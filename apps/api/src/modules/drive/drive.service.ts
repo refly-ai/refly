@@ -878,6 +878,7 @@ export class DriveService {
         'summary',
         'resultId',
         'resultVersion',
+        'variableId',
       ]),
       scope: 'present',
       category: processedReq.category,

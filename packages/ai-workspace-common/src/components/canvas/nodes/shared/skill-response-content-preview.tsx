@@ -67,10 +67,14 @@ export const SkillResponseContentPreview = memo(
     const upstreamAgentNodes = useRealtimeUpstreamAgents(nodeId);
 
     const files = useMemo(() => {
-      return contextItems?.filter((item) => item.type === 'file');
+      return contextItems?.filter(
+        (item) => item.type === 'file' && item.metadata.source === 'files',
+      );
     }, [contextItems]);
 
-    const content = processQueryWithMentions(query)?.processedQuery || '';
+    const content = useMemo(() => {
+      return processQueryWithMentions(query)?.processedQuery || '';
+    }, [query]);
 
     // Extract input variable names from contextItems
     const variableMentions = parseMentionsFromQuery(query)?.filter((item) => item.type === 'var');

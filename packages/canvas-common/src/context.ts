@@ -1,4 +1,9 @@
-import { ActionResult, CanvasNodeType, SkillContext } from '@refly/openapi-schema';
+import {
+  ActionResult,
+  CanvasNodeType,
+  SkillContext,
+  WorkflowVariable,
+} from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
 import { Node, Edge } from '@xyflow/react';
 import { omit, safeParseJSON } from '@refly/utils';
@@ -151,16 +156,54 @@ const deduplicate = <T>(array: T[] | null | undefined, keyFn: (item: T) => strin
 export const convertContextItemsToInvokeParams = (
   items: IContextItem[],
   resultIds: string[],
+  workflowVariables?: WorkflowVariable[], // WorkflowVariable[] - accepting workflow variables for resolving resource variables
 ): SkillContext => {
   const purgedItems = purgeContextItems(items);
+
+  // Build a map from variableId to fileId for resource variables
+  const variableToFileIdMap = new Map<
+    string,
+    { fileId: string; variableId: string; variableName: string }
+  >();
+  if (workflowVariables) {
+    for (const variable of workflowVariables) {
+      if (variable.variableType === 'resource' && variable.value?.length > 0) {
+        const fileId = variable.value[0]?.resource?.fileId;
+        if (fileId) {
+          variableToFileIdMap.set(variable.variableId, {
+            fileId,
+            variableId: variable.variableId,
+            variableName: variable.name,
+          });
+        }
+      }
+    }
+  }
 
   const context: SkillContext = {
     files: deduplicate(
       purgedItems
         ?.filter((item) => item?.type === 'file')
-        .map((item) => ({
-          fileId: item.entityId,
-        })),
+        .map((item) => {
+          // For resource variables, resolve variableId to fileId
+          if (item.metadata?.source === 'variable' && item.metadata?.variableId) {
+            const detail = variableToFileIdMap.get(item.metadata.variableId);
+            if (detail) {
+              // Find the variable to get its name
+              return detail;
+            }
+            // If variableId cannot be resolved, skip this item
+            console.warn(
+              `Cannot resolve variableId ${item.metadata.variableId} to fileId, skipping`,
+            );
+            return null;
+          }
+          // For direct file references, use entityId as fileId
+          return {
+            fileId: item.entityId,
+          };
+        })
+        .filter((item) => item !== null),
       (item) => item.fileId,
     ),
     results: deduplicate(
@@ -248,7 +291,7 @@ export const purgeContextItems = (items: IContextItem[]): IContextItem[] => {
   }
   return items.map((item) => {
     if (
-      ['image', 'video', 'audio', 'resource', 'document', 'codeArtifact'].includes(
+      ['image', 'video', 'audio', 'resource', 'document', 'codeArtifact', 'file'].includes(
         item.type as string,
       )
     ) {

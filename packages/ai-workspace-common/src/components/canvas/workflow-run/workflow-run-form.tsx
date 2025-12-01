@@ -14,6 +14,7 @@ import { MixedTextEditor } from '@refly-packages/ai-workspace-common/components/
 import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/resource-upload';
 import { useFileUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables';
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 const RequiredTagText = () => {
   const { t } = useTranslation();
@@ -167,12 +168,19 @@ export const WorkflowRunForm = ({
       } else if (variable.variableType === 'resource') {
         // Convert resource values to UploadFile format
         const fileList: UploadFile[] =
-          variable.value?.map((v, index) => ({
-            uid: `file-${index}`,
-            name: v.resource?.name || '',
-            status: 'done',
-            url: v.resource?.storageKey || '',
-          })) || [];
+          variable.value?.map((v, index) => {
+            const fileId = v.resource?.fileId;
+            const entityId = v.resource?.entityId;
+
+            return {
+              uid: fileId || entityId || `file-${index}`, // Use fileId/entityId as uid if available
+              name: v.resource?.name || '',
+              status: 'done' as const,
+              url: v.resource?.storageKey || '',
+              // Store fileId in response for later retrieval
+              ...(fileId && { response: { fileId } }),
+            };
+          }) || [];
         formValues[variable.name] = fileList;
       }
     }
@@ -199,8 +207,15 @@ export const WorkflowRunForm = ({
       } else if (variable.variableType === 'resource') {
         const v = Array.isArray(value) ? value[0] : undefined;
         const entityId = variable?.value?.[0]?.resource?.entityId;
+        const existingFileId = variable?.value?.[0]?.resource?.fileId;
 
         if (v) {
+          // Extract fileId from upload response if available
+          const uploadedFileId = v.response?.fileId || v.uid;
+          // Use uploaded fileId if it looks like a fileId (starts with 'df-'),
+          // otherwise use existing fileId from variable
+          const fileId = uploadedFileId?.startsWith?.('df-') ? uploadedFileId : existingFileId;
+
           newVariables.push({
             ...variable,
             value: [
@@ -210,6 +225,7 @@ export const WorkflowRunForm = ({
                   name: v.name,
                   storageKey: v.url,
                   fileType: getFileType(v.name),
+                  ...(fileId && { fileId }),
                   ...(entityId && { entityId }),
                 },
               },
@@ -236,12 +252,41 @@ export const WorkflowRunForm = ({
       const result = await uploadFile(file, currentFileList);
 
       if (result && typeof result === 'object' && 'storageKey' in result) {
-        // Create new file with storageKey
+        let fileId: string | undefined;
+
+        // Create DriveFile if canvasId is available
+        if (canvasId) {
+          const variable = workflowVariables.find((v) => v.name === variableName);
+          if (variable?.variableId) {
+            try {
+              const { data: driveFileResponse, error } = await getClient().createDriveFile({
+                body: {
+                  canvasId,
+                  name: file.name,
+                  type: file.type,
+                  storageKey: result.storageKey,
+                  source: 'variable',
+                  variableId: variable.variableId,
+                },
+              });
+
+              if (!error && driveFileResponse?.data?.fileId) {
+                fileId = driveFileResponse.data.fileId;
+              }
+            } catch (error) {
+              console.error('Failed to create DriveFile:', error);
+              // Continue without fileId if creation fails
+            }
+          }
+        }
+
+        // Create new file with storageKey and optional fileId
         const newFile: UploadFile = {
-          uid: result.uid,
+          uid: fileId || result.uid,
           name: file.name,
           status: 'done',
           url: result.storageKey, // Store storageKey in url field
+          ...(fileId && { response: { fileId } }), // Store fileId in response for later retrieval
         };
 
         // Replace the file list with the new file (single file limit)
@@ -254,7 +299,7 @@ export const WorkflowRunForm = ({
       }
       return false;
     },
-    [uploadFile, variableValues],
+    [uploadFile, variableValues, canvasId, workflowVariables],
   );
 
   // Handle file removal for resource type variables
@@ -277,6 +322,8 @@ export const WorkflowRunForm = ({
       // Find the variable to get its resourceTypes
       const variable = workflowVariables.find((v) => v.name === variableName);
       const resourceTypes = variable?.resourceTypes;
+      const oldFileId = variable?.value?.[0]?.resource?.fileId;
+      const variableId = variable?.variableId;
 
       refreshFile(
         currentFileList,
@@ -287,9 +334,12 @@ export const WorkflowRunForm = ({
           });
         },
         resourceTypes,
+        oldFileId,
+        canvasId,
+        variableId,
       );
     },
-    [refreshFile, variableValues, handleValueChange, form, workflowVariables],
+    [refreshFile, variableValues, handleValueChange, form, workflowVariables, canvasId],
   );
 
   // Initialize template variables when templateContent changes

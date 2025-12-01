@@ -490,6 +490,7 @@ export const SkillResponseNode = memo(
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
           version: nextVersion,
           modelInfo: data?.metadata?.modelInfo,
+          workflowVariables: variables,
         },
         {
           entityType: 'canvas',

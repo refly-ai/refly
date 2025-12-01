@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Modal, Form, Input, Checkbox, message } from 'antd';
-import { /*Attachment, */ Close, List, Text1 } from 'refly-icons';
+import { /*Attachment, */ Attachment, Close, List, Text1 } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { cn, genVariableID } from '@refly/utils';
 import { MAX_VARIABLE_LENGTH } from '../node-preview/start';
 import { StringTypeForm } from './string-type-form';
@@ -58,11 +59,11 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
           value: 'string',
           icon: <Text1 size={16} />,
         },
-        // {
-        //   label: t('canvas.workflow.variables.variableTypeOptions.resource'),
-        //   value: 'resource',
-        //   icon: <Attachment size={16} />,
-        // },
+        {
+          label: t('canvas.workflow.variables.variableTypeOptions.resource'),
+          value: 'resource',
+          icon: <Attachment size={16} />,
+        },
         {
           label: t('canvas.workflow.variables.variableTypeOptions.option'),
           value: 'option',
@@ -137,10 +138,11 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
             // Set file list for resource type
             if (defaultValue.value?.length) {
               const files: UploadFile[] = defaultValue.value.map((value) => ({
-                uid: value.resource?.entityId,
+                // Use fileId as uid to track existing files
+                uid: value.resource?.fileId || value.resource?.entityId || '',
                 name: value.resource?.name || '',
                 status: 'done',
-                url: value.resource?.storageKey || '', // Use storageKey from resource
+                url: value.resource?.storageKey || '',
               }));
               setFileList(files);
             }
@@ -285,8 +287,26 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
     );
 
     const handleRefreshFile = useCallback(() => {
-      refreshFile(fileList, handleFileListChange, resourceFormData.resourceTypes);
-    }, [fileList, handleFileListChange, refreshFile, resourceFormData.resourceTypes]);
+      // Get old fileId from defaultValue (if editing existing variable)
+      const oldFileId = defaultValue?.value?.[0]?.resource?.fileId;
+      const variableId = defaultValue?.variableId || genVariableID();
+
+      refreshFile(
+        fileList,
+        handleFileListChange,
+        resourceFormData.resourceTypes,
+        oldFileId,
+        canvasId,
+        variableId,
+      );
+    }, [
+      fileList,
+      handleFileListChange,
+      refreshFile,
+      resourceFormData.resourceTypes,
+      defaultValue,
+      canvasId,
+    ]);
 
     const resetState = useCallback(() => {
       resetFormData();
@@ -383,23 +403,73 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
           return;
         }
 
+        // Generate variableId first (needed for DriveFile creation)
+        const variableId = defaultValue?.variableId || genVariableID();
+
         // Construct the value array based on variable type
         let finalValue: VariableValue[];
         if (variableType === 'string') {
           const textValue = values.value?.[0]?.text?.trim() ?? '';
           finalValue = textValue ? [{ type: 'text', text: textValue }] : [];
         } else if (variableType === 'resource') {
-          // For resource type, construct value array from fileList
-          const currentEntityId = defaultValue?.value?.[0]?.resource?.entityId;
-          finalValue = fileList.map((file) => ({
-            type: 'resource',
-            resource: {
-              name: file.name || '',
-              storageKey: file.url || '',
-              fileType: getFileType(file.name),
-              ...(currentEntityId ? { entityId: currentEntityId } : {}),
-            },
-          }));
+          // For resource type, create DriveFile for each file and get fileId
+          const resourceValues = await Promise.all(
+            fileList.map(async (file) => {
+              // Check if this file already has a fileId (existing DriveFile)
+              const existingFileId = defaultValue?.value?.find(
+                (v) => v.resource?.storageKey === file.url || v.resource?.fileId === file.uid,
+              )?.resource?.fileId;
+
+              if (existingFileId) {
+                // Use existing fileId for unchanged files
+                const existingResource = defaultValue?.value?.find(
+                  (v) => v.resource?.fileId === existingFileId,
+                )?.resource;
+                return {
+                  type: 'resource' as const,
+                  resource: {
+                    name: file.name || '',
+                    fileType: getFileType(file.name),
+                    fileId: existingFileId,
+                    storageKey: existingResource?.storageKey || file.url || '',
+                  },
+                };
+              }
+
+              // Create new DriveFile for newly uploaded files
+              const storageKey = file.url || '';
+              if (!storageKey) {
+                throw new Error('File storage key is missing');
+              }
+
+              const { data: driveFileResponse, error } = await getClient().createDriveFile({
+                body: {
+                  canvasId,
+                  name: file.name || '',
+                  type: file.type || '',
+                  storageKey,
+                  source: 'variable',
+                  variableId,
+                },
+              });
+
+              if (error || !driveFileResponse?.data?.fileId) {
+                throw new Error('Failed to create drive file');
+              }
+
+              return {
+                type: 'resource' as const,
+                resource: {
+                  name: file.name || '',
+                  fileType: getFileType(file.name),
+                  fileId: driveFileResponse.data.fileId,
+                  storageKey,
+                },
+              };
+            }),
+          );
+
+          finalValue = resourceValues;
         } else if (variableType === 'option') {
           // Get the selected value from the form
           const selectedValue = (values as any).selectedValue;
@@ -428,7 +498,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
         }
 
         const variable: WorkflowVariable = {
-          variableId: defaultValue?.variableId || genVariableID(),
+          variableId,
           name: values.name,
           value: finalValue,
           description: values.description,
@@ -460,6 +530,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       options,
       workflowVariables,
       defaultValue,
+      canvasId,
     ]);
 
     const handleModalClose = useCallback(() => {

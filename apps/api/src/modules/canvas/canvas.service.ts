@@ -1269,9 +1269,15 @@ export class CanvasService {
     const { resource } = value;
     if (!resource) return value;
 
+    // If fileId exists, use it directly (new approach with DriveFile)
+    if (resource.fileId) {
+      this.logger.log(`Resource has fileId: ${resource.fileId}, skipping resource creation`);
+      return value;
+    }
+
     const { storageKey } = resource;
     if (!storageKey) {
-      this.logger.warn('Resource variable missing storageKey; skipping processing');
+      this.logger.warn('Resource variable missing both fileId and storageKey; skipping processing');
       return value;
     }
 
@@ -1289,7 +1295,17 @@ export class CanvasService {
     }
 
     if (!resource.entityId) {
-      // New upload - create new resource
+      // New upload without fileId or entityId - skip creation for now
+      // This can happen with old data during workflow-app execution
+      this.logger.warn(
+        `Resource variable without fileId or entityId; skipping resource creation. storageKey: ${storageKey}`,
+      );
+      return value;
+
+      // Note: Creating resource here is disabled because canvasId might be temporary
+      // and doesn't exist in database (e.g., during workflow-app execution).
+      // New approach should use fileId with DriveFile instead of creating Resource.
+      /*
       const newResource = await this.resourceService.createResource(
         user,
         {
@@ -1320,6 +1336,7 @@ export class CanvasService {
           entityId: newResource.resourceId,
         },
       };
+      */
     }
 
     // Find existing resource - update old resource

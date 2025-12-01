@@ -86,6 +86,9 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
   const { activeNode, setActiveNode } = useActiveNode(canvasId);
 
+  // Fetch workflow variables for mentions (startNode/resourceLibrary)
+  const { data: workflowVariables } = useVariablesManagement(canvasId);
+
   // Close edit mode on any outside interaction when editMode is enabled
   useEffect(() => {
     if (!enabled) {
@@ -163,6 +166,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
         contextItems,
         modelInfo,
         selectedToolsets,
+        workflowVariables: variables,
       },
       {
         entityId: canvasId,
@@ -206,6 +210,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     addNode,
     activeNode,
     setActiveNode,
+    workflowVariables,
   ]);
 
   const customActions: CustomAction[] = useMemo(
@@ -236,9 +241,6 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
       setModelInfo,
     ],
   );
-
-  // Fetch workflow variables for mentions (startNode/resourceLibrary)
-  const { data: workflowVariables } = useVariablesManagement(canvasId);
 
   if (!enabled) {
     return null;

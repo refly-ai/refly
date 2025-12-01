@@ -713,6 +713,7 @@ const WorkflowAppPage: React.FC = () => {
                     onCopyWorkflow={handleCopyWorkflow}
                     onCopyShareLink={handleCopyShareLink}
                     isRunning={isRunning}
+                    canvasId={canvasId}
                     templateContent={workflowApp?.templateContent}
                     executionCreditUsage={executionCreditUsage}
                     className="max-h-[500px] sm:max-h-[600px] bg-[var(--refly-bg-float-z3)] dark:bg-[var(--refly-bg-content-z2)] border border-[var(--refly-Card-Border)] dark:border-[var(--refly-semi-color-border)] shadow-[0_2px_20px_4px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_20px_4px_rgba(0,0,0,0.2)] px-4 py-3 rounded-2xl"

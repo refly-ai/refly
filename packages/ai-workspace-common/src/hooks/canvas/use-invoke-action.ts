@@ -50,6 +50,7 @@ export interface InvokeActionPayload {
   selectedToolsets?: GenericToolset[];
   agentMode?: AgentMode;
   copilotSessionId?: string;
+  workflowVariables?: any[]; // WorkflowVariable[] - for resolving resource variables
 }
 
 export const useInvokeAction = (params?: { source?: string }) => {
@@ -714,6 +715,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         selectedToolsets = [],
         agentMode = 'node_agent',
         copilotSessionId,
+        workflowVariables,
       } = payload;
 
       logEvent('model::invoke_trigger', Date.now(), {
@@ -730,6 +732,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
       const context = convertContextItemsToInvokeParams(
         contextItems ?? [],
         upstreamAgentNodes.map((node) => node.data?.entityId) ?? [],
+        workflowVariables, // Pass workflow variables for resolving resource variables
       );
 
       const param: InvokeSkillRequest = {

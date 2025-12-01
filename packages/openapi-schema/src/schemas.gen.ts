@@ -5604,6 +5604,14 @@ export const SkillContextFileItemSchema = {
       description: 'File object',
       $ref: '#/components/schemas/DriveFile',
     },
+    variableId: {
+      type: 'string',
+      description: 'Variable ID if this file is from a workflow variable',
+    },
+    variableName: {
+      type: 'string',
+      description: 'Variable name if this file is from a workflow variable',
+    },
   },
 } as const;
 
@@ -10165,7 +10173,7 @@ export const ValueTypeSchema = {
 
 export const ResourceValueSchema = {
   type: 'object',
-  required: ['name', 'fileType', 'storageKey'],
+  required: ['name', 'fileType'],
   properties: {
     name: {
       type: 'string',
@@ -10175,13 +10183,17 @@ export const ResourceValueSchema = {
       description: 'Resource file type',
       $ref: '#/components/schemas/VariableResourceType',
     },
+    fileId: {
+      type: 'string',
+      description: 'DriveFile ID (primary identifier for resource)',
+    },
     storageKey: {
       type: 'string',
-      description: 'Resource storage key',
+      description: 'Resource storage key (legacy, for backward compatibility)',
     },
     entityId: {
       type: 'string',
-      description: 'Resource ID',
+      description: 'Resource ID (deprecated, use fileId instead)',
     },
   },
 } as const;
