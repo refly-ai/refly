@@ -3582,6 +3582,8 @@ const translations = {
       description: {
         '5k_tokens':
           '{{inputCost}} credit(s) per 5k input tokens, {{outputCost}} credit(s) per 5k output tokens',
+        '1m_tokens':
+          '{{inputCost}} credit(s) per 1M input tokens, {{outputCost}} credit(s) per 1M output tokens',
         product: '{{cost}} credit(s) per product',
         canvasTotal:
           'AI output is unstable, credits are only estimated and subject to actual execution results',

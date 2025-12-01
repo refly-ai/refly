@@ -847,6 +847,12 @@ export class CreditService {
           creditCost = Math.ceil(
             (inputTokens / 5000) * perInputUnit + (outputTokens / 5000) * perOutputUnit,
           );
+        } else if (creditBilling.unit === '1m_tokens') {
+          const perInputUnit = creditBilling.inputCost || 0;
+          const perOutputUnit = creditBilling.outputCost || 0;
+          creditCost = Math.ceil(
+            (inputTokens / 1000000) * perInputUnit + (outputTokens / 1000000) * perOutputUnit,
+          );
         } else {
           creditCost = Math.max(creditBilling.inputCost, creditBilling.outputCost);
         }
