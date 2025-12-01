@@ -2,6 +2,7 @@ import React from 'react';
 import { Popover, Button } from 'antd';
 import { FaDiscord } from 'react-icons/fa6';
 import { RiNotionLine, RiTwitterXFill } from 'react-icons/ri';
+import Feishu from '../../assets/feishu.svg';
 
 import { useTranslation } from 'react-i18next';
 import { Close } from 'refly-icons';
@@ -15,7 +16,8 @@ interface ContactUsPopoverProps {
 }
 
 export const ContactUsPopover: React.FC<ContactUsPopoverProps> = ({ children, open, setOpen }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLanguage = i18n.language;
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
@@ -30,7 +32,14 @@ export const ContactUsPopover: React.FC<ContactUsPopoverProps> = ({ children, op
   };
 
   const handleNotionDocumentClick = () => {
-    window.open('https://notion.so/reflydoc/Contact-us-28dd62ce607180318ae6c944e2db6abf', '_blank');
+    window.open(
+      'https://www.notion.so/reflydoc/Welcome-to-Refly-28cd62ce60718093b830c4b9fc8b22a3',
+      '_blank',
+    );
+  };
+
+  const handleFeishuDocumentClick = () => {
+    window.open('https://powerformer.feishu.cn/wiki/A7Paw5CIGip0jvkCU26ce4IunFc', '_blank');
   };
 
   const handleTwitterClick = () => {
@@ -47,13 +56,21 @@ export const ContactUsPopover: React.FC<ContactUsPopoverProps> = ({ children, op
         <Button type="text" icon={<Close size={24} />} onClick={() => setOpen(false)} />
       </div>
       <div className="grid grid-cols-3 gap-4">
-        {/* notion document */}
-        <ContactCard
-          icon={<RiNotionLine className="text-refly-text-0 text-[64px]" />}
-          title={t('landingPage.footer.contactUs.notionDocument')}
-          buttonText={t('landingPage.footer.contactUs.viewNotionDocument')}
-          onButtonClick={handleNotionDocumentClick}
-        />
+        {currentLanguage === 'zh-CN' ? (
+          <ContactCard
+            icon={<img src={Feishu} alt="Feishu" className="w-16 h-16" />}
+            title={t('landingPage.footer.contactUs.feishuDocument')}
+            buttonText={t('landingPage.footer.contactUs.viewDocument')}
+            onButtonClick={handleFeishuDocumentClick}
+          />
+        ) : (
+          <ContactCard
+            icon={<RiNotionLine className="text-refly-text-0 text-[64px]" />}
+            title={t('landingPage.footer.contactUs.notionDocument')}
+            buttonText={t('landingPage.footer.contactUs.viewDocument')}
+            onButtonClick={handleNotionDocumentClick}
+          />
+        )}
         {/* Discord Group */}
         <ContactCard
           icon={<FaDiscord className="text-refly-text-0 text-[64px]" />}

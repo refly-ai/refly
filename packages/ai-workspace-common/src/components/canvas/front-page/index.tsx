@@ -70,7 +70,7 @@ export const FrontPage = memo(() => {
     enabled: true,
   });
 
-  const templateLanguage = i18n.language;
+  const currentLanguage = i18n.language;
   const [templateCategoryId, setTemplateCategoryId] = useState('');
 
   // Sort categories according to TAB_ORDER
@@ -135,8 +135,15 @@ export const FrontPage = memo(() => {
   );
 
   const handleViewGuide = useCallback(() => {
-    window.open('https://reflydoc.notion.site/how-to-use-refly', '_blank');
-  }, []);
+    if (currentLanguage === 'zh-CN') {
+      window.open('https://powerformer.feishu.cn/wiki/KrI1wxCKiisumTkOLJbcLeY7nec', '_blank');
+    } else {
+      window.open(
+        'https://www.notion.so/reflydoc/How-to-Use-Refly-ai-28cd62ce6071801f9b86e39bc50d3333',
+        '_blank',
+      );
+    }
+  }, [currentLanguage]);
 
   const handleViewAllWorkflows = useCallback(() => {
     navigate('/workflow-list');
@@ -220,7 +227,7 @@ export const FrontPage = memo(() => {
                   )}
                   onClick={() => handleTemplateCategoryClick(category.categoryId)}
                 >
-                  {category.labelDict?.[templateLanguage]}
+                  {category.labelDict?.[currentLanguage]}
                 </div>
               ))}
             </div>
@@ -237,7 +244,7 @@ export const FrontPage = memo(() => {
               <TemplateList
                 source="front-page"
                 scrollableTargetId="front-page-scrollable-div"
-                language={templateLanguage}
+                language={currentLanguage}
                 categoryId={templateCategoryId}
                 className="!bg-transparent !px-0 !pt-0 -ml-2 -mt-2"
               />
