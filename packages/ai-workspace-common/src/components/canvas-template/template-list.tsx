@@ -122,13 +122,13 @@ export const TemplateList = ({
   }, []);
 
   const viewMoreSection = (
-    <div className="flex flex-col items-center gap-4 mt-6">
-      <div className="text-base text-center text-refly-text-0">
+    <div className="flex flex-col items-center gap-4 mt-[50px]">
+      <div className="text-base text-center text-refly-text-0 font-normal leading-[26px]">
         {t('template.notFoundQuestion')}
       </div>
       <Button
         type="default"
-        className="border-[#0E9F77] text-[#0E9F77] hover:!border-[#0E9F77] hover:!text-[#0E9F77] rounded-lg px-3 py-2.5 font-medium"
+        className="!bg-refly-bg-content-z2 !border-refly-primary-default !text-refly-primary-default !border-[0.5px] !font-medium hover:!border-refly-primary-default hover:!text-refly-primary-default hover:!bg-refly-bg-content-z2 rounded-lg px-3 py-2.5"
         onClick={handleGoToMarketplace}
       >
         {t('template.goToMarketplace')}

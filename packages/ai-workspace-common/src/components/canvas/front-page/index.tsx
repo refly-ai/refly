@@ -74,7 +74,7 @@ export const FrontPage = memo(() => {
 
   // Sort categories according to TAB_ORDER
   const templateCategories = useMemo(() => {
-    const categories = [...(data?.data ?? [])];
+    const categories = [...(data?.data ?? [])].filter((category) => category.name !== 'top_picks');
     return categories.sort((a, b) => {
       // Get English label from labelDict (try 'en' or 'en-US')
       const getEnglishLabel = (category: (typeof categories)[0]) => {
