@@ -139,12 +139,11 @@ const translations = {
         priceYearlyTotal: '$ {{price}}/年 节省 20%',
         buttonText: '升级到 {{planName}}',
         features: [
-          '每日可获取新积分\n300点',
-          '每月积分\n2000点',
-          '世界顶级AI模型\nOpenAI、Claude、Grok、DeepSeek...',
-          '知识库文件数\n200个',
-          '文件上传限制\n最大 10MB',
-          '服务支持\n高优邮件支持',
+          '每日可获取新积分\n100点',
+          '世界顶级AI模型\nOpenAI, Claude, Grok, DeepSeek...',
+          '知识库文件数\n100个',
+          '文件上传限制\n最大 5MB',
+          '服务支持\n社区支持 (微信群, 飞书群, Discord)',
         ],
       },
       max: {

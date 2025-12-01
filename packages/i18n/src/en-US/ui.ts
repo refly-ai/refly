@@ -3602,19 +3602,22 @@ const translations = {
         price: 'Free forever',
         buttonText: 'Continue for free',
         buttonTextDowngrade: 'Downgrade to Free',
-        features: [
-          'Daily new credits\n100 points',
-          'Top AI models\nOpenAI, Claude, Grok, DeepSeek...',
-          'Knowledge base files\n100 files',
-          'File upload limit\nMax 5MB',
-          'Service support\nCommunity support (WeChat, Lark, Discord)',
-        ],
+        features: ['Daily new credits\n100 credits'],
       },
       pro: {
         title: 'PRO',
       },
       plus: {
         title: 'PLUS',
+        description: 'A high-performance toolkit for ambitious creators ready to go further',
+        buttonText: 'Get Plus',
+        features: [
+          'Daily new credits\n300 credits',
+          'Monthly credits\n2,000 credits',
+          'New subscribers receive an extra\n2,000 bonus credits',
+          'Access to a vast library of tools',
+          'Service support\nHigh priority support',
+        ],
       },
       max: {
         title: 'MAX',

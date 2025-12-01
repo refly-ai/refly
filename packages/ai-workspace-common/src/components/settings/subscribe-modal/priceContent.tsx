@@ -310,7 +310,7 @@ export const PriceContent = (props: { source: PriceSource }) => {
   const currentPlan: string = userProfile?.subscription?.planType || 'free';
 
   const plansData = useMemo(() => {
-    const planTypes = ['free', 'plus', 'starter', 'maker', 'enterprise'];
+    const planTypes = ['free', 'plus'];
     const data: Record<string, { title: string; description: string; features: Feature[] }> = {};
     for (const planType of planTypes) {
       data[planType] = {
