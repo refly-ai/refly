@@ -31,6 +31,7 @@ import {
 import { buildSuccessResponse } from '../../utils/response';
 import { Response, Request } from 'express';
 import { buildContentDisposition } from '../../utils/filename';
+import { checkHttpCache, send304NotModified, applyCacheHeaders } from '../../utils/http-cache';
 
 @ApiTags('Drive')
 @Controller('v1/drive')
@@ -108,19 +109,40 @@ export class DriveController {
     @Res() res: Response,
     @Req() req: Request,
   ): Promise<void> {
-    const { data, contentType, filename } = await this.driveService.getDriveFileStream(
+    const origin = req.headers.origin;
+
+    // First, get only metadata (no file content loaded yet)
+    const { contentType, filename, lastModified } = await this.driveService.getDriveFileMetadata(
       user,
       fileId,
     );
 
-    const origin = req.headers.origin;
+    // Check HTTP cache and get cache headers
+    const cacheResult = checkHttpCache(req, {
+      identifier: fileId,
+      lastModified,
+    });
 
-    res.set({
-      'Content-Type': contentType,
+    const corsHeaders = {
       'Access-Control-Allow-Origin': origin || '*',
       'Access-Control-Allow-Credentials': 'true',
       'Cross-Origin-Resource-Policy': 'cross-origin',
+    };
+
+    // If client has valid cache, return 304 Not Modified (without loading file content)
+    if (cacheResult.useCache) {
+      send304NotModified(res, cacheResult, corsHeaders);
+      return;
+    }
+
+    // Cache is stale, load the full file content
+    const { data } = await this.driveService.getDriveFileStream(user, fileId);
+
+    // Return file with cache headers
+    applyCacheHeaders(res, cacheResult, {
+      'Content-Type': contentType,
       'Content-Length': String(data.length),
+      ...corsHeaders,
       ...(download
         ? {
             'Content-Disposition': buildContentDisposition(filename),
@@ -138,16 +160,38 @@ export class DriveController {
     @Res() res: Response,
     @Req() req: Request,
   ): Promise<void> {
-    const { data, contentType, filename } = await this.driveService.getPublicFileContent(fileId);
-
     const origin = req.headers.origin;
 
-    res.set({
-      'Content-Type': contentType,
+    // First, get only metadata (no file content loaded yet)
+    const { contentType, filename, lastModified } =
+      await this.driveService.getPublicFileMetadata(fileId);
+
+    // Check HTTP cache and get cache headers
+    const cacheResult = checkHttpCache(req, {
+      identifier: fileId,
+      lastModified,
+    });
+
+    const corsHeaders = {
       'Access-Control-Allow-Origin': origin || '*',
       'Access-Control-Allow-Credentials': 'true',
       'Cross-Origin-Resource-Policy': 'cross-origin',
+    };
+
+    // If client has valid cache, return 304 Not Modified (without loading file content)
+    if (cacheResult.useCache) {
+      send304NotModified(res, cacheResult, corsHeaders);
+      return;
+    }
+
+    // Cache is stale, load the full file content
+    const { data } = await this.driveService.getPublicFileContent(fileId);
+
+    // Return file with cache headers
+    applyCacheHeaders(res, cacheResult, {
+      'Content-Type': contentType,
       'Content-Length': String(data.length),
+      ...corsHeaders,
       ...(download
         ? {
             'Content-Disposition': buildContentDisposition(filename),
