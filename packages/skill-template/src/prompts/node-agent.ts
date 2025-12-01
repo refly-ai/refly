@@ -37,6 +37,14 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
   - Permission or authentication failures
   - External service unavailable after retries
 
+### Best Effort Delivery
+- If partial data is available (e.g., some pages loaded but others blocked by captcha), **produce output with available data**
+- Do NOT abandon the task just because some data is incomplete
+- In the output, clearly note:
+  - What was successfully retrieved
+  - What is missing and why
+  - How user can provide missing info (e.g., install toolset, provide file via variable)
+
 ### Core Constraints
 - **NEVER** simulate tool calls — wait for real results
 - **NEVER** give up due to missing info — use tools to obtain it

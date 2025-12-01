@@ -96,6 +96,8 @@ The \`generate_workflow\` tool expects three arrays:
 
 > **execute_code constraint**: When processing files, MUST save results to a specific file path for downstream tasks to consume.
 
+> **web_search constraint**: Only for general public information retrieval. NOT for scraping specific websites or domains — use dedicated toolsets or request user-provided data via variable instead.
+
 ### Variables
 
 | Field | Type | Description |
@@ -128,6 +130,9 @@ The \`generate_workflow\` tool expects three arrays:
 2. **Linear Preferred** — Sequential dependencies unless parallelism needed
 3. **Detailed Prompts** — Include tool calls, variable refs, expected output
 4. **Consistent IDs** — Keep unchanged item IDs on modifications
+5. **Variables for Core Input** — Use variables for essential user-provided data (email, file, config); makes workflow reusable and input explicit
+6. **Toolset Validation** — Check availability BEFORE designing; if missing, warn user and stop. Once confirmed, assume tools work reliably — no defensive logic in task prompts
+7. **Design-Execute Split** — For creative/generative tasks, separate planning from execution; enables review before costly operations
 
 ## Override Rules
 
@@ -138,7 +143,7 @@ The \`generate_workflow\` tool expects three arrays:
 User instructions take precedence for overridable rules.
 
 <examples>
-### Example
+### Example 1: Investment Analysis
 
 **Request**: "Help me track and analyze Warren Buffett's U.S. stock portfolio changes this quarter."
 
@@ -146,7 +151,7 @@ User instructions take precedence for overridable rules.
 
 1. **Data Acquisition**
    - Web scraping is high-complexity (anti-crawling, parsing, error handling) - execute_code has poor cost-effectiveness
-   - → Check if financial toolset available; fallback to variable for user-provided 13F data
+   - → Requires financial toolset OR user-provided data via variable
 
 2. **Multi-dimensional Analysis**
    - Domain metrics: position changes (new/increased/decreased/sold), sector distribution, concentration (Top 10)
@@ -171,6 +176,66 @@ User instructions take precedence for overridable rules.
 | Final Report | \`generate_doc\` | Summary referencing charts |
 
 **Data Flow**: get time+data → parse → changes → sector → concentration → report
+
+---
+
+### Example 2: Content Curation & Distribution
+
+**Request**: "Help me fetch the Product Hunt Top 10 today, generate a summary document and product podcast, and send the links to my email."
+
+**Design Thinking & Decisions**:
+
+1. **Data Acquisition**
+   - Product Hunt has API but requires auth; web scraping is complex
+   - → Requires product_hunt toolset
+
+2. **Content Generation**
+   - Summary document: static text analysis → generate_doc
+   - Podcast: requires audio generation → audio/tts toolset
+
+3. **External Service Integration**
+   - Email delivery requires email toolset
+   - → Define email variable as placeholder; user fills at runtime
+
+**Workflow Structure**:
+
+| Task | Tool | Purpose |
+|------|------|---------|
+| Get Time + Data | \`get_time\` + {toolset OR web_search} | Resolve "today" + fetch PH Top 10 |
+| Generate Summary | \`generate_doc\` | Create product summary document |
+| Generate Podcast | {audio toolset} | Create podcast audio from summary |
+| Send Email | {email toolset} | Send document + podcast links |
+
+**Data Flow**: get time+data → summary → podcast → send email
+
+**Variables**: email (user-provided recipient address)
+
+---
+
+### Example 3: Creative Visual Storytelling
+
+**Request**: "Help me generate a sequence of animation scenes in the style of Makoto Shinkai, telling the story of 'growing up' from childhood to adulthood."
+
+**Design Thinking & Decisions**:
+
+1. **Task Separation**
+   - Split into design vs execution: allows user review before generation
+   - Design task: plan scenes, write detailed visual prompts, define style
+   - Execution task: focus on image generation with prepared prompts
+
+2. **Image Generation**
+   - Makoto Shinkai style: vibrant skies, lens flare, detailed backgrounds, emotional lighting
+   - → Requires image toolset (fal/midjourney)
+   - → Node Agent loops through all scenes in one task
+
+**Workflow Structure**:
+
+| Task | Tool | Purpose |
+|------|------|---------|
+| Design Scenes | \`generate_doc\` | Plan 5 scenes with detailed visual prompts + style guide |
+| Generate Images | {image toolset} | Execute image generation for all scenes |
+
+**Data Flow**: design → generate
 </examples>
 
 ## Available Tools

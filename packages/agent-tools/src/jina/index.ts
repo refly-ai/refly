@@ -12,22 +12,24 @@ export const JinaToolsetDefinition: ToolsetDefinition = {
     'zh-CN': 'Jina',
   },
   descriptionDict: {
-    en: 'Jina is a powerful tool that can read the content of a URL',
-    'zh-CN': 'Jina 是一个强大的工具，可以读取 URL 的内容',
+    en: 'Jina provides URL content extraction and site-specific search capabilities',
+    'zh-CN': 'Jina 提供 URL 内容提取和站点定向搜索能力',
   },
   tools: [
     {
       name: 'read',
       descriptionDict: {
-        en: 'Read the content of a URL',
-        'zh-CN': '读取 URL 的内容',
+        en: 'Fetch and extract content from a specific URL. Supports markdown/html/text/screenshot output. Use when you have a known URL to read.',
+        'zh-CN':
+          '从指定 URL 获取并提取内容。支持 markdown/html/text/screenshot 输出格式。适用于已知 URL 的内容读取。',
       },
     },
     {
       name: 'serp',
       descriptionDict: {
-        en: 'Search the web for a query',
-        'zh-CN': '搜索网络以获取查询结果',
+        en: 'Search with site-specific filtering (site parameter). Can read full content of results. Use for targeted domain search, NOT general web search.',
+        'zh-CN':
+          '支持站点定向搜索（site 参数）。可读取搜索结果完整内容。适用于特定站点搜索，不适用于通用网络搜索。',
       },
     },
   ],
@@ -74,7 +76,8 @@ export class JinaRead extends AgentBaseTool<JinaToolParams> {
       .default('markdown'),
   });
 
-  description = 'Read the content of a URL';
+  description =
+    'Fetch and extract content from a specific URL. Supports markdown/html/text/screenshot output. Use when you have a known URL to read.';
 
   protected params: JinaToolParams;
 
@@ -125,7 +128,8 @@ export class JinaSerp extends AgentBaseTool<JinaToolParams> {
     offset: z.number().describe('The offset to search for').default(1),
   });
 
-  description = 'Search the web for a query';
+  description =
+    'Search with site-specific filtering (site parameter). Can read full content of results. Use for targeted domain search, NOT general web search.';
 
   protected params: JinaToolParams;
 
