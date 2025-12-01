@@ -7,7 +7,11 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import { get, set, update } from 'idb-keyval';
+import {
+  safeGet as get,
+  safeSet as set,
+  safeUpdate as update,
+} from '@refly-packages/ai-workspace-common/utils/safe-idb';
 import { Modal, Radio } from 'antd';
 import { ModalFunc } from 'antd/es/modal/confirm';
 import { Node, Edge, useStoreApi, InternalNode, useReactFlow } from '@xyflow/react';
@@ -361,7 +365,7 @@ export const CanvasProvider = ({
       isSyncingRemoteRef.current = true;
 
       try {
-        const state = await get<CanvasState>(`canvas-state:${canvasId}`);
+        const state = await get<CanvasState | undefined>(`canvas-state:${canvasId}`);
         if (!state) {
           return;
         }
@@ -481,8 +485,8 @@ export const CanvasProvider = ({
         },
       }));
 
-      const currentState = await get(`canvas-state:${canvasId}`);
-      const currentStateData = getCanvasDataFromState(currentState);
+      const currentState = await get<CanvasState | undefined>(`canvas-state:${canvasId}`);
+      const currentStateData = getCanvasDataFromState(currentState as CanvasState);
 
       const diff = calculateCanvasStateDiff(currentStateData, {
         nodes: purgedNodes,
@@ -541,7 +545,7 @@ export const CanvasProvider = ({
 
   const initialFetchCanvasState = useDebouncedCallback(
     async (canvasId: string) => {
-      const localState = await get<CanvasState>(`canvas-state:${canvasId}`);
+      const localState = await get<CanvasState | undefined>(`canvas-state:${canvasId}`);
 
       // Only set loading when local state is not found
       let needLoading = false;
@@ -590,7 +594,7 @@ export const CanvasProvider = ({
         if (missingLocalTxs.length > 0) {
           try {
             await syncWithRemote(missingLocalTxs);
-            latestLocalState = await get<CanvasState>(`canvas-state:${canvasId}`);
+            latestLocalState = await get<CanvasState | undefined>(`canvas-state:${canvasId}`);
           } catch {
             // Intentionally ignore push errors here; we will rely on merge or later sync cycles
           }
@@ -646,16 +650,19 @@ export const CanvasProvider = ({
   );
 
   const undo = useCallback(async () => {
-    const currentState = await get(`canvas-state:${canvasId}`);
+    const currentState = await get<CanvasState | undefined>(`canvas-state:${canvasId}`);
     const transactions = currentState?.transactions;
     if (Array.isArray(transactions) && transactions.length > 0) {
+      if (!currentState) {
+        return;
+      }
       // Find the last transaction where revoked is false
       for (let i = transactions.length - 1; i >= 0; i--) {
         if (!transactions[i]?.revoked) {
           transactions[i].revoked = true;
           transactions[i].syncedAt = undefined;
-          await set(`canvas-state:${canvasId}`, currentState);
-          updateCanvasDataFromState(currentState);
+          await set(`canvas-state:${canvasId}`, currentState as CanvasState);
+          updateCanvasDataFromState(currentState as CanvasState);
           break;
         }
       }
@@ -663,16 +670,19 @@ export const CanvasProvider = ({
   }, [canvasId, updateCanvasDataFromState]);
 
   const redo = useCallback(async () => {
-    const currentState = await get(`canvas-state:${canvasId}`);
+    const currentState = await get<CanvasState | undefined>(`canvas-state:${canvasId}`);
     const transactions = currentState?.transactions;
     if (Array.isArray(transactions) && transactions.length > 0) {
+      if (!currentState) {
+        return;
+      }
       // Find the first transaction where revoked is true
       for (let i = 0; i < transactions.length; i++) {
         if (transactions[i]?.revoked) {
           transactions[i].revoked = false;
           transactions[i].syncedAt = undefined;
-          await set(`canvas-state:${canvasId}`, currentState);
-          updateCanvasDataFromState(currentState);
+          await set(`canvas-state:${canvasId}`, currentState as CanvasState);
+          updateCanvasDataFromState(currentState as CanvasState);
           break;
         }
       }
@@ -691,7 +701,7 @@ export const CanvasProvider = ({
       if (!polling) return;
       try {
         // Get local CanvasState
-        const localState = await get<CanvasState>(`canvas-state:${canvasId}`);
+        const localState = await get<CanvasState | undefined>(`canvas-state:${canvasId}`);
         if (!localState) {
           // If local state is not found, skip this poll
           return;

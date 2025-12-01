@@ -1,13 +1,31 @@
 import { useTranslation } from 'react-i18next';
 import { Modal } from 'antd';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { ensureIndexedDbSupport } from '@refly-packages/ai-workspace-common/utils/indexeddb';
 
 // Clear IndexedDB
 const deleteIndexedDB = async () => {
   try {
-    const databases = await window.indexedDB.databases?.();
-    for (const db of databases ?? []) {
-      window.indexedDB.deleteDatabase(db.name ?? '');
+    const canUseIndexedDb = await ensureIndexedDbSupport();
+    if (!canUseIndexedDb) {
+      return;
+    }
+
+    const databases = await window?.indexedDB?.databases?.();
+    const databaseList = Array.isArray(databases) ? databases : [];
+    for (const db of databaseList) {
+      if (!db?.name) {
+        continue;
+      }
+      const deleteRequest = window?.indexedDB?.deleteDatabase?.(db.name ?? '');
+      if (!deleteRequest) {
+        continue;
+      }
+      await new Promise<void>((resolve) => {
+        deleteRequest.onsuccess = () => resolve();
+        deleteRequest.onerror = () => resolve();
+        deleteRequest.onblocked = () => resolve();
+      });
     }
   } catch (error) {
     console.error('Failed to clear IndexedDB:', error);

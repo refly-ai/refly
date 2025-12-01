@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { message } from 'antd';
-import * as Y from 'yjs';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useDebouncedCallback } from 'use-debounce';
 import { useNavigate } from 'react-router-dom';
 import { useCanvasStore } from '@refly/stores';
-import { IndexeddbPersistence } from 'y-indexeddb';
+import { safeDel } from '@refly-packages/ai-workspace-common/utils/safe-idb';
 
 export const useDeleteCanvas = () => {
   const [isRemoving, setIsRemoving] = useState(false);
@@ -38,10 +37,11 @@ export const useDeleteCanvas = () => {
 
         deleteCanvasData(canvasId);
 
-        // Clear IndexedDB persistence for the deleted canvas
-        const indexedDbProvider = new IndexeddbPersistence(canvasId, new Y.Doc());
-        await indexedDbProvider.clearData();
-        await indexedDbProvider.destroy();
+        try {
+          await safeDel(`canvas-state:${canvasId}`);
+        } catch (error) {
+          console.error('Failed to remove cached canvas state:', error);
+        }
 
         // Only navigate if we're currently on the deleted canvas
         if (latestCurrentCanvasId === canvasId) {
