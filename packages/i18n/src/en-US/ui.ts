@@ -3582,7 +3582,8 @@ const translations = {
     },
     creditBilling: {
       description: {
-        '5k_tokens': '{{cost}} credit(s) per 5k tokens',
+        '5k_tokens':
+          '{{inputCost}} credit(s) per 5k input tokens, {{outputCost}} credit(s) per 5k output tokens',
         product: '{{cost}} credit(s) per product',
         canvasTotal:
           'AI output is unstable, credits are only estimated and subject to actual execution results',
@@ -4067,9 +4068,9 @@ const translations = {
     deleteConfirm: 'Are you sure you want to revoke the template {{title}}?',
     reviewStatus: {
       reviewing: 'Under Review',
-      reviewingTooltip: 'Template has been published to the community',
+      reviewingTooltip: 'Template is under review, but can still be used normally',
       published: 'Published',
-      publishedTooltip: 'Template is under review, but can still be used normally',
+      publishedTooltip: 'Template has been published to the community',
     },
   },
   whyChooseRefly: {

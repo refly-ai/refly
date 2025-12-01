@@ -30,7 +30,6 @@ import {
   ActionResult,
   LLMModelConfig,
   MediaGenerationModelConfig,
-  CreditBilling,
   DriveFile,
   GenericToolset,
 } from '@refly/openapi-schema';
@@ -58,6 +57,7 @@ import { actionResultPO2DTO } from '../action/action.dto';
 import { ProviderService } from '../provider/provider.service';
 import { providerPO2DTO, providerItemPO2DTO } from '../provider/provider.dto';
 import { SkillInvokerService } from './skill-invoker.service';
+import { normalizeCreditBilling } from '../../utils/credit-billing';
 import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
@@ -495,9 +495,9 @@ export class SkillService implements OnModuleInit {
       }
     }
 
-    const creditBilling: CreditBilling = providerItem?.creditBilling
-      ? safeParseJSON(providerItem?.creditBilling)
-      : undefined;
+    const creditBilling = normalizeCreditBilling(
+      providerItem?.creditBilling ? safeParseJSON(providerItem?.creditBilling) : undefined,
+    );
 
     if (creditBilling) {
       const creditUsageResult = await this.credit.checkRequestCreditUsage(user, creditBilling);
@@ -537,7 +537,7 @@ export class SkillService implements OnModuleInit {
     if (param.context) {
       param.context = await this.populateSkillContext(user, param.context);
     }
-    if (param.resultHistory) {
+    if (param.resultHistory && Array.isArray(param.resultHistory)) {
       param.resultHistory = await this.populateSkillResultHistory(user, param.resultHistory);
     }
     if (param.projectId) {
@@ -752,6 +752,18 @@ export class SkillService implements OnModuleInit {
 
     const purgeResultHistory = (resultHistory: ActionResult[] = []) => {
       // remove extra unnecessary fields from result history to save storage
+      if (!Array.isArray(resultHistory)) {
+        // Handle case where resultHistory might be a stringified array due to double stringify bug
+        if (typeof resultHistory === 'string') {
+          try {
+            const parsed = JSON.parse(resultHistory);
+            return Array.isArray(parsed) ? parsed.map((r) => pick(r, ['resultId', 'title'])) : [];
+          } catch {
+            return [];
+          }
+        }
+        return [];
+      }
       return resultHistory?.map((r) => pick(r, ['resultId', 'title']));
     };
 
@@ -894,7 +906,7 @@ export class SkillService implements OnModuleInit {
           context: JSON.stringify(param.context ?? {}),
           tplConfig: JSON.stringify(param.tplConfig ?? {}),
           runtimeConfig: JSON.stringify(param.runtimeConfig ?? {}),
-          history: JSON.stringify(param.resultHistory ?? []),
+          history: JSON.stringify(Array.isArray(param.resultHistory) ? param.resultHistory : []),
           providerItemId: param.modelItemId,
         },
       });
@@ -981,7 +993,11 @@ export class SkillService implements OnModuleInit {
   /**
    * Populate skill result history with actual result detail and steps.
    */
-  async populateSkillResultHistory(user: User, resultHistory: { resultId: string }[]) {
+  async populateSkillResultHistory(user: User, resultHistory: { resultId: string }[] = []) {
+    if (!Array.isArray(resultHistory) || resultHistory.length === 0) {
+      return [];
+    }
+
     // Fetch all results for the given resultIds
     const results = await this.prisma.actionResult.findMany({
       where: { resultId: { in: resultHistory.map((r) => r.resultId) }, uid: user.uid },

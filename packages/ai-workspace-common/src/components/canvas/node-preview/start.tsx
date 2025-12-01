@@ -330,6 +330,10 @@ export const StartNodePreview = () => {
     return groups;
   }, [workflowVariables]);
 
+  const handleClose = useCallback(() => {
+    setNodePreview(canvasId, null);
+  }, [canvasId, setNodePreview]);
+
   if (workflowVariablesLoading) {
     return (
       <div className="h-full flex flex-col items-center justify-center">
@@ -337,10 +341,6 @@ export const StartNodePreview = () => {
       </div>
     );
   }
-
-  const handleClose = useCallback(() => {
-    setNodePreview(canvasId, null);
-  }, [canvasId, setNodePreview]);
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">

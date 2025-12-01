@@ -8,6 +8,7 @@ import { RoutesList } from './routes';
 import { InitializationSuspense } from './prepare/InitializationSuspense';
 import { shouldSkipLayout } from './config/layout';
 import { ErrorFallback } from './components/ErrorFallback';
+import { GlobalSEO } from './components/GlobalSEO';
 
 const AppContent = () => {
   const location = useLocation();
@@ -45,20 +46,23 @@ const AppContent = () => {
 
 export const App = () => {
   return (
-    <ErrorBoundary
-      fallback={({ error, componentStack, eventId, resetError }) => (
-        <ErrorFallback
-          error={error}
-          componentStack={componentStack}
-          eventId={eventId}
-          resetError={resetError}
-          isGlobal={true}
-        />
-      )}
-    >
-      <InitializationSuspense>
-        <AppContent />
-      </InitializationSuspense>
-    </ErrorBoundary>
+    <>
+      <GlobalSEO />
+      <ErrorBoundary
+        fallback={({ error, componentStack, eventId, resetError }) => (
+          <ErrorFallback
+            error={error}
+            componentStack={componentStack}
+            eventId={eventId}
+            resetError={resetError}
+            isGlobal={true}
+          />
+        )}
+      >
+        <InitializationSuspense>
+          <AppContent />
+        </InitializationSuspense>
+      </ErrorBoundary>
+    </>
   );
 };

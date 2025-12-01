@@ -104,7 +104,8 @@ const translations = {
     },
     creditBilling: {
       description: {
-        '5k_tokens': '每 5k token 消耗 {{cost}} 积分',
+        '5k_tokens':
+          '每 5k 输入 token 消耗 {{inputCost}} 积分，每 5k 输出 token 消耗 {{outputCost}} 积分',
         product: '每个产物消耗 {{cost}} 积分',
         canvasTotal: 'AI 输出不稳定，积分仅为预估情况，需按实际执行结果',
       },
@@ -4110,9 +4111,9 @@ const translations = {
     deleteConfirm: '确定要撤销模版{{title}}吗',
     reviewStatus: {
       reviewing: '审核中',
-      reviewingTooltip: '模板已发布到社区',
+      reviewingTooltip: '模板正在审核中,但仍可正常使用',
       published: '已发布',
-      publishedTooltip: '模板正在审核中,但仍可正常使用',
+      publishedTooltip: '模板已发布到社区',
     },
   },
   whyChooseRefly: {

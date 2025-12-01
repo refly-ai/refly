@@ -31,7 +31,8 @@ export interface CreditBalance {
 // New interfaces for batch processing
 export interface ModelUsageDetail {
   modelName: string;
-  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
   creditCost: number;
 }
 
