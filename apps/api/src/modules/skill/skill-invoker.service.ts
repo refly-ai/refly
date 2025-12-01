@@ -894,8 +894,11 @@ export class SkillInvokerService {
                 modelName: String(runMeta.ls_model_name),
                 modelLabel: providerItem?.name,
                 providerItemId: providerItem?.itemId,
-                inputTokens: chunk.usage_metadata?.input_tokens ?? 0,
+                inputTokens:
+                  (chunk.usage_metadata?.input_tokens ?? 0) -
+                  (chunk.usage_metadata?.input_token_details?.cache_read ?? 0),
                 outputTokens: chunk.usage_metadata?.output_tokens ?? 0,
+                cacheReadTokens: chunk.usage_metadata?.input_token_details?.cache_read ?? 0,
               };
               resultAggregator.addUsageItem(runMeta, usage);
 

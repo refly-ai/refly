@@ -1544,6 +1544,10 @@ export type TokenUsageItem = {
    */
   outputTokens: number;
   /**
+   * Cache read tokens
+   */
+  cacheReadTokens?: number;
+  /**
    * Provider item ID
    */
   providerItemId?: string;
