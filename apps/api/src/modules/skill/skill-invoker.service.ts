@@ -1,4 +1,5 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 
 import { DirectConnection } from '@hocuspocus/server';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
@@ -65,8 +66,6 @@ import { normalizeCreditBilling } from '../../utils/credit-billing';
 
 @Injectable()
 export class SkillInvokerService {
-  private readonly logger = new Logger(SkillInvokerService.name);
-
   private skillEngine: SkillEngine;
   private skillInventory: BaseSkill[];
 
@@ -76,6 +75,7 @@ export class SkillInvokerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly logger: PinoLogger,
     private readonly miscService: MiscService,
     private readonly providerService: ProviderService,
     private readonly driveService: DriveService,
@@ -99,9 +99,10 @@ export class SkillInvokerService {
     @InjectQueue(QUEUE_SYNC_PILOT_STEP)
     private pilotStepQueue?: Queue<SyncPilotStepJobData>,
   ) {
+    this.logger.setContext(SkillInvokerService.name);
     this.skillEngine = this.skillEngineService.getEngine();
     this.skillInventory = createSkillInventory(this.skillEngine);
-    this.logger.log(`Skill inventory initialized: ${this.skillInventory.length}`);
+    this.logger.info({ count: this.skillInventory.length }, 'Skill inventory initialized');
   }
 
   private async buildLangchainMessages(
@@ -289,7 +290,7 @@ export class SkillInvokerService {
   private async _invokeSkill(user: User, data: InvokeSkillJobData, res?: Response) {
     const { input, result, context } = data;
     const { resultId, version, actionMeta, tier } = result;
-    this.logger.log(
+    this.logger.info(
       `invoke skill with input: ${JSON.stringify(input)}, resultId: ${resultId}, version: ${version}`,
     );
 
@@ -325,16 +326,20 @@ export class SkillInvokerService {
     // Archive files from previous execution of this result
     const canvasId = data.target?.entityType === 'canvas' ? data.target?.entityId : undefined;
     if (canvasId) {
-      this.logger.log(
-        `[Archive] Starting archive for resultId: ${resultId}, canvasId: ${canvasId}, uid: ${user.uid}`,
+      this.logger.info(
+        { resultId, canvasId, uid: user.uid, source: 'agent' },
+        '[Archive] Starting archive for previous execution files',
       );
       await this.driveService.archiveFiles(user, canvasId, {
         resultId,
         source: 'agent',
       });
-      this.logger.log(`[Archive] Completed archive for resultId: ${resultId}`);
+      this.logger.info({ resultId, canvasId }, '[Archive] Completed archive');
     } else {
-      this.logger.log(`[Archive] Skipping archive - no canvasId found for resultId: ${resultId}`);
+      this.logger.warn(
+        { resultId, targetType: data.target?.entityType, targetId: data.target?.entityId },
+        '[Archive] Skipping archive - no canvasId found',
+      );
     }
 
     // Create abort controller for this action
@@ -359,7 +364,7 @@ export class SkillInvokerService {
           try {
             const shouldAbort = await this.actionService.isAbortRequested(resultId, version);
             if (shouldAbort) {
-              this.logger.log(`Detected cross-pod abort request for ${resultId}`);
+              this.logger.info(`Detected cross-pod abort request for ${resultId}`);
               abortController.abort('Aborted by user');
               clearInterval(abortCheckInterval);
             }
@@ -438,7 +443,9 @@ export class SkillInvokerService {
                 timeoutReason,
                 'systemError',
               );
-              this.logger.log(`Successfully aborted action ${resultId} due to stream idle timeout`);
+              this.logger.info(
+                `Successfully aborted action ${resultId} due to stream idle timeout`,
+              );
             } catch (error) {
               this.logger.error(
                 `Failed to abort action ${resultId} on stream idle timeout: ${error?.message}`,
@@ -521,7 +528,7 @@ export class SkillInvokerService {
             }
             return;
           case 'artifact':
-            this.logger.log(`artifact event received: ${JSON.stringify(artifact)}`);
+            this.logger.info(`artifact event received: ${JSON.stringify(artifact)}`);
             return;
           case 'error':
             result.errors.push(data.content);
@@ -880,7 +887,7 @@ export class SkillInvokerService {
           }
           case 'on_chat_model_end':
             if (runMeta && chunk) {
-              this.logger.log(`ls_model_name: ${String(runMeta.ls_model_name)}`);
+              this.logger.info(`ls_model_name: ${String(runMeta.ls_model_name)}`);
               const providerItem = await this.providerService.findLLMProviderItemByModelID(
                 user,
                 String(runMeta.ls_model_name),
@@ -1022,7 +1029,7 @@ export class SkillInvokerService {
       const messages = messageAggregator.getUnpersistedMessagesAsPrismaInput();
       const status = result.errors.length > 0 ? 'failed' : 'finish';
 
-      this.logger.log(
+      this.logger.info(
         `Persisting ${steps.length} steps and ${messages.length} unpersisted messages for result ${resultId}`,
       );
 
@@ -1087,7 +1094,7 @@ export class SkillInvokerService {
 
       // Sync pilot step if needed
       if (result.pilotStepId && this.pilotStepQueue) {
-        this.logger.log(
+        this.logger.info(
           `Sync pilot step for result ${resultId}, pilotStepId: ${result.pilotStepId}`,
         );
         await this.pilotStepQueue.add('syncPilotStep', {
@@ -1173,7 +1180,7 @@ export class SkillInvokerService {
         return;
       }
 
-      this.logger.log(
+      this.logger.info(
         `Handling ${uploadedFiles.length} generated files from tool for result ${parentResultId}`,
       );
 
@@ -1203,7 +1210,7 @@ export class SkillInvokerService {
           // Use storageKey as unique identifier
           const dedupeKey = `${parentResultId}:${storageKey}`;
           if (this.addedFilesMap.has(dedupeKey)) {
-            this.logger.log(
+            this.logger.info(
               `File ${storageKey} already added for result ${parentResultId}, skipping duplicate`,
             );
             continue;
@@ -1260,7 +1267,7 @@ export class SkillInvokerService {
           // Mark this file as added
           this.addedFilesMap.set(dedupeKey, mediaId);
 
-          this.logger.log(
+          this.logger.info(
             `Successfully added ${nodeType} node to canvas: ${nodeTitle} (${mediaId})`,
           );
         } catch (fileError) {
@@ -1424,7 +1431,7 @@ export class SkillInvokerService {
 
       await this.creditService.syncBatchTokenCreditUsage(batchTokenCreditUsage);
 
-      this.logger.log(
+      this.logger.info(
         `Batch credit billing processed for ${resultId}: ${creditUsageSteps.length} usage items`,
       );
     }

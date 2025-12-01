@@ -4,6 +4,43 @@
  * Note: These values serve as defaults for runtime-configurable options.
  * LOCAL_CONCURRENCY is compile-time only (used directly in @Processor decorator).
  */
+
+// ==================== Executor Template ====================
+
+/** Custom executor template name */
+export const SCALEBOX_TEMPLATE = 'refly-executor-slim-v0-2-3';
+
+/** Code size threshold for switching to path mode (64KB) */
+export const CODE_SIZE_THRESHOLD = 64 * 1024;
+
+/** Credentials file path in sandbox */
+export const EXECUTOR_CREDENTIALS_PATH = '/tmp/.s3_cred';
+
+/** Executor resource limits defaults */
+export const EXECUTOR_LIMITS_DEFAULTS = {
+  maxFileSize: 10 * 1024 * 1024, // 10MB
+  maxTotalWrite: 50 * 1024 * 1024, // 50MB
+  maxFiles: 100,
+  maxProcesses: 50,
+} as const;
+
+export type ExecutorLimits = typeof EXECUTOR_LIMITS_DEFAULTS;
+
+/** Executor supported languages */
+export type ExecutorLanguage = 'python' | 'javascript' | 'shell';
+
+/**
+ * Language mapping from OpenAPI schema to executor supported languages
+ * Direct 1:1 mapping, no aliases
+ */
+export const LANGUAGE_MAP: Record<string, ExecutorLanguage> = {
+  python: 'python',
+  javascript: 'javascript',
+  shell: 'shell',
+} as const;
+
+// ==================== Scalebox Defaults ====================
+
 export const SCALEBOX_DEFAULTS = {
   // Sandbox
   SANDBOX_TIMEOUT_MS: 60 * 60 * 1000, // 1 hour

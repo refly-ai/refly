@@ -40,7 +40,7 @@ export class SandboxPool {
   private autoPauseDelayMs: number;
 
   @Trace('pool.acquire', { 'operation.type': 'pool_acquire' })
-  async acquire(context: ExecutionContext): Promise<SandboxWrapper> {
+  async acquire(context: ExecutionContext, templateName: string): Promise<SandboxWrapper> {
     const onFailed = (sandboxId: string, error: Error) => {
       this.enqueueKill(sandboxId, `acquire:${error.message.slice(0, 50)}`);
     };
@@ -62,7 +62,13 @@ export class SandboxPool {
             ),
         );
 
-      return await SandboxWrapper.create(this.logger, context, this.sandboxTimeoutMs, onFailed);
+      return await SandboxWrapper.create(
+        this.logger,
+        context,
+        templateName,
+        this.sandboxTimeoutMs,
+        onFailed,
+      );
     });
 
     // Inject sandboxId into logger context for all subsequent logs

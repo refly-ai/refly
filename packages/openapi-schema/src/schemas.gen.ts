@@ -1051,6 +1051,11 @@ export const CanvasTemplateSchema = {
       type: 'string',
       description: 'Associated workflow app share ID',
     },
+    creditUsage: {
+      type: 'integer',
+      description: 'Credit usage for running this workflow app',
+      nullable: true,
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -6579,7 +6584,7 @@ export const SandboxExecuteParamsSchema = {
     language: {
       type: 'string',
       description: 'Programming language for code execution',
-      enum: ['python', 'javascript', 'typescript', 'r', 'java', 'bash', 'node', 'nodejs', 'deno'],
+      enum: ['python', 'javascript', 'shell'],
       example: 'python',
     },
   },

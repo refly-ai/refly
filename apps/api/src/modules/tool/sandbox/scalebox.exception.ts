@@ -121,3 +121,13 @@ export class SandboxAcquireException extends SandboxException {
     super(messageOrError, 'SANDBOX_ACQUIRE_FAILED', { sandboxId });
   }
 }
+
+export class SandboxLanguageNotSupportedException extends SandboxException {
+  constructor(language: string) {
+    super(
+      `Language '${language}' is not supported. Supported: python, javascript, bash, shell`,
+      'SANDBOX_LANGUAGE_NOT_SUPPORTED',
+      { language },
+    );
+  }
+}

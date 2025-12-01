@@ -1,4 +1,4 @@
-import { Sandbox, type ExecutionResult } from '@scalebox/sdk';
+import { Sandbox } from '@scalebox/sdk';
 import { PinoLogger } from 'nestjs-pino';
 import { SandboxExecuteParams } from '@refly/openapi-schema';
 
@@ -9,23 +9,26 @@ import {
   SandboxCreationException,
   SandboxExecutionFailedException,
   SandboxConnectionException,
-  SandboxExecutionBadResultException,
-  SandboxRunCodeException,
-  SandboxFileListException,
   SandboxAcquireException,
+  SandboxLanguageNotSupportedException,
 } from './scalebox.exception';
-import { SANDBOX_DRIVE_MOUNT_POINT, SCALEBOX_DEFAULTS } from './scalebox.constants';
-import { ExecutionContext, OnLifecycleFailed } from './scalebox.dto';
+import {
+  SANDBOX_DRIVE_MOUNT_POINT,
+  SCALEBOX_DEFAULTS,
+  EXECUTOR_CREDENTIALS_PATH,
+} from './scalebox.constants';
+import {
+  ExecutionContext,
+  ExecuteCodeContext,
+  ExecutorInput,
+  ExecutorOutput,
+  OnLifecycleFailed,
+  S3Config,
+  mapLanguage,
+} from './scalebox.dto';
 
-export interface S3Config {
-  endPoint: string; // MinIO SDK uses 'endPoint' with capital P
-  port: number;
-  useSSL: boolean;
-  accessKey: string;
-  secretKey: string;
-  bucket: string;
-  region: string;
-}
+// Re-export S3Config for backward compatibility
+export type { S3Config } from './scalebox.dto';
 
 export interface SandboxMetadata {
   sandboxId: string;
@@ -35,46 +38,6 @@ export interface SandboxMetadata {
   isPaused?: boolean; // Whether the sandbox is currently paused
   lastPausedAt?: number; // Timestamp of last pause operation
 }
-
-export interface ExecuteCodeContext {
-  logger: PinoLogger;
-  timeoutMs: number;
-}
-
-const S3FS_PASSWD_FILE = '/tmp/s3fs_passwd';
-
-const COMMAND_BUILDER = {
-  mountS3: (
-    s3Config: S3Config,
-    path: string,
-    mountPoint: string,
-    options?: { readOnly?: boolean; allowNonEmpty?: boolean },
-  ): string => {
-    const passwdContent = `${s3Config.accessKey}:${s3Config.secretKey}`;
-    const s3EndpointUrl = `https://${s3Config.endPoint}`;
-    const optionalFlags = [
-      options?.readOnly ? '-o ro' : '',
-      options?.allowNonEmpty ? '-o nonempty' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-
-    const s3fsCmd = [
-      `s3fs ${s3Config.bucket}:/${path} ${mountPoint}`,
-      `-o url=${s3EndpointUrl}`,
-      `-o endpoint=${s3Config.region}`,
-      `-o passwd_file=${S3FS_PASSWD_FILE}`,
-      '-o use_path_request_style',
-      '-o compat_dir',
-      optionalFlags,
-    ]
-      .filter(Boolean)
-      .join(' ');
-
-    // Subshell: mkdir → create passwd file → run s3fs → cleanup → return original exit code
-    return `(mkdir -p ${mountPoint} && echo "${passwdContent}" > ${S3FS_PASSWD_FILE} && chmod 600 ${S3FS_PASSWD_FILE}; ${s3fsCmd}; ret=$?; rm -f ${S3FS_PASSWD_FILE}; exit $ret)`;
-  },
-};
 
 export class SandboxWrapper {
   private isPaused = false;
@@ -162,12 +125,13 @@ export class SandboxWrapper {
   private static async createInner(
     logger: PinoLogger,
     context: ExecutionContext,
+    templateName: string,
     timeoutMs: number,
   ): Promise<SandboxWrapper> {
-    logger.info({ canvasId: context.canvasId }, 'Creating sandbox');
+    logger.info({ canvasId: context.canvasId, templateName }, 'Creating sandbox');
 
     const sandbox = await guard(() =>
-      Sandbox.create('code-interpreter', {
+      Sandbox.create(templateName, {
         apiKey: context.apiKey,
         timeoutMs,
       }),
@@ -254,6 +218,7 @@ export class SandboxWrapper {
   static async create(
     logger: PinoLogger,
     context: ExecutionContext,
+    templateName: string,
     timeoutMs: number,
     onFailed?: OnLifecycleFailed,
   ): Promise<SandboxWrapper> {
@@ -261,7 +226,7 @@ export class SandboxWrapper {
     const errors: string[] = [];
 
     return guard
-      .retry(() => SandboxWrapper.createInner(logger, context, timeoutMs), {
+      .retry(() => SandboxWrapper.createInner(logger, context, templateName, timeoutMs), {
         maxAttempts: LIFECYCLE_RETRY_MAX_ATTEMPTS,
         initialDelay: LIFECYCLE_RETRY_DELAY_MS,
         maxDelay: LIFECYCLE_RETRY_DELAY_MS,
@@ -319,87 +284,154 @@ export class SandboxWrapper {
       );
   }
 
-  @Trace('sandbox.mount')
-  async mountDrive(
-    s3DrivePath: string,
-    s3Config: S3Config,
-    options?: { allowNonEmpty?: boolean },
-  ): Promise<void> {
-    const canvasId = this.context.canvasId;
-    const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
-
-    this.logger.debug({ canvasId, mountPoint, s3DrivePath }, 'Mounting drive storage');
-
-    await this.runCommand(COMMAND_BUILDER.mountS3(s3Config, s3DrivePath, mountPoint, options));
-
-    this.logger.debug({ canvasId, mountPoint }, 'Drive storage mounted');
-  }
-
-  @Trace('sandbox.unmount')
-  async unmountDrive(): Promise<void> {
-    const mountPoint = SANDBOX_DRIVE_MOUNT_POINT;
-
-    this.logger.debug({ sandboxId: this.sandboxId, mountPoint }, 'Unmounting drive storage');
-
-    // Use fusermount with lazy unmount (-z) for FUSE filesystems
-    // -u: unmount, -z: lazy unmount (detach even if busy)
-    // Lazy unmount is asynchronous, completes in background
-    await this.runCommand(`fusermount -uz ${mountPoint}`);
-
-    this.logger.debug({ sandboxId: this.sandboxId, mountPoint }, 'Drive storage unmounted');
-  }
-
-  @Trace('sandbox.command')
-  private async runCommand(command: string) {
-    const result = await guard(() => this.sandbox.commands.run(command)).orThrow((error) => {
-      this.logger.warn({ error, sandboxId: this.sandboxId }, 'Sandbox command failed');
-      return new SandboxExecutionFailedException(error);
-    });
-
-    guard.ensure(result.exitCode === 0).orThrow(() => {
-      this.logger.warn(
-        { exitCode: result.exitCode, stderr: result.stderr },
-        'Sandbox command non-zero exit',
-      );
-      return new SandboxExecutionFailedException(result.stderr, result.exitCode);
-    });
-
-    return result;
-  }
-
   @Trace('sandbox.executeCode', { 'operation.type': 'code_execution' })
   async executeCode(
     params: SandboxExecuteParams,
     ctx: ExecuteCodeContext,
-  ): Promise<ExecutionResult> {
-    ctx.logger.info({ language: params.language }, 'Executing code');
+  ): Promise<ExecutorOutput> {
+    const { logger, timeoutMs, s3Config, s3DrivePath, limits, codeSizeThreshold } = ctx;
 
-    const result = await guard(() =>
-      this.sandbox.runCode(params.code, {
-        language: params.language,
+    logger.info({ language: params.language }, 'Executing code');
+
+    // 1. Map language
+    const language = mapLanguage(params.language);
+    if (!language) {
+      throw new SandboxLanguageNotSupportedException(params.language);
+    }
+
+    // 2. Write S3 credentials file
+    await this.writeCredentials(s3Config);
+
+    // 3. Prepare code (inline vs path mode)
+    const codeBytes = Buffer.byteLength(params.code, 'utf8');
+    const usePathMode = codeBytes > codeSizeThreshold;
+
+    let input: ExecutorInput;
+
+    if (usePathMode) {
+      // Large code: write to file first, then use path mode
+      const codePath = '/tmp/code_script';
+      logger.debug({ codeBytes, codePath }, 'Using path mode for large code');
+      await this.sandbox.files.write(codePath, params.code);
+      input = {
+        path: codePath,
+        language,
+        timeout: Math.floor(timeoutMs / 1000),
         cwd: this.cwd,
-        timeout: ctx.timeoutMs,
+        delete: true, // Delete code file after execution
+        s3: this.buildS3Input(s3Config, s3DrivePath),
+        limits,
+      };
+    } else {
+      // Small code: inline mode
+      input = {
+        code: Buffer.from(params.code).toString('base64'),
+        language,
+        timeout: Math.floor(timeoutMs / 1000),
+        cwd: this.cwd,
+        s3: this.buildS3Input(s3Config, s3DrivePath),
+        limits,
+      };
+    }
+
+    // 4. Execute via executor binary
+    const escaped = JSON.stringify(input).replace(/'/g, "'\"'\"'");
+    const result = await guard(() =>
+      this.sandbox.commands.run(`printf '%s' '${escaped}' | refly-executor-slim`, {
+        timeoutMs: timeoutMs + 10000, // Extra buffer for executor overhead
       }),
     ).orThrow((error) => {
-      this.logger.warn(error, 'Sandbox runCode failed');
-      return new SandboxRunCodeException(error);
+      logger.warn({ error, sandboxId: this.sandboxId }, 'Executor command failed');
+      return new SandboxExecutionFailedException(error);
     });
 
-    guard
-      .ensure(result.exitCode === 0)
-      .orThrow(() => new SandboxExecutionBadResultException(result));
+    // 5. Parse output
+    const output = this.parseExecutorOutput(result.stdout);
 
-    return result;
+    logger.info(
+      { exitCode: output.exitCode, filesAdded: output.diff?.added?.length ?? 0 },
+      'Execution completed',
+    );
+
+    return output;
   }
 
-  @Trace('sandbox.listFiles')
-  async listCwdFiles(): Promise<string[]> {
-    return guard(() =>
-      this.sandbox.files.list(this.cwd).then((files) => files.map((file) => file.name)),
-    ).orThrow((error) => {
-      this.logger.warn(error, 'Failed to list files');
-      return new SandboxFileListException(error);
-    });
+  /**
+   * Write S3 credentials to file in sandbox
+   * Executor will read and delete this file automatically
+   */
+  private async writeCredentials(s3Config: S3Config): Promise<void> {
+    const content = `${s3Config.accessKey}:${s3Config.secretKey}`;
+    await this.sandbox.commands.run(`printf '%s' '${content}' > ${EXECUTOR_CREDENTIALS_PATH}`);
+  }
+
+  /**
+   * Build S3 input config for executor
+   */
+  private buildS3Input(s3Config: S3Config, s3DrivePath: string) {
+    return {
+      endpoint: s3Config.endPoint,
+      passwdFile: EXECUTOR_CREDENTIALS_PATH,
+      bucket: s3Config.bucket,
+      region: s3Config.region,
+      prefix: s3DrivePath,
+    };
+  }
+
+  /**
+   * Parse executor JSON output from stdout
+   * Handles cases where stdout may contain log lines before the JSON
+   */
+  private parseExecutorOutput(stdout: string): ExecutorOutput {
+    const trimmed = stdout.trim();
+
+    this.logger.debug(
+      {
+        sandboxId: this.sandboxId,
+        stdoutLength: stdout?.length,
+        trimmedLength: trimmed?.length,
+        stdoutPreview: trimmed?.slice(0, 500),
+      },
+      '[parseExecutorOutput] Parsing stdout',
+    );
+
+    if (!trimmed) {
+      throw new SandboxExecutionFailedException('No output from executor');
+    }
+
+    // Find last JSON line (executor outputs JSON as last line)
+    const lines = trimmed.split('\n');
+    this.logger.debug(
+      { sandboxId: this.sandboxId, lineCount: lines.length },
+      '[parseExecutorOutput] Split into lines',
+    );
+
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line.startsWith('{') && line.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(line);
+          this.logger.debug(
+            {
+              sandboxId: this.sandboxId,
+              lineIndex: i,
+              parsedKeys: Object.keys(parsed),
+              hasDiff: !!parsed.diff,
+              diffKeys: parsed.diff ? Object.keys(parsed.diff) : null,
+            },
+            '[parseExecutorOutput] Successfully parsed JSON',
+          );
+          return parsed;
+        } catch (e) {
+          this.logger.warn(
+            { sandboxId: this.sandboxId, lineIndex: i, error: e.message },
+            '[parseExecutorOutput] JSON parse failed, trying previous line',
+          );
+        }
+      }
+    }
+
+    throw new SandboxExecutionFailedException(`Invalid executor output: ${trimmed.slice(0, 200)}`);
   }
 
   async kill(): Promise<void> {
@@ -407,19 +439,23 @@ export class SandboxWrapper {
   }
 
   /**
-   * Check if sandbox gRPC endpoint is ready
-   * Polls with commands.run('true') until success or max attempts
+   * Check if sandbox and executor are ready
+   * Verifies executor binary is available and working
    */
   async healthCheck(): Promise<boolean> {
     const { HEALTH_CHECK_MAX_ATTEMPTS, HEALTH_CHECK_INTERVAL_MS } = SCALEBOX_DEFAULTS;
 
     return guard
-      .retry(() => this.runCommand('true').then(() => true), {
-        maxAttempts: HEALTH_CHECK_MAX_ATTEMPTS,
-        initialDelay: HEALTH_CHECK_INTERVAL_MS,
-        maxDelay: HEALTH_CHECK_INTERVAL_MS,
-        backoffFactor: 1,
-      })
+      .retry(
+        () =>
+          this.sandbox.commands.run('refly-executor-slim --version').then((r) => r.exitCode === 0),
+        {
+          maxAttempts: HEALTH_CHECK_MAX_ATTEMPTS,
+          initialDelay: HEALTH_CHECK_INTERVAL_MS,
+          maxDelay: HEALTH_CHECK_INTERVAL_MS,
+          backoffFactor: 1,
+        },
+      )
       .orElse(async () => false);
   }
 }

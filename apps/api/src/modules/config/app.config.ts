@@ -241,6 +241,9 @@ export default () => ({
   sandbox: {
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
+      // Template
+      templateName: process.env.SCALEBOX_TEMPLATE_NAME,
+      codeSizeThreshold: process.env.SCALEBOX_CODE_SIZE_THRESHOLD,
       // Sandbox
       sandboxTimeoutMs: process.env.SCALEBOX_SANDBOX_TIMEOUT_MS,
       // Pool
@@ -253,6 +256,13 @@ export default () => ({
       lockPollIntervalMs: process.env.SCALEBOX_LOCK_POLL_INTERVAL_MS,
       lockInitialTtlSec: process.env.SCALEBOX_LOCK_INITIAL_TTL_SEC,
       lockRenewalIntervalMs: process.env.SCALEBOX_LOCK_RENEWAL_INTERVAL_MS,
+      // Executor limits
+      limits: {
+        maxFileSize: process.env.SCALEBOX_LIMITS_MAX_FILE_SIZE,
+        maxTotalWrite: process.env.SCALEBOX_LIMITS_MAX_TOTAL_WRITE,
+        maxFiles: process.env.SCALEBOX_LIMITS_MAX_FILES,
+        maxProcesses: process.env.SCALEBOX_LIMITS_MAX_PROCESSES,
+      },
     },
   },
 });
