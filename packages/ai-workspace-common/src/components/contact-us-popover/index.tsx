@@ -55,7 +55,7 @@ export const ContactUsPopover: React.FC<ContactUsPopoverProps> = ({ children, op
 
         <Button type="text" icon={<Close size={24} />} onClick={() => setOpen(false)} />
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {currentLanguage === 'zh-CN' ? (
           <ContactCard
             icon={<img src={Feishu} alt="Feishu" className="w-16 h-16" />}

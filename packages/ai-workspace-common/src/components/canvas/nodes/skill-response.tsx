@@ -159,7 +159,14 @@ const NodeStatusBar = memo(
               {status === 'failed' && isUserAbort ? (
                 <Paragraph
                   className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
-                  ellipsis={{ rows: 8, tooltip: true }}
+                  ellipsis={{
+                    rows: 8,
+                    tooltip: (
+                      <div className="max-h-[300px] overflow-y-auto">
+                        {t('canvas.skillResponse.userAbort.description')}
+                      </div>
+                    ),
+                  }}
                 >
                   {t('canvas.skillResponse.userAbort.description')}
                 </Paragraph>
@@ -168,7 +175,10 @@ const NodeStatusBar = memo(
                   <Paragraph
                     key={index}
                     className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
-                    ellipsis={{ rows: 8, tooltip: true }}
+                    ellipsis={{
+                      rows: 8,
+                      tooltip: <div className="max-h-[300px] overflow-y-auto">{error}</div>,
+                    }}
                   >
                     {error}
                   </Paragraph>
