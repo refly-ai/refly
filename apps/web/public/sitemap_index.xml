@@ -6,4 +6,7 @@
   <sitemap>
     <loc>https://refly.ai/sitemap-templates.xml</loc>
   </sitemap>
+  <sitemap>
+    <loc>https://refly.ai/workflow-marketplace/sitemap.xml</loc>
+  </sitemap>
 </sitemapindex>
