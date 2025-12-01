@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
 import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
+import { TemplateCardSkeleton } from '@refly-packages/ai-workspace-common/components/canvas-template/template-card-skeleton';
 import { canvasTemplateEnabled } from '@refly/ui-kit';
 import { useSiderStoreShallow } from '@refly/stores';
 import cn from 'classnames';
@@ -65,7 +66,7 @@ export const FrontPage = memo(() => {
 
   const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas({});
 
-  const { data } = useListCanvasTemplateCategories({}, undefined, {
+  const { data, isLoading: isLoadingCategories } = useListCanvasTemplateCategories({}, undefined, {
     enabled: true,
   });
 
@@ -226,13 +227,21 @@ export const FrontPage = memo(() => {
           )}
 
           <div className="flex-1">
-            <TemplateList
-              source="front-page"
-              scrollableTargetId="front-page-scrollable-div"
-              language={templateLanguage}
-              categoryId={templateCategoryId}
-              className="!bg-transparent !px-0 !pt-0 -ml-2 -mt-2"
-            />
+            {!templateCategoryId || isLoadingCategories ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <TemplateCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : (
+              <TemplateList
+                source="front-page"
+                scrollableTargetId="front-page-scrollable-div"
+                language={templateLanguage}
+                categoryId={templateCategoryId}
+                className="!bg-transparent !px-0 !pt-0 -ml-2 -mt-2"
+              />
+            )}
           </div>
         </ModuleContainer>
       )}

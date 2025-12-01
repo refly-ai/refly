@@ -6,21 +6,33 @@ import {
   CreateCanvasTemplateRequest,
   UpdateCanvasTemplateRequest,
 } from '@refly/openapi-schema';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../common/prisma.service';
 import { genCanvasTemplateID } from '@refly/utils';
+import { PrismaService } from '../common/prisma.service';
 import { ShareCreationService } from '../share/share-creation.service';
 import { MiscService } from '../misc/misc.service';
+import { SingleFlightCache } from '../../utils/cache';
+
+import type { CanvasTemplateCategory, Prisma } from '@prisma/client';
+
+const TEMPLATE_CATEGORY_CACHE_TTL = 60 * 1000;
 
 @Injectable()
 export class TemplateService {
   private logger = new Logger(TemplateService.name);
+  private readonly canvasTemplateCategoryCache: SingleFlightCache<CanvasTemplateCategory[]>;
 
   constructor(
     private prisma: PrismaService,
     private shareCreationService: ShareCreationService,
     private miscService: MiscService,
-  ) {}
+  ) {
+    this.canvasTemplateCategoryCache = new SingleFlightCache<CanvasTemplateCategory[]>(
+      this.loadCanvasTemplateCategories.bind(this),
+      {
+        ttl: TEMPLATE_CATEGORY_CACHE_TTL,
+      },
+    );
+  }
 
   async listCanvasTemplates(user: User | null, param: ListCanvasTemplatesData['query']) {
     const { categoryId, scope, language, page, pageSize } = param;
@@ -180,6 +192,10 @@ export class TemplateService {
   }
 
   async listCanvasTemplateCategories() {
+    return this.canvasTemplateCategoryCache.get();
+  }
+
+  private async loadCanvasTemplateCategories(): Promise<CanvasTemplateCategory[]> {
     // Get all categories that are not deleted
     const categories = await this.prisma.canvasTemplateCategory.findMany({
       where: {
@@ -189,6 +205,10 @@ export class TemplateService {
         name: 'asc',
       },
     });
+
+    if (categories.length === 0) {
+      return [];
+    }
 
     // Get all category IDs
     const categoryIds = categories.map((cat) => cat.categoryId);
@@ -202,8 +222,11 @@ export class TemplateService {
       select: { templateId: true },
     });
 
-    const publicTemplateIds =
-      publicTemplates?.map((t) => t?.templateId).filter((id): id is string => !!id) ?? [];
+    const publicTemplateIds = publicTemplates.map((t) => t.templateId);
+
+    if (publicTemplateIds.length === 0) {
+      return [];
+    }
 
     // Count templates for each category using groupBy
     // Only count public templates that are not deleted
