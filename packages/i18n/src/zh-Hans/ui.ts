@@ -277,7 +277,7 @@ const translations = {
     uploadFailed: '上传失败',
     upload: {
       notification: {
-        uploading: '正在上传 {{count}}  个文件',
+        uploading: '正在上传 {{count}} 个文件',
         progress: '已完成 {{completed}}/{{total}}',
         complete: '完成',
         success: '成功上传 {{count}} 个文件',
