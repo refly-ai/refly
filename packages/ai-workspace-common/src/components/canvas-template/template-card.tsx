@@ -66,8 +66,6 @@ export const TemplateCard = ({ template, className, showUser = true }: TemplateC
     return template.shareUser?.avatar || AVATAR_PLACEHOLDER_IMAGE;
   }, [template.shareUser]);
 
-  const iconFilterStyle = useMemo(() => ({ filter: 'var(--refly-icon-filter, none)' }), []);
-
   const formattedDate = useMemo(() => {
     if (!template.createdAt) {
       return '';
@@ -118,21 +116,13 @@ export const TemplateCard = ({ template, className, showUser = true }: TemplateC
 
   return (
     <div
-      className={`${className ?? ''} w-full h-[262px] overflow-hidden flex flex-col cursor-pointer group relative transition-shadow duration-200 ease-out`}
+      className={`${className ?? ''} w-full h-[262px] rounded-[12px] border-[0.5px] overflow-hidden flex flex-col cursor-pointer group relative transition-shadow duration-200 ease-out hover:shadow-[0px_8px_24px_0px_var(--refly-modal-mask)]`}
       style={{
         borderRadius: '12px',
-        border: '0.5px solid var(--border---refly-Card-Border, rgba(0, 0, 0, 0.10))',
-        background: 'var(--bg---refly-bg-content-z2, #FFF)',
-        boxShadow: '0px 0px 0px 0px transparent',
+        border: '0.5px solid var(--refly-Card-Border)',
+        background: 'var(--refly-bg-content-z2)',
       }}
       onClick={handlePreview}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow =
-          '0px 8px 24px 0px var(--refly-modal-mask, rgba(0, 0, 0, 0.1))';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = '0px 0px 0px 0px transparent';
-      }}
     >
       <div className="relative w-full h-[160px] overflow-hidden flex-shrink-0">
         <img
@@ -160,25 +150,21 @@ export const TemplateCard = ({ template, className, showUser = true }: TemplateC
               <img
                 src={authorAvatar}
                 alt={author}
-                className="w-4 h-4 rounded-full border-[0.5px] flex-shrink-0"
-                style={{ borderColor: 'var(--refly-Card-Border)' }}
+                className="w-4 h-4 rounded-full border-[0.5px] border-refly-Card-Border flex-shrink-0"
                 onError={handleAuthorAvatarError}
               />
               <span
-                className="text-[11px] leading-[1.4545454545454546em] flex-shrink-0"
-                style={{ color: 'var(--refly-text-2)', fontFamily: 'Open Sans, sans-serif' }}
+                className="text-[11px] leading-[1.4545454545454546em] text-refly-text-2 flex-shrink-0"
+                style={{ fontFamily: 'Open Sans, sans-serif' }}
               >
                 {author}
               </span>
-              <div
-                className="w-px h-[10px] rounded-[3px] flex-shrink-0"
-                style={{ backgroundColor: 'var(--refly-line)' }}
-              />
+              <div className="w-px h-[10px] rounded-[3px] bg-refly-line flex-shrink-0" />
             </>
           )}
           <span
-            className="text-[11px] leading-[1.4545454545454546em] flex-shrink-0"
-            style={{ color: 'var(--refly-text-2)', fontFamily: 'Open Sans, sans-serif' }}
+            className="text-[11px] leading-[1.4545454545454546em] text-refly-text-2 flex-shrink-0"
+            style={{ fontFamily: 'Open Sans, sans-serif' }}
           >
             {formattedDate}
           </span>
@@ -190,20 +176,17 @@ export const TemplateCard = ({ template, className, showUser = true }: TemplateC
               src={diamondIcon}
               alt="price"
               className="w-3.5 h-3.5 flex-shrink-0"
-              style={iconFilterStyle}
+              style={{ filter: 'var(--refly-icon-filter, none)' }}
             />
             <span
-              className="text-base font-semibold leading-[1em] flex-shrink-0"
-              style={{
-                fontFamily: 'Open Sans, sans-serif',
-                color: 'var(--refly-text-0)',
-              }}
+              className="text-base font-semibold leading-[1em] text-refly-text-0 flex-shrink-0"
+              style={{ fontFamily: 'Open Sans, sans-serif' }}
             >
               {points}
             </span>
             <span
-              className="text-xs leading-[1.3333333333333333em] flex-shrink-0"
-              style={{ fontFamily: 'Open Sans, sans-serif', color: 'var(--refly-text-caption)' }}
+              className="text-xs leading-[1.3333333333333333em] text-refly-text-caption flex-shrink-0"
+              style={{ fontFamily: 'Open Sans, sans-serif' }}
             >
               {t('template.perRun', { defaultValue: '/run' })}
             </span>
