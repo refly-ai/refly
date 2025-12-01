@@ -7,7 +7,7 @@ export const LightLoading = () => {
       <div className="flex justify-center items-center mb-5">
         <Logo
           logoProps={{ show: true, className: '!w-10' }}
-          textProps={{ show: true, className: '!w-[90px]' }}
+          textProps={{ show: true, className: '!w-[90px] translate-y-[2px]' }}
         />
       </div>
       <div className="text-gray-600 dark:text-gray-300">
