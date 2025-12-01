@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useUserStoreShallow } from '@refly/stores';
-
-const SUCCESS_ANIMATION_DURATION = 1800;
+import { Button } from 'antd';
+import { useTranslation } from 'react-i18next';
 
 // confetti animation styles
 const CONFETTI_STYLES = `
@@ -83,6 +83,7 @@ const fireConfetti = (container: HTMLElement) => {
 };
 
 export const OnboardingSuccessModal = () => {
+  const { t } = useTranslation();
   const { showOnboardingSuccessAnimation, setShowOnboardingSuccessAnimation } = useUserStoreShallow(
     (state) => ({
       showOnboardingSuccessAnimation: state.showOnboardingSuccessAnimation,
@@ -90,6 +91,7 @@ export const OnboardingSuccessModal = () => {
     }),
   );
   const containerRef = useRef<HTMLDivElement>(null);
+  const styleElementRef = useRef<HTMLStyleElement | null>(null);
 
   useEffect(() => {
     if (!showOnboardingSuccessAnimation) {
@@ -100,6 +102,7 @@ export const OnboardingSuccessModal = () => {
     const styleElement = document.createElement('style');
     styleElement.textContent = CONFETTI_STYLES;
     document.head.appendChild(styleElement);
+    styleElementRef.current = styleElement;
 
     // fire animation
     const container = containerRef.current?.querySelector('#confetti-layer') as HTMLElement;
@@ -107,31 +110,134 @@ export const OnboardingSuccessModal = () => {
       fireConfetti(container);
     }
 
-    const timer = window.setTimeout(() => {
-      setShowOnboardingSuccessAnimation(false);
-      // clean styles
-      document.head.removeChild(styleElement);
-    }, SUCCESS_ANIMATION_DURATION);
-
     return () => {
-      window.clearTimeout(timer);
-      if (document.head.contains(styleElement)) {
-        document.head.removeChild(styleElement);
+      if (styleElementRef.current && document.head.contains(styleElementRef.current)) {
+        document.head.removeChild(styleElementRef.current);
+        styleElementRef.current = null;
       }
     };
-  }, [setShowOnboardingSuccessAnimation, showOnboardingSuccessAnimation]);
+  }, [showOnboardingSuccessAnimation]);
+
+  const handleClose = useCallback(() => {
+    setShowOnboardingSuccessAnimation(false);
+    // clean styles
+    if (styleElementRef.current && document.head.contains(styleElementRef.current)) {
+      document.head.removeChild(styleElementRef.current);
+      styleElementRef.current = null;
+    }
+  }, [setShowOnboardingSuccessAnimation]);
 
   if (!showOnboardingSuccessAnimation) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 z-[65] bg-refly-bg-canvas/90 flex flex-col items-center justify-center">
-      <div ref={containerRef} className="relative" style={{ width: '122px', height: '122px' }}>
+    <div className="fixed inset-0 z-[65] bg-black/50 flex flex-col items-center justify-center">
+      {/* Background card container */}
+      <div className="relative">
+        {/* Decorative stars */}
+        <svg
+          className="absolute -top-12 left-16 w-5 h-5 text-[#2DD4BF] z-20"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
+        </svg>
+        <svg
+          className="absolute -top-8 right-12 w-7 h-7 text-[#2DD4BF] z-20"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
+        </svg>
+
+        {/* Inner card (letter) - positioned to stick out from envelope */}
         <div
-          id="confetti-layer"
-          className="fixed top-1/2 left-1/2 w-0 h-0 z-[9999] pointer-events-none overflow-visible -translate-x-1/2 -translate-y-1/2"
-        />
+          className="absolute left-6 right-6 rounded-2xl z-10 shadow-lg"
+          style={{
+            top: '-20px',
+            height: '240px',
+            background: 'linear-gradient(180deg, #D1FAF0 0%, #E8FFF9 100%)',
+          }}
+        >
+          {/* Title with decorative lines */}
+          <div className="flex items-center justify-center gap-2 pt-6 pb-4">
+            <span className="w-4 h-[1px] bg-[#2F9E8C]" />
+            <span className="text-[#2F9E8C] text-base font-medium">
+              {t('onboarding.rewardTitle', '获得奖励积分')}
+            </span>
+            <span className="w-4 h-[1px] bg-[#2F9E8C]" />
+          </div>
+          {/* White content area */}
+          <div className="mx-4 bg-white rounded-xl shadow-sm flex items-center justify-center h-[140px]">
+            {/* Star icon + points text */}
+            <div className="flex items-center gap-3">
+              <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"
+                  fill="url(#starGradient)"
+                />
+                <defs>
+                  <linearGradient
+                    id="starGradient"
+                    x1="12"
+                    y1="2"
+                    x2="12"
+                    y2="22"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop stopColor="#4FD1C5" />
+                    <stop offset="1" stopColor="#2DD4BF" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <span className="text-4xl font-bold text-gray-900">
+                {t('onboarding.rewardPoints', '3000积分')}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main card (envelope) */}
+        <div
+          className="relative rounded-3xl overflow-hidden shadow-xl"
+          style={{
+            width: '360px',
+            height: '300px',
+            marginTop: '20px',
+            background: 'linear-gradient(180deg, #E0FFF9 0%, #F0FFFC 100%)',
+          }}
+        >
+          {/* Bottom envelope fold effect */}
+          <div
+            className="absolute bottom-0 left-0 right-0 rounded-t-[40px] flex items-center justify-center"
+            style={{
+              height: '100px',
+              background: 'linear-gradient(180deg, #E8FFF9 0%, #F5FFFD 100%)',
+            }}
+          >
+            {/* Action button */}
+            <Button
+              type="primary"
+              onClick={handleClose}
+              className="w-[200px] h-14 rounded-full text-lg font-medium"
+            >
+              {t('common.startExperience', '立刻体验')}
+            </Button>
+          </div>
+
+          {/* Confetti animation layer */}
+          <div
+            ref={containerRef}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{ top: '-20px' }}
+          >
+            <div
+              id="confetti-layer"
+              className="absolute w-0 h-0 z-[9999] pointer-events-none overflow-visible"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
