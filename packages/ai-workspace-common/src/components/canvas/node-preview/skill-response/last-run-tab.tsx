@@ -1,15 +1,12 @@
 import { memo, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Divider, Skeleton } from 'antd';
+import { Skeleton } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { Thinking } from 'refly-icons';
-import { ActionResult, ActionMessage, GenericToolset } from '@refly/openapi-schema';
+import { ActionResult, GenericToolset } from '@refly/openapi-schema';
 import { ActionStepCard } from './action-step';
 import { FailureNotice } from './failure-notice';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
-import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
-import ToolCall from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/render';
-import { ReasoningContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/reasoning-content-preview';
+import { MessageList } from '@refly-packages/ai-workspace-common/components/result-message';
 
 interface LastRunTabProps {
   loading: boolean;
@@ -17,7 +14,6 @@ interface LastRunTabProps {
   resultId: string;
   result?: ActionResult;
   outputStep?: ActionResult['steps'][number];
-  statusText: string;
   query?: string | null;
   title?: string;
   nodeId: string;
@@ -25,126 +21,12 @@ interface LastRunTabProps {
   handleRetry: () => void;
 }
 
-/**
- * Render AI message with markdown content
- */
-const AIMessageCard = memo(
-  ({
-    message,
-    resultId,
-    stepStatus,
-  }: {
-    message: ActionMessage;
-    resultId: string;
-    stepStatus: 'executing' | 'finish';
-  }) => {
-    const content = message.content ?? '';
-    const reasoningContent = message.reasoningContent ?? '';
-    const hasReasoningContent = Boolean(reasoningContent?.trim());
-
-    if (!content?.trim()) return null;
-
-    return (
-      <div className="my-3 text-base">
-        <div className={`skill-response-content-${resultId}-${message.messageId}`}>
-          {hasReasoningContent && (
-            <ReasoningContentPreview
-              content={reasoningContent}
-              stepStatus={stepStatus}
-              className="my-3"
-              resultId={resultId}
-            />
-          )}
-          <Markdown content={content} resultId={resultId} />
-        </div>
-      </div>
-    );
-  },
-);
-AIMessageCard.displayName = 'AIMessageCard';
-
-/**
- * Render tool message using ToolCall component
- */
-const ToolMessageCard = memo(({ message }: { message: ActionMessage }) => {
-  const toolCallMeta = message.toolCallMeta;
-  const toolCallResult = message.toolCallResult;
-
-  // Parse content to get arguments and result
-  // For tool messages, content might contain the result
-  const toolProps = useMemo(
-    () => ({
-      'data-tool-name': toolCallMeta?.toolName ?? 'unknown',
-      'data-tool-toolset-key': toolCallMeta?.toolsetKey ?? 'unknown',
-      'data-tool-call-id': toolCallMeta?.toolCallId ?? message.toolCallId ?? '',
-      'data-tool-call-status': toolCallResult?.status ?? toolCallMeta?.status ?? 'executing',
-      'data-tool-created-at': String(
-        toolCallMeta?.startTs ?? new Date(toolCallResult?.createdAt ?? 0).getTime(),
-      ),
-      'data-tool-updated-at': String(
-        toolCallMeta?.endTs ?? new Date(toolCallResult?.updatedAt ?? 0).getTime(),
-      ),
-      'data-tool-arguments': JSON.stringify(toolCallResult?.input),
-      'data-tool-result': JSON.stringify(toolCallResult?.output),
-      'data-tool-error': toolCallMeta?.error,
-    }),
-    [toolCallMeta, message, toolCallResult],
-  );
-
-  return (
-    <div className="my-2">
-      <ToolCall {...toolProps} />
-    </div>
-  );
-});
-ToolMessageCard.displayName = 'ToolMessageCard';
-
-/**
- * Render message list based on message type
- */
-const MessageList = memo(
-  ({
-    messages,
-    resultId,
-    stepStatus,
-  }: {
-    messages: ActionMessage[];
-    resultId: string;
-    stepStatus: 'executing' | 'finish';
-  }) => {
-    if (!messages?.length) return null;
-
-    return (
-      <div className="flex flex-col">
-        {messages.map((message) => {
-          if (message.type === 'ai') {
-            return (
-              <AIMessageCard
-                key={message.messageId}
-                message={message}
-                resultId={resultId}
-                stepStatus={stepStatus}
-              />
-            );
-          }
-          if (message.type === 'tool') {
-            return <ToolMessageCard key={message.messageId} message={message} />;
-          }
-          return null;
-        })}
-      </div>
-    );
-  },
-);
-MessageList.displayName = 'MessageList';
-
 const LastRunTabComponent = ({
   loading,
   isStreaming,
   resultId,
   result,
   outputStep,
-  statusText,
   query,
   title,
   handleRetry,
@@ -155,7 +37,6 @@ const LastRunTabComponent = ({
   const hasMessages = messages.length > 0;
   // Fallback to steps if no messages (for backward compatibility)
   const shouldUseSteps = !hasMessages && !!outputStep;
-  const hasContent = hasMessages || shouldUseSteps;
   const resultStatus = result?.status;
   const messageStepStatus = useMemo(() => {
     return resultStatus === 'executing' || resultStatus === 'waiting' || resultStatus === 'init'
@@ -254,20 +135,12 @@ const LastRunTabComponent = ({
             {loading && !isStreaming && (
               <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
             )}
-            {(result?.status === 'executing' || result?.status === 'waiting') &&
-              !hasContent &&
-              statusText && (
-                <div className="flex flex-col gap-2 animate-pulse">
-                  <Divider dashed className="my-2" />
-                  <div className="m-2 flex items-center gap-1 text-gray-500">
-                    <Thinking size={16} />
-                    <span className="text-sm">{statusText}</span>
-                  </div>
-                </div>
-              )}
-            {hasMessages && (
-              <MessageList messages={messages} resultId={resultId} stepStatus={messageStepStatus} />
-            )}
+            <MessageList
+              messages={messages}
+              resultId={resultId}
+              status={resultStatus}
+              stepStatus={messageStepStatus}
+            />
             {shouldUseSteps && (
               <ActionStepCard
                 result={result}

@@ -252,6 +252,7 @@ const translations = {
     newDocument: '新文档',
     docs: '文档',
     skill: '技能',
+    thinking: 'Refly AI 思考中',
     thread: '会话',
     meta: '元信息',
     project: '知识库',

@@ -62,6 +62,7 @@ const translations = {
     docs: 'Docs',
     skill: 'Skill',
     thread: 'Thread',
+    thinking: 'Refly AI is thinking',
     meta: 'Meta',
     project: 'Project',
     upgrade: 'Upgrade',
@@ -3197,7 +3198,7 @@ const translations = {
         'Help me generate a sequence of animation scenes in the style of Makoto Shinkai, telling the story of "growing up" from childhood to adulthood.',
     },
     sessionDetail: {
-      thinking: 'Thinking',
+      thinking: 'Refly is thinking',
       approve: 'Approve',
       confirmClearCanvas: {
         title: 'Confirm Clear Canvas',
