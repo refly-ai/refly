@@ -61,7 +61,7 @@ const fireConfetti = (container: HTMLElement) => {
     p.style.width = `${size}px`;
     p.style.height = `${size}px`;
 
-    // 计算扩散坐标
+    // calculate spread coordinates
     const angle = Math.random() * Math.PI * 2;
     const dist = 160 + Math.random() * 140;
     const tx = `${Math.cos(angle) * dist}px`;
