@@ -418,7 +418,13 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
 
       {shouldRenderFilePreview &&
         filePreviewDriveFile.map((file) => (
-          <ProductCard key={file.fileId} file={file} source="card" classNames="mt-3" />
+          <ProductCard
+            key={file.fileId}
+            file={file}
+            source="card"
+            classNames="mt-3"
+            inAgentDetail={true}
+          />
         ))}
     </>
   );
