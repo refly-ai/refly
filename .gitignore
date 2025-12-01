@@ -52,3 +52,6 @@ docs/.vitepress/cache/*
 *.opt
 
 .claude/settings.local.json
+
+# Python
+__pycache__/
