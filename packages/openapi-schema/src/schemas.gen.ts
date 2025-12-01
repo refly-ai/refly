@@ -8430,17 +8430,22 @@ export const ProviderItemConfigSchema = {
 export const CreditBillingSchema = {
   type: 'object',
   description: 'Credit billing configuration for provider items',
-  required: ['unitCost', 'unit', 'minCharge'],
+  required: ['unit', 'inputCost', 'outputCost', 'minCharge'],
   properties: {
-    unitCost: {
-      type: 'number',
-      description: 'Credit consumption per unit usage',
-      minimum: 0,
-    },
     unit: {
       type: 'string',
       description: 'Measurement unit (e.g., token, product, second)',
       example: '5k_tokens',
+    },
+    inputCost: {
+      type: 'number',
+      description: 'Credit consumption per unit for input tokens',
+      minimum: 0,
+    },
+    outputCost: {
+      type: 'number',
+      description: 'Credit consumption per unit for output tokens',
+      minimum: 0,
     },
     minCharge: {
       type: 'number',
@@ -10030,6 +10035,14 @@ export const WorkflowAppSchema = {
     coverUrl: {
       type: 'string',
       description: 'Cover image URL',
+    },
+    publishToCommunity: {
+      type: 'boolean',
+      description: 'Whether to publish this app to the community',
+    },
+    publishReviewStatus: {
+      type: 'string',
+      description: 'Community publish review status',
     },
     createdAt: {
       type: 'string',

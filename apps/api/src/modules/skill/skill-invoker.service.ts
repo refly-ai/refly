@@ -1,16 +1,19 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 
 import { DirectConnection } from '@hocuspocus/server';
-import { AIMessageChunk } from '@langchain/core/dist/messages';
+import { AIMessage, HumanMessage } from '@langchain/core/messages';
+import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/dist/messages';
 import { CallbackHandler as LangfuseCallbackHandler } from '@langfuse/langchain';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { ProjectNotFoundError } from '@refly/errors';
 import {
+  ActionResult,
+  ActionStep,
   Artifact,
-  CreditBilling,
   DriveFile,
   LLMModelConfig,
+  ProviderItem,
   SkillEvent,
   TokenUsageItem,
   ToolCallMeta,
@@ -24,7 +27,7 @@ import {
   SkillRunnableMeta,
   createSkillInventory,
 } from '@refly/skill-template';
-import { genImageID, safeParseJSON } from '@refly/utils';
+import { genImageID, getWholeParsedContent, safeParseJSON } from '@refly/utils';
 import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
@@ -58,6 +61,7 @@ import { ToolService } from '../tool/tool.service';
 import { InvokeSkillJobData } from './skill.dto';
 import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
+import { normalizeCreditBilling } from '../../utils/credit-billing';
 
 @Injectable()
 export class SkillInvokerService {
@@ -100,6 +104,54 @@ export class SkillInvokerService {
     this.logger.log(`Skill inventory initialized: ${this.skillInventory.length}`);
   }
 
+  private async buildLangchainMessages(
+    user: User,
+    providerItem: ProviderItem,
+    result: ActionResult,
+    steps: ActionStep[],
+  ): Promise<BaseMessage[]> {
+    const query = result.input?.query || result.title;
+
+    // Only create content array if images exist
+    let messageContent: string | MessageContentComplex[] = query;
+    if (result.input?.images?.length > 0 && (providerItem?.config as any)?.capabilities?.vision) {
+      const imageUrls = await this.miscService.generateImageUrls(user, result.input.images);
+      messageContent = [
+        { type: 'text', text: query },
+        ...imageUrls.map((url) => ({ type: 'image_url', image_url: { url } })),
+      ];
+    }
+
+    // Build consolidated tool call history by step from DB to avoid duplicating start/stream/end fragments
+    const toolCallsByStep = await this.toolCallService.fetchConsolidatedToolUseOutputByStep(
+      result.resultId,
+      result.version,
+    );
+
+    const aiMessages =
+      steps?.length > 0
+        ? steps.map((step) => {
+            const toolCallOutputs: any[] = toolCallsByStep?.get(step?.name ?? '') ?? [];
+            const mergedContent = getWholeParsedContent(step.reasoningContent, step.content ?? '');
+            return new AIMessage({
+              content: mergedContent,
+              additional_kwargs: {
+                skillMeta: result.actionMeta,
+                structuredData: step.structuredData,
+                type: result.type,
+                tplConfig:
+                  typeof result.tplConfig === 'string'
+                    ? safeParseJSON(result.tplConfig)
+                    : result.tplConfig,
+                toolCalls: toolCallOutputs,
+              },
+            });
+          })
+        : [];
+
+    return [new HumanMessage({ content: messageContent }), ...aiMessages];
+  }
+
   private async buildInvokeConfig(
     user: User,
     data: InvokeSkillJobData & {
@@ -110,8 +162,10 @@ export class SkillInvokerService {
       context,
       tplConfig,
       runtimeConfig,
+      providerItem,
       modelConfigMap,
       provider,
+      resultHistory,
       projectId,
       eventListener,
       toolsets,
@@ -151,6 +205,12 @@ export class SkillInvokerService {
         throw new ProjectNotFoundError(`project ${projectId} not found`);
       }
       config.configurable.project = projectPO2DTO(project);
+    }
+
+    if (resultHistory?.length > 0) {
+      config.configurable.chatHistory = await Promise.all(
+        resultHistory.map((r) => this.buildLangchainMessages(user, providerItem, r, r.steps)),
+      ).then((messages) => messages.flat());
     }
 
     if (toolsets?.length > 0) {
@@ -1326,7 +1386,11 @@ export class SkillInvokerService {
           const providerItem = providerItemsMap.get(String(tokenUsage.modelName));
 
           if (providerItem?.creditBilling) {
-            const creditBilling: CreditBilling = safeParseJSON(providerItem.creditBilling);
+            const creditBilling = normalizeCreditBilling(safeParseJSON(providerItem.creditBilling));
+
+            if (!creditBilling) {
+              continue;
+            }
 
             const usage: TokenUsageItem = {
               tier: providerItem?.tier,

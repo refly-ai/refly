@@ -762,12 +762,43 @@ export class MiscService implements OnModuleInit {
     }
   }
 
+  async getInternalFileMetadata(
+    user: User,
+    storageKey: string,
+  ): Promise<{ contentType: string; lastModified: Date; visibility: FileVisibility }> {
+    const file = await this.prisma.staticFile.findFirst({
+      select: {
+        visibility: true,
+        contentType: true,
+        updatedAt: true,
+      },
+      where: { storageKey, uid: user.uid, deletedAt: null },
+    });
+
+    if (!file) {
+      throw new NotFoundException();
+    }
+
+    return {
+      contentType: file.contentType,
+      lastModified: new Date(file.updatedAt),
+      visibility: file.visibility as FileVisibility,
+    };
+  }
+
   async getInternalFileStream(
     user: User,
     storageKey: string,
-  ): Promise<{ data: Buffer; contentType: string }> {
+  ): Promise<{ data: Buffer; contentType: string; lastModified: Date }> {
     const file = await this.prisma.staticFile.findFirst({
-      select: { uid: true, visibility: true, entityId: true, entityType: true, contentType: true },
+      select: {
+        uid: true,
+        visibility: true,
+        entityId: true,
+        entityType: true,
+        contentType: true,
+        updatedAt: true,
+      },
       where: { storageKey, uid: user.uid, deletedAt: null },
     });
 
@@ -780,20 +811,44 @@ export class MiscService implements OnModuleInit {
     );
     const data = await streamToBuffer(readable);
 
-    return { data, contentType: file.contentType };
+    return { data, contentType: file.contentType, lastModified: new Date(file.updatedAt) };
   }
 
-  async getExternalFileStream(storageKey: string): Promise<{ data: Buffer; contentType: string }> {
+  async getExternalFileMetadata(
+    storageKey: string,
+  ): Promise<{ contentType: string; lastModified: Date }> {
+    const stat = await this.prisma.staticFile.findFirst({
+      select: { contentType: true, updatedAt: true },
+      where: { storageKey, deletedAt: null },
+    });
+
+    if (!stat) {
+      throw new NotFoundException(`File with key ${storageKey} not found`);
+    }
+
+    return {
+      contentType: stat.contentType ?? 'application/octet-stream',
+      lastModified: new Date(stat.updatedAt),
+    };
+  }
+
+  async getExternalFileStream(
+    storageKey: string,
+  ): Promise<{ data: Buffer; contentType: string; lastModified: Date }> {
     try {
       const [readable, stat] = await Promise.all([
         this.minioClient('public').getObject(storageKey),
         this.prisma.staticFile.findFirst({
-          select: { contentType: true },
+          select: { contentType: true, updatedAt: true },
           where: { storageKey, deletedAt: null },
         }),
       ]);
       const data = await streamToBuffer(readable);
-      return { data, contentType: stat?.contentType ?? 'application/octet-stream' };
+      return {
+        data,
+        contentType: stat?.contentType ?? 'application/octet-stream',
+        lastModified: stat?.updatedAt ? new Date(stat.updatedAt) : new Date(),
+      };
     } catch (error) {
       // Check if it's the Minio S3Error for key not found
       if (

@@ -786,8 +786,10 @@ export class CreditService {
       throw new Error(`No user found for uid ${uid}`);
     }
 
-    // Calculate credit cost directly from unitCost
-    const creditCost = creditBilling?.unitCost || 0;
+    // Calculate credit cost using the higher of input/output costs (they should be identical for media models)
+    const creditCost = creditBilling
+      ? Math.max(creditBilling.inputCost ?? 0, creditBilling.outputCost ?? 0)
+      : 0;
 
     // If no credit cost, just create usage record
     if (creditCost <= 0) {
@@ -833,15 +835,22 @@ export class CreditService {
     for (const step of creditUsageSteps) {
       const { usage, creditBilling } = step;
 
-      // Calculate tokens for this usage
-      const totalTokens = usage.inputTokens + usage.outputTokens;
+      const inputTokens = usage.inputTokens || 0;
+      const outputTokens = usage.outputTokens || 0;
 
       // Calculate credit cost for this usage
       let creditCost = 0;
-      if (creditBilling && creditBilling.unit === '5k_tokens') {
-        // Round up to nearest 5k tokens (not enough 5K counts as 5K)
-        const tokenUnits = Math.ceil(totalTokens / 5000);
-        creditCost = tokenUnits * (creditBilling.unitCost || 0);
+      if (creditBilling) {
+        if (creditBilling.unit === '5k_tokens') {
+          // Round up to nearest 5k tokens (not enough 5K counts as 5K)
+          const inputUnits = Math.ceil(inputTokens / 5000);
+          const outputUnits = Math.ceil(outputTokens / 5000);
+          const perInputUnit = creditBilling.inputCost || 0;
+          const perOutputUnit = creditBilling.outputCost || 0;
+          creditCost = inputUnits * perInputUnit + outputUnits * perOutputUnit;
+        } else {
+          creditCost = Math.max(creditBilling.inputCost, creditBilling.outputCost);
+        }
       }
 
       // Track original due amount before early bird discount
@@ -860,7 +869,8 @@ export class CreditService {
       // Add to model usage details - model name, total tokens, and credit cost
       modelUsageDetails.push({
         modelName: usage.modelName,
-        totalTokens: usage.inputTokens + usage.outputTokens,
+        inputTokens,
+        outputTokens,
         creditCost: creditCost,
       });
     }
