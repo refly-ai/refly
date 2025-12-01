@@ -67,6 +67,10 @@ const PublishTemplateButton = React.memo(
     const toolbarLoading =
       executionStats.executing > 0 || executionStats.waiting > 0 || skillResponseLoading;
 
+    const disabled = useMemo(() => {
+      return toolbarLoading || !skillResponseNodes?.length;
+    }, [toolbarLoading, skillResponseNodes]);
+
     return (
       <>
         <CreateWorkflowAppModal
@@ -88,15 +92,14 @@ const PublishTemplateButton = React.memo(
           placement="top"
         >
           <Button
-            className={cn(
-              toolbarLoading || !skillResponseNodes?.length ? 'opacity-50 cursor-not-allowed' : '',
-            )}
+            className={cn(disabled ? 'opacity-50 cursor-not-allowed' : '')}
             type="primary"
             icon={<TurnRight size={16} />}
             onClick={() => {
               logEvent('canvas::canvas_publish_template', Date.now(), {
                 canvas_id: canvasId,
               });
+              if (disabled) return;
               handlePublishToCommunity();
             }}
           >

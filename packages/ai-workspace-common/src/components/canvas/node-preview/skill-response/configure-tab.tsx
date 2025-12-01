@@ -10,6 +10,7 @@ import { ConfigInfoDisplay } from './config-info-display';
 import { useUploadImage } from '@refly-packages/ai-workspace-common/hooks/use-upload-image';
 import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
+import Down from '../../../../assets/down.svg';
 
 interface ConfigureTabProps {
   readonly?: boolean;
@@ -171,11 +172,9 @@ const ConfigureTabComponent = ({
           onDragLeave={!readonly ? handleDragLeave : undefined}
         >
           {dragging && (
-            <div
-              className="absolute inset-0 bg-refly-primary-default/10 border-2 border-refly-Card-Border rounded-lg flex items-center justify-center z-10"
-              style={{ backdropFilter: 'blur(20px)' }}
-            >
-              <div className="text-sm font-semibold text-refly-primary-default text-center">
+            <div className="absolute inset-0 border-solid border-[1px] border-refly-Card-Border bg-refly-primary-default/10 backdrop-blur-[10px] rounded-lg flex flex-col items-center justify-center z-10">
+              <img src={Down} alt="down" className="w-[44px] mb-5" />
+              <div className="text-sm font-bold text-center text-refly-text-0 leading-5">
                 {t('common.dragAndDropFiles')}
               </div>
             </div>

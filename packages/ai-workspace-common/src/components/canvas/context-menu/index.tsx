@@ -5,8 +5,7 @@ import { useReactFlow } from '@xyflow/react';
 import { SearchList } from '@refly-packages/ai-workspace-common/modules/entity-selector/components';
 import { CanvasNodeType, SearchDomain } from '@refly/openapi-schema';
 import { ContextItem } from '@refly-packages/ai-workspace-common/types/context';
-import { AiChat, Substrsct } from 'refly-icons';
-import { genMemoID } from '@refly/utils/id';
+import { AiChat } from 'refly-icons';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { logEvent } from '@refly/telemetry-web';
 import { useAddAgentGlobal } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-agent-global';
@@ -41,20 +40,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
   const { addNode } = useAddNode();
   const { addGlobalAgent } = useAddAgentGlobal();
 
-  const createMemo = (position: { x: number; y: number }) => {
-    const memoId = genMemoID();
-    addNode(
-      {
-        type: 'memo',
-        data: { title: t('canvas.nodeTypes.memo'), entityId: memoId },
-        position: position,
-      },
-      [],
-      true,
-      true,
-    );
-  };
-
   // Combined menu items
   const menuItems: MenuItem[] = [
     // Creation menu items
@@ -63,12 +48,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
       icon: AiChat,
       type: 'button',
       title: t('canvas.toolbar.askAI'),
-    },
-    {
-      key: 'createMemo',
-      icon: Substrsct,
-      type: 'button',
-      title: t('canvas.toolbar.createMemo'),
     },
   ];
 
@@ -130,10 +109,6 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
         addGlobalAgent({ position });
         setOpen(false);
         break;
-      case 'createMemo':
-        createMemo(position);
-        setOpen(false);
-        break;
     }
   };
 
@@ -170,7 +145,7 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
     const button = (
       <Button
         key={item.key}
-        className="w-full h-8 flex items-center gap-2 px-2 rounded text-sm hover:bg-refly-tertiary-hover"
+        className="w-full h-auto flex items-center gap-2 px-4 py-2 rounded-lg text-sm hover:bg-refly-tertiary-hover"
         type="text"
         loading={false}
         onClick={() => {
@@ -181,7 +156,7 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
         }}
       >
         {item.icon && <item.icon size={18} className="flex items-center w-4.5 h-4.5" />}
-        <span className="flex-1 text-left truncate">{item.title}</span>
+        <div className="flex-1 text-left truncate leading-6">{item.title}</div>
       </Button>
     );
 
@@ -191,7 +166,7 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
   return (
     <div
       ref={menuRef}
-      className="fixed z-[9999] bg-white rounded-lg shadow-lg p-2 w-[200px] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.06)] dark:bg-gray-900"
+      className="fixed z-[9999] bg-refly-bg-float-z3 rounded-lg shadow-lg w-[200px]"
       style={{
         left: `${menuScreenPosition.x}px`,
         top: `${menuScreenPosition.y}px`,
@@ -199,7 +174,7 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
     >
       {menuItems.map((item) => {
         if (item.type === 'divider') {
-          return <Divider key={item.key} className="my-1 h-[1px] bg-gray-100 dark:bg-gray-900" />;
+          return <Divider key={item.key} className="my-1 h-[1px] bg-refly-Card-Border" />;
         }
 
         if (item.type === 'popover') {
