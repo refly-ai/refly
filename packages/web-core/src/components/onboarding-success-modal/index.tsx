@@ -151,25 +151,25 @@ export const OnboardingSuccessModal = () => {
           <path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" />
         </svg>
 
-        {/* Inner card (letter) - positioned to stick out from envelope */}
+        {/* Inner card (letter) - extends to bottom of main card */}
         <div
           className="absolute left-6 right-6 rounded-2xl z-10 shadow-lg"
           style={{
             top: '-20px',
-            height: '240px',
-            background: 'linear-gradient(180deg, #D1FAF0 0%, #E8FFF9 100%)',
+            height: '320px',
+            background: 'linear-gradient(90deg, #CDFFEA 0%, #E9FFFE 100%)',
           }}
         >
           {/* Title with decorative lines */}
           <div className="flex items-center justify-center gap-2 pt-6 pb-4">
             <span className="w-4 h-[1px] bg-[#2F9E8C]" />
             <span className="text-[#2F9E8C] text-base font-medium">
-              {t('onboarding.rewardTitle', '获得奖励积分')}
+              {t('onboarding.rewardTitle')}
             </span>
             <span className="w-4 h-[1px] bg-[#2F9E8C]" />
           </div>
           {/* White content area */}
-          <div className="mx-4 bg-white rounded-xl shadow-sm flex items-center justify-center h-[140px]">
+          <div className="mx-4 bg-white rounded-xl shadow-sm flex items-center justify-center h-[120px]">
             {/* Star icon + points text */}
             <div className="flex items-center gap-3">
               <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none">
@@ -192,7 +192,7 @@ export const OnboardingSuccessModal = () => {
                 </defs>
               </svg>
               <span className="text-4xl font-bold text-gray-900">
-                {t('onboarding.rewardPoints', '3000积分')}
+                {t('onboarding.rewardPoints')}
               </span>
             </div>
           </div>
@@ -203,17 +203,18 @@ export const OnboardingSuccessModal = () => {
           className="relative rounded-3xl overflow-hidden shadow-xl"
           style={{
             width: '360px',
-            height: '300px',
+            height: '280px',
             marginTop: '20px',
-            background: 'linear-gradient(180deg, #E0FFF9 0%, #F0FFFC 100%)',
+            background: '#FFFFFF',
           }}
         >
-          {/* Bottom envelope fold effect */}
+          {/* Bottom envelope fold effect with 50% white overlay */}
           <div
-            className="absolute bottom-0 left-0 right-0 rounded-t-[40px] flex items-center justify-center"
+            className="absolute bottom-0 left-0 right-0 rounded-t-[40px] flex items-center justify-center z-20"
             style={{
-              height: '100px',
-              background: 'linear-gradient(180deg, #E8FFF9 0%, #F5FFFD 100%)',
+              height: '120px',
+              background: 'rgba(255, 255, 255, 0.5)',
+              backdropFilter: 'blur(12px)',
             }}
           >
             {/* Action button */}
@@ -222,7 +223,7 @@ export const OnboardingSuccessModal = () => {
               onClick={handleClose}
               className="w-[200px] h-14 rounded-full text-lg font-medium"
             >
-              {t('common.startExperience', '立刻体验')}
+              {t('onboarding.startExperience')}
             </Button>
           </div>
 

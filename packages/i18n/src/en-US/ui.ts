@@ -3837,6 +3837,11 @@ const translations = {
       currentPlan: 'Current Plan',
     },
   },
+  onboarding: {
+    rewardTitle: 'Reward Credits',
+    rewardPoints: '3000 credits',
+    startExperience: 'Start Now',
+  },
   template: {
     templateLibrary: 'Template Library',
     myTemplates: 'My Templates',
