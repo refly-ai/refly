@@ -29,7 +29,9 @@ import {
 } from '../../components/markdown/plugins/tool-call/toolProcessor';
 import { useSubscriptionUsage } from '../use-subscription-usage';
 import {
-  globalAbortControllerRef,
+  cleanupAbortController,
+  globalAbortControllersRef,
+  globalAbortedResultsRef,
   globalCurrentResultIdRef,
   globalIsAbortedRef,
   useAbortAction,
@@ -539,7 +541,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
       }
     } else {
       // if it is aborted, do nothing
-      if (globalAbortControllerRef.current?.signal?.aborted) {
+      if (globalAbortedResultsRef.current.has(resultId)) {
         return;
       }
     }
@@ -806,8 +808,12 @@ export const useInvokeAction = (params?: { source?: string }) => {
         target: target?.entityType,
       });
 
-      globalAbortControllerRef.current = new AbortController();
+      const controller = new AbortController();
+      globalAbortControllersRef.current.set(resultId, controller);
+      console.log('add abort controller', resultId, controller);
       globalCurrentResultIdRef.current = resultId; // Track current active resultId
+      globalIsAbortedRef.current = false;
+      globalAbortedResultsRef.current.delete(resultId);
 
       const upstreamAgentNodes = nodeId ? getUpstreamAgentNodes(nodeId) : [];
       const context = convertContextItemsToInvokeParams(
@@ -850,25 +856,29 @@ export const useInvokeAction = (params?: { source?: string }) => {
       useActionResultStore.getState().addStreamResult(resultId, initialResult);
       useActionResultStore.getState().setResultActiveTab(resultId, 'lastRun');
 
-      await ssePost({
-        controller: globalAbortControllerRef.current,
-        payload: param,
-        onStart,
-        onSkillStart,
-        onSkillStream,
-        onToolCallStart,
-        onToolCallEnd,
-        onToolCallError,
-        onToolCallStream,
-        onSkillLog,
-        onSkillArtifact,
-        onSkillStructedData,
-        onSkillCreateNode,
-        onSkillEnd,
-        onCompleted,
-        onSkillError,
-        onSkillTokenUsage,
-      });
+      try {
+        await ssePost({
+          controller,
+          payload: param,
+          onStart,
+          onSkillStart,
+          onSkillStream,
+          onToolCallStart,
+          onToolCallEnd,
+          onToolCallError,
+          onToolCallStream,
+          onSkillLog,
+          onSkillArtifact,
+          onSkillStructedData,
+          onSkillCreateNode,
+          onSkillEnd,
+          onCompleted,
+          onSkillError,
+          onSkillTokenUsage,
+        });
+      } finally {
+        cleanupAbortController(resultId);
+      }
     },
     [onUpdateResult],
   );

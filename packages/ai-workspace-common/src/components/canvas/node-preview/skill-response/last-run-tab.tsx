@@ -3,7 +3,6 @@ import { Skeleton } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { ActionResult, GenericToolset } from '@refly/openapi-schema';
 import { ActionStepCard } from './action-step';
-import { FailureNotice } from './failure-notice';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { MessageList } from '@refly-packages/ai-workspace-common/components/result-message';
@@ -135,12 +134,7 @@ const LastRunTabComponent = ({
             {loading && !isStreaming && (
               <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
             )}
-            <MessageList
-              messages={messages}
-              resultId={resultId}
-              status={resultStatus}
-              stepStatus={messageStepStatus}
-            />
+            <MessageList result={result} stepStatus={messageStepStatus} handleRetry={handleRetry} />
             {shouldUseSteps && (
               <ActionStepCard
                 result={result}
@@ -148,9 +142,6 @@ const LastRunTabComponent = ({
                 status={result?.status}
                 query={displayQuery}
               />
-            )}
-            {result?.status === 'failed' && !loading && (
-              <FailureNotice result={result} handleRetry={handleRetry} />
             )}
           </>
         )}

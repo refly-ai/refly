@@ -1,11 +1,12 @@
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActionMessage, ActionStatus } from '@refly/openapi-schema';
+import { ActionMessage, ActionResult } from '@refly/openapi-schema';
+import { useActionResultStoreShallow } from '@refly/stores';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import ToolCall from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/render';
 import { ReasoningContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/reasoning-content-preview';
 import { ThinkingDots } from '@refly-packages/ai-workspace-common/components/common/thinking-dots';
-import { useActionResultStoreShallow } from '@refly/stores';
+import { FailureNotice } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/failure-notice';
 
 /**
  * Render AI message with markdown content
@@ -86,20 +87,26 @@ ToolMessageCard.displayName = 'ToolMessageCard';
  */
 export const MessageList = memo(
   ({
-    messages,
-    resultId,
-    status,
+    result,
     stepStatus,
+    handleRetry,
   }: {
-    messages: ActionMessage[];
-    resultId: string;
-    status: ActionStatus;
+    result: ActionResult;
     stepStatus: 'executing' | 'finish';
+    handleRetry?: () => void;
   }) => {
+    const { resultId, messages = [], status } = result ?? {};
+
     const { t } = useTranslation();
     const { streamChoked } = useActionResultStoreShallow((state) => ({
       streamChoked: state.streamChoked[resultId],
     }));
+
+    console.log('result', result);
+
+    if (!result) {
+      return null;
+    }
 
     if (!messages?.length) {
       if (status === 'executing' || status === 'waiting') {
@@ -108,6 +115,9 @@ export const MessageList = memo(
             <ThinkingDots label={t('common.thinking')} />
           </div>
         );
+      }
+      if (status === 'failed') {
+        return <FailureNotice result={result} />;
       }
       return null;
     }
@@ -130,11 +140,12 @@ export const MessageList = memo(
           }
           return null;
         })}
-        {streamChoked && (
+        {(status === 'executing' || status === 'waiting') && streamChoked && (
           <div className="my-4 mx-1 flex items-center gap-1 text-gray-500">
             <ThinkingDots />
           </div>
         )}
+        {status === 'failed' && <FailureNotice result={result} handleRetry={handleRetry} />}
       </div>
     );
   },

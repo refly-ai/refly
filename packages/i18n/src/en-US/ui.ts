@@ -3386,6 +3386,14 @@ const translations = {
       installSkillHintTitle: 'Add Assistant',
       openCanvas: 'Open Canvas',
     },
+    abortConfirmModal: {
+      title: 'Stop Execution',
+      content:
+        'Are you sure you want to stop the current execution? The consumed credits will not be refunded.',
+      confirm: 'Stop Execution',
+      cancel: 'Cancel',
+    },
+    abortSuccess: 'Execution has been stopped',
     recommendQuestions: {
       title: 'Recommended Questions',
       refresh: 'Refresh',

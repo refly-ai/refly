@@ -360,7 +360,10 @@ export const ssePost = async ({
       try {
         await reader.cancel();
       } catch (cancelError) {
-        console.error('Error cancelling reader:', cancelError);
+        // Ignore AbortError since the reader might already be aborted by the controller
+        if (!(cancelError instanceof Error && cancelError.name === 'AbortError')) {
+          console.error('Error cancelling reader:', cancelError);
+        }
       }
       reader.releaseLock();
     }

@@ -21,7 +21,7 @@ interface CopilotMessageProps {
 }
 
 export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
-  const { resultId, input, steps, status, messages } = result;
+  const { resultId, input, steps, status } = result;
 
   const workflowPlan = useMemo(() => {
     const toolCalls = steps?.[0]?.toolCalls ?? [];
@@ -146,7 +146,7 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
         </div>
       </div>
       {/* AI response - left aligned */}
-      <MessageList messages={messages} resultId={resultId} status={status} stepStatus="finish" />
+      <MessageList result={result} stepStatus="finish" />
       {workflowPlan && (
         <div className="mt-1">
           <Button type="primary" onClick={handleApprove}>

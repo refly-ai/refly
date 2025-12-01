@@ -1,7 +1,7 @@
 import { Button, Dropdown, Modal, message } from 'antd';
-import { memo, useState, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Running1, StopCircle } from 'refly-icons';
+import { Play, StopCircle } from 'refly-icons';
 import type { MenuProps } from 'antd';
 
 interface SkillResponseActionsProps {
@@ -33,7 +33,6 @@ const SkillResponseActionsComponent = ({
   readonly = false,
 }: SkillResponseActionsProps) => {
   const { t } = useTranslation();
-  const [isHovered, setIsHovered] = useState(false);
 
   // When workflow is running but current node is not executing, disable actions
   const disabled = readonly || workflowIsRunning;
@@ -103,11 +102,7 @@ const SkillResponseActionsComponent = ({
   const iconClassName = variant === 'preview' ? '' : 'translate-y-[-1px]';
   let icon = <Play size={iconSize} className={iconClassName} />;
   if (nodeIsExecuting && !disabled) {
-    icon = isHovered ? (
-      <StopCircle size={iconSize} className={iconClassName} />
-    ) : (
-      <Running1 size={iconSize} className={iconClassName} />
-    );
+    icon = <StopCircle size={iconSize} className={iconClassName} />;
   }
 
   const buttonClassName =
@@ -124,8 +119,6 @@ const SkillResponseActionsComponent = ({
           icon={icon}
           onClick={nodeIsExecuting ? handleStopClick : handleRerunClick}
           disabled={disabled}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
           className={buttonClassName}
         />
         {extraActions}
@@ -150,8 +143,6 @@ const SkillResponseActionsComponent = ({
         size="small"
         icon={icon}
         disabled={disabled}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
         className={buttonClassName}
       />
     </Dropdown>
