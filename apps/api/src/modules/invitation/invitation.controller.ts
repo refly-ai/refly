@@ -22,8 +22,7 @@ export class InvitationController {
     @LoginedUser() user: User,
     @Body() body: { code: string },
   ): Promise<BaseResponse> {
-    await this.invitationService.activateInvitationCode(user.uid, body.code);
-    return buildSuccessResponse();
+    return this.invitationService.activateInvitationCode(user.uid, body.code);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -34,8 +34,10 @@ export const UploadNotification: React.FC<UploadNotificationProps> = memo(({ cla
       let notificationType: 'open' | 'success' | 'warning' | 'error' = 'open';
       let icon = <IconImportResource className="text-refly-primary-default" />;
       let message =
-        t('common.upload.notification.uploading', { count: totalFiles }) ||
-        `Uploading ${totalFiles} image(s)`;
+        t('common.upload.notification.uploading', {
+          count: totalFiles,
+          suffix: totalFiles > 1 ? 's' : '',
+        }) || `Uploading ${totalFiles} files`;
       let duration = 0;
 
       if (isCompleted) {
@@ -44,8 +46,10 @@ export const UploadNotification: React.FC<UploadNotificationProps> = memo(({ cla
           notificationType = 'success';
           icon = <Completed color="var(--refly-func-success-default)" />;
           message =
-            t('common.upload.notification.success', { count: successCount }) ||
-            `Successfully uploaded ${successCount} image(s)`;
+            t('common.upload.notification.success', {
+              count: successCount,
+              suffix: successCount > 1 ? 's' : '',
+            }) || `Successfully uploaded ${successCount} files`;
           duration = 3;
         } else if (successCount > 0) {
           // Partial success

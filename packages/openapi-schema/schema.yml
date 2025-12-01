@@ -4757,6 +4757,10 @@ components:
         appShareId:
           type: string
           description: Associated workflow app share ID
+        creditUsage:
+          type: integer
+          description: Credit usage for running this workflow app
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -5538,6 +5542,9 @@ components:
         outputTokens:
           type: number
           description: Output tokens
+        cacheReadTokens:
+          type: number
+          description: Cache read tokens
         providerItemId:
           type: string
           description: Provider item ID

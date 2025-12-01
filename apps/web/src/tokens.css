@@ -85,7 +85,7 @@
   /* Use a subtle primary tint on top and blend into content background for dark theme */
   --refly-gradient-modal-top: rgb(36, 53, 50);
   --refly-gradient-modal-bottom: var(--refly-bg-content-z2);
-  --refly-bg-canvas: #1e1d1d;
+  --refly-bg-canvas: #151414;
   --refly-bg-body: #1a1a1a;
   --refly-modal-mask: rgba(0, 0, 0, 0.4);
   --refly-Card-Border: rgba(216, 216, 216, 0.1);

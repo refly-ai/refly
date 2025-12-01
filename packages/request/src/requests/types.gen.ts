@@ -1544,6 +1544,10 @@ export type TokenUsageItem = {
    */
   outputTokens: number;
   /**
+   * Cache read tokens
+   */
+  cacheReadTokens?: number;
+  /**
    * Provider item ID
    */
   providerItemId?: string;
@@ -7140,6 +7144,14 @@ export type WorkflowApp = {
    * Cover image URL
    */
   coverUrl?: string;
+  /**
+   * Whether to publish this app to the community
+   */
+  publishToCommunity?: boolean;
+  /**
+   * Community publish review status
+   */
+  publishReviewStatus?: string;
   /**
    * Workflow app creation timestamp
    */

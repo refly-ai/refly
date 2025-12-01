@@ -85,15 +85,15 @@ const translations = {
     uploadFailed: 'Upload failed',
     upload: {
       notification: {
-        uploading: 'Uploading {{count}} image(s)',
+        uploading: 'Uploading {{count}} file{{suffix}}',
         progress: '{{completed}} of {{total}} completed',
         complete: 'complete',
-        success: 'Successfully uploaded {{count}} image(s)',
-        allUploaded: 'All images have been uploaded successfully',
+        success: 'Successfully uploaded {{count}} file{{suffix}}',
+        allUploaded: 'Upload complete! Your content is now ready to be used',
         partialSuccess: 'Upload completed with some errors',
         partialSuccessDesc: '{{success}} successful, {{error}} failed',
         failed: 'Upload failed',
-        allFailed: 'All images failed to upload',
+        allFailed: 'All files failed to upload',
       },
     },
     errorNotice: {
@@ -709,7 +709,8 @@ const translations = {
         discordGroup: 'Discord Community',
         joinDiscordGroup: 'Join Community',
         notionDocument: 'Notion Document',
-        viewNotionDocument: 'View Document',
+        viewDocument: 'View Document',
+        feishuDocument: 'Feishu Document',
         followReflyUpdates: 'Follow Refly Updates',
         reflyTwitterAccount: 'Official Account',
       },
@@ -2119,8 +2120,8 @@ const translations = {
     defaultTitle: 'Code Artifact',
   },
   agent: {
-    configure: 'Configure',
-    lastRun: 'Last Run',
+    configure: 'Input',
+    lastRun: 'Output',
     noResult: 'Run to get results',
     editTitlePlaceholder: 'Enter title for the agent',
     config: {
@@ -2640,6 +2641,16 @@ const translations = {
       activateInvitationCodeSuccess: 'Welcome to Refly 🎉 Start your AI automation journey!',
       activateInvitationCodeFailed:
         'Invite code is invalid. Please try again or join Discord to get a new one.',
+      activateInvitationCodeInvalid:
+        'Invite code is invalid. Please try again or join Discord to get a new one.',
+      activateInvitationCodeUsed:
+        'Invitation code has already been used. Please try again or join Discord to get a new one.',
+      activateInvitationCodeAlreadyInvited:
+        'This user has already been invited. Please try again or join Discord to get a new one.',
+      activateInvitationCodeOwnCode:
+        'Cannot use your own invitation code. Please try again or join Discord to get a new one.',
+      activateInvitationCodeAlreadyActivated:
+        'This invitation has already been activated. Please try again or join Discord to get a new one.',
       invitationCodeCopied: 'Invite code copied! Go share it with your friends~',
       invitationCodeCopyFailed: 'Failed to copy invitation code',
       invitationReward: '+{amount} credits',
@@ -3572,6 +3583,8 @@ const translations = {
       description: {
         '5k_tokens':
           '{{inputCost}} credit(s) per 5k input tokens, {{outputCost}} credit(s) per 5k output tokens',
+        '1m_tokens':
+          '{{inputCost}} credit(s) per 1M input tokens, {{outputCost}} credit(s) per 1M output tokens',
         product: '{{cost}} credit(s) per product',
         canvasTotal:
           'AI output is unstable, credits are only estimated and subject to actual execution results',
@@ -3816,6 +3829,8 @@ const translations = {
     duplicateCanvasEntities: 'Duplicate the canvas entities',
     noDescription: 'No description',
     emptyList: 'Zero templates? No problem! Create yours now and inspire the community!',
+    notFoundQuestion: "Didn't find the workflow automation template you need?",
+    goToMarketplace: 'Go to Marketplace',
   },
   workflowApp: {
     title: 'Name',

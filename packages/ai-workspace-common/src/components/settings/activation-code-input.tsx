@@ -29,12 +29,15 @@ export const ActivationCodeInput: React.FC<ActivationCodeInputProps> = ({
 
     setActivatingCode(true);
     try {
-      const { error } = await getClient().activateInvitationCode({
+      const response = await getClient().activateInvitationCode({
         body: { code: activationCode.trim() },
       });
 
-      if (error) {
-        message.error(t('settings.account.activateInvitationCodeFailed'));
+      if (!response.data.success) {
+        const errorMessage = response.data.errMsg
+          ? t(response.data.errMsg)
+          : t('settings.account.activateInvitationCodeFailed');
+        message.error(errorMessage);
         return;
       }
 

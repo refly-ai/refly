@@ -109,6 +109,7 @@ export const CreateWorkflowAppModal = ({
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const showRemix = false;
 
   // Cover image upload state
   const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
@@ -441,7 +442,7 @@ export const CreateWorkflowAppModal = ({
         ...values,
         title: values.title,
         description: values.description ?? '',
-        remixEnabled: values.remixEnabled ?? false,
+        remixEnabled: showRemix ? (values.remixEnabled ?? false) : false,
         publishToCommunity: values.publishToCommunity ?? false,
       });
     } catch (error) {
@@ -749,20 +750,23 @@ export const CreateWorkflowAppModal = ({
                 </div>
               </div>
               {/* Remix Settings */}
-              <div className="flex flex-col gap-2 mt-5">
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="remix-enabled-switch"
-                    className="text-xs font-semibold text-refly-text-0 leading-[1.33]"
-                  >
-                    {t('workflowApp.enableRemix')}
-                  </label>
-                  <Form.Item name="remixEnabled" valuePropName="checked" className="mb-0">
-                    <Switch id="remix-enabled-switch" size="small" className="" />
-                  </Form.Item>
+              {showRemix && (
+                <div className="flex flex-col gap-2 mt-5">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="remix-enabled-switch"
+                      className="text-xs font-semibold text-refly-text-0 leading-[1.33]"
+                    >
+                      {t('workflowApp.enableRemix')}
+                    </label>
+                    <Form.Item name="remixEnabled" valuePropName="checked" className="mb-0">
+                      <Switch id="remix-enabled-switch" size="small" className="" />
+                    </Form.Item>
+                  </div>
+                  <div className="text-xs text-refly-text-2">{t('workflowApp.remixHint')}</div>
                 </div>
-                <div className="text-xs text-refly-text-2">{t('workflowApp.remixHint')}</div>
-              </div>
+              )}
+
               {/* Cover Image Upload */}
               <div className="flex flex-col gap-2 mt-5">
                 <div className="text-xs font-semibold text-refly-text-0 leading-[1.33]">
