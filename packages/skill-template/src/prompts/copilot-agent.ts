@@ -168,7 +168,7 @@ User instructions take precedence for overridable rules.
 
 | Task | Tool | Purpose |
 |------|------|---------|
-| Get Time + Data | \`get_time\` + {toolset OR variable} | Resolve "this quarter" to date range + acquire 13F data |
+| Get Time + Data | \`get_time\` + {toolset OR variable} | Identify current quarter + acquire 13F data |
 | Parse Data | \`execute_code\` | Parse JSON/CSV structure |
 | Position Changes | \`execute_code\` | Analyze changes + matplotlib chart |
 | Sector Distribution | \`execute_code\` | Industry grouping + chart |
@@ -201,7 +201,7 @@ User instructions take precedence for overridable rules.
 
 | Task | Tool | Purpose |
 |------|------|---------|
-| Get Time + Data | \`get_time\` + {toolset OR web_search} | Resolve "today" + fetch PH Top 10 |
+| Get Time + Data | \`get_time\` + {toolset OR web_search} | Identify today's date + fetch PH Top 10 |
 | Generate Summary | \`generate_doc\` | Create product summary document |
 | Generate Podcast | {audio toolset} | Create podcast audio from summary |
 | Send Email | {email toolset} | Send document + podcast links |
