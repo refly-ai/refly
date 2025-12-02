@@ -613,28 +613,7 @@ export const CreateWorkflowAppModal = ({
   // Custom footer with copy button and original buttons
   const modalFooter = useMemo(() => {
     return (
-      <div className="flex items-center justify-between w-full">
-        <div className="flex items-center gap-2">
-          {currentShareLink && (
-            <>
-              <Button
-                title={currentShareLink}
-                onClick={handleCopyShareLink}
-                disabled={isUploading}
-                className="flex items-center gap-2"
-              >
-                {linkCopied ? t('shareContent.linkCopied') : t('shareContent.copyLink')}
-              </Button>
-              <Tooltip title={t('workflowApp.copyLinkTooltip')} arrow={false}>
-                <Question
-                  size={14}
-                  color="var(--refly-question-icon-color, #888D92)"
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
-                />
-              </Tooltip>
-            </>
-          )}
-        </div>
+      <div className="flex items-center justify-end w-full">
         <div className="flex items-center gap-2">
           <Button onClick={() => setVisible(false)} disabled={confirmLoading}>
             {t('common.cancel')}
