@@ -171,10 +171,10 @@ export class SandboxPool {
       this.enqueueKill(failedSandboxId, `reconnect:${error.message.slice(0, 50)}`);
     };
 
-    return await guard(() => this.wrapperFactory.reconnect(context, metadata, onFailed)).orElse(
+    return guard(() => this.wrapperFactory.reconnect(context, metadata, onFailed)).orThrow(
       async (error) => {
         await this.deleteMetadata(sandboxId);
-        throw new SandboxCreationException(error);
+        return new SandboxCreationException(error);
       },
     );
   }

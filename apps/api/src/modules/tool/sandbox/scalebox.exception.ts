@@ -69,6 +69,18 @@ export class SandboxConnectionException extends SandboxException {
   }
 }
 
+export type LifecycleOperation = 'create' | 'reconnect' | 'pause';
+
+export class SandboxLifecycleException extends SandboxException {
+  constructor(
+    public readonly operation: LifecycleOperation,
+    messageOrError: unknown,
+    public readonly sandboxId?: string,
+  ) {
+    super(messageOrError, `SANDBOX_${operation.toUpperCase()}_FAILED`, { operation, sandboxId });
+  }
+}
+
 export class SandboxExecutionFailedException extends SandboxException {
   constructor(
     message: unknown,

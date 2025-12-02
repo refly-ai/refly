@@ -2,13 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 
+import { guard } from '../../../utils/guard';
 import { Config } from '../../config/config.decorator';
+import { DEFAULT_WRAPPER_TYPE, WrapperType } from './scalebox.constants';
+import { SandboxRequestParamsException } from './scalebox.exception';
 import { ExecutionContext, OnLifecycleFailed } from './scalebox.dto';
 import { ISandboxWrapper, SandboxMetadata } from './wrapper/base';
 import { ExecutorWrapper } from './wrapper/executor';
 import { InterpreterWrapper } from './wrapper/interpreter';
-
-export type WrapperType = 'executor' | 'interpreter';
 
 /**
  * Factory for creating sandbox wrapper instances
@@ -16,7 +17,7 @@ export type WrapperType = 'executor' | 'interpreter';
  */
 @Injectable()
 export class SandboxWrapperFactory {
-  @Config.string('sandbox.scalebox.wrapperType', 'executor')
+  @Config.string('sandbox.scalebox.wrapperType', DEFAULT_WRAPPER_TYPE)
   private readonly wrapperType!: WrapperType;
 
   @Config.string('sandbox.scalebox.templateName', '')
@@ -82,20 +83,28 @@ export class SandboxWrapperFactory {
       return 'code-interpreter';
     }
 
-    if (!this.templateName) {
-      throw new Error(
-        'SCALEBOX_TEMPLATE_NAME is required when wrapperType=executor. ' +
-          'Please set the environment variable or switch to wrapperType=interpreter.',
+    const template = guard
+      .notEmpty(this.templateName)
+      .orThrow(
+        () =>
+          new SandboxRequestParamsException(
+            'getTemplateName',
+            'SCALEBOX_TEMPLATE_NAME is required when wrapperType=executor. ' +
+              'Please set the environment variable or switch to wrapperType=interpreter.',
+          ),
       );
-    }
 
-    if (!/^[a-z0-9-]+$/.test(this.templateName)) {
-      throw new Error(
-        `Invalid template name "${this.templateName}": only lowercase letters, numbers, and hyphens are allowed.`,
+    guard
+      .ensure(/^[a-z0-9-]+$/.test(template))
+      .orThrow(
+        () =>
+          new SandboxRequestParamsException(
+            'getTemplateName',
+            `Invalid template name "${template}": only lowercase letters, numbers, and hyphens are allowed.`,
+          ),
       );
-    }
 
-    return this.templateName;
+    return template;
   }
 
   /**

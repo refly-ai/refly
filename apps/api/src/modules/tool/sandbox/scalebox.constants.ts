@@ -36,6 +36,13 @@ export const LANGUAGE_MAP: Record<string, ExecutorLanguage> = {
   shell: 'shell',
 } as const;
 
+// ==================== Wrapper Type ====================
+
+export type WrapperType = 'executor' | 'interpreter';
+
+/** Default wrapper type - interpreter for open source compatibility */
+export const DEFAULT_WRAPPER_TYPE: WrapperType = 'interpreter';
+
 // ==================== Scalebox Defaults ====================
 
 export const SCALEBOX_DEFAULTS = {
@@ -47,6 +54,7 @@ export const SCALEBOX_DEFAULTS = {
   LOCAL_CONCURRENCY: 5, // Compile-time constant, not env-configurable
   MAX_QUEUE_SIZE: 100,
   AUTO_PAUSE_DELAY_MS: 2 * 60 * 1000, // 2 minutes
+  IDLE_QUEUE_TTL_MULTIPLIER: 3, // idle queue TTL = sandboxTimeoutMs * multiplier
 
   // Lock
   RUN_CODE_TIMEOUT_SEC: 5 * 60, // 5 minutes
