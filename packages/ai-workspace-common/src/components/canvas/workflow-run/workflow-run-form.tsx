@@ -224,7 +224,7 @@ export const WorkflowRunForm = ({
                 resource: {
                   name: v.name,
                   storageKey: v.url,
-                  fileType: getFileType(v.name),
+                  fileType: getFileType(v.name, v.type),
                   ...(fileId && { fileId }),
                   ...(entityId && { entityId }),
                 },

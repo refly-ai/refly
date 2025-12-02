@@ -243,7 +243,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
             resource: {
               name: file.name || '',
               storageKey: file.url || '', // Use url field to store storageKey
-              fileType: getFileType(file.name),
+              fileType: getFileType(file.name, file.type),
             },
           }));
 
@@ -431,7 +431,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
                   type: 'resource' as const,
                   resource: {
                     name: file.name || '',
-                    fileType: getFileType(file.name),
+                    fileType: getFileType(file.name, file.type),
                     fileId: existingFileId,
                     storageKey: existingResource?.storageKey || file.url || '',
                   },
@@ -463,7 +463,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
                 type: 'resource' as const,
                 resource: {
                   name: file.name || '',
-                  fileType: getFileType(file.name),
+                  fileType: getFileType(file.name, file.type),
                   fileId: driveFileResponse.data.fileId,
                   storageKey,
                 },

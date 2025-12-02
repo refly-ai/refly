@@ -25,7 +25,7 @@ import { OSS_EXTERNAL, OSS_INTERNAL, ObjectStorageService } from '../common/obje
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { ConfigService } from '@nestjs/config';
-import { omit, scrapeWeblink } from '@refly/utils';
+import { omit, scrapeWeblink, getSafeMimeType } from '@refly/utils';
 import { QUEUE_IMAGE_PROCESSING, QUEUE_CLEAN_STATIC_FILES, streamToBuffer } from '../../utils';
 import {
   CanvasNotFoundError,
@@ -438,7 +438,7 @@ export class MiscService implements OnModuleInit {
     const objectKey = randomUUID();
     const fileExtension = path.extname(fpath);
     const storageKey = param.storageKey ?? `static/${objectKey}${fileExtension}`;
-    const contentType = mime.getType(fpath) ?? 'application/octet-stream';
+    const contentType = getSafeMimeType(fpath, mime.getType(fpath) ?? undefined);
 
     await this.prisma.staticFile.create({
       data: {
@@ -508,7 +508,10 @@ export class MiscService implements OnModuleInit {
 
     const objectKey = randomUUID();
     const extension = path.extname(file.originalname);
-    const contentType = mime.getType(extension) ?? file.mimetype ?? 'application/octet-stream';
+    const contentType = getSafeMimeType(
+      file.originalname,
+      mime.getType(extension) ?? file.mimetype ?? undefined,
+    );
     const storageKey = param.storageKey ?? `static/${objectKey}${extension}`;
 
     if (existingFile) {
@@ -601,7 +604,7 @@ export class MiscService implements OnModuleInit {
     }
 
     const inferredContentType =
-      contentType ?? mime.getType(finalFilename) ?? 'application/octet-stream';
+      contentType ?? getSafeMimeType(finalFilename, mime.getType(finalFilename) ?? undefined);
 
     const visibility = param?.visibility ?? 'private';
 

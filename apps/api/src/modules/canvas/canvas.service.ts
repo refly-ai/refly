@@ -21,7 +21,6 @@ import {
   SkillContext,
   ActionResult,
   WorkflowVariable,
-  ResourceType,
   VariableValue,
   CanvasNode,
   GenericToolset,
@@ -1264,113 +1263,31 @@ export class CanvasService {
     canvasId: string,
     value: VariableValue,
   ): Promise<VariableValue> {
-    this.logger.log(`Processing resource value for canvas ${canvasId}: ${JSON.stringify(value)}`);
-
     const { resource } = value;
     if (!resource) return value;
 
-    // If fileId exists, use it directly (new approach with DriveFile)
+    // If fileId exists, check if it belongs to current user
     if (resource.fileId) {
-      this.logger.log(`Resource has fileId: ${resource.fileId}, skipping resource creation`);
-      return value;
-    }
+      // Fetch the DriveFile to check its uid
+      const driveFile: any = await this.prisma.driveFile.findFirst({
+        where: { fileId: resource.fileId, deletedAt: null },
+      });
 
-    const { storageKey } = resource;
-    if (!storageKey) {
-      this.logger.warn('Resource variable missing both fileId and storageKey; skipping processing');
-      return value;
-    }
-
-    // Check if static file already exists with entity_id and entity_type
-    const resourceFile = await this.prisma.staticFile.findFirst({
-      where: { storageKey, deletedAt: null },
-    });
-
-    if (resourceFile?.entityId && resourceFile?.entityType === 'resource') {
-      // Resource already exists, read it
-      this.logger.log(
-        `Resource already exists for storageKey: ${storageKey}, entityId: ${resourceFile.entityId}`,
-      );
-      return value;
-    }
-
-    if (!resource.entityId) {
-      // New upload without fileId or entityId - skip creation for now
-      // This can happen with old data during workflow-app execution
-      this.logger.warn(
-        `Resource variable without fileId or entityId; skipping resource creation. storageKey: ${storageKey}`,
-      );
-      return value;
-
-      // Note: Creating resource here is disabled because canvasId might be temporary
-      // and doesn't exist in database (e.g., during workflow-app execution).
-      // New approach should use fileId with DriveFile instead of creating Resource.
-      /*
-      const newResource = await this.resourceService.createResource(
-        user,
-        {
-          title: resource.name,
-          resourceType: resource.fileType as ResourceType,
-          canvasId,
-          storageKey,
-        },
-        { skipCanvasCheck: true },
-      );
-
-      // Update static file with new entity information
-      if (resourceFile) {
-        await this.prisma.staticFile.update({
-          where: { pk: resourceFile.pk },
-          data: {
-            entityId: newResource.resourceId,
-            entityType: 'resource',
-          },
-        });
+      if (!driveFile) {
+        return value;
       }
 
-      // Update the variable value with new entityId
+      // If file belongs to a different user, duplicate it
+      const duplicatedFile = await this.driveService.duplicateDriveFile(user, driveFile, canvasId);
+
+      // Update the variable value with new fileId
       return {
         ...value,
         resource: {
           ...resource,
-          entityId: newResource.resourceId,
+          fileId: duplicatedFile.fileId,
         },
       };
-      */
-    }
-
-    // Find existing resource - update old resource
-    const existingResource = await this.prisma.resource.findUnique({
-      where: { resourceId: resource.entityId },
-    });
-
-    if (!existingResource) {
-      this.logger.warn(`Existing resource not found: ${resource.entityId}`);
-      return value;
-    }
-
-    // Update existing resource with new storage key
-    await this.resourceService.updateResource(
-      user,
-      {
-        title: resource.name,
-        resourceType: existingResource.resourceType as ResourceType,
-        canvasId,
-        storageKey,
-        resourceId: existingResource.resourceId,
-      },
-      { waitFor: 'parse_completed' }, // we must wait for the resource to be parsed
-    );
-
-    // Update static file with new entity information
-    if (resourceFile) {
-      await this.prisma.staticFile.update({
-        where: { pk: resourceFile.pk },
-        data: {
-          entityId: existingResource.resourceId,
-          entityType: 'resource',
-        },
-      });
     }
 
     return value;

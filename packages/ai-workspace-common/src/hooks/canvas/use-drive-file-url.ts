@@ -73,7 +73,8 @@ export const useDriveFileUrl = ({
   const isShareFile = useMatch('/share/file/:shareId');
   // Add workflow-app page check
   const isWorkflowApp = useMatch('/app/:shareId');
-  const isSharePage = Boolean(isShareCanvas || isShareFile || isWorkflowApp);
+  const isTemplateApp = useMatch('/workflow-template/:shareId');
+  const isSharePage = Boolean(isShareCanvas || isShareFile || isWorkflowApp || isTemplateApp);
 
   return useMemo(() => {
     return getDriveFileUrl(file, isSharePage, contextUsePublicFileUrl, download);

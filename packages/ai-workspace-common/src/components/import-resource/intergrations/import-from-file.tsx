@@ -75,7 +75,7 @@ export const ImportFromFile = ({ canvasId }: ImportFromFileProps) => {
 
       const tempUid = genResourceID();
       const fileExtension = getFileExtension(file.name);
-      const fileType = getFileType(file.name);
+      const fileType = getFileType(file.name, file.type);
 
       // Add file to waiting list with pending status
       addToWaitingList({

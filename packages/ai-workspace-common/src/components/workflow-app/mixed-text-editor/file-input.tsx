@@ -2,6 +2,8 @@ import React, { memo, useCallback, useState } from 'react';
 import { Upload } from 'antd';
 import { Attachment } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
+import { useFileUpload } from '../../canvas/workflow-variables';
+import { getFileType } from '../../canvas/workflow-variables/utils';
 
 interface FileInputProps {
   id: string;
@@ -26,21 +28,32 @@ const FileInput: React.FC<FileInputProps> = memo(
   }) => {
     const { t } = useTranslation();
     const [isHovered, setIsHovered] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const { handleFileUpload: uploadFile } = useFileUpload();
     const fileName = value?.name || '';
     const isEmpty = !fileName || fileName.trim() === '';
 
     const handleFileChange = useCallback(
-      (file: File) => {
-        // Create resource object
-        const resource = {
-          name: file.name,
-          storageKey: '', // This would be set after upload
-          fileType: file.type.split('/')[0] as any, // Extract file type
-          entityId: '', // This would be set after upload
-        };
-        onChange(resource);
+      async (file: File) => {
+        try {
+          setUploading(true);
+          // Upload file and get storageKey
+          const result = await uploadFile(file, []);
+
+          if (result && typeof result === 'object' && 'storageKey' in result) {
+            // Create resource object with actual storageKey
+            const resource = {
+              name: file.name,
+              storageKey: result.storageKey,
+              fileType: getFileType(file.name, file.type),
+            };
+            onChange(resource);
+          }
+        } finally {
+          setUploading(false);
+        }
       },
-      [onChange],
+      [onChange, uploadFile],
     );
 
     const handleMouseEnter = useCallback(() => {
@@ -59,7 +72,7 @@ const FileInput: React.FC<FileInputProps> = memo(
           handleFileChange(file);
           return false; // Prevent default upload
         }}
-        disabled={disabled}
+        disabled={disabled || uploading}
       >
         <div
           className={`
@@ -94,11 +107,17 @@ const FileInput: React.FC<FileInputProps> = memo(
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          title={fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')}
+          title={
+            uploading
+              ? t('common.upload.notification.uploading', { count: 1 })
+              : fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')
+          }
         >
           <Attachment size={16} color="var(--refly-primary-default)" />
           <span className="flex-1 ml-1 truncate max-w-[200px] min-w-0">
-            {fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')}
+            {uploading
+              ? t('common.upload.notification.uploading', { count: 1 })
+              : fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')}
           </span>
         </div>
       </Upload>
