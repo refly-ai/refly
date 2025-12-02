@@ -1,22 +1,18 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { BullModule } from '@nestjs/bullmq';
 import { ComposioController } from './composio.controller';
 import { ComposioService } from './composio.service';
+import { PostHandlerService } from './post-handler.service';
 import { CommonModule } from '../../common/common.module';
-import { QUEUE_SYNC_TOOL_CREDIT_USAGE } from '../../../utils/const';
-import { isDesktop } from '../../../utils/runtime';
-import { CreditModule } from '../../credit/credit.module';
+import { DriveModule } from '../../drive/drive.module';
+import { MiscModule } from '../../misc/misc.module';
+import { BillingModule } from '../billing/billing.module';
+import { ResourceHandler } from '../resource.service';
 
 @Module({
-  imports: [
-    ConfigModule,
-    CommonModule,
-    CreditModule,
-    ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_SYNC_TOOL_CREDIT_USAGE })]),
-  ],
+  imports: [ConfigModule, CommonModule, DriveModule, MiscModule, BillingModule],
   controllers: [ComposioController],
-  providers: [ComposioService],
+  providers: [ComposioService, PostHandlerService, ResourceHandler],
   exports: [ComposioService],
 })
 export class ComposioModule {}

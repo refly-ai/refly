@@ -1,6 +1,5 @@
 import { DynamicStructuredTool, type StructuredToolInterface } from '@langchain/core/tools';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   AnyToolsetClass,
@@ -33,9 +32,7 @@ import {
 } from '@refly/skill-template';
 import { genToolsetID, safeParseJSON, validateConfig } from '@refly/utils';
 import { SingleFlightCache } from '../../utils/cache';
-import { Queue } from 'bullmq';
 import { McpServer as McpServerPO, Prisma, Toolset as ToolsetPO } from '@prisma/client';
-import { QUEUE_SYNC_TOOL_CREDIT_USAGE } from '../../utils/const';
 import { EncryptionService } from '../common/encryption.service';
 import { PrismaService } from '../common/prisma.service';
 import { SyncToolCreditUsageJobData } from '../credit/credit.dto';
@@ -69,9 +66,6 @@ export class ToolService {
     private readonly toolFactory: ToolFactory,
     private readonly miscService: MiscService,
     private readonly inventoryService: ToolInventoryService,
-    @Optional()
-    @InjectQueue(QUEUE_SYNC_TOOL_CREDIT_USAGE)
-    private readonly toolCreditUsageQueue?: Queue<SyncToolCreditUsageJobData>,
   ) {
     // Cache toolset inventory with 5-minute TTL
     this.toolsetInventoryCache = new SingleFlightCache(this.loadToolsetInventory.bind(this), {
@@ -979,7 +973,7 @@ export class ToolService {
     const [regularTools, mcpTools, oauthToolsets] = await Promise.all([
       this.instantiateRegularToolsets(user, regularToolsets, engine, options),
       this.instantiateMcpServers(user, mcpServers),
-      this.instantiateOAuthToolsets(user, toolsets),
+      this.composioService.instantiateToolsets(user, toolsets, 'oauth'),
     ]);
     return [
       ...builtinTools,
@@ -1053,7 +1047,7 @@ export class ToolService {
       context?: SkillContext;
       canvasId?: string;
     },
-  ): Promise<DynamicStructuredTool[]> {
+  ): Promise<StructuredToolInterface[]> {
     if (!toolsets?.length) {
       return [];
     }
@@ -1075,11 +1069,19 @@ export class ToolService {
       },
     });
 
-    // Separate static and dynamic toolsets
+    // Separate legacy, config-based, and external API key toolsets
     const staticToolsets: typeof toolsetPOs = [];
     const configBasedToolsets: typeof toolsetPOs = [];
+    const externalApiKeyToolsets: typeof toolsetPOs = [];
     for (const toolsetPO of toolsetPOs) {
-      // Check if this toolset is in staticToolsetInventory (SDK-based)
+      // Check if this is an external API key toolset (Composio API Key tools)
+      if (toolsetPO.authType === 'external_apikey') {
+        externalApiKeyToolsets.push(toolsetPO);
+        continue;
+      }
+      // Check if this toolset is in staticToolsetInventory (legacy SDK-based tools, non-configurable)
+      // toolsetInventory contains old hardcoded tools that are not configurable via database
+      // All other tools are config-based and managed via toolset_inventory table
       const staticToolset = !!toolsetInventory[toolsetPO.key];
       if (staticToolset) {
         staticToolsets.push(toolsetPO);
@@ -1088,7 +1090,7 @@ export class ToolService {
       }
     }
 
-    // static toolsets
+    // Legacy static toolsets (hardcoded, non-configurable)
     const staticTools = staticToolsets.flatMap((t) => {
       const toolset = toolsetInventory[t.key];
       const config = t.config ? safeParseJSON(t.config) : {};
@@ -1122,7 +1124,8 @@ export class ToolService {
                 if (isGlobal && result?.status !== 'error' && creditCost > 0) {
                   const jobData: SyncToolCreditUsageJobData = {
                     uid: user.uid,
-                    creditCost,
+                    originalPrice: creditCost,
+                    discountedPrice: creditCost,
                     timestamp: new Date(),
                     toolsetName: t?.name ?? (toolset.definition.labelDict?.en as string) ?? t?.key,
                     toolName: tool.name,
@@ -1143,13 +1146,32 @@ export class ToolService {
         );
     });
 
-    // Instantiate config-based tools via ToolFactory
-    const configTools = await this.instantiateDynamicToolsets(configBasedToolsets);
+    // Instantiate config-based tools via ToolFactory and Composio API Key toolsets in parallel
+    const dynamicTools = (
+      await Promise.all([
+        this.instantiateDynamicToolsets(configBasedToolsets),
+        this.composioService.instantiateToolsets(
+          user,
+          externalApiKeyToolsets.map((t) => ({
+            id: t.toolsetId,
+            name: t.name,
+            type: 'regular' as const,
+            toolset: {
+              toolsetId: t.toolsetId,
+              name: t.name,
+              key: t.key,
+            },
+          })),
+          'apikey',
+        ),
+      ])
+    ).flat();
+
     this.logger.log(
-      `Instantiated ${staticTools.length} static tools and ${configTools.length} config-based tools`,
+      `Instantiated ${staticTools.length} static tools and ${dynamicTools.length} dynamic tools`,
     );
 
-    return [...staticTools, ...configTools];
+    return [...staticTools, ...dynamicTools];
   }
 
   /**
@@ -1248,13 +1270,6 @@ export class ToolService {
       }
       return [];
     }
-  }
-
-  private async instantiateOAuthToolsets(
-    user: User,
-    toolsets: GenericToolset[],
-  ): Promise<StructuredToolInterface[]> {
-    return this.composioService.instantiateOAuthToolsets(user, toolsets);
   }
 
   async getToolCallResult(user: User, toolCallId: string): Promise<ToolCallResult> {

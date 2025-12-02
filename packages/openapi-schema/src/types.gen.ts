@@ -6660,6 +6660,151 @@ export type ComposioRevokeResponse = {
   message: string;
 };
 
+/**
+ * Context for post-processing tool execution results
+ */
+export type PostHandlerContext = {
+  /**
+   * User who executed the tool
+   */
+  user: User;
+  /**
+   * Tool name that was executed
+   */
+  toolName: string;
+  /**
+   * Toolset name/key
+   */
+  toolsetName: string;
+  /**
+   * Credit cost for this tool execution
+   */
+  creditCost: number;
+  /**
+   * File name title from input params
+   */
+  fileNameTitle?: string;
+};
+
+/**
+ * Result from post-processing tool execution
+ */
+export type PostHandlerResult = {
+  /**
+   * Processed data (may be uploaded to OSS)
+   */
+  data: unknown;
+  /**
+   * Files uploaded during post-processing
+   */
+  files?: Array<DriveFile>;
+  /**
+   * Credit cost recorded
+   */
+  creditCost?: number;
+  /**
+   * Metadata about processing
+   */
+  metadata?: {
+    [key: string]: unknown;
+  };
+};
+
+/**
+ * Composio connected account structure from API response
+ */
+export type ComposioConnectedAccount = {
+  /**
+   * Connected account ID
+   */
+  id: string;
+  /**
+   * Connection status
+   */
+  status?: string;
+  toolkit?: {
+    /**
+     * Toolkit slug identifier
+     */
+    slug?: string;
+  };
+};
+
+/**
+ * Composio tool JSON schema structure
+ */
+export type ComposioToolSchema = {
+  /**
+   * Schema type
+   */
+  type?: string;
+  /**
+   * Schema properties
+   */
+  properties?: {
+    [key: string]: ComposioSchemaProperty;
+  };
+  /**
+   * Required property names
+   */
+  required?: Array<string>;
+  [key: string]: unknown | string | ComposioSchemaProperty;
+};
+
+/**
+ * Composio schema property definition
+ */
+export type ComposioSchemaProperty = {
+  /**
+   * Property type
+   */
+  type?: string;
+  /**
+   * Property description
+   */
+  description?: string;
+  /**
+   * Whether property is deprecated
+   */
+  deprecated?: boolean;
+  [key: string]: unknown | string | boolean;
+};
+
+/**
+ * Context for creating a DynamicStructuredTool. User/userId comes from getCurrentUser() at runtime.
+ */
+export type ToolCreationContext = {
+  /**
+   * Connected account ID from Composio
+   */
+  connectedAccountId: string;
+  /**
+   * Authentication type
+   */
+  authType: 'oauth' | 'apikey';
+  /**
+   * Credit cost for tool execution
+   */
+  creditCost: number;
+  /**
+   * Toolset type identifier
+   */
+  toolsetType: GenericToolsetType;
+  /**
+   * Toolset key
+   */
+  toolsetKey: string;
+  /**
+   * Toolset display name
+   */
+  toolsetName: string;
+};
+
+/**
+ * Authentication type
+ */
+export type authType = 'oauth' | 'apikey';
+
 export type GenericToolsetType = 'regular' | 'mcp' | 'external_oauth';
 
 export type GenericToolset = {

@@ -16,7 +16,10 @@ export interface SyncToolCreditUsageJobData {
   resultId?: string;
   version?: number;
   creditBilling?: CreditBilling;
-  creditCost?: number;
+  /** Actual amount to deduct (after discount) */
+  discountedPrice?: number;
+  /** Original price before discount */
+  originalPrice?: number;
   timestamp: Date;
   toolsetName: string;
   toolName: string;

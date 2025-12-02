@@ -714,12 +714,14 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
     const contentType = response.headers['content-type'] || '';
 
     if (contentType.includes('application/json')) {
-      if (Buffer.isBuffer(response.data) || response.data instanceof ArrayBuffer) {
-        return JSON.parse(Buffer.from(response.data).toString('utf-8'));
+      if (Buffer.isBuffer(response.data)) {
+        return JSON.parse(response.data.toString('utf-8'));
+      }
+      if (response.data instanceof ArrayBuffer) {
+        return JSON.parse(Buffer.from(new Uint8Array(response.data)).toString('utf-8'));
       }
       return response.data;
     }
-
     return response.data;
   }
 

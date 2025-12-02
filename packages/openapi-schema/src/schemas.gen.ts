@@ -9363,6 +9363,173 @@ export const ComposioRevokeResponseSchema = {
   },
 } as const;
 
+export const PostHandlerContextSchema = {
+  type: 'object',
+  description: 'Context for post-processing tool execution results',
+  required: ['user', 'toolName', 'toolsetName', 'creditCost'],
+  properties: {
+    user: {
+      $ref: '#/components/schemas/User',
+      description: 'User who executed the tool',
+    },
+    toolName: {
+      type: 'string',
+      description: 'Tool name that was executed',
+    },
+    toolsetName: {
+      type: 'string',
+      description: 'Toolset name/key',
+    },
+    creditCost: {
+      type: 'number',
+      description: 'Credit cost for this tool execution',
+    },
+    fileNameTitle: {
+      type: 'string',
+      description: 'File name title from input params',
+    },
+  },
+} as const;
+
+export const PostHandlerResultSchema = {
+  type: 'object',
+  description: 'Result from post-processing tool execution',
+  required: ['data'],
+  properties: {
+    data: {
+      description: 'Processed data (may be uploaded to OSS)',
+    },
+    files: {
+      type: 'array',
+      description: 'Files uploaded during post-processing',
+      items: {
+        $ref: '#/components/schemas/DriveFile',
+      },
+    },
+    creditCost: {
+      type: 'number',
+      description: 'Credit cost recorded',
+    },
+    metadata: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Metadata about processing',
+    },
+  },
+} as const;
+
+export const ComposioConnectedAccountSchema = {
+  type: 'object',
+  description: 'Composio connected account structure from API response',
+  required: ['id'],
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Connected account ID',
+    },
+    status: {
+      type: 'string',
+      description: 'Connection status',
+    },
+    toolkit: {
+      type: 'object',
+      properties: {
+        slug: {
+          type: 'string',
+          description: 'Toolkit slug identifier',
+        },
+      },
+    },
+  },
+} as const;
+
+export const ComposioToolSchemaSchema = {
+  type: 'object',
+  description: 'Composio tool JSON schema structure',
+  properties: {
+    type: {
+      type: 'string',
+      description: 'Schema type',
+    },
+    properties: {
+      type: 'object',
+      additionalProperties: {
+        $ref: '#/components/schemas/ComposioSchemaProperty',
+      },
+      description: 'Schema properties',
+    },
+    required: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'Required property names',
+    },
+  },
+  additionalProperties: true,
+} as const;
+
+export const ComposioSchemaPropertySchema = {
+  type: 'object',
+  description: 'Composio schema property definition',
+  properties: {
+    type: {
+      type: 'string',
+      description: 'Property type',
+    },
+    description: {
+      type: 'string',
+      description: 'Property description',
+    },
+    deprecated: {
+      type: 'boolean',
+      description: 'Whether property is deprecated',
+    },
+  },
+  additionalProperties: true,
+} as const;
+
+export const ToolCreationContextSchema = {
+  type: 'object',
+  description:
+    'Context for creating a DynamicStructuredTool. User/userId comes from getCurrentUser() at runtime.',
+  required: [
+    'connectedAccountId',
+    'authType',
+    'creditCost',
+    'toolsetType',
+    'toolsetKey',
+    'toolsetName',
+  ],
+  properties: {
+    connectedAccountId: {
+      type: 'string',
+      description: 'Connected account ID from Composio',
+    },
+    authType: {
+      type: 'string',
+      enum: ['oauth', 'apikey'],
+      description: 'Authentication type',
+    },
+    creditCost: {
+      type: 'number',
+      description: 'Credit cost for tool execution',
+    },
+    toolsetType: {
+      $ref: '#/components/schemas/GenericToolsetType',
+      description: 'Toolset type identifier',
+    },
+    toolsetKey: {
+      type: 'string',
+      description: 'Toolset key',
+    },
+    toolsetName: {
+      type: 'string',
+      description: 'Toolset display name',
+    },
+  },
+} as const;
+
 export const GenericToolsetTypeSchema = {
   type: 'string',
   enum: ['regular', 'mcp', 'external_oauth'],

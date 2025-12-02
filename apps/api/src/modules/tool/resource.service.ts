@@ -10,19 +10,20 @@ import type {
   HandlerResponse,
   JsonSchema,
   SchemaProperty,
+  User,
 } from '@refly/openapi-schema';
 import { fileTypeFromBuffer } from 'file-type';
 import _ from 'lodash';
 import mime from 'mime';
-import { DriveService } from '../../drive/drive.service';
-import { MiscService } from '../../misc/misc.service';
+import { DriveService } from '../drive/drive.service';
+import { MiscService } from '../misc/misc.service';
 import {
   collectResourceFields,
   isValidFileId,
   removeFieldsRecursively,
   type ResourceField,
-} from '../utils/schema-utils';
-import { getCanvasId, getCurrentUser, getResultId, getResultVersion } from './core/tool-context';
+} from './utils/schema-utils';
+import { getCanvasId, getCurrentUser, getResultId, getResultVersion } from './tool-context';
 
 /**
  * Error thrown when fileId format is invalid
@@ -378,7 +379,33 @@ export class ResourceHandler {
       return await this.uploadBase64Resource(user, canvasId, value, fileName);
     }
 
-    return null;
+    // Handle plain text - save as .txt file
+    return await this.uploadTextResource(user, canvasId, value, fileName);
+  }
+
+  /**
+   * Upload plain text resource
+   */
+  private async uploadTextResource(
+    user: any,
+    canvasId: string,
+    text: string,
+    fileName: string,
+  ): Promise<DriveFile> {
+    const filename = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
+    const base64Content = Buffer.from(text, 'utf-8').toString('base64');
+
+    const driveFile = await this.driveService.createDriveFile(user, {
+      canvasId,
+      name: filename,
+      type: 'text/plain',
+      content: base64Content,
+      source: 'agent',
+      resultId: getResultId(),
+      resultVersion: getResultVersion(),
+    });
+
+    return driveFile;
   }
 
   /**
@@ -579,7 +606,7 @@ export class ResourceHandler {
   }
 
   /**
-   * Upload a resource value to DriveService
+   * Upload a resource value to DriveService (internal use with context)
    */
   private async writeResource(
     value: unknown,
@@ -597,6 +624,53 @@ export class ResourceHandler {
 
       // Handle string type (URL, base64, data URL)
       if (typeof value === 'string') {
+        return await this.uploadStringResource(user, canvasId, value, fileName, schemaProperty);
+      }
+
+      // Handle object with buffer property
+      if (value && typeof value === 'object') {
+        return await this.uploadObjectResource(user, canvasId, value, fileName);
+      }
+      return null;
+    } catch (error) {
+      this.logger.error(`Failed to upload resource: ${(error as Error).message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Public method to upload a resource value to DriveService
+   * Can be used by external services like ComposioService
+   *
+   * @param user - User context
+   * @param canvasId - Canvas ID for storage
+   * @param value - Resource value (Buffer, string URL, base64, data URL, or object with buffer)
+   * @param fileName - File name for the uploaded resource
+   * @param options - Optional configuration
+   * @returns DriveFile if upload successful, null otherwise
+   */
+  async uploadResource(
+    user: User,
+    canvasId: string,
+    value: unknown,
+    fileName: string,
+    options?: {
+      /** Treat string as base64 encoded */
+      isBase64?: boolean;
+    },
+  ): Promise<DriveFile | null> {
+    try {
+      // Handle Buffer type
+      if (Buffer.isBuffer(value)) {
+        return await this.uploadBufferResource(user, canvasId, value, fileName);
+      }
+
+      // Handle string type (URL, base64, data URL)
+      if (typeof value === 'string') {
+        // Create a schema property to trigger base64 handling
+        const schemaProperty: SchemaProperty | undefined = options?.isBase64
+          ? { type: 'string', format: 'base64' }
+          : undefined;
         return await this.uploadStringResource(user, canvasId, value, fileName, schemaProperty);
       }
 

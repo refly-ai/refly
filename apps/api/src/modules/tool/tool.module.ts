@@ -14,10 +14,11 @@ import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { McpServerModule } from '../mcp-server/mcp-server.module';
 import { MiscModule } from '../misc/misc.module';
 import { ProviderModule } from '../provider/provider.module';
+import { BillingModule } from './billing/billing.module';
 import { ComposioModule } from './composio/composio.module';
 import { AdapterFactory } from './dynamic-tooling/adapters/factory';
 import { ToolFactory } from './dynamic-tooling/factory.service';
-import { ResourceHandler } from './dynamic-tooling/resource.service';
+import { ResourceHandler } from './resource.service';
 import { ToolInventoryService } from './inventory/inventory.service';
 import { ScaleboxModule } from './sandbox/scalebox.module';
 import { ToolController } from './tool.controller';
@@ -36,6 +37,7 @@ import { ToolService } from './tool.service';
     CanvasSyncModule,
     ProviderModule,
     CreditModule,
+    BillingModule,
     ScaleboxModule,
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_SYNC_TOOL_CREDIT_USAGE })]),
   ],
