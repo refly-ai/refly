@@ -2429,7 +2429,7 @@ const translations = {
       appearance: 'Appearance',
       subscription: 'Subscription',
       mcpServer: 'MCP Server',
-      tools: 'Tools Config',
+      tools: 'Tools',
     },
     mcpServer: {
       tools: 'Tools',

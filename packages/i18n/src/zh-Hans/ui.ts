@@ -2402,7 +2402,7 @@ const translations = {
       appearance: '外观',
       subscription: '订阅',
       mcpServer: 'MCP 服务器',
-      tools: '工具配置',
+      tools: '工具',
     },
     mcpServer: {
       tools: '工具',
