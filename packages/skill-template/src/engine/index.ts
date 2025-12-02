@@ -92,11 +92,13 @@ export class SkillEngine {
     const config = this.config?.configurable;
     const provider = config?.provider;
     const model = config.modelConfigMap?.[finalScene] as LLMModelConfig;
+    const mode = config?.mode;
 
     return getChatModel(
       provider,
       model ?? { modelId: this.options.defaultModel, modelName: this.options.defaultModel },
       params,
+      { mode, userId: config.user.uid },
     );
   }
 }

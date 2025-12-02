@@ -18,7 +18,7 @@ export const getChatModel = (
   provider: BaseProvider,
   config: LLMModelConfig,
   params?: Partial<OpenAIBaseInput> | Partial<AzureOpenAIInput>,
-  context?: { userId?: string },
+  context?: { userId?: string; mode?: string },
 ): BaseChatModel => {
   let model: BaseChatModel;
   const extraParams = provider.extraParams ? JSON.parse(provider.extraParams) : {};
@@ -104,6 +104,7 @@ export const getChatModel = (
     userId: context?.userId,
     modelId: config.modelId,
     provider: provider.providerKey,
+    mode: context?.mode,
   });
 };
 

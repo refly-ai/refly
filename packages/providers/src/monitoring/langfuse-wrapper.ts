@@ -154,7 +154,7 @@ function createTrace(userId?: string, metadata: Record<string, any> = {}) {
  */
 export function wrapChatModelWithMonitoring(
   model: BaseChatModel,
-  context: { userId?: string; modelId?: string; provider?: string } = {},
+  context: { userId?: string; modelId?: string; provider?: string; mode?: string } = {},
 ): BaseChatModel {
   if (!isMonitoringEnabled) {
     return model;
@@ -178,6 +178,7 @@ export function wrapChatModelWithMonitoring(
       input: { messages: input },
       metadata: {
         operation: 'invoke',
+        mode: context.mode,
         modelId: context.modelId,
         provider: context.provider,
       },
