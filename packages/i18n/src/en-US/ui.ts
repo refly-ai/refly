@@ -3902,6 +3902,7 @@ const translations = {
       label: 'Publish to Community',
       help: 'After publishing to the community, other users can discover and use your workflow app',
     },
+    copyLinkTooltip: 'Copy link from your latest published version',
   },
   project: {
     create: 'Create Project',

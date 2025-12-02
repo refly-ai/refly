@@ -3630,6 +3630,7 @@ const translations = {
       label: '发布到社区',
       help: '发布到社区后，其他用户可以在社区中发现和使用你的工作流应用',
     },
+    copyLinkTooltip: '复制最新发布版本的链接',
   },
   project: {
     create: '创建知识库',
