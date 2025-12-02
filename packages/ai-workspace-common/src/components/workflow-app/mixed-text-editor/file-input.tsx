@@ -95,6 +95,8 @@ const FileInput: React.FC<FileInputProps> = memo(
             };
             onChange(resource);
           }
+        } catch (error) {
+          console.error('File upload failed:', error);
         } finally {
           setUploading(false);
         }

@@ -1277,7 +1277,6 @@ export class CanvasService {
         return value;
       }
 
-      // If file belongs to a different user, duplicate it
       const duplicatedFile = await this.driveService.duplicateDriveFile(user, driveFile, canvasId);
 
       // Update the variable value with new fileId
