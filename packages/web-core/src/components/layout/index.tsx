@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Layout } from 'antd';
-import { useMatch } from 'react-router-dom';
+import { useMatch, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from '@sentry/react';
 import { SiderLayout } from '@refly-packages/ai-workspace-common/components/sider/layout';
@@ -43,6 +43,10 @@ interface AppLayoutProps {
 }
 
 export const AppLayout = (props: AppLayoutProps) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const hasRedirectedRef = useRef(false);
+
   const { showCanvasListModal, setShowCanvasListModal, showLibraryModal, setShowLibraryModal } =
     useSiderStoreShallow((state) => ({
       showCanvasListModal: state.showCanvasListModal,
@@ -87,6 +91,28 @@ export const AppLayout = (props: AppLayoutProps) => {
       i18n.changeLanguage(locale);
     }
   }, [i18n, locale]);
+
+  // Handle root path redirection based on login status
+  useEffect(() => {
+    if (
+      location.pathname === '/' &&
+      !userStore.isCheckingLoginStatus &&
+      !hasRedirectedRef.current
+    ) {
+      hasRedirectedRef.current = true;
+      if (userStore.isLogin && userStore.userProfile) {
+        navigate('/workspace', { replace: true });
+      } else {
+        navigate('/login', { replace: true });
+      }
+    }
+  }, [
+    location.pathname,
+    userStore.isLogin,
+    userStore.userProfile,
+    userStore.isCheckingLoginStatus,
+    navigate,
+  ]);
 
   // Handle payment callback
   useHandleUrlParamsCallback();

@@ -8,6 +8,10 @@ import { useCollabToken } from '@refly-packages/ai-workspace-common/hooks/use-co
 import { wsServerOrigin } from '@refly/ui-kit';
 import { Document } from '@refly/openapi-schema';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
+import {
+  ensureIndexedDbSupport,
+  getIndexedDbSupportState,
+} from '@refly-packages/ai-workspace-common/utils/indexeddb';
 
 interface DocumentContextType {
   docId: string;
@@ -23,7 +27,7 @@ const DocumentContext = createContext<DocumentContextType | null>(null);
 
 const providerCache = new Map<
   string,
-  { remote: HocuspocusProvider; local: IndexeddbPersistence }
+  { remote: HocuspocusProvider; local: IndexeddbPersistence | null }
 >();
 
 const getTitleFromYDoc = (ydoc: Y.Doc) => {
@@ -45,6 +49,9 @@ export const DocumentProvider = ({
   const { token, refreshToken } = useCollabToken();
   const [isLoading, setIsLoading] = useState(true);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
+  const [isIndexedDbAvailable, setIsIndexedDbAvailable] = useState(
+    () => getIndexedDbSupportState() ?? false,
+  );
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 2000;
 
@@ -54,6 +61,26 @@ export const DocumentProvider = ({
       setDocumentRemoteSyncedAt: state.setDocumentRemoteSyncedAt,
       updateDocument: state.updateDocument,
     }));
+
+  useEffect(() => {
+    let isMounted = true;
+    ensureIndexedDbSupport()
+      .then((result) => {
+        if (isMounted) {
+          setIsIndexedDbAvailable(result);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to detect IndexedDB availability:', error);
+        if (isMounted) {
+          setIsIndexedDbAvailable(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Fetch document data from API when in readonly mode
   const { data: documentData, loading: isShareDocumentLoading } =
@@ -87,7 +114,18 @@ export const DocumentProvider = ({
     }
 
     const existingProvider = providerCache.get(docId);
-    if (existingProvider?.remote?.status === 'connected') {
+    if (existingProvider) {
+      if (!existingProvider.local && isIndexedDbAvailable) {
+        try {
+          const upgradedLocal = new IndexeddbPersistence(docId, existingProvider.remote.document);
+          const upgradedProviders = { remote: existingProvider.remote, local: upgradedLocal };
+          providerCache.set(docId, upgradedProviders);
+          return { ...upgradedProviders, doc: upgradedProviders.remote.document };
+        } catch (error) {
+          console.error('Failed to upgrade IndexedDB persistence:', error);
+        }
+      }
+
       return { ...existingProvider, doc: existingProvider.remote.document };
     }
 
@@ -106,13 +144,21 @@ export const DocumentProvider = ({
       },
     });
 
-    const localProvider = new IndexeddbPersistence(docId, doc);
+    let localProvider: IndexeddbPersistence | null = null;
+    if (isIndexedDbAvailable) {
+      try {
+        localProvider = new IndexeddbPersistence(docId, doc);
+      } catch (error) {
+        console.error('Failed to initialize IndexedDB persistence:', error);
+        localProvider = null;
+      }
+    }
 
     const providers = { remote: remoteProvider, local: localProvider };
     providerCache.set(docId, providers);
 
     return { remote: remoteProvider, local: localProvider, doc };
-  }, [docId, token, readonly, updateDocumentData]);
+  }, [docId, token, readonly, refreshToken, isIndexedDbAvailable]);
 
   // Register event handlers for sync events
   useEffect(() => {

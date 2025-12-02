@@ -908,8 +908,11 @@ export class SkillInvokerService {
                 modelName: String(runMeta.ls_model_name),
                 modelLabel: providerItem?.name,
                 providerItemId: providerItem?.itemId,
-                inputTokens: chunk.usage_metadata?.input_tokens ?? 0,
+                inputTokens:
+                  (chunk.usage_metadata?.input_tokens ?? 0) -
+                  (chunk.usage_metadata?.input_token_details?.cache_read ?? 0),
                 outputTokens: chunk.usage_metadata?.output_tokens ?? 0,
+                cacheReadTokens: chunk.usage_metadata?.input_token_details?.cache_read ?? 0,
               };
               resultAggregator.addUsageItem(runMeta, usage);
 
@@ -1045,7 +1048,10 @@ export class SkillInvokerService {
       await this.prisma.$transaction([
         this.prisma.actionStep.createMany({ data: steps }),
         // Persist remaining unpersisted messages to action_messages table
-        ...(messages.length > 0 ? [this.prisma.actionMessage.createMany({ data: messages })] : []),
+        // Use skipDuplicates to handle cases where messages were already auto-saved
+        ...(messages.length > 0
+          ? [this.prisma.actionMessage.createMany({ data: messages, skipDuplicates: true })]
+          : []),
         ...(result.pilotStepId
           ? [
               this.prisma.pilotStep.updateMany({

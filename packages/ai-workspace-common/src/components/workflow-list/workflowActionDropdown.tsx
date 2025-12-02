@@ -17,6 +17,7 @@ interface WorkflowActionDropdown {
 }
 
 export const WorkflowActionDropdown = memo((props: WorkflowActionDropdown) => {
+  const showRemix = false;
   const { workflow, children, onRenameSuccess, onDeleteSuccess } = props;
   const { t } = useTranslation();
   const [popupVisible, setPopupVisible] = useState(false);
@@ -98,7 +99,7 @@ export const WorkflowActionDropdown = memo((props: WorkflowActionDropdown) => {
     {
       label: (
         <div
-          className="flex items-center gap-1 w-28"
+          className="flex items-center gap-1 min-w-28"
           onClick={(e) => {
             e.stopPropagation();
             openRenameModal(workflow.canvasId, workflow.title, onRenameSuccess);
@@ -110,44 +111,49 @@ export const WorkflowActionDropdown = memo((props: WorkflowActionDropdown) => {
       ),
       key: 'rename',
     },
-    {
-      label: (
-        <div
-          className="flex items-center gap-1 w-28"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDuplicate();
-          }}
-        >
-          {t('canvas.toolbar.duplicate')}
-          <Spin spinning={duplicateLoading} size="small" className="text-refly-text-3" />
-        </div>
-      ),
-      key: 'duplicate',
-      disabled: duplicateLoading,
-    },
-    {
-      label: (
-        <Tooltip
-          title={!isShared ? t('workflowList.copyLinkTooltip') : undefined}
-          placement="right"
-        >
-          <div
-            className={`flex items-center gap-1 w-28 ${!isShared ? 'opacity-50 cursor-not-allowed' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!isShared) return;
-              handleCopyLink();
-            }}
-          >
-            <Spin spinning={copyLinkLoading} size="small" className="text-refly-text-3" />
-            {t('workflowList.copyLink')}
-          </div>
-        </Tooltip>
-      ),
-      key: 'copyLink',
-      disabled: !isShared || copyLinkLoading,
-    },
+    ...(showRemix
+      ? [
+          {
+            label: (
+              <div
+                className="flex items-center gap-1 min-w-28"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDuplicate();
+                }}
+              >
+                {t('canvas.toolbar.duplicate')}
+                <Spin spinning={duplicateLoading} size="small" className="text-refly-text-3" />
+              </div>
+            ),
+            key: 'duplicate',
+            disabled: duplicateLoading,
+          },
+          {
+            label: (
+              <Tooltip
+                title={!isShared ? t('workflowList.copyLinkTooltip') : undefined}
+                placement="right"
+              >
+                <div
+                  className={`flex items-center gap-1 min-w-28 ${!isShared ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isShared) return;
+                    handleCopyLink();
+                  }}
+                >
+                  <Spin spinning={copyLinkLoading} size="small" className="text-refly-text-3" />
+                  {t('workflowList.copyLink')}
+                </div>
+              </Tooltip>
+            ),
+            key: 'copyLink',
+            disabled: !isShared || copyLinkLoading,
+          },
+        ]
+      : []),
+
     {
       label: (
         <Tooltip
@@ -155,7 +161,7 @@ export const WorkflowActionDropdown = memo((props: WorkflowActionDropdown) => {
           placement="right"
         >
           <div
-            className={`flex items-center gap-1 w-28 ${!isTemplatePublished ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex items-center gap-1 min-w-28 ${!isTemplatePublished ? 'opacity-50 cursor-not-allowed' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               if (!isTemplatePublished) return;
@@ -173,7 +179,7 @@ export const WorkflowActionDropdown = memo((props: WorkflowActionDropdown) => {
     {
       label: (
         <div
-          className="flex items-center text-refly-func-danger-default gap-1 w-28"
+          className="flex items-center text-refly-func-danger-default gap-1 min-w-28"
           onClick={(e) => {
             e.stopPropagation();
             openDeleteModal(workflow.canvasId, workflow.title, onDeleteSuccess);

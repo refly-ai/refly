@@ -2039,6 +2039,10 @@ export const TokenUsageItemSchema = {
       type: 'number',
       description: 'Output tokens',
     },
+    cacheReadTokens: {
+      type: 'number',
+      description: 'Cache read tokens',
+    },
     providerItemId: {
       type: 'string',
       description: 'Provider item ID',

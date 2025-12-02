@@ -204,19 +204,20 @@ export const CreateNodeMenu: FC<CreateNodeMenuProps> = memo(
     const menuItems = getMenuItems();
 
     return (
-      <div className="px-2 py-1.5">
+      <div>
         {menuItems.map((item) => {
           const button = (
             <Button
               key={item.key}
               className={`
               w-full
-              h-7
+              h-auto
               flex
               items-center
               justify-start
-              px-2
-              rounded
+              px-4
+              py-2
+              rounded-lg
               text-sm
               transition-colors
               text-refly-text-0

@@ -45,6 +45,27 @@ export const WorkspaceRedirect = () => {
 };
 
 /**
+ * Redirect component for /app/:shareId
+ * Redirects to /workflow-template/:shareId
+ * Preserves query parameters
+ */
+export const WorkflowTemplateRedirect = () => {
+  const { shareId } = useParams<{ shareId: string }>();
+  const [searchParams] = useSearchParams();
+
+  if (shareId) {
+    const queryString = searchParams.toString();
+    const target = queryString
+      ? `/workflow-template/${shareId}?${queryString}`
+      : `/workflow-template/${shareId}`;
+    return <Navigate to={target} replace />;
+  }
+
+  // Fallback to workspace if no shareId
+  return <Navigate to="/workspace" replace />;
+};
+
+/**
  * Protected route wrapper. Redirects unauthenticated users to /login with returnUrl.
  * This component does not render any loading UI to avoid UI changes on protected pages.
  */

@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { Popover, Button } from 'antd';
 import { FaDiscord } from 'react-icons/fa6';
 import { RiNotionLine, RiTwitterXFill, RiArrowRightLine } from 'react-icons/ri';
+import Feishu from '../../assets/feishu.svg';
 
 import { useTranslation } from 'react-i18next';
 import { Close } from 'refly-icons';
@@ -39,8 +40,8 @@ const CommunityLinkCard: React.FC<CommunityLinkCardProps> = React.memo(
 CommunityLinkCard.displayName = 'CommunityLinkCard';
 
 export const ContactUsPopover: React.FC<ContactUsPopoverProps> = ({ children, open, setOpen }) => {
-  const { t } = useTranslation();
-
+  const { t, i18n } = useTranslation();
+  const currentLanguage = i18n.language;
   const handleOpenChange = useCallback(
     (newOpen: boolean) => {
       setOpen(newOpen);
@@ -61,7 +62,14 @@ export const ContactUsPopover: React.FC<ContactUsPopoverProps> = ({ children, op
   }, []);
 
   const handleNotionDocumentClick = useCallback(() => {
-    window.open('https://notion.so/reflydoc/Contact-us-28dd62ce607180318ae6c944e2db6abf', '_blank');
+    window.open(
+      'https://www.notion.so/reflydoc/Welcome-to-Refly-28cd62ce60718093b830c4b9fc8b22a3',
+      '_blank',
+    );
+  }, []);
+
+  const handleFeishuDocumentClick = useCallback(() => {
+    window.open('https://powerformer.feishu.cn/wiki/A7Paw5CIGip0jvkCU26ce4IunFc', '_blank');
   }, []);
 
   const handleTwitterClick = useCallback(() => {
@@ -82,18 +90,26 @@ export const ContactUsPopover: React.FC<ContactUsPopoverProps> = ({ children, op
         />
       </div>
       <div className="flex flex-col gap-3">
-        {/* Notion Document */}
-        <CommunityLinkCard
-          icon={<RiNotionLine className="text-refly-text-0 text-[40px]" />}
-          title={t('landingPage.footer.contactUs.viewNotionDocument')}
-          onClick={handleNotionDocumentClick}
-        />
+        {currentLanguage === 'zh-CN' ? (
+          <CommunityLinkCard
+            icon={<img src={Feishu} alt="Feishu" className="w-10 h-10" />}
+            title={t('landingPage.footer.contactUs.viewDocument')}
+            onClick={handleFeishuDocumentClick}
+          />
+        ) : (
+          <CommunityLinkCard
+            icon={<RiNotionLine className="text-refly-text-0 text-[40px]" />}
+            title={t('landingPage.footer.contactUs.viewDocument')}
+            onClick={handleNotionDocumentClick}
+          />
+        )}
         {/* Discord Community */}
         <CommunityLinkCard
           icon={<FaDiscord className="text-refly-text-0 text-[40px]" />}
           title={t('landingPage.footer.contactUs.joinDiscordGroup')}
           onClick={handleDiscordClick}
         />
+
         {/* Twitter Official Account */}
         <CommunityLinkCard
           icon={<RiTwitterXFill className="text-refly-text-0 text-[40px]" />}

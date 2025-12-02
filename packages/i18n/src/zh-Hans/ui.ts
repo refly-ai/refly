@@ -106,6 +106,8 @@ const translations = {
       description: {
         '5k_tokens':
           '每 5k 输入 token 消耗 {{inputCost}} 积分，每 5k 输出 token 消耗 {{outputCost}} 积分',
+        '1m_tokens':
+          '每 1M 输入 token 消耗 {{inputCost}} 积分，每 1M 输出 token 消耗 {{outputCost}} 积分',
         product: '每个产物消耗 {{cost}} 积分',
         canvasTotal: 'AI 输出不稳定，积分仅为预估情况，需按实际执行结果',
       },
@@ -305,6 +307,7 @@ const translations = {
     newDocument: '新文档',
     docs: '文档',
     skill: '技能',
+    thinking: 'Refly AI 思考中',
     thread: '会话',
     meta: '元信息',
     project: '知识库',
@@ -330,21 +333,21 @@ const translations = {
     uploadFailed: '上传失败',
     upload: {
       notification: {
-        uploading: '正在上传 {{count}} 张图片',
+        uploading: '正在上传 {{count}} 个文件',
         progress: '已完成 {{completed}}/{{total}}',
         complete: '完成',
-        success: '成功上传 {{count}} 张图片',
-        allUploaded: '所有图片已成功上传',
+        success: '成功上传 {{count}} 个文件',
+        allUploaded: '上传完成！您上传的文件现在可以使用了',
         partialSuccess: '上传完成，部分失败',
-        partialSuccessDesc: '成功 {{success}} 张，失败 {{error}} 张',
+        partialSuccessDesc: '成功 {{success}} 个，失败 {{error}} 个',
         failed: '上传失败',
-        allFailed: '所有图片上传失败',
+        allFailed: '所有文件上传失败',
       },
     },
     errorNotice: {
       resultId: '请求 ID: {{resultId}}',
     },
-    dropImageHere: '拖放图片到这里',
+    dropImageHere: '拖放文件到这里',
     presetColors: '预设颜色',
     duplicate: '副本',
     shareSuccess: '分享链接已复制到剪贴板!',
@@ -726,7 +729,8 @@ const translations = {
         orWeChat: '或微信',
         discordGroup: 'Discord 交流群',
         notionDocument: 'Notion 文档',
-        viewNotionDocument: '查看文档',
+        viewDocument: '查看文档',
+        feishuDocument: '飞书文档',
         joinDiscordGroup: '加入 Discord',
         followReflyUpdates: '关注 Refly 动态',
         reflyTwitterAccount: 'Refly官方账号',
@@ -2165,8 +2169,8 @@ const translations = {
     defaultTitle: '代码组件',
   },
   agent: {
-    configure: '配置',
-    lastRun: '最近运行',
+    configure: '输入',
+    lastRun: '输出',
     noResult: '运行后才有记录哦',
     editTitlePlaceholder: '输入智能体的标题',
     config: {
@@ -2669,6 +2673,14 @@ const translations = {
       activateInvitationCode: '激活邀请码',
       activateInvitationCodeSuccess: '欢迎使用 Refly 🎉 开始您的 vibe-workflow 之旅吧！',
       activateInvitationCodeFailed: '邀请码无效，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeInvalid: '邀请码无效，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeUsed: '邀请码已被使用，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeAlreadyInvited:
+        '该用户已被邀请，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeOwnCode:
+        '不能使用自己的邀请码，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeAlreadyActivated:
+        '该邀请已激活，请重试或加入 Discord 群组获取新邀请码。',
       invitationCodeCopied: '邀请码已复制！快去分享给你的朋友吧~',
       invitationCodeCopyFailed: '复制邀请码失败',
       invitationReward: '+{{amount}}积分',
@@ -3431,6 +3443,13 @@ const translations = {
       installSkillHintTitle: '添加助手',
       openCanvas: '打开画布',
     },
+    abortConfirmModal: {
+      title: '停止执行',
+      content: '确定要停止当前执行吗？已消耗的积分将不会返还。',
+      confirm: '停止执行',
+      cancel: '取消',
+    },
+    abortSuccess: '已停止执行',
     recommendQuestions: {
       title: '推荐问题',
       refresh: '换一批',
@@ -3609,6 +3628,8 @@ const translations = {
     duplicateCanvasEntities: '复制该画布所包含的文档以及资源',
     noDescription: '暂无描述',
     emptyList: '暂无模版，快来发挥你的创造力，为社区贡献模版吧～',
+    notFoundQuestion: '没有找到你需要的自动化工作流模板？',
+    goToMarketplace: '前往市场',
   },
   workflowApp: {
     title: '名称',
@@ -3669,6 +3690,7 @@ const translations = {
       label: '发布到社区',
       help: '发布到社区后，其他用户可以在社区中发现和使用你的工作流应用',
     },
+    copyLinkTooltip: '复制最新发布版本的链接',
   },
   project: {
     create: '创建知识库',

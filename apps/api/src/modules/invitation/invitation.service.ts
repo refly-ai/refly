@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { CreditService } from '../credit/credit.service';
 import { ConfigService } from '@nestjs/config';
 import { InvitationCode } from '@refly/openapi-schema';
+import { BaseResponse } from '@refly/openapi-schema';
 
 @Injectable()
 export class InvitationService {
@@ -128,19 +129,19 @@ export class InvitationService {
    * activate invitation code for invitee
    * give both inviter and invitee 500 credits each with 2-week expiration
    */
-  async activateInvitationCode(inviteeUid: string, code: string): Promise<void> {
+  async activateInvitationCode(inviteeUid: string, code: string): Promise<BaseResponse> {
     // Check if invitation code exists
     const invitationCode = await this.prisma.invitationCode.findUnique({
       where: { code },
     });
 
     if (!invitationCode) {
-      throw new BadRequestException('Invalid invitation code');
+      return { success: false, errMsg: 'settings.account.activateInvitationCodeInvalid' };
     }
 
     // Check if code is still pending
     if (invitationCode.status !== 'pending') {
-      throw new BadRequestException('Invitation code has already been used');
+      return { success: false, errMsg: 'settings.account.activateInvitationCodeUsed' };
     }
 
     // Check if invitee has already been invited by anyone
@@ -152,12 +153,12 @@ export class InvitationService {
     });
 
     if (existingInvitee) {
-      throw new BadRequestException('This user has already been invited');
+      return { success: false, errMsg: 'settings.account.activateInvitationCodeAlreadyInvited' };
     }
 
     // Check if invitee is trying to use their own invitation code
     if (invitationCode.inviterUid === inviteeUid) {
-      throw new BadRequestException('Cannot use your own invitation code');
+      return { success: false, errMsg: 'settings.account.activateInvitationCodeOwnCode' };
     }
 
     // Check if invitee has already been invited by this inviter (unique constraint)
@@ -170,7 +171,7 @@ export class InvitationService {
     });
 
     if (existingActivation) {
-      throw new BadRequestException('This invitation has already been activated');
+      return { success: false, errMsg: 'settings.account.activateInvitationCodeAlreadyActivated' };
     }
     const now = new Date();
     // Update invitation code status and set invitee
@@ -208,5 +209,7 @@ export class InvitationService {
       inviteeUid,
       now,
     );
+
+    return { success: true };
   }
 }

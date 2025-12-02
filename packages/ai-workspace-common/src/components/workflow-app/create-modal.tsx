@@ -109,6 +109,7 @@ export const CreateWorkflowAppModal = ({
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const showRemix = false;
 
   // Cover image upload state
   const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
@@ -129,6 +130,9 @@ export const CreateWorkflowAppModal = ({
 
   // Drive files state
   const [driveFiles, setDriveFiles] = useState<DriveFile[]>([]);
+
+  // Copy share link state
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const { data: workflowVariables } = useVariablesManagement(canvasId);
   const { nodes } = useRealtimeCanvasData();
@@ -441,7 +445,7 @@ export const CreateWorkflowAppModal = ({
         ...values,
         title: values.title,
         description: values.description ?? '',
-        remixEnabled: values.remixEnabled ?? false,
+        remixEnabled: showRemix ? (values.remixEnabled ?? false) : false,
         publishToCommunity: values.publishToCommunity ?? false,
       });
     } catch (error) {
@@ -474,6 +478,9 @@ export const CreateWorkflowAppModal = ({
       setPreviewVisible(false);
       setPreviewImage('');
       setPreviewTitle('');
+
+      // Reset copy state
+      setLinkCopied(false);
     }
   }, [visible, title, appId, loadAppData]);
 
@@ -570,17 +577,93 @@ export const CreateWorkflowAppModal = ({
     return isUpdate ? t('workflowApp.updatePublish') : t('workflowApp.publish');
   }, [isUpdate, t]);
 
+  // Calculate current share link
+  const currentShareLink = useMemo(() => {
+    if (appData?.shareId) {
+      return getShareLink('workflowApp', appData.shareId);
+    }
+    return '';
+  }, [appData?.shareId]);
+
+  // Handle copy share link
+  const handleCopyShareLink = useCallback(async () => {
+    if (!currentShareLink) {
+      return;
+    }
+
+    try {
+      const ok = await copyToClipboard(currentShareLink);
+      if (ok) {
+        setLinkCopied(true);
+        message.success(t('shareContent.linkCopied'));
+        // Reset copied state after 2 seconds
+        setTimeout(() => {
+          setLinkCopied(false);
+        }, 2000);
+      } else {
+        message.error(t('common.operationFailed'));
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to copy link:', error);
+      message.error(t('common.operationFailed'));
+    }
+  }, [currentShareLink, t]);
+
+  // Custom footer with copy button and original buttons
+  const modalFooter = useMemo(() => {
+    return (
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-2">
+          {currentShareLink && (
+            <>
+              <Button
+                title={currentShareLink}
+                onClick={handleCopyShareLink}
+                disabled={isUploading}
+                className="flex items-center gap-2"
+              >
+                {linkCopied ? t('shareContent.linkCopied') : t('shareContent.copyLink')}
+              </Button>
+              <Tooltip title={t('workflowApp.copyLinkTooltip')} arrow={false}>
+                <Question
+                  size={14}
+                  color="var(--refly-question-icon-color, #888D92)"
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                />
+              </Tooltip>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setVisible(false)} disabled={confirmLoading}>
+            {t('common.cancel')}
+          </Button>
+          <Button type="primary" onClick={onSubmit} loading={confirmLoading} disabled={isUploading}>
+            {okButtonText}
+          </Button>
+        </div>
+      </div>
+    );
+  }, [
+    currentShareLink,
+    handleCopyShareLink,
+    linkCopied,
+    isUploading,
+    confirmLoading,
+    okButtonText,
+    onSubmit,
+    setVisible,
+    t,
+  ]);
+
   return (
     <Modal
       centered
       open={visible}
       onCancel={() => setVisible(false)}
-      onOk={onSubmit}
-      confirmLoading={confirmLoading}
-      okText={okButtonText}
-      cancelText={t('common.cancel')}
+      footer={modalFooter}
       title={modalTitle}
-      okButtonProps={{ disabled: isUploading }}
       styles={{
         body: {
           maxHeight: '70vh',
@@ -749,20 +832,23 @@ export const CreateWorkflowAppModal = ({
                 </div>
               </div>
               {/* Remix Settings */}
-              <div className="flex flex-col gap-2 mt-5">
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="remix-enabled-switch"
-                    className="text-xs font-semibold text-refly-text-0 leading-[1.33]"
-                  >
-                    {t('workflowApp.enableRemix')}
-                  </label>
-                  <Form.Item name="remixEnabled" valuePropName="checked" className="mb-0">
-                    <Switch id="remix-enabled-switch" size="small" className="" />
-                  </Form.Item>
+              {showRemix && (
+                <div className="flex flex-col gap-2 mt-5">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="remix-enabled-switch"
+                      className="text-xs font-semibold text-refly-text-0 leading-[1.33]"
+                    >
+                      {t('workflowApp.enableRemix')}
+                    </label>
+                    <Form.Item name="remixEnabled" valuePropName="checked" className="mb-0">
+                      <Switch id="remix-enabled-switch" size="small" className="" />
+                    </Form.Item>
+                  </div>
+                  <div className="text-xs text-refly-text-2">{t('workflowApp.remixHint')}</div>
                 </div>
-                <div className="text-xs text-refly-text-2">{t('workflowApp.remixHint')}</div>
-              </div>
+              )}
+
               {/* Cover Image Upload */}
               <div className="flex flex-col gap-2 mt-5">
                 <div className="text-xs font-semibold text-refly-text-0 leading-[1.33]">

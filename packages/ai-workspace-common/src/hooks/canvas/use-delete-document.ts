@@ -4,6 +4,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useDebouncedCallback } from 'use-debounce';
 import { useDocumentStoreShallow } from '@refly/stores';
 import { IndexeddbPersistence } from 'y-indexeddb';
+import { ensureIndexedDbSupport } from '@refly-packages/ai-workspace-common/utils/indexeddb';
 import { useSubscriptionUsage } from '../use-subscription-usage';
 
 export const useDeleteDocument = () => {
@@ -30,9 +31,16 @@ export const useDeleteDocument = () => {
         deleteDocumentData(docId);
 
         // Clear IndexedDB persistence for the deleted document
-        const indexedDbProvider = new IndexeddbPersistence(docId, new Y.Doc());
-        await indexedDbProvider.clearData();
-        await indexedDbProvider.destroy();
+        try {
+          const canUseIndexedDb = await ensureIndexedDbSupport();
+          if (canUseIndexedDb) {
+            const indexedDbProvider = new IndexeddbPersistence(docId, new Y.Doc());
+            await indexedDbProvider.clearData();
+            await indexedDbProvider.destroy();
+          }
+        } catch (error) {
+          console.error('Failed to clear document IndexedDB state:', error);
+        }
       }
     } finally {
       setIsRemoving(false);

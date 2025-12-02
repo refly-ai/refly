@@ -10,9 +10,8 @@ import {
   type ResultActiveTab,
   useCanvasStoreShallow,
 } from '@refly/stores';
-import { sortSteps } from '@refly/utils/step';
 import { Segmented, Button } from 'antd';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
@@ -75,8 +74,6 @@ const SkillResponseNodePreviewComponent = ({
   const { data: shareData, loading: shareDataLoading } = useFetchShareData(shareId);
   const loading = fetchActionResultLoading || shareDataLoading;
 
-  const [statusText, setStatusText] = useState('');
-
   useEffect(() => {
     if (shareData && !result && shareData?.resultId === resultId) {
       updateActionResult(resultId, shareData);
@@ -96,7 +93,6 @@ const SkillResponseNodePreviewComponent = ({
 
   const { data } = node;
 
-  const actionMeta = result?.actionMeta ?? data?.metadata?.actionMeta;
   const version = result?.version ?? data?.metadata?.version ?? 0;
 
   const title = data?.title ?? result?.title;
@@ -107,29 +103,6 @@ const SkillResponseNodePreviewComponent = ({
   const selectedToolsets = data?.metadata?.selectedToolsets ?? result?.toolsets;
 
   const { steps = [] } = result ?? {};
-
-  useEffect(() => {
-    const skillName = actionMeta?.name || 'commonQnA';
-    if (result?.status !== 'executing' && result?.status !== 'waiting') return;
-
-    const sortedSteps = sortSteps(steps);
-
-    if (sortedSteps.length === 0) {
-      setStatusText(
-        t(`${skillName}.steps.analyzeQuery.description`, {
-          ns: 'skill',
-        }),
-      );
-      return;
-    }
-
-    const lastStep = sortedSteps[sortedSteps.length - 1];
-    setStatusText(
-      t(`${skillName}.steps.${lastStep.name}.description`, {
-        ns: 'skill',
-      }),
-    );
-  }, [result?.status, steps, t]);
 
   const handleRetry = useCallback(() => {
     // Reset failed state before retrying
@@ -281,7 +254,6 @@ const SkillResponseNodePreviewComponent = ({
               resultId={resultId}
               result={result}
               outputStep={outputStep}
-              statusText={statusText}
               query={query}
               title={title}
               nodeId={node.id}
