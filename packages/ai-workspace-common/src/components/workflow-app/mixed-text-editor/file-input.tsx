@@ -16,6 +16,52 @@ interface FileInputProps {
   isModified?: boolean; // Whether the value has been modified by user
 }
 
+// Loading dots animation component
+const LoadingDots: React.FC = () => {
+  const dotStyle: React.CSSProperties = {
+    width: '4px',
+    height: '4px',
+    backgroundColor: '#0E9F77',
+    borderRadius: '50%',
+    display: 'inline-block',
+    animation: 'bounce 1.4s infinite ease-in-out both',
+  };
+
+  return (
+    <>
+      <style>
+        {`
+          @keyframes bounce {
+            0%, 80%, 100% {
+              transform: scale(0.75);
+              opacity: 0.7;
+            }
+            40% {
+              transform: scale(1.5);
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
+      <div
+        style={{
+          width: '24px',
+          height: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginLeft: '8px',
+          marginRight: '8px',
+        }}
+      >
+        <div style={{ ...dotStyle, animationDelay: '-0.32s' }} />
+        <div style={{ ...dotStyle, animationDelay: '-0.16s' }} />
+        <div style={{ ...dotStyle, animationDelay: '0s' }} />
+      </div>
+    </>
+  );
+};
+
 const FileInput: React.FC<FileInputProps> = memo(
   ({
     value,
@@ -114,11 +160,15 @@ const FileInput: React.FC<FileInputProps> = memo(
           }
         >
           <Attachment size={16} color="var(--refly-primary-default)" />
-          <span className="flex-1 ml-1 truncate max-w-[200px] min-w-0">
-            {uploading
-              ? t('common.upload.notification.uploading', { count: 1 })
-              : fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')}
-          </span>
+          {uploading ? (
+            <div className="flex-1 flex items-center">
+              <LoadingDots />
+            </div>
+          ) : (
+            <span className="flex-1 ml-1 truncate max-w-[200px] min-w-0">
+              {fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')}
+            </span>
+          )}
         </div>
       </Upload>
     );
