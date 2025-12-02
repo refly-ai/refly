@@ -171,6 +171,43 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   const { onLayout } = useCanvasLayout();
   const { getNodes } = useReactFlow<CanvasNode<any>>();
 
+  // Clean up highlightedNodeIds when nodes are deleted
+  // Use a ref to track previous node IDs to detect deletions accurately
+  const prevNodeIdsRef = useRef<Set<string>>(new Set(nodes.map((node) => node.id)));
+  useEffect(() => {
+    const currentNodes = getNodes();
+    const currentNodeIds = new Set(currentNodes.map((node) => node.id));
+    const prevNodeIds = prevNodeIdsRef.current;
+
+    // Only check if nodes were actually deleted (not just added or moved)
+    const nodesDeleted = prevNodeIds.size > currentNodeIds.size;
+    const hasDeletedNodes = Array.from(prevNodeIds).some((id) => !currentNodeIds.has(id));
+
+    // Only proceed if nodes were actually deleted
+    if (nodesDeleted || hasDeletedNodes) {
+      // Check if any previously highlighted nodes were deleted
+      const { highlightedNodeIds: currentHighlighted } = useCanvasNodesStore.getState();
+      if (currentHighlighted && currentHighlighted.size > 0) {
+        // Find highlighted nodes that no longer exist
+        const validHighlightedIds = Array.from(currentHighlighted).filter((id) =>
+          currentNodeIds.has(id),
+        );
+
+        // If any highlighted nodes were deleted, clean them up
+        if (validHighlightedIds.length !== currentHighlighted.size) {
+          if (validHighlightedIds.length > 0) {
+            setHighlightedNodeIds(validHighlightedIds);
+          } else {
+            clearHighlightedNodeIds();
+          }
+        }
+      }
+    }
+
+    // Update ref for next comparison
+    prevNodeIdsRef.current = currentNodeIds;
+  }, [nodes, getNodes, setHighlightedNodeIds, clearHighlightedNodeIds]);
+
   // Listen for canvas fitView and highlight events from create-modal
   useEffect(() => {
     let highlightTimeoutId: NodeJS.Timeout | null = null;
@@ -194,7 +231,11 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
     ) => {
       if (event.detail.canvasId === canvasId && reactFlowInstance) {
         const { nodeIds } = event.detail;
-        const allNodes = getNodes();
+
+        // Validate nodeIds array
+        if (!Array.isArray(nodeIds) || nodeIds.length === 0) {
+          return;
+        }
 
         // Clear previous highlight timeout if exists
         if (highlightTimeoutId) {
@@ -202,14 +243,24 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
           highlightTimeoutId = null;
         }
 
-        // Use the node's built-in highlight mechanism (shouldHighlight)
-        // This will show the highlight effect with border-refly-node-run and background overlay
-        setHighlightedNodeIds(nodeIds);
+        // Get current nodes to validate node IDs exist in this canvas
+        const currentNodes = getNodes();
+        const validNodeIds = nodeIds.filter((nodeId) => {
+          if (!nodeId || typeof nodeId !== 'string') return false;
+          return currentNodes.some((node) => node.id === nodeId && node.type === 'skillResponse');
+        });
 
-        // Fit view to highlighted nodes
-        requestAnimationFrame(() => {
-          if (nodeIds.length > 0) {
-            const nodesToFit = allNodes.filter((node) => nodeIds.includes(node.id));
+        // Only set highlight if we have valid node IDs
+        if (validNodeIds.length > 0) {
+          // Use the node's built-in highlight mechanism (shouldHighlight)
+          // This will show the highlight effect with border-refly-node-run and background overlay
+          setHighlightedNodeIds(validNodeIds);
+
+          // Fit view to highlighted nodes
+          // Get nodes inside requestAnimationFrame to ensure we have the latest node list
+          requestAnimationFrame(() => {
+            const latestNodes = getNodes();
+            const nodesToFit = latestNodes.filter((node) => validNodeIds.includes(node.id));
             if (nodesToFit.length > 0) {
               reactFlowInstance.fitView({
                 padding: 0.2,
@@ -218,22 +269,33 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
                 maxZoom: 1,
                 nodes: nodesToFit,
               });
+            } else {
+              // Fallback: fit view to all nodes if target nodes not found
+              reactFlowInstance.fitView({
+                padding: 0.2,
+                duration: 200,
+                minZoom: 0.1,
+                maxZoom: 1,
+              });
             }
-          } else {
+          });
+
+          // Auto-clear highlight after 5 seconds
+          highlightTimeoutId = setTimeout(() => {
+            clearHighlightedNodeIds();
+            highlightTimeoutId = null;
+          }, 5000);
+        } else {
+          // If no valid nodes, just fit view without highlighting
+          requestAnimationFrame(() => {
             reactFlowInstance.fitView({
               padding: 0.2,
               duration: 200,
               minZoom: 0.1,
               maxZoom: 1,
             });
-          }
-        });
-
-        // Auto-clear highlight after 5 seconds
-        highlightTimeoutId = setTimeout(() => {
-          clearHighlightedNodeIds();
-          highlightTimeoutId = null;
-        }, 5000);
+          });
+        }
       }
     };
 
@@ -249,7 +311,8 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
         clearTimeout(highlightTimeoutId);
         highlightTimeoutId = null;
       }
-      // Clear highlighted nodes when component unmounts or canvasId changes
+      // Only clear the batch highlight (highlightedNodeIds) we set, not the single hover highlight
+      // This preserves user's hover interactions while cleaning up validation highlights
       clearHighlightedNodeIds();
       window.removeEventListener('refly:canvas:fitView', handleFitView as EventListener);
       window.removeEventListener(
@@ -259,8 +322,9 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
     };
     // Only depend on canvasId and reactFlowInstance to avoid unnecessary re-registrations
     // getNodes is a stable reference from useReactFlow
+    // clearHighlightedNodeIds is a stable function from zustand store
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasId, reactFlowInstance, clearHighlightedNodeIds]);
+  }, [canvasId, reactFlowInstance]);
 
   // Use copy paste hook for skillResponse nodes
   useCopyPasteSkillResponseNode({ canvasId, readonly });

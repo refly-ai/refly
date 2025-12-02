@@ -456,6 +456,11 @@ export const CreateWorkflowAppModal = ({
   };
 
   const onSubmit = async () => {
+    // Prevent concurrent submissions
+    if (confirmLoading) {
+      return;
+    }
+
     logEvent('publish_template', Date.now(), {
       canvas_id: canvasId,
     });

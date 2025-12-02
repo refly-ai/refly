@@ -212,6 +212,7 @@ export const SkillResponseNode = memo(
     }));
 
     // Check if node should be highlighted (either single highlight or multiple highlights)
+    // Single highlight (hover) and multiple highlights (validation) can coexist
     const shouldHighlight = highlightedNodeId === id || highlightedNodeIds?.has(id) === true;
 
     const connection = useConnection();
