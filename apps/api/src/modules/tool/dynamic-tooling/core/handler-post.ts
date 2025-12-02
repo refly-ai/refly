@@ -13,6 +13,7 @@ import type {
 import { calculateCredits, ResourceHandler } from '../../utils';
 import type { CreditService } from '../../../credit/credit.service';
 import type { SyncToolCreditUsageJobData } from '../../../credit/credit.dto';
+import { getResultId, getResultVersion, getToolCallId } from './tool-context';
 
 /**
  * Configuration for base post-handler
@@ -206,13 +207,15 @@ async function processBilling(
       if (creditService && request.user?.uid) {
         const jobData: SyncToolCreditUsageJobData = {
           uid: request.user.uid,
+          resultId: getResultId(),
+          version: getResultVersion(),
           creditCost: credits,
           timestamp: new Date(),
-          toolsetName:
-            (request.metadata?.toolsetKey as string) ||
-            (request.provider as string) ||
-            'unknown_toolset',
-          toolName: request.method,
+          toolCallId: getToolCallId(),
+          toolCallMeta: {
+            toolName: request.method,
+            toolsetKey: request.metadata?.toolsetKey as string,
+          },
         };
         try {
           await creditService.syncToolCreditUsage(jobData);

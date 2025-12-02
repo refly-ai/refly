@@ -29,6 +29,7 @@ import {
 import {
   MultiServerMCPClient,
   SkillEngine,
+  SkillRunnableConfig,
   convertMcpServersToClientConfig,
 } from '@refly/skill-template';
 import { genToolsetID, safeParseJSON, validateConfig } from '@refly/utils';
@@ -1113,19 +1114,23 @@ export class ToolService {
               name: `${toolset.definition.key}_${tool.name}`,
               description: tool.description,
               schema: tool.schema,
-              func: async (input, _config) => {
+              func: async (input, runManager, config: SkillRunnableConfig) => {
                 const result = await tool.invoke(input);
                 const isGlobal = t?.isGlobal ?? false;
                 const creditCost = (result as any)?.creditCost ?? 0;
-                const resultId = (_config as any)?.metadata?.resultId as string;
-                const version = (_config as any)?.metadata?.version as number;
+                const resultId = config.configurable.resultId;
+                const version = config.configurable.version;
                 if (isGlobal && result?.status !== 'error' && creditCost > 0) {
                   const jobData: SyncToolCreditUsageJobData = {
                     uid: user.uid,
                     creditCost,
                     timestamp: new Date(),
-                    toolsetName: t?.name ?? (toolset.definition.labelDict?.en as string) ?? t?.key,
-                    toolName: tool.name,
+                    toolCallId: runManager?.runId,
+                    toolCallMeta: {
+                      toolName: tool.name,
+                      toolsetId: t.toolsetId,
+                      toolsetKey: t.key,
+                    },
                     resultId,
                     version,
                   };

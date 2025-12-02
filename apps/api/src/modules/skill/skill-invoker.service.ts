@@ -630,13 +630,7 @@ export class SkillInvokerService {
               toolName = nameParts.slice(1).join('_').toLowerCase();
             }
             const runId = event?.run_id ? String(event.run_id) : undefined;
-            const toolCallId = this.toolCallService.getOrCreateToolCallId({
-              resultId,
-              version,
-              toolName,
-              toolsetId,
-              runId,
-            });
+            const toolCallId = runId;
 
             const persistToolCall = async (
               status: ToolCallStatus,
