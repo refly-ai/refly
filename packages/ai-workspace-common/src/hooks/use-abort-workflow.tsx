@@ -59,7 +59,12 @@ export const useAbortWorkflow = ({
     Modal.confirm({
       centered: true,
       title: t('canvas.workflow.run.abort.confirmTitle'),
-      content: t('canvas.workflow.run.abort.confirmContent'),
+      content: (
+        <div>
+          <div>{t('canvas.workflow.run.abort.main')}</div>
+          <div className="text-sm text-gray-500">{t('canvas.workflow.run.abort.note')}</div>
+        </div>
+      ),
       okText: t('canvas.workflow.run.abort.confirm'),
       cancelText: t('common.cancel'),
       icon: null,

@@ -38,6 +38,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       defaultValue?.variableType || initialVariableType || 'string',
     );
     const [fileList, setFileList] = useState<UploadFile[]>([]);
+    const [submitting, setSubmitting] = useState(false);
     const { canvasId } = useCanvasContext();
     const { handleVariableView } = useVariableView(canvasId);
     const { data: workflowVariables, setVariables } = useVariablesManagement(canvasId);
@@ -382,6 +383,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
     );
 
     const handleSubmit = useCallback(async () => {
+      setSubmitting(true);
       try {
         const values = await form.validateFields();
 
@@ -519,6 +521,8 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
         onCancel(false);
       } catch (error) {
         console.error('Form validation failed:', error);
+      } finally {
+        setSubmitting(false);
       }
     }, [
       form,
@@ -717,10 +721,16 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
           </div>
 
           <div className="flex items-center justify-end gap-3">
-            <Button className="w-[80px]" onClick={handleModalClose}>
+            <Button className="w-[80px]" onClick={handleModalClose} disabled={submitting}>
               {t('common.cancel') || 'Cancel'}
             </Button>
-            <Button className="w-[80px]" type="primary" onClick={handleSubmit}>
+            <Button
+              className="w-[80px]"
+              type="primary"
+              onClick={handleSubmit}
+              loading={submitting}
+              disabled={submitting || uploading}
+            >
               {t('common.save') || 'Save'}
             </Button>
           </div>

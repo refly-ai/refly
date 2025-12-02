@@ -11477,6 +11477,9 @@ components:
         summary:
           type: string
           description: Drive file summary
+        storageKey:
+          type: string
+          description: Object storage key for the file
         variableId:
           type: string
           description: Related variable ID

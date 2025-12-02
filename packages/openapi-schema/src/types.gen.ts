@@ -704,7 +704,7 @@ export type CanvasTemplate = {
   /**
    * Credit usage for running this workflow app
    */
-  creditUsage?: number;
+  creditUsage?: number | null;
   /**
    * Canvas template creation time
    */
@@ -7376,6 +7376,10 @@ export type DriveFile = {
    * Drive file summary
    */
   summary?: string;
+  /**
+   * Object storage key for the file
+   */
+  storageKey?: string;
   /**
    * Related variable ID
    */

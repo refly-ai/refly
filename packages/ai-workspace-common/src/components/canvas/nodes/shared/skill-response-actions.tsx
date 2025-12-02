@@ -55,7 +55,14 @@ const SkillResponseActionsComponent = ({
       if (nodeIsExecuting) {
         Modal.confirm({
           title: t('canvas.skillResponse.stopConfirmModal.title'),
-          content: t('canvas.skillResponse.stopConfirmModal.content'),
+          content: (
+            <div>
+              <div>{t('canvas.skillResponse.stopConfirmModal.main')}</div>
+              <div className="text-sm text-gray-500">
+                {t('canvas.skillResponse.stopConfirmModal.note')}
+              </div>
+            </div>
+          ),
           okText: t('canvas.skillResponse.stopConfirmModal.confirm'),
           cancelText: t('canvas.skillResponse.stopConfirmModal.cancel'),
           icon: null,

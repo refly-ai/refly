@@ -519,8 +519,13 @@ const WorkflowAppPage: React.FC = () => {
   const handleAbortWorkflow = useCallback(() => {
     Modal.confirm({
       title: t('workflowApp.run.stopConfirmTitle'),
-      content: t('workflowApp.run.stopConfirmContent'),
-      okText: t('common.confirm'),
+      content: (
+        <div>
+          <div>{t('workflowApp.run.stopConfirmMain')}</div>
+          <div className="text-sm text-gray-500">{t('workflowApp.run.stopConfirmNote')}</div>
+        </div>
+      ),
+      okText: t('workflowApp.run.confirm'),
       cancelText: t('common.cancel'),
       rootClassName: 'workflow-app-modal-confirm',
       okButtonProps: {

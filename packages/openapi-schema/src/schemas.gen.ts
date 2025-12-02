@@ -1051,6 +1051,11 @@ export const CanvasTemplateSchema = {
       type: 'string',
       description: 'Associated workflow app share ID',
     },
+    creditUsage: {
+      type: 'integer',
+      description: 'Credit usage for running this workflow app',
+      nullable: true,
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -10403,6 +10408,10 @@ export const DriveFileSchema = {
     summary: {
       type: 'string',
       description: 'Drive file summary',
+    },
+    storageKey: {
+      type: 'string',
+      description: 'Object storage key for the file',
     },
     variableId: {
       type: 'string',
