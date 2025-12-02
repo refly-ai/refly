@@ -196,6 +196,7 @@ const SkillResponseNodePreviewComponent = ({
   ) : (
     <div className="h-full w-full flex flex-col overflow-hidden">
       <SkillResponseNodeHeader
+        iconSize={20}
         nodeId={node.id}
         entityId={data.entityId}
         title={title}
