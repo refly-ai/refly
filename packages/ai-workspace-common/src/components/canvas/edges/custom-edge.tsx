@@ -39,10 +39,21 @@ export const CustomEdge = memo(
 
     const isConnectedToStartNode = sourceNode?.type === 'start' || targetNode?.type === 'start';
 
+    const targetNodeType = targetNode?.type;
+    const targetMetadata = (targetNode?.data as { metadata?: { status?: string } } | undefined)
+      ?.metadata;
+    const targetStatus = targetMetadata?.status;
+
+    const isSkillResponseTarget = targetNodeType === 'skillResponse';
+    const isRunningStatus =
+      isSkillResponseTarget && (targetStatus === 'executing' || targetStatus === 'waiting');
+    const isFinishedStatus = isSkillResponseTarget && targetStatus === 'finish';
+    const isFailedStatus = isSkillResponseTarget && targetStatus === 'failed';
+
     const [edgePath, labelX, labelY] = getBezierPath({
       sourceX: sourceX - 30,
       sourceY,
-      targetX: targetX + 30,
+      targetX: targetX + 30 - (isRunningStatus ? 8 : 0),
       targetY,
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
@@ -75,17 +86,6 @@ export const CustomEdge = memo(
       };
 
       const isTempEdge = id?.startsWith?.('temp-edge-') ?? false;
-
-      const targetNodeType = targetNode?.type;
-      const targetMetadata = (targetNode?.data as { metadata?: { status?: string } } | undefined)
-        ?.metadata;
-      const targetStatus = targetMetadata?.status;
-
-      const isSkillResponseTarget = targetNodeType === 'skillResponse';
-      const isRunningStatus =
-        isSkillResponseTarget && (targetStatus === 'executing' || targetStatus === 'waiting');
-      const isFinishedStatus = isSkillResponseTarget && targetStatus === 'finish';
-      const isFailedStatus = isSkillResponseTarget && targetStatus === 'failed';
 
       // Default dashed edge style
       style.strokeDasharray = '6 6';
@@ -207,7 +207,9 @@ export const CustomEdge = memo(
             strokeWidth={20}
             stroke="transparent"
           />
-          <BaseEdge path={edgePath} style={baseEdgeStyle} markerEnd={markerEndUrl} />
+          {/* Base edge path without marker */}
+          <BaseEdge path={edgePath} style={baseEdgeStyle} />
+          {/* Running animation path - above base edge */}
           {isRunningEdge ? (
             <path
               className="fill-none"
@@ -233,6 +235,14 @@ export const CustomEdge = memo(
               />
             </path>
           ) : null}
+          {/* Marker path - above running animation */}
+          <path
+            d={edgePath}
+            fill="none"
+            stroke="transparent"
+            strokeWidth={baseEdgeStyle?.strokeWidth ?? 1.5}
+            markerEnd={markerEndUrl}
+          />
         </g>
 
         {/* Only show delete button if selected and not connected to start node */}

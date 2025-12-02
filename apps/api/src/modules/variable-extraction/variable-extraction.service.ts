@@ -885,6 +885,7 @@ export class VariableExtractionService {
         await this.canvasService.updateWorkflowVariables(user, {
           canvasId,
           variables: mergedVariables,
+          duplicateDriveFile: false,
         });
         this.logger.log(`Canvas variables updated successfully for canvas ${canvasId}`);
       } else {

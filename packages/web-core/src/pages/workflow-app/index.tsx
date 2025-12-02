@@ -520,8 +520,13 @@ const WorkflowAppPage: React.FC = () => {
   const handleAbortWorkflow = useCallback(() => {
     Modal.confirm({
       title: t('workflowApp.run.stopConfirmTitle'),
-      content: t('workflowApp.run.stopConfirmContent'),
-      okText: t('common.confirm'),
+      content: (
+        <div>
+          <div>{t('workflowApp.run.stopConfirmMain')}</div>
+          <div className="text-sm text-gray-500">{t('workflowApp.run.stopConfirmNote')}</div>
+        </div>
+      ),
+      okText: t('workflowApp.run.confirm'),
       cancelText: t('common.cancel'),
       rootClassName: 'workflow-app-modal-confirm',
       okButtonProps: {
@@ -714,6 +719,7 @@ const WorkflowAppPage: React.FC = () => {
                     onCopyWorkflow={handleCopyWorkflow}
                     onCopyShareLink={handleCopyShareLink}
                     isRunning={isRunning}
+                    canvasId={canvasId}
                     templateContent={workflowApp?.templateContent}
                     executionCreditUsage={executionCreditUsage}
                     className="max-h-[500px] sm:max-h-[600px] bg-[var(--refly-bg-float-z3)] dark:bg-[var(--refly-bg-content-z2)] border border-[var(--refly-Card-Border)] dark:border-[var(--refly-semi-color-border)] shadow-[0_2px_20px_4px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_20px_4px_rgba(0,0,0,0.2)] px-4 py-3 rounded-2xl"

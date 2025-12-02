@@ -17,9 +17,11 @@ export const StringTypeForm: React.FC<{ onBlur: () => void }> = React.memo(({ on
         },
       ]}
     >
-      <Input
+      <Input.TextArea
+        variant="filled"
         placeholder={t('canvas.workflow.variables.inputPlaceholder') || 'Please enter'}
         onBlur={onBlur}
+        autoSize={{ minRows: 2, maxRows: 5 }}
       />
     </Form.Item>
   );

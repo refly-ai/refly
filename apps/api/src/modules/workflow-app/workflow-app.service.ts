@@ -417,15 +417,13 @@ export class WorkflowAppService {
     // variables with old resource entity ids (need to be replaced)
     const oldVariables = variables || canvasData.variables || [];
 
-    // variables without resource entity ids (to be generated in the new canvas)
-    const processedOldVariables = await this.processVariablesForResource(user, oldVariables);
-
     const tempCanvasId = genCanvasID();
 
     const finalVariables = await this.canvasService.processResourceVariables(
       user,
       tempCanvasId,
-      processedOldVariables,
+      oldVariables,
+      true,
     );
 
     // Resource entity id map from old resource entity ids to new resource entity ids

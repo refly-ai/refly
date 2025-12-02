@@ -46,24 +46,32 @@ const DriveFileSharePage = () => {
 
   const file = driveFileData as DriveFile;
 
+  // Check if file is HTML
+  const isHtmlFile =
+    file.name?.toLowerCase().endsWith('.html') ||
+    file.name?.toLowerCase().endsWith('.htm') ||
+    file.type?.toLowerCase().includes('text/html');
+
   return (
     <div className="flex h-full w-full grow relative">
       {showBranding && <PoweredByRefly onClose={handleClose} />}
 
       {/* Main content */}
       <div className="flex h-full w-full grow bg-white dark:bg-black overflow-auto">
-        <div className="flex flex-col space-y-4 p-4 h-full max-w-[1024px] mx-auto w-full">
-          {file.name && (
+        <div
+          className={`flex flex-col space-y-4 ${isHtmlFile ? 'p-0' : 'p-4'} h-full ${isHtmlFile ? 'w-full' : 'max-w-[1024px] mx-auto w-full'}`}
+        >
+          {!isHtmlFile && file.name && (
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white mt-6 mb-4">
               {file.name}
             </h1>
           )}
 
-          {file.summary && (
+          {!isHtmlFile && file.summary && (
             <div className="text-gray-600 dark:text-gray-400 mb-4">{file.summary}</div>
           )}
 
-          <div className="flex-grow pb-16 h-full">
+          <div className={`flex-grow h-full ${isHtmlFile ? '' : 'pb-16'}`}>
             <FilePreview file={file} source="preview" />
           </div>
         </div>

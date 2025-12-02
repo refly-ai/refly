@@ -126,27 +126,6 @@ export const normalizeWorkflowPlan = (plan: WorkflowPlan): WorkflowPlan => {
         // Ensure toolsets array exists
         const toolsets = Array.isArray(task.toolsets) ? [...task.toolsets] : [];
 
-        // Check if task has products
-        if (Array.isArray(task.products) && task.products.length > 0) {
-          // Get product types for this task
-          const productTypes = new Set<string>();
-          for (const productId of task.products) {
-            const product = plan.products?.find((p) => p.id === productId);
-            if (product?.type) {
-              productTypes.add(product.type);
-            }
-          }
-
-          // Add required toolsets based on product types
-          if (productTypes.has('document') && !toolsets.includes('generate_doc')) {
-            toolsets.push('generate_doc');
-          }
-
-          if (productTypes.has('codeArtifact') && !toolsets.includes('generate_code_artifact')) {
-            toolsets.push('generate_code_artifact');
-          }
-        }
-
         return {
           ...task,
           toolsets,

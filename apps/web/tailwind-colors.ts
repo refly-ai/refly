@@ -62,4 +62,5 @@ export const reflyColors = {
   'refly-node-fill-1': 'var(--refly-node-fill-1)',
   'refly-node-fill-2': 'var(--refly-node-fill-2)',
   'refly-fill-label': 'var(--refly-fill-label)',
+  'refly-toast-fill': 'var(--refly-toast-fill)',
 } as const;

@@ -842,6 +842,7 @@ export class ShareDuplicationService {
         this.canvasService.updateWorkflowVariables(user, {
           canvasId: newCanvasId,
           variables: updatedVariables,
+          duplicateDriveFile: false,
         }),
       this.prisma.duplicateRecord.create({
         data: {

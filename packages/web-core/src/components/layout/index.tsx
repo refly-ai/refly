@@ -124,6 +124,7 @@ export const AppLayout = (props: AppLayoutProps) => {
   const isPricing = useMatch('/pricing');
   const matchCanvas = useMatch('/canvas/:canvasId');
   const matchWorkflow = useMatch('/workflow/:workflowId');
+  const isShareFile = useMatch('/share/file/:shareId');
   const isWorkflowEmpty = matchCanvas?.params?.canvasId === 'empty';
   const isWorkflow = (!!matchCanvas || !!matchWorkflow) && !isWorkflowEmpty;
 
@@ -151,10 +152,11 @@ export const AppLayout = (props: AppLayoutProps) => {
         {showSider ? <SiderLayout source="sider" /> : null}
         <Layout
           className={cn(
-            'content-layout bg-transparent flex-grow overflow-y-auto overflow-x-hidden m-2 rounded-xl min-w-0 min-h-0 overscroll-contain',
+            'content-layout bg-transparent flex-grow overflow-y-auto overflow-x-hidden rounded-xl min-w-0 min-h-0 overscroll-contain',
+            !isShareFile && 'm-2',
             isWorkflow ? '' : 'shadow-refly-m',
           )}
-          style={{ height: 'calc(var(--screen-height) - 16px)' }}
+          style={isShareFile ? {} : { height: 'calc(var(--screen-height) - 16px)' }}
         >
           <Content>{props.children}</Content>
         </Layout>

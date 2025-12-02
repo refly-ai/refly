@@ -77,7 +77,9 @@ export const ConfigInfoDisplay = memo(
 
     // Extract files from contextItems
     const files = useMemo(() => {
-      return contextItems.filter((item) => item.type === 'file');
+      return contextItems.filter(
+        (item) => item.type === 'file' && item.metadata?.source === 'files',
+      );
     }, [contextItems]);
 
     const handleRemoveContextItem = useCallback(

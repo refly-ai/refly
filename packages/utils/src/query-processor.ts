@@ -123,8 +123,12 @@ function processMention(
           // Only add to resourceVars once (when processing display mode)
           if (mode === 'display') {
             resourceVars.push({ ...variable, value: variable.value });
+            // In display mode, remove the resource variable mention from query
+            return { replacement: '', updatedQuery };
+          } else {
+            // In llm_input mode, format as @var:name for LLM to understand
+            return { replacement: formatMention(type, name, mode), updatedQuery };
           }
-          return { replacement: '', updatedQuery };
         } else {
           // Replace non-resource variables with their actual values when replaceVars is true
           const values = variable.value;

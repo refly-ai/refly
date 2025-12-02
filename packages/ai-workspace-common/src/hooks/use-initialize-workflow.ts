@@ -89,7 +89,7 @@ export const useInitializeWorkflow = (
           setCanvasExecutionId(canvasId, data.data.workflowExecutionId);
         }
 
-        message.success(t('common.putSuccess') || 'Workflow initialized successfully');
+        message.success(t('canvas.workflow.run.startRunning') || 'Your workflow starts running');
         return true;
       } catch (err) {
         console.error('Error initializing workflow:', err);
