@@ -54,6 +54,14 @@ export class CopilotAutogenService {
       this.logger.log(`[Autogen] Using existing canvas: ${canvasId}`);
     }
 
+    // 2.1 Get existing start nodes from canvas as workflow entry points
+    const rawCanvas = await this.canvasService.getCanvasRawData(user, canvasId, {
+      checkOwnership: false,
+    });
+    // Preserve only start nodes as workflow entry points
+    const startNodes = (rawCanvas.nodes ?? []).filter((node) => node.type === 'start');
+    this.logger.log(`[Autogen] Found ${startNodes.length} start nodes in canvas`);
+
     // 3. Invoke Copilot Agent (reuse SkillService)
     this.logger.log('[Autogen] Invoking Copilot Agent');
     const invokeRequest: InvokeSkillRequest = {
@@ -93,19 +101,28 @@ export class CopilotAutogenService {
 
     // 7. Convert to Canvas data (reuse canvas-common utility)
     this.logger.log('[Autogen] Generating canvas nodes and edges');
-    const { nodes, edges, variables } = generateCanvasDataFromWorkflowPlan(
-      workflowPlan,
-      toolsData ?? [],
-      {
-        autoLayout: true,
-        defaultModel: defaultModel ? providerItem2ModelInfo(defaultModel as any) : undefined,
-        startNodes: [],
-      },
+    const {
+      nodes: generatedNodes,
+      edges,
+      variables,
+    } = generateCanvasDataFromWorkflowPlan(workflowPlan, toolsData ?? [], {
+      autoLayout: true,
+      defaultModel: defaultModel ? providerItem2ModelInfo(defaultModel as any) : undefined,
+      startNodes,
+    });
+
+    // Merge preserved start nodes with generated workflow nodes
+    const startNodeIds = new Set(startNodes.map((node) => node.id));
+    const finalNodes = [
+      ...startNodes,
+      ...generatedNodes.filter((node) => !startNodeIds.has(node.id)),
+    ];
+    this.logger.log(
+      `[Autogen] Generated ${finalNodes.length} nodes (including ${startNodes.length} start nodes) and ${edges.length} edges`,
     );
-    this.logger.log(`[Autogen] Generated ${nodes.length} nodes and ${edges.length} edges`);
 
     // 8. Update Canvas state (reuse CanvasSyncService)
-    await this.updateCanvasState(canvasId, nodes, edges, variables, user);
+    await this.updateCanvasState(canvasId, finalNodes, edges, variables, user);
     this.logger.log(`[Autogen] Canvas ${canvasId} updated successfully`);
 
     return {
@@ -113,7 +130,7 @@ export class CopilotAutogenService {
       workflowPlan,
       sessionId: actionResult.copilotSessionId!,
       resultId,
-      nodesCount: nodes.length,
+      nodesCount: finalNodes.length,
       edgesCount: edges.length,
     };
   }

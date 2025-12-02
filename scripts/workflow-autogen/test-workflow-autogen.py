@@ -449,7 +449,7 @@ def test_workflow_execution():
             execution_id=execution_id,
             api_url=api_url,
             uid=uid,
-            poll_interval=2,  # Check every 2 seconds
+            poll_interval=10,  # Check every 10 seconds
             max_wait_time=600,  # Wait up to 10 minutes
         )
 
