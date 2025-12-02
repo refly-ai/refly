@@ -241,7 +241,8 @@ export default () => ({
   sandbox: {
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
-      // Template
+      // Wrapper
+      wrapperType: process.env.SCALEBOX_WRAPPER_TYPE, // 'executor' | 'interpreter'
       templateName: process.env.SCALEBOX_TEMPLATE_NAME,
       codeSizeThreshold: process.env.SCALEBOX_CODE_SIZE_THRESHOLD,
       // Sandbox

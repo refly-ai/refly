@@ -7,9 +7,6 @@
 
 // ==================== Executor Template ====================
 
-/** Custom executor template name */
-export const SCALEBOX_TEMPLATE = 'refly-executor-slim-v0-2-3';
-
 /** Code size threshold for switching to path mode (64KB) */
 export const CODE_SIZE_THRESHOLD = 64 * 1024;
 

@@ -16,7 +16,8 @@ import { ScaleboxService } from './scalebox.service';
 import { ScaleboxStorage } from './scalebox.storage';
 import { ScaleboxLock } from './scalebox.lock';
 import { Sandbox } from '@scalebox/sdk';
-import { SandboxWrapper, SandboxMetadata } from './scalebox.wrapper';
+import { SandboxMetadata } from './wrapper/base';
+import { SandboxWrapperFactory } from './scalebox.factory';
 import { SCALEBOX_DEFAULTS } from './scalebox.constants';
 import {
   SandboxExecuteJobData,
@@ -86,6 +87,7 @@ export class ScaleboxPauseProcessor extends WorkerHost {
   constructor(
     private readonly storage: ScaleboxStorage,
     private readonly lock: ScaleboxLock,
+    private readonly wrapperFactory: SandboxWrapperFactory,
     private readonly config: ConfigService,
     private readonly logger: PinoLogger,
   ) {
@@ -147,7 +149,7 @@ export class ScaleboxPauseProcessor extends WorkerHost {
       s3DrivePath: '',
     };
 
-    const wrapper = await SandboxWrapper.reconnect(this.logger, context, metadata);
+    const wrapper = await this.wrapperFactory.reconnect(context, metadata);
     await wrapper.betaPause();
     wrapper.markAsPaused();
     await this.storage.saveMetadata(wrapper);

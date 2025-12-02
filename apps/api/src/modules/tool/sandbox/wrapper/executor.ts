@@ -2,8 +2,8 @@ import { Sandbox } from '@scalebox/sdk';
 import { PinoLogger } from 'nestjs-pino';
 import { SandboxExecuteParams } from '@refly/openapi-schema';
 
-import { guard } from '../../../utils/guard';
-import { Trace } from './scalebox.tracer';
+import { guard } from '../../../../utils/guard';
+import { Trace } from '../scalebox.tracer';
 
 import {
   SandboxCreationException,
@@ -11,12 +11,12 @@ import {
   SandboxConnectionException,
   SandboxAcquireException,
   SandboxLanguageNotSupportedException,
-} from './scalebox.exception';
+} from '../scalebox.exception';
 import {
   SANDBOX_DRIVE_MOUNT_POINT,
   SCALEBOX_DEFAULTS,
   EXECUTOR_CREDENTIALS_PATH,
-} from './scalebox.constants';
+} from '../scalebox.constants';
 import {
   ExecutionContext,
   ExecuteCodeContext,
@@ -25,21 +25,19 @@ import {
   OnLifecycleFailed,
   S3Config,
   mapLanguage,
-} from './scalebox.dto';
+} from '../scalebox.dto';
+import { ISandboxWrapper, SandboxMetadata } from './base';
 
-// Re-export S3Config for backward compatibility
-export type { S3Config } from './scalebox.dto';
-
-export interface SandboxMetadata {
-  sandboxId: string;
-  cwd: string;
-  createdAt: number;
-  idleSince: number;
-  isPaused?: boolean; // Whether the sandbox is currently paused
-  lastPausedAt?: number; // Timestamp of last pause operation
-}
-
-export class SandboxWrapper {
+/**
+ * ExecutorWrapper - Implementation using refly-executor-slim custom template
+ *
+ * Features:
+ * - Uses refly-executor-slim binary for code execution
+ * - Built-in S3 FUSE mount (no server-side s3fs)
+ * - Automatic file diff tracking via executor
+ * - Resource limits support
+ */
+export class ExecutorWrapper implements ISandboxWrapper {
   private isPaused = false;
   private lastPausedAt?: number;
   private _idleSince: number;
@@ -53,7 +51,7 @@ export class SandboxWrapper {
     idleSince: number,
   ) {
     this._idleSince = idleSince;
-    this.logger.setContext(SandboxWrapper.name);
+    this.logger.setContext(ExecutorWrapper.name);
   }
 
   get idleSince(): number {
@@ -127,7 +125,7 @@ export class SandboxWrapper {
     context: ExecutionContext,
     templateName: string,
     timeoutMs: number,
-  ): Promise<SandboxWrapper> {
+  ): Promise<ExecutorWrapper> {
     logger.info({ canvasId: context.canvasId, templateName }, 'Creating sandbox');
 
     const sandbox = await guard(() =>
@@ -138,7 +136,7 @@ export class SandboxWrapper {
     ).orThrow((err) => new SandboxAcquireException(err));
 
     const now = Date.now();
-    const wrapper = new SandboxWrapper(
+    const wrapper = new ExecutorWrapper(
       sandbox,
       logger,
       context,
@@ -173,14 +171,14 @@ export class SandboxWrapper {
     logger: PinoLogger,
     context: ExecutionContext,
     metadata: SandboxMetadata,
-  ): Promise<SandboxWrapper> {
+  ): Promise<ExecutorWrapper> {
     logger.info({ sandboxId: metadata.sandboxId }, 'Reconnecting to sandbox');
 
     const sandbox = await guard(() =>
       Sandbox.connect(metadata.sandboxId, { apiKey: context.apiKey }),
     ).orThrow((err) => new SandboxAcquireException(err, metadata.sandboxId));
 
-    const wrapper = new SandboxWrapper(
+    const wrapper = new ExecutorWrapper(
       sandbox,
       logger,
       context,
@@ -221,12 +219,12 @@ export class SandboxWrapper {
     templateName: string,
     timeoutMs: number,
     onFailed?: OnLifecycleFailed,
-  ): Promise<SandboxWrapper> {
+  ): Promise<ExecutorWrapper> {
     const { LIFECYCLE_RETRY_MAX_ATTEMPTS, LIFECYCLE_RETRY_DELAY_MS } = SCALEBOX_DEFAULTS;
     const errors: string[] = [];
 
     return guard
-      .retry(() => SandboxWrapper.createInner(logger, context, templateName, timeoutMs), {
+      .retry(() => ExecutorWrapper.createInner(logger, context, templateName, timeoutMs), {
         maxAttempts: LIFECYCLE_RETRY_MAX_ATTEMPTS,
         initialDelay: LIFECYCLE_RETRY_DELAY_MS,
         maxDelay: LIFECYCLE_RETRY_DELAY_MS,
@@ -254,12 +252,12 @@ export class SandboxWrapper {
     context: ExecutionContext,
     metadata: SandboxMetadata,
     onFailed?: OnLifecycleFailed,
-  ): Promise<SandboxWrapper> {
+  ): Promise<ExecutorWrapper> {
     const { LIFECYCLE_RETRY_MAX_ATTEMPTS, LIFECYCLE_RETRY_DELAY_MS } = SCALEBOX_DEFAULTS;
     const errors: string[] = [];
 
     return guard
-      .retry(() => SandboxWrapper.reconnectInner(logger, context, metadata), {
+      .retry(() => ExecutorWrapper.reconnectInner(logger, context, metadata), {
         maxAttempts: LIFECYCLE_RETRY_MAX_ATTEMPTS,
         initialDelay: LIFECYCLE_RETRY_DELAY_MS,
         maxDelay: LIFECYCLE_RETRY_DELAY_MS,
@@ -290,8 +288,9 @@ export class SandboxWrapper {
     ctx: ExecuteCodeContext,
   ): Promise<ExecutorOutput> {
     const { logger, timeoutMs, s3Config, s3DrivePath, limits, codeSizeThreshold } = ctx;
+    const sid = this.sandboxId;
 
-    logger.info({ language: params.language }, 'Executing code');
+    logger.info({ sid, language: params.language }, '[exec:start]');
 
     // 1. Map language
     const language = mapLanguage(params.language);
@@ -300,6 +299,7 @@ export class SandboxWrapper {
     }
 
     // 2. Write S3 credentials file
+    logger.debug({ sid }, '[exec:cred]');
     await this.writeCredentials(s3Config);
 
     // 3. Prepare code (inline vs path mode)
@@ -311,7 +311,7 @@ export class SandboxWrapper {
     if (usePathMode) {
       // Large code: write to file first, then use path mode
       const codePath = '/tmp/code_script';
-      logger.debug({ codeBytes, codePath }, 'Using path mode for large code');
+      logger.debug({ sid, codeBytes }, '[exec:write-file]');
       await this.sandbox.files.write(codePath, params.code);
       input = {
         path: codePath,
@@ -335,13 +335,14 @@ export class SandboxWrapper {
     }
 
     // 4. Execute via executor binary
+    logger.debug({ sid }, '[exec:run]');
     const escaped = JSON.stringify(input).replace(/'/g, "'\"'\"'");
     const result = await guard(() =>
       this.sandbox.commands.run(`printf '%s' '${escaped}' | refly-executor-slim`, {
         timeoutMs: timeoutMs + 10000, // Extra buffer for executor overhead
       }),
     ).orThrow((error) => {
-      logger.warn({ error, sandboxId: this.sandboxId }, 'Executor command failed');
+      logger.warn({ sid, error }, '[exec:run:failed]');
       return new SandboxExecutionFailedException(error);
     });
 
@@ -349,8 +350,8 @@ export class SandboxWrapper {
     const output = this.parseExecutorOutput(result.stdout);
 
     logger.info(
-      { exitCode: output.exitCode, filesAdded: output.diff?.added?.length ?? 0 },
-      'Execution completed',
+      { sid, exitCode: output.exitCode, files: output.diff?.added?.length ?? 0 },
+      '[exec:done]',
     );
 
     return output;
@@ -362,7 +363,12 @@ export class SandboxWrapper {
    */
   private async writeCredentials(s3Config: S3Config): Promise<void> {
     const content = `${s3Config.accessKey}:${s3Config.secretKey}`;
-    await this.sandbox.commands.run(`printf '%s' '${content}' > ${EXECUTOR_CREDENTIALS_PATH}`);
+    await guard(() =>
+      this.sandbox.commands.run(`printf '%s' '${content}' > ${EXECUTOR_CREDENTIALS_PATH}`),
+    ).orThrow((error) => {
+      this.logger.warn({ sid: this.sandboxId, error }, '[exec:cred:failed]');
+      return new SandboxExecutionFailedException(error);
+    });
   }
 
   /**

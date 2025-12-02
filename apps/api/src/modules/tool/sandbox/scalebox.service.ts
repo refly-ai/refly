@@ -25,12 +25,12 @@ import {
 } from './scalebox.dto';
 import { extractErrorMessage } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
-import { SandboxWrapper, S3Config } from './scalebox.wrapper';
+import { ISandboxWrapper } from './wrapper/base';
+import { S3Config } from './scalebox.dto';
 import { Trace } from './scalebox.tracer';
 import {
   S3_DEFAULT_CONFIG,
   SCALEBOX_DEFAULTS,
-  SCALEBOX_TEMPLATE,
   CODE_SIZE_THRESHOLD,
   EXECUTOR_LIMITS_DEFAULTS,
   ExecutorLimits,
@@ -79,9 +79,6 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
   @Config.integer('sandbox.scalebox.maxQueueSize', SCALEBOX_DEFAULTS.MAX_QUEUE_SIZE)
   private maxQueueSize: number;
 
-  @Config.string('sandbox.scalebox.templateName', SCALEBOX_TEMPLATE)
-  private templateName: string;
-
   @Config.integer('sandbox.scalebox.codeSizeThreshold', CODE_SIZE_THRESHOLD)
   private codeSizeThreshold: number;
 
@@ -90,8 +87,8 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
 
   private async acquireSandboxWrapper(
     context: ExecutionContext,
-  ): Promise<readonly [SandboxWrapper, () => Promise<void>]> {
-    const wrapper = await this.sandboxPool.acquire(context, this.templateName);
+  ): Promise<readonly [ISandboxWrapper, () => Promise<void>]> {
+    const wrapper = await this.sandboxPool.acquire(context);
     return [wrapper, () => this.sandboxPool.release(wrapper)] as const;
   }
 
@@ -179,7 +176,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
 
   @Trace('sandbox.runCodeInSandbox')
   private async runCodeInSandbox(
-    wrapper: SandboxWrapper,
+    wrapper: ISandboxWrapper,
     params: SandboxExecuteParams,
     context: ExecutionContext,
   ): Promise<ScaleboxExecutionResult> {
@@ -218,7 +215,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
         hasDiff: !!executorOutput.diff,
         diffAdded: executorOutput.diff?.added,
         diffAddedLength: executorOutput.diff?.added?.length,
-        log: executorOutput.log,
+        executorLog: executorOutput.log?.split('\n').filter(Boolean),
       },
       '[runCodeInSandbox] Executor output received',
     );

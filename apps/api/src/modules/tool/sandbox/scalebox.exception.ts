@@ -131,3 +131,12 @@ export class SandboxLanguageNotSupportedException extends SandboxException {
     );
   }
 }
+
+export class SandboxMountException extends SandboxException {
+  constructor(
+    messageOrError: unknown,
+    public readonly sandboxId?: string,
+  ) {
+    super(messageOrError, 'SANDBOX_MOUNT_FAILED', { sandboxId });
+  }
+}

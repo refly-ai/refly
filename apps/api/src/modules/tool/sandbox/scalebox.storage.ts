@@ -4,7 +4,7 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { RedisService } from '../../common/redis.service';
 import { Config } from '../../config/config.decorator';
-import { SandboxWrapper, SandboxMetadata } from './scalebox.wrapper';
+import { ISandboxWrapper, SandboxMetadata } from './wrapper/base';
 import { REDIS_KEYS, SCALEBOX_DEFAULTS } from './scalebox.constants';
 
 /**
@@ -30,7 +30,7 @@ export class ScaleboxStorage {
 
   // ==================== Metadata Operations ====================
 
-  async saveMetadata(wrapper: SandboxWrapper): Promise<void> {
+  async saveMetadata(wrapper: ISandboxWrapper): Promise<void> {
     const sandboxId = wrapper.sandboxId;
     const metadata = wrapper.toMetadata();
     const ttlSeconds = Math.floor(this.sandboxTimeoutMs / 1000);
@@ -48,12 +48,20 @@ export class ScaleboxStorage {
 
   // ==================== Idle Queue Operations ====================
 
-  async popFromIdleQueue(): Promise<string | null> {
-    return this.redis.getClient().lpop(REDIS_KEYS.IDLE_QUEUE);
+  /**
+   * Get idle queue key partitioned by template name
+   * This ensures sandboxes from different templates are not mixed
+   */
+  private getIdleQueueKey(templateName: string): string {
+    return `${REDIS_KEYS.IDLE_QUEUE}:${templateName}`;
   }
 
-  async pushToIdleQueue(sandboxId: string): Promise<void> {
-    await this.redis.getClient().rpush(REDIS_KEYS.IDLE_QUEUE, sandboxId);
+  async popFromIdleQueue(templateName: string): Promise<string | null> {
+    return this.redis.getClient().lpop(this.getIdleQueueKey(templateName));
+  }
+
+  async pushToIdleQueue(sandboxId: string, templateName: string): Promise<void> {
+    await this.redis.getClient().rpush(this.getIdleQueueKey(templateName), sandboxId);
   }
 
   async getTotalSandboxCount(): Promise<number> {
