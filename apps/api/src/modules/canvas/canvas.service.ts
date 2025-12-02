@@ -563,7 +563,12 @@ export class CanvasService {
     ]);
 
     // Process resource variables after canvas is created
-    const processedVariables = await this.processResourceVariables(user, canvasId, param.variables);
+    const processedVariables = await this.processResourceVariables(
+      user,
+      canvasId,
+      param.variables,
+      true,
+    );
     const updatedCanvas = await this.prisma.canvas.update({
       where: { pk: canvas.pk },
       data: { workflow: JSON.stringify({ variables: processedVariables }) },
@@ -1228,6 +1233,7 @@ export class CanvasService {
     user: User,
     canvasId: string,
     variables: WorkflowVariable[],
+    duplicateDriveFile = false,
   ): Promise<WorkflowVariable[]> {
     if (!Array.isArray(variables)) return [];
 
@@ -1236,7 +1242,7 @@ export class CanvasService {
         const processedValues = await Promise.all(
           (variable.value ?? []).map(async (value) => {
             if (value.type === 'resource' && value.resource) {
-              return await this.processResourceValue(user, canvasId, value);
+              return await this.processResourceValue(user, canvasId, value, duplicateDriveFile);
             }
             return value;
           }),
@@ -1256,20 +1262,22 @@ export class CanvasService {
    * @param user - The user processing the resource
    * @param value - The resource variable value
    * @param canvasId - The target canvas ID
+   * @param duplicateDriveFile - Whether to duplicate the drive file
    * @returns Processed resource variable value
    */
   private async processResourceValue(
     user: User,
     canvasId: string,
     value: VariableValue,
+    duplicateDriveFile = false,
   ): Promise<VariableValue> {
     const { resource } = value;
     if (!resource) return value;
 
-    // If fileId exists, check if it belongs to current user
+    // If fileId exists and duplicateDriveFile is true, duplicate it
     if (resource.fileId) {
       // Fetch the DriveFile to check its uid
-      const driveFile: any = await this.prisma.driveFile.findFirst({
+      let driveFile: any = await this.prisma.driveFile.findFirst({
         where: { fileId: resource.fileId, deletedAt: null },
       });
 
@@ -1277,14 +1285,15 @@ export class CanvasService {
         return value;
       }
 
-      const duplicatedFile = await this.driveService.duplicateDriveFile(user, driveFile, canvasId);
+      if (duplicateDriveFile) {
+        driveFile = await this.driveService.duplicateDriveFile(user, driveFile, canvasId);
+      }
 
-      // Update the variable value with new fileId
       return {
         ...value,
         resource: {
           ...resource,
-          fileId: duplicatedFile.fileId,
+          fileId: driveFile.fileId,
         },
       };
     }
@@ -1362,9 +1371,9 @@ export class CanvasService {
    */
   async updateWorkflowVariables(
     user: User,
-    param: { canvasId: string; variables: WorkflowVariable[] },
+    param: { canvasId: string; variables: WorkflowVariable[]; duplicateDriveFile?: boolean },
   ): Promise<WorkflowVariable[]> {
-    const { canvasId, variables } = param;
+    const { canvasId, variables, duplicateDriveFile = false } = param;
     const canvas = await this.prisma.canvas.findUnique({
       select: { workflow: true },
       where: { canvasId, uid: user.uid, deletedAt: null },
@@ -1376,7 +1385,12 @@ export class CanvasService {
       } catch {}
     }
 
-    workflowObj.variables = await this.processResourceVariables(user, canvasId, variables);
+    workflowObj.variables = await this.processResourceVariables(
+      user,
+      canvasId,
+      variables,
+      duplicateDriveFile,
+    );
 
     await this.prisma.canvas.update({
       where: { canvasId, uid: user.uid, deletedAt: null },

@@ -965,6 +965,27 @@ export class DriveService {
   }
 
   /**
+   * Check if a file exists in OSS
+   * @param oss - The OSS instance to check
+   * @param storageKey - The storage key to check
+   * @returns true if file exists, false otherwise
+   */
+  private async fileExistsInOss(
+    oss: ObjectStorageService,
+    storageKey: string | null | undefined,
+  ): Promise<boolean> {
+    if (!storageKey) return false;
+    try {
+      const stat = await oss.statObject(storageKey);
+      return stat !== null;
+    } catch (error) {
+      // If any error occurs (permission denied, network error, etc.), treat as file not exists
+      this.logger.warn(`Failed to check file existence for ${storageKey}: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
    * Duplicate a drive file to a new canvas
    */
   async duplicateDriveFile(
@@ -979,9 +1000,13 @@ export class DriveService {
       canvasId: newCanvasId,
     });
 
-    if (await this.internalOss.statObject(sourceFile.storageKey)) {
+    if (newStorageKey === sourceFile.storageKey) {
+      return sourceFile;
+    }
+
+    if (await this.fileExistsInOss(this.internalOss, sourceFile.storageKey)) {
       await this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
-    } else if (await this.externalOss.statObject(sourceFile.storageKey)) {
+    } else if (await this.fileExistsInOss(this.externalOss, sourceFile.storageKey)) {
       const stream = await this.externalOss.getObject(sourceFile.storageKey);
       await this.internalOss.putObject(newStorageKey, stream);
     } else {

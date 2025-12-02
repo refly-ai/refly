@@ -114,6 +114,7 @@ export class WorkflowService {
       finalVariables = await this.canvasService.updateWorkflowVariables(user, {
         canvasId: canvasId,
         variables: finalVariables,
+        duplicateDriveFile: false,
       });
     }
 

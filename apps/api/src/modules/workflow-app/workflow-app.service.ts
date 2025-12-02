@@ -423,6 +423,7 @@ export class WorkflowAppService {
       user,
       tempCanvasId,
       oldVariables,
+      true,
     );
 
     // Resource entity id map from old resource entity ids to new resource entity ids
