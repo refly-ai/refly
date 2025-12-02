@@ -810,7 +810,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
       const controller = new AbortController();
       globalAbortControllersRef.current.set(resultId, controller);
-      console.log('add abort controller', resultId, controller);
       globalCurrentResultIdRef.current = resultId; // Track current active resultId
       globalIsAbortedRef.current = false;
       globalAbortedResultsRef.current.delete(resultId);

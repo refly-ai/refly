@@ -102,8 +102,6 @@ export const MessageList = memo(
       streamChoked: state.streamChoked[resultId],
     }));
 
-    console.log('result', result);
-
     if (!result) {
       return null;
     }

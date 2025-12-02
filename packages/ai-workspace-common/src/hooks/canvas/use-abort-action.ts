@@ -34,7 +34,6 @@ export const useAbortAction = (params?: { source?: string }) => {
 
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[activeResultId];
-    console.log('abortAction result', result);
 
     if (!result) {
       return;
@@ -52,7 +51,6 @@ export const useAbortAction = (params?: { source?: string }) => {
       const controllerToAbort = activeResultId?.trim()
         ? globalAbortControllersRef.current.get(activeResultId)
         : null;
-      console.log('controllerToAbort', controllerToAbort);
 
       if (controllerToAbort) {
         controllerToAbort.abort();
@@ -73,7 +71,7 @@ export const useAbortAction = (params?: { source?: string }) => {
           }
         }
       } else {
-        console.log('No local controller to abort');
+        console.warn('No local controller to abort');
       }
 
       // If resultId is provided and is a valid string, call the backend to clean up server-side resources
@@ -89,13 +87,6 @@ export const useAbortAction = (params?: { source?: string }) => {
           // Silent fail or minimal logging
           console.warn('Failed to abort action on server');
         }
-      } else {
-        console.log('No valid resultId provided, skipping backend call');
-        console.log('activeResultId details:', {
-          activeResultId,
-          type: typeof activeResultId,
-          isEmpty: !activeResultId,
-        });
       }
     } catch (err) {
       console.error('abort error', err);

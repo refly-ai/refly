@@ -134,7 +134,13 @@ const LastRunTabComponent = ({
             {loading && !isStreaming && (
               <Skeleton className="mt-1" active paragraph={{ rows: 5 }} />
             )}
-            <MessageList result={result} stepStatus={messageStepStatus} handleRetry={handleRetry} />
+            {result && (
+              <MessageList
+                result={result}
+                stepStatus={messageStepStatus}
+                handleRetry={handleRetry}
+              />
+            )}
             {shouldUseSteps && (
               <ActionStepCard
                 result={result}
