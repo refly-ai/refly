@@ -21,7 +21,6 @@ import { useActionResultStore } from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
 import { aggregateTokenUsage, detectActualTypeFromType, genActionResultID } from '@refly/utils';
 import { ARTIFACT_TAG_CLOSED_REGEX, getArtifactContentAndAttributes } from '@refly/utils/artifact';
-import { getRuntime } from '@refly/utils/env';
 import { useCallback, useEffect, useRef } from 'react';
 import {
   mergeToolCallById,
@@ -32,8 +31,6 @@ import {
   cleanupAbortController,
   globalAbortControllersRef,
   globalAbortedResultsRef,
-  globalCurrentResultIdRef,
-  globalIsAbortedRef,
   useAbortAction,
 } from './use-abort-action';
 import { useActionPolling } from './use-action-polling';
@@ -491,16 +488,11 @@ export const useInvokeAction = (params?: { source?: string }) => {
     };
     onUpdateResult(skillEvent.resultId, payload, skillEvent);
 
-    if (globalCurrentResultIdRef.current === skillEvent.resultId) {
-      globalCurrentResultIdRef.current = '';
-    }
-
     refetchUsage();
   };
 
   const onSkillError = (skillEvent: SkillEvent) => {
     clearLatestSteps(skillEvent.resultId);
-    const runtime = getRuntime();
     const { originError, resultId } = skillEvent;
 
     // Get result from store for logging and setTraceId
@@ -535,15 +527,9 @@ export const useInvokeAction = (params?: { source?: string }) => {
     };
     onUpdateResult(skillEvent.resultId, payload, skillEvent);
 
-    if (runtime?.includes('extension')) {
-      if (globalIsAbortedRef.current) {
-        return;
-      }
-    } else {
-      // if it is aborted, do nothing
-      if (globalAbortedResultsRef.current.has(resultId)) {
-        return;
-      }
+    // if it is aborted, do nothing
+    if (globalAbortedResultsRef.current.has(resultId)) {
+      return;
     }
   };
 
@@ -810,8 +796,6 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
       const controller = new AbortController();
       globalAbortControllersRef.current.set(resultId, controller);
-      globalCurrentResultIdRef.current = resultId; // Track current active resultId
-      globalIsAbortedRef.current = false;
       globalAbortedResultsRef.current.delete(resultId);
 
       const upstreamAgentNodes = nodeId ? getUpstreamAgentNodes(nodeId) : [];

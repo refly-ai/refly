@@ -11,8 +11,6 @@ export const globalAbortControllersRef = {
 export const globalAbortedResultsRef = {
   current: new Set<string>(),
 };
-export const globalIsAbortedRef = { current: false };
-export const globalCurrentResultIdRef = { current: '' as string };
 
 export const cleanupAbortController = (resultId?: string) => {
   if (!resultId?.trim()) {
@@ -20,17 +18,19 @@ export const cleanupAbortController = (resultId?: string) => {
   }
   globalAbortControllersRef.current.delete(resultId);
   globalAbortedResultsRef.current.delete(resultId);
-  if (globalCurrentResultIdRef.current === resultId) {
-    globalCurrentResultIdRef.current = '';
-  }
 };
 
 export const useAbortAction = (params?: { source?: string }) => {
   const { source } = params || {};
 
   const abortAction = useCallback(async (resultId?: string) => {
-    // Use current active resultId if none provided
-    const activeResultId = resultId || globalCurrentResultIdRef.current;
+    // Use provided resultId or skip if none provided
+    const activeResultId = resultId;
+
+    if (!activeResultId) {
+      console.warn('No resultId provided for abort action');
+      return;
+    }
 
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[activeResultId];
@@ -54,7 +54,6 @@ export const useAbortAction = (params?: { source?: string }) => {
 
       if (controllerToAbort) {
         controllerToAbort.abort();
-        globalIsAbortedRef.current = true;
         if (activeResultId?.trim()) {
           globalAbortedResultsRef.current.add(activeResultId);
 
