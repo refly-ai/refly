@@ -131,14 +131,30 @@ export const FrontPage = memo(() => {
             return englishLabel.toLowerCase() === 'featured';
           });
 
+          // Helper function to get valid categoryId
+          const getValidCategoryId = (category: (typeof templateCategories)[0]): string | null => {
+            const id = category?.categoryId;
+            // Ensure categoryId is a non-empty string
+            return id && typeof id === 'string' && id.trim().length > 0 ? id : null;
+          };
+
           if (featuredCategory) {
-            setTemplateCategoryId(featuredCategory.categoryId);
+            const validId = getValidCategoryId(featuredCategory);
+            if (validId) {
+              setTemplateCategoryId(validId);
+            }
           } else if (templateCategories.length === 1) {
             // If only one category exists, select it automatically
-            setTemplateCategoryId(templateCategories[0]?.categoryId ?? '');
+            const validId = getValidCategoryId(templateCategories[0]);
+            if (validId) {
+              setTemplateCategoryId(validId);
+            }
           } else {
             // Select the first category as default
-            setTemplateCategoryId(templateCategories[0]?.categoryId ?? '');
+            const validId = getValidCategoryId(templateCategories[0]);
+            if (validId) {
+              setTemplateCategoryId(validId);
+            }
           }
         }
       } else {
@@ -290,8 +306,8 @@ export const FrontPage = memo(() => {
                   <TemplateCardSkeleton key={index} />
                 ))}
               </div>
-            ) : (
-              // Show template list when category is selected
+            ) : templateCategoryId && templateCategoryId.trim().length > 0 ? (
+              // Show template list when category is selected and valid
               <TemplateList
                 source="front-page"
                 scrollableTargetId="front-page-scrollable-div"
@@ -299,6 +315,13 @@ export const FrontPage = memo(() => {
                 categoryId={templateCategoryId}
                 className="!bg-transparent !px-0 !pt-0 -ml-2 -mt-2"
               />
+            ) : (
+              // Fallback: show loading skeleton if categoryId is invalid
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <TemplateCardSkeleton key={index} />
+                ))}
+              </div>
             )}
           </div>
         </ModuleContainer>
