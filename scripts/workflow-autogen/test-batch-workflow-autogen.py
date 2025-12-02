@@ -462,7 +462,22 @@ def process_single_query(
 
                 data = response.json()
                 if not data.get("success"):
-                    raise Exception("Workflow generation failed")
+                    # Extract error message from API response
+                    error_msg = (
+                        data.get("message") or data.get("error") or "Unknown error"
+                    )
+                    error_detail = f"Workflow generation failed: {error_msg}"
+
+                    # Print error information immediately
+                    safe_print(f"\n❌ Query [{query_index}] generation failed:")
+                    safe_print(f"   Query: {query[:80]}...")
+                    safe_print(f"   Error: {error_msg}")
+                    if data.get("data"):
+                        safe_print(
+                            f"   Details: {json.dumps(data.get('data'), ensure_ascii=False)}"
+                        )
+
+                    raise Exception(error_detail)
 
                 # Extract workflow details
                 workflow_result = data.get("data", {})
@@ -483,16 +498,35 @@ def process_single_query(
                 break
 
             except requests.exceptions.RequestException as e:
+                error_msg = f"Network error: {str(e)}"
                 if attempt < max_retries - 1:
+                    # Print retry warning
+                    safe_print(
+                        f"\n⚠️  Query [{query_index}] generation attempt {attempt + 1} failed, retrying..."
+                    )
+                    safe_print(f"   Error: {error_msg}")
                     # Wait before retry with exponential backoff
                     wait_time = min(2**attempt * 5, 30)
                     time.sleep(wait_time)
                     continue
                 else:
+                    # Print final failure
+                    safe_print(
+                        f"\n❌ Query [{query_index}] generation failed after {max_retries} retries:"
+                    )
+                    safe_print(f"   Query: {query[:80]}...")
+                    safe_print(f"   Error: {error_msg}")
                     raise Exception(
                         f"Workflow generation failed after {max_retries} retries: {str(e)}"
                     )
             except Exception as e:
+                # Only re-raise if this is already our custom exception
+                if "Workflow generation failed:" in str(e):
+                    raise
+                # Otherwise, wrap and print the error
+                safe_print(f"\n❌ Query [{query_index}] generation error:")
+                safe_print(f"   Query: {query[:80]}...")
+                safe_print(f"   Error: {str(e)}")
                 raise Exception(f"Workflow generation error: {str(e)}")
 
         # Stage 2: Initializing workflow execution
