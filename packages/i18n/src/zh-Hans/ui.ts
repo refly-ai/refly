@@ -113,6 +113,7 @@ const translations = {
       },
     },
     plans: {
+      memberBenefits: '会员权益',
       free: {
         title: 'Free',
         titleCn: '终身免费',
@@ -121,13 +122,7 @@ const translations = {
         buttonText: '继续免费使用',
         buttonTextDowngrade: '变更为 Free',
         continueUse: '继续免费使用',
-        features: [
-          '每日可获取新积分\n100点',
-          '世界顶级AI模型\nOpenAI, Claude, Grok, DeepSeek...',
-          '知识库文件数\n100个',
-          '文件上传限制\n最大 5MB',
-          '服务支持\n社区支持 (微信群, 飞书群, Discord)',
-        ],
+        features: ['每日可获取新积分\n100点'],
       },
       pro: {
         title: 'PRO',
@@ -135,17 +130,32 @@ const translations = {
       plus: {
         title: 'PLUS',
         titleCn: 'Plus',
-        description: 'Plus 用户',
+        description: '适合运行高频自动化任务',
         priceMonthly: '$ {{price}}/月',
         priceYearly: '$ {{price}}/月',
         priceYearlyTotal: '$ {{price}}/年 节省 20%',
         buttonText: '升级到 {{planName}}',
         features: [
           '每日可获取新积分\n100点',
-          '世界顶级AI模型\nOpenAI, Claude, Grok, DeepSeek...',
-          '知识库文件数\n100个',
-          '文件上传限制\n最大 5MB',
-          '服务支持\n社区支持 (微信群, 飞书群, Discord)',
+          '每月积分\n2000点',
+          '首次订阅额外赠送\n2000点',
+          '访问丰富的工具库',
+          {
+            name: '免积分使用工具',
+            type: 'pointFreeTools',
+            items: [
+              'Gemini 3.0 Nano Banana pro',
+              'Seedream 4.0',
+              'Seedance 1.5',
+              'VibeVoice',
+              'Instagram',
+              'TikTok',
+              'Reddit',
+              'X',
+            ],
+            duration: '365 DAYS',
+          },
+          '服务支持\n高优邮件支持',
         ],
       },
       max: {
@@ -158,6 +168,7 @@ const translations = {
         priceMonthly: '$ {{price}}/月',
         priceYearly: '$ {{price}}/月',
         priceYearlyTotal: '$ {{price}}/年 节省 20%',
+        cannotSwitchTo: '无法直接升级到 Plus 套餐。请联系 support@refly.ai',
         buttonText: '升级到 {{planName}}',
         features: [
           '每日可获取新积分\n300点',
@@ -210,6 +221,7 @@ const translations = {
     creditPacks: {
       title: '积分包',
       buyNow: '立即购买',
+      cancel: '取消',
       credit_pack_100: {
         title: '100积分',
         description: '适合体验高级AI模型',
@@ -234,6 +246,12 @@ const translations = {
         price: '$20',
         credits: '2000积分',
       },
+      features: [
+        '即时充值\n积分即刻到账，工作不间断。',
+        '随处可用\n运行任何工作流、模板、智能体或工具。',
+        '90天有效期\n灵活安排积分使用时间。',
+        '随时扩展\n适合高负载工作或突发需求。',
+      ],
     },
   },
   onboarding: {

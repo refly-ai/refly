@@ -115,7 +115,7 @@ export const useActionPolling = () => {
               });
               if (hasCreditError) {
                 console.log('credit insufficient error');
-                setCreditInsufficientModalVisible(true);
+                setCreditInsufficientModalVisible(true, undefined, 'canvas');
               }
             }
 

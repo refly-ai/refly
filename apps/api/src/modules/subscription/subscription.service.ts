@@ -371,6 +371,12 @@ export class SubscriptionService implements OnModuleInit {
       const existingSub = await prisma.subscription.findUnique({
         where: { subscriptionId: param.subscriptionId },
       });
+      const existingUserSubscription = await prisma.subscription.findFirst({
+        where: { uid },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
       if (existingSub) {
         this.logger.log(`Subscription ${param.subscriptionId} already exists`);
         return existingSub;
@@ -420,12 +426,6 @@ export class SubscriptionService implements OnModuleInit {
 
       // Create a new credit recharge record
       const creditAmount = plan?.creditQuota ?? this.config.get('quota.credit');
-      const existingUserSubscription = await prisma.subscription.findFirst({
-        where: { uid },
-        orderBy: {
-          createdAt: 'asc',
-        },
-      });
 
       await this.creditService.createSubscriptionCreditRecharge(uid, creditAmount, endAt);
 

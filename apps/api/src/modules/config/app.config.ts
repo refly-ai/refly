@@ -225,6 +225,10 @@ export default () => ({
     canvasCreditCommissionRate: Number(process.env.CREDIT_CANVAS_CREDIT_COMMISSION_RATE) || 0.2,
     commissionCreditExpiresIn: Number(process.env.CREDIT_COMMISSION_CREDIT_EXPIRES_IN) || 6,
     creditPackExpiresInDays: Number(process.env.CREDIT_PACK_EXPIRES_IN_DAYS) || 90,
+    firstSubscriptionGiftCreditAmount:
+      Number(process.env.CREDIT_FIRST_SUBSCRIPTION_GIFT_CREDIT_AMOUNT) || 2000,
+    firstSubscriptionGiftCreditExpiresInMonths:
+      Number(process.env.CREDIT_FIRST_SUBSCRIPTION_GIFT_CREDIT_EXPIRES_IN_MONTHS) || 1,
   },
 
   audio: {

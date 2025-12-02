@@ -3618,6 +3618,8 @@ const translations = {
       upgrade: 'Upgrade to {{planType}}',
       cannotChangeTo: 'Cannot change to {{planType}}',
       currentPlan: 'Current Plan',
+      cannotSwitchTo:
+        "Legacy plans can't be switched to Plus directly.Please contact support@refly.ai",
       free: {
         title: 'Free Plan',
         description: 'A welcoming gateway to explore the power of AI—completely free',
@@ -3631,13 +3633,28 @@ const translations = {
       },
       plus: {
         title: 'PLUS',
-        description: 'A high-performance toolkit for ambitious creators ready to go further',
+        description: 'Suitable for running a high volume of automation tasks',
         buttonText: 'Get Plus',
         features: [
           'Daily new credits\n300 credits',
           'Monthly credits\n2,000 credits',
           'New subscribers receive an extra\n2,000 bonus credits',
           'Access to a vast library of tools',
+          {
+            name: 'Credit-free tools',
+            type: 'pointFreeTools',
+            items: [
+              'Gemini 3.0 Nano Banana pro',
+              'Seedream 4.0',
+              'Seedance 1.5',
+              'VibeVoice',
+              'Instagram',
+              'TikTok',
+              'Reddit',
+              'X',
+            ],
+            duration: '365 DAYS',
+          },
           'Service support\nHigh priority support',
         ],
       },
@@ -3687,6 +3704,7 @@ const translations = {
     creditPacks: {
       title: 'Credit Packs',
       buyNow: 'Buy Now',
+      cancel: 'Cancel',
       credit_pack_100: {
         title: '100 Credits',
         description: 'Perfect for trying out advanced AI models',
@@ -3711,6 +3729,12 @@ const translations = {
         price: '$20',
         credits: '2000 credits',
       },
+      features: [
+        'Instant top-up\nCredits arrive immediately so your work never stops.',
+        'Use anywhere\nRun any workflow, template, agent, or tool.',
+        '90-Day validity\nTotal flexibility on when to spend your credits.',
+        'Scale anytime\nIdeal for heavy workloads or sudden spikes in demand.',
+      ],
     },
     subscriptionManagement: {
       title: 'Subscription Management',
@@ -3800,13 +3824,7 @@ const translations = {
         price: 'Free forever',
         buttonText: 'Continue for free',
         buttonTextDowngrade: 'Downgrade to Free',
-        features: [
-          'Daily new credits\n100 points',
-          'Top AI models\nOpenAI, Claude, Grok, DeepSeek...',
-          'Knowledge base files\n100 files',
-          'File upload limit\nMax 5MB',
-          'Support\nCommunity support',
-        ],
+        features: ['Daily new credits\n100 points'],
       },
       starter: {
         title: 'Starter Plan',

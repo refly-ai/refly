@@ -211,8 +211,10 @@ export class CreditService {
       return;
     }
 
-    const giftCreditAmount = 2000;
-    const giftCreditExpiresInMonths = 12; // 12 months expiration
+    const giftCreditAmount = this.configService.get('credit.firstSubscriptionGiftCreditAmount');
+    const giftCreditExpiresInMonths = this.configService.get(
+      'credit.firstSubscriptionGiftCreditExpiresInMonths',
+    );
 
     // Calculate expiration date
     const expiresAt = new Date(now);
