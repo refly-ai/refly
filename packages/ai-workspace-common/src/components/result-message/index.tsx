@@ -8,48 +8,54 @@ import { ReasoningContentPreview } from '@refly-packages/ai-workspace-common/com
 import { ThinkingDots } from '@refly-packages/ai-workspace-common/components/common/thinking-dots';
 import { FailureNotice } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/failure-notice';
 
+interface AIMessageCardProps {
+  message: ActionMessage;
+  resultId: string;
+  stepStatus: 'executing' | 'finish';
+}
+
+interface ToolMessageCardProps {
+  message: ActionMessage;
+}
+
+interface MessageListProps {
+  result: ActionResult;
+  stepStatus: 'executing' | 'finish';
+  handleRetry?: () => void;
+}
+
 /**
  * Render AI message with markdown content
  */
-export const AIMessageCard = memo(
-  ({
-    message,
-    resultId,
-    stepStatus,
-  }: {
-    message: ActionMessage;
-    resultId: string;
-    stepStatus: 'executing' | 'finish';
-  }) => {
-    const content = message.content ?? '';
-    const reasoningContent = message.reasoningContent ?? '';
-    const hasReasoningContent = Boolean(reasoningContent?.trim());
+export const AIMessageCard = memo(({ message, resultId, stepStatus }: AIMessageCardProps) => {
+  const content = message.content ?? '';
+  const reasoningContent = message.reasoningContent ?? '';
+  const hasReasoningContent = Boolean(reasoningContent?.trim());
 
-    if (!content?.trim()) return null;
+  if (!content?.trim()) return null;
 
-    return (
-      <div className="my-2 text-base">
-        <div className={`skill-response-content-${resultId}-${message.messageId}`}>
-          {hasReasoningContent && (
-            <ReasoningContentPreview
-              content={reasoningContent}
-              stepStatus={stepStatus}
-              className="my-3"
-              resultId={resultId}
-            />
-          )}
-          <Markdown content={content} resultId={resultId} />
-        </div>
+  return (
+    <div className="my-2 text-base">
+      <div className={`skill-response-content-${resultId}-${message.messageId}`}>
+        {hasReasoningContent && (
+          <ReasoningContentPreview
+            content={reasoningContent}
+            stepStatus={stepStatus}
+            className="my-3"
+            resultId={resultId}
+          />
+        )}
+        <Markdown content={content} resultId={resultId} />
       </div>
-    );
-  },
-);
+    </div>
+  );
+});
 AIMessageCard.displayName = 'AIMessageCard';
 
 /**
  * Render tool message using ToolCall component
  */
-export const ToolMessageCard = memo(({ message }: { message: ActionMessage }) => {
+export const ToolMessageCard = memo(({ message }: ToolMessageCardProps) => {
   const toolCallMeta = message.toolCallMeta;
   const toolCallResult = message.toolCallResult;
 
@@ -85,67 +91,57 @@ ToolMessageCard.displayName = 'ToolMessageCard';
 /**
  * Render message list based on message type
  */
-export const MessageList = memo(
-  ({
-    result,
-    stepStatus,
-    handleRetry,
-  }: {
-    result: ActionResult;
-    stepStatus: 'executing' | 'finish';
-    handleRetry?: () => void;
-  }) => {
-    const { resultId, messages = [], status } = result ?? {};
+export const MessageList = memo(({ result, stepStatus, handleRetry }: MessageListProps) => {
+  const { resultId, messages = [], status } = result ?? {};
 
-    const { t } = useTranslation();
-    const { streamChoked } = useActionResultStoreShallow((state) => ({
-      streamChoked: state.streamChoked[resultId],
-    }));
+  const { t } = useTranslation();
+  const { streamChoked } = useActionResultStoreShallow((state) => ({
+    streamChoked: resultId ? state.streamChoked[resultId] : false,
+  }));
 
-    if (!result) {
-      return null;
+  if (!result) {
+    return null;
+  }
+
+  if (!messages?.length) {
+    if (status === 'executing' || status === 'waiting') {
+      return (
+        <div className="my-4 mx-2 flex items-center gap-1 text-gray-500">
+          <ThinkingDots label={t('common.thinking')} />
+        </div>
+      );
     }
-
-    if (!messages?.length) {
-      if (status === 'executing' || status === 'waiting') {
-        return (
-          <div className="my-4 mx-2 flex items-center gap-1 text-gray-500">
-            <ThinkingDots label={t('common.thinking')} />
-          </div>
-        );
-      }
-      if (status === 'failed') {
-        return <FailureNotice result={result} />;
-      }
-      return null;
+    if (status === 'failed') {
+      return <FailureNotice result={result} />;
     }
+    return null;
+  }
 
-    return (
-      <div className="flex flex-col">
-        {messages.map((message) => {
-          if (message.type === 'ai') {
-            return (
-              <AIMessageCard
-                key={message.messageId}
-                message={message}
-                resultId={resultId}
-                stepStatus={stepStatus}
-              />
-            );
-          }
-          if (message.type === 'tool') {
-            return <ToolMessageCard key={message.messageId} message={message} />;
-          }
-          return null;
-        })}
-        {(status === 'executing' || status === 'waiting') && streamChoked && (
-          <div className="my-4 mx-1 flex items-center gap-1 text-gray-500">
-            <ThinkingDots />
-          </div>
-        )}
-        {status === 'failed' && <FailureNotice result={result} handleRetry={handleRetry} />}
-      </div>
-    );
-  },
-);
+  return (
+    <div className="flex flex-col">
+      {messages.map((message) => {
+        if (message.type === 'ai') {
+          return (
+            <AIMessageCard
+              key={message.messageId}
+              message={message}
+              resultId={resultId}
+              stepStatus={stepStatus}
+            />
+          );
+        }
+        if (message.type === 'tool') {
+          return <ToolMessageCard key={message.messageId} message={message} />;
+        }
+        return null;
+      })}
+      {(status === 'executing' || status === 'waiting') && streamChoked && (
+        <div className="my-4 mx-1 flex items-center gap-1 text-gray-500">
+          <ThinkingDots />
+        </div>
+      )}
+      {status === 'failed' && <FailureNotice result={result} handleRetry={handleRetry} />}
+    </div>
+  );
+});
 MessageList.displayName = 'MessageList';

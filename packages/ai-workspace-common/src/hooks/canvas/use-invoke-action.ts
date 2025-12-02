@@ -863,7 +863,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         cleanupAbortController(resultId);
       }
     },
-    [onUpdateResult],
+    [source, abortAction, onUpdateResult, getUpstreamAgentNodes, refetchUsage],
   );
 
   return { invokeAction, abortAction };
