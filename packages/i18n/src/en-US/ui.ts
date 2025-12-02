@@ -1452,7 +1452,7 @@ const translations = {
         },
         creditUsage: 'Estimated usage {{count}} credits',
         abort: {
-          confirmTitle: 'Stop Workflow Execution?',
+          confirmTitle: 'Stop Workflow Execution',
           main: 'Are you sure you want to stop this workflow?',
           note: 'The workflow will halt immediately. Completed steps will remain saved, and credits already consumed will not be refunded.',
           confirm: 'Confirm Stop',

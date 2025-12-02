@@ -6,6 +6,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useCanvasStoreShallow } from '@refly/stores';
 import type { CanvasNode } from '@refly/canvas-common';
 import { useCleanupAbortedNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-cleanup-aborted-node';
+import { SadFace } from 'refly-icons';
 
 interface UseAbortWorkflowOptions {
   executionId?: string | null;
@@ -58,18 +59,26 @@ export const useAbortWorkflow = ({
 
     Modal.confirm({
       centered: true,
-      title: t('canvas.workflow.run.abort.confirmTitle'),
+      title: (
+        <div className="text-[16px] font-semibold text-refly-text-0 leading-[26px]">
+          {t('canvas.workflow.run.abort.confirmTitle')}
+        </div>
+      ),
       content: (
-        <div>
+        <div className="my-3 text-sm text-refly-text-0 leading-5">
           <div>{t('canvas.workflow.run.abort.main')}</div>
-          <div className="text-sm text-gray-500">{t('canvas.workflow.run.abort.note')}</div>
+          <div className="text-sm text-refly-text-2">{t('canvas.workflow.run.abort.note')}</div>
         </div>
       ),
       okText: t('canvas.workflow.run.abort.confirm'),
       cancelText: t('common.cancel'),
       icon: null,
       okButtonProps: {
-        className: '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
+        className:
+          '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66] rounded-lg',
+      },
+      cancelButtonProps: {
+        className: 'rounded-lg',
       },
       onOk: async () => {
         setIsAborting(true);
@@ -112,7 +121,10 @@ export const useAbortWorkflow = ({
             return;
           }
 
-          message.success(t('canvas.workflow.run.abort.success'));
+          message.success({
+            content: t('canvas.workflow.run.abort.success'),
+            icon: <SadFace size={18} className="mr-2" />,
+          });
 
           // Invoke success callback
           onSuccess?.();
