@@ -132,6 +132,9 @@ export const useFileUpload = () => {
       _fileList: UploadFile[],
       onFileListChange: (fileList: UploadFile[]) => void,
       resourceTypes?: string[],
+      _oldFileId?: string,
+      canvasId?: string | null,
+      variableId?: string,
     ) => {
       // Generate accept attribute based on resource types
       const generateAcceptAttribute = (types?: string[]) => {
@@ -181,9 +184,33 @@ export const useFileUpload = () => {
           // Process file upload
           const data = await processFileUpload(file);
           if (data) {
+            // Create new DriveFile if canvasId and variableId are provided
+            let newFileId = data.uid;
+            if (canvasId && variableId) {
+              try {
+                const { data: driveFileResponse, error } = await getClient().createDriveFile({
+                  body: {
+                    canvasId,
+                    name: file.name,
+                    type: file.type,
+                    storageKey: data.storageKey,
+                    source: 'variable',
+                    variableId,
+                  },
+                });
+
+                if (!error && driveFileResponse?.data?.fileId) {
+                  newFileId = driveFileResponse.data.fileId;
+                }
+              } catch (error) {
+                console.error('Failed to create new DriveFile:', error);
+                // Continue with storageKey if DriveFile creation fails
+              }
+            }
+
             // Replace the existing file with the new one
             const newFile: UploadFile = {
-              uid: data.uid,
+              uid: newFileId,
               name: file.name,
               status: 'done',
               url: data.storageKey,

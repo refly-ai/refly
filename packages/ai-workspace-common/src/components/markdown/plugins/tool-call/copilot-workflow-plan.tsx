@@ -162,7 +162,7 @@ export const CopilotWorkflowPlan = memo(({ data }: CopilotWorkflowPlanProps) => 
   const { data: toolsData } = useListTools({ query: { enabled: true } });
 
   return (
-    <div className="flex flex-col gap-3 pt-4">
+    <div className="flex flex-col gap-3 pt-2">
       <div className="flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas">
         <div className="flex items-center gap-1.5">
           <NodeIcon type="start" small />

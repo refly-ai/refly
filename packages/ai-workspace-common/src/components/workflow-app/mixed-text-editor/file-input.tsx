@@ -2,6 +2,8 @@ import React, { memo, useCallback, useState } from 'react';
 import { Upload } from 'antd';
 import { Attachment } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
+import { useFileUpload } from '../../canvas/workflow-variables';
+import { getFileType } from '../../canvas/workflow-variables/utils';
 
 interface FileInputProps {
   id: string;
@@ -13,6 +15,52 @@ interface FileInputProps {
   isDefaultValue?: boolean; // Whether this is a default value
   isModified?: boolean; // Whether the value has been modified by user
 }
+
+// Loading dots animation component
+const LoadingDots: React.FC = () => {
+  const dotStyle: React.CSSProperties = {
+    width: '4px',
+    height: '4px',
+    backgroundColor: '#0E9F77',
+    borderRadius: '50%',
+    display: 'inline-block',
+    animation: 'bounce 1.4s infinite ease-in-out both',
+  };
+
+  return (
+    <>
+      <style>
+        {`
+          @keyframes bounce {
+            0%, 80%, 100% {
+              transform: scale(0.75);
+              opacity: 0.7;
+            }
+            40% {
+              transform: scale(1.5);
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
+      <div
+        style={{
+          width: '24px',
+          height: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginLeft: '8px',
+          marginRight: '8px',
+        }}
+      >
+        <div style={{ ...dotStyle, animationDelay: '-0.32s' }} />
+        <div style={{ ...dotStyle, animationDelay: '-0.16s' }} />
+        <div style={{ ...dotStyle, animationDelay: '0s' }} />
+      </div>
+    </>
+  );
+};
 
 const FileInput: React.FC<FileInputProps> = memo(
   ({
@@ -26,21 +74,34 @@ const FileInput: React.FC<FileInputProps> = memo(
   }) => {
     const { t } = useTranslation();
     const [isHovered, setIsHovered] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const { handleFileUpload: uploadFile } = useFileUpload();
     const fileName = value?.name || '';
     const isEmpty = !fileName || fileName.trim() === '';
 
     const handleFileChange = useCallback(
-      (file: File) => {
-        // Create resource object
-        const resource = {
-          name: file.name,
-          storageKey: '', // This would be set after upload
-          fileType: file.type.split('/')[0] as any, // Extract file type
-          entityId: '', // This would be set after upload
-        };
-        onChange(resource);
+      async (file: File) => {
+        try {
+          setUploading(true);
+          // Upload file and get storageKey
+          const result = await uploadFile(file, []);
+
+          if (result && typeof result === 'object' && 'storageKey' in result) {
+            // Create resource object with actual storageKey
+            const resource = {
+              name: file.name,
+              storageKey: result.storageKey,
+              fileType: getFileType(file.name, file.type),
+            };
+            onChange(resource);
+          }
+        } catch (error) {
+          console.error('File upload failed:', error);
+        } finally {
+          setUploading(false);
+        }
       },
-      [onChange],
+      [onChange, uploadFile],
     );
 
     const handleMouseEnter = useCallback(() => {
@@ -59,7 +120,7 @@ const FileInput: React.FC<FileInputProps> = memo(
           handleFileChange(file);
           return false; // Prevent default upload
         }}
-        disabled={disabled}
+        disabled={disabled || uploading}
       >
         <div
           className={`
@@ -94,12 +155,22 @@ const FileInput: React.FC<FileInputProps> = memo(
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          title={fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')}
+          title={
+            uploading
+              ? t('common.upload.notification.uploading', { count: 1 })
+              : fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')
+          }
         >
           <Attachment size={16} color="var(--refly-primary-default)" />
-          <span className="flex-1 ml-1 truncate max-w-[200px] min-w-0">
-            {fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')}
-          </span>
+          {uploading ? (
+            <div className="flex-1 flex items-center">
+              <LoadingDots />
+            </div>
+          ) : (
+            <span className="flex-1 ml-1 truncate max-w-[200px] min-w-0">
+              {fileName || placeholder || t('canvas.workflow.variables.uploadPlaceholder')}
+            </span>
+          )}
         </div>
       </Upload>
     );

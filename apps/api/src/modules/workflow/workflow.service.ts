@@ -114,6 +114,7 @@ export class WorkflowService {
       finalVariables = await this.canvasService.updateWorkflowVariables(user, {
         canvasId: canvasId,
         variables: finalVariables,
+        duplicateDriveFile: false,
       });
     }
 
@@ -264,11 +265,16 @@ export class WorkflowService {
     }
 
     const { modelInfo, selectedToolsets, contextItems = [] } = metadata;
+
+    // Get workflow variables from canvas to resolve resource variable fileIds
+    const workflowVariables = await this.canvasService.getWorkflowVariables(user, { canvasId });
+
     const context = convertContextItemsToInvokeParams(
       contextItems,
       connectToFilters
         .filter((filter) => filter.type === 'skillResponse')
         .map((filter) => filter.entityId),
+      workflowVariables,
     );
 
     // Prepare the invoke skill request

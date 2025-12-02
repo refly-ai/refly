@@ -62,6 +62,7 @@ const translations = {
     docs: 'Docs',
     skill: 'Skill',
     thread: 'Thread',
+    thinking: 'Refly AI is thinking',
     meta: 'Meta',
     project: 'Project',
     upgrade: 'Upgrade',
@@ -910,9 +911,11 @@ const translations = {
     updateShareTooltip: 'Sync latest shared content',
     updateShareSuccess: '​​Latest canvas content synced and shared successfully!',
     copyLink: 'Copy Link',
+    copy: 'Copy',
     linkCopied: 'Link copied',
     copyLinkTooltip: 'Copy shared link',
     publishTemplate: 'Publish as Template',
+    updateTemplate: 'Update Template',
     publish: 'Publish',
     publishTemplateTooltip: 'Publish canvas as template',
     waitForAgentsToFinish: 'Please wait for all Agents to finish running before publishing',
@@ -1429,6 +1432,7 @@ const translations = {
       run: {
         title: 'Run Workflow',
         run: 'Run',
+        startRunning: 'Your workflow starts running',
         executing: 'Running',
         remix: 'Remix',
         copyWorkflow: 'Remix Workflow',
@@ -1451,11 +1455,11 @@ const translations = {
         creditUsage: 'Estimated usage {{count}} credits',
         abort: {
           confirmTitle: 'Stop Workflow Execution',
-          confirmContent:
-            'The workflow is still running. If you stop it now, the consumed credits will not be refunded. Confirm stop?',
+          main: 'Are you sure you want to stop this workflow?',
+          note: 'The workflow will halt immediately. Completed steps will remain saved, and credits already consumed will not be refunded.',
           confirm: 'Confirm Stop',
           abortButton: 'Stop',
-          success: 'Workflow execution has been stopped',
+          success: 'The workflow has been stopped successfully.',
           failed: 'Failed to stop workflow',
         },
       },
@@ -1490,13 +1494,13 @@ const translations = {
       rerunSingle: 'Rerun This Node',
       rerunFromHere: 'Run From Here',
       stopConfirmModal: {
-        title: 'Terminate Workflow Run',
-        content:
-          'The workflow is still running. If you terminate it now, the consumed credits will not be refunded. Confirm termination?',
+        title: 'Stop Agent Task?',
+        main: 'Are you sure you want to stop this agent task?',
+        note: 'Any progress made so far will be saved, and credits already consumed will not be refunded.',
         cancel: 'Cancel',
-        confirm: 'Confirm Termination',
+        confirm: 'Confirm Stop',
       },
-      stopSuccess: 'Workflow execution has been terminated',
+      stopSuccess: 'The agent has been stopped successfully.',
       stepTitle: 'Step {{index}}',
       aiThinking: 'AI is thinking ...',
       sourcesCnt: 'Total of {{count}} source(s) found',
@@ -3198,7 +3202,7 @@ const translations = {
         'Help me generate a sequence of animation scenes in the style of Makoto Shinkai, telling the story of "growing up" from childhood to adulthood.',
     },
     sessionDetail: {
-      thinking: 'Thinking',
+      thinking: 'Refly is thinking',
       approve: 'Approve',
       confirmClearCanvas: {
         title: 'Confirm Clear Canvas',
@@ -3386,6 +3390,14 @@ const translations = {
       installSkillHintTitle: 'Add Assistant',
       openCanvas: 'Open Canvas',
     },
+    abortConfirmModal: {
+      title: 'Stop Execution',
+      content:
+        'Are you sure you want to stop the current execution? The consumed credits will not be refunded.',
+      confirm: 'Stop Execution',
+      cancel: 'Cancel',
+    },
+    abortSuccess: 'Execution has been stopped',
     recommendQuestions: {
       title: 'Recommended Questions',
       refresh: 'Refresh',
@@ -3880,9 +3892,11 @@ const translations = {
       stopped: 'Workflow stopped',
       stoppedMessage: 'Workflow stopped, no results generated. You can rerun the template.',
       stopConfirmTitle: 'Stop Template Run?',
-      stopConfirmContent:
-        'Are you sure you want to stop this template run? The run will be terminated immediately, and credits already consumed will not be refunded.',
+      stopConfirmMain: 'Are you sure you want to stop this template run?',
+      stopConfirmNote:
+        'The run will be terminated immediately, and credits already consumed will not be refunded.',
       stopSuccess: 'The template run has been stopped successfully.',
+      confirm: 'Confirm Stop',
     },
     revenueSharing: {
       title: 'Earn credits by running templates',
@@ -3893,6 +3907,7 @@ const translations = {
       label: 'Publish to Community',
       help: 'After publishing to the community, other users can discover and use your workflow app',
     },
+    copyLinkTooltip: 'Copy link from your latest published version',
   },
   project: {
     create: 'Create Project',

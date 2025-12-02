@@ -16,7 +16,13 @@ import {
   DriveFileSource,
 } from '@refly/openapi-schema';
 import { Prisma, DriveFile as DriveFileModel } from '@prisma/client';
-import { genDriveFileID, getFileCategory, pick } from '@refly/utils';
+import {
+  genDriveFileID,
+  getFileCategory,
+  getSafeMimeType,
+  isPlainTextMimeType,
+  pick,
+} from '@refly/utils';
 import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
 import { streamToBuffer } from '../../utils';
@@ -340,15 +346,14 @@ export class DriveService {
           size = BigInt(objectInfo?.size ?? 0);
           request.type =
             objectInfo?.metaData?.['Content-Type'] ??
-            mime.getType(name) ??
-            'application/octet-stream';
+            getSafeMimeType(name, mime.getType(name) ?? undefined);
         } else if (externalUrl) {
           // Case 3: Download from external URL
           rawData = await this.downloadFileFromUrl(externalUrl);
           size = BigInt(rawData.length);
 
           // Determine content type based on file extension or default to binary
-          request.type = mime.getType(name) ?? 'application/octet-stream';
+          request.type = getSafeMimeType(name, mime.getType(name) ?? undefined);
         }
 
         if (options?.archiveFiles) {
@@ -466,8 +471,8 @@ export class DriveService {
 
     let content = driveFile.summary;
 
-    // Case 1: text/plain - read directly
-    if (driveFile.type === 'text/plain') {
+    // Case 1: Plain text files - read directly without parsing
+    if (isPlainTextMimeType(driveFile.type)) {
       try {
         const driveStorageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
         const readable = await this.internalOss.getObject(driveStorageKey);
@@ -486,7 +491,7 @@ export class DriveService {
       };
     }
 
-    // Case 2: other types - check cache or parse
+    // Case 2: Other types (PDF, images, etc.) - check cache or parse
     return await this.loadOrParseDriveFile(user, driveFile);
   }
 
@@ -878,6 +883,7 @@ export class DriveService {
         'summary',
         'resultId',
         'resultVersion',
+        'variableId',
       ]),
       scope: 'present',
       category: processedReq.category,
@@ -959,6 +965,27 @@ export class DriveService {
   }
 
   /**
+   * Check if a file exists in OSS
+   * @param oss - The OSS instance to check
+   * @param storageKey - The storage key to check
+   * @returns true if file exists, false otherwise
+   */
+  private async fileExistsInOss(
+    oss: ObjectStorageService,
+    storageKey: string | null | undefined,
+  ): Promise<boolean> {
+    if (!storageKey) return false;
+    try {
+      const stat = await oss.statObject(storageKey);
+      return stat !== null;
+    } catch (error) {
+      // If any error occurs (permission denied, network error, etc.), treat as file not exists
+      this.logger.warn(`Failed to check file existence for ${storageKey}: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
    * Duplicate a drive file to a new canvas
    */
   async duplicateDriveFile(
@@ -973,9 +1000,13 @@ export class DriveService {
       canvasId: newCanvasId,
     });
 
-    if (await this.internalOss.statObject(sourceFile.storageKey)) {
+    if (newStorageKey === sourceFile.storageKey) {
+      return sourceFile;
+    }
+
+    if (await this.fileExistsInOss(this.internalOss, sourceFile.storageKey)) {
       await this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
-    } else if (await this.externalOss.statObject(sourceFile.storageKey)) {
+    } else if (await this.fileExistsInOss(this.externalOss, sourceFile.storageKey)) {
       const stream = await this.externalOss.getObject(sourceFile.storageKey);
       await this.internalOss.putObject(newStorageKey, stream);
     } else {
@@ -1172,7 +1203,7 @@ export class DriveService {
     }
 
     const filename = path.basename(driveFile.storageKey) || 'file';
-    const contentType = mime.getType(filename) || 'application/octet-stream';
+    const contentType = getSafeMimeType(filename, mime.getType(filename) ?? undefined);
 
     return {
       contentType,
@@ -1211,7 +1242,7 @@ export class DriveService {
       const filename = path.basename(storageKey) || 'file';
 
       // Try to get contentType from file extension
-      const contentType = mime.getType(filename) || 'application/octet-stream';
+      const contentType = getSafeMimeType(filename, mime.getType(filename) ?? undefined);
 
       return {
         data,

@@ -90,16 +90,13 @@ export const RoutesList: RouteObject[] = [
     path: '/project/:projectId',
     element: <WorkspaceRedirect />,
   },
+  // TODO: deprecated and navigate to /workflow-template/:shareId
   {
     path: '/app/:shareId',
     element: <WorkflowAppPage />,
   },
   {
     path: '/workflow-list',
-    element: <WorkflowListPage />,
-  },
-  {
-    path: '/workflow-template',
     element: <WorkflowListPage />,
   },
   {
@@ -122,5 +119,9 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/workflow/:workflowId',
     element: <WorkflowPage />,
+  },
+  {
+    path: '/workflow-template/:shareId',
+    element: <WorkflowAppPage />,
   },
 ];

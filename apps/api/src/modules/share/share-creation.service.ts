@@ -106,6 +106,7 @@ export class ShareCreationService {
       where: {
         uid: user.uid,
         canvasId,
+        scope: 'present',
         deletedAt: null,
       },
     });

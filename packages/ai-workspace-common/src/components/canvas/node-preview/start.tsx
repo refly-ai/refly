@@ -356,14 +356,14 @@ export const StartNodePreview = () => {
           highlightedVariableId={highlightedVariableId}
         />
 
-        {/* <VariableTypeSection
+        <VariableTypeSection
           canvasId={canvasId}
           type="resource"
           variables={groupedVariables.resource}
           totalVariables={workflowVariables}
           readonly={readonly}
           highlightedVariableId={highlightedVariableId}
-        /> */}
+        />
 
         <VariableTypeSection
           canvasId={canvasId}

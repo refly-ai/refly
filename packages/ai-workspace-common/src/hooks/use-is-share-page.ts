@@ -7,6 +7,7 @@ export const usePublicAccessPage = () => {
   const isArtifactGalleryPage = location?.pathname?.startsWith('/artifact-gallery') ?? false;
   const isUseCasesGalleryPage = location?.pathname?.startsWith('/use-cases-gallery') ?? false;
   const isAppPage = location?.pathname?.startsWith('/app/') ?? false;
+  const isWorkflowTemplatePage = location?.pathname?.startsWith('/workflow-template/') ?? false;
   const isLoginPage = (location?.pathname ?? '') === '/login';
   return (
     isPreviewPage ||
@@ -14,6 +15,7 @@ export const usePublicAccessPage = () => {
     isArtifactGalleryPage ||
     isUseCasesGalleryPage ||
     isAppPage ||
+    isWorkflowTemplatePage ||
     isLoginPage
   );
 };

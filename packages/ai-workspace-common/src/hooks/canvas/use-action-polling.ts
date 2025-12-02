@@ -119,7 +119,13 @@ export const useActionPolling = () => {
 
   const startPolling = useCallback(
     async (resultId: string, version: number) => {
-      const { pollingStateMap, resultMap } = useActionResultStore.getState();
+      const { pollingStateMap, resultMap, streamResults } = useActionResultStore.getState();
+      const isStreaming = !!streamResults[resultId];
+
+      if (isStreaming) {
+        return;
+      }
+
       const pollingState = pollingStateMap[resultId];
       const currentResult = resultMap[resultId];
 

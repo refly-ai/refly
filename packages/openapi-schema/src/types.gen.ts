@@ -4038,6 +4038,14 @@ export type SkillContextFileItem = {
    * File object
    */
   file?: DriveFile;
+  /**
+   * Variable ID if this file is from a workflow variable
+   */
+  variableId?: string;
+  /**
+   * Variable name if this file is from a workflow variable
+   */
+  variableName?: string;
 };
 
 /**
@@ -7197,11 +7205,15 @@ export type ResourceValue = {
    */
   fileType: VariableResourceType;
   /**
-   * Resource storage key
+   * DriveFile ID (primary identifier for resource)
    */
-  storageKey: string;
+  fileId?: string;
   /**
-   * Resource ID
+   * Resource storage key (legacy, for backward compatibility)
+   */
+  storageKey?: string;
+  /**
+   * Resource ID (deprecated, use fileId instead)
    */
   entityId?: string;
 };
@@ -7346,6 +7358,10 @@ export type DriveFile = {
    * Drive file summary
    */
   summary?: string;
+  /**
+   * Object storage key for the file
+   */
+  storageKey?: string;
   /**
    * Related variable ID
    */

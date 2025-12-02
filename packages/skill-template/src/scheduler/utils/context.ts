@@ -8,6 +8,8 @@ export interface ContextFile {
   type: string;
   summary: string;
   content: string;
+  variableId?: string;
+  variableName?: string;
 }
 
 export interface AgentResult {
@@ -70,6 +72,8 @@ export async function prepareContext(
         type: file?.type ?? 'unknown',
         summary: file?.summary ?? '',
         content: fileContent,
+        ...(item.variableId && { variableId: item.variableId }),
+        ...(item.variableName && { variableName: item.variableName }),
       };
 
       selectedFiles.push(contextFile);
