@@ -1,4 +1,5 @@
-import { WorkflowPlan, WorkflowVariable } from '@refly/openapi-schema';
+import { WorkflowPlan } from '@refly/canvas-common';
+import { WorkflowVariable } from '@refly/openapi-schema';
 
 export interface GenerateWorkflowRequest {
   uid: string; // User ID
