@@ -2,20 +2,35 @@ import { useCallback } from 'react';
 import { logEvent } from '@refly/telemetry-web';
 import { useActionResultStore } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import type { ActionStatus } from '@refly/openapi-schema';
 
 // Global variables shared across all hook instances
-export const globalAbortControllerRef = {
-  current: null as AbortController | null,
+export const globalAbortControllersRef = {
+  current: new Map<string, AbortController>(),
 };
-export const globalIsAbortedRef = { current: false };
-export const globalCurrentResultIdRef = { current: '' as string };
+export const globalAbortedResultsRef = {
+  current: new Set<string>(),
+};
+
+export const cleanupAbortController = (resultId?: string) => {
+  if (!resultId?.trim()) {
+    return;
+  }
+  globalAbortControllersRef.current.delete(resultId);
+  globalAbortedResultsRef.current.delete(resultId);
+};
 
 export const useAbortAction = (params?: { source?: string }) => {
   const { source } = params || {};
 
   const abortAction = useCallback(async (resultId?: string) => {
-    // Use current active resultId if none provided
-    const activeResultId = resultId || globalCurrentResultIdRef.current;
+    // Use provided resultId or skip if none provided
+    const activeResultId = resultId;
+
+    if (!activeResultId) {
+      console.warn('No resultId provided for abort action');
+      return;
+    }
 
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[activeResultId];
@@ -32,12 +47,30 @@ export const useAbortAction = (params?: { source?: string }) => {
     });
 
     try {
-      // Abort the local controller
-      if (globalAbortControllerRef.current) {
-        globalAbortControllerRef.current.abort();
-        globalIsAbortedRef.current = true;
+      // Abort the local controller tied to the active result
+      const controllerToAbort = activeResultId?.trim()
+        ? globalAbortControllersRef.current.get(activeResultId)
+        : null;
+
+      if (controllerToAbort) {
+        controllerToAbort.abort();
+        if (activeResultId?.trim()) {
+          globalAbortedResultsRef.current.add(activeResultId);
+
+          // Update result status to 'failed' to reflect the abort in UI
+          const { updateActionResult, resultMap } = useActionResultStore.getState();
+          const currentResult = resultMap[activeResultId];
+          if (currentResult) {
+            updateActionResult(activeResultId, {
+              ...currentResult,
+              status: 'failed' as ActionStatus,
+              errorType: 'userAbort',
+              errors: [...(currentResult.errors ?? []), 'Action was aborted by user'],
+            });
+          }
+        }
       } else {
-        console.log('No local controller to abort');
+        console.warn('No local controller to abort');
       }
 
       // If resultId is provided and is a valid string, call the backend to clean up server-side resources
@@ -53,13 +86,6 @@ export const useAbortAction = (params?: { source?: string }) => {
           // Silent fail or minimal logging
           console.warn('Failed to abort action on server');
         }
-      } else {
-        console.log('No valid resultId provided, skipping backend call');
-        console.log('activeResultId details:', {
-          activeResultId,
-          type: typeof activeResultId,
-          isEmpty: !activeResultId,
-        });
       }
     } catch (err) {
       console.error('abort error', err);

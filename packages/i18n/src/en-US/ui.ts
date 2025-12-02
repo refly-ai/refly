@@ -62,6 +62,7 @@ const translations = {
     docs: 'Docs',
     skill: 'Skill',
     thread: 'Thread',
+    thinking: 'Refly AI is thinking',
     meta: 'Meta',
     project: 'Project',
     upgrade: 'Upgrade',
@@ -3198,7 +3199,7 @@ const translations = {
         'Help me generate a sequence of animation scenes in the style of Makoto Shinkai, telling the story of "growing up" from childhood to adulthood.',
     },
     sessionDetail: {
-      thinking: 'Thinking',
+      thinking: 'Refly is thinking',
       approve: 'Approve',
       confirmClearCanvas: {
         title: 'Confirm Clear Canvas',
@@ -3386,6 +3387,14 @@ const translations = {
       installSkillHintTitle: 'Add Assistant',
       openCanvas: 'Open Canvas',
     },
+    abortConfirmModal: {
+      title: 'Stop Execution',
+      content:
+        'Are you sure you want to stop the current execution? The consumed credits will not be refunded.',
+      confirm: 'Stop Execution',
+      cancel: 'Cancel',
+    },
+    abortSuccess: 'Execution has been stopped',
     recommendQuestions: {
       title: 'Recommended Questions',
       refresh: 'Refresh',
@@ -3895,6 +3904,7 @@ const translations = {
       label: 'Publish to Community',
       help: 'After publishing to the community, other users can discover and use your workflow app',
     },
+    copyLinkTooltip: 'Copy link from your latest published version',
   },
   project: {
     create: 'Create Project',

@@ -1029,7 +1029,10 @@ export class SkillInvokerService {
       await this.prisma.$transaction([
         this.prisma.actionStep.createMany({ data: steps }),
         // Persist remaining unpersisted messages to action_messages table
-        ...(messages.length > 0 ? [this.prisma.actionMessage.createMany({ data: messages })] : []),
+        // Use skipDuplicates to handle cases where messages were already auto-saved
+        ...(messages.length > 0
+          ? [this.prisma.actionMessage.createMany({ data: messages, skipDuplicates: true })]
+          : []),
         ...(result.pilotStepId
           ? [
               this.prisma.pilotStep.updateMany({

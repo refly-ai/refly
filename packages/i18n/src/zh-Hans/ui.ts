@@ -252,6 +252,7 @@ const translations = {
     newDocument: '新文档',
     docs: '文档',
     skill: '技能',
+    thinking: 'Refly AI 思考中',
     thread: '会话',
     meta: '元信息',
     project: '知识库',
@@ -3383,6 +3384,13 @@ const translations = {
       installSkillHintTitle: '添加助手',
       openCanvas: '打开画布',
     },
+    abortConfirmModal: {
+      title: '停止执行',
+      content: '确定要停止当前执行吗？已消耗的积分将不会返还。',
+      confirm: '停止执行',
+      cancel: '取消',
+    },
+    abortSuccess: '已停止执行',
     recommendQuestions: {
       title: '推荐问题',
       refresh: '换一批',
@@ -3625,6 +3633,7 @@ const translations = {
       label: '发布到社区',
       help: '发布到社区后，其他用户可以在社区中发现和使用你的工作流应用',
     },
+    copyLinkTooltip: '复制最新发布版本的链接',
   },
   project: {
     create: '创建知识库',

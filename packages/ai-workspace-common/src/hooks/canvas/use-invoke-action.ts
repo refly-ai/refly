@@ -21,7 +21,6 @@ import { useActionResultStore } from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
 import { aggregateTokenUsage, detectActualTypeFromType, genActionResultID } from '@refly/utils';
 import { ARTIFACT_TAG_CLOSED_REGEX, getArtifactContentAndAttributes } from '@refly/utils/artifact';
-import { getRuntime } from '@refly/utils/env';
 import { useCallback, useEffect, useRef } from 'react';
 import {
   mergeToolCallById,
@@ -29,9 +28,9 @@ import {
 } from '../../components/markdown/plugins/tool-call/toolProcessor';
 import { useSubscriptionUsage } from '../use-subscription-usage';
 import {
-  globalAbortControllerRef,
-  globalCurrentResultIdRef,
-  globalIsAbortedRef,
+  cleanupAbortController,
+  globalAbortControllersRef,
+  globalAbortedResultsRef,
   useAbortAction,
 } from './use-abort-action';
 import { useActionPolling } from './use-action-polling';
@@ -57,6 +56,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
   const latestStepsRef = useRef(new Map<string, ActionStep[]>());
   // Message cache for real-time updates (similar to steps cache)
   const latestMessagesRef = useRef(new Map<string, ActionMessage[]>());
+  const actionResultStatusRef = useRef(new Map<string, ActionStatus>());
 
   const { source } = params || {};
 
@@ -81,23 +81,26 @@ export const useInvokeAction = (params?: { source?: string }) => {
     };
   }, []);
 
-  const { createTimeoutHandler, stopPolling } = useActionPolling();
+  const { stopPolling } = useActionPolling();
   const onUpdateResult = useUpdateActionResult();
 
   const onSkillStart = (skillEvent: SkillEvent) => {
     const { resultId } = skillEvent;
-    const { resultMap } = useActionResultStore.getState();
-    const result = resultMap[resultId];
+    const status = getActionStatus(resultId);
 
-    if (!result) {
+    if (!status) {
       return;
     }
+
+    // Get result info from store for logging (this is acceptable for logging)
+    const { resultMap } = useActionResultStore.getState();
+    const result = resultMap[resultId];
 
     logEvent('model::invoke_start', Date.now(), {
       resultId,
       source,
-      model: result.modelInfo?.name,
-      skill: result.actionMeta?.name,
+      model: result?.modelInfo?.name,
+      skill: result?.actionMeta?.name,
     });
 
     stopPolling(resultId);
@@ -105,10 +108,17 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const onSkillLog = (skillEvent: SkillEvent) => {
     const { resultId, step, log } = skillEvent;
+    const status = getActionStatus(resultId);
+
+    if (!status || !step) {
+      return;
+    }
+
+    // Get result from store for steps access
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
-    if (!result || !step) {
+    if (!result) {
       return;
     }
 
@@ -126,17 +136,18 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const onSkillTokenUsage = (skillEvent: SkillEvent) => {
     const { resultId, step, tokenUsage } = skillEvent;
-    const { resultMap } = useActionResultStore.getState();
-    const result = resultMap[resultId];
+    const status = getActionStatus(resultId);
 
-    if (!result || !step) {
+    if (!status || !step) {
       return;
     }
 
-    const currentResult = useActionResultStore.getState().resultMap[resultId];
-    if (!currentResult) return;
+    // Get result from store for steps access
+    const { resultMap } = useActionResultStore.getState();
+    const result = resultMap[resultId];
+    if (!result) return;
 
-    const updatedStep: ActionStep = findOrCreateStep(currentResult.steps ?? [], step);
+    const updatedStep: ActionStep = findOrCreateStep(result.steps ?? [], step);
     if (tokenUsage) {
       updatedStep.tokenUsage = aggregateTokenUsage([...(updatedStep.tokenUsage ?? []), tokenUsage]);
     }
@@ -144,7 +155,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
     onUpdateResult(
       resultId,
       {
-        steps: getUpdatedSteps(currentResult.steps ?? [], updatedStep),
+        steps: getUpdatedSteps(result.steps ?? [], updatedStep),
       },
       skillEvent,
     );
@@ -260,6 +271,18 @@ export const useInvokeAction = (params?: { source?: string }) => {
     }
   };
 
+  const getActionStatus = (resultId: string): ActionStatus | null => {
+    const cachedStatus = actionResultStatusRef.current.get(resultId);
+    if (cachedStatus) return cachedStatus;
+
+    const storeResult = useActionResultStore.getState().resultMap[resultId];
+    return storeResult?.status ?? null;
+  };
+
+  const setActionStatus = (resultId: string, status: ActionStatus) => {
+    actionResultStatusRef.current.set(resultId, status);
+  };
+
   const getLatestMessages = (resultId: string): ActionMessage[] => {
     const cached = latestMessagesRef.current.get(resultId);
     if (cached && cached.length > 0) return cached;
@@ -274,10 +297,17 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const onSkillStream = (skillEvent: SkillEvent) => {
     const { resultId, content = '', reasoningContent = '', step, artifact, messageId } = skillEvent;
+    const status = getActionStatus(resultId);
+
+    if (!status || !step) {
+      return;
+    }
+
+    // Get result from store for steps access
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
-    if (!result || !step) {
+    if (!result) {
       return;
     }
 
@@ -303,6 +333,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
     setLatestSteps(resultId, mergedSteps);
 
     const payload: Partial<ActionResult> = {
+      status,
       steps: mergedSteps,
     };
 
@@ -339,10 +370,17 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const onSkillStructedData = (skillEvent: SkillEvent) => {
     const { step, resultId, structuredData = {} } = skillEvent;
+    const status = getActionStatus(resultId);
+
+    if (!status || !structuredData || !step) {
+      return;
+    }
+
+    // Get result from store for steps access
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
-    if (!result || !structuredData || !step) {
+    if (!result) {
       return;
     }
 
@@ -378,6 +416,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
     }
 
     const payload = {
+      status,
       steps: getUpdatedSteps(result.steps ?? [], updatedStep),
     };
     onUpdateResult(skillEvent.resultId, payload, skillEvent);
@@ -385,10 +424,17 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const onSkillArtifact = (skillEvent: SkillEvent) => {
     const { resultId, artifact, step } = skillEvent;
+    const status = getActionStatus(resultId);
+
+    if (!status || !step || !artifact) {
+      return;
+    }
+
+    // Get result from store for steps access
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
-    if (!result || !step || !artifact) {
+    if (!result) {
       return;
     }
 
@@ -406,6 +452,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         : [...existingArtifacts, artifact];
 
     const payload = {
+      status,
       steps: getUpdatedSteps(result.steps ?? [], updatedStep),
     };
 
@@ -418,6 +465,8 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const onSkillEnd = (skillEvent: SkillEvent) => {
     clearLatestSteps(skillEvent.resultId);
+
+    // Get result from store for logging
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[skillEvent.resultId];
 
@@ -434,23 +483,20 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
     stopPolling(skillEvent.resultId);
 
+    setActionStatus(skillEvent.resultId, 'finish');
     const payload = {
       status: 'finish' as const,
     };
     onUpdateResult(skillEvent.resultId, payload, skillEvent);
-
-    if (globalCurrentResultIdRef.current === skillEvent.resultId) {
-      globalCurrentResultIdRef.current = '';
-    }
 
     refetchUsage();
   };
 
   const onSkillError = (skillEvent: SkillEvent) => {
     clearLatestSteps(skillEvent.resultId);
-    const runtime = getRuntime();
     const { originError, resultId } = skillEvent;
 
+    // Get result from store for logging and setTraceId
     const { resultMap, setTraceId } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
@@ -475,21 +521,16 @@ export const useInvokeAction = (params?: { source?: string }) => {
       setTraceId(resultId, traceId);
     }
 
+    setActionStatus(skillEvent.resultId, 'failed');
     const payload = {
       status: 'failed' as const,
       errors: originError ? [originError] : [],
     };
     onUpdateResult(skillEvent.resultId, payload, skillEvent);
 
-    if (runtime?.includes('extension')) {
-      if (globalIsAbortedRef.current) {
-        return;
-      }
-    } else {
-      // if it is aborted, do nothing
-      if (globalAbortControllerRef.current?.signal?.aborted) {
-        return;
-      }
+    // if it is aborted, do nothing
+    if (globalAbortedResultsRef.current.has(resultId)) {
+      return;
     }
   };
 
@@ -504,22 +545,32 @@ export const useInvokeAction = (params?: { source?: string }) => {
       content = '',
       reasoningContent = '',
     } = skillEvent;
+    const status = getActionStatus(resultId);
+
+    if (!status) return;
+
+    // Get result from store for other properties if needed
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
     if (!result) return;
 
-    const payload: Partial<ActionResult> = {};
+    const payload: Partial<ActionResult> = {
+      status,
+    };
 
     // Update messages with tool message if messageId is provided
     if (messageId && toolCallMeta) {
-      const updatedMessage = findOrCreateMessage(result.messages ?? [], messageId, 'tool');
+      const currentMessages = getLatestMessages(resultId);
+      const updatedMessage = findOrCreateMessage(currentMessages, messageId, 'tool');
       updatedMessage.toolCallMeta = toolCallMeta;
       updatedMessage.toolCallId = toolCallMeta.toolCallId;
       updatedMessage.toolCallResult = toolCallResult;
       updatedMessage.updatedAt = new Date().toISOString();
 
-      payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);
+      const mergedMessages = getUpdatedMessages(currentMessages, updatedMessage);
+      setLatestMessages(resultId, mergedMessages);
+      payload.messages = mergedMessages;
     }
 
     // Also update steps for backward compatibility
@@ -560,16 +611,24 @@ export const useInvokeAction = (params?: { source?: string }) => {
       content = '',
       artifact,
     } = skillEvent;
+    const status = getActionStatus(resultId);
+
+    if (!status) return;
+
+    // Get result from store for other properties if needed
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
     if (!result) return;
 
-    const payload: Partial<ActionResult> = {};
+    const payload: Partial<ActionResult> = {
+      status,
+    };
 
     // Update messages with completed status
     if (messageId && toolCallMeta) {
-      const updatedMessage = findOrCreateMessage(result.messages ?? [], messageId, 'tool');
+      const currentMessages = getLatestMessages(resultId);
+      const updatedMessage = findOrCreateMessage(currentMessages, messageId, 'tool');
       updatedMessage.toolCallMeta = {
         ...updatedMessage.toolCallMeta,
         ...toolCallMeta,
@@ -579,7 +638,9 @@ export const useInvokeAction = (params?: { source?: string }) => {
       updatedMessage.toolCallResult = toolCallResult;
       updatedMessage.updatedAt = new Date().toISOString();
 
-      payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);
+      const mergedMessages = getUpdatedMessages(currentMessages, updatedMessage);
+      setLatestMessages(resultId, mergedMessages);
+      payload.messages = mergedMessages;
     }
 
     // Also update steps for backward compatibility
@@ -613,16 +674,24 @@ export const useInvokeAction = (params?: { source?: string }) => {
   // Handle tool_call_error event - update tool message status to failed
   const onToolCallError = (skillEvent: SkillEvent) => {
     const { resultId, messageId, toolCallMeta, toolCallResult, step, content = '' } = skillEvent;
+    const status = getActionStatus(resultId);
+
+    if (!status) return;
+
+    // Get result from store for other properties if needed
     const { resultMap } = useActionResultStore.getState();
     const result = resultMap[resultId];
 
     if (!result) return;
 
-    const payload: Partial<ActionResult> = {};
+    const payload: Partial<ActionResult> = {
+      status,
+    };
 
     // Update messages with failed status
     if (messageId && toolCallMeta) {
-      const updatedMessage = findOrCreateMessage(result.messages ?? [], messageId, 'tool');
+      const currentMessages = getLatestMessages(resultId);
+      const updatedMessage = findOrCreateMessage(currentMessages, messageId, 'tool');
       updatedMessage.toolCallMeta = {
         ...updatedMessage.toolCallMeta,
         ...toolCallMeta,
@@ -632,7 +701,9 @@ export const useInvokeAction = (params?: { source?: string }) => {
       updatedMessage.toolCallResult = toolCallResult;
       updatedMessage.updatedAt = new Date().toISOString();
 
-      payload.messages = getUpdatedMessages(result.messages ?? [], updatedMessage);
+      const mergedMessages = getUpdatedMessages(currentMessages, updatedMessage);
+      setLatestMessages(resultId, mergedMessages);
+      payload.messages = mergedMessages;
     }
 
     // Also update steps for backward compatibility
@@ -725,8 +796,9 @@ export const useInvokeAction = (params?: { source?: string }) => {
         target: target?.entityType,
       });
 
-      globalAbortControllerRef.current = new AbortController();
-      globalCurrentResultIdRef.current = resultId; // Track current active resultId
+      const controller = new AbortController();
+      globalAbortControllersRef.current.set(resultId, controller);
+      globalAbortedResultsRef.current.delete(resultId);
 
       const upstreamAgentNodes = nodeId ? getUpstreamAgentNodes(nodeId) : [];
       const context = convertContextItemsToInvokeParams(
@@ -760,53 +832,41 @@ export const useInvokeAction = (params?: { source?: string }) => {
         targetId: target?.entityId,
         targetType: target?.entityType,
         context,
-        status: 'waiting' as ActionStatus,
+        status: 'executing' as ActionStatus,
         steps: [],
         errors: [],
       };
 
+      setActionStatus(resultId, 'executing');
       onUpdateResult(resultId, initialResult);
       useActionResultStore.getState().addStreamResult(resultId, initialResult);
       useActionResultStore.getState().setResultActiveTab(resultId, 'lastRun');
 
-      // Create timeout handler for this action
-      const { resetTimeout, cleanup: timeoutCleanup } = createTimeoutHandler(resultId, version);
-
-      // Wrap event handlers to reset timeout
-      const wrapEventHandler =
-        (handler: (...args: any[]) => void) =>
-        (...args: any[]) => {
-          resetTimeout();
-          handler(...args);
-        };
-
-      resetTimeout();
-
-      await ssePost({
-        controller: globalAbortControllerRef.current,
-        payload: param,
-        onStart: wrapEventHandler(onStart),
-        onSkillStart: wrapEventHandler(onSkillStart),
-        onSkillStream: wrapEventHandler(onSkillStream),
-        onToolCallStart: wrapEventHandler(onToolCallStart),
-        onToolCallEnd: wrapEventHandler(onToolCallEnd),
-        onToolCallError: wrapEventHandler(onToolCallError),
-        onToolCallStream: wrapEventHandler(onToolCallStream),
-        onSkillLog: wrapEventHandler(onSkillLog),
-        onSkillArtifact: wrapEventHandler(onSkillArtifact),
-        onSkillStructedData: wrapEventHandler(onSkillStructedData),
-        onSkillCreateNode: wrapEventHandler(onSkillCreateNode),
-        onSkillEnd: wrapEventHandler(onSkillEnd),
-        onCompleted: wrapEventHandler(onCompleted),
-        onSkillError: wrapEventHandler(onSkillError),
-        onSkillTokenUsage: wrapEventHandler(onSkillTokenUsage),
-      });
-
-      return () => {
-        timeoutCleanup();
-      };
+      try {
+        await ssePost({
+          controller,
+          payload: param,
+          onStart,
+          onSkillStart,
+          onSkillStream,
+          onToolCallStart,
+          onToolCallEnd,
+          onToolCallError,
+          onToolCallStream,
+          onSkillLog,
+          onSkillArtifact,
+          onSkillStructedData,
+          onSkillCreateNode,
+          onSkillEnd,
+          onCompleted,
+          onSkillError,
+          onSkillTokenUsage,
+        });
+      } finally {
+        cleanupAbortController(resultId);
+      }
     },
-    [onUpdateResult, createTimeoutHandler],
+    [source, abortAction, onUpdateResult, getUpstreamAgentNodes, refetchUsage],
   );
 
   return { invokeAction, abortAction };

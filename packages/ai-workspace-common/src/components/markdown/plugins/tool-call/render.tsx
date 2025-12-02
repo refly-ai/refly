@@ -17,6 +17,7 @@ import {
   useListToolsetInventory,
   useGetToolCallResult,
 } from '@refly-packages/ai-workspace-common/queries';
+import cn from 'classnames';
 
 const { Paragraph } = Typography;
 
@@ -278,7 +279,10 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
             />
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Paragraph
-                className="!m-0 text-sm font-semibold truncate max-w-[50%] flex-shrink-0"
+                className={cn(
+                  '!m-0 text-sm font-semibold truncate flex-shrink-0',
+                  !toolsetDefinition?.builtin ? 'max-w-[50%]' : 'max-w-[100%]',
+                )}
                 ellipsis={{
                   rows: 1,
                   tooltip: {

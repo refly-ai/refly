@@ -20,6 +20,7 @@ interface ActionResultState {
   resultActiveTabMap: Record<string, ResultActiveTab>;
   pollingStateMap: Record<string, PollingState & CacheInfo>;
   streamResults: Record<string, ActionResult>;
+  streamChoked: Record<string, boolean>; // key: resultId, value: true if stream is choked
   traceIdMap: Record<string, string>; // key: resultId, value: traceId
   currentFile: DriveFile | null;
   currentFileUsePublicFileUrl?: boolean;
@@ -27,6 +28,7 @@ interface ActionResultState {
   // Stream result actions
   addStreamResult: (resultId: string, result: ActionResult) => void;
   removeStreamResult: (resultId: string) => void;
+  setStreamChoked: (resultId: string, choked: boolean) => void;
 
   // TraceId management actions
   setTraceId: (resultId: string, traceId: string) => void;
@@ -65,6 +67,7 @@ export const defaultState = {
   pollingStateMap: {},
   isBatchUpdateScheduled: false,
   streamResults: {},
+  streamChoked: {},
   traceIdMap: {},
   currentFile: null,
   currentFileUsePublicFileUrl: undefined,
@@ -397,6 +400,13 @@ export const useActionResultStore = create<ActionResultState>()(
             streamResults: newStreamResults,
           };
         });
+      },
+
+      setStreamChoked: (resultId: string, choked: boolean) => {
+        set((state) => ({
+          ...state,
+          streamChoked: { ...state.streamChoked, [resultId]: choked },
+        }));
       },
 
       // TraceId management methods
