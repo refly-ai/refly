@@ -254,11 +254,17 @@ export class SkillInvokerService {
   } {
     const errorMessage = err.message || 'Unknown error';
 
+    // Special handling for credit-related errors - preserve original message
+    const isCreditError =
+      err instanceof ModelUsageQuotaExceeded || /credit not available/i.test(err.message);
+
     // Categorize errors more reliably
     const isTimeoutError =
       err instanceof Error && (err.name === 'TimeoutError' || /timeout/i.test(err.message));
     const isAbortError =
-      err instanceof Error && (err.name === 'AbortError' || /abort/i.test(err.message));
+      err instanceof Error &&
+      (err.name === 'AbortError' || /abort/i.test(err.message)) &&
+      !isCreditError;
     const isNetworkError =
       err instanceof Error && (err.name === 'NetworkError' || /network|fetch/i.test(err.message));
     const isGeneralTimeout = isTimeoutError;
@@ -272,7 +278,11 @@ export class SkillInvokerService {
       ABORT_ERROR: 'Operation was aborted.',
     } as const;
 
-    if (isGeneralTimeout) {
+    if (isCreditError) {
+      // For credit errors, preserve the original detailed message
+      userFriendlyMessage = errorMessage;
+      logLevel = 'error';
+    } else if (isGeneralTimeout) {
       userFriendlyMessage = ERROR_MESSAGES.GENERAL_TIMEOUT;
     } else if (isNetworkError) {
       userFriendlyMessage = ERROR_MESSAGES.NETWORK_ERROR;
@@ -935,8 +945,13 @@ export class SkillInvokerService {
                 };
                 await this.usageReportQueue.add(`usage_report:${resultId}`, tokenUsage);
               }
+              // Process credit billing for all steps after skill completion
+              // Bill credits for successful completions and user aborts (partial usage should be charged)
+              const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
 
-              // Remove credit billing processing from here - will be handled after skill completion
+              if (shouldBillCredits) {
+                await this.processCreditUsageReport(user, resultId, version, resultAggregator);
+              }
             }
             break;
         }
@@ -1043,7 +1058,7 @@ export class SkillInvokerService {
           ? [
               this.prisma.workflowNodeExecution.updateMany({
                 where: { nodeExecutionId: result.workflowNodeExecutionId },
-                data: { status, endTime: new Date() },
+                data: { status, errorMessage: JSON.stringify(result.errors), endTime: new Date() },
               }),
             ]
           : []),
@@ -1105,20 +1120,6 @@ export class SkillInvokerService {
         if (key.startsWith(`${resultId}:`)) {
           this.addedFilesMap.delete(key);
         }
-      }
-
-      // Process credit billing for all steps after skill completion
-      // Bill credits for successful completions and user aborts (partial usage should be charged)
-      const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
-
-      if (shouldBillCredits) {
-        await this.processCreditUsageReport(
-          user,
-          resultId,
-          version,
-          resultAggregator,
-          result.workflowExecutionId,
-        );
       }
 
       // Dispose message aggregator to clean up resources (stop auto-save timer)
@@ -1346,7 +1347,6 @@ export class SkillInvokerService {
     resultId: string,
     version: number,
     resultAggregator: ResultAggregator,
-    workflowExecutionId?: string,
   ): Promise<void> {
     const steps = await resultAggregator.getSteps({ resultId, version });
 
@@ -1433,10 +1433,7 @@ export class SkillInvokerService {
       const requireRecharge =
         await this.creditService.syncBatchTokenCreditUsage(batchTokenCreditUsage);
       if (requireRecharge) {
-        if (workflowExecutionId) {
-          await this.abortWorkflowExecution(user, workflowExecutionId);
-        }
-        throw new ModelUsageQuotaExceeded('credit not available, workflow aborted');
+        throw new ModelUsageQuotaExceeded('credit not available: Insufficient credits.');
       }
 
       this.logger.log(

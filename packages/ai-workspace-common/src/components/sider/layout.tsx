@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { SettingModal } from '@refly-packages/ai-workspace-common/components/settings';
 import { InvitationModal } from '@refly-packages/ai-workspace-common/components/settings/invitation-modal';
 import { StorageExceededModal } from '@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal';
+import { CreditInsufficientModal } from '@refly-packages/ai-workspace-common/components/subscription/credit-insufficient-modal';
 // hooks
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
@@ -511,6 +512,7 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
       <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
       <InvitationModal visible={showInvitationModal} setVisible={setShowInvitationModal} />
       <StorageExceededModal />
+      <CreditInsufficientModal />
       <CanvasTemplateModal />
 
       {isLogin ? <SiderLoggedIn source={source} /> : <SiderLoggedOut source={source} />}

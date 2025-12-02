@@ -680,6 +680,7 @@ export class CreditService {
     // Prepare deduction operations
     const deductionOperations = [];
     let remainingCost = creditCost;
+    let totalNewBalance = 0;
 
     // Deduct from available credits first
     for (const recharge of creditRecharges) {
@@ -695,6 +696,7 @@ export class CreditService {
         }),
       );
 
+      totalNewBalance += newBalance;
       remainingCost -= deductAmount;
     }
 
@@ -745,8 +747,7 @@ export class CreditService {
     // Execute transaction
     await this.prisma.$transaction(transactionOperations);
 
-    // Return true if balance is zero or has debt (remainingCost >= 0 indicates balance is zero or debt was created)
-    return remainingCost >= 0;
+    return remainingCost > 0 || totalNewBalance === 0;
   }
 
   private async isEarlyBirdUser(user: User) {

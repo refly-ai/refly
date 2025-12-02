@@ -1,6 +1,14 @@
 import { useCallback, useRef, useEffect } from 'react';
-import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
-import { ActionResultNotFoundError } from '@refly/errors';
+import {
+  useActionResultStore,
+  useActionResultStoreShallow,
+  useSubscriptionStoreShallow,
+} from '@refly/stores';
+import {
+  ActionResultNotFoundError,
+  ModelUsageQuotaExceeded,
+  guessModelProviderError,
+} from '@refly/errors';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useUpdateActionResult } from './use-update-action-result';
 
@@ -30,6 +38,10 @@ export const useActionPolling = () => {
     startTimeout: state.startTimeout,
     updateLastEventTime: state.updateLastEventTime,
     clearTimeout: state.clearTimeout,
+  }));
+
+  const { setCreditInsufficientModalVisible } = useSubscriptionStoreShallow((state) => ({
+    setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
   }));
 
   const onUpdateResult = useUpdateActionResult();
@@ -94,6 +106,19 @@ export const useActionPolling = () => {
           }
 
           if (status === 'failed' && result.data) {
+            // Check if this is a credit insufficient error
+            const errors = result.data?.errors;
+            if (errors && Array.isArray(errors)) {
+              const hasCreditError = errors.some((error) => {
+                const guessedError = guessModelProviderError(error);
+                return guessedError instanceof ModelUsageQuotaExceeded;
+              });
+              if (hasCreditError) {
+                console.log('credit insufficient error');
+                setCreditInsufficientModalVisible(true);
+              }
+            }
+
             onUpdateResult(resultId, result.data);
             stopPolling(resultId);
             failedResultIds.add(resultId);

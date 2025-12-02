@@ -511,9 +511,6 @@ export class SkillService implements OnModuleInit {
           `Credit not available: ${creditUsageResult.message}`,
           param,
         );
-        if (param.workflowExecutionId) {
-          await this.skillInvokerService.abortWorkflowExecution(user, param.workflowExecutionId);
-        }
         throw new ModelUsageQuotaExceeded(`credit not available: ${creditUsageResult.message}`);
       }
     }

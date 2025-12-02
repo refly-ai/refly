@@ -9907,6 +9907,10 @@ export const WorkflowNodeExecutionSchema = {
       type: 'number',
       description: 'Node progress',
     },
+    errorMessage: {
+      type: 'string',
+      description: 'Node error message',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -9955,6 +9959,10 @@ export const WorkflowExecutionSchema = {
       items: {
         $ref: '#/components/schemas/WorkflowNodeExecution',
       },
+    },
+    appId: {
+      type: 'string',
+      description: 'Workflow app ID',
     },
     createdAt: {
       type: 'string',

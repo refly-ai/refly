@@ -7032,6 +7032,10 @@ export type WorkflowNodeExecution = {
    */
   progress?: number;
   /**
+   * Node error message
+   */
+  errorMessage?: string;
+  /**
    * Node creation timestamp
    */
   createdAt?: string;
@@ -7068,6 +7072,10 @@ export type WorkflowExecution = {
    * Node executions
    */
   nodeExecutions?: Array<WorkflowNodeExecution>;
+  /**
+   * Workflow app ID
+   */
+  appId?: string;
   /**
    * Workflow creation timestamp
    */

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGetWorkflowDetail } from '@refly-packages/ai-workspace-common/queries';
 import { WorkflowExecution, WorkflowExecutionStatus } from '@refly/openapi-schema';
-import { useCanvasStoreShallow } from '@refly/stores';
+import { useCanvasStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
+import { guessModelProviderError, ModelUsageQuotaExceeded } from '@refly/errors';
 
 // Global poller management per executionId to prevent concurrent polling across components
 type WorkflowPollerRecord = {
@@ -71,6 +72,10 @@ export const useWorkflowExecutionPolling = ({
       setCanvasNodeExecutions: state.setCanvasNodeExecutions,
     }),
   );
+
+  const { setCreditInsufficientModalVisible } = useSubscriptionStoreShallow((state) => ({
+    setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
+  }));
 
   // Prefer store executionId; fallback to provided one
   const currentExecutionId = (storeExecutionId ?? executionId) || null;
@@ -184,7 +189,19 @@ export const useWorkflowExecutionPolling = ({
     if (nodeExecutions?.length > 0 && canvasId) {
       setCanvasNodeExecutions(canvasId, nodeExecutions);
     }
-  }, [nodeExecutions, canvasId, setCanvasNodeExecutions]);
+
+    // Log error messages from node executions
+    if (nodeExecutions?.length > 0 && data?.data?.appId) {
+      for (const nodeExecution of nodeExecutions) {
+        if (nodeExecution.errorMessage) {
+          const error = guessModelProviderError(nodeExecution.errorMessage);
+          if (error instanceof ModelUsageQuotaExceeded) {
+            setCreditInsufficientModalVisible(true);
+          }
+        }
+      }
+    }
+  }, [nodeExecutions, canvasId, setCanvasNodeExecutions, data?.data?.appId]);
 
   // Update status when data changes
   useEffect(() => {
