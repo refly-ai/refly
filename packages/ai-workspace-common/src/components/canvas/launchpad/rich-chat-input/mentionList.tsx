@@ -185,7 +185,7 @@ export const MentionList = ({
 
   const secondLevelClasses = useMemo(() => {
     const baseClasses =
-      'w-[180px] p-2 max-h-60 flex box-border overflow-y-auto bg-refly-bg-body-z0 border-[1px] border-solid border-refly-Card-Border';
+      'w-[210px] p-2 max-h-60 flex box-border overflow-y-auto bg-refly-bg-body-z0 border-[1px] border-solid border-refly-Card-Border';
 
     if (placement === 'top') {
       if (isSecondLevelTaller) {
@@ -610,7 +610,7 @@ export const MentionList = ({
                   : item.name}
               </div>
               {(item.toolset?.uninstalled || item.isInstalled === false) && (
-                <div className="text-xs text-amber-600 px-1.5 py-0.5 rounded flex items-center justify-center bg-amber-50 flex-shrink-0 font-medium">
+                <div className="text-[10px] text-amber-600 px-1 py-0.5 rounded flex items-center justify-center bg-amber-50 flex-shrink-0 font-medium">
                   {t('canvas.richChatInput.unauthorized')}
                 </div>
               )}
