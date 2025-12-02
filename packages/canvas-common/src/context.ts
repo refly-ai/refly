@@ -2,6 +2,7 @@ import {
   ActionResult,
   CanvasNodeType,
   SkillContext,
+  SkillContextFileItem,
   WorkflowVariable,
 } from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
@@ -203,7 +204,7 @@ export const convertContextItemsToInvokeParams = (
             fileId: item.entityId,
           };
         })
-        .filter((item) => item !== null),
+        .filter((item): item is SkillContextFileItem => item !== null),
       (item) => item.fileId,
     ),
     results: deduplicate(
