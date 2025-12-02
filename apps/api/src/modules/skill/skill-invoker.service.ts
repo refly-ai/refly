@@ -1,5 +1,5 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
-
+import { randomUUID } from 'node:crypto';
 import { DirectConnection } from '@hocuspocus/server';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/dist/messages';
@@ -629,7 +629,7 @@ export class SkillInvokerService {
               // Remove the first element (toolsetId) and join the rest
               toolName = nameParts.slice(1).join('_').toLowerCase();
             }
-            const runId = event?.run_id ? String(event.run_id) : undefined;
+            const runId = event?.run_id ? String(event.run_id) : randomUUID();
             const toolCallId = runId;
 
             const persistToolCall = async (
