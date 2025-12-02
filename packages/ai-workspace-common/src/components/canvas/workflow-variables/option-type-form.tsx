@@ -193,6 +193,7 @@ export const OptionTypeForm: React.FC<OptionTypeFormProps> = React.memo(
 
                           {editingIndex === index ? (
                             <Input
+                              variant="filled"
                               value={currentOption}
                               onChange={(e) => {
                                 const val = e.target.value;
@@ -319,6 +320,7 @@ export const OptionTypeForm: React.FC<OptionTypeFormProps> = React.memo(
           ]}
         >
           <Select
+            variant="filled"
             placeholder={
               t('canvas.workflow.variables.selectValuePlaceholder') ||
               'Please select a value from the options above'

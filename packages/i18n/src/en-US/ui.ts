@@ -1430,6 +1430,7 @@ const translations = {
       run: {
         title: 'Run Workflow',
         run: 'Run',
+        startRunning: 'Your workflow starts running',
         executing: 'Running',
         remix: 'Remix',
         copyWorkflow: 'Remix Workflow',

@@ -35,7 +35,7 @@ export const AIMessageCard = memo(({ message, resultId, stepStatus }: AIMessageC
   if (!content?.trim()) return null;
 
   return (
-    <div className="my-2 text-base">
+    <div className="my-2 px-3 text-base">
       <div className={`skill-response-content-${resultId}-${message.messageId}`}>
         {hasReasoningContent && (
           <ReasoningContentPreview

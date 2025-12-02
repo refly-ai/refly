@@ -673,6 +673,7 @@ export const CreateWorkflowAppModal = ({
           scrollbarGutter: 'stable both-edges',
         },
       }}
+      destroyOnClose={true}
     >
       {contextHolder}
       <div className="w-full pt-4">

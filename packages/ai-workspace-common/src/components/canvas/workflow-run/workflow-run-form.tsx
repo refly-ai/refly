@@ -89,7 +89,6 @@ export const WorkflowRunForm = ({
   workflowApp,
   creditUsage,
 }: WorkflowRunFormProps) => {
-  console.log('[WorkflowRunForm] workflowVariables', workflowVariables);
   const { t } = useTranslation();
   const { isLoggedRef } = useIsLogin();
   const navigate = useNavigate();
@@ -527,12 +526,13 @@ export const WorkflowRunForm = ({
           }
           data-field-name={name}
         >
-          <Input
+          <Input.TextArea
             variant="filled"
             placeholder={t('canvas.workflow.variables.inputPlaceholder')}
             value={value}
             onChange={(e) => handleValueChange(name, e.target.value)}
             data-field-name={name}
+            autoSize={{ minRows: 1, maxRows: 5 }}
             disabled={isFormDisabled}
           />
         </Form.Item>

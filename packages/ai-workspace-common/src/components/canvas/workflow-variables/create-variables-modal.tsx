@@ -705,6 +705,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
                 ]}
               >
                 <Input
+                  variant="filled"
                   placeholder={t('canvas.workflow.variables.inputPlaceholder') || 'Please enter'}
                   onBlur={() => handleInputBlur('name')}
                 />
