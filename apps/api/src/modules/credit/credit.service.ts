@@ -21,6 +21,7 @@ import {
   genCommissionCreditRechargeId,
   genRegistrationCreditRechargeId,
   genInvitationActivationCreditRechargeId,
+  genFirstSubscriptionGiftRechargeId,
 } from '@refly/utils';
 
 import { CreditBalance } from './credit.dto';
@@ -186,6 +187,52 @@ export class CreditService {
         expiresAt,
       },
       now,
+    );
+  }
+
+  /**
+   * Create first subscription gift credit recharge for a user
+   * This method creates a one-time 2000 credit gift for first-time subscribers
+   * Each user can only receive this gift once (uid unique constraint)
+   */
+  async createFirstSubscriptionGiftRecharge(uid: string, now: Date = new Date()): Promise<void> {
+    // Check if user already has first subscription gift
+    const existingGift = await this.prisma.creditRecharge.findFirst({
+      where: {
+        uid,
+        source: 'gift',
+        description: 'First subscription gift credit recharge',
+        enabled: true,
+      },
+    });
+
+    if (existingGift) {
+      this.logger.log(`User ${uid} already has first subscription gift, skipping`);
+      return;
+    }
+
+    const giftCreditAmount = 2000;
+    const giftCreditExpiresInMonths = 12; // 12 months expiration
+
+    // Calculate expiration date
+    const expiresAt = new Date(now);
+    expiresAt.setMonth(expiresAt.getMonth() + giftCreditExpiresInMonths);
+
+    await this.processCreditRecharge(
+      uid,
+      giftCreditAmount,
+      {
+        rechargeId: genFirstSubscriptionGiftRechargeId(uid),
+        source: 'gift',
+        description: 'First subscription gift credit recharge',
+        createdAt: now,
+        expiresAt,
+      },
+      now,
+    );
+
+    this.logger.log(
+      `Created first subscription gift recharge for user ${uid}: ${giftCreditAmount} credits, expires at ${expiresAt}`,
     );
   }
 

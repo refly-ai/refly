@@ -420,7 +420,19 @@ export class SubscriptionService implements OnModuleInit {
 
       // Create a new credit recharge record
       const creditAmount = plan?.creditQuota ?? this.config.get('quota.credit');
+      const existingUserSubscription = await prisma.subscription.findFirst({
+        where: { uid },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+
       await this.creditService.createSubscriptionCreditRecharge(uid, creditAmount, endAt);
+
+      // If this is the first subscription, create a gift credit recharge
+      if (!existingUserSubscription) {
+        await this.creditService.createFirstSubscriptionGiftRecharge(uid, now);
+      }
 
       // Update storage usage meter
       await prisma.storageUsageMeter.updateMany({

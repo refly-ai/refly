@@ -309,3 +309,7 @@ export function genActionMessageID(): string {
 export const genInvitationActivationCreditRechargeId = (inviterUid: string, inviteeUid: string) => {
   return `${IDPrefix.CREDIT_RECHARGE}invitation-${inviterUid}-${inviteeUid}`;
 };
+
+export const genFirstSubscriptionGiftRechargeId = (uid: string) => {
+  return `${IDPrefix.CREDIT_RECHARGE}first-subscription-gift-${uid}`;
+};
