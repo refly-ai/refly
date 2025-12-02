@@ -142,6 +142,30 @@ export const CreateWorkflowAppModal = ({
     skillResponseNodes.map((node) => node.data?.entityId).filter(Boolean),
   );
 
+  // Canvas validation checks using useRealtimeCanvasData
+  // These checks can be used to validate the workflow before publishing
+  const canvasValidation = useMemo(() => {
+    // Check if there are no user input variables
+    const hasNoVariables = !workflowVariables || workflowVariables.length === 0;
+
+    // Check for failed or unrun skillResponse nodes
+    // Returns true if any skillResponse node has status 'failed', 'init', or undefined
+    const hasFailedOrUnrunNodes = skillResponseNodes.some((node) => {
+      const status = (node.data?.metadata as any)?.status;
+      return status === 'failed' || status === 'init' || !status;
+    });
+
+    // Check if there are no skillResponse nodes
+    // Returns true if there are no Agent nodes in the canvas
+    const hasNoSkillResponseNodes = skillResponseNodes.length === 0;
+
+    return {
+      hasNoVariables,
+      hasFailedOrUnrunNodes,
+      hasNoSkillResponseNodes,
+    };
+  }, [workflowVariables, skillResponseNodes]);
+
   const { forceSyncState } = useCanvasContext();
 
   // Fetch credit usage data when modal is visible
@@ -440,6 +464,68 @@ export const CreateWorkflowAppModal = ({
       // Make sure the canvas data is synced to the remote
       await forceSyncState({ syncRemote: true });
 
+      // Validate canvas before publishing
+      // Priority: User Input > 没有Agent > Agent 未运行或失败
+      if (canvasValidation.hasNoVariables) {
+        // Show toast
+        message.error(t('workflowApp.validationNoUserInputs'));
+        // Trigger canvas fitView event
+        window.dispatchEvent(
+          new CustomEvent('refly:canvas:fitView', {
+            detail: { canvasId },
+          }),
+        );
+        return;
+      }
+
+      if (canvasValidation.hasNoSkillResponseNodes) {
+        // Show toast
+        message.error(t('workflowApp.validationNoAgents'));
+        // Trigger canvas fitView event
+        window.dispatchEvent(
+          new CustomEvent('refly:canvas:fitView', {
+            detail: { canvasId },
+          }),
+        );
+        return;
+      }
+
+      if (canvasValidation.hasFailedOrUnrunNodes) {
+        // Get failed or unrun node IDs for highlighting
+        const failedOrUnrunNodeIds = skillResponseNodes
+          .filter((node) => {
+            if (!node?.id) return false;
+            const status = (node.data?.metadata as any)?.status;
+            return status === 'failed' || status === 'init' || !status;
+          })
+          .map((node) => node.id)
+          .filter(Boolean) as string[];
+
+        // Show toast
+        message.error(t('workflowApp.validationAgentsNotRun'));
+
+        // Only trigger highlight if we have valid node IDs
+        if (failedOrUnrunNodeIds.length > 0) {
+          // Trigger canvas fitView and highlight event
+          window.dispatchEvent(
+            new CustomEvent('refly:canvas:fitViewAndHighlight', {
+              detail: {
+                canvasId,
+                nodeIds: failedOrUnrunNodeIds,
+              },
+            }),
+          );
+        } else {
+          // Fallback: just fit view if no valid node IDs found
+          window.dispatchEvent(
+            new CustomEvent('refly:canvas:fitView', {
+              detail: { canvasId },
+            }),
+          );
+        }
+        return;
+      }
+
       const values = await form.validateFields();
       await createWorkflowApp({
         ...values,
@@ -567,6 +653,12 @@ export const CreateWorkflowAppModal = ({
   const isUpdate = useMemo(() => {
     return !!appId || !!appData;
   }, [appId, appData]);
+
+  // Determine if publishToCommunity switch should be disabled
+  // Disable when updating an app that was already published to community
+  const isPublishToCommunityDisabled = useMemo(() => {
+    return isUpdate && appData?.publishToCommunity === true;
+  }, [isUpdate, appData?.publishToCommunity]);
 
   // Get title and button text based on whether it's an update or new publish
   const modalTitle = useMemo(() => {
@@ -716,7 +808,7 @@ export const CreateWorkflowAppModal = ({
                   </Tooltip>
                 </div>
                 <Form.Item name="publishToCommunity" valuePropName="checked" className="mb-0">
-                  <Switch size="small" />
+                  <Switch size="small" disabled={isPublishToCommunityDisabled} />
                 </Form.Item>
               </div>
             </div>
@@ -810,7 +902,13 @@ export const CreateWorkflowAppModal = ({
               {/* Run Result */}
               <div className="flex flex-col gap-2 mt-5">
                 <div className="flex items-center justify-between h-4">
-                  <div className="text-xs font-semibold text-refly-text-0 leading-[1.33]">
+                  <div
+                    className={`text-xs font-semibold leading-[1.33] ${
+                      selectedResults.length === 0
+                        ? 'text-refly-func-danger-default'
+                        : 'text-refly-text-0'
+                    }`}
+                  >
                     {t('workflowApp.runResult')}
                   </div>
                   <MultiSelectResult
@@ -819,6 +917,11 @@ export const CreateWorkflowAppModal = ({
                     options={displayNodes}
                   />
                 </div>
+                {selectedResults.length === 0 && (
+                  <div className="text-xs text-refly-func-danger-default leading-[1.33]">
+                    {t('workflowApp.runResultRequired')}
+                  </div>
+                )}
                 <div
                   className="w-full rounded-lg border border-solid p-3 bg-[#FBFBFB] dark:bg-[var(--refly-bg-main-z1)]"
                   style={{

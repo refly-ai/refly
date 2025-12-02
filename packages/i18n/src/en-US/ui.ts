@@ -3872,6 +3872,10 @@ const translations = {
     selectResults: 'Select Results',
     noResultsAvailable: 'No results available',
     noResultsSelected: 'No results selected',
+    runResultRequired: 'No run result selected. Please choose the result before publishing.',
+    validationNoUserInputs: 'Please add user inputs before publishing your template.',
+    validationNoAgents: 'Please add agents before publishing your template.',
+    validationAgentsNotRun: 'Please run all agents successfully before publishing your template.',
     resultPreview: 'Result Preview',
     notLoggedIn: 'Not Logged In',
     run: {

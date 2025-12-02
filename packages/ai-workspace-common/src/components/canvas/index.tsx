@@ -165,9 +165,102 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
 
   const reactFlowInstance = useReactFlow();
 
-  const { pendingNode, clearPendingNode } = useCanvasNodesStore();
+  const { pendingNode, clearPendingNode, setHighlightedNodeIds, clearHighlightedNodeIds } =
+    useCanvasNodesStore();
   const { loading, readonly, shareNotFound, shareLoading, undo, redo } = useCanvasContext();
   const { onLayout } = useCanvasLayout();
+  const { getNodes } = useReactFlow<CanvasNode<any>>();
+
+  // Listen for canvas fitView and highlight events from create-modal
+  useEffect(() => {
+    let highlightTimeoutId: NodeJS.Timeout | null = null;
+
+    const handleFitView = (event: CustomEvent<{ canvasId: string }>) => {
+      if (event.detail.canvasId === canvasId && reactFlowInstance) {
+        // Use requestAnimationFrame to avoid conflicts with other fitView calls
+        requestAnimationFrame(() => {
+          reactFlowInstance.fitView({
+            padding: 0.2,
+            duration: 200,
+            minZoom: 0.1,
+            maxZoom: 1,
+          });
+        });
+      }
+    };
+
+    const handleFitViewAndHighlight = (
+      event: CustomEvent<{ canvasId: string; nodeIds: string[] }>,
+    ) => {
+      if (event.detail.canvasId === canvasId && reactFlowInstance) {
+        const { nodeIds } = event.detail;
+        const allNodes = getNodes();
+
+        // Clear previous highlight timeout if exists
+        if (highlightTimeoutId) {
+          clearTimeout(highlightTimeoutId);
+          highlightTimeoutId = null;
+        }
+
+        // Use the node's built-in highlight mechanism (shouldHighlight)
+        // This will show the highlight effect with border-refly-node-run and background overlay
+        setHighlightedNodeIds(nodeIds);
+
+        // Fit view to highlighted nodes
+        requestAnimationFrame(() => {
+          if (nodeIds.length > 0) {
+            const nodesToFit = allNodes.filter((node) => nodeIds.includes(node.id));
+            if (nodesToFit.length > 0) {
+              reactFlowInstance.fitView({
+                padding: 0.2,
+                duration: 200,
+                minZoom: 0.1,
+                maxZoom: 1,
+                nodes: nodesToFit,
+              });
+            }
+          } else {
+            reactFlowInstance.fitView({
+              padding: 0.2,
+              duration: 200,
+              minZoom: 0.1,
+              maxZoom: 1,
+            });
+          }
+        });
+
+        // Auto-clear highlight after 5 seconds
+        highlightTimeoutId = setTimeout(() => {
+          clearHighlightedNodeIds();
+          highlightTimeoutId = null;
+        }, 5000);
+      }
+    };
+
+    window.addEventListener('refly:canvas:fitView', handleFitView as EventListener);
+    window.addEventListener(
+      'refly:canvas:fitViewAndHighlight',
+      handleFitViewAndHighlight as EventListener,
+    );
+
+    return () => {
+      // Clear timeout on cleanup
+      if (highlightTimeoutId) {
+        clearTimeout(highlightTimeoutId);
+        highlightTimeoutId = null;
+      }
+      // Clear highlighted nodes when component unmounts or canvasId changes
+      clearHighlightedNodeIds();
+      window.removeEventListener('refly:canvas:fitView', handleFitView as EventListener);
+      window.removeEventListener(
+        'refly:canvas:fitViewAndHighlight',
+        handleFitViewAndHighlight as EventListener,
+      );
+    };
+    // Only depend on canvasId and reactFlowInstance to avoid unnecessary re-registrations
+    // getNodes is a stable reference from useReactFlow
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasId, reactFlowInstance, clearHighlightedNodeIds]);
 
   // Use copy paste hook for skillResponse nodes
   useCopyPasteSkillResponseNode({ canvasId, readonly });
