@@ -106,20 +106,64 @@ export const FrontPage = memo(() => {
     });
   }, [data?.data]);
 
-  // Set default category to Featured when categories are loaded
+  // Set default category when categories are loaded
   useEffect(() => {
-    if (templateCategories.length > 0 && !templateCategoryId) {
-      const featuredCategory = templateCategories.find((category) => {
-        const englishLabel =
-          category.labelDict?.en ?? category.labelDict?.['en-US'] ?? category.name ?? '';
-        return englishLabel.toLowerCase() === 'featured';
-      });
+    // Only process when loading is complete
+    if (!isLoadingCategories) {
+      if (templateCategories.length > 0) {
+        // If a category is already selected, verify it still exists in the list
+        if (templateCategoryId) {
+          const categoryExists = templateCategories.some(
+            (category) => category.categoryId === templateCategoryId,
+          );
+          if (!categoryExists) {
+            // Selected category no longer exists, reset to default
+            setTemplateCategoryId('');
+          }
+        }
 
-      if (featuredCategory) {
-        setTemplateCategoryId(featuredCategory.categoryId);
+        // Set default category if no category is selected
+        if (!templateCategoryId) {
+          // Try to find Featured category first
+          const featuredCategory = templateCategories.find((category) => {
+            const englishLabel =
+              category.labelDict?.en ?? category.labelDict?.['en-US'] ?? category.name ?? '';
+            return englishLabel.toLowerCase() === 'featured';
+          });
+
+          // Helper function to get valid categoryId
+          const getValidCategoryId = (category: (typeof templateCategories)[0]): string | null => {
+            const id = category?.categoryId;
+            // Ensure categoryId is a non-empty string
+            return id && typeof id === 'string' && id.trim().length > 0 ? id : null;
+          };
+
+          if (featuredCategory) {
+            const validId = getValidCategoryId(featuredCategory);
+            if (validId) {
+              setTemplateCategoryId(validId);
+            }
+          } else if (templateCategories.length === 1) {
+            // If only one category exists, select it automatically
+            const validId = getValidCategoryId(templateCategories[0]);
+            if (validId) {
+              setTemplateCategoryId(validId);
+            }
+          } else {
+            // Select the first category as default
+            const validId = getValidCategoryId(templateCategories[0]);
+            if (validId) {
+              setTemplateCategoryId(validId);
+            }
+          }
+        }
+      } else {
+        // No categories available, ensure templateCategoryId is empty
+        // This will trigger empty state display
+        setTemplateCategoryId('');
       }
     }
-  }, [templateCategories, templateCategoryId]);
+  }, [templateCategories, templateCategoryId, isLoadingCategories]);
 
   const handleNewWorkflow = useCallback(() => {
     setIsManualCollapse(false);
@@ -234,13 +278,36 @@ export const FrontPage = memo(() => {
           )}
 
           <div className="flex-1">
-            {!templateCategoryId || isLoadingCategories ? (
+            {isLoadingCategories ? (
+              // Show loading skeleton while categories are being fetched
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {Array.from({ length: 4 }).map((_, index) => (
                   <TemplateCardSkeleton key={index} />
                 ))}
               </div>
-            ) : (
+            ) : templateCategories.length === 0 ? (
+              // Show empty state when no categories are available
+              <div className="mt-8 h-full flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-refly-text-2 text-sm mb-2">{t('template.emptyList')}</div>
+                  <Button
+                    type="default"
+                    className="!bg-refly-bg-content-z2 !border-refly-primary-default !text-refly-primary-default !border-[0.5px] !font-medium hover:!border-refly-primary-default hover:!text-refly-primary-default hover:!bg-refly-bg-content-z2 rounded-lg px-3 py-2.5"
+                    onClick={handleViewMarketplace}
+                  >
+                    {t('template.goToMarketplace')}
+                  </Button>
+                </div>
+              </div>
+            ) : !templateCategoryId ? (
+              // Show loading skeleton if categories exist but none is selected yet
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <TemplateCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : templateCategoryId && templateCategoryId.trim().length > 0 ? (
+              // Show template list when category is selected and valid
               <TemplateList
                 source="front-page"
                 scrollableTargetId="front-page-scrollable-div"
@@ -248,6 +315,13 @@ export const FrontPage = memo(() => {
                 categoryId={templateCategoryId}
                 className="!bg-transparent !px-0 !pt-0 -ml-2 -mt-2"
               />
+            ) : (
+              // Fallback: show loading skeleton if categoryId is invalid
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <TemplateCardSkeleton key={index} />
+                ))}
+              </div>
             )}
           </div>
         </ModuleContainer>

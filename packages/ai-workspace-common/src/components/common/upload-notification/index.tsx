@@ -145,13 +145,20 @@ export const UploadNotification: React.FC<UploadNotificationProps> = memo(({ cla
           className: cn('upload-notification', className),
         });
       }
+      let clearTimeoutId: NodeJS.Timeout;
 
       // Clear uploads after completion notification
       if (isCompleted) {
-        setTimeout(() => {
+        clearTimeoutId = setTimeout(() => {
           clearUploads();
         }, 1000);
       }
+
+      return () => {
+        if (clearTimeoutId) {
+          clearTimeout(clearTimeoutId);
+        }
+      };
     }
   }, [uploads, isUploading, completedFiles, totalFiles, t, clearUploads, className]);
 

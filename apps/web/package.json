@@ -4,12 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rsbuild build",
+    "build": "rsbuild build && npm run generate:sitemap",
     "dev": "rsbuild dev",
     "preview": "rsbuild preview",
     "update:tokens": "node token/generate-css.cjs",
     "copy-env": "ncp .env.example .env",
-    "copy-env:develop": "ncp .env.example .env"
+    "copy-env:develop": "ncp .env.example .env",
+    "generate:sitemap": "node scripts/generate-sitemap.js"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",

@@ -11,7 +11,7 @@ import { classifyExecutionError } from '@refly-packages/ai-workspace-common/util
 
 interface FailureNoticeProps {
   result: ActionResult;
-  handleRetry: () => void;
+  handleRetry?: () => void;
 }
 
 export const FailureNotice = ({ result, handleRetry }: FailureNoticeProps) => {
