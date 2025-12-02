@@ -17,12 +17,7 @@ import {
 } from '@refly/web-core';
 
 import type { RouteObject } from 'react-router-dom';
-import {
-  CanvasRedirect,
-  WorkspaceRedirect,
-  ProtectedRoute,
-  WorkflowTemplateRedirect,
-} from './redirects';
+import { CanvasRedirect, WorkspaceRedirect, ProtectedRoute } from './redirects';
 
 export const RoutesList: RouteObject[] = [
   // TODO: deprecated and navigate to framer page
@@ -98,7 +93,7 @@ export const RoutesList: RouteObject[] = [
   // TODO: deprecated and navigate to /workflow-template/:shareId
   {
     path: '/app/:shareId',
-    element: <WorkflowTemplateRedirect />,
+    element: <WorkflowAppPage />,
   },
   {
     path: '/workflow-list',
