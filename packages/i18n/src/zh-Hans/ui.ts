@@ -3631,8 +3631,8 @@ const translations = {
       howToEarn: '如何获得收益',
     },
     publishToCommunity: {
-      label: '发布到社区',
-      help: '发布到社区后，其他用户可以在社区中发现和使用你的工作流应用',
+      label: '发布到市场',
+      help: '发布到市场后，其他用户可以在市场中发现和使用你的工作流应用',
     },
     copyLinkTooltip: '复制最新发布版本的链接',
   },
