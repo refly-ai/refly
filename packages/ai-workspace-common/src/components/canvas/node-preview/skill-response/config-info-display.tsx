@@ -63,7 +63,7 @@ export const ConfigInfoDisplay = memo(
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
 
     // Use toolset definition hook for complete definition data
-    const { lookupToolsetDefinition } = useToolsetDefinition();
+    const { lookupToolsetDefinitionByKey } = useToolsetDefinition();
 
     // Extract tools
     const toolsets = useMemo(() => {
@@ -153,7 +153,7 @@ export const ConfigInfoDisplay = memo(
           <div className="flex flex-wrap gap-2">
             {toolsets.map((toolset, index) => {
               // Get toolset definition for better localized labels
-              const definition = lookupToolsetDefinition(toolset.id);
+              const definition = lookupToolsetDefinitionByKey(toolset.toolset?.key ?? toolset.id);
               const labelName = definition
                 ? ((definition.labelDict?.[currentLanguage] as string) ??
                   (definition.labelDict?.en as string) ??

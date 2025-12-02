@@ -1,4 +1,4 @@
-import type { DriveFile, WorkflowVariable } from '@refly/openapi-schema';
+import type { DriveFile, ToolsetDefinition, WorkflowVariable } from '@refly/openapi-schema';
 
 export type MentionItemType = 'var' | 'agent' | 'file' | 'toolset' | 'tool';
 
@@ -6,6 +6,7 @@ export interface MentionCommonData {
   type: MentionItemType;
   id: string;
   name: string;
+  toolsetKey?: string;
 }
 
 export interface MentionParseResult {
@@ -69,7 +70,8 @@ type MentionFormatMode = 'display' | 'llm_input';
 /**
  * Format mention based on type and mode
  */
-function formatMention(type: string, name: string, mode: MentionFormatMode): string {
+function formatMention(data: MentionCommonData, mode: MentionFormatMode): string {
+  const { type, name, toolsetKey } = data;
   if (mode === 'display') {
     return `@${name}`;
   } else {
@@ -78,6 +80,10 @@ function formatMention(type: string, name: string, mode: MentionFormatMode): str
       return `@var:${name}`;
     } else if (type === 'file') {
       return `@file:${name}`;
+    } else if (type === 'toolset') {
+      return toolsetKey ? `@toolset:${toolsetKey}` : `@toolset:${name}`;
+    } else if (type === 'tool') {
+      return toolsetKey ? `@tool:${toolsetKey}_${name}` : `@tool:${name}`;
     } else {
       return `@${type}:${name}`;
     }
@@ -97,6 +103,7 @@ function processMention(
     mode: MentionFormatMode;
     resourceVars: WorkflowVariable[];
     updatedQuery: string;
+    lookupToolsetDefinitionById?: (id: string) => ToolsetDefinition;
   },
 ): { replacement: string; updatedQuery: string } {
   const { replaceVars, variables, files, mode, resourceVars } = options;
@@ -110,7 +117,11 @@ function processMention(
     }
   }
 
-  const { type, id, name } = params;
+  const { type, id, name, toolsetKey } = params;
+  const toolsetDefinition = options?.lookupToolsetDefinitionById
+    ? options.lookupToolsetDefinitionById(id)
+    : undefined;
+  const finalToolsetKey = toolsetDefinition?.key ?? toolsetKey;
 
   if (type === 'var') {
     if (replaceVars && variables.length > 0) {
@@ -145,7 +156,7 @@ function processMention(
     }
 
     // When replaceVars is false or variable not found, replace with formatted mention
-    return { replacement: formatMention(type, name, mode), updatedQuery };
+    return { replacement: formatMention({ type, name, id }, mode), updatedQuery };
   }
 
   if (type === 'file') {
@@ -159,7 +170,10 @@ function processMention(
           const updatedMention = `@{type=file,id=${id},name=${fileName}}`;
           updatedQuery = updatedQuery.replace(match, updatedMention);
         }
-        return { replacement: formatMention('file', fileName, mode), updatedQuery };
+        return {
+          replacement: formatMention({ type: 'file', name: fileName, id }, mode),
+          updatedQuery,
+        };
       }
     }
 
@@ -190,19 +204,33 @@ function processMention(
       }
 
       const variableResourceName = matchingVariable.value[0]?.resource?.name ?? '';
-      return { replacement: formatMention('file', variableResourceName, mode), updatedQuery };
+      return {
+        replacement: formatMention({ type: 'file', name: variableResourceName, id }, mode),
+        updatedQuery,
+      };
     }
 
     // Replace resource mentions with the formatted name
-    return { replacement: formatMention(type, name, mode), updatedQuery };
+    return { replacement: formatMention({ type, name, id }, mode), updatedQuery };
   }
 
-  if (type === 'agent' || type === 'toolset' || type === 'tool') {
+  if (type === 'toolset' || type === 'tool') {
+    // Replace toolset mentions with the formatted name
+    return {
+      replacement: formatMention({ type, name, id, toolsetKey: finalToolsetKey }, mode),
+      updatedQuery,
+    };
+  }
+
+  if (type === 'agent') {
     // Replace step, toolset and tool mentions with the formatted name
-    return { replacement: formatMention(type, name, mode), updatedQuery };
+    return { replacement: formatMention({ type, name, id }, mode), updatedQuery };
   }
 
-  return { replacement: formatMention(type, name ?? match, mode), updatedQuery };
+  return {
+    replacement: formatMention({ type: type as MentionItemType, name: name ?? match, id }, mode),
+    updatedQuery,
+  };
 }
 
 /**
@@ -218,9 +246,15 @@ export function processQueryWithMentions(
     replaceVars?: boolean;
     variables?: WorkflowVariable[];
     files?: DriveFile[];
+    lookupToolsetDefinitionById?: (id: string) => ToolsetDefinition;
   },
 ): ProcessQueryResult {
-  const { replaceVars = false, variables = [], files = [] } = options ?? {};
+  const {
+    replaceVars = false,
+    variables = [],
+    files = [],
+    lookupToolsetDefinitionById,
+  } = options ?? {};
 
   if (!query) {
     return { processedQuery: query, llmInputQuery: query, updatedQuery: query, resourceVars: [] };
@@ -241,6 +275,7 @@ export function processQueryWithMentions(
       mode: 'display',
       resourceVars,
       updatedQuery,
+      lookupToolsetDefinitionById,
     });
     updatedQuery = result.updatedQuery;
     return result.replacement;
@@ -255,6 +290,7 @@ export function processQueryWithMentions(
       mode: 'llm_input',
       resourceVars: [], // Don't modify resourceVars in llm_input mode
       updatedQuery: '', // Don't modify updatedQuery in llm_input mode
+      lookupToolsetDefinitionById,
     });
     return result.replacement;
   });

@@ -1,10 +1,20 @@
 import { useMemo, useCallback } from 'react';
 import { GenericToolset, ToolsetDefinition } from '@refly/openapi-schema';
-import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries/queries';
+import {
+  useListToolsetInventory,
+  useListUserTools,
+} from '@refly-packages/ai-workspace-common/queries/queries';
 
 export const useToolsetDefinition = () => {
   const { data: toolsetInventoryData } = useListToolsetInventory();
   const toolsetInventory = toolsetInventoryData?.data ?? [];
+
+  const { data: userToolsData } = useListUserTools({}, [], {
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const userTools = userToolsData?.data ?? [];
 
   const inventoryMap = useMemo(() => {
     return toolsetInventory.reduce(
@@ -25,12 +35,27 @@ export const useToolsetDefinition = () => {
     });
   };
 
-  const lookupToolsetDefinition = useCallback(
-    (key: string) => {
+  const lookupToolsetDefinitionByKey = useCallback(
+    (key: string): ToolsetDefinition => {
       return inventoryMap[key];
     },
     [inventoryMap],
   );
 
-  return { populateToolsetDefinition, lookupToolsetDefinition };
+  const lookupToolsetDefinitionById = useCallback(
+    (id: string): ToolsetDefinition => {
+      const userTool = userTools.find((tool) => tool.toolsetId === id);
+      if (userTool?.key) {
+        return inventoryMap[userTool.key];
+      }
+      return undefined;
+    },
+    [userTools, inventoryMap],
+  );
+
+  return {
+    populateToolsetDefinition,
+    lookupToolsetDefinitionByKey,
+    lookupToolsetDefinitionById,
+  };
 };

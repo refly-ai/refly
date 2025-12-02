@@ -27,7 +27,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
   const userTools = userToolsData?.data ?? [];
 
   // Use toolset definition hook for complete definition data
-  const { lookupToolsetDefinition } = useToolsetDefinition();
+  const { lookupToolsetDefinitionByKey } = useToolsetDefinition();
   const { data: workflowVariables } = useVariablesManagement(canvasId);
 
   const allItems: MentionItem[] = useMemo(() => {
@@ -82,7 +82,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
     const toolsetItems: MentionItem[] = userTools.map((userTool): MentionItem => {
       const isAuthorized = userTool.authorized ?? false;
       const toolsetKey = userTool.key;
-      const inventoryDefinition = lookupToolsetDefinition(toolsetKey);
+      const inventoryDefinition = lookupToolsetDefinitionByKey(toolsetKey);
 
       if (isAuthorized && userTool.toolset) {
         // Authorized (installed) tool - use toolset inventory definition for better data
@@ -139,7 +139,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
     const toolItems: MentionItem[] = userTools.flatMap((userTool) => {
       const isAuthorized = userTool.authorized ?? false;
       const toolsetKey = userTool.key;
-      const inventoryDefinition = lookupToolsetDefinition(toolsetKey);
+      const inventoryDefinition = lookupToolsetDefinitionByKey(toolsetKey);
 
       // Prioritize inventory definition, fallback to user tool definition
       const definition =
@@ -168,7 +168,7 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
     nodes,
     files,
     userTools,
-    lookupToolsetDefinition,
+    lookupToolsetDefinitionByKey,
     t,
     currentLanguage,
     filterNodeId,
