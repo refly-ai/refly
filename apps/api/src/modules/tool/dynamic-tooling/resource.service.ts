@@ -276,14 +276,14 @@ export class ResourceHandler {
         // Strip possible file extension from title
         const cleanTitle = title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '');
         // Use title and infer proper extension from content type
-        const inferredExtension = mime.getExtension(contentType) || extension || fallbackMediaType;
+        const inferredExtension = extension || mime.getExtension(contentType) || fallbackMediaType;
         baseFilename = `${cleanTitle}.${inferredExtension}`;
       } else {
         // Fallback to URL-based filename generation
         baseFilename = urlFilename || `media_${Date.now()}`;
         if (!baseFilename.includes('.')) {
           const inferredExtension =
-            mime.getExtension(contentType) || extension || fallbackMediaType;
+            extension || mime.getExtension(contentType) || fallbackMediaType;
           baseFilename = `${baseFilename}.${inferredExtension}`;
         }
       }
@@ -566,27 +566,57 @@ export class ResourceHandler {
    * - Direct: 'df-xxx'
    * - URI format: 'fileId://df-xxx'
    * - Mention format: '@file:df-xxx'
+   * - Path format: 'files/df-xxx'
+   * - URL format: 'https://files.refly.ai/df-xxx'
    *
    * @param value - Value to validate (can be string or object with fileId property)
    * @returns True if the value is a valid fileId
    */
   private isValidFileId(value: unknown): boolean {
     if (typeof value === 'string') {
-      // Support 'df-xxx', 'fileId://df-xxx', and '@file:df-xxx' formats
-      return (
-        value.startsWith('df-') || value.startsWith('fileId://df-') || value.startsWith('@file:df-')
-      );
+      return this.extractFileId(value) !== null;
     }
     if (value && typeof value === 'object' && 'fileId' in value) {
       const fileId = (value as any).fileId;
-      return (
-        typeof fileId === 'string' &&
-        (fileId.startsWith('df-') ||
-          fileId.startsWith('fileId://df-') ||
-          fileId.startsWith('@file:df-'))
-      );
+      return typeof fileId === 'string' && this.extractFileId(fileId) !== null;
     }
     return false;
+  }
+
+  /**
+   * Extract fileId from various formats
+   * @param value - String value that may contain a fileId
+   * @returns The extracted fileId (df-xxx format) or null if not found
+   */
+  private extractFileId(value: string): string | null {
+    // Direct format: 'df-xxx'
+    if (value.startsWith('df-')) {
+      return value;
+    }
+    // URI format: 'fileId://df-xxx'
+    if (value.startsWith('fileId://df-')) {
+      return value.slice('fileId://'.length);
+    }
+    // Mention format: '@file:df-xxx'
+    if (value.startsWith('@file:df-')) {
+      return value.slice('@file:'.length);
+    }
+    // Path format: 'files/df-xxx'
+    if (value.startsWith('files/df-')) {
+      return value.slice('files/'.length);
+    }
+    // URL format: 'https://files.refly.ai/df-xxx'
+    const urlMatch = value.match(/^https?:\/\/files\.refly\.ai\/(df-[a-z0-9]+)$/i);
+    if (urlMatch) {
+      return urlMatch[1];
+    }
+    // Fallback: extract 'df-xxx' pattern from anywhere in the string
+    // Use lookbehind to ensure 'df-' is not preceded by alphanumeric (avoid matching 'pdf-xxx', 'abcdf-xxx')
+    const fallbackMatch = value.match(/(?<![a-z0-9])(df-[a-z0-9]+)\b/i);
+    if (fallbackMatch) {
+      return fallbackMatch[1];
+    }
+    return null;
   }
 
   /**
