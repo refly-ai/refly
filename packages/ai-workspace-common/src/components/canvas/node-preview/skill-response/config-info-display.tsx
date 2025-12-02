@@ -12,6 +12,7 @@ import { LabelItem } from '@refly-packages/ai-workspace-common/components/canvas
 import { useCanvasNodesStoreShallow } from '@refly/stores';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { AGENT_CONFIG_KEY_CLASSNAMES } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
+import { useToolsetDefinition } from '@refly-packages/ai-workspace-common/hooks/use-toolset-definition';
 
 interface ConfigInfoDisplayProps {
   readonly?: boolean;
@@ -60,6 +61,9 @@ export const ConfigInfoDisplay = memo(
       setHighlightedNodeId: state.setHighlightedNodeId,
     }));
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
+
+    // Use toolset definition hook for complete definition data
+    const { lookupToolsetDefinition } = useToolsetDefinition();
 
     // Extract tools
     const toolsets = useMemo(() => {
@@ -148,9 +152,11 @@ export const ConfigInfoDisplay = memo(
           </SectionTitle>
           <div className="flex flex-wrap gap-2">
             {toolsets.map((toolset, index) => {
-              // Get localized label for builtin toolsets, otherwise use name
-              const labelName = toolset?.builtin
-                ? ((toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
+              // Get toolset definition for better localized labels
+              const definition = lookupToolsetDefinition(toolset.id);
+              const labelName = definition
+                ? ((definition.labelDict?.[currentLanguage] as string) ??
+                  (definition.labelDict?.en as string) ??
                   toolset.name)
                 : toolset.name;
 

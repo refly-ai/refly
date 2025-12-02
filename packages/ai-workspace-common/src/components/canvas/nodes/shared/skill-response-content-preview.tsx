@@ -13,6 +13,7 @@ import { parseMentionsFromQuery, processQueryWithMentions } from '@refly/utils/q
 import { useRealtimeUpstreamAgents } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-upstream-agent';
 import { useCanvasNodesStoreShallow } from '@refly/stores';
 import { NodeIcon } from './node-icon';
+import { useToolsetDefinition } from '@refly-packages/ai-workspace-common/hooks/use-toolset-definition';
 
 interface SkillResponseContentPreviewProps {
   nodeId: string;
@@ -58,6 +59,9 @@ export const SkillResponseContentPreview = memo(
       setHighlightedNodeId: state.setHighlightedNodeId,
     }));
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
+
+    // Use toolset definition hook for complete definition data
+    const { lookupToolsetDefinition } = useToolsetDefinition();
 
     const query = metadata?.query ?? (metadata?.structuredData?.query as string) ?? '';
     const modelInfo = metadata?.modelInfo;
@@ -114,22 +118,29 @@ export const SkillResponseContentPreview = memo(
 
         <LabelDisplay
           title={t('canvas.skillResponse.config.tool')}
-          labels={toolsets.map((toolset) => ({
-            icon: (
-              <ToolsetIcon
-                toolset={toolset}
-                config={{
-                  size: 12,
-                  className: 'flex-shrink-0',
-                  builtinClassName: '!rounded-[2.5px] !w-3 !h-3',
-                }}
-              />
-            ),
-            labeltext: toolset?.builtin
-              ? ((toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
+          labels={toolsets.map((toolset) => {
+            // Get toolset definition for better localized labels
+            const definition = lookupToolsetDefinition(toolset.id);
+            const labelName = definition
+              ? ((definition.labelDict?.[currentLanguage] as string) ??
+                (definition.labelDict?.en as string) ??
                 toolset.name)
-              : toolset.name,
-          }))}
+              : toolset.name;
+
+            return {
+              icon: (
+                <ToolsetIcon
+                  toolset={toolset}
+                  config={{
+                    size: 12,
+                    className: 'flex-shrink-0',
+                    builtinClassName: '!rounded-[2.5px] !w-3 !h-3',
+                  }}
+                />
+              ),
+              labeltext: labelName,
+            };
+          })}
           labelClassnames="bg-refly-node-contrl-1"
           showMore={false}
         />

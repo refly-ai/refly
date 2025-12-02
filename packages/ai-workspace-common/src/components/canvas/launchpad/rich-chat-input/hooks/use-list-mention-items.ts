@@ -7,6 +7,7 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useListUserTools } from '@refly-packages/ai-workspace-common/queries/queries';
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useToolsetDefinition } from '@refly-packages/ai-workspace-common/hooks/use-toolset-definition';
 
 export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
   const { t, i18n } = useTranslation();
@@ -24,6 +25,9 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
     gcTime: 0,
   });
   const userTools = userToolsData?.data ?? [];
+
+  // Use toolset definition hook for complete definition data
+  const { lookupToolsetDefinition } = useToolsetDefinition();
   const { data: workflowVariables } = useVariablesManagement(canvasId);
 
   const allItems: MentionItem[] = useMemo(() => {
@@ -74,34 +78,50 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
         },
       })) ?? [];
 
-    // Build toolset items from userTools API response
-    const toolsetItems: MentionItem[] = userTools.map((userTool) => {
+    // Build toolset items from userTools API response with enhanced definition data
+    const toolsetItems: MentionItem[] = userTools.map((userTool): MentionItem => {
       const isAuthorized = userTool.authorized ?? false;
+      const toolsetKey = userTool.key;
+      const inventoryDefinition = lookupToolsetDefinition(toolsetKey);
 
       if (isAuthorized && userTool.toolset) {
-        // Authorized (installed) tool
-        return {
-          name: userTool.name ?? userTool.key ?? '',
-          description:
-            userTool.toolset?.toolset?.name ||
+        // Authorized (installed) tool - use toolset inventory definition for better data
+        const name = inventoryDefinition
+          ? ((inventoryDefinition.labelDict?.[currentLanguage as 'en' | 'zh'] ||
+              inventoryDefinition.labelDict?.en) as string)
+          : (userTool.name ?? userTool.key ?? '');
+
+        const description = inventoryDefinition
+          ? ((inventoryDefinition.descriptionDict?.[currentLanguage as 'en' | 'zh'] ||
+              inventoryDefinition.descriptionDict?.en) as string)
+          : userTool.toolset?.toolset?.name ||
             userTool.toolset?.mcpServer?.name ||
             userTool.name ||
-            '',
+            '';
+
+        return {
+          name: name || userTool.key || '',
+          description: description || name || userTool.key || '',
           source: 'toolsets' as const,
           toolset: userTool.toolset,
           toolsetId: userTool.toolset?.id || userTool.toolsetId,
           isInstalled: true,
         };
       } else {
-        // Unauthorized (uninstalled) tool
-        const name = (userTool.definition?.labelDict?.[currentLanguage as 'en' | 'zh'] ||
-          userTool.definition?.labelDict?.en ||
-          userTool.name) as string;
-        const description = (userTool.definition?.descriptionDict?.[
-          currentLanguage as 'en' | 'zh'
-        ] ||
-          userTool.definition?.descriptionDict?.en ||
-          userTool.description) as string;
+        // Unauthorized (uninstalled) tool - prioritize inventory definition
+        const name = inventoryDefinition
+          ? ((inventoryDefinition.labelDict?.[currentLanguage as 'en' | 'zh'] ||
+              inventoryDefinition.labelDict?.en) as string)
+          : ((userTool.definition?.labelDict?.[currentLanguage as 'en' | 'zh'] ||
+              userTool.definition?.labelDict?.en ||
+              userTool.name) as string);
+
+        const description = inventoryDefinition
+          ? ((inventoryDefinition.descriptionDict?.[currentLanguage as 'en' | 'zh'] ||
+              inventoryDefinition.descriptionDict?.en) as string)
+          : ((userTool.definition?.descriptionDict?.[currentLanguage as 'en' | 'zh'] ||
+              userTool.definition?.descriptionDict?.en ||
+              userTool.description) as string);
 
         return {
           name: name || userTool.key || '',
@@ -109,33 +129,50 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
           source: 'toolsets' as const,
           toolset: undefined,
           toolsetId: userTool.key,
-          toolDefinition: userTool.definition,
+          toolDefinition: inventoryDefinition || userTool.definition,
           isInstalled: false,
         };
       }
     });
 
-    // Build tool items (individual tools within toolsets)
+    // Build tool items (individual tools within toolsets) with enhanced definition data
     const toolItems: MentionItem[] = userTools.flatMap((userTool) => {
       const isAuthorized = userTool.authorized ?? false;
-      const definition = isAuthorized ? userTool.toolset?.toolset?.definition : userTool.definition;
+      const toolsetKey = userTool.key;
+      const inventoryDefinition = lookupToolsetDefinition(toolsetKey);
+
+      // Prioritize inventory definition, fallback to user tool definition
+      const definition =
+        inventoryDefinition ||
+        (isAuthorized ? userTool.toolset?.toolset?.definition : userTool.definition);
       const tools = definition?.tools ?? [];
 
-      return tools.map((tool) => ({
-        name: tool.name,
-        description:
-          (tool.descriptionDict?.[currentLanguage as 'en' | 'zh'] as string) || tool.name,
-        source: 'tools' as const,
-        toolset: isAuthorized ? userTool.toolset : undefined,
-        toolsetId: isAuthorized ? userTool.toolset?.id : userTool.key,
-        toolDefinition: isAuthorized ? undefined : userTool.definition,
-        isInstalled: isAuthorized,
-      }));
+      return tools.map(
+        (tool): MentionItem => ({
+          name: tool.name,
+          description: ((tool.descriptionDict?.[currentLanguage as 'en' | 'zh'] as string) ||
+            tool.name) as string,
+          source: 'tools' as const,
+          toolset: isAuthorized ? userTool.toolset : undefined,
+          toolsetId: isAuthorized ? userTool.toolset?.id : userTool.key,
+          toolDefinition: isAuthorized ? undefined : inventoryDefinition || userTool.definition,
+          isInstalled: isAuthorized,
+        }),
+      );
     });
 
     // Combine all items
     return [...variableItems, ...agentItems, ...fileItems, ...toolsetItems, ...toolItems];
-  }, [workflowVariables, nodes, files, userTools, t, currentLanguage, filterNodeId]);
+  }, [
+    workflowVariables,
+    nodes,
+    files,
+    userTools,
+    lookupToolsetDefinition,
+    t,
+    currentLanguage,
+    filterNodeId,
+  ]);
 
   return allItems;
 };
