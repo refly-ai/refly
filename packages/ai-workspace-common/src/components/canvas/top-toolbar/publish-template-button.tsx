@@ -9,6 +9,7 @@ import { useCanvasStoreShallow } from '@refly/stores';
 import { useSkillResponseLoadingStatus } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-loading-status';
 import { TurnRight } from 'refly-icons';
 import { cn } from '@refly/utils/cn';
+import { PublishTemplatePopover } from './publish-template-popover';
 
 interface PublishTemplateButtonProps {
   canvasId: string;
@@ -37,6 +38,12 @@ const PublishTemplateButton = React.memo(
     }, [workflowAppsData, canvasId]);
 
     const handlePublishToCommunity = useCallback(async () => {
+      // Make sure the canvas data is synced to the remote
+      await forceSyncState({ syncRemote: true });
+      setCreateTemplateModalVisible(true);
+    }, [forceSyncState]);
+
+    const handleUpdateTemplate = useCallback(async () => {
       // Make sure the canvas data is synced to the remote
       await forceSyncState({ syncRemote: true });
       setCreateTemplateModalVisible(true);
@@ -71,6 +78,10 @@ const PublishTemplateButton = React.memo(
       return toolbarLoading || !skillResponseNodes?.length;
     }, [toolbarLoading, skillResponseNodes]);
 
+    const shareId = useMemo(() => {
+      return latestWorkflowApp?.shareId;
+    }, [latestWorkflowApp]);
+
     return (
       <>
         <CreateWorkflowAppModal
@@ -81,32 +92,66 @@ const PublishTemplateButton = React.memo(
           onPublishSuccess={handlePublishSuccess}
           appId={latestWorkflowApp?.appId}
         />
-        <Tooltip
-          title={
-            toolbarLoading
-              ? t('shareContent.waitForAgentsToFinish')
-              : !skillResponseNodes?.length
-                ? t('shareContent.noSkillResponseNodes')
-                : undefined
-          }
-          placement="top"
-        >
-          <Button
-            className={cn(disabled ? 'opacity-50 cursor-not-allowed' : '')}
-            type="primary"
-            icon={<TurnRight size={16} />}
-            onClick={() => {
-              if (disabled) return;
-
-              logEvent('canvas::canvas_publish_template', Date.now(), {
-                canvas_id: canvasId,
-              });
-              handlePublishToCommunity();
-            }}
+        {shareId ? (
+          <Tooltip
+            title={
+              toolbarLoading
+                ? t('shareContent.waitForAgentsToFinish')
+                : !skillResponseNodes?.length
+                  ? t('shareContent.noSkillResponseNodes')
+                  : undefined
+            }
+            placement="top"
           >
-            {t('shareContent.publishTemplate')}
-          </Button>
-        </Tooltip>
+            <PublishTemplatePopover
+              shareId={shareId}
+              onUpdateTemplate={handleUpdateTemplate}
+              disabled={disabled}
+              onOpen={() => {
+                logEvent('canvas::canvas_publish_template', Date.now(), {
+                  canvas_id: canvasId,
+                });
+              }}
+            >
+              <Button
+                className={cn(disabled ? 'opacity-50 cursor-not-allowed' : '')}
+                type="primary"
+                icon={<TurnRight size={16} />}
+                disabled={disabled}
+              >
+                {t('shareContent.publishTemplate')}
+              </Button>
+            </PublishTemplatePopover>
+          </Tooltip>
+        ) : (
+          <Tooltip
+            title={
+              toolbarLoading
+                ? t('shareContent.waitForAgentsToFinish')
+                : !skillResponseNodes?.length
+                  ? t('shareContent.noSkillResponseNodes')
+                  : undefined
+            }
+            placement="top"
+          >
+            <Button
+              className={cn(disabled ? 'opacity-50 cursor-not-allowed' : '')}
+              type="primary"
+              icon={<TurnRight size={16} />}
+              disabled={disabled}
+              onClick={() => {
+                if (disabled) return;
+
+                logEvent('canvas::canvas_publish_template', Date.now(), {
+                  canvas_id: canvasId,
+                });
+                handlePublishToCommunity();
+              }}
+            >
+              {t('shareContent.publishTemplate')}
+            </Button>
+          </Tooltip>
+        )}
       </>
     );
   },

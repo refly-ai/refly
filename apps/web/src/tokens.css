@@ -72,6 +72,7 @@
   --refly-bg-input: #f6f6f6;
   --refly-border-divider: rgba(0, 0, 0, 0.1);
   --refly-oauth-button-bg: #fdfdfd;
+  --refly-toast-fill: #fffce0;
 }
 
 /* Dark Theme */
@@ -148,4 +149,5 @@
   --refly-bg-input: #ffffff;
   --refly-border-divider: rgba(216, 216, 216, 0.08);
   --refly-oauth-button-bg: rgba(216, 216, 216, 0.08);
+  --refly-toast-fill: #bfbb9c;
 }

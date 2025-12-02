@@ -12,6 +12,7 @@ interface SkillResponseNodeHeaderProps {
   // Custom actions (e.g., Play button, More button)
   actions?: React.ReactNode;
   canEdit?: boolean;
+  iconSize?: number;
 }
 
 /**
@@ -29,6 +30,7 @@ export const SkillResponseNodeHeader = memo(
     className,
     actions,
     canEdit,
+    iconSize = 16,
   }: SkillResponseNodeHeaderProps) => {
     const { t } = useTranslation();
     const updateNodeTitle = useUpdateNodeTitle();
@@ -54,6 +56,7 @@ export const SkillResponseNodeHeader = memo(
         source={source === 'preview' ? 'skillResponsePreview' : 'node'}
         className={className}
         actions={actions}
+        iconSize={iconSize}
         maxLength={200}
       />
     );

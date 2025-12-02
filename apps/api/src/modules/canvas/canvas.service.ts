@@ -21,7 +21,6 @@ import {
   SkillContext,
   ActionResult,
   WorkflowVariable,
-  ResourceType,
   VariableValue,
   CanvasNode,
   GenericToolset,
@@ -564,7 +563,12 @@ export class CanvasService {
     ]);
 
     // Process resource variables after canvas is created
-    const processedVariables = await this.processResourceVariables(user, canvasId, param.variables);
+    const processedVariables = await this.processResourceVariables(
+      user,
+      canvasId,
+      param.variables,
+      true,
+    );
     const updatedCanvas = await this.prisma.canvas.update({
       where: { pk: canvas.pk },
       data: { workflow: JSON.stringify({ variables: processedVariables }) },
@@ -1229,6 +1233,7 @@ export class CanvasService {
     user: User,
     canvasId: string,
     variables: WorkflowVariable[],
+    duplicateDriveFile = false,
   ): Promise<WorkflowVariable[]> {
     if (!Array.isArray(variables)) return [];
 
@@ -1237,7 +1242,7 @@ export class CanvasService {
         const processedValues = await Promise.all(
           (variable.value ?? []).map(async (value) => {
             if (value.type === 'resource' && value.resource) {
-              return await this.processResourceValue(user, canvasId, value);
+              return await this.processResourceValue(user, canvasId, value, duplicateDriveFile);
             }
             return value;
           }),
@@ -1257,103 +1262,40 @@ export class CanvasService {
    * @param user - The user processing the resource
    * @param value - The resource variable value
    * @param canvasId - The target canvas ID
+   * @param duplicateDriveFile - Whether to duplicate the drive file
    * @returns Processed resource variable value
    */
   private async processResourceValue(
     user: User,
     canvasId: string,
     value: VariableValue,
+    duplicateDriveFile = false,
   ): Promise<VariableValue> {
-    this.logger.log(`Processing resource value for canvas ${canvasId}: ${JSON.stringify(value)}`);
-
     const { resource } = value;
     if (!resource) return value;
 
-    const { storageKey } = resource;
-    if (!storageKey) {
-      this.logger.warn('Resource variable missing storageKey; skipping processing');
-      return value;
-    }
+    // If fileId exists and duplicateDriveFile is true, duplicate it
+    if (resource.fileId) {
+      // Fetch the DriveFile to check its uid
+      let driveFile: any = await this.prisma.driveFile.findFirst({
+        where: { fileId: resource.fileId, deletedAt: null },
+      });
 
-    // Check if static file already exists with entity_id and entity_type
-    const resourceFile = await this.prisma.staticFile.findFirst({
-      where: { storageKey, deletedAt: null },
-    });
-
-    if (resourceFile?.entityId && resourceFile?.entityType === 'resource') {
-      // Resource already exists, read it
-      this.logger.log(
-        `Resource already exists for storageKey: ${storageKey}, entityId: ${resourceFile.entityId}`,
-      );
-      return value;
-    }
-
-    if (!resource.entityId) {
-      // New upload - create new resource
-      const newResource = await this.resourceService.createResource(
-        user,
-        {
-          title: resource.name,
-          resourceType: resource.fileType as ResourceType,
-          canvasId,
-          storageKey,
-        },
-        { skipCanvasCheck: true },
-      );
-
-      // Update static file with new entity information
-      if (resourceFile) {
-        await this.prisma.staticFile.update({
-          where: { pk: resourceFile.pk },
-          data: {
-            entityId: newResource.resourceId,
-            entityType: 'resource',
-          },
-        });
+      if (!driveFile) {
+        return value;
       }
 
-      // Update the variable value with new entityId
+      if (duplicateDriveFile) {
+        driveFile = await this.driveService.duplicateDriveFile(user, driveFile, canvasId);
+      }
+
       return {
         ...value,
         resource: {
           ...resource,
-          entityId: newResource.resourceId,
+          fileId: driveFile.fileId,
         },
       };
-    }
-
-    // Find existing resource - update old resource
-    const existingResource = await this.prisma.resource.findUnique({
-      where: { resourceId: resource.entityId },
-    });
-
-    if (!existingResource) {
-      this.logger.warn(`Existing resource not found: ${resource.entityId}`);
-      return value;
-    }
-
-    // Update existing resource with new storage key
-    await this.resourceService.updateResource(
-      user,
-      {
-        title: resource.name,
-        resourceType: existingResource.resourceType as ResourceType,
-        canvasId,
-        storageKey,
-        resourceId: existingResource.resourceId,
-      },
-      { waitFor: 'parse_completed' }, // we must wait for the resource to be parsed
-    );
-
-    // Update static file with new entity information
-    if (resourceFile) {
-      await this.prisma.staticFile.update({
-        where: { pk: resourceFile.pk },
-        data: {
-          entityId: existingResource.resourceId,
-          entityType: 'resource',
-        },
-      });
     }
 
     return value;
@@ -1429,9 +1371,9 @@ export class CanvasService {
    */
   async updateWorkflowVariables(
     user: User,
-    param: { canvasId: string; variables: WorkflowVariable[] },
+    param: { canvasId: string; variables: WorkflowVariable[]; duplicateDriveFile?: boolean },
   ): Promise<WorkflowVariable[]> {
-    const { canvasId, variables } = param;
+    const { canvasId, variables, duplicateDriveFile = false } = param;
     const canvas = await this.prisma.canvas.findUnique({
       select: { workflow: true },
       where: { canvasId, uid: user.uid, deletedAt: null },
@@ -1443,7 +1385,12 @@ export class CanvasService {
       } catch {}
     }
 
-    workflowObj.variables = await this.processResourceVariables(user, canvasId, variables);
+    workflowObj.variables = await this.processResourceVariables(
+      user,
+      canvasId,
+      variables,
+      duplicateDriveFile,
+    );
 
     await this.prisma.canvas.update({
       where: { canvasId, uid: user.uid, deletedAt: null },
