@@ -59,7 +59,7 @@ export class UserService implements OnModuleInit {
     });
 
     let subscription: Subscription | null = null;
-    if (userPo.subscriptionId) {
+    if (userPo?.subscriptionId) {
       subscription = await this.subscriptionService.getSubscription(userPo.subscriptionId);
     }
 
