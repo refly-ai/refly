@@ -68,7 +68,7 @@ export const SkillResponseContentPreview = memo(
 
     const files = useMemo(() => {
       return contextItems?.filter(
-        (item) => item.type === 'file' && item.metadata.source === 'files',
+        (item) => item.type === 'file' && item.metadata?.source === 'files',
       );
     }, [contextItems]);
 
