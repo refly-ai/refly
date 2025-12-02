@@ -702,6 +702,10 @@ export type CanvasTemplate = {
    */
   appShareId?: string;
   /**
+   * Credit usage for running this workflow app
+   */
+  creditUsage?: number | null;
+  /**
    * Canvas template creation time
    */
   createdAt: string;
@@ -6497,6 +6501,10 @@ export type ToolsetDefinition = {
    * Whether this is a builtin toolset
    */
   builtin?: boolean;
+  /**
+   * Whether this is an internal toolset (cannot be selected manually)
+   */
+  internal?: boolean;
   /**
    * Toolset domain (used for display icon)
    */

@@ -9149,6 +9149,10 @@ export const ToolsetDefinitionSchema = {
       type: 'boolean',
       description: 'Whether this is a builtin toolset',
     },
+    internal: {
+      type: 'boolean',
+      description: 'Whether this is an internal toolset (cannot be selected manually)',
+    },
     domain: {
       type: 'string',
       description: 'Toolset domain (used for display icon)',

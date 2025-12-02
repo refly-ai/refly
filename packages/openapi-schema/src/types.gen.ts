@@ -6492,6 +6492,10 @@ export type ToolsetDefinition = {
    */
   builtin?: boolean;
   /**
+   * Whether this is an internal toolset (cannot be selected manually)
+   */
+  internal?: boolean;
+  /**
    * Toolset domain (used for display icon)
    */
   domain?: string;
