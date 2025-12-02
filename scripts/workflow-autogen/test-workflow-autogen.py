@@ -9,12 +9,22 @@ This script:
 4. Polls workflow status until completion
 
 Usage:
-    REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-execution.py
+    # Using command line argument (recommended)
+    python test-workflow-autogen.py --query "Your workflow query here"
 
-    Optional:
+    # With environment variables
+    REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"
+
+    # Optional parameters
     MODEL_NAME="openai/gpt-4o" (default if not specified)
+    LOCALE="en-US" (default if not specified)
+    API_URL="http://localhost:5800" (default if not specified)
+
+    # Without query argument (uses default query)
+    python test-workflow-autogen.py
 """
 
+import argparse
 import json
 import os
 import sys
@@ -22,7 +32,7 @@ import time
 
 import requests
 
-query = """
+DEFAULT_QUERY = """
 输入一周工作总结，自动提炼并生成 3 篇专业、有洞察力的 LinkedIn 帖子。
 """
 
@@ -339,8 +349,13 @@ def poll_workflow_status(
         sys.exit(1)
 
 
-def test_workflow_execution():
-    """Test complete workflow: generation, variable filling, and execution"""
+def test_workflow_execution(query: str):
+    """
+    Test complete workflow: generation, variable filling, and execution
+
+    Args:
+        query: The workflow query to process
+    """
 
     # Configuration
     api_url = os.getenv("API_URL", "http://localhost:5800")
@@ -355,7 +370,7 @@ def test_workflow_execution():
         print("❌ Error: REFLY_USER_ID environment variable is not set")
         print("\nUsage:")
         print(
-            '  REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-execution.py'
+            '  REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"'
         )
         sys.exit(1)
 
@@ -364,7 +379,7 @@ def test_workflow_execution():
         print("❌ Error: LLM_ENDPOINT environment variable is not set")
         print("\nUsage:")
         print(
-            '  REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-execution.py'
+            '  REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"'
         )
         sys.exit(1)
 
@@ -373,7 +388,7 @@ def test_workflow_execution():
         print("❌ Error: LLM_API_KEY environment variable is not set")
         print("\nUsage:")
         print(
-            '  REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-execution.py'
+            '  REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"'
         )
         sys.exit(1)
 
@@ -491,5 +506,45 @@ def test_workflow_execution():
         sys.exit(1)
 
 
+def main():
+    """Main function with argument parsing"""
+    parser = argparse.ArgumentParser(
+        description="Test Workflow Execution with Copilot Autogen API",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Using command line argument
+  python test-workflow-autogen.py --query "Generate LinkedIn posts from weekly summary"
+  
+  # With all parameters
+  REFLY_USER_ID="user_123" LLM_ENDPOINT="https://api.example.com/v1" LLM_API_KEY="sk-xxx" \\
+    python test-workflow-autogen.py --query "Your query here"
+  
+  # Using default query
+  python test-workflow-autogen.py
+        """,
+    )
+
+    parser.add_argument(
+        "--query",
+        "-q",
+        type=str,
+        default=None,
+        help="Workflow query to process (default: use built-in default query)",
+    )
+
+    args = parser.parse_args()
+
+    # Use provided query or default
+    query = args.query if args.query else DEFAULT_QUERY.strip()
+
+    if not query:
+        print("❌ Error: Query cannot be empty")
+        sys.exit(1)
+
+    # Run the workflow execution test
+    test_workflow_execution(query)
+
+
 if __name__ == "__main__":
-    test_workflow_execution()
+    main()
