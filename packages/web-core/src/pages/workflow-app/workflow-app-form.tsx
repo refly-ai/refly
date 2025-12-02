@@ -422,34 +422,42 @@ export const WorkflowAPPForm = ({
       // Create DriveFile for variables without fileId
       if (canvasId) {
         for (const variable of newVariables) {
-          if (variable.variableType === 'resource' && variable.value) {
-            for (const val of variable.value) {
-              if (val.type === 'resource' && val.resource) {
-                const { fileId, storageKey, name, mimeType } = val.resource as any;
+          // Skip if not a resource variable or has no value
+          if (variable.variableType !== 'resource' || !variable.value) {
+            continue;
+          }
 
-                // If no fileId but has storageKey, create DriveFile
-                if (!fileId && storageKey && variable.variableId) {
-                  try {
-                    const { data: driveFileResponse, error } = await getClient().createDriveFile({
-                      body: {
-                        canvasId,
-                        name: name,
-                        type: mimeType || 'application/octet-stream', // Use stored MIME type or default
-                        storageKey: storageKey,
-                        source: 'variable',
-                        variableId: variable.variableId,
-                      },
-                    });
+          for (const val of variable.value) {
+            // Skip if not a resource type or has no resource data
+            if (val.type !== 'resource' || !val.resource) {
+              continue;
+            }
 
-                    if (!error && driveFileResponse?.data?.fileId) {
-                      val.resource.fileId = driveFileResponse.data.fileId;
-                    }
-                  } catch (error) {
-                    console.error('Failed to create DriveFile:', error);
-                    // Continue without fileId if creation fails
-                  }
-                }
+            const { fileId, storageKey, name, mimeType } = val.resource as any;
+
+            // Skip if already has fileId or missing required data
+            if (fileId || !storageKey || !variable.variableId) {
+              continue;
+            }
+
+            try {
+              const { data: driveFileResponse, error } = await getClient().createDriveFile({
+                body: {
+                  canvasId,
+                  name: name,
+                  type: mimeType || 'application/octet-stream',
+                  storageKey: storageKey,
+                  source: 'variable',
+                  variableId: variable.variableId,
+                },
+              });
+
+              if (!error && driveFileResponse?.data?.fileId) {
+                val.resource.fileId = driveFileResponse.data.fileId;
               }
+            } catch (error) {
+              console.error('Failed to create DriveFile:', error);
+              // Continue without fileId if creation fails
             }
           }
         }
