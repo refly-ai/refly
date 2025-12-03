@@ -48,8 +48,9 @@ export const useActionPolling = () => {
 
   const pollActionResult = useCallback(
     async (resultId: string, version: number) => {
-      const { pollingStateMap, resultMap } = useActionResultStore.getState();
+      const { pollingStateMap, resultMap, streamResults } = useActionResultStore.getState();
       const pollingState = pollingStateMap[resultId];
+      const isStreaming = !!streamResults[resultId];
 
       if (!pollingState?.isPolling) {
         return;
@@ -98,6 +99,11 @@ export const useActionPolling = () => {
             stopPolling(resultId);
             failedResultIds.add(resultId);
             return;
+          }
+
+          // If not streaming, update the local result
+          if (!isStreaming) {
+            onUpdateResult(resultId, result.data);
           }
         }
 
