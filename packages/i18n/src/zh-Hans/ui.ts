@@ -964,7 +964,7 @@ const translations = {
       more: '更多',
     },
     template: {
-      title: '社区模板',
+      title: '模板市场',
       endMessage: {
         title: '没有找到你需要的工作流自动化模板？',
         subtitle: '加入我们的 Discord 社区，告诉我们你想要什么',
