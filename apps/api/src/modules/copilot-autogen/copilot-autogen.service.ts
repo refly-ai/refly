@@ -28,16 +28,12 @@ export class CopilotAutogenService {
     private canvasSyncService: CanvasSyncService,
   ) {}
 
-  async generateWorkflow(request: GenerateWorkflowRequest): Promise<GenerateWorkflowResponse> {
-    this.logger.log(`[Autogen] Starting workflow generation for user ${request.uid}`);
+  async generateWorkflow(
+    user: User,
+    request: GenerateWorkflowRequest,
+  ): Promise<GenerateWorkflowResponse> {
+    this.logger.log(`[Autogen] Starting workflow generation for user ${user.uid}`);
     this.logger.log(`[Autogen] Query: ${request.query}`);
-
-    // 1. Get user object (reuse Prisma)
-    const user = await this.prisma.user.findUnique({ where: { uid: request.uid } });
-    if (!user) {
-      this.logger.error(`[Autogen] User not found: ${request.uid}`);
-      throw new Error('User not found');
-    }
 
     // 2. Determine or create Canvas (reuse CanvasService)
     let canvasId = request.canvasId;

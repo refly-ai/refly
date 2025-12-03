@@ -2,7 +2,6 @@ import { WorkflowPlan } from '@refly/canvas-common';
 import { WorkflowVariable } from '@refly/openapi-schema';
 
 export interface GenerateWorkflowRequest {
-  uid: string; // User ID
   query: string; // User requirement description
   canvasId?: string; // Optional: Specify Canvas ID, create new if not provided
   projectId?: string; // Optional: Project ID

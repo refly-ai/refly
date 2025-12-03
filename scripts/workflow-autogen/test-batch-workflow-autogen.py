@@ -11,7 +11,7 @@ This script:
 6. Runs multiple workflows concurrently using thread pool
 
 Usage:
-    REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-batch-workflow-autogen.py
+    REFLY_EMAIL="your@email.com" REFLY_PASSWORD="your_password" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-batch-workflow-autogen.py
 
     Optional:
     MODEL_NAME="openai/gpt-4o" (default if not specified)
@@ -27,6 +27,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 
 import requests
+
+# Cookie name constant (matches backend)
+ACCESS_TOKEN_COOKIE = "_rf_access"
 
 # Global lock for thread-safe printing
 print_lock = Lock()
@@ -49,6 +52,51 @@ def safe_print(*args, **kwargs):
     with print_lock:
         print(*args, **kwargs)
         sys.stdout.flush()
+
+
+def login_with_session(api_url: str, email: str, password: str) -> requests.Session:
+    """
+    Login and establish authenticated session
+
+    Args:
+        api_url: Base API URL
+        email: User email
+        password: User password
+
+    Returns:
+        Authenticated requests.Session object
+    """
+    session = requests.Session()
+
+    try:
+        response = session.post(
+            f"{api_url}/v1/auth/email/login",
+            json={"email": email, "password": password},
+            headers={"Content-Type": "application/json"},
+            timeout=30,
+        )
+        response.raise_for_status()
+
+        data = response.json()
+        if not data.get("success"):
+            raise Exception(f"Login failed: {data.get('message', 'Unknown error')}")
+
+        # Extract access token from cookies and set Authorization header
+        access_token = session.cookies.get(ACCESS_TOKEN_COOKIE)
+        if not access_token:
+            raise Exception(
+                f"No access token cookie ({ACCESS_TOKEN_COOKIE}) found in response"
+            )
+
+        # Set Authorization header for subsequent requests
+        session.headers.update({"Authorization": f"Bearer {access_token}"})
+
+        return session
+
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"Login request failed: {str(e)}")
+    except Exception as e:
+        raise Exception(f"Login error: {str(e)}")
 
 
 def update_stats(old_status: str, new_status: str):
@@ -235,25 +283,28 @@ Generate specific, realistic values based on the user query context."""
 
 
 def initialize_workflow(
-    canvas_id: str, variables: list, api_url: str, uid: str, max_retries: int = 3
+    canvas_id: str,
+    variables: list,
+    api_url: str,
+    session: requests.Session,
+    max_retries: int = 3,
 ) -> str:
     """
-    Initialize workflow execution using workflow/initialize-test API
+    Initialize workflow execution using workflow/initialize API
 
     Args:
         canvas_id: Canvas ID
         variables: List of workflow variables with values
         api_url: Base API URL
-        uid: User ID
+        session: Authenticated requests session
         max_retries: Maximum number of retries (default: 3)
 
     Returns:
         Execution ID
     """
-    endpoint = f"{api_url}/v1/workflow/initialize-test"
+    endpoint = f"{api_url}/v1/workflow/initialize"
 
     payload = {
-        "uid": uid,
         "canvasId": canvas_id,
         "variables": variables,
         "nodeBehavior": "update",
@@ -263,7 +314,7 @@ def initialize_workflow(
 
     for attempt in range(max_retries):
         try:
-            response = requests.post(
+            response = session.post(
                 endpoint,
                 json=payload,
                 headers={"Content-Type": "application/json"},
@@ -301,7 +352,7 @@ def initialize_workflow(
 def poll_workflow_status(
     execution_id: str,
     api_url: str,
-    uid: str,
+    session: requests.Session,
     poll_interval: int = 10,
     max_wait_time: int = 1800,
     max_retries: int = 5,
@@ -312,7 +363,7 @@ def poll_workflow_status(
     Args:
         execution_id: Workflow execution ID
         api_url: Base API URL
-        uid: User ID
+        session: Authenticated requests session
         poll_interval: Polling interval in seconds
         max_wait_time: Maximum wait time in seconds (default: 1800s = 30min)
         max_retries: Maximum number of retries for failed requests (default: 5)
@@ -320,7 +371,7 @@ def poll_workflow_status(
     Returns:
         Final workflow execution detail
     """
-    endpoint = f"{api_url}/v1/workflow/detail-test"
+    endpoint = f"{api_url}/v1/workflow/detail"
 
     start_time = time.time()
     consecutive_failures = 0
@@ -335,9 +386,9 @@ def poll_workflow_status(
 
             try:
                 # Query workflow status
-                response = requests.get(
+                response = session.get(
                     endpoint,
-                    params={"executionId": execution_id, "uid": uid},
+                    params={"executionId": execution_id},
                     headers={"Content-Type": "application/json"},
                     timeout=30,
                 )
@@ -397,7 +448,7 @@ def poll_workflow_status(
 def process_single_query(
     query_index: int,
     query: str,
-    uid: str,
+    session: requests.Session,
     api_url: str,
     llm_endpoint: str,
     llm_api_key: str,
@@ -410,7 +461,7 @@ def process_single_query(
     Args:
         query_index: Index of the query (for logging)
         query: User query
-        uid: User ID
+        session: Authenticated requests session
         api_url: Base API URL
         llm_endpoint: LLM API endpoint
         llm_api_key: LLM API key
@@ -442,7 +493,6 @@ def process_single_query(
 
         endpoint = f"{api_url}/v1/copilot-autogen/generate"
         payload = {
-            "uid": uid,
             "query": query,
             "locale": locale,
         }
@@ -452,7 +502,7 @@ def process_single_query(
 
         for attempt in range(max_retries):
             try:
-                response = requests.post(
+                response = session.post(
                     endpoint,
                     json=payload,
                     headers={"Content-Type": "application/json"},
@@ -535,7 +585,7 @@ def process_single_query(
         update_stats(old_status, "initializing")
         print_progress(force=True)
 
-        execution_id = initialize_workflow(canvas_id, variables, api_url, uid)
+        execution_id = initialize_workflow(canvas_id, variables, api_url, session)
         result["execution_id"] = execution_id
 
         # Stage 3: Executing workflow (polling status)
@@ -547,7 +597,7 @@ def process_single_query(
         _ = poll_workflow_status(
             execution_id=execution_id,
             api_url=api_url,
-            uid=uid,
+            session=session,
             poll_interval=10,
             max_wait_time=1800,
             max_retries=5,
@@ -613,13 +663,18 @@ def test_batch_workflow_execution():
     safe_print(f"并发数: {max_workers}\n")
 
     # Get required environment variables
-    uid = os.getenv("REFLY_USER_ID")
-    if not uid:
-        safe_print("❌ 错误: 未设置 REFLY_USER_ID 环境变量")
+    email = os.getenv("REFLY_EMAIL")
+    if not email:
+        safe_print("❌ 错误: 未设置 REFLY_EMAIL 环境变量")
         safe_print("\n使用方法:")
         safe_print(
-            '  REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-batch-workflow-autogen.py'
+            '  REFLY_EMAIL="your@email.com" REFLY_PASSWORD="your_password" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-batch-workflow-autogen.py'
         )
+        sys.exit(1)
+
+    password = os.getenv("REFLY_PASSWORD")
+    if not password:
+        safe_print("❌ 错误: 未设置 REFLY_PASSWORD 环境变量")
         sys.exit(1)
 
     llm_endpoint = os.getenv("LLM_ENDPOINT")
@@ -636,7 +691,16 @@ def test_batch_workflow_execution():
     model_name = os.getenv("MODEL_NAME", "openai/gpt-4o")
     locale = os.getenv("LOCALE", "en-US")
 
-    safe_print(f"用户 ID: {uid}")
+    # Login to establish authenticated session
+    safe_print("🔐 登录中...")
+    safe_print(f"   邮箱: {email}")
+    try:
+        session = login_with_session(api_url, email, password)
+        safe_print("✅ 登录成功\n")
+    except Exception as e:
+        safe_print(f"❌ 登录失败: {str(e)}")
+        sys.exit(1)
+
     safe_print(f"LLM 端点: {llm_endpoint}")
     safe_print(f"模型: {model_name}")
     safe_print(f"语言: {locale}\n")
@@ -661,7 +725,7 @@ def test_batch_workflow_execution():
                 process_single_query,
                 idx + 1,
                 query,
-                uid,
+                session,
                 api_url,
                 llm_endpoint,
                 llm_api_key,

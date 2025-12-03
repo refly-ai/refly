@@ -3,17 +3,18 @@
 Workflow Execution Test Script
 
 This script:
-1. Generates a workflow using Copilot Autogen API
-2. Uses LLM API to generate variable values
-3. Executes the workflow using workflow/initialize API
-4. Polls workflow status until completion
+1. Authenticates user via email/password
+2. Generates a workflow using Copilot Autogen API
+3. Uses LLM API to generate variable values
+4. Executes the workflow using workflow/initialize API
+5. Polls workflow status until completion
 
 Usage:
     # Using command line argument (recommended)
     python test-workflow-autogen.py --query "Your workflow query here"
 
     # With environment variables
-    REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"
+    REFLY_EMAIL="your@email.com" REFLY_PASSWORD="your_password" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"
 
     # Optional parameters
     MODEL_NAME="openai/gpt-4o" (default if not specified)
@@ -32,9 +33,54 @@ import time
 
 import requests
 
+# Cookie name constant (matches backend)
+ACCESS_TOKEN_COOKIE = "_rf_access"
+
 DEFAULT_QUERY = """
 输入一周工作总结，自动提炼并生成 3 篇专业、有洞察力的 LinkedIn 帖子。
 """
+
+
+def login_with_session(
+    session: requests.Session, api_url: str, email: str, password: str
+):
+    """
+    Login and establish authenticated session
+
+    Args:
+        session: requests.Session object
+        api_url: Base API URL
+        email: User email
+        password: User password
+    """
+    print("🔐 Logging in...")
+    print(f"   Email: {email}")
+
+    try:
+        response = session.post(
+            f"{api_url}/v1/auth/email/login",
+            json={"email": email, "password": password},
+            timeout=10,
+        )
+        response.raise_for_status()
+        print("✅ Login successful")
+
+        # Extract access token from cookies and set Authorization header
+        access_token = session.cookies.get(ACCESS_TOKEN_COOKIE)
+        if not access_token:
+            print(f"❌ No access token cookie ({ACCESS_TOKEN_COOKIE}) found!")
+            sys.exit(1)
+
+        # Set Authorization header for subsequent requests
+        session.headers.update({"Authorization": f"Bearer {access_token}"})
+
+    except requests.exceptions.HTTPError as e:
+        print(f"❌ Login failed: HTTP {e.response.status_code}")
+        print(f"   Response: {e.response.text}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Login failed: {e}")
+        sys.exit(1)
 
 
 def generate_variable_values(
@@ -158,32 +204,33 @@ Generate specific, realistic values based on the user query context."""
         sys.exit(1)
 
 
-def initialize_workflow(canvas_id: str, variables: list, api_url: str, uid: str) -> str:
+def initialize_workflow(
+    session: requests.Session, canvas_id: str, variables: list, api_url: str
+) -> str:
     """
-    Initialize workflow execution using workflow/initialize-test API
+    Initialize workflow execution using workflow/initialize API
 
     Args:
+        session: Authenticated requests.Session object
         canvas_id: Canvas ID
         variables: List of workflow variables with values
         api_url: Base API URL
-        uid: User ID
 
     Returns:
         Execution ID
     """
-    endpoint = f"{api_url}/v1/workflow/initialize-test"
+    endpoint = f"{api_url}/v1/workflow/initialize"
 
     print("\n🚀 Initializing workflow execution...")
 
     payload = {
-        "uid": uid,
         "canvasId": canvas_id,
         "variables": variables,
         "nodeBehavior": "update",
     }
 
     try:
-        response = requests.post(
+        response = session.post(
             endpoint,
             json=payload,
             headers={"Content-Type": "application/json"},
@@ -220,9 +267,9 @@ def initialize_workflow(canvas_id: str, variables: list, api_url: str, uid: str)
 
 
 def poll_workflow_status(
+    session: requests.Session,
     execution_id: str,
     api_url: str,
-    uid: str,
     poll_interval: int = 2,
     max_wait_time: int = 600,
 ) -> dict:
@@ -230,16 +277,16 @@ def poll_workflow_status(
     Poll workflow execution status until completion
 
     Args:
+        session: Authenticated requests.Session object
         execution_id: Workflow execution ID
         api_url: Base API URL
-        uid: User ID
         poll_interval: Polling interval in seconds (default: 2)
         max_wait_time: Maximum wait time in seconds (default: 600 = 10 minutes)
 
     Returns:
         Final workflow execution detail
     """
-    endpoint = f"{api_url}/v1/workflow/detail-test"
+    endpoint = f"{api_url}/v1/workflow/detail"
 
     print("\n⏳ Polling workflow execution status...")
     print(f"   Poll interval: {poll_interval}s")
@@ -262,9 +309,9 @@ def poll_workflow_status(
                 sys.exit(1)
 
             # Query workflow status
-            response = requests.get(
+            response = session.get(
                 endpoint,
-                params={"executionId": execution_id, "uid": uid},
+                params={"executionId": execution_id},
                 headers={"Content-Type": "application/json"},
                 timeout=10,
             )
@@ -351,7 +398,7 @@ def poll_workflow_status(
 
 def test_workflow_execution(query: str):
     """
-    Test complete workflow: generation, variable filling, and execution
+    Test complete workflow: authentication, generation, variable filling, and execution
 
     Args:
         query: The workflow query to process
@@ -365,12 +412,21 @@ def test_workflow_execution(query: str):
     print(f"Endpoint: {endpoint}\n")
 
     # Get required environment variables
-    uid = os.getenv("REFLY_USER_ID")
-    if not uid:
-        print("❌ Error: REFLY_USER_ID environment variable is not set")
+    email = os.getenv("REFLY_EMAIL")
+    if not email:
+        print("❌ Error: REFLY_EMAIL environment variable is not set")
         print("\nUsage:")
         print(
-            '  REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"'
+            '  REFLY_EMAIL="your@email.com" REFLY_PASSWORD="your_password" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"'
+        )
+        sys.exit(1)
+
+    password = os.getenv("REFLY_PASSWORD")
+    if not password:
+        print("❌ Error: REFLY_PASSWORD environment variable is not set")
+        print("\nUsage:")
+        print(
+            '  REFLY_EMAIL="your@email.com" REFLY_PASSWORD="your_password" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"'
         )
         sys.exit(1)
 
@@ -379,7 +435,7 @@ def test_workflow_execution(query: str):
         print("❌ Error: LLM_ENDPOINT environment variable is not set")
         print("\nUsage:")
         print(
-            '  REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"'
+            '  REFLY_EMAIL="your@email.com" REFLY_PASSWORD="your_password" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"'
         )
         sys.exit(1)
 
@@ -388,7 +444,7 @@ def test_workflow_execution(query: str):
         print("❌ Error: LLM_API_KEY environment variable is not set")
         print("\nUsage:")
         print(
-            '  REFLY_USER_ID="your_user_id" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"'
+            '  REFLY_EMAIL="your@email.com" REFLY_PASSWORD="your_password" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-workflow-autogen.py --query "Your query"'
         )
         sys.exit(1)
 
@@ -396,24 +452,27 @@ def test_workflow_execution(query: str):
     model_name = os.getenv("MODEL_NAME", "openai/gpt-4o")
     locale = os.getenv("LOCALE", "en-US")
 
-    print(f"User ID: {uid}")
+    print(f"Email: {email}")
     print(f"LLM Endpoint: {llm_endpoint}")
     print(f"Model: {model_name}")
     print(f"Query: {query}")
     print(f"Locale: {locale}\n")
 
+    # Step 0: Create session and login
+    session = requests.Session()
+    login_with_session(session, api_url, email, password)
+
     # Step 1: Generate Workflow
-    print("Sending request...\n")
+    print("\nSending request...\n")
 
     payload = {
-        "uid": uid,
         "query": query,
         "locale": locale,
     }
 
     try:
         # Make API request to generate workflow
-        response = requests.post(
+        response = session.post(
             endpoint,
             json=payload,
             headers={"Content-Type": "application/json"},
@@ -452,7 +511,7 @@ def test_workflow_execution(query: str):
             print("ℹ️  No variables to generate\n")
 
         # Step 3: Initialize workflow execution
-        execution_id = initialize_workflow(canvas_id, variables, api_url, uid)
+        execution_id = initialize_workflow(session, canvas_id, variables, api_url)
 
         print("\n✅ Workflow execution started!")
         frontend_url = api_url.replace(":3000", ":5174").replace(":5800", ":5174")
@@ -461,9 +520,9 @@ def test_workflow_execution(query: str):
 
         # Step 4: Poll workflow status until completion
         workflow_detail = poll_workflow_status(
+            session=session,
             execution_id=execution_id,
             api_url=api_url,
-            uid=uid,
             poll_interval=10,  # Check every 10 seconds
             max_wait_time=600,  # Wait up to 10 minutes
         )
@@ -517,7 +576,7 @@ Examples:
   python test-workflow-autogen.py --query "Generate LinkedIn posts from weekly summary"
   
   # With all parameters
-  REFLY_USER_ID="user_123" LLM_ENDPOINT="https://api.example.com/v1" LLM_API_KEY="sk-xxx" \\
+  REFLY_EMAIL="your@email.com" REFLY_PASSWORD="your_password" LLM_ENDPOINT="https://api.example.com/v1" LLM_API_KEY="sk-xxx" \\
     python test-workflow-autogen.py --query "Your query here"
   
   # Using default query
