@@ -5,6 +5,7 @@ import { CanvasModule } from '../canvas/canvas.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { SkillModule } from '../skill/skill.module';
 import { ActionModule } from '../action/action.module';
+import { ToolModule } from '../tool/tool.module';
 import { WorkflowService } from './workflow.service';
 import { WorkflowController } from './workflow.controller';
 import { RunWorkflowProcessor, PollWorkflowProcessor } from './workflow.processor';
@@ -17,6 +18,7 @@ import { CreditModule } from '../credit/credit.module';
     CommonModule,
     CanvasModule,
     CanvasSyncModule,
+    ToolModule,
     SkillModule,
     ActionModule,
     CreditModule,
