@@ -4,6 +4,7 @@
  */
 
 import { DynamicStructuredTool } from '@langchain/core/tools';
+import { CallbackManagerForToolRun } from '@langchain/core/callbacks/manager';
 import { Injectable, Logger } from '@nestjs/common';
 import type {
   DynamicToolDefinition,
@@ -214,12 +215,13 @@ export class ToolFactory {
   ) {
     return async (
       args: Record<string, unknown>,
-      _runManager?: any,
+      runManager?: CallbackManagerForToolRun,
       runnableConfig?: SkillRunnableConfig,
     ): Promise<string> => {
       try {
         const response = await runInContext(
           {
+            runManager,
             langchainConfig: runnableConfig,
             requestId: `tool-${definition.name}-${Date.now()}`,
           },

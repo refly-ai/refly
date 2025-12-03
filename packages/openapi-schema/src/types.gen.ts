@@ -4716,31 +4716,13 @@ export type SandboxExecuteParams = {
   /**
    * Programming language for code execution
    */
-  language:
-    | 'python'
-    | 'javascript'
-    | 'typescript'
-    | 'r'
-    | 'java'
-    | 'bash'
-    | 'node'
-    | 'nodejs'
-    | 'deno';
+  language: 'python' | 'javascript' | 'shell';
 };
 
 /**
  * Programming language for code execution
  */
-export type language =
-  | 'python'
-  | 'javascript'
-  | 'typescript'
-  | 'r'
-  | 'java'
-  | 'bash'
-  | 'node'
-  | 'nodejs'
-  | 'deno';
+export type language = 'python' | 'javascript' | 'shell';
 
 export type SandboxExecuteContext = {
   /**

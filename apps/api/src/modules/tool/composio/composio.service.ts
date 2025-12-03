@@ -9,6 +9,7 @@ import { PrismaService } from '../../common/prisma.service';
 import { RedisService } from '../../common/redis.service';
 import { CreditService } from '../../credit/credit.service';
 import type { SyncToolCreditUsageJobData } from '../../credit/credit.dto';
+import type { SkillRunnableConfig } from '@refly/skill-template';
 
 @Injectable()
 export class ComposioService {
@@ -330,7 +331,7 @@ export class ComposioService {
             name: toolName,
             description: fn?.description ?? `OAuth tool: ${toolName}`,
             schema: toolSchema,
-            func: async (input: unknown) => {
+            func: async (input, runManager, config: SkillRunnableConfig) => {
               try {
                 const result = await this.executeTool(
                   user,
@@ -341,12 +342,20 @@ export class ComposioService {
                 if (result?.successful) {
                   // Add credit billing logic after successful execution
                   if (creditCost > 0) {
+                    const resultId = config.configurable.resultId;
+                    const version = config.configurable.version;
                     const jobData: SyncToolCreditUsageJobData = {
                       uid: user.uid,
                       creditCost: creditCost,
                       timestamp: new Date(),
-                      toolsetName: toolsetPO?.name ?? toolset.name,
-                      toolName: toolName,
+                      toolCallId: runManager?.runId,
+                      toolCallMeta: {
+                        toolName: toolName,
+                        toolsetId: toolset.id,
+                        toolsetKey: toolset.toolset?.key,
+                      },
+                      resultId,
+                      version,
                     };
                     await this.creditService.syncToolCreditUsage(jobData);
                   }

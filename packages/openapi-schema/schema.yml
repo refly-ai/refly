@@ -8848,13 +8848,7 @@ components:
           enum:
             - python
             - javascript
-            - typescript
-            - r
-            - java
-            - bash
-            - node
-            - nodejs
-            - deno
+            - shell
           example: "python"
 
     SandboxExecuteContext:

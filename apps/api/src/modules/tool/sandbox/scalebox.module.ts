@@ -13,6 +13,7 @@ import { ScaleboxService } from './scalebox.service';
 import { SandboxPool } from './scalebox.pool';
 import { ScaleboxStorage } from './scalebox.storage';
 import { ScaleboxLock } from './scalebox.lock';
+import { SandboxWrapperFactory } from './scalebox.factory';
 import {
   ScaleboxExecuteProcessor,
   ScaleboxPauseProcessor,
@@ -56,6 +57,7 @@ import {
     SandboxPool,
     ScaleboxStorage,
     ScaleboxLock,
+    SandboxWrapperFactory,
     ScaleboxExecuteProcessor,
     ScaleboxPauseProcessor,
     ScaleboxKillProcessor,

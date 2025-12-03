@@ -1,7 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
-import { CreditRechargeExtraData, CreditUsageExtraData, User } from '@refly/openapi-schema';
+import {
+  CreditRechargeExtraData,
+  CreditUsageExtraData,
+  ToolCallMeta,
+  User,
+} from '@refly/openapi-schema';
 import { CreditBilling, CreditRecharge, CreditUsage, RawCanvasData } from '@refly/openapi-schema';
 import {
   CheckRequestCreditUsageResult,
@@ -699,6 +704,8 @@ export class CreditService {
       modelName?: string;
       usageType?: string;
       modelUsageDetails?: string;
+      toolCallId?: string;
+      toolCallMeta?: ToolCallMeta;
       createdAt: Date;
       description?: string;
       appId?: string;
@@ -766,6 +773,8 @@ export class CreditService {
           dueAmount: dueAmount,
           createdAt: usageData.createdAt,
           description: usageData.description,
+          toolCallId: usageData.toolCallId,
+          toolCallMeta: JSON.stringify(usageData.toolCallMeta),
           appId: usageData.appId,
           extraData: JSON.stringify(extraData),
         },
@@ -820,7 +829,7 @@ export class CreditService {
   }
 
   async syncToolCreditUsage(data: SyncToolCreditUsageJobData) {
-    const { uid, creditCost, timestamp, resultId, toolsetName, toolName, version } = data;
+    const { uid, creditCost, timestamp, resultId, toolCallId, toolCallMeta, version } = data;
 
     // Find user
     const user = await this.prisma.user.findUnique({ where: { uid } });
@@ -839,21 +848,30 @@ export class CreditService {
           usageType: 'tool_call',
           amount: 0,
           createdAt: timestamp,
-          description: `Tool call: ${toolsetName} ${toolName}`,
+          toolCallId,
+          toolCallMeta: JSON.stringify(toolCallMeta),
+          description: `Tool call: ${toolCallMeta?.toolsetKey}.${toolCallMeta?.toolName}`,
         },
       });
       return;
     }
 
     // Use the extracted method to handle credit deduction
-    await this.deductCreditsAndCreateUsage(uid, creditCost, {
-      usageId: genCreditUsageId(),
-      actionResultId: resultId,
-      version,
-      usageType: 'tool_call',
-      createdAt: timestamp,
-      description: `Tool call: ${toolsetName} ${toolName}`,
-    });
+    await this.deductCreditsAndCreateUsage(
+      uid,
+      creditCost,
+      {
+        usageId: genCreditUsageId(),
+        actionResultId: resultId,
+        version,
+        usageType: 'tool_call',
+        createdAt: timestamp,
+        toolCallId,
+        toolCallMeta,
+        description: `Tool call: ${toolCallMeta?.toolsetKey}.${toolCallMeta?.toolName}`,
+      },
+      creditCost,
+    );
   }
 
   async syncMediaCreditUsage(data: SyncMediaCreditUsageJobData) {
@@ -886,12 +904,17 @@ export class CreditService {
     }
 
     // Use the extracted method to handle credit deduction
-    await this.deductCreditsAndCreateUsage(uid, creditCost, {
-      usageId: genCreditUsageId(),
-      actionResultId: resultId,
-      usageType: 'media_generation',
-      createdAt: timestamp,
-    });
+    await this.deductCreditsAndCreateUsage(
+      uid,
+      creditCost,
+      {
+        usageId: genCreditUsageId(),
+        actionResultId: resultId,
+        usageType: 'media_generation',
+        createdAt: timestamp,
+      },
+      creditCost,
+    );
   }
 
   async syncBatchTokenCreditUsage(data: SyncBatchTokenCreditUsageJobData): Promise<boolean> {

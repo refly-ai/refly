@@ -37,7 +37,6 @@ import {
   ParamsError,
   PasswordIncorrect,
 } from '@refly/errors';
-import { ProviderService } from '../provider/provider.service';
 import { logEvent } from '@refly/telemetry-node';
 import { NotificationService } from '../notification/notification.service';
 import { CreditService } from '../credit/credit.service';
@@ -51,7 +50,6 @@ export class AuthService {
     private configService: ConfigService,
     private jwtService: JwtService,
     private miscService: MiscService,
-    private providerService: ProviderService,
     private notificationService: NotificationService,
     private creditService: CreditService,
   ) {}
@@ -515,7 +513,6 @@ export class AuthService {
   }
 
   private async postCreateUser(user: User) {
-    await this.providerService.prepareGlobalProviderItemsForUser(user);
     await this.creditService.createRegistrationCreditRecharge(user.uid);
   }
 

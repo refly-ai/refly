@@ -81,7 +81,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
     };
   }, []);
 
-  const { stopPolling } = useActionPolling();
+  const { createTimeoutHandler, stopPolling } = useActionPolling();
   const onUpdateResult = useUpdateActionResult();
 
   const onSkillStart = (skillEvent: SkillEvent) => {
@@ -842,26 +842,43 @@ export const useInvokeAction = (params?: { source?: string }) => {
       useActionResultStore.getState().addStreamResult(resultId, initialResult);
       useActionResultStore.getState().setResultActiveTab(resultId, 'lastRun');
 
+      // Create timeout handler for this action
+      const { resetTimeout, cleanup: timeoutCleanup } = createTimeoutHandler(resultId, version);
+
+      // Wrap event handlers to reset timeout
+      const wrapEventHandler =
+        (handler: (...args: any[]) => void) =>
+        (...args: any[]) => {
+          resetTimeout();
+          handler(...args);
+        };
+
+      resetTimeout();
+
       try {
         await ssePost({
           controller,
           payload: param,
-          onStart,
-          onSkillStart,
-          onSkillStream,
-          onToolCallStart,
-          onToolCallEnd,
-          onToolCallError,
-          onToolCallStream,
-          onSkillLog,
-          onSkillArtifact,
-          onSkillStructedData,
-          onSkillCreateNode,
-          onSkillEnd,
-          onCompleted,
-          onSkillError,
-          onSkillTokenUsage,
+          onStart: wrapEventHandler(onStart),
+          onSkillStart: wrapEventHandler(onSkillStart),
+          onSkillStream: wrapEventHandler(onSkillStream),
+          onToolCallStart: wrapEventHandler(onToolCallStart),
+          onToolCallEnd: wrapEventHandler(onToolCallEnd),
+          onToolCallError: wrapEventHandler(onToolCallError),
+          onToolCallStream: wrapEventHandler(onToolCallStream),
+          onSkillLog: wrapEventHandler(onSkillLog),
+          onSkillArtifact: wrapEventHandler(onSkillArtifact),
+          onSkillStructedData: wrapEventHandler(onSkillStructedData),
+          onSkillCreateNode: wrapEventHandler(onSkillCreateNode),
+          onSkillEnd: wrapEventHandler(onSkillEnd),
+          onCompleted: wrapEventHandler(onCompleted),
+          onSkillError: wrapEventHandler(onSkillError),
+          onSkillTokenUsage: wrapEventHandler(onSkillTokenUsage),
         });
+
+        return () => {
+          timeoutCleanup();
+        };
       } finally {
         cleanupAbortController(resultId);
       }

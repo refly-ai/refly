@@ -2441,7 +2441,7 @@ const translations = {
       appearance: 'Appearance',
       subscription: 'Subscription',
       mcpServer: 'MCP Server',
-      tools: 'Tools Config',
+      tools: 'Tools',
     },
     mcpServer: {
       tools: 'Tools',
@@ -3436,6 +3436,7 @@ const translations = {
     modelSelector: {
       configureModel: 'Click to configure models',
       noVisionSupport: 'This model does not support image processing',
+      noAvailableModel: 'No available models',
     },
     contentSelector: {
       openForWeb: 'Enable content selection for questions, and the canvas is now in read-only mode',
@@ -3941,6 +3942,10 @@ const translations = {
     selectResults: 'Select Results',
     noResultsAvailable: 'No results available',
     noResultsSelected: 'No results selected',
+    runResultRequired: 'No run result selected. Please choose the result before publishing.',
+    validationNoUserInputs: 'Please add user inputs before publishing your template.',
+    validationNoAgents: 'Please add agents before publishing your template.',
+    validationAgentsNotRun: 'Please run all agents successfully before publishing your template.',
     resultPreview: 'Result Preview',
     notLoggedIn: 'Not Logged In',
     run: {
@@ -3970,8 +3975,8 @@ const translations = {
       howToEarn: 'How to earn',
     },
     publishToCommunity: {
-      label: 'Publish to Community',
-      help: 'After publishing to the community, other users can discover and use your workflow app',
+      label: 'Publish to Marketplace',
+      help: 'After publishing to the marketplace, other users can discover and use your workflow app',
     },
     copyLinkTooltip: 'Copy link from your latest published version',
   },

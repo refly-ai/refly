@@ -22,7 +22,13 @@ import {
   MediaGenerationModelConfig,
 } from '@refly/openapi-schema';
 import { Provider as ProviderModel, ProviderItem as ProviderItemModel } from '@prisma/client';
-import { genProviderItemID, genProviderID, providerInfoList, safeParseJSON } from '@refly/utils';
+import {
+  genProviderItemID,
+  genProviderID,
+  providerInfoList,
+  safeParseJSON,
+  deepmerge,
+} from '@refly/utils';
 import {
   ProviderNotFoundError,
   ProviderItemNotFoundError,
@@ -465,8 +471,9 @@ export class ProviderService implements OnModuleInit {
    */
   async getUserPreferences(user: User, preferenceJson?: string): Promise<UserPreferences> {
     const { uid } = user;
-    const defaultPreferences: UserPreferences = {
+    const systemPreferences: UserPreferences = {
       providerMode: this.configService.get('provider.defaultMode'),
+      defaultModel: await this.getGlobalDefaultModelConfig(),
     };
 
     try {
@@ -482,16 +489,14 @@ export class ProviderService implements OnModuleInit {
       }
 
       if (!rawPreference) {
-        return defaultPreferences;
+        return systemPreferences;
       }
 
-      return {
-        ...defaultPreferences,
-        ...safeParseJSON(rawPreference),
-      };
+      // System preferences should have higher priority
+      return deepmerge(safeParseJSON(rawPreference), systemPreferences);
     } catch (error) {
       this.logger.warn(`Failed to get user preferences for ${uid}: ${error?.message || error}`);
-      return defaultPreferences;
+      return systemPreferences;
     }
   }
 
@@ -700,97 +705,90 @@ export class ProviderService implements OnModuleInit {
     };
   }
 
-  async prepareGlobalProviderItemsForUser(user: User) {
-    const userPreferences = await this.getUserPreferences(user);
-    const defaultModel = this.configService.get('defaultModel');
+  private async getGlobalDefaultModelConfig() {
+    const defaultModel = this.configService.get<Record<string, string>>('defaultModel');
 
-    const defaultModelConfig: DefaultModelConfig = { ...userPreferences.defaultModel };
+    const defaultModelConfig: DefaultModelConfig = {};
 
     const { items } = await this.globalProviderCache.get();
 
-    if (defaultModel.chat && !userPreferences.defaultModel?.chat) {
+    if (defaultModel.chat) {
       const chatItem = items.find((item) => {
         const config: LLMModelConfig = safeParseJSON(item.config);
-        return config.modelId === defaultModel.chat;
+        return item.itemId === defaultModel.chat || config.modelId === defaultModel.chat;
       });
       if (chatItem) {
         defaultModelConfig.chat = providerItemPO2DTO(chatItem);
       }
     }
 
-    if (defaultModel.agent && !userPreferences.defaultModel?.agent) {
+    if (defaultModel.agent) {
       const agentItem = items.find((item) => {
         const config: LLMModelConfig = safeParseJSON(item.config);
-        return config.modelId === defaultModel.agent;
+        return item.itemId === defaultModel.agent || config.modelId === defaultModel.agent;
       });
       if (agentItem) {
         defaultModelConfig.agent = providerItemPO2DTO(agentItem);
       }
     }
 
-    if (defaultModel.queryAnalysis && !userPreferences.defaultModel?.queryAnalysis) {
+    if (defaultModel.queryAnalysis) {
       const queryAnalysisItem = items.find((item) => {
         const config: LLMModelConfig = safeParseJSON(item.config);
-        return config.modelId === defaultModel.queryAnalysis;
+        return (
+          item.itemId === defaultModel.queryAnalysis ||
+          config.modelId === defaultModel.queryAnalysis
+        );
       });
       if (queryAnalysisItem) {
         defaultModelConfig.queryAnalysis = providerItemPO2DTO(queryAnalysisItem);
       }
     }
 
-    if (defaultModel.titleGeneration && !userPreferences.defaultModel?.titleGeneration) {
+    if (defaultModel.titleGeneration) {
       const titleGenerationItem = items.find((item) => {
         const config: LLMModelConfig = safeParseJSON(item.config);
-        return config.modelId === defaultModel.titleGeneration;
+        return (
+          item.itemId === defaultModel.titleGeneration ||
+          config.modelId === defaultModel.titleGeneration
+        );
       });
       if (titleGenerationItem) {
         defaultModelConfig.titleGeneration = providerItemPO2DTO(titleGenerationItem);
       }
     }
 
-    if (defaultModel.image && !userPreferences.defaultModel?.image) {
+    if (defaultModel.image) {
       const imageItem = items.find((item) => {
         const config: MediaGenerationModelConfig = safeParseJSON(item.config);
-        return config.modelId === defaultModel.image;
+        return item.itemId === defaultModel.image || config.modelId === defaultModel.image;
       });
       if (imageItem) {
         defaultModelConfig.image = providerItemPO2DTO(imageItem);
       }
     }
 
-    if (defaultModel.video && !userPreferences.defaultModel?.video) {
+    if (defaultModel.video) {
       const videoItem = items.find((item) => {
         const config: MediaGenerationModelConfig = safeParseJSON(item.config);
-        return config.modelId === defaultModel.video;
+        return item.itemId === defaultModel.video || config.modelId === defaultModel.video;
       });
       if (videoItem) {
         defaultModelConfig.video = providerItemPO2DTO(videoItem);
       }
     }
 
-    if (defaultModel.audio && !userPreferences.defaultModel?.audio) {
+    if (defaultModel.audio) {
       const audioItem = items.find((item) => {
         const config: MediaGenerationModelConfig = safeParseJSON(item.config);
-        return config.modelId === defaultModel.audio;
+        return item.itemId === defaultModel.audio || config.modelId === defaultModel.audio;
       });
       if (audioItem) {
         defaultModelConfig.audio = providerItemPO2DTO(audioItem);
       }
     }
 
-    this.logger.log(
-      `Update defaultModel preferences for user ${user.uid}: ${JSON.stringify(userPreferences)}`,
-    );
-
-    await this.prisma.user.update({
-      where: { uid: user.uid },
-      data: {
-        preferences: JSON.stringify({
-          ...userPreferences,
-          defaultModel: defaultModelConfig,
-        }),
-      },
-    });
+    return defaultModelConfig;
   }
 
   async findProviderItemsByCategory(user: User, category: ProviderCategory) {
@@ -1050,10 +1048,10 @@ export class ProviderService implements OnModuleInit {
       const globalModelItem = availableItems.find((item) => {
         if (category === 'mediaGeneration') {
           const config: MediaGenerationModelConfig = safeParseJSON(item.config);
-          return config.modelId === globalModelId;
+          return item.itemId === globalModelId || config.modelId === globalModelId;
         } else {
           const config: LLMModelConfig = safeParseJSON(item.config);
-          return config.modelId === globalModelId;
+          return item.itemId === globalModelId || config.modelId === globalModelId;
         }
       });
 

@@ -7,15 +7,15 @@ import { AccountSetting } from '@refly-packages/ai-workspace-common/components/s
 import { LanguageSetting } from '@refly-packages/ai-workspace-common/components/settings/language-setting';
 import { AppearanceSetting } from '@refly-packages/ai-workspace-common/components/settings/appearance-setting';
 import { Subscription } from '@refly-packages/ai-workspace-common/components/settings/subscription';
-import { ModelProviders } from '@refly-packages/ai-workspace-common/components/settings/model-providers';
-import { ModelConfig } from '@refly-packages/ai-workspace-common/components/settings/model-config';
-import { ParserConfig } from '@refly-packages/ai-workspace-common/components/settings/parser-config';
+// import { ModelProviders } from '@refly-packages/ai-workspace-common/components/settings/model-providers';
+// import { ModelConfig } from '@refly-packages/ai-workspace-common/components/settings/model-config';
+// import { ParserConfig } from '@refly-packages/ai-workspace-common/components/settings/parser-config';
 
 import './index.scss';
 import {
-  AIModel,
-  Provider,
-  Parse,
+  // AIModel,
+  // Provider,
+  // Parse,
   Tools,
   Subscription as SubscriptionIcon,
   Account,
@@ -134,40 +134,38 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
 
   const tabs = useMemo(
     () => [
+      // {
+      //   key: 'modelConfig',
+      //   label: t('settings.tabs.modelConfig'),
+      //   icon: <AIModel size={18} color="var(--refly-text-0)" />,
+      //   children: <ModelConfig visible={localActiveTab === SettingsModalActiveTab.ModelConfig} />,
+      // },
+      // ...(providerMode === 'custom'
+      //   ? [
+      //       {
+      //         key: 'modelProviders',
+      //         label: t('settings.tabs.providers'),
+      //         icon: <Provider size={18} color="var(--refly-text-0)" />,
+      //         children: (
+      //           <ModelProviders
+      //             visible={localActiveTab === SettingsModalActiveTab.ModelProviders}
+      //           />
+      //         ),
+      //       },
+      //     ]
+      //   : []),
+      // {
+      //   key: 'parserConfig',
+      //   label: t('settings.tabs.parserConfig'),
+      //   icon: <Parse size={18} color="var(--refly-text-0)" />,
+      //   children: <ParserConfig visible={localActiveTab === SettingsModalActiveTab.ParserConfig} />,
+      // },
+
       {
-        key: 'modelConfig',
-        label: t('settings.tabs.modelConfig'),
-        icon: <AIModel size={18} color="var(--refly-text-0)" />,
-        children: <ModelConfig visible={localActiveTab === SettingsModalActiveTab.ModelConfig} />,
-      },
-      ...(providerMode === 'custom'
-        ? [
-            {
-              key: 'modelProviders',
-              label: t('settings.tabs.providers'),
-              icon: <Provider size={18} color="var(--refly-text-0)" />,
-              children: (
-                <ModelProviders
-                  visible={localActiveTab === SettingsModalActiveTab.ModelProviders}
-                />
-              ),
-            },
-          ]
-        : []),
-      {
-        key: 'parserConfig',
-        label: t('settings.tabs.parserConfig'),
-        icon: <Parse size={18} color="var(--refly-text-0)" />,
-        children: <ParserConfig visible={localActiveTab === SettingsModalActiveTab.ParserConfig} />,
-      },
-      {
-        key: 'toolsConfig',
-        label: t('settings.tabs.tools'),
-        icon: <Tools size={18} color="var(--refly-text-0)" />,
-        children: (
-          <ToolsConfigTab visible={localActiveTab === SettingsModalActiveTab.ToolsConfig} />
-        ),
-        divider: true,
+        key: 'account',
+        label: t('settings.tabs.account'),
+        icon: <Account size={18} color="var(--refly-text-0)" />,
+        children: <AccountSetting />,
       },
       ...(subscriptionEnabled
         ? [
@@ -180,10 +178,12 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
           ]
         : []),
       {
-        key: 'account',
-        label: t('settings.tabs.account'),
-        icon: <Account size={18} color="var(--refly-text-0)" />,
-        children: <AccountSetting />,
+        key: 'toolsConfig',
+        label: t('settings.tabs.tools'),
+        icon: <Tools size={18} color="var(--refly-text-0)" />,
+        children: (
+          <ToolsConfigTab visible={localActiveTab === SettingsModalActiveTab.ToolsConfig} />
+        ),
       },
       {
         key: 'language',

@@ -6,6 +6,7 @@
 import { User } from '@refly/openapi-schema';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { SkillRunnableConfig } from '@refly/skill-template';
+import { CallbackManagerForToolRun } from '@langchain/core/callbacks/manager';
 
 export interface RequestContext {
   /**
@@ -32,6 +33,11 @@ export interface RequestContext {
    * Result ID associated with the request
    */
   resultId?: string;
+
+  /**
+   * Run manager associated with the request
+   */
+  runManager?: CallbackManagerForToolRun;
 
   /**
    * LangChain RunnableConfig (when running within LangChain context)
@@ -125,6 +131,11 @@ export function hasContext(): boolean {
 export function getCanvasId(): string | undefined {
   const context = asyncLocalStorage.getStore();
   return context?.langchainConfig?.configurable?.canvasId;
+}
+
+export function getToolCallId(): string | undefined {
+  const context = asyncLocalStorage.getStore();
+  return context?.runManager?.runId;
 }
 
 /**

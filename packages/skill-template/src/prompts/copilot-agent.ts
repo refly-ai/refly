@@ -94,7 +94,7 @@ The \`generate_workflow\` tool expects three arrays:
 | image/video/audio | media tools | External generation | From Available Tools |
 | (any) | \`execute_code\` | Runtime computation needed | Dynamic data, API calls, calculations |
 
-> **execute_code constraint**: When processing files, MUST save results to a specific file path for downstream tasks to consume.
+> **execute_code constraint**: Sandbox is append-only — can READ existing files and CREATE new files, but CANNOT modify/overwrite existing files. Always save results to NEW file paths (e.g., \`result_v2.csv\` not \`data.csv\`).
 
 > **web_search constraint**: Only for general public information retrieval. NOT for scraping specific websites or domains — use dedicated toolsets or request user-provided data via variable instead.
 
@@ -236,6 +236,53 @@ User instructions take precedence for overridable rules.
 | Generate Images | {image toolset} | Execute image generation for all scenes |
 
 **Data Flow**: design → generate
+
+---
+
+### Example 4: Sandbox Quick Demo
+
+**Request**: "Help me generate a sandbox test workflow" / "Test the sandbox" / "Show me what execute_code can do"
+
+**Design Thinking & Decisions**:
+
+1. **Vague Request Strategy**
+   - User intent unclear, but shows interest in sandbox capability
+   - → Don't ask clarifying questions (breaks momentum)
+   - → Generate minimal self-contained demo that showcases core features
+
+2. **Demo Design Principles**
+   - Must be fully closed-loop: no external data, no user input needed
+   - Must produce visible output: chart/visualization > text
+   - Must demonstrate key constraints: create new files, not modify existing
+
+3. **Task Splitting for Clarity**
+   - Split into 2-3 sequential tasks instead of one monolithic task
+   - Each task has clear input → output, helping user understand data flow
+   - Intermediate products visible: user sees each step's result
+   - Better for learning: "data generation" → "visualization" clearer than "do everything"
+
+4. **Chosen Demo: Data → Chart Pipeline**
+   - Task 1: Generate and save sample data (CSV)
+   - Task 2: Read data, create visualization (PNG)
+   - Showcases: code execution, file I/O, task dependencies, image output
+
+**Workflow Structure**:
+
+| Task | Tool | Purpose | Output |
+|------|------|---------|--------|
+| Generate Data | \`execute_code\` | Create sample sales data, save to CSV | sales_data.csv |
+| Visualize Data | \`execute_code\` | Read CSV, create matplotlib chart | sales_chart.png |
+
+**Products**:
+- sales_data.csv (intermediate, codeArtifact)
+- sales_chart.png (final, image)
+
+**Data Flow**: generate data → visualize
+
+**Key Learning Points for User**:
+- Task 1 output (CSV) becomes Task 2 input
+- Each node shows its own result
+- File naming: always NEW files (append-only sandbox)
 </examples>
 
 ## Available Tools

@@ -1,4 +1,5 @@
-import { CreditBilling, TokenUsageItem } from '@refly/openapi-schema';
+import { CreditBilling, TokenUsageItem, ToolCallMeta } from '@refly/openapi-schema';
+
 export type CheckRequestCreditUsageResult = {
   canUse: boolean;
   message: string;
@@ -13,14 +14,15 @@ export interface SyncMediaCreditUsageJobData {
 
 export interface SyncToolCreditUsageJobData {
   uid: string;
-  resultId?: string;
-  version?: number;
+  resultId: string;
+  version: number;
   creditBilling?: CreditBilling;
   creditCost?: number;
   timestamp: Date;
-  toolsetName: string;
-  toolName: string;
+  toolCallMeta: ToolCallMeta;
+  toolCallId: string;
 }
+
 export interface CreditBalance {
   creditAmount: number;
   creditBalance: number;

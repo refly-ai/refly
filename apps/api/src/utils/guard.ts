@@ -14,7 +14,9 @@ export interface RetryConfig {
 }
 
 interface GuardWrapper<T> {
-  orThrow(errorFactory?: (error: unknown) => Error): T extends Promise<infer U> ? Promise<U> : T;
+  orThrow(
+    errorFactory?: (error: unknown) => Error | Promise<Error>,
+  ): T extends Promise<infer U> ? Promise<U> : T;
   orElse(fallback: (error: unknown) => T): T extends Promise<infer U> ? Promise<U> : T;
 }
 
@@ -33,13 +35,13 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 export function guard<T>(fn: () => T): GuardWrapper<T> {
   return {
-    orThrow(errorFactory?: (error: unknown) => Error) {
+    orThrow(errorFactory?: (error: unknown) => Error | Promise<Error>) {
       try {
         const result = fn();
 
         if (result instanceof Promise) {
-          return result.catch((error) => {
-            throw errorFactory ? errorFactory(error) : error;
+          return result.catch(async (error) => {
+            throw errorFactory ? await errorFactory(error) : error;
           }) as any;
         }
 

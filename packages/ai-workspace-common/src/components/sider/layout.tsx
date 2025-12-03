@@ -28,6 +28,7 @@ import { SiderLoggedOut } from './sider-logged-out';
 
 import './layout.scss';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
+import { RightOutlined } from '@ant-design/icons';
 
 const Sider = Layout.Sider;
 
@@ -188,7 +189,7 @@ export const InvitationItem = React.memo(
                 collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
               )}
             >
-              &gt;
+              <RightOutlined />
             </span>
           </div>
         )}
