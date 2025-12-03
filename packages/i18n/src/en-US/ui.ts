@@ -3424,6 +3424,7 @@ const translations = {
     modelSelector: {
       configureModel: 'Click to configure models',
       noVisionSupport: 'This model does not support image processing',
+      noAvailableModel: 'No available models',
     },
     contentSelector: {
       openForWeb: 'Enable content selection for questions, and the canvas is now in read-only mode',

@@ -3420,6 +3420,7 @@ const translations = {
     modelSelector: {
       configureModel: '点击配置模型',
       noVisionSupport: '该模型不支持消费图片',
+      noAvailableModel: '无可用模型',
     },
     contentSelector: {
       openForWeb: '开启选择内容提问, 画布已进入只读模式',
