@@ -213,7 +213,11 @@ function truncateMessage(msg: BaseMessage, targetTokens: number): BaseMessage {
   }
 
   if (msg instanceof AIMessage) {
-    return new AIMessage(truncatedContent);
+    return new AIMessage({
+      content: truncatedContent,
+      tool_calls: msg.tool_calls,
+      additional_kwargs: msg.additional_kwargs,
+    });
   }
 
   if (msg instanceof HumanMessage) {
