@@ -746,14 +746,17 @@ export const SkillResponseNode = memo(
               source="node"
               canEdit={!readonly}
               actions={
-                <SkillResponseActions
-                  readonly={readonly}
-                  nodeIsExecuting={isExecuting}
-                  workflowIsRunning={workflowIsRunning}
-                  onRerunSingle={handleRerunSingle}
-                  onRerunFromHere={handleRerunFromHere}
-                  onStop={handleStop}
-                />
+                isHovered || selected ? (
+                  <SkillResponseActions
+                    readonly={readonly}
+                    nodeIsExecuting={isExecuting}
+                    workflowIsRunning={workflowIsRunning}
+                    onRerunSingle={handleRerunSingle}
+                    onRerunFromHere={handleRerunFromHere}
+                    onStop={handleStop}
+                    status={status}
+                  />
+                ) : null
               }
             />
 

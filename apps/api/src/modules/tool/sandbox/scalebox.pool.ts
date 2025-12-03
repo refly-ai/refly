@@ -9,7 +9,8 @@ import { QUEUE_SCALEBOX_PAUSE, QUEUE_SCALEBOX_KILL } from '../../../utils/const'
 import { Config } from '../../config/config.decorator';
 
 import { SandboxCreationException } from './scalebox.exception';
-import { SandboxWrapper } from './scalebox.wrapper';
+import { ISandboxWrapper } from './wrapper/base';
+import { SandboxWrapperFactory } from './scalebox.factory';
 import { ExecutionContext, SandboxPauseJobData, SandboxKillJobData } from './scalebox.dto';
 import { ScaleboxStorage } from './scalebox.storage';
 import { SCALEBOX_DEFAULTS } from './scalebox.constants';
@@ -21,6 +22,7 @@ export class SandboxPool {
     private readonly storage: ScaleboxStorage,
     private readonly config: ConfigService,
     private readonly logger: PinoLogger,
+    private readonly wrapperFactory: SandboxWrapperFactory,
     @InjectQueue(QUEUE_SCALEBOX_PAUSE)
     private readonly pauseQueue: Queue<SandboxPauseJobData>,
     @InjectQueue(QUEUE_SCALEBOX_KILL)
@@ -39,14 +41,21 @@ export class SandboxPool {
   @Config.integer('sandbox.scalebox.autoPauseDelayMs', SCALEBOX_DEFAULTS.AUTO_PAUSE_DELAY_MS)
   private autoPauseDelayMs: number;
 
+  /**
+   * Get current template name from factory (for idle queue partitioning)
+   */
+  private get templateName(): string {
+    return this.wrapperFactory.getCurrentTemplateName();
+  }
+
   @Trace('pool.acquire', { 'operation.type': 'pool_acquire' })
-  async acquire(context: ExecutionContext): Promise<SandboxWrapper> {
+  async acquire(context: ExecutionContext): Promise<ISandboxWrapper> {
     const onFailed = (sandboxId: string, error: Error) => {
       this.enqueueKill(sandboxId, `acquire:${error.message.slice(0, 50)}`);
     };
 
     const wrapper = await guard(async () => {
-      const sandboxId = await this.storage.popFromIdleQueue();
+      const sandboxId = await this.storage.popFromIdleQueue(this.templateName);
       await this.cancelPause(sandboxId);
       return await this.reconnect(sandboxId, context);
     }).orElse(async (error) => {
@@ -62,17 +71,31 @@ export class SandboxPool {
             ),
         );
 
-      return await SandboxWrapper.create(this.logger, context, this.sandboxTimeoutMs, onFailed);
+      return await this.wrapperFactory.create(context, this.sandboxTimeoutMs, onFailed);
     });
 
     // Inject sandboxId into logger context for all subsequent logs
     this.logger.assign({ sandboxId: wrapper.sandboxId });
+
+    // Mark as running and update metadata (unified for cache hit, reconnect, and create)
+    await guard.bestEffort(
+      async () => {
+        wrapper.markAsRunning();
+        await this.storage.saveMetadata(wrapper);
+      },
+      (error) =>
+        this.logger.warn(
+          { sandboxId: wrapper.sandboxId, error },
+          'Failed to mark sandbox as running',
+        ),
+    );
+
     this.logger.info('Sandbox acquired');
 
     return wrapper;
   }
 
-  async release(wrapper: SandboxWrapper): Promise<void> {
+  async release(wrapper: ISandboxWrapper): Promise<void> {
     const sandboxId = wrapper.sandboxId;
 
     this.logger.debug({ sandboxId }, 'Starting sandbox cleanup and release');
@@ -83,7 +106,7 @@ export class SandboxPool {
     await guard.bestEffort(
       async () => {
         await this.storage.saveMetadata(wrapper);
-        await this.storage.pushToIdleQueue(sandboxId);
+        await this.storage.pushToIdleQueue(sandboxId, this.templateName);
         await this.schedulePause(sandboxId);
       },
       async (error) => {
@@ -134,7 +157,7 @@ export class SandboxPool {
     );
   }
 
-  private async reconnect(sandboxId: string, context: ExecutionContext): Promise<SandboxWrapper> {
+  private async reconnect(sandboxId: string, context: ExecutionContext): Promise<ISandboxWrapper> {
     guard.ensure(!!sandboxId).orThrow(() => {
       this.logger.debug('No sandbox ID from idle queue (queue is empty)');
       return new SandboxCreationException('No idle sandbox available');
@@ -148,22 +171,12 @@ export class SandboxPool {
       this.enqueueKill(failedSandboxId, `reconnect:${error.message.slice(0, 50)}`);
     };
 
-    const wrapper = await guard(() =>
-      SandboxWrapper.reconnect(this.logger, context, metadata, onFailed),
-    ).orElse(async (error) => {
-      await this.deleteMetadata(sandboxId);
-      throw new SandboxCreationException(error);
-    });
-
-    await guard.bestEffort(
-      async () => {
-        wrapper.markAsRunning();
-        await this.storage.saveMetadata(wrapper);
+    return guard(() => this.wrapperFactory.reconnect(context, metadata, onFailed)).orThrow(
+      async (error) => {
+        await this.deleteMetadata(sandboxId);
+        return new SandboxCreationException(error);
       },
-      (error) => this.logger.warn({ sandboxId, error }, 'Failed to mark sandbox as running'),
     );
-
-    return wrapper;
   }
 
   /**

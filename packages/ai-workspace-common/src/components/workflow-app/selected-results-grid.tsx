@@ -98,6 +98,7 @@ export const SelectedResultsGrid = memo(
     // Clean up currentFile when component unmounts if modal was open
     // This prevents state leakage when navigating away while preview is open
     useEffect(() => {
+      setCurrentFile(null);
       return () => {
         if (currentFile) {
           setCurrentFile(null);

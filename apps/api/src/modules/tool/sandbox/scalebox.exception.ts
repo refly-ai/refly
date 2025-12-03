@@ -69,6 +69,18 @@ export class SandboxConnectionException extends SandboxException {
   }
 }
 
+export type LifecycleOperation = 'create' | 'reconnect' | 'pause';
+
+export class SandboxLifecycleException extends SandboxException {
+  constructor(
+    public readonly operation: LifecycleOperation,
+    messageOrError: unknown,
+    public readonly sandboxId?: string,
+  ) {
+    super(messageOrError, `SANDBOX_${operation.toUpperCase()}_FAILED`, { operation, sandboxId });
+  }
+}
+
 export class SandboxExecutionFailedException extends SandboxException {
   constructor(
     message: unknown,
@@ -119,5 +131,24 @@ export class SandboxAcquireException extends SandboxException {
     public readonly sandboxId?: string,
   ) {
     super(messageOrError, 'SANDBOX_ACQUIRE_FAILED', { sandboxId });
+  }
+}
+
+export class SandboxLanguageNotSupportedException extends SandboxException {
+  constructor(language: string) {
+    super(
+      `Language '${language}' is not supported. Supported: python, javascript, bash, shell`,
+      'SANDBOX_LANGUAGE_NOT_SUPPORTED',
+      { language },
+    );
+  }
+}
+
+export class SandboxMountException extends SandboxException {
+  constructor(
+    messageOrError: unknown,
+    public readonly sandboxId?: string,
+  ) {
+    super(messageOrError, 'SANDBOX_MOUNT_FAILED', { sandboxId });
   }
 }

@@ -21,17 +21,25 @@ import {
   ExecutionContext,
   SandboxExecuteJobData,
   ScaleboxResponseFactory,
+  ExecutorOutput,
 } from './scalebox.dto';
 import { extractErrorMessage } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
-import { SandboxWrapper, S3Config } from './scalebox.wrapper';
+import { ISandboxWrapper } from './wrapper/base';
+import { S3Config } from './scalebox.dto';
 import { Trace } from './scalebox.tracer';
-import { S3_DEFAULT_CONFIG, SCALEBOX_DEFAULTS } from './scalebox.constants';
+import {
+  S3_DEFAULT_CONFIG,
+  SCALEBOX_DEFAULTS,
+  CODE_SIZE_THRESHOLD,
+  EXECUTOR_LIMITS_DEFAULTS,
+  ExecutorLimits,
+} from './scalebox.constants';
 import { ScaleboxLock } from './scalebox.lock';
 
 /**
  * Scalebox Service
- * Execute code in a secure sandbox environment using Scalebox provider
+ * Execute code in a secure sandbox environment using custom executor template
  */
 @Injectable()
 export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
@@ -71,43 +79,17 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
   @Config.integer('sandbox.scalebox.maxQueueSize', SCALEBOX_DEFAULTS.MAX_QUEUE_SIZE)
   private maxQueueSize: number;
 
+  @Config.integer('sandbox.scalebox.codeSizeThreshold', CODE_SIZE_THRESHOLD)
+  private codeSizeThreshold: number;
+
+  @Config.object('sandbox.scalebox.limits', EXECUTOR_LIMITS_DEFAULTS)
+  private executorLimits: ExecutorLimits;
+
   private async acquireSandboxWrapper(
     context: ExecutionContext,
-  ): Promise<readonly [SandboxWrapper, () => Promise<void>]> {
+  ): Promise<readonly [ISandboxWrapper, () => Promise<void>]> {
     const wrapper = await this.sandboxPool.acquire(context);
     return [wrapper, () => this.sandboxPool.release(wrapper)] as const;
-  }
-
-  private async acquireMountDrive(
-    wrapper: SandboxWrapper,
-    context: ExecutionContext,
-  ): Promise<readonly [undefined, () => Promise<void>]> {
-    await wrapper.mountDrive(context.s3DrivePath, this.s3Config, { allowNonEmpty: true });
-    return [undefined, () => wrapper.unmountDrive()] as const;
-  }
-
-  private async acquireRegisterFiles(
-    wrapper: SandboxWrapper,
-    context: ExecutionContext,
-  ): Promise<readonly [Set<string>, () => Promise<void>]> {
-    const previousFiles = await wrapper.listCwdFiles();
-    const prevSet = new Set(previousFiles);
-
-    this.logger.info({ previousFiles }, 'Previous files');
-
-    return [
-      prevSet,
-      async () => {
-        const currentFiles = await wrapper.listCwdFiles();
-        const diffFiles = currentFiles
-          .filter((file) => !prevSet.has(file))
-          .map((p) => p.replace(wrapper.cwd, ''));
-
-        this.logger.info({ diffFiles }, 'Diff files');
-
-        context.registeredFiles = await this.registerFiles(context, diffFiles);
-      },
-    ] as const;
   }
 
   async execute(user: User, request: SandboxExecuteRequest): Promise<SandboxExecuteResponse> {
@@ -133,16 +115,9 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
         parentResultId: request.context?.parentResultId,
       });
 
-      const { originResult, files } = executionResult;
-
       const executionTime = Date.now() - startTime;
 
-      return ScaleboxResponseFactory.success(
-        originResult?.text || '',
-        files,
-        executionResult,
-        executionTime,
-      );
+      return ScaleboxResponseFactory.success(executionResult, executionTime);
     } catch (error) {
       this.logger.error({ error }, 'Sandbox execution failed');
       return ScaleboxResponseFactory.error(error, Date.now() - startTime);
@@ -157,6 +132,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
       .notEmpty(context.canvasId)
       .orThrow(() => new SandboxRequestParamsException('executeCode', 'canvasId is required'));
 
+    // Simplified to 2-layer defer (removed mount and files management)
     return guard.defer(
       () => this.lock.acquireExecuteLock(context.uid, context.canvasId),
       () =>
@@ -165,16 +141,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
           (wrapper) =>
             guard.defer(
               () => this.lock.acquireSandboxLock(wrapper.sandboxId),
-              () =>
-                guard.defer(
-                  () => this.acquireMountDrive(wrapper, context),
-                  () => this.runCodeInSandbox(wrapper, params, context),
-                  (error) =>
-                    this.logger.warn(
-                      { sandboxId: wrapper.sandboxId, error },
-                      'Failed to unmount drive',
-                    ),
-                ),
+              () => this.runCodeInSandbox(wrapper, params, context),
             ),
         ),
     );
@@ -209,25 +176,77 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
 
   @Trace('sandbox.runCodeInSandbox')
   private async runCodeInSandbox(
-    wrapper: SandboxWrapper,
+    wrapper: ISandboxWrapper,
     params: SandboxExecuteParams,
     context: ExecutionContext,
   ): Promise<ScaleboxExecutionResult> {
     const timeoutMs = this.lock.runCodeTimeoutMs;
 
-    const result = await guard.defer(
-      () => this.acquireRegisterFiles(wrapper, context),
-      () => wrapper.executeCode(params, { logger: this.logger, timeoutMs }),
-      (error) => this.logger.error({ error }, 'Failed to register files'),
+    this.logger.info(
+      {
+        sandboxId: wrapper.sandboxId,
+        canvasId: context.canvasId,
+        language: params.language,
+        codeLength: params.code?.length,
+      },
+      '[runCodeInSandbox] Starting execution',
     );
 
-    const errorMessage = extractErrorMessage(result);
+    // Execute code via executor binary
+    const executorOutput: ExecutorOutput = await wrapper.executeCode(params, {
+      logger: this.logger,
+      timeoutMs,
+      s3Config: this.s3Config,
+      s3DrivePath: context.s3DrivePath,
+      limits: this.executorLimits,
+      codeSizeThreshold: this.codeSizeThreshold,
+    });
+
+    // Log full executor output for debugging
+    this.logger.info(
+      {
+        sandboxId: wrapper.sandboxId,
+        exitCode: executorOutput.exitCode,
+        hasStdout: !!executorOutput.stdout,
+        stdoutLength: executorOutput.stdout?.length,
+        hasStderr: !!executorOutput.stderr,
+        stderrLength: executorOutput.stderr?.length,
+        hasError: !!executorOutput.error,
+        hasDiff: !!executorOutput.diff,
+        diffAdded: executorOutput.diff?.added,
+        diffAddedLength: executorOutput.diff?.added?.length,
+        executorLog: executorOutput.log?.split('\n').filter(Boolean),
+      },
+      '[runCodeInSandbox] Executor output received',
+    );
+
+    // Register files created during execution
+    const addedFiles = executorOutput.diff?.added || [];
+    this.logger.info(
+      { sandboxId: wrapper.sandboxId, addedFiles, addedFilesCount: addedFiles.length },
+      '[runCodeInSandbox] Files to register',
+    );
+
+    const files = await this.registerFiles(context, addedFiles);
+
+    // Extract error message from executor output
+    const errorMessage = extractErrorMessage(executorOutput);
+
+    this.logger.info(
+      {
+        sandboxId: wrapper.sandboxId,
+        exitCode: executorOutput.exitCode ?? 0,
+        errorMessage,
+        registeredFilesCount: files.length,
+      },
+      '[runCodeInSandbox] Execution completed',
+    );
 
     return {
-      originResult: result,
+      executorOutput,
       error: errorMessage,
-      exitCode: result.exitCode,
-      files: context.registeredFiles ?? [],
+      exitCode: executorOutput.exitCode ?? 0,
+      files,
     };
   }
 

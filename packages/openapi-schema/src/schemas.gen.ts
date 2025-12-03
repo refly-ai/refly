@@ -6592,7 +6592,7 @@ export const SandboxExecuteParamsSchema = {
     language: {
       type: 'string',
       description: 'Programming language for code execution',
-      enum: ['python', 'javascript', 'typescript', 'r', 'java', 'bash', 'node', 'nodejs', 'deno'],
+      enum: ['python', 'javascript', 'shell'],
       example: 'python',
     },
   },

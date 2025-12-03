@@ -16,7 +16,8 @@ import { ScaleboxService } from './scalebox.service';
 import { ScaleboxStorage } from './scalebox.storage';
 import { ScaleboxLock } from './scalebox.lock';
 import { Sandbox } from '@scalebox/sdk';
-import { SandboxWrapper, SandboxMetadata } from './scalebox.wrapper';
+import { SandboxMetadata } from './wrapper/base';
+import { SandboxWrapperFactory } from './scalebox.factory';
 import { SCALEBOX_DEFAULTS } from './scalebox.constants';
 import {
   SandboxExecuteJobData,
@@ -25,8 +26,6 @@ import {
   ScaleboxExecutionResult,
   ExecutionContext,
 } from './scalebox.dto';
-import { SandboxExecutionBadResultException } from './scalebox.exception';
-import { extractErrorMessage } from './scalebox.utils';
 
 // Note: @Processor decorator options are evaluated at compile-time, not runtime.
 // Dynamic config via getWorkerOptions() is NOT supported by @nestjs/bullmq.
@@ -65,20 +64,8 @@ export class ScaleboxExecuteProcessor extends WorkerHost {
         this.logger.info({ exitCode: result.exitCode }, 'Execution completed');
         return result;
       } catch (error) {
-        // Handle code execution errors (non-zero exit code) by returning as normal result
-        // BullMQ serializes exceptions and loses custom properties (code, result),
-        // so we must catch SandboxExecutionBadResultException here and convert to result
-        if (error instanceof SandboxExecutionBadResultException) {
-          this.logger.info({ exitCode: error.result.exitCode }, 'Code error (non-zero exit code)');
-          return {
-            originResult: error.result,
-            error: extractErrorMessage(error.result),
-            exitCode: error.result.exitCode,
-            files: context.registeredFiles ?? [],
-          };
-        }
-
-        // Other errors are system failures, let BullMQ handle them
+        // System errors - let BullMQ handle them
+        // Code errors (non-zero exit code) are returned as normal result, not thrown
         this.logger.error(error, 'Execution failed');
         throw error;
       }
@@ -100,6 +87,7 @@ export class ScaleboxPauseProcessor extends WorkerHost {
   constructor(
     private readonly storage: ScaleboxStorage,
     private readonly lock: ScaleboxLock,
+    private readonly wrapperFactory: SandboxWrapperFactory,
     private readonly config: ConfigService,
     private readonly logger: PinoLogger,
   ) {
@@ -161,7 +149,7 @@ export class ScaleboxPauseProcessor extends WorkerHost {
       s3DrivePath: '',
     };
 
-    const wrapper = await SandboxWrapper.reconnect(this.logger, context, metadata);
+    const wrapper = await this.wrapperFactory.reconnect(context, metadata);
     await wrapper.betaPause();
     wrapper.markAsPaused();
     await this.storage.saveMetadata(wrapper);

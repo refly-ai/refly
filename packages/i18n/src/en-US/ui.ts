@@ -1492,6 +1492,8 @@ const translations = {
       skillCompleted: 'Skill Completed',
       stepCompleted: 'Step Completed',
       rerunSingle: 'Rerun This Node',
+      runSingle: 'Run This Node',
+      stopSingle: 'Stop',
       rerunFromHere: 'Run From Here',
       stopConfirmModal: {
         title: 'Stop Agent Task?',
@@ -2429,7 +2431,7 @@ const translations = {
       appearance: 'Appearance',
       subscription: 'Subscription',
       mcpServer: 'MCP Server',
-      tools: 'Tools Config',
+      tools: 'Tools',
     },
     mcpServer: {
       tools: 'Tools',
@@ -3424,6 +3426,7 @@ const translations = {
     modelSelector: {
       configureModel: 'Click to configure models',
       noVisionSupport: 'This model does not support image processing',
+      noAvailableModel: 'No available models',
     },
     contentSelector: {
       openForWeb: 'Enable content selection for questions, and the canvas is now in read-only mode',

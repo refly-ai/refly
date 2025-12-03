@@ -1493,6 +1493,8 @@ const translations = {
       skillCompleted: '技能已完成',
       stepCompleted: '步骤已完成',
       rerunSingle: '仅运行此节点',
+      runSingle: '仅运行此节点',
+      stopSingle: '终止',
       rerunFromHere: '从此节点开始运行',
       stopConfirmModal: {
         title: '停止 Agent 任务？',
@@ -2402,7 +2404,7 @@ const translations = {
       appearance: '外观',
       subscription: '订阅',
       mcpServer: 'MCP 服务器',
-      tools: '工具配置',
+      tools: '工具',
     },
     mcpServer: {
       tools: '工具',
@@ -3420,6 +3422,7 @@ const translations = {
     modelSelector: {
       configureModel: '点击配置模型',
       noVisionSupport: '该模型不支持消费图片',
+      noAvailableModel: '无可用模型',
     },
     contentSelector: {
       openForWeb: '开启选择内容提问, 画布已进入只读模式',

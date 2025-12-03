@@ -1,10 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'node:path';
+import { setMaxListeners } from 'node:events';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import session, { SessionOptions } from 'express-session';
 import RedisStore from 'connect-redis';
+
+// Increase global AbortSignal listener limit to avoid warnings from concurrent LLM requests
+// OpenAI SDK adds abort listeners per request; default limit of 10 is too low for parallel calls
+setMaxListeners(50);
 
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
