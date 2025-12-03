@@ -1,6 +1,8 @@
 import { memo, useCallback, useMemo } from 'react';
 import validator from '@rjsf/validator-ajv8';
 import { ReflyRjsfForm } from '@refly-packages/ai-workspace-common/components/rjsf';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
+import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { useUserStoreShallow } from '@refly/stores';
 import { useGetFormDefinition } from '@refly-packages/ai-workspace-common/queries';
 import type { GetFormDefinitionDefaultResponse } from '@refly-packages/ai-workspace-common/queries/common';
@@ -76,16 +78,14 @@ const FormOnboardingModalComponent: React.FC = () => {
     <div className="fixed inset-0 z-[60] bg-refly-bg-canvas flex flex-col items-center justify-center">
       <div className="max-w-[580px] px-6 flex flex-col items-center mb-8 relative z-10">
         {isFormDefinitionLoading && (
-          <div className="flex items-center justify-center px-8 py-6 text-sm text-refly-text-2">
-            Loading form definition...
+          <div className="flex items-center justify-center px-8 py-6">
+            <Spin />
           </div>
         )}
         {!isFormDefinitionLoading && (isFormDefinitionError || !formSchema) && (
-          <div className="flex flex-col items-center justify-center px-8 py-6 text-center text-sm text-refly-text-2">
-            <span className="mb-2 font-medium text-refly-text-1">
-              Failed to load onboarding form
-            </span>
-            <span>Please try again later.</span>
+          <div className="flex flex-col items-center justify-center px-8 py-6 text-center">
+            <IconError className="w-8 h-8 text-red-500 mb-2" />
+            <span className="text-sm text-refly-text-2">Please try again later.</span>
           </div>
         )}
         {!isFormDefinitionLoading && !isFormDefinitionError && formSchema && (
