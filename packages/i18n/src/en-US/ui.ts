@@ -1911,7 +1911,7 @@ const translations = {
       loadingUserInput: 'Loading user input...',
       defaultPlaceholder: 'Describe what you want to generate...',
       createUserInput: 'Create user input "{{userInputName}}"',
-      unauthorized: 'Unauthorized',
+      unauthorized: 'Authorize',
     },
     toolsDepencency: {
       title: 'Tool Dependencies',
