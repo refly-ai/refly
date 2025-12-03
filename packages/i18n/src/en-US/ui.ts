@@ -2215,7 +2215,7 @@ const translations = {
       },
     },
     siderMenu: {
-      home: 'Dashboard',
+      home: 'Workspace',
       canvas: 'My Workflows',
       appManager: 'My Templates',
       marketplace: 'Marketplace',
