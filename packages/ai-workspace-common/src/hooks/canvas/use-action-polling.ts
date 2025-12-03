@@ -100,7 +100,7 @@ export const useActionPolling = () => {
             return;
           }
         }
-        onUpdateResult(resultId, result.data);
+
         updateLastPollTime(resultId);
       } catch (error) {
         console.error('Polling error:', error);
@@ -119,13 +119,7 @@ export const useActionPolling = () => {
 
   const startPolling = useCallback(
     async (resultId: string, version: number) => {
-      const { pollingStateMap, resultMap, streamResults } = useActionResultStore.getState();
-      const isStreaming = !!streamResults[resultId];
-
-      if (isStreaming) {
-        return;
-      }
-
+      const { pollingStateMap, resultMap } = useActionResultStore.getState();
       const pollingState = pollingStateMap[resultId];
       const currentResult = resultMap[resultId];
 

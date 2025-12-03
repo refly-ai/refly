@@ -106,7 +106,7 @@ export const MessageList = memo(({ result, stepStatus, handleRetry }: MessageLis
   if (!messages?.length) {
     if (status === 'executing' || status === 'waiting') {
       return (
-        <div className="my-4 mx-2 flex items-center gap-1 text-gray-500">
+        <div className="my-4 mx-2 px-1 flex items-center gap-1 text-gray-500">
           <ThinkingDots label={t('common.thinking')} />
         </div>
       );
@@ -136,7 +136,7 @@ export const MessageList = memo(({ result, stepStatus, handleRetry }: MessageLis
         return null;
       })}
       {(status === 'executing' || status === 'waiting') && streamChoked && (
-        <div className="my-4 mx-1 flex items-center gap-1 text-gray-500">
+        <div className="my-4 mx-2 px-1 flex items-center gap-1 text-gray-500">
           <ThinkingDots />
         </div>
       )}
