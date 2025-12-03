@@ -603,7 +603,7 @@ export const MentionList = ({
                   <div
                     className={cn(
                       'flex-1 text-sm leading-5 truncate min-w-0',
-                      item.isInstalled === false ? 'text-refly-text-2' : 'text-refly-text-0',
+                      item.isInstalled === false ? 'text-refly-text-3' : 'text-refly-text-0',
                     )}
                   >
                     {item?.name}
@@ -617,7 +617,10 @@ export const MentionList = ({
 
                 {item?.description && (
                   <Paragraph
-                    className="!m-0 w-full text-[10px] text-refly-text-2 leading-3 truncate"
+                    className={cn(
+                      '!m-0 w-full text-[10px] leading-3 truncate',
+                      item.isInstalled === false ? 'text-refly-text-3' : 'text-refly-text-2',
+                    )}
                     ellipsis={{
                       rows: 1,
 
