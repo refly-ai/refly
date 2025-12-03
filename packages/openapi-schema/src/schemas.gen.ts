@@ -10439,6 +10439,10 @@ export const DriveFileSchema = {
       format: 'date-time',
       description: 'Drive file update timestamp',
     },
+    url: {
+      type: 'string',
+      description: 'Private access URL for the file (requires authentication)',
+    },
   },
 } as const;
 

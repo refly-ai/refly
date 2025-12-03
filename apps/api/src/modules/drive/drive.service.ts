@@ -1,4 +1,5 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import mime from 'mime';
 import pLimit from 'p-limit';
 import pdf from 'pdf-parse';
@@ -51,9 +52,8 @@ type ListDriveFilesParams = ListDriveFilesData['query'] &
 
 @Injectable()
 export class DriveService {
-  private logger = new Logger(DriveService.name);
-
   constructor(
+    private readonly logger: PinoLogger,
     private config: ConfigService,
     private prisma: PrismaService,
     @Inject(OSS_INTERNAL) private internalOss: ObjectStorageService,
@@ -61,7 +61,9 @@ export class DriveService {
     private redis: RedisService,
     private providerService: ProviderService,
     private subscriptionService: SubscriptionService,
-  ) {}
+  ) {
+    this.logger.setContext(DriveService.name);
+  }
 
   /**
    * Build S3 path for drive files (user uploaded files)
@@ -71,6 +73,20 @@ export class DriveService {
   buildS3DrivePath(uid: string, canvasId: string, name = ''): string {
     const prefix = this.config.get<string>('drive.storageKeyPrefix').replace(/\/$/, '');
     return [prefix, uid, canvasId, name].filter(Boolean).join('/');
+  }
+
+  /**
+   * Extract private content URL for a file
+   * @param fileId - Drive file ID
+   * @returns Private access URL or null if origin is not configured
+   */
+  extractContentUrl(fileId: string): string | null {
+    const apiBaseUrl = this.config.get<string>('apiBaseUrl');
+    if (!apiBaseUrl) {
+      this.logger.warn('[extractContentUrl] apiBaseUrl is not configured');
+      return null;
+    }
+    return `${apiBaseUrl}/v1/drive/file/content/${fileId}`;
   }
 
   private generateStorageKey(
@@ -184,7 +200,7 @@ export class DriveService {
       resultId?: string;
     },
   ): Promise<void> {
-    this.logger.log(
+    this.logger.info(
       `Archiving files - uid: ${user.uid}, canvasId: ${canvasId}, conditions: ${JSON.stringify(conditions)}`,
     );
 
@@ -194,20 +210,20 @@ export class DriveService {
     });
 
     if (!files.length) {
-      this.logger.log(
+      this.logger.info(
         `No files found to archive - uid: ${user.uid}, canvasId: ${canvasId}, conditions: ${JSON.stringify(conditions)}`,
       );
       return;
     }
 
-    this.logger.log(
+    this.logger.info(
       `Found ${files.length} files to archive: ${files.map((f) => f.name).join(', ')}`,
     );
 
     // Get concurrency limit from config or use default
     const concurrencyLimit = this.config.get<number>('drive.archiveConcurrencyLimit') ?? 10;
 
-    this.logger.log(
+    this.logger.info(
       `Starting concurrent archiving of ${files.length} files with concurrency limit: ${concurrencyLimit}`,
     );
 
@@ -259,7 +275,7 @@ export class DriveService {
         result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success),
     ).length;
 
-    this.logger.log(
+    this.logger.info(
       `Archive operation completed: ${totalProcessed} files archived, ${totalErrors} errors`,
     );
   }
@@ -332,7 +348,8 @@ export class DriveService {
           // Case 1: Direct content upload
           rawData = Buffer.from(content, 'utf8');
           size = BigInt(rawData.length);
-          request.type = 'text/plain';
+          // Infer MIME type from filename, fallback to text/plain
+          request.type = getSafeMimeType(name, mime.getType(name) ?? undefined) || 'text/plain';
         } else if (storageKey) {
           // Case 2: Transfer from existing storage key
           let objectInfo = await this.internalOss.statObject(storageKey);
@@ -545,7 +562,7 @@ export class DriveService {
   private async loadOrParseDriveFile(user: User, driveFile: DriveFileModel): Promise<DriveFile> {
     const { fileId, type: contentType } = driveFile;
 
-    this.logger.log(`Loading or parsing drive file ${fileId}, contentType: ${contentType}`);
+    this.logger.info(`Loading or parsing drive file ${fileId}, contentType: ${contentType}`);
 
     // Step 1: Try to load from cache
     const cache = await this.prisma.driveFileParseCache.findUnique({
@@ -564,7 +581,7 @@ export class DriveService {
         const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
         content = this.truncateContent(content, maxWords);
 
-        this.logger.log(
+        this.logger.info(
           `Successfully loaded from cache for ${fileId}, content length: ${content.length}`,
         );
         return { ...driveFilePO2DTO(driveFile), content };
@@ -576,7 +593,7 @@ export class DriveService {
 
     // Step 2: No cache found, perform parsing
     try {
-      this.logger.log(`No cache found for ${fileId}, starting parse process`);
+      this.logger.info(`No cache found for ${fileId}, starting parse process`);
 
       const parserFactory = new ParserFactory(this.config, this.providerService);
       const parser = await parserFactory.createDocumentParser(user, contentType, {
@@ -587,7 +604,7 @@ export class DriveService {
       const storageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
       const fileStream = await this.internalOss.getObject(storageKey);
       const fileBuffer = await streamToBuffer(fileStream);
-      this.logger.log(`File loaded from storage for ${fileId}, size: ${fileBuffer.length} bytes`);
+      this.logger.info(`File loaded from storage for ${fileId}, size: ${fileBuffer.length} bytes`);
 
       // Check PDF page count
       let numPages: number | undefined = undefined;
@@ -601,7 +618,7 @@ export class DriveService {
 
         if (numPages > available) {
           const errorMessage = `Page limit exceeded: ${numPages} pages, available: ${available}`;
-          this.logger.log(
+          this.logger.info(
             `Drive file ${fileId} parse failed due to page limit, numpages: ${numPages}, available: ${available}`,
           );
 
@@ -636,7 +653,7 @@ export class DriveService {
       }
 
       // Perform parsing
-      this.logger.log(`Starting to parse file ${fileId} with parser: ${parser.name}`);
+      this.logger.info(`Starting to parse file ${fileId} with parser: ${parser.name}`);
       const result = await parser.parse(fileBuffer);
       if (result.error) {
         throw new Error(`Parse failed: ${result.error}`);
@@ -695,7 +712,7 @@ export class DriveService {
         });
       }
 
-      this.logger.log(
+      this.logger.info(
         `Successfully parsed and cached file ${fileId}, content length: ${processedContent.length}, word count: ${wordCount}`,
       );
 
@@ -725,7 +742,7 @@ export class DriveService {
       });
 
       // Fallback to summary
-      this.logger.log(`Returning fallback summary for ${fileId} due to parse failure`);
+      this.logger.info(`Returning fallback summary for ${fileId} due to parse failure`);
       return { ...driveFilePO2DTO(driveFile), content: driveFile.summary };
     }
   }
@@ -752,7 +769,7 @@ export class DriveService {
       fileMode = 'base64';
     }
 
-    this.logger.log(`Generating drive file URLs in ${fileMode} mode for ${files.length} files`);
+    this.logger.info(`Generating drive file URLs in ${fileMode} mode for ${files.length} files`);
 
     try {
       if (fileMode === 'base64') {
@@ -820,7 +837,7 @@ export class DriveService {
     const { canvasId, files } = request;
 
     if (!files?.length) {
-      this.logger.log('[DriveService] batchCreateDriveFiles: No files to create');
+      this.logger.info('[DriveService] batchCreateDriveFiles: No files to create');
       return [];
     }
 
@@ -839,12 +856,12 @@ export class DriveService {
       };
     });
 
-    this.logger.log(
+    this.logger.info(
       `[DriveService] batchCreateDriveFiles: Inserting ${driveFilesData.length} records to database`,
     );
     if (driveFilesData.length > 0) {
       const sample = driveFilesData[0];
-      this.logger.log(
+      this.logger.info(
         `[DriveService] batchCreateDriveFiles: Sample record - name: ${sample.name}, resultId: ${sample.resultId || 'N/A'}, resultVersion: ${sample.resultVersion || 'N/A'}, size: ${sample.size}`,
       );
     }
@@ -1037,7 +1054,7 @@ export class DriveService {
       },
     });
 
-    this.logger.log(
+    this.logger.info(
       `Duplicated drive file record from ${sourceFile.fileId} to ${fileId} for canvas ${newCanvasId}`,
     );
 
@@ -1071,7 +1088,7 @@ export class DriveService {
             },
           });
 
-          this.logger.log(`Duplicated parse cache from ${sourceFile.fileId} to ${fileId}`);
+          this.logger.info(`Duplicated parse cache from ${sourceFile.fileId} to ${fileId}`);
         } catch (error) {
           this.logger.warn(`Failed to duplicate parse cache for ${fileId}: ${error.message}`);
           // Continue without failing the entire duplication
@@ -1306,7 +1323,7 @@ export class DriveService {
     // Extract unique fileIds
     const fileIds = [...new Set(matches.map((m) => m[1]))];
 
-    this.logger.log(
+    this.logger.info(
       `[processContentForDownload] Found ${fileIds.length} unique file references to process`,
     );
 
@@ -1327,11 +1344,11 @@ export class DriveService {
     const accessibleFiles = driveFiles.filter((f) => f.uid === user.uid);
 
     if (accessibleFiles.length === 0) {
-      this.logger.log('[processContentForDownload] No accessible files found, returning original');
+      this.logger.info('[processContentForDownload] No accessible files found, returning original');
       return content;
     }
 
-    this.logger.log(
+    this.logger.info(
       `[processContentForDownload] ${accessibleFiles.length}/${fileIds.length} files accessible`,
     );
 
@@ -1362,7 +1379,7 @@ export class DriveService {
         ),
     );
 
-    this.logger.log(
+    this.logger.info(
       `[processContentForDownload] Successfully published ${publishedFileIds.size} files`,
     );
 

@@ -344,7 +344,8 @@ export class BuiltinGenerateCodeArtifact extends AgentBaseTool<BuiltinToolParams
     content: z.string().describe('Actual code content'),
   });
 
-  description = 'Create a new code artifact with title, type, and content.';
+  description =
+    'Create a new code artifact with title, type, and content. Always use full file url for hyperlink in content.';
 
   protected params: BuiltinToolParams;
 

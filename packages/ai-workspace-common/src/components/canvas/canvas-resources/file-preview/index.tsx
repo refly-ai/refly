@@ -138,7 +138,35 @@ export const FilePreview = memo(
 
       const { contentType, url } = fileContent;
 
-      // Image files
+      // SVG files - render in Shadow DOM to isolate styles while preserving cookie for internal image requests
+      if (contentType === 'image/svg+xml') {
+        const svgContent = new TextDecoder().decode(fileContent.data);
+        return (
+          <div className="h-full flex items-center justify-center max-w-[1024px] mx-auto overflow-hidden relative">
+            <div
+              className="max-w-full max-h-full cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => setIsPreviewModalVisible(true)}
+              ref={(el) => {
+                if (el && !el.shadowRoot) {
+                  const shadow = el.attachShadow({ mode: 'open' });
+                  shadow.innerHTML = svgContent;
+                }
+              }}
+            />
+
+            {/* Image Preview Modal */}
+            <div className="absolute inset-0 pointer-events-none">
+              <ImagePreview
+                isPreviewModalVisible={isPreviewModalVisible}
+                setIsPreviewModalVisible={setIsPreviewModalVisible}
+                imageUrl={url}
+              />
+            </div>
+          </div>
+        );
+      }
+
+      // Image files (non-SVG)
       if (contentType.startsWith('image/')) {
         return (
           <div className="h-full flex items-center justify-center max-w-[1024px] mx-auto overflow-hidden relative">
