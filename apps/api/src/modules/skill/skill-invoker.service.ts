@@ -1538,7 +1538,7 @@ export class SkillInvokerService {
       },
     });
 
-    this.logger.log(
+    this.logger.info(
       `Aborting workflow ${executionId}: found ${nodesToAbort.length} nodes to abort`,
     );
 
@@ -1554,7 +1554,7 @@ export class SkillInvokerService {
             { resultId: node.entityId },
             'Workflow aborted by user',
           );
-          this.logger.log(`Aborted action ${node.entityId} for node ${node.nodeId}`);
+          this.logger.info(`Aborted action ${node.entityId} for node ${node.nodeId}`);
           return { success: true, nodeId: node.nodeId };
         } catch (error) {
           this.logger.warn(
@@ -1566,7 +1566,7 @@ export class SkillInvokerService {
     );
 
     const successCount = abortResults.filter((r) => r.status === 'fulfilled').length;
-    this.logger.log(`Aborted ${successCount}/${executingSkillNodes.length} executing skill nodes`);
+    this.logger.info(`Aborted ${successCount}/${executingSkillNodes.length} executing skill nodes`);
 
     // Update all non-terminal nodes to failed (not just waiting/executing)
     await this.prisma.workflowNodeExecution.updateMany({
@@ -1593,6 +1593,6 @@ export class SkillInvokerService {
       },
     });
 
-    this.logger.log(`Workflow execution ${executionId} aborted by user ${user.uid}`);
+    this.logger.info(`Workflow execution ${executionId} aborted by user ${user.uid}`);
   }
 }
