@@ -1492,6 +1492,8 @@ const translations = {
       skillCompleted: 'Skill Completed',
       stepCompleted: 'Step Completed',
       rerunSingle: 'Rerun This Node',
+      runSingle: 'Run This Node',
+      stopSingle: 'Stop',
       rerunFromHere: 'Run From Here',
       stopConfirmModal: {
         title: 'Stop Agent Task?',

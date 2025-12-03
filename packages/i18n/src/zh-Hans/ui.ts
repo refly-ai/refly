@@ -1493,6 +1493,8 @@ const translations = {
       skillCompleted: '技能已完成',
       stepCompleted: '步骤已完成',
       rerunSingle: '仅运行此节点',
+      runSingle: '仅运行此节点',
+      stopSingle: '终止',
       rerunFromHere: '从此节点开始运行',
       stopConfirmModal: {
         title: '停止 Agent 任务？',
