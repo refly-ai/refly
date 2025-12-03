@@ -1488,6 +1488,10 @@ export class SkillInvokerService {
       sessionId: params.sessionId,
       userId: params.userId,
       tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent'],
+      traceMetadata: {
+        mode: params.mode || 'node_agent',
+        skillName: params.skillName,
+      },
     });
   }
 }
