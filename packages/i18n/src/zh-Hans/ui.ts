@@ -1571,6 +1571,8 @@ const translations = {
       skillCompleted: '技能已完成',
       stepCompleted: '步骤已完成',
       rerunSingle: '仅运行此节点',
+      runSingle: '仅运行此节点',
+      stopSingle: '终止',
       rerunFromHere: '从此节点开始运行',
       stopConfirmModal: {
         title: '停止 Agent 任务？',
@@ -3685,7 +3687,7 @@ const translations = {
     noResultsAvailable: '暂无可用结果',
     noResultsSelected: '暂无选择结果',
     runResultRequired: '未选择运行结果。请在发布前选择结果。',
-    validationNoUserInputs: '请在发布模板前添加用户输入。',
+    validationNoUserInputs: '请在发布模板前添加输入项。',
     validationNoAgents: '请在发布模板前添加 Agent 节点。',
     validationAgentsNotRun: '请在发布模板前确保所有 Agent 节点运行成功。',
     resultPreview: '产物预览',

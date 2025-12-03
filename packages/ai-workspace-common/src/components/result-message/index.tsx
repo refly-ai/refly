@@ -31,11 +31,12 @@ export const AIMessageCard = memo(({ message, resultId, stepStatus }: AIMessageC
   const content = message.content ?? '';
   const reasoningContent = message.reasoningContent ?? '';
   const hasReasoningContent = Boolean(reasoningContent?.trim());
+  const hasContent = Boolean(content?.trim());
 
-  if (!content?.trim()) return null;
+  if (!hasContent && !hasReasoningContent) return null;
 
   return (
-    <div className="my-2 px-3 text-base">
+    <div className="my-2 text-base">
       <div className={`skill-response-content-${resultId}-${message.messageId}`}>
         {hasReasoningContent && (
           <ReasoningContentPreview
@@ -45,7 +46,7 @@ export const AIMessageCard = memo(({ message, resultId, stepStatus }: AIMessageC
             resultId={resultId}
           />
         )}
-        <Markdown content={content} resultId={resultId} />
+        <Markdown content={content} resultId={resultId} className="px-3" />
       </div>
     </div>
   );
