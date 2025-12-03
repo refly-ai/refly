@@ -332,6 +332,26 @@ const WorkflowAppPage: React.FC = () => {
     return new Set(nodeIds);
   }, [workflowApp?.resultNodeIds, canvasFilesById, canvasNodesByResultId]);
 
+  // Build a stable order map aligned with Result Preview (resultNodeIds)
+  // This ensures products are shown in the same order as the preview selection.
+  const selectedNodeOrder = useMemo(() => {
+    const order = new Map<string, number>();
+    const ids = (workflowApp?.resultNodeIds as string[]) ?? [];
+    ids.forEach((rid, idx) => {
+      // Map drive file id (df-*) to its source canvas node id if possible
+      let nodeId: string | undefined = rid;
+      if (rid.startsWith('df-')) {
+        const resultId = canvasFilesById?.get(rid)?.resultId;
+        const mappedNodeId = resultId ? canvasNodesByResultId?.get(resultId) : undefined;
+        nodeId = mappedNodeId ?? nodeId;
+      }
+      if (nodeId && !order.has(nodeId)) {
+        order.set(nodeId, idx);
+      }
+    });
+    return order;
+  }, [workflowApp?.resultNodeIds, canvasFilesById, canvasNodesByResultId]);
+
   const products = useMemo(() => {
     // Legacy product node executions (document, codeArtifact, image, video, audio)
     // These are old product nodes that may still exist before migration to drive_files
@@ -381,6 +401,42 @@ const WorkflowAppPage: React.FC = () => {
   useEffect(() => {
     products.length > 0 && setActiveTab('products');
   }, [products?.length]);
+
+  // Resolve the "source node id" for a product to align with preview order
+  const getSourceNodeId = useCallback(
+    (p: WorkflowNodeExecution) => {
+      // For drive-derived pseudo executions, entityId maps back to the parent node
+      const parentFromEntity = p?.entityId ? parsedNodeExecutions?.get(p.entityId) : undefined;
+      if (parentFromEntity) return parentFromEntity;
+      // For legacy executions, fall back to nodeId directly
+      return p?.nodeId ?? null;
+    },
+    [parsedNodeExecutions],
+  );
+
+  // Sort products to align with Result Preview order while preserving stability
+  const sortedProducts = useMemo(() => {
+    const list = products ?? [];
+    // If no preview selection, keep original order to avoid unintended changes
+    if (!list?.length || !(workflowApp?.resultNodeIds?.length ?? 0)) return list;
+
+    // Build stable tuples and sort by preview rank then original index
+    return [...list]
+      .map((p, i) => {
+        const src = getSourceNodeId(p);
+        const rank =
+          src != null
+            ? (selectedNodeOrder?.get(src) ?? Number.MAX_SAFE_INTEGER)
+            : Number.MAX_SAFE_INTEGER;
+        return { p, i, rank };
+      })
+      .sort((a, b) => {
+        if (a.rank !== b.rank) return a.rank - b.rank;
+        // Stable fallback: preserve original relative order
+        return a.i - b.i;
+      })
+      .map((x) => x.p);
+  }, [products, workflowApp?.resultNodeIds, selectedNodeOrder, getSourceNodeId]);
 
   const logs = useMemo(() => {
     return nodeExecutions.filter((nodeExecution: WorkflowNodeExecution) =>
@@ -925,7 +981,7 @@ const WorkflowAppPage: React.FC = () => {
                         <div className="transition-opacity duration-300 ease-in-out">
                           {activeTab === 'products' ? (
                             <PublicFileUrlProvider value={false}>
-                              <WorkflowAppProducts products={products || []} />
+                              <WorkflowAppProducts products={sortedProducts || []} />
                             </PublicFileUrlProvider>
                           ) : activeTab ===
                             'runLogs' ? // <WorkflowAppRunLogs nodeExecutions={logs || []} />
