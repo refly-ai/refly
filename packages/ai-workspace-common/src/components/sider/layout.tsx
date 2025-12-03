@@ -42,6 +42,7 @@ import { GithubStar } from '@refly-packages/ai-workspace-common/components/commo
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import { RightOutlined } from '@ant-design/icons';
 
 const Sider = Layout.Sider;
 
@@ -278,7 +279,7 @@ export const InvitationItem = React.memo(
             collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
           )}
         >
-          &gt;
+          <RightOutlined />
         </span>
       </div>
     );
