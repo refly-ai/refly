@@ -3077,6 +3077,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CheckSettingsFieldResponse'
+  /form/definition:
+    get:
+      tags:
+        - form
+      summary: Get form definition
+      description: Get form definition
+      operationId: getFormDefinition
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetFormDefinitionResponse'
+  /form/submission:
+    post:
+      tags:
+        - form
+      summary: Submit form
+      description: Submit a form
+      operationId: submitForm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitFormRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+  /form/hasFilledForm:
+    get:
+      tags:
+        - form
+      summary: Check if user has filled the form
+      description: Check if user has filled the form
+      operationId: hasFilledForm
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HasFilledFormResponse'
   /credit/recharge:
     get:
       tags:
@@ -3349,6 +3397,26 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateCheckoutSessionRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCheckoutSessionResponse'
+  /subscription/createCreditPackCheckoutSession:
+    post:
+      tags:
+        - subscription
+      summary: Create checkout session
+      description: Create a checkout session
+      operationId: createCreditPackCheckoutSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCreditPackCheckoutSessionRequest'
       responses:
         '200':
           description: successful operation
@@ -5930,6 +5998,7 @@ components:
         - starter
         - maker
         - enterprise
+        - plus
     SubscriptionStatus:
       type: string
       description: Subscription status
@@ -9129,6 +9198,14 @@ components:
         interval:
           description: Subscription billing interval
           $ref: '#/components/schemas/SubscriptionInterval'
+    CreateCreditPackCheckoutSessionRequest:
+      type: object
+      required: 
+        - packId
+      properties:
+        packId:
+          type: string
+          description: Credit pack identifier
     CreateCheckoutSessionResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -9153,6 +9230,36 @@ components:
                 url:
                   type: string
                   description: Portal session URL
+    SubmitFormRequest:
+      type: object
+      required:
+        - formSubmission
+      properties:
+        formSubmission:
+          description: Form submission
+          $ref: '#/components/schemas/FormSubmission'
+    GetFormDefinitionResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: Form definition
+              $ref: '#/components/schemas/FormDefinition'
+    HasFilledFormResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: Has filled form data
+              properties:
+                hasFilledForm:
+                  type: boolean
+                  description: Whether the user has filled the form
+                  default: false
     GetCreditRechargeResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -10549,6 +10656,9 @@ components:
         builtin:
           type: boolean
           description: Whether this is a builtin toolset
+        internal:
+          type: boolean
+          description: Whether this is an internal toolset (cannot be selected manually)
         domain:
           type: string
           description: Toolset domain (used for display icon)
@@ -11191,6 +11301,9 @@ components:
         progress:
           type: number
           description: Node progress
+        errorMessage:
+          type: string
+          description: Node error message
         createdAt:
           type: string
           format: date-time
@@ -11231,6 +11344,9 @@ components:
           description: Node executions
           items:
             $ref: '#/components/schemas/WorkflowNodeExecution'
+        appId:
+          type: string
+          description: Workflow app ID
         createdAt:
           type: string
           format: date-time

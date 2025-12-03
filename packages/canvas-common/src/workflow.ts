@@ -5,6 +5,7 @@ import {
   CanvasEdge,
   CanvasNode,
   CanvasNodeType,
+  ToolsetDefinition,
   WorkflowVariable,
 } from '@refly/openapi-schema';
 import { IContextItem } from '@refly/common-types';
@@ -137,8 +138,9 @@ export const prepareNodeExecutions = (params: {
   variables: WorkflowVariable[];
   startNodes?: string[];
   nodeBehavior?: 'create' | 'update';
+  lookupToolsetDefinitionById?: (id: string) => ToolsetDefinition;
 }): { nodeExecutions: WorkflowNode[]; startNodes: string[] } => {
-  const { canvasData, variables, nodeBehavior = 'update' } = params;
+  const { canvasData, variables, nodeBehavior = 'update', lookupToolsetDefinitionById } = params;
   const { nodes, edges } = canvasData;
 
   let newNodes: CanvasNode[] = nodes;
@@ -158,6 +160,7 @@ export const prepareNodeExecutions = (params: {
           const { llmInputQuery, updatedQuery } = processQueryWithMentions(originalQuery, {
             replaceVars: true,
             variables,
+            lookupToolsetDefinitionById,
           });
           node.data.metadata = deepmerge(node.data.metadata, {
             query: updatedQuery,

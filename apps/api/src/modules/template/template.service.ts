@@ -73,7 +73,7 @@ export class TemplateService {
     const templates = await this.prisma.canvasTemplate.findMany({
       where,
       skip: (page - 1) * pageSize,
-      take: pageSize,
+      take: Math.min(pageSize, 12), // Limit to maximum 12 templates (3 rows)
       orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
     });
 

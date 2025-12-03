@@ -19,7 +19,7 @@ const PricingPage = () => {
   }, []);
 
   return (
-    <div className="box-border w-full h-[var(--screen-height)] overflow-y-auto bg-white dark:bg-gray-900 py-20">
+    <div className="box-border w-full h-[var(--screen-height)] bg-white dark:bg-gray-900 py-20">
       {!isLogin && (
         <>
           <Helmet>

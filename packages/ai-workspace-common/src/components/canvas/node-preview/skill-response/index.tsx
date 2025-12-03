@@ -19,8 +19,8 @@ import { ConfigureTab } from './configure-tab';
 import { LastRunTab } from './last-run-tab';
 import { ActionStepCard } from './action-step';
 import { Close } from 'refly-icons';
-import { processQueryWithMentions } from '@refly/utils/query-processor';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use-query-processor';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
 import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
 import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
@@ -68,6 +68,7 @@ const SkillResponseNodePreviewComponent = ({
 
   const { t } = useTranslation();
   const { data: variables } = useVariablesManagement(canvasId);
+  const { processQuery } = useQueryProcessor();
 
   const shareId = node.data?.metadata?.shareId;
   const nodeStatus = node.data?.metadata?.status;
@@ -107,7 +108,7 @@ const SkillResponseNodePreviewComponent = ({
   const handleRetry = useCallback(() => {
     // Reset failed state before retrying
     resetFailedState(resultId);
-    const { llmInputQuery } = processQueryWithMentions(query, {
+    const { llmInputQuery } = processQuery(query, {
       replaceVars: true,
       variables,
     });

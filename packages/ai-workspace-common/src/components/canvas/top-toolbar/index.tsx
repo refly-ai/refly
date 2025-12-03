@@ -17,6 +17,7 @@ import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/us
 import { useAuthStoreShallow } from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
 import { ActionsInCanvasDropdown } from '@refly-packages/ai-workspace-common/components/canvas/top-toolbar/actions-in-canvas-dropdown';
+import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 
 interface TopToolbarProps {
   canvasId: string;
@@ -140,6 +141,9 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
               <PublishTemplateButton canvasId={canvasId} canvasTitle={canvasTitle} />
             </>
           )}
+          <div className="group relative">
+            <SettingItem showName={false} avatarAlign={'right'} />
+          </div>
         </div>
       </div>
     </>

@@ -26,6 +26,7 @@ export const useGetUserSettings = () => {
     setShowTourModal: state.setShowTourModal,
     setShowSettingsGuideModal: state.setShowSettingsGuideModal,
     setShowInvitationCodeModal: state.setShowInvitationCodeModal,
+    setShowOnboardingFormModal: state.setShowOnboardingFormModal,
     userProfile: state.userProfile,
     localSettings: state.localSettings,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
@@ -78,9 +79,25 @@ export const useGetUserSettings = () => {
       const invitationResp = await getClient().hasBeenInvited();
       const hasBeenInvited = invitationResp.data?.data ?? false;
       userStore.setShowInvitationCodeModal(!hasBeenInvited);
+
+      // Only check form filling status if user has been invited
+      if (hasBeenInvited) {
+        try {
+          const formResp = await getClient().hasFilledForm();
+          const hasFilledForm = formResp.data?.data?.hasFilledForm ?? false;
+          userStore.setShowOnboardingFormModal(!hasFilledForm);
+        } catch (_formError) {
+          // If form check fails, don't block user login, default to not showing modal
+          userStore.setShowOnboardingFormModal(false);
+        }
+      } else {
+        // If not invited, don't show form modal
+        userStore.setShowOnboardingFormModal(false);
+      }
     } catch (_error) {
-      // If invitation check fails, don't block user login, default to not showing modal
+      // If invitation check fails, don't block user login, default to not showing modals
       userStore.setShowInvitationCodeModal(false);
+      userStore.setShowOnboardingFormModal(false);
     }
 
     // set tour guide

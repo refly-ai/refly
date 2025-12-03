@@ -7,6 +7,7 @@ import {
   WorkflowVariable,
   NodeDiff,
   RawCanvasData,
+  ToolsetDefinition,
 } from '@refly/openapi-schema';
 import {
   CanvasNodeFilter,
@@ -26,6 +27,8 @@ import {
   genWorkflowNodeExecutionID,
   pick,
 } from '@refly/utils';
+import { ToolInventoryService } from '../tool/inventory/inventory.service';
+import { ToolService } from '../tool/tool.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { WorkflowNodeExecution as WorkflowNodeExecutionPO } from '@prisma/client';
@@ -49,11 +52,46 @@ export class WorkflowService {
     private readonly actionService: ActionService,
     private readonly canvasService: CanvasService,
     private readonly canvasSyncService: CanvasSyncService,
+    private readonly toolInventoryService: ToolInventoryService,
+    private readonly toolService: ToolService,
     private readonly creditService: CreditService,
     @InjectQueue(QUEUE_RUN_WORKFLOW) private readonly runWorkflowQueue?: Queue<RunWorkflowJobData>,
     @InjectQueue(QUEUE_POLL_WORKFLOW)
     private readonly pollWorkflowQueue?: Queue<PollWorkflowJobData>,
   ) {}
+
+  private async buildLookupToolsetDefinitionById(
+    user: User,
+  ): Promise<(id: string) => ToolsetDefinition | undefined> {
+    const [inventoryMap, userTools] = await Promise.all([
+      this.toolInventoryService.getInventoryMap(),
+      this.toolService.listUserTools(user),
+    ]);
+
+    const definitionsByKey: Record<string, ToolsetDefinition> = {};
+    const normalizedInventoryMap = inventoryMap ?? {};
+    for (const [key, item] of Object.entries(normalizedInventoryMap)) {
+      const definition = item?.definition;
+      if (definition) {
+        definitionsByKey[key] = definition;
+      }
+    }
+
+    const toolsetKeyById = new Map<string, string>();
+    const normalizedUserTools = Array.isArray(userTools) ? userTools : [];
+    for (const userTool of normalizedUserTools) {
+      const toolsetId = userTool?.toolsetId;
+      const toolsetKey = userTool?.key;
+      if (toolsetId && toolsetKey) {
+        toolsetKeyById.set(toolsetId, toolsetKey);
+      }
+    }
+
+    return (id: string): ToolsetDefinition | undefined => {
+      const toolsetKey = toolsetKeyById.get(id);
+      return toolsetKey ? definitionsByKey[toolsetKey] : undefined;
+    };
+  }
 
   /**
    * Initialize workflow execution - entry method
@@ -118,12 +156,15 @@ export class WorkflowService {
       });
     }
 
+    const lookupToolsetDefinitionById = await this.buildLookupToolsetDefinitionById(user);
+
     const { nodeExecutions, startNodes } = prepareNodeExecutions({
       executionId,
       canvasData,
       variables: finalVariables,
       startNodes: options?.startNodes ?? [],
       nodeBehavior,
+      lookupToolsetDefinitionById,
     });
 
     // If it's new canvas mode, add the new node to the new canvas
@@ -732,7 +773,6 @@ export class WorkflowService {
 
     this.logger.log(`Workflow execution ${executionId} aborted by user ${user.uid}`);
   }
-
   /**
    * Get workflow execution detail with node executions
    * @param user - The user requesting the workflow detail

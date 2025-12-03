@@ -1941,3 +1941,58 @@ model VariableExtractionHistory {
   @@index([extractionConfidence])
   @@map("variable_extraction_history")
 }
+
+model FormDefinition {
+  /// Primary key
+  pk          BigInt    @id @default(autoincrement())
+  /// Form ID
+  formId      String    @unique @map("form_id")
+  /// UID
+  uid         String    @map("uid")
+  /// Form title
+  title       String    @map("title")
+  /// Form description
+  description String?   @map("description")
+  /// JSON Schema definition (RJSF compatible)
+  schema      String    @map("schema")
+  /// UI Schema definition (RJSF compatible)
+  uiSchema    String?   @map("ui_schema")
+  /// Form status
+  status      String    @default("draft") @map("status")
+  /// Create timestamp
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz()
+
+  /// Form submissions
+  submissions FormSubmission[]
+
+  @@index([uid, deletedAt])
+  @@map("form_definitions")
+}
+
+model FormSubmission {
+  /// Primary key
+  pk        BigInt   @id @default(autoincrement())
+  /// Form ID
+  formId    String   @map("form_id")
+  /// UID
+  uid       String   @map("uid")
+  /// Submission answers (JSON)
+  answers   String   @map("answers")
+  /// Submission status
+  status    String   @default("draft") @map("status")
+  /// Create timestamp
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  /// Associated form definition
+  form FormDefinition @relation(fields: [formId], references: [formId])
+
+  @@index([formId, uid])
+  @@index([uid, createdAt])
+  @@map("form_submissions")
+}

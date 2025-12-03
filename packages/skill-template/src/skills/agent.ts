@@ -217,7 +217,7 @@ export class Agent extends BaseSkill {
 
               toolResultMessages.push(
                 new ToolMessage({
-                  content: stringified ?? 'null',
+                  content: stringified,
                   tool_call_id: call?.id ?? '',
                   name: matchedTool.name,
                 }),

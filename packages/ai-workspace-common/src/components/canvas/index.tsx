@@ -123,6 +123,8 @@ interface FlowProps {
 
 const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: FlowProps) => {
   const { t } = useTranslation();
+  const { workflow: workflowRun } = useCanvasContext();
+  const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
 
   // Wrap setCopilotWidth to handle null values
   const handleSetCopilotWidth = useCallback(
@@ -1163,7 +1165,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
             nodesConnectable={!readonly}
             elementsSelectable={true}
             onSelectionContextMenu={readonly ? undefined : onSelectionContextMenu}
-            deleteKeyCode={readonly ? null : ['Backspace', 'Delete']}
+            deleteKeyCode={readonly || workflowIsRunning ? null : ['Backspace', 'Delete']}
             multiSelectionKeyCode={readonly ? null : ['Shift', 'Meta']}
             onDragOver={handlers.handleDragOver}
             onDragLeave={handlers.handleDragLeave}

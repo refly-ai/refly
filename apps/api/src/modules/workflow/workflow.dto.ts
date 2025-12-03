@@ -44,6 +44,7 @@ export const workflowNodeExecutionPO2DTO = (
       'title',
       'progress',
       'nodeData',
+      'errorMessage',
     ]),
     status: nodeExecution.status as ActionStatus,
     createdAt: nodeExecution.createdAt.toJSON(),
@@ -55,7 +56,7 @@ export const workflowExecutionPO2DTO = (
   execution: WorkflowExecutionPO & { nodeExecutions?: WorkflowNodeExecutionPO[] },
 ): WorkflowExecution => {
   return {
-    ...pick(execution, ['executionId', 'canvasId', 'title', 'abortedByUser']),
+    ...pick(execution, ['executionId', 'canvasId', 'title', 'abortedByUser', 'appId']),
     status: execution.status as WorkflowExecutionStatus,
     nodeExecutions: execution.nodeExecutions?.map(workflowNodeExecutionPO2DTO),
     createdAt: execution.createdAt.toJSON(),

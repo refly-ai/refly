@@ -2513,7 +2513,7 @@ export const SubscriptionIntervalSchema = {
 export const SubscriptionPlanTypeSchema = {
   type: 'string',
   description: 'Subscription plan type',
-  enum: ['free', 'starter', 'maker', 'enterprise'],
+  enum: ['free', 'starter', 'maker', 'enterprise', 'plus'],
 } as const;
 
 export const SubscriptionStatusSchema = {
@@ -7099,6 +7099,17 @@ export const CreateCheckoutSessionRequestSchema = {
   },
 } as const;
 
+export const CreateCreditPackCheckoutSessionRequestSchema = {
+  type: 'object',
+  required: ['packId'],
+  properties: {
+    packId: {
+      type: 'string',
+      description: 'Credit pack identifier',
+    },
+  },
+} as const;
+
 export const CreateCheckoutSessionResponseSchema = {
   allOf: [
     {
@@ -7137,6 +7148,59 @@ export const CreatePortalSessionResponseSchema = {
             url: {
               type: 'string',
               description: 'Portal session URL',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const SubmitFormRequestSchema = {
+  type: 'object',
+  required: ['formSubmission'],
+  properties: {
+    formSubmission: {
+      description: 'Form submission',
+      $ref: '#/components/schemas/FormSubmission',
+    },
+  },
+} as const;
+
+export const GetFormDefinitionResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Form definition',
+          $ref: '#/components/schemas/FormDefinition',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const HasFilledFormResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Has filled form data',
+          properties: {
+            hasFilledForm: {
+              type: 'boolean',
+              description: 'Whether the user has filled the form',
+              default: false,
             },
           },
         },
@@ -9149,6 +9213,10 @@ export const ToolsetDefinitionSchema = {
       type: 'boolean',
       description: 'Whether this is a builtin toolset',
     },
+    internal: {
+      type: 'boolean',
+      description: 'Whether this is an internal toolset (cannot be selected manually)',
+    },
     domain: {
       type: 'string',
       description: 'Toolset domain (used for display icon)',
@@ -10031,6 +10099,10 @@ export const WorkflowNodeExecutionSchema = {
       type: 'number',
       description: 'Node progress',
     },
+    errorMessage: {
+      type: 'string',
+      description: 'Node error message',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -10079,6 +10151,10 @@ export const WorkflowExecutionSchema = {
       items: {
         $ref: '#/components/schemas/WorkflowNodeExecution',
       },
+    },
+    appId: {
+      type: 'string',
+      description: 'Workflow app ID',
     },
     createdAt: {
       type: 'string',

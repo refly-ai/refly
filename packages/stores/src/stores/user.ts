@@ -25,6 +25,8 @@ export interface UserState {
   showSettingsGuideModal: boolean;
   helpModalVisible: boolean;
   showInvitationCodeModal: boolean;
+  showOnboardingFormModal: boolean;
+  showOnboardingSuccessAnimation: boolean;
 
   // method
   setIsCheckingLoginStatus: (val: boolean) => void;
@@ -37,6 +39,8 @@ export interface UserState {
   setShowSettingsGuideModal: (val: boolean) => void;
   setHelpModalVisible: (val: boolean) => void;
   setShowInvitationCodeModal: (val: boolean) => void;
+  setShowOnboardingFormModal: (val: boolean) => void;
+  setShowOnboardingSuccessAnimation: (val: boolean) => void;
 }
 
 const getDefaultLocale = () => {
@@ -79,6 +83,8 @@ export const defaultState = {
   showSettingsGuideModal: false,
   helpModalVisible: false,
   showInvitationCodeModal: false,
+  showOnboardingFormModal: false,
+  showOnboardingSuccessAnimation: false,
 };
 
 export const useUserStore = create<UserState>()(
@@ -98,6 +104,10 @@ export const useUserStore = create<UserState>()(
     setHelpModalVisible: (val: boolean) => set((state) => ({ ...state, helpModalVisible: val })),
     setShowInvitationCodeModal: (val: boolean) =>
       set((state) => ({ ...state, showInvitationCodeModal: val })),
+    setShowOnboardingFormModal: (val: boolean) =>
+      set((state) => ({ ...state, showOnboardingFormModal: val })),
+    setShowOnboardingSuccessAnimation: (val: boolean) =>
+      set((state) => ({ ...state, showOnboardingSuccessAnimation: val })),
   })),
 );
 

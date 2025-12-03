@@ -13,13 +13,15 @@ import {
 import { ArrowRight, X } from 'refly-icons';
 import { getStartNodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/variable/getVariableIcon';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
-import { Button, message } from 'antd';
+import { Button, message, Typography } from 'antd';
 import { cn, genVariableID } from '@refly/utils';
 import { useVariableView } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { logEvent } from '@refly/telemetry-web';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import type { MentionItemSource } from './const';
+
+const { Paragraph } = Typography;
 
 export interface MentionItem {
   name: string;
@@ -190,7 +192,7 @@ export const MentionList: React.FC<{
 
   const secondLevelClasses = useMemo(() => {
     const baseClasses =
-      'w-[180px] p-2 max-h-60 flex box-border overflow-y-auto bg-refly-bg-body-z0 border-[1px] border-solid border-refly-Card-Border';
+      'w-[230px] p-2 max-h-60 flex box-border overflow-y-auto bg-refly-bg-body-z0 border-[1px] border-solid border-refly-Card-Border';
 
     if (placement === 'top') {
       if (isSecondLevelTaller) {
@@ -562,7 +564,7 @@ export const MentionList: React.FC<{
           key={`${item.name}-${index}`}
           data-active={isActive}
           className={cn(
-            'h-8 p-1.5 flex items-center gap-2 cursor-pointer transition-colors rounded-md',
+            'min-h-8 p-1.5 flex items-center gap-2 cursor-pointer transition-colors rounded-md',
             isActive ? 'bg-refly-fill-hover' : 'hover:bg-refly-fill-hover',
           )}
           onMouseEnter={() => {
@@ -598,27 +600,55 @@ export const MentionList: React.FC<{
                 toolset={item.toolset}
                 toolsetKey={item.isInstalled === false ? item.toolsetId : undefined}
                 config={{
-                  size: 16,
+                  size: 24,
                   className: 'flex-shrink-0',
-                  builtinClassName: '!w-4 !h-4',
+                  builtinClassName: '!w-6 !h-6',
                 }}
               />
-              <div
-                className={cn(
-                  'flex-1 text-sm leading-5 truncate min-w-0',
-                  item.isInstalled === false ? 'text-refly-text-2' : 'text-refly-text-0',
-                )}
-              >
-                {item.toolset?.builtin
-                  ? ((item.toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string) ??
-                    item.name)
-                  : item.name}
-              </div>
-              {(item.toolset?.uninstalled || item.isInstalled === false) && (
-                <div className="text-xs text-amber-600 px-1.5 py-0.5 rounded flex items-center justify-center bg-amber-50 flex-shrink-0 font-medium">
-                  {t('canvas.richChatInput.unauthorized')}
+              <div className="flex flex-col overflow-hidden">
+                <div className="flex gap-1 justify-between w-full">
+                  <div
+                    className={cn(
+                      'flex-1 text-sm leading-5 truncate min-w-0',
+                      item.isInstalled === false ? 'text-refly-text-3' : 'text-refly-text-0',
+                    )}
+                  >
+                    {item?.name}
+                  </div>
+                  {(item.toolset?.uninstalled || item.isInstalled === false) && (
+                    <div className="h-[18px] text-[8px] leading-[10px] text-refly-primary-default bg-refly-bg-control-z2 px-1.5 py-1 rounded-[4px] flex items-center justify-center flex-shrink-0 font-medium border-[0.5px] border-solid border-refly-Card-Border hover:border-refly-primary-default transition-all duration-200">
+                      {t('canvas.richChatInput.unauthorized')}
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {item?.description && (
+                  <Paragraph
+                    className={cn(
+                      '!m-0 w-full text-[10px] leading-3 truncate',
+                      item.isInstalled === false ? 'text-refly-text-3' : 'text-refly-text-2',
+                    )}
+                    ellipsis={{
+                      rows: 1,
+
+                      tooltip: {
+                        title: (
+                          <div className="max-h-[300px] overflow-y-auto text-xs">
+                            {item.description}
+                          </div>
+                        ),
+                        align: {
+                          offset: [0, -20],
+                        },
+                        arrow: false,
+                        zIndex: 10000,
+                      },
+                    }}
+                  >
+                    {item.description}
+                  </Paragraph>
+                )}
+              </div>
             </>
           ) : (
             <>

@@ -22,6 +22,9 @@ import { logEvent } from '@refly/telemetry-web';
 // styles
 import './index.scss';
 import { ContentHeader } from '@refly-packages/ai-workspace-common/components/settings/contentHeader';
+import { Subscription as SubscriptionIcon } from 'refly-icons';
+import RegularIcon from '@refly-packages/ai-workspace-common/assets/regular.svg';
+import CommissionIcon from '@refly-packages/ai-workspace-common/assets/commission.svg';
 
 // Define interfaces for the table data
 interface CreditUsageRecord {
@@ -495,26 +498,45 @@ export const Subscription = () => {
             <>
               {renderPlanCard()}
 
-              <div className="usage-cards">
-                <div className="usage-card points-card">
+              <div className="usage-section-wrapper">
+                <div className="available-credits-section">
                   <div className="usage-label">
                     {t('subscription.subscriptionManagement.availableCredits')}
                   </div>
-                  <div className="usage-value">{creditBalance?.toLocaleString()}</div>
+
+                  <div className="usage-value">
+                    <SubscriptionIcon size={18} className="text-refly-text-2 flex-shrink-0" />
+                    {creditBalance?.toLocaleString()}
+                  </div>
                 </div>
 
-                <div className="usage-card regular-credits-card">
-                  <div className="usage-label">
-                    {t('subscription.subscriptionManagement.regularCredits')}
+                <div className="usage-cards">
+                  <div className="usage-card regular-credits-card flex items-center justify-between">
+                    <div className="usage-content flex-1 p-4">
+                      <div className="usage-label">
+                        {t('subscription.subscriptionManagement.regularCredits')}
+                      </div>
+                      <div className="usage-value flex items-center gap-1">
+                        {' '}
+                        <SubscriptionIcon size={18} className="text-refly-text-2 flex-shrink-0" />
+                        {regularCredits?.toLocaleString()}
+                      </div>
+                    </div>
+                    <img src={RegularIcon} alt="Regular" className="w-[76px] h-[76px]" />
                   </div>
-                  <div className="usage-value">{regularCredits?.toLocaleString()}</div>
-                </div>
 
-                <div className="usage-card template-earnings-card">
-                  <div className="usage-label">
-                    {t('subscription.subscriptionManagement.templateEarningsCredits')}
+                  <div className="usage-card template-earnings-card flex items-center justify-between">
+                    <div className="usage-content flex-1 p-4">
+                      <div className="usage-label">
+                        {t('subscription.subscriptionManagement.templateEarningsCredits')}
+                      </div>
+                      <div className="usage-value flex items-center gap-1">
+                        <SubscriptionIcon size={18} className="text-refly-text-2 flex-shrink-0" />
+                        {templateEarningsCredits?.toLocaleString()}
+                      </div>
+                    </div>
+                    <img src={CommissionIcon} alt="Commission" className="w-[76px] h-[76px]" />
                   </div>
-                  <div className="usage-value">{templateEarningsCredits?.toLocaleString()}</div>
                 </div>
               </div>
               <div className="points-history">

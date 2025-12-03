@@ -23,6 +23,7 @@ import {
   createCanvasVersion,
   createCheckoutSession,
   createCodeArtifact,
+  createCreditPackCheckoutSession,
   createDocument,
   createDriveFile,
   createLabelClass,
@@ -87,6 +88,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -100,6 +102,7 @@ import {
   getWorkflowDetail,
   getWorkflowVariables,
   hasBeenInvited,
+  hasFilledForm,
   importCanvas,
   initializeWorkflow,
   invokeSkill,
@@ -147,6 +150,7 @@ import {
   setCanvasState,
   sharePage,
   streamInvokeSkill,
+  submitForm,
   syncCanvasState,
   testProviderConnection,
   unpinSkillInstance,
@@ -214,6 +218,8 @@ import {
   CreateCheckoutSessionError,
   CreateCodeArtifactData,
   CreateCodeArtifactError,
+  CreateCreditPackCheckoutSessionData,
+  CreateCreditPackCheckoutSessionError,
   CreateDocumentData,
   CreateDocumentError,
   CreateDriveFileData,
@@ -338,6 +344,7 @@ import {
   GetCreditUsageError,
   GetDocumentDetailData,
   GetDocumentDetailError,
+  GetFormDefinitionError,
   GetPageByCanvasIdData,
   GetPageByCanvasIdError,
   GetPageDetailData,
@@ -360,6 +367,7 @@ import {
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
   HasBeenInvitedError,
+  HasFilledFormError,
   ImportCanvasData,
   ImportCanvasError,
   InitializeWorkflowData,
@@ -444,6 +452,8 @@ import {
   SharePageError,
   StreamInvokeSkillData,
   StreamInvokeSkillError,
+  SubmitFormData,
+  SubmitFormError,
   SyncCanvasStateData,
   SyncCanvasStateError,
   TestProviderConnectionData,
@@ -1170,6 +1180,36 @@ export const useCheckSettingsField = <
     queryKey: Common.UseCheckSettingsFieldKeyFn(clientOptions, queryKey),
     queryFn: () =>
       checkSettingsField({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetFormDefinition = <
+  TData = Common.GetFormDefinitionDefaultResponse,
+  TError = GetFormDefinitionError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getFormDefinition({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useHasFilledForm = <
+  TData = Common.HasFilledFormDefaultResponse,
+  TError = HasFilledFormError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseHasFilledFormKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      hasFilledForm({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetCreditRecharge = <
@@ -2832,6 +2872,23 @@ export const useExecuteWorkflowApp = <
     mutationFn: (clientOptions) => executeWorkflowApp(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
+export const useSubmitForm = <
+  TData = Common.SubmitFormMutationResult,
+  TError = SubmitFormError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<SubmitFormData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<SubmitFormData, true>, TContext>({
+    mutationKey: Common.UseSubmitFormKeyFn(mutationKey),
+    mutationFn: (clientOptions) => submitForm(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
 export const useActivateInvitationCode = <
   TData = Common.ActivateInvitationCodeMutationResult,
   TError = ActivateInvitationCodeError,
@@ -2866,6 +2923,24 @@ export const useCreateCheckoutSession = <
     mutationKey: Common.UseCreateCheckoutSessionKeyFn(mutationKey),
     mutationFn: (clientOptions) =>
       createCheckoutSession(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useCreateCreditPackCheckoutSession = <
+  TData = Common.CreateCreditPackCheckoutSessionMutationResult,
+  TError = CreateCreditPackCheckoutSessionError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<CreateCreditPackCheckoutSessionData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<CreateCreditPackCheckoutSessionData, true>, TContext>({
+    mutationKey: Common.UseCreateCreditPackCheckoutSessionKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      createCreditPackCheckoutSession(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreatePortalSession = <

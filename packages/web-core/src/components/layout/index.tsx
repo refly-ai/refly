@@ -33,6 +33,8 @@ import { useGetMediaModel } from '@refly-packages/ai-workspace-common/hooks/use-
 import { useHandleUrlParamsCallback } from '@refly-packages/ai-workspace-common/hooks/use-handle-url-params-callback';
 import { useRouteCollapse } from '@refly-packages/ai-workspace-common/hooks/use-route-collapse';
 import cn from 'classnames';
+import { FormOnboardingModal } from '../form-onboarding-modal';
+import { OnboardingSuccessModal } from '../onboarding-success-modal';
 
 const Content = Layout.Content;
 
@@ -161,6 +163,8 @@ export const AppLayout = (props: AppLayoutProps) => {
         <BigSearchModal />
         <LoginModal />
         <VerificationModal />
+        <FormOnboardingModal />
+        <OnboardingSuccessModal />
         <InvitationCodeModal />
         <ResetPasswordModal />
         <SubscribeModal />
