@@ -15,6 +15,7 @@ import { Share } from 'refly-icons';
 import { logEvent } from '@refly/telemetry-web';
 import { CanvasNode } from '@refly/openapi-schema';
 import { ResultItemPreview } from '@refly-packages/ai-workspace-common/components/workflow-app/ResultItemPreview';
+import { usePublicFileUrlContext } from '@refly-packages/ai-workspace-common/context/public-file-url';
 
 // Content renderer component
 const NodeRenderer = memo(
@@ -39,6 +40,7 @@ const NodeRenderer = memo(
     inModal?: boolean;
   }) => {
     const { t } = useTranslation();
+    const usePublicFileUrl = usePublicFileUrlContext();
 
     // Check if node has downloadable data
     const nodeData: NodeData = useMemo(
@@ -64,8 +66,8 @@ const NodeRenderer = memo(
           title: nodeData.title,
         });
       }
-      await downloadNodeData(nodeData, t);
-    }, [nodeData, t, fromProducts]);
+      await downloadNodeData(nodeData, t, { usePublicFileUrl });
+    }, [nodeData, t, fromProducts, usePublicFileUrl]);
 
     // Handle share for any node type
     const handleShare = useCallback(async () => {

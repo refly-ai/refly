@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Layout } from 'antd';
-import { useMatch } from 'react-router-dom';
+import { useMatch, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from '@sentry/react';
 import { SiderLayout } from '@refly-packages/ai-workspace-common/components/sider/layout';
@@ -41,6 +41,10 @@ interface AppLayoutProps {
 }
 
 export const AppLayout = (props: AppLayoutProps) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const hasRedirectedRef = useRef(false);
+
   const { showCanvasListModal, setShowCanvasListModal, showLibraryModal, setShowLibraryModal } =
     useSiderStoreShallow((state) => ({
       showCanvasListModal: state.showCanvasListModal,
@@ -86,6 +90,28 @@ export const AppLayout = (props: AppLayoutProps) => {
     }
   }, [i18n, locale]);
 
+  // Handle root path redirection based on login status
+  useEffect(() => {
+    if (
+      location.pathname === '/' &&
+      !userStore.isCheckingLoginStatus &&
+      !hasRedirectedRef.current
+    ) {
+      hasRedirectedRef.current = true;
+      if (userStore.isLogin && userStore.userProfile) {
+        navigate('/workspace', { replace: true });
+      } else {
+        navigate('/login', { replace: true });
+      }
+    }
+  }, [
+    location.pathname,
+    userStore.isLogin,
+    userStore.userProfile,
+    userStore.isCheckingLoginStatus,
+    navigate,
+  ]);
+
   // Handle payment callback
   useHandleUrlParamsCallback();
 
@@ -96,6 +122,7 @@ export const AppLayout = (props: AppLayoutProps) => {
   const isPricing = useMatch('/pricing');
   const matchCanvas = useMatch('/canvas/:canvasId');
   const matchWorkflow = useMatch('/workflow/:workflowId');
+  const isShareFile = useMatch('/share/file/:shareId');
   const isWorkflowEmpty = matchCanvas?.params?.canvasId === 'empty';
   const isWorkflow = (!!matchCanvas || !!matchWorkflow) && !isWorkflowEmpty;
 
@@ -123,10 +150,11 @@ export const AppLayout = (props: AppLayoutProps) => {
         {showSider ? <SiderLayout source="sider" /> : null}
         <Layout
           className={cn(
-            'content-layout bg-transparent flex-grow overflow-y-auto overflow-x-hidden m-2 rounded-xl min-w-0 min-h-0 overscroll-contain',
+            'content-layout bg-transparent flex-grow overflow-y-auto overflow-x-hidden rounded-xl min-w-0 min-h-0 overscroll-contain',
+            !isShareFile && 'm-2',
             isWorkflow ? '' : 'shadow-refly-m',
           )}
-          style={{ height: 'calc(var(--screen-height) - 16px)' }}
+          style={isShareFile ? {} : { height: 'calc(var(--screen-height) - 16px)' }}
         >
           <Content>{props.children}</Content>
         </Layout>

@@ -1,13 +1,13 @@
-import { Button, Dropdown, Modal, message } from 'antd';
-import { memo, useState, useCallback, useMemo } from 'react';
+import { Button, Modal, Tooltip, message } from 'antd';
+import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Running1, StopCircle } from 'refly-icons';
-import type { MenuProps } from 'antd';
+import { Play, StopCircle, Preview } from 'refly-icons';
+import { ActionStatus } from '@refly/openapi-schema';
 
 interface SkillResponseActionsProps {
   nodeIsExecuting: boolean;
   workflowIsRunning: boolean;
-  // Variant: 'node' shows dropdown menu, 'preview' shows simple button
+  // Variant: 'node' shows two buttons (rerunFromHere and rerunSingle), 'preview' shows simple button
   variant?: 'node' | 'preview';
   // For node variant
   onRerunSingle?: () => void;
@@ -19,6 +19,7 @@ interface SkillResponseActionsProps {
   // Extra actions (e.g., Close button in preview)
   extraActions?: React.ReactNode;
   readonly?: boolean;
+  status?: ActionStatus;
 }
 
 const SkillResponseActionsComponent = ({
@@ -31,22 +32,38 @@ const SkillResponseActionsComponent = ({
   onStop,
   extraActions,
   readonly = false,
+  status,
 }: SkillResponseActionsProps) => {
   const { t } = useTranslation();
-  const [isHovered, setIsHovered] = useState(false);
 
   // When workflow is running but current node is not executing, disable actions
   const disabled = readonly || workflowIsRunning;
 
-  const handleMenuClick = useCallback<NonNullable<MenuProps['onClick']>>(
-    ({ key }) => {
-      if (key === 'rerunSingle' && onRerunSingle) {
+  const isReRunning = status && status !== 'init';
+  const singleButtonTitle = nodeIsExecuting
+    ? t('canvas.skillResponse.stopSingle')
+    : isReRunning
+      ? t('canvas.skillResponse.rerunSingle')
+      : t('canvas.skillResponse.runSingle');
+
+  const handleRerunSingleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onRerunSingle) {
         onRerunSingle();
-      } else if (key === 'rerunFromHere' && onRerunFromHere) {
+      }
+    },
+    [onRerunSingle],
+  );
+
+  const handleRerunFromHereClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onRerunFromHere) {
         onRerunFromHere();
       }
     },
-    [onRerunSingle, onRerunFromHere],
+    [onRerunFromHere],
   );
 
   const handleStopClick = useCallback(
@@ -55,10 +72,18 @@ const SkillResponseActionsComponent = ({
       if (nodeIsExecuting) {
         Modal.confirm({
           title: t('canvas.skillResponse.stopConfirmModal.title'),
-          content: t('canvas.skillResponse.stopConfirmModal.content'),
+          content: (
+            <div>
+              <div>{t('canvas.skillResponse.stopConfirmModal.main')}</div>
+              <div className="text-sm text-gray-500">
+                {t('canvas.skillResponse.stopConfirmModal.note')}
+              </div>
+            </div>
+          ),
           okText: t('canvas.skillResponse.stopConfirmModal.confirm'),
           cancelText: t('canvas.skillResponse.stopConfirmModal.cancel'),
           icon: null,
+          centered: true,
           okButtonProps: {
             className:
               '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
@@ -83,39 +108,21 @@ const SkillResponseActionsComponent = ({
     [onRerun],
   );
 
-  const menuItems: MenuProps['items'] = useMemo(
-    () => [
-      {
-        key: 'rerunFromHere',
-        label: t('canvas.skillResponse.rerunFromHere'),
-      },
-      {
-        key: 'rerunSingle',
-        label: t('canvas.skillResponse.rerunSingle'),
-      },
-    ],
-    [t],
-  );
-
   // Determine which icon to show
   const iconSize = variant === 'preview' ? 20 : 12;
   const iconClassName = variant === 'preview' ? '' : 'translate-y-[-1px]';
   let icon = <Play size={iconSize} className={iconClassName} />;
   if (nodeIsExecuting && !disabled) {
-    icon = isHovered ? (
-      <StopCircle size={iconSize} className={iconClassName} />
-    ) : (
-      <Running1 size={iconSize} className={iconClassName} />
-    );
+    icon = <StopCircle size={iconSize} className={iconClassName} />;
   }
 
   const buttonClassName =
     variant === 'preview'
       ? 'flex items-center justify-center'
-      : '!h-6 !w-6 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover';
+      : '!h-5 !w-5 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover';
 
   // Preview variant: simple button(s)
-  if (variant === 'preview' || nodeIsExecuting) {
+  if (variant === 'preview') {
     return (
       <>
         <Button
@@ -123,8 +130,6 @@ const SkillResponseActionsComponent = ({
           icon={icon}
           onClick={nodeIsExecuting ? handleStopClick : handleRerunClick}
           disabled={disabled}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
           className={buttonClassName}
         />
         {extraActions}
@@ -132,28 +137,32 @@ const SkillResponseActionsComponent = ({
     );
   }
 
-  // Node variant: dropdown or stop button
-  // When running, just show a button; when not running, show dropdown
   return (
-    <Dropdown
-      menu={{
-        items: menuItems,
-        onClick: handleMenuClick,
-      }}
-      trigger={['click']}
-      placement="topLeft"
-      disabled={disabled}
-    >
-      <Button
-        type="text"
-        size="small"
-        icon={icon}
-        disabled={disabled}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        className={buttonClassName}
-      />
-    </Dropdown>
+    <>
+      <Tooltip title={t('canvas.skillResponse.rerunFromHere')}>
+        <Button
+          type="text"
+          size="small"
+          icon={<Preview size={iconSize} className={iconClassName} />}
+          onClick={handleRerunFromHereClick}
+          disabled={disabled || nodeIsExecuting}
+          className={buttonClassName}
+          title={t('canvas.skillResponse.rerunFromHere')}
+        />
+      </Tooltip>
+
+      <Tooltip title={singleButtonTitle}>
+        <Button
+          type="text"
+          size="small"
+          icon={icon}
+          onClick={nodeIsExecuting ? handleStopClick : handleRerunSingleClick}
+          disabled={disabled}
+          className={buttonClassName}
+          title={singleButtonTitle}
+        />
+      </Tooltip>
+    </>
   );
 };
 

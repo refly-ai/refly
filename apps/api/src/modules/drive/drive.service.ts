@@ -16,7 +16,13 @@ import {
   DriveFileSource,
 } from '@refly/openapi-schema';
 import { Prisma, DriveFile as DriveFileModel } from '@prisma/client';
-import { genDriveFileID, getFileCategory, pick } from '@refly/utils';
+import {
+  genDriveFileID,
+  getFileCategory,
+  getSafeMimeType,
+  isPlainTextMimeType,
+  pick,
+} from '@refly/utils';
 import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
 import { streamToBuffer } from '../../utils';
@@ -340,15 +346,14 @@ export class DriveService {
           size = BigInt(objectInfo?.size ?? 0);
           request.type =
             objectInfo?.metaData?.['Content-Type'] ??
-            mime.getType(name) ??
-            'application/octet-stream';
+            getSafeMimeType(name, mime.getType(name) ?? undefined);
         } else if (externalUrl) {
           // Case 3: Download from external URL
           rawData = await this.downloadFileFromUrl(externalUrl);
           size = BigInt(rawData.length);
 
           // Determine content type based on file extension or default to binary
-          request.type = mime.getType(name) ?? 'application/octet-stream';
+          request.type = getSafeMimeType(name, mime.getType(name) ?? undefined);
         }
 
         if (options?.archiveFiles) {
@@ -466,8 +471,8 @@ export class DriveService {
 
     let content = driveFile.summary;
 
-    // Case 1: text/plain - read directly
-    if (driveFile.type === 'text/plain') {
+    // Case 1: Plain text files - read directly without parsing
+    if (isPlainTextMimeType(driveFile.type)) {
       try {
         const driveStorageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
         const readable = await this.internalOss.getObject(driveStorageKey);
@@ -486,7 +491,7 @@ export class DriveService {
       };
     }
 
-    // Case 2: other types - check cache or parse
+    // Case 2: Other types (PDF, images, etc.) - check cache or parse
     return await this.loadOrParseDriveFile(user, driveFile);
   }
 
@@ -730,12 +735,17 @@ export class DriveService {
    * @param files - Array of drive files to generate URLs for
    * @returns Array of URLs (either base64 data URLs or signed URLs depending on config)
    */
-  async generateDriveFileUrls(user: User, files: DriveFile[]): Promise<string[]> {
+  async generateDriveFileUrls(
+    user: User,
+    files: DriveFile[],
+    modeOverride?: 'base64' | 'url',
+  ): Promise<string[]> {
     if (!Array.isArray(files) || files.length === 0) {
       return [];
     }
 
-    let fileMode = this.config.get('drive.payloadMode');
+    const configuredMode = this.config.get<string>('drive.payloadMode');
+    let fileMode = modeOverride ?? configuredMode ?? 'url';
     if (fileMode === 'url' && !this.config.get('static.private.endpoint')) {
       this.logger.warn('Private static endpoint is not configured, fallback to base64 mode');
       fileMode = 'base64';
@@ -813,9 +823,7 @@ export class DriveService {
       return [];
     }
 
-    const processedRequests = await this.batchProcessDriveFileRequests(user, canvasId, files, {
-      archiveFiles: true,
-    });
+    const processedRequests = await this.batchProcessDriveFileRequests(user, canvasId, files);
 
     // Process each file to prepare data for bulk creation
     const driveFilesData: Prisma.DriveFileCreateManyInput[] = processedRequests.map((req) => {
@@ -856,9 +864,7 @@ export class DriveService {
       throw new ParamsError('Canvas ID is required for create operation');
     }
 
-    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request], {
-      archiveFiles: true,
-    });
+    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request]);
     const processedReq = processedResults[0];
 
     if (!processedReq) {
@@ -877,6 +883,7 @@ export class DriveService {
         'summary',
         'resultId',
         'resultVersion',
+        'variableId',
       ]),
       scope: 'present',
       category: processedReq.category,
@@ -958,6 +965,27 @@ export class DriveService {
   }
 
   /**
+   * Check if a file exists in OSS
+   * @param oss - The OSS instance to check
+   * @param storageKey - The storage key to check
+   * @returns true if file exists, false otherwise
+   */
+  private async fileExistsInOss(
+    oss: ObjectStorageService,
+    storageKey: string | null | undefined,
+  ): Promise<boolean> {
+    if (!storageKey) return false;
+    try {
+      const stat = await oss.statObject(storageKey);
+      return stat !== null;
+    } catch (error) {
+      // If any error occurs (permission denied, network error, etc.), treat as file not exists
+      this.logger.warn(`Failed to check file existence for ${storageKey}: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
    * Duplicate a drive file to a new canvas
    */
   async duplicateDriveFile(
@@ -972,9 +1000,13 @@ export class DriveService {
       canvasId: newCanvasId,
     });
 
-    if (await this.internalOss.statObject(sourceFile.storageKey)) {
+    if (newStorageKey === sourceFile.storageKey) {
+      return sourceFile;
+    }
+
+    if (await this.fileExistsInOss(this.internalOss, sourceFile.storageKey)) {
       await this.internalOss.duplicateFile(sourceFile.storageKey, newStorageKey);
-    } else if (await this.externalOss.statObject(sourceFile.storageKey)) {
+    } else if (await this.fileExistsInOss(this.externalOss, sourceFile.storageKey)) {
       const stream = await this.externalOss.getObject(sourceFile.storageKey);
       await this.internalOss.putObject(newStorageKey, stream);
     } else {
@@ -1050,14 +1082,48 @@ export class DriveService {
   }
 
   /**
+   * Get drive file metadata without loading the full content
+   */
+  async getDriveFileMetadata(
+    user: User,
+    fileId: string,
+  ): Promise<{ contentType: string; filename: string; lastModified: Date }> {
+    const driveFile = await this.prisma.driveFile.findFirst({
+      select: {
+        name: true,
+        type: true,
+        updatedAt: true,
+      },
+      where: { fileId, uid: user.uid, deletedAt: null },
+    });
+
+    if (!driveFile) {
+      throw new NotFoundException(`Drive file not found: ${fileId}`);
+    }
+
+    return {
+      contentType: driveFile.type || 'application/octet-stream',
+      filename: driveFile.name,
+      lastModified: new Date(driveFile.updatedAt),
+    };
+  }
+
+  /**
    * Get drive file stream for serving file content
    */
   async getDriveFileStream(
     user: User,
     fileId: string,
-  ): Promise<{ data: Buffer; contentType: string; filename: string }> {
+  ): Promise<{ data: Buffer; contentType: string; filename: string; lastModified: Date }> {
     const driveFile = await this.prisma.driveFile.findFirst({
-      select: { uid: true, canvasId: true, name: true, storageKey: true, type: true },
+      select: {
+        uid: true,
+        canvasId: true,
+        name: true,
+        storageKey: true,
+        type: true,
+        updatedAt: true,
+      },
       where: { fileId, uid: user.uid, deletedAt: null },
     });
 
@@ -1079,6 +1145,7 @@ export class DriveService {
       data,
       contentType: driveFile.type || 'application/octet-stream',
       filename: driveFile.name,
+      lastModified: new Date(driveFile.updatedAt),
     };
   }
 
@@ -1115,6 +1182,37 @@ export class DriveService {
   }
 
   /**
+   * Get public drive file metadata without loading the full content
+   */
+  async getPublicFileMetadata(fileId: string): Promise<{
+    contentType: string;
+    filename: string;
+    lastModified: Date;
+  }> {
+    const driveFile = await this.prisma.driveFile.findFirst({
+      select: {
+        type: true,
+        storageKey: true,
+        updatedAt: true,
+      },
+      where: { fileId },
+    });
+
+    if (!driveFile) {
+      throw new NotFoundException(`Public file with id ${fileId} not found`);
+    }
+
+    const filename = path.basename(driveFile.storageKey) || 'file';
+    const contentType = getSafeMimeType(filename, mime.getType(filename) ?? undefined);
+
+    return {
+      contentType,
+      filename,
+      lastModified: new Date(driveFile.updatedAt),
+    };
+  }
+
+  /**
    * Get public drive file content for serving via public endpoint
    * Used by the public file endpoint to serve shared files
    */
@@ -1122,12 +1220,14 @@ export class DriveService {
     data: Buffer;
     contentType: string;
     filename: string;
+    lastModified: Date;
   }> {
     try {
       const driveFile = await this.prisma.driveFile.findFirst({
         select: {
           type: true,
           storageKey: true,
+          updatedAt: true,
         },
         where: { fileId },
       });
@@ -1142,12 +1242,13 @@ export class DriveService {
       const filename = path.basename(storageKey) || 'file';
 
       // Try to get contentType from file extension
-      const contentType = mime.getType(filename) || 'application/octet-stream';
+      const contentType = getSafeMimeType(filename, mime.getType(filename) ?? undefined);
 
       return {
         data,
         contentType,
         filename,
+        lastModified: new Date(driveFile.updatedAt),
       };
     } catch (error) {
       if (

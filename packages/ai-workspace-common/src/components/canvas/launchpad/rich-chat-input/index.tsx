@@ -7,7 +7,7 @@ import {
 import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import type { IContextItem } from '@refly/common-types';
-import type { CanvasNodeType, GenericToolset } from '@refly/openapi-schema';
+import type { GenericToolset } from '@refly/openapi-schema';
 import { useSearchStoreShallow, useUserStoreShallow, useToolStoreShallow } from '@refly/stores';
 import { cn } from '@refly/utils/cn';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -290,32 +290,34 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             }
           }, 100);
         } else if (item.variableType === 'resource') {
-          // For resource type variables, find the corresponding resource data and add to context
+          // For resource type variables, find the corresponding DriveFile and add to context
           if (item.variableValue?.length && item.variableValue[0]?.resource) {
             const resourceValue = item.variableValue[0].resource;
-            const resource = files.find((r) => r.fileId === resourceValue.entityId);
+            const fileId = resourceValue.fileId;
+            const resource = files.find((r) => r.fileId === fileId);
 
             const contextItem: IContextItem = {
-              entityId: resourceValue.entityId,
+              // Use variableId as entityId to maintain stable reference
+              // even when the underlying file changes
+              entityId: item.variableId,
               title: resource?.name ?? resourceValue.name,
-              type: 'resource' as CanvasNodeType,
+              // Use 'file' type to ensure it's processed by convertContextItemsToInvokeParams
+              type: 'file',
               metadata: {
-                source: 'myUpload',
-                storageKey: resourceValue.storageKey,
-                resourceType: resourceValue.fileType,
-                resourceMeta: resource,
+                source: 'variable',
+                variableId: item.variableId,
               },
             };
 
             insertMention(editor, range, {
-              id: resourceValue.entityId,
-              label: resourceValue.name,
-              source: 'myUpload',
+              id: item.variableId,
+              label: item.name,
+              source: 'variables',
               variableType: 'resource',
               url: resourceValue.storageKey,
               resourceType: resourceValue.fileType,
               resourceMeta: resource,
-              entityId: resourceValue.entityId,
+              entityId: item.variableId,
             });
 
             setTimeout(() => {

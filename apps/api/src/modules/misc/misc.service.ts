@@ -25,7 +25,7 @@ import { OSS_EXTERNAL, OSS_INTERNAL, ObjectStorageService } from '../common/obje
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { ConfigService } from '@nestjs/config';
-import { omit, scrapeWeblink } from '@refly/utils';
+import { omit, scrapeWeblink, getSafeMimeType } from '@refly/utils';
 import { QUEUE_IMAGE_PROCESSING, QUEUE_CLEAN_STATIC_FILES, streamToBuffer } from '../../utils';
 import {
   CanvasNotFoundError,
@@ -60,6 +60,22 @@ export class MiscService implements OnModuleInit {
   async onModuleInit() {
     if (this.cleanStaticFilesQueue) {
       await this.setupCleanStaticFilesCronjob();
+    }
+  }
+
+  async fileStorageExists(
+    storageKey: string,
+    visibility: FileVisibility = 'public',
+  ): Promise<boolean> {
+    if (!storageKey) {
+      return false;
+    }
+    try {
+      const minio = this.minioClient(visibility);
+      await minio.statObject(storageKey);
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -422,7 +438,7 @@ export class MiscService implements OnModuleInit {
     const objectKey = randomUUID();
     const fileExtension = path.extname(fpath);
     const storageKey = param.storageKey ?? `static/${objectKey}${fileExtension}`;
-    const contentType = mime.getType(fpath) ?? 'application/octet-stream';
+    const contentType = getSafeMimeType(fpath, mime.getType(fpath) ?? undefined);
 
     await this.prisma.staticFile.create({
       data: {
@@ -492,7 +508,10 @@ export class MiscService implements OnModuleInit {
 
     const objectKey = randomUUID();
     const extension = path.extname(file.originalname);
-    const contentType = mime.getType(extension) ?? file.mimetype ?? 'application/octet-stream';
+    const contentType = getSafeMimeType(
+      file.originalname,
+      mime.getType(extension) ?? file.mimetype ?? undefined,
+    );
     const storageKey = param.storageKey ?? `static/${objectKey}${extension}`;
 
     if (existingFile) {
@@ -585,7 +604,7 @@ export class MiscService implements OnModuleInit {
     }
 
     const inferredContentType =
-      contentType ?? mime.getType(finalFilename) ?? 'application/octet-stream';
+      contentType ?? getSafeMimeType(finalFilename, mime.getType(finalFilename) ?? undefined);
 
     const visibility = param?.visibility ?? 'private';
 
@@ -746,12 +765,43 @@ export class MiscService implements OnModuleInit {
     }
   }
 
+  async getInternalFileMetadata(
+    user: User,
+    storageKey: string,
+  ): Promise<{ contentType: string; lastModified: Date; visibility: FileVisibility }> {
+    const file = await this.prisma.staticFile.findFirst({
+      select: {
+        visibility: true,
+        contentType: true,
+        updatedAt: true,
+      },
+      where: { storageKey, uid: user.uid, deletedAt: null },
+    });
+
+    if (!file) {
+      throw new NotFoundException();
+    }
+
+    return {
+      contentType: file.contentType,
+      lastModified: new Date(file.updatedAt),
+      visibility: file.visibility as FileVisibility,
+    };
+  }
+
   async getInternalFileStream(
     user: User,
     storageKey: string,
-  ): Promise<{ data: Buffer; contentType: string }> {
+  ): Promise<{ data: Buffer; contentType: string; lastModified: Date }> {
     const file = await this.prisma.staticFile.findFirst({
-      select: { uid: true, visibility: true, entityId: true, entityType: true, contentType: true },
+      select: {
+        uid: true,
+        visibility: true,
+        entityId: true,
+        entityType: true,
+        contentType: true,
+        updatedAt: true,
+      },
       where: { storageKey, uid: user.uid, deletedAt: null },
     });
 
@@ -764,20 +814,44 @@ export class MiscService implements OnModuleInit {
     );
     const data = await streamToBuffer(readable);
 
-    return { data, contentType: file.contentType };
+    return { data, contentType: file.contentType, lastModified: new Date(file.updatedAt) };
   }
 
-  async getExternalFileStream(storageKey: string): Promise<{ data: Buffer; contentType: string }> {
+  async getExternalFileMetadata(
+    storageKey: string,
+  ): Promise<{ contentType: string; lastModified: Date }> {
+    const stat = await this.prisma.staticFile.findFirst({
+      select: { contentType: true, updatedAt: true },
+      where: { storageKey, deletedAt: null },
+    });
+
+    if (!stat) {
+      throw new NotFoundException(`File with key ${storageKey} not found`);
+    }
+
+    return {
+      contentType: stat.contentType ?? 'application/octet-stream',
+      lastModified: new Date(stat.updatedAt),
+    };
+  }
+
+  async getExternalFileStream(
+    storageKey: string,
+  ): Promise<{ data: Buffer; contentType: string; lastModified: Date }> {
     try {
       const [readable, stat] = await Promise.all([
         this.minioClient('public').getObject(storageKey),
         this.prisma.staticFile.findFirst({
-          select: { contentType: true },
+          select: { contentType: true, updatedAt: true },
           where: { storageKey, deletedAt: null },
         }),
       ]);
       const data = await streamToBuffer(readable);
-      return { data, contentType: stat?.contentType ?? 'application/octet-stream' };
+      return {
+        data,
+        contentType: stat?.contentType ?? 'application/octet-stream',
+        lastModified: stat?.updatedAt ? new Date(stat.updatedAt) : new Date(),
+      };
     } catch (error) {
       // Check if it's the Minio S3Error for key not found
       if (

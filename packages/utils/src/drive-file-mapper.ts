@@ -137,7 +137,7 @@ export function mapDriveFileToWorkflowNodeExecution(
         metadata,
       },
     }),
-    entityId: file.fileId,
+    entityId: file.resultId,
   } as WorkflowNodeExecution;
 }
 

@@ -6,7 +6,7 @@ import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui'
 import { ProviderItem } from '@refly/openapi-schema';
 import { LuInfo } from 'react-icons/lu';
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
-import { SettingsButton } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
+// import { SettingsButton } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions/model-selector';
 import { CreditBillingInfo } from '@refly-packages/ai-workspace-common/components/common/credit-billing-info';
 import { useChatStoreShallow } from '@refly/stores';
 import { ArrowDown } from 'refly-icons';
@@ -234,10 +234,10 @@ export const MediaModelSelector = memo(
               </div>
             ))}
           </div>
-          <SettingsButton
+          {/* <SettingsButton
             handleOpenSettingModal={handleOpenSettingModal}
             setDropdownOpen={setDropdownOpen}
-          />
+          /> */}
         </div>
       ),
       [groupedModels, handleMenuClick, handleOpenSettingModal, setDropdownOpen],

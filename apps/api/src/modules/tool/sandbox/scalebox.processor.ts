@@ -6,21 +6,26 @@ import { PinoLogger } from 'nestjs-pino';
 import { storage, Store } from 'nestjs-pino/storage';
 
 import { guard } from '../../../utils/guard';
-import { QUEUE_SCALEBOX_EXECUTE, QUEUE_SCALEBOX_PAUSE } from '../../../utils/const';
+import {
+  QUEUE_SCALEBOX_EXECUTE,
+  QUEUE_SCALEBOX_PAUSE,
+  QUEUE_SCALEBOX_KILL,
+} from '../../../utils/const';
 import { Config } from '../../config/config.decorator';
 import { ScaleboxService } from './scalebox.service';
 import { ScaleboxStorage } from './scalebox.storage';
 import { ScaleboxLock } from './scalebox.lock';
-import { SandboxWrapper, SandboxMetadata } from './scalebox.wrapper';
+import { Sandbox } from '@scalebox/sdk';
+import { SandboxMetadata } from './wrapper/base';
+import { SandboxWrapperFactory } from './scalebox.factory';
 import { SCALEBOX_DEFAULTS } from './scalebox.constants';
 import {
   SandboxExecuteJobData,
   SandboxPauseJobData,
+  SandboxKillJobData,
   ScaleboxExecutionResult,
   ExecutionContext,
 } from './scalebox.dto';
-import { SandboxExecutionBadResultException } from './scalebox.exception';
-import { extractErrorMessage } from './scalebox.utils';
 
 // Note: @Processor decorator options are evaluated at compile-time, not runtime.
 // Dynamic config via getWorkerOptions() is NOT supported by @nestjs/bullmq.
@@ -59,20 +64,8 @@ export class ScaleboxExecuteProcessor extends WorkerHost {
         this.logger.info({ exitCode: result.exitCode }, 'Execution completed');
         return result;
       } catch (error) {
-        // Handle code execution errors (non-zero exit code) by returning as normal result
-        // BullMQ serializes exceptions and loses custom properties (code, result),
-        // so we must catch SandboxExecutionBadResultException here and convert to result
-        if (error instanceof SandboxExecutionBadResultException) {
-          this.logger.info({ exitCode: error.result.exitCode }, 'Code error (non-zero exit code)');
-          return {
-            originResult: error.result,
-            error: extractErrorMessage(error.result),
-            exitCode: error.result.exitCode,
-            files: context.registeredFiles ?? [],
-          };
-        }
-
-        // Other errors are system failures, let BullMQ handle them
+        // System errors - let BullMQ handle them
+        // Code errors (non-zero exit code) are returned as normal result, not thrown
         this.logger.error(error, 'Execution failed');
         throw error;
       }
@@ -94,6 +87,7 @@ export class ScaleboxPauseProcessor extends WorkerHost {
   constructor(
     private readonly storage: ScaleboxStorage,
     private readonly lock: ScaleboxLock,
+    private readonly wrapperFactory: SandboxWrapperFactory,
     private readonly config: ConfigService,
     private readonly logger: PinoLogger,
   ) {
@@ -155,9 +149,99 @@ export class ScaleboxPauseProcessor extends WorkerHost {
       s3DrivePath: '',
     };
 
-    const wrapper = await SandboxWrapper.reconnect(this.logger, context, metadata);
+    const wrapper = await this.wrapperFactory.reconnect(context, metadata);
     await wrapper.betaPause();
     wrapper.markAsPaused();
     await this.storage.saveMetadata(wrapper);
+  }
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Sandbox Kill Processor
+ *
+ * Handles async kill tasks for sandbox cleanup.
+ * Uses retry logic to ensure sandboxes are properly terminated.
+ */
+@Injectable()
+@Processor(QUEUE_SCALEBOX_KILL, {
+  concurrency: 10,
+})
+export class ScaleboxKillProcessor extends WorkerHost {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly logger: PinoLogger,
+  ) {
+    super();
+    this.logger.setContext(ScaleboxKillProcessor.name);
+    void this.config;
+  }
+
+  @Config.string('sandbox.scalebox.apiKey', '')
+  private scaleboxApiKey: string;
+
+  async process(job: Job<SandboxKillJobData>): Promise<void> {
+    const { sandboxId, label } = job.data;
+
+    return storage.run(new Store(this.logger.logger), async () => {
+      this.logger.assign({ jobId: job.id, sandboxId, label });
+      this.logger.debug('Processing kill job');
+
+      const result = await this.safeKill(sandboxId);
+
+      if (result.success) {
+        this.logger.info(
+          { attempts: result.attempts, durationMs: result.durationMs },
+          'Sandbox killed successfully',
+        );
+      } else {
+        this.logger.error(
+          { attempts: result.attempts, durationMs: result.durationMs, error: result.error },
+          'Failed to kill sandbox after retries',
+        );
+      }
+    });
+  }
+
+  private async safeKill(sandboxId: string): Promise<{
+    success: boolean;
+    attempts: number;
+    durationMs: number;
+    error?: string;
+  }> {
+    const { KILL_RETRY_MAX_ATTEMPTS, KILL_RETRY_INTERVAL_MS } = SCALEBOX_DEFAULTS;
+    const start = Date.now();
+    let lastError: string | undefined;
+
+    for (let attempt = 1; attempt <= KILL_RETRY_MAX_ATTEMPTS; attempt++) {
+      try {
+        const sandbox = await Sandbox.connect(sandboxId, { apiKey: this.scaleboxApiKey });
+        await sandbox.kill();
+
+        return {
+          success: true,
+          attempts: attempt,
+          durationMs: Date.now() - start,
+        };
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+        this.logger.debug(
+          { sandboxId, attempt, maxAttempts: KILL_RETRY_MAX_ATTEMPTS, error: lastError },
+          'Kill attempt failed',
+        );
+
+        if (attempt < KILL_RETRY_MAX_ATTEMPTS) {
+          await sleep(KILL_RETRY_INTERVAL_MS);
+        }
+      }
+    }
+
+    return {
+      success: false,
+      attempts: KILL_RETRY_MAX_ATTEMPTS,
+      durationMs: Date.now() - start,
+      error: lastError,
+    };
   }
 }

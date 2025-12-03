@@ -10,7 +10,7 @@ import SyntaxHighlighter from '@refly-packages/ai-workspace-common/modules/artif
 import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
 import CodeViewer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/code-viewer';
 import { cn } from '@refly/utils/cn';
-
+import { useMatch } from 'react-router-dom';
 interface FilePreviewProps {
   file: DriveFile;
   markdownClassName?: string;
@@ -30,6 +30,9 @@ export const FilePreview = memo(
     const [error, setError] = useState<string | null>(null);
     const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
     const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
+
+    // Check if current page is a share page
+    const isShareFile = useMatch('/share/file/:shareId');
 
     // useFileUrl now automatically fetches publicURL if needed in share pages
     const { fileUrl, isLoading: isLoadingUrl } = useDriveFileUrl({ file });
@@ -166,8 +169,8 @@ export const FilePreview = memo(
 
         // HTML file handling
         if (language === 'html') {
-          // If source is 'card', use simple Renderer preview
-          if (source === 'card') {
+          // If source is 'card' or in share page, use simple Renderer preview
+          if (source === 'card' || isShareFile) {
             return (
               <div className="h-full overflow-hidden">
                 <Renderer
@@ -181,7 +184,7 @@ export const FilePreview = memo(
             );
           }
 
-          // If source is 'preview', use CodeViewer with code/preview tabs
+          // If source is 'preview' and not in share page, use CodeViewer with code/preview tabs
           if (source === 'preview') {
             return (
               <div className="h-full">

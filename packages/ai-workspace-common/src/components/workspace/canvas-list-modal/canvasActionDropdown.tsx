@@ -42,6 +42,7 @@ export const CanvasActionDropdown = memo((props: CanvasActionDropdown) => {
     openRenameModal: state.openRenameModal,
     openDeleteModal: state.openDeleteModal,
   }));
+  const showRemix = false;
 
   const { duplicateCanvas, loading: duplicateLoading } = useDuplicateCanvas();
 
@@ -86,23 +87,27 @@ export const CanvasActionDropdown = memo((props: CanvasActionDropdown) => {
       ),
       key: 'rename',
     },
-    {
-      label: (
-        <div
-          className="flex items-center gap-1"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDuplicate();
-          }}
-        >
-          <Copy size={18} />
-          {t('canvas.toolbar.duplicate')}
-          <Spin spinning={duplicateLoading} size="small" className="text-refly-text-3" />
-        </div>
-      ),
-      key: 'duplicate',
-      disabled: duplicateLoading,
-    },
+    ...(showRemix
+      ? [
+          {
+            label: (
+              <div
+                className="flex items-center gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDuplicate();
+                }}
+              >
+                <Copy size={18} />
+                {t('canvas.toolbar.duplicate')}
+                <Spin spinning={duplicateLoading} size="small" className="text-refly-text-3" />
+              </div>
+            ),
+            key: 'duplicate',
+            disabled: duplicateLoading,
+          },
+        ]
+      : []),
     handleRemoveFromProject && {
       label: (
         <div

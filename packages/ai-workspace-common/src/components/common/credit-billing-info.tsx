@@ -9,18 +9,21 @@ export const CreditBillingInfo = ({ creditBilling }: { creditBilling: CreditBill
     return null;
   }
 
-  const { unit, unitCost } = creditBilling;
+  const { unit } = creditBilling;
+  const inputCost = Math.round(creditBilling.inputCost);
+  const outputCost = Math.round(creditBilling.outputCost);
 
   return (
     <Tooltip
       placement="right"
-      className="flex items-center gap-0.5 text-xs text-refly-text-2"
+      className="flex items-center gap-1 text-xs text-refly-text-2"
       title={t(`subscription.creditBilling.description.${unit}`, {
-        cost: unitCost,
+        inputCost,
+        outputCost,
       })}
     >
       <Subscription size={12} className="text-[#1C1F23] dark:text-white" />
-      {unitCost}
+      {inputCost} / {outputCost}
     </Tooltip>
   );
 };

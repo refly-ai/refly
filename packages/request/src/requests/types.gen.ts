@@ -702,6 +702,10 @@ export type CanvasTemplate = {
    */
   appShareId?: string;
   /**
+   * Credit usage for running this workflow app
+   */
+  creditUsage?: number | null;
+  /**
    * Canvas template creation time
    */
   createdAt: string;
@@ -1543,6 +1547,10 @@ export type TokenUsageItem = {
    * Output tokens
    */
   outputTokens: number;
+  /**
+   * Cache read tokens
+   */
+  cacheReadTokens?: number;
   /**
    * Provider item ID
    */
@@ -4030,6 +4038,14 @@ export type SkillContextFileItem = {
    * File object
    */
   file?: DriveFile;
+  /**
+   * Variable ID if this file is from a workflow variable
+   */
+  variableId?: string;
+  /**
+   * Variable name if this file is from a workflow variable
+   */
+  variableName?: string;
 };
 
 /**
@@ -4700,31 +4716,13 @@ export type SandboxExecuteParams = {
   /**
    * Programming language for code execution
    */
-  language:
-    | 'python'
-    | 'javascript'
-    | 'typescript'
-    | 'r'
-    | 'java'
-    | 'bash'
-    | 'node'
-    | 'nodejs'
-    | 'deno';
+  language: 'python' | 'javascript' | 'shell';
 };
 
 /**
  * Programming language for code execution
  */
-export type language =
-  | 'python'
-  | 'javascript'
-  | 'typescript'
-  | 'r'
-  | 'java'
-  | 'bash'
-  | 'node'
-  | 'nodejs'
-  | 'deno';
+export type language = 'python' | 'javascript' | 'shell';
 
 export type SandboxExecuteContext = {
   /**
@@ -5211,6 +5209,18 @@ export type GetCreditUsageByCanvasIdResponse = BaseResponse & {
      * Credit usage list by canvas ID
      */
     usages?: Array<CreditUsage>;
+  };
+};
+
+export type GetCanvasCommissionByCanvasIdResponse = BaseResponse & {
+  /**
+   * Canvas commission by canvas ID
+   */
+  data?: {
+    /**
+     * Total canvas commission by canvas ID
+     */
+    total?: number;
   };
 };
 
@@ -5953,13 +5963,17 @@ export type ProviderItemConfig =
  */
 export type CreditBilling = {
   /**
-   * Credit consumption per unit usage
-   */
-  unitCost: number;
-  /**
    * Measurement unit (e.g., token, product, second)
    */
   unit: string;
+  /**
+   * Credit consumption per unit for input tokens
+   */
+  inputCost: number;
+  /**
+   * Credit consumption per unit for output tokens
+   */
+  outputCost: number;
   /**
    * Minimum credit charge per request
    */
@@ -6660,6 +6674,151 @@ export type ComposioRevokeResponse = {
   message: string;
 };
 
+/**
+ * Context for post-processing tool execution results
+ */
+export type PostHandlerContext = {
+  /**
+   * User who executed the tool
+   */
+  user: User;
+  /**
+   * Tool name that was executed
+   */
+  toolName: string;
+  /**
+   * Toolset name/key
+   */
+  toolsetName: string;
+  /**
+   * Credit cost for this tool execution
+   */
+  creditCost: number;
+  /**
+   * File name title from input params
+   */
+  fileNameTitle?: string;
+};
+
+/**
+ * Result from post-processing tool execution
+ */
+export type PostHandlerResult = {
+  /**
+   * Processed data (may be uploaded to OSS)
+   */
+  data: unknown;
+  /**
+   * Files uploaded during post-processing
+   */
+  files?: Array<DriveFile>;
+  /**
+   * Credit cost recorded
+   */
+  creditCost?: number;
+  /**
+   * Metadata about processing
+   */
+  metadata?: {
+    [key: string]: unknown;
+  };
+};
+
+/**
+ * Composio connected account structure from API response
+ */
+export type ComposioConnectedAccount = {
+  /**
+   * Connected account ID
+   */
+  id: string;
+  /**
+   * Connection status
+   */
+  status?: string;
+  toolkit?: {
+    /**
+     * Toolkit slug identifier
+     */
+    slug?: string;
+  };
+};
+
+/**
+ * Composio tool JSON schema structure
+ */
+export type ComposioToolSchema = {
+  /**
+   * Schema type
+   */
+  type?: string;
+  /**
+   * Schema properties
+   */
+  properties?: {
+    [key: string]: ComposioSchemaProperty;
+  };
+  /**
+   * Required property names
+   */
+  required?: Array<string>;
+  [key: string]: unknown | string | ComposioSchemaProperty;
+};
+
+/**
+ * Composio schema property definition
+ */
+export type ComposioSchemaProperty = {
+  /**
+   * Property type
+   */
+  type?: string;
+  /**
+   * Property description
+   */
+  description?: string;
+  /**
+   * Whether property is deprecated
+   */
+  deprecated?: boolean;
+  [key: string]: unknown | string | boolean;
+};
+
+/**
+ * Context for creating a DynamicStructuredTool. User/userId comes from getCurrentUser() at runtime.
+ */
+export type ToolCreationContext = {
+  /**
+   * Connected account ID from Composio
+   */
+  connectedAccountId: string;
+  /**
+   * Authentication type
+   */
+  authType: 'oauth' | 'apikey';
+  /**
+   * Credit cost for tool execution
+   */
+  creditCost: number;
+  /**
+   * Toolset type identifier
+   */
+  toolsetType: GenericToolsetType;
+  /**
+   * Toolset key
+   */
+  toolsetKey: string;
+  /**
+   * Toolset display name
+   */
+  toolsetName: string;
+};
+
+/**
+ * Authentication type
+ */
+export type authType = 'oauth' | 'apikey';
+
 export type GenericToolsetType = 'regular' | 'mcp' | 'external_oauth';
 
 export type GenericToolset = {
@@ -7191,11 +7350,15 @@ export type ResourceValue = {
    */
   fileType: VariableResourceType;
   /**
-   * Resource storage key
+   * DriveFile ID (primary identifier for resource)
    */
-  storageKey: string;
+  fileId?: string;
   /**
-   * Resource ID
+   * Resource storage key (legacy, for backward compatibility)
+   */
+  storageKey?: string;
+  /**
+   * Resource ID (deprecated, use fileId instead)
    */
   entityId?: string;
 };
@@ -7340,6 +7503,10 @@ export type DriveFile = {
    * Drive file summary
    */
   summary?: string;
+  /**
+   * Object storage key for the file
+   */
+  storageKey?: string;
   /**
    * Related variable ID
    */
@@ -7792,20 +7959,6 @@ export type SchemaPropertyType = 'string' | 'number' | 'boolean' | 'object' | 'a
  */
 export type ToolResourceType = 'audio' | 'video' | 'image' | 'document';
 
-/**
- * Resource tags for categorization and pipeline routing
- */
-export type ResourceTag =
-  | 'image'
-  | 'audio'
-  | 'video'
-  | 'document'
-  | 'archive'
-  | 'pdf'
-  | 'spreadsheet'
-  | 'presentation'
-  | 'code';
-
 export type SchemaProperty = {
   type: SchemaPropertyType;
   /**
@@ -7820,14 +7973,6 @@ export type SchemaProperty = {
    * Format for the property value. For resources: base64, url, binary, text. For strings: date-time, uri, email, etc.
    */
   format?: string;
-  /**
-   * Resource tags for categorization and pipeline routing (e.g., ['image', 'png'])
-   */
-  tags?: Array<ResourceTag>;
-  /**
-   * Accepted MIME types for this resource field (e.g., ['image/png', 'image/jpeg'])
-   */
-  mimeTypes?: Array<string>;
   /**
    * Constant value for discriminator matching in oneOf/anyOf
    */
@@ -8386,11 +8531,15 @@ export type HandlerResponse = {
    */
   success: boolean;
   /**
-   * Response data
+   * Response data (object or array of objects)
    */
-  data?: {
-    [key: string]: unknown;
-  };
+  data?:
+    | {
+        [key: string]: unknown;
+      }
+    | Array<{
+        [key: string]: unknown;
+      }>;
   /**
    * Local file path (if file was saved)
    */
@@ -10382,6 +10531,19 @@ export type GetCreditUsageByCanvasIdData = {
 export type GetCreditUsageByCanvasIdResponse2 = GetCreditUsageByCanvasIdResponse;
 
 export type GetCreditUsageByCanvasIdError = unknown;
+
+export type GetCanvasCommissionByCanvasIdData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+  };
+};
+
+export type GetCanvasCommissionByCanvasIdResponse2 = GetCanvasCommissionByCanvasIdResponse;
+
+export type GetCanvasCommissionByCanvasIdError = unknown;
 
 export type ListInvitationCodesResponse2 = ListInvitationCodesResponse;
 

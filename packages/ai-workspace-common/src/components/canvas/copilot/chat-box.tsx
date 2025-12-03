@@ -1,4 +1,5 @@
 import { memo, useMemo, useEffect, useCallback } from 'react';
+import { Modal, message } from 'antd';
 
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { genActionResultID, genCopilotSessionID } from '@refly/utils/id';
@@ -49,9 +50,13 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
     return sessionResultIds?.map((resultId) => resultMap[resultId]) ?? [];
   }, [sessionResultIds, resultMap]);
 
-  const isExecuting = useMemo(() => {
-    return results.some((result) => ['executing', 'waiting'].includes(result?.status ?? ''));
+  const currentExecutingResult = useMemo(() => {
+    return (
+      results.find((result) => ['executing', 'waiting'].includes(result?.status ?? '')) ?? null
+    );
   }, [results]);
+
+  const isExecuting = !!currentExecutingResult;
 
   const firstResult = useMemo(() => {
     return results?.[0] ?? null;
@@ -63,7 +68,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
     }
   }, [firstResult?.status, refetchHistorySessions]);
 
-  const { invokeAction } = useInvokeAction();
+  const { invokeAction, abortAction } = useInvokeAction();
 
   const handleSendMessage = useCallback(async () => {
     if (isExecuting) {
@@ -108,6 +113,28 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
     setCreatedCopilotSessionId,
   ]);
 
+  const handleAbort = useCallback(() => {
+    if (!currentExecutingResult) {
+      return;
+    }
+
+    Modal.confirm({
+      title: t('copilot.abortConfirmModal.title'),
+      content: t('copilot.abortConfirmModal.content'),
+      okText: t('copilot.abortConfirmModal.confirm'),
+      cancelText: t('copilot.abortConfirmModal.cancel'),
+      icon: null,
+      centered: true,
+      okButtonProps: {
+        className: '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
+      },
+      onOk: async () => {
+        await abortAction(currentExecutingResult.resultId);
+        message.success(t('copilot.abortSuccess'));
+      },
+    });
+  }, [currentExecutingResult, abortAction, t]);
+
   return (
     <div className="w-full p-3 rounded-xl overflow-hidden border-[1px] border-solid border-refly-primary-default ">
       <ChatInput
@@ -127,6 +154,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
         onUploadImage={() => Promise.resolve()}
         isExecuting={isExecuting}
         showLeftActions={false}
+        handleAbort={handleAbort}
       />
     </div>
   );

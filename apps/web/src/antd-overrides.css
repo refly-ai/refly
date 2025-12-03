@@ -179,3 +179,10 @@
 .ant-image-preview-operations {
   background-color: var(--refly-bg-content-z2) !important;
 }
+
+.ant-message-notice-content {
+  background: var(--refly-toast-fill) !important;
+  border: 1px solid var(--refly-Card-Border) !important;
+  box-shadow: 0 8px 40px 0 rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+}

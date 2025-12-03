@@ -1,5 +1,5 @@
 import { memo, useEffect, useState, useCallback, useMemo } from 'react';
-import { NodeProps, Position, useReactFlow } from '@xyflow/react';
+import { NodeProps, Position } from '@xyflow/react';
 import { StartNodeHeader } from './shared/start-node-header';
 import cn from 'classnames';
 import { BiText } from 'react-icons/bi';
@@ -26,7 +26,7 @@ import { CanvasNode } from '@refly/openapi-schema';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useCanvasStoreShallow } from '@refly/stores';
 
-const NODE_SIDE_CONFIG = { width: 'fit-content', height: 'auto' };
+const NODE_SIDE_CONFIG = { width: 250, height: 'auto' };
 
 export const VARIABLE_TYPE_ICON_MAP = {
   string: BiText,
@@ -95,10 +95,8 @@ export const StartNode = memo(({ id, onNodeClick, data }: StartNodeProps) => {
 
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
-  const [previousWidth, setPreviousWidth] = useState<string | number>('fit-content');
   const { edges } = useCanvasData();
-  const { setNodeStyle, setNodePosition } = useNodeData();
-  const { getNode } = useReactFlow();
+  const { setNodeStyle } = useNodeData();
   useSelectedNodeZIndex(id, selected);
   const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
 
@@ -156,74 +154,10 @@ export const StartNode = memo(({ id, onNodeClick, data }: StartNodeProps) => {
     [id, addNode, getConnectionInfo],
   );
 
-  // Function to calculate width difference and adjust position
-  const adjustPositionForWidthChange = useCallback(
-    (
-      oldWidth: string | number,
-      newWidth: string | number,
-      currentPosition: { x: number; y: number },
-    ) => {
-      // Only adjust if we have a valid current position
-      if (!currentPosition) return currentPosition;
-
-      // Calculate width difference
-      let widthDifference = 0;
-
-      if (oldWidth === 'fit-content' && newWidth === 320) {
-        // From fit-content to 320px - move left by the difference
-        // Estimate fit-content width based on the header content (icon + text + padding)
-        // Icon (~24px) + text (~60px) + padding (32px) = ~116px
-        const estimatedFitContentWidth = 116;
-        widthDifference = 320 - estimatedFitContentWidth;
-      } else if (oldWidth === 320 && newWidth === 'fit-content') {
-        // From 320px to fit-content - move right by the difference
-        const estimatedFitContentWidth = 116;
-        widthDifference = estimatedFitContentWidth - 320;
-      }
-
-      // Adjust x position to keep right edge in the same place
-      return {
-        x: currentPosition.x - widthDifference,
-        y: currentPosition.y,
-      };
-    },
-    [],
-  );
-
   // Effect to handle width changes and maintain right edge position
   useEffect(() => {
-    const newWidth = workflowVariables.length > 0 ? 320 : 'fit-content';
-    const oldWidth = previousWidth;
     setNodeStyle(id, NODE_SIDE_CONFIG);
-
-    // Adjust position if width has changed to keep right edge in the same place
-    if (oldWidth !== newWidth) {
-      const currentNode = getNode(id);
-      if (currentNode?.position) {
-        const adjustedPosition = adjustPositionForWidthChange(
-          oldWidth,
-          newWidth,
-          currentNode.position,
-        );
-
-        // Only update position if it has actually changed
-        if (adjustedPosition.x !== currentNode.position.x) {
-          setNodePosition(id, adjustedPosition);
-        }
-      }
-
-      // Update the previous width for next comparison
-      setPreviousWidth(newWidth);
-    }
-  }, [
-    id,
-    setNodeStyle,
-    setNodePosition,
-    workflowVariables.length,
-    previousWidth,
-    adjustPositionForWidthChange,
-    getNode,
-  ]);
+  }, [id, setNodeStyle]);
 
   // Add event handling for askAI
   useEffect(() => {
@@ -269,7 +203,7 @@ export const StartNode = memo(({ id, onNodeClick, data }: StartNodeProps) => {
 
         {/* Input parameters section */}
         {workflowVariables.length > 0 ? (
-          <div className="flex flex-col p-3 w-[320px]">
+          <div className="flex flex-col p-3">
             <div className="space-y-2">
               {workflowVariables.slice(0, 6).map((variable) => (
                 <InputParameterRow

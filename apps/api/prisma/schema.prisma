@@ -1408,6 +1408,10 @@ model CreditUsage {
   pilotSessionId    String?  @map("pilot_session_id")
   /// Usage description
   description       String?  @map("description")
+  /// Related tool call ID (if usageType is tool_call)
+  toolCallId        String?  @map("tool_call_id")
+  /// Tool call metadata (if usageType is tool_call)
+  toolCallMeta      String?  @map("tool_call_meta")
   /// App Id
   appId             String?  @map("app_id")
   /// Extra data (JSON)

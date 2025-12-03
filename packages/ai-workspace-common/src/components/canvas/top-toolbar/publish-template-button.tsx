@@ -8,6 +8,8 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { useCanvasStoreShallow } from '@refly/stores';
 import { useSkillResponseLoadingStatus } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-loading-status';
 import { TurnRight } from 'refly-icons';
+import { cn } from '@refly/utils/cn';
+import { PublishTemplatePopover } from './publish-template-popover';
 
 interface PublishTemplateButtonProps {
   canvasId: string;
@@ -41,6 +43,12 @@ const PublishTemplateButton = React.memo(
       setCreateTemplateModalVisible(true);
     }, [forceSyncState]);
 
+    const handleUpdateTemplate = useCallback(async () => {
+      // Make sure the canvas data is synced to the remote
+      await forceSyncState({ syncRemote: true });
+      setCreateTemplateModalVisible(true);
+    }, [forceSyncState]);
+
     const handlePublishSuccess = useCallback(async () => {
       // Refresh workflow apps data after successful publish
       await refetchWorkflowApps();
@@ -66,6 +74,14 @@ const PublishTemplateButton = React.memo(
     const toolbarLoading =
       executionStats.executing > 0 || executionStats.waiting > 0 || skillResponseLoading;
 
+    const disabled = useMemo(() => {
+      return toolbarLoading || !skillResponseNodes?.length;
+    }, [toolbarLoading, skillResponseNodes]);
+
+    const shareId = useMemo(() => {
+      return latestWorkflowApp?.shareId;
+    }, [latestWorkflowApp]);
+
     return (
       <>
         <CreateWorkflowAppModal
@@ -76,30 +92,67 @@ const PublishTemplateButton = React.memo(
           onPublishSuccess={handlePublishSuccess}
           appId={latestWorkflowApp?.appId}
         />
-        <Tooltip
-          title={
-            toolbarLoading
-              ? t('shareContent.waitForAgentsToFinish')
-              : !skillResponseNodes?.length
-                ? t('shareContent.noSkillResponseNodes')
-                : undefined
-          }
-          placement="top"
-        >
-          <Button
-            disabled={toolbarLoading || !skillResponseNodes?.length}
-            type="primary"
-            icon={<TurnRight size={16} />}
-            onClick={() => {
-              logEvent('canvas::canvas_publish_template', Date.now(), {
-                canvas_id: canvasId,
-              });
-              handlePublishToCommunity();
-            }}
+        {shareId ? (
+          <Tooltip
+            title={
+              toolbarLoading
+                ? t('shareContent.waitForAgentsToFinish')
+                : !skillResponseNodes?.length
+                  ? t('shareContent.noSkillResponseNodes')
+                  : undefined
+            }
+            placement="top"
           >
-            {t('shareContent.publishTemplate')}
-          </Button>
-        </Tooltip>
+            <PublishTemplatePopover
+              shareId={shareId}
+              onUpdateTemplate={handleUpdateTemplate}
+              disabled={disabled}
+              onOpen={() => {
+                logEvent('canvas::canvas_publish_template', Date.now(), {
+                  canvas_id: canvasId,
+                });
+              }}
+            >
+              <Button
+                className={cn(disabled ? 'opacity-50 cursor-not-allowed' : '')}
+                type="primary"
+                icon={<TurnRight size={16} />}
+                disabled={disabled}
+              >
+                {t('shareContent.publishTemplate')}
+              </Button>
+            </PublishTemplatePopover>
+          </Tooltip>
+        ) : (
+          <Tooltip
+            title={
+              toolbarLoading
+                ? t('shareContent.waitForAgentsToFinish')
+                : !skillResponseNodes?.length
+                  ? t('shareContent.noSkillResponseNodes')
+                  : undefined
+            }
+            placement="top"
+          >
+            <Button
+              className={cn(disabled ? 'opacity-50 cursor-not-allowed' : '')}
+              type="primary"
+              icon={<TurnRight size={16} />}
+              //  remove this comment to restore the original style, the disable logic is handled in the event handler
+              // disabled={disabled}
+              onClick={() => {
+                if (disabled) return;
+
+                logEvent('canvas::canvas_publish_template', Date.now(), {
+                  canvas_id: canvasId,
+                });
+                handlePublishToCommunity();
+              }}
+            >
+              {t('shareContent.publishTemplate')}
+            </Button>
+          </Tooltip>
+        )}
       </>
     );
   },

@@ -11,7 +11,6 @@ import { GithubOauthStrategy } from './strategy/github-oauth.strategy';
 import { GoogleOauthStrategy } from './strategy/google-oauth.strategy';
 import { TwitterOauthStrategy } from './strategy/twitter-oauth.strategy';
 import { NotionOauthStrategy } from './strategy/notion-oauth.strategy';
-import { ProviderModule } from '../provider/provider.module';
 import { NotificationModule } from '../notification/notification.module';
 import { GoogleToolOauthStrategy } from './strategy/google-tool-oauth.strategy';
 import { CreditModule } from '../credit/credit.module';
@@ -19,7 +18,6 @@ import { CreditModule } from '../credit/credit.module';
   imports: [
     CommonModule,
     MiscModule,
-    ProviderModule,
     NotificationModule,
     CreditModule,
     PassportModule.register({

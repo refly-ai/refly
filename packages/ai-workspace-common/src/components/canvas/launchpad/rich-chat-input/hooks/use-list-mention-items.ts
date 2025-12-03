@@ -34,6 +34,9 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
       variableType: variable.variableType || 'string',
       variableId: variable.variableId || '',
       variableValue: variable.value,
+      // For resource type variables, set entityId to fileId for proper context handling
+      entityId:
+        variable.variableType === 'resource' ? variable.value?.[0]?.resource?.fileId : undefined,
     }));
 
     // Get skillResponse nodes for step records

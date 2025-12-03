@@ -11,6 +11,7 @@ export function canvasTemplatePO2DTO(
     category?: CanvasTemplateCategoryModel;
     coverUrl?: string;
     appShareId?: string;
+    creditUsage?: number | null;
   },
 ): CanvasTemplate {
   return {
@@ -26,6 +27,7 @@ export function canvasTemplatePO2DTO(
       'shareUser',
       'description',
       'language',
+      'creditUsage',
     ]),
     createdAt: template.createdAt.toJSON(),
     updatedAt: template.updatedAt.toJSON(),
@@ -34,7 +36,8 @@ export function canvasTemplatePO2DTO(
     featured: template.priority > 0 ? true : undefined,
     coverUrl: template.coverUrl,
     appShareId: template.appShareId,
-  };
+    creditUsage: template.creditUsage ?? undefined,
+  } as CanvasTemplate;
 }
 
 export function canvasTemplateCategoryPO2DTO(

@@ -82,45 +82,41 @@ export const GhostNode = React.memo(({ id, data }: { id: string; data: CanvasNod
   }, [close, dragCreateInfo]);
 
   return (
-    <div
-      className="relative bg-refly-bg-content-z2 rounded-lg px-2 py-1.5 shadow-refly-m"
-      ref={containerRef}
-    >
+    <div className="relative bg-refly-bg-float-z3 rounded-lg shadow-refly-m" ref={containerRef}>
       <Handle
         type="target"
         position={Position.Left}
         isConnectable={false}
         className="!bg-transparent !border-gray-300 !w-3 !h-3 opacity-0"
       />
-      <div className="px-2 py-1.5">
-        {menuItems.map((item) => {
-          const button = (
-            <Button
-              key={item.key}
-              className={`
+      {menuItems.map((item) => {
+        const button = (
+          <Button
+            key={item.key}
+            className={`
               w-full
-              h-7
+              h-auto
               flex
               items-center
               justify-start
-              px-2
-              rounded
+              px-4
+              py-2
+              rounded-lg
               text-sm
               transition-colors
               text-refly-text-0
               hover:!bg-refly-tertiary-hover
             `}
-              type="text"
-              onClick={item.onClick}
-            >
-              {item.icon ? <item.icon size={20} /> : undefined}
-              {item.label}
-            </Button>
-          );
+            type="text"
+            onClick={item.onClick}
+          >
+            {item.icon ? <item.icon size={20} /> : undefined}
+            {item.label}
+          </Button>
+        );
 
-          return <div key={item.key}>{button}</div>;
-        })}
-      </div>
+        return <div key={item.key}>{button}</div>;
+      })}
     </div>
   );
 });

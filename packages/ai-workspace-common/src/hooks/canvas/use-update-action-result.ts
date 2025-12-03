@@ -10,6 +10,7 @@ import { useSetNodeDataByEntity } from './use-set-node-data-by-entity';
 
 const FLUSH_INTERVAL_MS = 50; // Debounce interval for heavy flush (reduced for better real-time updates)
 const MAX_WAIT_MS = 300; // Hard cap to prevent starvation under continuous streams (reduced for faster response)
+const CHOKE_THRESHOLD_MS = 800; // Threshold to detect stream choking
 
 // Memoize token usage calculation to avoid recalculating on every update
 const memoizeTokenUsage = (() => {
@@ -100,9 +101,27 @@ const isNodeDataEqual = (
   return true;
 };
 
+const isNonEmptyEvent = (event: SkillEvent) => {
+  if (event?.event === 'start' || event?.event === 'end' || event?.event === 'error') {
+    return true;
+  }
+  if (event?.event === 'stream') {
+    return !!event?.content?.trim();
+  }
+  if (
+    event?.event === 'tool_call_start' ||
+    event?.event === 'tool_call_end' ||
+    event?.event === 'tool_call_error'
+  ) {
+    return !!event?.toolCallMeta || !!event?.toolCallResult;
+  }
+  return false;
+};
+
 export const useUpdateActionResult = () => {
-  const { updateActionResult } = useActionResultStoreShallow((state) => ({
+  const { updateActionResult, setStreamChoked } = useActionResultStoreShallow((state) => ({
     updateActionResult: state.updateActionResult,
+    setStreamChoked: state.setStreamChoked,
   }));
   const { getNodes } = useReactFlow();
   const setNodeDataByEntity = useSetNodeDataByEntity();
@@ -165,9 +184,12 @@ export const useUpdateActionResult = () => {
     >
   >({});
 
+  // Track choke detection timers per resultId
+  const chokeTimerRef = useRef<Record<string, number | null>>({});
+
   const clearAccumulator = useCallback((resultId?: string) => {
     if (!resultId) {
-      // Clear all
+      // Clear all accumulators
       for (const key of Object.keys(accumRef.current)) {
         const entry = accumRef.current[key];
         if (entry?.timeoutId) {
@@ -236,7 +258,7 @@ export const useUpdateActionResult = () => {
       // Clear the accumulator for this resultId
       clearAccumulator(resultId);
     },
-    [clearAccumulator, getNodes, setNodeDataByEntity, updateActionResult],
+    [buildNodeUpdates, clearAccumulator, getNodes, setNodeDataByEntity, updateActionResult],
   );
 
   const scheduleFlush = useCallback(
@@ -291,6 +313,15 @@ export const useUpdateActionResult = () => {
   // Ensure pending updates are not lost when the hook unmounts
   useEffect(() => {
     return () => {
+      // Clear all choke detection timers
+      for (const timerId of Object.values(chokeTimerRef.current)) {
+        if (timerId) {
+          window.clearTimeout(timerId);
+        }
+      }
+      chokeTimerRef.current = {};
+
+      // Flush pending updates
       const keys = Object.keys(accumRef.current);
       for (const k of keys) {
         try {
@@ -302,9 +333,29 @@ export const useUpdateActionResult = () => {
     };
   }, [flushUpdates]);
 
-  return useCallback(
+  const updateResult = useCallback(
     (resultId: string, payload: Partial<ActionResult>, event?: SkillEvent) => {
       actionEmitter.emit('updateResult', { resultId, payload });
+
+      // Handle stream choke detection - clear existing timer and reset choked state
+      const existingTimer = chokeTimerRef.current[resultId];
+      if (existingTimer) {
+        window.clearTimeout(existingTimer);
+        chokeTimerRef.current[resultId] = null;
+      }
+
+      // If stream was choked, mark it as recovered if event is not empty
+      if (isNonEmptyEvent(event)) {
+        setStreamChoked(resultId, false);
+      }
+
+      // Set a new timer to detect if stream becomes choked (no updates for CHOKE_THRESHOLD_MS)
+      const isStreamingStatus = payload?.status === 'executing' || payload?.status === 'waiting';
+      if (isStreamingStatus) {
+        chokeTimerRef.current[resultId] = window.setTimeout(() => {
+          setStreamChoked(resultId, true);
+        }, CHOKE_THRESHOLD_MS);
+      }
 
       // If event is empty, reset accumulation and perform initial update immediately
       if (!event) {
@@ -381,7 +432,10 @@ export const useUpdateActionResult = () => {
       getNodes,
       scheduleFlush,
       setNodeDataByEntity,
+      setStreamChoked,
       updateActionResult,
     ],
   );
+
+  return updateResult;
 };

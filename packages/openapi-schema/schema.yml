@@ -3225,6 +3225,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetCreditUsageByCanvasIdResponse'
+  /credit/commission:
+    get:
+      tags:
+        - credit
+      summary: Get canvas commission by canvas ID
+      description: Get canvas commission (credit usage with commission rate) by canvas ID
+      operationId: getCanvasCommissionByCanvasId
+      parameters:
+        - name: canvasId
+          in: query
+          description: Canvas ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCanvasCommissionByCanvasIdResponse'
   /invitation/list:
     get:
       tags:
@@ -4736,6 +4757,10 @@ components:
         appShareId:
           type: string
           description: Associated workflow app share ID
+        creditUsage:
+          type: integer
+          description: Credit usage for running this workflow app
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -5517,6 +5542,9 @@ components:
         outputTokens:
           type: number
           description: Output tokens
+        cacheReadTokens:
+          type: number
+          description: Cache read tokens
         providerItemId:
           type: string
           description: Provider item ID
@@ -8037,6 +8065,12 @@ components:
         file:
           description: File object
           $ref: '#/components/schemas/DriveFile'
+        variableId:
+          type: string
+          description: Variable ID if this file is from a workflow variable
+        variableName:
+          type: string
+          description: Variable name if this file is from a workflow variable
     SkillContextResultItem:
       type: object
       description: Skill context result item
@@ -8745,13 +8779,7 @@ components:
           enum:
             - python
             - javascript
-            - typescript
-            - r
-            - java
-            - bash
-            - node
-            - nodejs
-            - deno
+            - shell
           example: "python"
 
     SandboxExecuteContext:
@@ -9243,6 +9271,18 @@ components:
                   description: Credit usage list by canvas ID
                   items:
                     $ref: '#/components/schemas/CreditUsage'
+    GetCanvasCommissionByCanvasIdResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              description: Canvas commission by canvas ID
+              properties:
+                total:
+                  type: number
+                  description: Total canvas commission by canvas ID
     InvitationCode:
       type: object
       properties:
@@ -9988,18 +10028,23 @@ components:
       type: object
       description: Credit billing configuration for provider items
       required:
-        - unitCost
         - unit
+        - inputCost
+        - outputCost
         - minCharge
       properties:
-        unitCost:
-          type: number
-          description: Credit consumption per unit usage
-          minimum: 0
         unit:
           type: string
           description: Measurement unit (e.g., token, product, second)
           example: "5k_tokens"
+        inputCost:
+          type: number
+          description: Credit consumption per unit for input tokens
+          minimum: 0
+        outputCost:
+          type: number
+          description: Credit consumption per unit for output tokens
+          minimum: 0
         minCharge:
           type: number
           description: Minimum credit charge per request
@@ -11369,7 +11414,6 @@ components:
       required:
         - name
         - fileType
-        - storageKey
       properties:
         name:
           type: string
@@ -11377,12 +11421,15 @@ components:
         fileType:
           description: Resource file type
           $ref: '#/components/schemas/VariableResourceType'
+        fileId:
+          type: string
+          description: DriveFile ID (primary identifier for resource)
         storageKey:
           type: string
-          description: Resource storage key
+          description: Resource storage key (legacy, for backward compatibility)
         entityId:
           type: string
-          description: Resource ID
+          description: Resource ID (deprecated, use fileId instead)
     VariableValue:
       type: object
       required:
@@ -11550,6 +11597,9 @@ components:
         summary:
           type: string
           description: Drive file summary
+        storageKey:
+          type: string
+          description: Object storage key for the file
         variableId:
           type: string
           description: Related variable ID

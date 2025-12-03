@@ -102,7 +102,10 @@ const translations = {
     },
     creditBilling: {
       description: {
-        '5k_tokens': '每 5k token 消耗 {{cost}} 积分',
+        '5k_tokens':
+          '每 5k 输入 token 消耗 {{inputCost}} 积分，每 5k 输出 token 消耗 {{outputCost}} 积分',
+        '1m_tokens':
+          '每 1M 输入 token 消耗 {{inputCost}} 积分，每 1M 输出 token 消耗 {{outputCost}} 积分',
         product: '每个产物消耗 {{cost}} 积分',
         canvasTotal: 'AI 输出不稳定，积分仅为预估情况，需按实际执行结果',
       },
@@ -249,6 +252,7 @@ const translations = {
     newDocument: '新文档',
     docs: '文档',
     skill: '技能',
+    thinking: 'Refly AI 思考中',
     thread: '会话',
     meta: '元信息',
     project: '知识库',
@@ -274,21 +278,21 @@ const translations = {
     uploadFailed: '上传失败',
     upload: {
       notification: {
-        uploading: '正在上传 {{count}} 张图片',
+        uploading: '正在上传 {{count}} 个文件',
         progress: '已完成 {{completed}}/{{total}}',
         complete: '完成',
-        success: '成功上传 {{count}} 张图片',
-        allUploaded: '所有图片已成功上传',
+        success: '成功上传 {{count}} 个文件',
+        allUploaded: '上传完成！您上传的文件现在可以使用了',
         partialSuccess: '上传完成，部分失败',
-        partialSuccessDesc: '成功 {{success}} 张，失败 {{error}} 张',
+        partialSuccessDesc: '成功 {{success}} 个，失败 {{error}} 个',
         failed: '上传失败',
-        allFailed: '所有图片上传失败',
+        allFailed: '所有文件上传失败',
       },
     },
     errorNotice: {
       resultId: '请求 ID: {{resultId}}',
     },
-    dropImageHere: '拖放图片到这里',
+    dropImageHere: '拖放文件到这里',
     presetColors: '预设颜色',
     duplicate: '副本',
     shareSuccess: '分享链接已复制到剪贴板!',
@@ -670,7 +674,8 @@ const translations = {
         orWeChat: '或微信',
         discordGroup: 'Discord 交流群',
         notionDocument: 'Notion 文档',
-        viewNotionDocument: '查看文档',
+        viewDocument: '查看文档',
+        feishuDocument: '飞书文档',
         joinDiscordGroup: '加入交流群',
         followReflyUpdates: '关注 Refly 动态',
         reflyTwitterAccount: 'Refly官方账号',
@@ -920,9 +925,11 @@ const translations = {
     updateShareTooltip: '同步最新分享内容',
     updateShareSuccess: '最新画布内容已同步分享',
     copyLink: '复制链接',
+    copy: '复制',
     linkCopied: '链接已复制',
     copyLinkTooltip: '复制分享链接',
     publishTemplate: '发布为模版',
+    updateTemplate: '更新模板',
     publish: '发布',
     publishTemplateTooltip: '将画布发布为模板',
     waitForAgentsToFinish: '请等待所有 Agent 运行结束后再发布',
@@ -1429,6 +1436,7 @@ const translations = {
       run: {
         title: '运行调试',
         run: '运行',
+        startRunning: '工作流开始运行',
         executing: '运行中',
         remix: '再创作',
         copyWorkflow: '再创作工作流',
@@ -1451,11 +1459,11 @@ const translations = {
         creditUsage: '预计使用 {{count}} 积分',
         abort: {
           confirmTitle: '终止工作流执行',
-          confirmContent:
-            '工作流正在运行中，此时终止，已消耗的积分将不会返还。确认终止工作流执行吗？',
+          main: '确认终止工作流执行吗？',
+          note: '工作流将立即停止。已完成的步骤将保留，已消耗的积分将不会返还。',
           confirm: '确定终止',
           abortButton: '终止',
-          success: '工作流已终止执行',
+          success: '工作流已成功终止。',
           failed: '终止工作流失败',
         },
       },
@@ -1485,14 +1493,17 @@ const translations = {
       skillCompleted: '技能已完成',
       stepCompleted: '步骤已完成',
       rerunSingle: '仅运行此节点',
+      runSingle: '仅运行此节点',
+      stopSingle: '终止',
       rerunFromHere: '从此节点开始运行',
       stopConfirmModal: {
-        title: '终止工作流运行',
-        content: '工作流运行还未完成，此时终止，已消耗的积分将不会返还。确认终止工作流运行吗？',
+        title: '停止 Agent 任务？',
+        main: '确认停止此 Agent 任务吗？',
+        note: '已完成的进度将被保存，已消耗的积分将不会返还。',
         cancel: '取消',
-        confirm: '确定终止',
+        confirm: '确定停止',
       },
-      stopSuccess: '工作流已终止执行',
+      stopSuccess: 'Agent 已成功停止。',
       stepTitle: '步骤 {{index}}',
       aiThinking: 'AI 正在思考...',
       sourcesCnt: '共找到 {{count}} 个来源',
@@ -2108,8 +2119,8 @@ const translations = {
     defaultTitle: '代码组件',
   },
   agent: {
-    configure: '配置',
-    lastRun: '最近运行',
+    configure: '输入',
+    lastRun: '输出',
     noResult: '运行后才有记录哦',
     editTitlePlaceholder: '输入智能体的标题',
     config: {
@@ -2397,7 +2408,7 @@ const translations = {
       appearance: '外观',
       subscription: '订阅',
       mcpServer: 'MCP 服务器',
-      tools: '工具配置',
+      tools: '工具',
     },
     mcpServer: {
       tools: '工具',
@@ -2612,6 +2623,14 @@ const translations = {
       activateInvitationCode: '激活邀请码',
       activateInvitationCodeSuccess: '欢迎使用 Refly 🎉 开始您的 AI 自动化之旅！',
       activateInvitationCodeFailed: '邀请码无效，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeInvalid: '邀请码无效，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeUsed: '邀请码已被使用，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeAlreadyInvited:
+        '该用户已被邀请，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeOwnCode:
+        '不能使用自己的邀请码，请重试或加入 Discord 群组获取新邀请码。',
+      activateInvitationCodeAlreadyActivated:
+        '该邀请已激活，请重试或加入 Discord 群组获取新邀请码。',
       invitationCodeCopied: '邀请码已复制！快去分享给你的朋友吧~',
       invitationCodeCopyFailed: '复制邀请码失败',
       invitationReward: '+{{amount}}积分',
@@ -3374,6 +3393,13 @@ const translations = {
       installSkillHintTitle: '添加助手',
       openCanvas: '打开画布',
     },
+    abortConfirmModal: {
+      title: '停止执行',
+      content: '确定要停止当前执行吗？已消耗的积分将不会返还。',
+      confirm: '停止执行',
+      cancel: '取消',
+    },
+    abortSuccess: '已停止执行',
     recommendQuestions: {
       title: '推荐问题',
       refresh: '换一批',
@@ -3400,6 +3426,7 @@ const translations = {
     modelSelector: {
       configureModel: '点击配置模型',
       noVisionSupport: '该模型不支持消费图片',
+      noAvailableModel: '无可用模型',
     },
     contentSelector: {
       openForWeb: '开启选择内容提问, 画布已进入只读模式',
@@ -3552,6 +3579,8 @@ const translations = {
     duplicateCanvasEntities: '复制该画布所包含的文档以及资源',
     noDescription: '暂无描述',
     emptyList: '暂无模版，快来发挥你的创造力，为社区贡献模版吧～',
+    notFoundQuestion: '没有找到你需要的自动化工作流模板？',
+    goToMarketplace: '前往市场',
   },
   workflowApp: {
     title: '名称',
@@ -3559,6 +3588,7 @@ const translations = {
     titlePlaceholder: '请输入名称',
     descriptionPlaceholder: '请输入描述',
     publish: '发布',
+    updatePublish: '更新发布',
     edit: '编辑应用',
     publishSuccess: '发布成功',
     alreadyPublished: '已发布',
@@ -3582,6 +3612,10 @@ const translations = {
     selectResults: '选择结果',
     noResultsAvailable: '暂无可用结果',
     noResultsSelected: '暂无选择结果',
+    runResultRequired: '未选择运行结果。请在发布前选择结果。',
+    validationNoUserInputs: '请在发布模板前添加用户输入。',
+    validationNoAgents: '请在发布模板前添加 Agent 节点。',
+    validationAgentsNotRun: '请在发布模板前确保所有 Agent 节点运行成功。',
     resultPreview: '产物预览',
     notLoggedIn: '未登录',
     run: {
@@ -3599,8 +3633,10 @@ const translations = {
       stopped: '工作流已停止',
       stoppedMessage: '停止运行，未生成结果，可重新运行模板',
       stopConfirmTitle: '停止模板运行？',
-      stopConfirmContent: '确定要停止此模板运行吗？运行将立即终止，已消耗的积分不会退还。',
+      stopConfirmMain: '确认停止模板运行吗？',
+      stopConfirmNote: '运行将立即终止，已消耗的积分不会退还。',
       stopSuccess: '模板运行已成功停止。',
+      confirm: '确定停止',
     },
     revenueSharing: {
       title: '模板被运行可享受积分收益分成',
@@ -3608,9 +3644,10 @@ const translations = {
       howToEarn: '如何获得收益',
     },
     publishToCommunity: {
-      label: '发布到社区',
-      help: '发布到社区后，其他用户可以在社区中发现和使用你的工作流应用',
+      label: '发布到市场',
+      help: '发布到市场后，其他用户可以在市场中发现和使用你的工作流应用',
     },
+    copyLinkTooltip: '复制最新发布版本的链接',
   },
   project: {
     create: '创建知识库',
@@ -4057,9 +4094,9 @@ const translations = {
     deleteConfirm: '确定要撤销模版{{title}}吗',
     reviewStatus: {
       reviewing: '审核中',
-      reviewingTooltip: '模板已发布到社区',
+      reviewingTooltip: '模板正在审核中,但仍可正常使用',
       published: '已发布',
-      publishedTooltip: '模板正在审核中,但仍可正常使用',
+      publishedTooltip: '模板已发布到社区',
     },
   },
   whyChooseRefly: {

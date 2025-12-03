@@ -4,7 +4,7 @@ import { PinoLogger } from 'nestjs-pino';
 
 import { RedisService } from '../../common/redis.service';
 import { Config } from '../../config/config.decorator';
-import { SandboxWrapper, SandboxMetadata } from './scalebox.wrapper';
+import { ISandboxWrapper, SandboxMetadata } from './wrapper/base';
 import { REDIS_KEYS, SCALEBOX_DEFAULTS } from './scalebox.constants';
 
 /**
@@ -28,9 +28,14 @@ export class ScaleboxStorage {
   @Config.integer('sandbox.scalebox.sandboxTimeoutMs', SCALEBOX_DEFAULTS.SANDBOX_TIMEOUT_MS)
   private sandboxTimeoutMs: number;
 
+  /** Idle queue TTL in seconds (sandboxTimeoutMs * multiplier) */
+  private get idleQueueTtlSec(): number {
+    return Math.floor((this.sandboxTimeoutMs * SCALEBOX_DEFAULTS.IDLE_QUEUE_TTL_MULTIPLIER) / 1000);
+  }
+
   // ==================== Metadata Operations ====================
 
-  async saveMetadata(wrapper: SandboxWrapper): Promise<void> {
+  async saveMetadata(wrapper: ISandboxWrapper): Promise<void> {
     const sandboxId = wrapper.sandboxId;
     const metadata = wrapper.toMetadata();
     const ttlSeconds = Math.floor(this.sandboxTimeoutMs / 1000);
@@ -48,12 +53,46 @@ export class ScaleboxStorage {
 
   // ==================== Idle Queue Operations ====================
 
-  async popFromIdleQueue(): Promise<string | null> {
-    return this.redis.getClient().lpop(REDIS_KEYS.IDLE_QUEUE);
+  /**
+   * Get idle queue key partitioned by template name
+   * This ensures sandboxes from different templates are not mixed
+   */
+  private getIdleQueueKey(templateName: string): string {
+    return `${REDIS_KEYS.IDLE_QUEUE}:${templateName}`;
   }
 
-  async pushToIdleQueue(sandboxId: string): Promise<void> {
-    await this.redis.getClient().rpush(REDIS_KEYS.IDLE_QUEUE, sandboxId);
+  /**
+   * Pop sandbox from idle queue, refresh TTL if queue still has items, delete if empty
+   */
+  async popFromIdleQueue(templateName: string): Promise<string | null> {
+    const key = this.getIdleQueueKey(templateName);
+    const client = this.redis.getClient();
+
+    const sandboxId = await client.lpop(key);
+    if (!sandboxId) {
+      return null;
+    }
+
+    // Check remaining length and either refresh TTL or delete empty queue
+    const remaining = await client.llen(key);
+    if (remaining > 0) {
+      await client.expire(key, this.idleQueueTtlSec);
+    } else {
+      await client.del(key);
+    }
+
+    return sandboxId;
+  }
+
+  /**
+   * Push sandbox to idle queue and refresh TTL
+   */
+  async pushToIdleQueue(sandboxId: string, templateName: string): Promise<void> {
+    const key = this.getIdleQueueKey(templateName);
+    const client = this.redis.getClient();
+
+    await client.rpush(key, sandboxId);
+    await client.expire(key, this.idleQueueTtlSec);
   }
 
   async getTotalSandboxCount(): Promise<number> {

@@ -62,6 +62,7 @@ const translations = {
     docs: 'Docs',
     skill: 'Skill',
     thread: 'Thread',
+    thinking: 'Refly AI is thinking',
     meta: 'Meta',
     project: 'Project',
     upgrade: 'Upgrade',
@@ -85,15 +86,15 @@ const translations = {
     uploadFailed: 'Upload failed',
     upload: {
       notification: {
-        uploading: 'Uploading {{count}} image(s)',
+        uploading: 'Uploading {{count}} file{{suffix}}',
         progress: '{{completed}} of {{total}} completed',
         complete: 'complete',
-        success: 'Successfully uploaded {{count}} image(s)',
-        allUploaded: 'All images have been uploaded successfully',
+        success: 'Successfully uploaded {{count}} file{{suffix}}',
+        allUploaded: 'Upload complete! Your content is now ready to be used',
         partialSuccess: 'Upload completed with some errors',
         partialSuccessDesc: '{{success}} successful, {{error}} failed',
         failed: 'Upload failed',
-        allFailed: 'All images failed to upload',
+        allFailed: 'All files failed to upload',
       },
     },
     errorNotice: {
@@ -709,7 +710,8 @@ const translations = {
         discordGroup: 'Discord Community',
         joinDiscordGroup: 'Join Community',
         notionDocument: 'Notion Document',
-        viewNotionDocument: 'View Document',
+        viewDocument: 'View Document',
+        feishuDocument: 'Feishu Document',
         followReflyUpdates: 'Follow Refly Updates',
         reflyTwitterAccount: 'Official Account',
       },
@@ -909,9 +911,11 @@ const translations = {
     updateShareTooltip: 'Sync latest shared content',
     updateShareSuccess: '​​Latest canvas content synced and shared successfully!',
     copyLink: 'Copy Link',
+    copy: 'Copy',
     linkCopied: 'Link copied',
     copyLinkTooltip: 'Copy shared link',
     publishTemplate: 'Publish as Template',
+    updateTemplate: 'Update Template',
     publish: 'Publish',
     publishTemplateTooltip: 'Publish canvas as template',
     waitForAgentsToFinish: 'Please wait for all Agents to finish running before publishing',
@@ -1428,6 +1432,7 @@ const translations = {
       run: {
         title: 'Run Workflow',
         run: 'Run',
+        startRunning: 'Your workflow starts running',
         executing: 'Running',
         remix: 'Remix',
         copyWorkflow: 'Remix Workflow',
@@ -1450,11 +1455,11 @@ const translations = {
         creditUsage: 'Estimated usage {{count}} credits',
         abort: {
           confirmTitle: 'Stop Workflow Execution',
-          confirmContent:
-            'The workflow is still running. If you stop it now, the consumed credits will not be refunded. Confirm stop?',
+          main: 'Are you sure you want to stop this workflow?',
+          note: 'The workflow will halt immediately. Completed steps will remain saved, and credits already consumed will not be refunded.',
           confirm: 'Confirm Stop',
           abortButton: 'Stop',
-          success: 'Workflow execution has been stopped',
+          success: 'The workflow has been stopped successfully.',
           failed: 'Failed to stop workflow',
         },
       },
@@ -1487,15 +1492,17 @@ const translations = {
       skillCompleted: 'Skill Completed',
       stepCompleted: 'Step Completed',
       rerunSingle: 'Rerun This Node',
+      runSingle: 'Run This Node',
+      stopSingle: 'Stop',
       rerunFromHere: 'Run From Here',
       stopConfirmModal: {
-        title: 'Terminate Workflow Run',
-        content:
-          'The workflow is still running. If you terminate it now, the consumed credits will not be refunded. Confirm termination?',
+        title: 'Stop Agent Task?',
+        main: 'Are you sure you want to stop this agent task?',
+        note: 'Any progress made so far will be saved, and credits already consumed will not be refunded.',
         cancel: 'Cancel',
-        confirm: 'Confirm Termination',
+        confirm: 'Confirm Stop',
       },
-      stopSuccess: 'Workflow execution has been terminated',
+      stopSuccess: 'The agent has been stopped successfully.',
       stepTitle: 'Step {{index}}',
       aiThinking: 'AI is thinking ...',
       sourcesCnt: 'Total of {{count}} source(s) found',
@@ -2123,8 +2130,8 @@ const translations = {
     defaultTitle: 'Code Artifact',
   },
   agent: {
-    configure: 'Configure',
-    lastRun: 'Last Run',
+    configure: 'Input',
+    lastRun: 'Output',
     noResult: 'Run to get results',
     editTitlePlaceholder: 'Enter title for the agent',
     config: {
@@ -2428,7 +2435,7 @@ const translations = {
       appearance: 'Appearance',
       subscription: 'Subscription',
       mcpServer: 'MCP Server',
-      tools: 'Tools Config',
+      tools: 'Tools',
     },
     mcpServer: {
       tools: 'Tools',
@@ -2644,6 +2651,16 @@ const translations = {
       activateInvitationCodeSuccess: 'Welcome to Refly 🎉 Start your AI automation journey!',
       activateInvitationCodeFailed:
         'Invite code is invalid. Please try again or join Discord to get a new one.',
+      activateInvitationCodeInvalid:
+        'Invite code is invalid. Please try again or join Discord to get a new one.',
+      activateInvitationCodeUsed:
+        'Invitation code has already been used. Please try again or join Discord to get a new one.',
+      activateInvitationCodeAlreadyInvited:
+        'This user has already been invited. Please try again or join Discord to get a new one.',
+      activateInvitationCodeOwnCode:
+        'Cannot use your own invitation code. Please try again or join Discord to get a new one.',
+      activateInvitationCodeAlreadyActivated:
+        'This invitation has already been activated. Please try again or join Discord to get a new one.',
       invitationCodeCopied: 'Invite code copied! Go share it with your friends~',
       invitationCodeCopyFailed: 'Failed to copy invitation code',
       invitationReward: '+{amount} credits',
@@ -3191,7 +3208,7 @@ const translations = {
         'Help me generate a sequence of animation scenes in the style of Makoto Shinkai, telling the story of "growing up" from childhood to adulthood.',
     },
     sessionDetail: {
-      thinking: 'Thinking',
+      thinking: 'Refly is thinking',
       approve: 'Approve',
       confirmClearCanvas: {
         title: 'Confirm Clear Canvas',
@@ -3379,6 +3396,14 @@ const translations = {
       installSkillHintTitle: 'Add Assistant',
       openCanvas: 'Open Canvas',
     },
+    abortConfirmModal: {
+      title: 'Stop Execution',
+      content:
+        'Are you sure you want to stop the current execution? The consumed credits will not be refunded.',
+      confirm: 'Stop Execution',
+      cancel: 'Cancel',
+    },
+    abortSuccess: 'Execution has been stopped',
     recommendQuestions: {
       title: 'Recommended Questions',
       refresh: 'Refresh',
@@ -3405,6 +3430,7 @@ const translations = {
     modelSelector: {
       configureModel: 'Click to configure models',
       noVisionSupport: 'This model does not support image processing',
+      noAvailableModel: 'No available models',
     },
     contentSelector: {
       openForWeb: 'Enable content selection for questions, and the canvas is now in read-only mode',
@@ -3574,7 +3600,10 @@ const translations = {
     },
     creditBilling: {
       description: {
-        '5k_tokens': '{{cost}} credit(s) per 5k tokens',
+        '5k_tokens':
+          '{{inputCost}} credit(s) per 5k input tokens, {{outputCost}} credit(s) per 5k output tokens',
+        '1m_tokens':
+          '{{inputCost}} credit(s) per 1M input tokens, {{outputCost}} credit(s) per 1M output tokens',
         product: '{{cost}} credit(s) per product',
         canvasTotal:
           'AI output is unstable, credits are only estimated and subject to actual execution results',
@@ -3819,6 +3848,8 @@ const translations = {
     duplicateCanvasEntities: 'Duplicate the canvas entities',
     noDescription: 'No description',
     emptyList: 'Zero templates? No problem! Create yours now and inspire the community!',
+    notFoundQuestion: "Didn't find the workflow automation template you need?",
+    goToMarketplace: 'Go to Marketplace',
   },
   workflowApp: {
     title: 'Name',
@@ -3826,6 +3857,7 @@ const translations = {
     titlePlaceholder: 'Please enter name',
     descriptionPlaceholder: 'Please enter description',
     publish: 'Publish',
+    updatePublish: 'Update Publish',
     edit: 'Edit App',
     publishSuccess: 'Published successfully',
     alreadyPublished: 'Already Published',
@@ -3850,6 +3882,10 @@ const translations = {
     selectResults: 'Select Results',
     noResultsAvailable: 'No results available',
     noResultsSelected: 'No results selected',
+    runResultRequired: 'No run result selected. Please choose the result before publishing.',
+    validationNoUserInputs: 'Please add user inputs before publishing your template.',
+    validationNoAgents: 'Please add agents before publishing your template.',
+    validationAgentsNotRun: 'Please run all agents successfully before publishing your template.',
     resultPreview: 'Result Preview',
     notLoggedIn: 'Not Logged In',
     run: {
@@ -3867,9 +3903,11 @@ const translations = {
       stopped: 'Workflow stopped',
       stoppedMessage: 'Workflow stopped, no results generated. You can rerun the template.',
       stopConfirmTitle: 'Stop Template Run?',
-      stopConfirmContent:
-        'Are you sure you want to stop this template run? The run will be terminated immediately, and credits already consumed will not be refunded.',
+      stopConfirmMain: 'Are you sure you want to stop this template run?',
+      stopConfirmNote:
+        'The run will be terminated immediately, and credits already consumed will not be refunded.',
       stopSuccess: 'The template run has been stopped successfully.',
+      confirm: 'Confirm Stop',
     },
     revenueSharing: {
       title: 'Earn credits by running templates',
@@ -3877,9 +3915,10 @@ const translations = {
       howToEarn: 'How to earn',
     },
     publishToCommunity: {
-      label: 'Publish to Community',
-      help: 'After publishing to the community, other users can discover and use your workflow app',
+      label: 'Publish to Marketplace',
+      help: 'After publishing to the marketplace, other users can discover and use your workflow app',
     },
+    copyLinkTooltip: 'Copy link from your latest published version',
   },
   project: {
     create: 'Create Project',
@@ -4030,9 +4069,9 @@ const translations = {
     deleteConfirm: 'Are you sure you want to revoke the template {{title}}?',
     reviewStatus: {
       reviewing: 'Under Review',
-      reviewingTooltip: 'Template has been published to the community',
+      reviewingTooltip: 'Template is under review, but can still be used normally',
       published: 'Published',
-      publishedTooltip: 'Template is under review, but can still be used normally',
+      publishedTooltip: 'Template has been published to the community',
     },
   },
   whyChooseRefly: {

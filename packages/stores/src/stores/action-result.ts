@@ -20,12 +20,15 @@ interface ActionResultState {
   resultActiveTabMap: Record<string, ResultActiveTab>;
   pollingStateMap: Record<string, PollingState & CacheInfo>;
   streamResults: Record<string, ActionResult>;
+  streamChoked: Record<string, boolean>; // key: resultId, value: true if stream is choked
   traceIdMap: Record<string, string>; // key: resultId, value: traceId
   currentFile: DriveFile | null;
+  currentFileUsePublicFileUrl?: boolean;
 
   // Stream result actions
   addStreamResult: (resultId: string, result: ActionResult) => void;
   removeStreamResult: (resultId: string) => void;
+  setStreamChoked: (resultId: string, choked: boolean) => void;
 
   // TraceId management actions
   setTraceId: (resultId: string, traceId: string) => void;
@@ -55,7 +58,7 @@ interface ActionResultState {
   cleanupOldResults: () => void;
 
   // Current file management
-  setCurrentFile: (file: DriveFile | null) => void;
+  setCurrentFile: (file: DriveFile | null, options?: { usePublicFileUrl?: boolean }) => void;
 }
 
 export const defaultState = {
@@ -64,8 +67,10 @@ export const defaultState = {
   pollingStateMap: {},
   isBatchUpdateScheduled: false,
   streamResults: {},
+  streamChoked: {},
   traceIdMap: {},
   currentFile: null,
+  currentFileUsePublicFileUrl: undefined,
 };
 
 const POLLING_STATE_INITIAL: PollingState = {
@@ -397,6 +402,13 @@ export const useActionResultStore = create<ActionResultState>()(
         });
       },
 
+      setStreamChoked: (resultId: string, choked: boolean) => {
+        set((state) => ({
+          ...state,
+          streamChoked: { ...state.streamChoked, [resultId]: choked },
+        }));
+      },
+
       // TraceId management methods
       setTraceId: (resultId: string, traceId: string) => {
         set((state) => ({
@@ -424,10 +436,11 @@ export const useActionResultStore = create<ActionResultState>()(
       },
 
       // Current file management methods
-      setCurrentFile: (file: DriveFile | null) => {
+      setCurrentFile: (file: DriveFile | null, options?: { usePublicFileUrl?: boolean }) => {
         set((state) => ({
           ...state,
           currentFile: file,
+          currentFileUsePublicFileUrl: file ? options?.usePublicFileUrl : undefined,
         }));
       },
     }),

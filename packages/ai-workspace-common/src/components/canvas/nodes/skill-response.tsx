@@ -159,7 +159,14 @@ const NodeStatusBar = memo(
               {status === 'failed' && isUserAbort ? (
                 <Paragraph
                   className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
-                  ellipsis={{ rows: 8, tooltip: true }}
+                  ellipsis={{
+                    rows: 8,
+                    tooltip: (
+                      <div className="max-h-[300px] overflow-y-auto">
+                        {t('canvas.skillResponse.userAbort.description')}
+                      </div>
+                    ),
+                  }}
                 >
                   {t('canvas.skillResponse.userAbort.description')}
                 </Paragraph>
@@ -168,7 +175,10 @@ const NodeStatusBar = memo(
                   <Paragraph
                     key={index}
                     className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
-                    ellipsis={{ rows: 8, tooltip: true }}
+                    ellipsis={{
+                      rows: 8,
+                      tooltip: <div className="max-h-[300px] overflow-y-auto">{error}</div>,
+                    }}
                   >
                     {error}
                   </Paragraph>
@@ -196,11 +206,14 @@ export const SkillResponseNode = memo(
       return nodePreviewId === id;
     }, [nodePreviewId, id]);
 
-    const { highlightedNodeId } = useCanvasNodesStoreShallow((state) => ({
+    const { highlightedNodeId, highlightedNodeIds } = useCanvasNodesStoreShallow((state) => ({
       highlightedNodeId: state.highlightedNodeId,
+      highlightedNodeIds: state.highlightedNodeIds,
     }));
 
-    const shouldHighlight = highlightedNodeId === id;
+    // Check if node should be highlighted (either single highlight or multiple highlights)
+    // Single highlight (hover) and multiple highlights (validation) can coexist
+    const shouldHighlight = highlightedNodeId === id || highlightedNodeIds?.has(id) === true;
 
     const connection = useConnection();
     const isConnectingTarget = useMemo(
@@ -465,7 +478,7 @@ export const SkillResponseNode = memo(
       });
 
       const query = data?.metadata?.query ?? '';
-      const { processedQuery } = processQueryWithMentions(query, {
+      const { llmInputQuery } = processQueryWithMentions(query, {
         replaceVars: true,
         variables,
       });
@@ -475,11 +488,12 @@ export const SkillResponseNode = memo(
           nodeId: id,
           title: title ?? query,
           resultId: entityId,
-          query: processedQuery,
+          query: llmInputQuery,
           contextItems: data?.metadata?.contextItems,
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
           version: nextVersion,
           modelInfo: data?.metadata?.modelInfo,
+          workflowVariables: variables,
         },
         {
           entityType: 'canvas',
@@ -732,14 +746,17 @@ export const SkillResponseNode = memo(
               source="node"
               canEdit={!readonly}
               actions={
-                <SkillResponseActions
-                  readonly={readonly}
-                  nodeIsExecuting={isExecuting}
-                  workflowIsRunning={workflowIsRunning}
-                  onRerunSingle={handleRerunSingle}
-                  onRerunFromHere={handleRerunFromHere}
-                  onStop={handleStop}
-                />
+                isHovered || selected ? (
+                  <SkillResponseActions
+                    readonly={readonly}
+                    nodeIsExecuting={isExecuting}
+                    workflowIsRunning={workflowIsRunning}
+                    onRerunSingle={handleRerunSingle}
+                    onRerunFromHere={handleRerunFromHere}
+                    onStop={handleStop}
+                    status={status}
+                  />
+                ) : null
               }
             />
 

@@ -702,6 +702,10 @@ export type CanvasTemplate = {
    */
   appShareId?: string;
   /**
+   * Credit usage for running this workflow app
+   */
+  creditUsage?: number | null;
+  /**
    * Canvas template creation time
    */
   createdAt: string;
@@ -1543,6 +1547,10 @@ export type TokenUsageItem = {
    * Output tokens
    */
   outputTokens: number;
+  /**
+   * Cache read tokens
+   */
+  cacheReadTokens?: number;
   /**
    * Provider item ID
    */
@@ -4030,6 +4038,14 @@ export type SkillContextFileItem = {
    * File object
    */
   file?: DriveFile;
+  /**
+   * Variable ID if this file is from a workflow variable
+   */
+  variableId?: string;
+  /**
+   * Variable name if this file is from a workflow variable
+   */
+  variableName?: string;
 };
 
 /**
@@ -4700,31 +4716,13 @@ export type SandboxExecuteParams = {
   /**
    * Programming language for code execution
    */
-  language:
-    | 'python'
-    | 'javascript'
-    | 'typescript'
-    | 'r'
-    | 'java'
-    | 'bash'
-    | 'node'
-    | 'nodejs'
-    | 'deno';
+  language: 'python' | 'javascript' | 'shell';
 };
 
 /**
  * Programming language for code execution
  */
-export type language =
-  | 'python'
-  | 'javascript'
-  | 'typescript'
-  | 'r'
-  | 'java'
-  | 'bash'
-  | 'node'
-  | 'nodejs'
-  | 'deno';
+export type language = 'python' | 'javascript' | 'shell';
 
 export type SandboxExecuteContext = {
   /**
@@ -5211,6 +5209,18 @@ export type GetCreditUsageByCanvasIdResponse = BaseResponse & {
      * Credit usage list by canvas ID
      */
     usages?: Array<CreditUsage>;
+  };
+};
+
+export type GetCanvasCommissionByCanvasIdResponse = BaseResponse & {
+  /**
+   * Canvas commission by canvas ID
+   */
+  data?: {
+    /**
+     * Total canvas commission by canvas ID
+     */
+    total?: number;
   };
 };
 
@@ -5953,13 +5963,17 @@ export type ProviderItemConfig =
  */
 export type CreditBilling = {
   /**
-   * Credit consumption per unit usage
-   */
-  unitCost: number;
-  /**
    * Measurement unit (e.g., token, product, second)
    */
   unit: string;
+  /**
+   * Credit consumption per unit for input tokens
+   */
+  inputCost: number;
+  /**
+   * Credit consumption per unit for output tokens
+   */
+  outputCost: number;
   /**
    * Minimum credit charge per request
    */
@@ -7336,11 +7350,15 @@ export type ResourceValue = {
    */
   fileType: VariableResourceType;
   /**
-   * Resource storage key
+   * DriveFile ID (primary identifier for resource)
    */
-  storageKey: string;
+  fileId?: string;
   /**
-   * Resource ID
+   * Resource storage key (legacy, for backward compatibility)
+   */
+  storageKey?: string;
+  /**
+   * Resource ID (deprecated, use fileId instead)
    */
   entityId?: string;
 };
@@ -7485,6 +7503,10 @@ export type DriveFile = {
    * Drive file summary
    */
   summary?: string;
+  /**
+   * Object storage key for the file
+   */
+  storageKey?: string;
   /**
    * Related variable ID
    */
@@ -10509,6 +10531,19 @@ export type GetCreditUsageByCanvasIdData = {
 export type GetCreditUsageByCanvasIdResponse2 = GetCreditUsageByCanvasIdResponse;
 
 export type GetCreditUsageByCanvasIdError = unknown;
+
+export type GetCanvasCommissionByCanvasIdData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+  };
+};
+
+export type GetCanvasCommissionByCanvasIdResponse2 = GetCanvasCommissionByCanvasIdResponse;
+
+export type GetCanvasCommissionByCanvasIdError = unknown;
 
 export type ListInvitationCodesResponse2 = ListInvitationCodesResponse;
 

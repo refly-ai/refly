@@ -1,4 +1,4 @@
-import type { ExecutionResult, Language } from '@scalebox/sdk';
+import { PinoLogger } from 'nestjs-pino';
 import {
   SandboxExecuteParams,
   SandboxExecuteContext,
@@ -6,8 +6,19 @@ import {
   type DriveFile,
 } from '@refly/openapi-schema';
 
-import { SandboxException, SandboxExecutionBadResultException } from './scalebox.exception';
-import { extractErrorMessage, isGrpcTransientError } from './scalebox.utils';
+import { SandboxException } from './scalebox.exception';
+import { ExecutorLanguage, ExecutorLimits, LANGUAGE_MAP } from './scalebox.constants';
+
+// S3 configuration interface (shared between dto and wrapper)
+export interface S3Config {
+  endPoint: string; // MinIO SDK uses 'endPoint' with capital P
+  port: number;
+  useSSL: boolean;
+  accessKey: string;
+  secretKey: string;
+  bucket: string;
+  region: string;
+}
 
 /**
  * Scalebox internal type definitions
@@ -18,6 +29,69 @@ import { extractErrorMessage, isGrpcTransientError } from './scalebox.utils';
  * Re-export SandboxExecuteParams from OpenAPI schema for internal use
  */
 export { SandboxExecuteParams };
+
+// ==================== Executor Types ====================
+
+/**
+ * Executor input format (stdin JSON)
+ * Used to communicate with refly-executor-slim binary
+ */
+export interface ExecutorInput {
+  /** Base64 encoded code (inline mode) */
+  code?: string;
+  /** Path to code file (path mode for large code) */
+  path?: string;
+  /** Programming language */
+  language: ExecutorLanguage;
+  /** Execution timeout in seconds */
+  timeout: number;
+  /** Working directory (also S3 mount point) */
+  cwd: string;
+  /** Delete code file after execution (path mode only) */
+  delete?: boolean;
+  /** S3 mount configuration */
+  s3?: {
+    endpoint: string;
+    passwdFile: string;
+    bucket: string;
+    region: string;
+    prefix: string;
+  };
+  /** Resource limits */
+  limits?: Partial<ExecutorLimits>;
+}
+
+/**
+ * Executor output format (stdout JSON)
+ * Returned by refly-executor-slim binary
+ */
+export interface ExecutorOutput {
+  /** Process exit code */
+  exitCode?: number;
+  /** Standard output */
+  stdout?: string;
+  /** Standard error */
+  stderr?: string;
+  /** Executor internal log */
+  log?: string;
+  /** System-level error message (not code error) */
+  error?: string;
+  /** File changes */
+  diff?: {
+    /** Files created during execution */
+    added: string[];
+  };
+}
+
+/**
+ * Map language from OpenAPI schema to executor supported language
+ * @returns mapped language or null if not supported
+ */
+export function mapLanguage(language: string): ExecutorLanguage | null {
+  return LANGUAGE_MAP[language] ?? null;
+}
+
+// ==================== Execution Context ====================
 
 /**
  * Execution context information
@@ -31,7 +105,7 @@ export interface ExecutionContext extends Partial<SandboxExecuteContext> {
   s3DrivePath: string; // S3 storage path for this execution
   version?: number;
 
-  // Mutable internal fields
+  // Mutable internal fields (set during execution)
   registeredFiles?: DriveFile[];
 
   // Inherited optional fields from SandboxExecuteContext:
@@ -39,19 +113,18 @@ export interface ExecutionContext extends Partial<SandboxExecuteContext> {
 }
 
 /**
- * Scalebox execution job data (internal use)
- * @deprecated Use SandboxExecuteJobData instead
+ * Context passed to wrapper.executeCode()
  */
-export interface ScaleboxExecutionJobData {
-  uid: string;
-  code: string;
-  language: Language;
-  timeout?: number;
-  canvasId: string;
-  apiKey: string;
+export interface ExecuteCodeContext {
+  logger: PinoLogger;
+  timeoutMs: number;
+  s3Config: S3Config;
   s3DrivePath: string;
-  version?: number;
+  limits: ExecutorLimits;
+  codeSizeThreshold: number;
 }
+
+// ==================== Job Data Types ====================
 
 /**
  * BullMQ job data for sandbox execution
@@ -70,74 +143,42 @@ export interface SandboxPauseJobData {
 }
 
 /**
+ * BullMQ job data for sandbox kill (async cleanup)
+ */
+export interface SandboxKillJobData {
+  sandboxId: string;
+  label: string; // Log identifier, e.g., 'create:attempt1'
+}
+
+/**
+ * Callback for sandbox lifecycle failure (create/reconnect)
+ * Called when an attempt fails, allowing caller to handle async cleanup
+ */
+export type OnLifecycleFailed = (sandboxId: string, error: Error) => void;
+
+/**
  * Union type for all sandbox job types
  */
 export type SandboxJobData = SandboxExecuteJobData | SandboxPauseJobData;
 
+// ==================== Execution Result ====================
+
 /**
  * Scalebox execution result (internal use)
+ * Contains the executor output and registered files
  */
 export interface ScaleboxExecutionResult {
-  originResult?: ExecutionResult;
+  /** Raw executor output */
+  executorOutput: ExecutorOutput;
+  /** Extracted error message (from stderr or error field) */
   error: string;
+  /** Process exit code */
   exitCode: number;
+  /** Files registered to drive after execution */
   files: DriveFile[];
 }
 
-/**
- * Simplified sandbox result for LLM consumption
- * Provides a flat, easy-to-parse structure
- */
-export interface SimplifiedSandboxResult {
-  /** Whether the execution succeeded */
-  success: boolean;
-
-  /** Content output based on execution result */
-  content: {
-    /** Type of content returned */
-    type: 'text' | 'image' | 'error';
-    /** Text output (for type: 'text') */
-    text?: string;
-    /** Image URL (for type: 'image') */
-    imageUrl?: string;
-    /** Formatted error message (for type: 'error') */
-    error?: string;
-  };
-
-  /** Execution metadata */
-  meta: {
-    /** Exit code from sandbox execution */
-    exitCode: number;
-    /** Execution time in milliseconds */
-    executionTimeMs: number;
-    /** Machine-readable error code (if error occurred) */
-    errorCode?: string;
-  };
-}
-
-/**
- * Type guard for SandboxExecutionBadResultException
- * Handles both native instances AND serialized objects from BullMQ
- *
- * BullMQ serializes exceptions to JSON, losing prototype chain.
- * After deserialization, instanceof checks fail, but properties are preserved:
- * { type, name, code, result, message, stack, context }
- */
-function isBadResultException(
-  error: unknown,
-): error is { result: ExecutionResult; code: string; message: string } {
-  if (error instanceof SandboxExecutionBadResultException) {
-    return true;
-  }
-  // Check for serialized exception from BullMQ
-  const e = error as Record<string, unknown>;
-  return (
-    e?.code === 'SANDBOX_EXECUTION_BAD_RESULT' &&
-    typeof e?.result === 'object' &&
-    e?.result !== null &&
-    'exitCode' in (e.result as object)
-  );
-}
+// ==================== Response Factory ====================
 
 /**
  * Factory for building sandbox execution responses
@@ -152,18 +193,14 @@ export const ScaleboxResponseFactory = {
    * Build success response (covers both successful execution and code errors)
    * Code errors are indicated by non-zero exitCode
    */
-  success(
-    output: string,
-    files: DriveFile[],
-    result: ScaleboxExecutionResult,
-    executionTime: number,
-  ): SandboxExecuteResponse {
+  success(result: ScaleboxExecutionResult, executionTime: number): SandboxExecuteResponse {
+    const { executorOutput, error, exitCode, files } = result;
     return {
       status: 'success',
       data: {
-        output,
-        error: result.error || '',
-        exitCode: result.exitCode ?? 0,
+        output: executorOutput.stdout || '',
+        error: error || '',
+        exitCode: exitCode ?? 0,
         executionTime,
         files,
       },
@@ -171,53 +208,10 @@ export const ScaleboxResponseFactory = {
   },
 
   /**
-   * Build error response - automatically classifies as code error or system error
-   *
-   * Classification logic:
-   * 1. SandboxExecutionBadResultException with gRPC transient error → system_error (retry suggested)
-   * 2. SandboxExecutionBadResultException without gRPC error → code_error (model can fix)
-   * 3. Other exceptions → system_error (infrastructure failure)
-   *
-   * Note: Uses property-based check instead of instanceof to handle
-   * BullMQ serialized exceptions that lose their prototype chain.
+   * Build error response for system errors
+   * Used when execution cannot complete due to infrastructure issues
    */
-  error(error: unknown, executionTime: number): SandboxExecuteResponse {
-    // Check for code execution error (handles both native and BullMQ-serialized exceptions)
-    if (isBadResultException(error)) {
-      const result = error.result;
-
-      // Check if it's a gRPC transient error (502/503 UNAVAILABLE)
-      // These are system errors, not code errors - retry may help
-      if (isGrpcTransientError(result)) {
-        return {
-          status: 'failed',
-          data: null,
-          errors: [
-            {
-              code: 'SANDBOX_TRANSIENT_ERROR',
-              message:
-                'Sandbox service temporarily unavailable. This is a transient error, please retry the request.',
-            },
-          ],
-        };
-      }
-
-      // Code error: non-zero exitCode from user's code
-      // Return success with exitCode != 0 so model can fix the code
-      return {
-        status: 'success',
-        data: {
-          output: result.text || '',
-          error: extractErrorMessage(result),
-          exitCode: result.exitCode,
-          executionTime,
-          files: [],
-        },
-      };
-    }
-
-    // System error: infrastructure failure (sandbox creation, lock timeout, etc.)
-    // Return failed status - model cannot fix this by changing code
+  error(error: unknown, _executionTime: number): SandboxExecuteResponse {
     return {
       status: 'failed',
       data: null,
@@ -231,9 +225,8 @@ function formatSandboxError(error: unknown): { code: string; message: string } {
   if (error instanceof SandboxException) {
     return { code: error.code, message: error.getFormattedMessage() };
   }
-  // Return raw message without prefix - agent-tools will add appropriate prefix
   if (error instanceof Error) {
-    return { code: 'QUEUE_EXECUTION_FAILED', message: error.message };
+    return { code: 'SANDBOX_EXECUTION_FAILED', message: error.message };
   }
-  return { code: 'QUEUE_EXECUTION_FAILED', message: String(error) };
+  return { code: 'SANDBOX_EXECUTION_FAILED', message: String(error) };
 }

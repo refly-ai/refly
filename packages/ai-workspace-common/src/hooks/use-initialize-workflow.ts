@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { message, notification } from 'antd';
+import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -30,16 +30,13 @@ export const useInitializeWorkflow = (
   const handleComplete = useMemo(
     () => (status: string, data: any) => {
       if (status === 'finish') {
-        notification.success({
-          message:
-            t('canvas.workflow.run.completed') || 'Workflow execution completed successfully',
-        });
+        message.success(
+          t('canvas.workflow.run.completed') || 'Workflow execution completed successfully',
+        );
       } else if (status === 'failed') {
         // Only show error notification if NOT aborted by user
         if (!data?.data?.abortedByUser) {
-          notification.error({
-            message: t('canvas.workflow.run.failed') || 'Workflow execution failed',
-          });
+          message.error(t('canvas.workflow.run.failed') || 'Workflow execution failed');
         }
       }
     },
@@ -48,9 +45,7 @@ export const useInitializeWorkflow = (
 
   const handleError = useMemo(
     () => (_error: any) => {
-      notification.error({
-        message: t('canvas.workflow.run.error') || 'Error monitoring workflow execution',
-      });
+      message.error(t('canvas.workflow.run.error') || 'Error monitoring workflow execution');
     },
     [t],
   );
@@ -94,7 +89,7 @@ export const useInitializeWorkflow = (
           setCanvasExecutionId(canvasId, data.data.workflowExecutionId);
         }
 
-        message.success(t('common.putSuccess') || 'Workflow initialized successfully');
+        message.success(t('canvas.workflow.run.startRunning') || 'Your workflow starts running');
         return true;
       } catch (err) {
         console.error('Error initializing workflow:', err);

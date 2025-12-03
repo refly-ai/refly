@@ -472,14 +472,14 @@ export class ResourceHandler {
         // Strip possible file extension from title
         const cleanTitle = title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '');
         // Use title and infer proper extension from content type
-        const inferredExtension = mime.getExtension(contentType) || extension || fallbackMediaType;
+        const inferredExtension = extension || mime.getExtension(contentType) || fallbackMediaType;
         baseFilename = `${cleanTitle}.${inferredExtension}`;
       } else {
         // Fallback to URL-based filename generation
         baseFilename = urlFilename || `media_${Date.now()}`;
         if (!baseFilename.includes('.')) {
           const inferredExtension =
-            mime.getExtension(contentType) || extension || fallbackMediaType;
+            extension || mime.getExtension(contentType) || fallbackMediaType;
           baseFilename = `${baseFilename}.${inferredExtension}`;
         }
       }

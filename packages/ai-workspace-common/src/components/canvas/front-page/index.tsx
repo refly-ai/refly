@@ -1,7 +1,8 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
 import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
+import { TemplateCardSkeleton } from '@refly-packages/ai-workspace-common/components/canvas-template/template-card-skeleton';
 import { canvasTemplateEnabled } from '@refly/ui-kit';
 import { useSiderStoreShallow } from '@refly/stores';
 import cn from 'classnames';
@@ -12,6 +13,19 @@ import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canva
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
+
+const TAB_ORDER = [
+  'Featured',
+  'Sales',
+  'Marketing',
+  'Research',
+  'Support',
+  'Content Creation',
+  'Business',
+  'Education',
+  'Development',
+  'Design',
+] as const;
 
 const ModuleContainer = ({
   title,
@@ -52,17 +66,104 @@ export const FrontPage = memo(() => {
 
   const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas({});
 
-  const { data } = useListCanvasTemplateCategories({}, undefined, {
+  const { data, isLoading: isLoadingCategories } = useListCanvasTemplateCategories({}, undefined, {
     enabled: true,
   });
-  const showTemplateCategories = false;
-  const templateCategories = [
-    { categoryId: '', labelDict: { en: 'All', 'zh-CN': '全部' } },
-    ...(data?.data ?? []),
-  ];
 
-  const templateLanguage = i18n.language;
+  const currentLanguage = i18n.language;
   const [templateCategoryId, setTemplateCategoryId] = useState('');
+
+  // Sort categories according to TAB_ORDER
+  const templateCategories = useMemo(() => {
+    const categories = [...(data?.data ?? [])].filter((category) => category.name !== 'top_picks');
+    return categories.sort((a, b) => {
+      // Get English label from labelDict (try 'en' or 'en-US')
+      const getEnglishLabel = (category: (typeof categories)[0]) => {
+        return category.labelDict?.en ?? category.labelDict?.['en-US'] ?? category.name ?? '';
+      };
+
+      const labelA = getEnglishLabel(a);
+      const labelB = getEnglishLabel(b);
+
+      // Find index in TAB_ORDER (case-insensitive)
+      const indexA = TAB_ORDER.findIndex((order) => order.toLowerCase() === labelA.toLowerCase());
+      const indexB = TAB_ORDER.findIndex((order) => order.toLowerCase() === labelB.toLowerCase());
+
+      // If both found, sort by index
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      // If only A found, A comes first
+      if (indexA !== -1) {
+        return -1;
+      }
+      // If only B found, B comes first
+      if (indexB !== -1) {
+        return 1;
+      }
+      // If neither found, maintain original order
+      return 0;
+    });
+  }, [data?.data]);
+
+  // Set default category when categories are loaded
+  useEffect(() => {
+    // Only process when loading is complete
+    if (!isLoadingCategories) {
+      if (templateCategories.length > 0) {
+        // If a category is already selected, verify it still exists in the list
+        if (templateCategoryId) {
+          const categoryExists = templateCategories.some(
+            (category) => category.categoryId === templateCategoryId,
+          );
+          if (!categoryExists) {
+            // Selected category no longer exists, reset to default
+            setTemplateCategoryId('');
+          }
+        }
+
+        // Set default category if no category is selected
+        if (!templateCategoryId) {
+          // Try to find Featured category first
+          const featuredCategory = templateCategories.find((category) => {
+            const englishLabel =
+              category.labelDict?.en ?? category.labelDict?.['en-US'] ?? category.name ?? '';
+            return englishLabel.toLowerCase() === 'featured';
+          });
+
+          // Helper function to get valid categoryId
+          const getValidCategoryId = (category: (typeof templateCategories)[0]): string | null => {
+            const id = category?.categoryId;
+            // Ensure categoryId is a non-empty string
+            return id && typeof id === 'string' && id.trim().length > 0 ? id : null;
+          };
+
+          if (featuredCategory) {
+            const validId = getValidCategoryId(featuredCategory);
+            if (validId) {
+              setTemplateCategoryId(validId);
+            }
+          } else if (templateCategories.length === 1) {
+            // If only one category exists, select it automatically
+            const validId = getValidCategoryId(templateCategories[0]);
+            if (validId) {
+              setTemplateCategoryId(validId);
+            }
+          } else {
+            // Select the first category as default
+            const validId = getValidCategoryId(templateCategories[0]);
+            if (validId) {
+              setTemplateCategoryId(validId);
+            }
+          }
+        }
+      } else {
+        // No categories available, ensure templateCategoryId is empty
+        // This will trigger empty state display
+        setTemplateCategoryId('');
+      }
+    }
+  }, [templateCategories, templateCategoryId, isLoadingCategories]);
 
   const handleNewWorkflow = useCallback(() => {
     setIsManualCollapse(false);
@@ -71,17 +172,29 @@ export const FrontPage = memo(() => {
 
   const handleTemplateCategoryClick = useCallback(
     (categoryId: string) => {
+      if (categoryId === templateCategoryId) return;
       setTemplateCategoryId(categoryId);
     },
-    [setTemplateCategoryId],
+    [templateCategoryId],
   );
 
   const handleViewGuide = useCallback(() => {
-    window.open('https://reflydoc.notion.site/how-to-use-refly', '_blank');
-  }, []);
+    if (currentLanguage === 'zh-CN') {
+      window.open('https://powerformer.feishu.cn/wiki/KrI1wxCKiisumTkOLJbcLeY7nec', '_blank');
+    } else {
+      window.open(
+        'https://www.notion.so/reflydoc/How-to-Use-Refly-ai-28cd62ce6071801f9b86e39bc50d3333',
+        '_blank',
+      );
+    }
+  }, [currentLanguage]);
 
   const handleViewAllWorkflows = useCallback(() => {
     navigate('/workflow-list');
+  }, [navigate]);
+
+  const handleViewMarketplace = useCallback(() => {
+    window.open('/workflow-marketplace', '_blank');
   }, []);
 
   useEffect(() => {
@@ -138,35 +251,78 @@ export const FrontPage = memo(() => {
       )}
 
       {canvasTemplateEnabled && (
-        <ModuleContainer title={t('frontPage.template.title')}>
-          {showTemplateCategories && templateCategories.length > 1 && (
-            <div className="flex items-center gap-2 flex-wrap">
+        <ModuleContainer
+          title={t('frontPage.template.title')}
+          handleTitleClick={handleViewMarketplace}
+        >
+          {templateCategories.length > 1 && (
+            <div className="flex items-center gap-2 flex-wrap mb-3">
               {templateCategories.map((category) => (
                 <div
                   key={category.categoryId}
                   className={cn(
-                    'flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm text-refly-text-0 leading-5 cursor-pointer rounded-[40px] hover:bg-refly-tertiary-hover',
+                    'flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm leading-5 cursor-pointer rounded-[40px] transition-all duration-300 ease-in-out transform',
                     {
-                      '!bg-refly-primary-default text-white font-semibold':
+                      '!bg-refly-primary-default text-white font-semibold shadow-sm scale-105':
                         category.categoryId === templateCategoryId,
+                      'text-refly-text-0 hover:bg-refly-tertiary-hover hover:scale-[1.02]':
+                        category.categoryId !== templateCategoryId,
                     },
                   )}
                   onClick={() => handleTemplateCategoryClick(category.categoryId)}
                 >
-                  {category.labelDict?.[templateLanguage]}
+                  {category.labelDict?.[currentLanguage]}
                 </div>
               ))}
             </div>
           )}
 
           <div className="flex-1">
-            <TemplateList
-              source="front-page"
-              scrollableTargetId="front-page-scrollable-div"
-              language={templateLanguage}
-              categoryId={templateCategoryId}
-              className="!bg-transparent !px-0 !pt-0 -ml-2 -mt-2"
-            />
+            {isLoadingCategories ? (
+              // Show loading skeleton while categories are being fetched
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <TemplateCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : templateCategories.length === 0 ? (
+              // Show empty state when no categories are available
+              <div className="mt-8 h-full flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-refly-text-2 text-sm mb-2">{t('template.emptyList')}</div>
+                  <Button
+                    type="default"
+                    className="!bg-refly-bg-content-z2 !border-refly-primary-default !text-refly-primary-default !border-[0.5px] !font-medium hover:!border-refly-primary-default hover:!text-refly-primary-default hover:!bg-refly-bg-content-z2 rounded-lg px-3 py-2.5"
+                    onClick={handleViewMarketplace}
+                  >
+                    {t('template.goToMarketplace')}
+                  </Button>
+                </div>
+              </div>
+            ) : !templateCategoryId ? (
+              // Show loading skeleton if categories exist but none is selected yet
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <TemplateCardSkeleton key={index} />
+                ))}
+              </div>
+            ) : templateCategoryId && templateCategoryId.trim().length > 0 ? (
+              // Show template list when category is selected and valid
+              <TemplateList
+                source="front-page"
+                scrollableTargetId="front-page-scrollable-div"
+                language={currentLanguage}
+                categoryId={templateCategoryId}
+                className="!bg-transparent !px-0 !pt-0 -ml-2 -mt-2"
+              />
+            ) : (
+              // Fallback: show loading skeleton if categoryId is invalid
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <TemplateCardSkeleton key={index} />
+                ))}
+              </div>
+            )}
           </div>
         </ModuleContainer>
       )}

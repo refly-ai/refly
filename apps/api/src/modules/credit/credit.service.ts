@@ -1,7 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
-import { CreditRechargeExtraData, CreditUsageExtraData, User } from '@refly/openapi-schema';
+import {
+  CreditRechargeExtraData,
+  CreditUsageExtraData,
+  ToolCallMeta,
+  User,
+} from '@refly/openapi-schema';
 import { CreditBilling, CreditRecharge, CreditUsage, RawCanvasData } from '@refly/openapi-schema';
 import {
   CheckRequestCreditUsageResult,
@@ -624,6 +629,8 @@ export class CreditService {
       modelName?: string;
       usageType?: string;
       modelUsageDetails?: string;
+      toolCallId?: string;
+      toolCallMeta?: ToolCallMeta;
       createdAt: Date;
       description?: string;
       appId?: string;
@@ -689,6 +696,8 @@ export class CreditService {
           dueAmount: dueAmount,
           createdAt: usageData.createdAt,
           description: usageData.description,
+          toolCallId: usageData.toolCallId,
+          toolCallMeta: JSON.stringify(usageData.toolCallMeta),
           appId: usageData.appId,
           extraData: JSON.stringify(extraData),
         },
@@ -741,16 +750,7 @@ export class CreditService {
   }
 
   async syncToolCreditUsage(data: SyncToolCreditUsageJobData) {
-    const {
-      uid,
-      discountedPrice,
-      originalPrice,
-      timestamp,
-      resultId,
-      toolsetName,
-      toolName,
-      version,
-    } = data;
+    const { uid, discountedPrice, originalPrice, timestamp, resultId, toolCallMeta } = data;
 
     // Find user
     const user = await this.prisma.user.findUnique({ where: { uid } });
@@ -765,12 +765,14 @@ export class CreditService {
           uid,
           usageId: genCreditUsageId(),
           actionResultId: resultId,
-          version,
+          version: data.version,
           usageType: 'tool_call',
           amount: 0,
           dueAmount: originalPrice ?? 0,
           createdAt: timestamp,
-          description: `Tool call: ${toolsetName} ${toolName}`,
+          toolCallId: data.toolCallId,
+          toolCallMeta: JSON.stringify(toolCallMeta),
+          description: `Tool call: ${toolCallMeta?.toolsetKey}.${toolCallMeta?.toolName}`,
         },
       });
       return;
@@ -783,10 +785,10 @@ export class CreditService {
       {
         usageId: genCreditUsageId(),
         actionResultId: resultId,
-        version,
+        version: data.version,
         usageType: 'tool_call',
         createdAt: timestamp,
-        description: `Tool call: ${toolsetName} ${toolName}`,
+        description: `Tool call: ${toolCallMeta?.toolsetKey}.${toolCallMeta?.toolName}`,
       },
       originalPrice,
     );
@@ -801,8 +803,10 @@ export class CreditService {
       throw new Error(`No user found for uid ${uid}`);
     }
 
-    // Calculate credit cost directly from unitCost
-    const creditCost = creditBilling?.unitCost || 0;
+    // Calculate credit cost using the higher of input/output costs (they should be identical for media models)
+    const creditCost = creditBilling
+      ? Math.max(creditBilling.inputCost ?? 0, creditBilling.outputCost ?? 0)
+      : 0;
 
     // If no credit cost, just create usage record
     if (creditCost <= 0) {
@@ -820,12 +824,17 @@ export class CreditService {
     }
 
     // Use the extracted method to handle credit deduction
-    await this.deductCreditsAndCreateUsage(uid, creditCost, {
-      usageId: genCreditUsageId(),
-      actionResultId: resultId,
-      usageType: 'media_generation',
-      createdAt: timestamp,
-    });
+    await this.deductCreditsAndCreateUsage(
+      uid,
+      creditCost,
+      {
+        usageId: genCreditUsageId(),
+        actionResultId: resultId,
+        usageType: 'media_generation',
+        createdAt: timestamp,
+      },
+      creditCost,
+    );
   }
 
   async syncBatchTokenCreditUsage(data: SyncBatchTokenCreditUsageJobData) {
@@ -848,15 +857,27 @@ export class CreditService {
     for (const step of creditUsageSteps) {
       const { usage, creditBilling } = step;
 
-      // Calculate tokens for this usage
-      const totalTokens = usage.inputTokens + usage.outputTokens;
+      const inputTokens = usage.inputTokens || 0;
+      const outputTokens = usage.outputTokens || 0;
 
       // Calculate credit cost for this usage
       let creditCost = 0;
-      if (creditBilling && creditBilling.unit === '5k_tokens') {
-        // Round up to nearest 5k tokens (not enough 5K counts as 5K)
-        const tokenUnits = Math.ceil(totalTokens / 5000);
-        creditCost = tokenUnits * (creditBilling.unitCost || 0);
+      if (creditBilling) {
+        if (creditBilling.unit === '5k_tokens') {
+          const perInputUnit = creditBilling.inputCost || 0;
+          const perOutputUnit = creditBilling.outputCost || 0;
+          creditCost = Math.ceil(
+            (inputTokens / 5000) * perInputUnit + (outputTokens / 5000) * perOutputUnit,
+          );
+        } else if (creditBilling.unit === '1m_tokens') {
+          const perInputUnit = creditBilling.inputCost || 0;
+          const perOutputUnit = creditBilling.outputCost || 0;
+          creditCost = Math.ceil(
+            (inputTokens / 1000000) * perInputUnit + (outputTokens / 1000000) * perOutputUnit,
+          );
+        } else {
+          creditCost = Math.max(creditBilling.inputCost, creditBilling.outputCost);
+        }
       }
 
       // Track original due amount before early bird discount
@@ -875,7 +896,8 @@ export class CreditService {
       // Add to model usage details - model name, total tokens, and credit cost
       modelUsageDetails.push({
         modelName: usage.modelName,
-        totalTokens: usage.inputTokens + usage.outputTokens,
+        inputTokens,
+        outputTokens,
         creditCost: creditCost,
       });
     }

@@ -116,7 +116,7 @@ const WorkflowList = memo(() => {
         width: 336,
         fixed: 'left' as const,
         render: (text: string, record: Canvas) => {
-          const isShared = record?.shareRecord?.shareId;
+          // const isShared = record?.shareRecord?.shareId;
           const isPublished = record?.workflowApp?.shareId;
           return (
             <div className="flex items-center gap-2">
@@ -127,11 +127,11 @@ const WorkflowList = memo(() => {
                 {text || t('common.untitled')}
               </Typography.Text>
               <div className="flex items-center gap-1 flex-shrink-0">
-                {isShared && (
+                {/* {isShared && (
                   <Tag color="default" className="text-xs">
                     {t('workflowList.shared')}
                   </Tag>
-                )}
+                )} */}
                 {isPublished && (
                   <Tag color="success" className="text-xs">
                     {t('workflowList.published')}

@@ -16,6 +16,10 @@ import { NodeRelation } from '@refly-packages/ai-workspace-common/components/sli
 import { Modal } from 'antd';
 import { CloseCircleOutlined } from '@ant-design/icons';
 import { NodeRenderer } from '@refly-packages/ai-workspace-common/components/slideshow/components/NodeRenderer';
+import {
+  PublicFileUrlProvider,
+  usePublicFileUrlContext,
+} from '@refly-packages/ai-workspace-common/context/public-file-url';
 
 // Global media manager to stop all playing media
 const mediaManager = {
@@ -318,6 +322,7 @@ DefaultPreview.displayName = 'DefaultPreview';
 export const ResultItemPreview = memo(
   ({ node, inModal = false }: { node: CanvasNode; inModal?: boolean }) => {
     const [wideModeOpen, setWideModeOpen] = useState(false);
+    const inheritedUsePublicFileUrl = usePublicFileUrlContext();
     const [isHovered, setIsHovered] = useState(false);
 
     // Construct DriveFile from node metadata if fileId exists
@@ -413,6 +418,11 @@ export const ResultItemPreview = memo(
           onCancel={handleWideModeClose}
           width="85%"
           style={{ top: 20 }}
+          modalRender={(modalNode) => (
+            <PublicFileUrlProvider value={inheritedUsePublicFileUrl}>
+              {modalNode}
+            </PublicFileUrlProvider>
+          )}
           styles={{
             body: {
               maxHeight: 'calc(var(--screen-height) - 100px)',

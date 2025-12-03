@@ -10,10 +10,13 @@ export interface RetryConfig {
   maxDelay?: number;
   backoffFactor?: number;
   retryIf?: (error: unknown) => boolean; // Only retry if returns true; retries all errors if not provided
+  onRetry?: (error: unknown, attempt: number) => void | Promise<void>; // Called before each retry
 }
 
 interface GuardWrapper<T> {
-  orThrow(errorFactory?: (error: unknown) => Error): T extends Promise<infer U> ? Promise<U> : T;
+  orThrow(
+    errorFactory?: (error: unknown) => Error | Promise<Error>,
+  ): T extends Promise<infer U> ? Promise<U> : T;
   orElse(fallback: (error: unknown) => T): T extends Promise<infer U> ? Promise<U> : T;
 }
 
@@ -32,13 +35,13 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 export function guard<T>(fn: () => T): GuardWrapper<T> {
   return {
-    orThrow(errorFactory?: (error: unknown) => Error) {
+    orThrow(errorFactory?: (error: unknown) => Error | Promise<Error>) {
       try {
         const result = fn();
 
         if (result instanceof Promise) {
-          return result.catch((error) => {
-            throw errorFactory ? errorFactory(error) : error;
+          return result.catch(async (error) => {
+            throw errorFactory ? await errorFactory(error) : error;
           }) as any;
         }
 
@@ -223,6 +226,7 @@ guard.retry = <T>(fn: () => T | Promise<T>, config: RetryConfig): GuardWrapper<P
       maxDelay = 1000,
       backoffFactor = 1,
       retryIf,
+      onRetry,
     } = config;
 
     let lastError: unknown;
@@ -246,6 +250,7 @@ guard.retry = <T>(fn: () => T | Promise<T>, config: RetryConfig): GuardWrapper<P
           throw lastError;
         }
 
+        await onRetry?.(error, attempt);
         await sleep(delay);
         delay = Math.min(delay * backoffFactor, maxDelay);
       }

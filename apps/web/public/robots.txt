@@ -1,0 +1,33 @@
+# robots.txt for refly.ai
+# Generated according to SEO checklist requirements
+
+User-agent: *
+# Allow crawling of public pages
+Allow: /
+Allow: /login
+Allow: /pricing
+Allow: /marketplace
+Allow: /workflow-marketplace
+Allow: /workflow-template/
+
+# Disallow user-specific workflows (private content)
+Disallow: /workflow/
+# Disallow workspace (requires login)
+Disallow: /workspace
+# Disallow all share paths (user-generated content, not for SEO)
+Disallow: /share/
+# Disallow deprecated routes
+Disallow: /artifact-gallery
+Disallow: /preview/canvas/
+Disallow: /canvas/
+Disallow: /project/
+# Disallow deprecated app route (redirects to workflow-template)
+Disallow: /app/
+# Disallow internal management pages
+Disallow: /app-manager
+Disallow: /workflow-list
+
+# Sitemap location
+Sitemap: https://refly.ai/sitemap.xml
+Sitemap: https://refly.ai/sitemap-templates.xml
+

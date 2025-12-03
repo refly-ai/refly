@@ -1051,6 +1051,11 @@ export const CanvasTemplateSchema = {
       type: 'string',
       description: 'Associated workflow app share ID',
     },
+    creditUsage: {
+      type: 'integer',
+      description: 'Credit usage for running this workflow app',
+      nullable: true,
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -2038,6 +2043,10 @@ export const TokenUsageItemSchema = {
     outputTokens: {
       type: 'number',
       description: 'Output tokens',
+    },
+    cacheReadTokens: {
+      type: 'number',
+      description: 'Cache read tokens',
     },
     providerItemId: {
       type: 'string',
@@ -5600,6 +5609,14 @@ export const SkillContextFileItemSchema = {
       description: 'File object',
       $ref: '#/components/schemas/DriveFile',
     },
+    variableId: {
+      type: 'string',
+      description: 'Variable ID if this file is from a workflow variable',
+    },
+    variableName: {
+      type: 'string',
+      description: 'Variable name if this file is from a workflow variable',
+    },
   },
 } as const;
 
@@ -6575,7 +6592,7 @@ export const SandboxExecuteParamsSchema = {
     language: {
       type: 'string',
       description: 'Programming language for code execution',
-      enum: ['python', 'javascript', 'typescript', 'r', 'java', 'bash', 'node', 'nodejs', 'deno'],
+      enum: ['python', 'javascript', 'shell'],
       example: 'python',
     },
   },
@@ -7321,6 +7338,29 @@ export const GetCreditUsageByCanvasIdResponseSchema = {
               items: {
                 $ref: '#/components/schemas/CreditUsage',
               },
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetCanvasCommissionByCanvasIdResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Canvas commission by canvas ID',
+          properties: {
+            total: {
+              type: 'number',
+              description: 'Total canvas commission by canvas ID',
             },
           },
         },
@@ -8407,17 +8447,22 @@ export const ProviderItemConfigSchema = {
 export const CreditBillingSchema = {
   type: 'object',
   description: 'Credit billing configuration for provider items',
-  required: ['unitCost', 'unit', 'minCharge'],
+  required: ['unit', 'inputCost', 'outputCost', 'minCharge'],
   properties: {
-    unitCost: {
-      type: 'number',
-      description: 'Credit consumption per unit usage',
-      minimum: 0,
-    },
     unit: {
       type: 'string',
       description: 'Measurement unit (e.g., token, product, second)',
       example: '5k_tokens',
+    },
+    inputCost: {
+      type: 'number',
+      description: 'Credit consumption per unit for input tokens',
+      minimum: 0,
+    },
+    outputCost: {
+      type: 'number',
+      description: 'Credit consumption per unit for output tokens',
+      minimum: 0,
     },
     minCharge: {
       type: 'number',
@@ -10300,7 +10345,7 @@ export const ValueTypeSchema = {
 
 export const ResourceValueSchema = {
   type: 'object',
-  required: ['name', 'fileType', 'storageKey'],
+  required: ['name', 'fileType'],
   properties: {
     name: {
       type: 'string',
@@ -10310,13 +10355,17 @@ export const ResourceValueSchema = {
       description: 'Resource file type',
       $ref: '#/components/schemas/VariableResourceType',
     },
+    fileId: {
+      type: 'string',
+      description: 'DriveFile ID (primary identifier for resource)',
+    },
     storageKey: {
       type: 'string',
-      description: 'Resource storage key',
+      description: 'Resource storage key (legacy, for backward compatibility)',
     },
     entityId: {
       type: 'string',
-      description: 'Resource ID',
+      description: 'Resource ID (deprecated, use fileId instead)',
     },
   },
 } as const;
@@ -10526,6 +10575,10 @@ export const DriveFileSchema = {
     summary: {
       type: 'string',
       description: 'Drive file summary',
+    },
+    storageKey: {
+      type: 'string',
+      description: 'Object storage key for the file',
     },
     variableId: {
       type: 'string',

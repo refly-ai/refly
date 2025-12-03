@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal } from 'antd';
 import { useActionResultStoreShallow } from '@refly/stores';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
+import { PublicFileUrlProvider } from '@refly-packages/ai-workspace-common/context/public-file-url';
 
 export interface SelectedResultsGridProps {
   selectedResults: string[];
@@ -21,10 +22,12 @@ export const SelectedResultsGrid = memo(
     const containerRef = useRef<HTMLDivElement>(null);
     const [itemHeight, setItemHeight] = useState<number | null>(null);
     const [itemsPerRow, setItemsPerRow] = useState<number>(3);
-    const { currentFile, setCurrentFile } = useActionResultStoreShallow((state) => ({
-      currentFile: state.currentFile,
-      setCurrentFile: state.setCurrentFile,
-    }));
+    const { currentFile, currentFileUsePublicFileUrl, setCurrentFile } =
+      useActionResultStoreShallow((state) => ({
+        currentFile: state.currentFile,
+        currentFileUsePublicFileUrl: state.currentFileUsePublicFileUrl,
+        setCurrentFile: state.setCurrentFile,
+      }));
 
     // Filter options to only show selected ones
     const selectedNodes = options.filter((node) => selectedResults.includes(node.id));
@@ -95,6 +98,7 @@ export const SelectedResultsGrid = memo(
     // Clean up currentFile when component unmounts if modal was open
     // This prevents state leakage when navigating away while preview is open
     useEffect(() => {
+      setCurrentFile(null);
       return () => {
         if (currentFile) {
           setCurrentFile(null);
@@ -226,6 +230,11 @@ export const SelectedResultsGrid = memo(
             onCancel={() => setCurrentFile(null)}
             width="85%"
             style={{ top: 20 }}
+            modalRender={(modalNode) => (
+              <PublicFileUrlProvider value={currentFileUsePublicFileUrl}>
+                {modalNode}
+              </PublicFileUrlProvider>
+            )}
             styles={{
               body: {
                 maxHeight: 'calc(var(--screen-height, 100vh) - 100px)',
