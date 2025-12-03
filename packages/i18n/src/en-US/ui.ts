@@ -927,7 +927,7 @@ const translations = {
     linkCopied: 'Link copied',
     copyLinkTooltip: 'Copy shared link',
     publishTemplate: 'Publish as Template',
-    updateTemplate: 'Update Template',
+    updateTemplate: 'Edit',
     publish: 'Publish',
     publishTemplateTooltip: 'Publish canvas as template',
     waitForAgentsToFinish: 'Please wait for all Agents to finish running before publishing',
@@ -3948,6 +3948,9 @@ const translations = {
     validationNoUserInputs: 'Please add User Inputs before publishing your template.',
     validationNoAgents: 'Please add agents before publishing your template.',
     validationAgentsNotRun: 'Please run all agents successfully before publishing your template.',
+    unsavedChangesTitle: 'Unsaved Changes',
+    unsavedChangesContent:
+      'You have unsaved changes. Are you sure you want to close without saving?',
     resultPreview: 'Result Preview',
     notLoggedIn: 'Not Logged In',
     run: {

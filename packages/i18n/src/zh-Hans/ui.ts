@@ -1007,7 +1007,7 @@ const translations = {
     linkCopied: '链接已复制',
     copyLinkTooltip: '复制分享链接',
     publishTemplate: '发布为模版',
-    updateTemplate: '更新模板',
+    updateTemplate: '编辑',
     publish: '发布',
     publishTemplateTooltip: '将画布发布为模板',
     waitForAgentsToFinish: '请等待所有 Agent 运行结束后再发布',
@@ -3690,6 +3690,8 @@ const translations = {
     validationNoUserInputs: '请在发布模板前添加输入项。',
     validationNoAgents: '请在发布模板前添加 Agent 节点。',
     validationAgentsNotRun: '请在发布模板前确保所有 Agent 节点运行成功。',
+    unsavedChangesTitle: '未保存的更改',
+    unsavedChangesContent: '您有未保存的更改，确定要关闭而不保存吗？',
     resultPreview: '产物预览',
     notLoggedIn: '未登录',
     run: {

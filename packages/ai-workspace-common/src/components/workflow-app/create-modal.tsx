@@ -1,6 +1,6 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Button, Form, Input, message, Modal, Upload, Image, Switch, Spin, Tooltip } from 'antd';
-import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
+import { PlusOutlined, LoadingOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { Trans, useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -131,8 +131,15 @@ export const CreateWorkflowAppModal = ({
   // Drive files state
   const [driveFiles, setDriveFiles] = useState<DriveFile[]>([]);
 
-  // Copy share link state
-  const [linkCopied, setLinkCopied] = useState(false);
+  // Track initial form values and state to detect unsaved changes
+  const initialSnapshotRef = useRef<{
+    formValues: any;
+    coverStorageKey: string | undefined;
+    selectedResults: string[];
+  } | null>(null);
+
+  // Track if initial data has been fully loaded and snapshot recorded
+  const isInitializedRef = useRef(false);
 
   const { data: workflowVariables } = useVariablesManagement(canvasId);
   const { nodes } = useRealtimeCanvasData();
@@ -365,6 +372,75 @@ export const CreateWorkflowAppModal = ({
     setPreviewVisible(false);
   }, []);
 
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = useCallback(() => {
+    // Don't check during loading or submitting
+    if (loadingAppData || confirmLoading || coverUploading) {
+      return false;
+    }
+
+    // Don't check if not initialized yet
+    if (!isInitializedRef.current || !initialSnapshotRef.current) {
+      return false;
+    }
+
+    const snapshot = initialSnapshotRef.current;
+    const currentFormValues = form.getFieldsValue();
+
+    // Check form values (handle undefined/null cases)
+    const formChanged =
+      (currentFormValues.title ?? '') !== (snapshot.formValues.title ?? '') ||
+      (currentFormValues.description ?? '') !== (snapshot.formValues.description ?? '') ||
+      Boolean(currentFormValues.remixEnabled) !== Boolean(snapshot.formValues.remixEnabled) ||
+      Boolean(currentFormValues.publishToCommunity) !==
+        Boolean(snapshot.formValues.publishToCommunity);
+
+    // Check cover image (handle undefined cases)
+    const coverChanged = (coverStorageKey ?? undefined) !== (snapshot.coverStorageKey ?? undefined);
+
+    // Check selected results (deep comparison)
+    const snapshotSet = new Set(snapshot.selectedResults);
+    const currentSet = new Set(selectedResults);
+    const selectedResultsChanged =
+      snapshotSet.size !== currentSet.size ||
+      !Array.from(currentSet).every((id) => snapshotSet.has(id));
+
+    return formChanged || coverChanged || selectedResultsChanged;
+  }, [form, coverStorageKey, selectedResults, loadingAppData, confirmLoading, coverUploading]);
+
+  // Handle modal close with unsaved changes check
+  const handleModalClose = useCallback(() => {
+    // Prevent closing during loading or submitting
+    if (loadingAppData || confirmLoading || coverUploading) {
+      return;
+    }
+
+    if (hasUnsavedChanges()) {
+      Modal.confirm({
+        title: t('workflowApp.unsavedChangesTitle'),
+        content: t('workflowApp.unsavedChangesContent'),
+        icon: <ExclamationCircleOutlined />,
+        okText: t('common.confirm'),
+        cancelText: t('common.cancel'),
+        okButtonProps: {
+          className: 'unsaved-changes-confirm-ok',
+        },
+        cancelButtonProps: {
+          className: 'unsaved-changes-confirm-cancel',
+        },
+        className: 'unsaved-changes-confirm-modal',
+        onOk: () => {
+          // Clear snapshot and reset initialization flag before closing
+          initialSnapshotRef.current = null;
+          isInitializedRef.current = false;
+          setVisible(false);
+        },
+      });
+    } else {
+      setVisible(false);
+    }
+  }, [hasUnsavedChanges, setVisible, t, loadingAppData, confirmLoading, coverUploading]);
+
   const createWorkflowApp = async ({
     title,
     description,
@@ -406,6 +482,9 @@ export const CreateWorkflowAppModal = ({
           message.error('Failed to copy link to clipboard');
         }
 
+        // Clear snapshot and reset initialization flag on successful publish to prevent confirmation dialog
+        initialSnapshotRef.current = null;
+        isInitializedRef.current = false;
         setVisible(false);
 
         const messageInstance = messageApi.open({
@@ -465,7 +544,7 @@ export const CreateWorkflowAppModal = ({
     }
   };
 
-  // Reset form state when modal opens
+  // Reset form state when modal opens and record initial snapshot
   useEffect(() => {
     if (visible) {
       // Load existing app data if appId is provided
@@ -489,11 +568,8 @@ export const CreateWorkflowAppModal = ({
       setPreviewVisible(false);
       setPreviewImage('');
       setPreviewTitle('');
-
-      // Reset copy state
-      setLinkCopied(false);
     }
-  }, [visible, title, appId, loadAppData]);
+  }, [visible, title, appId, loadAppData, form]);
 
   // Populate form with loaded app data
   useEffect(() => {
@@ -522,6 +598,60 @@ export const CreateWorkflowAppModal = ({
       }
     }
   }, [appData, visible, title, form]);
+
+  // Record initial snapshot after all data is initialized (for both new and existing apps)
+  // Wait for: loadingAppData to complete, coverStorageKey to be set, displayNodes to be ready, and selectedResults to be set
+  useEffect(() => {
+    if (!visible) {
+      // Clear snapshot and reset initialization flag when modal closes
+      initialSnapshotRef.current = null;
+      isInitializedRef.current = false;
+      return;
+    }
+
+    // Determine if we're in edit mode (has appId) or create mode
+    const isEditMode = !!appId;
+
+    // For edit mode: wait for appData to load and coverStorageKey to be set
+    // For create mode: coverStorageKey should already be undefined
+    const coverReady = isEditMode ? appData !== null && !loadingAppData : true;
+
+    // Wait for displayNodes to be ready (needed for selectedResults)
+    const nodesReady = displayNodes.length >= 0;
+
+    // Only record snapshot when all conditions are met
+    if (!loadingAppData && coverReady && nodesReady) {
+      // Use a longer delay to ensure all useEffect hooks have completed
+      // This ensures coverStorageKey and selectedResults are set before recording snapshot
+      const timer = setTimeout(() => {
+        const formValues = form.getFieldsValue();
+        initialSnapshotRef.current = {
+          formValues: {
+            title: formValues.title ?? title,
+            description: formValues.description ?? '',
+            remixEnabled: formValues.remixEnabled ?? false,
+            publishToCommunity: formValues.publishToCommunity ?? false,
+          },
+          coverStorageKey: coverStorageKey ?? undefined,
+          selectedResults: [...selectedResults],
+        };
+        // Mark as initialized after snapshot is recorded
+        isInitializedRef.current = true;
+      }, 150); // Increased delay to ensure coverStorageKey and selectedResults are set
+
+      return () => clearTimeout(timer);
+    }
+  }, [
+    visible,
+    loadingAppData,
+    appId,
+    appData,
+    form,
+    title,
+    coverStorageKey,
+    selectedResults,
+    displayNodes.length,
+  ]);
 
   // Sync selected results when appData loads and displayNodes is ready (for editing existing app)
   // Use displayNodes.length as dependency instead of displayNodes to avoid infinite loop
@@ -594,45 +724,12 @@ export const CreateWorkflowAppModal = ({
     return isUpdate ? t('workflowApp.updatePublish') : t('workflowApp.publish');
   }, [isUpdate, t]);
 
-  // Calculate current share link
-  const currentShareLink = useMemo(() => {
-    if (appData?.shareId) {
-      return getShareLink('workflowApp', appData.shareId);
-    }
-    return '';
-  }, [appData?.shareId]);
-
-  // Handle copy share link
-  const handleCopyShareLink = useCallback(async () => {
-    if (!currentShareLink) {
-      return;
-    }
-
-    try {
-      const ok = await copyToClipboard(currentShareLink);
-      if (ok) {
-        setLinkCopied(true);
-        message.success(t('shareContent.linkCopied'));
-        // Reset copied state after 2 seconds
-        setTimeout(() => {
-          setLinkCopied(false);
-        }, 2000);
-      } else {
-        message.error(t('common.operationFailed'));
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to copy link:', error);
-      message.error(t('common.operationFailed'));
-    }
-  }, [currentShareLink, t]);
-
   // Custom footer with copy button and original buttons
   const modalFooter = useMemo(() => {
     return (
       <div className="flex items-center justify-end w-full">
         <div className="flex items-center gap-2">
-          <Button onClick={() => setVisible(false)} disabled={confirmLoading}>
+          <Button onClick={handleModalClose} disabled={confirmLoading}>
             {t('common.cancel')}
           </Button>
           <Button type="primary" onClick={onSubmit} loading={confirmLoading} disabled={isUploading}>
@@ -641,25 +738,63 @@ export const CreateWorkflowAppModal = ({
         </div>
       </div>
     );
-  }, [
-    currentShareLink,
-    handleCopyShareLink,
-    linkCopied,
-    isUploading,
-    confirmLoading,
-    okButtonText,
-    onSubmit,
-    setVisible,
-    t,
-  ]);
+  }, [handleModalClose, isUploading, confirmLoading, okButtonText, onSubmit, t]);
 
   return (
     <>
+      {/* Styles for unsaved changes confirmation modal */}
+      <style>
+        {`
+          .unsaved-changes-confirm-modal .ant-modal-content {
+            border-radius: 20px;
+          }
+          .unsaved-changes-confirm-modal .ant-modal-header {
+            border-radius: 20px 20px 0 0;
+            border-bottom: 1px solid var(--refly-Card-Border);
+            background-color: var(--refly-bg-content-z1);
+          }
+          .unsaved-changes-confirm-modal .ant-modal-body {
+            background-color: var(--refly-bg-content-z1);
+            color: var(--refly-text-0);
+          }
+          .unsaved-changes-confirm-modal .ant-modal-footer {
+            border-radius: 0 0 20px 20px;
+            border-top: 1px solid var(--refly-Card-Border);
+            background-color: var(--refly-bg-content-z1);
+          }
+          .unsaved-changes-confirm-modal .ant-modal-title {
+            color: var(--refly-text-0);
+          }
+          .unsaved-changes-confirm-ok.ant-btn-primary {
+            background-color: var(--refly-primary-default) !important;
+            border-color: var(--refly-primary-default) !important;
+            color: #ffffff !important;
+          }
+          .unsaved-changes-confirm-ok.ant-btn-primary:hover {
+            background-color: var(--refly-primary-hover) !important;
+            border-color: var(--refly-primary-hover) !important;
+          }
+          .unsaved-changes-confirm-ok.ant-btn-primary:active {
+            background-color: var(--refly-primary-active) !important;
+            border-color: var(--refly-primary-active) !important;
+          }
+          .unsaved-changes-confirm-cancel.ant-btn-default {
+            color: var(--refly-text-0) !important;
+            background-color: var(--refly-bg-control-z0) !important;
+            border-color: var(--refly-Card-Border) !important;
+          }
+          .unsaved-changes-confirm-cancel.ant-btn-default:hover {
+            color: var(--refly-text-0) !important;
+            background-color: var(--refly-tertiary-hover) !important;
+            border-color: var(--refly-Card-Border) !important;
+          }
+        `}
+      </style>
       {contextHolder}
       <Modal
         centered
         open={visible}
-        onCancel={() => setVisible(false)}
+        onCancel={handleModalClose}
         footer={modalFooter}
         title={modalTitle}
         styles={{
