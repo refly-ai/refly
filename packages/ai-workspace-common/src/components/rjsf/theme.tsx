@@ -826,7 +826,7 @@ const CheckboxesWidget = (props: RjsfWidgetProps) => {
             {shouldShowInput && (
               <div className="col-span-2 mt-3">
                 <Input
-                  placeholder="请输入其他选项"
+                  placeholder="Please enter other options"
                   value={otherValue}
                   disabled={disabled || readonly}
                   onChange={(e) => handleOtherInputChange(e.target.value)}
