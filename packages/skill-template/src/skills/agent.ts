@@ -25,7 +25,6 @@ import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { type StructuredToolInterface } from '@langchain/core/tools';
-import { toolResultTruncator } from '../scheduler/utils/tool-result-truncator';
 
 // Constants for recursion control
 const MAX_TOOL_ITERATIONS = 25;
@@ -215,27 +214,9 @@ export class Agent extends BaseSkill {
                   ? rawResult
                   : JSON.stringify(rawResult ?? {}, null, 2);
 
-              // Apply smart truncation based on context window usage
-              const { truncatedResult, originalTokens, truncatedTokens, strategy } =
-                toolResultTruncator.truncateToolResult({
-                  modelInfo: config.configurable?.modelConfigMap?.chat,
-                  currentMessages: priorMessages,
-                  toolResult: stringified,
-                  toolName,
-                });
-
-              // Log truncation info if truncation occurred
-              if (truncatedTokens < originalTokens) {
-                this.engine.logger.info(
-                  `Tool '${toolName}' result truncated: ${originalTokens} → ${truncatedTokens} tokens ` +
-                    `(context usage: ${(strategy.usageRatio * 100).toFixed(1)}%, ` +
-                    `max allowed: ${strategy.maxToolResultTokens} tokens)`,
-                );
-              }
-
               toolResultMessages.push(
                 new ToolMessage({
-                  content: truncatedResult,
+                  content: stringified,
                   tool_call_id: call?.id ?? '',
                   name: matchedTool.name,
                 }),
