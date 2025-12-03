@@ -223,6 +223,7 @@ export class WorkflowAppService {
       entityType: 'canvas',
       visibility: 'public',
     });
+    let isTemplateContentValid = false;
 
     // Decide whether to enqueue template generation (stable mode comparison)
     try {
@@ -279,7 +280,7 @@ export class WorkflowAppService {
           | string
           | null
           | undefined;
-        const isTemplateContentValid = this.validateTemplateContentMatchesVariables(
+        isTemplateContentValid = this.validateTemplateContentMatchesVariables(
           prevTemplateContent,
           variables,
         );
@@ -340,6 +341,7 @@ export class WorkflowAppService {
           resultNodeIds,
           creditUsage,
           updatedAt: new Date(),
+          ...{ ...(isTemplateContentValid ? {} : { templateContent: null }) },
         },
       });
     } else {
