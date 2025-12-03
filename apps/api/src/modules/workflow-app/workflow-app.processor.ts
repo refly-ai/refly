@@ -1,5 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 
 import { PrismaService } from '../common/prisma.service';
@@ -8,6 +8,7 @@ import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
 import type { GenerateWorkflowAppTemplateJobData } from './workflow-app.dto';
 import { CanvasService } from '../canvas/canvas.service';
 import { MiscService } from '../misc/misc.service';
+import { OSS_EXTERNAL, ObjectStorageService } from '../common/object-storage';
 
 @Processor(QUEUE_WORKFLOW_APP_TEMPLATE)
 export class WorkflowAppTemplateProcessor extends WorkerHost {
@@ -18,6 +19,7 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
     private readonly variableExtractionService: VariableExtractionService,
     private readonly canvasService: CanvasService,
     private readonly miscService: MiscService,
+    @Inject(OSS_EXTERNAL) private readonly externalOss: ObjectStorageService,
   ) {
     super();
   }
@@ -92,7 +94,7 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
       );
 
       // Update object storage with the new templateContent and variables
-      await this.updateSharedAppStorage(user, appId, templateResult?.templateContent, variables);
+      await this.updateSharedAppStorage(appId, templateResult?.templateContent, variables);
     } catch (error: any) {
       this.logger.error(
         `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Error processing job ${job.id}: ${error?.stack}`,
@@ -105,62 +107,81 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
    * Update the templateContent and variables in the shared app JSON file stored in object storage
    */
   private async updateSharedAppStorage(
-    user: any,
     appId: string,
     templateContent: string | null | undefined,
     variables: any,
   ): Promise<void> {
     try {
-      // Find the share record for this workflow app
-      const shareRecord = await this.prisma.shareRecord.findFirst({
+      // Find all share records for this workflow app (regular share + template share)
+      const shareRecords = await this.prisma.shareRecord.findMany({
         where: {
           entityId: appId,
           entityType: 'workflowApp',
           deletedAt: null,
         },
-        orderBy: {
-          updatedAt: 'desc',
-        },
       });
 
-      if (!shareRecord?.storageKey) {
+      if (!shareRecords?.length) {
         this.logger.log(
-          `[${QUEUE_WORKFLOW_APP_TEMPLATE}] No share record found for appId=${appId}, skip storage update`,
+          `[${QUEUE_WORKFLOW_APP_TEMPLATE}] No share records found for appId=${appId}, skip storage update`,
         );
         return;
       }
 
-      // Download the existing JSON file from object storage
-      const existingBuffer = await this.miscService.downloadFile({
-        storageKey: shareRecord.storageKey,
-        visibility: 'public',
-      });
+      // Update all share records (could be regular share and/or template share)
+      for (const shareRecord of shareRecords) {
+        if (!shareRecord?.storageKey) {
+          this.logger.warn(
+            `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Share record ${shareRecord.shareId} has no storageKey, skip`,
+          );
+          continue;
+        }
 
-      const existingData = JSON.parse(existingBuffer.toString('utf-8'));
+        try {
+          // Download the existing JSON file from object storage
+          const existingBuffer = await this.miscService.downloadFile({
+            storageKey: shareRecord.storageKey,
+            visibility: 'public',
+          });
 
-      // Update only the templateContent and variables fields
-      const updatedData = {
-        ...existingData,
-        templateContent: templateContent ?? null,
-        variables: Array.isArray(variables) ? variables : [],
-      };
+          const existingData = JSON.parse(existingBuffer.toString('utf-8'));
 
-      // Re-upload the updated JSON file
-      await this.miscService.uploadBuffer(user, {
-        fpath: 'workflow-app.json',
-        buf: Buffer.from(JSON.stringify(updatedData)),
-        entityId: appId,
-        entityType: 'workflowApp',
-        visibility: 'public',
-        storageKey: shareRecord.storageKey,
-      });
+          // Validate existingData is an object
+          if (!existingData || typeof existingData !== 'object' || Array.isArray(existingData)) {
+            this.logger.warn(
+              `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Invalid JSON structure in ${shareRecord.storageKey}, skip`,
+            );
+            continue;
+          }
 
-      this.logger.log(
-        `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Updated storage for appId=${appId}, shareId=${shareRecord.shareId}`,
-      );
+          // Update only the templateContent and variables fields
+          const updatedData = {
+            ...existingData,
+            templateContent: templateContent ?? null,
+            variables: Array.isArray(variables) ? variables : [],
+          };
+
+          // Directly update object storage using putObject to avoid creating duplicate staticFile records
+          const jsonBuffer = Buffer.from(JSON.stringify(updatedData));
+          await this.externalOss.putObject(shareRecord.storageKey, jsonBuffer, {
+            'Content-Type': 'application/json',
+          });
+
+          this.logger.log(
+            `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Updated storage for appId=${appId}, shareId=${shareRecord.shareId}`,
+          );
+        } catch (error: any) {
+          this.logger.error(
+            `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Failed to update storage for shareId=${shareRecord.shareId}: ${error?.message}`,
+            error?.stack,
+          );
+          // Continue to next share record even if one fails
+        }
+      }
     } catch (error: any) {
       this.logger.error(
         `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Failed to update storage for appId=${appId}: ${error?.message}`,
+        error?.stack,
       );
       // Don't throw error to avoid failing the entire job
     }
