@@ -342,6 +342,7 @@ function extractVariableReferences(originalQuery: string): string[] {
 
 /**
  * Build nodes text - format canvas nodes into readable description
+ * Includes node title, type, and query content for prompt generation
  */
 function buildNodesText(skillResponses: CanvasNode[]): string {
   if (!skillResponses?.length) {
@@ -350,10 +351,19 @@ function buildNodesText(skillResponses: CanvasNode[]): string {
 
   return skillResponses
     .map((node, index) => {
-      const nodeType = node.type || 'unknown';
-      const nodeTitle = node?.title || node.data.title || `Node ${index + 1}`;
+      const nodeType = node?.type || 'unknown';
+      const nodeTitle = node?.title || node?.data?.title || `Node ${index + 1}`;
+      // Extract query from metadata.structuredData.query (used by filterUsedVariables) or metadata.query
+      // Safely handle cases where node.data or metadata might be undefined
+      const query =
+        (node?.data as any)?.metadata?.structuredData?.query ??
+        (node?.data as any)?.metadata?.query ??
+        '';
 
-      const description = `- ${nodeTitle} (${nodeType})`;
+      let description = `- ${nodeTitle} (${nodeType})`;
+      if (query?.trim()) {
+        description += `\n  Query: ${query}`;
+      }
 
       return description;
     })

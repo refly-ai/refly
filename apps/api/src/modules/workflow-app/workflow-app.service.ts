@@ -102,6 +102,74 @@ export class WorkflowAppService {
     return JSON.stringify(simplified);
   }
 
+  /**
+   * Build a deterministic fingerprint string for skill response nodes.
+   * Only stable fields that affect prompt are included (type, title/data.title, query).
+   * Query is included because it's used to extract variable references in filterUsedVariables.
+   */
+  private buildSkillResponsesFingerprint(nodes: RawCanvasData['nodes'] | undefined | null): string {
+    const safeNodes = Array.isArray(nodes) ? nodes : [];
+    const responses = safeNodes
+      .filter((n) => (n as any)?.type === 'skillResponse')
+      .map((n) => {
+        const node = n as CanvasNode;
+        const type = (node?.type as string) ?? '';
+        const title = (node as any)?.title ?? (node?.data as any)?.title ?? '';
+        // Query from metadata.structuredData.query (used by filterUsedVariables) or metadata.query
+        const query =
+          (node?.data as any)?.metadata?.structuredData?.query ??
+          (node?.data as any)?.metadata?.query ??
+          '';
+        return { type, title: title ?? '', query: query ?? '' };
+      })
+      .sort((a, b) => {
+        // Include query in sort key to ensure consistent ordering
+        const ka = `${a.title}|${a.type}|${a.query}`;
+        const kb = `${b.title}|${b.type}|${b.query}`;
+        return ka.localeCompare(kb);
+      });
+    return JSON.stringify(responses);
+  }
+
+  /**
+   * Validate if templateContent matches the provided variables.
+   * This checks if all variables are present in the template as placeholders.
+   * Reference: workflow-app.processor.ts validation logic
+   */
+  private validateTemplateContentMatchesVariables(
+    templateContent: string | null | undefined,
+    variables: WorkflowVariable[] | undefined | null,
+  ): boolean {
+    // If no templateContent, it's invalid (previous generation might have failed)
+    if (!templateContent) {
+      return false;
+    }
+
+    // If no variables, template should have no placeholders
+    const safeVars = Array.isArray(variables) ? variables : [];
+    if (safeVars.length === 0) {
+      // No variables means template should have no placeholders
+      const placeholderRegex = /\{\{[^}]+\}\}/g;
+      const matches = templateContent.match(placeholderRegex);
+      return !matches || matches.length === 0;
+    }
+
+    // Extract placeholders from templateContent
+    const placeholderRegex = /\{\{[^}]+\}\}/g;
+    const placeholders = templateContent.match(placeholderRegex) ?? [];
+
+    // Check if placeholder count matches variable count
+    if (placeholders.length !== safeVars.length) {
+      return false;
+    }
+
+    // Check if every variable has a corresponding placeholder
+    return safeVars.every((v) => {
+      const varName = v?.name ?? '';
+      return placeholders.includes(`{{${varName}}}` as never);
+    });
+  }
+
   async createWorkflowApp(user: User, body: CreateWorkflowAppRequest) {
     const { canvasId, title, query, variables, description } = body;
     const coverStorageKey = (body as any).coverStorageKey;
@@ -152,13 +220,12 @@ export class WorkflowAppService {
       visibility: 'public',
     });
 
-    // Determine whether to skip template generation when inputs are unchanged
-    const shouldSkipGeneration =
-      !!existingWorkflowApp &&
-      (existingWorkflowApp?.title ?? '') === (canvasData?.title ?? '') &&
-      (existingWorkflowApp?.query ?? '') === (query ?? '') &&
-      this.buildVariablesFingerprint(
-        (() => {
+    // Decide whether to enqueue template generation (stable mode comparison)
+    try {
+      let shouldSkipGeneration = false;
+      if (existingWorkflowApp) {
+        // Previous variables fingerprint
+        const prevVariables: WorkflowVariable[] = (() => {
           try {
             return existingWorkflowApp?.variables
               ? (JSON.parse(existingWorkflowApp.variables) as WorkflowVariable[])
@@ -166,14 +233,70 @@ export class WorkflowAppService {
           } catch {
             return [];
           }
-        })(),
-      ) === this.buildVariablesFingerprint(variables);
+        })();
+        const prevVarsFp = this.buildVariablesFingerprint(prevVariables);
+        const curVarsFp = this.buildVariablesFingerprint(variables);
 
-    // Generate app template content asynchronously when possible
-    try {
+        // Previous canvas data (from stored public JSON)
+        let prevTitle = existingWorkflowApp?.title ?? '';
+        const prevDescription = existingWorkflowApp?.description ?? null;
+        let prevSkillResponsesFp = '';
+        try {
+          const prevStorageKey = (existingWorkflowApp as any)?.storageKey as string | undefined;
+          if (prevStorageKey) {
+            const prevBuf = await this.miscService.downloadFile({
+              storageKey: prevStorageKey,
+              visibility: 'public',
+            });
+            if (prevBuf) {
+              const prevCanvasJson = JSON.parse(prevBuf.toString('utf8')) as RawCanvasData;
+              prevTitle = (prevCanvasJson as any)?.title ?? prevTitle ?? '';
+              // Description comes from DB, not canvas JSON
+              prevSkillResponsesFp = this.buildSkillResponsesFingerprint(prevCanvasJson?.nodes);
+            }
+          }
+        } catch (error) {
+          // If previous canvas cannot be loaded, fall back to DB fields only
+          // Log error but don't fail - we'll compare with empty fingerprint which will trigger regeneration
+          this.logger.warn(
+            `Failed to load previous canvas data for comparison (appId=${appId}): ${error?.message}`,
+          );
+          prevSkillResponsesFp = '';
+        }
+
+        // Current canvas stable fields
+        const curTitle = canvasData?.title ?? '';
+        const curDescription = description ?? null;
+        const curSkillResponsesFp = this.buildSkillResponsesFingerprint(canvasData?.nodes);
+
+        // Validate previous templateContent matches current variables
+        // This handles cases where previous async generation failed or variables changed
+        const prevTemplateContent = (existingWorkflowApp as any)?.templateContent as
+          | string
+          | null
+          | undefined;
+        const isTemplateContentValid = this.validateTemplateContentMatchesVariables(
+          prevTemplateContent,
+          variables,
+        );
+
+        // Stable mode comparison:
+        // - canvas title (from canvas JSON)
+        // - description (from request body, stored in DB)
+        // - skillResponses fingerprint (type/title)
+        // - variables fingerprint (name/type/description/values)
+        // - templateContent validation (ensures previous template matches current variables)
+        shouldSkipGeneration =
+          prevTitle === curTitle &&
+          prevDescription === curDescription &&
+          prevSkillResponsesFp === curSkillResponsesFp &&
+          prevVarsFp === curVarsFp &&
+          isTemplateContentValid;
+      }
+
       if (shouldSkipGeneration) {
         this.logger.log(
-          `Skip template generation for workflow app ${appId}: title/query/variables unchanged`,
+          `Skip template generation for workflow app ${appId}: stable prompt dependencies unchanged`,
         );
       } else if (this.templateQueue) {
         await this.templateQueue.add(
@@ -207,10 +330,6 @@ export class WorkflowAppService {
           description,
           storageKey,
           coverStorageKey: coverStorageKey as any,
-          // Reuse existing templateContent when skipping generation; otherwise keep unchanged (async path)
-          templateContent: shouldSkipGeneration
-            ? (existingWorkflowApp?.templateContent ?? null)
-            : undefined,
           remixEnabled,
           publishToCommunity,
           publishReviewStatus: publishToCommunity ? 'reviewing' : 'init',
@@ -231,8 +350,6 @@ export class WorkflowAppService {
           canvasId,
           storageKey,
           coverStorageKey: coverStorageKey as any,
-          // Always async: initial templateContent remains null
-          templateContent: null,
           remixEnabled,
           publishToCommunity,
           publishReviewStatus: publishToCommunity ? 'reviewing' : 'init',
