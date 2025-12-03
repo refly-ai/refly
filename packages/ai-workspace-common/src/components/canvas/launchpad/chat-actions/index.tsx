@@ -89,6 +89,9 @@ export const ChatActions = memo((props: ChatActionsProps) => {
       used_knowledge_base: usedKnowledgeBase,
       used_tools: usedTools,
     });
+
+    logEvent('copilot_prompt_sent');
+
     handleSendMessage();
   }, [contextItems, modelInfo, handleSendMessage, selectedToolsets]);
 

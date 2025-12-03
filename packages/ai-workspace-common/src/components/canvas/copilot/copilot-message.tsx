@@ -14,6 +14,7 @@ import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hook
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { CanvasNode } from '@refly/openapi-schema';
+import { logEvent } from '@refly/telemetry-web';
 
 interface CopilotMessageProps {
   result: ActionResult;
@@ -69,6 +70,7 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
   });
 
   const handleApprove = useCallback(async () => {
+    logEvent('copilot_approve_clicked');
     if (!workflowPlan) {
       return;
     }
