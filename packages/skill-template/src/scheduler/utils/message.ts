@@ -258,7 +258,6 @@ function buildCoreMessages(messages: BaseMessage[], targetBudget: number): BaseM
     }
   }
 
-  console.warn(`Core mode: ${messages.length} -> ${result.length} messages`);
   return result;
 }
 
