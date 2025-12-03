@@ -88,8 +88,6 @@ export const buildFinalRequestMessages = ({
 
   // Apply message list truncation if model info is available
 
-  console.log(`buildFinalRequestMessages: ${modelInfo?.contextLimit}`);
-
   if (modelInfo?.contextLimit) {
     requestMessages = truncateMessageList(requestMessages, modelInfo);
   }
@@ -211,59 +209,19 @@ function truncateMessage(msg: BaseMessage, targetTokens: number): BaseMessage {
   const headRatio = 0.7;
   const tailRatio = 0.3;
 
-  // Reserve tokens for the truncation message
-  const truncationMessageTokens = 50;
-  const availableTokens = Math.max(100, targetTokens - truncationMessageTokens);
+  // Estimate character count from token ratio (approximation: 1 token ≈ 4 chars for English)
+  const targetRatio = targetTokens / currentTokens;
+  const estimatedChars = Math.floor(content.length * targetRatio * 0.95); // 0.95 safety margin
 
-  const headTargetTokens = Math.floor(availableTokens * headRatio);
-  const tailTargetTokens = Math.floor(availableTokens * tailRatio);
-
-  // Binary search for head length
-  let headLength = 0;
-  {
-    let left = 0;
-    let right = content.length;
-
-    while (left <= right) {
-      const mid = Math.floor((left + right) / 2);
-      const truncated = content.substring(0, mid);
-      const tokens = countToken(truncated);
-
-      if (tokens <= headTargetTokens) {
-        headLength = mid;
-        left = mid + 1;
-      } else {
-        right = mid - 1;
-      }
-    }
-  }
-
-  // Binary search for tail length
-  let tailLength = 0;
-  {
-    let left = 0;
-    let right = content.length;
-
-    while (left <= right) {
-      const mid = Math.floor((left + right) / 2);
-      const truncated = content.substring(content.length - mid);
-      const tokens = countToken(truncated);
-
-      if (tokens <= tailTargetTokens) {
-        tailLength = mid;
-        left = mid + 1;
-      } else {
-        right = mid - 1;
-      }
-    }
-  }
+  // Calculate head and tail lengths in characters
+  const headLength = Math.floor(estimatedChars * headRatio);
+  const tailLength = Math.floor(estimatedChars * tailRatio);
 
   const headContent = content.substring(0, headLength);
   const tailContent = content.substring(content.length - tailLength);
   const removedChars = content.length - headLength - tailLength;
-  const removedTokens = currentTokens - countToken(headContent) - countToken(tailContent);
 
-  const truncationMessage = `\n\n[... Middle part truncated: removed ${removedChars} chars (≈${removedTokens} tokens) ...]\n\n`;
+  const truncationMessage = `\n\n[... Truncated ${removedChars} chars (≈${currentTokens - targetTokens} tokens) ...]\n\n`;
   const truncatedContent = headContent + truncationMessage + tailContent;
 
   // Return appropriate message type
