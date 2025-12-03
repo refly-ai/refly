@@ -533,7 +533,7 @@ export const CreateWorkflowAppModal = ({
 
       // Validate run result selection before publishing
       if (!selectedResults || selectedResults.length === 0) {
-        message.error('No run result selected. Please choose the result before publishing.');
+        message.error(t('workflowApp.runResultRequired'));
         return;
       }
 
@@ -909,11 +909,7 @@ export const CreateWorkflowAppModal = ({
                       options={displayNodes}
                     />
                   </div>
-                  {selectedResults.length === 0 && (
-                    <div className="text-xs text-refly-func-danger-default leading-[1.33]">
-                      {'No run result selected. Please choose the result before publishing.'}
-                    </div>
-                  )}
+
                   <div
                     className="w-full rounded-lg border border-solid p-3 bg-[#FBFBFB] dark:bg-[var(--refly-bg-main-z1)]"
                     style={{
