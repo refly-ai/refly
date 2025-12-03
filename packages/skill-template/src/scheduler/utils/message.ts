@@ -243,7 +243,7 @@ function buildCoreMessages(messages: BaseMessage[], targetBudget: number): BaseM
 
   // 2. Last user message
   const last = messages[messages.length - 1];
-  if (last) {
+  if (last && last !== system) {
     result.push(last);
     tokens += countToken(last.content);
   }
