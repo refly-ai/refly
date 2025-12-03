@@ -15,6 +15,7 @@ import { Icon, SkillTemplateConfigDefinition, User } from '@refly/openapi-schema
 import { GraphState } from '../scheduler/types';
 // utils
 import { buildFinalRequestMessages } from '../scheduler/utils/message';
+import { truncateContent, countToken } from '../scheduler/utils/token';
 
 // prompts
 import { buildNodeAgentSystemPrompt } from '../prompts/node-agent';
@@ -32,6 +33,10 @@ const MAX_TOOL_ITERATIONS = 25;
 const DEFAULT_RECURSION_LIMIT = 2 * MAX_TOOL_ITERATIONS + 1;
 // Max consecutive identical tool calls to detect infinite loops
 const MAX_IDENTICAL_TOOL_CALLS = 3;
+
+// Maximum tokens for a single tool result to prevent excessive context usage
+// Can be overridden via environment variable
+const MAX_TOOL_RESULT_TOKENS = Number(process.env.MAX_TOOL_RESULT_TOKENS) || 20000;
 
 // Define a more specific type for the compiled graph
 type CompiledGraphApp = {
@@ -209,10 +214,28 @@ export class Agent extends BaseSkill {
 
               // Each invocation awaited to ensure strict serial execution
               const rawResult = await matchedTool.invoke(toolArgs);
-              const stringified =
+              let stringified =
                 typeof rawResult === 'string'
                   ? rawResult
                   : JSON.stringify(rawResult ?? {}, null, 2);
+
+              // Calculate token count and truncate if necessary
+              const resultTokens = countToken(stringified);
+
+              if (resultTokens > MAX_TOOL_RESULT_TOKENS) {
+                this.engine.logger.warn(
+                  `Tool '${toolName}' result exceeds token limit: ${resultTokens} > ${MAX_TOOL_RESULT_TOKENS}, truncating...`,
+                );
+                stringified = truncateContent(stringified, MAX_TOOL_RESULT_TOKENS);
+                const truncatedTokens = countToken(stringified);
+                this.engine.logger.info(
+                  `Tool '${toolName}' result truncated: ${resultTokens} -> ${truncatedTokens} tokens`,
+                );
+              } else {
+                this.engine.logger.info(
+                  `Tool '${toolName}' result size: ${resultTokens} tokens (within limit)`,
+                );
+              }
 
               toolResultMessages.push(
                 new ToolMessage({
