@@ -41,6 +41,18 @@ export class BuiltinExecuteCode extends AgentBaseTool<BuiltinSandboxParams> {
 - 🔸 Reload data from files when continuing previous work
 - 🔸 Write self-contained code (treat each call as a fresh Python session)
 
+# Installed Packages (Python)
+
+- **Data processing**: numpy, pandas, scipy
+- **Machine learning**: scikit-learn
+- **Symbolic math**: sympy
+- **Visualization**: matplotlib, seaborn, plotly, mplfonts (CJK font support)
+- **Image**: pillow
+- **File processing**: openpyxl, python-docx, pypdf, pymupdf, reportlab, python-pptx
+- **Format parsing**: pyyaml, toml, orjson, lxml, beautifulsoup4
+- **Network**: requests
+- **Utilities**: python-dateutil, pytz, tabulate
+
 # Example
 
 **Step 1**: Process data and save to file
@@ -67,6 +79,7 @@ plt.figure(figsize=(10, 6))
 plt.bar(df['name'], df['total'])
 plt.savefig('chart.png')
 \`\`\`
+
 `;
 
   protected params: BuiltinSandboxParams;
