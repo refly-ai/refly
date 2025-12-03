@@ -87,6 +87,9 @@ export const buildFinalRequestMessages = ({
   ];
 
   // Apply message list truncation if model info is available
+
+  console.log(`buildFinalRequestMessages: ${modelInfo?.contextLimit}`);
+
   if (modelInfo?.contextLimit) {
     requestMessages = truncateMessageList(requestMessages, modelInfo);
   }
@@ -192,103 +195,92 @@ const createHumanMessageWithContent = (contentItems: ContentItem[]): HumanMessag
 
 // ============ Message List Truncation ============
 
-interface TruncateRule {
-  canTruncate: boolean; // Whether this message can be truncated
-  priority: number; // Higher number = higher priority to truncate
-  keepRatio: number; // Ratio to keep after truncation (0-1)
-  minKeep: number; // Minimum tokens to keep
-}
-
-/**
- * Get truncation rule for a specific message
- */
-function getTruncateRule(msg: BaseMessage, index: number, totalLength: number): TruncateRule {
-  // SystemMessage - never truncate
-  if (msg instanceof SystemMessage) {
-    return { canTruncate: false, priority: 0, keepRatio: 1, minKeep: 0 };
-  }
-
-  // Last HumanMessage - never truncate (current user query)
-  if (index === totalLength - 1 && msg instanceof HumanMessage) {
-    return { canTruncate: false, priority: 0, keepRatio: 1, minKeep: 0 };
-  }
-
-  const tokens = countToken(msg.content);
-
-  // ToolMessage
-  if (msg instanceof ToolMessage) {
-    if (tokens > 5000) {
-      // Large ToolMessage - highest priority to truncate
-      return { canTruncate: true, priority: 10, keepRatio: 0.1, minKeep: 1000 };
-    }
-    if (tokens > 2000) {
-      // Medium ToolMessage
-      return { canTruncate: true, priority: 7, keepRatio: 0.3, minKeep: 500 };
-    }
-    // Small ToolMessage - don't truncate
-    return { canTruncate: false, priority: 0, keepRatio: 1, minKeep: 0 };
-  }
-
-  // ChatHistory (messages between first and last)
-  const isChatHistory = index > 0 && index < totalLength - 1;
-  if (isChatHistory) {
-    const recentThreshold = Math.max(1, totalLength - 6); // Last 3 rounds (6 messages)
-
-    if (index < recentThreshold) {
-      // Old chat history - high priority to remove
-      return { canTruncate: true, priority: 9, keepRatio: 0, minKeep: 0 };
-    } else {
-      // Recent chat history - low priority to truncate
-      return { canTruncate: true, priority: 3, keepRatio: 0.5, minKeep: 200 };
-    }
-  }
-
-  // Other messages
-  return { canTruncate: true, priority: 5, keepRatio: 0.5, minKeep: 200 };
-}
-
 /**
  * Truncate a single message to target token count
+ * Strategy: Keep head and tail, remove middle part
  */
 function truncateMessage(msg: BaseMessage, targetTokens: number): BaseMessage {
   const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+  const currentTokens = countToken(content);
 
-  // Binary search to find the right truncation length
-  let left = 0;
-  let right = content.length;
-  let bestLength = 0;
+  if (currentTokens <= targetTokens) {
+    return msg;
+  }
 
-  while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    const truncated = content.substring(0, mid);
-    const tokens = countToken(truncated);
+  // Strategy: Keep 70% at head, 30% at tail
+  const headRatio = 0.7;
+  const tailRatio = 0.3;
 
-    if (tokens <= targetTokens) {
-      bestLength = mid;
-      left = mid + 1;
-    } else {
-      right = mid - 1;
+  // Reserve tokens for the truncation message
+  const truncationMessageTokens = 50;
+  const availableTokens = Math.max(100, targetTokens - truncationMessageTokens);
+
+  const headTargetTokens = Math.floor(availableTokens * headRatio);
+  const tailTargetTokens = Math.floor(availableTokens * tailRatio);
+
+  // Binary search for head length
+  let headLength = 0;
+  {
+    let left = 0;
+    let right = content.length;
+
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2);
+      const truncated = content.substring(0, mid);
+      const tokens = countToken(truncated);
+
+      if (tokens <= headTargetTokens) {
+        headLength = mid;
+        left = mid + 1;
+      } else {
+        right = mid - 1;
+      }
     }
   }
 
-  const truncatedContent = content.substring(0, bestLength);
-  const suffix = `\n\n[... truncated ${content.length - bestLength} chars ...]`;
+  // Binary search for tail length
+  let tailLength = 0;
+  {
+    let left = 0;
+    let right = content.length;
+
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2);
+      const truncated = content.substring(content.length - mid);
+      const tokens = countToken(truncated);
+
+      if (tokens <= tailTargetTokens) {
+        tailLength = mid;
+        left = mid + 1;
+      } else {
+        right = mid - 1;
+      }
+    }
+  }
+
+  const headContent = content.substring(0, headLength);
+  const tailContent = content.substring(content.length - tailLength);
+  const removedChars = content.length - headLength - tailLength;
+  const removedTokens = currentTokens - countToken(headContent) - countToken(tailContent);
+
+  const truncationMessage = `\n\n[... Middle part truncated: removed ${removedChars} chars (≈${removedTokens} tokens) ...]\n\n`;
+  const truncatedContent = headContent + truncationMessage + tailContent;
 
   // Return appropriate message type
   if (msg instanceof ToolMessage) {
     return new ToolMessage({
-      content: truncatedContent + suffix,
+      content: truncatedContent,
       tool_call_id: msg.tool_call_id,
       name: msg.name,
     });
   }
 
   if (msg instanceof AIMessage) {
-    return new AIMessage(truncatedContent + suffix);
+    return new AIMessage(truncatedContent);
   }
 
   if (msg instanceof HumanMessage) {
-    return new HumanMessage(truncatedContent + suffix);
+    return new HumanMessage(truncatedContent);
   }
 
   return msg;
@@ -325,6 +317,7 @@ function buildCoreMessages(messages: BaseMessage[], targetBudget: number): BaseM
     }
   }
 
+  console.warn(`Core mode: ${messages.length} -> ${result.length} messages`);
   return result;
 }
 
@@ -336,9 +329,10 @@ export function truncateMessageList(
   modelInfo: LLMModelConfig,
 ): BaseMessage[] {
   const contextLimit = modelInfo.contextLimit || 100000;
-  const targetBudget = contextLimit * 0.8; // Target: use 80%, reserve 20% for output
+  const maxOutput = modelInfo.maxOutput || 8000;
+  const targetBudget = contextLimit - maxOutput; // Reserve maxOutput tokens for LLM response
 
-  const currentTokens = countMessagesTokens(messages);
+  const currentTokens = Math.floor(countMessagesTokens(messages) * 1.3);
   const needToTruncate = currentTokens - targetBudget;
 
   // No truncation needed
@@ -346,66 +340,56 @@ export function truncateMessageList(
     return messages;
   }
 
-  // Score each message
-  const scoredMessages = messages.map((msg, index) => {
-    const tokens = countToken(msg.content);
-    const rule = getTruncateRule(msg, index, messages.length);
+  // Simple strategy: Sort messages by size, truncate the largest ones
+  const messagesWithTokens = messages.map((msg, index) => ({
+    index,
+    message: msg,
+    tokens: countToken(msg.content),
+    canTruncate: !(msg instanceof SystemMessage),
+  }));
 
-    return {
-      index,
-      message: msg,
-      tokens,
-      rule,
-      // Calculate max tokens we can save from this message
-      maxSavable: rule.canTruncate
-        ? Math.max(0, tokens - Math.max(tokens * rule.keepRatio, rule.minKeep))
-        : 0,
-    };
-  });
+  // Sort by tokens (largest first), but only truncatable messages
+  const truncatableMessages = messagesWithTokens
+    .filter((item) => item.canTruncate)
+    .sort((a, b) => b.tokens - a.tokens);
 
-  // Sort by priority (higher priority first)
-  const sortedByPriority = scoredMessages
-    .filter((item) => item.maxSavable > 0)
-    .sort((a, b) => b.rule.priority - a.rule.priority);
-
-  // Truncate one by one until we have saved enough
+  // Truncate largest messages until we save enough
   const toTruncate = new Map<number, number>(); // index -> keepTokens
   let saved = 0;
 
-  for (const item of sortedByPriority) {
+  for (const item of truncatableMessages) {
     if (saved >= needToTruncate) break;
 
     const needMore = needToTruncate - saved;
-    const canSave = item.maxSavable;
+    const minKeep = 1000; // Minimum tokens to keep per message
+    const maxCanSave = Math.max(0, item.tokens - minKeep);
 
-    if (canSave <= needMore) {
-      // This message contributes all it can
-      const keepTokens = Math.max(item.tokens * item.rule.keepRatio, item.rule.minKeep);
-      toTruncate.set(item.index, Math.ceil(keepTokens));
-      saved += canSave;
+    if (maxCanSave <= 0) continue;
+
+    if (maxCanSave >= needMore) {
+      // This message can save enough by itself
+      const keepTokens = item.tokens - needMore;
+      toTruncate.set(item.index, keepTokens);
+      saved += needMore;
     } else {
-      // This message only needs to contribute part of what it can
-      const shouldSave = needMore;
-      const keepTokens = item.tokens - shouldSave;
-      toTruncate.set(item.index, Math.ceil(keepTokens));
-      saved += shouldSave;
+      // Truncate this message as much as possible
+      toTruncate.set(item.index, minKeep);
+      saved += maxCanSave;
     }
   }
 
-  // If we can't save enough even after truncating everything, fallback to core mode
+  // If can't save enough, fallback to core mode
   if (saved < needToTruncate) {
-    return buildCoreMessages(messages, targetBudget);
+    const coreMessages = buildCoreMessages(messages, targetBudget);
+    return coreMessages;
   }
 
   // Execute truncation
-  const result = messages
-    .map((msg, index) => {
-      const keepTokens = toTruncate.get(index);
-      if (keepTokens === undefined) return msg; // No truncation
-      if (keepTokens === 0) return null; // Remove this message
-      return truncateMessage(msg, keepTokens); // Truncate to specified size
-    })
-    .filter((msg): msg is BaseMessage => msg !== null);
+  const result = messages.map((msg, index) => {
+    const keepTokens = toTruncate.get(index);
+    if (keepTokens === undefined) return msg; // No truncation
+    return truncateMessage(msg, keepTokens); // Truncate to specified size
+  });
 
   return result;
 }
