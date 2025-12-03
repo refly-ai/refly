@@ -1252,29 +1252,6 @@ model SubscriptionPlan {
   @@map("subscription_plans")
 }
 
-model CreditPackPlan {
-  /// Primary key
-  pk          BigInt   @id @default(autoincrement())
-  /// Credit pack ID (business identifier)
-  packId      String   @unique @map("pack_id")
-  /// Stripe price lookup key
-  lookupKey   String   @map("lookup_key")
-  /// Credit amount for this pack
-  creditQuota Int      @map("credit_quota")
-  /// Whether this pack is enabled
-  enabled     Boolean  @default(true) @map("enabled")
-  /// Display name
-  name        String   @map("name")
-  /// Display description
-  description String?  @map("description")
-  /// Create timestamp
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  /// Update timestamp
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
-
-  @@map("credit_pack_plans")
-}
-
 model Subscription {
   /// Primary key
   pk             BigInt    @id @default(autoincrement())

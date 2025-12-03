@@ -1,10 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import Stripe from 'stripe';
 import { StripeWebhookHandler } from '@golevelup/nestjs-stripe';
-import { SubscriptionInterval, SubscriptionPlanType } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
-import { CreditService } from '../credit/credit.service';
 import { SubscriptionService } from './subscription.service';
+import { SubscriptionInterval, SubscriptionPlanType } from '@refly/openapi-schema';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -14,7 +13,6 @@ export class SubscriptionWebhooks {
   constructor(
     private readonly prisma: PrismaService,
     private readonly subscriptionService: SubscriptionService,
-    private readonly creditService: CreditService,
   ) {}
 
   @StripeWebhookHandler('checkout.session.completed')
@@ -29,8 +27,7 @@ export class SubscriptionWebhooks {
 
     const uid = session.client_reference_id;
     const customerId = session.customer as string;
-    const purpose = session.metadata?.purpose ?? 'subscription';
-    const mode = session.mode ?? 'subscription';
+    const subscriptionId = session.subscription as string;
 
     const checkoutSession = await this.prisma.checkoutSession.findFirst({
       where: { sessionId: session.id },
@@ -51,8 +48,7 @@ export class SubscriptionWebhooks {
       where: { pk: checkoutSession.pk },
       data: {
         paymentStatus: session.payment_status,
-        subscriptionId: (session.subscription as string | null) ?? null,
-        customerId,
+        subscriptionId: session.subscription as string,
       },
     });
 
@@ -69,37 +65,6 @@ export class SubscriptionWebhooks {
         data: { customerId },
       });
     }
-
-    // Handle credit pack purchase when purpose is credit_pack or mode is payment
-    if (purpose === 'credit_pack' || mode === 'payment') {
-      const packPlan = await this.prisma.creditPackPlan.findFirst({
-        where: {
-          lookupKey: checkoutSession.lookupKey,
-          enabled: true,
-        },
-      });
-
-      if (!packPlan) {
-        this.logger.error(`No credit pack plan found for lookupKey ${checkoutSession.lookupKey}`);
-        return;
-      }
-
-      const creditAmount = packPlan.creditQuota;
-
-      await this.creditService.createCreditPackRecharge(
-        uid ?? '',
-        creditAmount,
-        session.id,
-        `Credit pack purchase: ${packPlan.name}`,
-      );
-
-      this.logger.log(
-        `Successfully processed credit pack purchase checkout session ${session.id} for user ${uid}`,
-      );
-      return;
-    }
-
-    const subscriptionId = session.subscription as string;
 
     const plan = await this.prisma.subscriptionPlan.findFirstOrThrow({
       where: { lookupKey: checkoutSession.lookupKey },

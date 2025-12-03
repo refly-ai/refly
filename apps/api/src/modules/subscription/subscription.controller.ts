@@ -5,7 +5,6 @@ import { LoginedUser } from '../../utils/decorators/user.decorator';
 import {
   User,
   CreateCheckoutSessionRequest,
-  CreateCreditPackCheckoutSessionRequest,
   CreateCheckoutSessionResponse,
   CreatePortalSessionResponse,
   GetSubscriptionPlansResponse,
@@ -26,16 +25,6 @@ export class SubscriptionController {
     @Body() param: CreateCheckoutSessionRequest,
   ): Promise<CreateCheckoutSessionResponse> {
     const session = await this.subscriptionService.createCheckoutSession(user, param);
-    return buildSuccessResponse({ url: session.url });
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('/createCreditPackCheckoutSession')
-  async createCreditPackCheckoutSession(
-    @LoginedUser() user: User,
-    @Body() param: CreateCreditPackCheckoutSessionRequest,
-  ): Promise<CreateCheckoutSessionResponse> {
-    const session = await this.subscriptionService.createCreditPackCheckoutSession(user, param);
     return buildSuccessResponse({ url: session.url });
   }
 

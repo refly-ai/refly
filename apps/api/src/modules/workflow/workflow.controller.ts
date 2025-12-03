@@ -13,14 +13,10 @@ import {
 import { buildSuccessResponse } from '../../utils';
 import { ParamsError } from '@refly/errors';
 import { workflowExecutionPO2DTO } from './workflow.dto';
-import { SkillInvokerService } from '../skill/skill-invoker.service';
 
 @Controller('v1/workflow')
 export class WorkflowController {
-  constructor(
-    private readonly workflowService: WorkflowService,
-    private readonly skillInvokerService: SkillInvokerService,
-  ) {}
+  constructor(private readonly workflowService: WorkflowService) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('initialize')
@@ -55,7 +51,7 @@ export class WorkflowController {
       throw new ParamsError('Execution ID is required');
     }
 
-    await this.workflowService.abortWorkflow(user, request.executionId);
+    await this.workflowService.abortWorkflowExecution(user, request.executionId);
     return buildSuccessResponse(null);
   }
 
