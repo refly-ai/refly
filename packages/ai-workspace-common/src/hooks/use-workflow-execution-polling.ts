@@ -196,7 +196,7 @@ export const useWorkflowExecutionPolling = ({
         if (nodeExecution.errorMessage) {
           const error = guessModelProviderError(nodeExecution.errorMessage);
           if (error instanceof ModelUsageQuotaExceeded) {
-            setCreditInsufficientModalVisible(true);
+            setCreditInsufficientModalVisible(true, undefined, 'template');
           }
         }
       }

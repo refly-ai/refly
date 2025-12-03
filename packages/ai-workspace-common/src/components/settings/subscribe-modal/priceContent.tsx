@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from 'react';
+import { memo, useMemo, useState, useCallback, useEffect } from 'react';
 
 import { Row, Col, Tag, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
@@ -413,6 +413,13 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
   }));
 
   const currentPlan: string = userProfile?.subscription?.planType || 'free';
+
+  // Report pricing view event when component mounts
+  useEffect(() => {
+    logEvent('pricing_view', Date.now(), {
+      user_plan: currentPlan,
+    });
+  }, [currentPlan]);
 
   const plansData = useMemo(() => {
     const planTypes = ['free', 'plus'];

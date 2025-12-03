@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState, useEffect } from 'react';
 import { Modal, Button, Row, Col, Tag } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
@@ -411,6 +411,24 @@ export const CreditInsufficientModal = memo(() => {
 
   // Determine if showing both cards (free user not from canvas) or single card
   const showBothCards = !hasPaidSubscription && shouldShowCreditPacks;
+
+  // Determine popup type based on display logic
+  const popupType = useMemo(() => {
+    if (!shouldShowCreditPacks) return 'plus_only';
+    if (hasPaidSubscription) return 'credit_pack_only';
+    return 'plus_and_package';
+  }, [shouldShowCreditPacks, hasPaidSubscription]);
+
+  // Report insufficient_credit_popup_view event when modal opens
+  useEffect(() => {
+    if (creditInsufficientModalVisible) {
+      logEvent('insufficient_credit_popup_view', Date.now(), {
+        user_plan: currentPlan,
+        popup_type: popupType,
+        source: creditInsufficientTriggeredFrom || 'canvas',
+      });
+    }
+  }, [creditInsufficientModalVisible, currentPlan, popupType, creditInsufficientTriggeredFrom]);
 
   // Single selection state - can be 'monthly', 'yearly', or a credit pack id
   const [selectedId, setSelectedId] = useState<SelectionId>(
