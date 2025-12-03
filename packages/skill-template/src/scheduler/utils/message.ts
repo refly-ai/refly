@@ -8,7 +8,7 @@ import {
 } from '@langchain/core/messages';
 import { LLMModelConfig } from '@refly/openapi-schema';
 import { ContextBlock } from './context';
-import { countToken, countMessagesTokens } from './token';
+import { countToken, countMessagesTokens, truncateContent as truncateContentUtil } from './token';
 
 export interface SkillPromptModule {
   buildSystemPrompt: (
@@ -199,30 +199,9 @@ const createHumanMessageWithContent = (contentItems: ContentItem[]): HumanMessag
  */
 function truncateMessage(msg: BaseMessage, targetTokens: number): BaseMessage {
   const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-  const currentTokens = countToken(content);
 
-  if (currentTokens <= targetTokens) {
-    return msg;
-  }
-
-  // Strategy: Keep 70% at head, 30% at tail
-  const headRatio = 0.7;
-  const tailRatio = 0.3;
-
-  // Estimate character count from token ratio (approximation: 1 token ≈ 4 chars for English)
-  const targetRatio = targetTokens / currentTokens;
-  const estimatedChars = Math.floor(content.length * targetRatio * 0.95); // 0.95 safety margin
-
-  // Calculate head and tail lengths in characters
-  const headLength = Math.floor(estimatedChars * headRatio);
-  const tailLength = Math.floor(estimatedChars * tailRatio);
-
-  const headContent = content.substring(0, headLength);
-  const tailContent = content.substring(content.length - tailLength);
-  const removedChars = content.length - headLength - tailLength;
-
-  const truncationMessage = `\n\n[... Truncated ${removedChars} chars (≈${currentTokens - targetTokens} tokens) ...]\n\n`;
-  const truncatedContent = headContent + truncationMessage + tailContent;
+  // Use shared truncateContent utility
+  const truncatedContent = truncateContentUtil(content, targetTokens);
 
   // Return appropriate message type
   if (msg instanceof ToolMessage) {
