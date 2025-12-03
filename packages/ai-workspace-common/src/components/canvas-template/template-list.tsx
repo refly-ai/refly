@@ -10,7 +10,7 @@ import { TemplateCardSkeleton } from './template-card-skeleton';
 import cn from 'classnames';
 
 // Marketplace link
-const MARKETPLACE_LINK = 'https://refly.ai/workflow-marketplace';
+const MARKETPLACE_LINK = `${window.location.origin}`;
 
 // Custom EndMessage component for template list
 const EndMessage = memo(() => {
@@ -73,7 +73,7 @@ export const TemplateList = ({
   const [isFading, setIsFading] = useState(false);
   const prevCategoryIdRef = useRef(categoryId);
 
-  const { dataList, reload, isRequesting, setDataList } = useFetchDataList({
+  const { dataList, reload, isRequesting, setDataList, hasMore } = useFetchDataList({
     fetchData: async (queryPayload) => {
       const res = await getClient().listCanvasTemplates({
         query: {
@@ -189,7 +189,8 @@ export const TemplateList = ({
           )}
         >
           <div className={cn('grid', gridClassName)}>{templateCards}</div>
-          {hasMoreTemplates && viewMoreSection}
+          {!hasMore && displayDataList.length > 0 && <EndMessage />}
+          {hasMore && hasMoreTemplates && viewMoreSection}
         </div>
       ) : (
         emptyState

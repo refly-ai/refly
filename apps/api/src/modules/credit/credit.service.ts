@@ -51,7 +51,7 @@ export class CreditService {
     creditAmount: number,
     rechargeData: {
       rechargeId: string;
-      source: 'gift' | 'subscription' | 'commission' | 'invitation' | 'purchase';
+      source: 'gift' | 'subscription' | 'commission' | 'invitation';
       description?: string;
       createdAt: Date;
       expiresAt: Date;
@@ -838,7 +838,7 @@ export class CreditService {
     );
   }
 
-  async syncBatchTokenCreditUsage(data: SyncBatchTokenCreditUsageJobData): Promise<void> {
+  async syncBatchTokenCreditUsage(data: SyncBatchTokenCreditUsageJobData) {
     const { uid, creditUsageSteps, timestamp, resultId, version } = data;
 
     // Find user

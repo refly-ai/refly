@@ -28,7 +28,6 @@ import { CanvasProvider } from '@refly-packages/ai-workspace-common/context/canv
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { logEvent } from '@refly/telemetry-web';
-import { CreditInsufficientModal } from '@refly-packages/ai-workspace-common/components/subscription/credit-insufficient-modal';
 import { Helmet } from 'react-helmet';
 import FooterSection from '@refly-packages/ai-workspace-common/components/workflow-app/FooterSection';
 import WhyChooseRefly from './WhyChooseRefly';
@@ -967,9 +966,6 @@ const WorkflowAppPage: React.FC = () => {
 
           {/* Settings Modal */}
           <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
-
-          {/* Credit Insufficient Modal */}
-          <CreditInsufficientModal />
         </div>
       </CanvasProvider>
     </ReactFlowProvider>

@@ -422,7 +422,7 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
   }, [currentPlan]);
 
   const plansData = useMemo(() => {
-    const planTypes = ['free', 'plus'];
+    const planTypes = ['free', 'starter', 'maker', 'enterprise'];
     const data: Record<string, { title: string; description: string; features: Feature[] }> = {};
     for (const planType of planTypes) {
       const rawFeatures =
