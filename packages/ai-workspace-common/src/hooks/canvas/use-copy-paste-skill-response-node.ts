@@ -3,6 +3,7 @@ import { useStore } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 import { CanvasNode } from '@refly/canvas-common';
 import { useDuplicateNode } from './use-duplicate-node';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 
 interface CopyPasteSkillResponseNodeOptions {
   /** Canvas ID */
@@ -17,6 +18,8 @@ interface CopyPasteSkillResponseNodeOptions {
  */
 export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNodeOptions = {}) => {
   const { canvasId, readonly } = options;
+  const { workflow: workflowRun } = useCanvasContext();
+  const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
   const { nodes } = useStore(
     useShallow((state) => ({
       nodes: state.nodes,
@@ -31,7 +34,7 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
    * Copy selected skillResponse nodes
    */
   const handleCopy = useCallback(() => {
-    if (readonly) return;
+    if (readonly || workflowIsRunning) return;
 
     const selectedNodes = nodes.filter(
       (node) => node.selected && node.type === 'skillResponse',
@@ -40,13 +43,13 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
     if (selectedNodes.length > 0) {
       setCopiedNodes(selectedNodes);
     }
-  }, [nodes, readonly]);
+  }, [nodes, readonly, workflowIsRunning]);
 
   /**
    * Paste copied nodes at offset {x: 400, y: 100} from original position
    */
   const handlePaste = useCallback(() => {
-    if (readonly || copiedNodes.length === 0 || !canvasId) return;
+    if (readonly || copiedNodes.length === 0 || !canvasId || workflowIsRunning) return;
 
     // Fixed offset for pasted nodes (bottom right of original position)
     const fixedOffset = { x: 0, y: 200 };
@@ -61,7 +64,7 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
         duplicateNode(node, canvasId, { offset: fixedOffset });
       }
     }
-  }, [copiedNodes, duplicateNode, canvasId, readonly]);
+  }, [copiedNodes, duplicateNode, canvasId, readonly, workflowIsRunning]);
 
   /**
    * Handle keyboard shortcuts for copy and paste
@@ -69,7 +72,7 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       // Skip all keyboard handling in readonly mode
-      if (readonly) return;
+      if (readonly || workflowIsRunning) return;
 
       const target = e.target as HTMLElement;
 
@@ -104,7 +107,7 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
         return;
       }
     },
-    [readonly, handleCopy, handlePaste],
+    [readonly, handleCopy, handlePaste, workflowIsRunning],
   );
 
   // Add keyboard event listener
