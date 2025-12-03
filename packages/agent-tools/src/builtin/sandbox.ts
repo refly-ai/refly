@@ -46,7 +46,7 @@ export class BuiltinExecuteCode extends AgentBaseTool<BuiltinSandboxParams> {
 - **Data processing**: numpy, pandas, scipy
 - **Machine learning**: scikit-learn
 - **Symbolic math**: sympy
-- **Visualization**: matplotlib, seaborn, plotly, mplfonts (CJK font support)
+- **Visualization**: matplotlib, seaborn, plotly
 - **Image**: pillow
 - **File processing**: openpyxl, python-docx, pypdf, pymupdf, reportlab, python-pptx
 - **Format parsing**: pyyaml, toml, orjson, lxml, beautifulsoup4
