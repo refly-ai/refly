@@ -21,39 +21,50 @@ export class BuiltinExecuteCode extends AgentBaseTool<BuiltinSandboxParams> {
   });
 
   description = `
-Execute code in a secure sandbox environment.
+# Rules
 
-** Critical Rules **
+## You CAN
 
-- Always use relative path for file operations (files are in current working directory)
-- Always include all necessary imports in EVERY execution
-- Always create new files, never modify or delete existing files
-- Prefer no code comments, use concise code instead
-- COMPLETE ISOLATION: Each tool call starts with a fresh Python environment - no variables, imports, or objects carry over from previous calls
-- File Persistence: Only files are persistent across calls - all Python variables and imports must be redefined each time
-- Self-Contained Code: Every code block must be completely self-contained with all required imports and variable definitions
+- ✅ Read existing files (user uploads, previous outputs)
+- ✅ Create and modify new files (files you created persist across calls)
+- ✅ Use any pre-installed packages (see "Installed Packages" below)
 
-** Environment Behavior **
+## You CANNOT
 
-✅ Files created in previous calls remain accessible
-❌ Variables from previous calls are NOT available
-❌ Imports from previous calls are NOT retained
-❌ Function definitions from previous calls are NOT accessible
+- ❌ Modify or delete existing files (user uploads are read-only)
+- ❌ Access variables, imports, or functions from previous calls (each call is completely isolated)
+- ❌ Install new packages with pip
 
-** Best Practices **
+## You MUST
 
-Start each execution with all necessary imports
-Load data from files if continuing previous work
-Save results to files for future use
-Treat each call as a completely new Python session
+- 🔸 Include ALL necessary imports in EVERY code block
+- 🔸 Reload data from files when continuing previous work
+- 🔸 Write self-contained code (treat each call as a fresh Python session)
+
+# Example
+
+**Step 1**: Process data and save to file
+
+\`\`\`python
+import pandas as pd
+
+df = pd.read_csv('data.csv')
+df['total'] = df['price'] * df['quantity']
+df.to_csv('result.csv', index=False)
+print(f"Processed {len(df)} rows")
+\`\`\`
+
+**Step 2**: Load saved file and visualize (must re-import everything)
 
 \`\`\`python
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_csv('data.csv')
+# df from Step 1 is NOT available, must reload from file
+df = pd.read_csv('result.csv')
 
-df.to_csv('result.csv', index=False)
+plt.figure(figsize=(10, 6))
+plt.bar(df['name'], df['total'])
 plt.savefig('chart.png')
 \`\`\`
 `;

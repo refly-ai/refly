@@ -27,6 +27,7 @@ import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
 import { streamToBuffer } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
+import { isEmbeddableLinkFile } from './drive.utils';
 import path from 'node:path';
 import { ProviderService } from '../provider/provider.service';
 import { ParserFactory } from '../knowledge/parsers/factory';
@@ -1259,6 +1260,124 @@ export class DriveService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Regex pattern to match drive file content URLs
+   * Matches pattern: /v1/drive/file/content/df-xxx
+   */
+  private readonly FILE_CONTENT_URL_PATTERN = /\/v1\/drive\/file\/content\/(df-[a-zA-Z0-9]+)/g;
+
+  /**
+   * Process markdown/html/svg content for download
+   * Extracts all /file/content/:fileId links, publishes them to public bucket,
+   * and replaces with /file/public/:fileId links
+   *
+   * @param user - Current user for permission check
+   * @param content - File content as Buffer
+   * @param filename - File name with extension
+   * @param contentType - MIME type of the content
+   * @returns Processed content with public URLs, or original content if not applicable
+   */
+  async processContentForDownload(
+    user: User,
+    content: Buffer,
+    filename: string,
+    contentType: string,
+  ): Promise<Buffer> {
+    const textContent = content.toString('utf-8');
+
+    // First, check if content contains any file content URLs
+    const matches = [...textContent.matchAll(this.FILE_CONTENT_URL_PATTERN)];
+
+    if (matches.length === 0) {
+      return content;
+    }
+
+    // Found URLs, now check if file type is supported for processing
+    if (!isEmbeddableLinkFile(filename, contentType)) {
+      this.logger.warn(
+        `[processContentForDownload] Found ${matches.length} file content URLs in unsupported file type: ` +
+          `filename="${filename}", contentType="${contentType}". Consider adding support for this type.`,
+      );
+      return content;
+    }
+
+    // Extract unique fileIds
+    const fileIds = [...new Set(matches.map((m) => m[1]))];
+
+    this.logger.log(
+      `[processContentForDownload] Found ${fileIds.length} unique file references to process`,
+    );
+
+    // Batch query files for permission check and get storageKeys
+    const driveFiles = await this.prisma.driveFile.findMany({
+      select: {
+        fileId: true,
+        uid: true,
+        storageKey: true,
+      },
+      where: {
+        fileId: { in: fileIds },
+        deletedAt: null,
+      },
+    });
+
+    // Filter files that user has permission to access (same uid)
+    const accessibleFiles = driveFiles.filter((f) => f.uid === user.uid);
+
+    if (accessibleFiles.length === 0) {
+      this.logger.log('[processContentForDownload] No accessible files found, returning original');
+      return content;
+    }
+
+    this.logger.log(
+      `[processContentForDownload] ${accessibleFiles.length}/${fileIds.length} files accessible`,
+    );
+
+    // Publish files to public bucket in parallel with concurrency limit
+    const limit = pLimit(5);
+    const publishResults = await Promise.allSettled(
+      accessibleFiles.map((file) =>
+        limit(async () => {
+          try {
+            await this.publishDriveFile(file.storageKey, file.fileId);
+            return { fileId: file.fileId, success: true };
+          } catch (error) {
+            this.logger.warn(
+              `[processContentForDownload] Failed to publish file ${file.fileId}: ${error.message}`,
+            );
+            return { fileId: file.fileId, success: false };
+          }
+        }),
+      ),
+    );
+
+    // Build set of successfully published fileIds
+    const publishedFileIds = new Set(
+      publishResults
+        .filter((r) => r.status === 'fulfilled' && r.value.success)
+        .map(
+          (r) => (r as PromiseFulfilledResult<{ fileId: string; success: boolean }>).value.fileId,
+        ),
+    );
+
+    this.logger.log(
+      `[processContentForDownload] Successfully published ${publishedFileIds.size} files`,
+    );
+
+    // Replace /v1/drive/file/content/:fileId with /v1/drive/file/public/:fileId for published files
+    let processedContent = textContent;
+    for (const fileId of publishedFileIds) {
+      // Replace all occurrences of this fileId
+      const contentPattern = new RegExp(`/v1/drive/file/content/${fileId}`, 'g');
+      processedContent = processedContent.replace(
+        contentPattern,
+        `/v1/drive/file/public/${fileId}`,
+      );
+    }
+
+    return Buffer.from(processedContent, 'utf-8');
   }
 
   /**
