@@ -69,7 +69,7 @@ export function createBasePostHandler(
         const billingResult = await config.billingService.processBilling({
           uid: request.user.uid,
           toolName: request.method,
-          toolsetName:
+          toolsetKey:
             (request.metadata?.toolsetKey as string) ||
             (request.provider as string) ||
             'unknown_toolset',

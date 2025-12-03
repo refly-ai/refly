@@ -468,13 +468,18 @@ export class ComposioService {
     this.logger.log(`Setting up global API key auth for ${integrationId}`);
 
     try {
+      // Determine which API key field to use based on integration
+      const integrationIdLower = integrationId.toLowerCase();
+      const useGenericApiKey =
+        integrationIdLower === 'alpha_vantage' || integrationIdLower === 'hunter';
+
+      const apiKeyConfig = useGenericApiKey ? { generic_api_key: apiKey } : { api_key: apiKey };
+
       const connectionRequest = await this.composio.connectedAccounts.initiate(
         'refly_global', // Fixed userId for global tools
         authConfigId,
         {
-          config: AuthScheme.APIKey({
-            api_key: apiKey,
-          }),
+          config: AuthScheme.APIKey(apiKeyConfig),
         },
       );
 
@@ -621,6 +626,7 @@ export class ComposioService {
             user,
             toolName,
             toolsetName: context.toolsetName,
+            toolsetKey: context.toolsetKey,
             creditCost: context.creditCost,
             fileNameTitle: (file_name_title as string) || 'untitled',
           });

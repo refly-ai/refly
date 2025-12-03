@@ -61,6 +61,7 @@ export class PostHandlerService {
       result.metadata = {
         toolName: context.toolName,
         toolsetName: context.toolsetName,
+        toolsetKey: context.toolsetKey,
         creditCost: result.creditCost,
         filesUploaded: result.files?.length ?? 0,
       };
@@ -82,7 +83,7 @@ export class PostHandlerService {
     await this.billingService.processBilling({
       uid: context.user.uid,
       toolName: context.toolName,
-      toolsetName: context.toolsetName,
+      toolsetKey: context.toolsetKey,
       discountedPrice: context.creditCost,
       originalPrice: context.creditCost, // For Composio, original price equals discounted price
     });

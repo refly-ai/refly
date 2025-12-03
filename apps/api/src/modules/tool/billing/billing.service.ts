@@ -9,6 +9,7 @@ import type { SyncToolCreditUsageJobData } from '../../credit/credit.dto';
 import { CreditService } from '../../credit/credit.service';
 import { calculateCredits } from '../utils/billing';
 import type { ProcessBillingOptions, ProcessBillingResult } from './billing.dto';
+import { getResultId, getResultVersion, getToolCallId } from '../tool-context';
 export type { ProcessBillingOptions, ProcessBillingResult } from './billing.dto';
 
 /**
@@ -48,7 +49,7 @@ export class BillingService {
    * @returns Billing processing result
    */
   async processBilling(options: ProcessBillingOptions): Promise<ProcessBillingResult> {
-    const { uid, toolName, toolsetName, discountedPrice, originalPrice, billingConfig, params } =
+    const { uid, toolName, toolsetKey, discountedPrice, originalPrice, billingConfig, params } =
       options;
 
     try {
@@ -67,7 +68,7 @@ export class BillingService {
       }
 
       // Apply toolset-based free access (specific toolsets are always free)
-      if (FREE_TOOLSET_KEYS.includes(toolsetName)) {
+      if (FREE_TOOLSET_KEYS.includes(toolsetKey)) {
         // Apply subscription-based discount
         if (finalDiscountedPrice > 0) {
           const hasFreeToolAccess = await this.checkFreeToolAccess(uid);
@@ -84,12 +85,17 @@ export class BillingService {
         discountedPrice: finalDiscountedPrice,
         originalPrice: finalOriginalPrice,
         timestamp: new Date(),
-        toolsetName,
-        toolName,
+        resultId: getResultId(),
+        version: getResultVersion(),
+        toolCallId: getToolCallId(),
+        toolCallMeta: {
+          toolName,
+          toolsetKey,
+        },
       };
 
       await this.creditService.syncToolCreditUsage(jobData);
-      this.logger.debug(`Recorded ${finalDiscountedPrice} credits for ${toolsetName}.${toolName}`);
+      this.logger.debug(`Recorded ${finalDiscountedPrice} credits for ${toolsetKey}.${toolName}`);
 
       return {
         success: true,
@@ -98,9 +104,7 @@ export class BillingService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Failed to process billing for ${toolsetName}.${toolName}: ${errorMessage}`,
-      );
+      this.logger.error(`Failed to process billing for ${toolsetKey}.${toolName}: ${errorMessage}`);
 
       // Don't fail the request if billing fails
       return {

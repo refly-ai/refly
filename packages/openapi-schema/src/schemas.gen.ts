@@ -9411,7 +9411,7 @@ export const ComposioRevokeResponseSchema = {
 export const PostHandlerContextSchema = {
   type: 'object',
   description: 'Context for post-processing tool execution results',
-  required: ['user', 'toolName', 'toolsetName', 'creditCost'],
+  required: ['user', 'toolName', 'toolsetName', 'toolsetKey', 'creditCost'],
   properties: {
     user: {
       $ref: '#/components/schemas/User',
@@ -9423,7 +9423,11 @@ export const PostHandlerContextSchema = {
     },
     toolsetName: {
       type: 'string',
-      description: 'Toolset name/key',
+      description: 'Toolset display name',
+    },
+    toolsetKey: {
+      type: 'string',
+      description: 'Toolset unique identifier/key',
     },
     creditCost: {
       type: 'number',

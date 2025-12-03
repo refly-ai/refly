@@ -13,8 +13,8 @@ export interface ProcessBillingOptions {
   uid: string;
   /** Tool name */
   toolName: string;
-  /** Toolset name */
-  toolsetName: string;
+  /** Toolset key */
+  toolsetKey: string;
 
   /**
    * Actual amount to deduct (after discount)

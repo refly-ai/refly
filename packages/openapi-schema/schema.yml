@@ -10739,6 +10739,7 @@ components:
         - user
         - toolName
         - toolsetName
+        - toolsetKey
         - creditCost
       properties:
         user:
@@ -10749,7 +10750,10 @@ components:
           description: Tool name that was executed
         toolsetName:
           type: string
-          description: Toolset name/key
+          description: Toolset display name
+        toolsetKey:
+          type: string
+          description: Toolset unique identifier/key
         creditCost:
           type: number
           description: Credit cost for this tool execution
