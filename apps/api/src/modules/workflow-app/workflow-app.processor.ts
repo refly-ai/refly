@@ -6,7 +6,7 @@ import { PrismaService } from '../common/prisma.service';
 import { VariableExtractionService } from '../variable-extraction/variable-extraction.service';
 import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
 import type { GenerateWorkflowAppTemplateJobData } from './workflow-app.dto';
-import { safeParseJSON } from '@refly/utils';
+import { CanvasService } from '../canvas/canvas.service';
 
 @Processor(QUEUE_WORKFLOW_APP_TEMPLATE)
 export class WorkflowAppTemplateProcessor extends WorkerHost {
@@ -15,6 +15,7 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     private readonly variableExtractionService: VariableExtractionService,
+    private readonly canvasService: CanvasService,
   ) {
     super();
   }
@@ -45,19 +46,10 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
         return;
       }
 
-      // Fetch workflow app to access variables for validation
-      const workflowApp = await this.prisma.workflowApp.findUnique({
-        where: { appId, uid, deletedAt: null },
-      } as any);
-
-      if (!workflowApp) {
-        this.logger.warn(
-          `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Workflow app not found for appId=${appId}, skip.`,
-        );
-        return;
-      }
-
-      const variables = safeParseJSON(workflowApp.variables) ?? [];
+      // Get workflow variables from Canvas service
+      const variables = await this.canvasService.getWorkflowVariables(user, {
+        canvasId,
+      });
 
       const templateResult = await this.variableExtractionService.generateAppPublishTemplate(
         user,

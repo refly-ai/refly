@@ -171,7 +171,7 @@ export class WorkflowAppService {
   }
 
   async createWorkflowApp(user: User, body: CreateWorkflowAppRequest) {
-    const { canvasId, title, query, variables, description } = body;
+    const { canvasId, title, query, description } = body;
     const coverStorageKey = (body as any).coverStorageKey;
     const remixEnabled = (body as any).remixEnabled ?? false;
     const publishToCommunity = (body as any).publishToCommunity ?? false;
@@ -191,6 +191,10 @@ export class WorkflowAppService {
       throw new Error('canvas not found');
     }
 
+    // Get workflow variables from Canvas service
+    const variables = await this.canvasService.getWorkflowVariables(user, {
+      canvasId,
+    });
     const canvasData = await this.canvasService.getCanvasRawData(user, canvasId);
 
     // Calculate raw credit usage from canvas
