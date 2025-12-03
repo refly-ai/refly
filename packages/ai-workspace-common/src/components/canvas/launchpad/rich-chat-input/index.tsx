@@ -38,6 +38,11 @@ import {
 } from './utils';
 import { useAgentConnections } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-connections';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import {
+  useOAuthPopup,
+  getOAuthCache,
+  clearOAuthCache,
+} from '@refly-packages/ai-workspace-common/hooks/use-oauth-popup';
 
 interface RichChatInputProps {
   readonly: boolean;
@@ -110,6 +115,13 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     // Use ref to track previous canvas data to avoid infinite loops
     const prevCanvasDataRef = useRef({ canvasId: '', allItemsLength: 0 });
 
+    // Track pending OAuth toolset key for auto-selection after authorization
+    const pendingOAuthToolsetKeyRef = useRef<string | null>(null);
+    // Track if we've checked cache on mount
+    const hasCheckedOAuthCacheRef = useRef(false);
+    // Ref to hold the MentionList component instance for external updates
+    const mentionComponentRef = useRef<any>(null);
+
     // Helper function to add item to context items
     const addToContextItems = useCallback(
       (contextItem: IContextItem) => {
@@ -141,6 +153,61 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       },
       [setSelectedToolsets],
     );
+
+    // OAuth popup hook - lives in parent component to persist across MentionList destruction
+    const { openOAuthPopup, isPolling, isOpening } = useOAuthPopup({
+      onSuccess: (toolsetKey) => {
+        pendingOAuthToolsetKeyRef.current = toolsetKey;
+      },
+    });
+
+    // Restore pending OAuth key from cache on mount (for page refresh recovery)
+    useEffect(() => {
+      if (hasCheckedOAuthCacheRef.current) return;
+      hasCheckedOAuthCacheRef.current = true;
+
+      const cachedToolsetKey = getOAuthCache();
+      if (cachedToolsetKey) {
+        pendingOAuthToolsetKeyRef.current = cachedToolsetKey;
+        clearOAuthCache();
+      }
+    }, []);
+
+    // Watch for allItems changes and auto-select the authorized tool
+    useEffect(() => {
+      if (!pendingOAuthToolsetKeyRef.current) return;
+
+      const toolsetKey = pendingOAuthToolsetKeyRef.current;
+
+      // Find the authorized item
+      const authorizedItem = allItems.find(
+        (item) =>
+          (item.source === 'toolsets' || item.source === 'tools') &&
+          item.isInstalled === true &&
+          item.toolset !== undefined &&
+          (item.toolsetId === toolsetKey || item.toolset?.toolset?.key === toolsetKey),
+      );
+
+      if (authorizedItem) {
+        pendingOAuthToolsetKeyRef.current = null;
+
+        // Add toolset to selected toolsets
+        if (authorizedItem.toolset) {
+          addToSelectedToolsets(authorizedItem.toolset);
+        }
+
+        // Refresh the MentionList with updated items so the panel shows the tool as authorized
+        if (mentionComponentRef.current) {
+          try {
+            mentionComponentRef.current.updateProps({
+              items: allItems,
+            });
+          } catch {
+            // Ignore errors if component is not available
+          }
+        }
+      }
+    }, [allItems, addToSelectedToolsets]);
 
     const addToUpstreamAgents = useCallback(
       (resultId: string) => {
@@ -288,6 +355,10 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         allItemsRef,
         mentionPosition,
         setIsMentionListVisible,
+        openOAuthPopup,
+        isPolling,
+        isOpening,
+        mentionComponentRef,
       });
     }, [
       handleCommand,
@@ -295,6 +366,10 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       allItemsRef,
       mentionPosition,
       setIsMentionListVisible,
+      openOAuthPopup,
+      isPolling,
+      isOpening,
+      mentionComponentRef,
     ]);
 
     // Keyboard shortcut: Alt+Cmd+V (Mac) or Alt+Ctrl+V (Windows) to trigger variable extraction

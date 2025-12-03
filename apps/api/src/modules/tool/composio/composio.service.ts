@@ -12,9 +12,11 @@ import type {
   User,
 } from '@refly/openapi-schema';
 import { COMPOSIO_CONNECTION_STATUS } from '../constant/constant';
+import { genToolsetID } from '@refly/utils';
 import { PrismaService } from '../../common/prisma.service';
 import { RedisService } from '../../common/redis.service';
 import { PostHandlerService } from './post-handler.service';
+import { ToolInventoryService } from '../inventory/inventory.service';
 import { getCurrentUser, runInContext } from '../tool-context';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { SkillRunnableConfig } from '@refly/skill-template';
@@ -30,6 +32,7 @@ export class ComposioService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly postHandlerService: PostHandlerService,
+    private readonly inventoryService: ToolInventoryService,
   ) {
     const apiKey = this.config.get<string>('composio.apiKey');
     if (!apiKey) {
@@ -238,8 +241,8 @@ export class ComposioService {
   }
 
   /**
-   * Save or update Composio connection record in the database
-   * This only manages the composio_connections table
+   * Save or update Composio connection and toolset records in the database
+   * Uses a transaction to guarantee data persistence for both tables
    */
   private async saveConnection(
     user: User,
@@ -252,28 +255,70 @@ export class ComposioService {
         ? COMPOSIO_CONNECTION_STATUS.ACTIVE
         : COMPOSIO_CONNECTION_STATUS.REVOKED;
 
-    // 1. Save or update composio_connections
-    await this.prisma.composioConnection.upsert({
-      where: {
-        uid_integrationId: {
+    // Use transaction to ensure both composio_connection and toolset are saved atomically
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Save or update composio_connections
+      await tx.composioConnection.upsert({
+        where: {
+          uid_integrationId: {
+            uid: user.uid,
+            integrationId: appSlug,
+          },
+        },
+        create: {
           uid: user.uid,
           integrationId: appSlug,
+          connectedAccountId: connectedAccountId,
+          status: status,
+          metadata: JSON.stringify({}),
         },
-      },
-      create: {
-        uid: user.uid,
-        integrationId: appSlug,
-        connectedAccountId: connectedAccountId,
-        status: status,
-        metadata: JSON.stringify({}),
-      },
-      update: {
-        connectedAccountId: connectedAccountId,
-        status: status,
-        metadata: JSON.stringify({}),
-        deletedAt: null,
-        updatedAt: new Date(),
-      },
+        update: {
+          connectedAccountId: connectedAccountId,
+          status: status,
+          metadata: JSON.stringify({}),
+          deletedAt: null,
+          updatedAt: new Date(),
+        },
+      });
+
+      // 2. Get toolset inventory info from InventoryService
+      const inventoryItem = await this.inventoryService.getInventoryItem(appSlug);
+      const toolsetName = (inventoryItem?.definition?.labelDict?.en as string) ?? appSlug;
+
+      // 3. Find existing toolset (including soft-deleted ones for the same uid+key)
+      const existingToolset = await tx.toolset.findFirst({
+        where: {
+          uid: user.uid,
+          key: appSlug,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (existingToolset) {
+        // Update existing toolset (reactivate if soft-deleted)
+        await tx.toolset.update({
+          where: { pk: existingToolset.pk },
+          data: {
+            enabled: status === COMPOSIO_CONNECTION_STATUS.ACTIVE,
+            uninstalled: status !== COMPOSIO_CONNECTION_STATUS.ACTIVE,
+            deletedAt: null, // Reactivate if it was soft-deleted
+            updatedAt: new Date(),
+          },
+        });
+      } else {
+        // Create new toolset
+        await tx.toolset.create({
+          data: {
+            toolsetId: genToolsetID(),
+            name: toolsetName,
+            key: appSlug,
+            authType: 'oauth',
+            enabled: status === COMPOSIO_CONNECTION_STATUS.ACTIVE,
+            uninstalled: false,
+            uid: user.uid,
+          },
+        });
+      }
     });
   }
 

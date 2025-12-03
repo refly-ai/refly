@@ -135,6 +135,12 @@ interface MentionExtensionOptions {
   allItemsRef: React.MutableRefObject<MentionItem[]>;
   mentionPosition: MentionPosition;
   setIsMentionListVisible: (visible: boolean) => void;
+  // OAuth props for tool authorization
+  openOAuthPopup: (toolsetKey: string) => Promise<any>;
+  isPolling: boolean;
+  isOpening: boolean;
+  // Ref to store the component instance for external updates
+  mentionComponentRef?: React.MutableRefObject<any>;
 }
 
 export const createMentionExtension = ({
@@ -143,6 +149,10 @@ export const createMentionExtension = ({
   allItemsRef,
   mentionPosition,
   setIsMentionListVisible,
+  openOAuthPopup,
+  isPolling,
+  isOpening,
+  mentionComponentRef,
 }: MentionExtensionOptions) => {
   return CustomMention.configure({
     HTMLAttributes: {
@@ -198,9 +208,17 @@ export const createMentionExtension = ({
                 ...props,
                 placement: mentionPosition,
                 query: props.query || '',
+                openOAuthPopup,
+                isPolling,
+                isOpening,
               },
               editor: props.editor,
             });
+
+            // Store component reference for external updates
+            if (mentionComponentRef) {
+              mentionComponentRef.current = component;
+            }
 
             popup = tippy('body', {
               getReferenceClientRect: () => {
@@ -296,6 +314,10 @@ export const createMentionExtension = ({
             return component.ref?.onKeyDown(props);
           },
           onExit() {
+            // Clear component reference
+            if (mentionComponentRef) {
+              mentionComponentRef.current = null;
+            }
             popup[0].destroy();
             component.element.remove();
             component.destroy();

@@ -11,11 +11,11 @@ import { BillingService } from '../billing/billing.service';
 import { ResourceHandler, getCanvasId } from '../utils';
 
 /**
- * Size threshold for uploading to OSS (bytes)
- * Data larger than this will be uploaded
- * Default: 10KB
+ * Size threshold for truncating/uploading data (characters)
+ * Data larger than this will be truncated with "..." and saved as plain text
+ * Default: 5000 characters
  */
-const DEFAULT_UPLOAD_THRESHOLD = 10 * 1024;
+const DEFAULT_UPLOAD_THRESHOLD = 5000;
 
 @Injectable()
 export class PostHandlerService {
@@ -123,15 +123,14 @@ export class PostHandlerService {
       }
     }
 
-    // Case 3: Large string data
+    // Case 3: Large string data - truncate and save as plain text
     if (typeof data === 'string' && data.length > this.uploadThreshold) {
-      const isBase64 = this.isLikelyBase64(data);
+      const truncatedData = `${data.substring(0, this.uploadThreshold)}...`;
       const file = await this.resourceHandler.uploadResource(
         context.user,
         canvasId,
-        data,
-        context.fileNameTitle ?? 'untitled',
-        { isBase64 },
+        truncatedData,
+        `${context.fileNameTitle ?? 'untitled'}.txt`,
       );
       if (file) {
         files.push(file);

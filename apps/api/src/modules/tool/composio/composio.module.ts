@@ -8,11 +8,12 @@ import { DriveModule } from '../../drive/drive.module';
 import { MiscModule } from '../../misc/misc.module';
 import { BillingModule } from '../billing/billing.module';
 import { ResourceHandler } from '../resource.service';
+import { ToolInventoryService } from '../inventory/inventory.service';
 
 @Module({
   imports: [ConfigModule, CommonModule, DriveModule, MiscModule, BillingModule],
   controllers: [ComposioController],
-  providers: [ComposioService, PostHandlerService, ResourceHandler],
+  providers: [ComposioService, PostHandlerService, ResourceHandler, ToolInventoryService],
   exports: [ComposioService],
 })
 export class ComposioModule {}

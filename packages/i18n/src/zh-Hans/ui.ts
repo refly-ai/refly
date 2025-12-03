@@ -1891,6 +1891,10 @@ const translations = {
       defaultPlaceholder: '描述你想要生成的内容...',
       createUserInput: '创建输入项 "{{userInputName}}"',
       unauthorized: '未授权',
+      oauthSuccess: '工具授权成功',
+      oauthFailed: '工具授权失败',
+      oauthTimeout: '授权超时，请重试',
+      authorizing: '授权中...',
     },
     toolsDepencency: {
       title: '工具依赖',
