@@ -1,6 +1,7 @@
 import { SkillContext } from '@refly/openapi-schema';
 import { encode } from 'gpt-tokenizer';
 import { SkillEngine } from '../../engine';
+import { truncateContent } from './token';
 
 export interface ContextFile {
   name: string;
@@ -24,6 +25,11 @@ export interface ContextBlock {
   results: AgentResult[];
   totalTokens?: number;
 }
+
+// Maximum tokens for a single result/file to prevent one item from consuming too much space
+// Can be overridden via environment variables
+const MAX_SINGLE_RESULT_TOKENS = Number(process.env.MAX_SINGLE_RESULT_TOKENS) || 20000;
+const MAX_SINGLE_FILE_TOKENS = Number(process.env.MAX_SINGLE_FILE_TOKENS) || 20000;
 
 /**
  * Prepare context from SkillContext into a structured ContextBlock format
@@ -53,12 +59,26 @@ export async function prepareContext(
 
   // Process files with token estimation
   if (context?.files?.length > 0) {
-    for (const item of context.files) {
+    // Sort files by content length (shortest first) to prioritize smaller files
+    // This ensures shorter files are less likely to be truncated later
+    const sortedFiles = [...context.files].sort((a, b) => {
+      const aContent = a?.file?.content ?? '';
+      const bContent = b?.file?.content ?? '';
+      return aContent.length - bContent.length;
+    });
+
+    for (const item of sortedFiles) {
       const file = item?.file;
       if (!file) continue;
 
-      const fileContent = file?.content ?? '';
-      const contentTokens = estimateTokens(fileContent);
+      let fileContent = file?.content ?? '';
+      let contentTokens = estimateTokens(fileContent);
+
+      // Truncate single file if it exceeds the limit
+      if (contentTokens > MAX_SINGLE_FILE_TOKENS) {
+        fileContent = truncateContent(fileContent, MAX_SINGLE_FILE_TOKENS);
+        contentTokens = estimateTokens(fileContent);
+      }
 
       // Check if adding this file would exceed token limit
       if (maxTokens > 0 && currentTokens + contentTokens > maxTokens) {
@@ -83,12 +103,26 @@ export async function prepareContext(
 
   // Process results with token estimation
   if (context?.results?.length > 0) {
-    for (const item of context.results) {
+    // Sort results by content length (shortest first) to prioritize smaller results
+    // This ensures shorter results are less likely to be truncated later
+    const sortedResults = [...context.results].sort((a, b) => {
+      const aContent = a?.result?.steps?.map((step) => step.content).join('\n\n') ?? '';
+      const bContent = b?.result?.steps?.map((step) => step.content).join('\n\n') ?? '';
+      return aContent.length - bContent.length;
+    });
+
+    for (const item of sortedResults) {
       const result = item?.result;
       if (!result) continue;
 
-      const resultContent = result?.steps?.map((step) => step.content).join('\n\n') ?? '';
-      const contentTokens = estimateTokens(resultContent);
+      let resultContent = result?.steps?.map((step) => step.content).join('\n\n') ?? '';
+      let contentTokens = estimateTokens(resultContent);
+
+      // Truncate single result if it exceeds the limit
+      if (contentTokens > MAX_SINGLE_RESULT_TOKENS) {
+        resultContent = truncateContent(resultContent, MAX_SINGLE_RESULT_TOKENS);
+        contentTokens = estimateTokens(resultContent);
+      }
 
       // Check if adding this result would exceed token limit
       if (maxTokens > 0 && currentTokens + contentTokens > maxTokens) {

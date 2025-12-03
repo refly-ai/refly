@@ -1492,6 +1492,8 @@ const translations = {
       skillCompleted: 'Skill Completed',
       stepCompleted: 'Step Completed',
       rerunSingle: 'Rerun This Node',
+      runSingle: 'Run This Node',
+      stopSingle: 'Stop',
       rerunFromHere: 'Run From Here',
       stopConfirmModal: {
         title: 'Stop Agent Task?',
@@ -3877,7 +3879,7 @@ const translations = {
     noResultsAvailable: 'No results available',
     noResultsSelected: 'No results selected',
     runResultRequired: 'No run result selected. Please choose the result before publishing.',
-    validationNoUserInputs: 'Please add user inputs before publishing your template.',
+    validationNoUserInputs: 'Please add User Inputs before publishing your template.',
     validationNoAgents: 'Please add agents before publishing your template.',
     validationAgentsNotRun: 'Please run all agents successfully before publishing your template.',
     resultPreview: 'Result Preview',
