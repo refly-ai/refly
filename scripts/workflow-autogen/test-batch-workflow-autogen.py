@@ -15,7 +15,7 @@ Usage:
 
     Optional:
     MODEL_NAME="openai/gpt-4o" (default if not specified)
-    MAX_WORKERS=20 (default if not specified)
+    MAX_WORKERS=3 (default if not specified)
     QUERIES_FILE="queries.txt" (default if not specified)
 """
 
@@ -456,7 +456,7 @@ def process_single_query(
                     endpoint,
                     json=payload,
                     headers={"Content-Type": "application/json"},
-                    timeout=300,
+                    timeout=600,  # Increased from 300s to 600s for complex workflows
                 )
                 response.raise_for_status()
 
@@ -603,7 +603,9 @@ def test_batch_workflow_execution():
     # Configuration
     api_url = os.getenv("API_URL", "http://localhost:5800")
     queries_file = os.getenv("QUERIES_FILE", "queries.txt")
-    max_workers = int(os.getenv("MAX_WORKERS", "20"))
+    max_workers = int(
+        os.getenv("MAX_WORKERS", "3")
+    )  # Reduced from 20 to 3 for stability
 
     safe_print("🚀 批量工作流执行测试")
     safe_print(f"API 地址: {api_url}")
