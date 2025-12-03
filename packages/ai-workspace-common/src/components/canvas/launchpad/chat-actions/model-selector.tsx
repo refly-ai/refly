@@ -344,7 +344,7 @@ export const ModelSelector = memo(
             />
           </div>*/}
 
-          <div className="max-h-[38vh] w-full overflow-y-auto p-1.5">
+          <div className="max-h-[38vh] w-full overflow-y-auto p-1.5 my-2">
             {droplist
               .filter((item) => !!item)
               .map((item) => {
@@ -371,10 +371,10 @@ export const ModelSelector = memo(
                 );
               })}
           </div>
-          <SettingsButton
+          {/* <SettingsButton
             handleOpenSettingModal={handleOpenSettingModal}
             setDropdownOpen={setDropdownOpen}
-          />
+          /> */}
         </div>
       ),
       [
