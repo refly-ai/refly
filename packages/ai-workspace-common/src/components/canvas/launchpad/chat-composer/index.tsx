@@ -97,8 +97,6 @@ const ChatComposerComponent = forwardRef<ChatComposerRef, ChatComposerProps>((pr
     setSelectedToolsets,
   } = useAgentNodeManagement(nodeId);
 
-  console.log('query', query);
-
   // Ref for the input component
   const inputRef = useRef<RichChatInputRef>(null);
 
