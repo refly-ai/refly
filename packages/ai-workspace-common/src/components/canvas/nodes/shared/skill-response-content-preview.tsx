@@ -9,11 +9,12 @@ import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canv
 import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { X, AiChat } from 'refly-icons';
 import { LabelDisplay } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
-import { parseMentionsFromQuery, processQueryWithMentions } from '@refly/utils/query-processor';
+import { parseMentionsFromQuery } from '@refly/utils/query-processor';
 import { useRealtimeUpstreamAgents } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-upstream-agent';
 import { useCanvasNodesStoreShallow } from '@refly/stores';
 import { NodeIcon } from './node-icon';
 import { useToolsetDefinition } from '@refly-packages/ai-workspace-common/hooks/use-toolset-definition';
+import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use-query-processor';
 
 interface SkillResponseContentPreviewProps {
   nodeId: string;
@@ -62,6 +63,7 @@ export const SkillResponseContentPreview = memo(
 
     // Use toolset definition hook for complete definition data
     const { lookupToolsetDefinitionByKey } = useToolsetDefinition();
+    const { processQuery } = useQueryProcessor();
 
     const query = metadata?.query ?? (metadata?.structuredData?.query as string) ?? '';
     const modelInfo = metadata?.modelInfo;
@@ -77,8 +79,8 @@ export const SkillResponseContentPreview = memo(
     }, [contextItems]);
 
     const content = useMemo(() => {
-      return processQueryWithMentions(query)?.processedQuery || '';
-    }, [query]);
+      return processQuery(query)?.processedQuery || '';
+    }, [query, processQuery]);
 
     // Extract input variable names from contextItems
     const variableMentions = parseMentionsFromQuery(query)?.filter((item) => item.type === 'var');

@@ -138,7 +138,7 @@ function processMention(
             return { replacement: '', updatedQuery };
           } else {
             // In llm_input mode, format as @var:name for LLM to understand
-            return { replacement: formatMention(type, name, mode), updatedQuery };
+            return { replacement: formatMention({ type, name, id }, mode), updatedQuery };
           }
         } else {
           // Replace non-resource variables with their actual values when replaceVars is true
