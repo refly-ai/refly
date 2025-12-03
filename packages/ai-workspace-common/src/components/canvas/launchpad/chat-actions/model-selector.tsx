@@ -318,7 +318,7 @@ export const ModelSelector = memo(
           className="bg-refly-bg-content-z2 rounded-lg border-[1px] border-solid border-refly-Card-Border shadow-refly-m"
           style={{ width: variant === 'filled' ? triggerWidth : 260 }}
         >
-          <div className="max-h-[38vh] w-full overflow-y-auto p-1.5 my-2">
+          <div className="max-h-[38vh] w-full overflow-y-auto p-1.5">
             {droplist
               .filter((item) => !!item)
               .map((item) => {
