@@ -1979,7 +1979,7 @@ const translations = {
       loadingUserInput: '加载用户输入中...',
       defaultPlaceholder: '描述你想要生成的内容...',
       createUserInput: '创建输入项 "{{userInputName}}"',
-      unauthorized: '未授权',
+      unauthorized: '授权',
     },
     toolsDepencency: {
       title: '工具依赖',

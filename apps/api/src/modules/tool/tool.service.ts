@@ -162,18 +162,20 @@ export class ToolService {
   }
 
   listBuiltinTools(): GenericToolset[] {
-    return Object.values(builtinToolsetInventory).map((toolset) => ({
-      type: ToolsetType.REGULAR,
-      id: toolset.definition.key,
-      name: (toolset.definition.labelDict?.en as string) ?? toolset.definition.key,
-      builtin: true,
-      toolset: {
-        toolsetId: 'builtin',
-        key: toolset.definition.key,
+    return Object.values(builtinToolsetInventory)
+      .filter((toolset) => Boolean(toolset.definition) && !toolset.definition.internal)
+      .map((toolset) => ({
+        type: ToolsetType.REGULAR,
+        id: toolset.definition.key,
         name: (toolset.definition.labelDict?.en as string) ?? toolset.definition.key,
-        definition: toolset.definition,
-      },
-    }));
+        builtin: true,
+        toolset: {
+          toolsetId: 'builtin',
+          key: toolset.definition.key,
+          name: (toolset.definition.labelDict?.en as string) ?? toolset.definition.key,
+          definition: toolset.definition,
+        },
+      }));
   }
 
   /**

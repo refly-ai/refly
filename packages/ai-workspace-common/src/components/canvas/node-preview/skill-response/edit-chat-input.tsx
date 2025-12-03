@@ -9,8 +9,8 @@ import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canva
 import { convertContextItemsToEdges } from '@refly/canvas-common';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useReactFlow } from '@xyflow/react';
-import { processQueryWithMentions } from '@refly/utils';
 import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
+import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use-query-processor';
 import { useActionResultStoreShallow, useActiveNode } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Undo } from 'refly-icons';
@@ -88,6 +88,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
   // Fetch workflow variables for mentions (startNode/resourceLibrary)
   const { data: workflowVariables } = useVariablesManagement(canvasId);
+  const { processQuery } = useQueryProcessor();
 
   // Close edit mode on any outside interaction when editMode is enabled
   useEffect(() => {
@@ -151,7 +152,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
 
     // Process query with workflow variables
     const variables = workflowVariables;
-    const { llmInputQuery } = processQueryWithMentions(query, {
+    const { llmInputQuery } = processQuery(query, {
       replaceVars: true,
       variables,
     });

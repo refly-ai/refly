@@ -17,6 +17,7 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
 import { SkillModule } from './skill/skill.module';
 import { PilotModule } from './pilot/pilot.module';
 import { CopilotModule } from './copilot/copilot.module';
+import { CopilotAutogenModule } from './copilot-autogen/copilot-autogen.module';
 import { SearchModule } from './search/search.module';
 import { LabelModule } from './label/label.module';
 import { EventModule } from './event/event.module';
@@ -126,6 +127,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     SkillModule,
     PilotModule,
     CopilotModule,
+    CopilotAutogenModule,
     SearchModule,
     LabelModule,
     EventModule,

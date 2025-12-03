@@ -3,9 +3,12 @@ import {
   SystemMessage,
   BaseMessage,
   BaseMessageFields,
+  AIMessage,
+  ToolMessage,
 } from '@langchain/core/messages';
 import { LLMModelConfig } from '@refly/openapi-schema';
 import { ContextBlock } from './context';
+import { countToken, countMessagesTokens, truncateContent as truncateContentUtil } from './token';
 
 export interface SkillPromptModule {
   buildSystemPrompt: (
@@ -76,12 +79,18 @@ export const buildFinalRequestMessages = ({
     : new HumanMessage(userPrompt);
 
   // Assemble all messages - following Anthropic's caching order: tools -> system -> messages
-  const requestMessages = [
+  let requestMessages = [
     new SystemMessage(systemPrompt), // System message comes first in our implementation
     ...chatHistory, // Historical conversation
     ...messages, // Additional messages
     finalUserMessage, // The actual query that needs a response (should not be cached)
   ];
+
+  // Apply message list truncation if model info is available
+
+  if (modelInfo?.contextLimit) {
+    requestMessages = truncateMessageList(requestMessages, modelInfo);
+  }
 
   // Check if context caching should be enabled and the model supports it
   const shouldEnableContextCaching = !!modelInfo?.capabilities?.contextCaching;
@@ -181,3 +190,146 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
 const createHumanMessageWithContent = (contentItems: ContentItem[]): HumanMessage => {
   return new HumanMessage({ content: contentItems } as BaseMessageFields);
 };
+
+// ============ Message List Truncation ============
+
+/**
+ * Truncate a single message to target token count
+ * Strategy: Keep head and tail, remove middle part
+ */
+function truncateMessage(msg: BaseMessage, targetTokens: number): BaseMessage {
+  const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+
+  // Use shared truncateContent utility
+  const truncatedContent = truncateContentUtil(content, targetTokens);
+
+  // Return appropriate message type
+  if (msg instanceof ToolMessage) {
+    return new ToolMessage({
+      content: truncatedContent,
+      tool_call_id: msg.tool_call_id,
+      name: msg.name,
+    });
+  }
+
+  if (msg instanceof AIMessage) {
+    return new AIMessage({
+      content: truncatedContent,
+      tool_calls: msg.tool_calls,
+      additional_kwargs: msg.additional_kwargs,
+    });
+  }
+
+  if (msg instanceof HumanMessage) {
+    return new HumanMessage(truncatedContent);
+  }
+
+  return msg;
+}
+
+/**
+ * Core mode: keep only essential messages
+ */
+function buildCoreMessages(messages: BaseMessage[], targetBudget: number): BaseMessage[] {
+  const result: BaseMessage[] = [];
+  let tokens = 0;
+
+  // 1. System message
+  const system = messages.find((m) => m instanceof SystemMessage);
+  if (system) {
+    result.push(system);
+    tokens += countToken(system.content);
+  }
+
+  // 2. Last user message
+  const last = messages[messages.length - 1];
+  if (last && last !== system) {
+    result.push(last);
+    tokens += countToken(last.content);
+  }
+
+  // 3. If there's space, add 1-2 recent messages
+  for (let i = messages.length - 2; i >= 1 && tokens < targetBudget * 0.8; i--) {
+    const msg = messages[i];
+    const msgTokens = countToken(msg.content);
+    if (tokens + msgTokens < targetBudget * 0.8) {
+      result.splice(result.length - 1, 0, msg); // Insert before last message
+      tokens += msgTokens;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Truncate message list to fit within target budget
+ */
+export function truncateMessageList(
+  messages: BaseMessage[],
+  modelInfo: LLMModelConfig,
+): BaseMessage[] {
+  const contextLimit = modelInfo.contextLimit || 100000;
+  const maxOutput = modelInfo.maxOutput || 8000;
+  const targetBudget = contextLimit - maxOutput; // Reserve maxOutput tokens for LLM response
+
+  const currentTokens = Math.floor(countMessagesTokens(messages) * 1.3);
+  const needToTruncate = currentTokens - targetBudget;
+
+  // No truncation needed
+  if (needToTruncate <= 0) {
+    return messages;
+  }
+
+  // Simple strategy: Sort messages by size, truncate the largest ones
+  const messagesWithTokens = messages.map((msg, index) => ({
+    index,
+    message: msg,
+    tokens: countToken(msg.content),
+    canTruncate: !(msg instanceof SystemMessage),
+  }));
+
+  // Sort by tokens (largest first), but only truncatable messages
+  const truncatableMessages = messagesWithTokens
+    .filter((item) => item.canTruncate)
+    .sort((a, b) => b.tokens - a.tokens);
+
+  // Truncate largest messages until we save enough
+  const toTruncate = new Map<number, number>(); // index -> keepTokens
+  let saved = 0;
+
+  for (const item of truncatableMessages) {
+    if (saved >= needToTruncate) break;
+
+    const needMore = needToTruncate - saved;
+    const minKeep = 1000; // Minimum tokens to keep per message
+    const maxCanSave = Math.max(0, item.tokens - minKeep);
+
+    if (maxCanSave <= 0) continue;
+
+    if (maxCanSave >= needMore) {
+      // This message can save enough by itself
+      const keepTokens = item.tokens - needMore;
+      toTruncate.set(item.index, keepTokens);
+      saved += needMore;
+    } else {
+      // Truncate this message as much as possible
+      toTruncate.set(item.index, minKeep);
+      saved += maxCanSave;
+    }
+  }
+
+  // If can't save enough, fallback to core mode
+  if (saved < needToTruncate) {
+    const coreMessages = buildCoreMessages(messages, targetBudget);
+    return coreMessages;
+  }
+
+  // Execute truncation
+  const result = messages.map((msg, index) => {
+    const keepTokens = toTruncate.get(index);
+    if (keepTokens === undefined) return msg; // No truncation
+    return truncateMessage(msg, keepTokens); // Truncate to specified size
+  });
+
+  return result;
+}

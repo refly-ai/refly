@@ -1,10 +1,11 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import { Popover } from 'antd';
 import type { PopoverProps } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
-import { GenericToolset } from '@refly/openapi-schema';
+import type { GenericToolset, ToolsetDefinition } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
+import { useToolsetDefinition } from '@refly-packages/ai-workspace-common/hooks/use-toolset-definition';
 
 interface ToolsetPopoverProps {
   toolsets: GenericToolset[];
@@ -12,6 +13,10 @@ interface ToolsetPopoverProps {
   placement?: PopoverProps['placement'];
   align?: { offset: [number, number] };
 }
+
+type ToolsetWithDefinition = GenericToolset & {
+  definition?: ToolsetDefinition;
+};
 
 /**
  * Toolset Popover Component
@@ -27,28 +32,58 @@ export const ToolsetPopover = memo(
     const { i18n, t } = useTranslation();
     const currentLanguage = (i18n.language || 'en') as 'en' | 'zh';
     const [open, setOpen] = useState(false);
+    const { populateToolsetDefinition } = useToolsetDefinition();
+
+    const iconConfig = useMemo(
+      () => ({
+        size: 32,
+        builtinClassName: '!w-8 !h-8',
+        className: 'rounded-lg',
+      }),
+      [],
+    );
+
+    const enrichedToolsets = useMemo<ToolsetWithDefinition[]>(() => {
+      if (!toolsets?.length) {
+        return [];
+      }
+
+      return populateToolsetDefinition(toolsets) as ToolsetWithDefinition[];
+    }, [populateToolsetDefinition, toolsets]);
+
+    const getToolsetLabel = useCallback(
+      (toolset: ToolsetWithDefinition) =>
+        toolset?.type === 'regular' && toolset?.builtin
+          ? ((toolset?.definition?.labelDict?.[currentLanguage] as string | undefined) ??
+            toolset?.name ??
+            t('workflowList.defaultToolLabel'))
+          : (toolset?.name ?? t('workflowList.defaultToolLabel')),
+      [currentLanguage, t],
+    );
+
+    const getToolsetDescription = useCallback(
+      (toolset: ToolsetWithDefinition) =>
+        toolset?.type === 'mcp'
+          ? (toolset.mcpServer?.url ?? t('workflowList.defaultToolDescription'))
+          : ((toolset?.definition?.descriptionDict?.[currentLanguage] as string | undefined) ??
+            t('workflowList.defaultToolDescription')),
+      [currentLanguage, t],
+    );
 
     const handleOpenChange = useCallback((visible: boolean) => {
       setOpen(visible);
     }, []);
 
     const renderContent = useCallback(() => {
-      if (!toolsets?.length) {
+      if (!enrichedToolsets?.length) {
         return null;
       }
 
       return (
         <div className="flex flex-col p-2 pt-0">
-          {toolsets.map((toolset) => {
-            const description =
-              toolset?.type === 'mcp'
-                ? toolset.mcpServer?.url
-                : toolset?.toolset?.definition?.descriptionDict?.[currentLanguage];
-
-            const labelName =
-              toolset?.type === 'regular' && toolset?.builtin
-                ? (toolset?.toolset?.definition?.labelDict?.[currentLanguage] as string)
-                : toolset.name;
+          {enrichedToolsets.map((toolset) => {
+            const labelName = getToolsetLabel(toolset);
+            const description = getToolsetDescription(toolset);
 
             return (
               <div
@@ -59,14 +94,7 @@ export const ToolsetPopover = memo(
                 )}
               >
                 <div className="bg-refly-tertiary-default rounded-lg p-1">
-                  <ToolsetIcon
-                    toolset={toolset}
-                    config={{
-                      size: 32,
-                      builtinClassName: '!w-8 !h-8',
-                      className: 'rounded-lg',
-                    }}
-                  />
+                  <ToolsetIcon toolset={toolset} config={iconConfig} />
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col">
                   <div className="text-sm text-refly-text-0 font-semibold block truncate leading-5">
@@ -81,7 +109,7 @@ export const ToolsetPopover = memo(
           })}
         </div>
       );
-    }, [toolsets, currentLanguage]);
+    }, [enrichedToolsets, getToolsetDescription, getToolsetLabel, iconConfig]);
 
     return (
       <Popover

@@ -673,6 +673,7 @@ export class SkillService implements OnModuleInit {
 
     const data: InvokeSkillJobData = {
       ...param,
+      resultId,
       uid,
       rawParam: JSON.stringify(param),
       modelConfigMap,
