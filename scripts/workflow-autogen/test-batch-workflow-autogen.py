@@ -4,11 +4,13 @@ Batch Workflow Execution Test Script
 
 This script:
 1. Reads queries from queries.txt (one per line)
-2. Generates workflows for each query using Copilot Autogen API
-3. Uses LLM API to generate variable values
-4. Executes workflows using workflow/initialize API
-5. Polls workflow status until completion
-6. Runs multiple workflows concurrently using thread pool
+2. Processes queries using LLM (optional enhancement/transformation)
+3. Saves processed queries to file
+4. Generates workflows for each query using Copilot Autogen API
+5. Uses LLM API to generate variable values
+6. Executes workflows using workflow/initialize API
+7. Polls workflow status until completion
+8. Runs multiple workflows concurrently using thread pool
 
 Usage:
     REFLY_EMAIL="your@email.com" REFLY_PASSWORD="your_password" LLM_ENDPOINT="https://litellm.powerformer.net/v1" LLM_API_KEY="your_key" python test-batch-workflow-autogen.py
@@ -17,6 +19,8 @@ Usage:
     MODEL_NAME="openai/gpt-4o" (default if not specified)
     MAX_WORKERS=3 (default if not specified)
     QUERIES_FILE="queries.txt" (default if not specified)
+    PROCESSED_QUERIES_FILE="queries-processed.txt" (auto-generated if not specified)
+    PROMPT_FILE="prompt-process-query.md" (default: prompt-process-query.md in script directory)
 """
 
 import json
@@ -647,6 +651,183 @@ def load_queries(queries_file: str) -> list:
         sys.exit(1)
 
 
+def load_prompt_template(prompt_file: str) -> str:
+    """
+    Load prompt template from file
+
+    Args:
+        prompt_file: Path to prompt template file
+
+    Returns:
+        Prompt template string
+    """
+    try:
+        with open(prompt_file, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        raise Exception(f"Failed to load prompt template: {str(e)}")
+
+
+def process_single_query_with_llm(
+    query: str,
+    prompt_template: str,
+    llm_endpoint: str,
+    llm_api_key: str,
+    model_name: str,
+    max_retries: int = 3,
+) -> str:
+    """
+    Process a single query using LLM
+
+    Args:
+        query: Original query string
+        prompt_template: Prompt template with {query} placeholder
+        llm_endpoint: LLM API endpoint
+        llm_api_key: LLM API key
+        model_name: Model name to use
+        max_retries: Maximum number of retries
+
+    Returns:
+        Processed query string
+    """
+    # Build full prompt by replacing {query} placeholder
+    full_prompt = prompt_template.replace("{query}", query)
+
+    # Construct API URL
+    llm_endpoint = llm_endpoint.rstrip("/")
+    if llm_endpoint.endswith("/v1"):
+        chat_url = f"{llm_endpoint}/chat/completions"
+    else:
+        chat_url = f"{llm_endpoint}/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {llm_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "model": model_name,
+        "messages": [{"role": "user", "content": full_prompt}],
+        "temperature": 0.3,
+    }
+
+    last_error = None
+
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                chat_url,
+                json=payload,
+                headers=headers,
+                timeout=60,
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            processed_query = (
+                data.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+                .strip()
+            )
+
+            if not processed_query:
+                raise Exception("Empty response from LLM")
+
+            return processed_query
+
+        except requests.exceptions.RequestException as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                wait_time = min(2**attempt * 2, 10)
+                time.sleep(wait_time)
+                continue
+        except (KeyError, IndexError) as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                time.sleep(2)
+                continue
+
+    # If all retries failed, return original query
+    safe_print(f"⚠️  处理查询失败 (使用原始查询): {query[:50]}... - {str(last_error)}")
+    return query
+
+
+def process_queries(
+    queries: list,
+    llm_endpoint: str,
+    llm_api_key: str,
+    model_name: str,
+    output_file: str = None,
+    prompt_file: str = None,
+) -> list:
+    """
+    Process queries using LLM (e.g., enhance, validate, or transform queries)
+
+    Args:
+        queries: List of original query strings
+        llm_endpoint: LLM API endpoint
+        llm_api_key: LLM API key
+        model_name: Model name to use
+        output_file: Optional output file path to save processed queries
+        prompt_file: Path to prompt template file (relative to script directory if not absolute)
+
+    Returns:
+        List of processed query strings
+    """
+    safe_print("🔄 处理查询中...")
+
+    # If prompt_file is not provided or is relative, resolve it relative to script directory
+    if prompt_file is None:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        prompt_file = os.path.join(script_dir, "prompt-process-query.md")
+    elif not os.path.isabs(prompt_file):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        prompt_file = os.path.join(script_dir, prompt_file)
+
+    # Load prompt template
+    try:
+        prompt_template = load_prompt_template(prompt_file)
+        safe_print(f"   已加载 prompt: {os.path.basename(prompt_file)}")
+    except Exception as e:
+        safe_print(f"⚠️  无法加载 prompt 文件 ({prompt_file}): {str(e)}")
+        safe_print("⚠️  将使用原始查询\n")
+        return queries
+
+    processed_queries = []
+
+    for idx, query in enumerate(queries):
+        try:
+            processed_query = process_single_query_with_llm(
+                query, prompt_template, llm_endpoint, llm_api_key, model_name
+            )
+            processed_queries.append(processed_query)
+
+            # Show progress for each query
+            safe_print(f"   [{idx + 1}/{len(queries)}] 已处理")
+
+        except Exception as e:
+            safe_print(f"⚠️  处理第 {idx + 1} 个查询失败: {str(e)}")
+            # Use original query on error
+            processed_queries.append(query)
+
+    safe_print(f"✅ 已处理 {len(processed_queries)} 个查询")
+
+    # Write processed queries to output file if specified
+    if output_file:
+        try:
+            with open(output_file, "w", encoding="utf-8") as f:
+                for query in processed_queries:
+                    f.write(f"{query}\n")
+            safe_print(f"💾 已保存处理后的查询到: {output_file}\n")
+        except Exception as e:
+            safe_print(f"⚠️  保存查询文件失败: {str(e)}\n")
+    else:
+        safe_print()
+
+    return processed_queries
+
+
 def test_batch_workflow_execution():
     """Test batch workflow execution with concurrent processing"""
 
@@ -707,9 +888,28 @@ def test_batch_workflow_execution():
 
     # Load queries
     queries = load_queries(queries_file)
-    stats["total"] = len(queries)
-
     safe_print(f"📋 已加载 {len(queries)} 个查询\n")
+
+    # Process queries (enhancement, validation, transformation, etc.)
+    # Generate output file path: queries.txt -> queries-processed.txt
+    processed_queries_file = os.getenv("PROCESSED_QUERIES_FILE")
+    if not processed_queries_file:
+        base_name = os.path.splitext(queries_file)[0]
+        processed_queries_file = f"{base_name}-processed.txt"
+
+    # Get prompt file path (default: prompt-process-query.md in script directory)
+    prompt_file = os.getenv("PROMPT_FILE")
+
+    queries = process_queries(
+        queries,
+        llm_endpoint,
+        llm_api_key,
+        model_name,
+        processed_queries_file,
+        prompt_file,
+    )
+
+    stats["total"] = len(queries)
 
     # Process queries concurrently
     results = []
