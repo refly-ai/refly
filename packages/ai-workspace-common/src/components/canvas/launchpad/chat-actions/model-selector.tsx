@@ -7,7 +7,6 @@ import { ModelInfo, TokenUsageMeter } from '@refly/openapi-schema';
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { LuInfo } from 'react-icons/lu';
-import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { IContextItem } from '@refly/common-types';
 import { modelEmitter } from '@refly-packages/ai-workspace-common/utils/event-emitter/model';
@@ -41,14 +40,12 @@ const SelectedModelDisplay = memo(
     model,
     size = 'medium',
     variant = 'default',
-    handleOpenSettingModal,
     readonly = false,
   }: {
     open: boolean;
     model: ModelInfo | null;
     size?: 'small' | 'medium';
     variant?: 'default' | 'filled';
-    handleOpenSettingModal: () => void;
     readonly?: boolean;
   }) => {
     const { t } = useTranslation();
@@ -60,7 +57,7 @@ const SelectedModelDisplay = memo(
         <Button
           type="text"
           size="small"
-          disabled={readonly}
+          disabled={true}
           className={cn(
             'text-xs gap-1.5 hover:bg-refly-tertiary-hover',
             isFilled
@@ -70,9 +67,8 @@ const SelectedModelDisplay = memo(
           )}
           style={{ color: '#f59e0b' }}
           icon={<LuInfo className="flex items-center" />}
-          onClick={handleOpenSettingModal}
         >
-          <div className="leading-5">{t('copilot.modelSelector.configureModel')}</div>
+          <div className="leading-5">{t('copilot.modelSelector.noAvailableModel')}</div>
         </Button>
       );
     }
@@ -245,16 +241,6 @@ export const ModelSelector = memo(
 
     const { tokenUsage, isUsageLoading } = useSubscriptionUsage();
 
-    const { setShowSettingModal, setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
-      setShowSettingModal: state.setShowSettingModal,
-      setSettingsModalActiveTab: state.setSettingsModalActiveTab,
-    }));
-
-    const handleOpenSettingModal = useCallback(() => {
-      setShowSettingModal(true);
-      setSettingsModalActiveTab(SettingsModalActiveTab.ModelConfig);
-    }, [setShowSettingModal, setSettingsModalActiveTab]);
-
     /**
      * Filter and map provider items to only include those with category 'llm' or 'mediaGeneration'.
      * This ensures only relevant model types are shown in the model selector.
@@ -332,19 +318,7 @@ export const ModelSelector = memo(
           className="bg-refly-bg-content-z2 rounded-lg border-[1px] border-solid border-refly-Card-Border shadow-refly-m"
           style={{ width: variant === 'filled' ? triggerWidth : 260 }}
         >
-          {/* Category Switch */}
-          {/*<div className="p-2 pb-0">
-            <Segmented
-              className="w-full [&_.ant-segmented-item]:flex-1 [&_.ant-segmented-item]:text-center [&_.ant-segmented-item]:py-0.5 [&_.ant-segmented-item]:text-xs"
-              shape="round"
-              size="small"
-              options={[{ label: '对话模型', value: 'llm' }]}
-              value={selectedCategory}
-              onChange={(value) => setSelectedCategory(value as 'llm')}
-            />
-          </div>*/}
-
-          <div className="max-h-[38vh] w-full overflow-y-auto p-1.5">
+          <div className="max-h-[38vh] w-full overflow-y-auto p-1.5 my-2">
             {droplist
               .filter((item) => !!item)
               .map((item) => {
@@ -371,17 +345,16 @@ export const ModelSelector = memo(
                 );
               })}
           </div>
-          <SettingsButton
+          {/* <SettingsButton
             handleOpenSettingModal={handleOpenSettingModal}
             setDropdownOpen={setDropdownOpen}
-          />
+          /> */}
         </div>
       ),
       [
         t,
         droplist,
         handleMenuClick,
-        handleOpenSettingModal,
         setDropdownOpen,
         selectedCategory,
         modelList,
@@ -442,7 +415,6 @@ export const ModelSelector = memo(
               model={model}
               size={size}
               variant={variant}
-              handleOpenSettingModal={handleOpenSettingModal}
             />
 
             {!remoteModel?.capabilities?.vision && isContextIncludeImage && (

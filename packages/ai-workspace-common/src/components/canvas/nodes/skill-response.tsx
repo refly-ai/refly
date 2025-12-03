@@ -206,11 +206,14 @@ export const SkillResponseNode = memo(
       return nodePreviewId === id;
     }, [nodePreviewId, id]);
 
-    const { highlightedNodeId } = useCanvasNodesStoreShallow((state) => ({
+    const { highlightedNodeId, highlightedNodeIds } = useCanvasNodesStoreShallow((state) => ({
       highlightedNodeId: state.highlightedNodeId,
+      highlightedNodeIds: state.highlightedNodeIds,
     }));
 
-    const shouldHighlight = highlightedNodeId === id;
+    // Check if node should be highlighted (either single highlight or multiple highlights)
+    // Single highlight (hover) and multiple highlights (validation) can coexist
+    const shouldHighlight = highlightedNodeId === id || highlightedNodeIds?.has(id) === true;
 
     const connection = useConnection();
     const isConnectingTarget = useMemo(
