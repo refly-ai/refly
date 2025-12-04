@@ -28,13 +28,10 @@ const FREE_TOOL_LOOKUP_KEYS = [
 const FREE_TOOLSET_KEYS = [
   'nano_banana_pro',
   'instagram',
-  'tiktok',
   'facebook',
   'twitter',
   'fish_audio',
-  'fal_image',
-  'fal_video',
-  'fal_audio',
+  'seedream_image',
 ];
 
 @Injectable()

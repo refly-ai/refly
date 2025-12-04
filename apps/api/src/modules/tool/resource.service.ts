@@ -219,26 +219,37 @@ export class ResourceHandler {
     mode: ProcessingMode,
   ): Promise<Record<string, unknown>> {
     // Collect all processing tasks
-    const tasks: Array<{ path: string; schema: SchemaProperty }> = [];
+    const tasks: Array<{ path: string; schema: SchemaProperty; isOptionalResource?: boolean }> = [];
 
     for (const field of resourceFields) {
       if (field.isArrayItem) {
         // Expand array paths to concrete indices
         const expandedPaths = this.expandArrayPaths(field.dataPath, field.arrayPaths, data);
         for (const path of expandedPaths) {
-          tasks.push({ path, schema: field.schema });
+          tasks.push({ path, schema: field.schema, isOptionalResource: field.isOptionalResource });
         }
       } else {
-        tasks.push({ path: field.dataPath, schema: field.schema });
+        tasks.push({
+          path: field.dataPath,
+          schema: field.schema,
+          isOptionalResource: field.isOptionalResource,
+        });
       }
     }
 
     // Process all fields in parallel (mutates data directly)
     await Promise.all(
-      tasks.map(async ({ path, schema }) => {
+      tasks.map(async ({ path, schema, isOptionalResource }) => {
         const value = _.get(data, path);
         if (value !== undefined) {
-          const processed = await this.processResourceValue(value, schema, path, processor, mode);
+          const processed = await this.processResourceValue(
+            value,
+            schema,
+            path,
+            processor,
+            mode,
+            isOptionalResource,
+          );
           _.set(data, path, processed);
         }
       }),
@@ -299,6 +310,9 @@ export class ResourceHandler {
 
   /**
    * Process a single resource field value
+   *
+   * @param isOptionalResource - If true, the field is from a oneOf/anyOf schema with non-resource alternatives.
+   *                             In this case, if the value isn't a valid fileId, we skip processing instead of throwing.
    */
   private async processResourceValue(
     value: unknown,
@@ -306,12 +320,18 @@ export class ResourceHandler {
     fieldPath: string,
     processor: (value: unknown, schema: SchemaProperty) => Promise<unknown>,
     mode: ProcessingMode,
+    isOptionalResource?: boolean,
   ): Promise<unknown> {
     if (value === null || value === undefined) {
       return value;
     }
 
     if (mode === 'input' && !isValidFileId(value)) {
+      // If this is an optional resource (part of oneOf/anyOf), skip processing for non-fileId values
+      // The value will be treated as a plain string by the other schema option
+      if (isOptionalResource) {
+        return value; // Return original value unchanged
+      }
       throw new InvalidFileIdError(fieldPath, value);
     }
 

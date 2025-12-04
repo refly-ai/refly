@@ -31,6 +31,8 @@ export interface ResourceField {
   isArrayItem: boolean;
   /** Parent array paths that need expansion */
   arrayPaths: string[];
+  /** Whether this resource is optional (part of oneOf/anyOf with non-resource alternatives) */
+  isOptionalResource?: boolean;
 }
 
 // ============================================================================
@@ -326,12 +328,17 @@ export function collectResourceFields(schema: JsonSchema): ResourceField[] {
       const { path, arrayPaths } = jsonPointerToDataPath(jsonPtr);
 
       if (path) {
+        // Detect if this resource is inside a oneOf/anyOf (optional resource)
+        // JSON pointer like "/properties/text/oneOf/1" indicates it's part of oneOf
+        const isOptionalResource = /\/(oneOf|anyOf)\/\d+/.test(jsonPtr);
+
         fields.push({
           jsonPointer: jsonPtr,
           dataPath: path,
           schema: subSchema as SchemaProperty,
           isArrayItem: arrayPaths.length > 0,
           arrayPaths,
+          isOptionalResource,
         });
       }
     }
