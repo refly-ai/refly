@@ -9326,7 +9326,10 @@ components:
                   description: Regular credits (from purchases, gifts, subscriptions)
                 templateEarningsCredits:
                   type: number
-                  description: Template earnings credits                
+                  description: Template earnings credits      
+                cumulativeEarningsCredits:
+                  type: number
+                  description: Cumulative earnings credits                  
     GetCreditUsageByResultIdResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

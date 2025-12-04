@@ -5194,6 +5194,10 @@ export type getCreditBalanceResponse = BaseResponse & {
      * Template earnings credits
      */
     templateEarningsCredits?: number;
+    /**
+     * Cumulative earnings credits
+     */
+    cumulativeEarningsCredits?: number;
   };
 };
 

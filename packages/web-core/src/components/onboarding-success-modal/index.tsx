@@ -191,7 +191,7 @@ export const OnboardingSuccessModal = () => {
                   </linearGradient>
                 </defs>
               </svg>
-              <span className="text-4xl font-bold text-gray-900">
+              <span className="text-3xl font-bold text-gray-900">
                 {t('onboarding.rewardPoints')}
               </span>
             </div>

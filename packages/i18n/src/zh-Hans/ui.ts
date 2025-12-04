@@ -38,6 +38,9 @@ const translations = {
       remainingCredits: '剩余积分',
       regularCredits: '常规积分',
       templateEarningsCredits: '收益积分',
+      availableCreditsDescription: '您可用于运行工作流的积分总数',
+      regularCreditsDescription: '通过购买、任务、活动或系统赠送等方式获得的积分',
+      templateEarningsCreditsDescription: '他人运行你的模板后获得的积分收益',
       knowledgeBaseFiles: '知识库文件',
       creditUsageDetails: '积分使用明细',
       creditRechargeDetails: '积分获取明细',
@@ -128,7 +131,7 @@ const translations = {
         title: 'PRO',
       },
       plus: {
-        title: 'PLUS',
+        title: 'Plus',
         titleCn: 'Plus',
         description: '适合运行高频自动化任务',
         priceMonthly: '$ {{price}}/月',

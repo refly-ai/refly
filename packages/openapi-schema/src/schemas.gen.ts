@@ -7313,6 +7313,10 @@ export const getCreditBalanceResponseSchema = {
               type: 'number',
               description: 'Template earnings credits',
             },
+            cumulativeEarningsCredits: {
+              type: 'number',
+              description: 'Cumulative earnings credits',
+            },
           },
         },
       },

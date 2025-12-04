@@ -1207,11 +1207,16 @@ export class CreditService {
       .filter((record) => record.source === 'commission')
       .reduce((sum, record) => sum + Number(record.balance), 0);
 
+    const cumulativeEarningsCredits = activeRecharges
+      .filter((record) => record.source === 'commission')
+      .reduce((sum, record) => sum + Number(record.amount), 0);
+
     return {
       creditAmount: totalAmount,
       creditBalance: netBalance,
       regularCredits: regularCredits,
       templateEarningsCredits: templateEarningsCredits,
+      cumulativeEarningsCredits: cumulativeEarningsCredits,
     };
   }
 

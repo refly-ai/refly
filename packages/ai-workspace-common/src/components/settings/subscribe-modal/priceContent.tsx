@@ -63,7 +63,7 @@ const PriceOption = memo(({ type, isSelected, price, yearlyTotal, onSelect }: Pr
   return (
     <div
       className={`
-        relative flex-1 p-4 rounded-xl cursor-pointer transition-all duration-200
+        relative flex-1 px-4 py-2 rounded-xl cursor-pointer transition-all duration-200
         ${
           isSelected
             ? 'border-2 !border-solid !border-black bg-white'
@@ -72,29 +72,29 @@ const PriceOption = memo(({ type, isSelected, price, yearlyTotal, onSelect }: Pr
       `}
       onClick={handleClick}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-base font-medium text-gray-900">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-gray-900">
           {type === 'monthly' ? t('subscription.monthly') : t('subscription.yearly')}
         </span>
         {type === 'yearly' && (
           <Tag
-            className="!m-0 !px-2 !py-0.5 !text-xs !font-medium !rounded-full !border-0"
+            className="!m-0 !px-1.5 !py-0.5 !text-xs !font-medium !rounded-full !border-0"
             color="orange"
           >
             {t('subscription.save20')}
           </Tag>
         )}
         {isSelected && (
-          <div className="ml-auto w-5 h-5 bg-[#0E9F77] rounded-full flex items-center justify-center">
-            <Checked size={12} color="#fff" />
+          <div className="ml-auto w-4 h-4 bg-[#0E9F77] rounded-full flex items-center justify-center">
+            <Checked size={10} color="#fff" />
           </div>
         )}
       </div>
       <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-bold text-gray-900">${price}</span>
-        <span className="text-sm text-gray-500">/month</span>
+        <span className="text-2xl font-normal text-refly-text-0">${price}</span>
+        <span className="text-xs text-gray-500">/month</span>
         {type === 'yearly' && yearlyTotal && (
-          <span className="text-sm text-gray-500">${yearlyTotal}/year</span>
+          <span className="text-xs text-gray-500">${yearlyTotal}/year</span>
         )}
       </div>
     </div>
@@ -165,14 +165,13 @@ const FeatureItem = memo(
           )}
         </div>
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm leading-5 text-gray-900 font-semibold">
+          <span className="text-sm leading-5 text-refly-text-0 font-normal">
             {name}
             {description && (
               <span
-                className={`font-normal ${isGreenDescription ? 'text-green-600' : 'text-gray-500'}`}
+                className={`font-normal ${isGreenDescription ? 'text-green-600' : 'text-refly-text-0'}`}
               >
-                {' '}
-                {description}
+                : {description}
               </span>
             )}
           </span>
@@ -264,7 +263,11 @@ const PlanItem = memo((props: PlanItemProps) => {
       );
     }
     if (isCurrentPlan) {
-      return t('subscription.plans.currentPlan');
+      return (
+        <span className={`text-base font-medium ${isHovered ? 'text-refly-text-2' : ''}`}>
+          {t('subscription.plans.currentPlan')}
+        </span>
+      );
     }
     if (planType === 'free') {
       return t('subscription.plans.free.buttonText');
@@ -273,33 +276,37 @@ const PlanItem = memo((props: PlanItemProps) => {
       return t('subscription.plans.enterprise.buttonText');
     }
     return (
-      <span className="flex items-center justify-center gap-2">
+      <span className="flex items-center justify-center gap-2 font-medium">
         <IconLightning01 size={20} color="#0E9F77" />
         {t('subscription.plans.upgrade', {
           planType: planType.charAt(0).toUpperCase() + planType.slice(1),
         })}
       </span>
     );
-  }, [loadingInfo, planType, isCurrentPlan, t]);
+  }, [loadingInfo, planType, isCurrentPlan, isHovered, t]);
 
   // Free plan card - simplified version
   if (planType === 'free') {
     return (
       <div
-        className="w-full max-w-[532px] p-6 box-border rounded-2xl shadow-[0px_4px_24px_rgba(0,0,0,0.08)] bg-white"
+        className="w-full max-w-[532px] p-6 box-border border-1 border-solid border-gray-200 rounded-2xl shadow-[0px_4px_24px_rgba(0,0,0,0.08)] bg-white"
         style={{
-          background: 'linear-gradient(180deg, rgba(243, 244, 246, 0.6) 0%, #ffffff 30%)',
+          background: isHovered
+            ? 'rgba(244, 244, 244, 0.8)'
+            : 'linear-gradient(180deg, rgba(243, 244, 246, 0.6) 0%, #ffffff 30%)',
         }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         {/* Header */}
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xl font-semibold text-gray-900">{title}</span>
+          <span className="text-xl font-normal text-refly-text-0">{title}</span>
         </div>
         <p className="text-sm text-gray-500 mb-4">{description}</p>
 
         {/* Price */}
         <div className="flex items-baseline gap-2 mb-4">
-          <span className="text-2xl font-bold text-gray-900">$0</span>
+          <span className="text-3xl font-normal text-refly-text-0">$0</span>
           <span className="text-sm text-gray-500">/month</span>
         </div>
 
@@ -307,11 +314,11 @@ const PlanItem = memo((props: PlanItemProps) => {
         <button
           type="button"
           className={`
-            w-full h-11 rounded-lg text-sm font-semibold transition-all duration-200
+            w-full h-11 rounded-lg text-sm font-semibold transition-all duration-200 !border-[1px] !border-solid !border-gray-200
             ${
               isButtonDisabled
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-900 text-white hover:bg-gray-800'
+                ? 'bg-gray-100 text-refly-text-0 cursor-pointer'
+                : 'bg-gray-900 text-white hover:bg-gray-800 cursor-pointer'
             }
           `}
           onClick={handleButtonClick}
@@ -322,7 +329,7 @@ const PlanItem = memo((props: PlanItemProps) => {
 
         {/* Features */}
         <div className="pt-5 mt-5 border-t border-black/[0.06] flex flex-col gap-4">
-          <span className="text-sm font-semibold text-gray-900">
+          <span className="text-sm font-normal text-refly-text-0">
             {t('subscription.plans.memberBenefits')}
           </span>
           {features.map((feature, index) => (
@@ -336,7 +343,7 @@ const PlanItem = memo((props: PlanItemProps) => {
   // Paid plan card with pricing options
   return (
     <div
-      className="w-full max-w-[532px] p-6 box-border rounded-2xl shadow-[0px_4px_24px_rgba(0,0,0,0.08)]"
+      className="w-full max-w-[532px] p-6 box-border border-1 border-solid border-gray-200 rounded-2xl shadow-[0px_4px_24px_rgba(0,0,0,0.08)]"
       style={{
         background:
           isCurrentPlan || isUpgrade
@@ -350,10 +357,10 @@ const PlanItem = memo((props: PlanItemProps) => {
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">
-        <Subscription size={24} className="text-gray-900" />
-        <span className="text-xl font-semibold text-gray-900">{title}</span>
+        <Subscription size={20} className="text-gray-900" />
+        <span className="text-xl font-normal text-refly-text-0">{title}</span>
         {isCurrentPlan && (
-          <Tag className="!m-0 !px-2 !py-0.5 !text-xs !font-medium !rounded !bg-gray-100 !text-gray-600 !border-gray-200">
+          <Tag className="!m-0 !px-2 !py-0.5 !text-sm !font-light !rounded !bg-gray-100 !text-refly-text-2 !border-gray-200">
             {t('subscription.plans.currentPlan')}
           </Tag>
         )}
@@ -391,7 +398,7 @@ const PlanItem = memo((props: PlanItemProps) => {
         <button
           type="button"
           className={`
-            w-full h-11 rounded-lg text-sm font-semibold transition-all duration-200
+            w-full h-11 rounded-lg text-sm font-semibold transition-all duration-200 hover:cursor-pointer
             ${
               isButtonDisabled
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -409,7 +416,7 @@ const PlanItem = memo((props: PlanItemProps) => {
 
       {/* Features */}
       <div className="pt-5 mt-5 border-t border-black/[0.06] flex flex-col gap-4">
-        <span className="text-sm font-semibold text-gray-900">
+        <span className="text-sm font-normal text-refly-text-0">
           {t('subscription.plans.memberBenefits')}
         </span>
         {features.map((feature, index) => (

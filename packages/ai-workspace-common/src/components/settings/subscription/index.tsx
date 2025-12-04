@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import dayjs from 'dayjs';
-import { Button, Table, Segmented } from 'antd';
+import { Button, Table, Segmented, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,7 @@ import { ContentHeader } from '@refly-packages/ai-workspace-common/components/se
 import { Subscription as SubscriptionIcon } from 'refly-icons';
 import RegularIcon from '@refly-packages/ai-workspace-common/assets/regular.svg';
 import CommissionIcon from '@refly-packages/ai-workspace-common/assets/commission.svg';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 
 // Define interfaces for the table data
 interface CreditUsageRecord {
@@ -177,6 +178,7 @@ export const Subscription = () => {
   const creditBalance = balanceData?.data?.creditBalance ?? 0;
   const regularCredits = balanceData?.data?.regularCredits ?? 0;
   const templateEarningsCredits = balanceData?.data?.templateEarningsCredits ?? 0;
+  const cumulativeEarningsCredits = balanceData?.data?.cumulativeEarningsCredits ?? 0;
 
   // State for active history tab
   const [activeTab, setActiveTab] = useState<'usage' | 'recharge'>('usage');
@@ -500,8 +502,15 @@ export const Subscription = () => {
 
               <div className="usage-section-wrapper">
                 <div className="available-credits-section">
-                  <div className="usage-label">
+                  <div className="usage-label flex items-center gap-1">
                     {t('subscription.subscriptionManagement.availableCredits')}
+                    <Tooltip
+                      title={t('subscription.subscriptionManagement.availableCreditsDescription')}
+                    >
+                      <span className="text-refly-text-2 cursor-pointer">
+                        <QuestionCircleOutlined />
+                      </span>
+                    </Tooltip>
                   </div>
 
                   <div className="usage-value">
@@ -513,8 +522,15 @@ export const Subscription = () => {
                 <div className="usage-cards">
                   <div className="usage-card regular-credits-card flex items-center justify-between">
                     <div className="usage-content flex-1 p-4">
-                      <div className="usage-label">
+                      <div className="usage-label flex items-center gap-1">
                         {t('subscription.subscriptionManagement.regularCredits')}
+                        <Tooltip
+                          title={t('subscription.subscriptionManagement.regularCreditsDescription')}
+                        >
+                          <span className="text-refly-text-2 cursor-pointer">
+                            <QuestionCircleOutlined />
+                          </span>
+                        </Tooltip>
                       </div>
                       <div className="usage-value flex items-center gap-1">
                         {' '}
@@ -527,12 +543,24 @@ export const Subscription = () => {
 
                   <div className="usage-card template-earnings-card flex items-center justify-between">
                     <div className="usage-content flex-1 p-4">
-                      <div className="usage-label">
+                      <div className="usage-label flex items-center gap-1">
                         {t('subscription.subscriptionManagement.templateEarningsCredits')}
+                        <Tooltip
+                          title={t(
+                            'subscription.subscriptionManagement.templateEarningsCreditsDescription',
+                          )}
+                        >
+                          <span className="text-refly-text-2 cursor-pointer">
+                            <QuestionCircleOutlined />
+                          </span>
+                        </Tooltip>
                       </div>
                       <div className="usage-value flex items-center gap-1">
                         <SubscriptionIcon size={18} className="text-refly-text-2 flex-shrink-0" />
                         {templateEarningsCredits?.toLocaleString()}
+                        <div className="text-gray-500 text-sm">
+                          / {cumulativeEarningsCredits?.toLocaleString()}
+                        </div>
                       </div>
                     </div>
                     <img src={CommissionIcon} alt="Commission" className="w-[76px] h-[76px]" />

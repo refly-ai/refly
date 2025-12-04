@@ -11,7 +11,7 @@ const translations = {
   form: {
     previous: '← Previous',
     next: 'Next →',
-    submit: 'Submit to get credits',
+    submit: 'Submit & Earn',
     submitting: 'Submitting...',
     submitSuccess: '🎉 Refly will recommend the best templates and tasks!',
   },
@@ -3639,11 +3639,11 @@ const translations = {
         title: 'PRO',
       },
       plus: {
-        title: 'PLUS',
+        title: 'Plus',
         description: 'Suitable for running a high volume of automation tasks',
         buttonText: 'Get Plus',
         features: [
-          'Daily new credits\n300 credits',
+          'Daily new credits\n100 credits',
           'Monthly credits\n2,000 credits',
           //'New subscribers receive an extra\n2,000 bonus credits',
           'Access to a vast library of tools',
@@ -3754,6 +3754,10 @@ const translations = {
       viewPricing: 'View Pricing',
       upgradePlan: 'Upgrade Plan',
       availableCredits: 'Total Available Credits',
+      availableCreditsDescription: 'All credits you can use to run workflows',
+      regularCreditsDescription: 'Credits earned from purchases, bonuses, and system rewards',
+      templateEarningsCreditsDescription:
+        'Earnings credits obtained by sharing templates and works, can be used to redeem more AI features',
       regularCredits: 'Regular Credits',
       templateEarningsCredits: 'Earnings Credits',
       remainingCredits: 'Credits',
@@ -3886,7 +3890,7 @@ const translations = {
   },
   onboarding: {
     rewardTitle: 'Reward Credits',
-    rewardPoints: '3000 credits',
+    rewardPoints: '3000 Credits',
     startExperience: 'Start Now',
   },
   template: {
