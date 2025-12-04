@@ -11,7 +11,6 @@ import { TurnRight } from 'refly-icons';
 import { cn } from '@refly/utils/cn';
 import { PublishTemplatePopover } from './publish-template-popover';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
-import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 interface PublishTemplateButtonProps {
   canvasId: string;
@@ -39,8 +38,7 @@ const PublishTemplateButton = React.memo(
       return result;
     }, [workflowAppsData, canvasId]);
 
-    // Get canvas data and variables for validation
-    const { data: workflowVariables } = useVariablesManagement(canvasId);
+    // Get canvas data for validation
     const { nodes } = useRealtimeCanvasData();
 
     // Filter skillResponse nodes for validation
@@ -50,9 +48,6 @@ const PublishTemplateButton = React.memo(
 
     // Canvas validation checks
     const canvasValidation = useMemo(() => {
-      // Check if there are no user input variables
-      const hasNoVariables = !workflowVariables || workflowVariables.length === 0;
-
       // Check for failed or unrun skillResponse nodes
       // Returns true if any skillResponse node has status 'failed', 'init', or undefined
       const hasFailedOrUnrunNodes = skillResponseNodesForValidation.some((node) => {
@@ -65,27 +60,15 @@ const PublishTemplateButton = React.memo(
       const hasNoSkillResponseNodes = skillResponseNodesForValidation.length === 0;
 
       return {
-        hasNoVariables,
         hasFailedOrUnrunNodes,
         hasNoSkillResponseNodes,
       };
-    }, [workflowVariables, skillResponseNodesForValidation]);
+    }, [skillResponseNodesForValidation]);
 
     // Validate canvas before publishing
     // Returns true if validation passes, false otherwise
     const validateCanvas = useCallback(() => {
-      // Priority: User Input > No Agents > Agent Not Run or Failed
-      if (canvasValidation.hasNoVariables) {
-        // Show toast
-        message.error(t('workflowApp.validationNoUserInputs'));
-        // Trigger canvas fitView event
-        window.dispatchEvent(
-          new CustomEvent('refly:canvas:fitView', {
-            detail: { canvasId },
-          }),
-        );
-        return false;
-      }
+      // Priority:  No Agents > Agent Not Run or Failed
 
       if (canvasValidation.hasNoSkillResponseNodes) {
         // Show toast
