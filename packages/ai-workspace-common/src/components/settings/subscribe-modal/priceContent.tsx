@@ -6,7 +6,7 @@ import { logEvent } from '@refly/telemetry-web';
 // styles
 import './index.scss';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
-import { Checked, Wait } from 'refly-icons';
+import { Checked, Subscription, Wait } from 'refly-icons';
 import { IconLightning01 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import {
@@ -66,8 +66,8 @@ const PriceOption = memo(({ type, isSelected, price, yearlyTotal, onSelect }: Pr
         relative flex-1 p-4 rounded-xl cursor-pointer transition-all duration-200
         ${
           isSelected
-            ? 'border-2 border-[#0E9F77] bg-white'
-            : 'border-[1.5px] border-gray-200 bg-[#FAFAFA] hover:border-[#0E9F77]'
+            ? 'border-2 !border-solid !border-black bg-white'
+            : 'border-2 !border-solid !border-gray-200 bg-[#FAFAFA] hover:border-[#0E9F77]'
         }
       `}
       onClick={handleClick}
@@ -77,7 +77,10 @@ const PriceOption = memo(({ type, isSelected, price, yearlyTotal, onSelect }: Pr
           {type === 'monthly' ? t('subscription.monthly') : t('subscription.yearly')}
         </span>
         {type === 'yearly' && (
-          <Tag className="!m-0 !px-2 !py-0.5 !text-xs !font-medium !rounded" color="orange">
+          <Tag
+            className="!m-0 !px-2 !py-0.5 !text-xs !font-medium !rounded-full !border-0"
+            color="orange"
+          >
             {t('subscription.save20')}
           </Tag>
         )}
@@ -105,62 +108,79 @@ interface FeatureItemProps {
   feature: Feature;
   isEnterprise?: boolean;
   isLast?: boolean;
+  planType?: string;
+  featureIndex?: number;
 }
 
-const FeatureItem = memo(({ feature, isEnterprise, isLast }: FeatureItemProps) => {
-  const parts = feature.name.split('\n');
-  const name = parts[0];
-  const description = parts.length > 1 ? parts.slice(1).join('\n') : null;
+const FeatureItem = memo(
+  ({ feature, isEnterprise, isLast, planType, featureIndex }: FeatureItemProps) => {
+    const parts = feature.name.split('\n');
+    const name = parts[0];
+    const description = parts.length > 1 ? parts.slice(1).join('\n') : null;
 
-  // Handle pointFreeTools type with special display logic
-  if (feature.type === 'pointFreeTools' && feature.items && feature.items.length > 0) {
-    return (
-      <div className="flex flex-col gap-2">
-        {/* Header with check icon */}
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 mt-0.5">
-            <Checked size={16} color="#0E9F77" />
-          </div>
-          <span className="text-sm leading-5 text-gray-900 font-semibold">{name}</span>
-        </div>
-        {/* Sub-items list */}
-        <div className="ml-7 p-3 rounded-lg bg-transparent flex flex-col gap-2">
-          {feature.items.map((item, index) => (
-            <div key={index} className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#0E9F77] flex-shrink-0" />
-                <span className="text-sm text-gray-700">{item}</span>
-              </div>
-              {feature.duration && (
-                <span className="text-xs font-medium text-gray-500 bg-white px-2 py-0.5 rounded">
-                  {feature.duration}
-                </span>
-              )}
+    // For plus plan, make the 2nd and 3rd description green
+    const isGreenDescription =
+      planType === 'plus' &&
+      featureIndex !== undefined &&
+      (featureIndex === 1 || featureIndex === 2);
+
+    // Handle pointFreeTools type with special display logic
+    if (feature.type === 'pointFreeTools' && feature.items && feature.items.length > 0) {
+      return (
+        <div className="flex flex-col gap-2">
+          {/* Header with check icon */}
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <Checked size={16} color="#0E9F77" />
             </div>
-          ))}
+            <span className="text-sm leading-5 text-gray-900 font-semibold">{name}</span>
+          </div>
+          {/* Sub-items list */}
+          <div className="ml-7 p-3 rounded-lg bg-transparent flex flex-col gap-2">
+            {feature.items.map((item, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0E9F77] flex-shrink-0" />
+                  <span className="text-sm text-gray-700">{item}</span>
+                </div>
+                {feature.duration && (
+                  <span className="text-xs font-medium text-gray-500 bg-white px-2 py-0.5 rounded">
+                    {feature.duration}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 mt-0.5">
+          {isEnterprise && isLast ? (
+            <Wait size={16} color="rgba(28, 31, 35, 0.6)" />
+          ) : (
+            <Checked size={16} color="#0E9F77" />
+          )}
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm leading-5 text-gray-900 font-semibold">
+            {name}
+            {description && (
+              <span
+                className={`font-normal ${isGreenDescription ? 'text-green-600' : 'text-gray-500'}`}
+              >
+                {' '}
+                {description}
+              </span>
+            )}
+          </span>
         </div>
       </div>
     );
-  }
-
-  return (
-    <div className="flex items-start gap-3">
-      <div className="flex-shrink-0 mt-0.5">
-        {isEnterprise && isLast ? (
-          <Wait size={16} color="rgba(28, 31, 35, 0.6)" />
-        ) : (
-          <Checked size={16} color="#0E9F77" />
-        )}
-      </div>
-      <div className="flex flex-col gap-0.5">
-        <span className="text-sm leading-5 text-gray-900 font-semibold">
-          {name}
-          {description && <span className="font-normal text-gray-500"> {description}</span>}
-        </span>
-      </div>
-    </div>
-  );
-});
+  },
+);
 
 FeatureItem.displayName = 'FeatureItem';
 
@@ -195,6 +215,7 @@ const PlanItem = memo((props: PlanItemProps) => {
     PlanPriorityMap[PlanPriorityMap[currentPlan as keyof typeof PlanPriorityMap] + 1] ||
     'enterprise';
   const isUpgrade = upgradePlan === planType;
+  const [isHovered, setIsHovered] = useState(false);
   const isDowngrade =
     PlanPriorityMap[currentPlan as keyof typeof PlanPriorityMap] >
     PlanPriorityMap[planType as keyof typeof PlanPriorityMap];
@@ -253,7 +274,7 @@ const PlanItem = memo((props: PlanItemProps) => {
     }
     return (
       <span className="flex items-center justify-center gap-2">
-        <IconLightning01 size={16} />
+        <IconLightning01 size={20} color="#0E9F77" />
         {t('subscription.plans.upgrade', {
           planType: planType.charAt(0).toUpperCase() + planType.slice(1),
         })}
@@ -275,6 +296,12 @@ const PlanItem = memo((props: PlanItemProps) => {
           <span className="text-xl font-semibold text-gray-900">{title}</span>
         </div>
         <p className="text-sm text-gray-500 mb-4">{description}</p>
+
+        {/* Price */}
+        <div className="flex items-baseline gap-2 mb-4">
+          <span className="text-2xl font-bold text-gray-900">$0</span>
+          <span className="text-sm text-gray-500">/month</span>
+        </div>
 
         {/* Button */}
         <button
@@ -299,7 +326,7 @@ const PlanItem = memo((props: PlanItemProps) => {
             {t('subscription.plans.memberBenefits')}
           </span>
           {features.map((feature, index) => (
-            <FeatureItem key={index} feature={feature} />
+            <FeatureItem key={index} feature={feature} planType={planType} featureIndex={index} />
           ))}
         </div>
       </div>
@@ -314,11 +341,16 @@ const PlanItem = memo((props: PlanItemProps) => {
         background:
           isCurrentPlan || isUpgrade
             ? 'linear-gradient(180deg, rgba(14, 159, 119, 0.08) 0%, rgba(255, 255, 255, 0) 30%), #ffffff'
-            : 'linear-gradient(180deg, #1FC99615, #45BEFF10),  #ffffff',
+            : isHovered
+              ? 'linear-gradient(180deg, #A4FFF6, #CFFFD3),  #ffffff'
+              : '#ffffff',
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">
+        <Subscription size={24} className="text-gray-900" />
         <span className="text-xl font-semibold text-gray-900">{title}</span>
         {isCurrentPlan && (
           <Tag className="!m-0 !px-2 !py-0.5 !text-xs !font-medium !rounded !bg-gray-100 !text-gray-600 !border-gray-200">
@@ -386,6 +418,8 @@ const PlanItem = memo((props: PlanItemProps) => {
             feature={feature}
             isEnterprise={planType === 'enterprise'}
             isLast={index === features.length - 1}
+            planType={planType}
+            featureIndex={index}
           />
         ))}
       </div>
@@ -422,7 +456,7 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
   }, [currentPlan]);
 
   const plansData = useMemo(() => {
-    const planTypes = ['free', 'starter', 'maker', 'enterprise'];
+    const planTypes = ['free', 'plus'];
     const data: Record<string, { title: string; description: string; features: Feature[] }> = {};
     for (const planType of planTypes) {
       const rawFeatures =

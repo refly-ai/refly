@@ -28,7 +28,7 @@ export interface ContextBlock {
 
 // Maximum tokens for a single result/file to prevent one item from consuming too much space
 // Can be overridden via environment variables
-const MAX_SINGLE_RESULT_TOKENS = Number(process.env.MAX_SINGLE_RESULT_TOKENS) || 20000;
+const MAX_SINGLE_RESULT_TOKENS = Number(process.env.MAX_SINGLE_RESULT_TOKENS) || 30000;
 const MAX_SINGLE_FILE_TOKENS = Number(process.env.MAX_SINGLE_FILE_TOKENS) || 20000;
 
 /**

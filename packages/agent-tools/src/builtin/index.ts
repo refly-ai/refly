@@ -343,11 +343,30 @@ export class BuiltinGenerateCodeArtifact extends AgentBaseTool<BuiltinToolParams
   schema = z.object({
     filename: z
       .string()
-      .describe('Name of the code file to generate, should contain valid file extension'),
-    content: z.string().describe('Actual code content'),
+      .describe('Name of the file to generate, must include extension (.md, .html, .svg, etc.)'),
+    content: z.string().describe('File content (markdown, HTML, SVG markup, etc.)'),
   });
 
-  description = 'Create a new code artifact with title, type, and content.';
+  description = `Generate renderable content files that display as rich previews in the UI.
+
+## Supported File Types (with live preview)
+- **Markdown (.md)**: Reports, documentation, formatted articles with tables, lists, and embedded images
+- **HTML (.html)**: Interactive pages, styled content, web components
+- **SVG (.svg)**: Vector graphics, diagrams, flowcharts, data visualizations
+
+## Use Cases
+- ✅ Creating formatted reports or documentation
+- ✅ Generating diagrams, charts, or visual representations
+- ✅ Building interactive HTML content
+
+## NOT for
+- ❌ Executable code files (.py, .js, .ts) — use execute_code tool instead
+- ❌ Data files (CSV, JSON, Excel) — use execute_code to generate these
+
+## Important
+- Always use **full URLs** for embedded images/links (e.g., http://localhost:5173/v1/drive/file/content/df-xxx)
+- SVG \`<image>\` tag requires **explicit numeric width and height** (e.g., \`width="300" height="200"\`). Do NOT use \`auto\` — it's invalid in SVG
+- Markdown supports standard image syntax: ![alt](full-url)`;
 
   protected params: BuiltinToolParams;
 

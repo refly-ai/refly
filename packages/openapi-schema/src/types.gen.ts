@@ -7580,6 +7580,10 @@ export type DriveFile = {
    * Drive file update timestamp
    */
   updatedAt?: string;
+  /**
+   * Private access URL for the file (requires authentication)
+   */
+  url?: string;
 };
 
 export type ListDriveFilesResponse = BaseResponse & {

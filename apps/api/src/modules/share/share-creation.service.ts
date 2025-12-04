@@ -1286,6 +1286,12 @@ export class ShareCreationService {
       throw new ShareNotFoundError();
     }
 
+    // Get workflow variables from Canvas service
+    const variables = await this.canvasService.getWorkflowVariables(user, {
+      canvasId: workflowApp.canvasId,
+    });
+    workflowApp.variables = JSON.stringify(variables) ?? '[]';
+
     // Use creditUsage from database if available (already has markup applied),
     // otherwise calculate from param (apply markup if needed)
     let finalCreditUsage: number;

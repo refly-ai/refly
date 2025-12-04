@@ -64,10 +64,9 @@ export const ToolsetPopover = memo(
     const getToolsetDescription = useCallback(
       (toolset: ToolsetWithDefinition) =>
         toolset?.type === 'mcp'
-          ? (toolset.mcpServer?.url ?? t('workflowList.defaultToolDescription'))
-          : ((toolset?.definition?.descriptionDict?.[currentLanguage] as string | undefined) ??
-            t('workflowList.defaultToolDescription')),
-      [currentLanguage, t],
+          ? (toolset.mcpServer?.url ?? '')
+          : ((toolset?.definition?.descriptionDict?.[currentLanguage] as string | undefined) ?? ''),
+      [currentLanguage],
     );
 
     const handleOpenChange = useCallback((visible: boolean) => {

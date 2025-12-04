@@ -227,7 +227,13 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
       '[runCodeInSandbox] Files to register',
     );
 
-    const files = await this.registerFiles(context, addedFiles);
+    const registeredFiles = await this.registerFiles(context, addedFiles);
+
+    // Append access URLs to files for frontend consumption
+    const files = registeredFiles.map((file) => ({
+      ...file,
+      url: this.driveService.extractContentUrl(file.fileId),
+    }));
 
     // Extract error message from executor output
     const errorMessage = extractErrorMessage(executorOutput);

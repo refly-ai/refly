@@ -1,26 +1,96 @@
 import { memo, useState, useEffect, useCallback } from 'react';
 import { Button } from 'antd';
 import { DriveFile } from '@refly/openapi-schema';
-import { Download, File } from 'refly-icons';
-import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
-import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
-import { isCodeFile, getCodeLanguage } from '@refly-packages/ai-workspace-common/utils/file-type';
+import { File } from 'refly-icons';
+import { getCodeLanguage } from '@refly-packages/ai-workspace-common/utils/file-type';
 import { useDriveFileUrl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drive-file-url';
-import SyntaxHighlighter from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/syntax-highlighter';
-import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
-import CodeViewer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/code-viewer';
 import { cn } from '@refly/utils/cn';
 import { useMatch } from 'react-router-dom';
+
+// Import renderer components
+import type { FileContent } from './types';
+
+import { SvgRenderer } from './svg';
+import { ImageRenderer } from './image';
+import { CodeRenderer, JsonRenderer } from './code';
+import { PdfRenderer } from './pdf';
+import { VideoRenderer } from './video';
+import { AudioRenderer } from './audio';
+import { UnsupportedRenderer } from './unsupported';
+import { HtmlRenderer } from './html';
+import { MarkdownRenderer } from './markdown';
+
+const useHandleDownload = (url: string | undefined, fileName: string) => {
+  return useCallback(() => {
+    if (!url) return;
+
+    const link = document.createElement('a');
+    link.href = `${url}?download=1`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [url, fileName]);
+};
+
+interface ContentCategoryResult {
+  category: string;
+  language?: string;
+}
+
+const extractContentCategory = (contentType: string, fileName: string): ContentCategoryResult => {
+  // Media types
+  if (contentType === 'image/svg+xml') return { category: 'svg' };
+  if (contentType.startsWith('image/')) return { category: 'image' };
+  if (contentType.startsWith('video/')) return { category: 'video' };
+  if (contentType.startsWith('audio/')) return { category: 'audio' };
+
+  // Document types
+  if (contentType === 'application/pdf') return { category: 'pdf' };
+  if (contentType === 'application/json') return { category: 'json' };
+
+  // Text types - further categorize by file extension
+  if (contentType.startsWith('text/')) {
+    const language = getCodeLanguage(fileName);
+
+    if (language === 'html') return { category: 'html' };
+    if (language === 'markdown' || language === 'mdx') return { category: 'markdown' };
+    if (language) return { category: 'code', language };
+
+    return { category: 'text' };
+  }
+
+  return { category: 'unsupported' };
+};
+
+const LoadingState = memo(() => (
+  <div className="h-full flex items-center justify-center">
+    <div className="text-gray-500">Loading...</div>
+  </div>
+));
+
+interface ErrorStateProps {
+  error: string;
+  onRetry: () => void;
+}
+
+const ErrorState = memo(({ error, onRetry }: ErrorStateProps) => (
+  <div className="h-full flex items-center justify-center flex-col gap-4">
+    <div className="text-red-500 text-center">
+      <File className="w-12 h-12 mx-auto mb-2" />
+      <div>Failed to load file</div>
+      <div className="text-sm text-gray-400 mt-1">{error}</div>
+    </div>
+    <Button onClick={onRetry} size="small">
+      Retry
+    </Button>
+  </div>
+));
+
 interface FilePreviewProps {
   file: DriveFile;
   markdownClassName?: string;
   source?: 'card' | 'preview';
-}
-
-interface FileContent {
-  data: ArrayBuffer;
-  contentType: string;
-  url: string;
 }
 
 export const FilePreview = memo(
@@ -28,7 +98,6 @@ export const FilePreview = memo(
     const [fileContent, setFileContent] = useState<FileContent | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
     const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
 
     // Check if current page is a share page
@@ -95,240 +164,76 @@ export const FilePreview = memo(
       };
     }, [fetchFileContent]);
 
-    const handleDownload = useCallback(async () => {
-      if (!fileContent?.url) return;
-
-      const link = document.createElement('a');
-      link.href = `${fileContent.url}?download=1`;
-      link.download = file.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }, [fileContent?.url, file.name]);
+    const handleDownload = useHandleDownload(fileContent?.url, file.name);
 
     const handleTabChange = useCallback((tab: 'code' | 'preview') => {
       setActiveTab(tab);
     }, []);
 
     const renderFilePreview = () => {
-      if (loading) {
-        return (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-gray-500">Loading...</div>
-          </div>
-        );
-      }
-
-      if (error) {
-        return (
-          <div className="h-full flex items-center justify-center flex-col gap-4">
-            <div className="text-red-500 text-center">
-              <File className="w-12 h-12 mx-auto mb-2" />
-              <div>Failed to load file</div>
-              <div className="text-sm text-gray-400 mt-1">{error}</div>
-            </div>
-            <Button onClick={fetchFileContent} size="small">
-              Retry
-            </Button>
-          </div>
-        );
-      }
-
+      if (loading) return <LoadingState />;
+      if (error) return <ErrorState error={error} onRetry={fetchFileContent} />;
       if (!fileContent) return null;
 
-      const { contentType, url } = fileContent;
+      const { category, language } = extractContentCategory(fileContent.contentType, file.name);
+      const isCardMode = source === 'card' || !!isShareFile;
 
-      // Image files
-      if (contentType.startsWith('image/')) {
-        return (
-          <div className="h-full flex items-center justify-center max-w-[1024px] mx-auto overflow-hidden relative">
-            <img
-              src={url}
-              alt={file.name}
-              className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-90 transition-opacity rounded-lg"
-              loading="lazy"
-              onClick={() => setIsPreviewModalVisible(true)}
-            />
+      const rendererSource = isCardMode ? 'card' : 'preview';
 
-            {/* Image Preview Modal */}
-            <div className="absolute inset-0 pointer-events-none">
-              <ImagePreview
-                isPreviewModalVisible={isPreviewModalVisible}
-                setIsPreviewModalVisible={setIsPreviewModalVisible}
-                imageUrl={url}
-              />
-            </div>
-          </div>
-        );
-      }
-
-      // Text files
-      if (contentType.startsWith('text/')) {
-        const textContent = new TextDecoder().decode(fileContent.data);
-        const language = getCodeLanguage(file.name);
-
-        // HTML file handling
-        if (language === 'html') {
-          // If source is 'card' or in share page, use simple Renderer preview
-          if (source === 'card' || isShareFile) {
-            return (
-              <div className="h-full overflow-hidden">
-                <Renderer
-                  content={textContent}
-                  type="text/html"
-                  title={file.name}
-                  showActions={false}
-                  purePreview={true}
-                />
-              </div>
-            );
-          }
-
-          // If source is 'preview' and not in share page, use CodeViewer with code/preview tabs
-          if (source === 'preview') {
-            return (
-              <div className="h-full">
-                <CodeViewer
-                  code={textContent}
-                  language="html"
-                  title={file.name}
-                  entityId={file.fileId}
-                  isGenerating={false}
-                  activeTab={activeTab}
-                  onTabChange={handleTabChange}
-                  onClose={() => {}}
-                  onRequestFix={() => {}}
-                  readOnly={true}
-                  type="text/html"
-                  showActions={false}
-                  purePreview={false}
-                />
-              </div>
-            );
-          }
-        }
-
-        // Markdown file handling
-        if (language === 'markdown') {
-          // If source is 'card', use simple Markdown preview
-          if (source === 'card') {
-            return (
-              <div className="h-full overflow-y-auto">
-                <Markdown content={textContent} className={markdownClassName} />
-              </div>
-            );
-          }
-
-          // If source is 'preview', use CodeViewer with code/preview tabs
-          if (source === 'preview') {
-            return (
-              <div className="h-full">
-                <CodeViewer
-                  code={textContent}
-                  language="markdown"
-                  title={file.name}
-                  entityId={file.fileId}
-                  isGenerating={false}
-                  activeTab={activeTab}
-                  onTabChange={handleTabChange}
-                  onClose={() => {}}
-                  onRequestFix={() => {}}
-                  readOnly={true}
-                  type="text/markdown"
-                  showActions={false}
-                  purePreview={false}
-                />
-              </div>
-            );
-          }
-        }
-
-        // Check if it's a code file
-        const isCode = isCodeFile(file.name);
-
-        // Render as code with syntax highlighting
-        if (isCode && language) {
+      switch (category) {
+        case 'svg':
+          return <SvgRenderer fileContent={fileContent} file={file} />;
+        case 'image':
+          return <ImageRenderer fileContent={fileContent} file={file} />;
+        case 'html':
           return (
-            <div className="h-full overflow-y-auto">
-              <SyntaxHighlighter code={textContent} language={language} />
-            </div>
+            <HtmlRenderer
+              source={rendererSource}
+              fileContent={fileContent}
+              file={file}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+            />
           );
-        }
-
-        // Render as markdown for non-code text files
-        return (
-          <div className="h-full overflow-y-auto">
-            <Markdown content={textContent} className={markdownClassName} />
-          </div>
-        );
+        case 'markdown':
+          return (
+            <MarkdownRenderer
+              source={source}
+              fileContent={fileContent}
+              file={file}
+              className={markdownClassName}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+            />
+          );
+        case 'code':
+          return <CodeRenderer fileContent={fileContent} file={file} language={language!} />;
+        case 'text':
+          return (
+            <MarkdownRenderer
+              source="card"
+              fileContent={fileContent}
+              file={file}
+              className={markdownClassName}
+            />
+          );
+        case 'pdf':
+          return <PdfRenderer fileContent={fileContent} file={file} />;
+        case 'json':
+          return <JsonRenderer fileContent={fileContent} file={file} />;
+        case 'video':
+          return <VideoRenderer fileContent={fileContent} file={file} />;
+        case 'audio':
+          return <AudioRenderer fileContent={fileContent} file={file} />;
+        default:
+          return (
+            <UnsupportedRenderer
+              fileContent={fileContent}
+              file={file}
+              onDownload={handleDownload}
+            />
+          );
       }
-
-      // PDF files
-      if (contentType === 'application/pdf') {
-        return (
-          <div className="h-full flex flex-col">
-            <iframe src={url} className="w-full h-full border-0" title={file.name} />
-          </div>
-        );
-      }
-
-      // JSON files
-      if (contentType === 'application/json') {
-        const textContent = new TextDecoder().decode(fileContent.data);
-        return (
-          <div className="h-full overflow-y-auto">
-            <SyntaxHighlighter code={textContent} language="json" />
-          </div>
-        );
-      }
-
-      // Video files
-      if (contentType.startsWith('video/')) {
-        return (
-          <div className="h-full flex flex-col">
-            <div className="flex-1 flex items-center justify-center">
-              <video
-                src={url}
-                controls
-                className="max-w-full max-h-full object-contain rounded-lg"
-                preload="metadata"
-              >
-                <track kind="captions" />
-                Your browser does not support the video tag.
-              </video>
-            </div>
-          </div>
-        );
-      }
-
-      // Audio files
-      if (contentType.startsWith('audio/')) {
-        return (
-          <div className="h-full flex flex-col">
-            <div className="flex-1 flex items-center justify-center">
-              <audio src={url} controls className="w-full max-w-md" preload="metadata">
-                <track kind="captions" />
-                Your browser does not support the audio element.
-              </audio>
-            </div>
-          </div>
-        );
-      }
-
-      // Unsupported file types - show download option
-      return (
-        <div className="h-full flex items-center justify-center flex-col gap-4">
-          <div className="text-center">
-            <File className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <div className="text-lg font-medium text-gray-700 mb-2">{file.name}</div>
-            <div className="text-sm text-gray-500 mb-4">File type: {contentType}</div>
-            <div className="text-sm text-gray-400">Preview not available for this file type</div>
-          </div>
-          <Button type="primary" icon={<Download className="w-4 h-4" />} onClick={handleDownload}>
-            Download File
-          </Button>
-        </div>
-      );
     };
 
     return (

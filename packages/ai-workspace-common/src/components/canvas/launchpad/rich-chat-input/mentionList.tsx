@@ -630,7 +630,6 @@ export const MentionList: React.FC<{
                     )}
                     ellipsis={{
                       rows: 1,
-
                       tooltip: {
                         title: (
                           <div className="max-h-[300px] overflow-y-auto text-xs">
