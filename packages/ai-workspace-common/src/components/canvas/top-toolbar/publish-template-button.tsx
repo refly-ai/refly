@@ -230,7 +230,8 @@ const PublishTemplateButton = React.memo(
                 className={cn(disabled ? 'opacity-50 cursor-not-allowed' : '')}
                 type="primary"
                 icon={<TurnRight size={16} />}
-                disabled={disabled}
+                //  remove this comment to restore the original style, the disable logic is handled in the event handler
+                // disabled={disabled}
               >
                 {t('shareContent.publishTemplate')}
               </Button>
