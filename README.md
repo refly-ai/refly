@@ -9,10 +9,14 @@
     ⭐️ The World's First Vibe Workflow Platform for Non-technical Creators ⭐️ <br>
 </h1>
 
+</div>
+
 Refly.AI is the world's first vibe workflow platform that empowers non-technical creators to build, share and monetize powerful AI automation workflows through simple prompts and a visual canvas - no coding required.
 
 - N8N for non-technical: Build workflows as easily as assembling Lego bricks. Refly.ai empowers non-technical creators to eliminate repetitive tasks without technical barriers.
 - Canva for workflow: Just as Canva democratized design, Refly.ai democratizes workflow creation—making it simple for everyone to build and share automations.
+
+<div align="center">
 
 [🚀 Refly.ai v1.0.0 Released! A milestone launch bringing the first full Vibe Workflow experience. 🚀](https://refly.ai/)
 
