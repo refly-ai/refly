@@ -1,4 +1,5 @@
 import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-schema';
+import { getWorkflowAppCanvasData, WorkflowAppData } from '@refly/utils';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, Form, Typography, message, Tooltip, Avatar } from 'antd';
 import { IconShare } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -78,7 +79,7 @@ interface WorkflowAPPFormProps {
   canvasId?: string | null;
   className?: string;
   templateContent?: string;
-  workflowApp?: any;
+  workflowApp?: WorkflowAppData;
   executionCreditUsage?: number | null;
 }
 
@@ -98,6 +99,11 @@ export const WorkflowAPPForm = ({
 }: WorkflowAPPFormProps) => {
   const showRemix = false;
   const { t } = useTranslation();
+
+  // Get canvas data using compatibility helper
+  const canvasData = useMemo(() => {
+    return getWorkflowAppCanvasData(workflowApp);
+  }, [workflowApp]);
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
@@ -646,9 +652,9 @@ export const WorkflowAPPForm = ({
                   originalVariables={workflowVariables}
                 />
                 {/* Tools Dependency Form */}
-                {workflowApp?.canvasData && (
+                {canvasData && (
                   <div className="mt-3 flex items-center justify-between">
-                    <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
+                    <ToolsDependencyChecker canvasData={canvasData} />
 
                     <Tooltip title={t('canvas.workflow.run.toolsGuide') || 'Tools Guide'}>
                       <Button
@@ -821,9 +827,9 @@ export const WorkflowAPPForm = ({
                     </Form>
 
                     {/* Tools Dependency Form */}
-                    {workflowApp?.canvasData && (
+                    {canvasData && (
                       <div className="mt-5 ">
-                        <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
+                        <ToolsDependencyChecker canvasData={canvasData} />
                       </div>
                     )}
                   </>

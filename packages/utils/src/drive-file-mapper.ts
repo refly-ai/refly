@@ -167,3 +167,83 @@ export function mapDriveFilesToWorkflowNodeExecutions(
     .map((file) => mapDriveFileToWorkflowNodeExecution(file, serverOrigin))
     .filter((execution): execution is WorkflowNodeExecution => execution !== null);
 }
+
+// Types for the new workflow app data structure
+export interface WorkflowAppPreview {
+  nodes: CanvasNode[];
+  files: DriveFile[];
+}
+
+export interface WorkflowAppData {
+  appId: string;
+  title: string;
+  description: string;
+  remixEnabled: boolean;
+  coverUrl?: string;
+  templateContent?: string;
+  resultNodeIds: string[];
+  query?: string;
+  variables: any[];
+  creditUsage: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+
+  // NEW: Top-level canvas identifiers
+  canvasId?: string;
+  minimapUrl?: string;
+
+  // NEW: Sanitized preview data
+  preview?: WorkflowAppPreview;
+
+  // LEGACY: Original canvasData (for backward compatibility)
+  canvasData?: {
+    canvasId?: string;
+    title?: string;
+    minimapUrl?: string;
+    nodes?: CanvasNode[];
+    files?: DriveFile[];
+    edges?: any[];
+    resources?: any[];
+    variables?: any[];
+  };
+}
+
+/**
+ * Get canvas data from workflow app with backward compatibility
+ * This helper function provides a unified interface for accessing canvas data
+ * regardless of whether the data uses the new preview structure or legacy canvasData
+ */
+export function getWorkflowAppCanvasData(workflowApp: WorkflowAppData | null | undefined) {
+  if (!workflowApp) {
+    return {
+      canvasId: '',
+      nodes: [],
+      files: [],
+    };
+  }
+
+  // Priority 1: New preview structure
+  if (workflowApp.preview) {
+    return {
+      canvasId: workflowApp.canvasId || '',
+      nodes: workflowApp.preview.nodes || [],
+      files: workflowApp.preview.files || [],
+    };
+  }
+
+  // Priority 2: Legacy canvasData (for backward compatibility)
+  if (workflowApp.canvasData) {
+    return {
+      canvasId: workflowApp.canvasData.canvasId || workflowApp.canvasId || '',
+      nodes: workflowApp.canvasData.nodes || [],
+      files: workflowApp.canvasData.files || [],
+    };
+  }
+
+  // Fallback: Empty data
+  return {
+    canvasId: workflowApp.canvasId || '',
+    nodes: [],
+    files: [],
+  };
+}
