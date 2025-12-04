@@ -149,6 +149,7 @@
     "@types/express-session": "^1.18.2",
     "@types/handlebars": "^4.1.0",
     "@types/jest": "29.5.1",
+    "@types/json-schema-traverse": "^1.0.0",
     "@types/jsonwebtoken": "~9.0.6",
     "@types/lodash": "^4.17.4",
     "@types/ms": "^0.7.34",

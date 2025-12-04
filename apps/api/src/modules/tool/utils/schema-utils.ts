@@ -365,9 +365,9 @@ export function findMatchingObjectOption(
     let hasConst = false;
 
     for (const [propKey, propSchema] of Object.entries(props)) {
-      if (propSchema.const !== undefined) {
+      if ('const' in propSchema && propSchema.const !== undefined) {
         hasConst = true;
-        if (dataObj[propKey] !== propSchema.const) {
+        if (dataObj[propKey] !== (propSchema as { const: unknown }).const) {
           allConstMatch = false;
           break;
         }

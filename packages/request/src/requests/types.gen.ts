@@ -6724,9 +6724,13 @@ export type PostHandlerContext = {
    */
   toolName: string;
   /**
-   * Toolset name/key
+   * Toolset display name
    */
   toolsetName: string;
+  /**
+   * Toolset unique identifier/key
+   */
+  toolsetKey: string;
   /**
    * Credit cost for this tool execution
    */
