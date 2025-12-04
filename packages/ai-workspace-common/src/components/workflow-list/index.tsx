@@ -21,6 +21,7 @@ import { UsedToolsets } from '@refly-packages/ai-workspace-common/components/wor
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 import { useDebouncedCallback } from 'use-debounce';
 import { useSiderStoreShallow } from '@refly/stores';
+import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 
 const WorkflowList = memo(() => {
   const { t, i18n } = useTranslation();
@@ -276,6 +277,9 @@ const WorkflowList = memo(() => {
           <Button type="primary" onClick={handleCreateWorkflow} loading={createCanvasLoading}>
             {t('workflowList.createWorkflow')}
           </Button>
+          <div className="group relative">
+            <SettingItem showName={false} avatarAlign={'right'} />
+          </div>
         </div>
       </div>
 

@@ -23,6 +23,7 @@ import {
   createCanvasVersion,
   createCheckoutSession,
   createCodeArtifact,
+  createCreditPackCheckoutSession,
   createDocument,
   createDriveFile,
   createLabelClass,
@@ -87,6 +88,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -100,6 +102,7 @@ import {
   getWorkflowDetail,
   getWorkflowVariables,
   hasBeenInvited,
+  hasFilledForm,
   importCanvas,
   initializeWorkflow,
   invokeSkill,
@@ -147,6 +150,7 @@ import {
   setCanvasState,
   sharePage,
   streamInvokeSkill,
+  submitForm,
   syncCanvasState,
   testProviderConnection,
   unpinSkillInstance,
@@ -653,6 +657,28 @@ export const UseCheckSettingsFieldKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useCheckSettingsFieldKey, ...(queryKey ?? [clientOptions])];
+export type GetFormDefinitionDefaultResponse = Awaited<
+  ReturnType<typeof getFormDefinition>
+>['data'];
+export type GetFormDefinitionQueryResult<
+  TData = GetFormDefinitionDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetFormDefinitionKey = 'GetFormDefinition';
+export const UseGetFormDefinitionKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useGetFormDefinitionKey, ...(queryKey ?? [clientOptions])];
+export type HasFilledFormDefaultResponse = Awaited<ReturnType<typeof hasFilledForm>>['data'];
+export type HasFilledFormQueryResult<
+  TData = HasFilledFormDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useHasFilledFormKey = 'HasFilledForm';
+export const UseHasFilledFormKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useHasFilledFormKey, ...(queryKey ?? [clientOptions])];
 export type GetCreditRechargeDefaultResponse = Awaited<
   ReturnType<typeof getCreditRecharge>
 >['data'];
@@ -1365,6 +1391,12 @@ export const UseExecuteWorkflowAppKeyFn = (mutationKey?: Array<unknown>) => [
   useExecuteWorkflowAppKey,
   ...(mutationKey ?? []),
 ];
+export type SubmitFormMutationResult = Awaited<ReturnType<typeof submitForm>>;
+export const useSubmitFormKey = 'SubmitForm';
+export const UseSubmitFormKeyFn = (mutationKey?: Array<unknown>) => [
+  useSubmitFormKey,
+  ...(mutationKey ?? []),
+];
 export type ActivateInvitationCodeMutationResult = Awaited<
   ReturnType<typeof activateInvitationCode>
 >;
@@ -1377,6 +1409,14 @@ export type CreateCheckoutSessionMutationResult = Awaited<ReturnType<typeof crea
 export const useCreateCheckoutSessionKey = 'CreateCheckoutSession';
 export const UseCreateCheckoutSessionKeyFn = (mutationKey?: Array<unknown>) => [
   useCreateCheckoutSessionKey,
+  ...(mutationKey ?? []),
+];
+export type CreateCreditPackCheckoutSessionMutationResult = Awaited<
+  ReturnType<typeof createCreditPackCheckoutSession>
+>;
+export const useCreateCreditPackCheckoutSessionKey = 'CreateCreditPackCheckoutSession';
+export const UseCreateCreditPackCheckoutSessionKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateCreditPackCheckoutSessionKey,
   ...(mutationKey ?? []),
 ];
 export type CreatePortalSessionMutationResult = Awaited<ReturnType<typeof createPortalSession>>;

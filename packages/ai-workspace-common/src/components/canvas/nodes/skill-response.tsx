@@ -52,8 +52,8 @@ import { IoCheckmarkCircle } from 'react-icons/io5';
 import './shared/executing-glow-effect.scss';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { useConnection } from '@xyflow/react';
-import { processQueryWithMentions } from '@refly/utils/query-processor';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use-query-processor';
 
 const { Paragraph } = Typography;
 
@@ -284,6 +284,7 @@ export const SkillResponseNode = memo(
 
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
     const { data: variables } = useVariablesManagement(canvasId);
+    const { processQuery } = useQueryProcessor();
 
     const { status, errorType, selectedSkill, actionMeta, version, shareId } = metadata ?? {};
     const currentSkill = actionMeta || selectedSkill;
@@ -478,7 +479,7 @@ export const SkillResponseNode = memo(
       });
 
       const query = data?.metadata?.query ?? '';
-      const { llmInputQuery } = processQueryWithMentions(query, {
+      const { llmInputQuery } = processQuery(query, {
         replaceVars: true,
         variables,
       });
@@ -746,14 +747,17 @@ export const SkillResponseNode = memo(
               source="node"
               canEdit={!readonly}
               actions={
-                <SkillResponseActions
-                  readonly={readonly}
-                  nodeIsExecuting={isExecuting}
-                  workflowIsRunning={workflowIsRunning}
-                  onRerunSingle={handleRerunSingle}
-                  onRerunFromHere={handleRerunFromHere}
-                  onStop={handleStop}
-                />
+                isHovered || selected ? (
+                  <SkillResponseActions
+                    readonly={readonly}
+                    nodeIsExecuting={isExecuting}
+                    workflowIsRunning={workflowIsRunning}
+                    onRerunSingle={handleRerunSingle}
+                    onRerunFromHere={handleRerunFromHere}
+                    onStop={handleStop}
+                    status={status}
+                  />
+                ) : null
               }
             />
 

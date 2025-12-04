@@ -342,23 +342,7 @@ export const WorkflowAPPForm = ({
   // Initialize template variables when templateContent changes
   useEffect(() => {
     if (templateContent) {
-      // Extract variables from template content
-      const variableRegex = /\{\{([^}]+)\}\}/g;
-      const templateVariableNames = new Set<string>();
-      let match: RegExpExecArray | null;
-
-      match = variableRegex.exec(templateContent);
-      while (match !== null) {
-        templateVariableNames.add(match?.[1]?.trim() ?? '');
-        match = variableRegex.exec(templateContent);
-      }
-
-      // Filter workflowVariables to only include those mentioned in template
-      const relevantVariables = workflowVariables.filter((variable) =>
-        templateVariableNames.has(variable.name),
-      );
-
-      setTemplateVariables(relevantVariables);
+      setTemplateVariables(workflowVariables);
     }
   }, [templateContent, workflowVariables]);
 

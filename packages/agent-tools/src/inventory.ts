@@ -8,6 +8,12 @@ import {
   BuiltinGenerateCodeArtifactDefinition,
   BuiltinSendEmailToolset,
   BuiltinSendEmailDefinition,
+  BuiltinGetTimeToolset,
+  BuiltinGetTimeDefinition,
+  BuiltinReadFileToolset,
+  BuiltinReadFileDefinition,
+  BuiltinExecuteCodeToolset,
+  BuiltinExecuteCodeDefinition,
 } from './builtin';
 import { AgentBaseToolset } from './base';
 import { BrowserUseToolset, BrowserUseToolsetDefinition } from './browser-use';
@@ -50,6 +56,18 @@ export const builtinToolsetInventory: Record<
   [BuiltinSendEmailDefinition.key]: {
     class: BuiltinSendEmailToolset,
     definition: BuiltinSendEmailDefinition,
+  },
+  [BuiltinGetTimeDefinition.key]: {
+    class: BuiltinGetTimeToolset,
+    definition: BuiltinGetTimeDefinition,
+  },
+  [BuiltinReadFileDefinition.key]: {
+    class: BuiltinReadFileToolset,
+    definition: BuiltinReadFileDefinition,
+  },
+  [BuiltinExecuteCodeDefinition.key]: {
+    class: BuiltinExecuteCodeToolset,
+    definition: BuiltinExecuteCodeDefinition,
   },
 };
 

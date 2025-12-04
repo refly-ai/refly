@@ -1945,7 +1945,7 @@ export type SubscriptionInterval = 'monthly' | 'yearly';
 /**
  * Subscription plan type
  */
-export type SubscriptionPlanType = 'free' | 'starter' | 'maker' | 'enterprise';
+export type SubscriptionPlanType = 'free' | 'starter' | 'maker' | 'enterprise' | 'plus';
 
 /**
  * Subscription status
@@ -5068,6 +5068,13 @@ export type CreateCheckoutSessionRequest = {
   interval?: SubscriptionInterval;
 };
 
+export type CreateCreditPackCheckoutSessionRequest = {
+  /**
+   * Credit pack identifier
+   */
+  packId: string;
+};
+
 export type CreateCheckoutSessionResponse = BaseResponse & {
   /**
    * Checkout session
@@ -5089,6 +5096,32 @@ export type CreatePortalSessionResponse = BaseResponse & {
      * Portal session URL
      */
     url?: string;
+  };
+};
+
+export type SubmitFormRequest = {
+  /**
+   * Form submission
+   */
+  formSubmission: FormSubmission;
+};
+
+export type GetFormDefinitionResponse = BaseResponse & {
+  /**
+   * Form definition
+   */
+  data?: FormDefinition;
+};
+
+export type HasFilledFormResponse = BaseResponse & {
+  /**
+   * Has filled form data
+   */
+  data?: {
+    /**
+     * Whether the user has filled the form
+     */
+    hasFilledForm?: boolean;
   };
 };
 
@@ -6492,6 +6525,10 @@ export type ToolsetDefinition = {
    */
   builtin?: boolean;
   /**
+   * Whether this is an internal toolset (cannot be selected manually)
+   */
+  internal?: boolean;
+  /**
    * Toolset domain (used for display icon)
    */
   domain?: string;
@@ -6997,6 +7034,10 @@ export type WorkflowNodeExecution = {
    */
   progress?: number;
   /**
+   * Node error message
+   */
+  errorMessage?: string;
+  /**
    * Node creation timestamp
    */
   createdAt?: string;
@@ -7033,6 +7074,10 @@ export type WorkflowExecution = {
    * Node executions
    */
   nodeExecutions?: Array<WorkflowNodeExecution>;
+  /**
+   * Workflow app ID
+   */
+  appId?: string;
   /**
    * Workflow creation timestamp
    */
@@ -10296,6 +10341,22 @@ export type CheckSettingsFieldResponse2 = CheckSettingsFieldResponse;
 
 export type CheckSettingsFieldError = unknown;
 
+export type GetFormDefinitionResponse2 = GetFormDefinitionResponse;
+
+export type GetFormDefinitionError = unknown;
+
+export type SubmitFormData = {
+  body: SubmitFormRequest;
+};
+
+export type SubmitFormResponse = BaseResponse;
+
+export type SubmitFormError = unknown;
+
+export type HasFilledFormResponse2 = HasFilledFormResponse;
+
+export type HasFilledFormError = unknown;
+
 export type GetCreditRechargeData = {
   query?: {
     /**
@@ -10425,6 +10486,14 @@ export type CreateCheckoutSessionData = {
 export type CreateCheckoutSessionResponse2 = CreateCheckoutSessionResponse;
 
 export type CreateCheckoutSessionError = unknown;
+
+export type CreateCreditPackCheckoutSessionData = {
+  body: CreateCreditPackCheckoutSessionRequest;
+};
+
+export type CreateCreditPackCheckoutSessionResponse = CreateCheckoutSessionResponse;
+
+export type CreateCreditPackCheckoutSessionError = unknown;
 
 export type CreatePortalSessionResponse2 = CreatePortalSessionResponse;
 

@@ -8,6 +8,13 @@ const translations = {
   termsPage: {
     title: 'Terms of Service',
   },
+  form: {
+    previous: '← Previous',
+    next: 'Next →',
+    submit: 'Submit to get credits',
+    submitting: 'Submitting...',
+    submitSuccess: '🎉 Refly will recommend the best templates and tasks!',
+  },
   common: {
     poweredBy: 'Powered by',
     confirm: 'Confirm',
@@ -708,7 +715,7 @@ const translations = {
         scanToJoinWechatGroup: 'Scan to Join WeChat Group',
         orWeChat: 'or WeChat',
         discordGroup: 'Discord Community',
-        joinDiscordGroup: 'Join Community',
+        joinDiscordGroup: 'Join Discord Community',
         notionDocument: 'Notion Document',
         viewDocument: 'View Document',
         feishuDocument: 'Feishu Document',
@@ -877,7 +884,12 @@ const translations = {
       more: 'More',
     },
     template: {
-      title: 'Community Templates',
+      title: 'Marketplace',
+      endMessage: {
+        title: "Didn't find the workflow automation template you need?",
+        subtitle: "Join our Discord and tell us what you're looking for",
+        goToMarketplace: 'Go to Marketplace',
+      },
     },
     agentInputPlaceholder: 'Enter task description, Agent will generate reusable workflows',
     chatInputPlaceholder: 'Enter a task (choose model & tools)',
@@ -1492,6 +1504,8 @@ const translations = {
       skillCompleted: 'Skill Completed',
       stepCompleted: 'Step Completed',
       rerunSingle: 'Rerun This Node',
+      runSingle: 'Run This Node',
+      stopSingle: 'Stop',
       rerunFromHere: 'Run From Here',
       stopConfirmModal: {
         title: 'Stop Agent Task?',
@@ -1909,7 +1923,7 @@ const translations = {
       loadingUserInput: 'Loading user input...',
       defaultPlaceholder: 'Describe what you want to generate...',
       createUserInput: 'Create user input "{{userInputName}}"',
-      unauthorized: 'Auth',
+      unauthorized: 'Authorize',
     },
     toolsDepencency: {
       title: 'Tool Dependencies',
@@ -2201,7 +2215,7 @@ const translations = {
       },
     },
     siderMenu: {
-      home: 'Dashboard',
+      home: 'Workspace',
       canvas: 'My Workflows',
       appManager: 'My Templates',
       marketplace: 'Marketplace',
@@ -2642,7 +2656,7 @@ const translations = {
       statusUsed: 'Used',
       enterInvitationCode: 'Enter invitation code',
       activateInvitationCode: 'Activate Code',
-      activateInvitationCodeSuccess: 'Welcome to Refly 🎉 Start your AI automation journey!',
+      activateInvitationCodeSuccess: "Welcome to Refly 🎉 Let's start your vibe-workflow journey!",
       activateInvitationCodeFailed:
         'Invite code is invalid. Please try again or join Discord to get a new one.',
       activateInvitationCodeInvalid:
@@ -3610,25 +3624,45 @@ const translations = {
       upgrade: 'Upgrade to {{planType}}',
       cannotChangeTo: 'Cannot change to {{planType}}',
       currentPlan: 'Current Plan',
+      cannotSwitchTo:
+        "Legacy plans can't be switched to Plus directly.Please contact support@refly.ai",
       free: {
         title: 'Free Plan',
         description: 'A welcoming gateway to explore the power of AI—completely free',
         price: 'Free forever',
         buttonText: 'Continue for free',
         buttonTextDowngrade: 'Downgrade to Free',
-        features: [
-          'Daily new credits\n100 points',
-          'Top AI models\nOpenAI, Claude, Grok, DeepSeek...',
-          'Knowledge base files\n100 files',
-          'File upload limit\nMax 5MB',
-          'Service support\nCommunity support (WeChat, Lark, Discord)',
-        ],
+        features: ['Daily new credits\n100 credits'],
       },
       pro: {
         title: 'PRO',
       },
       plus: {
         title: 'PLUS',
+        description: 'Suitable for running a high volume of automation tasks',
+        buttonText: 'Get Plus',
+        features: [
+          'Daily new credits\n300 credits',
+          'Monthly credits\n2,000 credits',
+          'New subscribers receive an extra\n2,000 bonus credits',
+          'Access to a vast library of tools',
+          {
+            name: 'Credit-free tools',
+            type: 'pointFreeTools',
+            items: [
+              'Gemini 3.0 Nano Banana pro',
+              'Seedream 4.0',
+              'Seedance 1.5',
+              'VibeVoice',
+              'Instagram',
+              'TikTok',
+              'Reddit',
+              'X',
+            ],
+            duration: '365 DAYS',
+          },
+          'Service support\nHigh priority support',
+        ],
       },
       max: {
         title: 'MAX',
@@ -3673,6 +3707,41 @@ const translations = {
         ],
       },
     },
+    creditPacks: {
+      title: 'Credit Packs',
+      buyNow: 'Buy Now',
+      cancel: 'Cancel',
+      credit_pack_100: {
+        title: '100 Credits',
+        description: 'Perfect for trying out advanced AI models',
+        price: '$1',
+        credits: '100 credits',
+      },
+      credit_pack_500: {
+        title: '500 Credits',
+        description: 'Ideal for regular AI usage and experimentation',
+        price: '$5',
+        credits: '500 credits',
+      },
+      credit_pack_1000: {
+        title: '1000 Credits',
+        description: 'Great for intensive AI projects and workflows',
+        price: '$10',
+        credits: '1000 credits',
+      },
+      credit_pack_2000: {
+        title: '2000 Credits',
+        description: 'Best value for heavy AI users and teams',
+        price: '$20',
+        credits: '2000 credits',
+      },
+      features: [
+        'Instant top-up\nCredits arrive immediately so your work never stops.',
+        'Use anywhere\nRun any workflow, template, agent, or tool.',
+        '90-Day validity\nTotal flexibility on when to spend your credits.',
+        'Scale anytime\nIdeal for heavy workloads or sudden spikes in demand.',
+      ],
+    },
     subscriptionManagement: {
       title: 'Subscription Management',
       subtitle: 'Manage subscription plans and credits',
@@ -3685,7 +3754,7 @@ const translations = {
       upgradePlan: 'Upgrade Plan',
       availableCredits: 'Total Available Credits',
       regularCredits: 'Regular Credits',
-      templateEarningsCredits: 'Template Earnings Credits',
+      templateEarningsCredits: 'Earnings Credits',
       remainingCredits: 'Credits',
       knowledgeBaseFiles: 'Knowledge Base Files',
       creditUsageDetails: 'Credit Usage Details',
@@ -3713,7 +3782,7 @@ const translations = {
         commissionPrefix: 'Template usage: ',
       },
       rechargeType: {
-        purchase: 'Purchase',
+        purchase: 'Credit pack',
         gift: 'Gift',
         promotion: 'Promotion',
         refund: 'Refund',
@@ -3761,13 +3830,7 @@ const translations = {
         price: 'Free forever',
         buttonText: 'Continue for free',
         buttonTextDowngrade: 'Downgrade to Free',
-        features: [
-          'Daily new credits\n100 points',
-          'Top AI models\nOpenAI, Claude, Grok, DeepSeek...',
-          'Knowledge base files\n100 files',
-          'File upload limit\nMax 5MB',
-          'Support\nCommunity support',
-        ],
+        features: ['Daily new credits\n100 points'],
       },
       starter: {
         title: 'Starter Plan',
@@ -3819,6 +3882,11 @@ const translations = {
       },
       currentPlan: 'Current Plan',
     },
+  },
+  onboarding: {
+    rewardTitle: 'Reward Credits',
+    rewardPoints: '3000 credits',
+    startExperience: 'Start Now',
   },
   template: {
     templateLibrary: 'Template Library',
@@ -3877,7 +3945,7 @@ const translations = {
     noResultsAvailable: 'No results available',
     noResultsSelected: 'No results selected',
     runResultRequired: 'No run result selected. Please choose the result before publishing.',
-    validationNoUserInputs: 'Please add user inputs before publishing your template.',
+    validationNoUserInputs: 'Please add User Inputs before publishing your template.',
     validationNoAgents: 'Please add agents before publishing your template.',
     validationAgentsNotRun: 'Please run all agents successfully before publishing your template.',
     resultPreview: 'Result Preview',
@@ -4027,9 +4095,9 @@ const translations = {
     unpublished: 'Unpublished',
     share: 'Share',
     unshare: 'Unshare',
-    copyLink: 'Copy Link',
+    copyLink: 'Copy Workflow Link',
     copyLinkTooltip: 'Please set to public visibility first before sharing',
-    templateLink: 'View Template Details',
+    templateLink: 'Copy Template Link',
     templateLinkCopied: 'Template link copied successfully! Paste to browser to view',
     templateNotPublishedTooltip: 'Template not published, publish to view details',
     templateLinkFailed: 'Failed to copy template link for workflow {{title}}',

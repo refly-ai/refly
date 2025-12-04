@@ -1,12 +1,11 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Popover, Button } from 'antd';
 import { FaDiscord } from 'react-icons/fa6';
-import { RiNotionLine, RiTwitterXFill } from 'react-icons/ri';
+import { RiNotionLine, RiTwitterXFill, RiArrowRightLine } from 'react-icons/ri';
 import Feishu from '../../assets/feishu.svg';
 
 import { useTranslation } from 'react-i18next';
 import { Close } from 'refly-icons';
-import { ContactCard } from './contact-card';
 import './index.scss';
 
 interface ContactUsPopoverProps {
@@ -15,94 +14,108 @@ interface ContactUsPopoverProps {
   setOpen: (open: boolean) => void;
 }
 
+interface CommunityLinkCardProps {
+  icon: React.ReactNode;
+  title: string;
+  onClick: () => void;
+}
+
+const CommunityLinkCard: React.FC<CommunityLinkCardProps> = React.memo(
+  ({ icon, title, onClick }) => {
+    return (
+      <div
+        className="flex items-center justify-between px-4 py-3 rounded-xl border border-solid border-gray-200 cursor-pointer hover:bg-refly-fill-hover transition-colors"
+        onClick={onClick}
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex-shrink-0">{icon}</div>
+          <span className="text-base font-normal text-refly-text-0">{title}</span>
+        </div>
+        <RiArrowRightLine className="text-gray-400 text-xl flex-shrink-0" />
+      </div>
+    );
+  },
+);
+
+CommunityLinkCard.displayName = 'CommunityLinkCard';
+
 export const ContactUsPopover: React.FC<ContactUsPopoverProps> = ({ children, open, setOpen }) => {
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.language;
+  const handleOpenChange = useCallback(
+    (newOpen: boolean) => {
+      setOpen(newOpen);
+    },
+    [setOpen],
+  );
 
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
-  };
-
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     setOpen(!open);
-  };
+  }, [open, setOpen]);
 
-  const handleDiscordClick = () => {
+  const handleClose = useCallback(() => {
+    setOpen(false);
+  }, [setOpen]);
+
+  const handleDiscordClick = useCallback(() => {
     window.open('https://discord.gg/YVuYFjFvRC', '_blank');
-  };
+  }, []);
 
-  const handleNotionDocumentClick = () => {
+  const handleNotionDocumentClick = useCallback(() => {
     window.open(
       'https://www.notion.so/reflydoc/Welcome-to-Refly-28cd62ce60718093b830c4b9fc8b22a3',
       '_blank',
     );
-  };
+  }, []);
 
-  const handleFeishuDocumentClick = () => {
+  const handleFeishuDocumentClick = useCallback(() => {
     window.open('https://powerformer.feishu.cn/wiki/A7Paw5CIGip0jvkCU26ce4IunFc', '_blank');
-  };
+  }, []);
 
-  const handleTwitterClick = () => {
+  const handleTwitterClick = useCallback(() => {
     window.open('https://twitter.com/reflyai', '_blank');
-  };
+  }, []);
 
   const content = (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
+    <div className="w-[360px]">
+      <div className="flex items-center justify-between mb-4">
         <div className="text-lg font-semibold text-refly-text-0">
           {t('landingPage.footer.contactUs.joinGroup')}
         </div>
-
-        <Button type="text" icon={<Close size={24} />} onClick={() => setOpen(false)} />
+        <Button
+          type="text"
+          className="flex items-center justify-center p-1 hover:bg-gray-100"
+          icon={<Close size={18} />}
+          onClick={handleClose}
+        />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="flex flex-col gap-3">
         {currentLanguage === 'zh-CN' ? (
-          <ContactCard
-            icon={<img src={Feishu} alt="Feishu" className="w-16 h-16" />}
-            title={t('landingPage.footer.contactUs.feishuDocument')}
-            buttonText={t('landingPage.footer.contactUs.viewDocument')}
-            onButtonClick={handleFeishuDocumentClick}
+          <CommunityLinkCard
+            icon={<img src={Feishu} alt="Feishu" className="w-10 h-10" />}
+            title={t('landingPage.footer.contactUs.viewDocument')}
+            onClick={handleFeishuDocumentClick}
           />
         ) : (
-          <ContactCard
-            icon={<RiNotionLine className="text-refly-text-0 text-[64px]" />}
-            title={t('landingPage.footer.contactUs.notionDocument')}
-            buttonText={t('landingPage.footer.contactUs.viewDocument')}
-            onButtonClick={handleNotionDocumentClick}
+          <CommunityLinkCard
+            icon={<RiNotionLine className="text-refly-text-0 text-[40px]" />}
+            title={t('landingPage.footer.contactUs.viewDocument')}
+            onClick={handleNotionDocumentClick}
           />
         )}
-        {/* Discord Group */}
-        <ContactCard
-          icon={<FaDiscord className="text-refly-text-0 text-[64px]" />}
-          title={t('landingPage.footer.contactUs.discordGroup')}
-          buttonText={t('landingPage.footer.contactUs.joinDiscordGroup')}
-          onButtonClick={handleDiscordClick}
+        {/* Discord Community */}
+        <CommunityLinkCard
+          icon={<FaDiscord className="text-refly-text-0 text-[40px]" />}
+          title={t('landingPage.footer.contactUs.joinDiscordGroup')}
+          onClick={handleDiscordClick}
         />
 
         {/* Twitter Official Account */}
-        <ContactCard
-          icon={
-            <div className="w-16 h-16 bg-refly-text-0 rounded-full flex items-center justify-center">
-              <RiTwitterXFill className="text-refly-bg-content-z2 text-[46px]" />
-            </div>
-          }
-          title={t('landingPage.footer.contactUs.followReflyUpdates')}
-          buttonText={t('landingPage.footer.contactUs.reflyTwitterAccount')}
-          onButtonClick={handleTwitterClick}
+        <CommunityLinkCard
+          icon={<RiTwitterXFill className="text-refly-text-0 text-[40px]" />}
+          title={t('landingPage.footer.contactUs.reflyTwitterAccount')}
+          onClick={handleTwitterClick}
         />
-        {/* WeChat Group */}
-        <div className="w-[156px] h-[176px] flex flex-col items-center text-center p-2 rounded-xl border-solid border-[1px] border-refly-Card-Border">
-          <div className="w-[140px] h-[140px] rounded-lg overflow-hidden">
-            <img
-              src="https://static.refly.ai/landing/wechat-qrcode.webp"
-              alt="WeChat Group QR Code"
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <div className="text-xs text-refly-text-0 mt-1 font-semibold leading-4">
-            {t('landingPage.footer.contactUs.scanToJoinWechatGroup')}
-          </div>
-        </div>
       </div>
     </div>
   );

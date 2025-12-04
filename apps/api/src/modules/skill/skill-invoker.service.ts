@@ -935,8 +935,6 @@ export class SkillInvokerService {
                 };
                 await this.usageReportQueue.add(`usage_report:${resultId}`, tokenUsage);
               }
-
-              // Remove credit billing processing from here - will be handled after skill completion
             }
             break;
         }
@@ -1046,7 +1044,7 @@ export class SkillInvokerService {
           ? [
               this.prisma.workflowNodeExecution.updateMany({
                 where: { nodeExecutionId: result.workflowNodeExecutionId },
-                data: { status, endTime: new Date() },
+                data: { status, errorMessage: JSON.stringify(result.errors), endTime: new Date() },
               }),
             ]
           : []),
@@ -1109,7 +1107,6 @@ export class SkillInvokerService {
           this.addedFilesMap.delete(key);
         }
       }
-
       // Process credit billing for all steps after skill completion
       // Bill credits for successful completions and user aborts (partial usage should be charged)
       const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';

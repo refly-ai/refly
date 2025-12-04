@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { IconLightning01 } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { logEvent } from '@refly/telemetry-web';
 
 const INVITATION_CODE_LENGTH = 6;
 
@@ -42,6 +43,7 @@ export const ActivationCodeInput: React.FC<ActivationCodeInputProps> = ({
       }
 
       message.success(t('settings.account.activateInvitationCodeSuccess'));
+      logEvent('invite_success');
       setActivationCode(''); // Clear input after success
       onSuccess?.(); // Call success callback
     } catch (error) {

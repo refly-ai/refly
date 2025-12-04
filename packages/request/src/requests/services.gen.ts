@@ -374,6 +374,13 @@ import type {
   CheckSettingsFieldData,
   CheckSettingsFieldError,
   CheckSettingsFieldResponse2,
+  GetFormDefinitionError,
+  GetFormDefinitionResponse2,
+  SubmitFormData,
+  SubmitFormError,
+  SubmitFormResponse,
+  HasFilledFormError,
+  HasFilledFormResponse2,
   GetCreditRechargeData,
   GetCreditRechargeError,
   GetCreditRechargeResponse2,
@@ -410,6 +417,9 @@ import type {
   CreateCheckoutSessionData,
   CreateCheckoutSessionError,
   CreateCheckoutSessionResponse2,
+  CreateCreditPackCheckoutSessionData,
+  CreateCreditPackCheckoutSessionError,
+  CreateCreditPackCheckoutSessionResponse,
   CreatePortalSessionError,
   CreatePortalSessionResponse2,
   SearchData,
@@ -2505,6 +2515,49 @@ export const checkSettingsField = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Get form definition
+ * Get form definition
+ */
+export const getFormDefinition = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetFormDefinitionResponse2,
+    GetFormDefinitionError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/form/definition',
+  });
+};
+
+/**
+ * Submit form
+ * Submit a form
+ */
+export const submitForm = <ThrowOnError extends boolean = false>(
+  options: Options<SubmitFormData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<SubmitFormResponse, SubmitFormError, ThrowOnError>({
+    ...options,
+    url: '/form/submission',
+  });
+};
+
+/**
+ * Check if user has filled the form
+ * Check if user has filled the form
+ */
+export const hasFilledForm = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<HasFilledFormResponse2, HasFilledFormError, ThrowOnError>({
+    ...options,
+    url: '/form/hasFilledForm',
+  });
+};
+
+/**
  * Get credit recharge
  * Get credit recharge
  */
@@ -2735,6 +2788,23 @@ export const createCheckoutSession = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/subscription/createCheckoutSession',
+  });
+};
+
+/**
+ * Create checkout session
+ * Create a checkout session
+ */
+export const createCreditPackCheckoutSession = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCreditPackCheckoutSessionData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateCreditPackCheckoutSessionResponse,
+    CreateCreditPackCheckoutSessionError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/subscription/createCreditPackCheckoutSession',
   });
 };
 

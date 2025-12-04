@@ -6,6 +6,7 @@ import { useLogout } from '@refly-packages/ai-workspace-common/hooks/use-logout'
 import { useThemeStoreShallow } from '@refly/stores';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SettingsModalActiveTab } from '@refly/stores';
+import { FaDiscord } from 'react-icons/fa6';
 import {
   Settings,
   Subscription,
@@ -196,6 +197,10 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
     handleLogout();
   }, [handleLogout]);
 
+  const handleDiscordClick = useCallback(() => {
+    window.open('https://discord.gg/YVuYFjFvRC', '_blank');
+  }, []);
+
   // Theme mode options
   const themeOptions = useMemo(
     () => [
@@ -289,6 +294,15 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
         type: 'divider' as const,
       },
       {
+        key: 'discord',
+        label: (
+          <DropdownItem icon={<FaDiscord size={18} />}>
+            {t('landingPage.footer.contactUs.joinDiscordGroup')}
+          </DropdownItem>
+        ),
+        onClick: handleDiscordClick,
+      },
+      {
         key: 'logout',
         label: (
           <DropdownItem icon={<Exit size={18} />}>
@@ -305,6 +319,7 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
       handleSettingsClick,
       themeMode,
       themeDropdownItems,
+      handleDiscordClick,
       handleLogoutClick,
     ],
   );

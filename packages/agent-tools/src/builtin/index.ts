@@ -139,6 +139,7 @@ export const BuiltinSendEmailDefinition: ToolsetDefinition = {
 
 export const BuiltinGetTimeDefinition: ToolsetDefinition = {
   key: 'get_time',
+  internal: true,
   labelDict: {
     en: 'Get Time',
     'zh-CN': '获取时间',
@@ -151,6 +152,7 @@ export const BuiltinGetTimeDefinition: ToolsetDefinition = {
 
 export const BuiltinReadFileDefinition: ToolsetDefinition = {
   key: 'read_file',
+  internal: true,
   labelDict: {
     en: 'Read File',
     'zh-CN': '读取文件',
@@ -163,6 +165,7 @@ export const BuiltinReadFileDefinition: ToolsetDefinition = {
 
 export const BuiltinExecuteCodeDefinition: ToolsetDefinition = {
   key: 'execute_code',
+  internal: true,
   labelDict: {
     en: 'Execute Code',
     'zh-CN': '执行代码',

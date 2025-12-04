@@ -17,6 +17,7 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
 import { SkillModule } from './skill/skill.module';
 import { PilotModule } from './pilot/pilot.module';
 import { CopilotModule } from './copilot/copilot.module';
+import { CopilotAutogenModule } from './copilot-autogen/copilot-autogen.module';
 import { SearchModule } from './search/search.module';
 import { LabelModule } from './label/label.module';
 import { EventModule } from './event/event.module';
@@ -42,6 +43,7 @@ import { ToolModule } from './tool/tool.module';
 import { VariableExtractionModule } from './variable-extraction/variable-extraction.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { DriveModule } from './drive/drive.module';
+import { FormModule } from './form/form.module';
 
 import { isDesktop } from '../utils/runtime';
 import { initTracer } from '../tracer';
@@ -125,6 +127,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     SkillModule,
     PilotModule,
     CopilotModule,
+    CopilotAutogenModule,
     SearchModule,
     LabelModule,
     EventModule,
@@ -149,6 +152,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     WorkflowAppModule,
     VariableExtractionModule,
     DriveModule,
+    FormModule,
     ...(isDesktop()
       ? []
       : [

@@ -25,6 +25,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -38,6 +39,7 @@ import {
   getWorkflowDetail,
   getWorkflowVariables,
   hasBeenInvited,
+  hasFilledForm,
   listAccounts,
   listActions,
   listCanvases,
@@ -112,6 +114,7 @@ import {
   GetCreditUsageError,
   GetDocumentDetailData,
   GetDocumentDetailError,
+  GetFormDefinitionError,
   GetPageByCanvasIdData,
   GetPageByCanvasIdError,
   GetPageDetailData,
@@ -134,6 +137,7 @@ import {
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
   HasBeenInvitedError,
+  HasFilledFormError,
   ListAccountsData,
   ListAccountsError,
   ListActionsError,
@@ -864,6 +868,36 @@ export const useCheckSettingsFieldSuspense = <
     queryKey: Common.UseCheckSettingsFieldKeyFn(clientOptions, queryKey),
     queryFn: () =>
       checkSettingsField({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetFormDefinitionSuspense = <
+  TData = Common.GetFormDefinitionDefaultResponse,
+  TError = GetFormDefinitionError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getFormDefinition({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useHasFilledFormSuspense = <
+  TData = Common.HasFilledFormDefaultResponse,
+  TError = HasFilledFormError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseHasFilledFormKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      hasFilledForm({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetCreditRechargeSuspense = <

@@ -248,6 +248,16 @@
           }
         }
 
+        &--loading {
+          cursor: not-allowed;
+          opacity: 0.8;
+          &:hover {
+            background-color: inherit !important;
+            border-color: inherit !important;
+            color: inherit !important;
+          }
+        }
+
         &:disabled {
           background-color: var(--refly-bg-control-z0);
           color: #9ca3af;
@@ -319,6 +329,106 @@
       text-decoration: underline;
       &:hover {
         color: #111827;
+      }
+    }
+  }
+
+  .credit-packs-section {
+    margin-top: 48px;
+
+    .credit-packs-title {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 24px;
+    }
+
+    .credit-packs-grid {
+      padding: 12px;
+      justify-content: center;
+      border-radius: 12px;
+
+      .item-credit-pack {
+        border: 0.5px solid #e5e5e5;
+        background-color: #fff;
+        border-radius: 10px;
+        padding: 24px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+
+        .credit-pack-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #111827;
+          text-align: center;
+          margin-bottom: 8px;
+        }
+
+        .description {
+          margin-top: 4px;
+          font-size: 14px;
+          color: #6b7280;
+          text-align: center;
+          min-height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .credit-pack-credits {
+          margin-top: 16px;
+          font-size: 16px;
+          font-weight: 500;
+          color: #111827;
+          text-align: center;
+          padding: 8px 0;
+          background-color: #f9fafb;
+          border-radius: 6px;
+        }
+
+        .credit-pack-price {
+          margin-top: 16px;
+          font-size: 24px;
+          font-weight: 600;
+          color: #111827;
+          text-align: center;
+          line-height: 1.2;
+        }
+
+        .credit-pack-btn {
+          margin: 24px 0;
+          height: 40px;
+          width: 100%;
+          font-size: 14px;
+          font-weight: 600;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+          background-color: var(--primary---refly-primary-default, #0e9f77);
+          border: 1px solid var(--primary---refly-primary-default, #0e9f77);
+          color: #fff;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          &:hover:not(:disabled) {
+            background-color: var(--primary---refly-primary-hover, #1b9774);
+            border-color: var(--primary---refly-primary-hover, #1b9774);
+          }
+
+          &--loading {
+            cursor: not-allowed;
+            opacity: 0.8;
+            &:hover {
+              background-color: inherit !important;
+              border-color: inherit !important;
+              color: inherit !important;
+            }
+          }
+        }
       }
     }
   }

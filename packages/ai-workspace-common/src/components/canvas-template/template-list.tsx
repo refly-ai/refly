@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useState, useRef } from 'react';
+import { useEffect, useCallback, useMemo, memo, useState, useRef } from 'react';
 import { Empty, Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
@@ -8,6 +8,39 @@ import { TemplateCard } from './template-card';
 import { TemplateCardSkeleton } from './template-card-skeleton';
 
 import cn from 'classnames';
+
+// Marketplace link
+const MARKETPLACE_LINK = `${window.location.origin}`;
+
+// Custom EndMessage component for template list
+const EndMessage = memo(() => {
+  const { t } = useTranslation();
+
+  const handleGoToMarketplace = useCallback(() => {
+    window.open(MARKETPLACE_LINK, '_blank', 'noopener,noreferrer');
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-4">
+      <p className="text-sm text-refly-text-1 text-center mb-6">
+        {t('frontPage.template.endMessage.title')}
+      </p>
+      <Button
+        type="text"
+        size="large"
+        onClick={handleGoToMarketplace}
+        className="rounded-2xl bg-transparent border
+        border-refly-primary-default !text-refly-primary-default
+        font-semibold px-8 py-6 h-10 hover:bg-refly-fill-hover
+        hover:border-refly-primary-hover hover:text-refly-primary-hover"
+      >
+        {t('frontPage.template.endMessage.goToMarketplace')}
+      </Button>
+    </div>
+  );
+});
+
+EndMessage.displayName = 'EndMessage';
 
 const MAX_DISPLAY_COUNT = 12;
 
@@ -40,7 +73,7 @@ export const TemplateList = ({
   const [isFading, setIsFading] = useState(false);
   const prevCategoryIdRef = useRef(categoryId);
 
-  const { dataList, reload, isRequesting, setDataList } = useFetchDataList({
+  const { dataList, reload, isRequesting, setDataList, hasMore } = useFetchDataList({
     fetchData: async (queryPayload) => {
       const res = await getClient().listCanvasTemplates({
         query: {
@@ -156,7 +189,8 @@ export const TemplateList = ({
           )}
         >
           <div className={cn('grid', gridClassName)}>{templateCards}</div>
-          {hasMoreTemplates && viewMoreSection}
+          {!hasMore && displayDataList.length > 0 && <EndMessage />}
+          {hasMore && hasMoreTemplates && viewMoreSection}
         </div>
       ) : (
         emptyState

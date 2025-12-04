@@ -25,6 +25,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
@@ -38,6 +39,7 @@ import {
   getWorkflowDetail,
   getWorkflowVariables,
   hasBeenInvited,
+  hasFilledForm,
   listAccounts,
   listActions,
   listCanvases,
@@ -476,6 +478,22 @@ export const ensureUseCheckSettingsFieldData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseCheckSettingsFieldKeyFn(clientOptions),
     queryFn: () => checkSettingsField({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetFormDefinitionData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions),
+    queryFn: () => getFormDefinition({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseHasFilledFormData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseHasFilledFormKeyFn(clientOptions),
+    queryFn: () => hasFilledForm({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetCreditRechargeData = (
   queryClient: QueryClient,
