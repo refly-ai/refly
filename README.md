@@ -6,12 +6,15 @@
     <b>
         <a href="https://refly.ai">Refly.AI</a><br>
     </b>
-    ⭐️  The Open-Source Agentic Workspace for Human-AI Collaboration ⭐️ <br>
+    ⭐️ The World's First Vibe Workflow Platform for Non-technical Creators ⭐️ <br>
 </h1>
 
-Refly.AI is the open-source Agentic Workspace for Human–AI Collaboration. Seamlessly blend human insight with AI execution across real-world scenarios—whether you’re rapidly prototyping a product design, creating polished presentations, conducting hot-topic analysis, automating deep research workflows, generating multimodal marketing content, or orchestrating complex operational pipelines, Refly empowers your team to achieve any task with transparency and control.
+Refly.AI is the world's first vibe workflow platform that empowers non-technical creators to build, share and monetize powerful AI automation workflows through simple prompts and a visual canvas - no coding required.
 
-[🚀 v0.10.0 Released! A powerful update with a unified resource panel. 🚀](https://docs.refly.ai/changelog/v0.10.0)
+- N8N for non-technical: Build workflows as easily as assembling Lego bricks. Refly.ai empowers non-technical creators to eliminate repetitive tasks without technical barriers.
+- Canva for workflow: Just as Canva democratized design, Refly.ai democratizes workflow creation—making it simple for everyone to build and share automations.
+
+[🚀 Refly.ai v1.0.0 Released! A milestone launch bringing the first full Vibe Workflow experience. 🚀](https://refly.ai/)
 
 [Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/community-version/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/YVuYFjFvRC) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
 
@@ -33,143 +36,32 @@ Refly.AI is the open-source Agentic Workspace for Human–AI Collaboration. Seam
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/refly-ai/refly)
 [![Deploy on Hostinger](https://assets.hostinger.com/vps/deploy.svg)](https://www.hostinger.com/vps/docker-hosting?compose_url=https://github.com/refly-ai/refly)
 
-<p align="center">
-  <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
-  <a href="./README_CN.md"><img alt="简体中文版自述文件" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
-</p>
-
 </div>
-
-## Quick Start
-
-> Before installing ReflyAI, ensure your machine meets these minimum system requirements:
->
-> CPU >= 1 cores
->
-> Memory >= 2GB
-
-### Self-deploy with Docker
-
-Deploy your own feature-rich, unlimited version of ReflyAI using Docker. Our team is working hard to keep up with the latest versions.
-
-To start deployment:
-
-```bash
-cd deploy/docker
-cp ../../apps/api/.env.example .env # copy the example api env file
-docker compose up -d
-```
-
-### Self-deploy with Kubernetes
-
-Also, we support deploy ReflyAI to Kubernetes cluster.
-
-To start deployment:
-
-```bash
-cd deploy/kubernetes
-
-kubectl apply -f refly-deployment.yaml
-```
-
-For the following steps, you can visit [Self-deploy Guide](https://docs.refly.ai/community-version/self-deploy/) for more details.
-
-For core deployment tutorials, environment variable configuration, and FAQs, please refer to 👉 [Deployment Guide](https://docs.refly.ai/community-version/self-deploy/).
-
-### Local Development
-
-View details in [CONTRIBUTING](./CONTRIBUTING.md).
 
 ## ✨ Key Features
 
-### `1` 🧵 Multi-threaded Conversation System
-Built on an innovative multi-threaded architecture that enables parallel management of independent conversation contexts. Implements complex Agentic Workflows through efficient state management and context switching mechanisms, transcending traditional dialogue model limitations.
+### Intervenable Agent: Eliminates unpredictable "black box" executions
 
-### `2` 🤖 Multi-model Integration Framework
-- Integration with 13+ leading language models, including DeepSeek R1, Claude 3.5 Sonnet, Google Gemini 2.0, and OpenAI O3-mini
-- Support for model hybrid scheduling and parallel processing
-- Flexible model switching mechanism with unified conversation interface
-- Multi-model knowledge base collaboration
+- **Visualized Execution**: Every step of the workflow is clearly visible on the canvas. Allows for easy review, understanding, and debugging of the automation process.
+- **Real-time Intervention**: Users can pause, review, modify, or restart the Agent at any point during execution. Eliminates the frustration of unstable, irreversible, or unoptimizable "black box" executions.
 
-### `3` 🎨 Multimodal Processing Capabilities
-- File Format Support: 7+ formats including PDF, DOCX, RTF, TXT, MD, HTML, EPUB
-- Image Processing: Support for mainstream formats including PNG, JPG, JPEG, BMP, GIF, SVG, WEBP
-- Intelligent Batch Processing: Canvas multi-element selection and AI analysis
+### Minimalist Workflow Tool:  Orchestrate not nodes, but pre-packaged & powerful Agents
 
-### `4` ⚡️ AI-Powered Skill System
-Integrating advanced capabilities from Perplexity AI, Stanford Storm, and more:
-- Intelligent web-wide search and information aggregation
-- Vector database-based knowledge retrieval
-- Smart query rewriting and recommendations
-- AI-assisted document generation workflow
+- Forget tedious configuration. In Refly.ai, every node is a powerful, ready-to-use Agent. All you need to do is assign tasks and connect. Refly.ai does in minutes with two nodes what n8n takes hours and ten or more nodes to complete.
 
-### `5` 🔍 Context Management System
-- Precise temporary knowledge base construction
-- Flexible node selection mechanism
-- Multi-dimensional context correlation
-- Cursor-like intelligent context understanding
+### Workflow Copilot: Turn your words into complex automations
 
-### `6` 📚 Knowledge Base Engine
-- Support for multi-source heterogeneous data import
-- RAG-based semantic retrieval architecture
-- Intelligent knowledge graph construction
-- Personalized knowledge space management
+- Describe a task, and the Refly copilot instantly crafts, modifies, and debugs complex automations directly in your canvas. Even multi-step workflows can be built in seconds.
 
-### `7` ✂️ Intelligent Content Capture
-- One-click content capture from mainstream platforms (Github, Medium, Wikipedia, Arxiv)
-- Intelligent content parsing and structuring
-- Automatic knowledge classification and tagging
-- Deep knowledge base integration
+### Workflow Marketplace: One-Click Publishing,Monetize your expertise
 
-### `8` 📌 Citation System
-- Flexible multi-source content referencing
-- Intelligent context correlation
-- One-click citation generation
-- Reference source tracking
-
-### `9` ✍️ AI-Enhanced Editor
-- Real-time Markdown rendering
-- AI-assisted content optimization
-- Intelligent content analysis
-- Notion-like editing experience
-
-### `10` 🎨 Code Artifact Generation
-- Generate HTML, SVG, Mermaid diagrams, and React applications
-- Smart code structure optimization
-- Component-based architecture support
-- Real-time code preview and debugging
-
-### `11` 🌐 Website Visualization Engine
-- Interactive web page rendering and preview
-- Complex concept visualization support
-- Dynamic SVG and diagram generation
-- Responsive design templates
-- Real-time website prototyping
-- Integration with modern web frameworks
-
-## 🛣️ Roadmap
-
-We're continuously improving Refly with exciting new features. For a detailed roadmap, visit our [complete roadmap documentation](https://docs.refly.ai/roadmap).
-
-- 🎨 Advanced image, audio, and video generation capabilities
-- 🎨 Cross-modal content transformation tools
-- 💻 High-performance desktop client with improved resource management
-- 💻 Enhanced offline capabilities
-- 📚 Advanced knowledge organization and visualization tools
-- 📚 Collaborative knowledge base features
-- 🔌 Open standard for third-party plugin development based on MCP
-- 🔌 Plugin marketplace and developer SDK
-- 🤖 Autonomous task completion with minimal supervision
-- 🤖 Multi-agent collaboration systems
-- ⚡️ Visual workflow builder for complex AI-powered processes
-- ⚡️ Advanced integration capabilities with external systems and API support
-- 🔒 Enhanced security and compliance tools
-- 🔒 Advanced team management and analytics
+- **One-click publishing**: Users can easily turn their workflows into shareable AI Apps and publish them to the workflow marketplace.
+- **Monetize your expertise**: Creators get paid every time users run their workflows, making your experience and creations more valuable than ever.
 
 ## How to Use?
 
 - **Cloud**
-  - We've deployed a Refly Cloud version that allows zero-configuration usage, offering all capabilities of the self-hosted version, including free access to GPT-4o-mini and limited trials of GPT-4o and Claude-3.5-Sonnet. Visit [https://refly.ai/](https://refly.ai/) to get started.
+  - We've deployed a Refly Cloud version that allows zero-configuration usage, offering all capabilities of the self-hosted version, including free access to the latest models. Visit [https://refly.ai/](https://refly.ai/) to get started.
 - **Self-hosting Refly Community Edition**
   - Get started quickly with our [Getting Started Guide](./CONTRIBUTING.md) to run Refly in your environment. For more detailed references and in-depth instructions, please refer to our documentation.
 - **Refly for enterprise / organizations**
@@ -200,29 +92,6 @@ If you have any questions, feel free to reach out to us. One of the best places 
 - [GitHub Issues](https://github.com/refly-ai/refly/issues): Best for reporting bugs and suggesting features when using ReflyAI. Please refer to our contribution guidelines.
 - [Discord](https://discord.gg/YVuYFjFvRC): Best for sharing your applications and interacting with the community.
 - [X(Twitter)](https://x.com/reflyai): Best for sharing your applications and staying connected with the community.
-
-## Upstream Projects
-
-We would also like to thank the following open-source projects that make ReflyAI possible:
-
-1. [LangChain](https://github.com/langchain-ai/langchainjs) - Library for building AI applications.
-2. [ReactFlow](https://github.com/xyflow/xyflow) - Library for building visual workflows.
-3. [Tiptap](https://github.com/ueberdosis/tiptap) - Library for building collaborative editors.
-4. [Ant Design](https://github.com/ant-design/ant-design) - UI library.
-5. [yjs](https://github.com/yjs/yjs) - Provides CRDT foundation for our state management and data sync implementation.
-6. [React](https://github.com/facebook/react) - Library for web and native user interfaces.
-7. [NestJS](https://github.com/nestjs/nest) - Library for building Node.js servers.
-8. [Zustand](https://github.com/pmndrs/zustand) - Primitive and flexible state management for React.
-9. [Vite](https://github.com/vitejs/vite) - Next generation frontend tooling.
-10. [TailwindCSS](https://github.com/tailwindcss/tailwindcss) - CSS library for writing beautiful styles.
-11. [Tanstack Query](https://github.com/tanstack/query) - Library for frontend request handling.
-12. [Radix-UI](https://github.com/radix-ui) - Library for building accessible React UI.
-13. [Elasticsearch](https://github.com/elastic/elasticsearch) - Library for building search functionality.
-14. [Qdrant](https://github.com/qdrant/qdrant) - Library for building vector search functionality.
-15. [Resend](https://github.com/resend/react-email) - Library for building email sending functionality.
-16. Other upstream dependencies.
-
-We are deeply grateful to the community for providing such powerful yet simple libraries that allow us to focus more on implementing product logic. We hope that our project will also provide an easier-to-use **Agentic Workspace for Human-AI Collaboration** for everyone in the future.
 
 ## Security Issues
 
