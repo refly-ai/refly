@@ -3,6 +3,11 @@ import { AgentBaseTool, ToolCallResult, AgentBaseToolset, AgentToolConstructor }
 import { ToolsetDefinition } from '@refly/openapi-schema';
 import { JinaClient } from './client';
 import { ToolParams } from '@langchain/core/tools';
+import { countToken, truncateContent } from '@refly/utils';
+
+// Maximum tokens for a single tool result to prevent excessive context usage
+// Can be overridden via environment variable
+const MAX_TOOL_RESULT_TOKENS = Number(process.env.MAX_TOOL_RESULT_TOKENS) || 20000;
 
 export const JinaToolsetDefinition: ToolsetDefinition = {
   key: 'jina',
@@ -93,7 +98,19 @@ export class JinaRead extends AgentBaseTool<JinaToolParams> {
 
       // Calculate credit cost based on tokens used: 7 credits per million tokens, minimum 1 credit
       const tokens = response.data?.usage?.tokens ?? 0;
-      const creditCost = Math.max(1, Math.ceil((tokens / 1_000_000) * 7));
+      const creditCost = Math.max(1, Math.ceil((tokens / 1000000) * 7));
+
+      console.log('response.data?.content', response.data?.content);
+
+      // Truncate content if it exceeds the maximum token limit
+      if (response.data?.content) {
+        const contentTokens = countToken(response.data.content);
+        console.log('contentTokens', contentTokens);
+
+        if (contentTokens > MAX_TOOL_RESULT_TOKENS) {
+          response.data.content = truncateContent(response.data.content, MAX_TOOL_RESULT_TOKENS);
+        }
+      }
 
       return {
         status: 'success',
@@ -148,6 +165,69 @@ export class JinaSerp extends AgentBaseTool<JinaToolParams> {
         input.offset,
       );
 
+      // Strategy: ensure all results get some space, truncate proportionally
+      if (response.data && Array.isArray(response.data)) {
+        const totalContentTokens = response.data.reduce(
+          (sum: number, result: any) => sum + (result?.usage?.tokens ?? 0),
+          0,
+        );
+        // If total exceeds limit, truncate each result proportionally
+        if (totalContentTokens > MAX_TOOL_RESULT_TOKENS) {
+          const MIN_TOKENS_PER_RESULT = 500; // Each result gets at least this much
+          const resultCount = response.data.length;
+          const reservedTokens = MIN_TOKENS_PER_RESULT * resultCount;
+
+          // Check if we can give everyone the minimum
+          if (reservedTokens > MAX_TOOL_RESULT_TOKENS) {
+            // Give everyone equal share
+            const tokensPerResult = Math.floor(MAX_TOOL_RESULT_TOKENS / resultCount);
+
+            for (let i = 0; i < response.data.length; i++) {
+              const result = response.data[i];
+              const originalTokens = result?.usage?.tokens ?? 0;
+
+              if (result?.content && originalTokens > tokensPerResult) {
+                result.content = truncateContent(result.content, tokensPerResult);
+                const newTokens = countToken(result.content);
+                if (result.usage) result.usage.tokens = newTokens;
+              }
+            }
+          } else {
+            // Distribute remaining budget proportionally
+            const remainingBudget = MAX_TOOL_RESULT_TOKENS - reservedTokens;
+
+            for (let i = 0; i < response.data.length; i++) {
+              const result = response.data[i];
+              const originalTokens = result?.usage?.tokens ?? 0;
+
+              // Each result gets: minimum + proportional share of remaining budget
+              const proportionalShare = Math.floor(
+                (originalTokens / totalContentTokens) * remainingBudget,
+              );
+              const targetTokens = MIN_TOKENS_PER_RESULT + proportionalShare;
+
+              if (result?.content && originalTokens > targetTokens) {
+                result.content = truncateContent(result.content, targetTokens);
+                const newTokens = countToken(result.content);
+                if (result.usage) result.usage.tokens = newTokens;
+              }
+            }
+          }
+
+          // Calculate final total
+          const finalTotal = response.data.reduce(
+            (sum: number, result: any) => sum + (result?.usage?.tokens ?? 0),
+            0,
+          );
+          console.log(`Final: ${response.data.length} results, ${finalTotal} tokens`);
+        } else {
+          // Just log for monitoring
+          response.data.forEach((result: any, i: number) => {
+            console.log(`Result ${i}: ${result?.usage?.tokens ?? 0} tokens`);
+          });
+        }
+      }
+
       // Calculate total tokens from all search results and determine credit cost
       // Each search result has usage.tokens, sum them all up
       const totalTokens =
@@ -156,7 +236,7 @@ export class JinaSerp extends AgentBaseTool<JinaToolParams> {
         }, 0) ?? 0;
 
       // Calculate credit cost based on tokens used: 7 credits per million tokens, minimum 1 credit
-      const creditCost = Math.max(1, Math.ceil((totalTokens / 1_000_000) * 7));
+      const creditCost = Math.max(1, Math.ceil((totalTokens / 1000000) * 7));
 
       return {
         status: 'success',

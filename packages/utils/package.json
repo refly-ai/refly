@@ -24,6 +24,7 @@
     "clsx": "^2.1.0",
     "dayjs": "~1.11.7",
     "deepmerge": "^4.3.1",
+    "gpt-tokenizer": "^2.9.0",
     "js-cookie": "^3.0.5",
     "jsonrepair": "^3.12.0",
     "linkify-it": "^5.0.0",
