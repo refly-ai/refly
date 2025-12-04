@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, useCallback } from 'react';
 import { Button } from 'antd';
+import DOMPurify from 'dompurify';
 import { DriveFile } from '@refly/openapi-schema';
 import { Download, File } from 'refly-icons';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
@@ -138,18 +139,30 @@ export const FilePreview = memo(
 
       const { contentType, url } = fileContent;
 
-      // SVG files - render in Shadow DOM to isolate styles while preserving cookie for internal image requests
+      // SVG files - render in Shadow DOM with sanitization to isolate styles and preserve cookie for internal image requests
       if (contentType === 'image/svg+xml') {
         const svgContent = new TextDecoder().decode(fileContent.data);
+        // Sanitize SVG to remove malicious scripts and event handlers
+        const sanitizedSvg = DOMPurify.sanitize(svgContent, {
+          USE_PROFILES: { svg: true, svgFilters: true },
+          ADD_TAGS: ['image'],
+          ADD_ATTR: ['href', 'xlink:href'],
+        });
         return (
           <div className="h-full flex items-center justify-center max-w-[1024px] mx-auto overflow-hidden relative">
             <div
-              className="max-w-full max-h-full cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => setIsPreviewModalVisible(true)}
+              className="max-w-full max-h-full"
               ref={(el) => {
                 if (el && !el.shadowRoot) {
                   const shadow = el.attachShadow({ mode: 'open' });
-                  shadow.innerHTML = svgContent;
+                  // Inject styles to disable interactions on images and links
+                  shadow.innerHTML = `
+                    <style>
+                      :host { display: block; }
+                      image, a { pointer-events: none; cursor: default; }
+                    </style>
+                    ${sanitizedSvg}
+                  `;
                 }
               }}
             />

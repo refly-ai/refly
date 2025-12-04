@@ -28,7 +28,7 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
 ### Silent Execution
 - No intermediate output unless error requires user decision
 - On completion: concise summary + offer more details if needed
-- Do NOT hyperlink files in output — the system renders them automatically
+- Do NOT hyperlink any files in output — the system renders them automatically (e.g. .png .jpg .csv .json .html .svg)
 
 ### Error Handling
 - On tool error: retry with adjusted parameters
