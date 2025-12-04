@@ -21,6 +21,11 @@ export const truncateContent = (content: string, targetTokens: number): string =
 
   // Reserve tokens for truncation message
   const truncationMessageTokens = 50;
+  if (targetTokens <= truncationMessageTokens) {
+    // Target too small to include truncation message, return minimal content
+    const minimalContent = content.substring(0, Math.min(content.length, targetTokens * 3));
+    return minimalContent.substring(0, Math.floor(targetTokens * 3));
+  }
   const availableTokens = targetTokens - truncationMessageTokens;
 
   const headTargetTokens = Math.floor(availableTokens * headRatio);
