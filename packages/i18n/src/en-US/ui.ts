@@ -889,7 +889,7 @@ const translations = {
       endMessage: {
         title: "Didn't find the workflow automation template you need?",
         subtitle: "Join our Discord and tell us what you're looking for",
-        goToMarketplace: 'Go to Marketplace',
+        goToMarketplace: 'Explore More Templates',
       },
     },
     agentInputPlaceholder: 'Enter task description, Agent will generate reusable workflows',
