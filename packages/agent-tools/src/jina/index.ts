@@ -100,12 +100,9 @@ export class JinaRead extends AgentBaseTool<JinaToolParams> {
       const tokens = response.data?.usage?.tokens ?? 0;
       const creditCost = Math.max(1, Math.ceil((tokens / 1000000) * 7));
 
-      console.log('response.data?.content', response.data?.content);
-
       // Truncate content if it exceeds the maximum token limit
       if (response.data?.content) {
         const contentTokens = countToken(response.data.content);
-        console.log('contentTokens', contentTokens);
 
         if (contentTokens > MAX_TOOL_RESULT_TOKENS) {
           response.data.content = truncateContent(response.data.content, MAX_TOOL_RESULT_TOKENS);
@@ -213,18 +210,6 @@ export class JinaSerp extends AgentBaseTool<JinaToolParams> {
               }
             }
           }
-
-          // Calculate final total
-          const finalTotal = response.data.reduce(
-            (sum: number, result: any) => sum + (result?.usage?.tokens ?? 0),
-            0,
-          );
-          console.log(`Final: ${response.data.length} results, ${finalTotal} tokens`);
-        } else {
-          // Just log for monitoring
-          response.data.forEach((result: any, i: number) => {
-            console.log(`Result ${i}: ${result?.usage?.tokens ?? 0} tokens`);
-          });
         }
       }
 
