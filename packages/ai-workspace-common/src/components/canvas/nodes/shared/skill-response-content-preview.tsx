@@ -2,11 +2,10 @@ import { memo, useMemo } from 'react';
 import { Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@refly/utils/cn';
-import { ModelIcon } from '@lobehub/icons';
 import { ResponseNodeMeta } from '@refly/canvas-common';
 import { ModelInfo } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
-import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconError, ModelIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { X, AiChat } from 'refly-icons';
 import { LabelDisplay } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
 import { parseMentionsFromQuery } from '@refly/utils/query-processor';
@@ -99,7 +98,7 @@ export const SkillResponseContentPreview = memo(
             title={t('canvas.skillResponse.config.model')}
             labels={[
               {
-                icon: <ModelIcon model={modelInfo.name} size={12} type={'color'} />,
+                icon: <ModelIcon model={modelInfo.name} size={12} />,
                 labeltext: modelInfo.label,
               },
             ]}

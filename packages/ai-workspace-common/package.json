@@ -24,7 +24,6 @@
     "@dagrejs/dagre": "^1.1.4",
     "@hey-api/client-fetch": "0.4.0",
     "@hocuspocus/provider": "^2.13.0",
-    "@lobehub/icons": "^1.97.2",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-dialog": "~1.1.1",
     "@radix-ui/react-popover": "^1.0.7",
