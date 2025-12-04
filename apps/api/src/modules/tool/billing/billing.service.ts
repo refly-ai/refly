@@ -15,7 +15,12 @@ export type { ProcessBillingOptions, ProcessBillingResult } from './billing.dto'
 /**
  * Subscription lookup keys that qualify for free tool usage
  */
-const FREE_TOOL_LOOKUP_KEYS = ['refly_plus_yearly_stable_v3'];
+const FREE_TOOL_LOOKUP_KEYS = [
+  'refly_plus_yearly_stable_v3',
+  'refly_plus_yearly_test_v3',
+  'refly_plus_monthly_stable_v3',
+  'refly_plus_monthly_test_v3',
+];
 
 /**
  * Toolset keys that are always free (no credit charge)
