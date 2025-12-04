@@ -81,12 +81,12 @@ export class DriveService {
    * @returns Private access URL or null if origin is not configured
    */
   extractContentUrl(fileId: string): string | null {
-    const apiBaseUrl = this.config.get<string>('apiBaseUrl');
-    if (!apiBaseUrl) {
-      this.logger.warn('[extractContentUrl] apiBaseUrl is not configured');
+    const origin = this.config.get<string>('origin');
+    if (!origin) {
+      this.logger.warn('[extractContentUrl] origin is not configured');
       return null;
     }
-    return `${apiBaseUrl}/v1/drive/file/content/${fileId}`;
+    return `${origin}/v1/drive/file/content/${fileId}`;
   }
 
   private generateStorageKey(

@@ -4,7 +4,6 @@ export default () => ({
   port: Number.parseInt(process.env.PORT) || 5800,
   wsPort: Number.parseInt(process.env.WS_PORT) || 5801,
   origin: process.env.ORIGIN || 'http://localhost:5700',
-  apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:5173',
   static: {
     public: {
       endpoint: process.env.STATIC_PUBLIC_ENDPOINT || 'http://localhost:5800/v1/misc/public',
