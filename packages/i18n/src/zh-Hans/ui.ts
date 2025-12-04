@@ -969,7 +969,7 @@ const translations = {
       endMessage: {
         title: '没有找到你需要的工作流自动化模板？',
         subtitle: '加入我们的 Discord 社区，告诉我们你想要什么',
-        goToMarketplace: '前往 Marketplace',
+        goToMarketplace: '前往模板市场',
       },
     },
     agentInputPlaceholder: '输入任务描述，Agent 将生成可复用的工作流',
