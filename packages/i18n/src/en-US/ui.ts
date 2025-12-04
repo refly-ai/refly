@@ -163,6 +163,7 @@ const translations = {
     actions: 'Actions',
     addedToCanvas: 'Added to canvas',
     operationFailed: 'Operation failed',
+    confirmClose: 'Confirm Close',
     enable: 'Enable',
     disable: 'Disable',
     enabled: 'Enabled',
@@ -3948,6 +3949,8 @@ const translations = {
     validationNoUserInputs: 'Please add User Inputs before publishing your template.',
     validationNoAgents: 'Please add agents before publishing your template.',
     validationAgentsNotRun: 'Please run all agents successfully before publishing your template.',
+    confirmCloseContent:
+      'Unsaved content will be lost after closing. Are you sure you want to close?',
     resultPreview: 'Result Preview',
     notLoggedIn: 'Not Logged In',
     run: {

@@ -713,12 +713,33 @@ export const CreateWorkflowAppModal = ({
     }
   }, [currentShareLink, t]);
 
+  // Handle modal close with confirmation
+  const handleModalClose = useCallback(() => {
+    if (confirmLoading || isUploading) {
+      return;
+    }
+
+    Modal.confirm({
+      title: t('common.confirmClose'),
+      content: t('workflowApp.confirmCloseContent'),
+      okText: t('common.confirm'),
+      cancelText: t('common.cancel'),
+      okButtonProps: {
+        className:
+          '!bg-[var(--refly-primary-default)] !border-[var(--refly-primary-default)] !text-white hover:!bg-[var(--refly-primary-hover)] hover:!border-[var(--refly-primary-hover)] active:!bg-[var(--refly-primary-active)] active:!border-[var(--refly-primary-active)]',
+      },
+      onOk: () => {
+        setVisible(false);
+      },
+    });
+  }, [confirmLoading, isUploading, setVisible, t]);
+
   // Custom footer with copy button and original buttons
   const modalFooter = useMemo(() => {
     return (
       <div className="flex items-center justify-end w-full">
         <div className="flex items-center gap-2">
-          <Button onClick={() => setVisible(false)} disabled={confirmLoading}>
+          <Button onClick={handleModalClose} disabled={confirmLoading}>
             {t('common.cancel')}
           </Button>
           <Button type="primary" onClick={onSubmit} loading={confirmLoading} disabled={isUploading}>
@@ -735,7 +756,7 @@ export const CreateWorkflowAppModal = ({
     confirmLoading,
     okButtonText,
     onSubmit,
-    setVisible,
+    handleModalClose,
     t,
   ]);
 
@@ -745,7 +766,7 @@ export const CreateWorkflowAppModal = ({
       <Modal
         centered
         open={visible}
-        onCancel={() => setVisible(false)}
+        onCancel={handleModalClose}
         footer={modalFooter}
         title={modalTitle}
         styles={{
