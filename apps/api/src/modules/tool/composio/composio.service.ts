@@ -1,14 +1,24 @@
-import { Composio, ToolExecuteResponse } from '@composio/core';
+import { Composio, ToolExecuteResponse, AuthScheme } from '@composio/core';
 import { JSONSchemaToZod } from '@dmitryrechkin/json-schema-to-zod';
 import { DynamicStructuredTool, type StructuredToolInterface } from '@langchain/core/tools';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { ComposioConnectionStatus, GenericToolset, User } from '@refly/openapi-schema';
+import type {
+  ComposioConnectedAccount,
+  ComposioConnectionStatus,
+  ComposioToolSchema,
+  GenericToolset,
+  ToolCreationContext,
+  User,
+} from '@refly/openapi-schema';
 import { COMPOSIO_CONNECTION_STATUS } from '../constant/constant';
+import { genToolsetID } from '@refly/utils';
 import { PrismaService } from '../../common/prisma.service';
 import { RedisService } from '../../common/redis.service';
-import { CreditService } from '../../credit/credit.service';
-import type { SyncToolCreditUsageJobData } from '../../credit/credit.dto';
+import { PostHandlerService } from './post-handler.service';
+import { ToolInventoryService } from '../inventory/inventory.service';
+import { getCurrentUser, runInContext } from '../tool-context';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import type { SkillRunnableConfig } from '@refly/skill-template';
 
 @Injectable()
@@ -16,11 +26,13 @@ export class ComposioService {
   private readonly logger = new Logger(ComposioService.name);
   private composio: Composio;
   private readonly DEFINITION_CACHE_PREFIX = 'oauth:definition:';
+
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly creditService: CreditService,
+    private readonly postHandlerService: PostHandlerService,
+    private readonly inventoryService: ToolInventoryService,
   ) {
     const apiKey = this.config.get<string>('composio.apiKey');
     if (!apiKey) {
@@ -158,34 +170,33 @@ export class ComposioService {
   }
 
   /**
-   * Fetch OAuth tools from Composio API
-   * @param user - The user object
-   * @param appSlug - The app slug
-   * @returns
+   * Fetch tools from Composio API
+   * @param userId - The user ID (user.uid for OAuth, 'refly_global' for API Key tools)
+   * @param integrationId - The integration/toolkit ID
    */
-  async fetchOAuthTools(user: User, appSlug: string): Promise<any[]> {
-    const tools = await this.composio.tools.get(user.uid, {
-      toolkits: [appSlug],
-      limit: 50,
+  async fetchTools(userId: string, integrationId: string): Promise<any[]> {
+    const tools = await this.composio.tools.get(userId, {
+      toolkits: [integrationId],
+      limit: 100,
     });
     return tools;
   }
   /**
    * Execute a tool via toolName
-   * @param user - The user objectoc
+   * @param userId - The user ID (user.uid for OAuth, 'refly_global' for API Key tools)
    * @param connectedAccountId - The connected account id
    * @param toolName - The tool name
    * @param input - The input arguments
    * @returns The tool execute response
    */
   async executeTool(
-    user: User,
+    userId: string,
     connectedAccountId: string,
     toolName: string,
-    input: any,
+    input: Record<string, unknown>,
   ): Promise<ToolExecuteResponse> {
     return await this.composio.tools.execute(toolName, {
-      userId: user.uid,
+      userId,
       connectedAccountId,
       dangerouslySkipVersionCheck: true,
       arguments: input,
@@ -230,52 +241,103 @@ export class ComposioService {
   }
 
   /**
-   * Save or update Composio connection record in the database
-   * This only manages the composio_connections table
+   * Save or update Composio connection and toolset records in the database
+   * Uses a transaction to guarantee data persistence for both tables
    */
-  private async saveConnection(user: User, appSlug: string, connectedAccount: any) {
+  private async saveConnection(
+    user: User,
+    appSlug: string,
+    connectedAccount: ComposioConnectedAccount,
+  ) {
     const connectedAccountId = connectedAccount.id;
     const status: ComposioConnectionStatus =
       connectedAccount.status?.toUpperCase() === 'ACTIVE'
         ? COMPOSIO_CONNECTION_STATUS.ACTIVE
         : COMPOSIO_CONNECTION_STATUS.REVOKED;
 
-    // 1. Save or update composio_connections
-    await this.prisma.composioConnection.upsert({
-      where: {
-        uid_integrationId: {
+    // Use transaction to ensure both composio_connection and toolset are saved atomically
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Save or update composio_connections
+      await tx.composioConnection.upsert({
+        where: {
+          uid_integrationId: {
+            uid: user.uid,
+            integrationId: appSlug,
+          },
+        },
+        create: {
           uid: user.uid,
           integrationId: appSlug,
+          connectedAccountId: connectedAccountId,
+          status: status,
+          metadata: JSON.stringify({}),
         },
-      },
-      create: {
-        uid: user.uid,
-        integrationId: appSlug,
-        connectedAccountId: connectedAccountId,
-        status: status,
-        metadata: JSON.stringify({}),
-      },
-      update: {
-        connectedAccountId: connectedAccountId,
-        status: status,
-        metadata: JSON.stringify({}),
-        deletedAt: null,
-        updatedAt: new Date(),
-      },
+        update: {
+          connectedAccountId: connectedAccountId,
+          status: status,
+          metadata: JSON.stringify({}),
+          deletedAt: null,
+          updatedAt: new Date(),
+        },
+      });
+
+      // 2. Get toolset inventory info from InventoryService
+      const inventoryItem = await this.inventoryService.getInventoryItem(appSlug);
+      const toolsetName = (inventoryItem?.definition?.labelDict?.en as string) ?? appSlug;
+
+      // 3. Find existing toolset (including soft-deleted ones for the same uid+key)
+      const existingToolset = await tx.toolset.findFirst({
+        where: {
+          uid: user.uid,
+          key: appSlug,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (existingToolset) {
+        // Update existing toolset (reactivate if soft-deleted)
+        await tx.toolset.update({
+          where: { pk: existingToolset.pk },
+          data: {
+            enabled: status === COMPOSIO_CONNECTION_STATUS.ACTIVE,
+            uninstalled: status !== COMPOSIO_CONNECTION_STATUS.ACTIVE,
+            deletedAt: null, // Reactivate if it was soft-deleted
+            updatedAt: new Date(),
+          },
+        });
+      } else {
+        // Create new toolset
+        await tx.toolset.create({
+          data: {
+            toolsetId: genToolsetID(),
+            name: toolsetName,
+            key: appSlug,
+            authType: 'oauth',
+            enabled: status === COMPOSIO_CONNECTION_STATUS.ACTIVE,
+            uninstalled: false,
+            uid: user.uid,
+          },
+        });
+      }
     });
   }
 
   /**
-   * Instantiate OAuth toolsets into structured tools
-   * Converts Composio OAuth tools into LangChain DynamicStructuredTool instances
+   * Instantiate Composio toolsets into structured tools
+   * Converts Composio tools into LangChain DynamicStructuredTool instances
+   * @param user - The user requesting the tools
+   * @param toolsets - Array of toolsets to instantiate
+   * @param authType - Authentication type: 'oauth' (user-specific) or 'apikey' (global shared)
    */
-  async instantiateOAuthToolsets(
+  async instantiateToolsets(
     user: User,
     toolsets: GenericToolset[],
+    authType: 'oauth' | 'apikey',
   ): Promise<StructuredToolInterface[]> {
     if (!toolsets?.length) {
       return [];
     }
+
     const structuredTools: StructuredToolInterface[] = [];
     for (const toolset of toolsets) {
       const integrationId = toolset.toolset?.key;
@@ -283,107 +345,63 @@ export class ComposioService {
         continue;
       }
 
-      const connectionStatus = await this.checkAppStatus(user, integrationId);
-      if (connectionStatus.status !== 'active') {
-        continue;
-      }
+      try {
+        // Get connection info based on auth type
+        let userId: string;
+        let connectedAccountId: string;
 
-      // Query toolset from database to get creditBilling
-      const toolsetPO = await this.prisma.toolset.findFirst({
-        where: {
-          key: integrationId,
-          uid: user.uid,
-          authType: 'oauth',
-          deletedAt: null,
-        },
-        select: {
-          creditBilling: true,
-          name: true,
-        },
-      });
-
-      // Parse creditBilling from database (stored as a number string)
-      const creditCost = toolsetPO?.creditBilling ? Number.parseFloat(toolsetPO.creditBilling) : 0;
-
-      const tools = await this.fetchOAuthTools(user, integrationId);
-      // Convert to LangChain DynamicStructuredTool
-      const langchainTools = tools
-        .filter((tool) => {
-          const fn = tool?.function;
-          if (!fn?.name) return false;
-          // Skip deprecated tools
-          const description = fn?.description ?? tool?.description ?? '';
-          if (/deprecated/i.test(description)) {
-            return false;
+        if (authType === 'oauth') {
+          const connectionStatus = await this.checkAppStatus(user, integrationId);
+          if (connectionStatus.status !== 'active') {
+            continue;
           }
-          const params = (fn.parameters ?? {}) as Record<string, any>;
-          const properties = params?.properties ?? {};
-          const deprecatedProps = Object.keys(properties)
-            .map((key) => (properties[key]?.deprecated ? key : null))
-            .filter(Boolean);
-          return deprecatedProps.length === 0;
-        })
-        .map((tool) => {
-          const fn = tool.function;
-          const toolName = fn?.name ?? 'unknown_tool';
-          const toolSchema = JSONSchemaToZod.convert(fn.parameters ?? {}) as any;
-          return new DynamicStructuredTool({
-            name: toolName,
-            description: fn?.description ?? `OAuth tool: ${toolName}`,
-            schema: toolSchema,
-            func: async (input, runManager, config: SkillRunnableConfig) => {
-              try {
-                const result = await this.executeTool(
-                  user,
-                  connectionStatus.connectedAccountId ?? '',
-                  toolName,
-                  input,
-                );
-                if (result?.successful) {
-                  // Add credit billing logic after successful execution
-                  if (creditCost > 0) {
-                    const resultId = config.configurable.resultId;
-                    const version = config.configurable.version;
-                    const jobData: SyncToolCreditUsageJobData = {
-                      uid: user.uid,
-                      creditCost: creditCost,
-                      timestamp: new Date(),
-                      toolCallId: runManager?.runId,
-                      toolCallMeta: {
-                        toolName: toolName,
-                        toolsetId: toolset.id,
-                        toolsetKey: toolset.toolset?.key,
-                      },
-                      resultId,
-                      version,
-                    };
-                    await this.creditService.syncToolCreditUsage(jobData);
-                  }
-                  return JSON.stringify(result.data ?? null);
-                }
-                return JSON.stringify({
-                  error: result?.error ?? 'Unknown Composio execution error',
-                });
-              } catch (error) {
-                this.logger.error(
-                  `Failed to execute Composio tool ${toolName}: ${error instanceof Error ? error.message : error}`,
-                );
-                return JSON.stringify({
-                  error: error instanceof Error ? error.message : String(error),
-                });
-              }
-            },
-            metadata: {
-              name: toolName,
-              type: toolset.type,
-              toolsetKey: toolset.toolset?.key,
-              toolsetName: toolset.name,
-            },
-          });
-        });
+          userId = user.uid;
+          connectedAccountId = connectionStatus.connectedAccountId ?? '';
+        } else {
+          // API Key: use global refly_global connection (lazy loading)
+          connectedAccountId = await this.checkApiKeyStatus(integrationId);
+          userId = 'refly_global';
+        }
 
-      structuredTools.push(...langchainTools);
+        // Get creditBilling from toolsetInventory (unified source), default to 3
+        const inventory = await this.prisma.toolsetInventory.findUnique({
+          where: { key: integrationId },
+          select: {
+            creditBilling: true,
+            name: true,
+          },
+        });
+        const creditCost = inventory?.creditBilling
+          ? Number.parseFloat(inventory.creditBilling)
+          : 3;
+
+        // Fetch tools definition from Composio
+        const tools = await this.fetchTools(userId, integrationId);
+
+        // Create context for tool creation (user/userId comes from getCurrentUser() at runtime)
+        const toolCreateContext: ToolCreationContext = {
+          connectedAccountId,
+          authType,
+          creditCost,
+          toolsetType: toolset.type,
+          toolsetKey: toolset.toolset?.key ?? '',
+          toolsetName: inventory?.name ?? toolset.name,
+        };
+
+        // Convert to LangChain DynamicStructuredTool
+        const langchainTools = tools
+          .filter((tool) => this.isToolValid(tool))
+          .map((tool) => this.createStructuredTool(tool, toolCreateContext));
+
+        structuredTools.push(...langchainTools);
+      } catch (error) {
+        this.logger.error(
+          `Failed to instantiate ${authType} toolset ${integrationId}: ${error instanceof Error ? error.message : error}`,
+        );
+        // Continue with other toolsets even if one fails
+      }
     }
+
     return structuredTools;
   }
 
@@ -394,5 +412,280 @@ export class ComposioService {
     const cacheKey = `${this.DEFINITION_CACHE_PREFIX}${appSlug}`;
     await this.redis.del(cacheKey);
     this.logger.log(`Invalidated definition cache for ${appSlug}`);
+  }
+
+  /**
+   * Ensure auth config exists for a toolkit
+   * Returns existing authConfigId from composio_connection.metadata or creates a new one
+   */
+  async ensureAuthConfig(integrationId: string): Promise<string> {
+    // Check if authConfigId already exists in composio_connection metadata
+    const existingConnection = await this.prisma.composioConnection.findFirst({
+      where: {
+        uid: 'refly_global',
+        integrationId,
+        deletedAt: null,
+      },
+    });
+
+    if (existingConnection?.metadata) {
+      try {
+        const metadata = JSON.parse(existingConnection.metadata);
+        if (metadata.authConfigId) {
+          this.logger.log(`Auth config exists for ${integrationId}: ${metadata.authConfigId}`);
+          return metadata.authConfigId;
+        }
+      } catch {
+        // Invalid metadata, continue to create new auth config
+      }
+    }
+
+    // Create new auth config via Composio API
+    this.logger.log(`Creating auth config for ${integrationId}`);
+
+    try {
+      const authConfig = await this.composio.authConfigs.create(integrationId, {
+        type: 'use_custom_auth',
+        authScheme: 'API_KEY',
+        credentials: {},
+      });
+
+      this.logger.log(`Auth config created for ${integrationId}: ${authConfig.id}`);
+      return authConfig.id;
+    } catch (error) {
+      this.logger.error(`Failed to create auth config for ${integrationId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Setup global API key authentication for a toolkit
+   */
+  async setupGlobalApiKeyAuth(integrationId: string, apiKey: string): Promise<string> {
+    // Ensure auth config exists
+    const authConfigId = await this.ensureAuthConfig(integrationId);
+    // Create connected account using initiate method
+    this.logger.log(`Setting up global API key auth for ${integrationId}`);
+
+    try {
+      // Determine which API key field to use based on integration
+      const integrationIdLower = integrationId.toLowerCase();
+      const useGenericApiKey =
+        integrationIdLower === 'alpha_vantage' || integrationIdLower === 'hunter';
+
+      const apiKeyConfig = useGenericApiKey ? { generic_api_key: apiKey } : { api_key: apiKey };
+
+      const connectionRequest = await this.composio.connectedAccounts.initiate(
+        'refly_global', // Fixed userId for global tools
+        authConfigId,
+        {
+          config: AuthScheme.APIKey(apiKeyConfig),
+        },
+      );
+
+      // Save to composio_connection table
+      await this.prisma.composioConnection.create({
+        data: {
+          uid: 'refly_global',
+          integrationId,
+          connectedAccountId: connectionRequest.id,
+          status: connectionRequest.status || 'active',
+          metadata: JSON.stringify({
+            authConfigId,
+            createdAt: new Date().toISOString(),
+          }),
+        },
+      });
+
+      this.logger.log(
+        `Global API key tool registered: ${integrationId} -> ${connectionRequest.id}`,
+      );
+
+      return connectionRequest.id;
+    } catch (error) {
+      this.logger.error(`Failed to setup global API key auth: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure global API key connection exists (lazy loading)
+   * Called when tool is about to be used
+   */
+  async checkApiKeyStatus(integrationId: string): Promise<string> {
+    // Check if connection already exists
+    const existing = await this.prisma.composioConnection.findFirst({
+      where: {
+        uid: 'refly_global',
+        integrationId,
+        deletedAt: null,
+      },
+    });
+
+    if (existing) {
+      this.logger.log(`Connection exists for ${integrationId}: ${existing.connectedAccountId}`);
+      return existing.connectedAccountId;
+    }
+
+    // Get API key from inventory
+    const inventory = await this.prisma.toolsetInventory.findUnique({
+      where: { key: integrationId },
+    });
+
+    if (!inventory) {
+      throw new Error(`Toolset not found in inventory: ${integrationId}`);
+    }
+
+    if (!inventory.apiKey) {
+      throw new Error(`No API key configured for ${integrationId}`);
+    }
+
+    // Setup new connection
+    this.logger.log(`Creating new connection for ${integrationId}`);
+    return await this.setupGlobalApiKeyAuth(integrationId, inventory.apiKey);
+  }
+
+  /**
+   * Check if a tool should be included (not deprecated)
+   * @param tool - Composio tool definition
+   * @returns true if the tool should be included
+   */
+  private isToolValid(tool: {
+    function?: { name?: string; description?: string; parameters?: Record<string, any> };
+    description?: string;
+  }): boolean {
+    const fn = tool?.function;
+    if (!fn?.name) return false;
+
+    // Skip deprecated tools
+    const description = fn?.description ?? tool?.description ?? '';
+    if (/deprecated/i.test(description)) {
+      return false;
+    }
+
+    // Skip tools with deprecated properties
+    const params = (fn.parameters ?? {}) as Record<string, any>;
+    const properties = params?.properties ?? {};
+    const hasDeprecatedProps = Object.values(properties).some(
+      (prop: any) => prop?.deprecated === true,
+    );
+
+    return !hasDeprecatedProps;
+  }
+
+  /**
+   * Create a DynamicStructuredTool from Composio tool definition
+   */
+  private createStructuredTool(
+    tool: { function?: { name?: string; description?: string; parameters?: Record<string, any> } },
+    context: ToolCreationContext,
+  ): DynamicStructuredTool {
+    const fn = tool.function;
+    const toolName = fn?.name ?? 'unknown_tool';
+
+    // Add file_name_title field to schema for naming generated files
+    const schemaWithTitle = this.addFileNameTitleToSchema(fn?.parameters ?? {});
+    const toolSchema: any = JSONSchemaToZod.convert(schemaWithTitle);
+
+    return new DynamicStructuredTool({
+      name: toolName,
+      description:
+        fn?.description ??
+        `${context.authType === 'oauth' ? 'OAuth' : 'API Key'} tool: ${toolName}`,
+      schema: toolSchema,
+      func: async (input: unknown, _runManager: unknown, runnableConfig: RunnableConfig) => {
+        try {
+          const inputRecord = input as Record<string, unknown>;
+
+          // Extract file_name_title before calling Composio API (it's not part of the actual schema)
+          const { file_name_title, ...toolInput } = inputRecord;
+
+          // Run tool execution within context (similar to dynamic-tooling)
+          const { result, user } = await runInContext(
+            {
+              langchainConfig: runnableConfig as SkillRunnableConfig,
+              requestId: `composio-${toolName}-${Date.now()}`,
+            },
+            async () => {
+              // Capture user inside context before it's gone
+              const currentUser = getCurrentUser();
+              // For OAuth tools, use current user's uid; for API Key tools, use 'refly_global'
+              const userId = context.authType === 'oauth' ? currentUser?.uid : 'refly_global';
+              const executionResult = await this.executeTool(
+                userId,
+                context.connectedAccountId,
+                toolName,
+                toolInput,
+              );
+              return { result: executionResult, user: currentUser };
+            },
+          );
+
+          // Use postHandler for billing and resource processing
+          const postResult = await this.postHandlerService.process(result, {
+            user,
+            toolName,
+            toolsetName: context.toolsetName,
+            toolsetKey: context.toolsetKey,
+            creditCost: context.creditCost,
+            fileNameTitle: (file_name_title as string) || 'untitled',
+          });
+
+          if (result?.successful) {
+            return JSON.stringify(postResult.data ?? null);
+          }
+          return JSON.stringify({
+            error: result?.error ?? 'Unknown Composio execution error',
+          });
+        } catch (error) {
+          this.logger.error(
+            `Failed to execute ${context.authType} tool ${toolName}: ${error instanceof Error ? error.message : error}`,
+          );
+          return JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      },
+      metadata: {
+        name: toolName,
+        type: context.toolsetType,
+        toolsetKey: context.toolsetKey,
+        toolsetName: context.toolsetName,
+      },
+    });
+  }
+
+  /**
+   * Add file_name_title field to schema for naming generated files
+   * @param schema - Original JSON schema from Composio tool
+   * @returns Schema with file_name_title field added
+   */
+  private addFileNameTitleToSchema(schema: ComposioToolSchema): ComposioToolSchema {
+    // Clone schema to avoid mutation
+    const newSchema: ComposioToolSchema = JSON.parse(JSON.stringify(schema));
+
+    // Ensure properties object exists
+    if (!newSchema.properties) {
+      newSchema.properties = {};
+    }
+
+    // Add file_name_title field if it doesn't already exist
+    if (!newSchema.properties.file_name_title) {
+      newSchema.properties.file_name_title = {
+        type: 'string',
+        description:
+          'The title for the generated file. Should be concise and descriptive. This will be used as the filename.',
+      };
+
+      // Add file_name_title to required fields so AI will always generate it
+      if (!newSchema.required) {
+        newSchema.required = [];
+      }
+      if (!newSchema.required.includes('file_name_title')) {
+        newSchema.required.push('file_name_title');
+      }
+    }
+
+    return newSchema;
   }
 }

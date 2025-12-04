@@ -58,7 +58,8 @@ export const useDownloadFile = () => {
       try {
         const file = currentFile as DriveFile;
         // Use async getFileUrl which handles publicURL fetching automatically
-        const { fileUrl } = getDriveFileUrl(file, isSharePage, usePublicFileUrl);
+        // Pass download=true to trigger server-side URL processing for markdown/html/svg files
+        const { fileUrl } = getDriveFileUrl(file, isSharePage, usePublicFileUrl, true);
 
         if (!fileUrl) {
           throw new Error('File URL not available');

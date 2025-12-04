@@ -750,7 +750,7 @@ export class CreditService {
   }
 
   async syncToolCreditUsage(data: SyncToolCreditUsageJobData) {
-    const { uid, creditCost, timestamp, resultId, toolCallId, toolCallMeta, version } = data;
+    const { uid, discountedPrice, originalPrice, timestamp, resultId, toolCallMeta } = data;
 
     // Find user
     const user = await this.prisma.user.findUnique({ where: { uid } });
@@ -758,18 +758,19 @@ export class CreditService {
       throw new Error(`No user found for uid ${uid}`);
     }
 
-    // If no credit cost, just create usage record
-    if (creditCost <= 0) {
+    // If no discounted price, just create usage record
+    if (discountedPrice <= 0) {
       await this.prisma.creditUsage.create({
         data: {
           uid,
           usageId: genCreditUsageId(),
           actionResultId: resultId,
-          version,
+          version: data.version,
           usageType: 'tool_call',
           amount: 0,
+          dueAmount: originalPrice ?? 0,
           createdAt: timestamp,
-          toolCallId,
+          toolCallId: data.toolCallId,
           toolCallMeta: JSON.stringify(toolCallMeta),
           description: `Tool call: ${toolCallMeta?.toolsetKey}.${toolCallMeta?.toolName}`,
         },
@@ -780,18 +781,16 @@ export class CreditService {
     // Use the extracted method to handle credit deduction
     await this.deductCreditsAndCreateUsage(
       uid,
-      creditCost,
+      discountedPrice,
       {
         usageId: genCreditUsageId(),
         actionResultId: resultId,
-        version,
+        version: data.version,
         usageType: 'tool_call',
         createdAt: timestamp,
-        toolCallId,
-        toolCallMeta,
         description: `Tool call: ${toolCallMeta?.toolsetKey}.${toolCallMeta?.toolName}`,
       },
-      creditCost,
+      originalPrice,
     );
   }
 

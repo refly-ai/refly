@@ -885,7 +885,7 @@ const translations = {
       more: 'More',
     },
     template: {
-      title: 'Community Templates',
+      title: 'Marketplace',
       endMessage: {
         title: "Didn't find the workflow automation template you need?",
         subtitle: "Join our Discord and tell us what you're looking for",
@@ -1925,6 +1925,10 @@ const translations = {
       defaultPlaceholder: 'Describe what you want to generate...',
       createUserInput: 'Create user input "{{userInputName}}"',
       unauthorized: 'Authorize',
+      oauthSuccess: 'Tool authorized successfully',
+      oauthFailed: 'Failed to authorize tool',
+      oauthTimeout: 'Authorization timeout, please try again',
+      authorizing: 'Authorizing...',
     },
     toolsDepencency: {
       title: 'Tool Dependencies',
@@ -2216,7 +2220,7 @@ const translations = {
       },
     },
     siderMenu: {
-      home: 'Dashboard',
+      home: 'Workspace',
       canvas: 'My Workflows',
       appManager: 'My Templates',
       marketplace: 'Marketplace',
@@ -2705,7 +2709,7 @@ const translations = {
       getStarted: 'Get Started',
       subscribeNow: 'Subscribe Now',
       manage: 'Manage Subscription',
-      currentPlan: 'Current Plan',
+      currentPlan: 'Your Current Plan',
       t1Requests: 'T1 Requests',
       t1RequestsDescription:
         'T1 models include Claude 3.7 Sonnet (Thinking), DeepSeek R1, o3 Mini, GPT-4o and others. Each successful skill call to T1 models counts as one request.',
@@ -3592,7 +3596,7 @@ const translations = {
     },
   },
   subscription: {
-    modalTitle: 'Upgrade to Get More Credits',
+    modalTitle: 'Upgrade Your Plan to Get More Credits',
     cancelAnytime: "Cancel anytime. By subscribing, you agree to Refly's",
     privacy: 'Privacy',
     terms: 'Terms',
@@ -3622,14 +3626,15 @@ const translations = {
       priceMonthly: '{{price}}/month',
       priceYearly: '{{price}}/month',
       priceYearlyTotal: '{{price}}/year Save 20%',
-      upgrade: 'Upgrade to {{planType}}',
+      upgrade: 'Get {{planType}}',
       cannotChangeTo: 'Cannot change to {{planType}}',
-      currentPlan: 'Current Plan',
+      currentPlan: 'Your Current Plan',
       cannotSwitchTo:
         "Legacy plans can't be switched to Plus directly.Please contact support@refly.ai",
+      memberBenefits: 'Member Benefits',
       free: {
-        title: 'Free Plan',
-        description: 'A welcoming gateway to explore the power of AI—completely free',
+        title: 'Free',
+        description: 'Ideal for beginners exploring workflow automation',
         price: 'Free forever',
         buttonText: 'Continue for free',
         buttonTextDowngrade: 'Downgrade to Free',
@@ -3645,9 +3650,9 @@ const translations = {
         features: [
           'Daily new credits\n300 credits',
           'Monthly credits\n2,000 credits',
-          'New subscribers receive an extra\n2,000 bonus credits',
+          //'New subscribers receive an extra\n2,000 bonus credits',
           'Access to a vast library of tools',
-          {
+          /*{
             name: 'Credit-free tools',
             type: 'pointFreeTools',
             items: [
@@ -3661,7 +3666,7 @@ const translations = {
               'X',
             ],
             duration: '365 DAYS',
-          },
+          },*/
           'Service support\nHigh priority support',
         ],
       },
@@ -3826,7 +3831,7 @@ const translations = {
     storageFullModal: {
       free: {
         title: 'Free Plan',
-        titleCn: 'Current Plan',
+        titleCn: 'Your Current Plan',
         description: 'A welcoming gateway to explore the power of AI—completely free',
         price: 'Free forever',
         buttonText: 'Continue for free',
@@ -3881,7 +3886,7 @@ const translations = {
           'More enterprise features coming soon',
         ],
       },
-      currentPlan: 'Current Plan',
+      currentPlan: 'Your Current Plan',
     },
   },
   onboarding: {

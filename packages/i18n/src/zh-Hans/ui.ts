@@ -138,9 +138,9 @@ const translations = {
         features: [
           '每日可获取新积分\n100点',
           '每月积分\n2000点',
-          '首次订阅额外赠送\n2000点',
+          //'首次订阅额外赠送\n2000点',
           '访问丰富的工具库',
-          {
+          /*{
             name: '免积分使用工具',
             type: 'pointFreeTools',
             items: [
@@ -154,7 +154,7 @@ const translations = {
               'X',
             ],
             duration: '365 DAYS',
-          },
+          },*/
           '服务支持\n高优邮件支持',
         ],
       },
@@ -965,11 +965,11 @@ const translations = {
       more: '更多',
     },
     template: {
-      title: '社区模板',
+      title: '模板市场',
       endMessage: {
         title: '没有找到你需要的工作流自动化模板？',
         subtitle: '加入我们的 Discord 社区，告诉我们你想要什么',
-        goToMarketplace: '探索更多模版',
+        goToMarketplace: '探索更多模板',
       },
     },
     agentInputPlaceholder: '输入任务描述，Agent 将生成可复用的工作流',
@@ -1981,6 +1981,10 @@ const translations = {
       defaultPlaceholder: '描述你想要生成的内容...',
       createUserInput: '创建输入项 "{{userInputName}}"',
       unauthorized: '授权',
+      oauthSuccess: '工具授权成功',
+      oauthFailed: '工具授权失败',
+      oauthTimeout: '授权超时，请重试',
+      authorizing: '授权中...',
     },
     toolsDepencency: {
       title: '工具依赖',

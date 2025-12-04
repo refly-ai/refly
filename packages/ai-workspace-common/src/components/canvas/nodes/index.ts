@@ -1,9 +1,5 @@
 import { NodeTypes } from '@xyflow/react';
 import { DocumentNode } from './document';
-import { ResourceNode } from './resource';
-import { MediaSkillNode } from './media/mediaSkill';
-import { MediaSkillResponseNode } from './media/media-skill-response';
-import { ToolNode } from './tool';
 import { SkillResponseNode } from './skill-response';
 import { MemoNode } from './memo/memo';
 import { GroupNode } from './group';
@@ -17,10 +13,6 @@ import { StartNode } from './start';
 
 // Export all components and types
 export * from './document';
-export * from './resource';
-export * from './media/mediaSkill';
-export * from './media/media-skill-response';
-export * from './tool';
 export * from './skill-response';
 export * from './memo/memo';
 export * from './group';
@@ -34,10 +26,6 @@ export * from './start';
 // Node types mapping
 export const nodeTypes: NodeTypes = {
   document: DocumentNode,
-  resource: ResourceNode,
-  mediaSkill: MediaSkillNode,
-  mediaSkillResponse: MediaSkillResponseNode,
-  tool: ToolNode,
   skillResponse: SkillResponseNode,
   memo: MemoNode,
   group: GroupNode,

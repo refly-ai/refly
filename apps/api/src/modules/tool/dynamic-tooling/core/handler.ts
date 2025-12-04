@@ -18,7 +18,7 @@ import { IAdapter } from './adapter';
 import { createBasePostHandler } from './handler-post';
 import { createBasePreHandler } from './handler-pre';
 import { ResourceHandler } from '../../utils';
-import { CreditService } from '../../../credit/credit.service';
+import type { BillingService } from '../../billing/billing.service';
 
 /**
  * Base handler interface
@@ -243,8 +243,8 @@ export abstract class BaseHandler implements IHandler {
 export interface HttpHandlerOptions extends HandlerConfig {
   /** Billing configuration */
   billing?: BillingConfig;
-  /** Credit service */
-  creditService?: CreditService;
+  /** Billing service */
+  billingService?: BillingService;
   /** Whether to format response */
   formatResponse?: boolean;
   /** Whether to enable resource upload via ResourceHandler */
@@ -292,7 +292,7 @@ export class HttpHandler extends BaseHandler {
     this.usePost(
       createBasePostHandler({
         billing: this.options.billing,
-        creditService: this.options.creditService,
+        billingService: this.options.billingService,
         resourceHandler: this.options.resourceHandler,
       }),
     );

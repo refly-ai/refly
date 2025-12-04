@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { Button, Layout, Divider } from 'antd';
 import {
   useLocation,
@@ -18,7 +18,16 @@ import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/us
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
 import { useGetAuthConfig } from '@refly-packages/ai-workspace-common/queries';
-import { File, Project, Flow, Contact, SideRight, SideLeft, Settings, Home } from 'refly-icons';
+import {
+  File,
+  Project,
+  Flow,
+  Contact,
+  SideRight,
+  SideLeft,
+  Settings,
+  MarketPlace,
+} from 'refly-icons';
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
 import { useKnowledgeBaseStoreShallow, useUserStoreShallow } from '@refly/stores';
@@ -306,7 +315,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
         key: 'appManager',
       },
       {
-        icon: <Home key="marketplace" style={{ fontSize: 20 }} />,
+        icon: <MarketPlace key="marketplace" style={{ fontSize: 20 }} />,
         title: t('loggedHomePage.siderMenu.marketplace'),
         onActionClick: () => navigate('/marketplace'),
         key: 'marketplace',

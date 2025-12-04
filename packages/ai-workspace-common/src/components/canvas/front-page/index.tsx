@@ -473,7 +473,7 @@ export const FrontPage = memo(() => {
                 scrollableTargetId="front-page-scrollable-div"
                 language={currentLanguage}
                 categoryId={templateCategoryId}
-                className="!bg-transparent !px-0 !pt-0 -ml-2 -mt-2"
+                className="!bg-transparent !px-0 !pt-0"
               />
             ) : (
               // Fallback: show loading skeleton if categoryId is invalid

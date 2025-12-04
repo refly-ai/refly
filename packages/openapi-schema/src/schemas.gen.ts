@@ -9476,6 +9476,177 @@ export const ComposioRevokeResponseSchema = {
   },
 } as const;
 
+export const PostHandlerContextSchema = {
+  type: 'object',
+  description: 'Context for post-processing tool execution results',
+  required: ['user', 'toolName', 'toolsetName', 'toolsetKey', 'creditCost'],
+  properties: {
+    user: {
+      $ref: '#/components/schemas/User',
+      description: 'User who executed the tool',
+    },
+    toolName: {
+      type: 'string',
+      description: 'Tool name that was executed',
+    },
+    toolsetName: {
+      type: 'string',
+      description: 'Toolset display name',
+    },
+    toolsetKey: {
+      type: 'string',
+      description: 'Toolset unique identifier/key',
+    },
+    creditCost: {
+      type: 'number',
+      description: 'Credit cost for this tool execution',
+    },
+    fileNameTitle: {
+      type: 'string',
+      description: 'File name title from input params',
+    },
+  },
+} as const;
+
+export const PostHandlerResultSchema = {
+  type: 'object',
+  description: 'Result from post-processing tool execution',
+  required: ['data'],
+  properties: {
+    data: {
+      description: 'Processed data (may be uploaded to OSS)',
+    },
+    files: {
+      type: 'array',
+      description: 'Files uploaded during post-processing',
+      items: {
+        $ref: '#/components/schemas/DriveFile',
+      },
+    },
+    creditCost: {
+      type: 'number',
+      description: 'Credit cost recorded',
+    },
+    metadata: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Metadata about processing',
+    },
+  },
+} as const;
+
+export const ComposioConnectedAccountSchema = {
+  type: 'object',
+  description: 'Composio connected account structure from API response',
+  required: ['id'],
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Connected account ID',
+    },
+    status: {
+      type: 'string',
+      description: 'Connection status',
+    },
+    toolkit: {
+      type: 'object',
+      properties: {
+        slug: {
+          type: 'string',
+          description: 'Toolkit slug identifier',
+        },
+      },
+    },
+  },
+} as const;
+
+export const ComposioToolSchemaSchema = {
+  type: 'object',
+  description: 'Composio tool JSON schema structure',
+  properties: {
+    type: {
+      type: 'string',
+      description: 'Schema type',
+    },
+    properties: {
+      type: 'object',
+      additionalProperties: {
+        $ref: '#/components/schemas/ComposioSchemaProperty',
+      },
+      description: 'Schema properties',
+    },
+    required: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'Required property names',
+    },
+  },
+  additionalProperties: true,
+} as const;
+
+export const ComposioSchemaPropertySchema = {
+  type: 'object',
+  description: 'Composio schema property definition',
+  properties: {
+    type: {
+      type: 'string',
+      description: 'Property type',
+    },
+    description: {
+      type: 'string',
+      description: 'Property description',
+    },
+    deprecated: {
+      type: 'boolean',
+      description: 'Whether property is deprecated',
+    },
+  },
+  additionalProperties: true,
+} as const;
+
+export const ToolCreationContextSchema = {
+  type: 'object',
+  description:
+    'Context for creating a DynamicStructuredTool. User/userId comes from getCurrentUser() at runtime.',
+  required: [
+    'connectedAccountId',
+    'authType',
+    'creditCost',
+    'toolsetType',
+    'toolsetKey',
+    'toolsetName',
+  ],
+  properties: {
+    connectedAccountId: {
+      type: 'string',
+      description: 'Connected account ID from Composio',
+    },
+    authType: {
+      type: 'string',
+      enum: ['oauth', 'apikey'],
+      description: 'Authentication type',
+    },
+    creditCost: {
+      type: 'number',
+      description: 'Credit cost for tool execution',
+    },
+    toolsetType: {
+      $ref: '#/components/schemas/GenericToolsetType',
+      description: 'Toolset type identifier',
+    },
+    toolsetKey: {
+      type: 'string',
+      description: 'Toolset key',
+    },
+    toolsetName: {
+      type: 'string',
+      description: 'Toolset display name',
+    },
+  },
+} as const;
+
 export const GenericToolsetTypeSchema = {
   type: 'string',
   enum: ['regular', 'mcp', 'external_oauth'],
@@ -10515,6 +10686,10 @@ export const DriveFileSchema = {
       format: 'date-time',
       description: 'Drive file update timestamp',
     },
+    url: {
+      type: 'string',
+      description: 'Private access URL for the file (requires authentication)',
+    },
   },
 } as const;
 
@@ -11087,6 +11262,23 @@ export const SchemaPropertySchema = {
         'Format for the property value. For resources: base64, url, binary, text. For strings: date-time, uri, email, etc.',
       example: 'binary',
     },
+    const: {
+      description: 'Constant value for discriminator matching in oneOf/anyOf',
+    },
+    oneOf: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/SchemaProperty',
+      },
+      description: 'One of the listed schemas must match',
+    },
+    anyOf: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/SchemaProperty',
+      },
+      description: 'Any of the listed schemas can match',
+    },
     minLength: {
       type: 'number',
       description: 'Minimum length (for string)',
@@ -11139,6 +11331,7 @@ export const SchemaPropertySchema = {
 
 export const JsonSchemaSchema = {
   type: 'object',
+  description: 'JSON schema definition for request/response with resource field markers',
   required: ['type', 'properties'],
   properties: {
     type: {
@@ -11160,32 +11353,18 @@ export const JsonSchemaSchema = {
       },
       description: 'Required property names',
     },
-    additionalProperties: {
-      type: 'boolean',
-      description: 'Additional properties allowed',
+    omitFields: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: "Field names to omit from the response (e.g., ['thoughtSignature'])",
     },
   },
 } as const;
 
 export const ResponseSchemaSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/JsonSchema',
-    },
-    {
-      type: 'object',
-      description: 'Response schema definition for identifying resource fields',
-      properties: {
-        omitFields: {
-          type: 'array',
-          items: {
-            type: 'string',
-          },
-          description: "Field names to omit from the response (e.g., ['thoughtSignature'])",
-        },
-      },
-    },
-  ],
+  $ref: '#/components/schemas/JsonSchema',
 } as const;
 
 export const ResourceFieldSchema = {
@@ -11379,7 +11558,7 @@ export const ParsedMethodConfigSchema = {
       $ref: '#/components/schemas/JsonSchema',
     },
     responseSchema: {
-      $ref: '#/components/schemas/ResponseSchema',
+      $ref: '#/components/schemas/JsonSchema',
     },
     billing: {
       $ref: '#/components/schemas/BillingConfig',
@@ -11769,9 +11948,20 @@ export const HandlerResponseSchema = {
       description: 'Success status',
     },
     data: {
-      type: 'object',
-      additionalProperties: true,
-      description: 'Response data',
+      oneOf: [
+        {
+          type: 'object',
+          additionalProperties: true,
+        },
+        {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: true,
+          },
+        },
+      ],
+      description: 'Response data (object or array of objects)',
     },
     localPath: {
       type: 'string',
@@ -11830,7 +12020,7 @@ export const HandlerContextSchema = {
       description: 'Credentials for authentication',
     },
     responseSchema: {
-      $ref: '#/components/schemas/ResponseSchema',
+      $ref: '#/components/schemas/JsonSchema',
       description: 'Response schema for identifying resource fields via traversal',
     },
     startTime: {
@@ -11857,7 +12047,7 @@ export const HandlerConfigSchema = {
       description: 'Credentials',
     },
     responseSchema: {
-      $ref: '#/components/schemas/ResponseSchema',
+      $ref: '#/components/schemas/JsonSchema',
       description: 'Response schema for identifying resource fields via traversal',
     },
     timeout: {

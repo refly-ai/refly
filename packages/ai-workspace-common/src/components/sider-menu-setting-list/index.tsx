@@ -335,7 +335,7 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
         open={open}
         onOpenChange={setOpen}
         align={{
-          offset: [0, 10],
+          offset: [-8, 4],
         }}
       >
         {props.children}

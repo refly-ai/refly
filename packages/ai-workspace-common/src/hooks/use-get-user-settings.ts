@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useCookie } from 'react-use';
 import { useTranslation } from 'react-i18next';
 import {
-  useMatch,
+  useLocation,
   useNavigate,
   useSearchParams,
 } from '@refly-packages/ai-workspace-common/utils/router';
@@ -14,7 +14,7 @@ import { mapDefaultLocale } from '@refly-packages/ai-workspace-common/utils/loca
 import { LOCALE, OutputLocale } from '@refly/common-types';
 import { UserSettings } from '@refly/openapi-schema';
 import { UID_COOKIE } from '@refly/utils/cookie';
-import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
+import { isPublicAccessPageByPath } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 import { isDesktop } from '@refly/ui-kit';
 
 export const useGetUserSettings = () => {
@@ -33,15 +33,13 @@ export const useGetUserSettings = () => {
   }));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   const [uid] = useCookie(UID_COOKIE);
 
   const hasLoginCredentials = !!uid || isDesktop();
 
   const { i18n } = useTranslation();
-
-  const isPublicAcessPage = usePublicAccessPage();
-  const isPricing = useMatch('/pricing');
 
   const getLoginStatus = async () => {
     let error: any;
@@ -63,7 +61,12 @@ export const useGetUserSettings = () => {
       userStore.setUserProfile(undefined);
       userStore.setIsLogin(false);
 
-      if (!isPublicAcessPage && !isPricing) {
+      // Use location.pathname from useLocation hook to get current route
+      // We use isPublicAccessPageByPath (extracted from usePublicAccessPage) to check
+      // This ensures we get the latest route value even in async context
+      const isPublicPage = isPublicAccessPageByPath(location.pathname);
+
+      if (!isPublicPage) {
         navigate(`/?${searchParams.toString()}`); // Extension should navigate to home
       }
 
@@ -155,5 +158,5 @@ export const useGetUserSettings = () => {
 
   useEffect(() => {
     getLoginStatus();
-  }, [hasLoginCredentials]);
+  }, [hasLoginCredentials, location.pathname]);
 };

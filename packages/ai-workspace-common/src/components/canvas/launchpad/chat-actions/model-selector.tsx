@@ -1,11 +1,10 @@
 import { useEffect, useState, useMemo, useCallback, memo, useRef } from 'react';
 import { Button, Dropdown, DropdownProps, MenuProps, Skeleton, Tooltip, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { ModelIcon } from '@lobehub/icons';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { ModelInfo, TokenUsageMeter } from '@refly/openapi-schema';
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
-import { IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { ModelIcon, IconError } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { LuInfo } from 'react-icons/lu';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { IContextItem } from '@refly/common-types';
@@ -87,7 +86,7 @@ const SelectedModelDisplay = memo(
         )}
       >
         <div className="flex items-center gap-1.5 min-w-0">
-          <ModelIcon model={model.name} type={'color'} size={18} />
+          <ModelIcon model={model.name} size={18} />
           <Paragraph
             className={cn(
               'truncate leading-5 !mb-0',
@@ -281,7 +280,7 @@ export const ModelSelector = memo(
           .map((model) => ({
             key: model.providerItemId,
             label: <ModelLabel model={model} isContextIncludeImage={isContextIncludeImage} />,
-            icon: <ModelIcon model={model.name} size={16} type={'color'} />,
+            icon: <ModelIcon model={model.name} size={16} />,
           }));
       }
 
@@ -302,7 +301,7 @@ export const ModelSelector = memo(
           const items = group.models.map((model) => ({
             key: model.providerItemId,
             label: <ModelLabel model={model} isContextIncludeImage={isContextIncludeImage} />,
-            icon: <ModelIcon model={model.name} size={16} type={'color'} />,
+            icon: <ModelIcon model={model.name} size={16} />,
           }));
           list = [...list, header, ...items];
         }
@@ -424,7 +423,7 @@ export const ModelSelector = memo(
             )}
           </div>
         ) : (
-          <ModelIcon model={'gpt-4o'} size={16} type={'color'} />
+          <ModelIcon model={'gpt-4o'} size={16} />
         )}
       </Dropdown>
     );
