@@ -961,6 +961,11 @@ const translations = {
       buttonText: '新建工作流',
       buttonDescription: '新建空白工作流',
     },
+    tutorial: {
+      title: '教程',
+      buttonText: '5分钟上手教程',
+      buttonDescription: '如何构建一个AI 驱动的工作流',
+    },
     recentWorkflows: {
       title: '近期工作流',
       edit: '编辑',
