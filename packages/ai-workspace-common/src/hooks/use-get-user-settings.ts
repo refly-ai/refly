@@ -1,11 +1,7 @@
 import { useEffect } from 'react';
 import { useCookie } from 'react-use';
 import { useTranslation } from 'react-i18next';
-import {
-  useLocation,
-  useNavigate,
-  useSearchParams,
-} from '@refly-packages/ai-workspace-common/utils/router';
+import { useNavigate, useSearchParams } from '@refly-packages/ai-workspace-common/utils/router';
 
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { LocalSettings, useUserStoreShallow } from '@refly/stores';
@@ -33,7 +29,6 @@ export const useGetUserSettings = () => {
   }));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const location = useLocation();
 
   const [uid] = useCookie(UID_COOKIE);
 
@@ -61,10 +56,10 @@ export const useGetUserSettings = () => {
       userStore.setUserProfile(undefined);
       userStore.setIsLogin(false);
 
-      // Use location.pathname from useLocation hook to get current route
+      // Use window.location.pathname to get current route (always latest, no dependency needed)
       // We use isPublicAccessPageByPath (extracted from usePublicAccessPage) to check
       // This ensures we get the latest route value even in async context
-      const isPublicPage = isPublicAccessPageByPath(location.pathname);
+      const isPublicPage = isPublicAccessPageByPath(window.location.pathname);
 
       if (!isPublicPage) {
         navigate(`/?${searchParams.toString()}`); // Extension should navigate to home
@@ -158,5 +153,5 @@ export const useGetUserSettings = () => {
 
   useEffect(() => {
     getLoginStatus();
-  }, [hasLoginCredentials, location.pathname]);
+  }, [hasLoginCredentials]);
 };
