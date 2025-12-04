@@ -1,14 +1,18 @@
 import { useLocation } from 'react-router-dom';
 
-export const usePublicAccessPage = () => {
-  const location = useLocation();
-  const isSharePage = location?.pathname?.startsWith('/share/') ?? false;
-  const isPreviewPage = location?.pathname?.startsWith('/preview/') ?? false;
-  const isArtifactGalleryPage = location?.pathname?.startsWith('/artifact-gallery') ?? false;
-  const isUseCasesGalleryPage = location?.pathname?.startsWith('/use-cases-gallery') ?? false;
-  const isAppPage = location?.pathname?.startsWith('/app/') ?? false;
-  const isWorkflowTemplatePage = location?.pathname?.startsWith('/workflow-template/') ?? false;
-  const isLoginPage = (location?.pathname ?? '') === '/login';
+/**
+ * Check if a pathname is a public access page
+ * This pure function can be used in async contexts where hooks cannot be called
+ */
+export const isPublicAccessPageByPath = (pathname: string): boolean => {
+  const isSharePage = pathname?.startsWith('/share/') ?? false;
+  const isPreviewPage = pathname?.startsWith('/preview/') ?? false;
+  const isArtifactGalleryPage = pathname?.startsWith('/artifact-gallery') ?? false;
+  const isUseCasesGalleryPage = pathname?.startsWith('/use-cases-gallery') ?? false;
+  const isAppPage = pathname?.startsWith('/app/') ?? false;
+  const isWorkflowTemplatePage = pathname?.startsWith('/workflow-template/') ?? false;
+  const isLoginPage = (pathname ?? '') === '/login';
+  const isPricingPage = pathname === '/pricing';
   return (
     isPreviewPage ||
     isSharePage ||
@@ -16,6 +20,12 @@ export const usePublicAccessPage = () => {
     isUseCasesGalleryPage ||
     isAppPage ||
     isWorkflowTemplatePage ||
-    isLoginPage
+    isLoginPage ||
+    isPricingPage
   );
+};
+
+export const usePublicAccessPage = () => {
+  const location = useLocation();
+  return isPublicAccessPageByPath(location.pathname);
 };
