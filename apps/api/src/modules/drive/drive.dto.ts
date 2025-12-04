@@ -9,8 +9,10 @@ import { pick } from '../../utils';
 
 /**
  * Transform DriveFile Prisma model to DriveFile DTO
+ * @param driveFile - Prisma DriveFile model
+ * @param origin - Server origin for generating content URL (e.g., 'https://api.example.com')
  */
-export function driveFilePO2DTO(driveFile: DriveFileModel): DriveFile {
+export function driveFilePO2DTO(driveFile: DriveFileModel, origin?: string): DriveFile {
   return {
     ...pick(driveFile, [
       'canvasId',
@@ -30,5 +32,6 @@ export function driveFilePO2DTO(driveFile: DriveFileModel): DriveFile {
     size: Number(driveFile.size),
     createdAt: driveFile.createdAt.toJSON(),
     updatedAt: driveFile.updatedAt.toJSON(),
+    url: origin ? `${origin}/v1/drive/file/content/${driveFile.fileId}` : undefined,
   };
 }

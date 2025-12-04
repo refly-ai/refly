@@ -76,17 +76,17 @@ export class DriveService {
   }
 
   /**
-   * Extract private content URL for a file
-   * @param fileId - Drive file ID
-   * @returns Private access URL or null if origin is not configured
+   * Get server origin from config
    */
-  extractContentUrl(fileId: string): string | null {
-    const origin = this.config.get<string>('origin');
-    if (!origin) {
-      this.logger.warn('[extractContentUrl] origin is not configured');
-      return null;
-    }
-    return `${origin}/v1/drive/file/content/${fileId}`;
+  private get origin(): string | undefined {
+    return this.config.get<string>('origin');
+  }
+
+  /**
+   * Transform DriveFile Prisma model to DTO with URL
+   */
+  toDTO(driveFile: DriveFileModel): DriveFile {
+    return driveFilePO2DTO(driveFile, this.origin);
   }
 
   private generateStorageKey(
@@ -311,7 +311,7 @@ export class DriveService {
 
       // Process each request in the batch
       for (const request of requests) {
-        const { canvasId, name, content, storageKey, externalUrl, buffer } = request;
+        const { canvasId, name, content, storageKey, externalUrl, buffer, type } = request;
 
         // Generate unique filename to avoid conflicts
         const uniqueName = this.generateUniqueFileName(name, existingFileNames);
@@ -349,7 +349,8 @@ export class DriveService {
           rawData = Buffer.from(content, 'utf8');
           size = BigInt(rawData.length);
           // Infer MIME type from filename, fallback to text/plain
-          request.type = getSafeMimeType(name, mime.getType(name) ?? undefined) || 'text/plain';
+          request.type =
+            getSafeMimeType(name, type ?? mime.getType(name) ?? undefined) || 'text/plain';
         } else if (storageKey) {
           // Case 2: Transfer from existing storage key
           let objectInfo = await this.internalOss.statObject(storageKey);
@@ -438,7 +439,7 @@ export class DriveService {
         driveFiles.map((file) => this.getDriveFileDetail(user, file.fileId, file)),
       );
     }
-    return driveFiles.map(driveFilePO2DTO);
+    return driveFiles.map((file) => this.toDTO(file));
   }
 
   /**
@@ -504,7 +505,7 @@ export class DriveService {
       }
 
       return {
-        ...driveFilePO2DTO(driveFile),
+        ...this.toDTO(driveFile),
         content,
       };
     }
@@ -584,7 +585,7 @@ export class DriveService {
         this.logger.info(
           `Successfully loaded from cache for ${fileId}, content length: ${content.length}`,
         );
-        return { ...driveFilePO2DTO(driveFile), content };
+        return { ...this.toDTO(driveFile), content };
       } catch (error) {
         this.logger.warn(`Cache read failed for ${fileId}, will re-parse:`, error);
         // Continue to parse
@@ -716,7 +717,7 @@ export class DriveService {
         `Successfully parsed and cached file ${fileId}, content length: ${processedContent.length}, word count: ${wordCount}`,
       );
 
-      return { ...driveFilePO2DTO(driveFile), content: processedContent };
+      return { ...this.toDTO(driveFile), content: processedContent };
     } catch (error) {
       this.logger.error(
         `Failed to parse drive file ${fileId}: ${JSON.stringify({ message: error.message })}`,
@@ -743,7 +744,7 @@ export class DriveService {
 
       // Fallback to summary
       this.logger.info(`Returning fallback summary for ${fileId} due to parse failure`);
-      return { ...driveFilePO2DTO(driveFile), content: driveFile.summary };
+      return { ...this.toDTO(driveFile), content: driveFile.summary };
     }
   }
 
@@ -870,7 +871,7 @@ export class DriveService {
     const createdFiles = await this.prisma.driveFile.createManyAndReturn({
       data: driveFilesData,
     });
-    return createdFiles.map(driveFilePO2DTO);
+    return createdFiles.map((file) => this.toDTO(file));
   }
 
   /**
@@ -912,7 +913,7 @@ export class DriveService {
     const createdFile = await this.prisma.driveFile.create({
       data: createData,
     });
-    return driveFilePO2DTO(createdFile);
+    return this.toDTO(createdFile);
   }
 
   /**
@@ -949,7 +950,7 @@ export class DriveService {
       where: { fileId, uid: user.uid },
       data: updateData,
     });
-    return driveFilePO2DTO(updatedFile);
+    return this.toDTO(updatedFile);
   }
 
   /**
@@ -1096,7 +1097,7 @@ export class DriveService {
       }
     }
 
-    return driveFilePO2DTO(duplicatedFile);
+    return this.toDTO(duplicatedFile);
   }
 
   /**
@@ -1260,7 +1261,10 @@ export class DriveService {
       const filename = path.basename(storageKey) || 'file';
 
       // Try to get contentType from file extension
-      const contentType = getSafeMimeType(filename, mime.getType(filename) ?? undefined);
+      const contentType = getSafeMimeType(
+        filename,
+        driveFile.type ?? mime.getType(filename) ?? undefined,
+      );
 
       return {
         data,

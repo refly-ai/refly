@@ -72,12 +72,14 @@ export function initTracer(options: TracerOptions): void {
     if (processor) spanProcessors.push(processor);
   }
 
+  const instrumentations = [getNodeAutoInstrumentations(), new PrismaInstrumentation()];
+
   sdk = new NodeSDK({
     traceExporter: options.otlpEndpoint
       ? new OTLPTraceExporter({ url: `${options.otlpEndpoint}/v1/traces` })
       : undefined,
     spanProcessors: spanProcessors.length > 0 ? spanProcessors : undefined,
-    instrumentations: [getNodeAutoInstrumentations(), new PrismaInstrumentation()],
+    instrumentations,
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: 'reflyd',
     }),
