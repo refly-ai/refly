@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getEnv, IENV } from '@refly/utils';
 import { useThemeStoreShallow } from '@refly/stores';
 import { MarketplaceErrorBoundary } from './error-boundary';
+import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 
 const MarketplacePageContent = memo(() => {
   const { t, i18n } = useTranslation();
@@ -82,7 +83,10 @@ const MarketplacePageContent = memo(() => {
       <Helmet>
         <title>{t('loggedHomePage.siderMenu.marketplace')}</title>
       </Helmet>
-      <div className="w-full h-full flex flex-col overflow-hidden">
+      <div className="w-full h-full flex flex-col overflow-hidden relative">
+        <div className="absolute top-[17px] right-[17px] z-10">
+          <SettingItem showName={false} avatarAlign={'right'} />
+        </div>
         <iframe
           ref={iframeRef}
           src={iframeSrc}

@@ -879,6 +879,11 @@ const translations = {
       buttonText: 'New Workflow',
       buttonDescription: 'Create a new workflow',
     },
+    tutorial: {
+      title: 'Tutorial',
+      buttonText: '5 Minutes Tutorial',
+      buttonDescription: 'Tutorial for AI-driven workflow',
+    },
     recentWorkflows: {
       title: 'Recent Workflows',
       edit: 'Edit',

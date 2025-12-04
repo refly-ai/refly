@@ -16,7 +16,9 @@ import {
   Exit,
   Parse,
   Account,
+  Github,
 } from 'refly-icons';
+import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
 import './index.scss';
 import React from 'react';
 import { TFunction } from 'i18next';
@@ -149,6 +151,16 @@ const ThemeAppearanceItem = React.memo(({ themeMode, t }: { themeMode: string; t
       <span>{t('loggedHomePage.siderMenu.systemTheme')}</span>
       <ArrowRight size={16} />
     </div>
+  </div>
+));
+
+const GithubItem = React.memo(() => (
+  <div className="flex items-center justify-between gap-2">
+    <div className="flex items-center gap-2">
+      <Github size={18} />
+      GitHub
+    </div>
+    <GithubStar showIcon={false} />
   </div>
 ));
 
@@ -292,6 +304,10 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
       },
       {
         type: 'divider' as const,
+      },
+      {
+        key: 'github',
+        label: <GithubItem />,
       },
       {
         key: 'discord',
