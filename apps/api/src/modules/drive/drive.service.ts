@@ -350,7 +350,7 @@ export class DriveService {
           size = BigInt(rawData.length);
           // Infer MIME type from filename, fallback to text/plain
           request.type =
-            getSafeMimeType(name, type ?? mime.getType(name) ?? undefined) || 'text/plain';
+            getSafeMimeType(name, mime.getType(name) ?? type ?? undefined) || 'text/plain';
         } else if (storageKey) {
           // Case 2: Transfer from existing storage key
           let objectInfo = await this.internalOss.statObject(storageKey);
