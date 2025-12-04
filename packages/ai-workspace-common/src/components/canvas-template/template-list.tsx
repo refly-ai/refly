@@ -10,7 +10,7 @@ import { TemplateCardSkeleton } from './template-card-skeleton';
 import cn from 'classnames';
 
 // Marketplace link
-const MARKETPLACE_LINK = `${window.location.origin}/workflow-marketplace`;
+const MARKETPLACE_LINK = `${window.location.origin}/marketplace`;
 
 // Custom EndMessage component for template list
 const EndMessage = memo(() => {
