@@ -4,9 +4,8 @@ FROM nginx:1.27.3-alpine
 # Install envsubst and bash for environment variable substitution
 RUN apk add --no-cache bash
 
-# Copy nginx configurations (no-proxy as default, proxy as optional)
-COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.noproxy.conf
-COPY deploy/docker/nginx-proxy.conf /etc/nginx/conf.d/default.proxy.conf
+# Copy nginx configuration
+COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy static files
 WORKDIR /usr/share/nginx/html
@@ -33,13 +32,6 @@ set -e
 
 # Generate runtime config.js from template
 envsubst < /usr/share/nginx/html/config.template.js > /usr/share/nginx/html/config.js
-
-# Select nginx config based on ENABLE_REVERSE_PROXY (default is no reverse proxy)
-if [ "$ENABLE_REVERSE_PROXY" = "true" ]; then
-  cp /etc/nginx/conf.d/default.proxy.conf /etc/nginx/conf.d/default.conf
-else
-  cp /etc/nginx/conf.d/default.noproxy.conf /etc/nginx/conf.d/default.conf
-fi
 
 exec nginx -g "daemon off;"
 EOF
