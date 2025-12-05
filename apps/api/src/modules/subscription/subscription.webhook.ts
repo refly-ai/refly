@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import Stripe from 'stripe';
 import { StripeWebhookHandler } from '@golevelup/nestjs-stripe';
 import { PrismaService } from '../common/prisma.service';
 import { SubscriptionService } from './subscription.service';
+import { VoucherService } from '../voucher/voucher.service';
 import { SubscriptionInterval, SubscriptionPlanType } from '@refly/openapi-schema';
 import { Prisma } from '@prisma/client';
 
@@ -13,6 +14,8 @@ export class SubscriptionWebhooks {
   constructor(
     private readonly prisma: PrismaService,
     private readonly subscriptionService: SubscriptionService,
+    @Inject(forwardRef(() => VoucherService))
+    private readonly voucherService: VoucherService,
   ) {}
 
   @StripeWebhookHandler('checkout.session.completed')
@@ -80,6 +83,21 @@ export class SubscriptionWebhooks {
       subscriptionId,
       customerId,
     });
+
+    // Mark voucher as used if one was applied
+    const voucherId = session.metadata?.voucherId;
+    if (voucherId) {
+      try {
+        await this.voucherService.useVoucher({
+          voucherId,
+          subscriptionId,
+        });
+        this.logger.log(`Marked voucher ${voucherId} as used for subscription ${subscriptionId}`);
+      } catch (error) {
+        this.logger.error(`Failed to mark voucher ${voucherId} as used: ${error.message}`);
+        // Don't throw - subscription was already created successfully
+      }
+    }
 
     this.logger.log(`Successfully processed checkout session ${session.id} for user ${uid}`);
   }

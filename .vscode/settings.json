@@ -40,5 +40,8 @@
   "eslint.enable": false,
   "[sql]": {
     "editor.defaultFormatter": "dbcode.dbcode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
   }
 }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { StripeModule } from '@golevelup/nestjs-stripe';
 import { BullModule } from '@nestjs/bullmq';
 import { SubscriptionService } from './subscription.service';
@@ -13,6 +13,7 @@ import {
 import { SubscriptionController } from './subscription.controller';
 import { CommonModule } from '../common/common.module';
 import { CreditModule } from '../credit/credit.module';
+import { VoucherModule } from '../voucher/voucher.module';
 import {
   QUEUE_CHECK_CANCELED_SUBSCRIPTIONS,
   QUEUE_EXPIRE_AND_RECHARGE_CREDITS,
@@ -23,6 +24,7 @@ import { isDesktop } from '../../utils/runtime';
   imports: [
     CommonModule,
     CreditModule,
+    forwardRef(() => VoucherModule),
     ...(isDesktop()
       ? []
       : [

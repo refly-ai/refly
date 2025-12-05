@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional, forwardRef } from '@nestjs/common';
 import pLimit from 'p-limit';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -69,6 +69,7 @@ export class CanvasService {
     private documentService: DocumentService,
     private providerService: ProviderService,
     private codeArtifactService: CodeArtifactService,
+    @Inject(forwardRef(() => SubscriptionService))
     private subscriptionService: SubscriptionService,
     private readonly driveService: DriveService,
     @Inject(OSS_INTERNAL) private oss: ObjectStorageService,

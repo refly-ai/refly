@@ -31,6 +31,8 @@ import {
 import type { GenerateWorkflowAppTemplateJobData } from './workflow-app.dto';
 import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
 import type { Queue } from 'bullmq';
+import { VoucherService } from '../voucher/voucher.service';
+import { VoucherTriggerResult } from '../voucher/voucher.dto';
 
 /**
  * Structure of shared workflow app data
@@ -62,6 +64,7 @@ export class WorkflowAppService {
     private readonly creditService: CreditService,
     private readonly notificationService: NotificationService,
     private readonly configService: ConfigService,
+    private readonly voucherService: VoucherService,
     @Optional()
     @InjectQueue(QUEUE_WORKFLOW_APP_TEMPLATE)
     private readonly templateQueue?: Queue<GenerateWorkflowAppTemplateJobData>,
@@ -446,7 +449,27 @@ export class WorkflowAppService {
       where: { uid: user.uid },
     });
 
-    return { ...workflowApp, owner: userPo };
+    // Trigger voucher generation for template publish
+    let voucherTriggerResult: VoucherTriggerResult | null = null;
+    if (publishToCommunity) {
+      try {
+        voucherTriggerResult = await this.voucherService.handleTemplatePublish(
+          { uid: user.uid } as any,
+          canvasId,
+          appId,
+        );
+        if (voucherTriggerResult) {
+          this.logger.log(
+            `Voucher triggered for workflow app ${appId}: ${voucherTriggerResult.voucher.voucherId} (${voucherTriggerResult.voucher.discountPercent}% off)`,
+          );
+        }
+      } catch (error) {
+        this.logger.error(`Failed to trigger voucher for workflow app ${appId}: ${error?.stack}`);
+        // Don't throw error - voucher is optional, workflow app creation should still succeed
+      }
+    }
+
+    return { ...workflowApp, owner: userPo, voucherTriggerResult };
   }
 
   async getWorkflowAppDetail(user: User, appId: string) {

@@ -312,7 +312,7 @@ export class BuiltinGenerateDoc extends AgentBaseTool<BuiltinToolParams> {
       const file = await reflyService.writeFile(user, {
         name: input.title,
         content: input.content,
-        type: 'text/plain',
+        type: 'text/markdown',
         canvasId: config.configurable?.canvasId,
         resultId: config.configurable?.resultId,
         resultVersion: config.configurable?.version,

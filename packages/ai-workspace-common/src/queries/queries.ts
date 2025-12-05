@@ -18,6 +18,7 @@ import {
   checkSettingsField,
   checkToolOauthStatus,
   checkVerification,
+  claimVoucherInvitation,
   convert,
   createCanvas,
   createCanvasTemplate,
@@ -42,6 +43,7 @@ import {
   createSkillTrigger,
   createToolset,
   createVerification,
+  createVoucherInvitation,
   createWorkflowApp,
   deleteCanvas,
   deleteDocument,
@@ -73,6 +75,7 @@ import {
   generateMedia,
   getActionResult,
   getAuthConfig,
+  getAvailableVouchers,
   getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
@@ -136,6 +139,7 @@ import {
   listToolsetInventory,
   listToolsets,
   listUserTools,
+  listUserVouchers,
   listWorkflowApps,
   logout,
   multiLingualWebSearch,
@@ -177,6 +181,8 @@ import {
   updateWorkflowVariables,
   upload,
   validateMcpServer,
+  validateVoucher,
+  verifyVoucherInvitation,
 } from '../requests/services.gen';
 import {
   AbortActionData,
@@ -207,6 +213,8 @@ import {
   CheckToolOauthStatusError,
   CheckVerificationData,
   CheckVerificationError,
+  ClaimVoucherInvitationData,
+  ClaimVoucherInvitationError,
   ConvertData,
   ConvertError,
   CreateCanvasData,
@@ -254,6 +262,8 @@ import {
   CreateToolsetError,
   CreateVerificationData,
   CreateVerificationError,
+  CreateVoucherInvitationData,
+  CreateVoucherInvitationError,
   CreateWorkflowAppData,
   CreateWorkflowAppError,
   DeleteCanvasData,
@@ -315,6 +325,7 @@ import {
   GetActionResultData,
   GetActionResultError,
   GetAuthConfigError,
+  GetAvailableVouchersError,
   GetCanvasCommissionByCanvasIdData,
   GetCanvasCommissionByCanvasIdError,
   GetCanvasDataData,
@@ -426,6 +437,7 @@ import {
   ListToolsetsData,
   ListToolsetsError,
   ListUserToolsError,
+  ListUserVouchersError,
   ListWorkflowAppsData,
   ListWorkflowAppsError,
   LogoutError,
@@ -505,6 +517,10 @@ import {
   UploadError,
   ValidateMcpServerData,
   ValidateMcpServerError,
+  ValidateVoucherData,
+  ValidateVoucherError,
+  VerifyVoucherInvitationData,
+  VerifyVoucherInvitationError,
 } from '../requests/types.gen';
 import * as Common from './common';
 export const useListMcpServers = <
@@ -1559,6 +1575,55 @@ export const useServeStatic = <
     queryKey: Common.UseServeStaticKeyFn(clientOptions, queryKey),
     queryFn: () =>
       serveStatic({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetAvailableVouchers = <
+  TData = Common.GetAvailableVouchersDefaultResponse,
+  TError = GetAvailableVouchersError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetAvailableVouchersKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getAvailableVouchers({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useListUserVouchers = <
+  TData = Common.ListUserVouchersDefaultResponse,
+  TError = ListUserVouchersError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseListUserVouchersKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listUserVouchers({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useVerifyVoucherInvitation = <
+  TData = Common.VerifyVoucherInvitationDefaultResponse,
+  TError = VerifyVoucherInvitationError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<VerifyVoucherInvitationData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseVerifyVoucherInvitationKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      verifyVoucherInvitation({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useExtractVariables = <
@@ -3288,6 +3353,59 @@ export const useConvert = <
   useMutation<TData, TError, Options<ConvertData, true>, TContext>({
     mutationKey: Common.UseConvertKeyFn(mutationKey),
     mutationFn: (clientOptions) => convert(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useValidateVoucher = <
+  TData = Common.ValidateVoucherMutationResult,
+  TError = ValidateVoucherError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<ValidateVoucherData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<ValidateVoucherData, true>, TContext>({
+    mutationKey: Common.UseValidateVoucherKeyFn(mutationKey),
+    mutationFn: (clientOptions) => validateVoucher(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useCreateVoucherInvitation = <
+  TData = Common.CreateVoucherInvitationMutationResult,
+  TError = CreateVoucherInvitationError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<CreateVoucherInvitationData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<CreateVoucherInvitationData, true>, TContext>({
+    mutationKey: Common.UseCreateVoucherInvitationKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      createVoucherInvitation(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useClaimVoucherInvitation = <
+  TData = Common.ClaimVoucherInvitationMutationResult,
+  TError = ClaimVoucherInvitationError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<ClaimVoucherInvitationData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<ClaimVoucherInvitationData, true>, TContext>({
+    mutationKey: Common.UseClaimVoucherInvitationKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      claimVoucherInvitation(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useUpdatePage = <

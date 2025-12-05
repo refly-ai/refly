@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional, Inject, forwardRef } from '@nestjs/common';
 import Stripe from 'stripe';
 import { InjectStripeClient } from '@golevelup/nestjs-stripe';
 import { PrismaService } from '../common/prisma.service';
@@ -29,6 +29,7 @@ import {
   QUEUE_SYNC_STORAGE_USAGE,
 } from '../../utils/const';
 import { RedisService } from '../common/redis.service';
+import { VoucherService } from '../voucher/voucher.service';
 
 @Injectable()
 export class SubscriptionService implements OnModuleInit {
@@ -44,6 +45,8 @@ export class SubscriptionService implements OnModuleInit {
     private readonly redis: RedisService,
     private readonly config: ConfigService,
     private readonly creditService: CreditService,
+    @Inject(forwardRef(() => VoucherService))
+    private readonly voucherService: VoucherService,
     @Optional() @InjectStripeClient() private readonly stripeClient?: Stripe,
     @Optional()
     @InjectQueue(QUEUE_CHECK_CANCELED_SUBSCRIPTIONS)
@@ -162,7 +165,7 @@ export class SubscriptionService implements OnModuleInit {
 
   async createCheckoutSession(user: User, param: CreateCheckoutSessionRequest) {
     const { uid } = user;
-    const { planType, interval } = param;
+    const { planType, interval, voucherId } = param;
     const userPo = await this.prisma.user.findUnique({ where: { uid } });
 
     const plan = await this.prisma.subscriptionPlan.findFirst({
@@ -179,6 +182,40 @@ export class SubscriptionService implements OnModuleInit {
     });
     if (prices.data.length === 0) {
       throw new ParamsError(`No prices found for lookup key: ${lookupKey}`);
+    }
+
+    // Validate and get voucher discount if provided
+    let stripeCouponId: string | undefined;
+    let validatedVoucherId: string | undefined;
+    if (voucherId) {
+      const voucherValidation = await this.voucherService.validateVoucher(uid, voucherId);
+      if (voucherValidation.valid && voucherValidation.voucher) {
+        // Create a one-time Stripe coupon for this voucher
+        const discountPercent = voucherValidation.voucher.discountPercent;
+        try {
+          const coupon = await this.stripeClient.coupons.create({
+            percent_off: discountPercent,
+            duration: 'once', // Apply only to first payment
+            name: `Refly Voucher ${discountPercent}% Off`,
+            metadata: {
+              voucherId: voucherId,
+              uid: uid,
+            },
+          });
+          stripeCouponId = coupon.id;
+          validatedVoucherId = voucherId;
+          this.logger.log(
+            `Created Stripe coupon ${coupon.id} for voucher ${voucherId} (${discountPercent}% off)`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to create Stripe coupon for voucher ${voucherId}: ${error.message}`,
+          );
+          // Continue without discount if coupon creation fails
+        }
+      } else {
+        this.logger.warn(`Voucher ${voucherId} validation failed: ${voucherValidation.reason}`);
+      }
     }
 
     // Try to find or create customer
@@ -204,7 +241,7 @@ export class SubscriptionService implements OnModuleInit {
     }
 
     const price = prices.data[0];
-    const session = await this.stripeClient.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
       line_items: [{ price: price.id, quantity: 1 }],
       success_url: this.config.get('stripe.sessionSuccessUrl'),
@@ -212,11 +249,20 @@ export class SubscriptionService implements OnModuleInit {
       client_reference_id: uid,
       customer: customerId || undefined,
       customer_email: !customerId ? userPo?.email : undefined,
-      allow_promotion_codes: true,
       consent_collection: {
         terms_of_service: 'required',
       },
-    });
+      metadata: validatedVoucherId ? { voucherId: validatedVoucherId } : undefined,
+    };
+
+    // Apply voucher discount or allow promotion codes (not both)
+    if (stripeCouponId) {
+      sessionParams.discounts = [{ coupon: stripeCouponId }];
+    } else {
+      sessionParams.allow_promotion_codes = true;
+    }
+
+    const session = await this.stripeClient.checkout.sessions.create(sessionParams);
 
     await this.prisma.$transaction([
       this.prisma.checkoutSession.create({
@@ -224,6 +270,7 @@ export class SubscriptionService implements OnModuleInit {
           uid,
           sessionId: session.id,
           lookupKey,
+          // Note: voucherId is stored in Stripe session metadata, not in DB
         },
       }),
       // Only update if customer ID changed

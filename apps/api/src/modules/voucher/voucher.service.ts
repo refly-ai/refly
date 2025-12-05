@@ -1,0 +1,523 @@
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { User } from '@refly/openapi-schema';
+import { PrismaService } from '../common/prisma.service';
+import { TemplateScoringService } from './template-scoring.service';
+import { CreditService } from '../credit/credit.service';
+import { genVoucherID, genVoucherInvitationID, genInviteCode, getYYYYMMDD } from '@refly/utils';
+import {
+  VoucherDTO,
+  VoucherTriggerResult,
+  DailyTriggerCheckResult,
+  CreateVoucherInput,
+  VoucherAvailableResult,
+  VoucherValidateResult,
+  UseVoucherInput,
+  VoucherInvitationDTO,
+  CreateInvitationResult,
+  ClaimInvitationInput,
+  ClaimInvitationResult,
+} from './voucher.dto';
+import {
+  DAILY_POPUP_TRIGGER_LIMIT,
+  VOUCHER_EXPIRATION_DAYS,
+  VoucherStatus,
+  VoucherSource,
+  InvitationStatus,
+  INVITER_REWARD_CREDITS,
+  AnalyticsEvents,
+} from './voucher.constants';
+import { ConfigService } from '@nestjs/config';
+
+@Injectable()
+export class VoucherService {
+  private readonly logger = new Logger(VoucherService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly templateScoringService: TemplateScoringService,
+    private readonly configService: ConfigService,
+    @Inject(forwardRef(() => CreditService))
+    private readonly creditService: CreditService,
+  ) {}
+
+  /**
+   * Handle template publish event - main entry point
+   * Checks daily limit, scores template, generates voucher
+   *
+   * @param user - User publishing the template
+   * @param canvasId - Canvas ID being published
+   * @param templateId - Generated template/app ID
+   * @returns VoucherTriggerResult or null if limit reached
+   */
+  async handleTemplatePublish(
+    user: User,
+    canvasId: string,
+    templateId: string,
+  ): Promise<VoucherTriggerResult | null> {
+    try {
+      this.logger.log(`Handling template publish for user ${user.uid}, canvas ${canvasId}`);
+
+      // 1. Check daily trigger limit
+      const { canTrigger, currentCount } = await this.checkDailyTriggerLimit(user.uid);
+
+      if (!canTrigger) {
+        this.logger.log(
+          `Daily trigger limit reached for user ${user.uid}: ${currentCount}/${DAILY_POPUP_TRIGGER_LIMIT}`,
+        );
+
+        // Track analytics event
+        this.trackEvent(AnalyticsEvents.DAILY_PUBLISH_TRIGGER_LIMIT_REACHED, {
+          uid: user.uid,
+          currentCount,
+          limit: DAILY_POPUP_TRIGGER_LIMIT,
+        });
+
+        return null;
+      }
+
+      // 2. Score the template using canvas ID
+      const scoringResult = await this.templateScoringService.scoreTemplateByCanvasId(
+        user,
+        canvasId,
+      );
+
+      // 3. Calculate discount percentage from score
+      const discountPercent = this.templateScoringService.scoreToDiscountPercent(
+        scoringResult.score,
+      );
+
+      // 4. Generate voucher
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + VOUCHER_EXPIRATION_DAYS);
+
+      const voucher = await this.createVoucher({
+        uid: user.uid,
+        discountPercent,
+        llmScore: scoringResult.score,
+        source: VoucherSource.TEMPLATE_PUBLISH,
+        sourceId: templateId,
+        expiresAt,
+      });
+
+      // 5. Record popup trigger
+      await this.recordPopupTrigger(user.uid, templateId, voucher.voucherId);
+
+      // 6. Track analytics event
+      this.trackEvent(AnalyticsEvents.VOUCHER_POPUP_DISPLAY, {
+        uid: user.uid,
+        voucherId: voucher.voucherId,
+        discountPercent,
+        llmScore: scoringResult.score,
+      });
+
+      this.logger.log(
+        `Voucher generated for user ${user.uid}: ${voucher.voucherId} (${discountPercent}% off)`,
+      );
+
+      return {
+        voucher,
+        score: scoringResult.score,
+        feedback: scoringResult.feedback,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to handle template publish for user ${user.uid}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if user can trigger popup today
+   */
+  async checkDailyTriggerLimit(uid: string): Promise<DailyTriggerCheckResult> {
+    const today = getYYYYMMDD(new Date());
+
+    const count = await this.prisma.voucherPopupLog.count({
+      where: {
+        uid,
+        popupDate: today,
+      },
+    });
+
+    return {
+      canTrigger: count < DAILY_POPUP_TRIGGER_LIMIT,
+      currentCount: count,
+      limit: DAILY_POPUP_TRIGGER_LIMIT,
+    };
+  }
+
+  /**
+   * Record a popup trigger event
+   */
+  async recordPopupTrigger(uid: string, templateId: string, voucherId?: string): Promise<void> {
+    const today = getYYYYMMDD(new Date());
+
+    await this.prisma.voucherPopupLog.create({
+      data: {
+        uid,
+        templateId,
+        popupDate: today,
+        voucherId,
+        createdAt: new Date(),
+      },
+    });
+  }
+
+  /**
+   * Create a new voucher
+   */
+  async createVoucher(input: CreateVoucherInput): Promise<VoucherDTO> {
+    const voucherId = genVoucherID();
+    const now = new Date();
+
+    const voucher = await this.prisma.voucher.create({
+      data: {
+        voucherId,
+        uid: input.uid,
+        discountPercent: input.discountPercent,
+        status: VoucherStatus.UNUSED,
+        source: input.source,
+        sourceId: input.sourceId,
+        llmScore: input.llmScore,
+        expiresAt: input.expiresAt,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+
+    return this.toVoucherDTO(voucher);
+  }
+
+  /**
+   * Get user's available (unused, not expired) vouchers
+   */
+  async getAvailableVouchers(uid: string): Promise<VoucherAvailableResult> {
+    const now = new Date();
+
+    const vouchers = await this.prisma.voucher.findMany({
+      where: {
+        uid,
+        status: VoucherStatus.UNUSED,
+        expiresAt: {
+          gt: now,
+        },
+      },
+      orderBy: {
+        discountPercent: 'desc', // Best voucher first
+      },
+    });
+
+    const voucherDTOs = vouchers.map((v) => this.toVoucherDTO(v));
+
+    return {
+      hasAvailableVoucher: voucherDTOs.length > 0,
+      vouchers: voucherDTOs,
+      bestVoucher: voucherDTOs[0] || undefined,
+    };
+  }
+
+  /**
+   * Get all vouchers for a user (including used/expired)
+   */
+  async getUserVouchers(uid: string): Promise<VoucherDTO[]> {
+    const vouchers = await this.prisma.voucher.findMany({
+      where: { uid },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return vouchers.map((v) => this.toVoucherDTO(v));
+  }
+
+  /**
+   * Validate a voucher for use
+   */
+  async validateVoucher(uid: string, voucherId: string): Promise<VoucherValidateResult> {
+    const voucher = await this.prisma.voucher.findFirst({
+      where: {
+        voucherId,
+        uid,
+      },
+    });
+
+    if (!voucher) {
+      return { valid: false, reason: 'Voucher not found' };
+    }
+
+    if (voucher.status !== VoucherStatus.UNUSED) {
+      return {
+        valid: false,
+        voucher: this.toVoucherDTO(voucher),
+        reason: `Voucher has already been ${voucher.status}`,
+      };
+    }
+
+    if (voucher.expiresAt < new Date()) {
+      // Mark as expired
+      await this.prisma.voucher.update({
+        where: { pk: voucher.pk },
+        data: { status: VoucherStatus.EXPIRED, updatedAt: new Date() },
+      });
+
+      return {
+        valid: false,
+        voucher: this.toVoucherDTO({ ...voucher, status: VoucherStatus.EXPIRED }),
+        reason: 'Voucher has expired',
+      };
+    }
+
+    return {
+      valid: true,
+      voucher: this.toVoucherDTO(voucher),
+    };
+  }
+
+  /**
+   * Mark a voucher as used
+   */
+  async useVoucher(input: UseVoucherInput): Promise<VoucherDTO | null> {
+    const voucher = await this.prisma.voucher.findFirst({
+      where: {
+        voucherId: input.voucherId,
+        status: VoucherStatus.UNUSED,
+      },
+    });
+
+    if (!voucher) {
+      this.logger.warn(`Voucher not found or already used: ${input.voucherId}`);
+      return null;
+    }
+
+    const updatedVoucher = await this.prisma.voucher.update({
+      where: { pk: voucher.pk },
+      data: {
+        status: VoucherStatus.USED,
+        usedAt: new Date(),
+        subscriptionId: input.subscriptionId,
+        updatedAt: new Date(),
+      },
+    });
+
+    this.logger.log(`Voucher used: ${input.voucherId}`);
+
+    return this.toVoucherDTO(updatedVoucher);
+  }
+
+  /**
+   * Create a sharing invitation for a voucher
+   */
+  async createInvitation(uid: string, voucherId: string): Promise<CreateInvitationResult> {
+    // Get the voucher
+    const voucher = await this.prisma.voucher.findFirst({
+      where: { voucherId, uid },
+    });
+
+    if (!voucher) {
+      throw new Error('Voucher not found');
+    }
+
+    const invitationId = genVoucherInvitationID();
+    const inviteCode = genInviteCode();
+
+    const invitation = await this.prisma.voucherInvitation.create({
+      data: {
+        invitationId,
+        inviterUid: uid,
+        inviteCode,
+        voucherId,
+        discountPercent: voucher.discountPercent,
+        status: InvitationStatus.UNCLAIMED,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Build share URL
+    const origin = this.configService.get<string>('origin')?.split(',')[0] || '';
+    const shareUrl = `${origin}/invite/${inviteCode}`;
+
+    this.logger.log(`Invitation created: ${invitationId} with code ${inviteCode}`);
+
+    return {
+      invitation: this.toInvitationDTO(invitation),
+      shareUrl,
+      // qrCodeUrl will be generated by frontend or a separate service
+    };
+  }
+
+  /**
+   * Verify an invitation code
+   */
+  async verifyInvitation(inviteCode: string): Promise<VoucherInvitationDTO | null> {
+    const invitation = await this.prisma.voucherInvitation.findFirst({
+      where: {
+        inviteCode,
+        status: InvitationStatus.UNCLAIMED,
+      },
+    });
+
+    if (!invitation) {
+      return null;
+    }
+
+    return this.toInvitationDTO(invitation);
+  }
+
+  /**
+   * Claim an invitation - creates a voucher for the invitee
+   */
+  async claimInvitation(input: ClaimInvitationInput): Promise<ClaimInvitationResult> {
+    const { inviteCode, inviteeUid } = input;
+
+    // Find the invitation
+    const invitation = await this.prisma.voucherInvitation.findFirst({
+      where: {
+        inviteCode,
+        status: InvitationStatus.UNCLAIMED,
+      },
+    });
+
+    if (!invitation) {
+      return {
+        success: false,
+        message: 'Invalid or already claimed invitation',
+      };
+    }
+
+    // Check if invitee is not the inviter
+    if (invitation.inviterUid === inviteeUid) {
+      return {
+        success: false,
+        message: 'Cannot claim your own invitation',
+      };
+    }
+
+    // Create voucher for invitee
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + VOUCHER_EXPIRATION_DAYS);
+
+    const voucher = await this.createVoucher({
+      uid: inviteeUid,
+      discountPercent: invitation.discountPercent,
+      source: VoucherSource.INVITATION_CLAIM,
+      sourceId: invitation.invitationId,
+      expiresAt,
+    });
+
+    // Update invitation status
+    await this.prisma.voucherInvitation.update({
+      where: { pk: invitation.pk },
+      data: {
+        status: InvitationStatus.CLAIMED,
+        inviteeUid,
+        claimedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Grant reward to inviter (2000 credits) - idempotent
+    await this.grantInviterReward(invitation.inviterUid, invitation.invitationId);
+
+    // Track analytics
+    this.trackEvent(AnalyticsEvents.VOUCHER_CLAIM, {
+      inviteeUid,
+      inviterUid: invitation.inviterUid,
+      inviteCode,
+      discountPercent: invitation.discountPercent,
+    });
+
+    this.logger.log(
+      `Invitation claimed: ${inviteCode} by ${inviteeUid}, inviter: ${invitation.inviterUid}`,
+    );
+
+    return {
+      success: true,
+      voucher,
+    };
+  }
+
+  /**
+   * Grant reward credits to inviter (idempotent)
+   */
+  private async grantInviterReward(inviterUid: string, invitationId: string): Promise<void> {
+    // Check if reward already granted
+    const invitation = await this.prisma.voucherInvitation.findFirst({
+      where: { invitationId },
+    });
+
+    if (!invitation || invitation.rewardGranted) {
+      this.logger.log(`Reward already granted for invitation ${invitationId}`);
+      return;
+    }
+
+    // Mark reward as granted first (idempotent)
+    await this.prisma.voucherInvitation.update({
+      where: { pk: invitation.pk },
+      data: {
+        rewardGranted: true,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Grant credits via CreditService
+    try {
+      await this.creditService.createVoucherInviterRewardRecharge(
+        inviterUid,
+        invitationId,
+        INVITER_REWARD_CREDITS,
+      );
+      this.logger.log(
+        `Inviter reward ${INVITER_REWARD_CREDITS} credits granted to ${inviterUid} for invitation ${invitationId}`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to grant inviter reward for ${inviterUid}: ${error.message}`);
+      // Note: rewardGranted is already true, so this won't retry on failure
+      // This is intentional to prevent double-crediting
+    }
+  }
+
+  /**
+   * Convert Prisma voucher to DTO
+   */
+  private toVoucherDTO(voucher: any): VoucherDTO {
+    return {
+      voucherId: voucher.voucherId,
+      uid: voucher.uid,
+      discountPercent: voucher.discountPercent,
+      status: voucher.status,
+      source: voucher.source,
+      sourceId: voucher.sourceId,
+      llmScore: voucher.llmScore,
+      expiresAt: voucher.expiresAt.toISOString(),
+      usedAt: voucher.usedAt?.toISOString(),
+      subscriptionId: voucher.subscriptionId,
+      createdAt: voucher.createdAt.toISOString(),
+      updatedAt: voucher.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Convert Prisma invitation to DTO
+   */
+  private toInvitationDTO(invitation: any): VoucherInvitationDTO {
+    return {
+      invitationId: invitation.invitationId,
+      inviterUid: invitation.inviterUid,
+      inviteeUid: invitation.inviteeUid,
+      inviteCode: invitation.inviteCode,
+      voucherId: invitation.voucherId,
+      discountPercent: invitation.discountPercent,
+      status: invitation.status,
+      claimedAt: invitation.claimedAt?.toISOString(),
+      rewardGranted: invitation.rewardGranted,
+      createdAt: invitation.createdAt.toISOString(),
+      updatedAt: invitation.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * Track analytics event (placeholder - integrate with actual analytics service)
+   */
+  private trackEvent(eventName: string, properties: Record<string, any>): void {
+    this.logger.debug(`Analytics event: ${eventName}`, properties);
+    // TODO: Integrate with actual analytics service (e.g., Mixpanel, Amplitude)
+  }
+}

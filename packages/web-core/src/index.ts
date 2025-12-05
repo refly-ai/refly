@@ -27,6 +27,7 @@ export const AppManager = lazy(() => import('./pages/app-manager'));
 export const MarketplacePage = lazy(() => import('./pages/marketplace'));
 export const WorkflowPage = lazy(() => import('./pages/workflow'));
 export const WorkspacePage = lazy(() => import('./pages/workspace'));
+export const VoucherInvitePage = lazy(() => import('./pages/voucher-invite'));
 
 export { AppLayout } from './components/layout';
 
