@@ -538,7 +538,7 @@ export const Subscription = () => {
                         {regularCredits?.toLocaleString()}
                       </div>
                     </div>
-                    <img src={RegularIcon} alt="Regular" className="w-[76px] h-[76px]" />
+                    <img src={RegularIcon} alt="Regular" className="w-[76px] h-[76px] mt-2" />
                   </div>
 
                   <div className="usage-card template-earnings-card flex items-center justify-between">
@@ -563,7 +563,7 @@ export const Subscription = () => {
                         </div>
                       </div>
                     </div>
-                    <img src={CommissionIcon} alt="Commission" className="w-[76px] h-[76px]" />
+                    <img src={CommissionIcon} alt="Commission" className="w-[76px] h-[76px] mt-2" />
                   </div>
                 </div>
               </div>
