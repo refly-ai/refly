@@ -6,10 +6,10 @@ import { ConfigService } from '@nestjs/config';
 import type {
   ComposioConnectedAccount,
   ComposioConnectionStatus,
-  ComposioToolSchema,
   GenericToolset,
   ToolCreationContext,
   User,
+  HandlerRequest,
 } from '@refly/openapi-schema';
 import { COMPOSIO_CONNECTION_STATUS } from '../constant/constant';
 import { genToolsetID } from '@refly/utils';
@@ -20,6 +20,8 @@ import { ToolInventoryService } from '../inventory/inventory.service';
 import { getCurrentUser, runInContext } from '../tool-context';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { SkillRunnableConfig } from '@refly/skill-template';
+import { enhanceToolSchema } from '../utils/schema-utils';
+import { ResourceHandler } from '../resource.service';
 
 @Injectable()
 export class ComposioService {
@@ -33,6 +35,7 @@ export class ComposioService {
     private readonly redis: RedisService,
     private readonly postHandlerService: PostHandlerService,
     private readonly inventoryService: ToolInventoryService,
+    private readonly resourceHandler: ResourceHandler,
   ) {
     const apiKey = this.config.get<string>('composio.apiKey');
     if (!apiKey) {
@@ -583,9 +586,10 @@ export class ComposioService {
     const fn = tool.function;
     const toolName = fn?.name ?? 'unknown_tool';
 
-    // Add file_name_title field to schema for naming generated files
-    const schemaWithTitle = this.addFileNameTitleToSchema(fn?.parameters ?? {});
-    const toolSchema: any = JSONSchemaToZod.convert(schemaWithTitle);
+    // Enhance schema: mark URL fields as resources, add file_name_title field, and guide LLM
+    const enhancedSchema = enhanceToolSchema((fn?.parameters ?? {}) as any);
+    // Convert to Zod schema (enhanced descriptions will be preserved)
+    const toolSchema: any = JSONSchemaToZod.convert(enhancedSchema);
 
     return new DynamicStructuredTool({
       name: toolName,
@@ -593,7 +597,11 @@ export class ComposioService {
         fn?.description ??
         `${context.authType === 'oauth' ? 'OAuth' : 'API Key'} tool: ${toolName}`,
       schema: toolSchema,
-      func: async (input: unknown, _runManager: unknown, runnableConfig: RunnableConfig) => {
+      func: async (
+        input: Record<string, unknown>,
+        _runManager: unknown,
+        runnableConfig: RunnableConfig,
+      ) => {
         try {
           const inputRecord = input as Record<string, unknown>;
 
@@ -609,13 +617,19 @@ export class ComposioService {
             async () => {
               // Capture user inside context before it's gone
               const currentUser = getCurrentUser();
+              // Convert fileIds to URLs using ResourceHandler
+              const processedRequest = await this.resourceHandler.resolveInputResources(
+                { params: toolInput } as HandlerRequest,
+                enhancedSchema,
+              );
+
               // For OAuth tools, use current user's uid; for API Key tools, use 'refly_global'
               const userId = context.authType === 'oauth' ? currentUser?.uid : 'refly_global';
               const executionResult = await this.executeTool(
                 userId,
                 context.connectedAccountId,
                 toolName,
-                toolInput,
+                processedRequest.params,
               );
               return { result: executionResult, user: currentUser };
             },
@@ -653,39 +667,5 @@ export class ComposioService {
         toolsetName: context.toolsetName,
       },
     });
-  }
-
-  /**
-   * Add file_name_title field to schema for naming generated files
-   * @param schema - Original JSON schema from Composio tool
-   * @returns Schema with file_name_title field added
-   */
-  private addFileNameTitleToSchema(schema: ComposioToolSchema): ComposioToolSchema {
-    // Clone schema to avoid mutation
-    const newSchema: ComposioToolSchema = JSON.parse(JSON.stringify(schema));
-
-    // Ensure properties object exists
-    if (!newSchema.properties) {
-      newSchema.properties = {};
-    }
-
-    // Add file_name_title field if it doesn't already exist
-    if (!newSchema.properties.file_name_title) {
-      newSchema.properties.file_name_title = {
-        type: 'string',
-        description:
-          'The title for the generated file. Should be concise and descriptive. This will be used as the filename.',
-      };
-
-      // Add file_name_title to required fields so AI will always generate it
-      if (!newSchema.required) {
-        newSchema.required = [];
-      }
-      if (!newSchema.required.includes('file_name_title')) {
-        newSchema.required.push('file_name_title');
-      }
-    }
-
-    return newSchema;
   }
 }
