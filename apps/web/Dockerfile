@@ -11,17 +11,30 @@ COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
 WORKDIR /usr/share/nginx/html
 COPY apps/web/dist .
 
-# Create config.js template
-RUN echo 'window.ENV = { \
-  API_URL: "$API_URL", \
-  COLLAB_URL: "$COLLAB_URL", \
-  SUBSCRIPTION_ENABLED: "$SUBSCRIPTION_ENABLED" \
-};' > /usr/share/nginx/html/config.template.js
+# Create config.js template (will be processed by envsubst at container startup)
+RUN cat << 'EOF' > /usr/share/nginx/html/config.template.js
+window.ENV = {
+  API_URL: "$API_URL" || undefined,
+  COLLAB_URL: "$COLLAB_URL" || undefined,
+  STATIC_PUBLIC_ENDPOINT: "$STATIC_PUBLIC_ENDPOINT" || undefined,
+  STATIC_PRIVATE_ENDPOINT: "$STATIC_PRIVATE_ENDPOINT" || undefined,
+  SUBSCRIPTION_ENABLED: "$SUBSCRIPTION_ENABLED" === "true",
+  CANVAS_TEMPLATE_ENABLED: "$CANVAS_TEMPLATE_ENABLED" === "true",
+  SENTRY_ENABLED: "$SENTRY_ENABLED" === "true",
+  ENV_TAG: "$ENV_TAG" || undefined,
+};
+EOF
 
 # Create entrypoint script
-RUN printf '#!/bin/bash\n\
-envsubst < /usr/share/nginx/html/config.template.js > /usr/share/nginx/html/config.js\n\
-exec nginx -g "daemon off;"\n' > /docker-entrypoint.sh
+RUN cat << 'EOF' > /docker-entrypoint.sh
+#!/bin/bash
+set -e
+
+# Generate runtime config.js from template
+envsubst < /usr/share/nginx/html/config.template.js > /usr/share/nginx/html/config.js
+
+exec nginx -g "daemon off;"
+EOF
 
 RUN chmod +x /docker-entrypoint.sh
 
