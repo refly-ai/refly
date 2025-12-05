@@ -73,6 +73,10 @@ export const useWorkflowExecutionPolling = ({
     }),
   );
 
+  const { setCreditInsufficientModalVisible } = useSubscriptionStoreShallow((state) => ({
+    setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
+  }));
+
   // Prefer store executionId; fallback to provided one
   const currentExecutionId = (storeExecutionId ?? executionId) || null;
 
@@ -192,6 +196,7 @@ export const useWorkflowExecutionPolling = ({
         if (nodeExecution.errorMessage) {
           const error = guessModelProviderError(nodeExecution.errorMessage);
           if (error instanceof ModelUsageQuotaExceeded) {
+            setCreditInsufficientModalVisible(true, undefined, 'template');
           }
         }
       }
