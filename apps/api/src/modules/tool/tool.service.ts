@@ -74,6 +74,15 @@ export class ToolService {
     });
   }
 
+  private isDeprecatedToolset(key?: string): boolean {
+    return key === 'web_search';
+  }
+
+  private shouldExposeToolset(key?: string): boolean {
+    if (!key) return true;
+    return !this.isDeprecatedToolset(key);
+  }
+
   async getToolsetInventory(): Promise<
     Record<
       string,
@@ -105,7 +114,9 @@ export class ToolService {
       builtin: true,
     }));
     const definitions = await this.inventoryService.getInventoryDefinitions();
-    return [...builtinInventory, ...definitions].sort((a, b) => a.key.localeCompare(b.key));
+    return [...builtinInventory, ...definitions]
+      .filter((definition) => this.shouldExposeToolset(definition.key))
+      .sort((a, b) => a.key.localeCompare(b.key));
   }
 
   async listToolsetInventory(): Promise<ToolsetDefinition[]> {
@@ -128,7 +139,7 @@ export class ToolService {
     // external_oauth type tools have requiresAuth=true and authPatterns with type='oauth'
     const allDefinitions = await this.inventoryService.getInventoryDefinitions();
     const unauthorizedTools = allDefinitions.filter(
-      (def) => def.requiresAuth && !installedKeys.has(def.key),
+      (def) => this.shouldExposeToolset(def.key) && def.requiresAuth && !installedKeys.has(def.key),
     );
 
     // 4. Build result: authorized tools first, then unauthorized
@@ -157,7 +168,12 @@ export class ToolService {
 
   listBuiltinTools(): GenericToolset[] {
     return Object.values(builtinToolsetInventory)
-      .filter((toolset) => Boolean(toolset.definition) && !toolset.definition.internal)
+      .filter(
+        (toolset) =>
+          Boolean(toolset.definition) &&
+          !toolset.definition.internal &&
+          this.shouldExposeToolset(toolset.definition.key),
+      )
       .map((toolset) => ({
         type: ToolsetType.REGULAR,
         id: toolset.definition.key,
@@ -209,7 +225,7 @@ export class ToolService {
       },
     });
     const inventoryMap = await this.inventoryService.getInventoryMap();
-    return oauthToolsets.map((toolset) => toolsetPo2GenericToolset(toolset, inventoryMap));
+    return oauthToolsets.map((toolset) => toolsetPo2GenericOAuthToolset(toolset, inventoryMap));
   }
 
   /**
@@ -237,7 +253,9 @@ export class ToolService {
       where: whereCondition,
     });
     const inventoryMap = await this.inventoryService.getInventoryMap();
-    return toolsets.map((toolset) => toolsetPo2GenericToolset(toolset, inventoryMap));
+    return toolsets
+      .filter((toolset) => this.shouldExposeToolset(toolset.key))
+      .map((toolset) => toolsetPo2GenericToolset(toolset, inventoryMap));
   }
 
   async listMcpTools(user: User, param?: ListToolsData['query']): Promise<GenericToolset[]> {
@@ -1118,12 +1136,13 @@ export class ToolService {
               name: `${toolset.definition.key}_${tool.name}`,
               description: tool.description,
               schema: tool.schema,
-              func: async (input, runManager, config: SkillRunnableConfig) => {
+              func: async (input, runManager, config) => {
                 const result = await tool.invoke(input);
                 const isGlobal = t?.isGlobal ?? false;
                 const creditCost = (result as any)?.creditCost ?? 0;
-                const resultId = config.configurable.resultId;
-                const version = config.configurable.version;
+                const skillConfig = config as SkillRunnableConfig;
+                const resultId = skillConfig?.configurable?.resultId;
+                const version = skillConfig?.configurable?.version;
                 if (isGlobal && result?.status !== 'error' && creditCost > 0) {
                   const jobData: SyncToolCreditUsageJobData = {
                     uid: user.uid,
