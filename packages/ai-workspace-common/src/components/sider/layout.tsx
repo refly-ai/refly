@@ -30,14 +30,14 @@ import {
 } from 'refly-icons';
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
+import GiftPromotionIcon from '@refly-packages/ai-workspace-common/assets/community.svg';
 import { useKnowledgeBaseStoreShallow, useUserStoreShallow } from '@refly/stores';
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
 import { SiderLoggedOut } from './sider-logged-out';
 
 import './layout.scss';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
-import { RightOutlined } from '@ant-design/icons';
-
+import { RightOutlined, ArrowRightOutlined } from '@ant-design/icons';
 const Sider = Layout.Sider;
 
 // Reusable section header component
@@ -152,6 +152,78 @@ export const SiderLogo = (props: {
     </div>
   );
 };
+
+export const PromotionItem = React.memo(
+  ({
+    collapsed = false,
+    promotionUrl,
+  }: {
+    collapsed?: boolean;
+    promotionUrl: string;
+  }) => {
+    const { t } = useTranslation();
+
+    const handleClick = useCallback(() => {
+      window.open(promotionUrl, '_blank', 'noopener,noreferrer');
+    }, [promotionUrl]);
+
+    if (collapsed) {
+      return null;
+    }
+
+    return (
+      <div
+        className={cn(
+          'w-full flex flex-col cursor-pointer rounded-[16px] bg-gradient-to-b from-[#9810FA] to-[#FFFFFF] p-3 transition-all duration-500 shadow-lg',
+        )}
+        onClick={handleClick}
+        data-cy="promotion-menu-item"
+      >
+        {/* Header with gift icon and title */}
+        <div className="flex items-start gap-1">
+          <div className="flex-shrink-0">
+            <img src={GiftPromotionIcon} className="w-12 h-15" />
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-baseline gap-0.5 flex-wrap">
+              <span className="text-xs font-bold text-white">{t('common.promotion.title')}</span>
+              <span className="text-[19px] font-extrabold text-[#FFE066]">
+                {t('common.promotion.discount')}
+              </span>
+              <span className="text-sm font-bold text-white">
+                {t('common.promotion.titleSuffix')}
+              </span>
+            </div>
+            <span className="text-xs font-semibold text-white/90">
+              {t('common.promotion.subtitle')}
+            </span>
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="text-xs text-white/80 mb-2 leading-relaxed">
+          {t('common.promotion.description')}
+        </p>
+
+        {/* Tags */}
+        <div className="flex gap-2 mb-3">
+          <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-medium text-white">
+            {t('common.promotion.tag1')}
+          </span>
+          <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-medium text-white">
+            {t('common.promotion.tag2')}
+          </span>
+        </div>
+
+        {/* CTA Button */}
+        <Button className="w-32 py-2.5 bg-white !text-[#9810FA] font-semibold text-sm flex items-center justify-center gap-1 hover:bg-white/90 transition-colors">
+          {t('common.promotion.button')}
+          <ArrowRightOutlined />
+        </Button>
+      </div>
+    );
+  },
+);
 
 export const InvitationItem = React.memo(
   ({
@@ -439,10 +511,20 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
             <Divider className="m-0 border-refly-Card-Border" />
           </div>
 
-          {!!userProfile?.uid &&
-            authConfig?.data?.some((item) => item.provider === 'invitation') && (
-              <InvitationItem collapsed={isCollapsed} onClick={handleInvitationClick} />
+          {/* Promotion entry - show above invitation */}
+          <div className="flex flex-col gap-2">
+            {!isCollapsed && (
+              <PromotionItem
+                collapsed={isCollapsed}
+                promotionUrl={`${window.location.origin}/activities`}
+              />
             )}
+
+            {!!userProfile?.uid &&
+              authConfig?.data?.some((item) => item.provider === 'invitation') && (
+                <InvitationItem collapsed={isCollapsed} onClick={handleInvitationClick} />
+              )}
+          </div>
 
           <div className="p-2 pr-0">
             {/* Contact in collapsed state - above Settings */}
