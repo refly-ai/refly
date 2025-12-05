@@ -154,6 +154,7 @@ function extractFileIdToTopLevel(response: HandlerResponse): HandlerResponse {
         extractedResources.files = objRecord.files
           .filter((file) => file && typeof file === 'object' && 'fileId' in file)
           .map((file) => ({
+            url: file.url,
             fileId: String(file.fileId),
             mimeType: 'mimeType' in file ? String(file.mimeType) : undefined,
             name: 'name' in file ? String(file.name) : undefined,

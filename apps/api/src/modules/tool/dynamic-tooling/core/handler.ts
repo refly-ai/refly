@@ -12,7 +12,7 @@ import {
   HandlerRequest,
   HandlerResponse,
 } from '@refly/openapi-schema';
-import { PreHandler, PostHandler } from '@refly/openapi-schema/src/handler-types';
+import { PreHandler, PostHandler } from './handler-types';
 import { HandlerError } from '../../constant/constant';
 import { IAdapter } from './adapter';
 import { createBasePostHandler } from './handler-post';
