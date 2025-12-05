@@ -40,9 +40,6 @@ jobs:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           VITE_RUNTIME: web
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -66,8 +63,7 @@ jobs:
         with:
           context: .
           file: ./apps/${{ matrix.app }}/Dockerfile
-          platforms: linux/amd64
           push: true
           tags: ${{ steps.docker_tags.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=reflyai/refly-${{ matrix.app }}:buildcache
+          cache-to: type=registry,ref=reflyai/refly-${{ matrix.app }}:buildcache,mode=max
