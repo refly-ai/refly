@@ -8,11 +8,8 @@ import {
 } from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
-import {
-  IconLightning01,
-  IconSubscription,
-} from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Checked } from 'refly-icons';
+import { IconSubscription } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { Checked, Subscription } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { SubscriptionPlanType } from '@refly/openapi-schema';
 
@@ -40,7 +37,7 @@ interface PriceOptionProps {
   onSelect: (id: string) => void;
 }
 
-const PriceOption = memo(({ type, isSelected, price, yearlyTotal, onSelect }: PriceOptionProps) => {
+const PriceOption = memo(({ type, isSelected, price, onSelect }: PriceOptionProps) => {
   const { t } = useTranslation('ui');
 
   const handleClick = useCallback(() => {
@@ -50,11 +47,11 @@ const PriceOption = memo(({ type, isSelected, price, yearlyTotal, onSelect }: Pr
   return (
     <div
       className={`
-        relative flex-1 p-3 rounded-lg cursor-pointer transition-all duration-200
+        relative flex-1 px-3 py-1 rounded-lg cursor-pointer transition-all duration-200
         ${
           isSelected
-            ? 'border-2 border-[#0E9F77] bg-white shadow-[0px_2px_8px_rgba(14,159,119,0.12)]'
-            : 'border-[1.5px] border-gray-200 bg-[#FAFAFA] hover:border-[#0E9F77]'
+            ? 'border-1 border-solid border-refly-text-0 bg-white shadow-[0px_2px_8px_rgba(14,159,119,0.12)]'
+            : 'border-1 border-solid border-refly-Card-Border bg-[#FAFAFA]'
         }
       `}
       onClick={handleClick}
@@ -65,7 +62,7 @@ const PriceOption = memo(({ type, isSelected, price, yearlyTotal, onSelect }: Pr
         </span>
         {type === 'yearly' && (
           <Tag
-            className="!m-0 !px-1.5 !py-0 !text-[10px] !font-medium !rounded !leading-4"
+            className="!m-0 !px-1.5 !py-0 !text-[10px] !font-medium !rounded-full !leading-4 !border-0"
             color="orange"
           >
             {t('subscription.save20')}
@@ -78,11 +75,8 @@ const PriceOption = memo(({ type, isSelected, price, yearlyTotal, onSelect }: Pr
         )}
       </div>
       <div className="flex items-baseline gap-1.5">
-        <span className="text-xl font-bold text-gray-900">${price}</span>
+        <span className="text-xl font-normal text-gray-900">${price}</span>
         <span className="text-xs text-gray-500">/month</span>
-        {type === 'yearly' && yearlyTotal && (
-          <span className="text-xs text-gray-500">${yearlyTotal}/year</span>
-        )}
       </div>
     </div>
   );
@@ -93,13 +87,19 @@ PriceOption.displayName = 'PriceOption';
 // Feature item component (compact version)
 interface FeatureItemProps {
   feature: Feature | string;
+  featureIndex?: number;
+  planType?: string;
 }
 
-const FeatureItem = memo(({ feature }: FeatureItemProps) => {
+const FeatureItem = memo(({ feature, planType, featureIndex }: FeatureItemProps) => {
   const featureObj = typeof feature === 'string' ? { name: feature } : feature;
   const parts = featureObj.name.split('\n');
   const name = parts[0];
   const description = parts.length > 1 ? parts.slice(1).join('\n') : null;
+
+  // For plus plan, make the 2nd and 3rd description green
+  const isGreenDescription =
+    planType === 'plus' && featureIndex !== undefined && (featureIndex === 1 || featureIndex === 2);
 
   // Handle pointFreeTools type with special display logic
   if (featureObj.type === 'pointFreeTools' && featureObj.items && featureObj.items.length > 0) {
@@ -136,9 +136,15 @@ const FeatureItem = memo(({ feature }: FeatureItemProps) => {
         <Checked size={14} color="#0E9F77" />
       </div>
       <div className="flex flex-col">
-        <span className="text-xs leading-4 text-gray-900 font-semibold">
+        <span className="text-xs leading-5 text-refly-text-0 font-semibold">
           {name}
-          {description && <span className="font-normal text-gray-500"> {description}</span>}
+          {description && (
+            <span
+              className={`font-semibold ${isGreenDescription ? 'text-green-600' : 'text-refly-text-0'}`}
+            >
+              : {description}
+            </span>
+          )}
         </span>
       </div>
     </div>
@@ -162,22 +168,22 @@ const CreditPackCard = memo(({ pack, isSelected, onSelect }: CreditPackCardProps
   return (
     <div
       className={`
-        relative flex items-center justify-between p-3 px-4 bg-white 
-        rounded-lg cursor-pointer transition-all duration-200 min-h-[72px]
+        relative flex items-center justify-between p-2 px-3 bg-white
+        rounded-lg cursor-pointer transition-all duration-200 min-h-[56px]
         ${
           isSelected
-            ? 'border-2 border-[#0E9F77] shadow-[0px_2px_8px_rgba(14,159,119,0.12)]'
-            : 'border-[1.5px] border-gray-200 hover:border-[#0E9F77]'
+            ? 'border-1 border-solid border-refly-text-0 shadow-[0px_2px_8px_rgba(14,159,119,0.12)]'
+            : 'border-1 border-solid border-refly-Card-Border'
         }
       `}
       onClick={handleClick}
     >
       <div className="flex items-baseline gap-1.5">
-        <span className="text-2xl font-bold text-gray-900 leading-none">{pack.price}</span>
+        <span className="text-xl font-normal text-gray-900 leading-none">{pack.price}</span>
         <span className="text-xs font-normal text-gray-500 leading-none">{pack.credits}</span>
       </div>
       {isSelected && (
-        <div className="absolute top-3 right-4 w-4 h-4 bg-[#0E9F77] rounded-full flex items-center justify-center">
+        <div className="absolute top-2 right-3 w-4 h-4 bg-[#0E9F77] rounded-full flex items-center justify-center">
           <Checked size={10} color="#fff" />
         </div>
       )}
@@ -231,6 +237,7 @@ const PlusPlanCard = memo(
 
     const currentPlan = userProfile?.subscription?.planType || 'free';
     const isCurrentPlan = currentPlan === 'plus';
+    const [isHovered, setIsHovered] = useState(false);
 
     const priceInfo = useMemo(
       () => ({
@@ -250,14 +257,20 @@ const PlusPlanCard = memo(
 
     return (
       <div
-        className="flex-1 p-5 box-border rounded-xl shadow-[0px_4px_16px_rgba(0,0,0,0.06)] flex flex-col"
+        className="flex-1 p-5 box-border rounded-xl border-1 border-solid border-refly-Card-Border shadow-[0px_4px_16px_rgba(0,0,0,0.06)] flex flex-col"
         style={{
-          background: 'linear-gradient(180deg,  #1FC99615, #45BEFF10), #ffffff',
+          background: isCurrentPlan
+            ? 'linear-gradient(180deg, rgba(14, 159, 119, 0.08) 0%, rgba(255, 255, 255, 0) 30%), #ffffff'
+            : isHovered
+              ? 'linear-gradient(180deg, #A4FFF6, #CFFFD3),  #ffffff'
+              : '#ffffff',
         }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         {/* Header */}
         <div className="flex items-center gap-2 mb-1">
-          <IconLightning01 size={18} className="text-[#0E9F77]" />
+          <Subscription size={18} className="text-[#0E9F77]" />
           <span className="text-base font-semibold text-gray-900">
             {t('subscription.plans.plus.title')}
           </span>
@@ -286,9 +299,9 @@ const PlusPlanCard = memo(
         </div>
 
         {/* Features */}
-        <div className="pt-4 border-t border-black/[0.06] flex flex-col gap-2.5 flex-1 overflow-y-auto">
+        <div className="border-t border-black/[0.06] flex flex-col gap-2.5 flex-1 overflow-y-auto">
           {features.map((feature, index) => (
-            <FeatureItem key={index} feature={feature} />
+            <FeatureItem key={index} feature={feature} planType="plus" featureIndex={index} />
           ))}
         </div>
       </div>
@@ -341,7 +354,7 @@ const CreditPacksCard = memo(
 
     return (
       <div
-        className="flex-1 p-5 box-border rounded-xl shadow-[0px_4px_16px_rgba(0,0,0,0.06)]"
+        className="flex-1 p-5 box-border border-1 border-solid border-refly-Card-Border rounded-xl shadow-[0px_4px_16px_rgba(0,0,0,0.06)]"
         style={{
           background: 'linear-gradient(180deg, #FEC04C25, rgba(255, 255, 255, 0) 80%), #ffffff',
         }}
@@ -364,7 +377,7 @@ const CreditPacksCard = memo(
         </Row>
 
         {/* Features list */}
-        <div className="pt-4 border-t border-black/[0.06] flex flex-col gap-5 max-h-[220px] overflow-y-auto">
+        <div className="border-t border-black/[0.06] flex flex-col gap-5 max-h-[220px] overflow-y-auto">
           {features.map((feature, index) => (
             <CreditPacksFeatureItem key={index} feature={feature} />
           ))}
