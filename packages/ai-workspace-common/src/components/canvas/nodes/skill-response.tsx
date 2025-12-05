@@ -32,6 +32,7 @@ import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspac
 import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
 import {
+  useGetCreditBalance,
   useGetCreditUsageByResultId,
   useGetPilotSessionDetail,
 } from '@refly-packages/ai-workspace-common/queries/queries';
@@ -54,6 +55,9 @@ import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/ca
 import { useConnection } from '@xyflow/react';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use-query-processor';
+import { useSkillError } from '@refly-packages/ai-workspace-common/hooks/use-skill-error';
+import { classifyExecutionError } from '@refly-packages/ai-workspace-common/utils/error-classification';
+import { useUserMembership } from '@refly-packages/ai-workspace-common/hooks/use-user-membership';
 
 const { Paragraph } = Typography;
 
@@ -66,14 +70,14 @@ const NodeStatusBar = memo(
     status,
     errorType,
     executionTime,
-    errors,
+    error,
     version,
   }: {
     resultId: string;
     status: string;
     errorType?: string;
     executionTime?: number;
-    errors?: string[];
+    error?: string;
     version?: number;
   }) => {
     // Query credit usage when skill is completed
@@ -91,10 +95,42 @@ const NodeStatusBar = memo(
     );
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState(false);
-
-    // Default to systemError if undefined
     const effectiveErrorType = errorType || 'systemError';
     const isUserAbort = effectiveErrorType === 'userAbort';
+
+    const { data: balanceData, isSuccess: isBalanceSuccess } = useGetCreditBalance();
+    const creditBalance = balanceData?.data?.creditBalance ?? 0;
+    const { displayName } = useUserMembership();
+
+    const { errCode } = useSkillError(error ?? '');
+    const isCreditInsufficient = errCode === 'E2002' && creditBalance <= 0 && isBalanceSuccess;
+
+    const failureType = isUserAbort
+      ? 'userAbort'
+      : isCreditInsufficient
+        ? 'creditInsufficient'
+        : classifyExecutionError(error, errCode);
+
+    const errorMessage = useMemo(() => {
+      if (failureType === 'creditInsufficient') {
+        return t('canvas.skillResponse.creditInsufficient.description', {
+          membershipLevel: displayName,
+        });
+      }
+
+      const typeMap = {
+        userAbort: 'userAbort',
+        modelCall: 'modelCallFailure',
+        toolCall: 'toolCallFailure',
+        multimodal: 'multimodalFailure',
+      };
+      return t(
+        `canvas.skillResponse.${typeMap[failureType as keyof typeof typeMap] ?? 'multimodalFailure'}.description`,
+        {
+          defaultValue: error,
+        },
+      );
+    }, [failureType, error, t, displayName]);
 
     const getStatusIcon = () => {
       switch (status) {
@@ -118,7 +154,7 @@ const NodeStatusBar = memo(
       return null;
     }
 
-    const hasErrors = status === 'failed' && errors && errors.length > 0;
+    const hasErrors = status === 'failed' && error;
 
     return (
       <div className="flex flex-col mt-2 w-full">
@@ -156,34 +192,15 @@ const NodeStatusBar = memo(
           </div>
           {hasErrors && isExpanded && (
             <div className="min-w-0 mt-[10px] mb-1">
-              {status === 'failed' && isUserAbort ? (
-                <Paragraph
-                  className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
-                  ellipsis={{
-                    rows: 8,
-                    tooltip: (
-                      <div className="max-h-[300px] overflow-y-auto">
-                        {t('canvas.skillResponse.userAbort.description')}
-                      </div>
-                    ),
-                  }}
-                >
-                  {t('canvas.skillResponse.userAbort.description')}
-                </Paragraph>
-              ) : (
-                errors?.map((error, index) => (
-                  <Paragraph
-                    key={index}
-                    className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
-                    ellipsis={{
-                      rows: 8,
-                      tooltip: <div className="max-h-[300px] overflow-y-auto">{error}</div>,
-                    }}
-                  >
-                    {error}
-                  </Paragraph>
-                ))
-              )}
+              <Paragraph
+                className="!m-0 !p-0 text-refly-func-danger-default text-xs leading-4"
+                ellipsis={{
+                  rows: 8,
+                  tooltip: <div className="max-h-[300px] overflow-y-auto">{errorMessage}</div>,
+                }}
+              >
+                {errorMessage}
+              </Paragraph>
             </div>
           )}
         </div>
@@ -774,7 +791,7 @@ export const SkillResponseNode = memo(
             status={status}
             errorType={errorType}
             executionTime={metadata?.executionTime}
-            errors={result?.errors}
+            error={result?.errors?.[0] ?? ''}
             version={version}
           />
         )}
