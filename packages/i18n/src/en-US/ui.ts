@@ -3766,10 +3766,9 @@ const translations = {
       availableCredits: 'Total Available Credits',
       availableCreditsDescription: 'All credits you can use to run workflows',
       regularCreditsDescription: 'Credits earned from purchases, bonuses, and system rewards',
-      templateEarningsCreditsDescription:
-        'Earnings credits obtained by sharing templates and works, can be used to redeem more AI features',
+      templateEarningsCreditsDescription: 'Credits earned from others running your templates',
       regularCredits: 'Regular Credits',
-      templateEarningsCredits: 'Earnings Credits',
+      templateEarningsCredits: 'Revenue Credits',
       remainingCredits: 'Credits',
       knowledgeBaseFiles: 'Knowledge Base Files',
       creditUsageDetails: 'Credit Usage Details',

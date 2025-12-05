@@ -411,7 +411,6 @@ export const FrontPage = memo(() => {
           <Button
             className="w-fit h-fit flex items-center gap-2  border-[1px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover transition-colors"
             onClick={handleViewKnowledgeBase}
-            loading={createCanvasLoading}
           >
             <Knowledge size={42} color="var(--refly-primary-default)" />
             <div className="flex flex-col gap-1 w-[184px]">
