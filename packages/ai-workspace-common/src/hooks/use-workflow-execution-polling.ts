@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGetWorkflowDetail } from '@refly-packages/ai-workspace-common/queries';
 import { WorkflowExecution, WorkflowExecutionStatus } from '@refly/openapi-schema';
-import { useCanvasStoreShallow } from '@refly/stores';
+import { useCanvasStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
 import { guessModelProviderError, ModelUsageQuotaExceeded } from '@refly/errors';
 
 // Global poller management per executionId to prevent concurrent polling across components
