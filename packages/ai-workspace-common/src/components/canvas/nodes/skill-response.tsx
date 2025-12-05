@@ -130,7 +130,7 @@ const NodeStatusBar = memo(
           defaultValue: error,
         },
       );
-    }, [failureType, error, t]);
+    }, [failureType, error, t, displayName]);
 
     const getStatusIcon = () => {
       switch (status) {
