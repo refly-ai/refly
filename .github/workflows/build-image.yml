@@ -38,6 +38,7 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           VITE_RUNTIME: web
 
       - name: Set up Docker Buildx
