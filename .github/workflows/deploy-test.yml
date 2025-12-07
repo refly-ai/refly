@@ -3,6 +3,10 @@ name: Deploy To Test Environment
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     name: Deploy
