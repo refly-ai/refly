@@ -543,21 +543,20 @@ export class ToolService {
     for (const selectedToolset of toolsets) {
       const { type, id, selectedTools, builtin } = selectedToolset;
 
-      if (type === ToolsetType.REGULAR) {
-        if (builtin) {
-          continue;
-        }
-        regularToolsetIds.push(id);
-        if (selectedTools?.length) {
-          toolsetToolMap.set(id, selectedTools);
-        }
-      } else if (type === ToolsetType.MCP) {
+      if (type === ToolsetType.MCP) {
         mcpServerNames.push(id);
         if (selectedTools?.length) {
           mcpToolMap.set(id, selectedTools);
         }
-      } else {
-        throw new ParamsError('Invalid toolset selection: missing type or required fields');
+        continue;
+      }
+      // Treat all non-MCP toolsets (regular, external OAuth, etc.) the same here
+      if (builtin) {
+        continue;
+      }
+      regularToolsetIds.push(id);
+      if (selectedTools?.length) {
+        toolsetToolMap.set(id, selectedTools);
       }
     }
 
