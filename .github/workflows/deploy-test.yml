@@ -44,20 +44,36 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          username: reflyai
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
+          role-session-name: gha-refly-test-deploy
 
       - name: Set Docker tags
         id: docker_tags
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
-          TAGS="reflyai/refly-${{ matrix.app }}:${{ github.sha }}"
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          REPOSITORY="${REGISTRY}/refly-${{ matrix.app }}"
+          IMAGE_TAG="${{ github.sha }}"
+          TAGS="${REPOSITORY}:${IMAGE_TAG}"
           if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "stable" ]]; then
-            TAGS="$TAGS,reflyai/refly-${{ matrix.app }}:nightly"
+            TAGS="${TAGS},${REPOSITORY}:nightly"
           fi
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "registry=$REGISTRY" >> "$GITHUB_OUTPUT"
+          echo "repository=$REPOSITORY" >> "$GITHUB_OUTPUT"
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "deploy_image=${REPOSITORY}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Amazon ECR
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "${{ steps.docker_tags.outputs.registry }}"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -66,25 +82,19 @@ jobs:
           file: ./apps/${{ matrix.app }}/Dockerfile
           push: true
           tags: ${{ steps.docker_tags.outputs.tags }}
-          cache-from: type=registry,ref=reflyai/refly-${{ matrix.app }}:buildcache
-          cache-to: type=registry,ref=reflyai/refly-${{ matrix.app }}:buildcache,mode=max
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_GHA_EKS_ROLE }}
-          role-session-name: gha-eks-upgrade
+          cache-from: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache
+          cache-to: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache,mode=max
 
       - name: Update kubeconfig for EKS cluster
         run: |
-          aws eks update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER }} --region ${{ secrets.AWS_REGION }}
+          aws eks update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_TEST }} --region ${{ secrets.AWS_REGION }}
 
       - name: Update API deployment image on EKS
         if: matrix.app == 'api'
         run: |
-          kubectl set image deployment/refly-api refly-api=reflyai/refly-api:${{ github.sha }} -n refly-app
+          kubectl set image deployment/refly-api refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
 
       - name: Update Web deployment image on EKS
         if: matrix.app == 'web'
         run: |
-          kubectl set image deployment/refly-web refly-web=reflyai/refly-web:${{ github.sha }} -n refly-app
+          kubectl set image deployment/refly-web refly-web=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
