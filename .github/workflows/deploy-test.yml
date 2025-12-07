@@ -3,6 +3,10 @@ name: Deploy To Test Environment
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     name: Deploy
@@ -94,8 +98,10 @@ jobs:
         if: matrix.app == 'api'
         run: |
           kubectl set image deployment/refly-api refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
+          kubectl rollout status deployment/refly-api -n refly-app --timeout=300s
 
       - name: Update Web deployment image on EKS
         if: matrix.app == 'web'
         run: |
           kubectl set image deployment/refly-web refly-web=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
+          kubectl rollout status deployment/refly-web -n refly-app --timeout=300s
