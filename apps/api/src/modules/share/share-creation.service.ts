@@ -1159,6 +1159,115 @@ export class ShareCreationService {
   }
 
   /**
+   * Sanitize canvas data for public sharing - removes sensitive metadata and keeps only necessary data
+   *
+   * IMPORTANT: This method must preserve fields required for frontend rendering:
+   * - node.type: Required for frontend to determine which component to render (image/video/audio/etc)
+   * - file.category: Required for mapDriveFileToCanvasNode to determine file type
+   * - file.resultId: Required for product filtering in workflow app
+   */
+  private sanitizeCanvasDataForPublic(
+    canvasData: SharedCanvasData,
+    resultNodeIds: string[],
+  ): { nodes: any[]; files: any[] } {
+    // 1. Filter nodes to only result nodes
+    const resultNodes = (canvasData.nodes || []).filter((node) => resultNodeIds.includes(node.id));
+
+    // 2. Sanitize each node - keep necessary fields for frontend rendering
+    const sanitizedNodes = resultNodes.map((node) => ({
+      id: node.id,
+      type: node.type, // KEEP: Required for frontend to determine how to render the node
+      data: {
+        entityId: node.data?.entityId || '',
+        title: node.data?.title || '',
+        // Remove contentPreview and position to avoid revealing detailed content and layout
+        metadata: this.sanitizeNodeMetadata(node.data?.metadata || {}),
+      },
+    }));
+
+    // 3. Get result entity IDs to filter files
+    const resultEntityIds = new Set(sanitizedNodes.map((n) => n.data.entityId).filter(Boolean));
+
+    // 4. Filter and sanitize files - keep necessary fields for frontend rendering
+    const sanitizedFiles = (canvasData.files || [])
+      .filter((file) => file.resultId && resultEntityIds.has(file.resultId))
+      .map((file) => ({
+        fileId: file.fileId,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        category: file.category, // KEEP: Required for frontend to determine file type
+        resultId: file.resultId, // KEEP: Required for product filtering
+        // Remove internal fields that could reveal workflow details:
+        // - canvasId: internal context
+        // - source/scope: reveal workflow methodology
+        // - summary/content: could contain processing details
+        // - variableId/resultVersion: internal linking info
+        // - createdAt/updatedAt: detailed timing could reveal workflow sequence
+        // - storageKey: internal storage info
+      }));
+
+    return {
+      nodes: sanitizedNodes,
+      files: sanitizedFiles,
+    };
+  }
+
+  /**
+   * Sanitize node metadata - keep only whitelisted safe fields
+   */
+  private sanitizeNodeMetadata(metadata: Record<string, any>): Record<string, any> {
+    // Keep essential fields for public sharing - include media URLs for result display
+    const ALLOWED_FIELDS = [
+      'shareId', // Public share identifier - needed for frontend functionality
+      'imageUrl', // Published image URL - useful for result display
+      'videoUrl', // Published video URL - useful for result display
+      'audioUrl', // Published audio URL - useful for result display
+    ];
+
+    return Object.fromEntries(
+      Object.entries(metadata).filter(([key]) => ALLOWED_FIELDS.includes(key)),
+    );
+  }
+
+  /**
+   * Keep variables intact - user information should not be sanitized
+   * This is for protecting user's workflow creation, not user privacy
+   */
+  private sanitizeVariables(variables: any[]): any[] {
+    // Keep variables exactly as they are - no user data masking needed
+    return variables || [];
+  }
+
+  /**
+   * Protect workflow creation content from being copied
+   * Focus on hiding detailed process steps while keeping results visible
+   */
+
+  /**
+   * Keep template content but limit excessive detail to protect workflow methodology
+   */
+  private sanitizeTemplateContent(content: string | undefined): string | undefined {
+    if (!content) return content;
+
+    // Only truncate if extremely long to prevent reverse engineering of complex workflows
+    if (content.length > 500) {
+      // Find a natural break point (sentence end) within reasonable length
+      const truncated = content.substring(0, 497);
+      const lastPeriod = truncated.lastIndexOf('。');
+      const lastDot = truncated.lastIndexOf('.');
+      const breakPoint = Math.max(lastPeriod, lastDot);
+
+      if (breakPoint > 200) {
+        return content.substring(0, breakPoint + 1);
+      }
+      return `${truncated}...`;
+    }
+
+    return content;
+  }
+
+  /**
    * Create or update a workflow app share record
    * This helper method reduces code duplication between regular and template shares
    */
@@ -1174,35 +1283,52 @@ export class ShareCreationService {
     existingShareRecord: ShareRecord | null,
     logPrefix: string,
   ): Promise<ShareRecord> {
-    // Add canvasId to canvasData for frontend access
-    const canvasDataWithId = {
-      ...canvasData,
-      canvasId: workflowApp.canvasId,
-    };
+    // Sanitize canvas data for public exposure
+    const preview = this.sanitizeCanvasDataForPublic(canvasData, workflowApp.resultNodeIds || []);
 
     // Publish minimap if available
-    if (canvasDataWithId.minimapUrl) {
-      canvasDataWithId.minimapUrl = await this.miscService.publishFile(canvasDataWithId.minimapUrl);
+    let publishedMinimapUrl: string | undefined;
+    if (canvasData.minimapUrl) {
+      publishedMinimapUrl = await this.miscService.publishFile(canvasData.minimapUrl);
     }
 
-    // Create public workflow app data
+    // Create public workflow app data - protect workflow methodology while keeping user data
     const publicData = {
       appId: workflowApp.appId,
-      title: title || canvasDataWithId.title,
+      title: title || canvasData.title,
       description: workflowApp.description,
       remixEnabled: workflowApp.remixEnabled,
       coverUrl: workflowApp.coverStorageKey
         ? generateCoverUrl(workflowApp.coverStorageKey)
         : undefined,
-      templateContent: workflowApp.templateContent,
+      templateContent: this.sanitizeTemplateContent(workflowApp.templateContent),
       resultNodeIds: workflowApp.resultNodeIds,
-      query: workflowApp.query,
-      variables: safeParseJSON(workflowApp.variables || '[]'),
-      canvasData: canvasDataWithId,
-      // creditUsage already has markup applied (from database or calculated above)
+      query: workflowApp.query, // Keep query field - user data is not the concern
+      variables: this.sanitizeVariables(safeParseJSON(workflowApp.variables || '[]')), // Keep user variables intact
       creditUsage: creditUsage,
-      createdAt: workflowApp.createdAt,
+      createdAt: workflowApp.createdAt, // Keep original timestamps
       updatedAt: workflowApp.updatedAt,
+
+      // NEW: Top-level canvas identifiers for frontend compatibility
+      canvasId: workflowApp.canvasId,
+      minimapUrl: publishedMinimapUrl,
+
+      // NEW: Content-protected preview data (replaces canvasData)
+      preview: preview,
+
+      // LEGACY: Keep canvasData temporarily for backward compatibility
+      // TODO: Remove this field after frontend migration is complete
+      canvasData: {
+        canvasId: workflowApp.canvasId,
+        title: canvasData.title,
+        minimapUrl: publishedMinimapUrl,
+        nodes: preview.nodes, // Nodes with protected content
+        files: preview.files,
+        // Remove edges, resources to protect workflow structure
+        edges: [],
+        resources: [],
+        variables: this.sanitizeVariables(safeParseJSON(workflowApp.variables || '[]')),
+      },
     };
 
     // Upload public workflow app data to Minio
