@@ -169,16 +169,26 @@ export class ResourceHandler {
   /**
    * Batch process output resources to avoid lock contention
    * Collects all resource values first, then creates them in a single batch call
+   * Handles both object and array root data types
    */
   private async batchProcessOutputResources(
-    data: Record<string, unknown>,
+    data: Record<string, unknown> | Record<string, unknown>[],
     schema: JsonSchema,
     fileNameTitle?: string,
-  ): Promise<{ processedData: Record<string, unknown>; processedFiles: DriveFile[] }> {
+  ): Promise<{
+    processedData: Record<string, unknown> | Record<string, unknown>[];
+    processedFiles: DriveFile[];
+  }> {
     // Step 1: Remove omitFields from the data structure
     const omitFields = schema.omitFields || [];
     if (omitFields.length > 0) {
-      removeFieldsRecursively(data, omitFields);
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          removeFieldsRecursively(item, omitFields);
+        }
+      } else {
+        removeFieldsRecursively(data, omitFields);
+      }
     }
 
     // Step 2: Collect resource fields from schema
@@ -189,25 +199,61 @@ export class ResourceHandler {
     }
 
     // Step 3: Expand all array paths and collect resource values with their paths
+    // Handle both array root and object root data types
     const resourceTasks: Array<{
       path: string;
       value: unknown;
       schema: SchemaProperty;
     }> = [];
 
-    for (const field of resourceFields) {
-      if (field.isArrayItem) {
-        const expandedPaths = this.expandArrayPaths(field.dataPath, field.arrayPaths, data);
-        for (const path of expandedPaths) {
-          const value = _.get(data, path);
-          if (value !== undefined && value !== null) {
-            resourceTasks.push({ path, value, schema: field.schema });
+    if (Array.isArray(data)) {
+      // Root data is an array - iterate each item and prefix paths with array index
+      for (let arrayIndex = 0; arrayIndex < data.length; arrayIndex++) {
+        const item = data[arrayIndex];
+        for (const field of resourceFields) {
+          if (field.isArrayItem) {
+            // Expand nested array paths within each array item
+            const expandedPaths = this.expandArrayPaths(field.dataPath, field.arrayPaths, item);
+            for (const path of expandedPaths) {
+              const value = _.get(item, path);
+              if (value !== undefined && value !== null) {
+                // Prefix with array index for correct path in root array
+                resourceTasks.push({
+                  path: `[${arrayIndex}].${path}`,
+                  value,
+                  schema: field.schema,
+                });
+              }
+            }
+          } else {
+            const value = _.get(item, field.dataPath);
+            if (value !== undefined && value !== null) {
+              // Prefix with array index for correct path in root array
+              resourceTasks.push({
+                path: `[${arrayIndex}].${field.dataPath}`,
+                value,
+                schema: field.schema,
+              });
+            }
           }
         }
-      } else {
-        const value = _.get(data, field.dataPath);
-        if (value !== undefined && value !== null) {
-          resourceTasks.push({ path: field.dataPath, value, schema: field.schema });
+      }
+    } else {
+      // Root data is an object - use paths directly
+      for (const field of resourceFields) {
+        if (field.isArrayItem) {
+          const expandedPaths = this.expandArrayPaths(field.dataPath, field.arrayPaths, data);
+          for (const path of expandedPaths) {
+            const value = _.get(data, path);
+            if (value !== undefined && value !== null) {
+              resourceTasks.push({ path, value, schema: field.schema });
+            }
+          }
+        } else {
+          const value = _.get(data, field.dataPath);
+          if (value !== undefined && value !== null) {
+            resourceTasks.push({ path: field.dataPath, value, schema: field.schema });
+          }
         }
       }
     }
