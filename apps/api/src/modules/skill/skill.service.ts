@@ -7,6 +7,7 @@ import {
   SkillTrigger as SkillTriggerModel,
   ActionResult as ActionResultModel,
   ProviderItem as ProviderItemModel,
+  Provider as ProviderModel,
 } from '@prisma/client';
 import { Response } from 'express';
 import {
@@ -478,15 +479,18 @@ export class SkillService implements OnModuleInit {
     const defaultModel = await this.providerService.findDefaultProviderItem(user, 'chat');
     param.modelItemId ||= defaultModel?.itemId;
 
-    const modelItemId = param.modelItemId;
-    const providerItem = await this.providerService.findProviderItemById(user, modelItemId);
+    await this.findAndCheckProviderItem(user, param.modelItemId);
 
-    if (!providerItem || providerItem.category !== 'llm' || !providerItem.enabled) {
-      throw new ProviderItemNotFoundError(`provider item ${modelItemId} not valid`);
-    }
+    const modelProviderMap = await this.providerService.prepareModelProviderMap(
+      user,
+      param.modelItemId,
+    );
 
-    const modelProviderMap = await this.providerService.prepareModelProviderMap(user, modelItemId);
-    param.modelItemId = modelProviderMap.chat.itemId;
+    // Use the routed provider item from modelProviderMap (no need to query again)
+    // param.modelItemId remains unchanged (e.g., Auto) - used for display
+    // providerItem is the routed model (e.g., Claude Sonnet 4.5) - used for execution
+    // Type assertion needed because Prisma include is not reflected in the return type
+    const providerItem = modelProviderMap.chat as ProviderItemModel & { provider: ProviderModel };
 
     const tiers = [];
     for (const providerItem of Object.values(modelProviderMap)) {
@@ -687,6 +691,17 @@ export class SkillService implements OnModuleInit {
     return { data, existingResult, providerItem };
   }
 
+  private async findAndCheckProviderItem(
+    user: User,
+    modelItemId: string,
+  ): Promise<ProviderItemModel & { provider: ProviderModel }> {
+    const providerItem = await this.providerService.findProviderItemById(user, modelItemId);
+    if (!providerItem || providerItem.category !== 'llm' || !providerItem.enabled) {
+      throw new ProviderItemNotFoundError(`provider item ${modelItemId} not valid`);
+    }
+    return providerItem;
+  }
+
   async prepareCopilotSession(user: User, param: InvokeSkillRequest): Promise<string> {
     const { uid } = user;
     const { copilotSessionId } = param;
@@ -800,7 +815,7 @@ export class SkillService implements OnModuleInit {
               runtimeConfig: JSON.stringify(data.runtimeConfig),
               history: JSON.stringify(purgeResultHistory(data.resultHistory)),
               toolsets: JSON.stringify(purgeToolsets(data.toolsets)),
-              providerItemId: providerItem.itemId,
+              providerItemId: param.modelItemId,
               copilotSessionId: data.copilotSessionId,
               workflowExecutionId: data.workflowExecutionId,
               workflowNodeExecutionId: data.workflowNodeExecutionId,
@@ -834,7 +849,7 @@ export class SkillService implements OnModuleInit {
           runtimeConfig: JSON.stringify(data.runtimeConfig),
           history: JSON.stringify(purgeResultHistory(data.resultHistory)),
           toolsets: JSON.stringify(purgeToolsets(data.toolsets)),
-          providerItemId: providerItem.itemId,
+          providerItemId: param.modelItemId,
           copilotSessionId: data.copilotSessionId,
           workflowExecutionId: data.workflowExecutionId,
           workflowNodeExecutionId: data.workflowNodeExecutionId,
