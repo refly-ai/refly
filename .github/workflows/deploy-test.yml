@@ -100,17 +100,18 @@ jobs:
           cache-to: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache,mode=max
 
       - name: Update kubeconfig for EKS cluster
+        if: github.ref_name == 'main' || github.ref_name == 'stable'
         run: |
           aws eks update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_TEST }} --region ${{ vars.AWS_REGION }}
 
       - name: Update API deployment image on EKS
-        if: matrix.app == 'api'
+        if: matrix.app == 'api' && (github.ref_name == 'main' || github.ref_name == 'stable')
         run: |
           kubectl set image deployment/refly-api refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
           kubectl rollout status deployment/refly-api -n refly-app --timeout=300s
 
       - name: Update Web deployment image on EKS
-        if: matrix.app == 'web'
+        if: matrix.app == 'web' && (github.ref_name == 'main' || github.ref_name == 'stable')
         run: |
           kubectl set image deployment/refly-web refly-web=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
           kubectl rollout status deployment/refly-web -n refly-app --timeout=300s
