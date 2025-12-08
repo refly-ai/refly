@@ -312,3 +312,13 @@ Langfuse 读取 modelName + routeData → 追踪真实模型 + Auto 标签 ✓
 1. **更简洁**：不需要额外字段保存原始 ID
 2. **逻辑清晰**：`param.modelItemId` = 用户选择（展示用），`providerItem` = 系统路由（执行用）
 3. **一致性好**：成功和失败场景都用 `param.modelItemId`，代码统一
+
+## 计费
+
+Token 计算（真实模型）+ 费率计算（Auto 模型）= 最终费用
+    ↓                         ↓
+  Claude tokenizer        Auto 固定费率
+  1000 input tokens       80 credits/1M
+  500 output tokens       400 credits/1M
+
+因此，计费模块需要知道：这个请求是从 Auto 路由过来的。

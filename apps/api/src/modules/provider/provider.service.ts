@@ -29,6 +29,8 @@ import {
   safeParseJSON,
   safeStringifyJSON,
   deepmerge,
+  isAutoModel,
+  AUTO_MODEL_ID,
 } from '@refly/utils';
 import {
   ProviderNotFoundError,
@@ -872,22 +874,6 @@ export class ProviderService implements OnModuleInit {
     return null;
   }
 
-  private readonly AUTO_MODEL_ID = 'auto';
-
-  /**
-   * Check if the given provider item is the Auto model
-   * @param item The provider item to check
-   * @returns True if this is the Auto model
-   */
-  private isAutoModel(item: ProviderItemModel): boolean {
-    // model id is auto (json in config)
-    const config: LLMModelConfig = safeParseJSON(item.config);
-    if (!config) {
-      return false;
-    }
-    return config.modelId === this.AUTO_MODEL_ID;
-  }
-
   /**
    * Auto model routing priority list
    * The system will try to route to models in this order until it finds an available one
@@ -911,7 +897,7 @@ export class ProviderService implements OnModuleInit {
     chatItem: ProviderItemModel,
     user: User,
   ): Promise<ProviderItemModel> {
-    if (!this.isAutoModel(chatItem)) {
+    if (!isAutoModel(chatItem.config)) {
       return chatItem;
     }
 
@@ -926,7 +912,7 @@ export class ProviderService implements OnModuleInit {
     const config = safeParseJSON(routedItem.config || '{}');
     config.routeData = {
       originalItemId: chatItem.itemId,
-      originalModelId: this.AUTO_MODEL_ID,
+      originalModelId: AUTO_MODEL_ID,
     };
 
     return {
