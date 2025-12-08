@@ -1,4 +1,8 @@
-import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-schema';
+import type {
+  WorkflowVariable,
+  WorkflowExecutionStatus,
+  RawCanvasData,
+} from '@refly/openapi-schema';
 import { getWorkflowAppCanvasData, WorkflowAppData } from '@refly/utils';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, Form, Typography, message, Tooltip, Avatar } from 'antd';
@@ -654,7 +658,7 @@ export const WorkflowAPPForm = ({
                 {/* Tools Dependency Form */}
                 {canvasData && (
                   <div className="mt-3 flex items-center justify-between">
-                    <ToolsDependencyChecker canvasData={canvasData} />
+                    <ToolsDependencyChecker canvasData={canvasData as RawCanvasData} />
 
                     <Tooltip title={t('canvas.workflow.run.toolsGuide') || 'Tools Guide'}>
                       <Button
@@ -675,21 +679,25 @@ export const WorkflowAPPForm = ({
               </div>
 
               {/* owner */}
-              {workflowApp?.canvasData?.owner && (
+              {workflowApp?.owner && (
                 <div className="mt-2 flex items-center gap-1.5 cursor-pointer">
                   <Avatar
                     size={16}
-                    src={workflowApp.canvasData.owner?.avatar || defaultAvatar}
+                    src={workflowApp.owner?.avatar || defaultAvatar}
                     className="flex-shrink-0"
                   />
                   <span className="text-[11px] leading-[1.4545em] text-[rgba(28,31,35,0.35)] dark:text-refly-text-3">
-                    {workflowApp.canvasData.owner.nickname ||
-                      workflowApp.canvasData.owner?.name ||
-                      ''}
+                    {workflowApp.owner.nickname || workflowApp.owner?.name || ''}
                   </span>
                   <div className="w-[1px] h-[10px] bg-[#E7E7E7] dark:bg-refly-Card-Border rounded-[3px] flex-shrink-0" />
                   <span className="text-[11px] leading-[1.4545em] text-[rgba(28,31,35,0.35)] dark:text-refly-text-3">
-                    {formatDate(workflowApp?.updatedAt)}
+                    {formatDate(
+                      workflowApp?.updatedAt
+                        ? typeof workflowApp.updatedAt === 'string'
+                          ? workflowApp.updatedAt
+                          : workflowApp.updatedAt.toISOString()
+                        : undefined,
+                    )}
                   </span>
                 </div>
               )}
@@ -829,7 +837,7 @@ export const WorkflowAPPForm = ({
                     {/* Tools Dependency Form */}
                     {canvasData && (
                       <div className="mt-5 ">
-                        <ToolsDependencyChecker canvasData={canvasData} />
+                        <ToolsDependencyChecker canvasData={canvasData as RawCanvasData} />
                       </div>
                     )}
                   </>

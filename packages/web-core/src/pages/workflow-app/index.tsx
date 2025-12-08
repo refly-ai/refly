@@ -411,7 +411,8 @@ const WorkflowAppPage: React.FC = () => {
 
     for (const node of allNodes) {
       if (node?.id && !uniqueMap.has(node.id)) {
-        uniqueMap.set(node.id, node);
+        // Cast to CanvasNode since we've validated it has an id
+        uniqueMap.set(node.id, node as CanvasNode);
       }
     }
 
