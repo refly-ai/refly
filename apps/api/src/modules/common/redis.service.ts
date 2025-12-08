@@ -24,12 +24,18 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {
     if (!isDesktop()) {
       this.logger.log('Initializing Redis client');
-      this.client = new Redis({
-        host: configService.getOrThrow('redis.host'),
-        port: configService.getOrThrow('redis.port'),
-        username: configService.get('redis.username'),
-        password: configService.get('redis.password'),
-      });
+
+      if (configService.get('redis.url')) {
+        this.client = new Redis(configService.get('redis.url'));
+      } else {
+        this.client = new Redis({
+          host: configService.getOrThrow('redis.host'),
+          port: configService.getOrThrow('redis.port'),
+          username: configService.get('redis.username'),
+          password: configService.get('redis.password'),
+          tls: configService.get<boolean>('redis.tls') ? {} : undefined,
+        });
+      }
 
       // Add event listeners for debugging
       this.client.on('connect', () => {
