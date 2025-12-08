@@ -3668,7 +3668,7 @@ const translations = {
               'Facebook integrations',
               'Twitter integrations',
             ],
-            duration: '365 DAYS',
+            duration: '1 MONTH',
           },
           'Service support\nHigh priority support',
         ],
