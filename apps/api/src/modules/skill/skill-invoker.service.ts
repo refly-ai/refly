@@ -7,7 +7,11 @@ import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/c
 import { CallbackHandler as LangfuseCallbackHandler } from '@langfuse/langchain';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
-import { ProjectNotFoundError } from '@refly/errors';
+import {
+  ModelUsageQuotaExceeded,
+  ProjectNotFoundError,
+  WorkflowExecutionNotFoundError,
+} from '@refly/errors';
 import {
   ActionResult,
   ActionStep,
@@ -251,11 +255,17 @@ export class SkillInvokerService {
   } {
     const errorMessage = err.message || 'Unknown error';
 
+    // Special handling for credit-related errors - preserve original message
+    const isCreditError =
+      err instanceof ModelUsageQuotaExceeded || /credit not available/i.test(err.message);
+
     // Categorize errors more reliably
     const isTimeoutError =
       err instanceof Error && (err.name === 'TimeoutError' || /timeout/i.test(err.message));
     const isAbortError =
-      err instanceof Error && (err.name === 'AbortError' || /abort/i.test(err.message));
+      err instanceof Error &&
+      (err.name === 'AbortError' || /abort/i.test(err.message)) &&
+      !isCreditError;
     const isNetworkError =
       err instanceof Error && (err.name === 'NetworkError' || /network|fetch/i.test(err.message));
     const isGeneralTimeout = isTimeoutError;
@@ -269,7 +279,11 @@ export class SkillInvokerService {
       ABORT_ERROR: 'Operation was aborted.',
     } as const;
 
-    if (isGeneralTimeout) {
+    if (isCreditError) {
+      // For credit errors, preserve the original detailed message
+      userFriendlyMessage = errorMessage;
+      logLevel = 'error';
+    } else if (isGeneralTimeout) {
       userFriendlyMessage = ERROR_MESSAGES.GENERAL_TIMEOUT;
     } else if (isNetworkError) {
       userFriendlyMessage = ERROR_MESSAGES.NETWORK_ERROR;
@@ -935,6 +949,13 @@ export class SkillInvokerService {
                 };
                 await this.usageReportQueue.add(`usage_report:${resultId}`, tokenUsage);
               }
+              // Process credit billing for all steps after skill completion
+              // Bill credits for successful completions and user aborts (partial usage should be charged)
+              const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
+
+              if (shouldBillCredits) {
+                await this.processCreditUsageReport(user, resultId, version, resultAggregator);
+              }
             }
             break;
         }
@@ -1106,13 +1127,6 @@ export class SkillInvokerService {
         if (key.startsWith(`${resultId}:`)) {
           this.addedFilesMap.delete(key);
         }
-      }
-      // Process credit billing for all steps after skill completion
-      // Bill credits for successful completions and user aborts (partial usage should be charged)
-      const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
-
-      if (shouldBillCredits) {
-        await this.processCreditUsageReport(user, resultId, version, resultAggregator);
       }
 
       // Dispose message aggregator to clean up resources (stop auto-save timer)
@@ -1423,7 +1437,11 @@ export class SkillInvokerService {
         timestamp: new Date(),
       };
 
-      await this.creditService.syncBatchTokenCreditUsage(batchTokenCreditUsage);
+      const requireRecharge =
+        await this.creditService.syncBatchTokenCreditUsage(batchTokenCreditUsage);
+      if (requireRecharge) {
+        throw new ModelUsageQuotaExceeded('credit not available: Insufficient credits.');
+      }
 
       this.logger.info(
         `Batch credit billing processed for ${resultId}: ${creditUsageSteps.length} usage items`,
@@ -1487,5 +1505,94 @@ export class SkillInvokerService {
       userId: params.userId,
       tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent'],
     });
+  }
+
+  /**
+   * Abort workflow execution - stop all running/waiting nodes
+   * @param user - The user
+   * @param executionId - The workflow execution ID to abort
+   */
+  async abortWorkflowExecution(user: User, executionId: string): Promise<void> {
+    // Verify workflow execution exists and belongs to user
+    const workflowExecution = await this.prisma.workflowExecution.findUnique({
+      where: { executionId, uid: user.uid },
+    });
+
+    if (!workflowExecution) {
+      throw new WorkflowExecutionNotFoundError(`Workflow execution ${executionId} not found`);
+    }
+
+    // Check if workflow is already finished or failed
+    if (workflowExecution.status === 'finish' || workflowExecution.status === 'failed') {
+      this.logger.warn(
+        `Workflow execution ${executionId} is already ${workflowExecution.status}, cannot abort`,
+      );
+      return;
+    }
+
+    // Get all executing and waiting nodes
+    const nodesToAbort = await this.prisma.workflowNodeExecution.findMany({
+      where: {
+        executionId,
+        status: { in: ['waiting', 'executing'] },
+      },
+    });
+
+    this.logger.info(
+      `Aborting workflow ${executionId}: found ${nodesToAbort.length} nodes to abort`,
+    );
+
+    // Abort all executing skillResponse nodes by calling abort action
+    const executingSkillNodes = nodesToAbort.filter((n) => n.nodeType === 'skillResponse');
+
+    // Abort all executing nodes in parallel for better performance
+    const abortResults = await Promise.allSettled(
+      executingSkillNodes.map(async (node) => {
+        try {
+          await this.actionService.abortActionFromReq(
+            user,
+            { resultId: node.entityId },
+            'Workflow aborted by user',
+          );
+          this.logger.info(`Aborted action ${node.entityId} for node ${node.nodeId}`);
+          return { success: true, nodeId: node.nodeId };
+        } catch (error) {
+          this.logger.warn(
+            `Failed to abort action ${node.entityId}: ${(error as any)?.message ?? error}`,
+          );
+          return { success: false, nodeId: node.nodeId, error };
+        }
+      }),
+    );
+
+    const successCount = abortResults.filter((r) => r.status === 'fulfilled').length;
+    this.logger.info(`Aborted ${successCount}/${executingSkillNodes.length} executing skill nodes`);
+
+    // Update all non-terminal nodes to failed (not just waiting/executing)
+    await this.prisma.workflowNodeExecution.updateMany({
+      where: {
+        executionId,
+        status: { notIn: ['finish', 'failed'] },
+      },
+      data: {
+        status: 'failed',
+        errorMessage: 'Workflow aborted by user',
+        endTime: new Date(),
+      },
+    });
+
+    // Update workflow execution to failed if not already terminal
+    await this.prisma.workflowExecution.updateMany({
+      where: {
+        executionId,
+        status: { notIn: ['finish', 'failed'] },
+      },
+      data: {
+        status: 'failed',
+        abortedByUser: true,
+      },
+    });
+
+    this.logger.info(`Workflow execution ${executionId} aborted by user ${user.uid}`);
   }
 }
