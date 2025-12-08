@@ -245,9 +245,6 @@ importers:
       cheerio:
         specifier: ~1.0.0
         version: 1.0.0
-      connect-redis:
-        specifier: ^7.0.0
-        version: 7.1.1(express-session@1.18.2)
       cookie-parser:
         specifier: ~1.4.6
         version: 1.4.7
@@ -8386,12 +8383,6 @@ packages:
 
   confbox@0.2.2:
     resolution: {integrity: sha512-1NB+BKqhtNipMsov4xI/NnhCKp9XG9NamYp5PVm9klAT0fsrNPjaFICsCFhNhwZJKNh7zB/3q8qXz0E9oaMNtQ==}
-
-  connect-redis@7.1.1:
-    resolution: {integrity: sha512-M+z7alnCJiuzKa8/1qAYdGUXHYfDnLolOGAUjOioB07pP39qxjG+X9ibsud7qUBc4jMV5Mcy3ugGv8eFcgamJQ==}
-    engines: {node: '>=16'}
-    peerDependencies:
-      express-session: '>=1'
 
   consola@2.15.3:
     resolution: {integrity: sha512-9vAdYbHj6x2fLKC4+oPH0kFzY/orMZyG2Aj+kNylHxKGJ/Ed4dpNyAQYwJOdqO4zdM7XpVHmyejQDcQHrnuXbw==}
@@ -22912,10 +22903,6 @@ snapshots:
   confbox@0.1.8: {}
 
   confbox@0.2.2: {}
-
-  connect-redis@7.1.1(express-session@1.18.2):
-    dependencies:
-      express-session: 1.18.2
 
   consola@2.15.3: {}
 

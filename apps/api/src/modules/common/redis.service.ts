@@ -26,7 +26,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       this.logger.log('Initializing Redis client');
 
       if (configService.get('redis.url')) {
-        this.client = new Redis(configService.get('redis.url'));
+        this.client = new Redis(configService.get('redis.url'), {
+          maxRetriesPerRequest: null, // Required for BullMQ blocking commands
+        });
       } else {
         this.client = new Redis({
           host: configService.getOrThrow('redis.host'),
@@ -34,6 +36,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
           username: configService.get('redis.username'),
           password: configService.get('redis.password'),
           tls: configService.get<boolean>('redis.tls') ? {} : undefined,
+          maxRetriesPerRequest: null, // Required for BullMQ blocking commands
         });
       }
 
