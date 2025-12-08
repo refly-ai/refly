@@ -254,8 +254,9 @@ export class SkillEngineService implements OnModuleInit {
         );
 
         const url = `${this.config.get('origin')}/share/file/${shareRecord.shareId}`;
+        const contentUrl = `${this.config.get('origin')}/v1/drive/file/public/${fileId}`;
 
-        return { url, shareId: shareRecord.shareId, driveFile };
+        return { url, contentUrl, shareId: shareRecord.shareId, driveFile };
       },
       genImageID: async () => {
         return genImageID();

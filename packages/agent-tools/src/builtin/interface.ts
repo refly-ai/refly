@@ -141,7 +141,12 @@ export interface ReflyService {
   createShareForDriveFile: (
     user: User,
     fileId: string,
-  ) => Promise<{ url: string; shareId: string; driveFile: DriveFile }>;
+  ) => Promise<{
+    url: string; // Share page URL (for links/previews)
+    contentUrl: string; // Direct file content URL (for <img src="">)
+    shareId: string;
+    driveFile: DriveFile;
+  }>;
 
   getUserMediaConfig(
     user: User,
