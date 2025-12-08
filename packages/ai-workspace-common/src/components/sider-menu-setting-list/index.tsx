@@ -213,6 +213,10 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
     window.open('https://discord.gg/YVuYFjFvRC', '_blank');
   }, []);
 
+  const handleGithubClick = useCallback(() => {
+    window.open('https://github.com/refly-ai/refly', '_blank');
+  }, []);
+
   // Theme mode options
   const themeOptions = useMemo(
     () => [
@@ -308,6 +312,7 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
       {
         key: 'github',
         label: <GithubItem />,
+        onClick: handleGithubClick,
       },
       {
         key: 'discord',

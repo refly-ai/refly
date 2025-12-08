@@ -223,16 +223,27 @@ export const buildNodesFromContent = (
   const findToolMeta = (tokenId: string, tokenName: string) => {
     if (!tokenId && !tokenName) return null;
 
-    const foundFromAll = (allItems || []).find((it) => {
-      if (it.source !== 'tools') return false;
+    const toolSources: MentionItemSource[] = ['tools', 'toolsets'];
 
-      return it.toolsetId === tokenId;
+    const foundFromAll = (allItems || []).find((it) => {
+      if (!toolSources.includes(it.source)) return false;
+
+      const idMatch =
+        it.toolsetId === tokenId ||
+        it.toolset?.toolset?.key === tokenId ||
+        it.toolset?.toolset?.definition?.key === tokenId;
+      const nameMatch = tokenName ? it.name === tokenName : false;
+      return idMatch || nameMatch;
     });
 
     if (foundFromAll) {
+      const source = foundFromAll.source;
+      const variableType =
+        foundFromAll?.variableType ?? (source === 'toolsets' ? 'toolset' : 'tool');
+
       return {
-        variableType: foundFromAll?.variableType ?? 'toolset',
-        source: foundFromAll?.source,
+        variableType,
+        source,
         toolset: foundFromAll?.toolset,
         toolsetId: foundFromAll?.toolsetId,
         entityId: foundFromAll?.entityId,

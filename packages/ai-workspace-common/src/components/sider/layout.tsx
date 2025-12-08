@@ -525,7 +525,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
               )}
           </div>
 
-          <div className="p-2 pr-0">
+          <div>
             {/* Contact in collapsed state - above Settings */}
             {isCollapsed &&
               bottomMenuItems.map((item, index) => {
@@ -536,7 +536,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
                       open={openContactUs}
                       setOpen={setOpenContactUs}
                     >
-                      <div className="h-[26px] pl-0 pr-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 mb-2">
+                      <div className="p-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
                         <Contact key="contactUs" style={{ fontSize: 20 }} />
                       </div>
                     </ContactUsPopover>
@@ -548,7 +548,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
             {/* Settings and Contact in expanded state */}
             <div className="flex items-center gap-2">
               <div
-                className="h-[26px] pl-0 pr-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                className="p-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
                 onClick={handleSettingsClick}
                 data-cy="settings-menu-item"
               >
@@ -567,7 +567,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
                         open={openContactUs}
                         setOpen={setOpenContactUs}
                       >
-                        <div className="h-[26px] pl-0 pr-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
+                        <div className="p-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
                           <Contact key="contactUs" style={{ fontSize: 20 }} />
                         </div>
                       </ContactUsPopover>

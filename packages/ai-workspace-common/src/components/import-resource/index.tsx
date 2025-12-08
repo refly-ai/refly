@@ -15,6 +15,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { getAvailableFileCount } from '@refly/utils/quota';
 import { useListDriveFiles } from '@refly-packages/ai-workspace-common/queries';
+import { logEvent } from '@refly/telemetry-web';
 
 export const ImportResourceModal = memo(() => {
   const { t } = useTranslation();
@@ -57,6 +58,11 @@ export const ImportResourceModal = memo(() => {
     if (waitingList.length === 0) {
       return;
     }
+
+    logEvent('import_file', null, {
+      canvasId,
+      fileCount: waitingList.length,
+    });
 
     setSaveLoading(true);
     try {

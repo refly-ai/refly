@@ -73,6 +73,7 @@ export const NodeHeader = memo(
     const { t } = useTranslation();
     const [editTitle, setEditTitle] = useState(title);
     const [isEditing, setIsEditing] = useState(false);
+    const [isComposing, setIsComposing] = useState(false);
     const inputRef = useRef<InputRef>(null);
     const buttonContainerRef = useRef<HTMLDivElement>(null);
 
@@ -110,6 +111,20 @@ export const NodeHeader = memo(
         ? NODE_TYPE_BG_CLASSES[actualNodeType]
         : '';
 
+    const handleCompositionStart = useCallback(() => {
+      setIsComposing(true);
+    }, []);
+
+    const handleCompositionEnd = useCallback(() => {
+      setIsComposing(false);
+    }, []);
+
+    const handlePressEnter = useCallback(() => {
+      if (!isComposing && isEditing) {
+        setIsEditing(false);
+      }
+    }, [isComposing, isEditing]);
+
     return (
       <div
         data-cy={actualNodeType ? `${actualNodeType}-node-header` : 'node-header'}
@@ -140,11 +155,14 @@ export const NodeHeader = memo(
                   'text-lg': source === 'skillResponsePreview',
                 },
               )}
+              onCompositionStart={handleCompositionStart}
+              onCompositionEnd={handleCompositionEnd}
               value={editTitle}
               data-cy={actualNodeType ? `${actualNodeType}-node-header-input` : 'node-header-input'}
               placeholder={placeholder}
               onBlur={handleBlur}
               onChange={handleChange}
+              onPressEnter={handlePressEnter}
               maxLength={maxLength}
             />
           ) : (

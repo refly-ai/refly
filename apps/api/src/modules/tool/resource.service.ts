@@ -12,6 +12,7 @@ import type {
   SchemaProperty,
   User,
 } from '@refly/openapi-schema';
+import type { ExtendedUpsertDriveFileRequest } from '../drive/drive.service';
 import { fileTypeFromBuffer } from 'file-type';
 import _ from 'lodash';
 import mime from 'mime';
@@ -19,6 +20,7 @@ import { DriveService } from '../drive/drive.service';
 import { MiscService } from '../misc/misc.service';
 import {
   collectResourceFields,
+  extractFileId,
   isValidFileId,
   removeFieldsRecursively,
   type ResourceField,
@@ -41,6 +43,21 @@ export class InvalidFileIdError extends Error {
   }
 }
 
+/**
+ * Error thrown when resource value is neither a valid fileId nor a public URL
+ */
+export class InvalidResourceInputError extends Error {
+  constructor(
+    public readonly fieldName: string,
+    public readonly invalidValue: unknown,
+  ) {
+    const valueStr = typeof invalidValue === 'string' ? invalidValue : JSON.stringify(invalidValue);
+    super(
+      `Invalid resource value for "${fieldName}": "${valueStr}". Provide a valid Drive fileId (df-xxx / fileId://df-xxx / @file:df-xxx) or a public URL (http/https).`,
+    );
+    this.name = 'InvalidResourceInputError';
+  }
+}
 /**
  * Processing mode for resource handling
  */
@@ -135,28 +152,11 @@ export class ResourceHandler {
       return response;
     }
 
-    // Counter for generating unique file names and collect processed files
-    let resourceCount = 0;
-    const processedFiles: DriveFile[] = [];
-
-    const processedData = await this.mapResourceFields(
+    // Use batch processing to handle multiple resources with a single lock acquisition
+    const { processedData, processedFiles } = await this.batchProcessOutputResources(
+      response.data as Record<string, unknown>,
       response_schema,
-      response.data,
-      async (value, schemaProperty) => {
-        const fileName = fileNameTitle
-          ? resourceCount === 0
-            ? fileNameTitle
-            : `${fileNameTitle}-${resourceCount}`
-          : undefined;
-        resourceCount++;
-        const result = await this.writeResource(value, fileName, schemaProperty);
-        if (result) {
-          processedFiles.push(result);
-          return result;
-        }
-        return value;
-      },
-      'output',
+      fileNameTitle,
     );
 
     return {
@@ -164,6 +164,230 @@ export class ResourceHandler {
       data: processedData,
       files: processedFiles.length > 0 ? processedFiles : undefined,
     };
+  }
+
+  /**
+   * Batch process output resources to avoid lock contention
+   * Collects all resource values first, then creates them in a single batch call
+   * Handles both object and array root data types
+   */
+  private async batchProcessOutputResources(
+    data: Record<string, unknown> | Record<string, unknown>[],
+    schema: JsonSchema,
+    fileNameTitle?: string,
+  ): Promise<{
+    processedData: Record<string, unknown> | Record<string, unknown>[];
+    processedFiles: DriveFile[];
+  }> {
+    // Step 1: Remove omitFields from the data structure
+    const omitFields = schema.omitFields || [];
+    if (omitFields.length > 0) {
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          removeFieldsRecursively(item, omitFields);
+        }
+      } else {
+        removeFieldsRecursively(data, omitFields);
+      }
+    }
+
+    // Step 2: Collect resource fields from schema
+    const resourceFields = collectResourceFields(schema);
+
+    if (resourceFields.length === 0) {
+      return { processedData: data, processedFiles: [] };
+    }
+
+    // Step 3: Expand all array paths and collect resource values with their paths
+    // Handle both array root and object root data types
+    const resourceTasks: Array<{
+      path: string;
+      value: unknown;
+      schema: SchemaProperty;
+    }> = [];
+
+    if (Array.isArray(data)) {
+      // Root data is an array - iterate each item and prefix paths with array index
+      for (let arrayIndex = 0; arrayIndex < data.length; arrayIndex++) {
+        const item = data[arrayIndex];
+        for (const field of resourceFields) {
+          if (field.isArrayItem) {
+            // Expand nested array paths within each array item
+            const expandedPaths = this.expandArrayPaths(field.dataPath, field.arrayPaths, item);
+            for (const path of expandedPaths) {
+              const value = _.get(item, path);
+              if (value !== undefined && value !== null) {
+                // Prefix with array index for correct path in root array
+                resourceTasks.push({
+                  path: `[${arrayIndex}].${path}`,
+                  value,
+                  schema: field.schema,
+                });
+              }
+            }
+          } else {
+            const value = _.get(item, field.dataPath);
+            if (value !== undefined && value !== null) {
+              // Prefix with array index for correct path in root array
+              resourceTasks.push({
+                path: `[${arrayIndex}].${field.dataPath}`,
+                value,
+                schema: field.schema,
+              });
+            }
+          }
+        }
+      }
+    } else {
+      // Root data is an object - use paths directly
+      for (const field of resourceFields) {
+        if (field.isArrayItem) {
+          const expandedPaths = this.expandArrayPaths(field.dataPath, field.arrayPaths, data);
+          for (const path of expandedPaths) {
+            const value = _.get(data, path);
+            if (value !== undefined && value !== null) {
+              resourceTasks.push({ path, value, schema: field.schema });
+            }
+          }
+        } else {
+          const value = _.get(data, field.dataPath);
+          if (value !== undefined && value !== null) {
+            resourceTasks.push({ path: field.dataPath, value, schema: field.schema });
+          }
+        }
+      }
+    }
+
+    if (resourceTasks.length === 0) {
+      return { processedData: data, processedFiles: [] };
+    }
+
+    // Step 4: Categorize and process resources
+    const { urlRequests, nonUrlResults } = await this.categorizeAndProcessResources(
+      resourceTasks,
+      fileNameTitle,
+    );
+
+    // Step 5: Batch create URL resources and collect all results
+    const { processedFiles, taskResults } = await this.batchCreateAndCollectResults(
+      urlRequests,
+      nonUrlResults,
+    );
+
+    // Step 6: Set results back to their original paths in data
+    for (let i = 0; i < resourceTasks.length; i++) {
+      const task = resourceTasks[i];
+      const result = taskResults.get(i);
+      if (result) {
+        _.set(data, task.path, result);
+      }
+    }
+
+    return { processedData: data, processedFiles };
+  }
+
+  /**
+   * Categorize resource tasks into URL and non-URL resources, processing non-URL resources immediately
+   */
+  private async categorizeAndProcessResources(
+    resourceTasks: Array<{ path: string; value: unknown; schema: SchemaProperty }>,
+    fileNameTitle?: string,
+  ): Promise<{
+    urlRequests: Array<{ taskIndex: number; request: ExtendedUpsertDriveFileRequest }>;
+    nonUrlResults: Array<{ taskIndex: number; result: DriveFile | null }>;
+  }> {
+    const canvasId = getCanvasId();
+    const resultId = getResultId();
+    const resultVersion = getResultVersion();
+
+    const urlRequests: Array<{
+      taskIndex: number;
+      request: ExtendedUpsertDriveFileRequest;
+    }> = [];
+    const nonUrlResults: Array<{
+      taskIndex: number;
+      result: DriveFile | null;
+    }> = [];
+
+    for (let i = 0; i < resourceTasks.length; i++) {
+      const task = resourceTasks[i];
+      const fileName = fileNameTitle
+        ? i === 0
+          ? fileNameTitle
+          : `${fileNameTitle}-${i}`
+        : undefined;
+
+      // Check if value is a URL string
+      if (typeof task.value === 'string' && this.isPublicUrl(task.value)) {
+        const { filename } = this.inferFileInfoFromUrl(
+          task.value,
+          fileName || 'untitled',
+          'text/plain',
+        );
+        urlRequests.push({
+          taskIndex: i,
+          request: {
+            canvasId,
+            name: filename,
+            externalUrl: task.value,
+            source: 'agent',
+            resultId,
+            resultVersion,
+          },
+        });
+      } else {
+        // Handle non-URL resources individually (data URLs, base64, buffers)
+        const result = await this.writeResource(task.value, fileName, task.schema);
+        nonUrlResults.push({ taskIndex: i, result });
+      }
+    }
+
+    return { urlRequests, nonUrlResults };
+  }
+
+  /**
+   * Batch create URL resources and collect all results into a single map
+   */
+  private async batchCreateAndCollectResults(
+    urlRequests: Array<{ taskIndex: number; request: ExtendedUpsertDriveFileRequest }>,
+    nonUrlResults: Array<{ taskIndex: number; result: DriveFile | null }>,
+  ): Promise<{
+    processedFiles: DriveFile[];
+    taskResults: Map<number, DriveFile | null>;
+  }> {
+    const processedFiles: DriveFile[] = [];
+    const taskResults: Map<number, DriveFile | null> = new Map();
+
+    // Add non-URL results to the map
+    for (const { taskIndex, result } of nonUrlResults) {
+      taskResults.set(taskIndex, result);
+      if (result) {
+        processedFiles.push(result);
+      }
+    }
+
+    // Batch create URL resources
+    if (urlRequests.length > 0) {
+      const user = getCurrentUser();
+      const canvasId = getCanvasId();
+
+      const batchFiles = await this.driveService.batchCreateDriveFiles(user, {
+        canvasId,
+        files: urlRequests.map((r) => r.request),
+      });
+
+      // Map batch results back to task indices
+      for (let i = 0; i < urlRequests.length; i++) {
+        const taskIndex = urlRequests[i].taskIndex;
+        const driveFile = batchFiles[i] || null;
+        taskResults.set(taskIndex, driveFile);
+        if (driveFile) {
+          processedFiles.push(driveFile);
+        }
+      }
+    }
+
+    return { processedFiles, taskResults };
   }
 
   /**
@@ -326,13 +550,23 @@ export class ResourceHandler {
       return value;
     }
 
-    if (mode === 'input' && !isValidFileId(value)) {
-      // If this is an optional resource (part of oneOf/anyOf), skip processing for non-fileId values
-      // The value will be treated as a plain string by the other schema option
-      if (isOptionalResource) {
-        return value; // Return original value unchanged
+    if (mode === 'input') {
+      // Allow direct URLs to pass through; if they contain a df-xxx, resolve it
+      if (this.isPublicUrl(value)) {
+        const maybeFileId = extractFileId(value);
+        if (maybeFileId) {
+          return processor(maybeFileId, schema);
+        }
+        return value;
       }
-      throw new InvalidFileIdError(fieldPath, value);
+
+      if (!isValidFileId(value)) {
+        // If this is an optional resource (part of oneOf/anyOf), skip processing for non-fileId values
+        if (isOptionalResource) {
+          return value;
+        }
+        throw new InvalidResourceInputError(fieldPath, value);
+      }
     }
 
     return processor(value, schema);
@@ -709,6 +943,11 @@ export class ResourceHandler {
    * Resolve fileId to specified format
    */
   private async resolveFileIdToFormat(value: unknown, format: string): Promise<string | Buffer> {
+    // Public URLs should pass through unchanged; do not force Drive lookup
+    if (this.isPublicUrl(value)) {
+      return value as string;
+    }
+
     // Extract fileId from value
     let fileId = typeof value === 'string' ? value : (value as any)?.fileId;
     if (!fileId) {
@@ -766,6 +1005,16 @@ export class ResourceHandler {
         const result = await this.driveService.getDriveFileStream(user, fileId);
         return result.data;
       }
+    }
+  }
+
+  private isPublicUrl(value: unknown): boolean {
+    if (typeof value !== 'string') return false;
+    try {
+      const parsed = new URL(value);
+      return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !!parsed.hostname;
+    } catch {
+      return false;
     }
   }
 }

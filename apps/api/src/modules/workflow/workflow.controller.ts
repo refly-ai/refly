@@ -68,4 +68,28 @@ export class WorkflowController {
     const workflowDetail = await this.workflowService.getWorkflowDetail(user, executionId);
     return buildSuccessResponse(workflowExecutionPO2DTO(workflowDetail));
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('lastDetail')
+  async getLatestWorkflowDetail(
+    @LoginedUser() user: UserModel,
+    @Query('canvasId') canvasId: string,
+  ): Promise<GetWorkflowDetailResponse> {
+    if (!canvasId) {
+      throw new ParamsError('Canvas ID is required');
+    }
+
+    const workflowDetail = await this.workflowService.getLatestWorkflowDetail(user, canvasId);
+    return buildSuccessResponse(workflowExecutionPO2DTO(workflowDetail));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('allDetails')
+  async getAllWorkflowDetails(
+    @LoginedUser() user: UserModel,
+    @Query('canvasId') canvasId?: string,
+  ) {
+    const workflowDetails = await this.workflowService.getAllWorkflowDetails(user, canvasId);
+    return buildSuccessResponse(workflowDetails.map(workflowExecutionPO2DTO));
+  }
 }

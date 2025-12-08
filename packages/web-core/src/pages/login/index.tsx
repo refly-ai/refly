@@ -118,7 +118,7 @@ const LoginPage = () => {
       logEvent('auth::oauth_login_click', provider);
       authStore.setLoginInProgress(true);
       authStore.setLoginProvider(provider);
-      location.href = `${serverOrigin}/v1/auth/${provider}`;
+      window.location.href = `${serverOrigin}/v1/auth/${provider}`;
     },
     [authStore],
   );
@@ -135,6 +135,9 @@ const LoginPage = () => {
     authStore.setLoginProvider('email');
     authStore.setLoginInProgress(true);
 
+    // Get source from URL parameter
+    const source = searchParams.get('from') ?? undefined;
+
     if (authStore.isSignUpMode) {
       logEvent('auth::signup_click', 'email');
       const { data } = await getClient().emailSignup({
@@ -148,6 +151,8 @@ const LoginPage = () => {
       if (data?.success) {
         // Note: No need to close modal as this is a standalone login page
         if (data.data?.skipVerification) {
+          // Log signup success event with source
+          logEvent('signup_success', null, source ? { source } : undefined);
           authStore.reset();
           const returnUrl = searchParams.get('returnUrl');
           const redirectUrl = returnUrl
@@ -173,6 +178,8 @@ const LoginPage = () => {
       authStore.setLoginInProgress(false);
 
       if (data?.success) {
+        // Log login success event with source
+        logEvent('login_success', null, source ? { source } : undefined);
         // Note: No need to close modal as this is a standalone login page
         authStore.reset();
         const returnUrl = searchParams.get('returnUrl');
