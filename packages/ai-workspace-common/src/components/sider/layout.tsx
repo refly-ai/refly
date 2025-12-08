@@ -174,7 +174,7 @@ export const PromotionItem = React.memo(
     return (
       <div
         className={cn(
-          'w-full flex flex-col cursor-pointer rounded-[16px] bg-gradient-to-b from-[#9810FA] to-[#FFFFFF] p-3 transition-all duration-500 shadow-lg',
+          'w-[240px] flex flex-col cursor-pointer rounded-[20px] bg-gradient-to-b from-[#9810FA] to-[#FFFFFF] p-3 transition-all duration-500 shadow-lg',
         )}
         onClick={handleClick}
         data-cy="promotion-menu-item"
@@ -216,7 +216,7 @@ export const PromotionItem = React.memo(
         </div>
 
         {/* CTA Button */}
-        <Button className="w-32 py-2.5 bg-white !text-[#9810FA] font-semibold text-sm flex items-center justify-center gap-1 hover:bg-white/90 transition-colors">
+        <Button className="w-32 py-2.5 bg-white dark:bg-white !text-[#9810FA] dark:hover:!text-[#9810FA] font-semibold text-sm flex items-center justify-center gap-1 dark:hover:!bg-black/10 transition-colors">
           {t('common.promotion.button')}
           <ArrowRightOutlined />
         </Button>
