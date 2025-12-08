@@ -3,7 +3,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
 import { DirectConnection } from '@hocuspocus/server';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
-import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/dist/messages';
+import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/messages';
 import { CallbackHandler as LangfuseCallbackHandler } from '@langfuse/langchain';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';

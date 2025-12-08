@@ -22,6 +22,7 @@ interface ConfigInfoDisplayProps {
   upstreamAgentNodes: CanvasNode<ResponseNodeMeta>[];
   setContextItems: (items: IContextItem[]) => void;
   setSelectedToolsets: (toolsets: GenericToolset[]) => void;
+  setQuery: (query: string | ((prevQuery: string) => string)) => void;
   removeUpstreamAgent: (targetEntityId: string) => void;
   disabled: boolean;
 }
@@ -53,6 +54,7 @@ export const ConfigInfoDisplay = memo(
     upstreamAgentNodes = [],
     setContextItems,
     setSelectedToolsets,
+    setQuery,
     removeUpstreamAgent,
     disabled,
   }: ConfigInfoDisplayProps) => {
@@ -78,6 +80,42 @@ export const ConfigInfoDisplay = memo(
       const mentions = parseMentionsFromQuery(prompt);
       return mentions.filter((item) => item.type === 'var');
     }, [prompt]);
+    const escapeRegExp = useCallback(
+      (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+      [],
+    );
+
+    const handleRemoveVariable = useCallback(
+      (variableId: string, variableName: string) => {
+        if (!variableId && !variableName) {
+          return;
+        }
+
+        setQuery((prevQuery: string) => {
+          if (!prevQuery) return prevQuery;
+
+          const patterns: RegExp[] = [];
+          if (variableId) {
+            patterns.push(new RegExp(`@\\{[^}]*id=${escapeRegExp(variableId)}[^}]*\\}`, 'g'));
+          }
+          if (variableName) {
+            patterns.push(new RegExp(`@\\{[^}]*name=${escapeRegExp(variableName)}[^}]*\\}`, 'g'));
+          }
+
+          let nextQuery = prevQuery;
+          for (const pattern of patterns) {
+            nextQuery = nextQuery.replace(pattern, '');
+          }
+
+          // Clean up extra spaces/newlines left after removal
+          nextQuery = nextQuery.replace(/[ \t]+/g, ' ');
+          nextQuery = nextQuery.replace(/\s+\n/g, '\n');
+          nextQuery = nextQuery.replace(/\n{3,}/g, '\n\n');
+          return nextQuery.trim();
+        });
+      },
+      [escapeRegExp, setQuery],
+    );
 
     // Extract files from contextItems
     const files = useMemo(() => {
@@ -141,6 +179,11 @@ export const ConfigInfoDisplay = memo(
                 icon={<X size={12} className="flex-shrink-0" />}
                 labeltext={variable.name}
                 classnames={AGENT_CONFIG_KEY_CLASSNAMES.inputs}
+                onClose={
+                  disabled
+                    ? undefined
+                    : () => handleRemoveVariable(variable.id as string, variable.name)
+                }
               />
             ))}
           </div>

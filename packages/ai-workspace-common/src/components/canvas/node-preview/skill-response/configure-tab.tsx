@@ -44,6 +44,7 @@ const ConfigureTabComponent = ({
     modelInfo,
     contextItems,
     selectedToolsets,
+    setQuery,
     setModelInfo,
     setContextItems,
     setSelectedToolsets,
@@ -203,6 +204,7 @@ const ConfigureTabComponent = ({
               contextItems={contextItems}
               setContextItems={setContextItems}
               setSelectedToolsets={setSelectedToolsets}
+              setQuery={setQuery}
               upstreamAgentNodes={upstreamAgentNodes}
               removeUpstreamAgent={removeUpstreamAgent}
               disabled={disabled}
