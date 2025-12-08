@@ -7096,6 +7096,14 @@ export const CreateCheckoutSessionRequestSchema = {
       description: 'Subscription billing interval',
       $ref: '#/components/schemas/SubscriptionInterval',
     },
+    currentPlan: {
+      type: 'string',
+      description: 'Current plan',
+    },
+    source: {
+      type: 'string',
+      description: 'Source',
+    },
   },
 } as const;
 
@@ -7106,6 +7114,14 @@ export const CreateCreditPackCheckoutSessionRequestSchema = {
     packId: {
       type: 'string',
       description: 'Credit pack identifier',
+    },
+    currentPlan: {
+      type: 'string',
+      description: 'Current plan',
+    },
+    source: {
+      type: 'string',
+      description: 'Source',
     },
   },
 } as const;
