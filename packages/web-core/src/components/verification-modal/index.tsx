@@ -1,14 +1,18 @@
 import { Modal, Input, Button, message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { useAuthStore, useAuthStoreShallow } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { InvalidVerificationSession } from '@refly/errors';
+import { logEvent } from '@refly/telemetry-web';
 
 const RESEND_INTERVAL = 30;
 
 export const VerificationModal = () => {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const authStore = useAuthStoreShallow((state) => ({
     email: state.email,
     verificationModalOpen: state.verificationModalOpen,
@@ -19,6 +23,17 @@ export const VerificationModal = () => {
   const [resendLoading, setResendLoading] = useState(false);
   const [otp, setOtp] = useState('');
   const [countdown, setCountdown] = useState(0);
+
+  // Determine source based on route or URL parameter
+  const source = useMemo(() => {
+    const currentPath = location.pathname;
+    // Check if current route matches template page patterns
+    if (currentPath?.startsWith('/app/') || currentPath?.startsWith('/workflow-template/')) {
+      return 'template_page';
+    }
+    // Fallback to URL parameter
+    return searchParams.get('from') ?? undefined;
+  }, [location.pathname, searchParams]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -59,6 +74,8 @@ export const VerificationModal = () => {
     }
 
     if (data?.success) {
+      // Log signup success event with source (verification completed)
+      logEvent('signup_success', null, source ? { source } : undefined);
       authStore.reset();
       window.location.replace('/workspace');
     }

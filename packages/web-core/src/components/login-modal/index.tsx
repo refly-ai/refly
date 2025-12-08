@@ -2,7 +2,7 @@ import { Button, Modal, Divider, Input, Form } from 'antd';
 import { Link } from '@refly-packages/ai-workspace-common/utils/router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 
 import { OAuthButton } from './oauth-button';
 
@@ -23,6 +23,7 @@ interface FormValues {
 const LoginModal = (props: { visible?: boolean; from?: string }) => {
   const [form] = Form.useForm<FormValues>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [isEmailFormExpanded, setIsEmailFormExpanded] = useState(false);
 
   const authStore = useAuthStoreShallow((state) => ({
@@ -46,6 +47,17 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
   const { t } = useTranslation();
 
   const { data: authConfig, isLoading: isAuthConfigLoading } = useGetAuthConfig();
+
+  // Determine source based on route or URL parameter
+  const source = useMemo(() => {
+    const currentPath = location.pathname;
+    // Check if current route matches template page patterns
+    if (currentPath?.startsWith('/app/') || currentPath?.startsWith('/workflow-template/')) {
+      return 'template_page';
+    }
+    // Fallback to URL parameter or props
+    return searchParams.get('from') ?? props.from ?? undefined;
+  }, [location.pathname, searchParams, props.from]);
 
   // Provide default values if config is not loaded
   const { isGithubEnabled, isGoogleEnabled, isEmailEnabled } = useMemo(() => {
@@ -76,7 +88,7 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
       logEvent('auth::oauth_login_click', provider);
       authStore.setLoginInProgress(true);
       authStore.setLoginProvider(provider);
-      location.href = `${serverOrigin}/v1/auth/${provider}`;
+      window.location.href = `${serverOrigin}/v1/auth/${provider}`;
     },
     [authStore],
   );
@@ -107,6 +119,8 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
         authStore.setLoginModalOpen(false);
 
         if (data.data?.skipVerification) {
+          // Log signup success event with source
+          logEvent('signup_success', null, source ? { source } : undefined);
           authStore.reset();
           const returnUrl = searchParams.get('returnUrl');
           const redirectUrl = returnUrl
@@ -132,6 +146,8 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
       authStore.setLoginInProgress(false);
 
       if (data?.success) {
+        // Log login success event with source
+        logEvent('login_success', null, source ? { source } : undefined);
         authStore.setLoginModalOpen(false);
         authStore.reset();
         const returnUrl = searchParams.get('returnUrl');
@@ -143,7 +159,7 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
         window.location.replace(redirectUrl);
       }
     }
-  }, [authStore, form, isPublicAccessPage, searchParams]);
+  }, [authStore, form, isPublicAccessPage, searchParams, source]);
 
   const handleResetPassword = useCallback(() => {
     authStore.setLoginModalOpen(false);
