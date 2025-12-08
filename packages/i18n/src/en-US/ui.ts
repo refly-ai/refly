@@ -3649,31 +3649,17 @@ const translations = {
         title: 'PRO',
       },
       plus: {
-        title: 'Plus',
+        title: 'Plus Plan',
         description: 'Suitable for running a high volume of automation tasks',
         buttonText: 'Get Plus',
         features: [
-          'Daily new credits\n100 credits',
-          'Monthly credits\n2,000 credits',
-          //'New subscribers receive an extra\n2,000 bonus credits',
+          'Daily new credits: 100 points',
+          'Monthly credits: 2,000 points',
+          'New subscribers receive an extra 2,000 bonus credits',
           'Access to a vast library of tools',
-          /*{
-            name: 'Credit-free tools',
-            type: 'pointFreeTools',
-            items: [
-              'Gemini 3.0 Nano Banana pro',
-              'Seedream 4.0',
-              'Seedance 1.5',
-              'VibeVoice',
-              'Instagram',
-              'TikTok',
-              'Reddit',
-              'X',
-            ],
-            duration: '365 DAYS',
-          },*/
-          'Service support\nHigh priority support',
+          'Point-free tools',
         ],
+        support: 'Service support: High-priority email support',
       },
       max: {
         title: 'MAX',

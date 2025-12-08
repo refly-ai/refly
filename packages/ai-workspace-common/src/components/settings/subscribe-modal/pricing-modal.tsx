@@ -31,20 +31,43 @@ interface Feature {
 const FeatureItem = memo(
   ({
     children,
-    bold,
     green,
+    highlightCredits,
   }: {
     children: React.ReactNode;
-    bold?: boolean;
     green?: boolean;
+    highlightCredits?: boolean;
   }) => {
+    // Function to highlight credit numbers in text
+    const renderContent = () => {
+      if (!highlightCredits || typeof children !== 'string') {
+        return children;
+      }
+
+      // Match patterns like "2,000 points" or "2,000 bonus credits"
+      const regex = /([\d,]+\s*(?:points|bonus credits|积分))/gi;
+      const parts = children.split(regex);
+
+      return parts.map((part, index) => {
+        // Check if this part matches the pattern
+        if (/([\d,]+\s*(?:points|bonus credits|积分))/i.test(part)) {
+          return (
+            <span key={index} className="text-[#00968F]">
+              {part}
+            </span>
+          );
+        }
+        return part;
+      });
+    };
+
     return (
       <div className="flex items-start gap-2">
         <Checked size={20} color="#0E9F77" className="flex-shrink-0 mt-0.5" />
         <span
-          className={`text-sm text-[#1C1F23] ${bold ? 'font-medium' : ''} ${green ? 'text-[#0E9F77]' : ''}`}
+          className={`text-[14px] font-semibold leading-[21px] text-[#1C1F23] ${green ? 'text-[#0E9F77]' : ''}`}
         >
-          {children}
+          {renderContent()}
         </span>
       </div>
     );
@@ -126,37 +149,37 @@ const BillingOption = memo(
 
     // Calculate discounted price if voucher exists
     const displayPrice = discountPercent ? price * (1 - discountPercent / 100) : price;
-    const hasDiscount = discountPercent && discountPercent > 0;
 
     return (
-      <Button
-        type="text"
+      <button
+        type="button"
         onClick={handleClick}
-        className={`
-          !flex-1 !rounded-xl !p-4 !text-left !transition-all !bg-white !h-auto
-          ${isSelected ? '!border-[1.5px] !border-[#1C1F23]' : '!border !border-black/10 hover:!border-black/20'}
-        `}
+        className={`flex-1 rounded-xl p-4 text-left transition-all bg-white cursor-pointer ${
+          isSelected ? 'border-[1.5px] border-[#1C1F23]' : 'border border-black/10'
+        }`}
       >
-        <div className="flex items-center gap-2 mb-2">
-          <span className="font-medium text-[#1C1F23]">
-            {type === 'monthly'
-              ? t('subscription.monthly', 'Monthly')
-              : t('subscription.yearly', 'Yearly')}
-          </span>
-          {type === 'yearly' && (
-            <span className="bg-[#FC8800] text-white text-xs px-2 py-0.5 rounded font-medium">
-              {t('subscription.save20', 'Save 20%')}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[14px] font-semibold leading-[21px] text-[#0A0A0A]">
+              {type === 'monthly'
+                ? t('subscription.monthly', 'Monthly')
+                : t('subscription.yearly', 'Yearly')}
             </span>
-          )}
+            {type === 'yearly' && (
+              <span className="bg-[#FEF2CF] text-[#FC8800] text-xs px-2 py-0.5 rounded-full font-medium">
+                {t('subscription.save20', 'Save 20%')}
+              </span>
+            )}
+          </div>
           {isSelected && (
-            <div className="w-[18px] h-[18px] rounded-full bg-[#0E9F77] flex items-center justify-center ml-auto">
+            <div className="w-[18px] h-[18px] rounded-full bg-[#0E9F77] flex items-center justify-center">
               <Checked size={12} color="#fff" />
             </div>
           )}
         </div>
         <div className="flex items-baseline gap-2">
           <span
-            className={`text-2xl font-bold ${hasDiscount && type === 'monthly' ? 'text-[#FC8800]' : 'text-[#1C1F23]'}`}
+            className={`text-2xl font-bold ${isSelected ? 'text-[#FC8800]' : 'text-[#1C1F23]'}`}
           >
             ${displayPrice.toFixed(1)}
           </span>
@@ -172,7 +195,7 @@ const BillingOption = memo(
             </>
           )}
         </div>
-      </Button>
+      </button>
     );
   },
 );
@@ -251,10 +274,14 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
   // Point-free tools data
   const pointFreeTools = useMemo(
     () => [
-      { name: 'Claude 3.5 Sonnet', days: 365 },
-      { name: 'GPT-4o', days: 365 },
-      { name: 'Gemini Pro', days: 365 },
-      { name: 'DeepSeek', days: 365 },
+      { name: 'Gemini 3.0 Nano Banana pro', days: 356 },
+      { name: 'Seedream 4.0', days: 356 },
+      { name: 'Seedance 1.5', days: 356 },
+      { name: 'VibeVoice', days: 356 },
+      { name: 'Instagram', days: 356 },
+      { name: 'TikTok', days: 356 },
+      { name: 'Reddit', days: 356 },
+      { name: 'X', days: 356 },
     ],
     [],
   );
@@ -420,7 +447,7 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
                 <h3 className="text-sm font-medium text-[#1C1F23]/60 mb-4">
                   {t('subscription.plans.memberBenefits', 'Member Benefits')}
                 </h3>
-                <FeatureItem bold>
+                <FeatureItem>
                   {t('subscription.plans.free.dailyCredits', 'Daily new credits: 100 points')}
                 </FeatureItem>
               </div>
@@ -473,11 +500,16 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
             </div>
 
             {/* Get Plus Button */}
-            <Button
-              type="primary"
+            <button
+              type="button"
               onClick={handleGetPlus}
               disabled={isLoading}
-              className="!w-full !py-4 !h-auto !rounded-xl !bg-[#1C1F23] !text-white hover:!bg-[#1C1F23]/90 !transition-colors !mb-6 !font-medium !flex !items-center !justify-center !gap-2 disabled:!opacity-70"
+              className={`
+                w-full h-12 rounded-xl text-sm font-medium transition-all duration-200
+                flex items-center justify-center gap-2
+                ${isLoading ? 'bg-[#1C1F23] text-white opacity-70 cursor-not-allowed' : 'bg-[#1C1F23] text-white hover:bg-[#1C1F23]/90 cursor-pointer'}
+                mb-6
+              `}
             >
               {isLoading ? (
                 <>
@@ -490,7 +522,7 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
                   {t('subscription.plans.getPlus', 'Get Plus')}
                 </>
               )}
-            </Button>
+            </button>
 
             {/* Member Benefits */}
             <div>
@@ -499,9 +531,7 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
               </h3>
               <div className="space-y-3 mb-5">
                 {features.slice(0, 5).map((feature, index) => (
-                  <FeatureItem key={index} bold>
-                    {feature.name}
-                  </FeatureItem>
+                  <FeatureItem key={index}>{feature.name}</FeatureItem>
                 ))}
               </div>
 
@@ -512,7 +542,7 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
                 ))}
               </div>
 
-              <FeatureItem bold>
+              <FeatureItem>
                 {t(
                   'subscription.plans.plus.support',
                   'Service support: High-priority email support',
@@ -549,18 +579,28 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
 
   // Modal mode - compact "Insufficient Credits" modal
   return (
-    <div className="w-full max-w-[534px] rounded-[20px] bg-white/90 p-10 shadow-[0_6px_60px_rgba(0,0,0,0.08)] backdrop-blur-[20px] border border-black/10">
+    <div
+      className="w-full rounded-[20px] p-10 shadow-[0_6px_60px_rgba(0,0,0,0.08)] backdrop-blur-[20px] border border-black/10"
+      style={{ background: 'rgba(255, 255, 255, 0.90)' }}
+    >
       {/* Header */}
       <h1 className="text-2xl font-semibold text-[#1C1F23] mb-6">
         {t('subscription.insufficientCredits', 'Insufficient Credits')}
       </h1>
 
-      <div className="rounded-2xl bg-gradient-to-b from-[#D9FFFE]/50 to-white p-5 mb-6">
+      <div
+        className="rounded-2xl p-5 mb-6"
+        style={{
+          borderRadius: '16px',
+          border: '0.5px solid rgba(0, 0, 0, 0.10)',
+          background: 'linear-gradient(180deg, rgba(217, 255, 254, 0.50) 0%, #FFF 12.74%)',
+        }}
+      >
         {/* Plan Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Subscription size={20} className="text-[#1C1F23]" />
-            <span className="font-semibold text-[#1C1F23]">
+            <span className="text-[18px] font-semibold leading-[27px] text-[#1C1F23]">
               {t('subscription.plans.plus.title', 'Plus Plan')}
             </span>
           </div>
@@ -573,7 +613,7 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
         </div>
 
         {/* Billing Toggle */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 mb-6">
           <BillingOption
             type="monthly"
             isSelected={billingPeriod === 'monthly'}
@@ -590,34 +630,36 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
             onSelect={handleBillingChange}
           />
         </div>
-      </div>
 
-      {/* Features List */}
-      <div className="space-y-3 mb-6">
-        {features.slice(0, 5).map((feature, index) => (
-          <FeatureItem key={index}>{feature.name}</FeatureItem>
-        ))}
-      </div>
+        {/* Features List */}
+        <div className="space-y-3 mb-6">
+          {features.slice(0, 5).map((feature, index) => (
+            <FeatureItem key={index} highlightCredits={index === 1 || index === 2}>
+              {feature.name}
+            </FeatureItem>
+          ))}
+        </div>
 
-      {/* Point-free Tools List */}
-      <div className="space-y-2.5 mb-6 pl-7">
-        {pointFreeTools.map((tool) => (
-          <PointFreeToolItem key={tool.name} name={tool.name} days={tool.days} />
-        ))}
-      </div>
+        {/* Point-free Tools List */}
+        <div className="space-y-2 mb-6 pl-7">
+          {pointFreeTools.map((tool) => (
+            <PointFreeToolItem key={tool.name} name={tool.name} days={tool.days} />
+          ))}
+        </div>
 
-      {/* Service Support */}
-      <div className="mb-8">
-        <FeatureItem>
-          {t('subscription.plans.plus.support', 'Service support: High-priority email support')}
-        </FeatureItem>
+        {/* Service Support */}
+        <div>
+          <FeatureItem>
+            {t('subscription.plans.plus.support', 'Service support: High-priority email support')}
+          </FeatureItem>
+        </div>
       </div>
 
       {/* Action Buttons */}
       <div className="flex gap-3 justify-center">
         <Button
           onClick={handleCancel}
-          className="!px-10 !py-4 !h-auto !rounded-full !text-[#1C1F23] !bg-[#F6F6F6] !border !border-black/[0.14] hover:!bg-[#EBEBEB] !transition-colors !font-medium"
+          className="!w-[166px] !h-9 !rounded-full !text-[#1C1F23] !bg-[#F6F6F6] !border !border-black/[0.14] hover:!bg-[#EBEBEB] !transition-colors !font-medium"
         >
           {t('common.cancel', 'Cancel')}
         </Button>
@@ -625,7 +667,7 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
           type="primary"
           onClick={handleGetPlus}
           disabled={isLoading}
-          className="!px-10 !py-4 !h-auto !rounded-full !bg-[#1C1F23] !text-white hover:!bg-[#1C1F23]/90 !transition-colors !font-medium disabled:!opacity-70 !flex !items-center !gap-2"
+          className="!w-[166px] !h-9 !rounded-full !bg-[#1C1F23] !text-white hover:!bg-[#1C1F23]/90 !transition-colors !font-medium disabled:!opacity-70 !flex !items-center !justify-center !gap-2"
         >
           {isLoading ? (
             <>

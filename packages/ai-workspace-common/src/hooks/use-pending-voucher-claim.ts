@@ -53,7 +53,15 @@ export const usePendingVoucherClaim = () => {
         });
 
         if (!verifyResponse.data?.success || !verifyResponse.data.data) {
+          // Invitation is no longer valid (already claimed or expired)
           console.log('Pending voucher invitation is no longer valid');
+          message.info({
+            content: t(
+              'voucher.invite.alreadyClaimed',
+              'Code already claimed. Publish a template to get your own.',
+            ),
+            duration: 5,
+          });
           return;
         }
 
@@ -82,6 +90,15 @@ export const usePendingVoucherClaim = () => {
           setTimeout(() => {
             showClaimedVoucherPopup(voucher);
           }, 500);
+        } else if (claimResponse.data?.data?.success === false) {
+          // Claim failed - likely already claimed by another user
+          message.info({
+            content: t(
+              'voucher.invite.alreadyClaimed',
+              'Code already claimed. Publish a template to get your own.',
+            ),
+            duration: 5,
+          });
         }
       } catch (error) {
         console.error('Failed to claim pending voucher:', error);

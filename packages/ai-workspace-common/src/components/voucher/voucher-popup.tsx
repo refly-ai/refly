@@ -8,6 +8,10 @@ import { SharePoster } from './share-poster';
 import { useSubscriptionStoreShallow } from '@refly/stores';
 import { useCreateCanvas } from '../../hooks/canvas/use-create-canvas';
 import { Confetti } from './confetti';
+import { TicketBottomCard } from './ticket-bottom-card';
+
+// Base monthly price for discount calculation
+const BASE_MONTHLY_PRICE = 20;
 
 interface VoucherPopupProps {
   visible: boolean;
@@ -33,10 +37,14 @@ export const VoucherPopup = ({
   const [shareUrl, setShareUrl] = useState('');
   const [creatingInvitation, setCreatingInvitation] = useState(false);
 
-  // Get subscription modal control from store
-  const { setSubscribeModalVisible } = useSubscriptionStoreShallow((state) => ({
+  // Get subscription modal control and plan type from store
+  const { setSubscribeModalVisible, planType } = useSubscriptionStoreShallow((state) => ({
     setSubscribeModalVisible: state.setSubscribeModalVisible,
+    planType: state.planType,
   }));
+
+  // Determine if user is a Plus subscriber
+  const isPlusUser = planType !== 'free';
 
   // Create canvas hook for "Publish to Get Coupon" flow
   const { debouncedCreateCanvas, isCreating: isCreatingCanvas } = useCreateCanvas({
@@ -58,6 +66,10 @@ export const VoucherPopup = ({
 
   const { voucher } = voucherResult;
   const discountPercent = voucher.discountPercent;
+
+  // Calculate discount value and discounted price
+  const discountValue = Math.round((BASE_MONTHLY_PRICE * discountPercent) / 100);
+  const discountedPrice = BASE_MONTHLY_PRICE - discountValue;
 
   // Calculate valid days from expiresAt
   const validDays = voucher.expiresAt
@@ -153,12 +165,17 @@ export const VoucherPopup = ({
           body: {
             padding: 0,
           },
+          mask: {
+            overflow: 'hidden',
+          },
         }}
       >
-        <div className="relative w-full max-w-[380px] mx-auto">
-          {/* Confetti effect */}
+        {/* Confetti effect - positioned relative to viewport, not the modal */}
+        <div className="fixed inset-0 pointer-events-none z-[1000]">
           <Confetti isActive={visible} />
+        </div>
 
+        <div className="relative w-full max-w-[380px] mx-auto">
           {/* White base layer with shadow and rounded corners */}
           <div
             className="absolute left-0 right-0 rounded-[20px]"
@@ -221,83 +238,92 @@ export const VoucherPopup = ({
               </p>
             </div>
 
-            {/* Bottom semi-transparent white area with punched holes at top - overlays bottom half */}
-            <div className="absolute bottom-0 left-0 right-0">
-              <svg
-                className="w-full"
-                height="262"
-                viewBox="0 0 380 262"
-                fill="none"
-                preserveAspectRatio="none"
-                style={{ display: 'block' }}
+            {/* Bottom semi-transparent white area with punched hole at top */}
+            <TicketBottomCard minHeight={262}>
+              {/* Description text - different for Plus vs non-Plus users */}
+              <div
+                className="text-center text-sm leading-relaxed px-2"
+                style={{ color: 'rgba(28, 31, 35, 0.6)' }}
               >
-                {/* Backdrop blur effect filter */}
-                <defs>
-                  <filter id="backdrop-blur" x="-20" y="-20" width="420" height="302">
-                    <feGaussianBlur in="SourceGraphic" stdDeviation="6" />
-                  </filter>
-                </defs>
-                {/* White semi-transparent card with punched circular notches at top */}
-                <path
-                  d="M358 0C369.046 0 380 10.9543 380 22V242C380 253.046 369.046 262 358 262H22C10.9543 262 0 253.046 0 242V22C0 10.9543 10.9543 0 22 0H170C174.418 0 177.834 3.95 180.569 7.42C182.766 10.209 186.174 12 190 12C193.826 12 197.234 10.209 199.431 7.42C202.166 3.95 205.582 0 210 0H358Z"
-                  fill="rgba(255, 255, 255, 0.7)"
-                  style={{
-                    filter: 'url(#backdrop-blur)',
-                  }}
-                />
-              </svg>
-
-              {/* Bottom content area - positioned absolutely over the SVG */}
-              <div className="absolute inset-0 pt-6 pb-6 px-5 flex flex-col justify-end">
-                {/* Description text */}
-                <p
-                  className="text-center text-sm leading-relaxed px-2"
-                  style={{ color: 'rgba(28, 31, 35, 0.6)' }}
-                >
-                  {useOnlyMode
-                    ? t(
-                        'voucher.popup.claimedDescription',
-                        'Great! You have received a discount coupon. Publish a high-quality template to get your own coupon and share with friends!',
-                      )
-                    : t(
-                        'voucher.popup.description',
-                        'Thanks for contributing such a high-quality template to the Marketplace. With your Voucher applied, you get full access at a discounted price.',
+                {isPlusUser ? (
+                  // Plus user: show invite friend description
+                  <>
+                    <p>
+                      {t(
+                        'voucher.popup.plusUserDesc1',
+                        "To celebrate your amazing work, we're giving you a ${{value}} discount (valid for 7 days).",
+                        { value: discountValue },
                       )}
-                </p>
+                    </p>
+                    <p className="mt-2">
+                      {t(
+                        'voucher.popup.plusUserDesc2',
+                        "Invite a friend to register with your link and purchase a membership, and you'll both get rewards:",
+                      )}
+                    </p>
+                    <ul className="mt-1 text-left pl-4 list-disc">
+                      <li>{t('voucher.popup.plusUserReward1', 'You: +2,000 bonus credits')}</li>
+                      <li>
+                        {t(
+                          'voucher.popup.plusUserReward2',
+                          'Your friend: A special discount for their membership purchase.',
+                        )}
+                      </li>
+                    </ul>
+                  </>
+                ) : (
+                  // Non-Plus user: show discount and price description
+                  <>
+                    <p>
+                      {t(
+                        'voucher.popup.nonPlusUserDesc1',
+                        "To celebrate your amazing work, we're giving you a ${{value}} discount (valid for 7 days)—our way of saying thanks for contributing such a high-quality template to the Marketplace.",
+                        { value: discountValue },
+                      )}
+                    </p>
+                    <p className="mt-2">
+                      {t(
+                        'voucher.popup.nonPlusUserDesc2',
+                        'Enjoy full access for just ${{discountedPrice}}!',
+                        { discountedPrice },
+                      )}
+                    </p>
+                  </>
+                )}
+              </div>
 
-                {/* Button group */}
-                <div className="mt-5 flex flex-col gap-3">
+              {/* Button group */}
+              <div className="mt-5 flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={handleUseNow}
+                  disabled={isCreatingCanvas}
+                  className="h-12 w-full rounded-full text-base font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#1C1F23' }}
+                >
+                  {isCreatingCanvas
+                    ? t('common.loading', 'Loading...')
+                    : useOnlyMode
+                      ? t('voucher.popup.publishToGetCoupon', 'Publish to Get Coupon')
+                      : t('voucher.popup.useNow', 'Use It Now')}
+                </button>
+                {!useOnlyMode && (
                   <button
                     type="button"
-                    onClick={handleUseNow}
-                    disabled={isCreatingCanvas}
-                    className="h-12 w-full rounded-full text-base font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: '#1C1F23' }}
+                    onClick={handleShare}
+                    disabled={creatingInvitation}
+                    className="h-12 w-full rounded-full bg-white text-base font-medium text-black transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, 0.08)',
+                    }}
                   >
-                    {isCreatingCanvas
-                      ? t('common.loading', 'Loading...')
-                      : useOnlyMode
-                        ? t('voucher.popup.publishToGetCoupon', 'Publish to Get Coupon')
-                        : t('voucher.popup.useNow', 'Use It Now')}
+                    {creatingInvitation
+                      ? t('voucher.popup.creating', 'Creating...')
+                      : t('voucher.popup.shareWithFriend', 'Share With Friend')}
                   </button>
-                  {!useOnlyMode && (
-                    <button
-                      type="button"
-                      onClick={handleShare}
-                      disabled={creatingInvitation}
-                      className="h-12 w-full rounded-full bg-white text-base font-medium text-black transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, 0.08)',
-                      }}
-                    >
-                      {creatingInvitation
-                        ? t('voucher.popup.creating', 'Creating...')
-                        : t('voucher.popup.shareWithFriend', 'Share With Friend')}
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
-            </div>
+            </TicketBottomCard>
           </div>
         </div>
       </Modal>

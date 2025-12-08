@@ -415,6 +415,7 @@ const PlanItem = memo((props: PlanItemProps) => {
           type="button"
           className={`
             w-full h-11 rounded-lg text-sm font-semibold transition-all duration-200 hover:cursor-pointer
+            flex items-center justify-center gap-2
             ${
               isButtonDisabled
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'

@@ -7,17 +7,22 @@ import { VoucherTriggerResult } from '@refly/openapi-schema';
  * This should be placed in the app layout alongside SubscribeModal.
  *
  * Features:
- * - Shows voucher popup in "use only" mode (no share button)
+ * - For non-Plus users: Shows "Use It Now" button to subscribe with voucher
+ * - For Plus users: Shows "Publish to Get Coupon" button (no need to subscribe)
  * - Controlled by subscription store state
  * - Used after user claims voucher from QR code / invite link
  */
 export const ClaimedVoucherPopup = () => {
-  const { claimedVoucherPopupVisible, claimedVoucher, hideClaimedVoucherPopup } =
+  const { claimedVoucherPopupVisible, claimedVoucher, hideClaimedVoucherPopup, planType } =
     useSubscriptionStoreShallow((state) => ({
       claimedVoucherPopupVisible: state.claimedVoucherPopupVisible,
       claimedVoucher: state.claimedVoucher,
       hideClaimedVoucherPopup: state.hideClaimedVoucherPopup,
+      planType: state.planType,
     }));
+
+  // Determine if user is already a Plus subscriber
+  const isPlusUser = planType !== 'free';
 
   if (!claimedVoucher) return null;
 
@@ -33,7 +38,7 @@ export const ClaimedVoucherPopup = () => {
       visible={claimedVoucherPopupVisible}
       onClose={hideClaimedVoucherPopup}
       voucherResult={voucherResult}
-      useOnlyMode={true}
+      useOnlyMode={isPlusUser}
     />
   );
 };

@@ -131,7 +131,7 @@ const translations = {
         title: 'PRO',
       },
       plus: {
-        title: 'Plus',
+        title: 'Plus Plan',
         titleCn: 'Plus',
         description: '适合运行高频自动化任务',
         priceMonthly: '$ {{price}}/月',
@@ -139,27 +139,13 @@ const translations = {
         priceYearlyTotal: '$ {{price}}/年 节省 20%',
         buttonText: '升级到 {{planName}}',
         features: [
-          '每日可获取新积分\n100点',
-          '每月积分\n2000点',
-          //'首次订阅额外赠送\n2000点',
+          '每日新增积分：100点',
+          '每月积分：2,000点',
+          '新订阅用户额外获得 2,000 积分',
           '访问丰富的工具库',
-          /*{
-            name: '免积分使用工具',
-            type: 'pointFreeTools',
-            items: [
-              'Gemini 3.0 Nano Banana pro',
-              'Seedream 4.0',
-              'Seedance 1.5',
-              'VibeVoice',
-              'Instagram',
-              'TikTok',
-              'Reddit',
-              'X',
-            ],
-            duration: '365 DAYS',
-          },*/
-          '服务支持\n高优邮件支持',
+          '免积分工具',
         ],
+        support: '服务支持：高优邮件支持',
       },
       max: {
         title: 'MAX',
