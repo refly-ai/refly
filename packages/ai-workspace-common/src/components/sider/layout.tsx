@@ -184,12 +184,12 @@ export const PromotionItem = React.memo(
           <div className="flex-shrink-0">
             <img src={GiftPromotionIcon} className="w-12 h-15" />
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col pl-1">
             <div className="flex items-baseline flex-wrap">
               <span className="text-[20px] font-regular text-white">
                 {t('common.promotion.title')}
               </span>
-              <span className="text-[25px] font-regular text-[#FFE066]">
+              <span className="text-[25px] font-semibold text-[#FFE066]">
                 {t('common.promotion.discount')}
               </span>
               <span className="text-[20px] font-regular text-white">
@@ -200,16 +200,16 @@ export const PromotionItem = React.memo(
         </div>
 
         {/* Description */}
-        <p className="text-xs text-white/80 mb-2 leading-relaxed">
+        <p className="text-[11px] text-white/80 mb-2 leading-relaxed">
           {t('common.promotion.description')}
         </p>
 
         {/* Tags */}
         <div className="flex gap-2 mb-3">
-          <span className="py-1 px-2 rounded-full bg-black/5 text-[12px] font-medium text-white">
+          <span className="py-1 px-2 rounded-full bg-black/10 text-[12px] font-medium text-white">
             {t('common.promotion.tag1')}
           </span>
-          <span className="py-1 px-2 rounded-full bg-black/5 text-[12px] font-medium text-white">
+          <span className="py-1 px-2 rounded-full bg-black/10 text-[12px] font-medium text-white">
             {t('common.promotion.tag2')}
           </span>
         </div>

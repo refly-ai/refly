@@ -81,7 +81,7 @@ const translations = {
       discount: '90% OFF',
       titleSuffix: '',
       subtitle: 'Publish First AI Workflow',
-      description: 'Unlock top models like Nano banana pro, Gemini 3.0 and more',
+      description: 'Unlock unlimited access to top tools: Nano banana pro, Gemini 3.0 & more.',
       tag1: '100% Win Rate',
       tag2: '3000 Credits',
       button: 'Join Now',
