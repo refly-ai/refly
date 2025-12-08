@@ -9,6 +9,7 @@ export const useFetchProviderItems = (params: ListProviderItemsData['query']) =>
     userProfile: state.userProfile,
   }));
   const defaultChatModelId = userProfile?.preferences?.defaultModel?.chat?.itemId;
+  const defaultAgentModelId = userProfile?.preferences?.defaultModel?.agent?.itemId;
 
   const {
     data: providerItems,
@@ -31,11 +32,19 @@ export const useFetchProviderItems = (params: ListProviderItemsData['query']) =>
   );
 
   const defaultChatModel = providerItems?.data?.find((item) => item.itemId === defaultChatModelId);
+  const defaultAgentModel = providerItems?.data?.find(
+    (item) => item.itemId === defaultAgentModelId,
+  );
 
   return {
     data: providerItems?.data ?? [],
     isLoading,
     refetch,
     defaultChatModel: defaultChatModel ? providerItemToModelInfo(defaultChatModel) : null,
+    defaultAgentModel: defaultAgentModel
+      ? providerItemToModelInfo(defaultAgentModel)
+      : defaultChatModel
+        ? providerItemToModelInfo(defaultChatModel)
+        : null,
   };
 };

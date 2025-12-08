@@ -64,7 +64,7 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
   const { setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
     setShowWorkflowRun: state.setShowWorkflowRun,
   }));
-  const { defaultChatModel } = useFetchProviderItems({
+  const { defaultAgentModel } = useFetchProviderItems({
     category: 'llm',
     enabled: true,
   });
@@ -112,7 +112,7 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
       tools?.data ?? [],
       {
         autoLayout: true,
-        defaultModel: defaultChatModel,
+        defaultModel: defaultAgentModel,
         startNodes,
       },
     );
@@ -135,7 +135,7 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
     t,
     modal,
     setShowWorkflowRun,
-    defaultChatModel,
+    defaultAgentModel,
     onLayout,
   ]);
 
