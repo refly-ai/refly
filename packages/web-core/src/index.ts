@@ -8,7 +8,6 @@ export const LazyDebugPage = lazy(() =>
 );
 
 export const UnsignedFrontPage = lazy(() => import('./pages/home-new'));
-export const CanvasPage = lazy(() => import('./pages/canvas'));
 export const Pricing = lazy(() => import('./pages/pricing'));
 export const LoginPage = lazy(() => import('./pages/login/index'));
 export const ShareCanvasPage = lazy(() => import('./pages/share'));

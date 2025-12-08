@@ -10,6 +10,7 @@ import { genMemoID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useAddAgentGlobal } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-agent-global';
+import { logEvent } from '@refly/telemetry-web';
 
 interface ToolbarButtonsProps {
   canvasId: string;
@@ -62,12 +63,15 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
   };
 
   const handleAddAgent = useCallback(() => {
-    addGlobalAgent();
+    addGlobalAgent({ source: 'bottomBar' });
   }, [addGlobalAgent]);
 
   const handleAddMemo = useCallback(() => {
+    logEvent('add_note', null, {
+      canvasId,
+    });
     createMemo(null);
-  }, []);
+  }, [canvasId, logEvent, createMemo]);
 
   const internalActions = useMemo(() => {
     return readonly

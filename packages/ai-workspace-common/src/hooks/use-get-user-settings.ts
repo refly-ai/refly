@@ -56,12 +56,16 @@ export const useGetUserSettings = () => {
       userStore.setUserProfile(undefined);
       userStore.setIsLogin(false);
 
-      // Use window.location.pathname to get current route (always latest, no dependency needed)
-      // We use isPublicAccessPageByPath (extracted from usePublicAccessPage) to check
-      // This ensures we get the latest route value even in async context
-      const isPublicPage = isPublicAccessPageByPath(window.location.pathname);
+      // Use window.location.pathname to get current route (always latest, no dependency needed).
+      // We use isPublicAccessPageByPath (extracted from usePublicAccessPage) to check.
+      // This ensures we get the latest route value even in async context.
+      const currentPath = window?.location?.pathname ?? '';
+      const isPublicPage = isPublicAccessPageByPath(currentPath);
 
-      if (!isPublicPage) {
+      // Short-circuit to avoid redirect loops:
+      // - Do NOT navigate if we are already on public pages (including /login)
+      // - Do NOT navigate when we are already at root '/', because AppLayout will handle root redirection
+      if (!isPublicPage && currentPath !== '/' && currentPath !== '/login') {
         navigate(`/?${searchParams.toString()}`); // Extension should navigate to home
       }
 
