@@ -25,7 +25,12 @@ import { OSS_EXTERNAL, OSS_INTERNAL, ObjectStorageService } from '../common/obje
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { ConfigService } from '@nestjs/config';
-import { omit, scrapeWeblink, getSafeMimeType } from '@refly/utils';
+import {
+  omit,
+  scrapeWeblink,
+  getSafeMimeType,
+  runModuleInitWithTimeoutAndRetry,
+} from '@refly/utils';
 import { QUEUE_IMAGE_PROCESSING, QUEUE_CLEAN_STATIC_FILES, streamToBuffer } from '../../utils';
 import {
   CanvasNotFoundError,
@@ -47,6 +52,9 @@ import { RedisService } from '../common/redis.service';
 export class MiscService implements OnModuleInit {
   private logger = new Logger(MiscService.name);
 
+  // Timeout for initialization operations (30 seconds)
+  private readonly INIT_TIMEOUT = 30000;
+
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
@@ -57,10 +65,27 @@ export class MiscService implements OnModuleInit {
     @Optional() @InjectQueue(QUEUE_CLEAN_STATIC_FILES) private cleanStaticFilesQueue?: Queue,
   ) {}
 
-  async onModuleInit() {
-    if (this.cleanStaticFilesQueue) {
-      await this.setupCleanStaticFilesCronjob();
-    }
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        if (!this.cleanStaticFilesQueue) {
+          this.logger.log('Clean static files queue not available, skipping cronjob setup');
+          return;
+        }
+
+        try {
+          await this.setupCleanStaticFilesCronjob();
+        } catch (error) {
+          this.logger.error(`Failed to setup clean static files cronjob: ${error}`);
+          throw error;
+        }
+      },
+      {
+        logger: this.logger,
+        label: 'MiscService.onModuleInit',
+        timeoutMs: this.INIT_TIMEOUT,
+      },
+    );
   }
 
   async fileStorageExists(

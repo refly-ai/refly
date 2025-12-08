@@ -5,6 +5,7 @@ import { FileVisibility } from '@refly/openapi-schema';
 import { FsStorageBackend } from './backend/fs';
 import { MinioStorageBackend } from './backend/minio';
 import { ObjectInfo, ObjectStorageBackend } from './backend/interface';
+import { runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 
 @Injectable()
 export class ObjectStorageService implements OnModuleInit {
@@ -12,9 +13,17 @@ export class ObjectStorageService implements OnModuleInit {
 
   constructor(private readonly storageBackend: ObjectStorageBackend) {}
 
-  async onModuleInit() {
-    await this.storageBackend.initialize();
-    this.logger.log('Object storage service initialized');
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        await this.storageBackend.initialize();
+        this.logger.log('Object storage service initialized');
+      },
+      {
+        logger: this.logger,
+        label: 'ObjectStorageService.onModuleInit',
+      },
+    );
   }
 
   /**

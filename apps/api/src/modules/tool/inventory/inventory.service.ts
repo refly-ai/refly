@@ -7,7 +7,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import { ToolsetDefinition, ToolsetConfig, PollingConfig } from '@refly/openapi-schema';
-import { safeParseJSON } from '@refly/utils';
+import { safeParseJSON, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 import { toolsetInventory as staticToolsetInventory } from '@refly/agent-tools';
 import { SingleFlightCache } from '../../../utils/cache';
 import { BillingType } from '../constant';
@@ -27,6 +27,9 @@ export class ToolInventoryService implements OnModuleInit {
   private readonly logger = new Logger(ToolInventoryService.name);
   private inventoryCache: SingleFlightCache<Map<string, ToolsetInventoryItem>>;
 
+  // Timeout for initialization operations (30 seconds)
+  private readonly INIT_TIMEOUT = 30000;
+
   constructor(private readonly prisma: PrismaService) {
     // Cache inventory with 5-minute TTL
     this.inventoryCache = new SingleFlightCache(this.loadFromDatabase.bind(this), {
@@ -38,9 +41,23 @@ export class ToolInventoryService implements OnModuleInit {
    * Initialize on module startup
    */
   async onModuleInit(): Promise<void> {
-    this.logger.log('Initializing Tool Inventory Service...');
-    const inventory = await this.loadFromDatabase();
-    this.logger.log(`Tool Inventory initialized with ${inventory.size} toolsets`);
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        this.logger.log('Initializing Tool Inventory Service...');
+        try {
+          const inventory = await this.loadFromDatabase();
+          this.logger.log(`Tool Inventory initialized with ${inventory.size} toolsets`);
+        } catch (error) {
+          this.logger.error(`Failed to initialize Tool Inventory: ${error}`);
+          throw error;
+        }
+      },
+      {
+        logger: this.logger,
+        label: 'ToolInventoryService.onModuleInit',
+        timeoutMs: this.INIT_TIMEOUT,
+      },
+    );
   }
 
   /**

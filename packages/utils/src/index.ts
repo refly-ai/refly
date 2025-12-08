@@ -27,3 +27,4 @@ export * from './validator';
 export * from './query-processor';
 export * from './drive-file-mapper';
 export * from './token';
+export * from './on-module-init';
