@@ -40,10 +40,19 @@ jobs:
         if: matrix.app == 'web'
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_API_URL: ${{ vars.TEST_API_URL }}
+          VITE_COLLAB_URL: ${{ vars.TEST_COLLAB_URL }}
+          VITE_SUBSCRIPTION_ENABLED: true
+          VITE_SENTRY_ENABLED: true
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           VITE_RUNTIME: web
+          VITE_STATIC_PUBLIC_ENDPOINT: ${{ vars.TEST_STATIC_PUBLIC_ENDPOINT }}
+          VITE_STATIC_PRIVATE_ENDPOINT: ${{ vars.TEST_STATIC_PRIVATE_ENDPOINT }}
+          VITE_CANVAS_TEMPLATE_ENABLED: true
+          VITE_ENV_TAG: test
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -51,14 +60,14 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
           role-session-name: gha-refly-test-deploy
 
       - name: Set Docker tags
         id: docker_tags
         env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
@@ -76,7 +85,7 @@ jobs:
 
       - name: Log in to Amazon ECR
         env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
         run: |
           aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "${{ steps.docker_tags.outputs.registry }}"
 
@@ -92,7 +101,7 @@ jobs:
 
       - name: Update kubeconfig for EKS cluster
         run: |
-          aws eks update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_TEST }} --region ${{ secrets.AWS_REGION }}
+          aws eks update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_TEST }} --region ${{ vars.AWS_REGION }}
 
       - name: Update API deployment image on EKS
         if: matrix.app == 'api'
