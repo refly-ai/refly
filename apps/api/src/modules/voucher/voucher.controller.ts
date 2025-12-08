@@ -13,12 +13,42 @@ import {
   VerifyVoucherInvitationResponse,
   ClaimVoucherInvitationRequest,
   ClaimVoucherInvitationResponse,
+  TriggerVoucherRequest,
+  TriggerVoucherResponse,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils';
 
 @Controller('v1/voucher')
 export class VoucherController {
   constructor(private readonly voucherService: VoucherService) {}
+
+  /**
+   * Trigger voucher generation on template publish
+   * Scores the template and generates a discount voucher
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('trigger')
+  async triggerVoucher(
+    @LoginedUser() user: UserModel,
+    @Body() request: TriggerVoucherRequest,
+  ): Promise<TriggerVoucherResponse> {
+    const result = await this.voucherService.handleTemplatePublish(
+      { uid: user.uid, email: user.email },
+      request.canvasId,
+      request.templateId ?? request.canvasId,
+    );
+
+    if (result) {
+      return buildSuccessResponse(result);
+    }
+
+    // Return success with null data if daily limit reached
+    return buildSuccessResponse({
+      voucher: null,
+      score: 50,
+      triggerLimitReached: false,
+    });
+  }
 
   /**
    * Get user's available (unused, not expired) vouchers

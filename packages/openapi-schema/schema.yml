@@ -4172,6 +4172,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/ClaimVoucherInvitationResponse'
 
+  /voucher/trigger:
+    post:
+      tags:
+        - voucher
+      summary: Trigger voucher generation
+      description: Trigger voucher generation on template publish. Scores the template and generates a discount voucher.
+      operationId: triggerVoucher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerVoucherRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerVoucherResponse'
+
 components:
   schemas:
     ExtractVariablesRequest:
@@ -13578,6 +13601,32 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/ClaimInvitationResult'
+
+    TriggerVoucherRequest:
+      type: object
+      required:
+        - canvasId
+        - triggerType
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID of the template being published
+        templateId:
+          type: string
+          description: Optional template ID (defaults to canvasId if not provided)
+        triggerType:
+          type: string
+          enum:
+            - template_publish
+          description: Type of trigger event
+
+    TriggerVoucherResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/VoucherTriggerResult'
 
   securitySchemes:
     api_key:

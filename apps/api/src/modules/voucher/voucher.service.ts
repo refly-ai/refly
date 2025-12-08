@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef, OnModuleInit, Optional } from '@nestjs/common';
 import { User } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
 import { TemplateScoringService } from './template-scoring.service';
@@ -27,10 +27,14 @@ import {
   AnalyticsEvents,
 } from './voucher.constants';
 import { ConfigService } from '@nestjs/config';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { QUEUE_CLEANUP_EXPIRED_VOUCHERS } from '../../utils/const';
 
 @Injectable()
-export class VoucherService {
+export class VoucherService implements OnModuleInit {
   private readonly logger = new Logger(VoucherService.name);
+  private readonly INIT_TIMEOUT = 10000; // 10 seconds timeout
 
   constructor(
     private readonly prisma: PrismaService,
@@ -38,7 +42,113 @@ export class VoucherService {
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => CreditService))
     private readonly creditService: CreditService,
+    @Optional()
+    @InjectQueue(QUEUE_CLEANUP_EXPIRED_VOUCHERS)
+    private readonly cleanupExpiredVouchersQueue?: Queue,
   ) {}
+
+  async onModuleInit() {
+    if (this.cleanupExpiredVouchersQueue) {
+      const initPromise = this.setupCleanupExpiredVouchersJob();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(`Voucher cleanup cronjob timed out after ${this.INIT_TIMEOUT}ms`);
+        }, this.INIT_TIMEOUT);
+      });
+
+      try {
+        await Promise.race([initPromise, timeoutPromise]);
+        this.logger.log('Voucher cleanup cronjob scheduled successfully');
+      } catch (error) {
+        this.logger.error(`Failed to schedule voucher cleanup cronjob: ${error}`);
+        // Don't throw - allow service to continue working without the cronjob
+      }
+    } else {
+      this.logger.log('Voucher cleanup queue not available, skipping cronjob setup');
+    }
+  }
+
+  /**
+   * Setup the recurring job to cleanup expired vouchers
+   */
+  private async setupCleanupExpiredVouchersJob() {
+    if (!this.cleanupExpiredVouchersQueue) return;
+
+    // Remove any existing recurring jobs
+    const existingJobs = await this.cleanupExpiredVouchersQueue.getJobSchedulers();
+    await Promise.all(
+      existingJobs.map((job) => this.cleanupExpiredVouchersQueue!.removeJobScheduler(job.id)),
+    );
+
+    // Add the new recurring job - runs every 2 hours at minute 30
+    await this.cleanupExpiredVouchersQueue.add(
+      'cleanup-expired-vouchers',
+      {},
+      {
+        repeat: {
+          pattern: '30 */2 * * *', // Run every 2 hours at minute 30
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+        jobId: 'cleanup-expired-vouchers', // Unique job ID to prevent duplicates
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      },
+    );
+
+    this.logger.log('Expired vouchers cleanup job scheduled (runs every 2 hours at minute 30)');
+  }
+
+  /**
+   * Cleanup expired vouchers - marks unused vouchers past expiration as expired
+   * Also cleans up unclaimed invitations that are older than 30 days
+   */
+  async cleanupExpiredVouchers(): Promise<{ vouchersExpired: number; invitationsExpired: number }> {
+    const now = new Date();
+
+    // 1. Mark expired vouchers
+    const voucherResult = await this.prisma.voucher.updateMany({
+      where: {
+        status: VoucherStatus.UNUSED,
+        expiresAt: {
+          lt: now,
+        },
+      },
+      data: {
+        status: VoucherStatus.EXPIRED,
+        updatedAt: now,
+      },
+    });
+
+    // 2. Mark old unclaimed invitations as expired (30 days old)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const invitationResult = await this.prisma.voucherInvitation.updateMany({
+      where: {
+        status: InvitationStatus.UNCLAIMED,
+        createdAt: {
+          lt: thirtyDaysAgo,
+        },
+      },
+      data: {
+        status: InvitationStatus.EXPIRED,
+        updatedAt: now,
+      },
+    });
+
+    this.logger.log(
+      `Cleanup completed: ${voucherResult.count} vouchers expired, ${invitationResult.count} invitations expired`,
+    );
+
+    return {
+      vouchersExpired: voucherResult.count,
+      invitationsExpired: invitationResult.count,
+    };
+  }
 
   /**
    * Handle template publish event - main entry point

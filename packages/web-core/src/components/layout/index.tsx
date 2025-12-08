@@ -10,6 +10,7 @@ import { LOCALE } from '@refly/common-types';
 
 import { LoginModal } from '../../components/login-modal';
 import { SubscribeModal } from '@refly-packages/ai-workspace-common/components/settings/subscribe-modal';
+import { ClaimedVoucherPopup } from '@refly-packages/ai-workspace-common/components/voucher/claimed-voucher-popup';
 import { VerificationModal } from '../../components/verification-modal';
 import { ResetPasswordModal } from '../../components/reset-password-modal';
 import { InvitationCodeModal } from '../../components/invitation-code-modal';
@@ -168,6 +169,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         <InvitationCodeModal />
         <ResetPasswordModal />
         <SubscribeModal />
+        <ClaimedVoucherPopup />
         <CanvasListModal visible={showCanvasListModal} setVisible={setShowCanvasListModal} />
         <LibraryModal visible={showLibraryModal} setVisible={setShowLibraryModal} />
         <ImportResourceModal />

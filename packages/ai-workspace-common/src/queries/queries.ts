@@ -158,6 +158,7 @@ import {
   submitForm,
   syncCanvasState,
   testProviderConnection,
+  triggerVoucher,
   unpinSkillInstance,
   updateCanvas,
   updateCanvasTemplate,
@@ -471,6 +472,8 @@ import {
   SyncCanvasStateError,
   TestProviderConnectionData,
   TestProviderConnectionError,
+  TriggerVoucherData,
+  TriggerVoucherError,
   UnpinSkillInstanceData,
   UnpinSkillInstanceError,
   UpdateCanvasData,
@@ -3406,6 +3409,23 @@ export const useClaimVoucherInvitation = <
     mutationKey: Common.UseClaimVoucherInvitationKeyFn(mutationKey),
     mutationFn: (clientOptions) =>
       claimVoucherInvitation(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useTriggerVoucher = <
+  TData = Common.TriggerVoucherMutationResult,
+  TError = TriggerVoucherError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<TriggerVoucherData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<TriggerVoucherData, true>, TContext>({
+    mutationKey: Common.UseTriggerVoucherKeyFn(mutationKey),
+    mutationFn: (clientOptions) => triggerVoucher(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useUpdatePage = <

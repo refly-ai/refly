@@ -522,6 +522,9 @@ import type {
   ClaimVoucherInvitationData,
   ClaimVoucherInvitationError,
   ClaimVoucherInvitationResponse2,
+  TriggerVoucherData,
+  TriggerVoucherError,
+  TriggerVoucherResponse2,
 } from './types.gen';
 
 export const client = createClient(createConfig());
@@ -3395,5 +3398,22 @@ export const claimVoucherInvitation = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/voucher/invitation/claim',
+  });
+};
+
+/**
+ * Trigger voucher generation
+ * Trigger voucher generation on template publish. Scores the template and generates a discount voucher.
+ */
+export const triggerVoucher = <ThrowOnError extends boolean = false>(
+  options: Options<TriggerVoucherData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    TriggerVoucherResponse2,
+    TriggerVoucherError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/trigger',
   });
 };

@@ -3,11 +3,12 @@ import { Modal, Button, message, QRCode } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { CopyOutlined, DownloadOutlined, LinkOutlined } from '@ant-design/icons';
 import { VoucherInvitation } from '@refly/openapi-schema';
+import { logEvent } from '@refly/telemetry-web';
 
 interface SharePosterProps {
   visible: boolean;
   onClose: () => void;
-  invitation: VoucherInvitation | null;
+  invitation?: VoucherInvitation | null;
   shareUrl: string;
   discountPercent: number;
 }
@@ -28,6 +29,13 @@ export const SharePoster = ({
     try {
       await navigator.clipboard.writeText(shareUrl);
       message.success(t('voucher.share.linkCopied', '链接已复制'));
+
+      // Log telemetry event
+      logEvent('share_link_copied', null, {
+        inviteCode: invitation?.inviteCode,
+        discountPercent,
+        shareUrl,
+      });
     } catch {
       message.error(t('voucher.share.copyFailed', '复制失败'));
     }
@@ -36,11 +44,11 @@ export const SharePoster = ({
 
   const handleDownload = async () => {
     // Simple text download for now - can be enhanced with html2canvas later
+    const inviteCodeLine = invitation?.inviteCode ? `\n邀请码: ${invitation.inviteCode}` : '';
     const text = `
 Refly 折扣券分享
 折扣: ${discountPercent}% OFF
-链接: ${shareUrl}
-邀请码: ${invitation?.inviteCode || ''}
+链接: ${shareUrl}${inviteCodeLine}
     `.trim();
 
     const blob = new Blob([text], { type: 'text/plain' });
@@ -51,9 +59,14 @@ Refly 折扣券分享
     a.click();
     URL.revokeObjectURL(url);
     message.success(t('voucher.share.downloaded', '已下载'));
-  };
 
-  if (!invitation) return null;
+    // Log telemetry event
+    logEvent('poster_download', null, {
+      inviteCode: invitation?.inviteCode,
+      discountPercent,
+      format: 'text',
+    });
+  };
 
   return (
     <Modal
@@ -83,9 +96,11 @@ Refly 折扣券分享
               <QRCode value={shareUrl} size={120} bordered={false} />
             </div>
 
-            <div className="mt-4 text-xs opacity-80">
-              {t('voucher.share.inviteCode', '邀请码')}: {invitation.inviteCode}
-            </div>
+            {invitation?.inviteCode && (
+              <div className="mt-4 text-xs opacity-80">
+                {t('voucher.share.inviteCode', '邀请码')}: {invitation.inviteCode}
+              </div>
+            )}
           </div>
         </div>
 

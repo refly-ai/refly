@@ -12846,3 +12846,39 @@ export const ClaimVoucherInvitationResponseSchema = {
     },
   ],
 } as const;
+
+export const TriggerVoucherRequestSchema = {
+  type: 'object',
+  required: ['canvasId', 'triggerType'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID of the template being published',
+    },
+    templateId: {
+      type: 'string',
+      description: 'Optional template ID (defaults to canvasId if not provided)',
+    },
+    triggerType: {
+      type: 'string',
+      enum: ['template_publish'],
+      description: 'Type of trigger event',
+    },
+  },
+} as const;
+
+export const TriggerVoucherResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/VoucherTriggerResult',
+        },
+      },
+    },
+  ],
+} as const;

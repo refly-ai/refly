@@ -9235,6 +9235,30 @@ export type ClaimVoucherInvitationResponse = BaseResponse & {
   data?: ClaimInvitationResult;
 };
 
+export type TriggerVoucherRequest = {
+  /**
+   * Canvas ID of the template being published
+   */
+  canvasId: string;
+  /**
+   * Optional template ID (defaults to canvasId if not provided)
+   */
+  templateId?: string;
+  /**
+   * Type of trigger event
+   */
+  triggerType: 'template_publish';
+};
+
+/**
+ * Type of trigger event
+ */
+export type triggerType = 'template_publish';
+
+export type TriggerVoucherResponse = BaseResponse & {
+  data?: VoucherTriggerResult;
+};
+
 export type ExtractVariablesData = {
   body: ExtractVariablesRequest;
 };
@@ -11240,3 +11264,11 @@ export type ClaimVoucherInvitationData = {
 export type ClaimVoucherInvitationResponse2 = ClaimVoucherInvitationResponse;
 
 export type ClaimVoucherInvitationError = unknown;
+
+export type TriggerVoucherData = {
+  body: TriggerVoucherRequest;
+};
+
+export type TriggerVoucherResponse2 = TriggerVoucherResponse;
+
+export type TriggerVoucherError = unknown;

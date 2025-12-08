@@ -157,6 +157,7 @@ import {
   submitForm,
   syncCanvasState,
   testProviderConnection,
+  triggerVoucher,
   unpinSkillInstance,
   updateCanvas,
   updateCanvasTemplate,
@@ -1609,6 +1610,12 @@ export type ClaimVoucherInvitationMutationResult = Awaited<
 export const useClaimVoucherInvitationKey = 'ClaimVoucherInvitation';
 export const UseClaimVoucherInvitationKeyFn = (mutationKey?: Array<unknown>) => [
   useClaimVoucherInvitationKey,
+  ...(mutationKey ?? []),
+];
+export type TriggerVoucherMutationResult = Awaited<ReturnType<typeof triggerVoucher>>;
+export const useTriggerVoucherKey = 'TriggerVoucher';
+export const UseTriggerVoucherKeyFn = (mutationKey?: Array<unknown>) => [
+  useTriggerVoucherKey,
   ...(mutationKey ?? []),
 ];
 export type UpdatePageMutationResult = Awaited<ReturnType<typeof updatePage>>;

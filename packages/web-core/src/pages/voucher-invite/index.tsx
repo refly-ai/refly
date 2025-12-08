@@ -7,6 +7,9 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { VoucherInvitation } from '@refly/openapi-schema';
+import { logEvent } from '@refly/telemetry-web';
+import { useSubscriptionStoreShallow } from '@refly/stores';
+import { storePendingVoucherCode } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 const VoucherInvitePage = () => {
   const { inviteCode } = useParams<{ inviteCode: string }>();
@@ -20,6 +23,11 @@ const VoucherInvitePage = () => {
   const [invitation, setInvitation] = useState<VoucherInvitation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [claimed, setClaimed] = useState(false);
+
+  // Get subscription modal control from store
+  const { setSubscribeModalVisible } = useSubscriptionStoreShallow((state) => ({
+    setSubscribeModalVisible: state.setSubscribeModalVisible,
+  }));
 
   useEffect(() => {
     if (inviteCode) {
@@ -36,6 +44,13 @@ const VoucherInvitePage = () => {
       });
       if (response.data?.success && response.data.data) {
         setInvitation(response.data.data);
+
+        // Log page view event
+        logEvent('voucher_invite_page_view', null, {
+          inviteCode: inviteCode,
+          discountPercent: response.data.data.discountPercent,
+          isLoggedIn,
+        });
       } else {
         setError(t('voucher.invite.invalidCode', 'Invalid or expired invitation code'));
       }
@@ -48,6 +63,9 @@ const VoucherInvitePage = () => {
 
   const handleClaim = useCallback(async () => {
     if (!isLoggedIn) {
+      // Store invite code for claiming after login
+      storePendingVoucherCode(inviteCode!);
+
       // Redirect to login with return URL
       const returnUrl = encodeURIComponent(window.location.href);
       navigate(`/login?returnUrl=${returnUrl}`);
@@ -62,6 +80,13 @@ const VoucherInvitePage = () => {
       if (response.data?.success) {
         setClaimed(true);
         message.success(t('voucher.invite.claimSuccess', 'Voucher claimed successfully!'));
+
+        // Log telemetry event for successful claim
+        logEvent('voucher_claim', null, {
+          inviteCode: inviteCode,
+          discountPercent: invitation?.discountPercent,
+          inviterUid: invitation?.inviterUid,
+        });
       } else {
         message.error(
           response.data?.errMsg || t('voucher.invite.claimError', 'Failed to claim voucher'),
@@ -72,15 +97,20 @@ const VoucherInvitePage = () => {
       message.error(t('voucher.invite.claimError', 'Failed to claim voucher'));
     }
     setClaiming(false);
-  }, [inviteCode, isLoggedIn, navigate, t]);
+  }, [inviteCode, isLoggedIn, navigate, t, invitation]);
 
   const handleGoToWorkspace = useCallback(() => {
     navigate('/workspace');
   }, [navigate]);
 
   const handleGoToPricing = useCallback(() => {
-    navigate('/pricing');
-  }, [navigate]);
+    // Navigate to workspace first, then open subscribe modal
+    navigate('/workspace');
+    // Small delay to ensure navigation completes before opening modal
+    setTimeout(() => {
+      setSubscribeModalVisible(true);
+    }, 100);
+  }, [navigate, setSubscribeModalVisible]);
 
   if (loading) {
     return (
