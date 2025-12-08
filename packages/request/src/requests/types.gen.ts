@@ -5066,6 +5066,14 @@ export type CreateCheckoutSessionRequest = {
    * Subscription billing interval
    */
   interval?: SubscriptionInterval;
+  /**
+   * Current plan
+   */
+  currentPlan?: string;
+  /**
+   * Source
+   */
+  source?: string;
 };
 
 export type CreateCreditPackCheckoutSessionRequest = {
@@ -5073,6 +5081,14 @@ export type CreateCreditPackCheckoutSessionRequest = {
    * Credit pack identifier
    */
   packId: string;
+  /**
+   * Current plan
+   */
+  currentPlan?: string;
+  /**
+   * Source
+   */
+  source?: string;
 };
 
 export type CreateCheckoutSessionResponse = BaseResponse & {
@@ -7584,6 +7600,10 @@ export type DriveFile = {
    * Drive file update timestamp
    */
   updatedAt?: string;
+  /**
+   * Private access URL for the file (requires authentication)
+   */
+  url?: string;
 };
 
 export type ListDriveFilesResponse = BaseResponse & {

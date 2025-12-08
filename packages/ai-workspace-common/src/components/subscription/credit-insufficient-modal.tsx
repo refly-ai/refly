@@ -483,6 +483,8 @@ export const CreditInsufficientModal = memo(() => {
           body: {
             planType: 'plus' as SubscriptionPlanType,
             interval: interval,
+            currentPlan,
+            source: creditInsufficientTriggeredFrom,
           },
         });
         if (res.data?.data?.url) {
@@ -497,6 +499,8 @@ export const CreditInsufficientModal = memo(() => {
         const res = await getClient().createCreditPackCheckoutSession({
           body: {
             packId: selectedId,
+            currentPlan,
+            source: creditInsufficientTriggeredFrom,
           },
         });
         if (res.data?.data?.url) {

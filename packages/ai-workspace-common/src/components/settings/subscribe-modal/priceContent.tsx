@@ -505,6 +505,8 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
           body: {
             planType,
             interval: interval,
+            currentPlan,
+            source: 'pricing',
           },
         });
         if (res.data?.data?.url) {
