@@ -30,6 +30,8 @@ import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_CLEANUP_EXPIRED_VOUCHERS } from '../../utils/const';
+import Stripe from 'stripe';
+import { InjectStripeClient } from '@golevelup/nestjs-stripe';
 
 @Injectable()
 export class VoucherService implements OnModuleInit {
@@ -45,6 +47,9 @@ export class VoucherService implements OnModuleInit {
     @Optional()
     @InjectQueue(QUEUE_CLEANUP_EXPIRED_VOUCHERS)
     private readonly cleanupExpiredVouchersQueue?: Queue,
+    @Optional()
+    @InjectStripeClient()
+    private readonly stripeClient?: Stripe,
   ) {}
 
   async onModuleInit() {
@@ -279,6 +284,46 @@ export class VoucherService implements OnModuleInit {
     const voucherId = genVoucherID();
     const now = new Date();
 
+    // 1. Get Stripe coupon ID from database based on discount percent
+    let stripePromoCodeId: string | undefined;
+    if (this.stripeClient) {
+      try {
+        const stripeCoupon = await this.prisma.stripeCoupon.findFirst({
+          where: {
+            discountPercent: input.discountPercent,
+            isActive: true,
+          },
+        });
+
+        if (stripeCoupon) {
+          // 2. Create Stripe Promotion Code
+          const promoCode = await this.stripeClient.promotionCodes.create({
+            coupon: stripeCoupon.stripeCouponId,
+            max_redemptions: 1, // One-time use
+            expires_at: Math.floor(input.expiresAt.getTime() / 1000), // Convert to Unix timestamp
+            metadata: {
+              voucherId,
+              uid: input.uid,
+              source: input.source,
+            },
+          });
+
+          stripePromoCodeId = promoCode.id;
+          this.logger.log(
+            `Created Stripe promotion code ${promoCode.id} for voucher ${voucherId} (${input.discountPercent}% off)`,
+          );
+        } else {
+          this.logger.warn(`No active Stripe coupon found for ${input.discountPercent}% discount`);
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to create Stripe promotion code for voucher ${voucherId}: ${error.message}`,
+        );
+        // Continue without Stripe promo code - voucher can still be created
+      }
+    }
+
+    // 3. Create voucher in database
     const voucher = await this.prisma.voucher.create({
       data: {
         voucherId,
@@ -289,6 +334,7 @@ export class VoucherService implements OnModuleInit {
         sourceId: input.sourceId,
         llmScore: input.llmScore,
         expiresAt: input.expiresAt,
+        stripePromoCodeId,
         createdAt: now,
         updatedAt: now,
       },
@@ -599,6 +645,7 @@ export class VoucherService implements OnModuleInit {
       expiresAt: voucher.expiresAt.toISOString(),
       usedAt: voucher.usedAt?.toISOString(),
       subscriptionId: voucher.subscriptionId,
+      stripePromoCodeId: voucher.stripePromoCodeId,
       createdAt: voucher.createdAt.toISOString(),
       updatedAt: voucher.updatedAt.toISOString(),
     };

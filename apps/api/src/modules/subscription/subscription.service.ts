@@ -184,34 +184,23 @@ export class SubscriptionService implements OnModuleInit {
       throw new ParamsError(`No prices found for lookup key: ${lookupKey}`);
     }
 
-    // Validate and get voucher discount if provided
-    let stripeCouponId: string | undefined;
+    // Validate and get voucher promotion code if provided
+    let stripePromoCodeId: string | undefined;
     let validatedVoucherId: string | undefined;
     if (voucherId) {
       const voucherValidation = await this.voucherService.validateVoucher(uid, voucherId);
       if (voucherValidation.valid && voucherValidation.voucher) {
-        // Create a one-time Stripe coupon for this voucher
-        const discountPercent = voucherValidation.voucher.discountPercent;
-        try {
-          const coupon = await this.stripeClient.coupons.create({
-            percent_off: discountPercent,
-            duration: 'once', // Apply only to first payment
-            name: `Refly Voucher ${discountPercent}% Off`,
-            metadata: {
-              voucherId: voucherId,
-              uid: uid,
-            },
-          });
-          stripeCouponId = coupon.id;
+        // Use the pre-created Stripe promotion code from voucher
+        if (voucherValidation.voucher.stripePromoCodeId) {
+          stripePromoCodeId = voucherValidation.voucher.stripePromoCodeId;
           validatedVoucherId = voucherId;
           this.logger.log(
-            `Created Stripe coupon ${coupon.id} for voucher ${voucherId} (${discountPercent}% off)`,
+            `Using Stripe promotion code ${stripePromoCodeId} for voucher ${voucherId} (${voucherValidation.voucher.discountPercent}% off)`,
           );
-        } catch (error) {
-          this.logger.error(
-            `Failed to create Stripe coupon for voucher ${voucherId}: ${error.message}`,
+        } else {
+          this.logger.warn(
+            `Voucher ${voucherId} has no Stripe promotion code, discount will not be applied`,
           );
-          // Continue without discount if coupon creation fails
         }
       } else {
         this.logger.warn(`Voucher ${voucherId} validation failed: ${voucherValidation.reason}`);
@@ -255,9 +244,9 @@ export class SubscriptionService implements OnModuleInit {
       metadata: validatedVoucherId ? { voucherId: validatedVoucherId } : undefined,
     };
 
-    // Apply voucher discount or allow promotion codes (not both)
-    if (stripeCouponId) {
-      sessionParams.discounts = [{ coupon: stripeCouponId }];
+    // Apply voucher promotion code or allow promotion codes (not both)
+    if (stripePromoCodeId) {
+      sessionParams.discounts = [{ promotion_code: stripePromoCodeId }];
     } else {
       sessionParams.allow_promotion_codes = true;
     }

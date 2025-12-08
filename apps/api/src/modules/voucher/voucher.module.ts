@@ -1,5 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { StripeModule } from '@golevelup/nestjs-stripe';
 import { CommonModule } from '../common/common.module';
 import { VoucherController } from './voucher.controller';
 import { VoucherService } from './voucher.service';
@@ -17,6 +18,7 @@ import { QUEUE_CLEANUP_EXPIRED_VOUCHERS } from '../../utils/const';
     BullModule.registerQueue({
       name: QUEUE_CLEANUP_EXPIRED_VOUCHERS,
     }),
+    StripeModule.externallyConfigured(StripeModule, 0),
   ],
   controllers: [VoucherController],
   providers: [VoucherService, TemplateScoringService, CleanupExpiredVouchersProcessor],

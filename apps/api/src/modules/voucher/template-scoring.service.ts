@@ -7,12 +7,7 @@ import { ProviderService } from '../provider/provider.service';
 import { VariableExtractionService } from '../variable-extraction/variable-extraction.service';
 import { buildTemplateScoringPrompt, TemplateScoringInput } from './template-scoring.prompt';
 import { TemplateScoringResult, TemplateScoringBreakdown } from './voucher.dto';
-import {
-  DEFAULT_LLM_SCORE,
-  SCORING_TIMEOUT_MS,
-  MIN_DISCOUNT_PERCENT,
-  MAX_DISCOUNT_PERCENT,
-} from './voucher.constants';
+import { DEFAULT_LLM_SCORE, SCORING_TIMEOUT_MS } from './voucher.constants';
 
 /**
  * Zod Schema for structured output from LLM
@@ -199,17 +194,32 @@ export class TemplateScoringService implements OnModuleInit {
 
   /**
    * Convert LLM score (0-100) to discount percentage (10-90)
-   * Rule: every 10 points = 10% discount
-   * Example: 90 score = 90% off, 10 score = 10% off
+   * Higher score = higher discount (better templates get bigger discounts)
+   *
+   * Score to discount mapping:
+   * - 0-20:   10% off (9折)
+   * - 21-30:  20% off (8折)
+   * - 31-40:  30% off (7折)
+   * - 41-50:  40% off (6折)
+   * - 51-60:  50% off (5折)
+   * - 61-70:  60% off (4折)
+   * - 71-80:  70% off (3折)
+   * - 81-90:  80% off (2折)
+   * - 91-100: 90% off (1折)
    *
    * @param score - LLM score (0-100)
    * @returns Discount percentage (10-90)
    */
   scoreToDiscountPercent(score: number): number {
-    // Round down to nearest 10
-    const discountPercent = Math.floor(score / 10) * 10;
-    // Clamp to 10-90 range
-    return Math.max(MIN_DISCOUNT_PERCENT, Math.min(MAX_DISCOUNT_PERCENT, discountPercent));
+    if (score >= 91) return 90; // 1折
+    if (score >= 81) return 80; // 2折
+    if (score >= 71) return 70; // 3折
+    if (score >= 61) return 60; // 4折
+    if (score >= 51) return 50; // 5折
+    if (score >= 41) return 40; // 6折
+    if (score >= 31) return 30; // 7折
+    if (score >= 21) return 20; // 8折
+    return 10; // 9折 (0-20分)
   }
 
   /**

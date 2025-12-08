@@ -30,6 +30,7 @@ export interface VoucherDTO {
   expiresAt: string;
   usedAt?: string;
   subscriptionId?: string;
+  stripePromoCodeId?: string;
   createdAt: string;
   updatedAt: string;
 }
