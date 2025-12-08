@@ -174,29 +174,28 @@ export const PromotionItem = React.memo(
     return (
       <div
         className={cn(
-          'w-[240px] flex flex-col cursor-pointer rounded-[20px] bg-gradient-to-b from-[#9810FA] to-[#FFFFFF] p-3 transition-all duration-500 shadow-lg',
+          'w-[240px] flex flex-col cursor-pointer rounded-[20px] bg-gradient-to-b from-[#9810FA] to-[#FFFFFF] p-4 transition-all duration-500 shadow-lg',
         )}
         onClick={handleClick}
         data-cy="promotion-menu-item"
       >
         {/* Header with gift icon and title */}
-        <div className="flex items-start gap-1">
+        <div className="flex items-center gap-1">
           <div className="flex-shrink-0">
             <img src={GiftPromotionIcon} className="w-12 h-15" />
           </div>
           <div className="flex flex-col">
-            <div className="flex items-baseline gap-0.5 flex-wrap">
-              <span className="text-xs font-bold text-white">{t('common.promotion.title')}</span>
-              <span className="text-[19px] font-extrabold text-[#FFE066]">
+            <div className="flex items-baseline flex-wrap">
+              <span className="text-[20px] font-regular text-white">
+                {t('common.promotion.title')}
+              </span>
+              <span className="text-[25px] font-regular text-[#FFE066]">
                 {t('common.promotion.discount')}
               </span>
-              <span className="text-sm font-bold text-white">
+              <span className="text-[20px] font-regular text-white">
                 {t('common.promotion.titleSuffix')}
               </span>
             </div>
-            <span className="text-xs font-semibold text-white/90">
-              {t('common.promotion.subtitle')}
-            </span>
           </div>
         </div>
 
@@ -207,10 +206,10 @@ export const PromotionItem = React.memo(
 
         {/* Tags */}
         <div className="flex gap-2 mb-3">
-          <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-medium text-white">
+          <span className="py-1 px-2 rounded-full bg-black/5 text-[12px] font-medium text-white">
             {t('common.promotion.tag1')}
           </span>
-          <span className="px-3 py-1 rounded-full bg-white/20 text-xs font-medium text-white">
+          <span className="py-1 px-2 rounded-full bg-black/5 text-[12px] font-medium text-white">
             {t('common.promotion.tag2')}
           </span>
         </div>
