@@ -1,5 +1,14 @@
 import { useEffect, useState, useMemo, useCallback, memo, useRef } from 'react';
-import { Button, Dropdown, DropdownProps, MenuProps, Skeleton, Tooltip, Typography } from 'antd';
+import {
+  Button,
+  Divider,
+  Dropdown,
+  DropdownProps,
+  MenuProps,
+  Skeleton,
+  Tooltip,
+  Typography,
+} from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { ModelInfo, TokenUsageMeter } from '@refly/openapi-schema';
@@ -110,8 +119,21 @@ const ModelLabel = memo(
     const { t } = useTranslation();
 
     return (
-      <span className="text-xs flex items-center gap-1 text-refly-text-0 min-w-0 flex-1">
-        <span className="truncate">{model.label}</span>
+      <span className="text-xs flex items-center gap-1.5 text-refly-text-0 min-w-0 flex-1">
+        <span className="truncate flex items-center gap-2 leading-none">
+          <span className="leading-normal">{model.label}</span>
+          {model?.tooltip && (
+            <>
+              <Divider
+                type="vertical"
+                className="bg-refly-Card-Border m-0 h-3 relative top-[1px]"
+              />
+              <span className="text-refly-text-2 whitespace-nowrap leading-normal">
+                {model.tooltip}
+              </span>
+            </>
+          )}
+        </span>
         {!model.capabilities?.vision && isContextIncludeImage && (
           <Tooltip title={t('copilot.modelSelector.noVisionSupport')}>
             <IconError className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />

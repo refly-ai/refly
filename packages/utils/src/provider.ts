@@ -149,6 +149,7 @@ export const providerItemToModelInfo = (item: ProviderItem): ModelInfo => {
       group: item?.group ?? '',
       category: item?.category,
       inputParameters: config?.inputParameters ?? [],
+      tooltip: config?.tooltip,
     };
   } else {
     const config = item?.config as LLMModelConfig;
@@ -164,6 +165,7 @@ export const providerItemToModelInfo = (item: ProviderItem): ModelInfo => {
       group: item?.group ?? '',
       category: item?.category,
       inputParameters: [],
+      tooltip: config?.tooltip,
     };
   }
 };
