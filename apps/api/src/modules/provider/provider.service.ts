@@ -951,6 +951,7 @@ export class ProviderService implements OnModuleInit {
       }
     }
 
+    // Find the first available model from the priority list
     for (const candidateModelId of this.AUTO_MODEL_ROUTING_PRIORITY) {
       const item = modelMap.get(candidateModelId);
       if (item) {
@@ -958,8 +959,12 @@ export class ProviderService implements OnModuleInit {
       }
     }
 
-    // TODO fallback
-    throw new ProviderItemNotFoundError('Auto model routing failed: no suitable models available');
+    // Fallback to the first available model
+    if (items.length > 0) {
+      return items[0];
+    }
+
+    throw new ProviderItemNotFoundError('Auto model routing failed: no model available');
   }
 
   async prepareChatModel(user: User, itemId: string): Promise<BaseChatModel> {
