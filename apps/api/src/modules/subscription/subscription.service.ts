@@ -287,6 +287,79 @@ export class SubscriptionService implements OnModuleInit {
     return session;
   }
 
+  async createCreditPackCheckoutSession(user: User, param: { packId: string }) {
+    const { uid } = user;
+    const userPo = await this.prisma.user.findUnique({ where: { uid } });
+
+    // 1. check credit pack plan
+    const plan = await this.prisma.creditPackPlan.findFirst({
+      where: { packId: param.packId, enabled: true },
+    });
+    if (!plan) {
+      throw new ParamsError(`No credit pack plan found for packId: ${param.packId}`);
+    }
+
+    const lookupKey = plan.lookupKey;
+
+    // 2. check Stripe price
+    const prices = await this.stripeClient?.prices.list({
+      lookup_keys: [lookupKey],
+      expand: ['data.product'],
+    });
+    if (!prices?.data?.length) {
+      throw new ParamsError(`No prices found for lookup key: ${lookupKey}`);
+    }
+
+    // 3. handle customer
+    let customerId = userPo?.customerId;
+    if (!customerId && userPo?.email) {
+      const existingCustomers = await this.stripeClient?.customers.list({
+        email: userPo.email,
+        limit: 1,
+      });
+      if (existingCustomers?.data?.length) {
+        customerId = existingCustomers.data[0]?.id;
+        await this.prisma.user.update({
+          where: { uid },
+          data: { customerId },
+        });
+      }
+    }
+
+    const price = prices.data[0];
+
+    // 4. create Stripe Checkout Session
+    const session = await this.stripeClient?.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{ price: price.id, quantity: 1 }],
+      success_url: this.config.get('stripe.sessionSuccessUrl'),
+      cancel_url: this.config.get('stripe.sessionCancelUrl'),
+      client_reference_id: uid,
+      customer: customerId || undefined,
+      customer_email: !customerId ? userPo?.email : undefined,
+      allow_promotion_codes: true,
+      consent_collection: {
+        terms_of_service: 'required',
+      },
+      metadata: {
+        purpose: 'credit_pack',
+        packId: param.packId,
+        lookupKey,
+      },
+    });
+
+    // 5. record checkout_session
+    await this.prisma.checkoutSession.create({
+      data: {
+        uid,
+        sessionId: session?.id ?? '',
+        lookupKey,
+      },
+    });
+
+    return session;
+  }
+
   async createPortalSession(user: User) {
     const userPo = await this.prisma.user.findUnique({
       select: { customerId: true, email: true },
@@ -345,6 +418,12 @@ export class SubscriptionService implements OnModuleInit {
       const existingSub = await prisma.subscription.findUnique({
         where: { subscriptionId: param.subscriptionId },
       });
+      const existingUserSubscription = await prisma.subscription.findFirst({
+        where: { uid },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
       if (existingSub) {
         this.logger.log(`Subscription ${param.subscriptionId} already exists`);
         return existingSub;
@@ -394,7 +473,13 @@ export class SubscriptionService implements OnModuleInit {
 
       // Create a new credit recharge record
       const creditAmount = plan?.creditQuota ?? this.config.get('quota.credit');
+
       await this.creditService.createSubscriptionCreditRecharge(uid, creditAmount, endAt);
+
+      // If this is the first subscription, create a gift credit recharge
+      if (!existingUserSubscription) {
+        await this.creditService.createFirstSubscriptionGiftRecharge(uid, now);
+      }
 
       // Update storage usage meter
       await prisma.storageUsageMeter.updateMany({

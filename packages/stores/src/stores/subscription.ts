@@ -8,6 +8,9 @@ interface SubscriptionState {
   planType: SubscriptionPlanType;
   subscribeModalVisible: boolean;
   storageExceededModalVisible: boolean;
+  creditInsufficientModalVisible: boolean;
+  creditInsufficientMembershipLevel: string;
+  creditInsufficientTriggeredFrom: string; // Track where the credit insufficient modal was triggered from
   openedFromSettings: boolean; // Track if SubscribeModal was opened from SettingModal
 
   // Voucher state
@@ -22,6 +25,11 @@ interface SubscriptionState {
   setPlanType: (val: SubscriptionPlanType) => void;
   setSubscribeModalVisible: (val: boolean) => void;
   setStorageExceededModalVisible: (val: boolean) => void;
+  setCreditInsufficientModalVisible: (
+    val: boolean,
+    membershipLevel?: string,
+    triggeredFrom?: string,
+  ) => void;
   setOpenedFromSettings: (val: boolean) => void; // Method to set the openedFromSettings state
   setAvailableVoucher: (voucher: Voucher | null) => void;
   setVoucherLoading: (loading: boolean) => void;
@@ -34,6 +42,9 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     planType: 'free',
     subscribeModalVisible: false,
     storageExceededModalVisible: false,
+    creditInsufficientModalVisible: false,
+    creditInsufficientMembershipLevel: '',
+    creditInsufficientTriggeredFrom: '',
     openedFromSettings: false,
     availableVoucher: null,
     voucherLoading: false,
@@ -43,6 +54,16 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     setPlanType: (val: SubscriptionPlanType) => set({ planType: val }),
     setSubscribeModalVisible: (val: boolean) => set({ subscribeModalVisible: val }),
     setStorageExceededModalVisible: (val: boolean) => set({ storageExceededModalVisible: val }),
+    setCreditInsufficientModalVisible: (
+      val: boolean,
+      membershipLevel?: string,
+      triggeredFrom?: string,
+    ) =>
+      set({
+        creditInsufficientModalVisible: val,
+        creditInsufficientMembershipLevel: membershipLevel || '',
+        creditInsufficientTriggeredFrom: triggeredFrom || '',
+      }),
     setOpenedFromSettings: (val: boolean) => set({ openedFromSettings: val }),
     setAvailableVoucher: (voucher: Voucher | null) => set({ availableVoucher: voucher }),
     setVoucherLoading: (loading: boolean) => set({ voucherLoading: loading }),
