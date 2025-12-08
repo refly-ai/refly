@@ -7,6 +7,7 @@ import { useCanvasStoreShallow } from '@refly/stores';
 import type { CanvasNode } from '@refly/canvas-common';
 import { useCleanupAbortedNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-cleanup-aborted-node';
 import { SadFace } from 'refly-icons';
+import { logEvent } from '@refly/telemetry-web';
 
 interface UseAbortWorkflowOptions {
   executionId?: string | null;
@@ -82,6 +83,10 @@ export const useAbortWorkflow = ({
       },
       onOk: async () => {
         setIsAborting(true);
+        logEvent('stop_workflow_run', null, {
+          canvasId,
+          executionId,
+        });
         try {
           if (canvasId && Array.isArray(canvasNodeExecutions) && canvasNodeExecutions.length) {
             // Optimistic UI update: immediately update all executing/waiting nodes
@@ -145,6 +150,7 @@ export const useAbortWorkflow = ({
     cleanupAbortedNode,
     t,
     onSuccess,
+    logEvent,
   ]);
 
   return {

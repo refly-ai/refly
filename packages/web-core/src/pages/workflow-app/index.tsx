@@ -533,6 +533,11 @@ const WorkflowAppPage: React.FC = () => {
       },
       onOk: async () => {
         // Get all executing skillResponse nodes
+        logEvent('stop_template_run', null, {
+          canvasId: workflowDetail?.canvasId ?? '',
+          executionId,
+        });
+
         const executingNodes = nodeExecutions.filter(
           (node: WorkflowNodeExecution) =>
             node.nodeType === 'skillResponse' &&
@@ -608,7 +613,7 @@ const WorkflowAppPage: React.FC = () => {
         message.success(t('workflowApp.run.stopSuccess'));
       },
     });
-  }, [nodeExecutions, stopPolling, t, executionId, workflowDetail, refetchUsage]);
+  }, [nodeExecutions, stopPolling, t, executionId, workflowDetail, refetchUsage, logEvent]);
 
   return (
     <ReactFlowProvider>

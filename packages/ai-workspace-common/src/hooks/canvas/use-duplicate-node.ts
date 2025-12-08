@@ -29,8 +29,8 @@ export const useDuplicateNode = () => {
 
       const { data } = node;
 
-      if (logTelemetry) {
-        logEvent('duplicate_node_skill_response', null, {
+      if (logTelemetry && node.type === 'skillResponse') {
+        logEvent('duplicate_agent_node', null, {
           canvasId,
           nodeId: node.id,
         });
