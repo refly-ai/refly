@@ -89,7 +89,10 @@ export const ToolsetIcon: React.FC<{
   }
 
   const domain = toolset.toolset?.definition?.domain ?? toolset.mcpServer?.url;
-  const shouldLookup = !disableInventoryLookup && !domain && toolset.type === 'regular';
+  const shouldLookup =
+    !disableInventoryLookup &&
+    !domain &&
+    (toolset.type === 'regular' || toolset.type === 'external_oauth');
 
   if (shouldLookup) {
     return <ToolsetIconWithInventory toolset={toolset} size={size} className={className} />;

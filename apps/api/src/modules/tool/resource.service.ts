@@ -19,6 +19,7 @@ import { DriveService } from '../drive/drive.service';
 import { MiscService } from '../misc/misc.service';
 import {
   collectResourceFields,
+  extractFileId,
   isValidFileId,
   removeFieldsRecursively,
   type ResourceField,
@@ -41,6 +42,21 @@ export class InvalidFileIdError extends Error {
   }
 }
 
+/**
+ * Error thrown when resource value is neither a valid fileId nor a public URL
+ */
+export class InvalidResourceInputError extends Error {
+  constructor(
+    public readonly fieldName: string,
+    public readonly invalidValue: unknown,
+  ) {
+    const valueStr = typeof invalidValue === 'string' ? invalidValue : JSON.stringify(invalidValue);
+    super(
+      `Invalid resource value for "${fieldName}": "${valueStr}". Provide a valid Drive fileId (df-xxx / fileId://df-xxx / @file:df-xxx) or a public URL (http/https).`,
+    );
+    this.name = 'InvalidResourceInputError';
+  }
+}
 /**
  * Processing mode for resource handling
  */
@@ -326,13 +342,23 @@ export class ResourceHandler {
       return value;
     }
 
-    if (mode === 'input' && !isValidFileId(value)) {
-      // If this is an optional resource (part of oneOf/anyOf), skip processing for non-fileId values
-      // The value will be treated as a plain string by the other schema option
-      if (isOptionalResource) {
-        return value; // Return original value unchanged
+    if (mode === 'input') {
+      // Allow direct URLs to pass through; if they contain a df-xxx, resolve it
+      if (this.isPublicUrl(value)) {
+        const maybeFileId = extractFileId(value);
+        if (maybeFileId) {
+          return processor(maybeFileId, schema);
+        }
+        return value;
       }
-      throw new InvalidFileIdError(fieldPath, value);
+
+      if (!isValidFileId(value)) {
+        // If this is an optional resource (part of oneOf/anyOf), skip processing for non-fileId values
+        if (isOptionalResource) {
+          return value;
+        }
+        throw new InvalidResourceInputError(fieldPath, value);
+      }
     }
 
     return processor(value, schema);
@@ -709,6 +735,11 @@ export class ResourceHandler {
    * Resolve fileId to specified format
    */
   private async resolveFileIdToFormat(value: unknown, format: string): Promise<string | Buffer> {
+    // Public URLs should pass through unchanged; do not force Drive lookup
+    if (this.isPublicUrl(value)) {
+      return value as string;
+    }
+
     // Extract fileId from value
     let fileId = typeof value === 'string' ? value : (value as any)?.fileId;
     if (!fileId) {
@@ -766,6 +797,16 @@ export class ResourceHandler {
         const result = await this.driveService.getDriveFileStream(user, fileId);
         return result.data;
       }
+    }
+  }
+
+  private isPublicUrl(value: unknown): boolean {
+    if (typeof value !== 'string') return false;
+    try {
+      const parsed = new URL(value);
+      return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !!parsed.hostname;
+    } catch {
+      return false;
     }
   }
 }
