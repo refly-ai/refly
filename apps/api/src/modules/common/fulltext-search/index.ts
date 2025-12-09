@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma.service';
 import { PrismaFulltextSearchBackend } from './backend/prisma';
 import { ElasticsearchFulltextSearchBackend } from './backend/elasticsearch';
+import { runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 
 @Injectable()
 export class FulltextSearchService implements OnModuleInit {
@@ -12,9 +13,17 @@ export class FulltextSearchService implements OnModuleInit {
 
   constructor(private readonly backend: FulltextSearchBackend) {}
 
-  async onModuleInit() {
-    await this.backend.initialize();
-    this.logger.log('Fulltext search service initialized');
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        await this.backend.initialize();
+        this.logger.log('Fulltext search service initialized');
+      },
+      {
+        logger: this.logger,
+        label: 'FulltextSearchService.onModuleInit',
+      },
+    );
   }
 
   /**

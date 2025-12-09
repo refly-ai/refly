@@ -6,7 +6,12 @@ import { CreditService } from '../credit/credit.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { CreateCheckoutSessionRequest, SubscriptionUsageData, User } from '@refly/openapi-schema';
-import { genTokenUsageMeterID, genStorageUsageMeterID, safeParseJSON } from '@refly/utils';
+import {
+  genTokenUsageMeterID,
+  genStorageUsageMeterID,
+  safeParseJSON,
+  runModuleInitWithTimeoutAndRetry,
+} from '@refly/utils';
 import {
   CreateSubscriptionParam,
   SyncTokenUsageJobData,
@@ -59,44 +64,39 @@ export class SubscriptionService implements OnModuleInit {
     private ssuQueue?: Queue<SyncStorageUsageJobData>,
   ) {}
 
-  async onModuleInit() {
-    if (this.checkCanceledSubscriptionsQueue) {
-      const initPromise = this.setupSubscriptionCheckJobs();
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(`Subscription cronjob timed out after ${this.INIT_TIMEOUT}ms`);
-        }, this.INIT_TIMEOUT);
-      });
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        if (this.checkCanceledSubscriptionsQueue) {
+          try {
+            await this.setupSubscriptionCheckJobs();
+            this.logger.log('Subscription cronjob scheduled successfully');
+          } catch (error) {
+            this.logger.error(`Failed to schedule subscription cronjob: ${error}`);
+            throw error;
+          }
+        } else {
+          this.logger.log('Subscription queue not available, skipping cronjob setup');
+        }
 
-      try {
-        await Promise.race([initPromise, timeoutPromise]);
-        this.logger.log('Subscription cronjob scheduled successfully');
-      } catch (error) {
-        this.logger.error(`Failed to schedule subscription cronjob: ${error}`);
-        throw error;
-      }
-    } else {
-      this.logger.log('Subscription queue not available, skipping cronjob setup');
-    }
-
-    if (this.expireAndRechargeCreditsQueue) {
-      const initPromise = this.setupExpireAndRechargeCreditsJobs();
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(`Credit cronjob timed out after ${this.INIT_TIMEOUT}ms`);
-        }, this.INIT_TIMEOUT);
-      });
-
-      try {
-        await Promise.race([initPromise, timeoutPromise]);
-        this.logger.log('Credit cronjob scheduled successfully');
-      } catch (error) {
-        this.logger.error(`Failed to schedule credit cronjob: ${error}`);
-        throw error;
-      }
-    } else {
-      this.logger.log('Credit queue not available, skipping cronjob setup');
-    }
+        if (this.expireAndRechargeCreditsQueue) {
+          try {
+            await this.setupExpireAndRechargeCreditsJobs();
+            this.logger.log('Credit cronjob scheduled successfully');
+          } catch (error) {
+            this.logger.error(`Failed to schedule credit cronjob: ${error}`);
+            throw error;
+          }
+        } else {
+          this.logger.log('Credit queue not available, skipping cronjob setup');
+        }
+      },
+      {
+        logger: this.logger,
+        label: 'SubscriptionService.onModuleInit',
+        timeoutMs: this.INIT_TIMEOUT,
+      },
+    );
   }
 
   private async setupSubscriptionCheckJobs() {

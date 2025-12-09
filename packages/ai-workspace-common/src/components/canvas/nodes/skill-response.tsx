@@ -543,7 +543,7 @@ export const SkillResponseNode = memo(
         return;
       }
 
-      logEvent('rerun_ask_ai', null, {
+      logEvent('run_agent_node', null, {
         canvasId,
         nodeId: id,
       });
@@ -572,7 +572,7 @@ export const SkillResponseNode = memo(
     const { duplicateNode } = useDuplicateNode();
 
     const handleDelete = useCallback(() => {
-      logEvent('delete_node_ask_ai', null, {
+      logEvent('delete_agent_node', null, {
         canvasId,
         nodeId: id,
       });
@@ -630,8 +630,9 @@ export const SkillResponseNode = memo(
           event?.dragCreateInfo,
         );
 
-        logEvent('append_ask_ai', null, {
+        logEvent('create_agent_node', null, {
           canvasId,
+          source: 'other_agent_node',
         });
 
         // Add a small delay to avoid race conditions with context items

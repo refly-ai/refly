@@ -415,11 +415,16 @@ export class BuiltinSendEmail extends AgentBaseTool<BuiltinToolParams> {
 
   schema = z.object({
     subject: z.string().describe('The subject of the email'),
-    html: z
-      .string()
-      .describe(
-        "The HTML content of the email. When embedding files, reference them using placeholders like 'file://df-<fileId>' (e.g., 'file://df-xa4ieer0xx9jod9zcfsu8nnf'). CRITICAL: Use the fileId string directly (format: 'df-' followed by alphanumeric), NOT base64-encoded data. This field expects a file reference ID from the system, not actual image bytes. DO NOT encode to base64 - just use the fileId as-is.",
-      ),
+    html: z.string().describe(
+      `The HTML content of the email. When embedding files, use these placeholder formats:
+- \`file://df-<fileId>\` - Creates a shareable preview page link (for text links, clickable content)
+- \`file-content://df-<fileId>\` - Creates a direct file content URL (REQUIRED for <img src="">, <video src="">, etc.)
+
+CRITICAL: For <img> tags, you MUST use \`file-content://\` format, not \`file://\`.
+Example: <img src="file-content://df-xa4ieer0xx9jod9zcfsu8nnf" />
+
+Use the fileId string directly (format: 'df-' followed by alphanumeric), NOT base64-encoded data.`,
+    ),
     to: z
       .string()
       .describe(
@@ -429,8 +434,13 @@ export class BuiltinSendEmail extends AgentBaseTool<BuiltinToolParams> {
     attachments: z.array(z.string()).describe('The URLs of the attachments').optional(),
   });
 
-  description =
-    'Send an email to a specified recipient with subject and HTML content. When referencing Drive files in HTML, use file://df-<fileId> placeholders (e.g., file://df-xa4ieer0xx9jod9zcfsu8nnf).';
+  description = `Send an email to a specified recipient with subject and HTML content.
+
+## File Reference Placeholders
+- \`file://df-<fileId>\` → Shareable preview page (for links: <a href="file://df-xxx">)
+- \`file-content://df-<fileId>\` → Direct file content URL (for images: <img src="file-content://df-xxx">)
+
+IMPORTANT: Use \`file-content://\` for <img>, <video>, <audio> src attributes. Use \`file://\` for clickable links.`;
 
   protected params: BuiltinToolParams;
 
@@ -470,18 +480,39 @@ export class BuiltinSendEmail extends AgentBaseTool<BuiltinToolParams> {
   }
 
   private async replaceFilePlaceholders(html: string): Promise<string> {
-    if (!html || !html.includes('file://df-')) {
+    // Check for both placeholder formats
+    const hasFileContent = html?.includes('file-content://df-');
+    const hasFile = html?.includes('file://df-');
+
+    if (!html || (!hasFileContent && !hasFile)) {
       return html;
     }
 
-    const matchPattern = /file:\/\/(df-[a-zA-Z0-9]+)/g;
-    const matches = Array.from(html.matchAll(matchPattern));
-    if (matches.length === 0) {
+    // Match both formats: file-content://df-xxx and file://df-xxx
+    const contentMatchPattern = /file-content:\/\/(df-[a-zA-Z0-9]+)/g;
+    const shareMatchPattern = /(?<!file-content:\/\/)file:\/\/(df-[a-zA-Z0-9]+)/g;
+
+    const contentMatches = Array.from(html.matchAll(contentMatchPattern));
+    const shareMatches = Array.from(html.matchAll(shareMatchPattern));
+
+    if (contentMatches.length === 0 && shareMatches.length === 0) {
       return html;
     }
 
     const { reflyService, user } = this.params;
-    const uniqueFileIds = Array.from(new Set(matches.map(([, fileId]) => fileId)));
+
+    // Collect all unique file IDs from both patterns
+    const allFileIds = new Set<string>();
+    for (const [, fileId] of contentMatches) {
+      allFileIds.add(fileId);
+    }
+    for (const [, fileId] of shareMatches) {
+      allFileIds.add(fileId);
+    }
+
+    const uniqueFileIds = Array.from(allFileIds);
+
+    // Fetch all drive files
     const driveFiles = await Promise.all(
       uniqueFileIds.map(async (fileId) => {
         const file = await reflyService.readFile(user, fileId);
@@ -492,31 +523,39 @@ export class BuiltinSendEmail extends AgentBaseTool<BuiltinToolParams> {
       }),
     );
 
-    const urls = await Promise.all(
+    // Get both URL types for each file
+    const urlResults = await Promise.all(
       driveFiles.map(async (file) => {
-        const { url } = await reflyService.createShareForDriveFile(user, file.fileId);
-        return url;
+        const { url, contentUrl } = await reflyService.createShareForDriveFile(user, file.fileId);
+        return { fileId: file.fileId, shareUrl: url, contentUrl };
       }),
     );
 
-    if (!urls || urls.length !== driveFiles.length) {
-      throw new Error('Failed to resolve drive file links for email HTML content');
+    // Build maps for both URL types
+    const shareUrlMap = new Map<string, string>();
+    const contentUrlMap = new Map<string, string>();
+
+    for (const { fileId, shareUrl, contentUrl } of urlResults) {
+      if (!shareUrl || !contentUrl) {
+        throw new Error(`Failed to generate URLs for drive file: ${fileId}`);
+      }
+      shareUrlMap.set(fileId, shareUrl);
+      contentUrlMap.set(fileId, contentUrl);
     }
 
-    const resolvedMap = new Map<string, string>();
-    driveFiles.forEach((file, index) => {
-      const url = urls[index];
-      if (!url) {
-        throw new Error(`Failed to generate URL for drive file: ${file.fileId}`);
-      }
-      resolvedMap.set(file.fileId, url);
-    });
-
-    const replacePattern = /file:\/\/(df-[a-zA-Z0-9]+)/g;
-    return html.replace(
-      replacePattern,
-      (match, fileId: string) => resolvedMap.get(fileId) ?? match,
+    // Replace file-content:// with direct content URLs
+    let result = html.replace(
+      contentMatchPattern,
+      (match, fileId: string) => contentUrlMap.get(fileId) ?? match,
     );
+
+    // Replace file:// with share page URLs (but not file-content://)
+    result = result.replace(
+      /(?<!-)file:\/\/(df-[a-zA-Z0-9]+)/g,
+      (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
+    );
+
+    return result;
   }
 }
 

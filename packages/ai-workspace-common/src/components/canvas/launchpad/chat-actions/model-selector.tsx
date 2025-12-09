@@ -1,5 +1,14 @@
 import { useEffect, useState, useMemo, useCallback, memo, useRef } from 'react';
-import { Button, Dropdown, DropdownProps, MenuProps, Skeleton, Tooltip, Typography } from 'antd';
+import {
+  Button,
+  Divider,
+  Dropdown,
+  DropdownProps,
+  MenuProps,
+  Skeleton,
+  Tooltip,
+  Typography,
+} from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getPopupContainer } from '@refly-packages/ai-workspace-common/utils/ui';
 import { ModelInfo, TokenUsageMeter } from '@refly/openapi-schema';
@@ -16,6 +25,7 @@ import { useUserStoreShallow } from '@refly/stores';
 import { ArrowDown, Settings } from 'refly-icons';
 import cn from 'classnames';
 import { CreditBillingInfo } from '@refly-packages/ai-workspace-common/components/common/credit-billing-info';
+import { logEvent } from '@refly/telemetry-web';
 
 const { Paragraph } = Typography;
 
@@ -30,6 +40,8 @@ interface ModelSelectorProps {
   contextItems?: IContextItem[];
   disabled?: boolean;
   readonly?: boolean;
+  /** Scene for selecting default model: 'chat' for copilot, 'agent' for agent nodes */
+  defaultScene?: 'chat' | 'agent';
 }
 
 // Memoize the selected model display
@@ -110,8 +122,21 @@ const ModelLabel = memo(
     const { t } = useTranslation();
 
     return (
-      <span className="text-xs flex items-center gap-1 text-refly-text-0 min-w-0 flex-1">
-        <span className="truncate">{model.label}</span>
+      <span className="text-xs flex items-center gap-1.5 text-refly-text-0 min-w-0 flex-1">
+        <span className="truncate flex items-center gap-2 leading-none">
+          <span className="leading-normal">{model.label}</span>
+          {model?.tooltip && (
+            <>
+              <Divider
+                type="vertical"
+                className="bg-refly-Card-Border m-0 h-3 relative top-[1px]"
+              />
+              <span className="text-refly-text-2 whitespace-nowrap leading-normal">
+                {model.tooltip}
+              </span>
+            </>
+          )}
+        </span>
         {!model.capabilities?.vision && isContextIncludeImage && (
           <Tooltip title={t('copilot.modelSelector.noVisionSupport')}>
             <IconError className="w-3.5 h-3.5 text-[#faad14] flex-shrink-0" />
@@ -180,6 +205,7 @@ export const ModelSelector = memo(
     contextItems,
     disabled,
     readonly = false,
+    defaultScene = 'chat',
   }: ModelSelectorProps) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<'llm'>('llm');
@@ -266,11 +292,14 @@ export const ModelSelector = memo(
       ({ key }: { key: string }) => {
         const selectedModel = modelList?.find((model) => model.providerItemId === key);
         if (selectedModel) {
+          logEvent('choose_model', null, {
+            model: selectedModel.name,
+          });
           setModel(selectedModel);
           setDropdownOpen(false);
         }
       },
-      [modelList, setModel, setDropdownOpen],
+      [modelList, setModel, setDropdownOpen, logEvent],
     );
 
     const droplist: MenuProps['items'] = useMemo(() => {
@@ -363,12 +392,18 @@ export const ModelSelector = memo(
     );
 
     // Automatically select available model only when there is no current model
-    // Default to LLM category's first available model to avoid flicker
+    // Use defaultScene to determine which default model to use (agent vs chat)
     useEffect(() => {
       if (!modelList || modelList.length === 0) return;
       if (model) return;
 
-      const defaultModelItemId = userProfile?.preferences?.defaultModel?.chat?.itemId;
+      // Prioritize agent default model for agent scene, fallback to chat default model
+      const defaultModel = userProfile?.preferences?.defaultModel;
+      const defaultModelItemId =
+        defaultScene === 'agent'
+          ? (defaultModel?.agent?.itemId ?? defaultModel?.chat?.itemId)
+          : defaultModel?.chat?.itemId;
+
       let initialModel: ModelInfo | undefined;
 
       if (defaultModelItemId) {
@@ -380,7 +415,14 @@ export const ModelSelector = memo(
       }
 
       setModel(initialModel ?? null);
-    }, [model, modelList, tokenUsage, setModel]);
+    }, [
+      model,
+      modelList,
+      tokenUsage,
+      setModel,
+      defaultScene,
+      userProfile?.preferences?.defaultModel,
+    ]);
 
     if (isModelListLoading || isUsageLoading) {
       return <Skeleton className="w-28" active paragraph={false} />;
@@ -436,6 +478,7 @@ export const ModelSelector = memo(
       prevProps.size === nextProps.size &&
       prevProps.variant === nextProps.variant &&
       prevProps.contextItems === nextProps.contextItems &&
+      prevProps.defaultScene === nextProps.defaultScene &&
       JSON.stringify(prevProps.trigger) === JSON.stringify(nextProps.trigger)
     );
   },

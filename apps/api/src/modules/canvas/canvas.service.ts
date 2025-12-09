@@ -48,6 +48,7 @@ import { CanvasContentItem } from './canvas.dto';
 import { RedisService } from '../common/redis.service';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { ProviderService } from '../provider/provider.service';
+import { providerItem2ModelInfo } from '../provider/provider.dto';
 import { isDesktop } from '../../utils/runtime';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { initEmptyCanvasState, mirrorCanvasData } from '@refly/canvas-common';
@@ -591,7 +592,13 @@ export class CanvasService {
     // Use the canvasId from param if provided, otherwise generate a new one
     param.canvasId ||= genCanvasID();
 
-    const state = initEmptyCanvasState();
+    // Get default agent model for the initial skillResponse node
+    const defaultAgentItem = await this.providerService.findDefaultProviderItem(user, 'agent');
+    const defaultModelInfo = defaultAgentItem
+      ? providerItem2ModelInfo(defaultAgentItem as any)
+      : undefined;
+
+    const state = initEmptyCanvasState({ defaultModelInfo });
     return this.createCanvasWithState(user, param, state);
   }
 

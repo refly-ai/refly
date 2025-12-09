@@ -2,13 +2,11 @@ import { Module } from '@nestjs/common';
 import { McpModule, McpTransportType } from '@rekog/mcp-nest';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { McpServerService } from '../mcp-server/mcp-server.service';
-import { PrismaService } from '../common/prisma.service';
-import { EncryptionService } from '../common/encryption.service';
 import { InternalMcpService } from './internal-mcp.service';
 import { SearchTools } from './tools/search.tools';
 import { MediaGeneratorTools } from './tools/media-generator.tools';
 import { ProviderQueryTools } from './tools/provider-query.tools';
-import { SearchService } from '../search/search.service';
+import { SearchModule } from '../search/search.module';
 import { RAGModule } from '../rag/rag.module';
 import { ProviderModule } from '../provider/provider.module';
 import { CommonModule } from '../common/common.module';
@@ -29,17 +27,15 @@ import { ActionModule } from '../action/action.module';
     ProviderModule,
     MediaGeneratorModule,
     ActionModule,
+    SearchModule,
   ],
   providers: [
     InternalMcpService,
     McpServerService,
-    PrismaService,
-    EncryptionService,
     // McpServerTools,
     SearchTools,
     MediaGeneratorTools,
     ProviderQueryTools,
-    SearchService,
     JwtAuthGuard,
   ],
   exports: [InternalMcpService],

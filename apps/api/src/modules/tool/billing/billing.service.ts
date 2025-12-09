@@ -69,16 +69,10 @@ export class BillingService {
         finalOriginalPrice = finalDiscountedPrice; // No discount in dynamic-tooling scenario
       }
 
-      // Apply toolset-based free access (specific toolsets are always free)
-      if (FREE_TOOLSET_KEYS.includes(toolsetKey)) {
-        // Apply subscription-based discount
-        if (finalDiscountedPrice > 0) {
-          const hasFreeToolAccess = await this.checkFreeToolAccess(uid);
-          if (hasFreeToolAccess) {
-            this.logger.debug(`User ${uid} has free tool access, setting discounted price to 0`);
-            finalDiscountedPrice = 0;
-          }
-        }
+      // Apply toolset-based free access (specific toolsets are one month free)
+      if (FREE_TOOLSET_KEYS.includes(toolsetKey) && finalDiscountedPrice > 0) {
+        const hasFreeToolAccess = await this.checkFreeToolAccess(uid);
+        finalDiscountedPrice = hasFreeToolAccess ? 0 : finalDiscountedPrice;
       }
 
       // Record credit usage
@@ -118,32 +112,27 @@ export class BillingService {
   }
 
   /**
-   * Check if user has free tool access based on their subscription lookup key
+   * Check if user has free tool access based on subscription lookup key and creation date
    *
    * @param uid - User ID
-   * @returns true if user's subscription lookup key matches free tool access criteria
+   * @returns true if user has qualifying subscription created within the last month
    */
   private async checkFreeToolAccess(uid: string): Promise<boolean> {
     try {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
       const subscription = await this.prisma.subscription.findFirst({
         where: {
           uid,
           status: 'active',
+          lookupKey: { in: FREE_TOOL_LOOKUP_KEYS },
+          createdAt: { gt: oneMonthAgo },
           OR: [{ cancelAt: null }, { cancelAt: { gt: new Date() } }],
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        select: {
-          lookupKey: true,
         },
       });
 
-      if (!subscription) {
-        return false;
-      }
-
-      return FREE_TOOL_LOOKUP_KEYS.includes(subscription.lookupKey);
+      return !!subscription;
     } catch (error) {
       this.logger.warn(`Failed to check free tool access for user ${uid}: ${error}`);
       return false;

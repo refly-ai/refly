@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { CanvasNode } from '@refly/canvas-common';
 import { useDuplicateNode } from './use-duplicate-node';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { logEvent } from '@refly/telemetry-web';
 
 interface CopyPasteSkillResponseNodeOptions {
   /** Canvas ID */
@@ -54,17 +55,11 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
     // Fixed offset for pasted nodes (bottom right of original position)
     const fixedOffset = { x: 0, y: 200 };
 
-    if (copiedNodes.length === 1) {
-      // Single node: paste at fixed offset from original position
-      const node = copiedNodes[0];
+    // Paste all copied nodes with fixed offset from original position
+    for (const node of copiedNodes) {
       duplicateNode(node, canvasId, { offset: fixedOffset });
-    } else {
-      // Multiple nodes: maintain relative positions, apply fixed offset to each node
-      for (const node of copiedNodes) {
-        duplicateNode(node, canvasId, { offset: fixedOffset });
-      }
     }
-  }, [copiedNodes, duplicateNode, canvasId, readonly, workflowIsRunning]);
+  }, [copiedNodes, duplicateNode, canvasId, readonly, workflowIsRunning, logEvent]);
 
   /**
    * Handle keyboard shortcuts for copy and paste

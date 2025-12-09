@@ -81,6 +81,7 @@ import { GrCircleQuestion } from 'react-icons/gr';
 import { AiOutlineLink } from 'react-icons/ai';
 import { HiOutlineTableCells } from 'react-icons/hi2';
 import { X, Claude, Gpt, Qwen, Deepseek, Gemini, Kimi, Grok, AIModel } from 'refly-icons';
+import AutoIcon from '@refly-packages/ai-workspace-common/assets/auto-model.svg';
 import OpenAIIcon from '@refly-packages/ai-workspace-common/assets/openai.svg';
 import ClaudeIcon from '@refly-packages/ai-workspace-common/assets/claude.svg';
 import GeminiIcon from '@refly-packages/ai-workspace-common/assets/gemini.svg';
@@ -239,6 +240,9 @@ export const IconMindMap = (props: React.ComponentProps<typeof IoGitNetworkOutli
 
 export const ModelIcon = ({ model, size }: { model: string; size: number }) => {
   const modelName = model.toLowerCase();
+  if (modelName.includes('auto')) {
+    return <img src={AutoIcon} alt="Auto" style={{ width: size, height: size }} />;
+  }
   if (modelName.includes('claude')) {
     return <Claude size={size} />;
   }

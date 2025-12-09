@@ -8203,6 +8203,10 @@ export const ModelInfoSchema = {
       $ref: '#/components/schemas/CreditBilling',
       description: 'Credit billing info',
     },
+    tooltip: {
+      type: 'string',
+      description: 'Tooltip text for the model (e.g., "Smart Routing")',
+    },
     inputParameters: {
       type: 'array',
       description: 'Input parameter configurations',
@@ -8318,6 +8322,10 @@ export const LLMModelConfigSchema = {
       description: 'Model capabilities',
       $ref: '#/components/schemas/ModelCapabilities',
     },
+    tooltip: {
+      type: 'string',
+      description: 'Tooltip text for the model (e.g., "Smart Routing")',
+    },
   },
 } as const;
 
@@ -8421,6 +8429,10 @@ export const MediaGenerationModelConfigSchema = {
     description: {
       type: 'string',
       description: 'Model description',
+    },
+    tooltip: {
+      type: 'string',
+      description: 'Tooltip text for the model (e.g., "Smart Routing")',
     },
     supportedLanguages: {
       type: 'array',

@@ -3,6 +3,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Play, StopCircle, Preview } from 'refly-icons';
 import { ActionStatus } from '@refly/openapi-schema';
+import { logEvent } from '@refly/telemetry-web';
 
 interface SkillResponseActionsProps {
   nodeIsExecuting: boolean;
@@ -89,13 +90,14 @@ const SkillResponseActionsComponent = ({
               '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
           },
           onOk: async () => {
+            logEvent('stop_agent_run', null, {});
             await onStop();
             message.success(t('canvas.skillResponse.stopSuccess'));
           },
         });
       }
     },
-    [nodeIsExecuting, onStop, t],
+    [nodeIsExecuting, onStop, t, logEvent],
   );
 
   const handleRerunClick = useCallback(
