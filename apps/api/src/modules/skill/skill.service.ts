@@ -484,13 +484,9 @@ export class SkillService implements OnModuleInit {
     param.modelItemId ||= defaultModel?.itemId;
     const modelItemId = param.modelItemId;
 
-    const originalProviderItem = await this.providerService.findProviderItemById(user, modelItemId);
+    let providerItem = await this.providerService.findProviderItemById(user, modelItemId);
 
-    if (
-      !originalProviderItem ||
-      originalProviderItem.category !== 'llm' ||
-      !originalProviderItem.enabled
-    ) {
+    if (!providerItem || providerItem.category !== 'llm' || !providerItem.enabled) {
       throw new ProviderItemNotFoundError(`provider item ${modelItemId} not valid`);
     }
 
@@ -498,7 +494,7 @@ export class SkillService implements OnModuleInit {
     // Keep param.modelItemId unchanged (e.g., Auto) - used for display
     // providerItem is the routed model (e.g., Claude Sonnet 4.5) - used for execution
     const modelProviderMap = await this.providerService.prepareModelProviderMap(user, modelItemId);
-    const providerItem = modelProviderMap.chat as ProviderItemModel & { provider: ProviderModel };
+    providerItem = modelProviderMap.chat as ProviderItemModel & { provider: ProviderModel };
 
     const tiers = [];
     for (const providerItem of Object.values(modelProviderMap)) {
