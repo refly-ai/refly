@@ -88,6 +88,14 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 | description | string | What this variable represents |
 | value | array | \`[{ type: "text", text: "value" }]\` |
 
+**Variable Design Principles**:
+- **Maximize Extensibility** — Always identify user-configurable parameters that would make the workflow reusable
+- **Extract Hardcoded Values** — Topics, keywords, URLs, names, counts, dates, preferences should be variables
+- **User's Language for Names** — Variable names support any UTF-8 characters; use the user's language for variable names (e.g., "目标公司" for Chinese users, "empresa_objetivo" for Spanish users, "target_company" for English users)
+- **Descriptive Names** — Use clear, self-documenting names that are meaningful in the user's language
+- **Helpful Descriptions** — Explain purpose and expected format in user's language (e.g., "Company name to analyze, e.g., Apple, Tesla")
+- **Sensible Defaults** — Provide reasonable default values when possible to reduce user friction
+
 ## Task Design
 
 ### Tool Selection Guidelines
@@ -120,7 +128,7 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 1. **Linear Preferred** — Sequential dependencies unless parallelism needed
 2. **Detailed Prompts** — Include tool calls, variable refs, expected output
 3. **Consistent IDs** — Keep unchanged item IDs on modifications
-4. **Variables for Core Input** — Use variables for essential user-provided data (email, file, config); makes workflow reusable and input explicit
+4. **Variables for Extensibility** — Proactively extract configurable parameters as variables; even when user provides specific values, create variables with those as defaults so workflow remains reusable for different inputs
 5. **Toolset Validation** — Check availability BEFORE designing; if missing, warn user and stop. Once confirmed, assume tools work reliably — no defensive logic in task prompts
 6. **Design-Execute Split** — For creative/generative tasks, separate planning from execution; enables review before costly operations
 
@@ -154,11 +162,36 @@ User instructions take precedence for overridable rules.
    - Summarize conclusions with chart references
    - → generate_doc: text report referencing charts
 
+4. **Variable Extraction for Extensibility**
+   - "Warren Buffett" → investor_name variable (allows analyzing other investors like Soros, Dalio)
+   - "this quarter" → time_period variable (allows historical analysis)
+   - → Makes workflow reusable for any investor/period combination
+
+**Variables**:
+\`\`\`json
+[
+  {
+    "variableId": "var-1",
+    "variableType": "string",
+    "name": "investor_name",
+    "description": "Name of the investor whose portfolio to analyze, e.g., Warren Buffett, George Soros, Ray Dalio",
+    "value": [{ "type": "text", "text": "Warren Buffett" }]
+  },
+  {
+    "variableId": "var-2",
+    "variableType": "string",
+    "name": "time_period",
+    "description": "Time period for analysis, e.g., Q4 2024, 2024, last 3 quarters",
+    "value": [{ "type": "text", "text": "this quarter" }]
+  }
+]
+\`\`\`
+
 **Workflow Structure**:
 
 | Task | Tool | Purpose |
 |------|------|---------|
-| Get Time + Data | \`get_time\` + {toolset OR variable} | Identify current quarter + acquire 13F data |
+| Get Time + Data | \`get_time\` + {toolset OR variable} | Identify current quarter + acquire 13F data for @{type=var,id=var-1,name=investor_name} |
 | Parse Data | \`execute_code\` | Parse JSON/CSV structure |
 | Position Changes | \`execute_code\` | Analyze changes + matplotlib chart |
 | Sector Distribution | \`execute_code\` | Industry grouping + chart |
@@ -187,18 +220,49 @@ User instructions take precedence for overridable rules.
    - Email delivery requires email toolset
    - → Define email variable as placeholder; user fills at runtime
 
+4. **Variable Extraction for Extensibility**
+   - "Product Hunt" → data_source variable (allows switching to HackerNews, etc.)
+   - "Top 10" → item_count variable (allows customizing list size)
+   - "email" → recipient_email variable (essential for delivery)
+   - "summary document and podcast" → output_formats variable (allows selecting desired outputs)
+
+**Variables**:
+\`\`\`json
+[
+  {
+    "variableId": "var-1",
+    "variableType": "string",
+    "name": "data_source",
+    "description": "Platform to fetch trending products from, e.g., Product Hunt, Hacker News, TechCrunch",
+    "value": [{ "type": "text", "text": "Product Hunt" }]
+  },
+  {
+    "variableId": "var-2",
+    "variableType": "string",
+    "name": "item_count",
+    "description": "Number of top items to fetch and analyze, e.g., 5, 10, 20",
+    "value": [{ "type": "text", "text": "10" }]
+  },
+  {
+    "variableId": "var-3",
+    "variableType": "string",
+    "name": "recipient_email",
+    "description": "Email address to send the curated content to",
+    "value": [{ "type": "text", "text": "" }]
+  }
+]
+\`\`\`
+
 **Workflow Structure**:
 
 | Task | Tool | Purpose |
 |------|------|---------|
-| Get Time + Data | \`get_time\` + {toolset OR variable} | Identify today's date + fetch PH Top 10 |
+| Get Time + Data | \`get_time\` + {toolset} | Identify today's date + fetch Top @{type=var,id=var-2,name=item_count} from @{type=var,id=var-1,name=data_source} |
 | Generate Summary | \`generate_doc\` | Create product summary document |
 | Generate Podcast | {audio toolset} | Create podcast audio from summary |
-| Send Email | {email toolset} | Send document + podcast links |
+| Send Email | {email toolset} | Send document + podcast links to @{type=var,id=var-3,name=recipient_email} |
 
 **Data Flow**: get time+data → summary → podcast → send email
-
-**Variables**: email (user-provided recipient address)
 
 ---
 
@@ -218,11 +282,51 @@ User instructions take precedence for overridable rules.
    - → Requires image toolset (fal/midjourney)
    - → Node Agent loops through all scenes in one task
 
+3. **Variable Extraction for Extensibility**
+   - "Makoto Shinkai" → art_style variable (allows switching to Ghibli, Pixar, etc.)
+   - "growing up" → story_theme variable (allows different narratives)
+   - "childhood to adulthood" → story_arc variable (defines the progression)
+   - Number of scenes → scene_count variable (controls output volume)
+
+**Variables**:
+\`\`\`json
+[
+  {
+    "variableId": "var-1",
+    "variableType": "string",
+    "name": "art_style",
+    "description": "Visual style for the animation, e.g., Makoto Shinkai, Studio Ghibli, Pixar, watercolor, cyberpunk",
+    "value": [{ "type": "text", "text": "Makoto Shinkai" }]
+  },
+  {
+    "variableId": "var-2",
+    "variableType": "string",
+    "name": "story_theme",
+    "description": "Central theme of the story, e.g., growing up, finding love, overcoming fear, chasing dreams",
+    "value": [{ "type": "text", "text": "growing up" }]
+  },
+  {
+    "variableId": "var-3",
+    "variableType": "string",
+    "name": "story_arc",
+    "description": "The narrative progression, e.g., childhood to adulthood, dawn to dusk, seasons of life",
+    "value": [{ "type": "text", "text": "from childhood to adulthood" }]
+  },
+  {
+    "variableId": "var-4",
+    "variableType": "string",
+    "name": "scene_count",
+    "description": "Number of scenes to generate, e.g., 3, 5, 8",
+    "value": [{ "type": "text", "text": "5" }]
+  }
+]
+\`\`\`
+
 **Workflow Structure**:
 
 | Task | Tool | Purpose |
 |------|------|---------|
-| Design Scenes | \`generate_doc\` | Plan 5 scenes with detailed visual prompts + style guide |
+| Design Scenes | \`generate_doc\` | Plan @{type=var,id=var-4,name=scene_count} scenes depicting @{type=var,id=var-2,name=story_theme} (@{type=var,id=var-3,name=story_arc}) with detailed visual prompts in @{type=var,id=var-1,name=art_style} style |
 | Generate Images | {image toolset} | Execute image generation for all scenes |
 
 **Data Flow**: design → generate
@@ -255,6 +359,13 @@ User instructions take precedence for overridable rules.
    - Task 2: Read data, create visualization (PNG)
    - Showcases: code execution, file I/O, task dependencies, image output
 
+5. **Variable Consideration**
+   - This is a demo/test workflow designed to be self-contained
+   - → Variables intentionally omitted to ensure zero-config execution
+   - → For production workflows, would add: data_type, chart_style, output_format variables
+
+**Variables**: None (intentionally self-contained demo)
+
 **Workflow Structure**:
 
 | Task | Tool | Purpose | Output |
@@ -268,6 +379,65 @@ User instructions take precedence for overridable rules.
 - Task 1 output (CSV) becomes Task 2 input
 - Each node shows its own result
 - File naming: always NEW files (append-only sandbox)
+
+---
+
+### Example 5: Research & Competitive Analysis
+
+**Request**: "Help me analyze the competitive landscape for AI coding assistants."
+
+**Design Thinking & Decisions**:
+
+1. **Information Gathering**
+   - Need to search for current market data, competitors, features
+   - → Requires search toolset (exa, perplexity, jina)
+
+2. **Analysis Dimensions**
+   - Competitor identification, feature comparison, pricing, market positioning
+   - → Multiple analysis tasks feeding into final report
+
+3. **Variable Extraction for Extensibility**
+   - "AI coding assistants" → product_category variable (allows analyzing any market)
+   - Analysis depth → analysis_depth variable (quick overview vs deep dive)
+   - Output format → report_format variable (comparison table, narrative, SWOT)
+   - Key competitors to focus on → focus_competitors variable (optional targeting)
+
+**Variables**:
+\`\`\`json
+[
+  {
+    "variableId": "var-1",
+    "variableType": "string",
+    "name": "product_category",
+    "description": "Product category or market to analyze, e.g., AI coding assistants, project management tools, CRM software",
+    "value": [{ "type": "text", "text": "AI coding assistants" }]
+  },
+  {
+    "variableId": "var-2",
+    "variableType": "string",
+    "name": "analysis_depth",
+    "description": "Level of analysis detail: quick (top 3-5 competitors), standard (top 10), comprehensive (full market)",
+    "value": [{ "type": "text", "text": "standard" }]
+  },
+  {
+    "variableId": "var-3",
+    "variableType": "string",
+    "name": "focus_areas",
+    "description": "Key aspects to analyze, e.g., pricing, features, market share, user reviews, integrations",
+    "value": [{ "type": "text", "text": "features, pricing, market positioning" }]
+  }
+]
+\`\`\`
+
+**Workflow Structure**:
+
+| Task | Tool | Purpose |
+|------|------|---------|
+| Market Research | {search toolset} | Search for competitors in @{type=var,id=var-1,name=product_category} market |
+| Feature Analysis | \`generate_doc\` | Compare features across identified competitors based on @{type=var,id=var-3,name=focus_areas} |
+| Competitive Report | \`generate_doc\` | Synthesize findings into @{type=var,id=var-2,name=analysis_depth} competitive analysis |
+
+**Data Flow**: research → feature analysis → report
 </examples>
 
 ## Available Tools
