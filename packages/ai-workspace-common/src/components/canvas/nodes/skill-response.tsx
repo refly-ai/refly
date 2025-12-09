@@ -604,7 +604,8 @@ export const SkillResponseNode = memo(
         dragCreateInfo?: NodeDragCreateInfo;
       }) => {
         const { metadata } = data;
-        const { selectedSkill, actionMeta, modelInfo } = metadata;
+        // Do not pass modelInfo to the new node. The new node should use the Auto model.
+        const { selectedSkill, actionMeta, modelInfo: _ignored, ...restMetadata } = metadata;
 
         const currentSkill = actionMeta || selectedSkill;
 
@@ -644,11 +645,10 @@ export const SkillResponseNode = memo(
                 title: '',
                 entityId: genNodeEntityId('skillResponse') as string,
                 metadata: {
-                  ...metadata,
+                  ...restMetadata,
                   query: '',
                   contextItems: mergedContextItems,
                   selectedSkill: currentSkill,
-                  modelInfo,
                   status: 'init',
                 },
               },
