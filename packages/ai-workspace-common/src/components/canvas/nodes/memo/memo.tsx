@@ -2,7 +2,6 @@ import { useReactFlow, NodeResizer } from '@xyflow/react';
 import { CanvasNode } from '@refly/canvas-common';
 import { MemoNodeProps } from '../shared/types';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { getNodeCommonStyles } from '../shared/styles';
 import { useTranslation } from 'react-i18next';
@@ -58,8 +57,6 @@ export const MemoNode = ({ data, selected, id, isPreview = false, onNodeClick }:
   const [isFocused, setIsFocused] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
-
   const { readonly } = useCanvasContext();
 
   const { updateSize } = useNodeSize({
@@ -92,13 +89,11 @@ export const MemoNode = ({ data, selected, id, isPreview = false, onNodeClick }:
   // Handle node hover events
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
-    onHoverStart();
-  }, [onHoverStart]);
+  }, []);
 
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false);
-    onHoverEnd();
-  }, [onHoverEnd]);
+  }, []);
 
   const { addToContext } = useAddToContext();
 
