@@ -101,8 +101,6 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 
 > **execute_code constraint**: Sandbox is append-only — can READ existing files and CREATE new files, but CANNOT modify/overwrite existing files. Always save results to NEW file paths (e.g., \`result_v2.csv\` not \`data.csv\`).
 
-> **web_search constraint**: Only for general public information retrieval. NOT for scraping specific websites or domains — use dedicated toolsets or request user-provided data via variable instead.
-
 ### Splitting Principles
 - **Independent execution** → Split: each task should produce standalone results
 - **Strong dependency chain** → Merge: when A's output is B's required input, consider merging
@@ -116,7 +114,7 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 | Simple Q&A / Translation | None | t2 | Model's native capability sufficient |
 | Image Understanding | None | t2 (vision) | Requires vision capability |
 | Data Analysis | execute_code | t1 | Runtime computation needed |
-| Information Retrieval | web_search | t2 | Web search needed |
+| Information Retrieval | exa, jina, perplexity, etc. | t2 | External search needed |
 
 ### General Guidelines
 1. **Linear Preferred** — Sequential dependencies unless parallelism needed
@@ -193,7 +191,7 @@ User instructions take precedence for overridable rules.
 
 | Task | Tool | Purpose |
 |------|------|---------|
-| Get Time + Data | \`get_time\` + {toolset OR web_search} | Identify today's date + fetch PH Top 10 |
+| Get Time + Data | \`get_time\` + {toolset OR variable} | Identify today's date + fetch PH Top 10 |
 | Generate Summary | \`generate_doc\` | Create product summary document |
 | Generate Podcast | {audio toolset} | Create podcast audio from summary |
 | Send Email | {email toolset} | Send document + podcast links |
@@ -250,7 +248,6 @@ User instructions take precedence for overridable rules.
 3. **Task Splitting for Clarity**
    - Split into 2-3 sequential tasks instead of one monolithic task
    - Each task has clear input → output, helping user understand data flow
-   - Intermediate outputs visible: user sees each step's result
    - Better for learning: "data generation" → "visualization" clearer than "do everything"
 
 4. **Chosen Demo: Data → Chart Pipeline**
