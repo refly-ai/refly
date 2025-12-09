@@ -53,7 +53,9 @@ export const ReasoningContentPreview = memo(
         </div>
         {!collapsed && (
           <Markdown
-            className="p-3 pt-0 text-xs overflow-hidden"
+            className={cn('p-3 pt-0 text-xs overflow-hidden', {
+              'max-h-[300px] overflow-y-auto': !isExecuting,
+            })}
             content={getParsedReasoningContent(content)}
             sources={sources || []}
             resultId={resultId}
