@@ -911,6 +911,7 @@ export class SkillService implements OnModuleInit {
           input: JSON.stringify(param.input ?? {}),
           context: JSON.stringify(param.context ?? {}),
           tplConfig: JSON.stringify(param.tplConfig ?? {}),
+          toolsets: JSON.stringify(param.toolsets ?? {}),
           runtimeConfig: JSON.stringify(param.runtimeConfig ?? {}),
           history: JSON.stringify(Array.isArray(param.resultHistory) ? param.resultHistory : []),
           providerItemId: param.modelItemId,
