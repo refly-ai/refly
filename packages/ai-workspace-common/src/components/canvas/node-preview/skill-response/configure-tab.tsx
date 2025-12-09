@@ -139,6 +139,7 @@ const ConfigureTabComponent = ({
           trigger={['click']}
           contextItems={contextItems}
           disabled={disabled}
+          defaultScene="agent"
         />
       </div>
 

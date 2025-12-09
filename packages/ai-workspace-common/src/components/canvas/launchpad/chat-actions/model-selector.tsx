@@ -40,6 +40,8 @@ interface ModelSelectorProps {
   contextItems?: IContextItem[];
   disabled?: boolean;
   readonly?: boolean;
+  /** Scene for selecting default model: 'chat' for copilot, 'agent' for agent nodes */
+  defaultScene?: 'chat' | 'agent';
 }
 
 // Memoize the selected model display
@@ -203,6 +205,7 @@ export const ModelSelector = memo(
     contextItems,
     disabled,
     readonly = false,
+    defaultScene = 'chat',
   }: ModelSelectorProps) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<'llm'>('llm');
@@ -389,12 +392,18 @@ export const ModelSelector = memo(
     );
 
     // Automatically select available model only when there is no current model
-    // Default to LLM category's first available model to avoid flicker
+    // Use defaultScene to determine which default model to use (agent vs chat)
     useEffect(() => {
       if (!modelList || modelList.length === 0) return;
       if (model) return;
 
-      const defaultModelItemId = userProfile?.preferences?.defaultModel?.chat?.itemId;
+      // Prioritize agent default model for agent scene, fallback to chat default model
+      const defaultModel = userProfile?.preferences?.defaultModel;
+      const defaultModelItemId =
+        defaultScene === 'agent'
+          ? (defaultModel?.agent?.itemId ?? defaultModel?.chat?.itemId)
+          : defaultModel?.chat?.itemId;
+
       let initialModel: ModelInfo | undefined;
 
       if (defaultModelItemId) {
@@ -406,7 +415,14 @@ export const ModelSelector = memo(
       }
 
       setModel(initialModel ?? null);
-    }, [model, modelList, tokenUsage, setModel]);
+    }, [
+      model,
+      modelList,
+      tokenUsage,
+      setModel,
+      defaultScene,
+      userProfile?.preferences?.defaultModel,
+    ]);
 
     if (isModelListLoading || isUsageLoading) {
       return <Skeleton className="w-28" active paragraph={false} />;
@@ -462,6 +478,7 @@ export const ModelSelector = memo(
       prevProps.size === nextProps.size &&
       prevProps.variant === nextProps.variant &&
       prevProps.contextItems === nextProps.contextItems &&
+      prevProps.defaultScene === nextProps.defaultScene &&
       JSON.stringify(prevProps.trigger) === JSON.stringify(nextProps.trigger)
     );
   },

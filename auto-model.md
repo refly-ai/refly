@@ -95,6 +95,16 @@ TODO 待确认的问题：
     - 无法上传图片：前端通过检查 config.capabilities.vision 来决定是否显示上传图片按钮。如果 config 里没存，默认为 false，Auto 模型就无法发图了（虽然背后的 Sonnet 4.5 支持）。
     - Context 长度误报：前端会读取 config.contextLimit 做上下文长度检查。如果没存，默认为 0，可能会导致前端提示“Token 超限”或显示“Limit: 0”。
 
+## 默认模型
+
+环境变量：
+
+```
+DEFAULT_MODEL_AGENT=auto
+```
+
+修改代码行为，用户手动创建的 Agent node 和 Copilot 生成的 Workflow 中的 Agent node 的模型默认选中 Auto 模型。
+
 ## 模型路由
 
 ### 目标
