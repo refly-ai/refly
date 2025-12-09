@@ -609,7 +609,7 @@ export class ComposioService {
           const { file_name_title, ...toolInput } = inputRecord;
 
           // Run tool execution within context (similar to dynamic-tooling)
-          const { result, user } = await runInContext(
+          const { result, user, resultId, version } = await runInContext(
             {
               langchainConfig: runnableConfig as SkillRunnableConfig,
               requestId: `composio-${toolName}-${Date.now()}`,
@@ -631,7 +631,12 @@ export class ComposioService {
                 toolName,
                 processedRequest.params,
               );
-              return { result: executionResult, user: currentUser };
+              return {
+                result: executionResult,
+                user: currentUser,
+                resultId: runnableConfig?.configurable?.resultId as string | undefined,
+                version: runnableConfig?.configurable?.version as number | undefined,
+              };
             },
           );
 
@@ -643,6 +648,8 @@ export class ComposioService {
             toolsetKey: context.toolsetKey,
             creditCost: context.creditCost,
             fileNameTitle: (file_name_title as string) || 'untitled',
+            resultId,
+            version,
           });
 
           if (result?.successful) {

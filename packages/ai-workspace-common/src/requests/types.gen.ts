@@ -6743,6 +6743,14 @@ export type PostHandlerContext = {
    * File name title from input params
    */
   fileNameTitle?: string;
+  /**
+   * Result ID from execution context
+   */
+  resultId?: string;
+  /**
+   * Result version from execution context
+   */
+  version?: number;
 };
 
 /**
@@ -7584,6 +7592,10 @@ export type DriveFile = {
    * Drive file update timestamp
    */
   updatedAt?: string;
+  /**
+   * Private access URL for the file (requires authentication)
+   */
+  url?: string;
 };
 
 export type ListDriveFilesResponse = BaseResponse & {

@@ -6743,6 +6743,14 @@ export type PostHandlerContext = {
    * File name title from input params
    */
   fileNameTitle?: string;
+  /**
+   * Result ID from execution context
+   */
+  resultId?: string;
+  /**
+   * Result version from execution context
+   */
+  version?: number;
 };
 
 /**

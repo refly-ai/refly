@@ -81,8 +81,8 @@ export class BillingService {
         discountedPrice: finalDiscountedPrice,
         originalPrice: finalOriginalPrice,
         timestamp: new Date(),
-        resultId: getResultId(),
-        version: getResultVersion(),
+        resultId: options.resultId ?? getResultId(),
+        version: options.version ?? getResultVersion(),
         toolCallId: getToolCallId(),
         toolCallMeta: {
           toolName,
