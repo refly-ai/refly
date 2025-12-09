@@ -227,7 +227,7 @@ export class WorkflowAppService {
 
     // Decide whether to enqueue template generation (stable mode comparison)
     try {
-      let shouldSkipGeneration = false;
+      let _shouldSkipGeneration = false;
       if (existingWorkflowApp) {
         // Previous variables fingerprint
         const prevVariables: WorkflowVariable[] = (() => {
@@ -291,7 +291,7 @@ export class WorkflowAppService {
         // - skillResponses fingerprint (type/title)
         // - variables fingerprint (name/type/description/values)
         // - templateContent validation (ensures previous template matches current variables)
-        shouldSkipGeneration =
+        _shouldSkipGeneration =
           prevTitle === curTitle &&
           prevDescription === curDescription &&
           prevSkillResponsesFp === curSkillResponsesFp &&
@@ -299,11 +299,7 @@ export class WorkflowAppService {
           isTemplateContentValid;
       }
 
-      if (shouldSkipGeneration) {
-        this.logger.log(
-          `Skip template generation for workflow app ${appId}: stable prompt dependencies unchanged`,
-        );
-      } else if (this.templateQueue) {
+      if (this.templateQueue) {
         await this.templateQueue.add(
           'generate',
           { appId, canvasId, uid: user.uid },
