@@ -31,13 +31,18 @@ import {
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
 import GiftPromotionIcon from '@refly-packages/ai-workspace-common/assets/community.svg';
-import { useKnowledgeBaseStoreShallow, useUserStoreShallow } from '@refly/stores';
+import {
+  useKnowledgeBaseStoreShallow,
+  useUserStoreShallow,
+  useSubscriptionStoreShallow,
+} from '@refly/stores';
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
 import { SiderLoggedOut } from './sider-logged-out';
 
 import './layout.scss';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
 import { RightOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { logEvent } from '@refly/telemetry-web';
 const Sider = Layout.Sider;
 
 // Reusable section header component
@@ -157,15 +162,18 @@ export const PromotionItem = React.memo(
   ({
     collapsed = false,
     promotionUrl,
+    userType,
   }: {
     collapsed?: boolean;
     promotionUrl: string;
+    userType: string;
   }) => {
     const { t } = useTranslation();
 
     const handleClick = useCallback(() => {
       window.open(promotionUrl, '_blank', 'noopener,noreferrer');
-    }, [promotionUrl]);
+      logEvent('activity_entry_click_dashboard', userType);
+    }, [promotionUrl, userType]);
 
     if (collapsed) {
       return null;
@@ -290,6 +298,10 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
 
   const { userProfile } = useUserStoreShallow((state) => ({
     userProfile: state.userProfile,
+  }));
+
+  const { userType } = useSubscriptionStoreShallow((state) => ({
+    userType: state.userType,
   }));
 
   const {
@@ -516,6 +528,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
               <PromotionItem
                 collapsed={isCollapsed}
                 promotionUrl={`${window.location.origin}/activities`}
+                userType={userType}
               />
             )}
 

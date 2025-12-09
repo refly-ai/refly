@@ -1945,7 +1945,7 @@ export type SubscriptionInterval = 'monthly' | 'yearly';
 /**
  * Subscription plan type
  */
-export type SubscriptionPlanType = 'free' | 'starter' | 'maker' | 'enterprise' | 'plus';
+export type SubscriptionPlanType = 'free' | 'starter' | 'maker' | 'enterprise' | 'plus' | 'pro';
 
 /**
  * Subscription status
