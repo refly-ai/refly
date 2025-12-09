@@ -32,7 +32,6 @@ import type { GenerateWorkflowAppTemplateJobData } from './workflow-app.dto';
 import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
 import type { Queue } from 'bullmq';
 import { VoucherService } from '../voucher/voucher.service';
-import { VoucherTriggerResult } from '../voucher/voucher.dto';
 
 /**
  * Structure of shared workflow app data
@@ -328,6 +327,15 @@ export class WorkflowAppService {
       );
     }
 
+    // Start voucher scoring in parallel with DB operations
+    // This promise will be awaited later after all DB operations complete
+    const voucherPromise = this.voucherService
+      .handleTemplatePublish({ uid: user.uid } as any, canvasData, variables, appId, description)
+      .catch((error) => {
+        this.logger.error(`Failed to trigger voucher for workflow app ${appId}: ${error?.stack}`);
+        return null;
+      });
+
     if (existingWorkflowApp) {
       await this.prisma.workflowApp.update({
         where: { appId },
@@ -449,24 +457,12 @@ export class WorkflowAppService {
       where: { uid: user.uid },
     });
 
-    // Trigger voucher generation for template publish
-    let voucherTriggerResult: VoucherTriggerResult | null = null;
-    if (publishToCommunity) {
-      try {
-        voucherTriggerResult = await this.voucherService.handleTemplatePublish(
-          { uid: user.uid } as any,
-          canvasId,
-          appId,
-        );
-        if (voucherTriggerResult) {
-          this.logger.log(
-            `Voucher triggered for workflow app ${appId}: ${voucherTriggerResult.voucher.voucherId} (${voucherTriggerResult.voucher.discountPercent}% off)`,
-          );
-        }
-      } catch (error) {
-        this.logger.error(`Failed to trigger voucher for workflow app ${appId}: ${error?.stack}`);
-        // Don't throw error - voucher is optional, workflow app creation should still succeed
-      }
+    // Wait for voucher scoring to complete (was started in parallel earlier)
+    const voucherTriggerResult = await voucherPromise;
+    if (voucherTriggerResult) {
+      this.logger.log(
+        `Voucher triggered for workflow app ${appId}: ${voucherTriggerResult.voucher.voucherId} (${voucherTriggerResult.voucher.discountPercent}% off)`,
+      );
     }
 
     return { ...workflowApp, owner: userPo, voucherTriggerResult };

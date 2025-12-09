@@ -16,6 +16,7 @@ import {
 } from '@refly/stores';
 import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
 import { SubscriptionPlanType, Voucher } from '@refly/openapi-schema';
+import { SUBSCRIPTION_PRICES } from '@refly-packages/ai-workspace-common/constants/pricing';
 
 export type SubscriptionInterval = 'monthly' | 'yearly';
 export type PriceSource = 'page' | 'modal';
@@ -221,18 +222,7 @@ const PlanItem = memo((props: PlanItemProps) => {
     PlanPriorityMap[planType as keyof typeof PlanPriorityMap];
   const isButtonDisabled = (isCurrentPlan || isDowngrade) && planType !== 'enterprise';
 
-  // Price data
-  const prices = useMemo(
-    () =>
-      ({
-        plus: { monthly: 19.9, yearly: 15.9, yearlyTotal: 190 },
-        starter: { monthly: 24.9, yearly: 19.9, yearlyTotal: 238.8 },
-        maker: { monthly: 49.9, yearly: 39.9, yearlyTotal: 478.8 },
-      }) as const,
-    [],
-  );
-
-  const priceInfo = prices[planType as keyof typeof prices];
+  const priceInfo = SUBSCRIPTION_PRICES[planType as keyof typeof SUBSCRIPTION_PRICES];
 
   const handleIntervalChange = useCallback((newInterval: 'monthly' | 'yearly') => {
     setInterval(newInterval);

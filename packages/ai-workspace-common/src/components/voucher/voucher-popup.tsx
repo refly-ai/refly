@@ -1,4 +1,4 @@
-import { Modal, message } from 'antd';
+import { Modal, message, Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { VoucherTriggerResult } from '@refly/openapi-schema';
 import { useState, useEffect } from 'react';
@@ -9,9 +9,8 @@ import { useSubscriptionStoreShallow } from '@refly/stores';
 import { useCreateCanvas } from '../../hooks/canvas/use-create-canvas';
 import { Confetti } from './confetti';
 import { TicketBottomCard } from './ticket-bottom-card';
-
-// Base monthly price for discount calculation
-const BASE_MONTHLY_PRICE = 20;
+import getClient from '../../requests/proxiedRequest';
+import { getBaseMonthlyPrice } from '../../constants/pricing';
 
 interface VoucherPopupProps {
   visible: boolean;
@@ -19,7 +18,7 @@ interface VoucherPopupProps {
   voucherResult: VoucherTriggerResult | null;
   onUseNow?: () => void;
   onShare?: () => void;
-  /** If true, only show "Use It Now" button, hide share button */
+  /** If true, this voucher was claimed via invite link (not earned by publishing) */
   useOnlyMode?: boolean;
 }
 
@@ -36,10 +35,12 @@ export const VoucherPopup = ({
   const [shareInvitation, setShareInvitation] = useState<any>(null);
   const [shareUrl, setShareUrl] = useState('');
   const [creatingInvitation, setCreatingInvitation] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  // Key to force Confetti remount on each popup open
+  const [confettiKey, setConfettiKey] = useState(0);
 
-  // Get subscription modal control and plan type from store
-  const { setSubscribeModalVisible, planType } = useSubscriptionStoreShallow((state) => ({
-    setSubscribeModalVisible: state.setSubscribeModalVisible,
+  // Get plan type from store
+  const { planType } = useSubscriptionStoreShallow((state) => ({
     planType: state.planType,
   }));
 
@@ -51,9 +52,11 @@ export const VoucherPopup = ({
     afterCreateSuccess: onClose,
   });
 
-  // Log popup display event when visible
+  // Log popup display event when visible and trigger confetti remount
   useEffect(() => {
     if (visible && voucherResult?.voucher) {
+      // Increment key to force Confetti component remount
+      setConfettiKey((prev) => prev + 1);
       logEvent('voucher_popup_display', null, {
         voucherId: voucherResult?.voucher.voucherId,
         discountPercent: voucherResult?.voucher.discountPercent,
@@ -68,21 +71,23 @@ export const VoucherPopup = ({
   const discountPercent = voucher.discountPercent;
 
   // Calculate discount value and discounted price
-  const discountValue = Math.round((BASE_MONTHLY_PRICE * discountPercent) / 100);
-  const discountedPrice = BASE_MONTHLY_PRICE - discountValue;
+  const basePrice = getBaseMonthlyPrice('plus');
+  const discountValue = Math.round((basePrice * discountPercent) / 100);
+  const discountedPrice = basePrice - discountValue;
 
   // Calculate valid days from expiresAt
   const validDays = voucher.expiresAt
     ? Math.ceil((new Date(voucher.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 7;
 
-  // Handle "Use It Now" / "Publish to Get Coupon" button click
-  const handleUseNow = () => {
+  // Handle "Use It Now" / "Publish to Get Coupon" / "Claim" button click
+  const handleUseNow = async () => {
     // Log click event
     logEvent('voucher_use_now_click', null, {
       voucherId: voucher.voucherId,
       discountPercent: voucher.discountPercent,
       useOnlyMode,
+      isPlusUser,
     });
 
     // Use custom handler if provided
@@ -91,15 +96,67 @@ export const VoucherPopup = ({
       return;
     }
 
-    // In useOnlyMode (claimed via invite), create new canvas to encourage publishing
+    // If Plus user in useOnlyMode (claimed via invite), just close - they can share
+    if (useOnlyMode && isPlusUser) {
+      onClose();
+      return;
+    }
+
+    // In useOnlyMode (claimed via invite) for non-Plus user, create new canvas to encourage publishing
     if (useOnlyMode) {
       debouncedCreateCanvas('voucher_claimed');
       return;
     }
 
-    // Default behavior: Close voucher popup and open subscribe modal
-    onClose();
-    setSubscribeModalVisible(true);
+    // Default behavior: Create Stripe checkout session directly with voucher
+    setIsCheckingOut(true);
+    try {
+      // Validate voucher before creating checkout session
+      const validateRes = await getClient().validateVoucher({
+        body: { voucherId: voucher.voucherId },
+      });
+
+      const body: {
+        planType: 'plus';
+        interval: 'monthly';
+        voucherId?: string;
+      } = {
+        planType: 'plus',
+        interval: 'monthly',
+      };
+
+      if (validateRes.data?.data?.valid) {
+        body.voucherId = voucher.voucherId;
+
+        logEvent('voucher_applied', null, {
+          voucherId: voucher.voucherId,
+          discountPercent: voucher.discountPercent,
+          entry_point: 'voucher_popup',
+          planType: 'plus',
+          interval: 'monthly',
+        });
+      } else {
+        const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';
+        message.warning(
+          t('voucher.validation.invalid', {
+            reason,
+            defaultValue: `Your coupon cannot be applied: ${reason}`,
+          }),
+        );
+      }
+
+      const res = await getClient().createCheckoutSession({ body });
+      if (res.data?.data?.url) {
+        window.location.href = res.data.data.url;
+      }
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      message.error(
+        t('subscription.checkoutFailed', 'Failed to start checkout. Please try again.'),
+      );
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   // Handle "Share With Friend" button click
@@ -134,7 +191,8 @@ export const VoucherPopup = ({
         const url = `${baseUrl}/workspace?invite=${invitation.inviteCode}`;
         setShareUrl(url);
 
-        // Show share poster
+        // Close the voucher popup and show share poster
+        onClose();
         setShowSharePoster(true);
       } else {
         message.error(t('voucher.share.createFailed', 'Failed to create invitation'));
@@ -152,8 +210,7 @@ export const VoucherPopup = ({
       <Modal
         open={visible}
         footer={null}
-        closable={true}
-        onCancel={onClose}
+        closable={false}
         centered
         width={420}
         styles={{
@@ -172,7 +229,7 @@ export const VoucherPopup = ({
       >
         {/* Confetti effect - positioned relative to viewport, not the modal */}
         <div className="fixed inset-0 pointer-events-none z-[1000]">
-          <Confetti isActive={visible} />
+          <Confetti key={confettiKey} isActive={visible} />
         </div>
 
         <div className="relative w-full max-w-[380px] mx-auto">
@@ -188,10 +245,11 @@ export const VoucherPopup = ({
           />
 
           {/* Content Container */}
-          <div className="relative min-h-[460px]">
-            {/* Top Section - Congratulations and Coupon with green gradient background - full height */}
+          <div className="relative min-h-[520px]">
+            {/* Top Section - Congratulations and Coupon with green gradient background */}
+            {/* 16px margin from left, right, top and bottom, with rounded corners on all sides */}
             <div
-              className="absolute inset-0 mx-2 mt-2 rounded-t-[16px] px-4 pt-7 pb-6"
+              className="absolute left-4 right-4 top-4 bottom-4 z-0 rounded-[16px] px-4 pt-7"
               style={{
                 background: 'linear-gradient(90deg, #CDFFEA 0%, #E9FFFE 100%)',
                 border: '0.5px solid rgba(9, 9, 9, 0.07)',
@@ -239,7 +297,7 @@ export const VoucherPopup = ({
             </div>
 
             {/* Bottom semi-transparent white area with punched hole at top */}
-            <TicketBottomCard minHeight={262}>
+            <TicketBottomCard>
               {/* Description text - different for Plus vs non-Plus users */}
               <div
                 className="text-center text-sm leading-relaxed px-2"
@@ -281,7 +339,7 @@ export const VoucherPopup = ({
                         { value: discountValue },
                       )}
                     </p>
-                    <p className="mt-2">
+                    <p className="mt-1">
                       {t(
                         'voucher.popup.nonPlusUserDesc2',
                         'Enjoy full access for just ${{discountedPrice}}!',
@@ -293,34 +351,42 @@ export const VoucherPopup = ({
               </div>
 
               {/* Button group */}
-              <div className="mt-5 flex flex-col gap-3">
-                <button
-                  type="button"
+              <div className="mt-5 flex flex-col gap-3 max-w-[320px]">
+                <Button
+                  type="primary"
+                  size="large"
+                  block
+                  shape="round"
                   onClick={handleUseNow}
-                  disabled={isCreatingCanvas}
-                  className="h-12 w-full rounded-full text-base font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: '#1C1F23' }}
+                  loading={useOnlyMode ? isCreatingCanvas : isCheckingOut}
+                  style={{
+                    height: 48,
+                    backgroundColor: '#1C1F23',
+                    borderColor: '#1C1F23',
+                    fontSize: 16,
+                    fontWeight: 500,
+                  }}
                 >
-                  {isCreatingCanvas
-                    ? t('common.loading', 'Loading...')
-                    : useOnlyMode
-                      ? t('voucher.popup.publishToGetCoupon', 'Publish to Get Coupon')
-                      : t('voucher.popup.useNow', 'Use It Now')}
-                </button>
+                  {useOnlyMode
+                    ? t('voucher.popup.publishToGetCoupon', 'Publish to Get Coupon')
+                    : t('voucher.popup.useNow', 'Use It Now')}
+                </Button>
                 {!useOnlyMode && (
-                  <button
-                    type="button"
+                  <Button
+                    size="large"
+                    block
+                    shape="round"
                     onClick={handleShare}
-                    disabled={creatingInvitation}
-                    className="h-12 w-full rounded-full bg-white text-base font-medium text-black transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    loading={creatingInvitation}
                     style={{
+                      height: 48,
+                      fontSize: 16,
+                      fontWeight: 500,
                       boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, 0.08)',
                     }}
                   >
-                    {creatingInvitation
-                      ? t('voucher.popup.creating', 'Creating...')
-                      : t('voucher.popup.shareWithFriend', 'Share With Friend')}
-                  </button>
+                    {t('voucher.popup.shareWithFriend', 'Share With Friend')}
+                  </Button>
                 )}
               </div>
             </TicketBottomCard>

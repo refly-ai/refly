@@ -2,11 +2,9 @@
  * Template Quality Scoring Prompt
  * Used by TemplateScoringService to evaluate workflow template quality
  *
- * Scoring dimensions:
- * 1. Structure Completeness (0-30 points) - Node count, connections, flow logic
- * 2. Input Design (0-25 points) - Variable naming, descriptions, parameter count
- * 3. Prompt Quality (0-25 points) - Clarity, task description, context info
- * 4. Reusability (0-20 points) - General value, ease of use, title/description
+ * New lightweight scoring approach:
+ * - Rule-based scoring for structure (60 points)
+ * - LLM-based scoring for semantic quality (40 points)
  */
 
 export interface TemplateScoringInput {
@@ -23,83 +21,79 @@ export interface TemplateScoringInput {
     variableType: string;
     description?: string;
   }>;
-  templateContent?: string;
+  /** Skill response inputs (truncated) for semantic evaluation */
+  skillInputs?: Array<{
+    title?: string;
+    input: string; // Truncated to MAX_INPUT_LENGTH
+  }>;
 }
 
-export function buildTemplateScoringPrompt(input: TemplateScoringInput): string {
-  const nodesInfo =
-    input.nodes.length > 0
-      ? input.nodes
-          .map(
-            (n, i) =>
-              `${i + 1}. [${n.type}] ${n.title || 'Unnamed'}\n   Query: ${n.query || 'N/A'}`,
-          )
-          .join('\n')
-      : 'No nodes defined';
+/**
+ * Max length for skill input content (in characters)
+ */
+export const MAX_INPUT_LENGTH = 300;
 
-  const variablesInfo =
+/**
+ * Truncate text to max length, adding ellipsis if truncated
+ */
+export function truncateText(text: string | undefined | null, maxLength: number): string {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3)}...`;
+}
+
+/**
+ * Lightweight input for LLM semantic scoring
+ * Only includes essential info to reduce token usage
+ */
+export interface LightweightScoringInput {
+  title: string;
+  description?: string;
+  nodeTypes: string[]; // Just node types
+  variables: Array<{
+    name: string;
+    type: string;
+  }>;
+  /** Truncated skill inputs for understanding workflow purpose */
+  skillInputs?: Array<{
+    title?: string;
+    input: string;
+  }>;
+}
+
+/**
+ * Build lightweight prompt for LLM semantic scoring
+ * Only evaluates: generality (通用性) and ease of use (易上手)
+ * Max 40 points total
+ */
+export function buildLightweightScoringPrompt(input: LightweightScoringInput): string {
+  const variablesText =
     input.variables.length > 0
-      ? input.variables
-          .map((v) => `- ${v.name} (${v.variableType}): ${v.description || 'No description'}`)
+      ? input.variables.map((v) => `${v.name}(${v.type})`).join(', ')
+      : 'None';
+
+  const skillInputsText =
+    input.skillInputs && input.skillInputs.length > 0
+      ? input.skillInputs
+          .map((s, i) => `[${i + 1}] ${s.title || 'Untitled'}: ${s.input}`)
           .join('\n')
-      : 'No variables defined';
+      : 'None';
 
-  return `# Template Quality Scoring Expert
+  return `Score this workflow template (0-40 points total).
 
-You are a professional workflow template quality evaluator. Score the following template on a scale of 0-100.
-
-## Scoring Dimensions
-
-### 1. Structure Completeness (0-30 points)
-- Reasonable number of nodes (3-10 is ideal)
-- Clear node connections without redundancy
-- Workflow can execute smoothly
-
-### 2. Input Design (0-25 points)
-- Semantic and understandable variable names
-- Complete and clear variable descriptions
-- Reasonable number of input parameters (2-5 is ideal)
-
-### 3. Prompt Quality (0-25 points)
-- Clear and explicit prompts
-- Complete task descriptions
-- Sufficient context information
-
-### 4. Reusability (0-20 points)
-- Template has general value (not too specific)
-- Easy for other users to understand and use
-- Attractive title and description
-
-## Template Information
-
-### Basic Info
+Template:
 - Title: ${input.title}
-- Description: ${input.description || 'No description'}
+- Description: ${input.description || 'None'}
+- Node types: ${input.nodeTypes.join(', ') || 'None'}
+- Variables: ${variablesText}
 
-### Workflow Nodes (${input.nodes.length} total)
-${nodesInfo}
+Skill prompts:
+${skillInputsText}
 
-### Variables (${input.variables.length} total)
-${variablesInfo}
-
-${input.templateContent ? `### Generated Template Content\n${input.templateContent}` : ''}
-
-## Output Format
+Score 2 dimensions:
+1. Generality (0-20): Is this template useful for many users? Not too specific to one use case?
+2. Ease of use (0-20): Are variables clear and easy to understand? Is the workflow logic intuitive?
 
 Return JSON only:
-
-\`\`\`json
-{
-  "score": <total 0-100>,
-  "breakdown": {
-    "structure": <0-30>,
-    "inputDesign": <0-25>,
-    "promptQuality": <0-25>,
-    "reusability": <0-20>
-  },
-  "feedback": "<1-2 sentence improvement suggestion>"
-}
-\`\`\`
-
-Ensure total score equals sum of breakdown scores.`;
+{"generality":<0-20>,"easeOfUse":<0-20>,"feedback":"<one sentence>"}`;
 }

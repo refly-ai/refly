@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import getClient from '../requests/proxiedRequest';
 import { useIsLogin } from './use-is-login';
 import { logEvent } from '@refly/telemetry-web';
-import { useSubscriptionStoreShallow } from '@refly/stores';
+import { useSubscriptionStoreShallow, useUserStoreShallow } from '@refly/stores';
 
 const PENDING_VOUCHER_KEY = 'pendingVoucherInviteCode';
 
@@ -29,9 +29,15 @@ export const usePendingVoucherClaim = () => {
     showClaimedVoucherPopup: state.showClaimedVoucherPopup,
   }));
 
+  const { userProfile } = useUserStoreShallow((state) => ({
+    userProfile: state.userProfile,
+  }));
+
+  const currentUid = userProfile?.uid;
+
   useEffect(() => {
     // Only run once and only when logged in
-    if (hasChecked.current || !isLoggedIn) {
+    if (hasChecked.current || !isLoggedIn || !currentUid) {
       return;
     }
 
@@ -52,8 +58,28 @@ export const usePendingVoucherClaim = () => {
           query: { code: pendingCode },
         });
 
-        if (!verifyResponse.data?.success || !verifyResponse.data.data) {
-          // Invitation is no longer valid (already claimed or expired)
+        const verifyData = verifyResponse.data?.data as
+          | {
+              valid?: boolean;
+              claimedByUid?: string;
+              invitation?: { inviterUid?: string };
+            }
+          | undefined;
+
+        // Check if this is the user's own invitation (they created it)
+        if (verifyData?.invitation?.inviterUid === currentUid) {
+          console.log('User opened their own invitation link, ignoring');
+          return;
+        }
+
+        // Check if already claimed by current user
+        if (!verifyData?.valid && verifyData?.claimedByUid === currentUid) {
+          console.log('User already claimed this invitation, ignoring');
+          return;
+        }
+
+        if (!verifyResponse.data?.success || !verifyData?.valid) {
+          // Invitation is no longer valid (already claimed by someone else or expired)
           console.log('Pending voucher invitation is no longer valid');
           message.info({
             content: t(
@@ -90,15 +116,23 @@ export const usePendingVoucherClaim = () => {
           setTimeout(() => {
             showClaimedVoucherPopup(voucher);
           }, 500);
-        } else if (claimResponse.data?.data?.success === false) {
-          // Claim failed - likely already claimed by another user
-          message.info({
-            content: t(
-              'voucher.invite.alreadyClaimed',
-              'Code already claimed. Publish a template to get your own.',
-            ),
-            duration: 5,
-          });
+        } else {
+          // Claim failed - check the specific error message
+          const errorMessage = claimResponse.data?.data?.message;
+
+          if (errorMessage === 'Cannot claim your own invitation') {
+            // User tried to claim their own invitation - just ignore silently
+            console.log('User tried to claim their own invitation, ignoring');
+          } else {
+            // Other failures (already claimed by another user, etc.)
+            message.info({
+              content: t(
+                'voucher.invite.alreadyClaimed',
+                'Code already claimed. Publish a template to get your own.',
+              ),
+              duration: 5,
+            });
+          }
         }
       } catch (error) {
         console.error('Failed to claim pending voucher:', error);
@@ -107,7 +141,7 @@ export const usePendingVoucherClaim = () => {
     };
 
     claimPendingVoucher();
-  }, [isLoggedIn, t, showClaimedVoucherPopup]);
+  }, [isLoggedIn, currentUid, t, showClaimedVoucherPopup]);
 };
 
 /**

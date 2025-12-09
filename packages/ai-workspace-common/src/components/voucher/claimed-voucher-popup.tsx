@@ -11,18 +11,15 @@ import { VoucherTriggerResult } from '@refly/openapi-schema';
  * - For Plus users: Shows "Publish to Get Coupon" button (no need to subscribe)
  * - Controlled by subscription store state
  * - Used after user claims voucher from QR code / invite link
+ * - Always hides "Share With Friend" button since claimed vouchers cannot be re-shared
  */
 export const ClaimedVoucherPopup = () => {
-  const { claimedVoucherPopupVisible, claimedVoucher, hideClaimedVoucherPopup, planType } =
+  const { claimedVoucherPopupVisible, claimedVoucher, hideClaimedVoucherPopup } =
     useSubscriptionStoreShallow((state) => ({
       claimedVoucherPopupVisible: state.claimedVoucherPopupVisible,
       claimedVoucher: state.claimedVoucher,
       hideClaimedVoucherPopup: state.hideClaimedVoucherPopup,
-      planType: state.planType,
     }));
-
-  // Determine if user is already a Plus subscriber
-  const isPlusUser = planType !== 'free';
 
   if (!claimedVoucher) return null;
 
@@ -38,7 +35,7 @@ export const ClaimedVoucherPopup = () => {
       visible={claimedVoucherPopupVisible}
       onClose={hideClaimedVoucherPopup}
       voucherResult={voucherResult}
-      useOnlyMode={isPlusUser}
+      useOnlyMode // Always true for claimed vouchers - they cannot be re-shared
     />
   );
 };

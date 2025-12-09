@@ -41,16 +41,16 @@ export function Confetti({ isActive = true }: { isActive?: boolean }) {
       return;
     }
 
-    // Create initial particles
+    // Create initial particles - firework style, starting from bottom center
     const initialParticles: Particle[] = Array.from({ length: 30 }, (_, i) => ({
       id: i,
-      x: Math.random() * 100,
-      y: -10 - Math.random() * 20,
+      x: 40 + Math.random() * 20, // Start near center (40-60%)
+      y: 110 + Math.random() * 10, // Start from bottom (below visible area)
       size: 10 + Math.random() * 14,
       rotation: Math.random() * 360,
       rotationSpeed: (Math.random() - 0.5) * 10,
-      speedX: (Math.random() - 0.5) * 2,
-      speedY: 1.5 + Math.random() * 2,
+      speedX: (Math.random() - 0.5) * 4, // Spread horizontally
+      speedY: -(4 + Math.random() * 3), // Negative = upward movement
       opacity: 0.7 + Math.random() * 0.3,
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
     }));
@@ -66,10 +66,11 @@ export function Confetti({ isActive = true }: { isActive?: boolean }) {
             x: p.x + p.speedX,
             y: p.y + p.speedY,
             rotation: p.rotation + p.rotationSpeed,
-            speedY: p.speedY + 0.05, // Gravity acceleration
-            opacity: p.y > 80 ? p.opacity - 0.02 : p.opacity,
+            speedY: p.speedY + 0.12, // Gravity pulls back down
+            speedX: p.speedX * 0.99, // Slight horizontal drag
+            opacity: p.y < 20 || p.y > 100 ? p.opacity - 0.03 : p.opacity,
           }))
-          .filter((p) => p.opacity > 0 && p.y < 120),
+          .filter((p) => p.opacity > 0),
       );
     }, 30);
 

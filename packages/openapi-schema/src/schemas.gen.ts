@@ -12815,6 +12815,28 @@ export const CreateVoucherInvitationResponseSchema = {
   ],
 } as const;
 
+export const VerifyInvitationResultSchema = {
+  type: 'object',
+  required: ['valid'],
+  properties: {
+    valid: {
+      type: 'boolean',
+      description: 'Whether the invitation is valid and can be claimed',
+    },
+    invitation: {
+      $ref: '#/components/schemas/VoucherInvitation',
+    },
+    claimedByUid: {
+      type: 'string',
+      description: 'If already claimed, the UID of the user who claimed it',
+    },
+    message: {
+      type: 'string',
+      description: 'Error or status message',
+    },
+  },
+} as const;
+
 export const VerifyVoucherInvitationResponseSchema = {
   allOf: [
     {
@@ -12824,7 +12846,7 @@ export const VerifyVoucherInvitationResponseSchema = {
       type: 'object',
       properties: {
         data: {
-          $ref: '#/components/schemas/VoucherInvitation',
+          $ref: '#/components/schemas/VerifyInvitationResult',
         },
       },
     },

@@ -162,3 +162,14 @@ export interface UseVoucherInput {
   voucherId: string;
   subscriptionId: string;
 }
+
+/**
+ * Verify Invitation Result
+ */
+export interface VerifyInvitationResult {
+  valid: boolean;
+  invitation?: VoucherInvitationDTO;
+  /** If already claimed, who claimed it */
+  claimedByUid?: string;
+  message?: string;
+}

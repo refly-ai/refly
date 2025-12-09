@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject, forwardRef, OnModuleInit, Optional } from '@nestjs/common';
-import { User } from '@refly/openapi-schema';
+import { User, WorkflowVariable } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
-import { TemplateScoringService } from './template-scoring.service';
+import { TemplateScoringService, CanvasDataForScoring } from './template-scoring.service';
 import { CreditService } from '../credit/credit.service';
 import { genVoucherID, genVoucherInvitationID, genInviteCode, getYYYYMMDD } from '@refly/utils';
 import {
@@ -16,6 +16,7 @@ import {
   CreateInvitationResult,
   ClaimInvitationInput,
   ClaimInvitationResult,
+  VerifyInvitationResult,
 } from './voucher.dto';
 import {
   DAILY_POPUP_TRIGGER_LIMIT,
@@ -160,17 +161,21 @@ export class VoucherService implements OnModuleInit {
    * Checks daily limit, scores template, generates voucher
    *
    * @param user - User publishing the template
-   * @param canvasId - Canvas ID being published
+   * @param canvasData - Pre-fetched canvas data with nodes
+   * @param variables - Workflow variables
    * @param templateId - Generated template/app ID
+   * @param description - Template description
    * @returns VoucherTriggerResult or null if limit reached
    */
   async handleTemplatePublish(
     user: User,
-    canvasId: string,
+    canvasData: CanvasDataForScoring,
+    variables: WorkflowVariable[],
     templateId: string,
+    description?: string,
   ): Promise<VoucherTriggerResult | null> {
     try {
-      this.logger.log(`Handling template publish for user ${user.uid}, canvas ${canvasId}`);
+      this.logger.log(`Handling template publish for user ${user.uid}, template ${templateId}`);
 
       // 1. Check daily trigger limit
       const { canTrigger, currentCount } = await this.checkDailyTriggerLimit(user.uid);
@@ -190,10 +195,12 @@ export class VoucherService implements OnModuleInit {
         return null;
       }
 
-      // 2. Score the template using canvas ID
-      const scoringResult = await this.templateScoringService.scoreTemplateByCanvasId(
+      // 2. Score the template using pre-fetched canvas data
+      const scoringResult = await this.templateScoringService.scoreTemplateWithCanvasData(
         user,
-        canvasId,
+        canvasData,
+        variables,
+        description,
       );
 
       // 3. Calculate discount percentage from score
@@ -501,20 +508,46 @@ export class VoucherService implements OnModuleInit {
 
   /**
    * Verify an invitation code
+   * Returns detailed information about the invitation status
    */
-  async verifyInvitation(inviteCode: string): Promise<VoucherInvitationDTO | null> {
-    const invitation = await this.prisma.voucherInvitation.findFirst({
+  async verifyInvitation(inviteCode: string): Promise<VerifyInvitationResult> {
+    // First try to find unclaimed invitation
+    const unclaimedInvitation = await this.prisma.voucherInvitation.findFirst({
       where: {
         inviteCode,
         status: InvitationStatus.UNCLAIMED,
       },
     });
 
-    if (!invitation) {
-      return null;
+    if (unclaimedInvitation) {
+      return {
+        valid: true,
+        invitation: this.toInvitationDTO(unclaimedInvitation),
+      };
     }
 
-    return this.toInvitationDTO(invitation);
+    // Check if invitation exists but is already claimed
+    const claimedInvitation = await this.prisma.voucherInvitation.findFirst({
+      where: {
+        inviteCode,
+        status: InvitationStatus.CLAIMED,
+      },
+    });
+
+    if (claimedInvitation) {
+      return {
+        valid: false,
+        invitation: this.toInvitationDTO(claimedInvitation),
+        claimedByUid: claimedInvitation.inviteeUid || undefined,
+        message: 'Invitation already claimed',
+      };
+    }
+
+    // Invitation not found or expired
+    return {
+      valid: false,
+      message: 'Invalid or expired invitation',
+    };
   }
 
   /**

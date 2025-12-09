@@ -1,104 +1,127 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
+import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
-import { User } from '@refly/openapi-schema';
+import { User, WorkflowVariable, CanvasNode } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
 import { ProviderService } from '../provider/provider.service';
-import { VariableExtractionService } from '../variable-extraction/variable-extraction.service';
-import { buildTemplateScoringPrompt, TemplateScoringInput } from './template-scoring.prompt';
-import { TemplateScoringResult, TemplateScoringBreakdown } from './voucher.dto';
-import { DEFAULT_LLM_SCORE, SCORING_TIMEOUT_MS } from './voucher.constants';
+import {
+  buildLightweightScoringPrompt,
+  LightweightScoringInput,
+  TemplateScoringInput,
+  MAX_INPUT_LENGTH,
+  truncateText,
+} from './template-scoring.prompt';
+import { TemplateScoringResult } from './voucher.dto';
+import { DEFAULT_LLM_SCORE } from './voucher.constants';
 
 /**
- * Zod Schema for structured output from LLM
+ * Lightweight scoring timeout - shorter since prompt is simpler
  */
-const TemplateScoringResultSchema = z.object({
-  score: z.number().min(0).max(100).describe('Total score 0-100'),
-  breakdown: z.object({
-    structure: z.number().min(0).max(30).describe('Structure completeness 0-30'),
-    inputDesign: z.number().min(0).max(25).describe('Input design 0-25'),
-    promptQuality: z.number().min(0).max(25).describe('Prompt quality 0-25'),
-    reusability: z.number().min(0).max(20).describe('Reusability 0-20'),
-  }),
+const QUICK_SCORING_TIMEOUT_MS = 5000;
+
+/**
+ * Zod Schema for lightweight LLM output
+ */
+const LightweightScoringResultSchema = z.object({
+  generality: z.number().min(0).max(20).describe('Generality score 0-20'),
+  easeOfUse: z.number().min(0).max(20).describe('Ease of use score 0-20'),
   feedback: z.string().describe('Brief improvement suggestion'),
 });
 
-@Injectable()
-export class TemplateScoringService implements OnModuleInit {
-  private readonly logger = new Logger(TemplateScoringService.name);
+/**
+ * Rule-based scoring breakdown
+ */
+interface RuleBasedScoreBreakdown {
+  structureScore: number; // 0-30
+  inputScore: number; // 0-30
+  details: {
+    nodeCount: number;
+    variableCount: number;
+    hasTitle: boolean;
+    hasDescription: boolean;
+    variablesWithDescription: number;
+  };
+}
 
-  // Lazy-loaded to avoid circular dependency
-  private variableExtractionService: VariableExtractionService;
+/**
+ * Canvas data input for scoring (passed from workflow-app service)
+ */
+export interface CanvasDataForScoring {
+  title?: string;
+  nodes?: CanvasNode[];
+}
+
+@Injectable()
+export class TemplateScoringService {
+  private readonly logger = new Logger(TemplateScoringService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly providerService: ProviderService,
-    private readonly moduleRef: ModuleRef,
   ) {}
 
-  async onModuleInit() {
-    // Use moduleRef.get with { strict: false } to resolve circular dependency at runtime
-    this.variableExtractionService = this.moduleRef.get(VariableExtractionService, {
-      strict: false,
-    });
-  }
-
   /**
-   * Score a template by canvas ID
-   * This is the main entry point - fetches canvas data internally
+   * Score a template using pre-fetched canvas data
+   * This is the preferred method when canvas data is already available (e.g., during publish)
    *
    * @param user - User info for LLM provider access
-   * @param canvasId - Canvas ID to score
+   * @param canvasData - Pre-fetched canvas data with nodes
+   * @param variables - Workflow variables
+   * @param description - Template description
    * @returns Scoring result with score (0-100)
    */
-  async scoreTemplateByCanvasId(user: User, canvasId: string): Promise<TemplateScoringResult> {
+  async scoreTemplateWithCanvasData(
+    user: User,
+    canvasData: CanvasDataForScoring,
+    variables: WorkflowVariable[],
+    description?: string,
+  ): Promise<TemplateScoringResult> {
     try {
-      this.logger.log(`Starting template scoring for canvas: ${canvasId}`);
+      const startTime = Date.now();
+      const nodes = canvasData.nodes || [];
 
-      // 1. Build enhanced context from canvas (reuse VariableExtractionService logic)
-      const context = await this.variableExtractionService.buildEnhancedContext(canvasId, user);
-
-      // 2. Get canvas basic info
-      const canvas = await this.prisma.canvas.findFirst({
-        where: { canvasId, deletedAt: null },
-        select: { title: true },
-      });
-
-      // 3. Get workflow app info if exists (for description)
-      const workflowApp = await this.prisma.workflowApp.findFirst({
-        where: { canvasId, deletedAt: null },
-        select: { title: true, description: true, templateContent: true },
-      });
-
-      // 4. Build scoring input from context
+      // 1. Build scoring input
       const scoringInput: TemplateScoringInput = {
-        title: workflowApp?.title || canvas?.title || 'Untitled',
-        description: workflowApp?.description || undefined,
-        nodes:
-          context.canvasData.nodes?.map((node) => ({
-            id: node.id,
-            type: node.type,
-            title: (node.data as any)?.title || (node.data as any)?.metadata?.title,
-            query:
-              (node.data as any)?.metadata?.query ||
-              (node.data as any)?.metadata?.structuredData?.query,
-          })) || [],
-        variables: context.variables.map((v) => ({
+        title: canvasData.title || 'Untitled',
+        description,
+        nodes: nodes.map((node) => ({
+          id: node.id || '',
+          type: node.type,
+          title: (node.data?.title || node.data?.metadata?.title) as string | undefined,
+        })),
+        variables: variables.map((v) => ({
           name: v.name,
-          variableType: v.variableType,
+          variableType: v.variableType || 'text',
           description: v.description,
         })),
-        templateContent: workflowApp?.templateContent || undefined,
+        skillInputs: this.extractSkillInputs(nodes),
       };
 
-      // 5. Call LLM for scoring
-      const result = await this.scoreTemplate(user, scoringInput);
+      // 2. Calculate rule-based score (60 points max)
+      const ruleScore = this.calculateRuleBasedScore(scoringInput);
 
-      this.logger.log(`Template scoring completed for canvas ${canvasId}: ${result.score}/100`);
+      // 3. Get LLM semantic score (40 points max)
+      const llmScore = await this.getLightweightLLMScore(user, scoringInput);
 
-      return result;
+      // 4. Combine scores
+      const totalScore = ruleScore.structureScore + ruleScore.inputScore + llmScore.score;
+
+      const duration = Date.now() - startTime;
+      this.logger.log(
+        `Quick scoring completed: ${totalScore}/100 (rule: ${ruleScore.structureScore + ruleScore.inputScore}, llm: ${llmScore.score}) in ${duration}ms`,
+      );
+
+      return {
+        score: totalScore,
+        breakdown: {
+          structure: ruleScore.structureScore,
+          inputDesign: ruleScore.inputScore,
+          promptQuality: llmScore.generality,
+          reusability: llmScore.easeOfUse,
+        },
+        feedback: llmScore.feedback,
+      };
     } catch (error) {
-      this.logger.error(`Template scoring failed for canvas ${canvasId}: ${error.message}`);
+      this.logger.error(`Quick template scoring failed: ${error.message}`);
 
       // Degradation: return default score
       return {
@@ -109,55 +132,143 @@ export class TemplateScoringService implements OnModuleInit {
   }
 
   /**
-   * Score a template with provided input data
-   * Called internally after fetching canvas data
-   *
-   * @param user - User info for LLM provider access
-   * @param input - Template scoring input data
-   * @returns Scoring result with score (0-100)
+   * Extract skill inputs from skillResponse nodes
+   * Each input is truncated to MAX_INPUT_LENGTH characters
    */
-  async scoreTemplate(user: User, input: TemplateScoringInput): Promise<TemplateScoringResult> {
-    try {
-      this.logger.log(`Starting template scoring for: ${input.title}`);
+  private extractSkillInputs(nodes: CanvasNode[]): Array<{ title?: string; input: string }> {
+    const skillInputs: Array<{ title?: string; input: string }> = [];
 
-      // Build scoring prompt
-      const prompt = buildTemplateScoringPrompt(input);
+    for (const node of nodes) {
+      if (node.type !== 'skillResponse') continue;
 
-      // Call LLM with timeout
-      const result = await this.callLLMWithTimeout(user, prompt);
+      const nodeData = node.data as Record<string, any> | undefined;
+      if (!nodeData) continue;
 
-      // Validate score range
-      const validatedScore = Math.max(0, Math.min(100, result.score));
+      // Get input from metadata.structuredData.query or metadata.query
+      const metadata = nodeData.metadata as Record<string, any> | undefined;
+      const structuredData = metadata?.structuredData as Record<string, any> | undefined;
+      const query = structuredData?.query || metadata?.query || '';
 
-      // Validate breakdown sum equals total
-      if (result.breakdown) {
-        const breakdownSum =
-          result.breakdown.structure +
-          result.breakdown.inputDesign +
-          result.breakdown.promptQuality +
-          result.breakdown.reusability;
-
-        if (Math.abs(breakdownSum - validatedScore) > 1) {
-          this.logger.warn(
-            `Score breakdown mismatch: sum=${breakdownSum}, total=${validatedScore}`,
-          );
-        }
+      if (query) {
+        skillInputs.push({
+          title: (nodeData.title || metadata?.title) as string | undefined,
+          input: truncateText(query, MAX_INPUT_LENGTH),
+        });
       }
+    }
 
-      this.logger.log(`Template scoring completed: ${validatedScore}/100`);
+    return skillInputs;
+  }
+
+  /**
+   * Calculate rule-based score (60 points max)
+   * - Structure score (30 points): based on node count
+   * - Input score (30 points): based on variable count and descriptions
+   */
+  private calculateRuleBasedScore(input: TemplateScoringInput): RuleBasedScoreBreakdown {
+    const nodeCount = input.nodes.length;
+    const variableCount = input.variables.length;
+    const hasTitle = !!input.title && input.title !== 'Untitled';
+    const hasDescription = !!input.description && input.description.length > 10;
+    const variablesWithDescription = input.variables.filter(
+      (v) => v.description && v.description.length > 3,
+    ).length;
+
+    // Structure score (0-30)
+    // Ideal: 3-10 nodes
+    let structureScore = 0;
+    if (nodeCount >= 1 && nodeCount <= 2) {
+      structureScore = 15; // Too simple
+    } else if (nodeCount >= 3 && nodeCount <= 10) {
+      structureScore = 30; // Ideal range
+    } else if (nodeCount > 10 && nodeCount <= 15) {
+      structureScore = 20; // A bit complex
+    } else if (nodeCount > 15) {
+      structureScore = 10; // Too complex
+    }
+
+    // Input score (0-30)
+    let inputScore = 0;
+
+    // Variable count scoring (0-15)
+    // Ideal: 2-5 variables
+    if (variableCount >= 1 && variableCount <= 1) {
+      inputScore += 8; // Too few
+    } else if (variableCount >= 2 && variableCount <= 5) {
+      inputScore += 15; // Ideal range
+    } else if (variableCount > 5 && variableCount <= 8) {
+      inputScore += 10; // A bit many
+    } else if (variableCount > 8) {
+      inputScore += 5; // Too many
+    }
+
+    // Title and description bonus (0-7)
+    if (hasTitle) inputScore += 3;
+    if (hasDescription) inputScore += 4;
+
+    // Variable descriptions bonus (0-8)
+    if (variableCount > 0) {
+      const descriptionRatio = variablesWithDescription / variableCount;
+      inputScore += Math.round(descriptionRatio * 8);
+    }
+
+    return {
+      structureScore,
+      inputScore,
+      details: {
+        nodeCount,
+        variableCount,
+        hasTitle,
+        hasDescription,
+        variablesWithDescription,
+      },
+    };
+  }
+
+  /**
+   * Get lightweight LLM semantic score (40 points max)
+   * Only evaluates generality and ease of use
+   */
+  private async getLightweightLLMScore(
+    user: User,
+    input: TemplateScoringInput,
+  ): Promise<{ score: number; generality: number; easeOfUse: number; feedback: string }> {
+    try {
+      // Build lightweight input
+      const lightweightInput: LightweightScoringInput = {
+        title: input.title,
+        description: input.description,
+        nodeTypes: input.nodes.map((n) => n.type).filter(Boolean),
+        variables: input.variables.map((v) => ({
+          name: v.name,
+          type: v.variableType,
+        })),
+        skillInputs: input.skillInputs,
+      };
+
+      const prompt = buildLightweightScoringPrompt(lightweightInput);
+
+      // Call LLM with shorter timeout
+      const result = await this.callLLMWithTimeout(user, prompt, QUICK_SCORING_TIMEOUT_MS);
+
+      const generality = Math.max(0, Math.min(20, result.generality));
+      const easeOfUse = Math.max(0, Math.min(20, result.easeOfUse));
 
       return {
-        score: validatedScore,
-        breakdown: result.breakdown as TemplateScoringBreakdown,
+        score: generality + easeOfUse,
+        generality,
+        easeOfUse,
         feedback: result.feedback,
       };
     } catch (error) {
-      this.logger.error(`Template scoring failed: ${error.message}`);
+      this.logger.warn(`Lightweight LLM scoring failed: ${error.message}, using default`);
 
-      // Degradation: return default score
+      // Fallback: give moderate scores
       return {
-        score: DEFAULT_LLM_SCORE,
-        feedback: 'Scoring service temporarily unavailable, using default score.',
+        score: 20,
+        generality: 10,
+        easeOfUse: 10,
+        feedback: 'Unable to evaluate semantic quality.',
       };
     }
   }
@@ -168,9 +279,10 @@ export class TemplateScoringService implements OnModuleInit {
   private async callLLMWithTimeout(
     user: User,
     prompt: string,
-  ): Promise<z.infer<typeof TemplateScoringResultSchema>> {
+    timeoutMs: number = QUICK_SCORING_TIMEOUT_MS,
+  ): Promise<z.infer<typeof LightweightScoringResultSchema>> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), SCORING_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       // Get default chat model (platform cost, not user credits)
@@ -183,7 +295,7 @@ export class TemplateScoringService implements OnModuleInit {
 
       // Use withStructuredOutput for reliable JSON parsing
       const response = await model
-        .withStructuredOutput(TemplateScoringResultSchema)
+        .withStructuredOutput(LightweightScoringResultSchema)
         .invoke(prompt, { signal: controller.signal });
 
       return response;

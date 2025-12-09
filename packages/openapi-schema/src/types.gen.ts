@@ -9227,8 +9227,24 @@ export type CreateVoucherInvitationResponse = BaseResponse & {
   data?: CreateInvitationResult;
 };
 
+export type VerifyInvitationResult = {
+  /**
+   * Whether the invitation is valid and can be claimed
+   */
+  valid: boolean;
+  invitation?: VoucherInvitation;
+  /**
+   * If already claimed, the UID of the user who claimed it
+   */
+  claimedByUid?: string;
+  /**
+   * Error or status message
+   */
+  message?: string;
+};
+
 export type VerifyVoucherInvitationResponse = BaseResponse & {
-  data?: VoucherInvitation;
+  data?: VerifyInvitationResult;
 };
 
 export type ClaimVoucherInvitationResponse = BaseResponse & {

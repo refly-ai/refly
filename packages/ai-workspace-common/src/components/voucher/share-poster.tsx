@@ -1,11 +1,16 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { message, QRCode } from 'antd';
+import { useState, useRef, useCallback } from 'react';
+import { message, QRCode, Avatar, Modal } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Download, Copy } from 'lucide-react';
 import { VoucherInvitation } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import cn from 'classnames';
 import { useUserStoreShallow } from '@refly/stores';
+import html2canvas from 'html2canvas';
+import couponGradientBg from '../../assets/images/coupon-gradient-bg.webp';
+import reflyIcon from '../../assets/images/refly-icon.png';
+import defaultAvatar from '../../assets/refly_default_avatar.png';
+import { Account } from 'refly-icons';
 
 interface SharePosterProps {
   visible: boolean;
@@ -48,73 +53,43 @@ const CurvedArrow = ({ className }: { className?: string }) => (
 
 // Refly brand logo
 const ReflyLogo = ({ className }: { className?: string }) => (
-  <svg
-    className={cn('w-7 h-7', className)}
-    viewBox="0 0 28 28"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <circle cx="14" cy="14" r="13" fill="url(#reflyGradient)" />
-    <path d="M9 10L14 8L19 10L14 12L9 10Z" fill="white" fillOpacity="0.9" />
-    <path d="M9 14L14 12L19 14L14 16L9 14Z" fill="white" fillOpacity="0.7" />
-    <path d="M9 18L14 16L19 18L14 20L9 18Z" fill="white" fillOpacity="0.5" />
-    <defs>
-      <linearGradient id="reflyGradient" x1="0" y1="0" x2="28" y2="28">
-        <stop stopColor="#10B981" />
-        <stop offset="1" stopColor="#059669" />
-      </linearGradient>
-    </defs>
-  </svg>
+  <img src={reflyIcon} alt="Refly" className={cn('w-7 h-7', className)} loading="lazy" />
 );
 
 // Gradient coupon badge component
 const GradientCouponBadge = ({ discount }: { discount: string }) => (
   <div className="relative w-[140px] h-[66px]">
-    {/* Background gradient blobs */}
-    <div className="absolute inset-0 rounded-xl overflow-hidden">
-      <div className="absolute inset-0 opacity-60">
-        <div
-          className="absolute w-8 h-14 rounded-full blur-xl"
-          style={{ background: '#6F00FF', left: '10%', top: '50%', transform: 'translateY(-50%)' }}
-        />
-        <div
-          className="absolute w-8 h-14 rounded-full blur-xl"
-          style={{ background: '#00FFFF', left: '30%', top: '50%', transform: 'translateY(-50%)' }}
-        />
-        <div
-          className="absolute w-8 h-14 rounded-full blur-xl"
-          style={{ background: '#FF9900', left: '55%', top: '50%', transform: 'translateY(-50%)' }}
-        />
-        <div
-          className="absolute w-8 h-14 rounded-full blur-xl"
-          style={{ background: '#FF00FF', left: '80%', top: '50%', transform: 'translateY(-50%)' }}
-        />
-      </div>
+    {/* Background gradient image */}
+    <div className="absolute -inset-x-[17px] -inset-y-[28px] rounded-xl overflow-hidden">
+      <img src={couponGradientBg} alt="" className="w-full h-full object-cover" loading="lazy" />
     </div>
-    {/* Glass-morphism overlay */}
-    <div className="absolute inset-0 bg-white/70 backdrop-blur-sm rounded-xl border border-black/10 flex flex-col items-center justify-center">
-      <div className="absolute top-2 left-3">
+    {/* Content overlay */}
+    <div className="absolute inset-0 rounded-xl flex flex-col items-center justify-center">
+      <div className="absolute top-2 left-1">
         <SparkleIcon className="text-emerald-500" />
       </div>
-      <div className="absolute top-2 right-3">
+      <div className="absolute top-2 right-1">
         <SparkleIcon className="text-emerald-500" />
       </div>
       <span className="text-[26px] font-bold text-gray-900 tracking-tight leading-none">
         {discount}
       </span>
-      <span className="text-sm text-pink-500 font-medium mt-0.5">Coupon</span>
+      <span
+        className="text-[12px] font-normal leading-[18px] mt-0.5"
+        style={{ color: 'rgba(28, 31, 35, 0.60)' }}
+      >
+        Coupon
+      </span>
     </div>
   </div>
 );
 
-// Ticket divider with circular cutouts
+// Ticket divider - just the dashed line, cutouts are handled by the card mask
 const TicketDivider = () => (
-  <div className="relative w-full h-8 my-2">
-    <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-black/30 backdrop-blur-[10px]" />
-    <div className="absolute inset-x-4 top-1/2 -translate-y-1/2">
-      <div className="w-full border-t-2 border-dashed border-gray-300" />
+  <div className="relative w-full h-6 my-3">
+    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2">
+      <div className="w-full border-t-2 border-dashed border-gray-200" />
     </div>
-    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-6 h-6 rounded-full bg-black/30 backdrop-blur-[10px]" />
   </div>
 );
 
@@ -128,6 +103,7 @@ export const SharePoster = ({
   const { t } = useTranslation();
   const posterRef = useRef<HTMLDivElement>(null);
   const [copying, setCopying] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // Get user info for the poster
   const { userProfile } = useUserStoreShallow((state) => ({
@@ -137,39 +113,7 @@ export const SharePoster = ({
   const userName = userProfile?.name || 'Refly User';
   const userAvatar = userProfile?.avatar;
 
-  // Handle ESC key to close
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && visible) {
-        onClose();
-      }
-    };
-    if (visible) {
-      document.addEventListener('keydown', handleEscape);
-    }
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [visible, onClose]);
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (visible) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [visible]);
-
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) {
-        onClose();
-      }
-    },
-    [onClose],
-  );
-
-  const handleCopyLink = async () => {
+  const handleCopyLink = useCallback(async () => {
     setCopying(true);
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -179,57 +123,105 @@ export const SharePoster = ({
         discountPercent,
         shareUrl,
       });
+      onClose();
     } catch {
       message.error(t('voucher.share.copyFailed', 'Copy failed'));
     }
     setCopying(false);
-  };
+  }, [shareUrl, t, invitation?.inviteCode, discountPercent, onClose]);
 
-  const handleDownload = async () => {
-    // TODO: Implement html2canvas for proper poster download
-    const text = `
-Refly Discount Coupon
-Discount: ${discountPercent}% OFF
-Link: ${shareUrl}
-${invitation?.inviteCode ? `Invite Code: ${invitation.inviteCode}` : ''}
-    `.trim();
+  const handleDownload = useCallback(async () => {
+    if (!posterRef.current || downloading) return;
 
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'refly-voucher-share.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-    message.success(t('voucher.share.downloaded', 'Downloaded'));
+    setDownloading(true);
+    try {
+      // Use html2canvas to capture the poster element
+      const canvas = await html2canvas(posterRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2, // Higher quality
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      });
 
-    logEvent('poster_download', null, {
-      inviteCode: invitation?.inviteCode,
-      discountPercent,
-      format: 'text',
-    });
-  };
+      // Convert to PNG and download
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `refly-voucher-${discountPercent}off.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      message.success(t('voucher.share.downloaded', 'Downloaded'));
+
+      logEvent('poster_download', null, {
+        inviteCode: invitation?.inviteCode,
+        discountPercent,
+        format: 'png',
+      });
+      onClose();
+    } catch (error) {
+      console.error('Failed to download poster:', error);
+      message.error(t('voucher.share.downloadFailed', 'Download failed'));
+    } finally {
+      setDownloading(false);
+    }
+  }, [downloading, discountPercent, t, invitation?.inviteCode, onClose]);
 
   if (!visible) return null;
 
   const discountText = `${discountPercent}% OFF`;
+  // Calculate discounted price (Plus plan is $20/month)
+  const originalPrice = 20;
+  const discountedPrice = Math.round(originalPrice * (1 - discountPercent / 100));
 
   return (
-    <dialog
-      open
-      aria-modal="true"
-      className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[10px] flex items-center justify-center p-4 m-0 max-w-none max-h-none w-full h-full border-none"
-      onClick={handleBackdropClick}
+    <Modal
+      open={visible}
+      onCancel={onClose}
+      footer={null}
+      closable={false}
+      centered
+      width="auto"
+      styles={{
+        content: {
+          padding: 0,
+          background: 'transparent',
+          boxShadow: 'none',
+        },
+        body: {
+          padding: 0,
+        },
+        mask: {
+          backdropFilter: 'blur(10px)',
+          background: 'rgba(0, 0, 0, 0.3)',
+        },
+      }}
     >
-      <div className="relative flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+      <div className="flex flex-col items-center">
         {/* Poster Card */}
         <div
           ref={posterRef}
-          className="relative bg-white w-[340px] rounded-[24px] shadow-xl overflow-visible"
+          className="relative bg-white w-[340px] rounded-[24px] shadow-xl"
+          style={{
+            // CSS mask to create ticket-style cutouts on left and right edges
+            // The cutouts are positioned at approximately 68% from top (where the divider is)
+            maskImage: `
+              radial-gradient(circle at 0% 68%, transparent 10px, black 10px),
+              radial-gradient(circle at 100% 68%, transparent 10px, black 10px)
+            `,
+            maskComposite: 'intersect',
+            WebkitMaskImage: `
+              radial-gradient(circle at 0% 68%, transparent 10px, black 10px),
+              radial-gradient(circle at 100% 68%, transparent 10px, black 10px)
+            `,
+            WebkitMaskComposite: 'source-in',
+          }}
         >
           <div className="px-6 pt-6 pb-5">
             {/* Header: Brand + Coupon Badge */}
-            <div className="flex items-start justify-between mb-6">
+            <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
                 <ReflyLogo />
                 <span className="text-base font-semibold text-gray-900">Refly AI</span>
@@ -239,28 +231,31 @@ ${invitation?.inviteCode ? `Invite Code: ${invitation.inviteCode}` : ''}
 
             {/* User Info */}
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-white shadow-md">
-                {userAvatar ? (
-                  <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm">
-                      {userName?.charAt(0)?.toUpperCase() || 'U'}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <span className="text-base text-gray-700">{userName}</span>
+              <Avatar
+                size={36}
+                src={userAvatar || defaultAvatar}
+                icon={<Account />}
+                className="flex-shrink-0 ring-2 ring-white shadow-md"
+              />
+              <span
+                className="text-[16px] font-normal leading-[24px]"
+                style={{ color: 'rgba(28, 31, 35, 0.80)' }}
+              >
+                {userName}
+              </span>
             </div>
 
             {/* Main Content */}
             <h2 className="text-[26px] font-bold text-gray-900 leading-tight mb-3 whitespace-pre-line">
-              {t('voucher.share.posterTitle', 'Top Contributor\nReward Unlocked')}
+              {t('voucher.share.posterTitle', 'Unlock Plus for\nJust ${{discountedPrice}}!', {
+                discountedPrice,
+              })}
             </h2>
             <p className="text-[15px] text-gray-500 leading-relaxed">
               {t(
                 'voucher.share.posterDesc',
-                "Refly recognized my template contribution with a Pro reward. I'm sharing this exclusive access key with my network.",
+                "You're invited to enjoy full access to Refly Plus with a {{discount}} discount.",
+                { discount: discountText },
               )}
             </p>
 
@@ -268,12 +263,14 @@ ${invitation?.inviteCode ? `Invite Code: ${invitation.inviteCode}` : ''}
             <TicketDivider />
 
             {/* QR Code Section */}
-            <div className="flex items-start gap-4 pt-2">
+            <div className="flex items-center gap-4 pt-2">
               <div className="flex-shrink-0 rounded-lg shadow-sm overflow-hidden bg-white p-1.5 border border-gray-100">
                 <QRCode value={shareUrl} size={72} bordered={false} />
               </div>
-              <div className="flex flex-col pt-1">
-                <CurvedArrow className="text-gray-800 rotate-180 mb-1" />
+              <div className="relative flex flex-col justify-center">
+                {/* Arrow pointing to QR code - positioned above the text, can overflow */}
+                <CurvedArrow className="absolute -top-5 -left-2 text-gray-800 rotate-180" />
+                {/* Main content vertically centered with QR code */}
                 <p className="text-[15px] font-medium text-emerald-500 leading-snug max-w-[200px]">
                   {t(
                     'voucher.share.ctaText',
@@ -282,7 +279,7 @@ ${invitation?.inviteCode ? `Invite Code: ${invitation.inviteCode}` : ''}
                   )}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {t('voucher.share.validDays', 'valid for 7 days')}
+                  {t('voucher.share.validDays', 'Valid for 7 days.')}
                 </p>
               </div>
             </div>
@@ -294,10 +291,15 @@ ${invitation?.inviteCode ? `Invite Code: ${invitation.inviteCode}` : ''}
           <button
             type="button"
             onClick={handleDownload}
-            className="flex items-center gap-2 px-7 py-2.5 bg-white text-gray-800 font-medium text-sm rounded-full border border-gray-200 hover:bg-gray-50 active:bg-gray-100 transition-colors duration-150"
+            disabled={downloading}
+            className="flex items-center gap-2 px-7 py-2.5 bg-white text-gray-800 font-medium text-sm rounded-full border border-gray-200 hover:bg-gray-50 active:bg-gray-100 transition-colors duration-150 disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
-            <span>{t('voucher.share.download', 'Download')}</span>
+            <span>
+              {downloading
+                ? t('voucher.share.downloading', 'Downloading...')
+                : t('voucher.share.download', 'Download')}
+            </span>
           </button>
           <button
             type="button"
@@ -310,7 +312,7 @@ ${invitation?.inviteCode ? `Invite Code: ${invitation.inviteCode}` : ''}
           </button>
         </div>
       </div>
-    </dialog>
+    </Modal>
   );
 };
 

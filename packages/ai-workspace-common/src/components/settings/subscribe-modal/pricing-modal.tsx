@@ -78,6 +78,7 @@ FeatureItem.displayName = 'FeatureItem';
 
 // Point-free tool item
 const PointFreeToolItem = memo(({ name, days }: { name: string; days: number }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2.5">
@@ -85,7 +86,7 @@ const PointFreeToolItem = memo(({ name, days }: { name: string; days: number }) 
         <span className="text-sm text-[#0A0A0A]">{name}</span>
       </div>
       <span className="text-xs text-[#1C1F23] bg-[#EAF4FF] px-2.5 py-1 rounded font-medium">
-        {days} DAYS
+        {days} {t('subscription.days', 'DAYS')}
       </span>
     </div>
   );
@@ -184,13 +185,19 @@ const BillingOption = memo(
             ${displayPrice.toFixed(1)}
           </span>
           {type === 'monthly' && originalPrice && (
-            <span className="text-[#1C1F23]/60 line-through text-sm">${originalPrice}/month</span>
+            <span className="text-[#1C1F23]/60 line-through text-sm">
+              ${originalPrice}/{t('subscription.monthUnit', 'month')}
+            </span>
           )}
           {type === 'yearly' && (
             <>
-              <span className="text-[#1C1F23]/60 text-sm">/month</span>
+              <span className="text-[#1C1F23]/60 text-sm">
+                /{t('subscription.monthUnit', 'month')}
+              </span>
               {yearlyPrice && (
-                <span className="text-[#1C1F23]/60 line-through text-sm">${yearlyPrice}/year</span>
+                <span className="text-[#1C1F23]/60 line-through text-sm">
+                  ${yearlyPrice}/{t('subscription.yearUnit', 'year')}
+                </span>
               )}
             </>
           )}

@@ -43,14 +43,23 @@ const VoucherInvitePage = () => {
         query: { code: inviteCode! },
       });
       if (response.data?.success && response.data.data) {
-        setInvitation(response.data.data);
+        const result = response.data.data;
 
-        // Log page view event
-        logEvent('voucher_invite_page_view', null, {
-          inviteCode: inviteCode,
-          discountPercent: response.data.data.discountPercent,
-          isLoggedIn,
-        });
+        if (result.valid && result.invitation) {
+          setInvitation(result.invitation);
+
+          // Log page view event
+          logEvent('voucher_invite_page_view', null, {
+            inviteCode: inviteCode,
+            discountPercent: result.invitation.discountPercent,
+            isLoggedIn,
+          });
+        } else {
+          // Invitation is invalid or already claimed
+          setError(
+            result.message || t('voucher.invite.invalidCode', 'Invalid or expired invitation code'),
+          );
+        }
       } else {
         setError(t('voucher.invite.invalidCode', 'Invalid or expired invitation code'));
       }
