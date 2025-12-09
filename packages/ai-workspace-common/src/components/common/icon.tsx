@@ -1,12 +1,10 @@
 import {
   HiOutlineSquare3Stack3D,
   HiOutlineSparkles,
-  HiMiniPlayCircle,
   HiOutlineCircleStack,
   HiSquare3Stack3D,
   HiDocumentText,
   HiPlus,
-  HiMinus,
   HiSparkles,
   HiOutlineHome,
   HiOutlineFilm,
@@ -59,7 +57,6 @@ import {
   RiChatHistoryFill,
   RiUploadCloud2Line,
   RiImageAiFill,
-  RiImageAiLine,
   RiExpandDiagonalLine,
   RiGuideLine,
   RiSlideshow2Line,
@@ -83,7 +80,8 @@ import { TbWorldSearch, TbWorldCog, TbInputSpark, TbBolt } from 'react-icons/tb'
 import { GrCircleQuestion } from 'react-icons/gr';
 import { AiOutlineLink } from 'react-icons/ai';
 import { HiOutlineTableCells } from 'react-icons/hi2';
-import { X } from 'refly-icons';
+import { X, Claude, Gpt, Qwen, Deepseek, Gemini, Kimi, Grok, AIModel } from 'refly-icons';
+import AutoIcon from '@refly-packages/ai-workspace-common/assets/auto-model.svg';
 import OpenAIIcon from '@refly-packages/ai-workspace-common/assets/openai.svg';
 import ClaudeIcon from '@refly-packages/ai-workspace-common/assets/claude.svg';
 import GeminiIcon from '@refly-packages/ai-workspace-common/assets/gemini.svg';
@@ -111,7 +109,6 @@ export const IconTemplate = VscNotebookTemplate;
 export const IconAskAI = LuSparkles;
 export const IconAskAIInput = TbInputSpark;
 export const IconPilot = LuBot;
-export const IconImage = RiImageAiLine;
 export const IconImageFilled = RiImageAiFill;
 export const IconDocument = LuFileText;
 export const IconDocumentFilled = HiDocumentText;
@@ -131,9 +128,7 @@ export const IconQuote = RiDoubleQuotesL;
 export const IconToken = HiOutlineCircleStack;
 export const IconText = BiText;
 export const IconPlus = HiPlus;
-export const IconMinus = HiMinus;
 export const IconCheck = LuCheck;
-export const IconPlay = HiMiniPlayCircle;
 export const IconPlayOutline = LuCirclePlay;
 export const IconRun = LuPlay;
 export const IconRerun = LuRotateCw;
@@ -241,4 +236,33 @@ export const MemoizedIcon = memo(({ icon, className }: { icon: string; className
 
 export const IconMindMap = (props: React.ComponentProps<typeof IoGitNetworkOutline>) => {
   return <IoGitNetworkOutline {...props} />;
+};
+
+export const ModelIcon = ({ model, size }: { model: string; size: number }) => {
+  const modelName = model.toLowerCase();
+  if (modelName.includes('auto')) {
+    return <img src={AutoIcon} alt="Auto" style={{ width: size, height: size }} />;
+  }
+  if (modelName.includes('claude')) {
+    return <Claude size={size} />;
+  }
+  if (modelName.includes('grok')) {
+    return <Grok size={size} />;
+  }
+  if (modelName.includes('gemini')) {
+    return <Gemini size={size} />;
+  }
+  if (modelName.includes('kimi')) {
+    return <Kimi size={size} />;
+  }
+  if (modelName.includes('deepseek')) {
+    return <Deepseek size={size} />;
+  }
+  if (modelName.includes('gpt') || modelName.includes('openai')) {
+    return <Gpt size={size} />;
+  }
+  if (modelName.includes('qwen')) {
+    return <Qwen size={size} />;
+  }
+  return <AIModel size={size} />;
 };

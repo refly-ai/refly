@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { Button, Layout, Divider } from 'antd';
 import {
   useLocation,
@@ -18,7 +18,16 @@ import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/us
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
 import { useGetAuthConfig } from '@refly-packages/ai-workspace-common/queries';
-import { File, Project, Flow, Contact, SideRight, SideLeft, Settings } from 'refly-icons';
+import {
+  File,
+  Project,
+  Flow,
+  Contact,
+  SideRight,
+  SideLeft,
+  Settings,
+  MarketPlace,
+} from 'refly-icons';
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
 import { useKnowledgeBaseStoreShallow, useUserStoreShallow } from '@refly/stores';
@@ -306,7 +315,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
         key: 'appManager',
       },
       {
-        icon: <Project key="marketplace" style={{ fontSize: 20 }} />,
+        icon: <MarketPlace key="marketplace" style={{ fontSize: 20 }} />,
         title: t('loggedHomePage.siderMenu.marketplace'),
         onActionClick: () => navigate('/marketplace'),
         key: 'marketplace',
@@ -435,7 +444,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
               <InvitationItem collapsed={isCollapsed} onClick={handleInvitationClick} />
             )}
 
-          <div className="p-2 pr-0">
+          <div>
             {/* Contact in collapsed state - above Settings */}
             {isCollapsed &&
               bottomMenuItems.map((item, index) => {
@@ -446,7 +455,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
                       open={openContactUs}
                       setOpen={setOpenContactUs}
                     >
-                      <div className="h-[26px] pl-0 pr-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300 mb-2">
+                      <div className="p-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
                         <Contact key="contactUs" style={{ fontSize: 20 }} />
                       </div>
                     </ContactUsPopover>
@@ -458,7 +467,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
             {/* Settings and Contact in expanded state */}
             <div className="flex items-center gap-2">
               <div
-                className="h-[26px] pl-0 pr-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
+                className="p-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
                 onClick={handleSettingsClick}
                 data-cy="settings-menu-item"
               >
@@ -477,7 +486,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
                         open={openContactUs}
                         setOpen={setOpenContactUs}
                       >
-                        <div className="h-[26px] pl-0 pr-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
+                        <div className="p-2 flex items-center cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300">
                           <Contact key="contactUs" style={{ fontSize: 20 }} />
                         </div>
                       </ContactUsPopover>

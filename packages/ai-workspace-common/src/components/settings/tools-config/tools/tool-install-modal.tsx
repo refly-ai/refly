@@ -337,11 +337,29 @@ export const ToolInstallModal = React.memo(
       [form],
     );
 
+    // Check if tool with this key is already installed
+    const isToolAlreadyInstalled = useMemo(() => {
+      if (mode !== 'install' || !sourceData?.key) return false;
+      return toolInstances.some((tool) => tool.definition?.key === sourceData.key);
+    }, [mode, sourceData?.key, toolInstances]);
+
     const handleOAuthStatusChange = useCallback(
       (status: 'checking' | 'authorized' | 'unauthorized' | 'error') => {
         setOAuthStatus(status);
+
+        // If OAuth is authorized and tool is already installed, close modal silently
+        // Don't call onSuccess() to avoid showing "Install successfully" message
+        if (
+          status === 'authorized' &&
+          mode === 'install' &&
+          isToolAlreadyInstalled &&
+          selectedAuthPattern?.type === 'oauth'
+        ) {
+          refetchToolsets();
+          onCancel();
+        }
       },
-      [],
+      [mode, isToolAlreadyInstalled, selectedAuthPattern?.type, refetchToolsets, onCancel],
     );
 
     // Render credential form fields based on credential items

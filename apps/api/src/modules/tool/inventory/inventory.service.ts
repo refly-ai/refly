@@ -6,8 +6,13 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
-import { ToolsetDefinition, ToolsetConfig, PollingConfig } from '@refly/openapi-schema';
-import { safeParseJSON } from '@refly/utils';
+import {
+  ToolsetDefinition,
+  ToolsetConfig,
+  PollingConfig,
+  BillingConfig,
+} from '@refly/openapi-schema';
+import { safeParseJSON, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 import { toolsetInventory as staticToolsetInventory } from '@refly/agent-tools';
 import { SingleFlightCache } from '../../../utils/cache';
 import { BillingType } from '../constant';
@@ -27,6 +32,9 @@ export class ToolInventoryService implements OnModuleInit {
   private readonly logger = new Logger(ToolInventoryService.name);
   private inventoryCache: SingleFlightCache<Map<string, ToolsetInventoryItem>>;
 
+  // Timeout for initialization operations (30 seconds)
+  private readonly INIT_TIMEOUT = 30000;
+
   constructor(private readonly prisma: PrismaService) {
     // Cache inventory with 5-minute TTL
     this.inventoryCache = new SingleFlightCache(this.loadFromDatabase.bind(this), {
@@ -38,9 +46,23 @@ export class ToolInventoryService implements OnModuleInit {
    * Initialize on module startup
    */
   async onModuleInit(): Promise<void> {
-    this.logger.log('Initializing Tool Inventory Service...');
-    const inventory = await this.loadFromDatabase();
-    this.logger.log(`Tool Inventory initialized with ${inventory.size} toolsets`);
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        this.logger.log('Initializing Tool Inventory Service...');
+        try {
+          const inventory = await this.loadFromDatabase();
+          this.logger.log(`Tool Inventory initialized with ${inventory.size} toolsets`);
+        } catch (error) {
+          this.logger.error(`Failed to initialize Tool Inventory: ${error}`);
+          throw error;
+        }
+      },
+      {
+        logger: this.logger,
+        label: 'ToolInventoryService.onModuleInit',
+        timeoutMs: this.INIT_TIMEOUT,
+      },
+    );
   }
 
   /**
@@ -163,8 +185,10 @@ export class ToolInventoryService implements OnModuleInit {
     }
 
     // Parse credit billing config with backward compatibility
-    const creditBillingMap: Record<string, number> = {};
+    // Supports both simple number values and full BillingConfig objects
+    const creditBillingMap: Record<string, number | BillingConfig> = {};
     let globalCreditDefault: number | undefined;
+
     const parsePrice = (value: unknown): number | undefined => {
       if (typeof value === 'number' && Number.isFinite(value)) return value;
       if (typeof value === 'string') {
@@ -181,14 +205,34 @@ export class ToolInventoryService implements OnModuleInit {
       return undefined;
     };
 
+    /**
+     * Check if a value is a full BillingConfig object
+     * A valid BillingConfig must have 'enabled' and 'type' properties
+     */
+    const isBillingConfig = (value: unknown): value is BillingConfig => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+      const obj = value as Record<string, unknown>;
+      return (
+        typeof obj.enabled === 'boolean' &&
+        typeof obj.type === 'string' &&
+        (obj.type === BillingType.PER_CALL || obj.type === BillingType.PER_QUANTITY)
+      );
+    };
+
     if (inventory.creditBilling) {
       try {
         const parsed = JSON.parse(inventory.creditBilling);
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
           for (const [methodName, priceValue] of Object.entries(parsed)) {
-            const parsedPrice = parsePrice(priceValue);
-            if (parsedPrice !== undefined) {
-              creditBillingMap[methodName] = parsedPrice;
+            // First check if it's a full BillingConfig object
+            if (isBillingConfig(priceValue)) {
+              creditBillingMap[methodName] = priceValue;
+            } else {
+              // Fall back to parsing as a simple number
+              const parsedPrice = parsePrice(priceValue);
+              if (parsedPrice !== undefined) {
+                creditBillingMap[methodName] = parsedPrice;
+              }
             }
           }
         } else {
@@ -266,14 +310,7 @@ export class ToolInventoryService implements OnModuleInit {
         useFormData: adapterConfig.useFormData as boolean | undefined,
         polling: pollingConfig,
         defaultHeaders: adapterConfig.headers as Record<string, string> | undefined,
-        billing: {
-          enabled: true,
-          type: BillingType.PER_CALL,
-          creditsPerCall:
-            creditBillingMap[method.name] !== undefined
-              ? creditBillingMap[method.name]
-              : defaultCreditsPerCall,
-        },
+        billing: this.buildBillingConfig(creditBillingMap[method.name], defaultCreditsPerCall),
       };
     });
 
@@ -290,6 +327,38 @@ export class ToolInventoryService implements OnModuleInit {
       name: inventory.name,
       credentials,
       methods: parsedMethods,
+    };
+  }
+
+  /**
+   * Build billing config from method-specific config or default
+   * Supports both simple number (credits per call) and full BillingConfig objects
+   *
+   * @param methodBilling - Method-specific billing config (number or BillingConfig)
+   * @param defaultCreditsPerCall - Default credits per call if not specified
+   * @returns Complete BillingConfig object
+   */
+  private buildBillingConfig(
+    methodBilling: number | BillingConfig | undefined,
+    defaultCreditsPerCall: number,
+  ): BillingConfig {
+    // If it's a full BillingConfig object, use it directly
+    if (
+      methodBilling &&
+      typeof methodBilling === 'object' &&
+      'enabled' in methodBilling &&
+      'type' in methodBilling
+    ) {
+      return methodBilling;
+    }
+
+    // Otherwise, create a PER_CALL config with the specified or default credits
+    const credits = typeof methodBilling === 'number' ? methodBilling : defaultCreditsPerCall;
+
+    return {
+      enabled: true,
+      type: BillingType.PER_CALL,
+      creditsPerCall: credits,
     };
   }
 

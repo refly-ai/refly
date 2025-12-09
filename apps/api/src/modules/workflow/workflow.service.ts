@@ -800,4 +800,84 @@ export class WorkflowService {
     // Return workflow execution detail
     return { ...workflowExecution, nodeExecutions: sortedNodeExecutions };
   }
+
+  /**
+   * Get the latest workflow execution detail for a canvas with node executions
+   * @param user - The user requesting the workflow detail
+   * @param canvasId - The canvas ID
+   * @returns Promise<WorkflowExecution> - The latest workflow execution detail
+   */
+  async getLatestWorkflowDetail(user: User, canvasId: string) {
+    // Get the latest workflow execution for this canvas
+    const workflowExecution = await this.prisma.workflowExecution.findFirst({
+      where: { canvasId, uid: user.uid },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!workflowExecution) {
+      throw new WorkflowExecutionNotFoundError(
+        `No workflow execution found for canvas ${canvasId}`,
+      );
+    }
+
+    // Get node executions
+    const nodeExecutions = await this.prisma.workflowNodeExecution.findMany({
+      where: { executionId: workflowExecution.executionId },
+    });
+
+    // Sort node executions by execution order (topological sort based on parent-child relationships)
+    const sortedNodeExecutions = sortNodeExecutionsByExecutionOrder(nodeExecutions);
+
+    // Return workflow execution detail
+    return { ...workflowExecution, nodeExecutions: sortedNodeExecutions };
+  }
+
+  /**
+   * Get all workflow execution details with node executions
+   * @param user - The user requesting the workflow details
+   * @param canvasId - Optional canvas ID to filter by
+   * @returns Promise<WorkflowExecution[]> - All workflow execution details
+   */
+  async getAllWorkflowDetails(user: User, canvasId?: string) {
+    // Build where clause based on whether canvasId is provided
+    const whereClause: any = { uid: user.uid };
+    if (canvasId) {
+      whereClause.canvasId = canvasId;
+    }
+
+    // Get all workflow executions
+    const workflowExecutions = await this.prisma.workflowExecution.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!workflowExecutions?.length) {
+      return [];
+    }
+
+    // Get execution IDs
+    const executionIds = workflowExecutions.map((exec) => exec.executionId);
+
+    // Get all node executions for these executions
+    const allNodeExecutions = await this.prisma.workflowNodeExecution.findMany({
+      where: { executionId: { in: executionIds } },
+    });
+
+    // Group node executions by executionId
+    const nodeExecutionsByExecutionId = new Map<string, typeof allNodeExecutions>();
+    for (const nodeExecution of allNodeExecutions) {
+      const executionId = nodeExecution.executionId;
+      if (!nodeExecutionsByExecutionId.has(executionId)) {
+        nodeExecutionsByExecutionId.set(executionId, []);
+      }
+      nodeExecutionsByExecutionId.get(executionId)?.push(nodeExecution);
+    }
+
+    // Combine workflow executions with their node executions
+    return workflowExecutions.map((workflowExecution) => {
+      const nodeExecutions = nodeExecutionsByExecutionId.get(workflowExecution.executionId) ?? [];
+      const sortedNodeExecutions = sortNodeExecutionsByExecutionOrder(nodeExecutions);
+      return { ...workflowExecution, nodeExecutions: sortedNodeExecutions };
+    });
+  }
 }

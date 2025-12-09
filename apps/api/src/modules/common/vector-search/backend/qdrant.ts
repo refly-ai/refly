@@ -30,6 +30,7 @@ export class QdrantVectorSearchBackend implements VectorSearchBackend {
       host: this.configService.getOrThrow('vectorStore.qdrant.host'),
       port: this.configService.getOrThrow('vectorStore.qdrant.port'),
       apiKey: this.configService.get('vectorStore.qdrant.apiKey') || undefined,
+      checkCompatibility: false,
     });
     this.collectionName = this.configService.get<string>(
       'vectorStore.qdrant.collectionName',

@@ -1,6 +1,6 @@
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import {
   CanvasNodeType,
   ResourceMeta,
@@ -46,18 +46,25 @@ export interface MentionItem {
   };
 }
 
-export const MentionList = ({
-  items,
-  command,
-  placement = 'bottom',
-  isMentionListVisible,
-  query = '',
-}: {
+export const MentionList: React.FC<{
   items: MentionItem[];
   command: any;
   placement?: 'top' | 'bottom';
   isMentionListVisible?: boolean;
   query?: string;
+  // OAuth props passed from parent
+  openOAuthPopup?: (toolsetKey: string) => Promise<any>;
+  isPolling?: boolean;
+  isOpening?: boolean;
+}> = ({
+  items,
+  command,
+  placement = 'bottom',
+  isMentionListVisible,
+  query = '',
+  openOAuthPopup,
+  isPolling = false,
+  isOpening = false,
 }) => {
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.languages?.[0] || 'en';
@@ -623,7 +630,6 @@ export const MentionList = ({
                     )}
                     ellipsis={{
                       rows: 1,
-
                       tooltip: {
                         title: (
                           <div className="max-h-[300px] overflow-y-auto text-xs">
@@ -662,12 +668,49 @@ export const MentionList = ({
     </div>
   );
 
+  const mapSourceToLogType = (source: MentionItemSource) => {
+    if (source === 'variables') return 'user_input';
+    if (source === 'files') return 'file';
+    if (source === 'agents') return 'agent';
+    if (source === 'toolsets') return 'tool';
+    if (source === 'tools') return 'tool';
+    return null;
+  };
+
   const selectItem = (item: MentionItem) => {
     // Handle create variable case
     if (item.variableId === 'create-variable') {
+      logEvent('add_tools_and_context', null, {
+        type: 'user_input',
+      });
       handleAddVariable();
       return;
     }
+
+    const logType = mapSourceToLogType(item.source);
+    if (logType) {
+      logEvent('add_tools_and_context', null, {
+        type: logType,
+      });
+    }
+
+    // Handle unauth OAuth tools - open OAuth popup instead of inserting
+    if (
+      item.isInstalled === false &&
+      (item.source === 'toolsets' || item.source === 'tools') &&
+      item.toolsetId
+    ) {
+      // Prevent multiple OAuth popups
+      if (isPolling || isOpening) {
+        return;
+      }
+      // Open OAuth popup for authorization
+      if (openOAuthPopup) {
+        openOAuthPopup(item.toolsetId);
+      }
+      return;
+    }
+
     command(item);
   };
 

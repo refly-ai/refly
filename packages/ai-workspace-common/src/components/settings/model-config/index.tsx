@@ -15,14 +15,17 @@ import {
   Skeleton,
 } from 'antd';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
-import { IconDelete, IconEdit } from '@refly-packages/ai-workspace-common/components/common/icon';
+import {
+  IconDelete,
+  IconEdit,
+  ModelIcon,
+} from '@refly-packages/ai-workspace-common/components/common/icon';
 import {
   LLMModelConfig,
   ProviderCategory,
   ProviderItem,
   ProviderMode,
 } from '@refly/openapi-schema';
-import { ModelIcon } from '@lobehub/icons';
 import { modelEmitter } from '@refly-packages/ai-workspace-common/utils/event-emitter/model';
 import { ModelFormModal } from './model-form';
 import { useUserStoreShallow, useChatStoreShallow } from '@refly/stores';
@@ -163,11 +166,7 @@ const ModelItem = memo(
       <div className="relative px-1.5 py-0.5 rounded-md cursor-pointer group hover:bg-refly-tertiary-hover">
         <div className="min-h-8 flex items-center justify-between flex-wrap gap-3">
           <div className="flex-1 flex items-center gap-2">
-            <ModelIcon
-              model={(model.config as LLMModelConfig)?.modelId || model.name}
-              size={18}
-              type={'color'}
-            />
+            <ModelIcon model={(model.config as LLMModelConfig)?.modelId || model.name} size={18} />
             <div className="text-refly-text-0">{model.name}</div>
             {model.creditBilling && (
               <>

@@ -129,7 +129,7 @@ export const AppLayout = (props: AppLayoutProps) => {
   const isWorkflow = (!!matchCanvas || !!matchWorkflow) && !isWorkflowEmpty;
 
   if (!isPublicAccessPage && !isPricing && !isDesktop()) {
-    if (!userStore.isCheckingLoginStatus === undefined || userStore.isCheckingLoginStatus) {
+    if (userStore.isCheckingLoginStatus === undefined || userStore.isCheckingLoginStatus) {
       return <LightLoading />;
     }
 

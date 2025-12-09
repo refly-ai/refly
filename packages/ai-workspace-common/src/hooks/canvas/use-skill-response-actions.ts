@@ -48,7 +48,7 @@ export const useSkillResponseActions = ({
       return;
     }
 
-    logEvent('run_from_this_node', null, {
+    logEvent('run_from_here', null, {
       canvasId,
       nodeId,
     });
@@ -63,6 +63,7 @@ export const useSkillResponseActions = ({
   // Stop the running node
   const handleStop = useCallback(async () => {
     // First, abort the action on backend
+
     await abortAction(entityId);
 
     // Then, clean up frontend state

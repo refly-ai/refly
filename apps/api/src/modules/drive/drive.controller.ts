@@ -136,7 +136,12 @@ export class DriveController {
     }
 
     // Cache is stale, load the full file content
-    const { data } = await this.driveService.getDriveFileStream(user, fileId);
+    let { data } = await this.driveService.getDriveFileStream(user, fileId);
+
+    // Process content for download: replace private URLs with public URLs in markdown/html
+    if (download) {
+      data = await this.driveService.processContentForDownload(user, data, filename, contentType);
+    }
 
     // Return file with cache headers
     applyCacheHeaders(res, cacheResult, {

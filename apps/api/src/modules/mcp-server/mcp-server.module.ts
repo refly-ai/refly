@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { McpServerController } from './mcp-server.controller';
 import { McpServerService } from './mcp-server.service';
-import { PrismaService } from '../common/prisma.service';
-import { EncryptionService } from '../common/encryption.service';
+import { CommonModule } from '../common/common.module';
 
 @Module({
+  imports: [CommonModule],
   controllers: [McpServerController],
-  providers: [McpServerService, PrismaService, EncryptionService],
+  providers: [McpServerService],
   exports: [McpServerService],
 })
 export class McpServerModule {}

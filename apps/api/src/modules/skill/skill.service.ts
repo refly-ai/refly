@@ -7,6 +7,7 @@ import {
   SkillTrigger as SkillTriggerModel,
   ActionResult as ActionResultModel,
   ProviderItem as ProviderItemModel,
+  Provider as ProviderModel,
 } from '@prisma/client';
 import { Response } from 'express';
 import {
@@ -41,6 +42,7 @@ import {
   genSkillTriggerID,
   genCopilotSessionID,
   safeParseJSON,
+  runModuleInitWithTimeoutAndRetry,
 } from '@refly/utils';
 import { PrismaService } from '../common/prisma.service';
 import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
@@ -112,25 +114,28 @@ export class SkillService implements OnModuleInit {
     this.logger.log(`Skill inventory initialized: ${this.skillInventory.length}`);
   }
 
-  async onModuleInit() {
-    if (this.checkStuckActionsQueue) {
-      const initPromise = this.setupStuckActionsCheckJobs();
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(`Stuck actions check cronjob timed out after ${this.INIT_TIMEOUT}ms`);
-        }, this.INIT_TIMEOUT);
-      });
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        if (!this.checkStuckActionsQueue) {
+          this.logger.log('Stuck actions check queue not available, skipping cronjob setup');
+          return;
+        }
 
-      try {
-        await Promise.race([initPromise, timeoutPromise]);
-        this.logger.log('Stuck actions check cronjob scheduled successfully');
-      } catch (error) {
-        this.logger.error(`Failed to schedule stuck actions check cronjob: ${error}`);
-        throw error;
-      }
-    } else {
-      this.logger.log('Stuck actions check queue not available, skipping cronjob setup');
-    }
+        try {
+          await this.setupStuckActionsCheckJobs();
+          this.logger.log('Stuck actions check cronjob scheduled successfully');
+        } catch (error) {
+          this.logger.error(`Failed to schedule stuck actions check cronjob: ${error}`);
+          throw error;
+        }
+      },
+      {
+        logger: this.logger,
+        label: 'SkillService.onModuleInit',
+        timeoutMs: this.INIT_TIMEOUT,
+      },
+    );
   }
 
   private async setupStuckActionsCheckJobs() {
@@ -477,16 +482,19 @@ export class SkillService implements OnModuleInit {
 
     const defaultModel = await this.providerService.findDefaultProviderItem(user, 'chat');
     param.modelItemId ||= defaultModel?.itemId;
-
     const modelItemId = param.modelItemId;
-    const providerItem = await this.providerService.findProviderItemById(user, modelItemId);
+
+    let providerItem = await this.providerService.findProviderItemById(user, modelItemId);
 
     if (!providerItem || providerItem.category !== 'llm' || !providerItem.enabled) {
       throw new ProviderItemNotFoundError(`provider item ${modelItemId} not valid`);
     }
 
+    // Use the routed provider item from modelProviderMap (no need to query again)
+    // Keep param.modelItemId unchanged (e.g., Auto) - used for display
+    // providerItem is the routed model (e.g., Claude Sonnet 4.5) - used for execution
     const modelProviderMap = await this.providerService.prepareModelProviderMap(user, modelItemId);
-    param.modelItemId = modelProviderMap.chat.itemId;
+    providerItem = modelProviderMap.chat as ProviderItemModel & { provider: ProviderModel };
 
     const tiers = [];
     for (const providerItem of Object.values(modelProviderMap)) {
@@ -800,7 +808,7 @@ export class SkillService implements OnModuleInit {
               runtimeConfig: JSON.stringify(data.runtimeConfig),
               history: JSON.stringify(purgeResultHistory(data.resultHistory)),
               toolsets: JSON.stringify(purgeToolsets(data.toolsets)),
-              providerItemId: providerItem.itemId,
+              providerItemId: param.modelItemId,
               copilotSessionId: data.copilotSessionId,
               workflowExecutionId: data.workflowExecutionId,
               workflowNodeExecutionId: data.workflowNodeExecutionId,
@@ -834,7 +842,7 @@ export class SkillService implements OnModuleInit {
           runtimeConfig: JSON.stringify(data.runtimeConfig),
           history: JSON.stringify(purgeResultHistory(data.resultHistory)),
           toolsets: JSON.stringify(purgeToolsets(data.toolsets)),
-          providerItemId: providerItem.itemId,
+          providerItemId: param.modelItemId,
           copilotSessionId: data.copilotSessionId,
           workflowExecutionId: data.workflowExecutionId,
           workflowNodeExecutionId: data.workflowNodeExecutionId,

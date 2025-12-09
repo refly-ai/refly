@@ -1,11 +1,7 @@
 import { useEffect } from 'react';
 import { useCookie } from 'react-use';
 import { useTranslation } from 'react-i18next';
-import {
-  useMatch,
-  useNavigate,
-  useSearchParams,
-} from '@refly-packages/ai-workspace-common/utils/router';
+import { useNavigate, useSearchParams } from '@refly-packages/ai-workspace-common/utils/router';
 
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { LocalSettings, useUserStoreShallow } from '@refly/stores';
@@ -14,7 +10,7 @@ import { mapDefaultLocale } from '@refly-packages/ai-workspace-common/utils/loca
 import { LOCALE, OutputLocale } from '@refly/common-types';
 import { UserSettings } from '@refly/openapi-schema';
 import { UID_COOKIE } from '@refly/utils/cookie';
-import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
+import { isPublicAccessPageByPath } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 import { isDesktop } from '@refly/ui-kit';
 
 export const useGetUserSettings = () => {
@@ -40,9 +36,6 @@ export const useGetUserSettings = () => {
 
   const { i18n } = useTranslation();
 
-  const isPublicAcessPage = usePublicAccessPage();
-  const isPricing = useMatch('/pricing');
-
   const getLoginStatus = async () => {
     let error: any;
     let settings: UserSettings | undefined;
@@ -63,7 +56,16 @@ export const useGetUserSettings = () => {
       userStore.setUserProfile(undefined);
       userStore.setIsLogin(false);
 
-      if (!isPublicAcessPage && !isPricing) {
+      // Use window.location.pathname to get current route (always latest, no dependency needed).
+      // We use isPublicAccessPageByPath (extracted from usePublicAccessPage) to check.
+      // This ensures we get the latest route value even in async context.
+      const currentPath = window?.location?.pathname ?? '';
+      const isPublicPage = isPublicAccessPageByPath(currentPath);
+
+      // Short-circuit to avoid redirect loops:
+      // - Do NOT navigate if we are already on public pages (including /login)
+      // - Do NOT navigate when we are already at root '/', because AppLayout will handle root redirection
+      if (!isPublicPage && currentPath !== '/' && currentPath !== '/login') {
         navigate(`/?${searchParams.toString()}`); // Extension should navigate to home
       }
 

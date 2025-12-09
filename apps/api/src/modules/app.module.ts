@@ -44,6 +44,8 @@ import { VariableExtractionModule } from './variable-extraction/variable-extract
 import { InvitationModule } from './invitation/invitation.module';
 import { DriveModule } from './drive/drive.module';
 import { FormModule } from './form/form.module';
+import { CommonModule } from './common/common.module';
+import { RedisService } from './common/redis.service';
 
 import { isDesktop } from '../utils/runtime';
 import { initTracer } from '../tracer';
@@ -157,15 +159,11 @@ class CustomThrottlerGuard extends ThrottlerGuard {
       ? []
       : [
           BullModule.forRootAsync({
-            imports: [ConfigModule],
-            useFactory: async (configService: ConfigService) => ({
-              connection: {
-                host: configService.get('redis.host'),
-                port: configService.get('redis.port'),
-                password: configService.get('redis.password') || undefined,
-              },
-            }),
-            inject: [ConfigService],
+            imports: [CommonModule],
+            useFactory: (redisService: RedisService) => {
+              return { connection: redisService.getClient() };
+            },
+            inject: [RedisService],
           }),
           ThrottlerModule.forRootAsync({
             useFactory: async () => ({

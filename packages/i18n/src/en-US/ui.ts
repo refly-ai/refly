@@ -11,7 +11,7 @@ const translations = {
   form: {
     previous: '← Previous',
     next: 'Next →',
-    submit: 'Submit to get credits',
+    submit: 'Submit & Earn',
     submitting: 'Submitting...',
     submitSuccess: '🎉 Refly will recommend the best templates and tasks!',
   },
@@ -163,6 +163,7 @@ const translations = {
     actions: 'Actions',
     addedToCanvas: 'Added to canvas',
     operationFailed: 'Operation failed',
+    confirmClose: 'Confirm Close',
     enable: 'Enable',
     disable: 'Disable',
     enabled: 'Enabled',
@@ -878,13 +879,18 @@ const translations = {
       buttonText: 'New Workflow',
       buttonDescription: 'Create a new workflow',
     },
+    tutorial: {
+      title: 'Tutorial',
+      buttonText: '5 Minutes Tutorial',
+      buttonDescription: 'Tutorial for AI-driven workflow',
+    },
     recentWorkflows: {
       title: 'Recent Workflows',
       edit: 'Edit',
       more: 'More',
     },
     template: {
-      title: 'Community Templates',
+      title: 'Marketplace',
       endMessage: {
         title: "Didn't find the workflow automation template you need?",
         subtitle: "Join our Discord and tell us what you're looking for",
@@ -1924,6 +1930,10 @@ const translations = {
       defaultPlaceholder: 'Describe what you want to generate...',
       createUserInput: 'Create user input "{{userInputName}}"',
       unauthorized: 'Authorize',
+      oauthSuccess: 'Tool authorized successfully',
+      oauthFailed: 'Failed to authorize tool',
+      oauthTimeout: 'Authorization timeout, please try again',
+      authorizing: 'Authorizing...',
     },
     toolsDepencency: {
       title: 'Tool Dependencies',
@@ -2216,7 +2226,7 @@ const translations = {
       },
     },
     siderMenu: {
-      home: 'Dashboard',
+      home: 'Workspace',
       canvas: 'My Workflows',
       appManager: 'My Templates',
       marketplace: 'Marketplace',
@@ -3640,29 +3650,27 @@ const translations = {
         title: 'PRO',
       },
       plus: {
-        title: 'PLUS',
+        title: 'Plus',
         description: 'Suitable for running a high volume of automation tasks',
         buttonText: 'Get Plus',
         features: [
-          'Daily new credits\n300 credits',
+          'Daily new credits\n100 credits',
           'Monthly credits\n2,000 credits',
           //'New subscribers receive an extra\n2,000 bonus credits',
           'Access to a vast library of tools',
-          /*{
+          {
             name: 'Credit-free tools',
             type: 'pointFreeTools',
             items: [
-              'Gemini 3.0 Nano Banana pro',
-              'Seedream 4.0',
-              'Seedance 1.5',
-              'VibeVoice',
-              'Instagram',
-              'TikTok',
-              'Reddit',
-              'X',
+              'Nano Banana pro',
+              'Seedream 4.5',
+              'Fish Audio',
+              'Instagram integrations',
+              'Facebook integrations',
+              'Twitter integrations',
             ],
-            duration: '365 DAYS',
-          },*/
+            duration: '1 MONTH',
+          },
           'Service support\nHigh priority support',
         ],
       },
@@ -3755,8 +3763,11 @@ const translations = {
       viewPricing: 'View Pricing',
       upgradePlan: 'Upgrade Plan',
       availableCredits: 'Total Available Credits',
+      availableCreditsDescription: 'All credits you can use to run workflows',
+      regularCreditsDescription: 'Credits earned from purchases, bonuses, and system rewards',
+      templateEarningsCreditsDescription: 'Credits earned from others running your templates',
       regularCredits: 'Regular Credits',
-      templateEarningsCredits: 'Earnings Credits',
+      templateEarningsCredits: 'Revenue Credits',
       remainingCredits: 'Credits',
       knowledgeBaseFiles: 'Knowledge Base Files',
       creditUsageDetails: 'Credit Usage Details',
@@ -3887,7 +3898,7 @@ const translations = {
   },
   onboarding: {
     rewardTitle: 'Reward Credits',
-    rewardPoints: '3000 credits',
+    rewardPoints: '3000 Credits',
     startExperience: 'Start Now',
   },
   template: {
@@ -3950,6 +3961,8 @@ const translations = {
     validationNoUserInputs: 'Please add User Inputs before publishing your template.',
     validationNoAgents: 'Please add agents before publishing your template.',
     validationAgentsNotRun: 'Please run all agents successfully before publishing your template.',
+    confirmCloseContent:
+      'Unsaved content will be lost after closing. Are you sure you want to close?',
     resultPreview: 'Result Preview',
     notLoggedIn: 'Not Logged In',
     run: {

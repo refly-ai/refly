@@ -113,8 +113,9 @@ export class Agent extends BaseSkill {
       );
 
       if (validTools.length > 0) {
+        const toolNames = validTools.map((tool) => tool.name);
         this.engine.logger.info(
-          `Binding ${validTools.length} valid tools to LLM with tool_choice="auto"`,
+          `Binding ${validTools.length} valid tools to LLM with tool_choice="auto": [${toolNames.join(', ')}]`,
         );
         // Use tool_choice="auto" to force LLM to decide when to use tools
         // This ensures proper tool_calls format generation

@@ -17,7 +17,10 @@ export interface SyncToolCreditUsageJobData {
   resultId: string;
   version: number;
   creditBilling?: CreditBilling;
-  creditCost?: number;
+  /** Actual amount to deduct (after discount) */
+  discountedPrice?: number;
+  /** Original price before discount */
+  originalPrice?: number;
   timestamp: Date;
   toolCallMeta: ToolCallMeta;
   toolCallId: string;
@@ -28,11 +31,15 @@ export interface CreditBalance {
   creditBalance: number;
   regularCredits?: number;
   templateEarningsCredits?: number;
+  cumulativeEarningsCredits?: number;
 }
 
 // New interfaces for batch processing
 export interface ModelUsageDetail {
+  /** User-facing model name (Auto or direct model selection) */
   modelName: string;
+  /** Actual model name used for execution (e.g., Claude Sonnet 4) */
+  actualModelName?: string;
   inputTokens: number;
   outputTokens: number;
   creditCost: number;
@@ -42,6 +49,8 @@ export interface ModelUsageDetail {
 export interface CreditUsageStep {
   usage: TokenUsageItem;
   creditBilling: CreditBilling;
+  /** Model name used for billing (Auto or direct model selection) */
+  billingModelName: string;
 }
 
 export interface SyncBatchTokenCreditUsageJobData {

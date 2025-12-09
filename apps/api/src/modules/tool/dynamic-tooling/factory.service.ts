@@ -5,6 +5,7 @@
 
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { CallbackManagerForToolRun } from '@langchain/core/callbacks/manager';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import { Injectable, Logger } from '@nestjs/common';
 import type {
   DynamicToolDefinition,
@@ -14,9 +15,9 @@ import type {
   ToolMetadata,
   ToolsetConfig,
 } from '@refly/openapi-schema';
-import { SkillRunnableConfig } from '@refly/skill-template';
+import type { SkillRunnableConfig } from '@refly/skill-template';
 import { SingleFlightCache } from '../../../utils/cache';
-import { CreditService } from '../../credit/credit.service';
+import { BillingService } from '../billing/billing.service';
 import { ToolInventoryService } from '../inventory/inventory.service';
 import {
   ResourceHandler,
@@ -27,7 +28,7 @@ import {
 } from '../utils';
 import { AdapterFactory } from './adapters/factory';
 import { HttpHandler } from './core/handler';
-import { getCurrentUser, runInContext } from './core/tool-context';
+import { getCurrentUser, runInContext } from '../tool-context';
 
 /**
  * Tool factory service
@@ -42,7 +43,7 @@ export class ToolFactory {
     private readonly inventoryService: ToolInventoryService,
     private readonly adapterFactory: AdapterFactory,
     private resourceHandler: ResourceHandler,
-    private readonly creditService: CreditService,
+    private readonly billingService: BillingService,
   ) {}
 
   /**
@@ -194,7 +195,7 @@ export class ToolFactory {
       credentials,
       responseSchema: parsedMethod.responseSchema,
       billing: parsedMethod.billing,
-      creditService: this.creditService,
+      billingService: this.billingService,
       timeout: parsedMethod.timeout,
       useFormData: parsedMethod.useFormData,
       formatResponse: false, // Return JSON, not formatted text
@@ -216,13 +217,13 @@ export class ToolFactory {
     return async (
       args: Record<string, unknown>,
       runManager?: CallbackManagerForToolRun,
-      runnableConfig?: SkillRunnableConfig,
+      runnableConfig?: RunnableConfig,
     ): Promise<string> => {
       try {
         const response = await runInContext(
           {
             runManager,
-            langchainConfig: runnableConfig,
+            langchainConfig: runnableConfig as SkillRunnableConfig,
             requestId: `tool-${definition.name}-${Date.now()}`,
           },
           async () => {
@@ -278,7 +279,7 @@ export class ToolFactory {
     // Preprocess input resources if needed
     if (parsedMethod.schema?.properties) {
       const resourceHandler = this.resourceHandler;
-      return await resourceHandler.preprocessInputResources(initialRequest, parsedMethod.schema);
+      return await resourceHandler.resolveInputResources(initialRequest, parsedMethod.schema);
     }
 
     return initialRequest;
