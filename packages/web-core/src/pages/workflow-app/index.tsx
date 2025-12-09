@@ -298,7 +298,10 @@ const WorkflowAppPage: React.FC = () => {
     const map = new Map<string, DriveFile>();
     const files = canvasData.files;
     for (const file of files) {
-      map.set(file.fileId, file);
+      // Defensive check: only add files with valid fileId
+      if (file?.fileId) {
+        map.set(file.fileId, file);
+      }
     }
     return map;
   }, [canvasData.files]);

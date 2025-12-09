@@ -1286,11 +1286,9 @@ export class ShareCreationService {
     // Sanitize canvas data for public exposure
     const preview = this.sanitizeCanvasDataForPublic(canvasData, workflowApp.resultNodeIds || []);
 
-    // Publish minimap if available
-    let publishedMinimapUrl: string | undefined;
-    if (canvasData.minimapUrl) {
-      publishedMinimapUrl = await this.miscService.publishFile(canvasData.minimapUrl);
-    }
+    // minimapUrl is already a published public URL from processCanvasForShare
+    // Just use it directly, no need to publish again
+    const publishedMinimapUrl = canvasData.minimapUrl;
 
     // Create public workflow app data - protect workflow methodology while keeping user data
     const publicData = {
