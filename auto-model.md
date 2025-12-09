@@ -2,6 +2,13 @@
 
 ## 需求
 
+模型列表中新增一个 auto 模型，背后可以自动做模型路由。
+
+目前默认路由到 Claude 4.5 Opus (TODO)，未来可能根据各种情况（agent 复杂性、任务类型）等进行路由。
+
+- Agent node 的模型默认 auto
+- Copilot生成的 Workflow，Agent node 的模型默认 auto
+
 模型信息：
 
 1. 模型名称：Auto
@@ -16,58 +23,7 @@
 2. 新增的 Agent 节点，默认选中 Auto Model
 3. copilot 生成的 Agent 节点，默认选中 Auto Model
 
-背后实际的模型：Claude Sonnet 4.5
-
-模型列表中新增一个 auto 模型，背后可以自动做模型路由。不过目前背后只有 Sonnet 4.5。
-
-- Agent node 的模型默认 auto
-- Copilot生成的 Workflow，Agent node 的模型默认 auto
-
-## 现状调研
-
-### 模型列表
-
-前端获取模型列表：
-
-https://api.refly.ai/v1/provider/item/list?isGlobal=true&category=llm&enabled=true
-
-后端从 provider_items 和 providers 表中查询。
-
-等价 SQL：
-
-```sql
-SELECT 
-    pi.item_id,
-    pi.name AS model_name,
-    pi.category,
-    p.provider_key,
-    pi.config,
-    pi."order"
-FROM provider_items pi
-JOIN providers p ON pi.provider_id = p.provider_id
-WHERE 
-    -- 1. 对应 URL: isGlobal=true
-    p.is_global = true 
-    
-    -- 2. 对应 URL: category=llm
-    AND pi.category = 'llm'
-    
-    -- 3. 对应 URL: enabled=true (同时也检查 provider 是否启用)
-    AND pi.enabled = true
-    AND p.enabled = true
-    
-    -- 4. 对应代码中的 deletedAt: null
-    AND pi.deleted_at IS NULL
-    AND p.deleted_at IS NULL
-    
-    -- 5. 对应代码隐含逻辑：全局 Item 通常不属于特定用户
-    AND pi.uid IS NULL
-ORDER BY pi."order" ASC;
-```
-
-## 设计
-
-### 模型列表
+## 模型列表
 
 利用现有的 provider 机制，创建一个特殊的系统级 Provider，并挂载一个虚拟的 Auto 模型。
 
@@ -173,51 +129,6 @@ TODO 待确认的问题：
 4.  **底层适配**：修改 `getChatModel`，使其能识别并消费 `__metadata`，将其写入 LangChain 对象的 `metadata` 字段。
 
 这种方案既保证了路由的灵活性（能查库），又保证了监控的准确性（有标记）。
-
-### 详细设计 (方案一改进版)
-
-#### 1. 拦截与路由 (`ProviderService.ts`)
-
-```typescript
-async prepareModelProviderMap(user: User, modelItemId: string) {
-  // 1. 识别 Auto 模型
-  if (this.isAutoModel(modelItemId)) {
-     // 2. 路由决策：查找最佳真实模型
-     const realItem = await this.findBestAvailableModel(user);
-     
-     // 3. 注入元数据
-     const routedConfig = {
-       ...safeParseJSON(realItem.config),
-       __metadata: {
-         routed_from: 'auto',
-         original_model_id: 'auto'
-       }
-     };
-     
-     // 4. 返回带有标记的真实模型配置
-     return { 
-       chat: { ...realItem, config: JSON.stringify(routedConfig) }, 
-       // ... 
-     };
-  }
-  // ... 原有逻辑
-}
-```
-
-#### 2. 底层适配 (`llm/index.ts`)
-
-```typescript
-export const getChatModel = (provider, config, ...) => {
-  const model = new ChatOpenAI({
-    // ... 标准参数 ...
-    
-    // 5. 消费元数据，上报监控
-    metadata: config.__metadata,
-    tags: config.__metadata?.routed_from ? [config.__metadata.routed_from] : []
-  });
-  return model;
-}
-```
 
 ### 展示层修改（已实现）
 
