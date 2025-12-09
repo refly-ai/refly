@@ -6150,6 +6150,7 @@ components:
         - maker
         - enterprise
         - plus
+        - pro
     SubscriptionStatus:
       type: string
       description: Subscription status
