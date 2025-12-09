@@ -3220,7 +3220,7 @@ const translations = {
       subtitle: 'Explore your curiosity together',
       youCanTry: 'Get new inspiration',
       query1:
-        "Use a 13F data tool to research Warren Buffett's holdings in Q2 vs Q3 2025, list all increases and decreases, and generate a summary with simple charts",
+        "Use a 13F data tool to research Warren Buffett's holdings in Q2 vs Q3 2025, list all increases and decreases, and generate a summary with simple charts.",
       query2:
         "Use Perplexity to fetch yesterday's Product Hunt Top 5, create a summary document and a podcast, and email them to me.",
       query3:
