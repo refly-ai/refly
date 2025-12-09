@@ -3,7 +3,6 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-// import { PrismaInstrumentation } from '@prisma/instrumentation';
 import { LangfuseSpanProcessor } from '@langfuse/otel';
 import type { SpanProcessor } from '@opentelemetry/sdk-trace-base';
 
@@ -72,7 +71,6 @@ export function initTracer(options: TracerOptions): void {
     if (processor) spanProcessors.push(processor);
   }
 
-  const _instrumentations = [getNodeAutoInstrumentations()];
   const instrumentations = [getNodeAutoInstrumentations()];
 
   sdk = new NodeSDK({
