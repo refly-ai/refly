@@ -1443,11 +1443,6 @@ export class SkillInvokerService {
               outputTokens: tokenUsage.outputTokens || 0,
             };
 
-            // TODO debug log
-            this.logger.info(
-              `[Billing] model=${tokenUsage.modelName}, using ${autoProviderItem ? 'Auto' : providerItem?.name} rates: ${creditBilling.inputCost}/${creditBilling.outputCost} per ${creditBilling.unit}, tokens(in/out)=${usage.inputTokens}/${usage.outputTokens}`,
-            );
-
             creditUsageSteps.push({
               usage,
               creditBilling,

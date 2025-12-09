@@ -13,8 +13,9 @@ export const AUTO_MODEL_ID = 'auto';
  */
 export const AUTO_MODEL_ROUTING_PRIORITY = [
   // Primary
-  'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+  'global.anthropic.claude-opus-4-5-20251101-v1:0',
   // Fallbacks
+  'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   'us.anthropic.claude-sonnet-4-20250514-v1:0',
 ];
 
