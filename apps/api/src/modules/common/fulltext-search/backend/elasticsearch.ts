@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { SearchDomain, SearchRequest, SearchResult, User } from '@refly/openapi-schema';
 import { Client, ClientOptions } from '@elastic/elasticsearch';
 import { FulltextDocument, FulltextSearchBackend } from './interface';
+import { runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 
 export interface ResourceDocument extends FulltextDocument {
   title?: string;
@@ -165,21 +166,18 @@ export class ElasticsearchFulltextSearchBackend implements FulltextSearchBackend
     }
   }
 
-  async onModuleInit() {
-    const initPromise = this.initialize();
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(`Elasticsearch initialization timed out after ${this.INIT_TIMEOUT}ms`);
-      }, this.INIT_TIMEOUT);
-    });
-
-    try {
-      await Promise.race([initPromise, timeoutPromise]);
-      this.logger.log('Elasticsearch initialized successfully');
-    } catch (error) {
-      this.logger.error(`Failed to initialize Elasticsearch: ${error}`);
-      throw error;
-    }
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        await this.initialize();
+        this.logger.log('Elasticsearch initialized successfully');
+      },
+      {
+        logger: this.logger,
+        label: 'ElasticsearchFulltextSearchBackend.onModuleInit',
+        timeoutMs: this.INIT_TIMEOUT,
+      },
+    );
   }
 
   /**

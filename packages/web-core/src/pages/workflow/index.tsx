@@ -8,7 +8,6 @@ import { logEvent } from '@refly/telemetry-web';
 const WorkflowPage = () => {
   const { workflowId = '' } = useParams();
   const isShareMode = workflowId?.startsWith('can-');
-  console.log({ isShareMode, workflowId });
 
   const { collapse } = useSiderStoreShallow((state) => ({
     collapse: state.collapse,

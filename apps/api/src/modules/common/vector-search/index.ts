@@ -10,6 +10,7 @@ import {
 } from './backend/interface';
 import { QdrantVectorSearchBackend } from './backend/qdrant';
 import { LanceDBVectorSearchBackend } from './backend/lancedb';
+import { runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 
 @Injectable()
 export class VectorSearchService implements OnModuleInit {
@@ -17,9 +18,17 @@ export class VectorSearchService implements OnModuleInit {
 
   constructor(private readonly backend: VectorSearchBackend) {}
 
-  async onModuleInit() {
-    await this.backend.initialize();
-    this.logger.log('Vector search service initialized');
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        await this.backend.initialize();
+        this.logger.log('Vector search service initialized');
+      },
+      {
+        logger: this.logger,
+        label: 'VectorSearchService.onModuleInit',
+      },
+    );
   }
 
   /**

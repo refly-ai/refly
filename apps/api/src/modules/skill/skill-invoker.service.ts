@@ -717,9 +717,15 @@ export class SkillInvokerService {
             }
             if (event.event === 'on_tool_error') {
               const errorMsg = String((event.data as any)?.error ?? 'Tool execution failed');
+              // Parse tool output if it's a JSON string (from dynamic tools)
+              const rawErrorOutput = event.data?.output;
+              const errorToolOutput =
+                typeof rawErrorOutput === 'string'
+                  ? safeParseJSON(rawErrorOutput) || rawErrorOutput
+                  : rawErrorOutput;
               await persistToolCall(ToolCallStatus.FAILED, {
                 input: undefined,
-                output: event.data?.output,
+                output: errorToolOutput,
                 errorMessage: errorMsg,
               });
 
@@ -754,7 +760,7 @@ export class SkillInvokerService {
                     toolsetId,
                     toolName,
                     stepName,
-                    output: event.data?.output,
+                    output: errorToolOutput,
                     error: errorMsg,
                     status: 'failed',
                     createdAt: startTs,
@@ -774,7 +780,13 @@ export class SkillInvokerService {
               break;
             }
             if (event.event === 'on_tool_end') {
-              const toolOutput = event.data?.output;
+              // Parse tool output if it's a JSON string (from dynamic tools)
+              // to ensure consistent object format in SSE events
+              const rawToolOutput = event.data?.output;
+              const toolOutput =
+                typeof rawToolOutput === 'string'
+                  ? safeParseJSON(rawToolOutput) || rawToolOutput
+                  : rawToolOutput;
               const isErrorStatus = toolOutput?.status === 'error';
               const errorMessage = isErrorStatus
                 ? String(toolOutput?.error ?? 'Tool returned error status')

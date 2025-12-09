@@ -668,11 +668,30 @@ export const MentionList: React.FC<{
     </div>
   );
 
+  const mapSourceToLogType = (source: MentionItemSource) => {
+    if (source === 'variables') return 'user_input';
+    if (source === 'files') return 'file';
+    if (source === 'agents') return 'agent';
+    if (source === 'toolsets') return 'tool';
+    if (source === 'tools') return 'tool';
+    return null;
+  };
+
   const selectItem = (item: MentionItem) => {
     // Handle create variable case
     if (item.variableId === 'create-variable') {
+      logEvent('add_tools_and_context', null, {
+        type: 'user_input',
+      });
       handleAddVariable();
       return;
+    }
+
+    const logType = mapSourceToLogType(item.source);
+    if (logType) {
+      logEvent('add_tools_and_context', null, {
+        type: logType,
+      });
     }
 
     // Handle unauth OAuth tools - open OAuth popup instead of inserting

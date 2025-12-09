@@ -388,3 +388,195 @@ export function findMatchingObjectOption(
 
   return objectOptions[0];
 }
+
+// ============================================================================
+// Schema Enhancement for Composio Tools
+// ============================================================================
+
+/**
+ * Check if a field name or description suggests it's a URL-related field
+ * @param fieldName - The name of the field
+ * @param description - Optional description of the field
+ * @returns true if the field appears to be URL-related
+ */
+function isUrlRelatedField(fieldName: string, description?: string): boolean {
+  const fieldLower = fieldName.toLowerCase();
+
+  // URL-related field name patterns
+  const urlNamePatterns = [
+    '_url',
+    'url', // image_url, video_url, file_url
+    '_uri',
+    'uri', // resource_uri
+    'image',
+    'video',
+    'audio',
+    'file',
+    'media',
+    'photo',
+    'picture',
+    'attachment',
+    'document',
+  ];
+
+  if (urlNamePatterns.some((pattern) => fieldLower.includes(pattern))) {
+    return true;
+  }
+
+  // Check description for URL indicators
+  if (description) {
+    const descLower = description.toLowerCase();
+    const urlDescPatterns = ['url', 'link', 'href', 'uri'];
+    if (urlDescPatterns.some((pattern) => descLower.includes(pattern))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Recursively enhance schema properties to mark URL fields as resources
+ * This follows the same pattern that ResourceHandler.collectResourceFields() expects
+ * @param schema - Schema or schema property to enhance
+ */
+function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
+  if (!schema.properties) {
+    return;
+  }
+
+  for (const [fieldName, fieldSchema] of Object.entries(schema.properties)) {
+    // Only enhance string-type fields
+    if (fieldSchema.type === 'string') {
+      if (isUrlRelatedField(fieldName, fieldSchema.description)) {
+        // Mark as resource field (collectResourceFields will find this)
+        fieldSchema.isResource = true;
+        // Set format to 'url' (resolveFileIdToFormat will use this)
+        fieldSchema.format = 'url';
+        // Enhance description to guide LLM
+        const originalDesc = fieldSchema.description || '';
+        if (!originalDesc.includes('fileId')) {
+          const hint =
+            '\n\n**IMPORTANT:** This field ONLY accepts either: (1) a fileId from the context (format: df-xxxx), OR (2) a public URL. For uploaded files in the context, use the exact fileId value like "df-abc123" - the system will automatically convert it to a public URL. Do NOT use any other format or make up values.';
+          fieldSchema.description = originalDesc + hint;
+        }
+      }
+    }
+
+    // Recursively process nested objects
+    if (fieldSchema.type === 'object' && fieldSchema.properties) {
+      enhanceSchemaProperties(fieldSchema);
+    }
+
+    // Process array items
+    if (fieldSchema.type === 'array' && fieldSchema.items) {
+      if (fieldSchema.items.type === 'string' && isUrlRelatedField(fieldName)) {
+        // For arrays of URLs (e.g., images: string[])
+        fieldSchema.items.isResource = true;
+        fieldSchema.items.format = 'url';
+      } else if (fieldSchema.items.type === 'object') {
+        // For arrays of objects containing URL fields
+        enhanceSchemaProperties(fieldSchema.items);
+      }
+    }
+
+    // Handle oneOf/anyOf/allOf
+    for (const key of ['oneOf', 'anyOf', 'allOf']) {
+      if (fieldSchema[key] && Array.isArray(fieldSchema[key])) {
+        for (const option of fieldSchema[key] as SchemaProperty[]) {
+          if (option.type === 'object') {
+            enhanceSchemaProperties(option);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Enhance tool schema to mark URL fields as resources and add file_name_title field
+ * Follows the same schema rules used by ResourceHandler.resolveInputResources()
+ *
+ * This function:
+ * 1. Identifies URL-related fields (image_url, video_url, etc.)
+ * 2. Marks them with isResource: true and format: 'url'
+ * 3. Enhances descriptions to guide LLM to use fileId format
+ * 4. Adds file_name_title field for naming generated files
+ *
+ * The enhanced schema is used for:
+ * - LLM guidance (via enhanced descriptions in Zod schema)
+ * - Backend processing (via isResource markers for ResourceHandler)
+ *
+ * @param schema - Original JSON schema from Composio
+ * @returns Enhanced schema with isResource markers for URL fields and file_name_title field
+ *
+ * @example
+ * ```typescript
+ * const original = {
+ *   type: 'object',
+ *   properties: {
+ *     image_url: { type: 'string', description: 'URL to the image' }
+ *   }
+ * };
+ *
+ * const enhanced = enhanceToolSchema(original);
+ * // Result:
+ * // {
+ * //   type: 'object',
+ * //   properties: {
+ * //     image_url: {
+ * //       type: 'string',
+ * //       description: 'URL to the image\n\n**For uploaded files:** Provide a fileId...',
+ * //       isResource: true,
+ * //       format: 'url'
+ * //     },
+ * //     file_name_title: {
+ * //       type: 'string',
+ * //       description: 'The title for the generated file...'
+ * //     }
+ * //   },
+ * //   required: ['file_name_title']
+ * // }
+ * ```
+ */
+export function enhanceToolSchema(schema: JsonSchema): JsonSchema {
+  // Deep clone to avoid mutation
+  const enhanced = JSON.parse(JSON.stringify(schema)) as JsonSchema;
+
+  // Enhance URL fields with resource markers
+  enhanceSchemaProperties(enhanced);
+
+  // Add file_name_title field for naming generated files
+  addFileNameTitleField(enhanced);
+
+  return enhanced;
+}
+
+/**
+ * Add file_name_title field to schema for naming generated files
+ * This field guides the AI to generate descriptive filenames for tool outputs
+ * @param schema - Schema to enhance with file_name_title field (mutates in place)
+ */
+function addFileNameTitleField(schema: JsonSchema): void {
+  // Ensure properties object exists
+  if (!schema.properties) {
+    schema.properties = {};
+  }
+
+  // Add file_name_title field if it doesn't already exist
+  if (!schema.properties.file_name_title) {
+    schema.properties.file_name_title = {
+      type: 'string',
+      description:
+        'The title for the generated file. Should be concise and descriptive. This will be used as the filename.',
+    };
+
+    // Add file_name_title to required fields so AI will always generate it
+    if (!schema.required) {
+      schema.required = [];
+    }
+    if (!schema.required.includes('file_name_title')) {
+      schema.required.push('file_name_title');
+    }
+  }
+}

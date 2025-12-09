@@ -42,6 +42,7 @@ import {
   genSkillTriggerID,
   genCopilotSessionID,
   safeParseJSON,
+  runModuleInitWithTimeoutAndRetry,
 } from '@refly/utils';
 import { PrismaService } from '../common/prisma.service';
 import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
@@ -113,25 +114,28 @@ export class SkillService implements OnModuleInit {
     this.logger.log(`Skill inventory initialized: ${this.skillInventory.length}`);
   }
 
-  async onModuleInit() {
-    if (this.checkStuckActionsQueue) {
-      const initPromise = this.setupStuckActionsCheckJobs();
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(`Stuck actions check cronjob timed out after ${this.INIT_TIMEOUT}ms`);
-        }, this.INIT_TIMEOUT);
-      });
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        if (!this.checkStuckActionsQueue) {
+          this.logger.log('Stuck actions check queue not available, skipping cronjob setup');
+          return;
+        }
 
-      try {
-        await Promise.race([initPromise, timeoutPromise]);
-        this.logger.log('Stuck actions check cronjob scheduled successfully');
-      } catch (error) {
-        this.logger.error(`Failed to schedule stuck actions check cronjob: ${error}`);
-        throw error;
-      }
-    } else {
-      this.logger.log('Stuck actions check queue not available, skipping cronjob setup');
-    }
+        try {
+          await this.setupStuckActionsCheckJobs();
+          this.logger.log('Stuck actions check cronjob scheduled successfully');
+        } catch (error) {
+          this.logger.error(`Failed to schedule stuck actions check cronjob: ${error}`);
+          throw error;
+        }
+      },
+      {
+        logger: this.logger,
+        label: 'SkillService.onModuleInit',
+        timeoutMs: this.INIT_TIMEOUT,
+      },
+    );
   }
 
   private async setupStuckActionsCheckJobs() {

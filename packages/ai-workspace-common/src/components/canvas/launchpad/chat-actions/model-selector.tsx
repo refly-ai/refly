@@ -25,6 +25,7 @@ import { useUserStoreShallow } from '@refly/stores';
 import { ArrowDown, Settings } from 'refly-icons';
 import cn from 'classnames';
 import { CreditBillingInfo } from '@refly-packages/ai-workspace-common/components/common/credit-billing-info';
+import { logEvent } from '@refly/telemetry-web';
 
 const { Paragraph } = Typography;
 
@@ -288,11 +289,14 @@ export const ModelSelector = memo(
       ({ key }: { key: string }) => {
         const selectedModel = modelList?.find((model) => model.providerItemId === key);
         if (selectedModel) {
+          logEvent('choose_model', null, {
+            model: selectedModel.name,
+          });
           setModel(selectedModel);
           setDropdownOpen(false);
         }
       },
-      [modelList, setModel, setDropdownOpen],
+      [modelList, setModel, setDropdownOpen, logEvent],
     );
 
     const droplist: MenuProps['items'] = useMemo(() => {

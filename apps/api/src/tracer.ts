@@ -72,6 +72,7 @@ export function initTracer(options: TracerOptions): void {
     if (processor) spanProcessors.push(processor);
   }
 
+  const _instrumentations = [getNodeAutoInstrumentations()];
   const instrumentations = [getNodeAutoInstrumentations()];
 
   sdk = new NodeSDK({

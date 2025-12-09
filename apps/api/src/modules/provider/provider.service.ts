@@ -29,6 +29,7 @@ import {
   safeParseJSON,
   safeStringifyJSON,
   deepmerge,
+  runModuleInitWithTimeoutAndRetry,
   isAutoModel,
   AUTO_MODEL_ID,
 } from '@refly/utils';
@@ -82,27 +83,30 @@ export class ProviderService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    // Initialize monitoring when module starts
-    try {
-      const langfuseConfig = {
-        publicKey: this.configService.get('langfuse.publicKey'),
-        secretKey: this.configService.get('langfuse.secretKey'),
-        baseUrl: this.configService.get('langfuse.baseUrl'),
-        enabled: !!(
-          this.configService.get('langfuse.publicKey') &&
-          this.configService.get('langfuse.secretKey')
-        ),
-      };
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        const langfuseConfig = {
+          publicKey: this.configService.get('langfuse.publicKey'),
+          secretKey: this.configService.get('langfuse.secretKey'),
+          baseUrl: this.configService.get('langfuse.baseUrl'),
+          enabled: !!(
+            this.configService.get('langfuse.publicKey') &&
+            this.configService.get('langfuse.secretKey')
+          ),
+        };
 
-      if (langfuseConfig.enabled) {
-        initializeMonitoring(langfuseConfig);
-        this.logger.log('Langfuse monitoring initialized successfully');
-      } else {
-        this.logger.warn('Langfuse monitoring disabled - missing configuration');
-      }
-    } catch (error) {
-      this.logger.error('Failed to initialize monitoring:', error);
-    }
+        if (langfuseConfig.enabled) {
+          initializeMonitoring(langfuseConfig);
+          this.logger.log('Langfuse monitoring initialized successfully');
+        } else {
+          this.logger.warn('Langfuse monitoring disabled - missing configuration');
+        }
+      },
+      {
+        logger: this.logger,
+        label: 'ProviderService.onModuleInit',
+      },
+    );
 
     // Initialize default embedding provider if none exists
     // await this.initializeDefaultEmbeddingProvider();

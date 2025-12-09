@@ -21,10 +21,12 @@ export default () => ({
     presignExpiry: Number.parseInt(process.env.IMAGE_PRESIGN_EXPIRY) || 15 * 60, // 15 minutes
   },
   redis: {
+    url: process.env.REDIS_URL,
     host: process.env.REDIS_HOST || 'localhost',
     port: Number.parseInt(process.env.REDIS_PORT) || 6379,
     username: process.env.REDIS_USERNAME,
     password: process.env.REDIS_PASSWORD,
+    tls: process.env.REDIS_TLS === 'true' || false,
   },
   drive: {
     storageKeyPrefix: process.env.DRIVE_STORAGE_KEY_PREFIX || 'drive',

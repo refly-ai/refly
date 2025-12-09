@@ -1111,6 +1111,7 @@ export class DriveService {
       select: {
         name: true,
         type: true,
+        storageKey: true,
         updatedAt: true,
       },
       where: { fileId, uid: user.uid, deletedAt: null },
@@ -1120,10 +1121,21 @@ export class DriveService {
       throw new NotFoundException(`Drive file not found: ${fileId}`);
     }
 
+    // Get lastModified from OSS, throw 404 if file doesn't exist in OSS
+    const objectInfo = await this.internalOss.statObject(driveFile.storageKey);
+    if (!objectInfo) {
+      throw new NotFoundException(`Drive file not found in storage: ${fileId}`);
+    }
+
+    // Use the more recent of OSS lastModified and DB updatedAt
+    const dbUpdatedAt = new Date(driveFile.updatedAt);
+    const ossLastModified = objectInfo.lastModified;
+    const lastModified = ossLastModified > dbUpdatedAt ? ossLastModified : dbUpdatedAt;
+
     return {
       contentType: driveFile.type || 'application/octet-stream',
       filename: driveFile.name,
-      lastModified: new Date(driveFile.updatedAt),
+      lastModified,
     };
   }
 
@@ -1224,10 +1236,21 @@ export class DriveService {
     const filename = path.basename(driveFile.storageKey) || 'file';
     const contentType = getSafeMimeType(filename, mime.getType(filename) ?? undefined);
 
+    // Get lastModified from OSS, throw 404 if file doesn't exist in OSS
+    const objectInfo = await this.externalOss.statObject(driveFile.storageKey);
+    if (!objectInfo) {
+      throw new NotFoundException(`Public file not found in storage: ${fileId}`);
+    }
+
+    // Use the more recent of OSS lastModified and DB updatedAt
+    const dbUpdatedAt = new Date(driveFile.updatedAt);
+    const ossLastModified = objectInfo.lastModified;
+    const lastModified = ossLastModified > dbUpdatedAt ? ossLastModified : dbUpdatedAt;
+
     return {
       contentType,
       filename,
-      lastModified: new Date(driveFile.updatedAt),
+      lastModified,
     };
   }
 

@@ -71,6 +71,7 @@ import { CopilotContainer } from './copilot-container';
 import { cn } from '@refly/utils/cn';
 import { ToolStore } from '../settings/tools-config/tools/tool-store';
 import { Close } from 'refly-icons';
+import { logEvent } from '@refly/telemetry-web';
 
 const GRID_SIZE = 10;
 
@@ -1040,6 +1041,22 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
     [reactFlowInstance],
   );
 
+  // Handle node deletion event - ReactFlow's built-in delete handler
+  const handleNodesDelete = useCallback(
+    (deletedNodes: CanvasNode[]) => {
+      if (readonly) return;
+
+      // Log event for skillResponse nodes
+      const skillResponseNodes = deletedNodes.filter((node) => node.type === 'skillResponse');
+      if (skillResponseNodes.length > 0) {
+        for (const node of skillResponseNodes) {
+          logEvent('delete_agent_node', null, { canvasId, nodeId: node.id });
+        }
+      }
+    },
+    [readonly, canvasId, logEvent],
+  );
+
   // Add keyboard event listener
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -1150,6 +1167,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
             nodes={memoizedNodes}
             edges={memoizedEdges}
             onNodesChange={onNodesChange}
+            onNodesDelete={readonly ? undefined : handleNodesDelete}
             onEdgesChange={readonly ? readonlyEdgesChange : onEdgesChange}
             onConnect={readonly ? readonlyConnect : onConnect}
             onConnectStart={readonly ? undefined : temporaryEdgeOnConnectStart}
