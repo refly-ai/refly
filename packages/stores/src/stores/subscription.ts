@@ -6,6 +6,7 @@ import { SubscriptionPlanType } from '@refly/openapi-schema';
 interface SubscriptionState {
   // state
   planType: SubscriptionPlanType;
+  userType: string;
   subscribeModalVisible: boolean;
   storageExceededModalVisible: boolean;
   creditInsufficientModalVisible: boolean;
@@ -15,6 +16,7 @@ interface SubscriptionState {
 
   // method
   setPlanType: (val: SubscriptionPlanType) => void;
+  setUserType: (val: string) => void;
   setSubscribeModalVisible: (val: boolean) => void;
   setStorageExceededModalVisible: (val: boolean) => void;
   setCreditInsufficientModalVisible: (
@@ -28,6 +30,7 @@ interface SubscriptionState {
 export const useSubscriptionStore = create<SubscriptionState>()(
   devtools((set) => ({
     planType: 'free',
+    userType: '',
     subscribeModalVisible: false,
     storageExceededModalVisible: false,
     creditInsufficientModalVisible: false,
@@ -36,6 +39,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     openedFromSettings: false,
 
     setPlanType: (val: SubscriptionPlanType) => set({ planType: val }),
+    setUserType: (val: string) => set({ userType: val }),
     setSubscribeModalVisible: (val: boolean) => set({ subscribeModalVisible: val }),
     setStorageExceededModalVisible: (val: boolean) => set({ storageExceededModalVisible: val }),
     setCreditInsufficientModalVisible: (

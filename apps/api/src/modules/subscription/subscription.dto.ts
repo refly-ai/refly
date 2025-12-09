@@ -74,7 +74,7 @@ export type CheckFileParseUsageResult = {
 
 export function subscriptionPO2DTO(sub: SubscriptionModel): Subscription {
   return {
-    ...pick(sub, ['subscriptionId', 'lookupKey', 'isTrial']),
+    ...pick(sub, ['subscriptionId', 'lookupKey', 'isTrial', 'lookupKey']),
     planType: sub.planType as SubscriptionPlanType,
     interval: sub.interval as SubscriptionInterval,
     status: sub.status as SubscriptionStatus,
