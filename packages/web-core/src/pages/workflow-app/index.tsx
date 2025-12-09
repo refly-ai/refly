@@ -108,6 +108,13 @@ const WorkflowAppPage: React.FC = () => {
     }
   }, [shareId]);
 
+  // Track view_template_detail event when page loads completely
+  useEffect(() => {
+    if (shareId && !isLoading && workflowApp) {
+      logEvent('view_template_detail', null, { shareId });
+    }
+  }, [shareId, isLoading, workflowApp]);
+
   const workflowVariables = useMemo(() => {
     return workflowApp?.variables ?? [];
   }, [workflowApp]);
