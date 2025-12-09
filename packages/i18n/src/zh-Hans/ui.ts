@@ -154,7 +154,7 @@ const translations = {
               'Facebook integrations',
               'Twitter integrations',
             ],
-            duration: '365 DAYS',
+            duration: '1 MONTH',
           },
           '服务支持\n高优邮件支持',
         ],
