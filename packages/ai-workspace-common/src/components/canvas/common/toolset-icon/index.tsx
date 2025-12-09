@@ -159,12 +159,14 @@ const ToolsetIconWithInventory: React.FC<ToolsetIconWithInventoryProps> = React.
       toolset?.mcpServer?.url ??
       '';
 
+    // Check if it's an MCP toolset by type from definition, toolset, or key suffix as fallback
+    const isMcp = toolsetDefinition?.type === 'mcp';
     return (
       <div
         className={cn('flex items-center justify-center overflow-hidden', className)}
         aria-label={`Toolset icon for ${toolsetDefinition?.domain ?? toolset?.toolset?.definition?.domain ?? 'unknown domain'}`}
       >
-        <Favicon url={finalUrl} size={size} />
+        <Favicon url={finalUrl} size={size} isMcp={isMcp} />
       </div>
     );
   },

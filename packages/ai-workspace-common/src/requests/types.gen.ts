@@ -5782,6 +5782,10 @@ export type ModelInfo = {
    */
   creditBilling?: CreditBilling;
   /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
+  /**
    * Input parameter configurations
    */
   inputParameters?: Array<MediaModelParameter>;
@@ -5869,6 +5873,10 @@ export type LLMModelConfig = {
    * Model capabilities
    */
   capabilities?: ModelCapabilities;
+  /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
 };
 
 /**
@@ -5927,6 +5935,10 @@ export type MediaGenerationModelConfig = {
    * Model description
    */
   description?: string;
+  /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
   /**
    * Supported languages for translation
    */
@@ -6524,6 +6536,10 @@ export type ToolsetDefinition = {
    * Toolset key
    */
   key: string;
+  /**
+   * Toolset type (regular, mcp, external_oauth)
+   */
+  type?: GenericToolsetType;
   /**
    * Whether this is a builtin toolset
    */
@@ -7584,6 +7600,10 @@ export type DriveFile = {
    * Drive file update timestamp
    */
   updatedAt?: string;
+  /**
+   * Private access URL for the file (requires authentication)
+   */
+  url?: string;
 };
 
 export type ListDriveFilesResponse = BaseResponse & {

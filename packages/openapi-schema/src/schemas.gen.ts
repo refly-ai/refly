@@ -9225,6 +9225,10 @@ export const ToolsetDefinitionSchema = {
       type: 'string',
       description: 'Toolset key',
     },
+    type: {
+      $ref: '#/components/schemas/GenericToolsetType',
+      description: 'Toolset type (regular, mcp, external_oauth)',
+    },
     builtin: {
       type: 'boolean',
       description: 'Whether this is a builtin toolset',

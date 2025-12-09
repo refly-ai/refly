@@ -7,6 +7,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma.service';
 import {
+  GenericToolsetType,
   ToolsetDefinition,
   ToolsetConfig,
   PollingConfig,
@@ -133,6 +134,7 @@ export class ToolInventoryService implements OnModuleInit {
 
       const definition: ToolsetDefinition = {
         key: item.key,
+        type: item.type as GenericToolsetType,
         domain: item.domain || undefined,
         labelDict: safeParseJSON(item.labelDict) || {},
         descriptionDict: safeParseJSON(item.descriptionDict) || {},

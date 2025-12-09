@@ -6537,6 +6537,10 @@ export type ToolsetDefinition = {
    */
   key: string;
   /**
+   * Toolset type (regular, mcp, external_oauth)
+   */
+  type?: GenericToolsetType;
+  /**
    * Whether this is a builtin toolset
    */
   builtin?: boolean;
