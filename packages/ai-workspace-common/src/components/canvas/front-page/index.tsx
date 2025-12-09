@@ -345,7 +345,7 @@ export const FrontPage = memo(() => {
   }, [templateCategories, templateCategoryId, isLoadingCategories]);
 
   const handleNewWorkflow = useCallback(() => {
-    logEvent('new_workflow', null, {});
+    logEvent('new_workflow', Date.now(), {});
     setIsManualCollapse(false);
     debouncedCreateCanvas();
   }, [debouncedCreateCanvas, setIsManualCollapse, logEvent]);

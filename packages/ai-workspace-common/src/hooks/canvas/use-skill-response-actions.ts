@@ -48,7 +48,7 @@ export const useSkillResponseActions = ({
       return;
     }
 
-    logEvent('run_from_here', null, {
+    logEvent('run_from_here', Date.now(), {
       canvasId,
       nodeId,
     });

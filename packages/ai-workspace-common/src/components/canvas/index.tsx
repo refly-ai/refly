@@ -1050,7 +1050,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       const skillResponseNodes = deletedNodes.filter((node) => node.type === 'skillResponse');
       if (skillResponseNodes.length > 0) {
         for (const node of skillResponseNodes) {
-          logEvent('delete_agent_node', null, { canvasId, nodeId: node.id });
+          logEvent('delete_agent_node', Date.now(), { canvasId, nodeId: node.id });
         }
       }
     },

@@ -123,7 +123,7 @@ const SkillResponseNodePreviewComponent = ({
       },
     });
 
-    logEvent('run_agent_node', null, {
+    logEvent('run_agent_node', Date.now(), {
       canvasId,
       nodeId: node.id,
     });

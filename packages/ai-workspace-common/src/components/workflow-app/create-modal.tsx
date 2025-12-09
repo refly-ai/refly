@@ -449,7 +449,9 @@ export const CreateWorkflowAppModal = ({
       return;
     }
 
-    logEvent('publish_template', Date.now(), {
+    const eventName = isUpdate ? 'update_template' : 'publish_template';
+
+    logEvent(eventName, Date.now(), {
       canvas_id: canvasId,
     });
 

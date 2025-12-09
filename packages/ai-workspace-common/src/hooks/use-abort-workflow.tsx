@@ -83,7 +83,7 @@ export const useAbortWorkflow = ({
       },
       onOk: async () => {
         setIsAborting(true);
-        logEvent('stop_workflow_run', null, {
+        logEvent('stop_workflow_run', Date.now(), {
           canvasId,
           executionId,
         });
