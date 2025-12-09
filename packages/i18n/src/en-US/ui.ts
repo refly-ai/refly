@@ -2003,6 +2003,7 @@ const translations = {
       fileTooLarge: 'File size cannot exceed {{size}}',
       fileParsingUsage:
         'Advanced file parsing (including PDF): {{used}}/{{limit}} pages used today',
+      fileSizeLimit: 'Maximum upload size: {{size}}',
       fromWeblink: 'Paste Weblink',
       selectAll: 'Select All',
       webLinkPlaceholer: 'Enter or paste valid web links, one per line...',

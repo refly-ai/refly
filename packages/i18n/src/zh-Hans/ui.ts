@@ -2058,6 +2058,7 @@ const translations = {
       unlockUploadLimit: '解锁上传限制',
       fileTooLarge: '文件大小不能超过 {{size}}',
       fileParsingUsage: '高级文件解析（包括 PDF）：今日已使用 {{used}}/{{limit}} 页',
+      fileSizeLimit: '最大上传大小：{{size}}',
       fromWeblink: '导入网页链接',
       selectAll: '全选',
       webLinkPlaceholer: '输入或粘贴有效的网页链接，每行一个....',
