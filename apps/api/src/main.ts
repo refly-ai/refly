@@ -4,8 +4,6 @@ import { join } from 'node:path';
 import { setMaxListeners } from 'node:events';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import session, { SessionOptions } from 'express-session';
-import RedisStore from 'connect-redis';
 
 // Increase global AbortSignal listener limit to avoid warnings from concurrent LLM requests
 // OpenAI SDK adds abort listeners per request; default limit of 10 is too low for parallel calls
@@ -17,7 +15,6 @@ import { Logger } from 'nestjs-pino';
 
 import { AppModule } from './modules/app.module';
 import { ConfigService } from '@nestjs/config';
-import { isDesktop } from './utils/runtime';
 
 import { setTraceID } from './utils/middleware/set-trace-id';
 import { GlobalExceptionFilter } from './utils/filters/global-exception.filter';
@@ -71,49 +68,6 @@ async function bootstrap() {
 
   app.use(setTraceID);
   app.use(helmet());
-
-  // Session middleware for OAuth state management with Redis storage
-  const sessionConfig: SessionOptions = {
-    secret: configService.get('session.secret', 'your-super-secret-key'),
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    },
-  };
-
-  // Create Redis client directly for session storage
-  if (!isDesktop()) {
-    try {
-      const Redis = require('ioredis');
-      const redisClient = new Redis({
-        host: configService.get('redis.host'),
-        port: configService.get('redis.port'),
-        username: configService.get('redis.username'),
-        password: configService.get('redis.password'),
-      });
-
-      logger.log('Configuring session with Redis storage');
-
-      redisClient.on('error', (err) => {
-        logger.error(`Session Redis client error: ${err.message}`, err.stack);
-      });
-
-      sessionConfig.store = new RedisStore({
-        client: redisClient,
-        prefix: 'session:',
-        ttl: 24 * 60 * 60, // 24 hours in seconds
-      });
-    } catch (error) {
-      logger.error('Failed to create Redis client for session storage, using memory store', error);
-    }
-  } else {
-    logger.warn('Desktop mode: using default memory store for sessions');
-  }
-
-  app.use(session(sessionConfig));
 
   app.enableCors({
     origin: configService.get('origin').split(','),

@@ -8,7 +8,7 @@ import {
   User,
 } from '@refly/openapi-schema';
 import { Subscription } from '@prisma/client';
-import { pick, safeParseJSON } from '@refly/utils';
+import { pick, safeParseJSON, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { RedisService } from '../common/redis.service';
 import { OperationTooFrequent, ParamsError } from '@refly/errors';
@@ -30,27 +30,37 @@ export class UserService implements OnModuleInit {
     private providerService: ProviderService,
   ) {}
 
-  async onModuleInit() {
-    if (isDesktop()) {
-      const localUid = this.config.get('local.uid');
-      const localUser = await this.prisma.user.findUnique({
-        where: { uid: localUid },
-      });
-      if (!localUser) {
-        const username = os.userInfo().username;
-        await this.prisma.user.upsert({
-          where: { name: username },
-          create: {
-            uid: localUid,
-            name: username,
-            nickname: username,
-          },
-          update: {
-            uid: localUid,
-          },
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        if (!isDesktop()) {
+          return;
+        }
+
+        const localUid = this.config.get('local.uid');
+        const localUser = await this.prisma.user.findUnique({
+          where: { uid: localUid },
         });
-      }
-    }
+        if (!localUser) {
+          const username = os.userInfo().username;
+          await this.prisma.user.upsert({
+            where: { name: username },
+            create: {
+              uid: localUid,
+              name: username,
+              nickname: username,
+            },
+            update: {
+              uid: localUid,
+            },
+          });
+        }
+      },
+      {
+        logger: this.logger,
+        label: 'UserService.onModuleInit',
+      },
+    );
   }
 
   async getUserSettings(user: User) {

@@ -21,6 +21,7 @@ import { SiderMenuSettingList } from '../../sider-menu-setting-list';
 import { Subscription, Account } from 'refly-icons';
 import { Avatar, Divider } from 'antd';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import { logEvent } from '@refly/telemetry-web';
 
 // User avatar component for displaying user profile
 const UserAvatar = React.memo(
@@ -344,9 +345,10 @@ export const FrontPage = memo(() => {
   }, [templateCategories, templateCategoryId, isLoadingCategories]);
 
   const handleNewWorkflow = useCallback(() => {
+    logEvent('new_workflow', null, {});
     setIsManualCollapse(false);
     debouncedCreateCanvas();
-  }, [debouncedCreateCanvas, setIsManualCollapse]);
+  }, [debouncedCreateCanvas, setIsManualCollapse, logEvent]);
 
   const handleTemplateCategoryClick = useCallback(
     (categoryId: string) => {

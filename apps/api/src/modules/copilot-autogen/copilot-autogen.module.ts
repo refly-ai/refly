@@ -7,12 +7,20 @@ import { CanvasModule } from '../canvas/canvas.module';
 import { ToolModule } from '../tool/tool.module';
 import { ProviderModule } from '../provider/provider.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
-import { PrismaService } from '../common/prisma.service';
+import { CommonModule } from '../common/common.module';
 
 @Module({
-  imports: [SkillModule, ActionModule, CanvasModule, ToolModule, ProviderModule, CanvasSyncModule],
+  imports: [
+    CommonModule,
+    SkillModule,
+    ActionModule,
+    CanvasModule,
+    ToolModule,
+    ProviderModule,
+    CanvasSyncModule,
+  ],
   controllers: [CopilotAutogenController],
-  providers: [CopilotAutogenService, PrismaService],
+  providers: [CopilotAutogenService],
   exports: [CopilotAutogenService],
 })
 export class CopilotAutogenModule {}

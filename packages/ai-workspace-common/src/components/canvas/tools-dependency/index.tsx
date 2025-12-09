@@ -3,10 +3,10 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Close, Mcp, Cancelled } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
 import {
-  useListTools,
+  useListUserTools,
   useGetCanvasData,
 } from '@refly-packages/ai-workspace-common/queries/queries';
-import { GenericToolset, RawCanvasData, ToolsetDefinition } from '@refly/openapi-schema';
+import { GenericToolset, RawCanvasData, ToolsetDefinition, UserTool } from '@refly/openapi-schema';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import React from 'react';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
@@ -20,20 +20,33 @@ import { useOpenInstallTool } from '@refly-packages/ai-workspace-common/hooks/us
 import { useOpenInstallMcp } from '@refly-packages/ai-workspace-common/hooks/use-open-install-mcp';
 import { IoWarningOutline } from 'react-icons/io5';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
 
-const isToolsetInstalled = (
-  toolset: GenericToolset,
-  installedToolsets: GenericToolset[],
-): boolean => {
-  return installedToolsets.some((t) => {
-    if (toolset.type === 'regular') {
-      return toolset.builtin || t.toolset?.key === toolset.toolset?.key;
-    } else if (toolset.type === 'mcp') {
-      return t.name === toolset.name;
-    }
-    return false;
-  });
+/**
+ * Check if a toolset is authorized/installed
+ * - External OAuth tools: need authorization (check userTools.authorized)
+ * - Other tools (builtin, non-OAuth): always available, no installation needed
+ */
+const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): boolean => {
+  // MCP servers need to be checked separately
+  if (toolset.type === 'mcp') {
+    return userTools.some((t) => t.toolset?.name === toolset.name);
+  }
+
+  // Builtin tools are always available
+  if (toolset.builtin) {
+    return true;
+  }
+
+  // Find matching user tool by key
+  const matchingUserTool = userTools.find((t) => t.key === toolset.toolset?.key);
+
+  // If not in userTools list, it's not an external OAuth tool, so it's available
+  if (!matchingUserTool) {
+    return true;
+  }
+
+  // For external OAuth tools, check authorized status
+  return matchingUserTool.authorized ?? false;
 };
 
 interface ReferencedNode {
@@ -282,7 +295,7 @@ const ToolsDependencyContent = React.memo(
     activeTab,
     setActiveTab,
     currentTools,
-    installedToolsets,
+    userTools,
     toolsetDefinitions,
     setOpen,
     isLogin,
@@ -298,7 +311,7 @@ const ToolsDependencyContent = React.memo(
     activeTab: string;
     setActiveTab: (value: string) => void;
     currentTools: Array<{ toolset: any; referencedNodes: any[] }>;
-    installedToolsets: any[];
+    userTools: UserTool[];
     toolsetDefinitions: ToolsetDefinition[];
     setOpen: (value: boolean) => void;
     isLogin: boolean;
@@ -395,7 +408,7 @@ const ToolsDependencyContent = React.memo(
                 <EmptyContent searchTerm={searchTerm} />
               ) : (
                 currentTools.map(({ toolset, referencedNodes }) => {
-                  const isInstalled = isToolsetInstalled(toolset, installedToolsets);
+                  const isInstalled = isToolsetAuthorized(toolset, userTools);
                   const toolsetDefinition = getToolsetDefinition(toolset);
                   const description =
                     toolset?.type === 'mcp'
@@ -484,25 +497,19 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
 
   const nodes = canvasData?.nodes || [];
 
-  const { data, isLoading: toolsLoading } = useListTools({ query: { enabled: true } }, [], {
+  const { data: userToolsData, isLoading: toolsLoading } = useListUserTools({}, [], {
     enabled: isLogin,
     refetchOnWindowFocus: false,
   });
-  const { data: toolsetInventoryData } = useListToolsetInventory({}, null, {
-    enabled: true,
-  });
-  const toolsetDefinitions = toolsetInventoryData?.data ?? [];
 
-  const installedToolsets = data?.data ?? [];
+  const userTools = userToolsData?.data ?? [];
 
-  const [_, setSelectedToolsets] = useState<GenericToolset[]>([]);
-
-  // Set initial selected toolsets when installedToolsets data is loaded
-  useEffect(() => {
-    if (installedToolsets?.length > 0) {
-      setSelectedToolsets(installedToolsets);
-    }
-  }, [installedToolsets]);
+  // Build toolset definitions from userTools for display purposes
+  const toolsetDefinitions = useMemo(() => {
+    return userTools
+      .map((ut) => ut.definition || ut.toolset?.toolset?.definition)
+      .filter(Boolean) as ToolsetDefinition[];
+  }, [userTools]);
 
   // Process canvas data to find tool dependencies
   const toolsetsWithNodes = useMemo(() => {
@@ -520,21 +527,23 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
   }, [toolsetsWithNodes, searchTerm]);
 
   const categorizedTools = useMemo(() => {
-    const installed: ToolWithNodes[] = [];
-    const uninstalled: ToolWithNodes[] = [];
+    const authorized: ToolWithNodes[] = [];
+    const unauthorized: ToolWithNodes[] = [];
 
     for (const toolWithNodes of filteredToolsets) {
-      const isInstalled = isToolsetInstalled(toolWithNodes.toolset, installedToolsets);
+      const isAuthorized = isToolsetAuthorized(toolWithNodes.toolset, userTools);
 
-      // Find the complete toolset data from installedToolsets
+      // Find the complete toolset data from userTools
       let completeToolset = toolWithNodes.toolset;
-      const matchingInstalled = installedToolsets?.find(
-        (installedTool) => installedTool.id === toolWithNodes.toolset.id,
+      const matchingUserTool = userTools.find(
+        (ut) =>
+          ut.key === toolWithNodes.toolset.toolset?.key ||
+          ut.toolset?.id === toolWithNodes.toolset.id,
       );
 
-      // If we found a matching installed toolset with more complete data, use it
-      if (matchingInstalled?.toolset?.definition) {
-        completeToolset = matchingInstalled;
+      // If we found a matching user tool with more complete data, use it
+      if (matchingUserTool?.toolset?.toolset?.definition) {
+        completeToolset = matchingUserTool.toolset;
       }
 
       const enhancedToolWithNodes = {
@@ -542,23 +551,25 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
         toolset: completeToolset,
       };
 
-      if (isInstalled) {
-        installed.push(enhancedToolWithNodes);
+      if (isAuthorized) {
+        authorized.push(enhancedToolWithNodes);
       } else {
-        uninstalled.push(enhancedToolWithNodes);
+        unauthorized.push(enhancedToolWithNodes);
       }
     }
 
     // Also enhance the 'all' array
     const enhancedAll = filteredToolsets.map((toolWithNodes) => {
-      const matchingInstalled = installedToolsets?.find(
-        (installedTool) => installedTool.id === toolWithNodes.toolset.id,
+      const matchingUserTool = userTools.find(
+        (ut) =>
+          ut.key === toolWithNodes.toolset.toolset?.key ||
+          ut.toolset?.id === toolWithNodes.toolset.id,
       );
 
-      if (matchingInstalled?.toolset?.definition) {
+      if (matchingUserTool?.toolset?.toolset?.definition) {
         return {
           ...toolWithNodes,
-          toolset: matchingInstalled,
+          toolset: matchingUserTool.toolset,
         };
       }
 
@@ -567,10 +578,10 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
 
     return {
       all: enhancedAll,
-      installed,
-      uninstalled,
+      installed: authorized,
+      uninstalled: unauthorized,
     };
-  }, [filteredToolsets, installedToolsets]);
+  }, [filteredToolsets, userTools]);
 
   const currentTools = categorizedTools[activeTab as keyof typeof categorizedTools] || [];
 
@@ -580,9 +591,9 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
     if (!isLogin) return 0;
     if (!toolsetsWithNodes.length) return 0;
     return toolsetsWithNodes.filter((tool) => {
-      return !isToolsetInstalled(tool.toolset, installedToolsets);
+      return !isToolsetAuthorized(tool.toolset, userTools);
     }).length;
-  }, [isLogin, installedToolsets, toolsetsWithNodes]);
+  }, [isLogin, userTools, toolsetsWithNodes]);
 
   const options = useMemo(() => {
     return [
@@ -680,7 +691,7 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           currentTools={currentTools}
-          installedToolsets={installedToolsets}
+          userTools={userTools}
           toolsetDefinitions={toolsetDefinitions}
           totalCount={toolsetsWithNodes.length}
           setOpen={setOpen}
@@ -726,16 +737,19 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
 
   const nodes = shareData?.nodes || canvasResponse?.data?.nodes || [];
 
-  const { data, isLoading: toolsLoading } = useListTools({ query: { enabled: true } }, [], {
+  const { data: userToolsData, isLoading: toolsLoading } = useListUserTools({}, [], {
     enabled: isLogin,
     refetchOnWindowFocus: false,
   });
-  const { data: toolsetInventoryData } = useListToolsetInventory({}, null, {
-    enabled: true,
-  });
-  const toolsetDefinitions = toolsetInventoryData?.data ?? [];
 
-  const installedToolsets = data?.data ?? [];
+  const userTools = userToolsData?.data ?? [];
+
+  // Build toolset definitions from userTools for display purposes
+  const toolsetDefinitions = useMemo(() => {
+    return userTools
+      .map((ut) => ut.definition || ut.toolset?.toolset?.definition)
+      .filter(Boolean) as ToolsetDefinition[];
+  }, [userTools]);
 
   // Process canvas data to find tool dependencies
   const toolsetsWithNodes = useMemo(() => {
@@ -753,21 +767,23 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
   }, [toolsetsWithNodes, searchTerm]);
 
   const categorizedTools = useMemo(() => {
-    const installed: ToolWithNodes[] = [];
-    const uninstalled: ToolWithNodes[] = [];
+    const authorized: ToolWithNodes[] = [];
+    const unauthorized: ToolWithNodes[] = [];
 
     for (const toolWithNodes of filteredToolsets) {
-      const isInstalled = isToolsetInstalled(toolWithNodes.toolset, installedToolsets);
+      const isAuthorized = isToolsetAuthorized(toolWithNodes.toolset, userTools);
 
-      // Find the complete toolset data from installedToolsets
+      // Find the complete toolset data from userTools
       let completeToolset = toolWithNodes.toolset;
-      const matchingInstalled = installedToolsets?.find(
-        (installedTool) => installedTool.id === toolWithNodes.toolset.id,
+      const matchingUserTool = userTools.find(
+        (ut) =>
+          ut.key === toolWithNodes.toolset.toolset?.key ||
+          ut.toolset?.id === toolWithNodes.toolset.id,
       );
 
-      // If we found a matching installed toolset with more complete data, use it
-      if (matchingInstalled?.toolset?.definition) {
-        completeToolset = matchingInstalled;
+      // If we found a matching user tool with more complete data, use it
+      if (matchingUserTool?.toolset?.toolset?.definition) {
+        completeToolset = matchingUserTool.toolset;
       }
 
       const enhancedToolWithNodes = {
@@ -775,23 +791,25 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
         toolset: completeToolset,
       };
 
-      if (isInstalled) {
-        installed.push(enhancedToolWithNodes);
+      if (isAuthorized) {
+        authorized.push(enhancedToolWithNodes);
       } else {
-        uninstalled.push(enhancedToolWithNodes);
+        unauthorized.push(enhancedToolWithNodes);
       }
     }
 
     // Also enhance the 'all' array
     const enhancedAll = filteredToolsets.map((toolWithNodes) => {
-      const matchingInstalled = installedToolsets?.find(
-        (installedTool) => installedTool.id === toolWithNodes.toolset.id,
+      const matchingUserTool = userTools.find(
+        (ut) =>
+          ut.key === toolWithNodes.toolset.toolset?.key ||
+          ut.toolset?.id === toolWithNodes.toolset.id,
       );
 
-      if (matchingInstalled?.toolset?.definition) {
+      if (matchingUserTool?.toolset?.toolset?.definition) {
         return {
           ...toolWithNodes,
-          toolset: matchingInstalled,
+          toolset: matchingUserTool.toolset,
         };
       }
 
@@ -800,10 +818,10 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
 
     return {
       all: enhancedAll,
-      installed,
-      uninstalled,
+      installed: authorized,
+      uninstalled: unauthorized,
     };
-  }, [filteredToolsets, installedToolsets]);
+  }, [filteredToolsets, userTools]);
 
   const currentTools = categorizedTools[activeTab as keyof typeof categorizedTools] || [];
 
@@ -811,9 +829,9 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
     if (!isLogin) return 0;
     if (!toolsetsWithNodes.length) return 0;
     return toolsetsWithNodes.filter((tool) => {
-      return !isToolsetInstalled(tool.toolset, installedToolsets);
+      return !isToolsetAuthorized(tool.toolset, userTools);
     }).length;
-  }, [isLogin, installedToolsets, toolsetsWithNodes]);
+  }, [isLogin, userTools, toolsetsWithNodes]);
 
   const options = useMemo(() => {
     return [
@@ -870,7 +888,7 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           currentTools={currentTools}
-          installedToolsets={installedToolsets}
+          userTools={userTools}
           toolsetDefinitions={toolsetDefinitions}
           totalCount={toolsetsWithNodes.length}
           setOpen={setOpen}

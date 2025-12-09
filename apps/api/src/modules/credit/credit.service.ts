@@ -934,7 +934,7 @@ export class CreditService {
     const modelUsageDetails: ModelUsageDetail[] = [];
 
     for (const step of creditUsageSteps) {
-      const { usage, creditBilling } = step;
+      const { usage, creditBilling, billingModelName } = step;
 
       const inputTokens = usage.inputTokens || 0;
       const outputTokens = usage.outputTokens || 0;
@@ -972,9 +972,12 @@ export class CreditService {
 
       totalCreditCost += creditCost;
 
-      // Add to model usage details - model name, total tokens, and credit cost
+      // Add to model usage details
+      // modelName: user-facing name (Auto or direct model selection)
+      // actualModelName: real model used for execution (from usage.modelName)
       modelUsageDetails.push({
-        modelName: usage.modelName,
+        modelName: billingModelName,
+        actualModelName: usage.modelName,
         inputTokens,
         outputTokens,
         creditCost: creditCost,

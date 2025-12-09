@@ -44,6 +44,7 @@ const ConfigureTabComponent = ({
     modelInfo,
     contextItems,
     selectedToolsets,
+    setQuery,
     setModelInfo,
     setContextItems,
     setSelectedToolsets,
@@ -139,6 +140,7 @@ const ConfigureTabComponent = ({
           trigger={['click']}
           contextItems={contextItems}
           disabled={disabled}
+          defaultScene="agent"
         />
       </div>
 
@@ -203,6 +205,7 @@ const ConfigureTabComponent = ({
               contextItems={contextItems}
               setContextItems={setContextItems}
               setSelectedToolsets={setSelectedToolsets}
+              setQuery={setQuery}
               upstreamAgentNodes={upstreamAgentNodes}
               removeUpstreamAgent={removeUpstreamAgent}
               disabled={disabled}

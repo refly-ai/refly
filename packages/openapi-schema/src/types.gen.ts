@@ -5798,6 +5798,10 @@ export type ModelInfo = {
    */
   creditBilling?: CreditBilling;
   /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
+  /**
    * Input parameter configurations
    */
   inputParameters?: Array<MediaModelParameter>;
@@ -5885,6 +5889,10 @@ export type LLMModelConfig = {
    * Model capabilities
    */
   capabilities?: ModelCapabilities;
+  /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
 };
 
 /**
@@ -5943,6 +5951,10 @@ export type MediaGenerationModelConfig = {
    * Model description
    */
   description?: string;
+  /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
   /**
    * Supported languages for translation
    */

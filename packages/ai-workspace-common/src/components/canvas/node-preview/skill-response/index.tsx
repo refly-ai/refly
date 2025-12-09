@@ -24,6 +24,7 @@ import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
 import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
 import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
+import { logEvent } from '@refly/telemetry-web';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -120,6 +121,11 @@ const SkillResponseNodePreviewComponent = ({
         status: 'waiting',
         version: nextVersion,
       },
+    });
+
+    logEvent('run_agent_node', null, {
+      canvasId,
+      nodeId: node.id,
     });
 
     invokeAction(

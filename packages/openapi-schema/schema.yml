@@ -9924,6 +9924,9 @@ components:
         creditBilling:
           $ref: '#/components/schemas/CreditBilling'
           description: Credit billing info
+        tooltip:
+          type: string
+          description: Tooltip text for the model (e.g., "Smart Routing")
         inputParameters:
             type: array
             description: Input parameter configurations
@@ -10010,6 +10013,9 @@ components:
         capabilities:
           description: Model capabilities
           $ref: '#/components/schemas/ModelCapabilities'
+        tooltip:
+          type: string
+          description: Tooltip text for the model (e.g., "Smart Routing")
 
     MediaModelParameter:
       type: object
@@ -10083,6 +10089,9 @@ components:
         description:
           type: string
           description: Model description
+        tooltip:
+          type: string
+          description: Tooltip text for the model (e.g., "Smart Routing")
         supportedLanguages:
           type: array
           description: Supported languages for translation

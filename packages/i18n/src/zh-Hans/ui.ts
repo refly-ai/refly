@@ -143,21 +143,19 @@ const translations = {
           '每月积分\n2000点',
           //'首次订阅额外赠送\n2000点',
           '访问丰富的工具库',
-          /*{
+          {
             name: '免积分使用工具',
             type: 'pointFreeTools',
             items: [
-              'Gemini 3.0 Nano Banana pro',
+              'Nano Banana pro',
               'Seedream 4.0',
-              'Seedance 1.5',
-              'VibeVoice',
-              'Instagram',
-              'TikTok',
-              'Reddit',
-              'X',
+              'Fish Audio',
+              'Instagram integrations',
+              'Facebook integrations',
+              'Twitter integrations',
             ],
             duration: '365 DAYS',
-          },*/
+          },
           '服务支持\n高优邮件支持',
         ],
       },
