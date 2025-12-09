@@ -38,6 +38,9 @@ const translations = {
       remainingCredits: '剩余积分',
       regularCredits: '常规积分',
       templateEarningsCredits: '收益积分',
+      availableCreditsDescription: '您可用于运行工作流的积分总数',
+      regularCreditsDescription: '通过购买、任务、活动或系统赠送等方式获得的积分',
+      templateEarningsCreditsDescription: '他人运行你的模板后获得的积分收益',
       knowledgeBaseFiles: '知识库文件',
       creditUsageDetails: '积分使用明细',
       creditRechargeDetails: '积分获取明细',
@@ -128,7 +131,7 @@ const translations = {
         title: 'PRO',
       },
       plus: {
-        title: 'PLUS',
+        title: 'Plus',
         titleCn: 'Plus',
         description: '适合运行高频自动化任务',
         priceMonthly: '$ {{price}}/月',
@@ -140,21 +143,19 @@ const translations = {
           '每月积分\n2000点',
           //'首次订阅额外赠送\n2000点',
           '访问丰富的工具库',
-          /*{
+          {
             name: '免积分使用工具',
             type: 'pointFreeTools',
             items: [
-              'Gemini 3.0 Nano Banana pro',
+              'Nano Banana pro',
               'Seedream 4.0',
-              'Seedance 1.5',
-              'VibeVoice',
-              'Instagram',
-              'TikTok',
-              'Reddit',
-              'X',
+              'Fish Audio',
+              'Instagram integrations',
+              'Facebook integrations',
+              'Twitter integrations',
             ],
-            duration: '365 DAYS',
-          },*/
+            duration: '1 MONTH',
+          },
           '服务支持\n高优邮件支持',
         ],
       },
@@ -421,6 +422,7 @@ const translations = {
     actions: '操作',
     addedToCanvas: '已添加到画布',
     operationFailed: '操作失败',
+    confirmClose: '确认关闭',
     enable: '启用',
     disable: '禁用',
     enabled: '已启用',
@@ -958,13 +960,18 @@ const translations = {
       buttonText: '新建工作流',
       buttonDescription: '新建空白工作流',
     },
+    tutorial: {
+      title: '教程',
+      buttonText: '5分钟上手教程',
+      buttonDescription: '如何构建一个AI 驱动的工作流',
+    },
     recentWorkflows: {
       title: '近期工作流',
       edit: '编辑',
       more: '更多',
     },
     template: {
-      title: '社区模板',
+      title: '模板市场',
       endMessage: {
         title: '没有找到你需要的工作流自动化模板？',
         subtitle: '加入我们的 Discord 社区，告诉我们你想要什么',
@@ -1030,9 +1037,9 @@ const translations = {
     exportSuccess: '文档导出成功',
     exportFailed: '文档导出失败',
     exportAs: '导出为',
-    exportDocumentToMarkdown: '导出为 Markdown',
-    exportDocumentToDocx: '导出为 Docx',
-    exportDocumentToPdf: '导出为 PDF',
+    exportDocumentToMarkdown: 'Markdown 文档 (.md)',
+    exportDocumentToDocx: 'Word 文档 (.docx)',
+    exportDocumentToPdf: 'PDF 文档 (.pdf)',
     openWebpage: '打开原网页',
     downloadFile: '下载文件',
     canvasListModal: {
@@ -1980,6 +1987,10 @@ const translations = {
       defaultPlaceholder: '描述你想要生成的内容...',
       createUserInput: '创建输入项 "{{userInputName}}"',
       unauthorized: '授权',
+      oauthSuccess: '工具授权成功',
+      oauthFailed: '工具授权失败',
+      oauthTimeout: '授权超时，请重试',
+      authorizing: '授权中...',
     },
     toolsDepencency: {
       title: '工具依赖',
@@ -2058,6 +2069,7 @@ const translations = {
       unlockUploadLimit: '解锁上传限制',
       fileTooLarge: '文件大小不能超过 {{size}}',
       fileParsingUsage: '高级文件解析（包括 PDF）：今日已使用 {{used}}/{{limit}} 页',
+      fileSizeLimit: '最大上传大小：{{size}}',
       fromWeblink: '导入网页链接',
       selectAll: '全选',
       webLinkPlaceholer: '输入或粘贴有效的网页链接，每行一个....',
@@ -3272,9 +3284,12 @@ const translations = {
       title: '你的工作流创作伙伴',
       subtitle: '一起探索好奇心',
       youCanTry: '获取新灵感',
-      query1: '帮我追踪并分析巴菲特本季度的美股持仓变动。',
-      query2: '帮我抓取今天的 Product Hunt Top 10，生成总结文档和产品播客，并把链接发到我的邮箱。',
-      query3: '帮我生成一组新海诚风格、讲述“从小到大”成长故事的序列动画场景。',
+      query1:
+        '使用13F数据工具研究沃伦·巴菲特在2025年第二季度与第三季度的持仓情况，列出所有增持和减持的股票，并生成一份包含简易图表的摘要。',
+      query2:
+        '使用 Perplexity 获取昨天 Product Hunt 排行榜前五的产品，创建一份摘要文档和一集播客，并通过电子邮件发送给我。',
+      query3:
+        '帮我生成一个由五张图像组成的动画系列，采用新海诚的风格，主题为“成长”，并使用图像生成工具创建所有图像。',
     },
     sessionDetail: {
       thinking: '思考中',
@@ -3690,6 +3705,7 @@ const translations = {
     validationNoUserInputs: '请在发布模板前添加输入项。',
     validationNoAgents: '请在发布模板前添加 Agent 节点。',
     validationAgentsNotRun: '请在发布模板前确保所有 Agent 节点运行成功。',
+    confirmCloseContent: '关闭后未保存的内容将丢失，确定要关闭吗？',
     resultPreview: '产物预览',
     notLoggedIn: '未登录',
     run: {

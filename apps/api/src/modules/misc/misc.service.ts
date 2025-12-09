@@ -25,7 +25,12 @@ import { OSS_EXTERNAL, OSS_INTERNAL, ObjectStorageService } from '../common/obje
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { ConfigService } from '@nestjs/config';
-import { omit, scrapeWeblink, getSafeMimeType } from '@refly/utils';
+import {
+  omit,
+  scrapeWeblink,
+  getSafeMimeType,
+  runModuleInitWithTimeoutAndRetry,
+} from '@refly/utils';
 import { QUEUE_IMAGE_PROCESSING, QUEUE_CLEAN_STATIC_FILES, streamToBuffer } from '../../utils';
 import {
   CanvasNotFoundError,
@@ -47,6 +52,9 @@ import { RedisService } from '../common/redis.service';
 export class MiscService implements OnModuleInit {
   private logger = new Logger(MiscService.name);
 
+  // Timeout for initialization operations (30 seconds)
+  private readonly INIT_TIMEOUT = 30000;
+
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
@@ -57,10 +65,27 @@ export class MiscService implements OnModuleInit {
     @Optional() @InjectQueue(QUEUE_CLEAN_STATIC_FILES) private cleanStaticFilesQueue?: Queue,
   ) {}
 
-  async onModuleInit() {
-    if (this.cleanStaticFilesQueue) {
-      await this.setupCleanStaticFilesCronjob();
-    }
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        if (!this.cleanStaticFilesQueue) {
+          this.logger.log('Clean static files queue not available, skipping cronjob setup');
+          return;
+        }
+
+        try {
+          await this.setupCleanStaticFilesCronjob();
+        } catch (error) {
+          this.logger.error(`Failed to setup clean static files cronjob: ${error}`);
+          throw error;
+        }
+      },
+      {
+        logger: this.logger,
+        label: 'MiscService.onModuleInit',
+        timeoutMs: this.INIT_TIMEOUT,
+      },
+    );
   }
 
   async fileStorageExists(
@@ -782,10 +807,23 @@ export class MiscService implements OnModuleInit {
       throw new NotFoundException();
     }
 
+    const visibility = file.visibility as FileVisibility;
+
+    // Get lastModified from OSS, throw 404 if file doesn't exist in OSS
+    const objectInfo = await this.minioClient(visibility).statObject(storageKey);
+    if (!objectInfo) {
+      throw new NotFoundException(`File not found in storage: ${storageKey}`);
+    }
+
+    // Use the more recent of OSS lastModified and DB updatedAt
+    const dbUpdatedAt = new Date(file.updatedAt);
+    const ossLastModified = objectInfo.lastModified;
+    const lastModified = ossLastModified > dbUpdatedAt ? ossLastModified : dbUpdatedAt;
+
     return {
       contentType: file.contentType,
-      lastModified: new Date(file.updatedAt),
-      visibility: file.visibility as FileVisibility,
+      lastModified,
+      visibility,
     };
   }
 
@@ -820,18 +858,25 @@ export class MiscService implements OnModuleInit {
   async getExternalFileMetadata(
     storageKey: string,
   ): Promise<{ contentType: string; lastModified: Date }> {
+    // Get lastModified from OSS, throw 404 if file doesn't exist in OSS
+    const objectInfo = await this.externalOss.statObject(storageKey);
+    if (!objectInfo) {
+      throw new NotFoundException(`File not found in storage: ${storageKey}`);
+    }
+
     const stat = await this.prisma.staticFile.findFirst({
       select: { contentType: true, updatedAt: true },
       where: { storageKey, deletedAt: null },
     });
 
-    if (!stat) {
-      throw new NotFoundException(`File with key ${storageKey} not found`);
-    }
+    // Use the more recent of OSS lastModified and DB updatedAt
+    const dbUpdatedAt = stat?.updatedAt ? new Date(stat.updatedAt) : new Date(0);
+    const ossLastModified = objectInfo.lastModified;
+    const lastModified = ossLastModified > dbUpdatedAt ? ossLastModified : dbUpdatedAt;
 
     return {
-      contentType: stat.contentType ?? 'application/octet-stream',
-      lastModified: new Date(stat.updatedAt),
+      contentType: stat?.contentType ?? 'application/octet-stream',
+      lastModified,
     };
   }
 

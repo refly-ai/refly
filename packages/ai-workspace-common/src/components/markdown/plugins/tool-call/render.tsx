@@ -135,23 +135,35 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
 
   // Format the content for result
   const resultContent = useMemo(() => {
+    let rawResult: string | undefined;
+
     // First try props data
     if (props['data-tool-result']) {
-      return props['data-tool-result'];
-    }
-
-    // Fall back to API data
-    if (fetchedData?.data?.result?.error) {
+      rawResult = props['data-tool-result'];
+    } else if (fetchedData?.data?.result?.error) {
+      // Fall back to API data - error
       return fetchedData.data.result.error;
+    } else if (fetchedData?.data?.result?.output) {
+      // Fall back to API data - output
+      rawResult =
+        typeof fetchedData.data.result.output === 'string'
+          ? fetchedData.data.result.output
+          : JSON.stringify(fetchedData.data.result.output, null, 2);
     }
 
-    if (fetchedData?.data?.result?.output) {
-      return typeof fetchedData.data.result.output === 'string'
-        ? fetchedData.data.result.output
-        : JSON.stringify(fetchedData.data.result.output, null, 2);
+    if (!rawResult) {
+      return '';
     }
 
-    return '';
+    // Try to parse and re-stringify to get proper formatting
+    // This handles the case where the result is a double-escaped JSON string
+    try {
+      const parsed = JSON.parse(rawResult);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      // If parsing fails, return the raw result as-is
+      return rawResult;
+    }
   }, [
     props['data-tool-error'],
     props['data-tool-result'],

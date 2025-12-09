@@ -28,6 +28,7 @@ import {
   providerInfoList,
   safeParseJSON,
   deepmerge,
+  runModuleInitWithTimeoutAndRetry,
 } from '@refly/utils';
 import {
   ProviderNotFoundError,
@@ -55,6 +56,7 @@ import { ConfigService } from '@nestjs/config';
 import { VectorSearchService } from '../common/vector-search';
 import { VECTOR_SEARCH } from '../common/vector-search/tokens';
 import { providerItemPO2DTO } from './provider.dto';
+import { AutoModelRouter } from './auto-model-router.service';
 
 interface GlobalProviderConfig {
   providers: ProviderModel[];
@@ -79,27 +81,30 @@ export class ProviderService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    // Initialize monitoring when module starts
-    try {
-      const langfuseConfig = {
-        publicKey: this.configService.get('langfuse.publicKey'),
-        secretKey: this.configService.get('langfuse.secretKey'),
-        baseUrl: this.configService.get('langfuse.baseUrl'),
-        enabled: !!(
-          this.configService.get('langfuse.publicKey') &&
-          this.configService.get('langfuse.secretKey')
-        ),
-      };
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        const langfuseConfig = {
+          publicKey: this.configService.get('langfuse.publicKey'),
+          secretKey: this.configService.get('langfuse.secretKey'),
+          baseUrl: this.configService.get('langfuse.baseUrl'),
+          enabled: !!(
+            this.configService.get('langfuse.publicKey') &&
+            this.configService.get('langfuse.secretKey')
+          ),
+        };
 
-      if (langfuseConfig.enabled) {
-        initializeMonitoring(langfuseConfig);
-        this.logger.log('Langfuse monitoring initialized successfully');
-      } else {
-        this.logger.warn('Langfuse monitoring disabled - missing configuration');
-      }
-    } catch (error) {
-      this.logger.error('Failed to initialize monitoring:', error);
-    }
+        if (langfuseConfig.enabled) {
+          initializeMonitoring(langfuseConfig);
+          this.logger.log('Langfuse monitoring initialized successfully');
+        } else {
+          this.logger.warn('Langfuse monitoring disabled - missing configuration');
+        }
+      },
+      {
+        logger: this.logger,
+        label: 'ProviderService.onModuleInit',
+      },
+    );
 
     // Initialize default embedding provider if none exists
     // await this.initializeDefaultEmbeddingProvider();
@@ -940,7 +945,7 @@ export class ProviderService implements OnModuleInit {
       },
     });
     const defaultChatItem = await this.findDefaultProviderItem(user, 'chat', userPo);
-    const chatItem = modelItemId
+    let chatItem = modelItemId
       ? await this.findProviderItemById(user, modelItemId)
       : defaultChatItem;
 
@@ -951,6 +956,10 @@ export class ProviderService implements OnModuleInit {
     if (chatItem.category !== 'llm' || !chatItem.enabled) {
       throw new ProviderItemNotFoundError(`provider item ${modelItemId} not valid`);
     }
+
+    // Auto model routing
+    const llmItems = await this.findProviderItemsByCategory(user, 'llm');
+    chatItem = new AutoModelRouter({ llmItems, userId: user.uid }).route(chatItem);
 
     const agentItem = await this.findDefaultProviderItem(user, 'agent', userPo);
     const titleGenerationItem = await this.findDefaultProviderItem(user, 'titleGeneration', userPo);

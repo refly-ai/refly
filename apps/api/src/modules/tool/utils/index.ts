@@ -2,7 +2,8 @@
  * Utilities index
  */
 
-export * from '../dynamic-tooling/resource.service';
+export * from '../resource.service';
+export * from '../tool-context';
 export * from './billing';
 export * from './credential';
-export * from './schema';
+export * from './schema-utils';

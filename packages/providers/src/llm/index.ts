@@ -23,10 +23,15 @@ export const getChatModel = (
   let model: BaseChatModel;
   const extraParams = provider.extraParams ? JSON.parse(provider.extraParams) : {};
 
+  // Extract route data from config if present (for Auto model routing)
+  const routeData = (config as any).routeData;
+
   const commonParams = {
     ...extraParams,
     ...params,
     ...(config?.disallowTemperature ? { temperature: undefined } : {}),
+    // Include route data and tags for monitoring
+    ...(routeData ? { metadata: routeData, tags: ['auto-routed'] } : {}),
   };
 
   switch (provider?.providerKey) {

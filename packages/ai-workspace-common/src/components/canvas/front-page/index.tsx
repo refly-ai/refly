@@ -6,7 +6,7 @@ import { TemplateCardSkeleton } from '@refly-packages/ai-workspace-common/compon
 import { canvasTemplateEnabled } from '@refly/ui-kit';
 import { useSiderStoreShallow } from '@refly/stores';
 import cn from 'classnames';
-import { DocAdd, ArrowRight } from 'refly-icons';
+import { DocAdd, ArrowRight, Knowledge } from 'refly-icons';
 import { RecentWorkflow } from './recent-workflow';
 import { useListCanvasTemplateCategories } from '@refly-packages/ai-workspace-common/queries/queries';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
@@ -21,6 +21,7 @@ import { SiderMenuSettingList } from '../../sider-menu-setting-list';
 import { Subscription, Account } from 'refly-icons';
 import { Avatar, Divider } from 'antd';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import { logEvent } from '@refly/telemetry-web';
 
 // User avatar component for displaying user profile
 const UserAvatar = React.memo(
@@ -344,9 +345,10 @@ export const FrontPage = memo(() => {
   }, [templateCategories, templateCategoryId, isLoadingCategories]);
 
   const handleNewWorkflow = useCallback(() => {
+    logEvent('new_workflow', Date.now(), {});
     setIsManualCollapse(false);
     debouncedCreateCanvas();
-  }, [debouncedCreateCanvas, setIsManualCollapse]);
+  }, [debouncedCreateCanvas, setIsManualCollapse, logEvent]);
 
   const handleTemplateCategoryClick = useCallback(
     (categoryId: string) => {
@@ -364,6 +366,14 @@ export const FrontPage = memo(() => {
     window.open('/workflow-marketplace', '_blank');
   }, []);
 
+  const handleViewKnowledgeBase = useCallback(() => {
+    const isChinese = i18n.language?.startsWith('zh');
+    const url = isChinese
+      ? 'https://powerformer.feishu.cn/wiki/KrI1wxCKiisumTkOLJbcLeY7nec?fromScene=spaceOverview'
+      : 'https://reflydoc.notion.site/how-to-use-refly';
+    window.open(url, '_blank');
+  }, [i18n.language]);
+
   useEffect(() => {
     getCanvasList();
   }, []);
@@ -379,26 +389,42 @@ export const FrontPage = memo(() => {
         <title>{t('loggedHomePage.siderMenu.home')}</title>
       </Helmet>
 
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-[1px] z-10">
         <SettingItem showName={false} avatarAlign={'right'} />
       </div>
 
       <ModuleContainer title={t('frontPage.newWorkflow.title')} className="mt-[120px]">
-        <Button
-          className="w-fit h-fit flex items-center gap-2  border-[1px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover transition-colors"
-          onClick={handleNewWorkflow}
-          loading={createCanvasLoading}
-        >
-          <DocAdd size={42} color="var(--refly-primary-default)" />
-          <div className="flex flex-col gap-1 w-[184px]">
-            <div className="text-left text-base leading-[26px] font-semibold text-refly-text-0">
-              {t('frontPage.newWorkflow.buttonText')}
+        <div className="flex gap-4">
+          <Button
+            className="w-fit h-fit flex items-center gap-2  border-[1px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover transition-colors"
+            onClick={handleNewWorkflow}
+            loading={createCanvasLoading}
+          >
+            <DocAdd size={42} color="var(--refly-primary-default)" />
+            <div className="flex flex-col gap-1 w-[184px]">
+              <div className="text-left text-base leading-[26px] font-semibold text-refly-text-0">
+                {t('frontPage.newWorkflow.buttonText')}
+              </div>
+              <div className="text-left text-xs text-refly-text-3 leading-4 font-normal">
+                {t('frontPage.newWorkflow.buttonDescription')}
+              </div>
             </div>
-            <div className="text-left text-xs text-refly-text-3 leading-4 font-normal">
-              {t('frontPage.newWorkflow.buttonDescription')}
+          </Button>
+          <Button
+            className="w-fit h-fit flex items-center gap-2  border-[1px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover transition-colors"
+            onClick={handleViewKnowledgeBase}
+          >
+            <Knowledge size={42} color="var(--refly-primary-default)" />
+            <div className="flex flex-col gap-1 w-[184px]">
+              <div className="text-left text-base leading-[26px] font-semibold text-refly-text-0">
+                {t('frontPage.tutorial.buttonText')}
+              </div>
+              <div className="text-left text-xs text-refly-text-3 leading-4 font-normal">
+                {t('frontPage.tutorial.buttonDescription')}
+              </div>
             </div>
-          </div>
-        </Button>
+          </Button>
+        </div>
       </ModuleContainer>
 
       {canvases?.length > 0 && (
@@ -473,7 +499,7 @@ export const FrontPage = memo(() => {
                 scrollableTargetId="front-page-scrollable-div"
                 language={currentLanguage}
                 categoryId={templateCategoryId}
-                className="!bg-transparent !px-0 !pt-0 -ml-2 -mt-2"
+                className="!bg-transparent !px-0 !pt-0"
               />
             ) : (
               // Fallback: show loading skeleton if categoryId is invalid

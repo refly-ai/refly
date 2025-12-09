@@ -1513,7 +1513,7 @@ export const exportDocument = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).get<ExportDocumentResponse, ExportDocumentError, ThrowOnError>(
     {
       ...options,
-      url: '/knowledge/document/export/document',
+      url: '/drive/document/export',
     },
   );
 };

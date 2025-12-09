@@ -93,6 +93,7 @@ export const getSafeMimeType = (filename: string, fallbackMime?: string): string
   // Code and text files should always use text/plain or application/octet-stream
   if (CODE_FILE_EXTENSIONS.includes(extension)) {
     // Use specific MIME types for known text formats
+    if (['svg'].includes(extension)) return 'image/svg+xml';
     if (['md', 'markdown'].includes(extension)) return 'text/markdown';
     if (['json'].includes(extension)) return 'application/json';
     if (['xml'].includes(extension)) return 'application/xml';

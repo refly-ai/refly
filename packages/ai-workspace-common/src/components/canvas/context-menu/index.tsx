@@ -106,7 +106,7 @@ export const ContextMenu: FC<ContextMenuProps> = ({ open, position, setOpen }) =
     // Creation actions
     switch (key) {
       case 'askAI':
-        addGlobalAgent({ position });
+        addGlobalAgent({ position, source: 'agentMenu' });
         setOpen(false);
         break;
     }

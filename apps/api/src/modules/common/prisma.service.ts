@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
@@ -17,21 +18,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     });
   }
 
-  async onModuleInit() {
-    const initPromise = this.connectToDatabase();
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(`Database connection timed out after ${this.INIT_TIMEOUT}ms`);
-      }, this.INIT_TIMEOUT);
-    });
-
-    try {
-      await Promise.race([initPromise, timeoutPromise]);
-      this.logger.log('Database connection initialized successfully');
-    } catch (error) {
-      this.logger.error(`Failed to initialize database connection: ${error}`);
-      throw error;
-    }
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      async () => {
+        await this.connectToDatabase();
+        this.logger.log('Database connection initialized successfully');
+      },
+      {
+        logger: this.logger,
+        label: 'PrismaService.onModuleInit',
+        timeoutMs: this.INIT_TIMEOUT,
+      },
+    );
   }
 
   async connectToDatabase() {

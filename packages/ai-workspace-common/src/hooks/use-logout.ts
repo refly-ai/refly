@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal } from 'antd';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { ensureIndexedDbSupport } from '@refly-packages/ai-workspace-common/utils/indexeddb';
+import { isPublicAccessPageByPath } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 
 // Clear IndexedDB
 const deleteIndexedDB = async () => {
@@ -61,7 +62,14 @@ export const logout = async ({
     localStorage.clear();
 
     // Redirect to login page after logout
-    window.location.href = '/login';
+    // But don't redirect if we're on a public access page (like /app/:shareId or /workflow-template/:shareId)
+    // Public pages should continue to work even when not logged in
+    const currentPath = window.location.pathname;
+    const isPublicPage = isPublicAccessPageByPath(currentPath);
+
+    if (!isPublicPage) {
+      window.location.href = '/login';
+    }
   } catch (error) {
     console.error('Failed to logout:', error);
   } finally {

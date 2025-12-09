@@ -1,8 +1,13 @@
 import { Github } from 'refly-icons';
+import { StarOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import React from 'react';
 
-const GithubStarComponent = () => {
+interface GithubStarProps {
+  showIcon?: boolean;
+}
+
+const GithubStarComponent = ({ showIcon = true }: GithubStarProps) => {
   const [starCount, setStarCount] = useState('');
 
   const handleClick = () => {
@@ -26,7 +31,7 @@ const GithubStarComponent = () => {
       className="flex overflow-hidden gap-0.5 justify-center items-center self-stretch px-2 py-1 my-auto text-xs font-semibold leading-none text-center whitespace-nowrap bg-refly-bg-content-z2 rounded-xl border-[1px] border-solid border-refly-Card-Border text-refly-text-0 cursor-pointer hover:bg-refly-tertiary-hover"
       onClick={handleClick}
     >
-      <Github size={14} />
+      {showIcon ? <Github size={14} /> : <StarOutlined style={{ fontSize: '14px' }} />}
       <span className="leading-4 self-stretch my-auto">{starCount}</span>
     </div>
   );

@@ -1,7 +1,7 @@
 import { Button, Tooltip, message, Dropdown, Divider } from 'antd';
 import { Download, Share, More, Location, Delete } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useActiveNode, useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
@@ -29,6 +29,7 @@ export const CodeArtifactTopButtons = () => {
 
   const { setNodeCenter } = useNodePosition();
   const { deleteNode } = useDeleteNode();
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const fileName = useMemo(() => {
     const ext = getFileExtensionFromType(type);
@@ -36,6 +37,8 @@ export const CodeArtifactTopButtons = () => {
   }, [title, type]);
 
   const handleDownload = useCallback(async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
     try {
       let fileContent = (content ?? '') as string;
       if (!fileContent && entityId) {
@@ -64,8 +67,10 @@ export const CodeArtifactTopButtons = () => {
       // eslint-disable-next-line no-console
       console.error('Failed to download file:', error);
       message.error(t('codeArtifact.downloadError'));
+    } finally {
+      setIsDownloading(false);
     }
-  }, [content, entityId, fileName, t]);
+  }, [content, entityId, fileName, t, isDownloading]);
 
   const handleShare = useCallback(async () => {
     if (!entityId) return;
@@ -156,6 +161,7 @@ export const CodeArtifactTopButtons = () => {
           size="small"
           type="text"
           onClick={handleDownload}
+          loading={isDownloading}
           icon={<Download size={16} />}
         />
       </Tooltip>

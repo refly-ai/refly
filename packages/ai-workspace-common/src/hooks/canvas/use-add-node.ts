@@ -52,7 +52,7 @@ export const useAddNode = () => {
     setEdges((edges) => edges.filter((edge) => !edge.id.startsWith('temp-edge-')));
   };
 
-  const { defaultChatModel } = useFetchProviderItems({
+  const { defaultAgentModel } = useFetchProviderItems({
     category: 'llm',
     enabled: true,
   });
@@ -96,7 +96,7 @@ export const useAddNode = () => {
 
       // Set default model info if not provided
       node.data.metadata ??= {};
-      node.data.metadata.modelInfo ??= defaultChatModel;
+      node.data.metadata.modelInfo ??= defaultAgentModel;
 
       // Check for node limit
       const nodeCount = nodes?.length ?? 0;
@@ -184,7 +184,7 @@ export const useAddNode = () => {
       previewNode,
       t,
       layoutBranchAndUpdatePositions,
-      defaultChatModel,
+      defaultAgentModel,
     ],
   );
 

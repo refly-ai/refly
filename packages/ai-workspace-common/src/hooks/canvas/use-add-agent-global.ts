@@ -4,14 +4,17 @@ import { CanvasNodeFilter } from '@refly/canvas-common/src/types';
 import { useCallback } from 'react';
 import { CanvasNodeType, XYPosition } from '@refly/openapi-schema';
 import { genNodeEntityId } from '@refly/utils/id';
+import { logEvent } from '@refly/telemetry-web';
+
+type Source = 'bottomBar' | 'agentMenu';
 
 export const useAddAgentGlobal = () => {
   const { addNode } = useAddNode();
   const { nodes } = useCanvasData();
 
   const addGlobalAgent = useCallback(
-    (options: { position?: XYPosition } = {}) => {
-      const { position } = options;
+    (options: { position?: XYPosition; source?: Source } = {}) => {
+      const { position, source = 'agentMenu' } = options;
 
       // Find selected skillResponse node
       const selectedSkillResponseNode = nodes?.find(
@@ -60,6 +63,10 @@ export const useAddAgentGlobal = () => {
         }
       }
 
+      logEvent('create_agent_node', Date.now(), {
+        source: source === 'bottomBar' ? 'bottom_bar' : 'other_agent_node',
+      });
+
       addNode(
         {
           type: 'skillResponse',
@@ -80,7 +87,7 @@ export const useAddAgentGlobal = () => {
         true,
       );
     },
-    [addNode, nodes],
+    [addNode, nodes, logEvent],
   );
   return { addGlobalAgent };
 };

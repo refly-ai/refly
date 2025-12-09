@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 import { useListProviders } from '@refly-packages/ai-workspace-common/queries';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import React, { useCallback, useState, useMemo, useEffect } from 'react';
-import { ProviderIcon } from '@lobehub/icons';
 import {
   Button,
   Empty,
@@ -23,7 +22,7 @@ import { Provider } from '@refly-packages/ai-workspace-common/requests/types.gen
 import { ProviderModal } from './provider-modal';
 import { ProviderStore } from './ProviderStore';
 import { ContentHeader } from '@refly-packages/ai-workspace-common/components/settings/contentHeader';
-import { Close, More, Delete, Edit, Market } from 'refly-icons';
+import { Close, More, Delete, Edit, Market, ModelProvider } from 'refly-icons';
 import './index.scss';
 
 const ActionDropdown = ({
@@ -162,7 +161,7 @@ const ProviderItem = React.memo(
               {provider.isGlobal ? (
                 <LuGlobe size={24} className="text-refly-text-2" />
               ) : (
-                <ProviderIcon provider={provider.name?.toLowerCase()} size={24} type={'color'} />
+                <ModelProvider size={24} />
               )}
             </div>
 

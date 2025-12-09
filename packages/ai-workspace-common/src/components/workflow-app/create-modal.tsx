@@ -134,6 +134,18 @@ export const CreateWorkflowAppModal = ({
   // Copy share link state
   const [linkCopied, setLinkCopied] = useState(false);
 
+  // Initial form data state for change detection
+  const [initialFormData, setInitialFormData] = useState<{
+    publishToCommunity: boolean;
+    title: string;
+    description: string;
+    selectedResults: string[];
+    coverStorageKey: string | undefined;
+  } | null>(null);
+
+  // Flag to track if initial data has been saved (to prevent overwriting)
+  const [initialDataSaved, setInitialDataSaved] = useState(false);
+
   const { data: workflowVariables } = useVariablesManagement(canvasId);
   const { nodes } = useRealtimeCanvasData();
 
@@ -141,30 +153,6 @@ export const CreateWorkflowAppModal = ({
   const activeResultIdSet = new Set(
     skillResponseNodes.map((node) => node.data?.entityId).filter(Boolean),
   );
-
-  // Canvas validation checks using useRealtimeCanvasData
-  // These checks can be used to validate the workflow before publishing
-  const canvasValidation = useMemo(() => {
-    // Check if there are no user input variables
-    const hasNoVariables = !workflowVariables || workflowVariables.length === 0;
-
-    // Check for failed or unrun skillResponse nodes
-    // Returns true if any skillResponse node has status 'failed', 'init', or undefined
-    const hasFailedOrUnrunNodes = skillResponseNodes.some((node) => {
-      const status = (node.data?.metadata as any)?.status;
-      return status === 'failed' || status === 'init' || !status;
-    });
-
-    // Check if there are no skillResponse nodes
-    // Returns true if there are no Agent nodes in the canvas
-    const hasNoSkillResponseNodes = skillResponseNodes.length === 0;
-
-    return {
-      hasNoVariables,
-      hasFailedOrUnrunNodes,
-      hasNoSkillResponseNodes,
-    };
-  }, [workflowVariables, skillResponseNodes]);
 
   const { forceSyncState } = useCanvasContext();
 
@@ -461,75 +449,15 @@ export const CreateWorkflowAppModal = ({
       return;
     }
 
-    logEvent('publish_template', Date.now(), {
+    const eventName = isUpdate ? 'update_template' : 'publish_template';
+
+    logEvent(eventName, Date.now(), {
       canvas_id: canvasId,
     });
 
     try {
       // Make sure the canvas data is synced to the remote
       await forceSyncState({ syncRemote: true });
-
-      // Validate canvas before publishing
-      // Priority: User Input > 没有Agent > Agent 未运行或失败
-      if (canvasValidation.hasNoVariables) {
-        // Show toast
-        message.error(t('workflowApp.validationNoUserInputs'));
-        // Trigger canvas fitView event
-        window.dispatchEvent(
-          new CustomEvent('refly:canvas:fitView', {
-            detail: { canvasId },
-          }),
-        );
-        return;
-      }
-
-      if (canvasValidation.hasNoSkillResponseNodes) {
-        // Show toast
-        message.error(t('workflowApp.validationNoAgents'));
-        // Trigger canvas fitView event
-        window.dispatchEvent(
-          new CustomEvent('refly:canvas:fitView', {
-            detail: { canvasId },
-          }),
-        );
-        return;
-      }
-
-      if (canvasValidation.hasFailedOrUnrunNodes) {
-        // Get failed or unrun node IDs for highlighting
-        const failedOrUnrunNodeIds = skillResponseNodes
-          .filter((node) => {
-            if (!node?.id) return false;
-            const status = (node.data?.metadata as any)?.status;
-            return status === 'failed' || status === 'init' || !status;
-          })
-          .map((node) => node.id)
-          .filter(Boolean) as string[];
-
-        // Show toast
-        message.error(t('workflowApp.validationAgentsNotRun'));
-
-        // Only trigger highlight if we have valid node IDs
-        if (failedOrUnrunNodeIds.length > 0) {
-          // Trigger canvas fitView and highlight event
-          window.dispatchEvent(
-            new CustomEvent('refly:canvas:fitViewAndHighlight', {
-              detail: {
-                canvasId,
-                nodeIds: failedOrUnrunNodeIds,
-              },
-            }),
-          );
-        } else {
-          // Fallback: just fit view if no valid node IDs found
-          window.dispatchEvent(
-            new CustomEvent('refly:canvas:fitView', {
-              detail: { canvasId },
-            }),
-          );
-        }
-        return;
-      }
 
       // Validate run result selection before publishing
       if (!selectedResults || selectedResults.length === 0) {
@@ -554,6 +482,10 @@ export const CreateWorkflowAppModal = ({
   // Reset form state when modal opens
   useEffect(() => {
     if (visible) {
+      // Reset initial form data and saved flag
+      setInitialFormData(null);
+      setInitialDataSaved(false);
+
       // Load existing app data if appId is provided
       if (appId) {
         loadAppData(appId);
@@ -579,7 +511,7 @@ export const CreateWorkflowAppModal = ({
       // Reset copy state
       setLinkCopied(false);
     }
-  }, [visible, title, appId, loadAppData]);
+  }, [visible, title, appId, loadAppData, form]);
 
   // Populate form with loaded app data
   useEffect(() => {
@@ -608,6 +540,48 @@ export const CreateWorkflowAppModal = ({
       }
     }
   }, [appData, visible, title, form]);
+
+  // Save initial form data after appData and displayNodes are ready (for editing existing app)
+  useEffect(() => {
+    if (visible && appData && displayNodes.length > 0 && !initialDataSaved) {
+      // Get initial selectedResults from appData, filtered by valid node IDs
+      const savedNodeIds = appData?.resultNodeIds ?? [];
+      const validNodeIds =
+        displayNodes.filter((node): node is CanvasNode => !!node?.id)?.map((node) => node.id) ?? [];
+      const initialSelectedResults = savedNodeIds.filter((id) => validNodeIds.includes(id));
+
+      setInitialFormData({
+        publishToCommunity: appData.publishToCommunity ?? false,
+        title: appData.title ?? title,
+        description: appData.description ?? '',
+        selectedResults: [...initialSelectedResults].sort(),
+        coverStorageKey: appData?.coverStorageKey ?? undefined,
+      });
+      setInitialDataSaved(true);
+    }
+  }, [visible, appData, displayNodes.length, title, initialDataSaved]);
+
+  // Save initial form data for new apps
+  useEffect(() => {
+    if (visible && !appId && displayNodes.length > 0 && !initialDataSaved) {
+      const formValues = form.getFieldsValue();
+      // Calculate initial selectedResults same as auto-select logic
+      const validNodeIds =
+        displayNodes
+          .filter((node): node is CanvasNode => !!node?.id)
+          ?.filter((node) => node.type !== 'skillResponse')
+          ?.map((node) => node.id) ?? [];
+
+      setInitialFormData({
+        publishToCommunity: formValues.publishToCommunity ?? false,
+        title: formValues.title ?? title,
+        description: formValues.description ?? '',
+        selectedResults: [...validNodeIds].sort(),
+        coverStorageKey: undefined,
+      });
+      setInitialDataSaved(true);
+    }
+  }, [visible, appId, displayNodes.length, form, title, initialDataSaved]);
 
   // Sync selected results when appData loads and displayNodes is ready (for editing existing app)
   // Use displayNodes.length as dependency instead of displayNodes to avoid infinite loop
@@ -713,12 +687,89 @@ export const CreateWorkflowAppModal = ({
     }
   }, [currentShareLink, t]);
 
+  // Check if form data has been modified
+  const hasFormDataChanged = useCallback((): boolean => {
+    if (!initialFormData) {
+      // If no initial data, consider it unchanged (for new apps)
+      return false;
+    }
+
+    const formValues = form.getFieldsValue();
+    const currentTitle = formValues.title ?? '';
+    const currentDescription = formValues.description ?? '';
+    const currentPublishToCommunity = formValues.publishToCommunity ?? false;
+
+    // Compare title
+    if (currentTitle !== initialFormData.title) {
+      return true;
+    }
+
+    // Compare description
+    if (currentDescription !== initialFormData.description) {
+      return true;
+    }
+
+    // Compare publishToCommunity
+    if (currentPublishToCommunity !== initialFormData.publishToCommunity) {
+      return true;
+    }
+
+    // Compare selectedResults (sorted comparison)
+    const currentResultsSorted = [...selectedResults].sort();
+    const initialResultsSorted = [...initialFormData.selectedResults].sort();
+    if (
+      currentResultsSorted.length !== initialResultsSorted.length ||
+      !currentResultsSorted.every((id, index) => id === initialResultsSorted[index])
+    ) {
+      return true;
+    }
+
+    // Compare coverStorageKey
+    const currentCoverKey = coverStorageKey ?? undefined;
+    const initialCoverKey = initialFormData.coverStorageKey ?? undefined;
+    if (currentCoverKey !== initialCoverKey) {
+      return true;
+    }
+
+    return false;
+  }, [initialFormData, form, selectedResults, coverStorageKey]);
+
+  // Handle modal close with confirmation
+  const handleModalClose = useCallback(() => {
+    if (confirmLoading || isUploading) {
+      return;
+    }
+
+    // Check if form data has been modified
+    const hasChanged = hasFormDataChanged();
+
+    // Only show confirmation dialog if data has been modified
+    if (hasChanged) {
+      Modal.confirm({
+        title: t('common.confirmClose'),
+        content: t('workflowApp.confirmCloseContent'),
+        okText: t('common.confirm'),
+        cancelText: t('common.cancel'),
+        okButtonProps: {
+          className:
+            '!bg-[var(--refly-primary-default)] !border-[var(--refly-primary-default)] !text-white hover:!bg-[var(--refly-primary-hover)] hover:!border-[var(--refly-primary-hover)] active:!bg-[var(--refly-primary-active)] active:!border-[var(--refly-primary-active)]',
+        },
+        onOk: () => {
+          setVisible(false);
+        },
+      });
+    } else {
+      // No changes, close directly
+      setVisible(false);
+    }
+  }, [confirmLoading, isUploading, setVisible, t, hasFormDataChanged]);
+
   // Custom footer with copy button and original buttons
   const modalFooter = useMemo(() => {
     return (
       <div className="flex items-center justify-end w-full">
         <div className="flex items-center gap-2">
-          <Button onClick={() => setVisible(false)} disabled={confirmLoading}>
+          <Button onClick={handleModalClose} disabled={confirmLoading}>
             {t('common.cancel')}
           </Button>
           <Button type="primary" onClick={onSubmit} loading={confirmLoading} disabled={isUploading}>
@@ -735,7 +786,7 @@ export const CreateWorkflowAppModal = ({
     confirmLoading,
     okButtonText,
     onSubmit,
-    setVisible,
+    handleModalClose,
     t,
   ]);
 
@@ -745,7 +796,7 @@ export const CreateWorkflowAppModal = ({
       <Modal
         centered
         open={visible}
-        onCancel={() => setVisible(false)}
+        onCancel={handleModalClose}
         footer={modalFooter}
         title={modalTitle}
         styles={{
@@ -894,13 +945,7 @@ export const CreateWorkflowAppModal = ({
                 {/* Run Result */}
                 <div className="flex flex-col gap-2 mt-5">
                   <div className="flex items-center justify-between h-4">
-                    <div
-                      className={`text-xs font-semibold leading-[1.33] ${
-                        selectedResults.length === 0
-                          ? 'text-refly-func-danger-default'
-                          : 'text-refly-text-0'
-                      }`}
-                    >
+                    <div className={'text-xs font-semibold leading-[1.33]'}>
                       {t('workflowApp.runResult')}
                     </div>
                     <MultiSelectResult

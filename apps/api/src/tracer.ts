@@ -3,7 +3,6 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { PrismaInstrumentation } from '@prisma/instrumentation';
 import { LangfuseSpanProcessor } from '@langfuse/otel';
 import type { SpanProcessor } from '@opentelemetry/sdk-trace-base';
 
@@ -72,12 +71,14 @@ export function initTracer(options: TracerOptions): void {
     if (processor) spanProcessors.push(processor);
   }
 
+  const instrumentations = [getNodeAutoInstrumentations()];
+
   sdk = new NodeSDK({
     traceExporter: options.otlpEndpoint
       ? new OTLPTraceExporter({ url: `${options.otlpEndpoint}/v1/traces` })
       : undefined,
     spanProcessors: spanProcessors.length > 0 ? spanProcessors : undefined,
-    instrumentations: [getNodeAutoInstrumentations(), new PrismaInstrumentation()],
+    instrumentations,
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: 'reflyd',
     }),

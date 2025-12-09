@@ -4,6 +4,7 @@ import {
   CanvasEdge,
   CanvasTransaction,
   CanvasData,
+  ModelInfo,
 } from '@refly/openapi-schema';
 import {
   genCanvasVersionId,
@@ -15,7 +16,12 @@ import {
 import { deduplicateNodes, deduplicateEdges, prepareAddNode } from './utils';
 import { MAX_STATE_TX_COUNT, MAX_VERSION_AGE } from './constants';
 
-export const initEmptyCanvasState = (): CanvasState => {
+export interface InitEmptyCanvasOptions {
+  /** Default model info for the initial skillResponse node */
+  defaultModelInfo?: ModelInfo;
+}
+
+export const initEmptyCanvasState = (options?: InitEmptyCanvasOptions): CanvasState => {
   // Create a start node for the initial canvas
   const startNode: CanvasNode = {
     id: genNodeID(),
@@ -39,6 +45,7 @@ export const initEmptyCanvasState = (): CanvasState => {
       entityId: genNodeEntityId('skillResponse'),
       metadata: {
         status: 'init',
+        modelInfo: options?.defaultModelInfo,
       },
     },
     selected: false,

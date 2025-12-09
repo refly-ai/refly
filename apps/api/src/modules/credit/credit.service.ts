@@ -750,7 +750,7 @@ export class CreditService {
   }
 
   async syncToolCreditUsage(data: SyncToolCreditUsageJobData) {
-    const { uid, creditCost, timestamp, resultId, toolCallId, toolCallMeta, version } = data;
+    const { uid, discountedPrice, originalPrice, timestamp, resultId, toolCallMeta } = data;
 
     // Find user
     const user = await this.prisma.user.findUnique({ where: { uid } });
@@ -758,18 +758,19 @@ export class CreditService {
       throw new Error(`No user found for uid ${uid}`);
     }
 
-    // If no credit cost, just create usage record
-    if (creditCost <= 0) {
+    // If no discounted price, just create usage record
+    if (discountedPrice <= 0) {
       await this.prisma.creditUsage.create({
         data: {
           uid,
           usageId: genCreditUsageId(),
           actionResultId: resultId,
-          version,
+          version: data.version,
           usageType: 'tool_call',
           amount: 0,
+          dueAmount: originalPrice ?? 0,
           createdAt: timestamp,
-          toolCallId,
+          toolCallId: data.toolCallId,
           toolCallMeta: JSON.stringify(toolCallMeta),
           description: `Tool call: ${toolCallMeta?.toolsetKey}.${toolCallMeta?.toolName}`,
         },
@@ -780,18 +781,16 @@ export class CreditService {
     // Use the extracted method to handle credit deduction
     await this.deductCreditsAndCreateUsage(
       uid,
-      creditCost,
+      discountedPrice,
       {
         usageId: genCreditUsageId(),
         actionResultId: resultId,
-        version,
+        version: data.version,
         usageType: 'tool_call',
         createdAt: timestamp,
-        toolCallId,
-        toolCallMeta,
         description: `Tool call: ${toolCallMeta?.toolsetKey}.${toolCallMeta?.toolName}`,
       },
-      creditCost,
+      originalPrice,
     );
   }
 
@@ -856,7 +855,7 @@ export class CreditService {
     const modelUsageDetails: ModelUsageDetail[] = [];
 
     for (const step of creditUsageSteps) {
-      const { usage, creditBilling } = step;
+      const { usage, creditBilling, billingModelName } = step;
 
       const inputTokens = usage.inputTokens || 0;
       const outputTokens = usage.outputTokens || 0;
@@ -894,9 +893,12 @@ export class CreditService {
 
       totalCreditCost += creditCost;
 
-      // Add to model usage details - model name, total tokens, and credit cost
+      // Add to model usage details
+      // modelName: user-facing name (Auto or direct model selection)
+      // actualModelName: real model used for execution (from usage.modelName)
       modelUsageDetails.push({
-        modelName: usage.modelName,
+        modelName: billingModelName,
+        actualModelName: usage.modelName,
         inputTokens,
         outputTokens,
         creditCost: creditCost,
@@ -1207,11 +1209,16 @@ export class CreditService {
       .filter((record) => record.source === 'commission')
       .reduce((sum, record) => sum + Number(record.balance), 0);
 
+    const cumulativeEarningsCredits = activeRecharges
+      .filter((record) => record.source === 'commission')
+      .reduce((sum, record) => sum + Number(record.amount), 0);
+
     return {
       creditAmount: totalAmount,
       creditBalance: netBalance,
       regularCredits: regularCredits,
       templateEarningsCredits: templateEarningsCredits,
+      cumulativeEarningsCredits: cumulativeEarningsCredits,
     };
   }
 

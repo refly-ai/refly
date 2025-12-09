@@ -736,7 +736,15 @@ export type ResourceMeta = {
 /**
  * Resource type
  */
-export type ResourceType = 'weblink' | 'text' | 'file' | 'document' | 'image' | 'video' | 'audio';
+export type ResourceType =
+  | 'weblink'
+  | 'text'
+  | 'file'
+  | 'document'
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'text/plain';
 
 /**
  * Error message for resource indexing
@@ -5194,6 +5202,10 @@ export type getCreditBalanceResponse = BaseResponse & {
      * Template earnings credits
      */
     templateEarningsCredits?: number;
+    /**
+     * Cumulative earnings credits
+     */
+    cumulativeEarningsCredits?: number;
   };
 };
 
@@ -5778,6 +5790,10 @@ export type ModelInfo = {
    */
   creditBilling?: CreditBilling;
   /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
+  /**
    * Input parameter configurations
    */
   inputParameters?: Array<MediaModelParameter>;
@@ -5865,6 +5881,10 @@ export type LLMModelConfig = {
    * Model capabilities
    */
   capabilities?: ModelCapabilities;
+  /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
 };
 
 /**
@@ -5923,6 +5943,10 @@ export type MediaGenerationModelConfig = {
    * Model description
    */
   description?: string;
+  /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
   /**
    * Supported languages for translation
    */
@@ -6521,6 +6545,10 @@ export type ToolsetDefinition = {
    */
   key: string;
   /**
+   * Toolset type (regular, mcp, external_oauth)
+   */
+  type?: GenericToolsetType;
+  /**
    * Whether this is a builtin toolset
    */
   builtin?: boolean;
@@ -6710,6 +6738,163 @@ export type ComposioRevokeResponse = {
    */
   message: string;
 };
+
+/**
+ * Context for post-processing tool execution results
+ */
+export type PostHandlerContext = {
+  /**
+   * User who executed the tool
+   */
+  user: User;
+  /**
+   * Tool name that was executed
+   */
+  toolName: string;
+  /**
+   * Toolset display name
+   */
+  toolsetName: string;
+  /**
+   * Toolset unique identifier/key
+   */
+  toolsetKey: string;
+  /**
+   * Credit cost for this tool execution
+   */
+  creditCost: number;
+  /**
+   * File name title from input params
+   */
+  fileNameTitle?: string;
+  /**
+   * Result ID from execution context
+   */
+  resultId?: string;
+  /**
+   * Result version from execution context
+   */
+  version?: number;
+};
+
+/**
+ * Result from post-processing tool execution
+ */
+export type PostHandlerResult = {
+  /**
+   * Processed data (may be uploaded to OSS)
+   */
+  data: unknown;
+  /**
+   * Files uploaded during post-processing
+   */
+  files?: Array<DriveFile>;
+  /**
+   * Credit cost recorded
+   */
+  creditCost?: number;
+  /**
+   * Metadata about processing
+   */
+  metadata?: {
+    [key: string]: unknown;
+  };
+};
+
+/**
+ * Composio connected account structure from API response
+ */
+export type ComposioConnectedAccount = {
+  /**
+   * Connected account ID
+   */
+  id: string;
+  /**
+   * Connection status
+   */
+  status?: string;
+  toolkit?: {
+    /**
+     * Toolkit slug identifier
+     */
+    slug?: string;
+  };
+};
+
+/**
+ * Composio tool JSON schema structure
+ */
+export type ComposioToolSchema = {
+  /**
+   * Schema type
+   */
+  type?: string;
+  /**
+   * Schema properties
+   */
+  properties?: {
+    [key: string]: ComposioSchemaProperty;
+  };
+  /**
+   * Required property names
+   */
+  required?: Array<string>;
+  [key: string]: unknown | string | ComposioSchemaProperty;
+};
+
+/**
+ * Composio schema property definition
+ */
+export type ComposioSchemaProperty = {
+  /**
+   * Property type
+   */
+  type?: string;
+  /**
+   * Property description
+   */
+  description?: string;
+  /**
+   * Whether property is deprecated
+   */
+  deprecated?: boolean;
+  [key: string]: unknown | string | boolean;
+};
+
+/**
+ * Context for creating a DynamicStructuredTool. User/userId comes from getCurrentUser() at runtime.
+ */
+export type ToolCreationContext = {
+  /**
+   * Connected account ID from Composio
+   */
+  connectedAccountId: string;
+  /**
+   * Authentication type
+   */
+  authType: 'oauth' | 'apikey';
+  /**
+   * Credit cost for tool execution
+   */
+  creditCost: number;
+  /**
+   * Toolset type identifier
+   */
+  toolsetType: GenericToolsetType;
+  /**
+   * Toolset key
+   */
+  toolsetKey: string;
+  /**
+   * Toolset display name
+   */
+  toolsetName: string;
+};
+
+/**
+ * Authentication type
+ */
+export type authType = 'oauth' | 'apikey';
 
 export type GenericToolsetType = 'regular' | 'mcp' | 'external_oauth';
 
@@ -7431,6 +7616,10 @@ export type DriveFile = {
    * Drive file update timestamp
    */
   updatedAt?: string;
+  /**
+   * Private access URL for the file (requires authentication)
+   */
+  url?: string;
 };
 
 export type ListDriveFilesResponse = BaseResponse & {
@@ -7874,6 +8063,18 @@ export type SchemaProperty = {
    */
   format?: string;
   /**
+   * Constant value for discriminator matching in oneOf/anyOf
+   */
+  const?: unknown;
+  /**
+   * One of the listed schemas must match
+   */
+  oneOf?: Array<SchemaProperty>;
+  /**
+   * Any of the listed schemas can match
+   */
+  anyOf?: Array<SchemaProperty>;
+  /**
    * Minimum length (for string)
    */
   minLength?: number;
@@ -7914,6 +8115,9 @@ export type SchemaProperty = {
   required?: Array<string>;
 };
 
+/**
+ * JSON schema definition for request/response with resource field markers
+ */
 export type JsonSchema = {
   /**
    * Schema type
@@ -7930,9 +8134,9 @@ export type JsonSchema = {
    */
   required?: Array<string>;
   /**
-   * Additional properties allowed
+   * Field names to omit from the response (e.g., ['thoughtSignature'])
    */
-  additionalProperties?: boolean;
+  omitFields?: Array<string>;
 };
 
 /**
@@ -7940,12 +8144,7 @@ export type JsonSchema = {
  */
 export type type6 = 'object';
 
-export type ResponseSchema = JsonSchema & {
-  /**
-   * Field names to omit from the response (e.g., ['thoughtSignature'])
-   */
-  omitFields?: Array<string>;
-};
+export type ResponseSchema = JsonSchema;
 
 export type ResourceField = {
   /**
@@ -8104,7 +8303,7 @@ export type ParsedMethodConfig = {
   endpoint: string;
   method?: HttpMethod;
   schema: JsonSchema;
-  responseSchema: ResponseSchema;
+  responseSchema: JsonSchema;
   billing?: BillingConfig;
   /**
    * Custom handler class name
@@ -8421,11 +8620,15 @@ export type HandlerResponse = {
    */
   success: boolean;
   /**
-   * Response data
+   * Response data (object or array of objects)
    */
-  data?: {
-    [key: string]: unknown;
-  };
+  data?:
+    | {
+        [key: string]: unknown;
+      }
+    | Array<{
+        [key: string]: unknown;
+      }>;
   /**
    * Local file path (if file was saved)
    */
@@ -8480,7 +8683,7 @@ export type HandlerContext = {
   /**
    * Response schema for identifying resource fields via traversal
    */
-  responseSchema?: ResponseSchema;
+  responseSchema?: JsonSchema;
   /**
    * Request start timestamp
    */
@@ -8502,7 +8705,7 @@ export type HandlerConfig = {
   /**
    * Response schema for identifying resource fields via traversal
    */
-  responseSchema?: ResponseSchema;
+  responseSchema?: JsonSchema;
   /**
    * Request timeout (ms)
    */
@@ -9594,9 +9797,9 @@ export type GetDocumentDetailError = unknown;
 export type ExportDocumentData = {
   query: {
     /**
-     * Export document ID to retrieve
+     * Export file ID to retrieve
      */
-    docId: string;
+    fileId: string;
     /**
      * Export format
      */

@@ -1,32 +1,18 @@
 name: Deploy API To Staging
 
 on:
-  workflow_run:
-    workflows: ["Build and Push Docker Images"]
-    branches: [main]
-    types:
-      - completed
   workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
-    name: Deploy API
-    runs-on: ubuntu-latest
-    if: github.repository == 'refly-ai/refly' && github.event.workflow_run.conclusion == 'success'
-    steps:
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Configure kubectl
-        run: |
-          echo "${{ secrets.KUBE_CONFIG }}" > ./kubeconfig
-          chmod 600 kubeconfig
-          echo "KUBECONFIG=./kubeconfig" >> $GITHUB_ENV
-
-      - name: Update Kubernetes deployment
-        run: |
-          kubectl set image deployment/refly-api-staging refly-api=reflyai/refly-api:${{ github.sha }} --record -n refly-app
-
-      - name: Wait for deployment to complete
-        run: |
-          kubectl rollout status deployment/refly-api-staging --timeout=300s -n refly-app
+    uses: ./.github/workflows/deploy-api.yml
+    with:
+      environment: staging
+      deployment_name: refly-api-staging
+      eks_cluster_name: ${{ vars.AWS_EKS_CLUSTER_PROD }}
+      aws_region: ${{ vars.AWS_REGION }}
+    secrets: inherit
