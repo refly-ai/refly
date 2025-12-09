@@ -45,7 +45,7 @@ export const ReasoningContentPreview = memo(
           </div>
           <Button
             type="text"
-            icon={collapsed ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+            icon={collapsed ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
             onClick={() => setCollapsed(!collapsed)}
             size="small"
             className="flex items-center justify-center h-6 w-6 min-w-0 p-0"
