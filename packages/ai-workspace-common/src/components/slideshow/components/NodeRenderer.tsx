@@ -63,6 +63,7 @@ const NodeRenderer = memo(
     // Handle download for any node type
     const handleDownloadNode = useCallback(async () => {
       const file = nodeData.metadata as DriveFile;
+      file.name = nodeData.title;
       handleDownload({
         currentFile: file,
         contentType: file.type,
