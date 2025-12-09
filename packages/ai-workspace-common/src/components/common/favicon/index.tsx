@@ -2,16 +2,8 @@ import { serverOrigin } from '@refly/ui-kit';
 import { useMemo } from 'react';
 import { Mcp } from 'refly-icons';
 
-export const Favicon = (props: { url: string; size?: number; isMcp?: boolean }) => {
-  const { size = 12, url, isMcp = false } = props;
-  // Fallback: render MCP icon if it's an MCP tool, otherwise render a generic icon
-  if (isMcp) {
-    return (
-      <div style={{ width: size, height: size }} className="flex items-center justify-center">
-        <Mcp size={size} color="var(--refly-text-1)" />
-      </div>
-    );
-  }
+export const Favicon = (props: { url: string; size?: number }) => {
+  const { size = 12, url } = props;
 
   const faviconUrl = useMemo(() => {
     if (!url || url.trim() === '') {
@@ -27,13 +19,11 @@ export const Favicon = (props: { url: string; size?: number; isMcp?: boolean }) 
     }
   }, [url]);
 
+  // Fallback: render MCP icon when favicon URL is not available
   if (!faviconUrl) {
     return (
-      <div
-        style={{ width: size, height: size }}
-        className="flex items-center justify-center bg-gray-100 rounded-sm"
-      >
-        <span className="text-xs text-gray-400">?</span>
+      <div style={{ width: size, height: size }} className="flex items-center justify-center">
+        <Mcp size={size} color="var(--refly-text-1)" />
       </div>
     );
   }
