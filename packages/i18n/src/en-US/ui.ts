@@ -3219,11 +3219,11 @@ const translations = {
       subtitle: 'Explore your curiosity together',
       youCanTry: 'Get new inspiration',
       query1:
-        "Research Warren Buffett's holdings in Q2 vs Q3 2025, list increases and decreases, and generate a summary with simple charts.",
+        "Use a 13F data tool to research Warren Buffett's holdings in Q2 vs Q3 2025, list all increases and decreases, and generate a summary with simple charts",
       query2:
         "Use Perplexity to fetch yesterday's Product Hunt Top 5, create a summary document and a podcast, and email them to me.",
       query3:
-        'Help me generate a five-image animation series in the style of Makoto Shinkai, themed around "growth".',
+        'Help me generate a five-image animation series in the style of Makoto Shinkai, themed around "growth", and use an image-generation tool to create all images.',
     },
     sessionDetail: {
       thinking: 'Refly is thinking',
