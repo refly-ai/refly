@@ -1,10 +1,9 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useStore } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 import { CanvasNode } from '@refly/canvas-common';
 import { useDuplicateNode } from './use-duplicate-node';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { logEvent } from '@refly/telemetry-web';
 
 interface CopyPasteSkillResponseNodeOptions {
   /** Canvas ID */
@@ -28,29 +27,65 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
   );
   const { duplicateNode } = useDuplicateNode();
 
-  // Store copied nodes for paste operation
-  const [copiedNodes, setCopiedNodes] = useState<CanvasNode[]>([]);
-
   /**
    * Copy selected skillResponse nodes
    */
-  const handleCopy = useCallback(() => {
-    if (readonly || workflowIsRunning) return;
+  const handleCopy = useCallback(async () => {
+    const selection = window.getSelection()?.toString();
+    const selectedTextLength = typeof window === 'undefined' ? 0 : (selection?.length ?? 0);
+    const hasTextSelection = selectedTextLength > 0;
 
+    if (hasTextSelection) {
+      await navigator.clipboard.writeText(selection);
+      return;
+    }
+
+    if (readonly || workflowIsRunning) return;
     const selectedNodes = nodes.filter(
       (node) => node.selected && node.type === 'skillResponse',
     ) as CanvasNode[];
 
     if (selectedNodes.length > 0) {
-      setCopiedNodes(selectedNodes);
+      await navigator.clipboard.writeText(JSON.stringify(selectedNodes));
     }
   }, [nodes, readonly, workflowIsRunning]);
 
   /**
+   * Safely parse JSON string, return null if invalid
+   */
+  const safeJsonParse = useCallback((str: string): CanvasNode[] | null => {
+    if (!str || typeof str !== 'string') {
+      return null;
+    }
+
+    // Quick check: valid JSON should start with '[' or '{'
+    const trimmed = str.trim();
+    if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(str);
+      // Ensure parsed data is an array
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  /**
    * Paste copied nodes at offset {x: 400, y: 100} from original position
    */
-  const handlePaste = useCallback(() => {
-    if (readonly || copiedNodes.length === 0 || !canvasId || workflowIsRunning) return;
+  const handlePaste = useCallback(async () => {
+    const clipboardData = await navigator.clipboard.readText();
+    const copiedNodes = safeJsonParse(clipboardData);
+    const isCopySkillResponseNodes =
+      copiedNodes?.length > 0 && copiedNodes?.every((node) => node.type === 'skillResponse');
+
+    if (readonly || !canvasId || workflowIsRunning || !isCopySkillResponseNodes) return;
 
     // Fixed offset for pasted nodes (bottom right of original position)
     const fixedOffset = { x: 0, y: 200 };
@@ -59,13 +94,13 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
     for (const node of copiedNodes) {
       duplicateNode(node, canvasId, { offset: fixedOffset });
     }
-  }, [copiedNodes, duplicateNode, canvasId, readonly, workflowIsRunning, logEvent]);
+  }, [duplicateNode, canvasId, readonly, workflowIsRunning, safeJsonParse]);
 
   /**
    * Handle keyboard shortcuts for copy and paste
    */
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+    async (e: KeyboardEvent) => {
       // Skip all keyboard handling in readonly mode
       if (readonly || workflowIsRunning) return;
 
@@ -82,23 +117,16 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
 
       // Check for mod key (Command on Mac, Ctrl on Windows/Linux)
       const isModKey = e.metaKey || e.ctrlKey;
-      const selectedTextLength =
-        typeof window === 'undefined' ? 0 : (window.getSelection()?.toString()?.length ?? 0);
-      const hasTextSelection = selectedTextLength > 0;
 
       // Handle copy (Cmd/Ctrl + C) only when there is no text selection
       if (isModKey && e.key.toLowerCase() === 'c') {
-        if (!hasTextSelection) {
-          handleCopy();
-        }
+        await handleCopy();
         return;
       }
 
       // Handle paste (Cmd/Ctrl + V) only when there is no text selection
       if (isModKey && e.key.toLowerCase() === 'v') {
-        if (!hasTextSelection) {
-          handlePaste();
-        }
+        await handlePaste();
         return;
       }
     },
@@ -112,7 +140,6 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
   }, [handleKeyDown]);
 
   return {
-    copiedNodes,
     handleCopy,
     handlePaste,
   };
