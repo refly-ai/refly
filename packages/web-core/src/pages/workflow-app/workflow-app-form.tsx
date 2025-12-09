@@ -1,9 +1,4 @@
-import type {
-  WorkflowVariable,
-  WorkflowExecutionStatus,
-  RawCanvasData,
-} from '@refly/openapi-schema';
-import { getWorkflowAppCanvasData, WorkflowAppData } from '@refly/utils';
+import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, Form, Typography, message, Tooltip, Avatar } from 'antd';
 import { IconShare } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -83,7 +78,7 @@ interface WorkflowAPPFormProps {
   canvasId?: string | null;
   className?: string;
   templateContent?: string;
-  workflowApp?: WorkflowAppData;
+  workflowApp?: any;
   executionCreditUsage?: number | null;
 }
 
@@ -103,11 +98,6 @@ export const WorkflowAPPForm = ({
 }: WorkflowAPPFormProps) => {
   const showRemix = false;
   const { t } = useTranslation();
-
-  // Get canvas data using compatibility helper
-  const canvasData = useMemo(() => {
-    return getWorkflowAppCanvasData(workflowApp);
-  }, [workflowApp]);
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
@@ -656,9 +646,9 @@ export const WorkflowAPPForm = ({
                   originalVariables={workflowVariables}
                 />
                 {/* Tools Dependency Form */}
-                {canvasData && (
+                {workflowApp?.canvasData && (
                   <div className="mt-3 flex items-center justify-between">
-                    <ToolsDependencyChecker canvasData={canvasData as RawCanvasData} />
+                    <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
 
                     <Tooltip title={t('canvas.workflow.run.toolsGuide') || 'Tools Guide'}>
                       <Button
@@ -679,25 +669,21 @@ export const WorkflowAPPForm = ({
               </div>
 
               {/* owner */}
-              {workflowApp?.owner && (
+              {workflowApp?.canvasData?.owner && (
                 <div className="mt-2 flex items-center gap-1.5 cursor-pointer">
                   <Avatar
                     size={16}
-                    src={workflowApp.owner?.avatar || defaultAvatar}
+                    src={workflowApp.canvasData.owner?.avatar || defaultAvatar}
                     className="flex-shrink-0"
                   />
                   <span className="text-[11px] leading-[1.4545em] text-[rgba(28,31,35,0.35)] dark:text-refly-text-3">
-                    {workflowApp.owner.nickname || workflowApp.owner?.name || ''}
+                    {workflowApp.canvasData.owner.nickname ||
+                      workflowApp.canvasData.owner?.name ||
+                      ''}
                   </span>
                   <div className="w-[1px] h-[10px] bg-[#E7E7E7] dark:bg-refly-Card-Border rounded-[3px] flex-shrink-0" />
                   <span className="text-[11px] leading-[1.4545em] text-[rgba(28,31,35,0.35)] dark:text-refly-text-3">
-                    {formatDate(
-                      workflowApp?.updatedAt
-                        ? typeof workflowApp.updatedAt === 'string'
-                          ? workflowApp.updatedAt
-                          : workflowApp.updatedAt.toISOString()
-                        : undefined,
-                    )}
+                    {formatDate(workflowApp?.updatedAt)}
                   </span>
                 </div>
               )}
@@ -835,9 +821,9 @@ export const WorkflowAPPForm = ({
                     </Form>
 
                     {/* Tools Dependency Form */}
-                    {canvasData && (
+                    {workflowApp?.canvasData && (
                       <div className="mt-5 ">
-                        <ToolsDependencyChecker canvasData={canvasData as RawCanvasData} />
+                        <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
                       </div>
                     )}
                   </>
