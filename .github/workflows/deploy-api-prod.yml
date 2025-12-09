@@ -3,6 +3,10 @@ name: Deploy API To Prod
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     uses: ./.github/workflows/deploy-api.yml
