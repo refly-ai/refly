@@ -27,11 +27,8 @@ import {
   genProviderID,
   providerInfoList,
   safeParseJSON,
-  safeStringifyJSON,
   deepmerge,
   runModuleInitWithTimeoutAndRetry,
-  isAutoModel,
-  AUTO_MODEL_ID,
 } from '@refly/utils';
 import {
   ProviderNotFoundError,
@@ -59,6 +56,7 @@ import { ConfigService } from '@nestjs/config';
 import { VectorSearchService } from '../common/vector-search';
 import { VECTOR_SEARCH } from '../common/vector-search/tokens';
 import { providerItemPO2DTO } from './provider.dto';
+import { AutoModelRouter } from './auto-model-router.service';
 
 interface GlobalProviderConfig {
   providers: ProviderModel[];
@@ -878,99 +876,6 @@ export class ProviderService implements OnModuleInit {
     return null;
   }
 
-  /**
-   * Auto model routing priority list
-   * The system will try to route to models in this order until it finds an available one
-   * Priority: Claude 4.5 Sonnet > Claude 4 Sonnet
-   */
-  private readonly AUTO_MODEL_ROUTING_PRIORITY = [
-    'us.anthropic.claude-sonnet-4-5-20250929-v1:0', // Claude 4.5 Sonnet (primary target)
-    'us.anthropic.claude-sonnet-4-20250514-v1:0', // Claude 4 Sonnet (fallback)
-  ];
-
-  /**
-   * Route Auto model to the target model with monitoring metadata
-   * If the input is not an Auto model, returns it unchanged
-   * Routes to the first available model from the priority list
-   * @param chatItem The chat model item to potentially route
-   * @param user The user context
-   * @returns The routed model item or original item
-   * @throws ProviderItemNotFoundError if no suitable model is found
-   */
-  private async routeAutoModel(
-    chatItem: ProviderItemModel,
-    user: User,
-  ): Promise<ProviderItemModel> {
-    if (!isAutoModel(chatItem.config)) {
-      return chatItem;
-    }
-
-    // Find the first available model from the priority list
-    const routedItem = await this.findAvailableModelForAutoRouting(user);
-
-    this.logger.log(
-      `Routed auto model to ${routedItem.name} (itemId: ${routedItem.itemId}) for user ${user.uid}`,
-    );
-
-    // Inject route data for monitoring
-    const config = safeParseJSON(routedItem.config || '{}');
-    config.routeData = {
-      originalItemId: chatItem.itemId,
-      originalModelId: AUTO_MODEL_ID,
-    };
-
-    return {
-      ...routedItem,
-      config: safeStringifyJSON(config),
-    };
-  }
-
-  /**
-   * Find an available LLM provider item for Auto model routing
-   * This method iterates through the AUTO_MODEL_ROUTING_PRIORITY list and returns
-   * the first available and valid model
-   * Reasoning models (capabilities.reasoning = true) are excluded
-   * @param user The user context
-   * @returns An object containing the provider item and its modelId, or null if no suitable model is found
-   */
-  private async findAvailableModelForAutoRouting(user: User): Promise<ProviderItemModel> {
-    const items = await this.findProviderItemsByCategory(user, 'llm');
-
-    // Key: modelId, value: item
-    const modelMap = new Map<string, ProviderItemModel>();
-    for (const item of items) {
-      const config: LLMModelConfig = safeParseJSON(item.config);
-
-      if (!config) {
-        continue;
-      }
-
-      // Skip reasoning models
-      if (config.capabilities?.reasoning === true) {
-        continue;
-      }
-
-      if (config.modelId) {
-        modelMap.set(config.modelId, item);
-      }
-    }
-
-    // Find the first available model from the priority list
-    for (const candidateModelId of this.AUTO_MODEL_ROUTING_PRIORITY) {
-      const item = modelMap.get(candidateModelId);
-      if (item) {
-        return item;
-      }
-    }
-
-    // Fallback to the first available model
-    if (items.length > 0) {
-      return items[0];
-    }
-
-    throw new ProviderItemNotFoundError('Auto model routing failed: no model available');
-  }
-
   async prepareChatModel(user: User, itemId: string): Promise<BaseChatModel> {
     const item = await this.findProviderItemById(user, itemId);
     if (!item) {
@@ -1053,7 +958,8 @@ export class ProviderService implements OnModuleInit {
     }
 
     // Auto model routing
-    chatItem = await this.routeAutoModel(chatItem, user);
+    const llmItems = await this.findProviderItemsByCategory(user, 'llm');
+    chatItem = new AutoModelRouter({ llmItems, userId: user.uid }).route(chatItem);
 
     const agentItem = await this.findDefaultProviderItem(user, 'agent', userPo);
     const titleGenerationItem = await this.findDefaultProviderItem(user, 'titleGeneration', userPo);

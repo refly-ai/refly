@@ -1,0 +1,119 @@
+import { Logger } from '@nestjs/common';
+import { ProviderItem as ProviderItemModel } from '@prisma/client';
+import { LLMModelConfig } from '@refly/openapi-schema';
+import {
+  isAutoModel,
+  AUTO_MODEL_ID,
+  AUTO_MODEL_ROUTING_PRIORITY,
+  safeParseJSON,
+  safeStringifyJSON,
+} from '@refly/utils';
+import { ProviderItemNotFoundError } from '@refly/errors';
+
+/**
+ * Context for Auto model routing
+ * Contains all the data needed for routing decisions
+ */
+export interface RouterContext {
+  /**
+   * LLM provider items available for the user
+   * Pre-fetched by ProviderService.findProviderItemsByCategory(user, 'llm')
+   */
+  llmItems: ProviderItemModel[];
+
+  /**
+   * User identifier for logging purposes
+   */
+  userId: string;
+}
+
+/**
+ * Auto model router for selecting the best available model
+ * Instantiate with RouterContext and call route() to perform routing
+ */
+export class AutoModelRouter {
+  private logger = new Logger(AutoModelRouter.name);
+
+  constructor(private readonly context: RouterContext) {}
+
+  /**
+   * Route Auto model to the target model with monitoring metadata
+   * If the input is not an Auto model, returns it unchanged
+   * Routes to the first available model from the priority list
+   *
+   * @param chatItem The chat model item to potentially route
+   * @returns The routed model item or original item
+   * @throws ProviderItemNotFoundError if no suitable model is found
+   */
+  route(chatItem: ProviderItemModel): ProviderItemModel {
+    if (!isAutoModel(chatItem.config)) {
+      return chatItem;
+    }
+
+    // Find the first available model from the priority list
+    const routedItem = this.findAvailableModel();
+
+    this.logger.log(
+      `Routed auto model to ${routedItem.name} (itemId: ${routedItem.itemId}) for user ${this.context.userId}`,
+    );
+
+    // Inject route data for monitoring
+    const config = safeParseJSON(routedItem.config || '{}');
+    config.routeData = {
+      originalItemId: chatItem.itemId,
+      originalModelId: AUTO_MODEL_ID,
+    };
+
+    return {
+      ...routedItem,
+      config: safeStringifyJSON(config),
+    };
+  }
+
+  /**
+   * Find an available LLM provider item for Auto model routing
+   * This method iterates through the AUTO_MODEL_ROUTING_PRIORITY list and returns
+   * the first available and valid model
+   * Reasoning models (capabilities.reasoning = true) are excluded
+   *
+   * @returns The selected provider item
+   * @throws ProviderItemNotFoundError if no suitable model is found
+   */
+  private findAvailableModel(): ProviderItemModel {
+    const { llmItems } = this.context;
+
+    // Key: modelId, value: item
+    const modelMap = new Map<string, ProviderItemModel>();
+    for (const item of llmItems) {
+      const config: LLMModelConfig = safeParseJSON(item.config);
+
+      if (!config) {
+        continue;
+      }
+
+      // Skip reasoning models
+      if (config.capabilities?.reasoning === true) {
+        continue;
+      }
+
+      if (config.modelId) {
+        modelMap.set(config.modelId, item);
+      }
+    }
+
+    // Find the first available model from the priority list
+    for (const candidateModelId of AUTO_MODEL_ROUTING_PRIORITY) {
+      const item = modelMap.get(candidateModelId);
+      if (item) {
+        return item;
+      }
+    }
+
+    // Fallback to the first available model
+    if (llmItems.length > 0) {
+      return llmItems[0];
+    }
+
+    throw new ProviderItemNotFoundError('Auto model routing failed: no model available');
+  }
+}
