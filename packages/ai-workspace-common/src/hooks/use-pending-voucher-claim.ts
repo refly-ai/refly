@@ -13,9 +13,9 @@ const PENDING_VOUCHER_KEY = 'pendingVoucherInviteCode';
  * Should be used in main workspace/dashboard component that loads after login.
  *
  * Flow:
- * 1. User visits /invite/:code or /?invite=code while not logged in
- * 2. User clicks "Claim" or scans QR -> code is stored in localStorage, user redirected to login
- * 3. User logs in and is redirected to /workspace
+ * 1. User visits /?invite=code while not logged in
+ * 2. Code is stored in localStorage, user logs in
+ * 3. User is redirected to /workspace
  * 4. This hook detects the pending code and automatically claims it
  * 5. Shows voucher popup (use-only mode) so user can use it immediately
  */

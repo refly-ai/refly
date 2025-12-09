@@ -355,11 +355,8 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
           body.voucherId = availableVoucher.voucherId;
 
           logEvent('voucher_applied', null, {
-            voucherId: availableVoucher.voucherId,
-            discountPercent: availableVoucher.discountPercent,
-            entry_point: mode === 'modal' ? 'subscribe_modal' : 'pricing_page',
-            planType: 'plus',
-            interval: billingPeriod,
+            voucher_value: Math.round((100 - availableVoucher.discountPercent) / 10),
+            entry_point: 'pricing_page',
           });
         } else {
           const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';

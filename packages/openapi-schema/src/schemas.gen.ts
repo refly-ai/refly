@@ -12707,19 +12707,11 @@ export const VoucherValidateResultSchema = {
 
 export const CreateInvitationResultSchema = {
   type: 'object',
-  required: ['invitation', 'shareUrl'],
+  required: ['invitation'],
   properties: {
     invitation: {
       $ref: '#/components/schemas/VoucherInvitation',
       description: 'Created invitation',
-    },
-    shareUrl: {
-      type: 'string',
-      description: 'Share URL for the invitation',
-    },
-    qrCodeUrl: {
-      type: 'string',
-      description: 'QR code URL for the invitation',
     },
   },
 } as const;

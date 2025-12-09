@@ -88,8 +88,6 @@ export interface VoucherInvitationDTO {
  */
 export interface CreateInvitationResult {
   invitation: VoucherInvitationDTO;
-  shareUrl: string;
-  qrCodeUrl?: string;
 }
 
 /**

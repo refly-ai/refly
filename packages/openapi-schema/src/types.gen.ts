@@ -9193,14 +9193,6 @@ export type CreateInvitationResult = {
    * Created invitation
    */
   invitation: VoucherInvitation;
-  /**
-   * Share URL for the invitation
-   */
-  shareUrl: string;
-  /**
-   * QR code URL for the invitation
-   */
-  qrCodeUrl?: string;
 };
 
 export type ClaimInvitationResult = {

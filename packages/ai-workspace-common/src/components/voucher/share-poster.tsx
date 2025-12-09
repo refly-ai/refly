@@ -94,13 +94,7 @@ const TicketDivider = () => (
   </div>
 );
 
-export const SharePoster = ({
-  visible,
-  onClose,
-  invitation,
-  shareUrl,
-  discountPercent,
-}: SharePosterProps) => {
+export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: SharePosterProps) => {
   const { t } = useTranslation();
   const posterRef = useRef<HTMLDivElement>(null);
   const [copying, setCopying] = useState(false);
@@ -113,6 +107,8 @@ export const SharePoster = ({
 
   const userName = userProfile?.name || 'Refly User';
   const userAvatar = userProfile?.avatar;
+  // Convert discountPercent (e.g., 90 = 90% off) to voucher_value (e.g., 1 = 1折)
+  const voucherValue = Math.round((100 - discountPercent) / 10);
 
   const handleCopyLink = useCallback(async () => {
     setCopying(true);
@@ -131,16 +127,14 @@ export const SharePoster = ({
       await navigator.clipboard.writeText(promotionalText);
       message.success(t('voucher.share.linkCopied', 'Link copied!'));
       logEvent('share_link_copied', null, {
-        inviteCode: invitation?.inviteCode,
-        discountPercent,
-        shareUrl,
+        voucher_value: voucherValue,
       });
       onClose();
     } catch {
       message.error(t('voucher.share.copyFailed', 'Copy failed'));
     }
     setCopying(false);
-  }, [shareUrl, t, invitation?.inviteCode, discountPercent, onClose]);
+  }, [shareUrl, t, discountPercent, onClose, voucherValue]);
 
   const handleDownload = useCallback(async () => {
     if (!posterRef.current || downloading) return;
@@ -168,9 +162,7 @@ export const SharePoster = ({
       message.success(t('voucher.share.downloaded', 'Downloaded'));
 
       logEvent('poster_download', null, {
-        inviteCode: invitation?.inviteCode,
-        discountPercent,
-        format: 'png',
+        voucher_value: voucherValue,
       });
       onClose();
     } catch (error) {
@@ -179,7 +171,7 @@ export const SharePoster = ({
     } finally {
       setDownloading(false);
     }
-  }, [downloading, discountPercent, t, invitation?.inviteCode, onClose]);
+  }, [downloading, discountPercent, t, onClose, voucherValue]);
 
   if (!visible) return null;
 

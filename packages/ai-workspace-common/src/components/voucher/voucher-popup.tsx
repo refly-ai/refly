@@ -60,10 +60,9 @@ export const VoucherPopup = ({
     if (visible && voucherResult?.voucher) {
       // Increment key to force Confetti component remount
       setConfettiKey((prev) => prev + 1);
+      const dp = voucherResult.voucher.discountPercent;
       logEvent('voucher_popup_display', null, {
-        voucherId: voucherResult?.voucher.voucherId,
-        discountPercent: voucherResult?.voucher.discountPercent,
-        triggerLimitReached: voucherResult.triggerLimitReached,
+        voucher_value: Math.round((100 - dp) / 10),
       });
     }
   }, [visible, voucherResult?.voucher, voucherResult]);
@@ -72,6 +71,8 @@ export const VoucherPopup = ({
 
   const { voucher } = voucherResult;
   const discountPercent = voucher.discountPercent;
+  // Convert discountPercent (e.g., 90 = 90% off) to voucher_value (e.g., 1 = 1折)
+  const voucherValue = Math.round((100 - discountPercent) / 10);
 
   // Calculate discount value and discounted price
   const basePrice = getBaseMonthlyPrice('plus');
@@ -87,10 +88,7 @@ export const VoucherPopup = ({
   const handleUseNow = async () => {
     // Log click event
     logEvent('voucher_use_now_click', null, {
-      voucherId: voucher.voucherId,
-      discountPercent: voucher.discountPercent,
-      useOnlyMode,
-      isPlusUser,
+      voucher_value: voucherValue,
     });
 
     // Use custom handler if provided
@@ -132,11 +130,8 @@ export const VoucherPopup = ({
         body.voucherId = voucher.voucherId;
 
         logEvent('voucher_applied', null, {
-          voucherId: voucher.voucherId,
-          discountPercent: voucher.discountPercent,
-          entry_point: 'voucher_popup',
-          planType: 'plus',
-          interval: 'monthly',
+          voucher_value: voucherValue,
+          entry_point: 'discount_popup',
         });
       } else {
         const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';
@@ -166,8 +161,7 @@ export const VoucherPopup = ({
   const handleShare = async () => {
     // Log click event
     logEvent('voucher_share_click', null, {
-      voucherId: voucher.voucherId,
-      discountPercent: voucher.discountPercent,
+      voucher_value: voucherValue,
     });
 
     // Use custom handler if provided

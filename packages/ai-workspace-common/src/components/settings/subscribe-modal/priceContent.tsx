@@ -563,11 +563,8 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
 
             // Log voucher applied event
             logEvent('voucher_applied', null, {
-              voucherId: availableVoucher.voucherId,
-              discountPercent: availableVoucher.discountPercent,
-              entry_point: source === 'modal' ? 'subscribe_modal' : 'pricing_page',
-              planType,
-              interval,
+              voucher_value: Math.round((100 - availableVoucher.discountPercent) / 10),
+              entry_point: 'pricing_page',
             });
           } else {
             // Voucher is invalid - show message and clear it
