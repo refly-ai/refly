@@ -10,8 +10,11 @@ export class FormService {
     private readonly configService: ConfigService,
   ) {}
 
-  async getFormDefinition(_uid: string): Promise<FormDefinition> {
+  async getFormDefinition(_uid: string): Promise<FormDefinition | null> {
     const formDefinition = await this.prisma.formDefinition.findFirst();
+    if (!formDefinition) {
+      return null;
+    }
     return {
       formId: formDefinition.formId,
       title: formDefinition.title,
