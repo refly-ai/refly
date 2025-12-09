@@ -1030,9 +1030,9 @@ const translations = {
     exportSuccess: '文档导出成功',
     exportFailed: '文档导出失败',
     exportAs: '导出为',
-    exportDocumentToMarkdown: '导出为 Markdown',
-    exportDocumentToDocx: '导出为 Docx',
-    exportDocumentToPdf: '导出为 PDF',
+    exportDocumentToMarkdown: 'Markdown 文档 (.md)',
+    exportDocumentToDocx: 'Word 文档 (.docx)',
+    exportDocumentToPdf: 'PDF 文档 (.pdf)',
     openWebpage: '打开原网页',
     downloadFile: '下载文件',
     canvasListModal: {

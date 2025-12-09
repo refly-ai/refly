@@ -201,4 +201,34 @@ export class DriveController {
 
     res.end(data);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('document/export')
+  async exportDocument(
+    @LoginedUser() user: User,
+    @Query('fileId') fileId: string,
+    @Query('format') format: 'markdown' | 'docx' | 'pdf',
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<void> {
+    const data = await this.driveService.exportDocument(user, { fileId, format });
+
+    const origin = req.headers.origin;
+    let contentType = 'text/markdown';
+
+    if (format === 'docx') {
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else if (format === 'pdf') {
+      contentType = 'application/pdf';
+    }
+
+    res.set({
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Credentials': 'true',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+    });
+
+    res.end(data);
+  }
 }

@@ -1600,21 +1600,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetDocumentDetailResponse'
-  /knowledge/document/export/document:
+  /drive/document/export:
     get:
       tags:
-        - knowledge
+        - drive
       summary: Export document to Markdown, DOCX or PDF format
       description: Export a document to Markdown, DOCX or PDF format
       operationId: exportDocument
       parameters:
-        - name: docId
+        - name: fileId
           in: query
-          description: Export document ID to retrieve
+          description: Export file ID to retrieve
           required: true
           schema:
             type: string
-            example: d-g30e1b80b5g1itbemc0g5jj3
+            example: df-g30e1b80b5g1itbemc0g5jj3
         - name: format
           in: query
           description: Export format
@@ -4864,6 +4864,7 @@ components:
         - image
         - video
         - audio
+        - text/plain
     IndexError:
       type: object
       description: Error message for resource indexing

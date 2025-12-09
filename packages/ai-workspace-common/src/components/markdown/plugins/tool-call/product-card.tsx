@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { Typography, Button, message } from 'antd';
-import { Share, Download } from 'refly-icons';
+import { Typography, Button, Dropdown, message } from 'antd';
+import type { MenuProps } from 'antd';
+import { Share, Download, Markdown, Doc1, Pdf } from 'refly-icons';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
 import { DriveFile, ResourceType, EntityType } from '@refly/openapi-schema';
@@ -13,6 +14,7 @@ import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { usePublicFileUrlContext } from '@refly-packages/ai-workspace-common/context/public-file-url';
+import { useExportDocument } from '@refly-packages/ai-workspace-common/hooks/use-export-document';
 const { Paragraph } = Typography;
 
 // Convert DriveFile type to ResourceType
@@ -33,20 +35,35 @@ type ActionButtonProps = {
   label: string;
   icon: React.ReactElement;
   loading?: boolean;
-  onClick: () => void;
+  onClick?: () => void;
+  dropdownMenuItems?: MenuProps['items'];
 };
 
-const ActionButton = memo<ActionButtonProps>(({ label, icon, onClick, loading }) => (
-  <Button
-    type="text"
-    size="small"
-    icon={icon}
-    onClick={onClick}
-    aria-label={label}
-    loading={loading}
-    disabled={loading}
-  />
-));
+const ActionButton = memo<ActionButtonProps>(
+  ({ label, icon, onClick, loading, dropdownMenuItems }) => {
+    const buttonNode = (
+      <Button
+        type="text"
+        size="small"
+        icon={icon}
+        onClick={onClick}
+        aria-label={label}
+        loading={loading}
+        disabled={loading}
+      />
+    );
+
+    if (dropdownMenuItems?.length) {
+      return (
+        <Dropdown menu={{ items: dropdownMenuItems }} trigger={['click']} placement="bottomRight">
+          {buttonNode}
+        </Dropdown>
+      );
+    }
+
+    return buttonNode;
+  },
+);
 
 ActionButton.displayName = 'ActionButton';
 
@@ -63,6 +80,7 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
   const inheritedUsePublicFileUrl = usePublicFileUrlContext();
   const { t } = useTranslation();
   const { handleDownload, isDownloading } = useDownloadFile();
+  const { exportDocument } = useExportDocument();
 
   const title = file?.name ?? 'Untitled file';
 
@@ -90,6 +108,95 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
   }, [handleDownload, file]);
 
   const [isSharing, setIsSharing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = useCallback(
+    async (type: 'markdown' | 'docx' | 'pdf') => {
+      if (isExporting || !file?.fileId) {
+        return;
+      }
+
+      try {
+        setIsExporting(true);
+        let mimeType = '';
+        let extension = '';
+
+        const hide = message.loading({ content: t('workspace.exporting'), duration: 0 });
+        const content = await exportDocument(file.fileId, type);
+        hide();
+
+        switch (type) {
+          case 'markdown':
+            mimeType = 'text/markdown';
+            extension = 'md';
+            break;
+          case 'docx':
+            mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            extension = 'docx';
+            break;
+          case 'pdf':
+            mimeType = 'application/pdf';
+            extension = 'pdf';
+            break;
+        }
+
+        const blob = new Blob([content ?? ''], { type: mimeType || 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${title || t('common.untitled')}.${extension || 'md'}`;
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        message.success(t('workspace.exportSuccess'));
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Export error:', error);
+        message.error(t('workspace.exportFailed'));
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [exportDocument, file?.fileId, isExporting, t, title],
+  );
+
+  const exportMenuItems: MenuProps['items'] = useMemo(
+    () => [
+      {
+        key: 'exportPdf',
+        label: (
+          <div className="flex items-center gap-1 text-refly-text-0">
+            <Pdf size={18} color="var(--refly-Colorful-red)" />
+            {t('workspace.exportDocumentToPdf')}
+          </div>
+        ),
+        onClick: async () => handleExport('pdf'),
+      },
+
+      {
+        key: 'exportDocx',
+        label: (
+          <div className="flex items-center gap-1 text-refly-text-0">
+            <Doc1 size={18} color="var(--refly-Colorful-Blue)" />
+            {t('workspace.exportDocumentToDocx')}
+          </div>
+        ),
+        onClick: async () => handleExport('docx'),
+      },
+      {
+        key: 'exportMarkdown',
+        label: (
+          <div className="flex items-center gap-1 text-refly-text-0">
+            <Markdown size={18} color="var(--refly-text-0)" />
+            {t('workspace.exportDocumentToMarkdown')}
+          </div>
+        ),
+        onClick: async () => handleExport('markdown'),
+      },
+    ],
+    [handleExport, t],
+  );
 
   const handleShare = useCallback(async () => {
     if (!file?.fileId) {
@@ -127,23 +234,47 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
     }
   }, [file?.fileId, t]);
 
-  const actions = useMemo<ActionButtonProps[]>(
-    () => [
+  const actions = useMemo<ActionButtonProps[]>(() => {
+    const baseShareAction: ActionButtonProps | null = !isMediaFile
+      ? {
+          label: 'Share',
+          icon: <Share size={16} />,
+          onClick: handleShare,
+          loading: isSharing,
+        }
+      : null;
+
+    if (file?.type === 'text/plain') {
+      return [
+        {
+          label: 'Download',
+          icon: <Download size={16} />,
+          loading: isExporting,
+          dropdownMenuItems: exportMenuItems,
+        },
+        baseShareAction,
+      ].filter((action): action is ActionButtonProps => Boolean(action));
+    }
+
+    return [
       {
         label: 'Download',
         icon: <Download size={16} />,
         onClick: handleDownloadProduct,
         loading: isDownloading,
       },
-      !isMediaFile && {
-        label: 'Share',
-        icon: <Share size={16} />,
-        onClick: handleShare,
-        loading: isSharing,
-      },
-    ],
-    [handleDownloadProduct, handleShare, isDownloading, isMediaFile, isSharing],
-  );
+      baseShareAction,
+    ].filter((action): action is ActionButtonProps => Boolean(action));
+  }, [
+    exportMenuItems,
+    file?.type,
+    handleDownloadProduct,
+    handleShare,
+    isDownloading,
+    isExporting,
+    isMediaFile,
+    isSharing,
+  ]);
 
   const handleClosePreview = useCallback(() => {
     setCurrentFile(null);
@@ -193,6 +324,7 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
                   label={action.label}
                   onClick={action.onClick}
                   loading={action.loading}
+                  dropdownMenuItems={action.dropdownMenuItems}
                 />
               ),
           )}

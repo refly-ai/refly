@@ -950,9 +950,9 @@ const translations = {
     exportSuccess: 'Export successfully',
     exportFailed: 'Export failed',
     exportAs: 'Export as',
-    exportDocumentToMarkdown: 'Export to Markdown',
-    exportDocumentToDocx: 'Export to DOCX',
-    exportDocumentToPdf: 'Export to PDF',
+    exportDocumentToMarkdown: 'Markdown Document (.md)',
+    exportDocumentToDocx: 'Word Document (.docx)',
+    exportDocumentToPdf: 'PDF Document (.pdf)',
     openWebpage: 'Open Original Webpage',
     downloadFile: 'Download File',
     canvasListModal: {
