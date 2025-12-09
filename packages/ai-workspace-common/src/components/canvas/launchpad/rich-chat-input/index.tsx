@@ -248,8 +248,32 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         .run();
     }, []);
 
+    const resolveRange = useCallback((editor: any, range: any) => {
+      try {
+        const docSize = editor?.state?.doc?.content?.size ?? 0;
+        if (range && typeof range.from === 'number' && typeof range.to === 'number') {
+          const from = Math.max(0, Math.min(range.from, docSize));
+          const to = Math.max(from, Math.min(range.to, docSize));
+          return { from, to };
+        }
+
+        const selection = editor?.state?.selection;
+        if (selection) {
+          return {
+            from: Math.max(0, Math.min(selection.from, docSize)),
+            to: Math.max(0, Math.min(selection.to, docSize)),
+          };
+        }
+      } catch {
+        // fall through to default
+      }
+
+      return { from: 0, to: 0 };
+    }, []);
+
     const handleCommand = useCallback(
       ({ editor, range, props }: { editor: any; range: any; props: MentionItem }) => {
+        const targetRange = resolveRange(editor, range);
         const item = props;
 
         // If tool/toolset is not installed, open tool store modal to browse and install
@@ -266,7 +290,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           const mediaUrl =
             item.metadata?.imageUrl || item.metadata?.videoUrl || item.metadata?.audioUrl;
 
-          insertMention(editor, range, {
+          insertMention(editor, targetRange, {
             id: item.entityId || item.nodeId || item.variableId || item.name,
             label: item.name,
             source: item.source,
@@ -287,7 +311,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           }, 100);
         } else if (item.source === 'toolsets' || item.source === 'tools') {
           // Insert a tool mention with toolset metadata stored in node attrs
-          insertMention(editor, range, {
+          insertMention(editor, targetRange, {
             id: item.toolsetId || item.name,
             label: item.name,
             source: item.source,
@@ -323,7 +347,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
               },
             };
 
-            insertMention(editor, range, {
+            insertMention(editor, targetRange, {
               id: item.variableId,
               label: item.name,
               source: 'variables',
@@ -341,7 +365,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         } else {
           // For regular variables (startNode and resourceLibrary), insert as normal mention
           // These will be converted to Handlebars format when sending
-          insertMention(editor, range, {
+          insertMention(editor, targetRange, {
             id: item.variableId || item.name,
             label: item.name,
             source: item.source,
@@ -356,6 +380,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       [
         addToContextItems,
         addToSelectedToolsets,
+        resolveRange,
         insertMention,
         files,
         setToolStoreModalOpen,
