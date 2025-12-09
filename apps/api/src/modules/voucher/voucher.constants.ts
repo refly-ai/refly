@@ -3,8 +3,7 @@
  */
 
 // Daily popup trigger limit per user
-// TODO: Set back to 3 after testing
-export const DAILY_POPUP_TRIGGER_LIMIT = 999;
+export const DAILY_POPUP_TRIGGER_LIMIT = 3;
 
 // Voucher expiration days
 export const VOUCHER_EXPIRATION_DAYS = 7;

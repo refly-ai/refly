@@ -8,7 +8,7 @@ import cn from 'classnames';
 import { useUserStoreShallow } from '@refly/stores';
 import html2canvas from 'html2canvas';
 import couponGradientBg from '../../assets/images/coupon-gradient-bg.webp';
-import reflyIcon from '../../assets/images/refly-icon.png';
+import reflyIcon from '../../assets/logo.svg';
 import defaultAvatar from '../../assets/refly_default_avatar.png';
 import { Account } from 'refly-icons';
 import { getBaseMonthlyPrice } from '../../constants/pricing';
