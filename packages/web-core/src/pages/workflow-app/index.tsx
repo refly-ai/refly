@@ -104,7 +104,7 @@ const WorkflowAppPage: React.FC = () => {
   // Track enter_template_page event when page loads
   useEffect(() => {
     if (shareId) {
-      logEvent('enter_template_page', null, { shareId });
+      logEvent('enter_template_page', Date.now(), { shareId });
     }
   }, [shareId]);
 
@@ -533,7 +533,7 @@ const WorkflowAppPage: React.FC = () => {
       },
       onOk: async () => {
         // Get all executing skillResponse nodes
-        logEvent('stop_template_run', null, {
+        logEvent('stop_template_run', Date.now(), {
           canvasId: workflowDetail?.canvasId ?? '',
           executionId,
         });

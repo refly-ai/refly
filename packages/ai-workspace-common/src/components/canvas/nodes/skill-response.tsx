@@ -543,7 +543,7 @@ export const SkillResponseNode = memo(
         return;
       }
 
-      logEvent('run_agent_node', null, {
+      logEvent('run_agent_node', Date.now(), {
         canvasId,
         nodeId: id,
       });
@@ -572,7 +572,7 @@ export const SkillResponseNode = memo(
     const { duplicateNode } = useDuplicateNode();
 
     const handleDelete = useCallback(() => {
-      logEvent('delete_agent_node', null, {
+      logEvent('delete_agent_node', Date.now(), {
         canvasId,
         nodeId: id,
       });
@@ -630,7 +630,7 @@ export const SkillResponseNode = memo(
           event?.dragCreateInfo,
         );
 
-        logEvent('create_agent_node', null, {
+        logEvent('create_agent_node', Date.now(), {
           canvasId,
           source: 'other_agent_node',
         });

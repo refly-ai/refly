@@ -710,7 +710,7 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>(
       (item: MentionItem, rangeOverride?: { from: number; to: number } | null) => {
         // Handle create variable case
         if (item.variableId === 'create-variable') {
-          logEvent('add_tools_and_context', null, {
+          logEvent('add_tools_and_context', Date.now(), {
             type: 'user_input',
           });
           handleAddVariable();
@@ -719,7 +719,7 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>(
 
         const logType = mapSourceToLogType(item.source);
         if (logType) {
-          logEvent('add_tools_and_context', null, {
+          logEvent('add_tools_and_context', Date.now(), {
             type: logType,
           });
         }

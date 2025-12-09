@@ -121,6 +121,16 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
     setVariables(variables ?? []);
     setShowWorkflowRun(true);
 
+    for (const node of nodes) {
+      if (node.type === 'skillResponse') {
+        logEvent('create_agent_node', Date.now(), {
+          canvasId,
+          nodeId: node.id,
+          source: 'copilot_generate',
+        });
+      }
+    }
+
     setTimeout(() => {
       onLayout('LR');
     }, 200);
