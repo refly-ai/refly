@@ -40,9 +40,9 @@ const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): bo
   // Find matching user tool by key
   const matchingUserTool = userTools.find((t) => t.key === toolset.toolset?.key);
 
-  // If not in userTools list, it's not an external OAuth tool, so it's available
+  // If not in userTools list, user hasn't installed/authorized this tool
   if (!matchingUserTool) {
-    return true;
+    return false;
   }
 
   // For external OAuth tools, check authorized status
