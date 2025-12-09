@@ -1169,8 +1169,16 @@ export class ShareCreationService {
   private sanitizeCanvasDataForPublic(
     canvasData: SharedCanvasData,
     resultNodeIds: string[],
-  ): { nodes: any[]; files: any[] } {
-    // 1. Filter nodes to only result nodes
+  ): {
+    nodes: any[];
+    files: any[];
+    title?: string;
+    canvasId?: string;
+    owner?: any;
+    variables?: any[];
+    resources?: any[];
+  } {
+    // 1. Filter nodes to only result nodes (keep this logic unchanged)
     const resultNodes = (canvasData.nodes || []).filter((node) => resultNodeIds.includes(node.id));
 
     // 2. Sanitize each node - keep necessary fields for frontend rendering
@@ -1185,31 +1193,20 @@ export class ShareCreationService {
       },
     }));
 
-    // 3. Get result entity IDs to filter files
-    const resultEntityIds = new Set(sanitizedNodes.map((n) => n.data.entityId).filter(Boolean));
+    // 3. IMPORTANT: Keep ALL files without filtering
+    // Files' resultId points to agent nodes, but users may only select product nodes
+    // Removing the filter to avoid missing files when only product nodes are selected
+    const sanitizedFiles = canvasData.files || [];
 
-    // 4. Filter and sanitize files - keep necessary fields for frontend rendering
-    const sanitizedFiles = (canvasData.files || [])
-      .filter((file) => file.resultId && resultEntityIds.has(file.resultId))
-      .map((file) => ({
-        fileId: file.fileId,
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        category: file.category, // KEEP: Required for frontend to determine file type
-        resultId: file.resultId, // KEEP: Required for product filtering
-        // Remove internal fields that could reveal workflow details:
-        // - canvasId: internal context
-        // - source/scope: reveal workflow methodology
-        // - summary/content: could contain processing details
-        // - variableId/resultVersion: internal linking info
-        // - createdAt/updatedAt: detailed timing could reveal workflow sequence
-        // - storageKey: internal storage info
-      }));
-
+    // 4. Return additional canvasData fields for proper display
     return {
       nodes: sanitizedNodes,
-      files: sanitizedFiles,
+      files: sanitizedFiles, // All files preserved with all fields
+      title: canvasData.title,
+      canvasId: canvasData.canvasId,
+      owner: canvasData.owner,
+      variables: canvasData.variables,
+      resources: canvasData.resources,
     };
   }
 
@@ -1223,7 +1220,13 @@ export class ShareCreationService {
       'imageUrl', // Published image URL - useful for result display
       'videoUrl', // Published video URL - useful for result display
       'audioUrl', // Published audio URL - useful for result display
+      'selectedToolsets', // Toolset configuration - needed for displaying tool usage
     ];
+
+    // Handle null/undefined metadata gracefully
+    if (!metadata || typeof metadata !== 'object') {
+      return {};
+    }
 
     return Object.fromEntries(
       Object.entries(metadata).filter(([key]) => ALLOWED_FIELDS.includes(key)),
@@ -1317,15 +1320,18 @@ export class ShareCreationService {
       // LEGACY: Keep canvasData temporarily for backward compatibility
       // TODO: Remove this field after frontend migration is complete
       canvasData: {
-        canvasId: workflowApp.canvasId,
-        title: canvasData.title,
+        // Use values from sanitized preview first, fallback to original for backward compatibility
+        canvasId: preview.canvasId || workflowApp.canvasId,
+        title: preview.title || canvasData.title,
+        owner: preview.owner || canvasData.owner,
         minimapUrl: publishedMinimapUrl,
         nodes: preview.nodes, // Nodes with protected content
-        files: preview.files,
-        // Remove edges, resources to protect workflow structure
+        files: preview.files, // All files preserved with all fields
+        // Keep edges empty to protect workflow structure
         edges: [],
-        resources: [],
-        variables: this.sanitizeVariables(safeParseJSON(workflowApp.variables || '[]')),
+        resources: preview.resources || [],
+        variables:
+          preview.variables || this.sanitizeVariables(safeParseJSON(workflowApp.variables || '[]')),
       },
     };
 

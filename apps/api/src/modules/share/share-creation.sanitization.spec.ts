@@ -20,7 +20,7 @@ function sanitizeNodeMetadata(metadata: Record<string, any>): Record<string, any
   if (!metadata || typeof metadata !== 'object') {
     return {};
   }
-  const ALLOWED_FIELDS = ['shareId', 'imageUrl', 'videoUrl', 'audioUrl'];
+  const ALLOWED_FIELDS = ['shareId', 'imageUrl', 'videoUrl', 'audioUrl', 'selectedToolsets'];
   return Object.fromEntries(
     Object.entries(metadata).filter(([key]) => ALLOWED_FIELDS.includes(key)),
   );
@@ -29,9 +29,25 @@ function sanitizeNodeMetadata(metadata: Record<string, any>): Record<string, any
 function sanitizeCanvasDataForPublic(
   canvasData: SharedCanvasData,
   resultNodeIds: string[],
-): { nodes: any[]; files: any[] } {
+): {
+  nodes: any[];
+  files: any[];
+  title?: string;
+  canvasId?: string;
+  owner?: any;
+  variables?: any[];
+  resources?: any[];
+} {
   if (!canvasData || typeof canvasData !== 'object') {
-    return { nodes: [], files: [] };
+    return {
+      nodes: [],
+      files: [],
+      title: undefined,
+      canvasId: undefined,
+      owner: undefined,
+      variables: undefined,
+      resources: undefined,
+    };
   }
 
   const resultNodes = (canvasData.nodes || []).filter((node) => resultNodeIds.includes(node.id));
@@ -46,22 +62,17 @@ function sanitizeCanvasDataForPublic(
     },
   }));
 
-  const resultEntityIds = new Set(sanitizedNodes.map((n) => n.data.entityId).filter(Boolean));
-
-  const sanitizedFiles = (canvasData.files || [])
-    .filter((file) => file.resultId && resultEntityIds.has(file.resultId))
-    .map((file) => ({
-      fileId: file.fileId,
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      category: file.category, // KEEP: Required for frontend to determine file type
-      resultId: file.resultId, // KEEP: Required for product filtering
-    }));
+  // IMPORTANT: Keep ALL files without filtering
+  const sanitizedFiles = canvasData.files || [];
 
   return {
     nodes: sanitizedNodes,
     files: sanitizedFiles,
+    title: canvasData.title,
+    canvasId: canvasData.canvasId,
+    owner: canvasData.owner,
+    variables: canvasData.variables,
+    resources: canvasData.resources,
   };
 }
 
@@ -69,13 +80,14 @@ describe('ShareCreationService - Sanitization Logic', () => {
   // No setup needed - testing pure functions directly
 
   describe('sanitizeNodeMetadata - CRITICAL: Must Remove All Sensitive Fields', () => {
-    it('should ONLY keep whitelisted safe fields (shareId, imageUrl, videoUrl, audioUrl)', () => {
+    it('should ONLY keep whitelisted safe fields (shareId, imageUrl, videoUrl, audioUrl, selectedToolsets)', () => {
       const metadata = {
         // ALLOWED fields
         shareId: 'share_123',
         imageUrl: 'https://example.com/image.png',
         videoUrl: 'https://example.com/video.mp4',
         audioUrl: 'https://example.com/audio.mp3',
+        selectedToolsets: [{ toolsetId: 'toolset_123' }], // Now ALLOWED
 
         // FORBIDDEN sensitive fields - MUST be removed
         contextItems: [
@@ -86,7 +98,6 @@ describe('ShareCreationService - Sanitization Logic', () => {
         modelInfo: { model: 'gpt-4', provider: 'openai' },
         tokenUsage: [{ tokens: 1000 }],
         selectedSkill: { skillId: 'skill_123' },
-        selectedToolsets: [{ toolsetId: 'toolset_123' }],
         actionMeta: { actionId: 'action_123' },
         currentLog: 'SENSITIVE execution log',
         pilotSessionId: 'session_123',
@@ -103,11 +114,14 @@ describe('ShareCreationService - Sanitization Logic', () => {
       const sanitized = sanitizeNodeMetadata(metadata);
 
       // CRITICAL: Must ONLY contain whitelisted fields
-      expect(Object.keys(sanitized)).toEqual(['shareId', 'imageUrl', 'videoUrl', 'audioUrl']);
+      expect(Object.keys(sanitized).sort()).toEqual(
+        ['shareId', 'imageUrl', 'videoUrl', 'audioUrl', 'selectedToolsets'].sort(),
+      );
       expect(sanitized.shareId).toBe('share_123');
       expect(sanitized.imageUrl).toBe('https://example.com/image.png');
       expect(sanitized.videoUrl).toBe('https://example.com/video.mp4');
       expect(sanitized.audioUrl).toBe('https://example.com/audio.mp3');
+      expect(sanitized.selectedToolsets).toEqual([{ toolsetId: 'toolset_123' }]); // Now KEPT
 
       // CRITICAL: Must NOT contain any sensitive fields
       expect(sanitized.contextItems).toBeUndefined();
@@ -116,7 +130,6 @@ describe('ShareCreationService - Sanitization Logic', () => {
       expect(sanitized.modelInfo).toBeUndefined();
       expect(sanitized.tokenUsage).toBeUndefined();
       expect(sanitized.selectedSkill).toBeUndefined();
-      expect(sanitized.selectedToolsets).toBeUndefined();
       expect(sanitized.actionMeta).toBeUndefined();
       expect(sanitized.currentLog).toBeUndefined();
       expect(sanitized.pilotSessionId).toBeUndefined();
@@ -227,7 +240,7 @@ describe('ShareCreationService - Sanitization Logic', () => {
       expect(sanitized.nodes[0].data.metadata.query).toBeUndefined();
     });
 
-    it('should ONLY include files that are related to result nodes and preserve required fields', () => {
+    it('should include ALL files without filtering and preserve all fields', () => {
       const canvasData: SharedCanvasData = {
         canvasId: 'canvas_123',
         nodes: [
@@ -269,19 +282,22 @@ describe('ShareCreationService - Sanitization Logic', () => {
 
       const sanitized = sanitizeCanvasDataForPublic(canvasData, ['node_1']);
 
-      // CRITICAL: Must ONLY include files related to result nodes
-      expect(sanitized.files).toHaveLength(2);
-      expect(sanitized.files.map((f: any) => f.fileId)).toEqual(['file_1', 'file_3']);
-      expect(sanitized.files.find((f: any) => f.fileId === 'file_2')).toBeUndefined();
+      // IMPORTANT: Now includes ALL files without filtering
+      expect(sanitized.files).toHaveLength(3);
+      expect(sanitized.files.map((f: any) => f.fileId)).toEqual(['file_1', 'file_2', 'file_3']);
+      // All files are preserved, including file_2 which is not related to result nodes
+      expect(sanitized.files.find((f: any) => f.fileId === 'file_2')).toBeDefined();
 
       // CRITICAL: Must preserve category and resultId for frontend rendering
       expect(sanitized.files[0].category).toBe('document');
       expect(sanitized.files[0].resultId).toBe('entity_1');
-      expect(sanitized.files[1].category).toBe('audio');
-      expect(sanitized.files[1].resultId).toBe('entity_1');
+      expect(sanitized.files[1].category).toBe('document'); // file_2
+      expect(sanitized.files[1].resultId).toBe('entity_2');
+      expect(sanitized.files[2].category).toBe('audio'); // file_3
+      expect(sanitized.files[2].resultId).toBe('entity_1');
     });
 
-    it('should REMOVE storageKey and other internal fields from all files', () => {
+    it('should PRESERVE all fields in files including storageKey and other fields', () => {
       const canvasData: SharedCanvasData = {
         canvasId: 'canvas_123',
         nodes: [
@@ -315,15 +331,15 @@ describe('ShareCreationService - Sanitization Logic', () => {
 
       const sanitized = sanitizeCanvasDataForPublic(canvasData, ['node_1']);
 
-      // CRITICAL: Internal fields must be removed
-      expect(sanitized.files[0].storageKey).toBeUndefined();
-      expect(sanitized.files[0].canvasId).toBeUndefined();
-      expect(sanitized.files[0].source).toBeUndefined();
-      expect(sanitized.files[0].scope).toBeUndefined();
-      expect(sanitized.files[0].variableId).toBeUndefined();
-      expect(sanitized.files[0].resultVersion).toBeUndefined();
-      expect(sanitized.files[0].createdAt).toBeUndefined();
-      expect(sanitized.files[0].updatedAt).toBeUndefined();
+      // IMPORTANT: All fields are now preserved
+      expect(sanitized.files[0].storageKey).toBe('internal/storage/key');
+      expect(sanitized.files[0].canvasId).toBe('canvas_123');
+      expect(sanitized.files[0].source).toBe('agent');
+      expect(sanitized.files[0].scope).toBe('present');
+      expect(sanitized.files[0].variableId).toBe('var_123');
+      expect(sanitized.files[0].resultVersion).toBe(1);
+      expect(sanitized.files[0].createdAt).toBe('2024-01-01');
+      expect(sanitized.files[0].updatedAt).toBe('2024-01-01');
 
       // CRITICAL: Required fields must be preserved
       expect(sanitized.files[0].fileId).toBe('file_1');
@@ -464,7 +480,7 @@ describe('ShareCreationService - Sanitization Logic', () => {
       expect(sanitized.nodes[1].type).toBe('audio');
       expect(sanitized.nodes[1].data.metadata.audioUrl).toBe('https://example.com/audio.mp3');
 
-      // Validate files (only files related to ar-123 entityId)
+      // Validate files (now includes ALL files with ALL fields)
       expect(sanitized.files).toHaveLength(2);
 
       // File 1: document
@@ -473,15 +489,18 @@ describe('ShareCreationService - Sanitization Logic', () => {
       expect(sanitized.files[0].type).toBe('text/plain');
       expect(sanitized.files[0].category).toBe('document');
       expect(sanitized.files[0].resultId).toBe('ar-123');
-      expect(sanitized.files[0].storageKey).toBeUndefined();
-      expect(sanitized.files[0].canvasId).toBeUndefined();
-      expect(sanitized.files[0].source).toBeUndefined();
-      expect(sanitized.files[0].scope).toBeUndefined();
+      // All fields are now preserved
+      expect(sanitized.files[0].storageKey).toBe('internal/path/to/file');
+      expect(sanitized.files[0].canvasId).toBe('canvas_123');
+      expect(sanitized.files[0].source).toBe('agent');
+      expect(sanitized.files[0].scope).toBe('present');
 
       // File 2: audio
       expect(sanitized.files[1].fileId).toBe('df-audio-789');
       expect(sanitized.files[1].category).toBe('audio');
       expect(sanitized.files[1].resultId).toBe('ar-123');
+      // All fields are preserved
+      expect(sanitized.files[1].storageKey).toBe('internal/path/to/audio');
     });
   });
 });
