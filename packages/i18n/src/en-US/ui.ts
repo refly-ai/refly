@@ -3219,11 +3219,11 @@ const translations = {
       subtitle: 'Explore your curiosity together',
       youCanTry: 'Get new inspiration',
       query1:
-        "Help me track and analyze Warren Buffett's U.S. stock portfolio changes this quarter.",
+        "Research Warren Buffett's holdings in Q2 vs Q3 2025, list increases and decreases, and generate a summary with simple charts.",
       query2:
-        '‍Help me fetch the Product Hunt Top 10 today, generate a summary document and product podcast, and send the links to my email.',
+        "Use Perplexity to fetch yesterday's Product Hunt Top 5, create a summary document and a podcast, and email them to me.",
       query3:
-        'Help me generate a sequence of animation scenes in the style of Makoto Shinkai, telling the story of "growing up" from childhood to adulthood.',
+        'Help me generate a five-image animation series in the style of Makoto Shinkai, themed around "growth".',
     },
     sessionDetail: {
       thinking: 'Refly is thinking',
