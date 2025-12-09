@@ -7100,6 +7100,14 @@ export const CreateCheckoutSessionRequestSchema = {
       type: 'string',
       description: 'Optional voucher ID to apply discount',
     },
+    currentPlan: {
+      type: 'string',
+      description: 'Current plan',
+    },
+    source: {
+      type: 'string',
+      description: 'Source',
+    },
   },
 } as const;
 
@@ -7110,6 +7118,14 @@ export const CreateCreditPackCheckoutSessionRequestSchema = {
     packId: {
       type: 'string',
       description: 'Credit pack identifier',
+    },
+    currentPlan: {
+      type: 'string',
+      description: 'Current plan',
+    },
+    source: {
+      type: 'string',
+      description: 'Source',
     },
   },
 } as const;

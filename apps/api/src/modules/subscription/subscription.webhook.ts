@@ -7,6 +7,7 @@ import { PrismaService } from '../common/prisma.service';
 import { CreditService } from '../credit/credit.service';
 import { SubscriptionService } from './subscription.service';
 import { Prisma } from '@prisma/client';
+import { logEvent } from '@refly/telemetry-node';
 
 @Injectable()
 export class SubscriptionWebhooks {
@@ -62,7 +63,7 @@ export class SubscriptionWebhooks {
     // Check if customerId is already associated with this user
     const user = await this.prisma.user.findUnique({
       where: { uid },
-      select: { customerId: true },
+      select: { uid: true, customerId: true, email: true },
     });
 
     // Update user's customerId if it's missing or different
@@ -95,6 +96,11 @@ export class SubscriptionWebhooks {
         session.id,
         `Credit pack purchase: ${packPlan.name}`,
       );
+
+      logEvent(user, `purchase_${packPlan.packId}_success`, null, {
+        user_plan: checkoutSession.currentPlan,
+        source: checkoutSession.source,
+      });
 
       this.logger.log(
         `Successfully processed credit pack purchase checkout session ${session.id} for user ${uid}`,
@@ -133,6 +139,10 @@ export class SubscriptionWebhooks {
         // Don't throw - subscription was already created successfully
       }
     }
+    logEvent(user, 'purchase_plus_success', null, {
+      user_plan: checkoutSession.currentPlan,
+      source: checkoutSession.source,
+    });
 
     this.logger.log(`Successfully processed checkout session ${session.id} for user ${uid}`);
   }

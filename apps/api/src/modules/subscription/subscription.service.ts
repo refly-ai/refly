@@ -5,7 +5,13 @@ import { PrismaService } from '../common/prisma.service';
 import { CreditService } from '../credit/credit.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { CreateCheckoutSessionRequest, SubscriptionUsageData, User } from '@refly/openapi-schema';
+
+import {
+  CreateCreditPackCheckoutSessionRequest,
+  CreateCheckoutSessionRequest,
+  SubscriptionUsageData,
+  User,
+} from '@refly/openapi-schema';
 import {
   genTokenUsageMeterID,
   genStorageUsageMeterID,
@@ -260,6 +266,8 @@ export class SubscriptionService implements OnModuleInit {
           sessionId: session.id,
           lookupKey,
           // Note: voucherId is stored in Stripe session metadata, not in DB
+          currentPlan: param.currentPlan,
+          source: param.source,
         },
       }),
       // Only update if customer ID changed
@@ -276,7 +284,7 @@ export class SubscriptionService implements OnModuleInit {
     return session;
   }
 
-  async createCreditPackCheckoutSession(user: User, param: { packId: string }) {
+  async createCreditPackCheckoutSession(user: User, param: CreateCreditPackCheckoutSessionRequest) {
     const { uid } = user;
     const userPo = await this.prisma.user.findUnique({ where: { uid } });
 
@@ -343,6 +351,8 @@ export class SubscriptionService implements OnModuleInit {
         uid,
         sessionId: session?.id ?? '',
         lookupKey,
+        currentPlan: param.currentPlan,
+        source: param.source,
       },
     });
 

@@ -5070,6 +5070,14 @@ export type CreateCheckoutSessionRequest = {
    * Optional voucher ID to apply discount
    */
   voucherId?: string;
+  /**
+   * Current plan
+   */
+  currentPlan?: string;
+  /**
+   * Source
+   */
+  source?: string;
 };
 
 export type CreateCreditPackCheckoutSessionRequest = {
@@ -5077,6 +5085,14 @@ export type CreateCreditPackCheckoutSessionRequest = {
    * Credit pack identifier
    */
   packId: string;
+  /**
+   * Current plan
+   */
+  currentPlan?: string;
+  /**
+   * Source
+   */
+  source?: string;
 };
 
 export type CreateCheckoutSessionResponse = BaseResponse & {

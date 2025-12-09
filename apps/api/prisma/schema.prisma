@@ -1560,6 +1560,10 @@ model CheckoutSession {
   invoiceId      String?  @map("invoice_id")
   /// Stripe customer ID
   customerId     String?  @map("customer_id")
+  /// Current plan
+  currentPlan    String?  @map("current_plan")
+  /// Source (canvas, template, pricing, etc.)
+  source         String?  @map("source")
   /// Create timestamp
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
