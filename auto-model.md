@@ -4,7 +4,7 @@
 
 模型列表中新增一个 auto 模型，背后可以自动做模型路由。
 
-目前默认路由到 Claude 4.5 Opus (TODO)，未来可能根据各种情况（agent 复杂性、任务类型）等进行路由。
+目前默认路由到 Claude 4.5 Opus，未来可能根据各种情况（agent 复杂性、任务类型）等进行路由。
 
 - Agent node 的模型默认 auto
 - Copilot生成的 Workflow，Agent node 的模型默认 auto
@@ -19,7 +19,7 @@
 
 模型位置：
 
-1. 模型位置：模型列表的第一个 TODO
+1. 模型位置：模型列表的第一个
 2. 新增的 Agent 节点，默认选中 Auto Model
 3. copilot 生成的 Agent 节点，默认选中 Auto Model
 
@@ -31,7 +31,6 @@
 
 - 复用现有的模型查询 SQL
 - 配置模型的 tooltip, credit_billing 等信息
-TODO 确认计费逻辑是否正确
 
 ```sql
 -- 全量 SQL
@@ -66,13 +65,18 @@ VALUES (
 );
 ```
 
+模型排序机制：
+
+1. **当前实现**：前端在模型选择器中按名称做字母序排序（`name` / `label` 使用 `localeCompare`），后端全局 `provider_items` 查询暂未显式使用 `"order"` 字段。
+2. **Auto 排在第一个的原因**：由于名称是 `Auto`，首字母为 A，在按名称排序时自然排在所有 Claude、DeepSeek、Gemini 等模型之前，因此目前排第一是名称排序的“副作用”。
+3. **后续可选优化**：如果未来需要稳定依赖 `"order"` 字段控制排序，可以在 `fetchGlobalProviderConfig` 的 `providerItem.findMany` 中加上 `orderBy: { order: 'asc' }`，并约定 Auto 的 `"order" = 0`，实现显式排序规则。
+
 
 TODO 待确认的问题：
 
 - provider_items 的 config 字段可能带来的兼容性问题
     - 无法上传图片：前端通过检查 config.capabilities.vision 来决定是否显示上传图片按钮。如果 config 里没存，默认为 false，Auto 模型就无法发图了（虽然背后的 Sonnet 4.5 支持）。
     - Context 长度误报：前端会读取 config.contextLimit 做上下文长度检查。如果没存，默认为 0，可能会导致前端提示“Token 超限”或显示“Limit: 0”。
-- provider_items 的 tier, group_name 字段
 
 ## 模型路由
 
