@@ -106,6 +106,7 @@ export interface ClaimInvitationInput {
 export interface ClaimInvitationResult {
   success: boolean;
   voucher?: VoucherDTO;
+  inviterName?: string;
   message?: string;
 }
 

@@ -14,12 +14,17 @@ import { VoucherTriggerResult } from '@refly/openapi-schema';
  * - Always hides "Share With Friend" button since claimed vouchers cannot be re-shared
  */
 export const ClaimedVoucherPopup = () => {
-  const { claimedVoucherPopupVisible, claimedVoucher, hideClaimedVoucherPopup } =
-    useSubscriptionStoreShallow((state) => ({
-      claimedVoucherPopupVisible: state.claimedVoucherPopupVisible,
-      claimedVoucher: state.claimedVoucher,
-      hideClaimedVoucherPopup: state.hideClaimedVoucherPopup,
-    }));
+  const {
+    claimedVoucherPopupVisible,
+    claimedVoucher,
+    claimedVoucherInviterName,
+    hideClaimedVoucherPopup,
+  } = useSubscriptionStoreShallow((state) => ({
+    claimedVoucherPopupVisible: state.claimedVoucherPopupVisible,
+    claimedVoucher: state.claimedVoucher,
+    claimedVoucherInviterName: state.claimedVoucherInviterName,
+    hideClaimedVoucherPopup: state.hideClaimedVoucherPopup,
+  }));
 
   if (!claimedVoucher) return null;
 
@@ -36,6 +41,7 @@ export const ClaimedVoucherPopup = () => {
       onClose={hideClaimedVoucherPopup}
       voucherResult={voucherResult}
       useOnlyMode // Always true for claimed vouchers - they cannot be re-shared
+      inviterName={claimedVoucherInviterName || undefined}
     />
   );
 };

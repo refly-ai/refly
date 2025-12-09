@@ -9185,6 +9185,10 @@ export type ClaimInvitationResult = {
    */
   voucher?: Voucher;
   /**
+   * Name of the user who sent the invitation
+   */
+  inviterName?: string;
+  /**
    * Error message if failed
    */
   message?: string;

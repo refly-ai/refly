@@ -12708,6 +12708,10 @@ export const ClaimInvitationResultSchema = {
       $ref: '#/components/schemas/Voucher',
       description: 'Created voucher for invitee',
     },
+    inviterName: {
+      type: 'string',
+      description: 'Name of the user who sent the invitation',
+    },
     message: {
       type: 'string',
       description: 'Error message if failed',

@@ -98,6 +98,7 @@ export const usePendingVoucherClaim = () => {
 
         if (claimResponse.data?.success && claimResponse.data.data?.voucher) {
           const voucher = claimResponse.data.data.voucher;
+          const inviterName = claimResponse.data.data.inviterName;
 
           // Log telemetry event
           logEvent('voucher_claim', null, {
@@ -114,7 +115,7 @@ export const usePendingVoucherClaim = () => {
 
           // Show the voucher popup (use-only mode) after a short delay
           setTimeout(() => {
-            showClaimedVoucherPopup(voucher);
+            showClaimedVoucherPopup(voucher, inviterName);
           }, 500);
         } else {
           // Claim failed - check the specific error message

@@ -20,6 +20,8 @@ interface VoucherPopupProps {
   onShare?: () => void;
   /** If true, this voucher was claimed via invite link (not earned by publishing) */
   useOnlyMode?: boolean;
+  /** Name of the person who sent the voucher (for claimed vouchers) */
+  inviterName?: string;
 }
 
 export const VoucherPopup = ({
@@ -29,6 +31,7 @@ export const VoucherPopup = ({
   onUseNow: onUseNowProp,
   onShare: onShareProp,
   useOnlyMode = false,
+  inviterName,
 }: VoucherPopupProps) => {
   const { t } = useTranslation();
   const [showSharePoster, setShowSharePoster] = useState(false);
@@ -298,13 +301,28 @@ export const VoucherPopup = ({
 
             {/* Bottom semi-transparent white area with punched hole at top */}
             <TicketBottomCard>
-              {/* Description text - different for Plus vs non-Plus users */}
+              {/* Description text - different based on user status and mode */}
               <div
                 className="text-center text-sm leading-relaxed px-2"
                 style={{ color: 'rgba(28, 31, 35, 0.6)' }}
               >
-                {isPlusUser ? (
-                  // Plus user: show invite friend description
+                {useOnlyMode && isPlusUser ? (
+                  // Plus user who claimed via invite: encourage sharing
+                  <p>
+                    {t(
+                      'voucher.popup.plusUserClaimedDesc',
+                      "You're already a Plus member.\nGift this voucher to a friend!",
+                    )}
+                  </p>
+                ) : useOnlyMode ? (
+                  // Non-Plus user who claimed via invite: show sender name
+                  <p>
+                    {t('voucher.popup.claimedDesc', '{{name}} sent you a coupon — go claim it!', {
+                      name: inviterName || 'A friend',
+                    })}
+                  </p>
+                ) : isPlusUser ? (
+                  // Plus user who earned voucher: show invite description
                   <>
                     <p>
                       {t(
@@ -330,7 +348,7 @@ export const VoucherPopup = ({
                     </ul>
                   </>
                 ) : (
-                  // Non-Plus user: show discount and price description
+                  // Non-Plus user who earned voucher: show discount and price description
                   <>
                     <p>
                       {t(
@@ -358,7 +376,7 @@ export const VoucherPopup = ({
                   block
                   shape="round"
                   onClick={handleUseNow}
-                  loading={useOnlyMode ? isCreatingCanvas : isCheckingOut}
+                  loading={useOnlyMode && !isPlusUser ? isCreatingCanvas : isCheckingOut}
                   style={{
                     height: 48,
                     backgroundColor: '#1C1F23',
@@ -367,11 +385,14 @@ export const VoucherPopup = ({
                     fontWeight: 500,
                   }}
                 >
-                  {useOnlyMode
-                    ? t('voucher.popup.publishToGetCoupon', 'Publish to Get Coupon')
-                    : t('voucher.popup.useNow', 'Use It Now')}
+                  {useOnlyMode && isPlusUser
+                    ? t('voucher.popup.claim', 'Claim')
+                    : useOnlyMode
+                      ? t('voucher.popup.publishToGetCoupon', 'Publish to Get Coupon')
+                      : t('voucher.popup.useNow', 'Use It Now')}
                 </Button>
-                {!useOnlyMode && (
+                {/* Show share button: always when not useOnlyMode, or when Plus user in useOnlyMode */}
+                {(!useOnlyMode || (useOnlyMode && isPlusUser)) && (
                   <Button
                     size="large"
                     block

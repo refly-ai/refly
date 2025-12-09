@@ -20,6 +20,7 @@ interface SubscriptionState {
   // Claimed voucher popup state (for showing popup after claiming via invite)
   claimedVoucherPopupVisible: boolean;
   claimedVoucher: Voucher | null;
+  claimedVoucherInviterName: string | null; // Name of the person who sent the voucher
 
   // method
   setPlanType: (val: SubscriptionPlanType) => void;
@@ -33,7 +34,7 @@ interface SubscriptionState {
   setOpenedFromSettings: (val: boolean) => void; // Method to set the openedFromSettings state
   setAvailableVoucher: (voucher: Voucher | null) => void;
   setVoucherLoading: (loading: boolean) => void;
-  showClaimedVoucherPopup: (voucher: Voucher) => void;
+  showClaimedVoucherPopup: (voucher: Voucher, inviterName?: string) => void;
   hideClaimedVoucherPopup: () => void;
 }
 
@@ -50,6 +51,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     voucherLoading: false,
     claimedVoucherPopupVisible: false,
     claimedVoucher: null,
+    claimedVoucherInviterName: null,
 
     setPlanType: (val: SubscriptionPlanType) => set({ planType: val }),
     setSubscribeModalVisible: (val: boolean) => set({ subscribeModalVisible: val }),
@@ -67,9 +69,18 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     setOpenedFromSettings: (val: boolean) => set({ openedFromSettings: val }),
     setAvailableVoucher: (voucher: Voucher | null) => set({ availableVoucher: voucher }),
     setVoucherLoading: (loading: boolean) => set({ voucherLoading: loading }),
-    showClaimedVoucherPopup: (voucher: Voucher) =>
-      set({ claimedVoucherPopupVisible: true, claimedVoucher: voucher }),
-    hideClaimedVoucherPopup: () => set({ claimedVoucherPopupVisible: false, claimedVoucher: null }),
+    showClaimedVoucherPopup: (voucher: Voucher, inviterName?: string) =>
+      set({
+        claimedVoucherPopupVisible: true,
+        claimedVoucher: voucher,
+        claimedVoucherInviterName: inviterName || null,
+      }),
+    hideClaimedVoucherPopup: () =>
+      set({
+        claimedVoucherPopupVisible: false,
+        claimedVoucher: null,
+        claimedVoucherInviterName: null,
+      }),
   })),
 );
 

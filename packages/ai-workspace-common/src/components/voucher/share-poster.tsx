@@ -11,6 +11,7 @@ import couponGradientBg from '../../assets/images/coupon-gradient-bg.webp';
 import reflyIcon from '../../assets/images/refly-icon.png';
 import defaultAvatar from '../../assets/refly_default_avatar.png';
 import { Account } from 'refly-icons';
+import { getBaseMonthlyPrice } from '../../constants/pricing';
 
 interface SharePosterProps {
   visible: boolean;
@@ -116,7 +117,18 @@ export const SharePoster = ({
   const handleCopyLink = useCallback(async () => {
     setCopying(true);
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      // Build promotional text with link
+      const basePrice = getBaseMonthlyPrice('plus');
+      const discountValue = Math.round((basePrice * discountPercent) / 100);
+      const promotionalText = t(
+        'voucher.share.copyLinkText',
+        "Unlock Refly.ai's vibe-workflow and supercharge your automation with Banana Pro, Gemini 3.0, and other top-tier AI models — A ${{value}} discount to get you started! Join here → {{link}}",
+        {
+          value: discountValue,
+          link: shareUrl,
+        },
+      );
+      await navigator.clipboard.writeText(promotionalText);
       message.success(t('voucher.share.linkCopied', 'Link copied!'));
       logEvent('share_link_copied', null, {
         inviteCode: invitation?.inviteCode,
@@ -172,8 +184,8 @@ export const SharePoster = ({
   if (!visible) return null;
 
   const discountText = `${discountPercent}% OFF`;
-  // Calculate discounted price (Plus plan is $20/month)
-  const originalPrice = 20;
+  // Calculate discounted price using shared pricing constant
+  const originalPrice = getBaseMonthlyPrice('plus');
   const discountedPrice = Math.round(originalPrice * (1 - discountPercent / 100));
 
   return (
@@ -184,6 +196,7 @@ export const SharePoster = ({
       closable={false}
       centered
       width="auto"
+      maskClosable={false}
       styles={{
         content: {
           padding: 0,

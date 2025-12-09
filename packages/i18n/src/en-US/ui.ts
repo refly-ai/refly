@@ -3905,9 +3905,12 @@ const translations = {
         "Invite a friend to register with your link and purchase a membership, and you'll both get rewards:",
       plusUserReward1: 'You: +2,000 bonus credits',
       plusUserReward2: 'Your friend: A special discount for their membership purchase.',
+      plusUserClaimedDesc: "You're already a Plus member.\nGift this voucher to a friend!",
+      claimedDesc: '{{name}} sent you a coupon — go claim it!',
       useNow: 'Use It Now',
       shareWithFriend: 'Share With Friend',
       publishToGetCoupon: 'Publish to Get Coupon',
+      claim: 'Claim',
     },
     share: {
       posterTitle: 'Unlock Plus for\nJust ${{discountedPrice}}!',
@@ -3921,6 +3924,8 @@ const translations = {
       downloading: 'Downloading...',
       download: 'Download',
       copyLink: 'Copy link',
+      copyLinkText:
+        "Unlock Refly.ai's vibe-workflow and supercharge your automation with Banana Pro, Gemini 3.0, and other top-tier AI models — A ${{value}} discount to get you started! Join here → {{link}}",
       createFailed: 'Failed to create invitation',
     },
     invite: {

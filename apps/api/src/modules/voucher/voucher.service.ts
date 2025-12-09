@@ -617,9 +617,16 @@ export class VoucherService implements OnModuleInit {
       `Invitation claimed: ${inviteCode} by ${inviteeUid}, inviter: ${invitation.inviterUid}`,
     );
 
+    // Get inviter name
+    const inviter = await this.prisma.user.findFirst({
+      where: { uid: invitation.inviterUid },
+      select: { name: true },
+    });
+
     return {
       success: true,
       voucher,
+      inviterName: inviter?.name || undefined,
     };
   }
 

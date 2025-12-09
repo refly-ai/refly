@@ -263,9 +263,12 @@ const translations = {
       plusUserDesc2: '邀请朋友通过你的链接注册并购买会员，双方都将获得奖励：',
       plusUserReward1: '你：+2,000 额外积分',
       plusUserReward2: '你的朋友：购买会员时享受特别折扣。',
+      plusUserClaimedDesc: '你已经是 Plus 会员了。\n把这张优惠券送给朋友吧！',
+      claimedDesc: '{{name}} 送你一张优惠券 — 快来领取吧！',
       useNow: '立即使用',
       shareWithFriend: '分享给朋友',
       publishToGetCoupon: '发布获取优惠券',
+      claim: '领取',
     },
     share: {
       posterTitle: '仅需 ${{discountedPrice}}\n解锁 Plus！',
@@ -279,6 +282,8 @@ const translations = {
       downloading: '下载中...',
       download: '下载',
       copyLink: '复制链接',
+      copyLinkText:
+        '解锁 Refly.ai 的 vibe-workflow，用 Banana Pro、Gemini 3.0 等顶级 AI 模型为你的自动化工作流加速——${{value}} 折扣助你开启！立即加入 → {{link}}',
       createFailed: '创建邀请失败',
     },
     invite: {
