@@ -33,35 +33,52 @@
 - 配置模型的 tooltip, credit_billing 等信息
 
 ```sql
--- 全量 SQL
-INSERT INTO providers (pk, provider_id, provider_key, name, is_global, categories, enabled, created_at, updated_at)
-VALUES (
-  40,
-  'pr-system',
-  'system', 
-  'System', 
-  true, 
-  'llm', 
-  true, 
-  NOW(), 
-  NOW()
+-- 修复 pg pk
+SELECT setval(
+  pg_get_serial_sequence('providers', 'pk'),
+  (SELECT MAX(pk) FROM providers) + 1
 );
 
-INSERT INTO provider_items (pk, provider_id, item_id, category, name, group_name, "order", enabled, config, tier, credit_billing, created_at, updated_at)
+SELECT setval(
+  pg_get_serial_sequence('provider_items', 'pk'),
+  (SELECT MAX(pk) FROM provider_items) + 1
+);
+
+-- 全量 SQL
+INSERT INTO providers (provider_id, provider_key, "name", is_global, categories, uid, api_key, base_url, extra_params, enabled, created_at, updated_at, deleted_at)
 VALUES (
-  118,
+  'pr-system',
+  'system',
+  'System',
+  true,
+  'llm',
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  true,
+  '2025-12-08 10:27:10.781',
+  '2025-12-08 10:27:10.781',
+  NULL
+);
+
+INSERT INTO provider_items (provider_id, item_id, category, "name", uid, enabled, config, tier, credit_billing, "order", group_name, global_item_id, created_at, updated_at, deleted_at)
+VALUES (
   'pr-system',
   'pi-asnj62w0h0acxi34lkfg4ijn',
   'llm',
   'Auto',
-  'System',
-  0,
+  NULL,
   true,
-  '{"modelId": "auto", "modelName": "Auto", "contextLimit": 200000, "maxOutput": 8192, "capabilities": {"vision": true}}',
+  '{"modelId": "auto", "tooltip": "Smart Routing", "maxOutput": 8192, "modelName": "Auto", "capabilities": {"vision": true}, "contextLimit": 200000}',
   't1',
   '{"unit": "1m_tokens", "inputCost": 80, "outputCost": 400, "minCharge": 1, "isEarlyBirdFree": false}',
-  NOW(),
-  NOW()
+  0,
+  'System',
+  NULL,
+  '2025-12-08 10:27:10.781652+08',
+  '2025-12-08 10:27:10.781652+08',
+  NULL
 );
 ```
 
