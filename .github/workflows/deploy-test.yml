@@ -102,7 +102,7 @@ jobs:
       - name: Update kubeconfig for EKS cluster
         if: github.ref_name == 'main' || github.ref_name == 'stable'
         run: |
-          aws eks update-kubeconfig --name ${{ secrets.AWS_EKS_CLUSTER_TEST }} --region ${{ vars.AWS_REGION }}
+          aws eks update-kubeconfig --name ${{ vars.AWS_EKS_CLUSTER_TEST }} --region ${{ vars.AWS_REGION }}
 
       - name: Update API deployment image on EKS
         if: matrix.app == 'api' && (github.ref_name == 'main' || github.ref_name == 'stable')

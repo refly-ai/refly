@@ -5,23 +5,10 @@ on:
 
 jobs:
   deploy:
-    name: Deploy API
-    runs-on: ubuntu-latest
-    if: github.repository == 'refly-ai/refly'
-    steps:
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v4
-
-      - name: Configure kubectl
-        run: |
-          echo "${{ secrets.KUBE_CONFIG }}" > ./kubeconfig
-          chmod 600 kubeconfig
-          echo "KUBECONFIG=./kubeconfig" >> $GITHUB_ENV
-
-      - name: Update Kubernetes deployment
-        run: |
-          kubectl set image deployment/refly-api refly-api=reflyai/refly-api:${{ github.sha }} --record -n refly-app
-
-      - name: Wait for deployment to complete
-        run: |
-          kubectl rollout status deployment/refly-api --timeout=900s -n refly-app
+    uses: ./.github/workflows/deploy-api.yml
+    with:
+      environment: prod
+      deployment_name: refly-api
+      eks_cluster_name: ${{ vars.AWS_EKS_CLUSTER_PROD }}
+      aws_region: ${{ vars.AWS_REGION }}
+    secrets: inherit
