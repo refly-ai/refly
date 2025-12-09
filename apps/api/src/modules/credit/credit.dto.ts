@@ -36,7 +36,10 @@ export interface CreditBalance {
 
 // New interfaces for batch processing
 export interface ModelUsageDetail {
+  /** User-facing model name (Auto or direct model selection) */
   modelName: string;
+  /** Actual model name used for execution (e.g., Claude Sonnet 4) */
+  actualModelName?: string;
   inputTokens: number;
   outputTokens: number;
   creditCost: number;
@@ -46,6 +49,8 @@ export interface ModelUsageDetail {
 export interface CreditUsageStep {
   usage: TokenUsageItem;
   creditBilling: CreditBilling;
+  /** Model name used for billing (Auto or direct model selection) */
+  billingModelName: string;
 }
 
 export interface SyncBatchTokenCreditUsageJobData {

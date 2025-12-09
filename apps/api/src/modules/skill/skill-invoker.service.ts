@@ -1443,9 +1443,12 @@ export class SkillInvokerService {
               outputTokens: tokenUsage.outputTokens || 0,
             };
 
+            // billingModelName: model name used for billing (Auto or direct model)
+            // usage.modelName already contains the actual model name
             creditUsageSteps.push({
               usage,
               creditBilling,
+              billingModelName: billingItem.name,
             });
           }
         }
