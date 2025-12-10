@@ -25,7 +25,7 @@ import { GoogleSheetsToolsetDefinition } from './google-sheets';
 import { JinaToolset, JinaToolsetDefinition } from './jina';
 import { NotionToolset, NotionToolsetDefinition } from './notion';
 import { PerplexityToolset, PerplexityToolsetDefinition } from './perplexity';
-import { ProductHuntToolset, ProductHuntToolsetDefinition } from './producthunt';
+// import { ProductHuntToolset, ProductHuntToolsetDefinition } from './producthunt';
 import { RedditToolsetDefinition } from './reddit';
 import { TwitterToolsetDefinition } from './twitter';
 // import { WhaleWisdomToolset, WhaleWisdomToolsetDefinition } from './whalewisdom';
@@ -112,10 +112,10 @@ export const toolsetInventory: Record<
     class: PerplexityToolset,
     definition: PerplexityToolsetDefinition,
   },
-  [ProductHuntToolsetDefinition.key]: {
-    class: ProductHuntToolset,
-    definition: ProductHuntToolsetDefinition,
-  },
+  // [ProductHuntToolsetDefinition.key]: {
+  //   class: ProductHuntToolset,
+  //   definition: ProductHuntToolsetDefinition,
+  // },
   // [BrowserUseToolsetDefinition.key]: {
   //   class: BrowserUseToolset,
   //   definition: BrowserUseToolsetDefinition,
