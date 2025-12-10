@@ -86,11 +86,15 @@ export class DriveService {
     return this.config.get<string>('origin');
   }
 
+  private get endpoint(): string | undefined {
+    return this.config.get<string>('endpoint');
+  }
+
   /**
    * Transform DriveFile Prisma model to DTO with URL
    */
   toDTO(driveFile: DriveFileModel): DriveFile {
-    return driveFilePO2DTO(driveFile, this.origin);
+    return driveFilePO2DTO(driveFile, this.endpoint);
   }
 
   private generateStorageKey(
