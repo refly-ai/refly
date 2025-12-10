@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import getClient from '../requests/proxiedRequest';
 import { useIsLogin } from './use-is-login';
 import { logEvent } from '@refly/telemetry-web';
@@ -10,21 +11,20 @@ import type { Voucher } from '@refly/openapi-schema';
 const PENDING_VOUCHER_KEY = 'pendingVoucherInviteCode';
 
 /**
- * Hook to handle claiming a voucher that was pending when user was not logged in.
+ * Hook to handle claiming a voucher from URL parameter or localStorage.
  * Should be used in main workspace/dashboard component that loads after login.
  *
  * Flow:
- * 1. User visits /?invite=code while not logged in
- * 2. Code is stored in localStorage, user logs in
- * 3. User is redirected to /workspace
- * 4. This hook detects the pending code and automatically claims it
- * 5. Shows voucher popup (use-only mode) so user can use it immediately
+ * 1. User visits /workspace?invite=code (directly or after login redirect)
+ * 2. This hook detects the invite code from URL or localStorage
+ * 3. Automatically claims the voucher and shows popup
  */
 export const usePendingVoucherClaim = () => {
   const { t } = useTranslation();
   const { getLoginStatus } = useIsLogin();
   const isLoggedIn = getLoginStatus();
   const hasChecked = useRef(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { showClaimedVoucherPopup } = useSubscriptionStoreShallow((state) => ({
     showClaimedVoucherPopup: state.showClaimedVoucherPopup,
@@ -42,16 +42,25 @@ export const usePendingVoucherClaim = () => {
       return;
     }
 
-    const pendingCode = localStorage.getItem(PENDING_VOUCHER_KEY);
+    // Check URL parameter first, then localStorage
+    const urlInviteCode = searchParams.get('invite');
+    const pendingCode = urlInviteCode || localStorage.getItem(PENDING_VOUCHER_KEY);
+
     if (!pendingCode) {
       return;
     }
 
     hasChecked.current = true;
 
+    // Clear URL parameter if present
+    if (urlInviteCode) {
+      searchParams.delete('invite');
+      setSearchParams(searchParams, { replace: true });
+    }
+
     const claimPendingVoucher = async () => {
       try {
-        // Clear the pending code first to prevent duplicate claims
+        // Clear the pending code from localStorage
         localStorage.removeItem(PENDING_VOUCHER_KEY);
 
         // First verify the invitation is still valid
@@ -152,7 +161,7 @@ export const usePendingVoucherClaim = () => {
     };
 
     claimPendingVoucher();
-  }, [isLoggedIn, currentUid, t, showClaimedVoucherPopup]);
+  }, [isLoggedIn, currentUid, t, showClaimedVoucherPopup, searchParams, setSearchParams]);
 };
 
 /**

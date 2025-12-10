@@ -185,9 +185,9 @@ export const VoucherPopup = ({
         const invitation = response.data.data.invitation;
         setShareInvitation(invitation);
 
-        // Build share URL - pointing to homepage with invite parameter
+        // Build share URL - pointing to workspace with invite parameter
         const baseUrl = window.location.origin;
-        const url = `${baseUrl}/?invite=${invitation.inviteCode}`;
+        const url = `${baseUrl}/workspace?invite=${invitation.inviteCode}`;
         setShareUrl(url);
 
         // Close the voucher popup and show share poster

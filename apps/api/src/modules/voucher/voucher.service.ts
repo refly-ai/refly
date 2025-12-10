@@ -277,7 +277,7 @@ export class VoucherService implements OnModuleInit {
     // Create invitation for the share link
     const invitation = await this.createInvitation(uid, voucherId);
     const baseUrl = this.configService.get('app.baseUrl') || 'https://refly.ai';
-    const inviteLink = `${baseUrl}/?invite=${invitation.invitation.inviteCode}`;
+    const inviteLink = `${baseUrl}/workspace?invite=${invitation.invitation.inviteCode}`;
 
     // Calculate discount values
     const { discountValue, discountedPrice } = calculateDiscountValues(discountPercent);
