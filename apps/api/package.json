@@ -118,7 +118,6 @@
     "passport-twitter": "~1.0.4",
     "pdf-parse": "~1.1.1",
     "pino-http": "^10.3.0",
-    "pino-loki": "^2.6.0",
     "pino-pretty": "^11.0.0",
     "prisma": "5.16.1",
     "reading-time-estimator": "^1.11.0",

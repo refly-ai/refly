@@ -20,23 +20,79 @@ const EXCLUDED_SCOPES = new Set([
   '@opentelemetry/instrumentation-ioredis',
 ]);
 
-interface TracerOptions {
-  otlpEndpoint?: string;
-  langfuse?: {
-    publicKey?: string;
-    secretKey?: string;
-    baseUrl?: string;
-  };
+interface LangfuseConfig {
+  publicKey?: string;
+  secretKey?: string;
+  baseUrl?: string;
+}
+
+interface OtlpConfig {
+  endpoint?: string;
 }
 
 /**
  * Initialize OpenTelemetry tracing
- * - Tempo/Grafana: receives all spans (full observability)
- * - Langfuse: receives only LLM/LangChain spans (filtered)
+ *
+ * Supports two independent backends:
+ * - Tempo/Grafana (OTLP): receives all spans for full observability
+ * - Langfuse: receives only LLM/LangChain spans (filtered via shouldExportSpan)
+ *
+ * Either or both can be enabled independently via environment variables.
+ * If neither is configured, this function is a no-op.
  */
-function createLangfuseProcessor(
-  config: NonNullable<TracerOptions['langfuse']>,
-): SpanProcessor | null {
+export function initTracer(): void {
+  const otlp: OtlpConfig = {
+    endpoint: process.env.OTLP_TRACES_ENDPOINT,
+  };
+
+  const langfuse: LangfuseConfig = {
+    publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+    secretKey: process.env.LANGFUSE_SECRET_KEY,
+    baseUrl: process.env.LANGFUSE_BASE_URL,
+  };
+
+  if (!otlp.endpoint && !langfuse.baseUrl) {
+    console.log('[Tracer] No tracing backend configured, skipping initialization');
+    return;
+  }
+
+  const spanProcessors: SpanProcessor[] = [];
+
+  if (langfuse.baseUrl) {
+    const processor = createLangfuseProcessor(langfuse);
+    if (processor) spanProcessors.push(processor);
+  }
+
+  const traceExporter = otlp.endpoint
+    ? new OTLPTraceExporter({ url: `${otlp.endpoint}/v1/traces` })
+    : undefined;
+
+  if (otlp.endpoint) {
+    console.log('[Tracer] OTLP exporter configured:', { endpoint: otlp.endpoint });
+  }
+
+  sdk = new NodeSDK({
+    traceExporter,
+    spanProcessors: spanProcessors.length > 0 ? spanProcessors : undefined,
+    instrumentations: [getNodeAutoInstrumentations()],
+    resource: resourceFromAttributes({
+      [ATTR_SERVICE_NAME]: 'reflyd',
+    }),
+  });
+
+  sdk.start();
+  console.log('[Tracer] OpenTelemetry SDK started');
+
+  process.on('SIGTERM', () => {
+    sdk
+      ?.shutdown()
+      .then(() => console.log('[Tracer] Tracing terminated'))
+      .catch((error) => console.log('[Tracer] Error terminating tracing', error))
+      .finally(() => process.exit(0));
+  });
+}
+
+function createLangfuseProcessor(config: LangfuseConfig): SpanProcessor | null {
   const { publicKey, secretKey, baseUrl } = config;
 
   if (!publicKey || !secretKey || !baseUrl) {
@@ -49,7 +105,7 @@ function createLangfuseProcessor(
   }
 
   try {
-    console.log('[Tracer] Initializing Langfuse:', { baseUrl });
+    console.log('[Tracer] Langfuse processor configured:', { baseUrl });
     return new LangfuseSpanProcessor({
       publicKey,
       secretKey,
@@ -61,38 +117,6 @@ function createLangfuseProcessor(
     console.error('[Tracer] Failed to initialize Langfuse:', error);
     return null;
   }
-}
-
-export function initTracer(options: TracerOptions): void {
-  const spanProcessors: SpanProcessor[] = [];
-
-  if (options.langfuse) {
-    const processor = createLangfuseProcessor(options.langfuse);
-    if (processor) spanProcessors.push(processor);
-  }
-
-  const instrumentations = [getNodeAutoInstrumentations()];
-
-  sdk = new NodeSDK({
-    traceExporter: options.otlpEndpoint
-      ? new OTLPTraceExporter({ url: `${options.otlpEndpoint}/v1/traces` })
-      : undefined,
-    spanProcessors: spanProcessors.length > 0 ? spanProcessors : undefined,
-    instrumentations,
-    resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: 'reflyd',
-    }),
-  });
-
-  sdk.start();
-
-  process.on('SIGTERM', () => {
-    sdk
-      ?.shutdown()
-      .then(() => console.log('Tracing terminated'))
-      .catch((error) => console.log('Error terminating tracing', error))
-      .finally(() => process.exit(0));
-  });
 }
 
 export default sdk;
