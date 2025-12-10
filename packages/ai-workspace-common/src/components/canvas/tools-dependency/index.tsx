@@ -11,7 +11,7 @@ import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.sv
 import React from 'react';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import cn from 'classnames';
-import { useUserStoreShallow } from '@refly/stores';
+import { useUserStoreShallow, useSiderStoreShallow } from '@refly/stores';
 import { useNodePosition } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-position';
 import { useReactFlow } from '@xyflow/react';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
@@ -20,6 +20,8 @@ import { useOpenInstallTool } from '@refly-packages/ai-workspace-common/hooks/us
 import { useOpenInstallMcp } from '@refly-packages/ai-workspace-common/hooks/use-open-install-mcp';
 import { IoWarningOutline } from 'react-icons/io5';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useQueryClient } from '@tanstack/react-query';
+import { useListUserToolsKey } from '@refly-packages/ai-workspace-common/queries/common';
 
 /**
  * Check if a toolset is authorized/installed
@@ -491,8 +493,12 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const queryClient = useQueryClient();
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
+  }));
+  const { showSettingModal } = useSiderStoreShallow((state) => ({
+    showSettingModal: state.showSettingModal,
   }));
 
   const nodes = canvasData?.nodes || [];
@@ -503,6 +509,17 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
   });
 
   const userTools = userToolsData?.data ?? [];
+
+  // Refetch user tools when settings modal closes (after tool installation)
+  useEffect(() => {
+    if (!showSettingModal && isLogin) {
+      // Settings modal was closed, refetch user tools to get updated installation status
+      queryClient.refetchQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) && query.queryKey[0] === useListUserToolsKey,
+      });
+    }
+  }, [showSettingModal, isLogin, queryClient]);
 
   // Build toolset definitions from userTools for display purposes
   const toolsetDefinitions = useMemo(() => {
