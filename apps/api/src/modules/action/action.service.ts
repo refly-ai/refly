@@ -132,8 +132,10 @@ export class ActionService {
             toolsetId: toolCallResult.toolsetId,
             toolName: toolCallResult.toolName,
             stepName: toolCallResult.stepName,
-            input: safeParseJSON(toolCallResult.input || '{}'),
-            output: safeParseJSON(toolCallResult.output || '{}'),
+            input: safeParseJSON(toolCallResult.input || '{}') ?? {},
+            output: safeParseJSON(toolCallResult.output || '{}') ?? {
+              rawOutput: toolCallResult.output,
+            },
             error: toolCallResult.error || '',
             status: toolCallResult.status as 'executing' | 'completed' | 'failed',
             createdAt: toolCallResult.createdAt.getTime(),
