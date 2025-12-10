@@ -16,7 +16,9 @@ import {
   Exit,
   Parse,
   Account,
+  Github,
 } from 'refly-icons';
+import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
 import './index.scss';
 import React from 'react';
 import { TFunction } from 'i18next';
@@ -152,6 +154,16 @@ const ThemeAppearanceItem = React.memo(({ themeMode, t }: { themeMode: string; t
   </div>
 ));
 
+const GithubItem = React.memo(() => (
+  <div className="flex items-center justify-between gap-2">
+    <div className="flex items-center gap-2">
+      <Github size={18} />
+      GitHub
+    </div>
+    <GithubStar showIcon={false} />
+  </div>
+));
+
 interface SiderMenuSettingListProps {
   creditBalance: number;
   children: React.ReactNode;
@@ -199,6 +211,10 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
 
   const handleDiscordClick = useCallback(() => {
     window.open('https://discord.gg/YVuYFjFvRC', '_blank');
+  }, []);
+
+  const handleGithubClick = useCallback(() => {
+    window.open('https://github.com/refly-ai/refly', '_blank');
   }, []);
 
   // Theme mode options
@@ -292,6 +308,11 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
       },
       {
         type: 'divider' as const,
+      },
+      {
+        key: 'github',
+        label: <GithubItem />,
+        onClick: handleGithubClick,
       },
       {
         key: 'discord',

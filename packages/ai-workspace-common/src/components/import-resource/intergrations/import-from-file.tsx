@@ -184,12 +184,9 @@ export const ImportFromFile = ({ canvasId }: ImportFromFileProps) => {
           <div className="text-refly-primary-default text-sm font-medium leading-5">
             {t('resource.import.dragOrClick')}
           </div>
-          {fileParsingUsage?.pagesLimit && fileParsingUsage?.pagesLimit >= 0 && (
+          {uploadLimit > 0 && (
             <div className="text-refly-text-1 text-sm leading-4">
-              {t('resource.import.fileParsingUsage', {
-                used: fileParsingUsage?.pagesParsed,
-                limit: fileParsingUsage?.pagesLimit,
-              })}
+              {t('resource.import.fileSizeLimit', { size: maxFileSize })}
             </div>
           )}
         </div>

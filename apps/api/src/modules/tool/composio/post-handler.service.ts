@@ -86,6 +86,8 @@ export class PostHandlerService {
       toolsetKey: context.toolsetKey,
       discountedPrice: context.creditCost,
       originalPrice: context.creditCost, // For Composio, original price equals discounted price
+      resultId: context.resultId,
+      version: context.version,
     });
   }
 

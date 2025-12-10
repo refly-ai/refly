@@ -3,12 +3,12 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 export type ExportType = 'markdown' | 'docx' | 'pdf';
 
 export const useExportDocument = () => {
-  const exportDocument = async (docId: string, format: ExportType = 'markdown') => {
-    if (!docId) return '';
+  const exportDocument = async (fileId: string, format: ExportType = 'markdown') => {
+    if (!fileId) return '';
     try {
       const { data, error } = await getClient().exportDocument({
         query: {
-          docId,
+          fileId,
           format,
         },
       });

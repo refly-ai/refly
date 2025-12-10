@@ -44,26 +44,17 @@ import { VariableExtractionModule } from './variable-extraction/variable-extract
 import { InvitationModule } from './invitation/invitation.module';
 import { DriveModule } from './drive/drive.module';
 import { FormModule } from './form/form.module';
+import { CommonModule } from './common/common.module';
+import { RedisService } from './common/redis.service';
 
 import { isDesktop } from '../utils/runtime';
 import { initTracer } from '../tracer';
 
 // Initialize OpenTelemetry tracing
-// - Tempo/Grafana: receives all spans (full observability)
-// - Langfuse: receives only LLM/LangChain spans (filtered via shouldExportSpan)
-const langfuseEnabled = process.env.LANGFUSE_ENABLED === 'true';
-if (process.env.OTLP_TRACES_ENDPOINT) {
-  initTracer({
-    otlpEndpoint: process.env.OTLP_TRACES_ENDPOINT,
-    langfuse: langfuseEnabled
-      ? {
-          publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-          secretKey: process.env.LANGFUSE_SECRET_KEY,
-          baseUrl: process.env.LANGFUSE_BASE_URL,
-        }
-      : undefined,
-  });
-}
+// Tracer handles its own configuration via environment variables:
+// - OTLP_TRACES_ENDPOINT: Tempo/Grafana (full observability)
+// - LANGFUSE_ENABLED + LANGFUSE_*: Langfuse (LLM spans only)
+initTracer();
 
 class CustomThrottlerGuard extends ThrottlerGuard {
   protected async shouldSkip(context: ExecutionContext): Promise<boolean> {
@@ -97,23 +88,14 @@ class CustomThrottlerGuard extends ThrottlerGuard {
           remove: true,
         },
         autoLogging: false,
-        genReqId: () => api.trace.getSpan(api.context.active())?.spanContext()?.traceId,
-        transport: process.env.LOKI_HOST
-          ? {
-              target: 'pino-loki',
-              options: {
-                batching: true,
-                interval: 5,
-                host: process.env.LOKI_HOST,
-                labels: {
-                  app: 'refly-api',
-                  env: process.env.NODE_ENV || 'development',
-                },
-              },
-            }
-          : process.env.NODE_ENV !== 'production'
-            ? { target: 'pino-pretty' }
-            : undefined,
+        // Inject traceId into every log for Loki → Tempo correlation
+        mixin: () => {
+          const traceId = api.trace.getSpan(api.context.active())?.spanContext()?.traceId;
+          return traceId ? { traceId } : {};
+        },
+        // Development: pino-pretty for colored output
+        // Production: JSON to stdout (collected by k8s log aggregator)
+        transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
         formatters: {
           level: (level) => ({ level }),
         },
@@ -157,15 +139,11 @@ class CustomThrottlerGuard extends ThrottlerGuard {
       ? []
       : [
           BullModule.forRootAsync({
-            imports: [ConfigModule],
-            useFactory: async (configService: ConfigService) => ({
-              connection: {
-                host: configService.get('redis.host'),
-                port: configService.get('redis.port'),
-                password: configService.get('redis.password') || undefined,
-              },
-            }),
-            inject: [ConfigService],
+            imports: [CommonModule],
+            useFactory: (redisService: RedisService) => {
+              return { connection: redisService.getClient() };
+            },
+            inject: [RedisService],
           }),
           ThrottlerModule.forRootAsync({
             useFactory: async () => ({

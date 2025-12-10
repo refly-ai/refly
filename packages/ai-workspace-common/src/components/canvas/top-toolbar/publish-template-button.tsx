@@ -143,7 +143,7 @@ const PublishTemplateButton = React.memo(
       }
 
       setCreateTemplateModalVisible(true);
-    }, [forceSyncState, validateCanvas]);
+    }, [forceSyncState, validateCanvas, canvasId]);
 
     const handlePublishSuccess = useCallback(async () => {
       // Refresh workflow apps data after successful publish

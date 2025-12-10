@@ -134,6 +134,18 @@ export const CreateWorkflowAppModal = ({
   // Copy share link state
   const [linkCopied, setLinkCopied] = useState(false);
 
+  // Initial form data state for change detection
+  const [initialFormData, setInitialFormData] = useState<{
+    publishToCommunity: boolean;
+    title: string;
+    description: string;
+    selectedResults: string[];
+    coverStorageKey: string | undefined;
+  } | null>(null);
+
+  // Flag to track if initial data has been saved (to prevent overwriting)
+  const [initialDataSaved, setInitialDataSaved] = useState(false);
+
   const { data: workflowVariables } = useVariablesManagement(canvasId);
   const { nodes } = useRealtimeCanvasData();
 
@@ -437,7 +449,9 @@ export const CreateWorkflowAppModal = ({
       return;
     }
 
-    logEvent('publish_template', Date.now(), {
+    const eventName = isUpdate ? 'update_template' : 'publish_template';
+
+    logEvent(eventName, Date.now(), {
       canvas_id: canvasId,
     });
 
@@ -468,6 +482,10 @@ export const CreateWorkflowAppModal = ({
   // Reset form state when modal opens
   useEffect(() => {
     if (visible) {
+      // Reset initial form data and saved flag
+      setInitialFormData(null);
+      setInitialDataSaved(false);
+
       // Load existing app data if appId is provided
       if (appId) {
         loadAppData(appId);
@@ -493,7 +511,7 @@ export const CreateWorkflowAppModal = ({
       // Reset copy state
       setLinkCopied(false);
     }
-  }, [visible, title, appId, loadAppData]);
+  }, [visible, title, appId, loadAppData, form]);
 
   // Populate form with loaded app data
   useEffect(() => {
@@ -522,6 +540,48 @@ export const CreateWorkflowAppModal = ({
       }
     }
   }, [appData, visible, title, form]);
+
+  // Save initial form data after appData and displayNodes are ready (for editing existing app)
+  useEffect(() => {
+    if (visible && appData && displayNodes.length > 0 && !initialDataSaved) {
+      // Get initial selectedResults from appData, filtered by valid node IDs
+      const savedNodeIds = appData?.resultNodeIds ?? [];
+      const validNodeIds =
+        displayNodes.filter((node): node is CanvasNode => !!node?.id)?.map((node) => node.id) ?? [];
+      const initialSelectedResults = savedNodeIds.filter((id) => validNodeIds.includes(id));
+
+      setInitialFormData({
+        publishToCommunity: appData.publishToCommunity ?? false,
+        title: appData.title ?? title,
+        description: appData.description ?? '',
+        selectedResults: [...initialSelectedResults].sort(),
+        coverStorageKey: appData?.coverStorageKey ?? undefined,
+      });
+      setInitialDataSaved(true);
+    }
+  }, [visible, appData, displayNodes.length, title, initialDataSaved]);
+
+  // Save initial form data for new apps
+  useEffect(() => {
+    if (visible && !appId && displayNodes.length > 0 && !initialDataSaved) {
+      const formValues = form.getFieldsValue();
+      // Calculate initial selectedResults same as auto-select logic
+      const validNodeIds =
+        displayNodes
+          .filter((node): node is CanvasNode => !!node?.id)
+          ?.filter((node) => node.type !== 'skillResponse')
+          ?.map((node) => node.id) ?? [];
+
+      setInitialFormData({
+        publishToCommunity: formValues.publishToCommunity ?? false,
+        title: formValues.title ?? title,
+        description: formValues.description ?? '',
+        selectedResults: [...validNodeIds].sort(),
+        coverStorageKey: undefined,
+      });
+      setInitialDataSaved(true);
+    }
+  }, [visible, appId, displayNodes.length, form, title, initialDataSaved]);
 
   // Sync selected results when appData loads and displayNodes is ready (for editing existing app)
   // Use displayNodes.length as dependency instead of displayNodes to avoid infinite loop
@@ -627,26 +687,82 @@ export const CreateWorkflowAppModal = ({
     }
   }, [currentShareLink, t]);
 
+  // Check if form data has been modified
+  const hasFormDataChanged = useCallback((): boolean => {
+    if (!initialFormData) {
+      // If no initial data, consider it unchanged (for new apps)
+      return false;
+    }
+
+    const formValues = form.getFieldsValue();
+    const currentTitle = formValues.title ?? '';
+    const currentDescription = formValues.description ?? '';
+    const currentPublishToCommunity = formValues.publishToCommunity ?? false;
+
+    // Compare title
+    if (currentTitle !== initialFormData.title) {
+      return true;
+    }
+
+    // Compare description
+    if (currentDescription !== initialFormData.description) {
+      return true;
+    }
+
+    // Compare publishToCommunity
+    if (currentPublishToCommunity !== initialFormData.publishToCommunity) {
+      return true;
+    }
+
+    // Compare selectedResults (sorted comparison)
+    const currentResultsSorted = [...selectedResults].sort();
+    const initialResultsSorted = [...initialFormData.selectedResults].sort();
+    if (
+      currentResultsSorted.length !== initialResultsSorted.length ||
+      !currentResultsSorted.every((id, index) => id === initialResultsSorted[index])
+    ) {
+      return true;
+    }
+
+    // Compare coverStorageKey
+    const currentCoverKey = coverStorageKey ?? undefined;
+    const initialCoverKey = initialFormData.coverStorageKey ?? undefined;
+    if (currentCoverKey !== initialCoverKey) {
+      return true;
+    }
+
+    return false;
+  }, [initialFormData, form, selectedResults, coverStorageKey]);
+
   // Handle modal close with confirmation
   const handleModalClose = useCallback(() => {
     if (confirmLoading || isUploading) {
       return;
     }
 
-    Modal.confirm({
-      title: t('common.confirmClose'),
-      content: t('workflowApp.confirmCloseContent'),
-      okText: t('common.confirm'),
-      cancelText: t('common.cancel'),
-      okButtonProps: {
-        className:
-          '!bg-[var(--refly-primary-default)] !border-[var(--refly-primary-default)] !text-white hover:!bg-[var(--refly-primary-hover)] hover:!border-[var(--refly-primary-hover)] active:!bg-[var(--refly-primary-active)] active:!border-[var(--refly-primary-active)]',
-      },
-      onOk: () => {
-        setVisible(false);
-      },
-    });
-  }, [confirmLoading, isUploading, setVisible, t]);
+    // Check if form data has been modified
+    const hasChanged = hasFormDataChanged();
+
+    // Only show confirmation dialog if data has been modified
+    if (hasChanged) {
+      Modal.confirm({
+        title: t('common.confirmClose'),
+        content: t('workflowApp.confirmCloseContent'),
+        okText: t('common.confirm'),
+        cancelText: t('common.cancel'),
+        okButtonProps: {
+          className:
+            '!bg-[var(--refly-primary-default)] !border-[var(--refly-primary-default)] !text-white hover:!bg-[var(--refly-primary-hover)] hover:!border-[var(--refly-primary-hover)] active:!bg-[var(--refly-primary-active)] active:!border-[var(--refly-primary-active)]',
+        },
+        onOk: () => {
+          setVisible(false);
+        },
+      });
+    } else {
+      // No changes, close directly
+      setVisible(false);
+    }
+  }, [confirmLoading, isUploading, setVisible, t, hasFormDataChanged]);
 
   // Custom footer with copy button and original buttons
   const modalFooter = useMemo(() => {

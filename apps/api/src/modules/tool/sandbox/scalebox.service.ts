@@ -10,6 +10,7 @@ import {
   SandboxExecuteParams,
   DriveFile,
 } from '@refly/openapi-schema';
+import { runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 
 import { guard } from '../../../utils/guard';
 import { QUEUE_SCALEBOX_EXECUTE } from '../../../utils/const';
@@ -58,11 +59,19 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
     void this.config; // Suppress unused warning - used by @Config decorators
   }
 
-  onModuleInit() {
-    this.queueEvents = new QueueEvents(QUEUE_SCALEBOX_EXECUTE, {
-      connection: this.sandboxQueue.opts.connection,
-    });
-    this.logger.debug('QueueEvents initialized');
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      () => {
+        this.queueEvents = new QueueEvents(QUEUE_SCALEBOX_EXECUTE, {
+          connection: this.sandboxQueue.opts.connection,
+        });
+        this.logger.debug('QueueEvents initialized');
+      },
+      {
+        logger: this.logger,
+        label: 'ScaleboxService.onModuleInit',
+      },
+    );
   }
 
   async onModuleDestroy() {
@@ -227,13 +236,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
       '[runCodeInSandbox] Files to register',
     );
 
-    const registeredFiles = await this.registerFiles(context, addedFiles);
-
-    // Append access URLs to files for frontend consumption
-    const files = registeredFiles.map((file) => ({
-      ...file,
-      url: this.driveService.extractContentUrl(file.fileId),
-    }));
+    const files = await this.registerFiles(context, addedFiles);
 
     // Extract error message from executor output
     const errorMessage = extractErrorMessage(executorOutput);

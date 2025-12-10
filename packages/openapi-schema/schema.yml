@@ -1600,21 +1600,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetDocumentDetailResponse'
-  /knowledge/document/export/document:
+  /drive/document/export:
     get:
       tags:
-        - knowledge
+        - drive
       summary: Export document to Markdown, DOCX or PDF format
       description: Export a document to Markdown, DOCX or PDF format
       operationId: exportDocument
       parameters:
-        - name: docId
+        - name: fileId
           in: query
-          description: Export document ID to retrieve
+          description: Export file ID to retrieve
           required: true
           schema:
             type: string
-            example: d-g30e1b80b5g1itbemc0g5jj3
+            example: df-g30e1b80b5g1itbemc0g5jj3
         - name: format
           in: query
           description: Export format
@@ -4864,6 +4864,7 @@ components:
         - image
         - video
         - audio
+        - text/plain
     IndexError:
       type: object
       description: Error message for resource indexing
@@ -9912,6 +9913,9 @@ components:
         creditBilling:
           $ref: '#/components/schemas/CreditBilling'
           description: Credit billing info
+        tooltip:
+          type: string
+          description: Tooltip text for the model (e.g., "Smart Routing")
         inputParameters:
             type: array
             description: Input parameter configurations
@@ -9998,6 +10002,9 @@ components:
         capabilities:
           description: Model capabilities
           $ref: '#/components/schemas/ModelCapabilities'
+        tooltip:
+          type: string
+          description: Tooltip text for the model (e.g., "Smart Routing")
 
     MediaModelParameter:
       type: object
@@ -10071,6 +10078,9 @@ components:
         description:
           type: string
           description: Model description
+        tooltip:
+          type: string
+          description: Tooltip text for the model (e.g., "Smart Routing")
         supportedLanguages:
           type: array
           description: Supported languages for translation
@@ -10656,6 +10666,9 @@ components:
         key:
           type: string
           description: Toolset key
+        type:
+          $ref: '#/components/schemas/GenericToolsetType'
+          description: Toolset type (regular, mcp, external_oauth)
         builtin:
           type: boolean
           description: Whether this is a builtin toolset
@@ -10873,6 +10886,12 @@ components:
         fileNameTitle:
           type: string
           description: File name title from input params
+        resultId:
+          type: string
+          description: Result ID from execution context
+        version:
+          type: number
+          description: Result version from execution context
     PostHandlerResult:
       type: object
       description: Result from post-processing tool execution

@@ -24,9 +24,9 @@ import {
   isPlainTextMimeType,
   pick,
 } from '@refly/utils';
-import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
+import { ParamsError, DriveFileNotFoundError, DocumentNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
-import { streamToBuffer } from '../../utils';
+import { streamToBuffer, streamToString } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
 import { isEmbeddableLinkFile } from './drive.utils';
 import path from 'node:path';
@@ -34,6 +34,9 @@ import { ProviderService } from '../provider/provider.service';
 import { ParserFactory } from '../knowledge/parsers/factory';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { readingTime } from 'reading-time-estimator';
+import { MiscService } from '../misc/misc.service';
+import { DocxParser } from '../knowledge/parsers/docx.parser';
+import { PdfParser } from '../knowledge/parsers/pdf.parser';
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -61,6 +64,7 @@ export class DriveService {
     private redis: RedisService,
     private providerService: ProviderService,
     private subscriptionService: SubscriptionService,
+    private miscService: MiscService,
   ) {
     this.logger.setContext(DriveService.name);
   }
@@ -76,17 +80,17 @@ export class DriveService {
   }
 
   /**
-   * Extract private content URL for a file
-   * @param fileId - Drive file ID
-   * @returns Private access URL or null if origin is not configured
+   * Get server origin from config
    */
-  extractContentUrl(fileId: string): string | null {
-    const origin = this.config.get<string>('origin');
-    if (!origin) {
-      this.logger.warn('[extractContentUrl] origin is not configured');
-      return null;
-    }
-    return `${origin}/v1/drive/file/content/${fileId}`;
+  private get origin(): string | undefined {
+    return this.config.get<string>('origin');
+  }
+
+  /**
+   * Transform DriveFile Prisma model to DTO with URL
+   */
+  toDTO(driveFile: DriveFileModel): DriveFile {
+    return driveFilePO2DTO(driveFile, this.origin);
   }
 
   private generateStorageKey(
@@ -311,7 +315,7 @@ export class DriveService {
 
       // Process each request in the batch
       for (const request of requests) {
-        const { canvasId, name, content, storageKey, externalUrl, buffer } = request;
+        const { canvasId, name, content, storageKey, externalUrl, buffer, type } = request;
 
         // Generate unique filename to avoid conflicts
         const uniqueName = this.generateUniqueFileName(name, existingFileNames);
@@ -349,7 +353,8 @@ export class DriveService {
           rawData = Buffer.from(content, 'utf8');
           size = BigInt(rawData.length);
           // Infer MIME type from filename, fallback to text/plain
-          request.type = getSafeMimeType(name, mime.getType(name) ?? undefined) || 'text/plain';
+          request.type =
+            getSafeMimeType(name, mime.getType(name) ?? type ?? undefined) || 'text/plain';
         } else if (storageKey) {
           // Case 2: Transfer from existing storage key
           let objectInfo = await this.internalOss.statObject(storageKey);
@@ -438,7 +443,7 @@ export class DriveService {
         driveFiles.map((file) => this.getDriveFileDetail(user, file.fileId, file)),
       );
     }
-    return driveFiles.map(driveFilePO2DTO);
+    return driveFiles.map((file) => this.toDTO(file));
   }
 
   /**
@@ -504,7 +509,7 @@ export class DriveService {
       }
 
       return {
-        ...driveFilePO2DTO(driveFile),
+        ...this.toDTO(driveFile),
         content,
       };
     }
@@ -584,7 +589,7 @@ export class DriveService {
         this.logger.info(
           `Successfully loaded from cache for ${fileId}, content length: ${content.length}`,
         );
-        return { ...driveFilePO2DTO(driveFile), content };
+        return { ...this.toDTO(driveFile), content };
       } catch (error) {
         this.logger.warn(`Cache read failed for ${fileId}, will re-parse:`, error);
         // Continue to parse
@@ -716,7 +721,7 @@ export class DriveService {
         `Successfully parsed and cached file ${fileId}, content length: ${processedContent.length}, word count: ${wordCount}`,
       );
 
-      return { ...driveFilePO2DTO(driveFile), content: processedContent };
+      return { ...this.toDTO(driveFile), content: processedContent };
     } catch (error) {
       this.logger.error(
         `Failed to parse drive file ${fileId}: ${JSON.stringify({ message: error.message })}`,
@@ -743,7 +748,7 @@ export class DriveService {
 
       // Fallback to summary
       this.logger.info(`Returning fallback summary for ${fileId} due to parse failure`);
-      return { ...driveFilePO2DTO(driveFile), content: driveFile.summary };
+      return { ...this.toDTO(driveFile), content: driveFile.summary };
     }
   }
 
@@ -870,7 +875,7 @@ export class DriveService {
     const createdFiles = await this.prisma.driveFile.createManyAndReturn({
       data: driveFilesData,
     });
-    return createdFiles.map(driveFilePO2DTO);
+    return createdFiles.map((file) => this.toDTO(file));
   }
 
   /**
@@ -912,7 +917,7 @@ export class DriveService {
     const createdFile = await this.prisma.driveFile.create({
       data: createData,
     });
-    return driveFilePO2DTO(createdFile);
+    return this.toDTO(createdFile);
   }
 
   /**
@@ -949,7 +954,7 @@ export class DriveService {
       where: { fileId, uid: user.uid },
       data: updateData,
     });
-    return driveFilePO2DTO(updatedFile);
+    return this.toDTO(updatedFile);
   }
 
   /**
@@ -1096,7 +1101,7 @@ export class DriveService {
       }
     }
 
-    return driveFilePO2DTO(duplicatedFile);
+    return this.toDTO(duplicatedFile);
   }
 
   /**
@@ -1110,6 +1115,7 @@ export class DriveService {
       select: {
         name: true,
         type: true,
+        storageKey: true,
         updatedAt: true,
       },
       where: { fileId, uid: user.uid, deletedAt: null },
@@ -1119,10 +1125,21 @@ export class DriveService {
       throw new NotFoundException(`Drive file not found: ${fileId}`);
     }
 
+    // Get lastModified from OSS, throw 404 if file doesn't exist in OSS
+    const objectInfo = await this.internalOss.statObject(driveFile.storageKey);
+    if (!objectInfo) {
+      throw new NotFoundException(`Drive file not found in storage: ${fileId}`);
+    }
+
+    // Use the more recent of OSS lastModified and DB updatedAt
+    const dbUpdatedAt = new Date(driveFile.updatedAt);
+    const ossLastModified = objectInfo.lastModified;
+    const lastModified = ossLastModified > dbUpdatedAt ? ossLastModified : dbUpdatedAt;
+
     return {
       contentType: driveFile.type || 'application/octet-stream',
       filename: driveFile.name,
-      lastModified: new Date(driveFile.updatedAt),
+      lastModified,
     };
   }
 
@@ -1223,10 +1240,21 @@ export class DriveService {
     const filename = path.basename(driveFile.storageKey) || 'file';
     const contentType = getSafeMimeType(filename, mime.getType(filename) ?? undefined);
 
+    // Get lastModified from OSS, throw 404 if file doesn't exist in OSS
+    const objectInfo = await this.externalOss.statObject(driveFile.storageKey);
+    if (!objectInfo) {
+      throw new NotFoundException(`Public file not found in storage: ${fileId}`);
+    }
+
+    // Use the more recent of OSS lastModified and DB updatedAt
+    const dbUpdatedAt = new Date(driveFile.updatedAt);
+    const ossLastModified = objectInfo.lastModified;
+    const lastModified = ossLastModified > dbUpdatedAt ? ossLastModified : dbUpdatedAt;
+
     return {
       contentType,
       filename,
-      lastModified: new Date(driveFile.updatedAt),
+      lastModified,
     };
   }
 
@@ -1260,7 +1288,10 @@ export class DriveService {
       const filename = path.basename(storageKey) || 'file';
 
       // Try to get contentType from file extension
-      const contentType = getSafeMimeType(filename, mime.getType(filename) ?? undefined);
+      const contentType = getSafeMimeType(
+        filename,
+        driveFile.type ?? mime.getType(filename) ?? undefined,
+      );
 
       return {
         data,
@@ -1412,6 +1443,62 @@ export class DriveService {
         return { updatedAt: 'desc' };
       default:
         return { createdAt: 'desc' };
+    }
+  }
+
+  async exportDocument(
+    user: User,
+    params: { fileId: string; format: 'markdown' | 'docx' | 'pdf' },
+  ): Promise<Buffer> {
+    const { fileId, format } = params;
+
+    if (!fileId) {
+      throw new ParamsError('Document ID is required');
+    }
+
+    const doc = await this.prisma.driveFile.findFirst({
+      where: {
+        fileId,
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    if (!doc) {
+      throw new DocumentNotFoundError('Document not found');
+    }
+
+    let content: string;
+    if (doc.storageKey) {
+      const contentStream = await this.internalOss.getObject(doc.storageKey);
+      content = await streamToString(contentStream);
+    }
+
+    // Process images in the document content
+    if (content) {
+      content = await this.miscService.processContentImages(content);
+    }
+
+    // add title as H1 title
+    const title = doc.name ?? 'Untitled';
+    const markdownContent = `# ${title}\n\n${content ?? ''}`;
+
+    // convert content to the format
+    switch (format) {
+      case 'markdown':
+        return Buffer.from(markdownContent);
+      case 'docx': {
+        const docxParser = new DocxParser();
+        const docxData = await docxParser.parse(markdownContent);
+        return docxData.buffer;
+      }
+      case 'pdf': {
+        const pdfParser = new PdfParser();
+        const pdfData = await pdfParser.parse(markdownContent);
+        return pdfData.buffer;
+      }
+      default:
+        throw new ParamsError('Unsupported format');
     }
   }
 }

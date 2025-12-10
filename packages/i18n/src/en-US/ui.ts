@@ -879,6 +879,11 @@ const translations = {
       buttonText: 'New Workflow',
       buttonDescription: 'Create a new workflow',
     },
+    tutorial: {
+      title: 'Tutorial',
+      buttonText: '5 Minutes Tutorial',
+      buttonDescription: 'Tutorial for AI-driven workflow',
+    },
     recentWorkflows: {
       title: 'Recent Workflows',
       edit: 'Edit',
@@ -951,9 +956,9 @@ const translations = {
     exportSuccess: 'Export successfully',
     exportFailed: 'Export failed',
     exportAs: 'Export as',
-    exportDocumentToMarkdown: 'Export to Markdown',
-    exportDocumentToDocx: 'Export to DOCX',
-    exportDocumentToPdf: 'Export to PDF',
+    exportDocumentToMarkdown: 'Markdown Document (.md)',
+    exportDocumentToDocx: 'Word Document (.docx)',
+    exportDocumentToPdf: 'PDF Document (.pdf)',
     openWebpage: 'Open Original Webpage',
     downloadFile: 'Download File',
     canvasListModal: {
@@ -2008,6 +2013,7 @@ const translations = {
       fileTooLarge: 'File size cannot exceed {{size}}',
       fileParsingUsage:
         'Advanced file parsing (including PDF): {{used}}/{{limit}} pages used today',
+      fileSizeLimit: 'Maximum upload size: {{size}}',
       fromWeblink: 'Paste Weblink',
       selectAll: 'Select All',
       webLinkPlaceholer: 'Enter or paste valid web links, one per line...',
@@ -3214,11 +3220,11 @@ const translations = {
       subtitle: 'Explore your curiosity together',
       youCanTry: 'Get new inspiration',
       query1:
-        "Help me track and analyze Warren Buffett's U.S. stock portfolio changes this quarter.",
+        "Use a 13F data tool to research Warren Buffett's holdings in Q2 vs Q3 2025, list all increases and decreases, and generate a summary with simple charts.",
       query2:
-        '‍Help me fetch the Product Hunt Top 10 today, generate a summary document and product podcast, and send the links to my email.',
+        "Use Perplexity to fetch yesterday's Product Hunt Top 5, create a summary document and a podcast, and email them to me.",
       query3:
-        'Help me generate a sequence of animation scenes in the style of Makoto Shinkai, telling the story of "growing up" from childhood to adulthood.',
+        'Help me generate a five-image animation series in the style of Makoto Shinkai, themed around "growth", and use an image-generation tool to create all images.',
     },
     sessionDetail: {
       thinking: 'Refly is thinking',
@@ -3652,21 +3658,19 @@ const translations = {
           'Monthly credits\n2,000 credits',
           //'New subscribers receive an extra\n2,000 bonus credits',
           'Access to a vast library of tools',
-          /*{
+          {
             name: 'Credit-free tools',
             type: 'pointFreeTools',
             items: [
-              'Gemini 3.0 Nano Banana pro',
-              'Seedream 4.0',
-              'Seedance 1.5',
-              'VibeVoice',
-              'Instagram',
-              'TikTok',
-              'Reddit',
-              'X',
+              'Nano Banana pro',
+              'Seedream 4.5',
+              'Fish Audio',
+              'Instagram integrations',
+              'Facebook integrations',
+              'Twitter integrations',
             ],
-            duration: '365 DAYS',
-          },*/
+            duration: '1 MONTH',
+          },
           'Service support\nHigh priority support',
         ],
       },
@@ -3761,10 +3765,9 @@ const translations = {
       availableCredits: 'Total Available Credits',
       availableCreditsDescription: 'All credits you can use to run workflows',
       regularCreditsDescription: 'Credits earned from purchases, bonuses, and system rewards',
-      templateEarningsCreditsDescription:
-        'Earnings credits obtained by sharing templates and works, can be used to redeem more AI features',
+      templateEarningsCreditsDescription: 'Credits earned from others running your templates',
       regularCredits: 'Regular Credits',
-      templateEarningsCredits: 'Earnings Credits',
+      templateEarningsCredits: 'Revenue Credits',
       remainingCredits: 'Credits',
       knowledgeBaseFiles: 'Knowledge Base Files',
       creditUsageDetails: 'Credit Usage Details',

@@ -20,6 +20,7 @@ import {
   PublicFileUrlProvider,
   usePublicFileUrlContext,
 } from '@refly-packages/ai-workspace-common/context/public-file-url';
+import { logEvent } from '@refly/telemetry-web';
 
 // Global media manager to stop all playing media
 const mediaManager = {
@@ -400,10 +401,12 @@ export const ResultItemPreview = memo(
     // 宽屏弹窗开关
     const handleWideModeOpen = (e: React.MouseEvent) => {
       e.stopPropagation();
+      logEvent('view_template_generate_result', Date.now(), {});
       // Stop all playing media when opening modal
       mediaManager.stopAll();
       setWideModeOpen(true);
     };
+
     const handleWideModeClose = () => {
       // Stop all playing media when closing modal
       mediaManager.stopAll();

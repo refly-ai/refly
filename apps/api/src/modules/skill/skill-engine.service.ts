@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ModuleRef } from '@nestjs/core';
 import { ReflyService } from '@refly/agent-tools';
 import { SkillEngine, SkillEngineOptions } from '@refly/skill-template';
-import { genImageID } from '@refly/utils';
+import { genImageID, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 import { buildSuccessResponse } from '../../utils';
 import { genBaseRespDataFromError } from '../../utils/exception';
 import { ActionService } from '../action/action.service';
@@ -57,24 +57,32 @@ export class SkillEngineService implements OnModuleInit {
     this.logger.setContext(SkillEngineService.name);
   }
 
-  async onModuleInit() {
-    this.searchService = this.moduleRef.get(SearchService, { strict: false });
-    this.resourceService = this.moduleRef.get(ResourceService, { strict: false });
-    this.documentService = this.moduleRef.get(DocumentService, { strict: false });
-    this.ragService = this.moduleRef.get(RAGService, { strict: false });
-    this.canvasService = this.moduleRef.get(CanvasService, { strict: false });
-    this.providerService = this.moduleRef.get(ProviderService, { strict: false });
-    this.authService = this.moduleRef.get(AuthService, { strict: false });
-    this.mediaGeneratorService = this.moduleRef.get(MediaGeneratorService, { strict: false });
-    this.actionService = this.moduleRef.get(ActionService, { strict: false });
-    this.driveService = this.moduleRef.get(DriveService, { strict: false });
-    this.notificationService = this.moduleRef.get(NotificationService, { strict: false });
-    this.codeArtifactService = this.moduleRef.get(CodeArtifactService, { strict: false });
-    this.miscService = this.moduleRef.get(MiscService, { strict: false });
-    this.canvasSyncService = this.moduleRef.get(CanvasSyncService, { strict: false });
-    this.toolService = this.moduleRef.get(ToolService, { strict: false });
-    this.scaleboxService = this.moduleRef.get(ScaleboxService, { strict: false });
-    this.shareCreationService = this.moduleRef.get(ShareCreationService, { strict: false });
+  async onModuleInit(): Promise<void> {
+    await runModuleInitWithTimeoutAndRetry(
+      () => {
+        this.searchService = this.moduleRef.get(SearchService, { strict: false });
+        this.resourceService = this.moduleRef.get(ResourceService, { strict: false });
+        this.documentService = this.moduleRef.get(DocumentService, { strict: false });
+        this.ragService = this.moduleRef.get(RAGService, { strict: false });
+        this.canvasService = this.moduleRef.get(CanvasService, { strict: false });
+        this.providerService = this.moduleRef.get(ProviderService, { strict: false });
+        this.authService = this.moduleRef.get(AuthService, { strict: false });
+        this.mediaGeneratorService = this.moduleRef.get(MediaGeneratorService, { strict: false });
+        this.actionService = this.moduleRef.get(ActionService, { strict: false });
+        this.driveService = this.moduleRef.get(DriveService, { strict: false });
+        this.notificationService = this.moduleRef.get(NotificationService, { strict: false });
+        this.codeArtifactService = this.moduleRef.get(CodeArtifactService, { strict: false });
+        this.miscService = this.moduleRef.get(MiscService, { strict: false });
+        this.canvasSyncService = this.moduleRef.get(CanvasSyncService, { strict: false });
+        this.toolService = this.moduleRef.get(ToolService, { strict: false });
+        this.scaleboxService = this.moduleRef.get(ScaleboxService, { strict: false });
+        this.shareCreationService = this.moduleRef.get(ShareCreationService, { strict: false });
+      },
+      {
+        logger: this.logger,
+        label: 'SkillEngineService.onModuleInit',
+      },
+    );
   }
 
   /**
@@ -254,8 +262,9 @@ export class SkillEngineService implements OnModuleInit {
         );
 
         const url = `${this.config.get('origin')}/share/file/${shareRecord.shareId}`;
+        const contentUrl = `${this.config.get('endpoint')}/v1/drive/file/public/${fileId}`;
 
-        return { url, shareId: shareRecord.shareId, driveFile };
+        return { url, contentUrl, shareId: shareRecord.shareId, driveFile };
       },
       genImageID: async () => {
         return genImageID();

@@ -4,6 +4,7 @@ export default () => ({
   port: Number.parseInt(process.env.PORT) || 5800,
   wsPort: Number.parseInt(process.env.WS_PORT) || 5801,
   origin: process.env.ORIGIN || 'http://localhost:5700',
+  endpoint: process.env.ENDPOINT || 'http://localhost:5800',
   static: {
     public: {
       endpoint: process.env.STATIC_PUBLIC_ENDPOINT || 'http://localhost:5800/v1/misc/public',
@@ -21,10 +22,12 @@ export default () => ({
     presignExpiry: Number.parseInt(process.env.IMAGE_PRESIGN_EXPIRY) || 15 * 60, // 15 minutes
   },
   redis: {
+    url: process.env.REDIS_URL,
     host: process.env.REDIS_HOST || 'localhost',
     port: Number.parseInt(process.env.REDIS_PORT) || 6379,
     username: process.env.REDIS_USERNAME,
     password: process.env.REDIS_PASSWORD,
+    tls: process.env.REDIS_TLS === 'true' || false,
   },
   drive: {
     storageKeyPrefix: process.env.DRIVE_STORAGE_KEY_PREFIX || 'drive',

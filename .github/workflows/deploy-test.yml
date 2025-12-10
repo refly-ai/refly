@@ -1,0 +1,137 @@
+name: Deploy To Test Environment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    if: github.repository == 'refly-ai/refly'
+    strategy:
+      matrix:
+        app: ["api", "web"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        if: matrix.app == 'web'
+        with:
+          run_install: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        if: matrix.app == 'web'
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        if: matrix.app == 'web'
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build:web
+        if: matrix.app == 'web'
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          VITE_API_URL: ${{ vars.TEST_API_URL }}
+          VITE_COLLAB_URL: ${{ vars.TEST_COLLAB_URL }}
+          VITE_SUBSCRIPTION_ENABLED: true
+          VITE_SENTRY_ENABLED: true
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_RUNTIME: web
+          VITE_STATIC_PUBLIC_ENDPOINT: ${{ vars.TEST_STATIC_PUBLIC_ENDPOINT }}
+          VITE_STATIC_PRIVATE_ENDPOINT: ${{ vars.TEST_STATIC_PRIVATE_ENDPOINT }}
+          VITE_CANVAS_TEMPLATE_ENABLED: true
+          VITE_ENV_TAG: test
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
+          role-session-name: gha-refly-test-deploy
+
+      - name: Set Docker tags
+        id: docker_tags
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          REPOSITORY="${REGISTRY}/refly-${{ matrix.app }}"
+          IMAGE_TAG="${{ github.sha }}"
+          TAGS="${REPOSITORY}:${IMAGE_TAG}"
+          if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "stable" ]]; then
+            TAGS="${TAGS},${REPOSITORY}:nightly"
+          fi
+          echo "registry=$REGISTRY" >> "$GITHUB_OUTPUT"
+          echo "repository=$REPOSITORY" >> "$GITHUB_OUTPUT"
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "deploy_image=${REPOSITORY}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Check if image exists in ECR
+        id: check_image
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+        run: |
+          if aws ecr describe-images \
+            --repository-name refly-${{ matrix.app }} \
+            --image-ids imageTag=${{ steps.docker_tags.outputs.image_tag }} \
+            --region "$AWS_REGION" \
+            --output json > /dev/null 2>&1; then
+            echo "Image exists in ECR, skipping build"
+            echo "image_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Image does not exist in ECR, will build"
+            echo "image_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.check_image.outputs.image_exists == 'false'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Amazon ECR
+        if: steps.check_image.outputs.image_exists == 'false'
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "${{ steps.docker_tags.outputs.registry }}"
+
+      - name: Build and push Docker image
+        if: steps.check_image.outputs.image_exists == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/${{ matrix.app }}/Dockerfile
+          push: true
+          tags: ${{ steps.docker_tags.outputs.tags }}
+          cache-from: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache
+          cache-to: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache,mode=max
+
+      - name: Update kubeconfig for EKS cluster
+        if: github.ref_name == 'main' || github.ref_name == 'stable'
+        run: |
+          aws eks update-kubeconfig --name ${{ vars.AWS_EKS_CLUSTER_TEST }} --region ${{ vars.AWS_REGION }}
+
+      - name: Update API deployment image on EKS
+        if: matrix.app == 'api' && (github.ref_name == 'main' || github.ref_name == 'stable')
+        run: |
+          kubectl set image deployment/refly-api refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
+          kubectl rollout status deployment/refly-api -n refly-app --timeout=300s
+
+      - name: Update Web deployment image on EKS
+        if: matrix.app == 'web' && (github.ref_name == 'main' || github.ref_name == 'stable')
+        run: |
+          kubectl set image deployment/refly-web refly-web=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
+          kubectl rollout status deployment/refly-web -n refly-app --timeout=300s

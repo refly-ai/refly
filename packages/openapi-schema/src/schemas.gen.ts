@@ -1094,7 +1094,7 @@ export const ResourceMetaSchema = {
 export const ResourceTypeSchema = {
   type: 'string',
   description: 'Resource type',
-  enum: ['weblink', 'text', 'file', 'document', 'image', 'video', 'audio'],
+  enum: ['weblink', 'text', 'file', 'document', 'image', 'video', 'audio', 'text/plain'],
 } as const;
 
 export const IndexErrorSchema = {
@@ -8199,6 +8199,10 @@ export const ModelInfoSchema = {
       $ref: '#/components/schemas/CreditBilling',
       description: 'Credit billing info',
     },
+    tooltip: {
+      type: 'string',
+      description: 'Tooltip text for the model (e.g., "Smart Routing")',
+    },
     inputParameters: {
       type: 'array',
       description: 'Input parameter configurations',
@@ -8314,6 +8318,10 @@ export const LLMModelConfigSchema = {
       description: 'Model capabilities',
       $ref: '#/components/schemas/ModelCapabilities',
     },
+    tooltip: {
+      type: 'string',
+      description: 'Tooltip text for the model (e.g., "Smart Routing")',
+    },
   },
 } as const;
 
@@ -8417,6 +8425,10 @@ export const MediaGenerationModelConfigSchema = {
     description: {
       type: 'string',
       description: 'Model description',
+    },
+    tooltip: {
+      type: 'string',
+      description: 'Tooltip text for the model (e.g., "Smart Routing")',
     },
     supportedLanguages: {
       type: 'array',
@@ -9213,6 +9225,10 @@ export const ToolsetDefinitionSchema = {
       type: 'string',
       description: 'Toolset key',
     },
+    type: {
+      $ref: '#/components/schemas/GenericToolsetType',
+      description: 'Toolset type (regular, mcp, external_oauth)',
+    },
     builtin: {
       type: 'boolean',
       description: 'Whether this is a builtin toolset',
@@ -9508,6 +9524,14 @@ export const PostHandlerContextSchema = {
     fileNameTitle: {
       type: 'string',
       description: 'File name title from input params',
+    },
+    resultId: {
+      type: 'string',
+      description: 'Result ID from execution context',
+    },
+    version: {
+      type: 'number',
+      description: 'Result version from execution context',
     },
   },
 } as const;

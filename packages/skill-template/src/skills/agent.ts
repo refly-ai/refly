@@ -108,9 +108,20 @@ export class Agent extends BaseSkill {
 
     if (selectedTools.length > 0) {
       // Ensure tool definitions are valid before binding
-      const validTools = selectedTools.filter(
-        (tool) => tool.name && tool.description && tool.schema,
-      );
+      // Also filter out tools with names exceeding 64 characters (OpenAI limit)
+      const validTools = selectedTools.filter((tool) => {
+        if (!tool.name || !tool.description || !tool.schema) {
+          this.engine.logger.warn(`Skipping invalid tool: ${tool.name || 'unnamed'}`);
+          return false;
+        }
+        if (tool.name.length > 64) {
+          this.engine.logger.warn(
+            `Skipping tool with name exceeding 64 characters: ${tool.name} (${tool.name.length} chars)`,
+          );
+          return false;
+        }
+        return true;
+      });
 
       if (validTools.length > 0) {
         const toolNames = validTools.map((tool) => tool.name);

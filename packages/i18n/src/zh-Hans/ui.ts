@@ -143,21 +143,19 @@ const translations = {
           '每月积分\n2000点',
           //'首次订阅额外赠送\n2000点',
           '访问丰富的工具库',
-          /*{
+          {
             name: '免积分使用工具',
             type: 'pointFreeTools',
             items: [
-              'Gemini 3.0 Nano Banana pro',
+              'Nano Banana pro',
               'Seedream 4.0',
-              'Seedance 1.5',
-              'VibeVoice',
-              'Instagram',
-              'TikTok',
-              'Reddit',
-              'X',
+              'Fish Audio',
+              'Instagram integrations',
+              'Facebook integrations',
+              'Twitter integrations',
             ],
-            duration: '365 DAYS',
-          },*/
+            duration: '1 MONTH',
+          },
           '服务支持\n高优邮件支持',
         ],
       },
@@ -962,6 +960,11 @@ const translations = {
       buttonText: '新建工作流',
       buttonDescription: '新建空白工作流',
     },
+    tutorial: {
+      title: '教程',
+      buttonText: '5分钟上手教程',
+      buttonDescription: '如何构建一个AI 驱动的工作流',
+    },
     recentWorkflows: {
       title: '近期工作流',
       edit: '编辑',
@@ -1034,9 +1037,9 @@ const translations = {
     exportSuccess: '文档导出成功',
     exportFailed: '文档导出失败',
     exportAs: '导出为',
-    exportDocumentToMarkdown: '导出为 Markdown',
-    exportDocumentToDocx: '导出为 Docx',
-    exportDocumentToPdf: '导出为 PDF',
+    exportDocumentToMarkdown: 'Markdown 文档 (.md)',
+    exportDocumentToDocx: 'Word 文档 (.docx)',
+    exportDocumentToPdf: 'PDF 文档 (.pdf)',
     openWebpage: '打开原网页',
     downloadFile: '下载文件',
     canvasListModal: {
@@ -2066,6 +2069,7 @@ const translations = {
       unlockUploadLimit: '解锁上传限制',
       fileTooLarge: '文件大小不能超过 {{size}}',
       fileParsingUsage: '高级文件解析（包括 PDF）：今日已使用 {{used}}/{{limit}} 页',
+      fileSizeLimit: '最大上传大小：{{size}}',
       fromWeblink: '导入网页链接',
       selectAll: '全选',
       webLinkPlaceholer: '输入或粘贴有效的网页链接，每行一个....',
@@ -3280,9 +3284,12 @@ const translations = {
       title: '你的工作流创作伙伴',
       subtitle: '一起探索好奇心',
       youCanTry: '获取新灵感',
-      query1: '帮我追踪并分析巴菲特本季度的美股持仓变动。',
-      query2: '帮我抓取今天的 Product Hunt Top 10，生成总结文档和产品播客，并把链接发到我的邮箱。',
-      query3: '帮我生成一组新海诚风格、讲述“从小到大”成长故事的序列动画场景。',
+      query1:
+        '使用13F数据工具研究沃伦·巴菲特在2025年第二季度与第三季度的持仓情况，列出所有增持和减持的股票，并生成一份包含简易图表的摘要。',
+      query2:
+        '使用 Perplexity 获取昨天 Product Hunt 排行榜前五的产品，创建一份摘要文档和一集播客，并通过电子邮件发送给我。',
+      query3:
+        '帮我生成一个由五张图像组成的动画系列，采用新海诚的风格，主题为“成长”，并使用图像生成工具创建所有图像。',
     },
     sessionDetail: {
       thinking: '思考中',

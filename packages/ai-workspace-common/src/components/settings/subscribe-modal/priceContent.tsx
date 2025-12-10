@@ -133,10 +133,10 @@ const FeatureItem = memo(
             <div className="flex-shrink-0 mt-0.5">
               <Checked size={16} color="#0E9F77" />
             </div>
-            <span className="text-sm leading-5 text-gray-900 font-semibold">{name}</span>
+            <span className="text-sm leading-5 text-gray-900 font-regular">{name}</span>
           </div>
           {/* Sub-items list */}
-          <div className="ml-7 p-3 rounded-lg bg-transparent flex flex-col gap-2">
+          <div className="ml-7 rounded-lg bg-transparent flex flex-col gap-2">
             {feature.items.map((item, index) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

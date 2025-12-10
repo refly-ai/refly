@@ -39,6 +39,6 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "eslint.enable": false,
   "[sql]": {
-    "editor.defaultFormatter": "dbcode.dbcode"
+    "editor.defaultFormatter": "cweijan.vscode-postgresql-client2"
   }
 }
