@@ -20,7 +20,6 @@ import { useOpenInstallTool } from '@refly-packages/ai-workspace-common/hooks/us
 import { useOpenInstallMcp } from '@refly-packages/ai-workspace-common/hooks/use-open-install-mcp';
 import { IoWarningOutline } from 'react-icons/io5';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * Check if a toolset is authorized/installed
@@ -492,7 +491,6 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
-  const _queryClient = useQueryClient();
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
