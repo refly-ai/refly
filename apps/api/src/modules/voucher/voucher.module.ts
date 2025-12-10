@@ -8,6 +8,7 @@ import { TemplateScoringService } from './template-scoring.service';
 import { CleanupExpiredVouchersProcessor } from './voucher.processor';
 import { ProviderModule } from '../provider/provider.module';
 import { CreditModule } from '../credit/credit.module';
+import { NotificationModule } from '../notification/notification.module';
 import { QUEUE_CLEANUP_EXPIRED_VOUCHERS } from '../../utils/const';
 
 @Module({
@@ -15,6 +16,7 @@ import { QUEUE_CLEANUP_EXPIRED_VOUCHERS } from '../../utils/const';
     CommonModule,
     ProviderModule,
     forwardRef(() => CreditModule),
+    NotificationModule,
     BullModule.registerQueue({
       name: QUEUE_CLEANUP_EXPIRED_VOUCHERS,
     }),

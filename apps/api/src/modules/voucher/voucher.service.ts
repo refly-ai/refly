@@ -3,6 +3,7 @@ import { User, WorkflowVariable } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
 import { TemplateScoringService, CanvasDataForScoring } from './template-scoring.service';
 import { CreditService } from '../credit/credit.service';
+import { NotificationService } from '../notification/notification.service';
 import { genVoucherID, genVoucherInvitationID, genInviteCode, getYYYYMMDD } from '@refly/utils';
 import {
   VoucherDTO,
@@ -27,6 +28,7 @@ import {
   INVITER_REWARD_CREDITS,
   AnalyticsEvents,
 } from './voucher.constants';
+import { generateVoucherEmail, calculateDiscountValues } from './voucher-email-templates';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -43,6 +45,7 @@ export class VoucherService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly templateScoringService: TemplateScoringService,
     private readonly configService: ConfigService,
+    private readonly notificationService: NotificationService,
     @Inject(forwardRef(() => CreditService))
     private readonly creditService: CreditService,
     @Optional()
@@ -236,6 +239,11 @@ export class VoucherService implements OnModuleInit {
         `Voucher generated for user ${user.uid}: ${voucher.voucherId} (${discountPercent}% off)`,
       );
 
+      // 7. Send email notification (async, don't wait)
+      this.sendVoucherEmail(user.uid, voucher.voucherId, discountPercent).catch((err) => {
+        this.logger.error(`Failed to send voucher email for user ${user.uid}: ${err.message}`);
+      });
+
       return {
         voucher,
         score: scoringResult.score,
@@ -245,6 +253,57 @@ export class VoucherService implements OnModuleInit {
       this.logger.error(`Failed to handle template publish for user ${user.uid}: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * Send voucher notification email to user
+   */
+  private async sendVoucherEmail(
+    uid: string,
+    voucherId: string,
+    discountPercent: number,
+  ): Promise<void> {
+    // Get user info including locale
+    const userPo = await this.prisma.user.findUnique({
+      where: { uid },
+      select: { email: true, nickname: true, name: true, uiLocale: true },
+    });
+
+    if (!userPo?.email) {
+      this.logger.warn(`Cannot send voucher email: user ${uid} has no email`);
+      return;
+    }
+
+    // Create invitation for the share link
+    const invitation = await this.createInvitation(uid, voucherId);
+    const baseUrl = this.configService.get('app.baseUrl') || 'https://refly.ai';
+    const inviteLink = `${baseUrl}/?invite=${invitation.invitation.inviteCode}`;
+
+    // Calculate discount values
+    const { discountValue, discountedPrice } = calculateDiscountValues(discountPercent);
+
+    // Generate email content based on user's locale
+    const userName = userPo.nickname || userPo.name || 'Refly User';
+    const { subject, html } = generateVoucherEmail(
+      {
+        userName,
+        discountPercent,
+        discountValue,
+        discountedPrice,
+        inviteLink,
+        expirationDays: VOUCHER_EXPIRATION_DAYS,
+      },
+      userPo.uiLocale || undefined,
+    );
+
+    // Send email
+    await this.notificationService.sendEmail({
+      to: userPo.email,
+      subject,
+      html,
+    });
+
+    this.logger.log(`Voucher email sent to user ${uid} (${userPo.email})`);
   }
 
   /**
