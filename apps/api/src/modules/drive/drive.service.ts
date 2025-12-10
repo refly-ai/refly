@@ -322,7 +322,7 @@ export class DriveService {
         existingFileNames.add(uniqueName); // Add to set to prevent future conflicts in this batch
 
         // Skip requests that don't have content to process
-        if (content === undefined && !storageKey && !externalUrl) {
+        if (content === undefined && !storageKey && !externalUrl && !buffer) {
           continue;
         }
 
