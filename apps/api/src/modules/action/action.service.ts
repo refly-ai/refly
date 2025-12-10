@@ -9,7 +9,7 @@ import {
   GetActionResultData,
   User,
 } from '@refly/openapi-schema';
-import { batchReplaceRegex, genActionResultID, pick } from '@refly/utils';
+import { batchReplaceRegex, genActionResultID, pick, safeParseJSON } from '@refly/utils';
 import pLimit from 'p-limit';
 import {
   ActionResult,
@@ -132,8 +132,10 @@ export class ActionService {
             toolsetId: toolCallResult.toolsetId,
             toolName: toolCallResult.toolName,
             stepName: toolCallResult.stepName,
-            input: JSON.parse(toolCallResult.input || '{}'),
-            output: JSON.parse(toolCallResult.output || '{}'),
+            input: safeParseJSON(toolCallResult.input || '{}') ?? {},
+            output: safeParseJSON(toolCallResult.output || '{}') ?? {
+              rawOutput: toolCallResult.output,
+            },
             error: toolCallResult.error || '',
             status: toolCallResult.status as 'executing' | 'completed' | 'failed',
             createdAt: toolCallResult.createdAt.getTime(),

@@ -6,7 +6,6 @@ import { Tooltip, Button, Dropdown, message } from 'antd';
 import type { MenuProps } from 'antd';
 import { DownloadIcon } from 'lucide-react';
 import {
-  downloadNodeData,
   hasDownloadableData,
   shareNodeData,
   hasShareableData,
@@ -14,10 +13,10 @@ import {
 } from '@refly-packages/ai-workspace-common/utils/download-node-data';
 import { Share, Pdf, Doc1, Markdown } from 'refly-icons';
 import { logEvent } from '@refly/telemetry-web';
-import { CanvasNode } from '@refly/openapi-schema';
+import { CanvasNode, DriveFile } from '@refly/openapi-schema';
 import { ResultItemPreview } from '@refly-packages/ai-workspace-common/components/workflow-app/ResultItemPreview';
-import { usePublicFileUrlContext } from '@refly-packages/ai-workspace-common/context/public-file-url';
 import { useExportDocument } from '@refly-packages/ai-workspace-common/hooks/use-export-document';
+import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/canvas/use-download-file';
 
 // Content renderer component
 const NodeRenderer = memo(
@@ -42,7 +41,7 @@ const NodeRenderer = memo(
     inModal?: boolean;
   }) => {
     const { t } = useTranslation();
-    const usePublicFileUrl = usePublicFileUrlContext();
+    const { handleDownload } = useDownloadFile();
     const { exportDocument } = useExportDocument();
     const [isExporting, setIsExporting] = useState(false);
 
@@ -62,16 +61,14 @@ const NodeRenderer = memo(
     const canShare = useMemo(() => hasShareableData(nodeData), [nodeData]);
 
     // Handle download for any node type
-    const handleDownload = useCallback(async () => {
-      if (fromProducts) {
-        logEvent('download_template_result', null, {
-          nodeId: nodeData.nodeId,
-          nodeType: nodeData.nodeType,
-          title: nodeData.title,
-        });
-      }
-      await downloadNodeData(nodeData, t, { usePublicFileUrl });
-    }, [nodeData, t, fromProducts, usePublicFileUrl]);
+    const handleDownloadNode = useCallback(async () => {
+      const file = nodeData.metadata as DriveFile;
+      file.name = nodeData.title;
+      handleDownload({
+        currentFile: file,
+        contentType: file.type,
+      });
+    }, [nodeData, handleDownload]);
 
     // Handle share for any node type
     const handleShare = useCallback(async () => {
@@ -209,7 +206,7 @@ const NodeRenderer = memo(
                       type="text"
                       className="flex items-center justify-center border-none bg-[var(--refly-bg-float-z3)] hover:bg-[var(--refly-fill-hover)] text-[var(--refly-text-1)] hover:text-[var(--refly-primary-default)] transition"
                       icon={<DownloadIcon size={16} />}
-                      onClick={handleDownload}
+                      onClick={handleDownloadNode}
                     >
                       {/* <span className="sr-only" /> */}
                     </Button>
