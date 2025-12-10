@@ -366,6 +366,9 @@ import type {
   ListWorkflowAppsData,
   ListWorkflowAppsError,
   ListWorkflowAppsResponse2,
+  GetTemplateGenerationStatusData,
+  GetTemplateGenerationStatusError,
+  GetTemplateGenerationStatusResponse2,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -2466,6 +2469,23 @@ export const listWorkflowApps = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/workflow-app/list',
+  });
+};
+
+/**
+ * Get template generation status
+ * Get template generation status for a workflow app
+ */
+export const getTemplateGenerationStatus = <ThrowOnError extends boolean = false>(
+  options: Options<GetTemplateGenerationStatusData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetTemplateGenerationStatusResponse2,
+    GetTemplateGenerationStatusError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow-app/template-status',
   });
 };
 

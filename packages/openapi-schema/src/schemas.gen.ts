@@ -10401,6 +10401,56 @@ export const ListWorkflowAppsResponseSchema = {
   ],
 } as const;
 
+export const TemplateGenerationStatusSchema = {
+  type: 'string',
+  description: 'Template generation status',
+  enum: ['idle', 'pending', 'generating', 'completed', 'failed'],
+  example: 'completed',
+} as const;
+
+export const GetTemplateGenerationStatusResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      required: ['data'],
+      properties: {
+        data: {
+          type: 'object',
+          required: ['status', 'updatedAt', 'createdAt'],
+          properties: {
+            status: {
+              $ref: '#/components/schemas/TemplateGenerationStatus',
+            },
+            templateContent: {
+              type: 'string',
+              nullable: true,
+              description: 'Generated template content',
+            },
+            error: {
+              type: 'string',
+              nullable: true,
+              description: 'Error message if generation failed',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Last update time',
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Creation time',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const ExecuteWorkflowAppRequestSchema = {
   type: 'object',
   required: ['shareId', 'variables'],

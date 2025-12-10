@@ -3010,6 +3010,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListWorkflowAppsResponse'
+  /workflow-app/template-status:
+    get:
+      tags:
+        - app
+      summary: Get template generation status
+      description: Get template generation status for a workflow app
+      operationId: getTemplateGenerationStatus
+      parameters:
+        - name: appId
+          in: query
+          description: Workflow app ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTemplateGenerationStatusResponse'
+        '400':
+          description: Bad request (missing appId)
+        '404':
+          description: Workflow app not found
+      security:
+        - api_key: []
   /user/settings:
     get:
       tags:
@@ -11517,6 +11544,48 @@ components:
               description: List of workflow apps
               items:
                 $ref: '#/components/schemas/WorkflowApp'
+    TemplateGenerationStatus:
+      type: string
+      description: Template generation status
+      enum:
+        - idle
+        - pending
+        - generating
+        - completed
+        - failed
+      example: "completed"
+    GetTemplateGenerationStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              type: object
+              required:
+                - status
+                - updatedAt
+                - createdAt
+              properties:
+                status:
+                  $ref: '#/components/schemas/TemplateGenerationStatus'
+                templateContent:
+                  type: string
+                  nullable: true
+                  description: Generated template content
+                error:
+                  type: string
+                  nullable: true
+                  description: Error message if generation failed
+                updatedAt:
+                  type: string
+                  format: date-time
+                  description: Last update time
+                createdAt:
+                  type: string
+                  format: date-time
+                  description: Creation time
     ExecuteWorkflowAppRequest:
       type: object
       required:

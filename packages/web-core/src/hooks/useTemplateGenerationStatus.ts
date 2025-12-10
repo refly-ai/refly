@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import type { TemplateGenerationStatus, TemplateStatusResponse } from '../utils/templateStatus';
-import { client } from '@refly/openapi-schema';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { TemplateGenerationStatus } from '../utils/templateStatus';
+import { useGetTemplateGenerationStatus } from '@refly-packages/ai-workspace-common/queries';
 
 interface UseTemplateGenerationStatusOptions {
   appId: string | null;
@@ -36,6 +36,56 @@ export function useTemplateGenerationStatus({
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const cancelledRef = useRef(false);
 
+  // Use the generated hook with manual control
+  const { data, refetch } = useGetTemplateGenerationStatus(
+    {
+      query: { appId: appId ?? '' },
+    },
+    undefined,
+    {
+      enabled: false, // We'll manually trigger refetch
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+    },
+  );
+
+  // Update local state when data changes and stop polling if needed
+  useEffect(() => {
+    if (data?.data) {
+      const responseData = data.data;
+      const newStatus = responseData.status as TemplateGenerationStatus;
+      setStatus(newStatus);
+      setTemplateContent(responseData.templateContent ?? null);
+      setIsInitialized(true);
+
+      // Stop polling if status is final (completed, idle, or failed)
+      if (
+        isPolling &&
+        (newStatus === 'completed' || newStatus === 'idle' || newStatus === 'failed')
+      ) {
+        setIsPolling(false);
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+      }
+    }
+  }, [data, isPolling]);
+
+  // Polling function
+  const pollOnce = useCallback(async () => {
+    if (cancelledRef.current || !appId) {
+      return;
+    }
+
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('Polling template status error:', error);
+      // Continue polling on network error to retry
+    }
+  }, [appId, refetch]);
+
   useEffect(() => {
     if (!appId) {
       // No appId, reset everything
@@ -50,27 +100,16 @@ export function useTemplateGenerationStatus({
     if (!enabled) {
       // When disabled but appId exists, fetch status once to update state
       // This ensures refresh page can get correct status even if polling is disabled
-      const fetchStatusOnce = async () => {
+      const fetchOnce = async () => {
         try {
-          const response = await client.get<{ data: TemplateStatusResponse }, any, false>({
-            url: '/workflow-app/template-status',
-            query: { appId },
-          });
-
-          if (response?.data?.data) {
-            const data = response.data.data as TemplateStatusResponse;
-            setStatus(data.status);
-            setTemplateContent(data.templateContent ?? null);
-            setIsInitialized(true);
-          }
+          await refetch();
         } catch (error) {
           console.error('Failed to fetch template status (disabled mode):', error);
           // Even on error, mark as initialized to prevent showing default state
           setIsInitialized(true);
         }
       };
-
-      fetchStatusOnce();
+      void fetchOnce();
       setIsPolling(false);
       setAttempts(0);
       return;
@@ -81,33 +120,7 @@ export function useTemplateGenerationStatus({
     setAttempts(0);
 
     // Initial fetch
-    const fetchStatus = async () => {
-      try {
-        // Use direct API call since the endpoint might not be in generated types yet
-        const response = await client.get<{ data: TemplateStatusResponse }, any, false>({
-          url: '/workflow-app/template-status',
-          query: { appId },
-        });
-
-        if (response?.data?.data) {
-          const data = response.data.data as TemplateStatusResponse;
-          setStatus(data.status);
-          setTemplateContent(data.templateContent ?? null);
-          setIsInitialized(true);
-
-          // Stop polling if completed or idle (no need to poll)
-          if (data.status === 'completed' || data.status === 'idle') {
-            setIsPolling(false);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch template status:', error);
-        // On error, keep polling to retry
-      }
-    };
-
-    fetchStatus();
+    void pollOnce();
 
     const poll = () => {
       const pollInterval = setInterval(async () => {
@@ -127,34 +140,7 @@ export function useTemplateGenerationStatus({
           return newAttempts;
         });
 
-        try {
-          // Use direct API call since the endpoint might not be in generated types yet
-          const response = await client.get<{ data: TemplateStatusResponse }, any, false>({
-            url: '/workflow-app/template-status',
-            query: { appId },
-          });
-
-          if (response?.data?.data) {
-            const data = response.data.data as TemplateStatusResponse;
-            setStatus(data.status);
-            setTemplateContent(data.templateContent ?? null);
-            setIsInitialized(true);
-
-            // Stop polling if completed or idle
-            if (data.status === 'completed' || data.status === 'idle') {
-              setIsPolling(false);
-              clearInterval(pollInterval);
-            }
-            // Also stop polling if failed (no point retrying from client)
-            if (data.status === 'failed') {
-              setIsPolling(false);
-              clearInterval(pollInterval);
-            }
-          }
-        } catch (error) {
-          console.error('Polling template status error:', error);
-          // Continue polling on network error to retry
-        }
+        await pollOnce();
       }, pollingInterval);
 
       pollingRef.current = pollInterval;
@@ -167,19 +153,21 @@ export function useTemplateGenerationStatus({
       cancelledRef.current = true;
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
+        pollingRef.current = null;
       }
       clearTimeout(timeoutId);
       setIsPolling(false);
     };
-  }, [appId, pollingInterval, maxAttempts, enabled]);
+  }, [appId, pollingInterval, maxAttempts, enabled, pollOnce, refetch]);
 
-  const stopPolling = () => {
+  const stopPolling = useCallback(() => {
     cancelledRef.current = true;
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
+      pollingRef.current = null;
     }
     setIsPolling(false);
-  };
+  }, []);
 
   return {
     status,
