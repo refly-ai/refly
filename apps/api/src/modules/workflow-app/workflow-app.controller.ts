@@ -7,6 +7,7 @@ import {
   Query,
   DefaultValuePipe,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
@@ -98,6 +99,9 @@ export class WorkflowAppController {
   @UseGuards(JwtAuthGuard)
   @Get('template-status')
   async getTemplateGenerationStatus(@LoginedUser() user: UserModel, @Query('appId') appId: string) {
+    if (!appId?.trim()) {
+      throw new BadRequestException('appId is required');
+    }
     const status = await this.workflowAppService.getTemplateGenerationStatus(user, appId);
     return buildSuccessResponse(status);
   }

@@ -521,7 +521,8 @@ export class WorkflowAppService {
     }
 
     // Read status directly from database
-    const dbStatus = workflowApp.templateGenerationStatus as
+    // Handle null values from old records (before migration)
+    const dbStatus = (workflowApp.templateGenerationStatus ?? 'idle') as
       | 'idle'
       | 'pending'
       | 'generating'
@@ -533,6 +534,9 @@ export class WorkflowAppService {
     if (workflowApp.templateContent && workflowApp.templateContent.trim() !== '') {
       // Has content - if status is still pending/generating/failed, treat as completed
       if (status === 'pending' || status === 'generating' || status === 'failed') {
+        this.logger.warn(
+          `Status mismatch for appId=${appId}: content exists but status=${status}, treating as completed`,
+        );
         status = 'completed';
       }
     }
