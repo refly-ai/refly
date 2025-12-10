@@ -2,7 +2,7 @@ import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-s
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, Form, Typography, message, Tooltip, Avatar } from 'antd';
 import { IconShare } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 
 import cn from 'classnames';
@@ -19,7 +19,7 @@ import { Question } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useTemplateGenerationStatus } from '../../hooks/useTemplateGenerationStatus';
 import { TemplateStatusBadge } from './template-status-badge';
-import { shouldShowStatusBadge } from '../../utils/templateStatus';
+import { shouldShowStatusBadge, type TemplateGenerationStatus } from '../../utils/templateStatus';
 
 const EmptyContent = () => {
   const { t } = useTranslation();
@@ -117,6 +117,10 @@ export const WorkflowAPPForm = ({
   const [templateVariables, setTemplateVariables] = useState<WorkflowVariable[]>([]);
   const [userHasSwitched, setUserHasSwitched] = useState(false);
 
+  // Track initial status to distinguish between "refresh with existing template" and "generation completed"
+  const initialStatusRef = useRef<TemplateGenerationStatus | null>(null);
+  const hasCheckedAutoSwitchRef = useRef(false);
+
   // Restore user switch state from localStorage
   useEffect(() => {
     if (workflowApp?.appId) {
@@ -141,6 +145,52 @@ export const WorkflowAPPForm = ({
 
   // Use prop templateContent first (most authoritative), then polled content
   const effectiveTemplateContent = templateContent ?? polledTemplateContent;
+
+  // Track initial status when status is first initialized
+  useEffect(() => {
+    if (isStatusInitialized && initialStatusRef.current === null) {
+      initialStatusRef.current = templateStatus;
+    }
+  }, [isStatusInitialized, templateStatus]);
+
+  // Auto-switch to editor if page refresh with existing completed template
+  // Only auto-switch if:
+  // 1. Status has been initialized
+  // 2. Initial status was 'completed' (not 'pending' or 'generating')
+  // 3. Template content exists
+  // 4. User hasn't manually switched before (no localStorage record)
+  // 5. We haven't already checked for auto-switch
+  useEffect(() => {
+    if (
+      isStatusInitialized &&
+      !hasCheckedAutoSwitchRef.current &&
+      workflowApp?.appId &&
+      effectiveTemplateContent &&
+      initialStatusRef.current === 'completed' &&
+      !userHasSwitched
+    ) {
+      // Check if there's a localStorage record
+      const storedSwitched =
+        localStorage.getItem(`template_switched_${workflowApp.appId}`) === 'true';
+
+      // Only auto-switch if there's no stored switch record
+      // This means it's a fresh page load with existing template
+      if (!storedSwitched) {
+        setUserHasSwitched(true);
+        localStorage.setItem(`template_switched_${workflowApp.appId}`, 'true');
+      }
+
+      hasCheckedAutoSwitchRef.current = true;
+    }
+  }, [isStatusInitialized, effectiveTemplateContent, workflowApp?.appId, userHasSwitched]);
+
+  // Reset refs when appId changes
+  useEffect(() => {
+    if (workflowApp?.appId) {
+      initialStatusRef.current = null;
+      hasCheckedAutoSwitchRef.current = false;
+    }
+  }, [workflowApp?.appId]);
 
   // Reset userHasSwitched if stored state is inconsistent with actual content
   useEffect(() => {
