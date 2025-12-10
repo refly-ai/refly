@@ -1481,6 +1481,13 @@ const translations = {
           failed: 'Failed to stop workflow',
         },
       },
+      template: {
+        pending: 'Template generation queued, please wait...',
+        generating: 'Generating template content, please wait...',
+        completed: 'Template content generated!',
+        failed: 'Template generation failed, please try again later',
+        clickToSwitch: 'Click to switch to editor',
+      },
     },
     connectionTimeout: {
       title: 'Connection Timeout',

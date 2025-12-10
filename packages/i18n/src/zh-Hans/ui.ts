@@ -1552,6 +1552,13 @@ const translations = {
           failed: '终止工作流失败',
         },
       },
+      template: {
+        pending: '模板生成已排队，请稍候...',
+        generating: '正在生成模板内容，请稍候...',
+        completed: '模板内容已生成！',
+        failed: '模板生成失败，请稍后重试',
+        clickToSwitch: '点击切换到编辑器',
+      },
     },
     connectionTimeout: {
       title: '连接超时',

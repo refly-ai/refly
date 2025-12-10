@@ -31,20 +31,20 @@ export const TemplateStatusBadge = memo<TemplateStatusBadgeProps>(
             dot: true,
             title:
               status === 'pending'
-                ? t('canvas.workflow.template.pending') || '模板生成已排队，请稍候...'
-                : t('canvas.workflow.template.generating') || '正在生成模板内容，请稍候...',
+                ? t('canvas.workflow.template.pending')
+                : t('canvas.workflow.template.generating'),
           };
         case 'completed':
           return {
             status: 'success',
             dot: true,
-            title: t('canvas.workflow.template.completed') || '模板内容已生成！',
+            title: t('canvas.workflow.template.completed'),
           };
         case 'failed':
           return {
             status: 'error',
             dot: true,
-            title: t('canvas.workflow.template.failed') || '模板生成失败，请稍后重试',
+            title: t('canvas.workflow.template.failed'),
           };
         default:
           return {};
@@ -61,12 +61,11 @@ export const TemplateStatusBadge = memo<TemplateStatusBadgeProps>(
 
     // Badge needs to wrap an element to display in top-right corner
     // Position the badge dot in the top-right corner with proper offset
-    const badgeElement = (
-      <div className="absolute top-2 right-2 leading-[4px]">
-        <Badge {...badgeProps} className={className} offset={[0, -2]}>
-          <div className="w-1 h-1 opacity-0" />
-        </Badge>
-      </div>
+    // Use a larger invisible element to ensure hover area is sufficient for tooltip
+    const badgeContent = (
+      <Badge {...badgeProps} className={className} offset={[0, -2]}>
+        <div className="w-4 h-4 opacity-0 pointer-events-none" />
+      </Badge>
     );
 
     // Add ripple animation style once
@@ -123,29 +122,29 @@ export const TemplateStatusBadge = memo<TemplateStatusBadgeProps>(
     // If completed and has switch handler, make it clickable
     if (status === 'completed' && onSwitchToEditor) {
       const tooltipTitle = title
-        ? `${title} (${t('canvas.workflow.template.clickToSwitch') || '点击切换到编辑器'})`
-        : t('canvas.workflow.template.clickToSwitch') || '点击切换到编辑器';
+        ? `${title} (${t('canvas.workflow.template.clickToSwitch')})`
+        : t('canvas.workflow.template.clickToSwitch');
 
       return (
         <Tooltip title={tooltipTitle}>
           <div
-            className="absolute top-2 right-2 cursor-pointer hover:opacity-80 transition-opacity z-10 border-none bg-transparent p-0 leading-[4px]"
+            className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity z-10 border-none bg-transparent leading-[4px]"
             onClick={onSwitchToEditor}
             aria-label={tooltipTitle}
           >
-            <RippleWrapper>
-              <Badge {...badgeProps} className={className} offset={[0, -2]}>
-                <div className="w-1 h-1 opacity-0" />
-              </Badge>
-            </RippleWrapper>
+            <RippleWrapper>{badgeContent}</RippleWrapper>
           </div>
         </Tooltip>
       );
     }
 
+    // Ensure tooltip is shown for all statuses with title
+    // Wrap the badge element in a container with sufficient hover area
     return (
-      <Tooltip title={title}>
-        <RippleWrapper>{badgeElement}</RippleWrapper>
+      <Tooltip title={title || undefined}>
+        <div className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center leading-[4px]">
+          <RippleWrapper>{badgeContent}</RippleWrapper>
+        </div>
       </Tooltip>
     );
   },
