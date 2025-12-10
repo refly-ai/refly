@@ -56,7 +56,6 @@ import { ConfigService } from '@nestjs/config';
 import { VectorSearchService } from '../common/vector-search';
 import { VECTOR_SEARCH } from '../common/vector-search/tokens';
 import { providerItemPO2DTO } from './provider.dto';
-import { AutoModelRouter } from './auto-model-router.service';
 
 interface GlobalProviderConfig {
   providers: ProviderModel[];
@@ -727,6 +726,16 @@ export class ProviderService implements OnModuleInit {
       }
     }
 
+    if (defaultModel.copilot) {
+      const copilotItem = items.find((item) => {
+        const config: LLMModelConfig = safeParseJSON(item.config);
+        return item.itemId === defaultModel.copilot || config.modelId === defaultModel.copilot;
+      });
+      if (copilotItem) {
+        defaultModelConfig.copilot = providerItemPO2DTO(copilotItem);
+      }
+    }
+
     if (defaultModel.agent) {
       const agentItem = items.find((item) => {
         const config: LLMModelConfig = safeParseJSON(item.config);
@@ -945,7 +954,7 @@ export class ProviderService implements OnModuleInit {
       },
     });
     const defaultChatItem = await this.findDefaultProviderItem(user, 'chat', userPo);
-    let chatItem = modelItemId
+    const chatItem = modelItemId
       ? await this.findProviderItemById(user, modelItemId)
       : defaultChatItem;
 
@@ -957,10 +966,7 @@ export class ProviderService implements OnModuleInit {
       throw new ProviderItemNotFoundError(`provider item ${modelItemId} not valid`);
     }
 
-    // Auto model routing
-    const llmItems = await this.findProviderItemsByCategory(user, 'llm');
-    chatItem = new AutoModelRouter({ llmItems, userId: user.uid }).route(chatItem);
-
+    const copilotItem = await this.findDefaultProviderItem(user, 'copilot', userPo);
     const agentItem = await this.findDefaultProviderItem(user, 'agent', userPo);
     const titleGenerationItem = await this.findDefaultProviderItem(user, 'titleGeneration', userPo);
     const queryAnalysisItem = await this.findDefaultProviderItem(user, 'queryAnalysis', userPo);
@@ -970,6 +976,7 @@ export class ProviderService implements OnModuleInit {
 
     const modelConfigMap: Record<ModelScene, ProviderItemModel> = {
       chat: chatItem,
+      copilot: copilotItem,
       agent: agentItem,
       titleGeneration: titleGenerationItem,
       queryAnalysis: queryAnalysisItem,
@@ -994,6 +1001,9 @@ export class ProviderService implements OnModuleInit {
     // First, try to get from user preferences
     if (scene === 'chat' && userDefaultModel?.chat) {
       itemId = userDefaultModel.chat.itemId;
+    }
+    if (scene === 'copilot' && userDefaultModel?.copilot) {
+      itemId = userDefaultModel.copilot.itemId;
     }
     if (scene === 'titleGeneration' && userDefaultModel?.titleGeneration) {
       itemId = userDefaultModel.titleGeneration.itemId || userDefaultModel.chat?.itemId;
@@ -1030,6 +1040,9 @@ export class ProviderService implements OnModuleInit {
 
     if (scene === 'chat' && globalDefaultModel?.chat) {
       globalModelId = globalDefaultModel.chat;
+    }
+    if (scene === 'copilot' && globalDefaultModel?.copilot) {
+      globalModelId = globalDefaultModel.copilot;
     }
     if (scene === 'titleGeneration' && globalDefaultModel?.titleGeneration) {
       globalModelId = globalDefaultModel.titleGeneration || globalDefaultModel.chat;

@@ -178,6 +178,7 @@ export default () => ({
   },
   defaultModel: {
     chat: process.env.DEFAULT_MODEL_CHAT,
+    copilot: process.env.DEFAULT_MODEL_COPILOT || process.env.DEFAULT_MODEL_CHAT,
     agent: process.env.DEFAULT_MODEL_AGENT,
     queryAnalysis: process.env.DEFAULT_MODEL_QUERY_ANALYSIS,
     titleGeneration: process.env.DEFAULT_MODEL_TITLE_GENERATION,

@@ -81,13 +81,15 @@ export class Agent extends BaseSkill {
 
     const userPrompt = buildUserPrompt(optimizedQuery, context);
 
+    // Use copilot scene for copilot_agent mode, otherwise use chat scene
+    const modelConfigScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
     const requestMessages = buildFinalRequestMessages({
       systemPrompt,
       userPrompt,
       chatHistory: usedChatHistory,
       messages,
       images,
-      modelInfo: config?.configurable?.modelConfigMap.chat,
+      modelInfo: config?.configurable?.modelConfigMap?.[modelConfigScene],
     });
 
     return { requestMessages, sources };
@@ -97,13 +99,15 @@ export class Agent extends BaseSkill {
     _user: User,
     config?: SkillRunnableConfig,
   ): Promise<AgentComponents> {
-    const { selectedTools = [] } = config?.configurable ?? {};
+    const { selectedTools = [], mode = 'node_agent' } = config?.configurable ?? {};
 
     let actualToolNodeInstance: ToolNode<typeof MessagesAnnotation.State> | null = null;
     let availableToolsForNode: StructuredToolInterface[] = [];
 
     // LLM and LangGraph Setup
-    const baseLlm = this.engine.chatModel({ temperature: 0.1 });
+    // Use copilot scene for copilot_agent mode, otherwise use chat scene
+    const modelScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
+    const baseLlm = this.engine.chatModel({ temperature: 0.1 }, modelScene);
     let llmForGraph: Runnable<BaseMessage[], AIMessage>;
 
     if (selectedTools.length > 0) {

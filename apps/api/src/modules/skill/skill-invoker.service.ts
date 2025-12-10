@@ -28,7 +28,7 @@ import {
   SkillRunnableMeta,
   createSkillInventory,
 } from '@refly/skill-template';
-import { genImageID, getWholeParsedContent, safeParseJSON, isAutoModel } from '@refly/utils';
+import { genImageID, getWholeParsedContent, safeParseJSON } from '@refly/utils';
 import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
@@ -1124,7 +1124,13 @@ export class SkillInvokerService {
       const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
 
       if (shouldBillCredits) {
-        await this.processCreditUsageReport(user, resultId, version, resultAggregator);
+        await this.processCreditUsageReport(
+          user,
+          resultId,
+          version,
+          resultAggregator,
+          data.providerItem,
+        );
       }
 
       // Dispose message aggregator to clean up resources (stop auto-save timer)
@@ -1352,30 +1358,36 @@ export class SkillInvokerService {
     resultId: string,
     version: number,
     resultAggregator: ResultAggregator,
+    providerItem?: ProviderItem,
   ): Promise<void> {
     const steps = await resultAggregator.getSteps({ resultId, version });
 
-    // If this is an Auto model request, use Auto model's billing rate instead of the actual model's rate
-    let autoProviderItem: any = null;
-    try {
-      const actionResult = await this.prisma.actionResult.findFirst({
-        where: { resultId, version },
-      });
+    // If this is routed (from Auto model), use Auto model's billing rate instead of the actual model's rate
+    let autoBillingConfig: { creditBilling: any; name: string } | null = null;
+    if (providerItem?.config) {
+      const config = providerItem.config as any;
+      const routedData = config.routedData;
 
-      if (actionResult?.providerItemId) {
-        const originalItem = await this.providerService.findProviderItemById(
-          user,
-          actionResult.providerItemId,
-        );
-
-        if (originalItem) {
-          if (isAutoModel(originalItem.config)) {
-            autoProviderItem = originalItem;
+      if (routedData?.isRouted) {
+        try {
+          const originalItemId = routedData.originalItemId;
+          const originalItem = await this.providerService.findProviderItemById(
+            user,
+            originalItemId,
+          );
+          if (originalItem) {
+            autoBillingConfig = {
+              creditBilling: originalItem.creditBilling,
+              name: originalItem.name,
+            };
           }
+        } catch (error) {
+          // Fallback to actual model billing if failed to fetch Auto model config
+          this.logger.warn(
+            `Failed to fetch Auto model config, fallback to actual model: ${error?.message}`,
+          );
         }
       }
-    } catch (error) {
-      this.logger.warn(`[Billing] Failed to check Auto model routing: ${error?.message}`);
     }
 
     // Collect all model names used in token usage
@@ -1426,10 +1438,15 @@ export class SkillInvokerService {
 
           // Use Auto model's billing rate if this request was routed from Auto
           // This ensures: token count from real model + billing rate from Auto model
-          const billingItem = autoProviderItem || providerItem;
+          const billingConfig = autoBillingConfig || {
+            creditBilling: providerItem?.creditBilling,
+            name: providerItem?.name,
+          };
 
-          if (billingItem?.creditBilling) {
-            const creditBilling = normalizeCreditBilling(safeParseJSON(billingItem.creditBilling));
+          if (billingConfig?.creditBilling) {
+            const creditBilling = normalizeCreditBilling(
+              safeParseJSON(billingConfig.creditBilling),
+            );
 
             if (!creditBilling) {
               continue;
@@ -1448,7 +1465,7 @@ export class SkillInvokerService {
             creditUsageSteps.push({
               usage,
               creditBilling,
-              billingModelName: billingItem.name,
+              billingModelName: billingConfig.name,
             });
           }
         }
