@@ -17,6 +17,9 @@ import { useFileUpload } from '@refly-packages/ai-workspace-common/components/ca
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
 import { Question } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useTemplateGenerationStatus } from '../../hooks/useTemplateGenerationStatus';
+import { TemplateStatusBadge } from './template-status-badge';
+import { shouldShowStatusBadge } from '../../utils/templateStatus';
 
 const EmptyContent = () => {
   const { t } = useTranslation();
@@ -112,6 +115,64 @@ export const WorkflowAPPForm = ({
   const [form] = Form.useForm();
   const [variableValues, setVariableValues] = useState<Record<string, any>>({});
   const [templateVariables, setTemplateVariables] = useState<WorkflowVariable[]>([]);
+  const [userHasSwitched, setUserHasSwitched] = useState(false);
+
+  // Restore user switch state from localStorage
+  useEffect(() => {
+    if (workflowApp?.appId) {
+      const switched = localStorage.getItem(`template_switched_${workflowApp.appId}`) === 'true';
+      setUserHasSwitched(switched);
+    }
+  }, [workflowApp?.appId]);
+
+  // Poll template generation status
+  const shouldPoll = !userHasSwitched && !templateContent && !!workflowApp?.appId;
+
+  const {
+    status: templateStatus,
+    templateContent: polledTemplateContent,
+    isInitialized: isStatusInitialized,
+  } = useTemplateGenerationStatus({
+    appId: workflowApp?.appId ?? null,
+    enabled: shouldPoll,
+    pollingInterval: 2000,
+    maxAttempts: 30,
+  });
+
+  // Use prop templateContent first (most authoritative), then polled content
+  const effectiveTemplateContent = templateContent ?? polledTemplateContent;
+
+  // Reset userHasSwitched if stored state is inconsistent with actual content
+  useEffect(() => {
+    if (workflowApp?.appId) {
+      const storedSwitched =
+        localStorage.getItem(`template_switched_${workflowApp.appId}`) === 'true';
+
+      // If localStorage says switched but there's no effectiveTemplateContent, reset it
+      // This handles cases where template generation failed or was reset on backend
+      if (storedSwitched && !effectiveTemplateContent && !shouldPoll) {
+        // Only reset if not actively polling, to prevent resetting during active polling
+        setUserHasSwitched(false);
+        localStorage.removeItem(`template_switched_${workflowApp.appId}`);
+      }
+    }
+  }, [effectiveTemplateContent, shouldPoll, workflowApp?.appId]);
+
+  // Determine if status badge should be shown
+  // Only show badge if status has been initialized to prevent flickering
+  const shouldShowBadge =
+    isStatusInitialized && shouldShowStatusBadge(templateStatus, userHasSwitched);
+
+  // Handle switch to editor view (only when user manually clicks)
+  const handleSwitchToEditor = useCallback(() => {
+    if (effectiveTemplateContent && workflowApp?.appId) {
+      setUserHasSwitched(true);
+      localStorage.setItem(`template_switched_${workflowApp.appId}`, 'true');
+    }
+  }, [effectiveTemplateContent, workflowApp?.appId]);
+
+  // Only show MixedTextEditor if user has manually switched AND templateContent exists
+  const shouldShowEditor = userHasSwitched && !!effectiveTemplateContent;
 
   // Check if form should be disabled
   const isFormDisabled = loading || isRunning || isPolling;
@@ -339,12 +400,12 @@ export const WorkflowAPPForm = ({
     [refreshFile, variableValues, handleValueChange, form, workflowVariables, canvasId],
   );
 
-  // Initialize template variables when templateContent changes
+  // Initialize template variables when effectiveTemplateContent changes
   useEffect(() => {
-    if (templateContent) {
+    if (effectiveTemplateContent) {
       setTemplateVariables(workflowVariables);
     }
-  }, [templateContent, workflowVariables]);
+  }, [effectiveTemplateContent, workflowVariables]);
 
   // Update form values when workflowVariables change
   useEffect(() => {
@@ -367,7 +428,7 @@ export const WorkflowAPPForm = ({
     try {
       let newVariables: WorkflowVariable[] = [];
 
-      if (templateContent) {
+      if (effectiveTemplateContent) {
         // Validate templateVariables values
         const hasInvalidValues = templateVariables.some((variable) => {
           if (!variable.value || variable.value.length === 0) {
@@ -635,11 +696,15 @@ export const WorkflowAPPForm = ({
       {
         <>
           {/* default show Form */}
-          {templateContent ? (
+          {shouldShowEditor ? (
             <>
-              <div className={cn('w-full h-full gap-3 flex flex-col rounded-2xl', className)}>
+              <div
+                className={cn('w-full h-full gap-3 flex flex-col rounded-2xl relative', className)}
+              >
+                {/* Status badge in top-right corner */}
+                {shouldShowBadge && <TemplateStatusBadge status={templateStatus} />}
                 <MixedTextEditor
-                  templateContent={templateContent ?? ''}
+                  templateContent={effectiveTemplateContent ?? ''}
                   variables={templateVariables.length > 0 ? templateVariables : workflowVariables}
                   onVariablesChange={handleTemplateVariableChange}
                   disabled={isFormDisabled}
@@ -806,7 +871,20 @@ export const WorkflowAPPForm = ({
               </div>
             </>
           ) : (
-            <div className={cn('w-full h-full gap-3 flex flex-col rounded-2xl', className)}>
+            <div
+              className={cn('w-full h-full gap-3 flex flex-col rounded-2xl relative', className)}
+            >
+              {/* Status badge in top-right corner */}
+              {shouldShowBadge && (
+                <TemplateStatusBadge
+                  status={templateStatus}
+                  onSwitchToEditor={
+                    templateStatus === 'completed' && effectiveTemplateContent
+                      ? handleSwitchToEditor
+                      : undefined
+                  }
+                />
+              )}
               <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
                 {/* Show loading state when loading */}
                 {workflowVariables.length > 0 ? (

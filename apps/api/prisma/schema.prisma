@@ -891,49 +891,53 @@ model Project {
 
 model WorkflowApp {
   /// Primary key
-  pk                  BigInt    @id @default(autoincrement())
+  pk                       BigInt    @id @default(autoincrement())
   /// Workflow app id
-  appId               String    @unique @map("app_id")
+  appId                    String    @unique @map("app_id")
   /// UID
-  uid                 String    @map("uid")
+  uid                      String    @map("uid")
   /// Title
-  title               String    @default("") @map("title")
+  title                    String    @default("") @map("title")
   /// Description
-  description         String?   @map("description")
+  description              String?   @map("description")
   /// Query
-  query               String?   @map("query")
+  query                    String?   @map("query")
   /// Variables
-  variables           String?   @map("variables")
+  variables                String?   @map("variables")
   /// Canvas id
-  canvasId            String?   @map("canvas_id")
+  canvasId                 String?   @map("canvas_id")
   /// Storage key
-  storageKey          String?   @map("storage_key")
+  storageKey               String?   @map("storage_key")
   /// Share id for public access
-  shareId             String?   @map("share_id")
+  shareId                  String?   @map("share_id")
   /// Template share id for community publishing (independent from shareId)
-  templateShareId     String?   @map("template_share_id")
+  templateShareId          String?   @map("template_share_id")
   /// Cover image storage key
-  coverStorageKey     String?   @map("cover_storage_key")
+  coverStorageKey          String?   @map("cover_storage_key")
   /// Template content for app publishing
-  templateContent     String?   @map("template_content")
+  templateContent          String?   @map("template_content")
+  /// Template generation status: idle, pending, generating, completed, failed
+  templateGenerationStatus String    @default("idle") @map("template_generation_status")
+  /// Template generation error message (if failed)
+  templateGenerationError  String?   @map("template_generation_error")
   /// Whether remix is enabled for this app
-  remixEnabled        Boolean   @default(false) @map("remix_enabled")
+  remixEnabled             Boolean   @default(false) @map("remix_enabled")
   /// Whether to publish this app to the community
-  publishToCommunity  Boolean   @default(false) @map("publish_to_community")
+  publishToCommunity       Boolean   @default(false) @map("publish_to_community")
   /// Community publish review status
-  publishReviewStatus String    @default("init") @map("publish_review_status")
+  publishReviewStatus      String    @default("init") @map("publish_review_status")
   /// Review remarks/notes from admin
-  remarks             String?   @map("remarks")
+  remarks                  String?   @map("remarks")
   /// Result node IDs
-  resultNodeIds       String[]  @default([]) @map("result_node_ids")
+  resultNodeIds            String[]  @default([]) @map("result_node_ids")
   /// Credit usage for running this workflow app
-  creditUsage         Int?      @map("credit_usage")
+  creditUsage              Int?      @map("credit_usage")
   /// Create timestamp
-  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt                DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
-  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz()
+  deletedAt                DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@index([canvasId, deletedAt])
   @@index([shareId])

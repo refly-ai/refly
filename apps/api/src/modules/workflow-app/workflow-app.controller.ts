@@ -94,4 +94,11 @@ export class WorkflowAppController {
     await this.workflowAppService.deleteWorkflowApp(user, request.appId);
     return buildSuccessResponse();
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('template-status')
+  async getTemplateGenerationStatus(@LoginedUser() user: UserModel, @Query('appId') appId: string) {
+    const status = await this.workflowAppService.getTemplateGenerationStatus(user, appId);
+    return buildSuccessResponse(status);
+  }
 }

@@ -33,20 +33,23 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
     try {
       // Validate required inputs
       if (!appId || !canvasId || !uid) {
-        this.logger.warn(
-          `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Missing required fields in job data: ${JSON.stringify(job.data)}`,
-        );
+        const errorMsg = `Missing required fields in job data: ${JSON.stringify(job.data)}`;
+        this.logger.warn(`[${QUEUE_WORKFLOW_APP_TEMPLATE}] ${errorMsg}`);
+        await this.updateGenerationStatus(appId, 'failed', errorMsg);
         return;
       }
+
+      // Update status to 'generating'
+      await this.updateGenerationStatus(appId, 'generating');
 
       // Fetch user to call generator with proper context
       const user = await this.prisma.user.findUnique({
         where: { uid },
       });
       if (!user) {
-        this.logger.warn(
-          `[${QUEUE_WORKFLOW_APP_TEMPLATE}] User not found for uid=${uid}, skip generation.`,
-        );
+        const errorMsg = `User not found for uid=${uid}`;
+        this.logger.warn(`[${QUEUE_WORKFLOW_APP_TEMPLATE}] ${errorMsg}, skip generation.`);
+        await this.updateGenerationStatus(appId, 'failed', errorMsg);
         return;
       }
 
@@ -74,17 +77,20 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
           : true);
 
       if (!isValid) {
-        this.logger.warn(
-          `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Template placeholders validation failed for appId=${appId}`,
-        );
+        const errorMsg = `Template placeholders validation failed. Expected ${variables?.length ?? 0} placeholders, got ${placeholders?.length ?? 0}`;
+        this.logger.warn(`[${QUEUE_WORKFLOW_APP_TEMPLATE}] ${errorMsg} for appId=${appId}`);
+        await this.updateGenerationStatus(appId, 'failed', errorMsg);
         return;
       }
 
+      // Update database with template content and status
       await this.prisma.workflowApp.update({
         where: { appId },
         data: {
           templateContent: templateResult?.templateContent ?? null,
           variables: JSON.stringify(variables),
+          templateGenerationStatus: 'completed',
+          templateGenerationError: null,
           updatedAt: new Date(),
         },
       });
@@ -96,10 +102,38 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
       // Update object storage with the new templateContent and variables
       await this.updateSharedAppStorage(appId, templateResult?.templateContent, variables);
     } catch (error: any) {
+      const errorMsg = error?.message ?? 'Unknown error during template generation';
       this.logger.error(
         `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Error processing job ${job.id}: ${error?.stack}`,
       );
+      await this.updateGenerationStatus(appId, 'failed', errorMsg);
       throw error;
+    }
+  }
+
+  /**
+   * Update template generation status in database
+   */
+  private async updateGenerationStatus(
+    appId: string | undefined,
+    status: 'generating' | 'completed' | 'failed',
+    error?: string,
+  ): Promise<void> {
+    if (!appId) return;
+
+    try {
+      await this.prisma.workflowApp.update({
+        where: { appId },
+        data: {
+          templateGenerationStatus: status,
+          templateGenerationError: error ?? null,
+          updatedAt: new Date(),
+        },
+      });
+    } catch (err: any) {
+      this.logger.error(
+        `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Failed to update status for appId=${appId}: ${err?.message}`,
+      );
     }
   }
 
