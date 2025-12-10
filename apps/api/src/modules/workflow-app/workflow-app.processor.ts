@@ -34,8 +34,11 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
       // Validate required inputs
       if (!appId || !canvasId || !uid) {
         const errorMsg = `Missing required fields in job data: ${JSON.stringify(job.data)}`;
-        this.logger.warn(`[${QUEUE_WORKFLOW_APP_TEMPLATE}] ${errorMsg}`);
-        await this.updateGenerationStatus(appId, 'failed', errorMsg);
+        this.logger.warn(`[${QUEUE_WORKFLOW_APP_TEMPLATE}] Job ${job.id}: ${errorMsg}`);
+        // Only update status if appId is available
+        if (appId) {
+          await this.updateGenerationStatus(appId, 'failed', errorMsg);
+        }
         return;
       }
 
@@ -48,7 +51,9 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
       });
       if (!user) {
         const errorMsg = `User not found for uid=${uid}`;
-        this.logger.warn(`[${QUEUE_WORKFLOW_APP_TEMPLATE}] ${errorMsg}, skip generation.`);
+        this.logger.warn(
+          `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Job ${job.id}, appId=${appId}: ${errorMsg}, skip generation.`,
+        );
         await this.updateGenerationStatus(appId, 'failed', errorMsg);
         return;
       }
@@ -78,7 +83,9 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
 
       if (!isValid) {
         const errorMsg = `Template placeholders validation failed. Expected ${variables?.length ?? 0} placeholders, got ${placeholders?.length ?? 0}`;
-        this.logger.warn(`[${QUEUE_WORKFLOW_APP_TEMPLATE}] ${errorMsg} for appId=${appId}`);
+        this.logger.warn(
+          `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Job ${job.id}, appId=${appId}: ${errorMsg}`,
+        );
         await this.updateGenerationStatus(appId, 'failed', errorMsg);
         return;
       }
@@ -104,7 +111,8 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
     } catch (error: any) {
       const errorMsg = error?.message ?? 'Unknown error during template generation';
       this.logger.error(
-        `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Error processing job ${job.id}: ${error?.stack}`,
+        `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Error processing job ${job.id} for appId=${appId}: ${errorMsg}`,
+        error?.stack,
       );
       await this.updateGenerationStatus(appId, 'failed', errorMsg);
       throw error;
@@ -132,7 +140,8 @@ export class WorkflowAppTemplateProcessor extends WorkerHost {
       });
     } catch (err: any) {
       this.logger.error(
-        `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Failed to update status for appId=${appId}: ${err?.message}`,
+        `[${QUEUE_WORKFLOW_APP_TEMPLATE}] Failed to update status for appId=${appId}, status=${status}: ${err?.message}`,
+        err?.stack,
       );
     }
   }
