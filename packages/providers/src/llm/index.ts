@@ -8,6 +8,7 @@ import { AzureChatOpenAI, AzureOpenAIInput, OpenAIBaseInput } from '@langchain/o
 import { ChatBedrockConverse } from '@langchain/aws';
 import { wrapChatModelWithMonitoring } from '../monitoring/langfuse-wrapper';
 import { ProviderMisconfigurationError } from '@refly/errors';
+import { ChatVertexAI } from '@langchain/google-vertexai';
 
 interface BedrockApiKeyConfig {
   accessKeyId: string;
@@ -100,6 +101,16 @@ export const getChatModel = (
         throw new ProviderMisconfigurationError(`Invalid bedrock api key config: ${error}`);
       }
       break;
+    case 'vertex': {
+      model = new ChatVertexAI({
+        model: config.modelId,
+        location: 'global',
+        maxOutputTokens: config?.maxOutput,
+        ...commonParams,
+        ...(config?.capabilities?.reasoning ? { reasoning: { effort: 'medium' } } : {}),
+      });
+      break;
+    }
     default:
       throw new Error(`Unsupported provider: ${provider?.providerKey}`);
   }
