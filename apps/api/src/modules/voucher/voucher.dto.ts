@@ -170,5 +170,9 @@ export interface VerifyInvitationResult {
   invitation?: VoucherInvitationDTO;
   /** If already claimed, who claimed it */
   claimedByUid?: string;
+  /** If claimed by current user, the voucher they received */
+  claimedVoucher?: VoucherDTO;
+  /** Inviter's name (for display) */
+  inviterName?: string;
   message?: string;
 }

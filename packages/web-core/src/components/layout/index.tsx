@@ -104,11 +104,15 @@ export const AppLayout = (props: AppLayoutProps) => {
       if (userStore.isLogin && userStore.userProfile) {
         navigate('/workspace', { replace: true });
       } else {
-        navigate('/login', { replace: true });
+        // Preserve query parameters (e.g., invite code) when redirecting to login
+        const searchParams = new URLSearchParams(location.search);
+        const loginPath = searchParams.toString() ? `/login?${searchParams.toString()}` : '/login';
+        navigate(loginPath, { replace: true });
       }
     }
   }, [
     location.pathname,
+    location.search,
     userStore.isLogin,
     userStore.userProfile,
     userStore.isCheckingLoginStatus,

@@ -6,7 +6,6 @@ import { logEvent } from '@refly/telemetry-web';
 import { createVoucherInvitation } from '../../requests/services.gen';
 import { SharePoster } from './share-poster';
 import { useSubscriptionStoreShallow } from '@refly/stores';
-import { useCreateCanvas } from '../../hooks/canvas/use-create-canvas';
 import { Confetti } from './confetti';
 import { TicketBottomCard } from './ticket-bottom-card';
 import getClient from '../../requests/proxiedRequest';
@@ -51,11 +50,6 @@ export const VoucherPopup = ({
   // Determine if user is a Plus subscriber
   const isPlusUser = planType !== 'free';
 
-  // Create canvas hook for "Publish to Get Coupon" flow
-  const { debouncedCreateCanvas, isCreating: isCreatingCanvas } = useCreateCanvas({
-    afterCreateSuccess: onClose,
-  });
-
   // Log popup display event when visible and trigger confetti remount
   useEffect(() => {
     if (visible && voucherResult?.voucher) {
@@ -86,7 +80,7 @@ export const VoucherPopup = ({
     ? Math.ceil((new Date(voucher.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 7;
 
-  // Handle "Use It Now" / "Publish to Get Coupon" / "Claim" button click
+  // Handle "Use It Now" / "Use Coupon" / "Publish to Get Coupon" / "Claim" button click
   const handleUseNow = async () => {
     // Log click event
     logEvent('voucher_use_now_click', null, {
@@ -106,19 +100,18 @@ export const VoucherPopup = ({
       return;
     }
 
-    // In useOnlyMode (claimed via invite) for non-Plus user, create new canvas to encourage publishing
-    if (useOnlyMode) {
-      debouncedCreateCanvas('voucher_claimed');
-      return;
-    }
-
-    // Default behavior: Create Stripe checkout session directly with voucher
+    // For non-Plus user (both useOnlyMode and normal mode): Create Stripe checkout session with voucher
     setIsCheckingOut(true);
     try {
+      console.log('[voucher-popup] voucher:', voucher);
+      console.log('[voucher-popup] voucherId:', voucher.voucherId);
+
       // Validate voucher before creating checkout session
       const validateRes = await getClient().validateVoucher({
         body: { voucherId: voucher.voucherId },
       });
+
+      console.log('[voucher-popup] validateRes:', validateRes.data);
 
       const body: {
         planType: 'plus';
@@ -131,13 +124,15 @@ export const VoucherPopup = ({
 
       if (validateRes.data?.data?.valid) {
         body.voucherId = voucher.voucherId;
+        console.log('[voucher-popup] voucher is valid, adding to checkout body');
 
         logEvent('voucher_applied', null, {
           voucher_value: voucherValue,
-          entry_point: 'discount_popup',
+          entry_point: useOnlyMode ? 'claimed_popup' : 'discount_popup',
           user_type: userType,
         });
       } else {
+        console.log('[voucher-popup] voucher is NOT valid:', validateRes.data?.data);
         const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';
         message.warning(
           t('voucher.validation.invalid', {
@@ -147,7 +142,9 @@ export const VoucherPopup = ({
         );
       }
 
+      console.log('[voucher-popup] createCheckoutSession body:', body);
       const res = await getClient().createCheckoutSession({ body });
+      console.log('[voucher-popup] createCheckoutSession res:', res.data);
       if (res.data?.data?.url) {
         window.location.href = res.data.data.url;
       }
@@ -246,8 +243,11 @@ export const VoucherPopup = ({
             }}
           />
 
-          {/* Content Container */}
-          <div className="relative min-h-[520px]">
+          {/* Content Container - shorter height for useOnlyMode non-Plus users (simpler content) */}
+          <div
+            className="relative"
+            style={{ minHeight: useOnlyMode && !isPlusUser ? '420px' : '520px' }}
+          >
             {/* Top Section - Congratulations and Coupon with green gradient background */}
             {/* 16px margin from left, right, top and bottom, with rounded corners on all sides */}
             <div
@@ -375,7 +375,7 @@ export const VoucherPopup = ({
                   block
                   shape="round"
                   onClick={handleUseNow}
-                  loading={useOnlyMode && !isPlusUser ? isCreatingCanvas : isCheckingOut}
+                  loading={isCheckingOut}
                   style={{
                     height: 48,
                     backgroundColor: '#1C1F23',
@@ -387,7 +387,7 @@ export const VoucherPopup = ({
                   {useOnlyMode && isPlusUser
                     ? t('voucher.popup.claim', 'Claim')
                     : useOnlyMode
-                      ? t('voucher.popup.publishToGetCoupon', 'Publish to Get Coupon')
+                      ? t('voucher.popup.useCoupon', 'Use Coupon')
                       : t('voucher.popup.useNow', 'Use It Now')}
                 </Button>
                 {/* Show share button: always when not useOnlyMode, or when Plus user in useOnlyMode */}

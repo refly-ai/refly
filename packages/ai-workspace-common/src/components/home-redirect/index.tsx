@@ -35,14 +35,12 @@ export const HomeRedirect = ({ defaultNode }: { defaultNode: ReactNode }) => {
   // Check for invite parameter in URL
   const inviteCode = searchParams.get('invite');
 
-  useEffect(() => {
-    // If there's an invite code in URL, store it
-    if (inviteCode) {
-      storeHomepageInviteCode(inviteCode);
-      // Also store as pending voucher code for the claim flow
-      storePendingVoucherCode(inviteCode);
-    }
-  }, [inviteCode]);
+  // Store invite code synchronously before any redirects happen
+  // This ensures the code is saved even if we redirect immediately
+  if (inviteCode) {
+    storeHomepageInviteCode(inviteCode);
+    storePendingVoucherCode(inviteCode);
+  }
 
   const handleHomeRedirect = async () => {
     if (isLogin) {

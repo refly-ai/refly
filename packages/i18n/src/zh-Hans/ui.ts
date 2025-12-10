@@ -279,6 +279,7 @@ const translations = {
       plusUserClaimedDesc: '你已经是 Plus 会员了。\n把这张优惠券送给朋友吧！',
       claimedDesc: '{{name}} 送你一张优惠券 — 快来领取吧！',
       useNow: '立即使用',
+      useCoupon: '使用优惠券',
       shareWithFriend: '分享给朋友',
       publishToGetCoupon: '发布获取优惠券',
       claim: '领取',

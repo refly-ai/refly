@@ -529,12 +529,38 @@ export class VoucherService implements OnModuleInit {
     });
 
     if (claimedInvitation) {
-      return {
+      const result: VerifyInvitationResult = {
         valid: false,
         invitation: this.toInvitationDTO(claimedInvitation),
         claimedByUid: claimedInvitation.inviteeUid || undefined,
         message: 'Invitation already claimed',
       };
+
+      // If claimed, find the voucher that was created from this invitation
+      if (claimedInvitation.inviteeUid) {
+        const voucher = await this.prisma.voucher.findFirst({
+          where: {
+            uid: claimedInvitation.inviteeUid,
+            source: VoucherSource.INVITATION_CLAIM,
+            sourceId: claimedInvitation.invitationId,
+          },
+        });
+
+        if (voucher) {
+          result.claimedVoucher = this.toVoucherDTO(voucher);
+        }
+
+        // Get inviter's name
+        const inviter = await this.prisma.user.findUnique({
+          where: { uid: claimedInvitation.inviterUid },
+          select: { name: true },
+        });
+        if (inviter?.name) {
+          result.inviterName = inviter.name;
+        }
+      }
+
+      return result;
     }
 
     // Invitation not found or expired

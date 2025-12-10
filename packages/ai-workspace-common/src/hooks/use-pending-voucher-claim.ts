@@ -5,6 +5,7 @@ import getClient from '../requests/proxiedRequest';
 import { useIsLogin } from './use-is-login';
 import { logEvent } from '@refly/telemetry-web';
 import { useSubscriptionStoreShallow, useUserStoreShallow } from '@refly/stores';
+import type { Voucher } from '@refly/openapi-schema';
 
 const PENDING_VOUCHER_KEY = 'pendingVoucherInviteCode';
 
@@ -62,25 +63,35 @@ export const usePendingVoucherClaim = () => {
           | {
               valid?: boolean;
               claimedByUid?: string;
+              claimedVoucher?: Voucher;
+              inviterName?: string;
               invitation?: { inviterUid?: string };
             }
           | undefined;
 
         // Check if this is the user's own invitation (they created it)
         if (verifyData?.invitation?.inviterUid === currentUid) {
-          console.log('User opened their own invitation link, ignoring');
           return;
         }
 
         // Check if already claimed by current user
         if (!verifyData?.valid && verifyData?.claimedByUid === currentUid) {
-          console.log('User already claimed this invitation, ignoring');
+          // This invitation was already claimed by current user
+          // If the voucher exists and is unused, show the popup
+          if (
+            verifyData.claimedVoucher &&
+            verifyData.claimedVoucher.status === 'unused' &&
+            new Date(verifyData.claimedVoucher.expiresAt) > new Date()
+          ) {
+            setTimeout(() => {
+              showClaimedVoucherPopup(verifyData.claimedVoucher!, verifyData.inviterName);
+            }, 500);
+          }
           return;
         }
 
         if (!verifyResponse.data?.success || !verifyData?.valid) {
           // Invitation is no longer valid (already claimed by someone else or expired)
-          console.log('Pending voucher invitation is no longer valid');
           message.info({
             content: t(
               'voucher.invite.alreadyClaimed',
@@ -123,7 +134,6 @@ export const usePendingVoucherClaim = () => {
 
           if (errorMessage === 'Cannot claim your own invitation') {
             // User tried to claim their own invitation - just ignore silently
-            console.log('User tried to claim their own invitation, ignoring');
           } else {
             // Other failures (already claimed by another user, etc.)
             message.info({

@@ -21,7 +21,10 @@ import loginImage from '../../assets/login.png';
 import loginDarkImage from '../../assets/login-dark.png';
 import './index.css';
 import { useUserStoreShallow } from '@refly/stores';
-import { getPendingVoucherCode } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
+import {
+  getPendingVoucherCode,
+  storePendingVoucherCode,
+} from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 interface FormValues {
   email: string;
@@ -38,6 +41,13 @@ const LoginPage = () => {
     isLogin: state.isLogin,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
   }));
+
+  // Store invite code from URL parameter for claiming after login
+  // This must run synchronously before any redirect checks
+  const inviteCode = searchParams.get('invite');
+  if (inviteCode) {
+    storePendingVoucherCode(inviteCode);
+  }
 
   // Detect dark mode
   useEffect(() => {

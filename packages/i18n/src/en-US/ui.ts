@@ -3931,6 +3931,7 @@ const translations = {
       plusUserClaimedDesc: "You're already a Plus member.\nGift this voucher to a friend!",
       claimedDesc: '{{name}} sent you a coupon — go claim it!',
       useNow: 'Use It Now',
+      useCoupon: 'Use Coupon',
       shareWithFriend: 'Share With Friend',
       publishToGetCoupon: 'Publish to Get Coupon',
       claim: 'Claim',

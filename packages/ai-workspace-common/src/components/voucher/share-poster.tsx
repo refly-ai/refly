@@ -119,16 +119,12 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
     setCopying(true);
     try {
       // Build promotional text with link
+      // Note: We don't use i18n here because it escapes HTML entities in URLs
       const basePrice = getBaseMonthlyPrice('plus');
       const discountValue = Math.round((basePrice * discountPercent) / 100);
-      const promotionalText = t(
-        'voucher.share.copyLinkText',
-        "Unlock Refly.ai's vibe-workflow and supercharge your automation with Banana Pro, Gemini 3.0, and other top-tier AI models — A ${{value}} discount to get you started! Join here → {{link}}",
-        {
-          value: discountValue,
-          link: shareUrl,
-        },
-      );
+      const promotionalText = `Unlock Refly.ai's vibe-workflow and supercharge your automation with Banana Pro, Gemini 3.0, and other top-tier AI models — A $${discountValue} discount to get you started! Join here → ${shareUrl}`;
+      console.log('[share-poster] promotionalText:', promotionalText);
+      console.log('[share-poster] shareUrl:', shareUrl);
       await navigator.clipboard.writeText(promotionalText);
       message.success(t('voucher.share.linkCopied', 'Link copied!'));
       logEvent('share_link_copied', null, {
@@ -140,7 +136,7 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
       message.error(t('voucher.share.copyFailed', 'Copy failed'));
     }
     setCopying(false);
-  }, [shareUrl, t, discountPercent, onClose, voucherValue]);
+  }, [shareUrl, t, discountPercent, onClose, voucherValue, userType]);
 
   const handleDownload = useCallback(async () => {
     if (!posterRef.current || downloading) return;
