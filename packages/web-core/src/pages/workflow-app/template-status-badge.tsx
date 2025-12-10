@@ -1,7 +1,7 @@
 import { Badge, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { TemplateGenerationStatus } from '../../utils/templateStatus';
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 
 interface TemplateStatusBadgeProps {
   status: TemplateGenerationStatus;
@@ -62,12 +62,63 @@ export const TemplateStatusBadge = memo<TemplateStatusBadgeProps>(
     // Badge needs to wrap an element to display in top-right corner
     // Position the badge dot in the top-right corner with proper offset
     const badgeElement = (
-      <div className="absolute top-2 right-2">
-        <Badge {...badgeProps} className={className} offset={[0, 0]}>
+      <div className="absolute top-2 right-2 leading-[4px]">
+        <Badge {...badgeProps} className={className} offset={[0, -2]}>
           <div className="w-1 h-1 opacity-0" />
         </Badge>
       </div>
     );
+
+    // Add ripple animation style once
+    useEffect(() => {
+      const styleId = 'template-status-ripple-animation';
+      if (document.getElementById(styleId)) {
+        return;
+      }
+
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        @keyframes template-status-ripple {
+          0% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0.8;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(2.5);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+
+      return () => {
+        const existingStyle = document.getElementById(styleId);
+        if (existingStyle) {
+          document.head.removeChild(existingStyle);
+        }
+      };
+    }, []);
+
+    // Ripple effect wrapper for completed status
+    const RippleWrapper = ({ children }: { children: React.ReactNode }) => {
+      if (status !== 'completed') {
+        return <>{children}</>;
+      }
+
+      return (
+        <div className="relative inline-block">
+          {children}
+          <span
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-[#12B76A]"
+            style={{
+              animation: 'template-status-ripple 2s ease-out infinite',
+              opacity: 0,
+            }}
+          />
+        </div>
+      );
+    };
 
     // If completed and has switch handler, make it clickable
     if (status === 'completed' && onSwitchToEditor) {
@@ -78,19 +129,25 @@ export const TemplateStatusBadge = memo<TemplateStatusBadgeProps>(
       return (
         <Tooltip title={tooltipTitle}>
           <div
-            className="absolute top-2 right-2 cursor-pointer hover:opacity-80 transition-opacity z-10 border-none bg-transparent p-0"
+            className="absolute top-2 right-2 cursor-pointer hover:opacity-80 transition-opacity z-10 border-none bg-transparent p-0 leading-[4px]"
             onClick={onSwitchToEditor}
             aria-label={tooltipTitle}
           >
-            <Badge {...badgeProps} className={className} offset={[0, 0]}>
-              <div className="w-1 h-1 opacity-0" />
-            </Badge>
+            <RippleWrapper>
+              <Badge {...badgeProps} className={className} offset={[0, -2]}>
+                <div className="w-1 h-1 opacity-0" />
+              </Badge>
+            </RippleWrapper>
           </div>
         </Tooltip>
       );
     }
 
-    return <Tooltip title={title}>{badgeElement}</Tooltip>;
+    return (
+      <Tooltip title={title}>
+        <RippleWrapper>{badgeElement}</RippleWrapper>
+      </Tooltip>
+    );
   },
 );
 
