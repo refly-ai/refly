@@ -10629,6 +10629,38 @@ export const UpdateWorkflowVariablesResponseSchema = {
   ],
 } as const;
 
+export const CreateDefaultResourceFileRequestSchema = {
+  type: 'object',
+  required: ['canvasId', 'variableId'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    variableId: {
+      type: 'string',
+      description: 'Variable ID for the resource variable',
+    },
+  },
+} as const;
+
+export const CreateDefaultResourceFileResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/VariableValue',
+          description: 'The created variable value with file info',
+        },
+      },
+    },
+  ],
+} as const;
+
 export const DriveFileCategorySchema = {
   type: 'string',
   enum: ['document', 'image', 'video', 'audio', 'others'],

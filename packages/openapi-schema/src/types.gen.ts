@@ -7545,6 +7545,24 @@ export type UpdateWorkflowVariablesResponse = BaseResponse & {
   data?: Array<WorkflowVariable>;
 };
 
+export type CreateDefaultResourceFileRequest = {
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * Variable ID for the resource variable
+   */
+  variableId: string;
+};
+
+export type CreateDefaultResourceFileResponse = BaseResponse & {
+  /**
+   * The created variable value with file info
+   */
+  data?: VariableValue;
+};
+
 export type DriveFileCategory = 'document' | 'image' | 'video' | 'audio' | 'others';
 
 export type DriveFileSource = 'manual' | 'variable' | 'agent';
@@ -9505,6 +9523,14 @@ export type UpdateWorkflowVariablesData = {
 export type UpdateWorkflowVariablesResponse2 = UpdateWorkflowVariablesResponse;
 
 export type UpdateWorkflowVariablesError = unknown;
+
+export type CreateDefaultResourceFileData = {
+  body: CreateDefaultResourceFileRequest;
+};
+
+export type CreateDefaultResourceFileResponse2 = CreateDefaultResourceFileResponse;
+
+export type CreateDefaultResourceFileError = unknown;
 
 export type ListDriveFilesData = {
   query: {

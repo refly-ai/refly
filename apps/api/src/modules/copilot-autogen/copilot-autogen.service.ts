@@ -109,6 +109,31 @@ export class CopilotAutogenService {
       startNodes,
     });
 
+    // 7.1 Process resource variables: create default files for empty resource variables
+    const processedVariables = [];
+    for (const variable of variables ?? []) {
+      if (
+        variable.variableType === 'resource' &&
+        (!variable.value || variable.value.length === 0)
+      ) {
+        const defaultValue = await this.canvasService.createDefaultResourceFile(user, {
+          canvasId,
+          variableId: variable.variableId,
+        });
+        if (defaultValue) {
+          processedVariables.push({
+            ...variable,
+            value: [defaultValue],
+          });
+        } else {
+          processedVariables.push(variable);
+        }
+      } else {
+        processedVariables.push(variable);
+      }
+    }
+    this.logger.log(`[Autogen] Processed ${processedVariables.length} variables`);
+
     // Merge preserved start nodes with generated workflow nodes
     const startNodeIds = new Set(startNodes.map((node) => node.id));
     const finalNodes = [
@@ -120,7 +145,7 @@ export class CopilotAutogenService {
     );
 
     // 8. Update Canvas state (reuse CanvasSyncService)
-    await this.updateCanvasState(canvasId, finalNodes, edges, variables, user);
+    await this.updateCanvasState(canvasId, finalNodes, edges, processedVariables, user);
     this.logger.log(`[Autogen] Canvas ${canvasId} updated successfully`);
 
     return {

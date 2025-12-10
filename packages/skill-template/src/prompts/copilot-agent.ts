@@ -83,10 +83,20 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 | Field | Type | Description |
 |-------|------|-------------|
 | variableId | string | Unique identifier (e.g., "var-1") |
-| variableType | string | Currently only "string" |
+| variableType | string | "string" for text input, "resource" for file input |
 | name | string | Variable name for reference |
 | description | string | What this variable represents |
-| value | array | \`[{ type: "text", text: "value" }]\` |
+| value | array | For string type: \`[{ type: "text", text: "value" }]\`. For resource type: leave empty (system will provide default placeholder file) |
+
+**Variable Types**:
+- **string**: Text input for user-provided values (topics, keywords, URLs, names, counts, etc.)
+- **resource**: File input placeholder — user will select/replace with actual files when running the workflow
+
+**When to Use Resource Variables**:
+- When the workflow is designed to process files that vary per execution
+- When user needs to select which file(s) to analyze/process before running
+- Examples: document summarization workflows, file analysis templates, report generation from data files
+- Note: Resource variables act as placeholders; users replace them with actual files in the workflow panel before execution
 
 **Variable Design Principles**:
 - **Maximize Extensibility** — Always identify user-configurable parameters that would make the workflow reusable
@@ -438,6 +448,68 @@ User instructions take precedence for overridable rules.
 | Competitive Report | \`generate_doc\` | Synthesize findings into @{type=var,id=var-2,name=analysis_depth} competitive analysis |
 
 **Data Flow**: research → feature analysis → report
+
+---
+
+### Example 6: Document Processing with File Input
+
+**Request**: "Help me create a reusable workflow for summarizing documents."
+
+**Design Thinking & Decisions**:
+
+1. **File Input Required**
+   - Workflow should work with any document the user selects
+   - → Use resource variable as file input placeholder
+   - → User will replace placeholder with actual file before running workflow
+
+2. **Processing Pipeline**
+   - Read and understand document content
+   - Extract key points and insights
+   - Generate structured summary
+
+3. **Variable Design**
+   - Document file → resource variable (placeholder for user's file)
+   - Summary format → string variable (customizable output style)
+   - Focus areas → string variable (what aspects to emphasize)
+
+**Variables**:
+\`\`\`json
+[
+  {
+    "variableId": "var-1",
+    "variableType": "resource",
+    "name": "input_document",
+    "description": "Select the document to analyze and summarize (PDF, Word, or text file)"
+  },
+  {
+    "variableId": "var-2",
+    "variableType": "string",
+    "name": "summary_format",
+    "description": "Output format: bullet points, executive summary, detailed analysis",
+    "value": [{ "type": "text", "text": "bullet points" }]
+  },
+  {
+    "variableId": "var-3",
+    "variableType": "string",
+    "name": "focus_areas",
+    "description": "Aspects to focus on, e.g., main arguments, action items, key statistics",
+    "value": [{ "type": "text", "text": "main arguments and key takeaways" }]
+  }
+]
+\`\`\`
+
+**Workflow Structure**:
+
+| Task | Tool | Purpose |
+|------|------|---------|
+| Analyze Document | \`generate_doc\` | Read @{type=var,id=var-1,name=input_document} and extract @{type=var,id=var-3,name=focus_areas} in @{type=var,id=var-2,name=summary_format} format |
+
+**Data Flow**: document input → analysis → summary output
+
+**Key Points**:
+- Resource variable acts as placeholder; user selects actual file in workflow panel before execution
+- Variable reference in prompt gives Node Agent access to file content
+- Single task sufficient for document summarization (no external tools needed)
 </examples>
 
 ## Available Tools

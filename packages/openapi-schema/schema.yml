@@ -1058,6 +1058,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UpdateWorkflowVariablesResponse'
+  /canvas/workflow/createDefaultResourceFile:
+    post:
+      tags:
+        - canvas
+      summary: Create default resource file
+      description: Create a default resource file for a resource variable by duplicating the system default file
+      operationId: createDefaultResourceFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDefaultResourceFileRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDefaultResourceFileResponse'
   /drive/file/list:
     get:
       tags:
@@ -11685,6 +11705,26 @@ components:
               description: Updated list of workflow variables
               items:
                 $ref: '#/components/schemas/WorkflowVariable'
+    CreateDefaultResourceFileRequest:
+      type: object
+      required:
+        - canvasId
+        - variableId
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID
+        variableId:
+          type: string
+          description: Variable ID for the resource variable
+    CreateDefaultResourceFileResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/VariableValue'
+              description: The created variable value with file info
     DriveFileCategory:
       type: string
       enum:

@@ -6,9 +6,10 @@ import {
   WorkflowVariable,
   ModelInfo,
 } from '@refly/openapi-schema';
-import { genNodeEntityId, genUniqueId } from '@refly/utils';
+import { genNodeEntityId, genUniqueId, parseMentionsFromQuery } from '@refly/utils';
 import { CanvasNodeFilter } from './types';
 import { prepareAddNode } from './utils';
+import { IContextItem } from '@refly/common-types';
 
 export const workflowPlanSchema = z.object({
   tasks: z
@@ -32,8 +33,8 @@ export const workflowPlanSchema = z.object({
       z.object({
         variableId: z.string().describe('Variable ID, unique and readonly'),
         variableType: z
-          .literal('string')
-          .describe('Variable type (currently only string is supported)'),
+          .enum(['string', 'resource'])
+          .describe('Variable type: "string" for text input, "resource" for file input'),
         name: z.string().describe('Variable name used in the workflow'),
         description: z.string().describe('Description of what this variable represents'),
         value: z
@@ -43,7 +44,8 @@ export const workflowPlanSchema = z.object({
               text: z.string().describe('Variable text value'),
             }),
           )
-          .describe('Variable values'),
+          .optional()
+          .describe('Variable values (only for string type, leave empty for resource type)'),
       }),
     )
     .describe('Array of variables defined for the workflow'),
@@ -98,15 +100,30 @@ export const normalizeWorkflowPlan = (plan: WorkflowPlan): WorkflowPlan => {
 export const planVariableToWorkflowVariable = (
   planVariable: WorkflowPlan['variables'][number],
 ): WorkflowVariable => {
+  if (planVariable.variableType === 'resource') {
+    // For resource type, value will be populated by backend with default file
+    return {
+      variableId: planVariable.variableId,
+      variableType: planVariable.variableType,
+      name: planVariable.name,
+      description: planVariable.description,
+      value: [], // Empty, will be filled by backend
+      resourceTypes: ['document'], // Default to document type
+      isSingle: true,
+    };
+  }
+
+  // For string type
   return {
     variableId: planVariable.variableId,
     variableType: planVariable.variableType,
     name: planVariable.name,
-    value: planVariable.value?.map((value) => ({
-      type: value?.type,
-      text: value?.text,
-    })),
     description: planVariable.description,
+    value:
+      planVariable.value?.map((value) => ({
+        type: value?.type,
+        text: value?.text,
+      })) ?? [],
   };
 };
 
@@ -202,6 +219,26 @@ export const generateCanvasDataFromWorkflowPlan = (
         }
       }
 
+      // Extract resource variable mentions from prompt and create contextItems
+      const contextItems: IContextItem[] = [];
+      const variableMentions = parseMentionsFromQuery(taskPrompt);
+      for (const mention of variableMentions) {
+        if (mention.type === 'var') {
+          // Find if this is a resource variable
+          const variable = workflowPlan.variables?.find((v) => v.variableId === mention.id);
+          if (variable?.variableType === 'resource') {
+            contextItems.push({
+              entityId: mention.id, // variableId as entityId
+              type: 'file',
+              metadata: {
+                source: 'variable',
+                variableId: mention.id,
+              },
+            });
+          }
+        }
+      }
+
       // Create the node data for prepareAddNode
       const taskEntityId = genNodeEntityId('skillResponse');
 
@@ -226,7 +263,7 @@ export const generateCanvasDataFromWorkflowPlan = (
           metadata: {
             query: taskPrompt,
             selectedToolsets,
-            contextItems: [],
+            contextItems,
             status: 'init',
             modelInfo: defaultModel,
           },

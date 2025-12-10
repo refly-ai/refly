@@ -231,4 +231,14 @@ export class CanvasController {
     const variables = await this.canvasService.updateWorkflowVariables(user, body);
     return buildSuccessResponse(variables);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('workflow/createDefaultResourceFile')
+  async createDefaultResourceFile(
+    @LoginedUser() user: User,
+    @Body() body: { canvasId: string; variableId: string },
+  ) {
+    const result = await this.canvasService.createDefaultResourceFile(user, body);
+    return buildSuccessResponse(result);
+  }
 }

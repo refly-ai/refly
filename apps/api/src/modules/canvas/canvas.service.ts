@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import pLimit from 'p-limit';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -61,6 +62,7 @@ export class CanvasService {
 
   constructor(
     private prisma: PrismaService,
+    private config: ConfigService,
     private redis: RedisService,
     private miscService: MiscService,
     private actionService: ActionService,
@@ -1262,6 +1264,86 @@ export class CanvasService {
     );
 
     return processedVariables;
+  }
+
+  /**
+   * Create a default resource value by duplicating the configured default file
+   * @param user - The user who will own the duplicated file
+   * @param canvasId - The target canvas ID
+   * @returns A VariableValue with the duplicated file, or null if not configured
+   */
+  private async createDefaultResourceValue(
+    user: User,
+    canvasId: string,
+  ): Promise<VariableValue | null> {
+    const defaultFileId = this.config.get<string>('drive.defaultResourceFileId');
+    if (!defaultFileId) {
+      this.logger.warn('Default resource file ID not configured (DRIVE_DEFAULT_RESOURCE_FILE_ID)');
+      return null;
+    }
+
+    // Find the default file (could be from external/public OSS)
+    const defaultFile = await this.prisma.driveFile.findFirst({
+      where: { fileId: defaultFileId, deletedAt: null },
+    });
+
+    if (!defaultFile) {
+      this.logger.warn(`Default resource file not found: ${defaultFileId}`);
+      return null;
+    }
+
+    try {
+      // Duplicate the default file to user's canvas
+      const newFile = await this.driveService.duplicateDriveFile(
+        user,
+        defaultFile as any,
+        canvasId,
+      );
+
+      return {
+        type: 'resource',
+        resource: {
+          fileId: newFile.fileId,
+          storageKey: newFile.storageKey,
+          name: newFile.name,
+          fileType: 'document', // Default to document type for text files
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Failed to duplicate default resource file: ${error}`);
+      return null;
+    }
+  }
+
+  /**
+   * Create a default resource file for a variable (public API)
+   * Duplicates the default file to user's canvas and returns the file info
+   * @param user - The user creating the resource
+   * @param params - canvasId and variableId
+   * @returns VariableValue with the created file info, or null if failed
+   */
+  async createDefaultResourceFile(
+    user: User,
+    params: { canvasId: string; variableId: string },
+  ): Promise<VariableValue | null> {
+    const { canvasId, variableId } = params;
+
+    // Check canvas ownership
+    const canvas = await this.prisma.canvas.findFirst({
+      where: { canvasId, uid: user.uid, deletedAt: null },
+    });
+    if (!canvas) {
+      this.logger.warn(`Canvas not found or not owned by user: ${canvasId}`);
+      return null;
+    }
+
+    const result = await this.createDefaultResourceValue(user, canvasId);
+    if (result) {
+      this.logger.log(
+        `Created default resource file for variable ${variableId} in canvas ${canvasId}`,
+      );
+    }
+    return result;
   }
 
   /**

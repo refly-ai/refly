@@ -37,6 +37,8 @@ export default () => ({
     publicEndpoint:
       process.env.DRIVE_PUBLIC_ENDPOINT || 'http://localhost:5800/v1/drive/file/public',
     maxContentWords: Number.parseInt(process.env.DRIVE_MAX_CONTENT_WORDS) || 3000, // Maximum words in returned content, truncates if exceeded
+    defaultResourceFileId:
+      process.env.DRIVE_DEFAULT_RESOURCE_FILE_ID || 'df-z4f83o1j6goyhzffxznmgo9d', // Default file ID for resource variables (must be publicly accessible)
   },
   session: {
     secret: process.env.SESSION_SECRET || 'refly-session-secret-key-change-in-production',

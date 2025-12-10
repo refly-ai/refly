@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo } from 'react';
 import { Modal, Button, Divider } from 'antd';
 import { useListTools } from '@refly-packages/ai-workspace-common/queries';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
-import { ActionResult } from '@refly/openapi-schema';
+import { ActionResult, WorkflowVariable } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { safeParseJSON } from '@refly/utils';
@@ -15,6 +15,7 @@ import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { CanvasNode } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 interface CopilotMessageProps {
   result: ActionResult;
@@ -116,9 +117,35 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
         startNodes,
       },
     );
+
+    // Process resource variables: create default files for empty resource variables
+    const processedVariables: WorkflowVariable[] = [];
+    for (const variable of variables ?? []) {
+      if (
+        variable.variableType === 'resource' &&
+        (!variable.value || variable.value.length === 0)
+      ) {
+        // Call API to create default resource file
+        const { data: response } = await getClient().createDefaultResourceFile({
+          body: { canvasId, variableId: variable.variableId },
+        });
+        if (response?.data) {
+          processedVariables.push({
+            ...variable,
+            value: [response.data],
+          });
+        } else {
+          // If failed, keep the variable as is
+          processedVariables.push(variable);
+        }
+      } else {
+        processedVariables.push(variable);
+      }
+    }
+
     setNodes(nodes);
     setEdges(edges);
-    setVariables(variables ?? []);
+    setVariables(processedVariables);
     setShowWorkflowRun(true);
 
     for (const node of nodes) {

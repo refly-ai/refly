@@ -132,6 +132,9 @@ import type {
   UpdateWorkflowVariablesData,
   UpdateWorkflowVariablesError,
   UpdateWorkflowVariablesResponse2,
+  CreateDefaultResourceFileData,
+  CreateDefaultResourceFileError,
+  CreateDefaultResourceFileResponse2,
   ListDriveFilesData,
   ListDriveFilesError,
   ListDriveFilesResponse2,
@@ -1180,6 +1183,23 @@ export const updateWorkflowVariables = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/canvas/workflow/variables',
+  });
+};
+
+/**
+ * Create default resource file
+ * Create a default resource file for a resource variable by duplicating the system default file
+ */
+export const createDefaultResourceFile = <ThrowOnError extends boolean = false>(
+  options: Options<CreateDefaultResourceFileData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateDefaultResourceFileResponse2,
+    CreateDefaultResourceFileError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/canvas/workflow/createDefaultResourceFile',
   });
 };
 
