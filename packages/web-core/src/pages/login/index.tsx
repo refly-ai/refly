@@ -21,6 +21,10 @@ import loginImage from '../../assets/login.png';
 import loginDarkImage from '../../assets/login-dark.png';
 import './index.css';
 import { useUserStoreShallow } from '@refly/stores';
+import {
+  getPendingVoucherCode,
+  storePendingVoucherCode,
+} from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 interface FormValues {
   email: string;
@@ -37,6 +41,13 @@ const LoginPage = () => {
     isLogin: state.isLogin,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
   }));
+
+  // Store invite code from URL parameter for claiming after login
+  // This must run synchronously before any redirect checks
+  const inviteCode = searchParams.get('invite');
+  if (inviteCode) {
+    storePendingVoucherCode(inviteCode);
+  }
 
   // Detect dark mode
   useEffect(() => {
@@ -138,6 +149,11 @@ const LoginPage = () => {
     // Get source from URL parameter
     const source = searchParams.get('from') ?? undefined;
 
+    // Determine entry_point for signup tracking (voucher invite flow)
+    const hasPendingVoucher = !!getPendingVoucherCode();
+    const hasInviteParam = !!searchParams.get('invite');
+    const entryPoint = hasPendingVoucher || hasInviteParam ? 'visitor_page' : undefined;
+
     if (authStore.isSignUpMode) {
       logEvent('auth::signup_click', 'email');
       const { data } = await getClient().emailSignup({
@@ -151,8 +167,12 @@ const LoginPage = () => {
       if (data?.success) {
         // Note: No need to close modal as this is a standalone login page
         if (data.data?.skipVerification) {
-          // Log signup success event with source
-          logEvent('signup_success', null, source ? { source } : undefined);
+          // Log signup success event with source and entry_point
+          logEvent('signup_success', null, {
+            ...(source ? { source } : {}),
+            ...(entryPoint ? { entry_point: entryPoint } : {}),
+            user_type: 'free',
+          });
           authStore.reset();
           const returnUrl = searchParams.get('returnUrl');
           const redirectUrl = returnUrl

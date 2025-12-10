@@ -31,6 +31,7 @@ import {
 import type { GenerateWorkflowAppTemplateJobData } from './workflow-app.dto';
 import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
 import type { Queue } from 'bullmq';
+import { VoucherService } from '../voucher/voucher.service';
 
 /**
  * Structure of shared workflow app data
@@ -62,6 +63,7 @@ export class WorkflowAppService {
     private readonly creditService: CreditService,
     private readonly notificationService: NotificationService,
     private readonly configService: ConfigService,
+    private readonly voucherService: VoucherService,
     @Optional()
     @InjectQueue(QUEUE_WORKFLOW_APP_TEMPLATE)
     private readonly templateQueue?: Queue<GenerateWorkflowAppTemplateJobData>,
@@ -325,6 +327,15 @@ export class WorkflowAppService {
       );
     }
 
+    // Start voucher scoring in parallel with DB operations
+    // This promise will be awaited later after all DB operations complete
+    const voucherPromise = this.voucherService
+      .handleTemplatePublish({ uid: user.uid } as any, canvasData, variables, appId, description)
+      .catch((error) => {
+        this.logger.error(`Failed to trigger voucher for workflow app ${appId}: ${error?.stack}`);
+        return null;
+      });
+
     if (existingWorkflowApp) {
       await this.prisma.workflowApp.update({
         where: { appId },
@@ -446,7 +457,15 @@ export class WorkflowAppService {
       where: { uid: user.uid },
     });
 
-    return { ...workflowApp, owner: userPo };
+    // Wait for voucher scoring to complete (was started in parallel earlier)
+    const voucherTriggerResult = await voucherPromise;
+    if (voucherTriggerResult) {
+      this.logger.log(
+        `Voucher triggered for workflow app ${appId}: ${voucherTriggerResult.voucher.voucherId} (${voucherTriggerResult.voucher.discountPercent}% off)`,
+      );
+    }
+
+    return { ...workflowApp, owner: userPo, voucherTriggerResult };
   }
 
   async getWorkflowAppDetail(user: User, appId: string) {

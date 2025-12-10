@@ -5067,6 +5067,10 @@ export type CreateCheckoutSessionRequest = {
    */
   interval?: SubscriptionInterval;
   /**
+   * Optional voucher ID to apply discount
+   */
+  voucherId?: string;
+  /**
    * Current plan
    */
   currentPlan?: string;
@@ -7380,6 +7384,10 @@ export type WorkflowApp = {
    * Workflow app update timestamp
    */
   updatedAt?: string;
+  /**
+   * Voucher trigger result when publishing to community
+   */
+  voucherTriggerResult?: VoucherTriggerResult;
 };
 
 export type CreateWorkflowAppResponse = BaseResponse & {
@@ -9028,6 +9036,267 @@ export type ToolRegistryEntry = {
    * Last update timestamp
    */
   updatedAt: string;
+};
+
+/**
+ * Voucher status
+ */
+export type VoucherStatus = 'unused' | 'used' | 'expired' | 'invalid';
+
+/**
+ * Voucher source
+ */
+export type VoucherSource = 'template_publish' | 'invitation_claim';
+
+/**
+ * Invitation status
+ */
+export type InvitationStatus = 'unclaimed' | 'claimed' | 'expired';
+
+export type Voucher = {
+  /**
+   * Unique voucher ID
+   */
+  voucherId: string;
+  /**
+   * User ID who owns the voucher
+   */
+  uid: string;
+  /**
+   * Discount percentage (10-90)
+   */
+  discountPercent: number;
+  status: VoucherStatus;
+  source: VoucherSource;
+  /**
+   * Source entity ID (template ID or invitation ID)
+   */
+  sourceId?: string;
+  /**
+   * LLM scoring result (0-100)
+   */
+  llmScore?: number;
+  /**
+   * Voucher expiration time
+   */
+  expiresAt: string;
+  /**
+   * Voucher usage time
+   */
+  usedAt?: string;
+  /**
+   * Subscription ID if voucher was used
+   */
+  subscriptionId?: string;
+  /**
+   * Creation timestamp
+   */
+  createdAt: string;
+  /**
+   * Update timestamp
+   */
+  updatedAt: string;
+};
+
+export type VoucherInvitation = {
+  /**
+   * Unique invitation ID
+   */
+  invitationId: string;
+  /**
+   * Inviter user ID
+   */
+  inviterUid: string;
+  /**
+   * Invitee user ID
+   */
+  inviteeUid?: string;
+  /**
+   * Short invitation code for sharing
+   */
+  inviteCode: string;
+  /**
+   * Source voucher ID
+   */
+  voucherId: string;
+  /**
+   * Discount percentage
+   */
+  discountPercent: number;
+  status: InvitationStatus;
+  /**
+   * Claim timestamp
+   */
+  claimedAt?: string;
+  /**
+   * Whether inviter reward has been granted
+   */
+  rewardGranted: boolean;
+  /**
+   * Creation timestamp
+   */
+  createdAt: string;
+  /**
+   * Update timestamp
+   */
+  updatedAt: string;
+};
+
+export type VoucherTriggerResult = {
+  voucher: Voucher;
+  /**
+   * LLM score (0-100)
+   */
+  score: number;
+  /**
+   * LLM feedback for improvement
+   */
+  feedback?: string;
+  /**
+   * Whether daily trigger limit was reached
+   */
+  triggerLimitReached?: boolean;
+};
+
+export type VoucherAvailableResult = {
+  /**
+   * Whether user has available vouchers
+   */
+  hasAvailableVoucher: boolean;
+  /**
+   * List of available vouchers
+   */
+  vouchers: Array<Voucher>;
+  /**
+   * Best available voucher (highest discount)
+   */
+  bestVoucher?: Voucher;
+};
+
+export type VoucherValidateResult = {
+  /**
+   * Whether voucher is valid
+   */
+  valid: boolean;
+  /**
+   * Voucher details
+   */
+  voucher?: Voucher;
+  /**
+   * Reason if not valid
+   */
+  reason?: string;
+};
+
+export type CreateInvitationResult = {
+  /**
+   * Created invitation
+   */
+  invitation: VoucherInvitation;
+};
+
+export type ClaimInvitationResult = {
+  /**
+   * Whether claim was successful
+   */
+  success: boolean;
+  /**
+   * Created voucher for invitee
+   */
+  voucher?: Voucher;
+  /**
+   * Name of the user who sent the invitation
+   */
+  inviterName?: string;
+  /**
+   * Error message if failed
+   */
+  message?: string;
+};
+
+export type ValidateVoucherRequest = {
+  /**
+   * Voucher ID to validate
+   */
+  voucherId: string;
+};
+
+export type CreateVoucherInvitationRequest = {
+  /**
+   * Voucher ID to create invitation for
+   */
+  voucherId: string;
+};
+
+export type ClaimVoucherInvitationRequest = {
+  /**
+   * Invitation code to claim
+   */
+  inviteCode: string;
+};
+
+export type GetAvailableVouchersResponse = BaseResponse & {
+  data?: VoucherAvailableResult;
+};
+
+export type ListUserVouchersResponse = BaseResponse & {
+  data?: Array<Voucher>;
+};
+
+export type ValidateVoucherResponse = BaseResponse & {
+  data?: VoucherValidateResult;
+};
+
+export type CreateVoucherInvitationResponse = BaseResponse & {
+  data?: CreateInvitationResult;
+};
+
+export type VerifyInvitationResult = {
+  /**
+   * Whether the invitation is valid and can be claimed
+   */
+  valid: boolean;
+  invitation?: VoucherInvitation;
+  /**
+   * If already claimed, the UID of the user who claimed it
+   */
+  claimedByUid?: string;
+  /**
+   * Error or status message
+   */
+  message?: string;
+};
+
+export type VerifyVoucherInvitationResponse = BaseResponse & {
+  data?: VerifyInvitationResult;
+};
+
+export type ClaimVoucherInvitationResponse = BaseResponse & {
+  data?: ClaimInvitationResult;
+};
+
+export type TriggerVoucherRequest = {
+  /**
+   * Canvas ID of the template being published
+   */
+  canvasId: string;
+  /**
+   * Optional template ID (defaults to canvasId if not provided)
+   */
+  templateId?: string;
+  /**
+   * Type of trigger event
+   */
+  triggerType: 'template_publish';
+};
+
+/**
+ * Type of trigger event
+ */
+export type triggerType = 'template_publish';
+
+export type TriggerVoucherResponse = BaseResponse & {
+  data?: VoucherTriggerResult;
 };
 
 export type ExtractVariablesData = {
@@ -10990,3 +11259,56 @@ export type ConvertData = {
 export type ConvertResponse2 = ConvertResponse;
 
 export type ConvertError = unknown;
+
+export type GetAvailableVouchersResponse2 = GetAvailableVouchersResponse;
+
+export type GetAvailableVouchersError = unknown;
+
+export type ListUserVouchersResponse2 = ListUserVouchersResponse;
+
+export type ListUserVouchersError = unknown;
+
+export type ValidateVoucherData = {
+  body: ValidateVoucherRequest;
+};
+
+export type ValidateVoucherResponse2 = ValidateVoucherResponse;
+
+export type ValidateVoucherError = unknown;
+
+export type CreateVoucherInvitationData = {
+  body: CreateVoucherInvitationRequest;
+};
+
+export type CreateVoucherInvitationResponse2 = CreateVoucherInvitationResponse;
+
+export type CreateVoucherInvitationError = unknown;
+
+export type VerifyVoucherInvitationData = {
+  query: {
+    /**
+     * Invitation code
+     */
+    code: string;
+  };
+};
+
+export type VerifyVoucherInvitationResponse2 = VerifyVoucherInvitationResponse;
+
+export type VerifyVoucherInvitationError = unknown;
+
+export type ClaimVoucherInvitationData = {
+  body: ClaimVoucherInvitationRequest;
+};
+
+export type ClaimVoucherInvitationResponse2 = ClaimVoucherInvitationResponse;
+
+export type ClaimVoucherInvitationError = unknown;
+
+export type TriggerVoucherData = {
+  body: TriggerVoucherRequest;
+};
+
+export type TriggerVoucherResponse2 = TriggerVoucherResponse;
+
+export type TriggerVoucherError = unknown;

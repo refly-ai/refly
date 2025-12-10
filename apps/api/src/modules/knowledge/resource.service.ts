@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional, forwardRef } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import pdf from 'pdf-parse';
 import pLimit from 'p-limit';
@@ -67,6 +67,7 @@ export class ResourceService {
     private ragService: RAGService,
     private miscService: MiscService,
     private providerService: ProviderService,
+    @Inject(forwardRef(() => SubscriptionService))
     private subscriptionService: SubscriptionService,
     @Inject(OSS_INTERNAL) private oss: ObjectStorageService,
     @Inject(FULLTEXT_SEARCH) private fts: FulltextSearchService,

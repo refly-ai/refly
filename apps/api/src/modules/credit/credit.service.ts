@@ -26,6 +26,7 @@ import {
   genCommissionCreditRechargeId,
   genRegistrationCreditRechargeId,
   genInvitationActivationCreditRechargeId,
+  genVoucherInviterRewardRechargeId,
   genFirstSubscriptionGiftRechargeId,
 } from '@refly/utils';
 
@@ -430,6 +431,55 @@ export class CreditService {
 
     this.logger.log(
       `Created invitation activation credits: ${inviterUid} received ${inviterCreditAmount} credits (expires at ${inviterExpiresAt.toISOString()}), ${inviteeUid} received ${inviteeCreditAmount} credits (expires at ${inviteeExpiresAt.toISOString()})`,
+    );
+  }
+
+  /**
+   * Create voucher inviter reward credit recharge
+   * Called when an invitee claims a voucher invitation
+   *
+   * @param inviterUid - The user who shared the voucher
+   * @param invitationId - The invitation ID for idempotency
+   * @param creditAmount - Amount of credits to reward (default: 2000)
+   */
+  async createVoucherInviterRewardRecharge(
+    inviterUid: string,
+    invitationId: string,
+    creditAmount = 2000,
+    now: Date = new Date(),
+  ): Promise<void> {
+    // Use invitation ID to ensure idempotency
+    const rechargeId = genVoucherInviterRewardRechargeId(invitationId);
+
+    // Check if reward already exists
+    const existing = await this.prisma.creditRecharge.findUnique({
+      where: { rechargeId },
+    });
+
+    if (existing) {
+      this.logger.log(`Voucher inviter reward already exists for invitation ${invitationId}`);
+      return;
+    }
+
+    // Calculate expiration (3 months from now)
+    const expiresAt = new Date(now);
+    expiresAt.setMonth(expiresAt.getMonth() + 3);
+
+    await this.processCreditRecharge(
+      inviterUid,
+      creditAmount,
+      {
+        rechargeId,
+        source: 'invitation',
+        description: `Voucher sharing reward for invitation ${invitationId}`,
+        createdAt: now,
+        expiresAt,
+      },
+      now,
+    );
+
+    this.logger.log(
+      `Created voucher inviter reward: ${inviterUid} received ${creditAmount} credits for invitation ${invitationId}`,
     );
   }
 

@@ -49,6 +49,8 @@ export enum IDPrefix {
   VARIABLE = 'var-',
   WorkflowApp = 'wa-',
   ACTION_MESSAGE = 'am-',
+  VOUCHER = 'voucher-',
+  VOUCHER_INVITATION = 'vi-',
 }
 
 export function genUID(): string {
@@ -312,4 +314,21 @@ export const genInvitationActivationCreditRechargeId = (inviterUid: string, invi
 
 export const genFirstSubscriptionGiftRechargeId = (uid: string) => {
   return `${IDPrefix.CREDIT_RECHARGE}first-subscription-gift-${uid}`;
+};
+
+export function genVoucherID(): string {
+  return IDPrefix.VOUCHER + createId();
+}
+
+export function genVoucherInvitationID(): string {
+  return IDPrefix.VOUCHER_INVITATION + createId();
+}
+
+export function genInviteCode(): string {
+  // Generate a short, URL-safe invite code
+  return createId().substring(0, 12);
+}
+
+export const genVoucherInviterRewardRechargeId = (invitationId: string) => {
+  return `${IDPrefix.CREDIT_RECHARGE}voucher-inviter-${invitationId}`;
 };

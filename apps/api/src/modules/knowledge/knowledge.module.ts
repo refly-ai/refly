@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 
 import { KnowledgeController } from './knowledge.controller';
@@ -33,7 +33,7 @@ import { DocumentService } from './document.service';
     CollabModule,
     CanvasSyncModule,
     ProviderModule,
-    SubscriptionModule,
+    forwardRef(() => SubscriptionModule),
     ...(isDesktop()
       ? []
       : [

@@ -1,8 +1,9 @@
-import { Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { useMemo } from 'react';
+import { Navigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { useMemo, useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { useUserStoreShallow } from '@refly/stores';
+import { storePendingVoucherCode } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 /**
  * Redirect component for /canvas/:canvasId
@@ -68,6 +69,7 @@ export const WorkflowTemplateRedirect = () => {
 /**
  * Protected route wrapper. Redirects unauthenticated users to /login with returnUrl.
  * This component does not render any loading UI to avoid UI changes on protected pages.
+ * Preserves all query parameters including invite code for voucher claiming.
  */
 export const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   const { getLoginStatus } = useIsLogin();
@@ -75,10 +77,20 @@ export const ProtectedRoute = ({ children }: { children: ReactElement }) => {
     isLogin: state.isLogin,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
   }));
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   const isLoggedIn = useMemo(() => {
     return getLoginStatus() || isLogin;
   }, [getLoginStatus, isLogin]);
+
+  // Store invite code before redirecting to login (for voucher claiming after login)
+  useEffect(() => {
+    const inviteCode = searchParams.get('invite');
+    if (inviteCode && !isLoggedIn && isCheckingLoginStatus === false) {
+      storePendingVoucherCode(inviteCode);
+    }
+  }, [searchParams, isLoggedIn, isCheckingLoginStatus]);
 
   // Wait for checking to avoid flicker
   if (isCheckingLoginStatus === true || isCheckingLoginStatus === undefined) {
@@ -86,7 +98,11 @@ export const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   }
 
   if (!isLoggedIn) {
-    return <Navigate to={'/'} replace />;
+    // Build returnUrl with current path and all query params preserved
+    const queryString = searchParams.toString();
+    const fullPath = queryString ? `${location.pathname}?${queryString}` : location.pathname;
+    const returnUrl = encodeURIComponent(fullPath);
+    return <Navigate to={`/login?returnUrl=${returnUrl}`} replace />;
   }
 
   return children;

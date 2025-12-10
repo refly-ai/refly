@@ -17,6 +17,7 @@ import {
   checkSettingsField,
   checkToolOauthStatus,
   checkVerification,
+  claimVoucherInvitation,
   convert,
   createCanvas,
   createCanvasTemplate,
@@ -41,6 +42,7 @@ import {
   createSkillTrigger,
   createToolset,
   createVerification,
+  createVoucherInvitation,
   createWorkflowApp,
   deleteCanvas,
   deleteDocument,
@@ -72,6 +74,7 @@ import {
   generateMedia,
   getActionResult,
   getAuthConfig,
+  getAvailableVouchers,
   getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
@@ -135,6 +138,7 @@ import {
   listToolsetInventory,
   listToolsets,
   listUserTools,
+  listUserVouchers,
   listWorkflowApps,
   logout,
   multiLingualWebSearch,
@@ -153,6 +157,7 @@ import {
   submitForm,
   syncCanvasState,
   testProviderConnection,
+  triggerVoucher,
   unpinSkillInstance,
   updateCanvas,
   updateCanvasTemplate,
@@ -176,6 +181,8 @@ import {
   updateWorkflowVariables,
   upload,
   validateMcpServer,
+  validateVoucher,
+  verifyVoucherInvitation,
 } from '../requests/services.gen';
 export type ListMcpServersDefaultResponse = Awaited<ReturnType<typeof listMcpServers>>['data'];
 export type ListMcpServersQueryResult<
@@ -925,6 +932,40 @@ export const UseServeStaticKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useServeStaticKey, ...(queryKey ?? [clientOptions])];
+export type GetAvailableVouchersDefaultResponse = Awaited<
+  ReturnType<typeof getAvailableVouchers>
+>['data'];
+export type GetAvailableVouchersQueryResult<
+  TData = GetAvailableVouchersDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetAvailableVouchersKey = 'GetAvailableVouchers';
+export const UseGetAvailableVouchersKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useGetAvailableVouchersKey, ...(queryKey ?? [clientOptions])];
+export type ListUserVouchersDefaultResponse = Awaited<ReturnType<typeof listUserVouchers>>['data'];
+export type ListUserVouchersQueryResult<
+  TData = ListUserVouchersDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListUserVouchersKey = 'ListUserVouchers';
+export const UseListUserVouchersKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListUserVouchersKey, ...(queryKey ?? [clientOptions])];
+export type VerifyVoucherInvitationDefaultResponse = Awaited<
+  ReturnType<typeof verifyVoucherInvitation>
+>['data'];
+export type VerifyVoucherInvitationQueryResult<
+  TData = VerifyVoucherInvitationDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useVerifyVoucherInvitationKey = 'VerifyVoucherInvitation';
+export const UseVerifyVoucherInvitationKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useVerifyVoucherInvitationKey, ...(queryKey ?? [clientOptions])];
 export type ExtractVariablesMutationResult = Awaited<ReturnType<typeof extractVariables>>;
 export const useExtractVariablesKey = 'ExtractVariables';
 export const UseExtractVariablesKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1547,6 +1588,34 @@ export type ConvertMutationResult = Awaited<ReturnType<typeof convert>>;
 export const useConvertKey = 'Convert';
 export const UseConvertKeyFn = (mutationKey?: Array<unknown>) => [
   useConvertKey,
+  ...(mutationKey ?? []),
+];
+export type ValidateVoucherMutationResult = Awaited<ReturnType<typeof validateVoucher>>;
+export const useValidateVoucherKey = 'ValidateVoucher';
+export const UseValidateVoucherKeyFn = (mutationKey?: Array<unknown>) => [
+  useValidateVoucherKey,
+  ...(mutationKey ?? []),
+];
+export type CreateVoucherInvitationMutationResult = Awaited<
+  ReturnType<typeof createVoucherInvitation>
+>;
+export const useCreateVoucherInvitationKey = 'CreateVoucherInvitation';
+export const UseCreateVoucherInvitationKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateVoucherInvitationKey,
+  ...(mutationKey ?? []),
+];
+export type ClaimVoucherInvitationMutationResult = Awaited<
+  ReturnType<typeof claimVoucherInvitation>
+>;
+export const useClaimVoucherInvitationKey = 'ClaimVoucherInvitation';
+export const UseClaimVoucherInvitationKeyFn = (mutationKey?: Array<unknown>) => [
+  useClaimVoucherInvitationKey,
+  ...(mutationKey ?? []),
+];
+export type TriggerVoucherMutationResult = Awaited<ReturnType<typeof triggerVoucher>>;
+export const useTriggerVoucherKey = 'TriggerVoucher';
+export const UseTriggerVoucherKeyFn = (mutationKey?: Array<unknown>) => [
+  useTriggerVoucherKey,
   ...(mutationKey ?? []),
 ];
 export type UpdatePageMutationResult = Awaited<ReturnType<typeof updatePage>>;
