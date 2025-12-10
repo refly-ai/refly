@@ -42,9 +42,10 @@ export const VoucherPopup = ({
   // Key to force Confetti remount on each popup open
   const [confettiKey, setConfettiKey] = useState(0);
 
-  // Get plan type from store
-  const { planType } = useSubscriptionStoreShallow((state) => ({
+  // Get plan type and user type from store
+  const { planType, userType } = useSubscriptionStoreShallow((state) => ({
     planType: state.planType,
+    userType: state.userType,
   }));
 
   // Determine if user is a Plus subscriber
@@ -63,6 +64,7 @@ export const VoucherPopup = ({
       const dp = voucherResult.voucher.discountPercent;
       logEvent('voucher_popup_display', null, {
         voucher_value: Math.round((100 - dp) / 10),
+        user_type: userType,
       });
     }
   }, [visible, voucherResult?.voucher, voucherResult]);
@@ -89,6 +91,7 @@ export const VoucherPopup = ({
     // Log click event
     logEvent('voucher_use_now_click', null, {
       voucher_value: voucherValue,
+      user_type: userType,
     });
 
     // Use custom handler if provided
@@ -132,6 +135,7 @@ export const VoucherPopup = ({
         logEvent('voucher_applied', null, {
           voucher_value: voucherValue,
           entry_point: 'discount_popup',
+          user_type: userType,
         });
       } else {
         const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';
@@ -162,6 +166,7 @@ export const VoucherPopup = ({
     // Log click event
     logEvent('voucher_share_click', null, {
       voucher_value: voucherValue,
+      user_type: userType,
     });
 
     // Use custom handler if provided

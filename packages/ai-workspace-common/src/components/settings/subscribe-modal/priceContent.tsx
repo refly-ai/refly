@@ -452,11 +452,13 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
     availableVoucher,
     setAvailableVoucher,
     setVoucherLoading,
+    userType,
   } = useSubscriptionStoreShallow((state) => ({
     setSubscribeModalVisible: state.setSubscribeModalVisible,
     availableVoucher: state.availableVoucher,
     setAvailableVoucher: state.setAvailableVoucher,
     setVoucherLoading: state.setVoucherLoading,
+    userType: state.userType,
   }));
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
@@ -565,6 +567,7 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
             logEvent('voucher_applied', null, {
               voucher_value: Math.round((100 - availableVoucher.discountPercent) / 10),
               entry_point: 'pricing_page',
+              user_type: userType,
             });
           } else {
             // Voucher is invalid - show message and clear it

@@ -214,13 +214,19 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
 
-  const { setSubscribeModalVisible, availableVoucher, setAvailableVoucher, setVoucherLoading } =
-    useSubscriptionStoreShallow((state) => ({
-      setSubscribeModalVisible: state.setSubscribeModalVisible,
-      availableVoucher: state.availableVoucher,
-      setAvailableVoucher: state.setAvailableVoucher,
-      setVoucherLoading: state.setVoucherLoading,
-    }));
+  const {
+    setSubscribeModalVisible,
+    availableVoucher,
+    setAvailableVoucher,
+    setVoucherLoading,
+    userType,
+  } = useSubscriptionStoreShallow((state) => ({
+    setSubscribeModalVisible: state.setSubscribeModalVisible,
+    availableVoucher: state.availableVoucher,
+    setAvailableVoucher: state.setAvailableVoucher,
+    setVoucherLoading: state.setVoucherLoading,
+    userType: state.userType,
+  }));
 
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
@@ -357,6 +363,7 @@ export const PricingModal = memo(({ mode = 'modal', onCancel }: PricingModalProp
           logEvent('voucher_applied', null, {
             voucher_value: Math.round((100 - availableVoucher.discountPercent) / 10),
             entry_point: 'pricing_page',
+            user_type: userType,
           });
         } else {
           const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';

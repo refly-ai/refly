@@ -5,7 +5,7 @@ import { Download, Copy } from 'lucide-react';
 import { VoucherInvitation } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import cn from 'classnames';
-import { useUserStoreShallow } from '@refly/stores';
+import { useUserStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
 import html2canvas from 'html2canvas';
 import couponGradientBg from '../../assets/images/coupon-gradient-bg.webp';
 import reflyIcon from '../../assets/logo.svg';
@@ -105,6 +105,11 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
     userProfile: state.userProfile,
   }));
 
+  // Get user type for tracking
+  const { userType } = useSubscriptionStoreShallow((state) => ({
+    userType: state.userType,
+  }));
+
   const userName = userProfile?.name || 'Refly User';
   const userAvatar = userProfile?.avatar;
   // Convert discountPercent (e.g., 90 = 90% off) to voucher_value (e.g., 1 = 1折)
@@ -128,6 +133,7 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
       message.success(t('voucher.share.linkCopied', 'Link copied!'));
       logEvent('share_link_copied', null, {
         voucher_value: voucherValue,
+        user_type: userType,
       });
       onClose();
     } catch {
@@ -163,6 +169,7 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
 
       logEvent('poster_download', null, {
         voucher_value: voucherValue,
+        user_type: userType,
       });
       onClose();
     } catch (error) {

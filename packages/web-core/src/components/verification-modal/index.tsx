@@ -97,6 +97,7 @@ export const VerificationModal = () => {
       logEvent('signup_success', null, {
         ...(source ? { source } : {}),
         ...(entryPoint ? { entry_point: entryPoint } : {}),
+        user_type: 'free',
       });
       authStore.reset();
       window.location.replace('/workspace');
