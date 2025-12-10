@@ -2,9 +2,9 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { BatchSpanProcessor, type SpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import { LangfuseSpanProcessor } from '@langfuse/otel';
-import type { SpanProcessor } from '@opentelemetry/sdk-trace-base';
 
 let sdk: NodeSDK | null = null;
 
@@ -58,21 +58,20 @@ export function initTracer(): void {
 
   const spanProcessors: SpanProcessor[] = [];
 
+  // OTLP exporter for Tempo/Grafana - receives all spans
+  if (otlp.endpoint) {
+    const otlpExporter = new OTLPTraceExporter({ url: `${otlp.endpoint}/v1/traces` });
+    spanProcessors.push(new BatchSpanProcessor(otlpExporter));
+    console.log('[Tracer] OTLP exporter configured:', { endpoint: otlp.endpoint });
+  }
+
+  // Langfuse processor - receives filtered LLM spans only
   if (langfuse.baseUrl) {
     const processor = createLangfuseProcessor(langfuse);
     if (processor) spanProcessors.push(processor);
   }
 
-  const traceExporter = otlp.endpoint
-    ? new OTLPTraceExporter({ url: `${otlp.endpoint}/v1/traces` })
-    : undefined;
-
-  if (otlp.endpoint) {
-    console.log('[Tracer] OTLP exporter configured:', { endpoint: otlp.endpoint });
-  }
-
   sdk = new NodeSDK({
-    traceExporter,
     spanProcessors: spanProcessors.length > 0 ? spanProcessors : undefined,
     instrumentations: [getNodeAutoInstrumentations()],
     resource: resourceFromAttributes({
