@@ -21,7 +21,6 @@ import { useOpenInstallMcp } from '@refly-packages/ai-workspace-common/hooks/use
 import { IoWarningOutline } from 'react-icons/io5';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useQueryClient } from '@tanstack/react-query';
-import { useListUserToolsKey } from '@refly-packages/ai-workspace-common/queries/common';
 
 /**
  * Check if a toolset is authorized/installed
@@ -493,7 +492,7 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
@@ -503,7 +502,11 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
 
   const nodes = canvasData?.nodes || [];
 
-  const { data: userToolsData, isLoading: toolsLoading } = useListUserTools({}, [], {
+  const {
+    data: userToolsData,
+    isLoading: toolsLoading,
+    refetch: refetchUserTools,
+  } = useListUserTools({}, [], {
     enabled: isLogin,
     refetchOnWindowFocus: false,
   });
@@ -514,12 +517,9 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
   useEffect(() => {
     if (!showSettingModal && isLogin) {
       // Settings modal was closed, refetch user tools to get updated installation status
-      queryClient.refetchQueries({
-        predicate: (query) =>
-          Array.isArray(query.queryKey) && query.queryKey[0] === useListUserToolsKey,
-      });
+      refetchUserTools();
     }
-  }, [showSettingModal, isLogin, queryClient]);
+  }, [showSettingModal, isLogin, refetchUserTools]);
 
   // Build toolset definitions from userTools for display purposes
   const toolsetDefinitions = useMemo(() => {
