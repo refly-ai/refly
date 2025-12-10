@@ -54,9 +54,6 @@ jobs:
           VITE_CANVAS_TEMPLATE_ENABLED: true
           VITE_ENV_TAG: test
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -83,13 +80,36 @@ jobs:
           echo "deploy_image=${REPOSITORY}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
+      - name: Check if image exists in ECR
+        id: check_image
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+        run: |
+          if aws ecr describe-images \
+            --repository-name refly-${{ matrix.app }} \
+            --image-ids imageTag=${{ steps.docker_tags.outputs.image_tag }} \
+            --region "$AWS_REGION" \
+            --output json > /dev/null 2>&1; then
+            echo "Image exists in ECR, skipping build"
+            echo "image_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Image does not exist in ECR, will build"
+            echo "image_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.check_image.outputs.image_exists == 'false'
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to Amazon ECR
+        if: steps.check_image.outputs.image_exists == 'false'
         env:
           AWS_REGION: ${{ vars.AWS_REGION }}
         run: |
           aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "${{ steps.docker_tags.outputs.registry }}"
 
       - name: Build and push Docker image
+        if: steps.check_image.outputs.image_exists == 'false'
         uses: docker/build-push-action@v6
         with:
           context: .
