@@ -19,9 +19,12 @@ export const CopilotHeader = memo(
     const { t } = useTranslation();
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-    const { setCurrentSessionId } = useCopilotStoreShallow((state) => ({
-      setCurrentSessionId: state.setCurrentSessionId,
-    }));
+    const { setCurrentSessionId, historyTemplateSessions, removeHistoryTemplateSession } =
+      useCopilotStoreShallow((state) => ({
+        setCurrentSessionId: state.setCurrentSessionId,
+        historyTemplateSessions: state.historyTemplateSessions[canvasId] ?? [],
+        removeHistoryTemplateSession: state.removeHistoryTemplateSession,
+      }));
 
     const { data, refetch } = useListCopilotSessions(
       {
@@ -34,8 +37,16 @@ export const CopilotHeader = memo(
     );
 
     const sessionHistory = useMemo(() => {
-      return data?.data ?? [];
-    }, [data]);
+      let listFromRequest = data?.data ?? [];
+      for (const session of historyTemplateSessions) {
+        if (!listFromRequest.some((s) => s.sessionId === session.sessionId)) {
+          listFromRequest = [session, ...listFromRequest];
+        } else {
+          removeHistoryTemplateSession(canvasId, session.sessionId);
+        }
+      }
+      return listFromRequest;
+    }, [data, historyTemplateSessions]);
 
     const showDivider = useMemo(() => {
       return sessionHistory.length > 0 || !!sessionId;
