@@ -1088,8 +1088,6 @@ export class DriveService {
       canvasId: newCanvasId,
     });
 
-    console.log(`duplicateDriveFile ${sourceFile.storageKey} to ${newStorageKey}`);
-
     if (newStorageKey === sourceFile.storageKey) {
       return sourceFile;
     }

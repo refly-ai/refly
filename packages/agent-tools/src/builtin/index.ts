@@ -607,26 +607,10 @@ export class BuiltinReadFile extends AgentBaseTool<BuiltinToolParams> {
   toolsetKey = 'read_file';
 
   schema = z.object({
-    fileId: z
-      .string()
-      .describe(
-        'The ID of the file to read. MUST be a valid fileId from context (e.g., from @ mentions, previous tool results, or user-provided files). Do NOT fabricate or guess file IDs.',
-      ),
-    mode: z
-      .enum(['full', 'head', 'tail'])
-      .optional()
-      .describe(
-        'Read mode: "full" reads entire content (default, may be truncated for large files), "head" reads first ~1000 words, "tail" reads last ~1000 words. Use head/tail for previewing large or unknown files.',
-      ),
+    fileId: z.string().describe('The ID of the file to read'),
   });
 
-  description = `Read content from a drive file.
-
-IMPORTANT:
-- The fileId MUST be a valid file ID from the conversation context (e.g., files mentioned with @, files from previous tool results, or user-uploaded files)
-- Do NOT fabricate or guess file IDs - this will fail
-- For large files, use mode="head" or mode="tail" to preview content first
-- If you get a FileNotFoundError, use library_search tool to find the correct file`;
+  description = 'Read content from a drive file.';
 
   protected params: BuiltinToolParams;
 
@@ -636,72 +620,21 @@ IMPORTANT:
   }
 
   async _call(input: z.infer<typeof this.schema>): Promise<ToolCallResult> {
-    const { fileId, mode = 'full' } = input;
-
-    // Validate fileId format (basic check)
-    if (!fileId || fileId.trim() === '') {
-      return {
-        status: 'error',
-        error: 'InvalidFileId',
-        data: { errorType: 'InvalidFileId', fileId },
-        summary:
-          'File ID is empty or invalid. Please provide a valid fileId from the conversation context (e.g., from @ mentions or previous tool results).',
-      };
-    }
-
     try {
       const { reflyService, user } = this.params;
-      const file = await reflyService.readFile(user, fileId);
-
-      // Apply mode-based content processing
-      let content = file.content || '';
-      let truncationInfo = '';
-
-      if (mode !== 'full' && content) {
-        const words = content.split(/\s+/).filter((w) => w.length > 0);
-        const totalWords = words.length;
-
-        if (mode === 'head' && totalWords > 1000) {
-          content = words.slice(0, 1000).join(' ');
-          truncationInfo = ` (showing first 1000 of ${totalWords} words, use mode="full" for complete content)`;
-        } else if (mode === 'tail' && totalWords > 1000) {
-          content = words.slice(-1000).join(' ');
-          truncationInfo = ` (showing last 1000 of ${totalWords} words, use mode="full" for complete content)`;
-        }
-      }
+      const file = await reflyService.readFile(user, input.fileId);
 
       return {
         status: 'success',
-        data: { ...file, content },
-        summary: `Successfully read file: "${file.name}" (fileId: ${file.fileId})${truncationInfo}`,
+        data: file,
+        summary: `Successfully read file: "${file.name}" with file ID: ${file.fileId}`,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-      // Structured error responses for common failure cases
-      if (errorMessage.includes('not found') || errorMessage.includes('NotFound')) {
-        return {
-          status: 'error',
-          error: 'FileNotFoundError',
-          data: { errorType: 'FileNotFoundError', fileId },
-          summary: `File not found: "${fileId}". This fileId does not exist or you don't have access. Please verify the fileId from conversation context or use library_search to find the correct file.`,
-        };
-      }
-
-      if (errorMessage.includes('timeout') || errorMessage.includes('Timeout')) {
-        return {
-          status: 'error',
-          error: 'TimeoutError',
-          data: { errorType: 'TimeoutError', fileId },
-          summary: `Timeout reading file "${fileId}". The file may be too large. Try using mode="head" or mode="tail" to read a portion of the file.`,
-        };
-      }
-
       return {
         status: 'error',
-        error: 'ReadFileError',
-        data: { errorType: 'ReadFileError', fileId, message: errorMessage },
-        summary: `Error reading file "${fileId}": ${errorMessage}`,
+        error: 'Error reading file',
+        summary:
+          error instanceof Error ? error.message : 'Unknown error occurred while reading file',
       };
     }
   }
