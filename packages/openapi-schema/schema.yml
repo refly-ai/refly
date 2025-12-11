@@ -11679,6 +11679,9 @@ components:
           description: List of workflow variables
           items:
             $ref: '#/components/schemas/WorkflowVariable'
+        archiveOldFiles:
+          type: boolean
+          description: Whether to archive existing drive files associated with old resource variables before updating
     UpdateWorkflowVariablesResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
