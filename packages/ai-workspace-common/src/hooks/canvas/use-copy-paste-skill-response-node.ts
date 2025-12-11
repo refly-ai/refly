@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { CanvasNode } from '@refly/canvas-common';
 import { useDuplicateNode } from './use-duplicate-node';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 
 interface CopyPasteSkillResponseNodeOptions {
   /** Canvas ID */
@@ -36,7 +37,8 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
     const hasTextSelection = selectedTextLength > 0;
 
     if (hasTextSelection) {
-      await navigator.clipboard.writeText(selection);
+      // Use utility function with fallback for better compatibility
+      await copyToClipboard(selection ?? '');
       return;
     }
 
@@ -46,7 +48,8 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
     ) as CanvasNode[];
 
     if (selectedNodes.length > 0) {
-      await navigator.clipboard.writeText(JSON.stringify(selectedNodes));
+      // Use utility function with fallback for better compatibility
+      await copyToClipboard(JSON.stringify(selectedNodes));
     }
   }, [nodes, readonly, workflowIsRunning]);
 
@@ -77,24 +80,27 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
   }, []);
 
   /**
-   * Paste copied nodes at offset {x: 400, y: 100} from original position
+   * Paste copied nodes at offset {x: 0, y: 200} from original position
+   * @param clipboardData - The clipboard text data to parse and paste
    */
-  const handlePaste = useCallback(async () => {
-    const clipboardData = await navigator.clipboard.readText();
-    const copiedNodes = safeJsonParse(clipboardData);
-    const isCopySkillResponseNodes =
-      copiedNodes?.length > 0 && copiedNodes?.every((node) => node.type === 'skillResponse');
+  const handlePaste = useCallback(
+    (clipboardData: string) => {
+      const copiedNodes = safeJsonParse(clipboardData);
+      const isCopySkillResponseNodes =
+        copiedNodes?.length > 0 && copiedNodes?.every((node) => node.type === 'skillResponse');
 
-    if (readonly || !canvasId || workflowIsRunning || !isCopySkillResponseNodes) return;
+      if (readonly || !canvasId || workflowIsRunning || !isCopySkillResponseNodes) return;
 
-    // Fixed offset for pasted nodes (bottom right of original position)
-    const fixedOffset = { x: 0, y: 200 };
+      // Fixed offset for pasted nodes (bottom right of original position)
+      const fixedOffset = { x: 0, y: 200 };
 
-    // Paste all copied nodes with fixed offset from original position
-    for (const node of copiedNodes) {
-      duplicateNode(node, canvasId, { offset: fixedOffset });
-    }
-  }, [duplicateNode, canvasId, readonly, workflowIsRunning, safeJsonParse]);
+      // Paste all copied nodes with fixed offset from original position
+      for (const node of copiedNodes) {
+        duplicateNode(node, canvasId, { offset: fixedOffset });
+      }
+    },
+    [duplicateNode, canvasId, readonly, workflowIsRunning, safeJsonParse],
+  );
 
   /**
    * Handle keyboard shortcuts for copy and paste
@@ -120,13 +126,33 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
 
       // Handle copy (Cmd/Ctrl + C) only when there is no text selection
       if (isModKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
         await handleCopy();
         return;
       }
 
       // Handle paste (Cmd/Ctrl + V) only when there is no text selection
       if (isModKey && e.key.toLowerCase() === 'v') {
-        await handlePaste();
+        e.preventDefault();
+        // Read clipboard synchronously in user interaction context to avoid permission errors
+        try {
+          // Check if clipboard API is available
+          if (!navigator?.clipboard?.readText) {
+            console.warn('Clipboard API not available');
+            return;
+          }
+
+          // Read clipboard in the user interaction context (synchronously)
+          const clipboardData = await navigator.clipboard.readText();
+          handlePaste(clipboardData);
+        } catch (error) {
+          // Handle permission errors gracefully
+          if (error instanceof Error && error.name === 'NotAllowedError') {
+            console.warn('Clipboard read permission denied. This may require user interaction.');
+          } else {
+            console.error('Failed to read clipboard:', error);
+          }
+        }
         return;
       }
     },
