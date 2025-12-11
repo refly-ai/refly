@@ -438,6 +438,10 @@ const translations = {
     sharing: '分享中...',
     view: '查看',
     joinDiscord: '加入 Discord 社区',
+    clipboard: {
+      permissionDenied: '剪贴板读取权限被拒绝。请允许剪贴板访问您的浏览器设置。',
+      readFailed: '读取剪贴板失败。请重试。',
+    },
   },
   mode: {
     ask: '提问',

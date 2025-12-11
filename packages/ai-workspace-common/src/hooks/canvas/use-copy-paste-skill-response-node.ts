@@ -5,6 +5,8 @@ import { CanvasNode } from '@refly/canvas-common';
 import { useDuplicateNode } from './use-duplicate-node';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
+import { message } from 'antd';
+import { useTranslation } from 'react-i18next';
 
 interface CopyPasteSkillResponseNodeOptions {
   /** Canvas ID */
@@ -18,6 +20,7 @@ interface CopyPasteSkillResponseNodeOptions {
  * Supports Ctrl/Cmd+C for copy and Ctrl/Cmd+V for paste
  */
 export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNodeOptions = {}) => {
+  const { t } = useTranslation();
   const { canvasId, readonly } = options;
   const { workflow: workflowRun } = useCanvasContext();
   const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
@@ -148,9 +151,16 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
         } catch (error) {
           // Handle permission errors gracefully
           if (error instanceof Error && error.name === 'NotAllowedError') {
-            console.warn('Clipboard read permission denied. This may require user interaction.');
+            message.warning(
+              t(
+                'common.clipboard.permissionDenied',
+                'Clipboard read permission denied. Please allow clipboard access in your browser settings.',
+              ),
+            );
           } else {
-            console.error('Failed to read clipboard:', error);
+            message.error(
+              t('common.clipboard.readFailed', 'Failed to read clipboard. Please try again.'),
+            );
           }
         }
         return;
