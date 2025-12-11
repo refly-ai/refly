@@ -840,8 +840,6 @@ export const WorkflowAPPForm = ({
               <div
                 className={cn('w-full h-full gap-3 flex flex-col rounded-2xl relative', className)}
               >
-                {/* Status badge in top-right corner */}
-                {shouldShowBadge && <TemplateStatusBadge status={templateStatus} />}
                 <MixedTextEditor
                   templateContent={effectiveTemplateContent ?? ''}
                   variables={templateVariables.length > 0 ? templateVariables : workflowVariables}
