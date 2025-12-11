@@ -971,6 +971,27 @@ export class SkillInvokerService {
 
       this.logger.error(`Full error stack: ${err.stack}`);
 
+      // Log token count summary only when "too many tokens" error occurs
+      if (errorMessage.toLowerCase().includes('too many tokens')) {
+        try {
+          const inputTokens = encode(JSON.stringify(input)).length;
+          const contextTokens = encode(JSON.stringify(config.configurable.context || {})).length;
+          const historyTokens = encode(
+            JSON.stringify(config.configurable.chatHistory || []),
+          ).length;
+          const toolsTokens = encode(
+            JSON.stringify(config.configurable.selectedTools || []),
+          ).length;
+          const totalEstimatedTokens = inputTokens + contextTokens + historyTokens + toolsTokens;
+
+          this.logger.error(
+            `🔍 Token breakdown - Total: ${totalEstimatedTokens} | Input: ${inputTokens} | Context: ${contextTokens} | History: ${historyTokens} | Tools: ${toolsTokens} | Model: ${runMeta?.ls_model_name || data.providerItem?.name}`,
+          );
+        } catch (tokenCountError) {
+          this.logger.error(`Failed to count tokens: ${tokenCountError?.message}`);
+        }
+      }
+
       // For user aborts, estimate token usage from generated content
       if (errorInfo.isAbortError && runMeta) {
         try {
