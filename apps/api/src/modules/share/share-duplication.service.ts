@@ -533,7 +533,7 @@ export class ShareDuplicationService {
     // Try to parse as workflow app first
     const workflowAppData = safeParseJSON(dataBuffer.toString());
     if (workflowAppData?.canvasData) {
-      // ✅ Try to load complete data from private storage
+      // Try to load complete data from private storage
       const extraData = record.extraData ? (safeParseJSON(record.extraData) as ShareExtraData) : {};
 
       const executionStorageKey = extraData?.executionStorageKey;
@@ -549,17 +549,22 @@ export class ShareDuplicationService {
           const executionData = safeParseJSON(executionBuffer.toString()) as {
             nodes: CanvasNode[];
             edges: CanvasEdge[];
+            files?: any[];
+            resources?: any[];
             variables: WorkflowVariable[];
             title?: string;
             canvasId?: string;
+            owner?: any;
+            minimapUrl?: string;
           };
 
-          // Merge execution data with public data
+          // executionData contains complete data, use it directly
           canvasData = {
-            ...workflowAppData.canvasData,
-            nodes: executionData.nodes, // Complete nodes (including all agent nodes)
-            edges: executionData.edges, // Complete edges (workflow connections)
-            variables: executionData.variables || workflowAppData.canvasData.variables,
+            ...executionData,
+            // Ensure all fields exist
+            files: executionData.files || [],
+            resources: executionData.resources || [],
+            variables: executionData.variables || [],
           };
 
           this.logger.log(`Loaded complete execution data for duplication: ${executionStorageKey}`);

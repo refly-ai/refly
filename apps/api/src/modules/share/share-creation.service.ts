@@ -1158,62 +1158,6 @@ export class ShareCreationService {
   }
 
   /**
-   * Sanitize canvas data for public sharing - removes sensitive metadata and keeps only necessary data
-   *
-   * IMPORTANT: This method must preserve fields required for frontend rendering:
-   * - node.type: Required for frontend to determine which component to render (image/video/audio/etc)
-   * - file.category: Required for mapDriveFileToCanvasNode to determine file type
-   * - file.resultId: Required for product filtering in workflow app
-   */
-  private sanitizeCanvasDataForPublic(
-    canvasData: SharedCanvasData,
-    resultNodeIds: string[],
-  ): {
-    canvasId?: string;
-    title?: string;
-    owner?: any;
-    minimapUrl?: string;
-    nodes: any[];
-    files: any[];
-    edges: []; // 固定返回空数组以保护 workflow 结构
-    variables?: any[];
-    resources?: any[];
-  } {
-    // 1. Filter nodes to only result nodes (keep this logic unchanged)
-    const resultNodes = (canvasData.nodes || []).filter((node) => resultNodeIds.includes(node.id));
-
-    // 2. Sanitize each node - keep necessary fields for frontend rendering
-    const sanitizedNodes = resultNodes.map((node) => ({
-      id: node.id,
-      type: node.type, // KEEP: Required for frontend to determine how to render the node
-      data: {
-        entityId: node.data?.entityId || '',
-        title: node.data?.title || '',
-        // Remove contentPreview and position to avoid revealing detailed content and layout
-        metadata: this.sanitizeNodeMetadata(node.data?.metadata || {}),
-      },
-    }));
-
-    // 3. IMPORTANT: Keep ALL files without filtering
-    // Files' resultId points to agent nodes, but users may only select product nodes
-    // Removing the filter to avoid missing files when only product nodes are selected
-    const sanitizedFiles = canvasData.files || [];
-
-    // 4. Return canvasData structure directly (no preview wrapper)
-    return {
-      canvasId: canvasData.canvasId,
-      title: canvasData.title,
-      owner: canvasData.owner,
-      minimapUrl: canvasData.minimapUrl,
-      nodes: sanitizedNodes,
-      files: sanitizedFiles, // All files preserved with all fields
-      edges: [], // Always empty to protect workflow structure
-      variables: canvasData.variables,
-      resources: canvasData.resources,
-    };
-  }
-
-  /**
    * Sanitize node metadata - keep only whitelisted safe fields
    */
   private sanitizeNodeMetadata(metadata: Record<string, any>): Record<string, any> {
@@ -1237,43 +1181,6 @@ export class ShareCreationService {
   }
 
   /**
-   * Keep variables intact - user information should not be sanitized
-   * This is for protecting user's workflow creation, not user privacy
-   */
-  private sanitizeVariables(variables: any[]): any[] {
-    // Keep variables exactly as they are - no user data masking needed
-    return variables || [];
-  }
-
-  /**
-   * Protect workflow creation content from being copied
-   * Focus on hiding detailed process steps while keeping results visible
-   */
-
-  /**
-   * Keep template content but limit excessive detail to protect workflow methodology
-   */
-  private sanitizeTemplateContent(content: string | undefined): string | undefined {
-    if (!content) return content;
-
-    // Only truncate if extremely long to prevent reverse engineering of complex workflows
-    if (content.length > 500) {
-      // Find a natural break point (sentence end) within reasonable length
-      const truncated = content.substring(0, 497);
-      const lastPeriod = truncated.lastIndexOf('。');
-      const lastDot = truncated.lastIndexOf('.');
-      const breakPoint = Math.max(lastPeriod, lastDot);
-
-      if (breakPoint > 200) {
-        return content.substring(0, breakPoint + 1);
-      }
-      return `${truncated}...`;
-    }
-
-    return content;
-  }
-
-  /**
    * Create or update a workflow app share record
    * This helper method reduces code duplication between regular and template shares
    */
@@ -1289,17 +1196,21 @@ export class ShareCreationService {
     existingShareRecord: ShareRecord | null,
     logPrefix: string,
   ): Promise<ShareRecord> {
-    // 1. Sanitize canvas data for public exposure
-    const sanitizedCanvasData = this.sanitizeCanvasDataForPublic(
-      canvasData,
-      workflowApp.resultNodeIds || [],
-    );
+    // Step 1: Sanitize nodes metadata for public exposure
+    const sanitizedNodes = canvasData.nodes?.map((node) => ({
+      id: node.id,
+      type: node.type, // Required for frontend to determine how to render the node
+      data: {
+        entityId: node.data?.entityId || '',
+        title: node.data?.title || '',
+        metadata: this.sanitizeNodeMetadata(node.data?.metadata || {}),
+      },
+    }));
 
     // minimapUrl is already a published public URL from processCanvasForShare
-    // Just use it directly, no need to publish again
     const publishedMinimapUrl = canvasData.minimapUrl;
 
-    // 2. Create public workflow app data (脱敏数据) - 移除 preview，统一使用 canvasData
+    // Step 2: Create public workflow app data (sanitized data for public access)
     const publicData = {
       appId: workflowApp.appId,
       title: title || canvasData.title,
@@ -1308,12 +1219,12 @@ export class ShareCreationService {
       coverUrl: workflowApp.coverStorageKey
         ? generateCoverUrl(workflowApp.coverStorageKey)
         : undefined,
-      templateContent: this.sanitizeTemplateContent(workflowApp.templateContent),
+      templateContent: workflowApp.templateContent,
       resultNodeIds: workflowApp.resultNodeIds,
-      query: workflowApp.query, // Keep query field - user data is not the concern
-      variables: this.sanitizeVariables(safeParseJSON(workflowApp.variables || '[]')), // Keep user variables intact
+      query: workflowApp.query,
+      variables: safeParseJSON(workflowApp.variables || '[]'),
       creditUsage: creditUsage,
-      createdAt: workflowApp.createdAt, // Keep original timestamps
+      createdAt: workflowApp.createdAt,
       updatedAt: workflowApp.updatedAt,
 
       // Top-level canvas identifiers for frontend compatibility
@@ -1322,30 +1233,32 @@ export class ShareCreationService {
 
       // Unified canvasData structure (sanitized data, no preview field)
       canvasData: {
-        canvasId: sanitizedCanvasData.canvasId || workflowApp.canvasId,
-        title: sanitizedCanvasData.title || canvasData.title,
-        owner: sanitizedCanvasData.owner || canvasData.owner,
-        minimapUrl: publishedMinimapUrl,
-        nodes: sanitizedCanvasData.nodes, // Sanitized nodes (only result nodes)
-        files: sanitizedCanvasData.files, // All files preserved with all fields
         edges: [], // Always empty to protect workflow structure
-        variables:
-          sanitizedCanvasData.variables ||
-          this.sanitizeVariables(safeParseJSON(workflowApp.variables || '[]')),
-        resources: sanitizedCanvasData.resources || [],
+        nodes: sanitizedNodes, // Sanitized nodes with metadata filtered
+        files: canvasData.files || [],
+        resources: canvasData.resources || [],
+        variables: canvasData.variables || [],
+        title: canvasData.title,
+        canvasId: canvasData.canvasId,
+        owner: canvasData.owner,
+        minimapUrl: canvasData.minimapUrl,
       },
     };
 
-    // 3. Create execution data (完整数据，用于执行)
+    // Step 3: Create execution data (complete data for workflow execution)
     const executionData = {
       nodes: canvasData.nodes, // Complete nodes (including all agent nodes)
       edges: canvasData.edges, // Complete edges (workflow connections)
+      files: canvasData.files || [],
+      resources: canvasData.resources || [],
       variables: canvasData.variables || [],
       title: canvasData.title,
       canvasId: canvasData.canvasId,
+      owner: canvasData.owner,
+      minimapUrl: canvasData.minimapUrl,
     };
 
-    // 4. Upload public data to public storage
+    // Step 4: Upload public data to public storage
     const { storageKey } = await this.miscService.uploadBuffer(user, {
       fpath: 'workflow-app.json',
       buf: Buffer.from(JSON.stringify(publicData)),
@@ -1355,7 +1268,7 @@ export class ShareCreationService {
       storageKey: `share/${shareId}.json`,
     });
 
-    // 5. Upload execution data to private storage
+    // Step 5: Upload execution data to private storage
     const { storageKey: executionStorageKey } = await this.miscService.uploadBuffer(user, {
       fpath: 'workflow-app-execution.json',
       buf: Buffer.from(JSON.stringify(executionData)),
@@ -1365,12 +1278,12 @@ export class ShareCreationService {
       storageKey: `share/${shareId}-execution.json`,
     });
 
-    // 6. Prepare extraData with executionStorageKey
+    // Step 6: Prepare extraData with executionStorageKey
     const extraData: ShareExtraData = {
       executionStorageKey,
     };
 
-    // 7. Create or update share record
+    // Step 7: Create or update share record
     if (existingShareRecord) {
       // Merge existing extraData (e.g., vectorStorageKey if present)
       const existingExtraData = existingShareRecord.extraData
@@ -1386,7 +1299,7 @@ export class ShareCreationService {
           allowDuplication,
           extraData: JSON.stringify({
             ...existingExtraData,
-            executionStorageKey, // Update executionStorageKey
+            executionStorageKey,
           }),
           updatedAt: new Date(),
         },
@@ -1406,7 +1319,7 @@ export class ShareCreationService {
           storageKey,
           parentShareId,
           allowDuplication,
-          extraData: JSON.stringify(extraData), // Store executionStorageKey
+          extraData: JSON.stringify(extraData),
         },
       });
       this.logger.log(

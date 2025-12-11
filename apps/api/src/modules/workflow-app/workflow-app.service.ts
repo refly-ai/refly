@@ -527,7 +527,7 @@ export class WorkflowAppService {
     const executionStorageKey = extraData?.executionStorageKey;
 
     if (executionStorageKey) {
-      // ✅ New logic: Load complete execution data from private storage
+      // Load complete execution data from private storage
       try {
         const executionBuffer = await this.miscService.downloadFile({
           storageKey: executionStorageKey,
@@ -537,22 +537,24 @@ export class WorkflowAppService {
         const executionData = safeParseJSON(executionBuffer.toString()) as {
           nodes: CanvasNode[];
           edges: CanvasEdge[];
+          files?: any[];
+          resources?: any[];
           variables: WorkflowVariable[];
           title?: string;
           canvasId?: string;
+          owner?: any;
+          minimapUrl?: string;
         };
 
-        // Get files and resources from public data
-        const publicData = await this.shareCommonService.getSharedData(shareRecord.storageKey);
-
+        // executionData contains complete data, use it directly
         canvasData = {
           title: executionData.title,
           canvasId: executionData.canvasId,
           variables: executionData.variables,
           nodes: executionData.nodes, // Complete nodes (including all agent nodes)
-          edges: executionData.edges, // ✅ Complete edges (workflow connections)
-          files: publicData?.canvasData?.files || [],
-          resources: publicData?.canvasData?.resources || [],
+          edges: executionData.edges, // Complete edges (workflow connections)
+          files: executionData.files || [],
+          resources: executionData.resources || [],
         } as any;
 
         this.logger.log(`Loaded execution data from private storage: ${executionStorageKey}`);
