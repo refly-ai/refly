@@ -10797,6 +10797,11 @@ export const UpsertDriveFileRequestSchema = {
       type: 'number',
       description: 'Related agent result version',
     },
+    archiveFiles: {
+      type: 'boolean',
+      description:
+        'Whether to archive existing files with the same variableId or resultId before creating new file',
+    },
   },
 } as const;
 

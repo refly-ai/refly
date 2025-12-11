@@ -886,12 +886,14 @@ export class DriveService {
    * Create a new drive file
    */
   async createDriveFile(user: User, request: ExtendedUpsertDriveFileRequest): Promise<DriveFile> {
-    const { canvasId } = request;
+    const { canvasId, archiveFiles } = request;
     if (!canvasId) {
       throw new ParamsError('Canvas ID is required for create operation');
     }
 
-    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request]);
+    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request], {
+      archiveFiles,
+    });
     const processedReq = processedResults[0];
 
     if (!processedReq) {
