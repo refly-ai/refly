@@ -1,4 +1,4 @@
-import type { LLMModelConfig } from '@refly/openapi-schema';
+import type { ProviderItemConfig } from '@refly/openapi-schema';
 import { safeParseJSON } from './parse';
 
 /**
@@ -21,16 +21,27 @@ export const AUTO_MODEL_ROUTING_PRIORITY = [
 
 /**
  * Check if the given provider item config is the Auto model
- * @param configStr The provider item config string
+ * @param config The provider item config (string or ProviderItemConfig)
  * @returns True if this is the Auto model
  */
-export const isAutoModel = (configStr: string | null | undefined): boolean => {
-  if (!configStr) {
-    return false;
-  }
-  const config: LLMModelConfig = safeParseJSON(configStr);
+export const isAutoModel = (config: string | ProviderItemConfig | null | undefined): boolean => {
   if (!config) {
     return false;
   }
-  return config.modelId === AUTO_MODEL_ID;
+
+  // If config is already an object, use it directly
+  let modelConfig: ProviderItemConfig | null = null;
+  if (typeof config === 'string') {
+    modelConfig = safeParseJSON(config);
+  } else {
+    modelConfig = config;
+  }
+
+  if (!modelConfig) {
+    return false;
+  }
+
+  // Check if config has modelId property and if it equals AUTO_MODEL_ID
+  // This works for all config types in the union (LLMModelConfig, EmbeddingModelConfig, etc.)
+  return 'modelId' in modelConfig && modelConfig.modelId === AUTO_MODEL_ID;
 };

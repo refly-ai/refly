@@ -179,6 +179,11 @@ const translations = {
     sharing: 'Sharing...',
     view: 'View',
     joinDiscord: 'Join Discord Community',
+    clipboard: {
+      permissionDenied:
+        'Clipboard read permission denied. Please allow clipboard access in your browser settings.',
+      readFailed: 'Failed to read clipboard. Please try again.',
+    },
   },
   mode: {
     ask: 'Ask',
@@ -3944,10 +3949,10 @@ const translations = {
       'Generated {{count}} results for you, used {{executionCost}} credits',
     emptyLogs: 'No run logs, click to create app, start running',
     coverImage: 'Cover Image',
-    coverImageHint: 'Support JPG, PNG, WebP formats, file size within 5MB',
+    coverImageHint: 'Support JPG, PNG, WebP formats, file size within 30MB',
     uploadCover: 'Upload Cover',
     invalidImageType: 'Invalid image type, please upload JPG, PNG, or WebP format',
-    imageTooLarge: 'Image size exceeds 5MB, please upload a smaller image',
+    imageTooLarge: 'Image size exceeds 30MB, please upload a smaller image',
     coverImageRequired: 'Cover image is required',
     enableRemix: 'Enable Remix',
     remixHint: 'Allow others to remix and modify this workflow app',

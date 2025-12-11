@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DriveFile } from '@refly/openapi-schema';
 
@@ -276,6 +276,24 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   const toolsetDefinition = data?.data?.find((t) => t.key === toolsetKey);
   const toolsetName = toolsetDefinition?.labelDict?.[currentLanguage] ?? toolsetKey;
 
+  useEffect(() => {
+    let timeout: NodeJS.Timeout | null = null;
+
+    if (toolCallStatus === ToolCallStatus.EXECUTING) {
+      setIsCollapsed(false);
+    } else {
+      timeout = setTimeout(() => {
+        setIsCollapsed(true);
+      }, 1000);
+    }
+
+    return () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
+  }, [toolCallStatus]);
+
   return (
     <>
       <div className="rounded-lg overflow-hidden bg-refly-bg-control-z0 text-refly-text-0">
@@ -349,8 +367,7 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
             <Button
               type="text"
               size="small"
-              className="!w-4 !h-4 !rounded-[4px]"
-              icon={isCollapsed ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
+              icon={isCollapsed ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
               onClick={() => setIsCollapsed(!isCollapsed)}
             />
           </div>

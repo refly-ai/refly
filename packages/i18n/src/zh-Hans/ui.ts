@@ -438,6 +438,10 @@ const translations = {
     sharing: '分享中...',
     view: '查看',
     joinDiscord: '加入 Discord 社区',
+    clipboard: {
+      permissionDenied: '剪贴板读取权限被拒绝。请允许剪贴板访问您的浏览器设置。',
+      readFailed: '读取剪贴板失败。请重试。',
+    },
   },
   mode: {
     ask: '提问',
@@ -3688,10 +3692,10 @@ const translations = {
     productsGeneratedWithCost: '已为你生成 {{count}} 个结果，使用 {{executionCost}} 积分',
     emptyLogs: '暂无运行日志，点击创建应用，开始运行',
     coverImage: '封面图片',
-    coverImageHint: '支持 JPG、PNG、WebP 格式，文件大小 5MB 以内',
+    coverImageHint: '支持 JPG、PNG、WebP 格式，文件大小 30MB 以内',
     uploadCover: '上传封面',
     invalidImageType: '图片格式不正确，请上传 JPG、PNG 或 WebP 格式的图片',
-    imageTooLarge: '图片大小超过 5MB，请上传更小的图片',
+    imageTooLarge: '图片大小超过 30MB，请上传更小的图片',
     coverImageRequired: '封面图片为必填项',
     enableRemix: '启用 Remix',
     remixHint: '允许其他人Remix和修改此工作流应用',

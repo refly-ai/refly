@@ -6202,6 +6202,7 @@ components:
       description: Model usage scene
       enum:
         - chat
+        - copilot
         - agent
         - queryAnalysis
         - titleGeneration
@@ -6214,6 +6215,9 @@ components:
       properties:
         chat:
           description: Default chat model to use
+          $ref: '#/components/schemas/ProviderItem'
+        copilot:
+          description: Default copilot model to use
           $ref: '#/components/schemas/ProviderItem'
         agent:
           description: Default agent model to use

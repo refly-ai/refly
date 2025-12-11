@@ -18,6 +18,7 @@
     "@langchain/deepseek": "^0.0.1",
     "@langchain/ollama": "^0.2.0",
     "@langchain/openai": "0.6.7",
+    "@langchain/google-vertexai": "^0.2.16",
     "@paralleldrive/cuid2": "^2.2.2",
     "@refly/errors": "workspace:*",
     "@refly/observability": "workspace:*",

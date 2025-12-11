@@ -8,11 +8,41 @@ import { AzureChatOpenAI, AzureOpenAIInput, OpenAIBaseInput } from '@langchain/o
 import { ChatBedrockConverse } from '@langchain/aws';
 import { wrapChatModelWithMonitoring } from '../monitoring/langfuse-wrapper';
 import { ProviderMisconfigurationError } from '@refly/errors';
+import { ChatVertexAI } from '@langchain/google-vertexai';
 
 interface BedrockApiKeyConfig {
   accessKeyId: string;
   secretAccessKey: string;
 }
+
+interface BedrockExtraParams {
+  region?: string;
+  regions?: string[];
+}
+
+/**
+ * Select region for Bedrock provider with the following priority:
+ * 1. If `region` is specified, use it directly (backward compatible)
+ * 2. Otherwise, randomly select from `regions` array (load balancing)
+ * 3. If neither is specified, throw an error
+ */
+const selectBedrockRegion = (extraParams: BedrockExtraParams): string => {
+  // Priority 1: Use fixed region if specified
+  if (extraParams.region) {
+    return extraParams.region;
+  }
+
+  // Priority 2: Randomly select from regions array
+  if (extraParams.regions && extraParams.regions.length > 0) {
+    const randomIndex = Math.floor(Math.random() * extraParams.regions.length);
+    return extraParams.regions[randomIndex];
+  }
+
+  // Neither region nor regions is specified
+  throw new ProviderMisconfigurationError(
+    'Region is required for Bedrock provider. Specify either "region" (single) or "regions" (array) in extraParams.',
+  );
+};
 
 export const getChatModel = (
   provider: BaseProvider,
@@ -71,19 +101,19 @@ export const getChatModel = (
         ...commonParams,
       });
       break;
-    case 'bedrock':
-      if (!extraParams.region) {
-        throw new ProviderMisconfigurationError('Region is required for Bedrock provider');
-      }
+    case 'bedrock': {
+      const selectedRegion = selectBedrockRegion(extraParams as BedrockExtraParams);
+      // Exclude region/regions from commonParams to prevent overriding selectedRegion
+      const { region: _region, regions: _regions, ...bedrockCommonParams } = commonParams;
 
       try {
         const apiKeyConfig = JSON.parse(provider.apiKey) as BedrockApiKeyConfig;
         model = new ChatBedrockConverse({
           model: config.modelId,
-          region: extraParams.region,
+          region: selectedRegion,
           credentials: apiKeyConfig,
           maxTokens: config?.maxOutput,
-          ...commonParams,
+          ...bedrockCommonParams,
           ...(config?.capabilities?.reasoning
             ? {
                 additionalModelRequestFields: {
@@ -100,6 +130,17 @@ export const getChatModel = (
         throw new ProviderMisconfigurationError(`Invalid bedrock api key config: ${error}`);
       }
       break;
+    }
+    case 'vertex': {
+      model = new ChatVertexAI({
+        model: config.modelId,
+        location: 'global',
+        maxOutputTokens: config?.maxOutput,
+        ...commonParams,
+        ...(config?.capabilities?.reasoning ? { reasoning: { effort: 'medium' } } : {}),
+      });
+      break;
+    }
     default:
       throw new Error(`Unsupported provider: ${provider?.providerKey}`);
   }

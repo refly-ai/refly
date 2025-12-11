@@ -69,11 +69,9 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
         const imageFiles: File[] = [];
 
         for (const item of Array.from(items)) {
-          if (item.type.startsWith('image/')) {
-            const file = item.getAsFile();
-            if (file) {
-              imageFiles.push(file);
-            }
+          const file = item.getAsFile();
+          if (file) {
+            imageFiles.push(file);
           }
         }
 

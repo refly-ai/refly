@@ -37,7 +37,7 @@ export const useDragDropPaste = ({ canvasId, readonly }: UseDragDropPasteOptions
       if (readonly) return;
 
       const files = Array.from(event.dataTransfer.files);
-      const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+      const imageFiles = files;
 
       if (imageFiles.length > 0) {
         try {
@@ -64,11 +64,9 @@ export const useDragDropPaste = ({ canvasId, readonly }: UseDragDropPasteOptions
 
       const imageFiles: File[] = [];
       for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
-          const file = item.getAsFile();
-          if (file) {
-            imageFiles.push(file);
-          }
+        const file = item.getAsFile();
+        if (file) {
+          imageFiles.push(file);
         }
       }
 

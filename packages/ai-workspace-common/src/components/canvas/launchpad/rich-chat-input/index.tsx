@@ -410,15 +410,45 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     }, [placeholder, t]);
 
     // Create all extensions array
+    // Configure StarterKit to disable all rich text formatting (bold, italic, lists, etc.)
+    // Only keep basic structure: Document, Paragraph, Text, HardBreak
+    // This ensures only plain text and mentions are supported
+    const minimalStarterKit = useMemo(
+      () =>
+        StarterKit.configure({
+          bold: false,
+          italic: false,
+          strike: false,
+          code: false,
+          heading: false,
+          bulletList: false,
+          orderedList: false,
+          listItem: false,
+          blockquote: false,
+          codeBlock: false,
+          horizontalRule: false,
+          dropcursor: false,
+          gapcursor: false,
+          // History is enabled by default, no need to configure it
+        }),
+      [],
+    );
+
     const extensions = useMemo(
       () => [
+        minimalStarterKit,
         AtomicInlineKeymap,
-        StarterKit,
         mentionExtension,
         placeholderExtension,
         PasteCleanupExtension,
       ],
-      [mentionExtension, placeholderExtension, PasteCleanupExtension, AtomicInlineKeymap],
+      [
+        minimalStarterKit,
+        mentionExtension,
+        placeholderExtension,
+        PasteCleanupExtension,
+        AtomicInlineKeymap,
+      ],
     );
 
     const editor = useEditor(
@@ -789,11 +819,9 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         const imageFiles: File[] = [];
 
         for (const item of Array.from(items)) {
-          if (item.type.startsWith('image/')) {
-            const file = item.getAsFile();
-            if (file) {
-              imageFiles.push(file);
-            }
+          const file = item.getAsFile();
+          if (file) {
+            imageFiles.push(file);
           }
         }
 

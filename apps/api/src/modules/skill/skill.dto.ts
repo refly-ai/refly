@@ -25,6 +25,7 @@ export interface InvokeSkillJobData extends InvokeSkillRequest {
   providerItem?: ProviderItem;
   modelConfigMap?: {
     chat?: LLMModelConfig;
+    copilot?: LLMModelConfig;
     agent?: LLMModelConfig;
     queryAnalysis?: LLMModelConfig;
     titleGeneration?: LLMModelConfig;

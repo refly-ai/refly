@@ -17,6 +17,7 @@ import { AppModule } from './modules/app.module';
 import { ConfigService } from '@nestjs/config';
 
 import { setTraceID } from './utils/middleware/set-trace-id';
+import { HttpRouteInterceptor } from './utils/interceptors/http-route.interceptor';
 import { GlobalExceptionFilter } from './utils/filters/global-exception.filter';
 import { CustomWsAdapter } from './utils/adapters/ws-adapter';
 import { setupStatsig } from '@refly/telemetry-node';
@@ -76,6 +77,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.useWebSocketAdapter(new CustomWsAdapter(app, configService.get<number>('wsPort')));
+  app.useGlobalInterceptors(new HttpRouteInterceptor());
   app.useGlobalFilters(new GlobalExceptionFilter(configService));
 
   try {

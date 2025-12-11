@@ -342,8 +342,8 @@ export const CreateWorkflowAppModal = ({
       return false;
     }
 
-    const isLt5M = file.size / 1024 / 1024 < 5;
-    if (!isLt5M) {
+    const isLt30M = file.size / 1024 / 1024 < 30;
+    if (!isLt30M) {
       message.error(t('workflowApp.imageTooLarge'));
       return false;
     }
