@@ -1,16 +1,24 @@
 import { ContextBlock } from '../scheduler/utils/context';
 
-export const buildUserPrompt = (query: string, context: ContextBlock, images?: string[]) => {
+export interface BuildUserPromptOptions {
+  hasVisionCapability?: boolean;
+}
+
+export const buildUserPrompt = (
+  query: string,
+  context: ContextBlock,
+  options?: BuildUserPromptOptions,
+) => {
   if (!context || (!context.files?.length && !context.results?.length)) {
     return query;
   }
 
   // Check if context has image files but model doesn't have vision capability
   const hasImageFiles = context.files?.some((f) => f.type?.startsWith('image/'));
-  const hasVisionCapability = images && images.length > 0;
+  const hasVision = options?.hasVisionCapability ?? false;
 
   let visionWarning = '';
-  if (hasImageFiles && !hasVisionCapability) {
+  if (hasImageFiles && !hasVision) {
     visionWarning =
       '\n\n**Note**: The context contains image files, but the current model does NOT have vision capability. You cannot see the image content. To process images, use `execute_code` with Python image libraries (e.g., PIL, opencv).\n';
   }

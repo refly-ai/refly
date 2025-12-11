@@ -79,17 +79,20 @@ export class Agent extends BaseSkill {
           })
         : buildNodeAgentSystemPrompt();
 
-    const userPrompt = buildUserPrompt(optimizedQuery, context, images);
-
     // Use copilot scene for copilot_agent mode, otherwise use chat scene
     const modelConfigScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
+    const modelInfo = config?.configurable?.modelConfigMap?.[modelConfigScene];
+    const hasVisionCapability = modelInfo?.capabilities?.vision ?? false;
+
+    const userPrompt = buildUserPrompt(optimizedQuery, context, { hasVisionCapability });
+
     const requestMessages = buildFinalRequestMessages({
       systemPrompt,
       userPrompt,
       chatHistory: usedChatHistory,
       messages,
       images,
-      modelInfo: config?.configurable?.modelConfigMap?.[modelConfigScene],
+      modelInfo,
     });
 
     return { requestMessages, sources };
