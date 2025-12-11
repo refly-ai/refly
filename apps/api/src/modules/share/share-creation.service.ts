@@ -1169,11 +1169,13 @@ export class ShareCreationService {
     canvasData: SharedCanvasData,
     resultNodeIds: string[],
   ): {
+    canvasId?: string;
+    title?: string;
+    owner?: any;
+    minimapUrl?: string;
     nodes: any[];
     files: any[];
-    title?: string;
-    canvasId?: string;
-    owner?: any;
+    edges: []; // 固定返回空数组以保护 workflow 结构
     variables?: any[];
     resources?: any[];
   } {
@@ -1197,13 +1199,15 @@ export class ShareCreationService {
     // Removing the filter to avoid missing files when only product nodes are selected
     const sanitizedFiles = canvasData.files || [];
 
-    // 4. Return additional canvasData fields for proper display
+    // 4. Return canvasData structure directly (no preview wrapper)
     return {
+      canvasId: canvasData.canvasId,
+      title: canvasData.title,
+      owner: canvasData.owner,
+      minimapUrl: canvasData.minimapUrl,
       nodes: sanitizedNodes,
       files: sanitizedFiles, // All files preserved with all fields
-      title: canvasData.title,
-      canvasId: canvasData.canvasId,
-      owner: canvasData.owner,
+      edges: [], // Always empty to protect workflow structure
       variables: canvasData.variables,
       resources: canvasData.resources,
     };
@@ -1285,14 +1289,17 @@ export class ShareCreationService {
     existingShareRecord: ShareRecord | null,
     logPrefix: string,
   ): Promise<ShareRecord> {
-    // Sanitize canvas data for public exposure
-    const preview = this.sanitizeCanvasDataForPublic(canvasData, workflowApp.resultNodeIds || []);
+    // 1. Sanitize canvas data for public exposure
+    const sanitizedCanvasData = this.sanitizeCanvasDataForPublic(
+      canvasData,
+      workflowApp.resultNodeIds || [],
+    );
 
     // minimapUrl is already a published public URL from processCanvasForShare
     // Just use it directly, no need to publish again
     const publishedMinimapUrl = canvasData.minimapUrl;
 
-    // Create public workflow app data - protect workflow methodology while keeping user data
+    // 2. Create public workflow app data (脱敏数据) - 移除 preview，统一使用 canvasData
     const publicData = {
       appId: workflowApp.appId,
       title: title || canvasData.title,
@@ -1309,32 +1316,36 @@ export class ShareCreationService {
       createdAt: workflowApp.createdAt, // Keep original timestamps
       updatedAt: workflowApp.updatedAt,
 
-      // NEW: Top-level canvas identifiers for frontend compatibility
+      // Top-level canvas identifiers for frontend compatibility
       canvasId: workflowApp.canvasId,
       minimapUrl: publishedMinimapUrl,
 
-      // NEW: Content-protected preview data (replaces canvasData)
-      preview: preview,
-
-      // LEGACY: Keep canvasData temporarily for backward compatibility
-      // TODO: Remove this field after frontend migration is complete
+      // Unified canvasData structure (sanitized data, no preview field)
       canvasData: {
-        // Use values from sanitized preview first, fallback to original for backward compatibility
-        canvasId: preview.canvasId || workflowApp.canvasId,
-        title: preview.title || canvasData.title,
-        owner: preview.owner || canvasData.owner,
+        canvasId: sanitizedCanvasData.canvasId || workflowApp.canvasId,
+        title: sanitizedCanvasData.title || canvasData.title,
+        owner: sanitizedCanvasData.owner || canvasData.owner,
         minimapUrl: publishedMinimapUrl,
-        nodes: preview.nodes, // Nodes with protected content
-        files: preview.files, // All files preserved with all fields
-        // Keep edges empty to protect workflow structure
-        edges: [],
-        resources: preview.resources || [],
+        nodes: sanitizedCanvasData.nodes, // Sanitized nodes (only result nodes)
+        files: sanitizedCanvasData.files, // All files preserved with all fields
+        edges: [], // Always empty to protect workflow structure
         variables:
-          preview.variables || this.sanitizeVariables(safeParseJSON(workflowApp.variables || '[]')),
+          sanitizedCanvasData.variables ||
+          this.sanitizeVariables(safeParseJSON(workflowApp.variables || '[]')),
+        resources: sanitizedCanvasData.resources || [],
       },
     };
 
-    // Upload public workflow app data to Minio
+    // 3. Create execution data (完整数据，用于执行)
+    const executionData = {
+      nodes: canvasData.nodes, // Complete nodes (including all agent nodes)
+      edges: canvasData.edges, // Complete edges (workflow connections)
+      variables: canvasData.variables || [],
+      title: canvasData.title,
+      canvasId: canvasData.canvasId,
+    };
+
+    // 4. Upload public data to public storage
     const { storageKey } = await this.miscService.uploadBuffer(user, {
       fpath: 'workflow-app.json',
       buf: Buffer.from(JSON.stringify(publicData)),
@@ -1344,8 +1355,28 @@ export class ShareCreationService {
       storageKey: `share/${shareId}.json`,
     });
 
-    // Create or update share record
+    // 5. Upload execution data to private storage
+    const { storageKey: executionStorageKey } = await this.miscService.uploadBuffer(user, {
+      fpath: 'workflow-app-execution.json',
+      buf: Buffer.from(JSON.stringify(executionData)),
+      entityId: workflowApp.appId,
+      entityType: 'workflowApp',
+      visibility: 'private',
+      storageKey: `share/${shareId}-execution.json`,
+    });
+
+    // 6. Prepare extraData with executionStorageKey
+    const extraData: ShareExtraData = {
+      executionStorageKey,
+    };
+
+    // 7. Create or update share record
     if (existingShareRecord) {
+      // Merge existing extraData (e.g., vectorStorageKey if present)
+      const existingExtraData = existingShareRecord.extraData
+        ? (safeParseJSON(existingShareRecord.extraData) as ShareExtraData)
+        : {};
+
       const shareRecord = await this.prisma.shareRecord.update({
         where: { pk: existingShareRecord.pk },
         data: {
@@ -1353,6 +1384,10 @@ export class ShareCreationService {
           storageKey,
           parentShareId,
           allowDuplication,
+          extraData: JSON.stringify({
+            ...existingExtraData,
+            executionStorageKey, // Update executionStorageKey
+          }),
           updatedAt: new Date(),
         },
       });
@@ -1371,6 +1406,7 @@ export class ShareCreationService {
           storageKey,
           parentShareId,
           allowDuplication,
+          extraData: JSON.stringify(extraData), // Store executionStorageKey
         },
       });
       this.logger.log(

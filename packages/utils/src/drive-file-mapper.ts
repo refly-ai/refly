@@ -228,27 +228,17 @@ export function getWorkflowAppCanvasData(
       canvasId: '',
       nodes: [],
       files: [],
-      edges: [], // Required for ToolsDependencyChecker
+      edges: [],
     };
   }
 
-  // Priority 1: New preview structure
-  if (workflowApp.preview) {
-    return {
-      canvasId: workflowApp.canvasId || '',
-      nodes: (workflowApp.preview.nodes || []) as CanvasNode[],
-      files: (workflowApp.preview.files || []) as DriveFile[], // Cast to DriveFile[] for compatibility
-      edges: (workflowApp.canvasData?.edges || []) as CanvasEdge[], // Use edges from legacy canvasData if available
-    };
-  }
-
-  // Priority 2: Legacy canvasData (for backward compatibility)
+  // ✅ Unified: Use canvasData (no preview priority logic)
   if (workflowApp.canvasData) {
     return {
       canvasId: workflowApp.canvasData.canvasId || workflowApp.canvasId || '',
       nodes: (workflowApp.canvasData.nodes || []) as CanvasNode[],
       files: (workflowApp.canvasData.files || []) as DriveFile[], // Cast to DriveFile[] for compatibility
-      edges: (workflowApp.canvasData.edges || []) as CanvasEdge[], // Required for ToolsDependencyChecker
+      edges: (workflowApp.canvasData.edges || []) as CanvasEdge[], // Always empty array for public data
     };
   }
 
@@ -257,6 +247,6 @@ export function getWorkflowAppCanvasData(
     canvasId: workflowApp.canvasId || '',
     nodes: [],
     files: [],
-    edges: [], // Required for ToolsDependencyChecker
+    edges: [],
   };
 }
