@@ -155,7 +155,7 @@ async function _convertCallToolResult(
     return [mcpTextAndImageContent[0].text, artifacts];
   }
 
-  return [mcpTextAndImageContent, artifacts];
+  return [mcpTextAndImageContent as any, artifacts];
 }
 
 /**

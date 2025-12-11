@@ -150,7 +150,7 @@ export class SkillInvokerService {
           })
         : [];
 
-    return [new HumanMessage({ content: messageContent }), ...aiMessages];
+    return [new HumanMessage({ content: messageContent } as any), ...aiMessages];
   }
 
   private async buildInvokeConfig(
@@ -894,6 +894,19 @@ export class SkillInvokerService {
           case 'on_chat_model_end':
             if (runMeta && chunk) {
               this.logger.info(`ls_model_name: ${String(runMeta.ls_model_name)}`);
+
+              // DEBUG: Log the raw chunk to see AWS Bedrock response structure
+              console.log('[Prompt Caching Debug - Step 5.1] Raw chunk from LLM:');
+              console.log('  usage_metadata:', chunk.usage_metadata);
+
+              // Type assertion for response_metadata
+              const responseMetadata = chunk.response_metadata as any;
+              console.log('  response_metadata.metadata.usage:', responseMetadata?.metadata?.usage);
+              console.log(
+                '  response_metadata.metadata.metrics:',
+                responseMetadata?.metadata?.metrics,
+              );
+
               const providerItem = await this.providerService.findLLMProviderItemByModelID(
                 user,
                 String(runMeta.ls_model_name),
@@ -901,18 +914,53 @@ export class SkillInvokerService {
               if (!providerItem) {
                 this.logger.error(`model not found: ${String(runMeta.ls_model_name)}`);
               }
+
+              // Type assertions for usage metadata
+              const usageMetadata = chunk.usage_metadata as any;
+
+              // Extract cache-related tokens from different possible sources
+              // AWS Bedrock uses multiple possible field names:
+              //   - cacheReadInputTokenCount (singular, without 's')
+              //   - cacheReadInputTokens (plural, with 's')
+              //   - cacheReadInputTokensCount (legacy)
+              // Anthropic (via LangChain) uses: input_token_details.cache_read
+              const bedrockUsage = responseMetadata?.metadata?.usage;
+
+              const cacheRead =
+                usageMetadata?.input_token_details?.cache_read ??
+                bedrockUsage?.cacheReadInputTokenCount ??
+                bedrockUsage?.cacheReadInputTokens ??
+                bedrockUsage?.cacheReadInputTokensCount ??
+                0;
+
+              const cacheWrite =
+                usageMetadata?.input_token_details?.cache_creation ??
+                bedrockUsage?.cacheWriteInputTokenCount ??
+                bedrockUsage?.cacheWriteInputTokens ??
+                bedrockUsage?.cacheWriteInputTokensCount ??
+                0;
+
               const usage: TokenUsageItem = {
                 tier: providerItem?.tier,
                 modelProvider: providerItem?.provider?.name,
                 modelName: String(runMeta.ls_model_name),
                 modelLabel: providerItem?.name,
                 providerItemId: providerItem?.itemId,
-                inputTokens:
-                  (chunk.usage_metadata?.input_tokens ?? 0) -
-                  (chunk.usage_metadata?.input_token_details?.cache_read ?? 0),
-                outputTokens: chunk.usage_metadata?.output_tokens ?? 0,
-                cacheReadTokens: chunk.usage_metadata?.input_token_details?.cache_read ?? 0,
+                inputTokens: (usageMetadata?.input_tokens ?? 0) - cacheRead,
+                outputTokens: usageMetadata?.output_tokens ?? 0,
+                cacheReadTokens: cacheRead,
               };
+
+              // DEBUG: Log cache details (using console.log to ensure visibility)
+              console.log('[Prompt Caching Debug - Step 5] Token usage from LLM:', {
+                totalInputTokens: usageMetadata?.input_tokens ?? 0,
+                cacheRead,
+                cacheWrite,
+                calculatedInputTokens: usage.inputTokens,
+                outputTokens: usage.outputTokens,
+                fullUsageMetadata: usageMetadata,
+              });
+
               resultAggregator.addUsageItem(runMeta, usage);
 
               // Get the current AI message ID before finalizing
@@ -921,8 +969,8 @@ export class SkillInvokerService {
               // Record usage metadata for message persistence
               if (messageAggregator.hasCurrentAIMessage()) {
                 messageAggregator.setAIMessageUsage(
-                  chunk.usage_metadata?.input_tokens ?? 0,
-                  chunk.usage_metadata?.output_tokens ?? 0,
+                  usageMetadata?.input_tokens ?? 0,
+                  usageMetadata?.output_tokens ?? 0,
                 );
 
                 // Finalize the current AI message

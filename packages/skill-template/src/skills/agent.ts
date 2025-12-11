@@ -83,13 +83,23 @@ export class Agent extends BaseSkill {
 
     // Use copilot scene for copilot_agent mode, otherwise use chat scene
     const modelConfigScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
+    const modelInfo = config?.configurable?.modelConfigMap?.[modelConfigScene];
+
+    // DEBUG: Log model info before building messages
+    console.log('[Prompt Caching Debug - Step 2] modelInfo from config:', {
+      scene: modelConfigScene,
+      modelId: modelInfo?.modelId,
+      contextCaching: modelInfo?.capabilities?.contextCaching,
+      fullCapabilities: modelInfo?.capabilities,
+    });
+
     const requestMessages = buildFinalRequestMessages({
       systemPrompt,
       userPrompt,
       chatHistory: usedChatHistory,
       messages,
       images,
-      modelInfo: config?.configurable?.modelConfigMap?.[modelConfigScene],
+      modelInfo,
     });
 
     return { requestMessages, sources };
