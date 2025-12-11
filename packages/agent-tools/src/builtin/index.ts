@@ -612,10 +612,11 @@ export class BuiltinReadFile extends AgentBaseTool<BuiltinToolParams> {
 
   description = `Read content from a file.
 
-Supported types and output:
-- Text files (txt, md, json, csv, js, py, xml, yaml...): Raw content
-- PDF / Word (.docx) / EPUB: Extracted text (max 3000 words, truncated if exceeded)
-- Images / Audio / Video: NOT supported, returns error
+Supported types:
+- Text files (txt, md, json, csv, js, py, xml, yaml...): Returns raw content
+- PDF / Word (.docx) / EPUB: Returns extracted text (max 3000 words, truncated if exceeded)
+
+NOT supported: Images, Audio, Video (returns error)
 
 Latency: <2s`;
 
