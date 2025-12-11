@@ -1,7 +1,9 @@
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { BatchSpanProcessor, type SpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
 import { LangfuseSpanProcessor } from '@langfuse/otel';
@@ -27,22 +29,25 @@ interface LangfuseConfig {
 }
 
 interface OtlpConfig {
-  endpoint?: string;
+  tracesEndpoint?: string;
+  metricsEndpoint?: string;
 }
 
 /**
- * Initialize OpenTelemetry tracing
+ * Initialize OpenTelemetry tracing and metrics
  *
- * Supports two independent backends:
- * - Tempo/Grafana (OTLP): receives all spans for full observability
- * - Langfuse: receives only LLM/LangChain spans (filtered via shouldExportSpan)
+ * Supports multiple backends:
+ * - OTLP Traces: Tempo/Grafana for distributed tracing
+ * - OTLP Metrics: Prometheus for application metrics
+ * - Langfuse: LLM/LangChain spans only (filtered)
  *
- * Either or both can be enabled independently via environment variables.
- * If neither is configured, this function is a no-op.
+ * Each can be enabled independently via environment variables.
+ * If none is configured, this function is a no-op.
  */
 export function initTracer(): void {
   const otlp: OtlpConfig = {
-    endpoint: process.env.OTLP_TRACES_ENDPOINT,
+    tracesEndpoint: process.env.OTLP_TRACES_ENDPOINT,
+    metricsEndpoint: process.env.OTLP_METRICS_ENDPOINT,
   };
 
   const langfuse: LangfuseConfig = {
@@ -51,18 +56,18 @@ export function initTracer(): void {
     baseUrl: process.env.LANGFUSE_BASE_URL,
   };
 
-  if (!otlp.endpoint && !langfuse.baseUrl) {
-    console.log('[Tracer] No tracing backend configured, skipping initialization');
+  if (!otlp.tracesEndpoint && !otlp.metricsEndpoint && !langfuse.baseUrl) {
+    console.log('[Tracer] No observability backend configured, skipping initialization');
     return;
   }
 
   const spanProcessors: SpanProcessor[] = [];
 
-  // OTLP exporter for Tempo/Grafana - receives all spans
-  if (otlp.endpoint) {
-    const otlpExporter = new OTLPTraceExporter({ url: `${otlp.endpoint}/v1/traces` });
-    spanProcessors.push(new BatchSpanProcessor(otlpExporter));
-    console.log('[Tracer] OTLP exporter configured:', { endpoint: otlp.endpoint });
+  // OTLP trace exporter for Tempo/Grafana - receives all spans
+  if (otlp.tracesEndpoint) {
+    const traceExporter = new OTLPTraceExporter({ url: `${otlp.tracesEndpoint}/v1/traces` });
+    spanProcessors.push(new BatchSpanProcessor(traceExporter));
+    console.log('[Tracer] OTLP trace exporter configured:', { endpoint: otlp.tracesEndpoint });
   }
 
   // Langfuse processor - receives filtered LLM spans only
@@ -71,8 +76,20 @@ export function initTracer(): void {
     if (processor) spanProcessors.push(processor);
   }
 
+  // OTLP metric exporter for Prometheus - receives application metrics
+  let metricReader: PeriodicExportingMetricReader | undefined;
+  if (otlp.metricsEndpoint) {
+    const metricExporter = new OTLPMetricExporter({ url: `${otlp.metricsEndpoint}/v1/metrics` });
+    metricReader = new PeriodicExportingMetricReader({
+      exporter: metricExporter,
+      exportIntervalMillis: 60000, // Export every 60 seconds
+    });
+    console.log('[Tracer] OTLP metric exporter configured:', { endpoint: otlp.metricsEndpoint });
+  }
+
   sdk = new NodeSDK({
     spanProcessors: spanProcessors.length > 0 ? spanProcessors : undefined,
+    metricReader,
     instrumentations: [getNodeAutoInstrumentations()],
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: 'reflyd',
