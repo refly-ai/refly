@@ -179,6 +179,11 @@ const translations = {
     sharing: 'Sharing...',
     view: 'View',
     joinDiscord: 'Join Discord Community',
+    clipboard: {
+      permissionDenied:
+        'Clipboard read permission denied. Please allow clipboard access in your browser settings.',
+      readFailed: 'Failed to read clipboard. Please try again.',
+    },
   },
   mode: {
     ask: 'Ask',
