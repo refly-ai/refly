@@ -73,8 +73,8 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
 - **Use when**: Quick content overview, check file structure (e.g., CSV first rows)
 - **NOT for**:
   - Content already in context (base64 images, inline text)
-  - Image content reading (images are already provided to you directly)
   - Complex data processing (use \`execute_code\` instead)
+- **Note**: This tool does NOT support images. If the model has vision capability, images are already in context; otherwise use \`execute_code\` with Python libraries to process images
 
 #### \`execute_code\`
 - **Latency**: >5s
