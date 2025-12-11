@@ -34,12 +34,14 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
     appendSessionResultId,
     setCreatedCopilotSessionId,
     sessionResultIds,
+    addHistoryTemplateSession,
   } = useCopilotStoreShallow((state) => ({
     currentSessionId: state.currentSessionId[canvasId],
     setCurrentSessionId: state.setCurrentSessionId,
     appendSessionResultId: state.appendSessionResultId,
     setCreatedCopilotSessionId: state.setCreatedCopilotSessionId,
     sessionResultIds: state.sessionResultIds[state.currentSessionId?.[canvasId]],
+    addHistoryTemplateSession: state.addHistoryTemplateSession,
   }));
 
   const { resultMap } = useActionResultStoreShallow((state) => ({
@@ -101,6 +103,12 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
     setCurrentSessionId(canvasId, sessionId);
     appendSessionResultId(sessionId, resultId);
     setCreatedCopilotSessionId(sessionId);
+    addHistoryTemplateSession(canvasId, {
+      sessionId,
+      title: query,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
   }, [
     isExecuting,
     currentSessionId,
@@ -111,6 +119,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
     setCurrentSessionId,
     appendSessionResultId,
     setCreatedCopilotSessionId,
+    addHistoryTemplateSession,
   ]);
 
   const handleAbort = useCallback(() => {

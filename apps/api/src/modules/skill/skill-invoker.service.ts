@@ -302,10 +302,10 @@ export class SkillInvokerService {
       (data.providerItem?.config as LLMModelConfig)?.capabilities?.vision ?? false;
     const providerWithKey = data.provider as { key?: string } | undefined;
     const providerKey = providerWithKey?.key ?? data.provider?.providerKey ?? '';
-    const forceBase64ForImages = providerKey === 'bedrock';
+    const forceBase64ForImages = providerKey === 'bedrock' || providerKey === 'vertex';
 
     if (imageFiles.length > 0 && hasVisionCapability) {
-      // Bedrock must receive embedded base64 payloads regardless of URL configuration.
+      // Bedrock and Vertex providers must receive embedded base64 payloads regardless of URL configuration.
       const modeOverride = forceBase64ForImages ? 'base64' : undefined;
       input.images = await this.driveService.generateDriveFileUrls(user, imageFiles, modeOverride);
     } else {
