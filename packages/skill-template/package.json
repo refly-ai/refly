@@ -14,7 +14,7 @@
   "dependencies": {
     "@dmitryrechkin/json-schema-to-zod": "^1.0.1",
     "@langchain/community": "0.3.50",
-    "@langchain/core": "0.3.68",
+    "@langchain/core": "1.1.4",
     "@langchain/deepseek": "^0.0.1",
     "@langchain/langgraph": "0.2.45",
     "@langchain/ollama": "^0.2.0",

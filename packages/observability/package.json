@@ -18,6 +18,6 @@
     "langfuse-langchain": "^3.30.0"
   },
   "peerDependencies": {
-    "@langchain/core": "0.3.68"
+    "@langchain/core": "1.1.4"
   }
 }

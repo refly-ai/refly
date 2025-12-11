@@ -14,7 +14,7 @@
   "dependencies": {
     "@apify/consts": "^2.47.0",
     "@e2b/code-interpreter": "^2.1.0",
-    "@langchain/core": "0.3.68",
+    "@langchain/core": "1.1.4",
     "@notionhq/client": "^5.1.0",
     "@refly/common-types": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
