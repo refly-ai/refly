@@ -561,18 +561,14 @@ export class WorkflowAppService {
 
       // Replace the resource variable with the new entity id
       if (metadata.query) {
-        metadata.query = replaceResourceMentionsInQuery(
-          metadata.query,
-          finalVariables,
-          entityIdMap,
-        );
+        metadata.query = replaceResourceMentionsInQuery(metadata.query, variables, entityIdMap);
       }
 
       if (metadata.structuredData?.query) {
         (node.data.metadata as ResponseNodeMeta).structuredData.query =
           replaceResourceMentionsInQuery(
             metadata.structuredData.query as string,
-            finalVariables,
+            variables,
             entityIdMap,
           );
       }
