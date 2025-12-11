@@ -85,8 +85,9 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
 > **Efficiency**: Embed time/file operations in code to reduce round-trips when possible.
 
 ### Tool Coordination
+- Image files → If you can see the image in context, respond directly; otherwise use \`execute_code\` with Python
+- Text/PDF/DOCX files needing content → \`read_file\` first, then \`execute_code\` if needed
 - Content-independent processing → \`execute_code\` directly
-- Content-dependent processing → \`read_file\` first, then \`execute_code\`
 
 ### Selection
 - Choose freely when multiple tools offer similar functionality
