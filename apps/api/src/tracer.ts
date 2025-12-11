@@ -29,8 +29,9 @@ interface LangfuseConfig {
 }
 
 interface OtlpConfig {
-  tracesEndpoint?: string;
-  metricsEndpoint?: string;
+  tracesUrl?: string;
+  metricsUrl?: string;
+  metricsIntervalMs?: number;
 }
 
 /**
@@ -46,8 +47,11 @@ interface OtlpConfig {
  */
 export function initTracer(): void {
   const otlp: OtlpConfig = {
-    tracesEndpoint: process.env.OTLP_TRACES_ENDPOINT,
-    metricsEndpoint: process.env.OTLP_METRICS_ENDPOINT,
+    tracesUrl: process.env.OTLP_TRACES_URL,
+    metricsUrl: process.env.OTLP_METRICS_URL,
+    metricsIntervalMs: process.env.OTLP_METRICS_INTERVAL_MS
+      ? Number.parseInt(process.env.OTLP_METRICS_INTERVAL_MS, 10)
+      : 60000,
   };
 
   const langfuse: LangfuseConfig = {
@@ -56,7 +60,7 @@ export function initTracer(): void {
     baseUrl: process.env.LANGFUSE_BASE_URL,
   };
 
-  if (!otlp.tracesEndpoint && !otlp.metricsEndpoint && !langfuse.baseUrl) {
+  if (!otlp.tracesUrl && !otlp.metricsUrl && !langfuse.baseUrl) {
     console.log('[Tracer] No observability backend configured, skipping initialization');
     return;
   }
@@ -64,10 +68,10 @@ export function initTracer(): void {
   const spanProcessors: SpanProcessor[] = [];
 
   // OTLP trace exporter for Tempo/Grafana - receives all spans
-  if (otlp.tracesEndpoint) {
-    const traceExporter = new OTLPTraceExporter({ url: `${otlp.tracesEndpoint}/v1/traces` });
+  if (otlp.tracesUrl) {
+    const traceExporter = new OTLPTraceExporter({ url: otlp.tracesUrl });
     spanProcessors.push(new BatchSpanProcessor(traceExporter));
-    console.log('[Tracer] OTLP trace exporter configured:', { endpoint: otlp.tracesEndpoint });
+    console.log('[Tracer] OTLP trace exporter configured:', { url: otlp.tracesUrl });
   }
 
   // Langfuse processor - receives filtered LLM spans only
@@ -78,13 +82,16 @@ export function initTracer(): void {
 
   // OTLP metric exporter for Prometheus - receives application metrics
   let metricReader: PeriodicExportingMetricReader | undefined;
-  if (otlp.metricsEndpoint) {
-    const metricExporter = new OTLPMetricExporter({ url: `${otlp.metricsEndpoint}/v1/metrics` });
+  if (otlp.metricsUrl) {
+    const metricExporter = new OTLPMetricExporter({ url: otlp.metricsUrl });
     metricReader = new PeriodicExportingMetricReader({
       exporter: metricExporter,
-      exportIntervalMillis: 60000, // Export every 60 seconds
+      exportIntervalMillis: otlp.metricsIntervalMs,
     });
-    console.log('[Tracer] OTLP metric exporter configured:', { endpoint: otlp.metricsEndpoint });
+    console.log('[Tracer] OTLP metric exporter configured:', {
+      url: otlp.metricsUrl,
+      intervalMs: otlp.metricsIntervalMs,
+    });
   }
 
   sdk = new NodeSDK({
