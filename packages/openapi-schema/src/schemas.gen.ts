@@ -10610,6 +10610,11 @@ export const UpdateWorkflowVariablesRequestSchema = {
         $ref: '#/components/schemas/WorkflowVariable',
       },
     },
+    archiveOldFiles: {
+      type: 'boolean',
+      description:
+        'Whether to archive existing drive files associated with old resource variables before updating',
+    },
   },
 } as const;
 

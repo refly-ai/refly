@@ -7541,6 +7541,10 @@ export type UpdateWorkflowVariablesRequest = {
    * List of workflow variables
    */
   variables: Array<WorkflowVariable>;
+  /**
+   * Whether to archive existing drive files associated with old resource variables before updating
+   */
+  archiveOldFiles?: boolean;
 };
 
 export type UpdateWorkflowVariablesResponse = BaseResponse & {

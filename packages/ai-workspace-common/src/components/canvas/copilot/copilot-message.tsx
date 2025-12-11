@@ -118,7 +118,7 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
     );
     setNodes(nodes);
     setEdges(edges);
-    setVariables(variables ?? []);
+    setVariables(variables ?? [], { archiveOldFiles: true });
     setShowWorkflowRun(true);
 
     for (const node of nodes) {
