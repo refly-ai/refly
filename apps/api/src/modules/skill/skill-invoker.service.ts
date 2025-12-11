@@ -575,19 +575,23 @@ export class SkillInvokerService {
       startTimeoutCheck();
     }
 
-    // Create Langfuse callback handler if enabled
+    // Create Langfuse callback handler if baseUrl is configured
     // New @langfuse/langchain v4 API: simpler initialization, trace ID via runId parameter
-    const langfuseEnabled = this.config.get<boolean>('langfuse.enabled');
-
-    const callbacks = [
-      langfuseEnabled &&
-        this.createLangfuseHandler({
+    const callbacks = [];
+    const langfuseBaseUrl = this.config.get<string>('langfuse.baseUrl');
+    if (langfuseBaseUrl) {
+      try {
+        const handler = this.createLangfuseHandler({
           sessionId: data.target?.entityId,
           userId: user.uid,
           skillName: data.skillName,
           mode: data.mode,
-        }),
-    ].filter(Boolean);
+        });
+        callbacks.push(handler);
+      } catch (err) {
+        this.logger.warn(`Failed to create Langfuse callback handler: ${err.message}`);
+      }
+    }
 
     try {
       // Check if already aborted before starting execution (handles queued aborts)
@@ -1541,10 +1545,15 @@ export class SkillInvokerService {
     skillName?: string;
     mode?: string;
   }): LangfuseCallbackHandler {
-    return new LangfuseCallbackHandler({
+    this.logger.info(
+      `[Langfuse Debug] Creating LangfuseCallbackHandler with params: ${JSON.stringify(params)}`,
+    );
+    const handler = new LangfuseCallbackHandler({
       sessionId: params.sessionId,
       userId: params.userId,
       tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent'],
     });
+    this.logger.info('[Langfuse Debug] LangfuseCallbackHandler created successfully');
+    return handler;
   }
 }
