@@ -1,16 +1,32 @@
-# Trace & Logging Stack - Loki, Tempo, Grafana
-# For distributed tracing and log aggregation
+# Trace & Logging Stack - Loki, Tempo, Grafana, OTEL Collector
+# For distributed tracing, metrics, and log aggregation
 #
 # Usage:
 #   cd deploy/docker/trace
 #   docker-compose up -d
 #
 # Services:
+#   - otel-collector: OTLP receiver, forwards traces to Tempo, metrics to debug (exposed: 34318)
 #   - loki: Log aggregation (exposed: 33100)
-#   - tempo: Distributed tracing (exposed: 33200, 34318)
+#   - tempo: Distributed tracing (exposed: 33200)
 #   - grafana: Visualization dashboard (exposed: 33000)
 
 services:
+  otel-collector:
+    container_name: refly_otel_collector
+    image: otel/opentelemetry-collector-contrib:0.91.0
+    restart: unless-stopped
+    ports:
+      - 34318:4318  # OTLP HTTP receiver
+    command: --config=/etc/otelcol/config.yaml
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml
+    depends_on:
+      tempo:
+        condition: service_healthy
+    networks:
+      - refly_trace_network
+
   loki:
     container_name: refly_loki
     image: grafana/loki:2.9.0
@@ -35,7 +51,6 @@ services:
     image: grafana/tempo:2.3.0
     restart: unless-stopped
     ports:
-      - 34318:4318  # OTLP HTTP receiver
       - 33200:3200  # Tempo HTTP API
     command: -config.file=/etc/tempo/tempo.yaml
     volumes:
