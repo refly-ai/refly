@@ -162,22 +162,23 @@ export const WorkflowAPPForm = ({
   const shouldShowBadge =
     isStatusInitialized && shouldShowStatusBadge(templateStatus) && !effectiveTemplateContent;
 
-  // Show editor when template content is available and status is completed
+  // Show editor when template content is available and status is completed or idle
   const shouldShowEditor =
     !!effectiveTemplateContent && (templateStatus === 'completed' || templateStatus === 'idle');
 
-  // Show skeleton screen by default (during initialization, pending, generating, or idle without content)
-  // Only show form when explicitly failed
-  const shouldShowSkeleton =
-    !shouldShowEditor &&
-    !(isStatusInitialized && templateStatus === 'failed' && !effectiveTemplateContent);
-
-  // Show form only when explicitly failed and no content
+  // Show form when:
+  // 1. Failed and no content (explicit failure)
+  // 2. Completed but no content (abnormal case, allow user to interact)
+  // 3. Idle and no content and initialized (no generation needed, show form for user input)
   const shouldShowForm =
     !shouldShowEditor &&
     isStatusInitialized &&
-    templateStatus === 'failed' &&
-    !effectiveTemplateContent;
+    !effectiveTemplateContent &&
+    (templateStatus === 'failed' || templateStatus === 'completed' || templateStatus === 'idle');
+
+  // Show skeleton screen by default (during initialization, pending, generating, or uninitialized idle)
+  // This covers: uninitialized state, pending, generating, and idle without initialization
+  const shouldShowSkeleton = !shouldShowEditor && !shouldShowForm;
 
   // Check if form should be disabled
   const isFormDisabled = loading || isRunning || isPolling;
