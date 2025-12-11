@@ -607,10 +607,17 @@ export class BuiltinReadFile extends AgentBaseTool<BuiltinToolParams> {
   toolsetKey = 'read_file';
 
   schema = z.object({
-    fileId: z.string().describe('The ID of the file to read'),
+    fileId: z.string().describe('The ID of the file to read (format: df-xxx, from context)'),
   });
 
-  description = 'Read content from a drive file.';
+  description = `Read content from a file.
+
+Supported types and output:
+- Text files (txt, md, json, csv, js, py, xml, yaml...): Raw content
+- PDF / Word (.docx) / EPUB: Extracted text (max 3000 words, truncated if exceeded)
+- Images / Audio / Video: NOT supported, returns error
+
+Latency: <2s`;
 
   protected params: BuiltinToolParams;
 

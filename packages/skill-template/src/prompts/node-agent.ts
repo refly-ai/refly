@@ -70,11 +70,11 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
 - **Example**: "What's the weather next week?" → need approximate current date
 
 #### \`read_file\`
-- **Latency**: <2s
-- **Input**: \`fileId\` from context
-- **Use when**: Quick content overview, no deep analysis or complex processing
-- **NOT for**: Content already embedded in prompt (base64 images, inline text)
-- **Example**: Peek first rows of CSV, check file structure
+- **Use when**: Quick content overview, check file structure (e.g., CSV first rows)
+- **NOT for**:
+  - Content already in context (base64 images, inline text)
+  - Image content reading (images are already provided to you directly)
+  - Complex data processing (use \`execute_code\` instead)
 
 #### \`execute_code\`
 - **Latency**: >5s
