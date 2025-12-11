@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
+import { context } from '@opentelemetry/api';
+import { getRPCMetadata, RPCType } from '@opentelemetry/core';
 
 import * as Sentry from '@sentry/node';
 import { OAuthError, UnknownError } from '@refly/errors';
@@ -26,6 +28,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     @Inject(ConfigService)
     private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Set http.route on OpenTelemetry RPC metadata for metrics.
+   * Called from exception filter to ensure route is captured even when
+   * Guards throw exceptions before Interceptors run.
+   */
+  private setHttpRoute(request: Request): void {
+    const rpcMetadata = getRPCMetadata(context.active());
+
+    if (rpcMetadata?.type === RPCType.HTTP && !rpcMetadata.route) {
+      const routePath = request.route?.path;
+      if (routePath) {
+        const baseUrl = request.baseUrl || '';
+        rpcMetadata.route = baseUrl + (routePath === '/' && baseUrl ? '' : routePath);
+      }
+    }
+  }
 
   /**
    * Safely truncate request body for logging to prevent performance issues
@@ -56,6 +75,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+
+    // Set http.route on RPC metadata for OpenTelemetry metrics
+    // This ensures route is captured even when Guards throw exceptions before Interceptors run
+    this.setHttpRoute(request);
 
     const user = request.user as User;
 

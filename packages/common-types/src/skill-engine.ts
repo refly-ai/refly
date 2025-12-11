@@ -22,7 +22,7 @@ export interface ILogger {
 /**
  * Model scene types for different use cases
  */
-export type ModelScene = 'chat' | 'agent' | 'titleGeneration' | 'queryAnalysis';
+export type ModelScene = 'chat' | 'copilot' | 'agent' | 'titleGeneration' | 'queryAnalysis';
 
 /**
  * Parameters for creating a chat model

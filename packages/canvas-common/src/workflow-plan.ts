@@ -14,15 +14,9 @@ export const workflowPlanSchema = z.object({
   tasks: z
     .array(
       z.object({
-        id: z.string().min(1, 'Task ID cannot be empty').describe('Unique ID for the task'),
-        title: z
-          .string()
-          .min(1, 'Task title cannot be empty')
-          .describe('Display title for the task'),
-        prompt: z
-          .string()
-          .min(1, 'Task prompt cannot be empty')
-          .describe('The prompt or instruction for this task'),
+        id: z.string().describe('Unique ID for the task'),
+        title: z.string().describe('Display title for the task'),
+        prompt: z.string().describe('The prompt or instruction for this task'),
         dependentTasks: z
           .array(z.string().describe('Task ID'))
           .optional()
@@ -36,26 +30,19 @@ export const workflowPlanSchema = z.object({
   variables: z
     .array(
       z.object({
-        variableId: z
-          .string()
-          .min(1, 'Variable ID cannot be empty')
-          .describe('Variable ID, unique and readonly'),
+        variableId: z.string().describe('Variable ID, unique and readonly'),
         variableType: z
           .literal('string')
           .describe('Variable type (currently only string is supported)'),
-        name: z
-          .string()
-          .min(1, 'Variable name cannot be empty')
-          .describe('Variable name used in the workflow'),
+        name: z.string().describe('Variable name used in the workflow'),
         description: z.string().describe('Description of what this variable represents'),
         value: z
           .array(
             z.object({
               type: z.literal('text'),
-              text: z.string().min(1, 'Variable text value cannot be empty'),
+              text: z.string().describe('Variable text value'),
             }),
           )
-          .min(1, 'Variable values are required')
           .describe('Variable values'),
       }),
     )

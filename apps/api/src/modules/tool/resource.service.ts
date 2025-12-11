@@ -677,11 +677,13 @@ export class ResourceHandler {
     }
 
     const [, mimeType, base64Data] = matches;
+    // Decode base64 to Buffer for binary file storage
+    const buffer = Buffer.from(base64Data, 'base64');
     const driveFile = await this.driveService.createDriveFile(user, {
       canvasId,
       name: `${fileName}.${mime.getExtension(mimeType)}`,
       type: mimeType,
-      content: base64Data,
+      buffer,
       source: 'agent',
       resultId: getResultId(),
       resultVersion: getResultVersion(),

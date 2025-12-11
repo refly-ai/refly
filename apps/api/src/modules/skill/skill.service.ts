@@ -7,7 +7,6 @@ import {
   SkillTrigger as SkillTriggerModel,
   ActionResult as ActionResultModel,
   ProviderItem as ProviderItemModel,
-  Provider as ProviderModel,
 } from '@prisma/client';
 import { Response } from 'express';
 import {
@@ -42,7 +41,9 @@ import {
   genSkillTriggerID,
   genCopilotSessionID,
   safeParseJSON,
+  safeStringifyJSON,
   runModuleInitWithTimeoutAndRetry,
+  AUTO_MODEL_ID,
 } from '@refly/utils';
 import { PrismaService } from '../common/prisma.service';
 import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
@@ -64,6 +65,7 @@ import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
 import { DriveService } from '../drive/drive.service';
+import { AutoModelRouter } from '../provider/auto-model-router.service';
 
 /**
  * Fixed builtin toolsets that are always available for node_agent mode.
@@ -480,21 +482,62 @@ export class SkillService implements OnModuleInit {
     param.input ||= { query: '' };
     param.skillName ||= 'commonQnA';
 
-    const defaultModel = await this.providerService.findDefaultProviderItem(user, 'chat');
-    param.modelItemId ||= defaultModel?.itemId;
-    const modelItemId = param.modelItemId;
+    // Auto model routing
+    const llmItems = await this.providerService.findProviderItemsByCategory(user, 'llm');
+    const routerContext = {
+      llmItems,
+      userId: user.uid,
+    };
+    const autoModelRouter = new AutoModelRouter(routerContext);
 
+    const originalModelProviderMap = await this.providerService.prepareModelProviderMap(
+      user,
+      param.modelItemId,
+    );
+
+    const modelProviderMap = Object.fromEntries(
+      Object.entries(originalModelProviderMap).map(([scene, providerItem]) => [
+        scene,
+        autoModelRouter.route(providerItem),
+      ]),
+    );
+
+    // modelItemId is the routed model for actual execution
+    // param.modelItemId should be the surface model (original, not routed) for billing and UI
+    let modelItemId: string;
+    if (param.modelItemId) {
+      modelItemId = modelProviderMap.chat.itemId;
+    } else {
+      if (param.mode === 'copilot_agent') {
+        modelItemId = modelProviderMap.copilot.itemId;
+        param.modelItemId = originalModelProviderMap.copilot.itemId;
+      } else if (param.mode === 'node_agent') {
+        modelItemId = modelProviderMap.agent.itemId;
+        param.modelItemId = originalModelProviderMap.agent.itemId;
+      } else {
+        modelItemId = modelProviderMap.chat.itemId;
+        param.modelItemId = originalModelProviderMap.chat.itemId;
+      }
+    }
     let providerItem = await this.providerService.findProviderItemById(user, modelItemId);
 
     if (!providerItem || providerItem.category !== 'llm' || !providerItem.enabled) {
-      throw new ProviderItemNotFoundError(`provider item ${modelItemId} not valid`);
+      throw new ProviderItemNotFoundError(`provider item ${param.modelItemId} not valid`);
     }
 
-    // Use the routed provider item from modelProviderMap (no need to query again)
-    // Keep param.modelItemId unchanged (e.g., Auto) - used for display
-    // providerItem is the routed model (e.g., Claude Sonnet 4.5) - used for execution
-    const modelProviderMap = await this.providerService.prepareModelProviderMap(user, modelItemId);
-    providerItem = modelProviderMap.chat as ProviderItemModel & { provider: ProviderModel };
+    // Inject routedData into config if this was an Auto model routing
+    if (providerItem.itemId !== param.modelItemId) {
+      const config = safeParseJSON(providerItem.config || '{}');
+      config.routedData = {
+        isRouted: true,
+        originalItemId: param.modelItemId,
+        originalModelId: AUTO_MODEL_ID,
+      };
+      providerItem = {
+        ...providerItem,
+        config: safeStringifyJSON(config),
+      };
+    }
 
     const tiers = [];
     for (const providerItem of Object.values(modelProviderMap)) {
@@ -525,6 +568,9 @@ export class SkillService implements OnModuleInit {
 
     const modelConfigMap = {
       chat: safeParseJSON(modelProviderMap.chat.config) as LLMModelConfig,
+      copilot: modelProviderMap.copilot
+        ? (safeParseJSON(modelProviderMap.copilot.config) as LLMModelConfig)
+        : undefined,
       agent: safeParseJSON(modelProviderMap.agent.config) as LLMModelConfig,
       titleGeneration: safeParseJSON(modelProviderMap.titleGeneration.config) as LLMModelConfig,
       queryAnalysis: safeParseJSON(modelProviderMap.queryAnalysis.config) as LLMModelConfig,
@@ -911,6 +957,7 @@ export class SkillService implements OnModuleInit {
           input: JSON.stringify(param.input ?? {}),
           context: JSON.stringify(param.context ?? {}),
           tplConfig: JSON.stringify(param.tplConfig ?? {}),
+          toolsets: JSON.stringify(param.toolsets ?? {}),
           runtimeConfig: JSON.stringify(param.runtimeConfig ?? {}),
           history: JSON.stringify(Array.isArray(param.resultHistory) ? param.resultHistory : []),
           providerItemId: param.modelItemId,

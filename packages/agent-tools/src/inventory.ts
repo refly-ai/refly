@@ -16,7 +16,7 @@ import {
   BuiltinExecuteCodeDefinition,
 } from './builtin';
 import { AgentBaseToolset } from './base';
-import { BrowserUseToolset, BrowserUseToolsetDefinition } from './browser-use';
+// import { BrowserUseToolset, BrowserUseToolsetDefinition } from './browser-use';
 import { GitHubToolsetDefinition } from './github';
 import { GmailToolsetDefinition } from './gmail';
 import { GoogleDocsToolsetDefinition } from './google-docs';
@@ -25,7 +25,7 @@ import { GoogleSheetsToolsetDefinition } from './google-sheets';
 import { JinaToolset, JinaToolsetDefinition } from './jina';
 import { NotionToolset, NotionToolsetDefinition } from './notion';
 import { PerplexityToolset, PerplexityToolsetDefinition } from './perplexity';
-import { ProductHuntToolset, ProductHuntToolsetDefinition } from './producthunt';
+// import { ProductHuntToolset, ProductHuntToolsetDefinition } from './producthunt';
 import { RedditToolsetDefinition } from './reddit';
 import { TwitterToolsetDefinition } from './twitter';
 // import { WhaleWisdomToolset, WhaleWisdomToolsetDefinition } from './whalewisdom';
@@ -112,14 +112,14 @@ export const toolsetInventory: Record<
     class: PerplexityToolset,
     definition: PerplexityToolsetDefinition,
   },
-  [ProductHuntToolsetDefinition.key]: {
-    class: ProductHuntToolset,
-    definition: ProductHuntToolsetDefinition,
-  },
-  [BrowserUseToolsetDefinition.key]: {
-    class: BrowserUseToolset,
-    definition: BrowserUseToolsetDefinition,
-  },
+  // [ProductHuntToolsetDefinition.key]: {
+  //   class: ProductHuntToolset,
+  //   definition: ProductHuntToolsetDefinition,
+  // },
+  // [BrowserUseToolsetDefinition.key]: {
+  //   class: BrowserUseToolset,
+  //   definition: BrowserUseToolsetDefinition,
+  // },
   [GitHubToolsetDefinition.key]: {
     class: undefined,
     definition: GitHubToolsetDefinition,

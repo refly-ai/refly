@@ -2767,7 +2767,7 @@ export const ProviderConfigSchema = {
 export const ModelSceneSchema = {
   type: 'string',
   description: 'Model usage scene',
-  enum: ['chat', 'agent', 'queryAnalysis', 'titleGeneration', 'image', 'video', 'audio'],
+  enum: ['chat', 'copilot', 'agent', 'queryAnalysis', 'titleGeneration', 'image', 'video', 'audio'],
 } as const;
 
 export const DefaultModelConfigSchema = {
@@ -2776,6 +2776,10 @@ export const DefaultModelConfigSchema = {
   properties: {
     chat: {
       description: 'Default chat model to use',
+      $ref: '#/components/schemas/ProviderItem',
+    },
+    copilot: {
+      description: 'Default copilot model to use',
       $ref: '#/components/schemas/ProviderItem',
     },
     agent: {

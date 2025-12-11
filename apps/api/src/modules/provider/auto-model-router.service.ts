@@ -1,13 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { ProviderItem as ProviderItemModel } from '@prisma/client';
 import { LLMModelConfig } from '@refly/openapi-schema';
-import {
-  isAutoModel,
-  AUTO_MODEL_ID,
-  AUTO_MODEL_ROUTING_PRIORITY,
-  safeParseJSON,
-  safeStringifyJSON,
-} from '@refly/utils';
+import { isAutoModel, AUTO_MODEL_ROUTING_PRIORITY, safeParseJSON } from '@refly/utils';
 import { ProviderItemNotFoundError } from '@refly/errors';
 
 /**
@@ -57,17 +51,7 @@ export class AutoModelRouter {
       `Routed auto model to ${routedItem.name} (itemId: ${routedItem.itemId}) for user ${this.context.userId}`,
     );
 
-    // Inject route data for monitoring
-    const config = safeParseJSON(routedItem.config || '{}');
-    config.routeData = {
-      originalItemId: chatItem.itemId,
-      originalModelId: AUTO_MODEL_ID,
-    };
-
-    return {
-      ...routedItem,
-      config: safeStringifyJSON(config),
-    };
+    return routedItem;
   }
 
   /**

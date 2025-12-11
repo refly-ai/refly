@@ -2150,6 +2150,7 @@ export type ProviderConfig = {
  */
 export type ModelScene =
   | 'chat'
+  | 'copilot'
   | 'agent'
   | 'queryAnalysis'
   | 'titleGeneration'
@@ -2165,6 +2166,10 @@ export type DefaultModelConfig = {
    * Default chat model to use
    */
   chat?: ProviderItem;
+  /**
+   * Default copilot model to use
+   */
+  copilot?: ProviderItem;
   /**
    * Default agent model to use
    */

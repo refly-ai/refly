@@ -401,7 +401,7 @@ export const ResultItemPreview = memo(
     // 宽屏弹窗开关
     const handleWideModeOpen = (e: React.MouseEvent) => {
       e.stopPropagation();
-      logEvent('view_template_generate_result', null, {});
+      logEvent('view_template_generate_result', Date.now(), {});
       // Stop all playing media when opening modal
       mediaManager.stopAll();
       setWideModeOpen(true);

@@ -90,7 +90,7 @@ const SkillResponseActionsComponent = ({
               '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
           },
           onOk: async () => {
-            logEvent('stop_agent_run', null, {});
+            logEvent('stop_agent_run', Date.now(), {});
             await onStop();
             message.success(t('canvas.skillResponse.stopSuccess'));
           },

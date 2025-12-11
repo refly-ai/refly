@@ -394,13 +394,24 @@ export function findMatchingObjectOption(
 // ============================================================================
 
 /**
- * Check if a field name or description suggests it's a URL-related field
+ * Check if a field name suggests it's a URL-related field
  * @param fieldName - The name of the field
- * @param description - Optional description of the field
  * @returns true if the field appears to be URL-related
  */
-function isUrlRelatedField(fieldName: string, description?: string): boolean {
+function isUrlRelatedField(fieldName: string): boolean {
   const fieldLower = fieldName.toLowerCase();
+
+  // Skip fields that are ID references (e.g., fileId, imageId, documentId, media_ids, media_ids[0])
+  // These are ID references, not actual URLs
+  if (
+    fieldLower.endsWith('id') ||
+    fieldLower.endsWith('_id') ||
+    fieldLower.endsWith('ids') ||
+    fieldLower.endsWith('_ids') ||
+    /ids?\[\d*\]$/.test(fieldLower) // handles media_ids[0], file_id[1], etc.
+  ) {
+    return false;
+  }
 
   // URL-related field name patterns
   const urlNamePatterns = [
@@ -423,15 +434,6 @@ function isUrlRelatedField(fieldName: string, description?: string): boolean {
     return true;
   }
 
-  // Check description for URL indicators
-  if (description) {
-    const descLower = description.toLowerCase();
-    const urlDescPatterns = ['url', 'link', 'href', 'uri'];
-    if (urlDescPatterns.some((pattern) => descLower.includes(pattern))) {
-      return true;
-    }
-  }
-
   return false;
 }
 
@@ -448,7 +450,7 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
   for (const [fieldName, fieldSchema] of Object.entries(schema.properties)) {
     // Only enhance string-type fields
     if (fieldSchema.type === 'string') {
-      if (isUrlRelatedField(fieldName, fieldSchema.description)) {
+      if (isUrlRelatedField(fieldName)) {
         // Mark as resource field (collectResourceFields will find this)
         fieldSchema.isResource = true;
         // Set format to 'url' (resolveFileIdToFormat will use this)

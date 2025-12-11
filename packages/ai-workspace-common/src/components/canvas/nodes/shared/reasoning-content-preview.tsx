@@ -45,7 +45,7 @@ export const ReasoningContentPreview = memo(
           </div>
           <Button
             type="text"
-            icon={collapsed ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+            icon={collapsed ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
             onClick={() => setCollapsed(!collapsed)}
             size="small"
             className="flex items-center justify-center h-6 w-6 min-w-0 p-0"
@@ -53,7 +53,9 @@ export const ReasoningContentPreview = memo(
         </div>
         {!collapsed && (
           <Markdown
-            className="p-3 pt-0 text-xs overflow-hidden"
+            className={cn('p-3 pt-0 text-xs overflow-hidden', {
+              'max-h-[300px] overflow-y-auto': !isExecuting,
+            })}
             content={getParsedReasoningContent(content)}
             sources={sources || []}
             resultId={resultId}

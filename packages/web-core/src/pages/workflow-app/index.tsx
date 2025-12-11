@@ -104,9 +104,16 @@ const WorkflowAppPage: React.FC = () => {
   // Track enter_template_page event when page loads
   useEffect(() => {
     if (shareId) {
-      logEvent('enter_template_page', null, { shareId });
+      logEvent('enter_template_page', Date.now(), { shareId });
     }
   }, [shareId]);
+
+  // Track view_template_detail event when page loads completely
+  useEffect(() => {
+    if (shareId && !isLoading && workflowApp) {
+      logEvent('view_template_detail', null, { shareId });
+    }
+  }, [shareId, isLoading, workflowApp]);
 
   const workflowVariables = useMemo(() => {
     return workflowApp?.variables ?? [];
@@ -533,7 +540,7 @@ const WorkflowAppPage: React.FC = () => {
       },
       onOk: async () => {
         // Get all executing skillResponse nodes
-        logEvent('stop_template_run', null, {
+        logEvent('stop_template_run', Date.now(), {
           canvasId: workflowDetail?.canvasId ?? '',
           executionId,
         });

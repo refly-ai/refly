@@ -154,7 +154,7 @@ const translations = {
               'Facebook integrations',
               'Twitter integrations',
             ],
-            duration: '365 DAYS',
+            duration: '1 MONTH',
           },
           '服务支持\n高优邮件支持',
         ],
@@ -438,6 +438,10 @@ const translations = {
     sharing: '分享中...',
     view: '查看',
     joinDiscord: '加入 Discord 社区',
+    clipboard: {
+      permissionDenied: '剪贴板读取权限被拒绝。请允许剪贴板访问您的浏览器设置。',
+      readFailed: '读取剪贴板失败。请重试。',
+    },
   },
   mode: {
     ask: '提问',
@@ -3284,9 +3288,12 @@ const translations = {
       title: '你的工作流创作伙伴',
       subtitle: '一起探索好奇心',
       youCanTry: '获取新灵感',
-      query1: '帮我追踪并分析巴菲特本季度的美股持仓变动。',
-      query2: '帮我抓取今天的 Product Hunt Top 10，生成总结文档和产品播客，并把链接发到我的邮箱。',
-      query3: '帮我生成一组新海诚风格、讲述“从小到大”成长故事的序列动画场景。',
+      query1:
+        '使用13F数据工具研究沃伦·巴菲特在2025年第二季度与第三季度的持仓情况，列出所有增持和减持的股票，并生成一份包含简易图表的摘要。',
+      query2:
+        '使用 Perplexity 获取昨天 Product Hunt 排行榜前五的产品，创建一份摘要文档和一集播客，并通过电子邮件发送给我。',
+      query3:
+        '帮我生成一个由五张图像组成的动画系列，采用新海诚的风格，主题为“成长”，并使用图像生成工具创建所有图像。',
     },
     sessionDetail: {
       thinking: '思考中',
@@ -3685,10 +3692,10 @@ const translations = {
     productsGeneratedWithCost: '已为你生成 {{count}} 个结果，使用 {{executionCost}} 积分',
     emptyLogs: '暂无运行日志，点击创建应用，开始运行',
     coverImage: '封面图片',
-    coverImageHint: '支持 JPG、PNG、WebP 格式，文件大小 5MB 以内',
+    coverImageHint: '支持 JPG、PNG、WebP 格式，文件大小 30MB 以内',
     uploadCover: '上传封面',
     invalidImageType: '图片格式不正确，请上传 JPG、PNG 或 WebP 格式的图片',
-    imageTooLarge: '图片大小超过 5MB，请上传更小的图片',
+    imageTooLarge: '图片大小超过 30MB，请上传更小的图片',
     coverImageRequired: '封面图片为必填项',
     enableRemix: '启用 Remix',
     remixHint: '允许其他人Remix和修改此工作流应用',

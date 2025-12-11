@@ -59,7 +59,7 @@ export const ImportResourceModal = memo(() => {
       return;
     }
 
-    logEvent('import_file', null, {
+    logEvent('import_file', Date.now(), {
       canvasId,
       fileCount: waitingList.length,
     });

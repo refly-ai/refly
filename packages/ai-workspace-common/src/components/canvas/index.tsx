@@ -942,7 +942,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   );
 
   // Use the new drag, drop, paste hook
-  const { handlers, DropOverlay } = useDragDropPaste({
+  const { handlers } = useDragDropPaste({
     canvasId,
     readonly,
   });
@@ -1050,7 +1050,7 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       const skillResponseNodes = deletedNodes.filter((node) => node.type === 'skillResponse');
       if (skillResponseNodes.length > 0) {
         for (const node of skillResponseNodes) {
-          logEvent('delete_agent_node', null, { canvasId, nodeId: node.id });
+          logEvent('delete_agent_node', Date.now(), { canvasId, nodeId: node.id });
         }
       }
     },
@@ -1145,7 +1145,6 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
       <div className="w-full h-full relative flex flex-col overflow-hidden shadow-sm rounded-xl border-solid border-[1px] border-refly-Card-Border">
         <div className="flex-grow relative">
           <style>{selectionStyles}</style>
-          <DropOverlay />
           <ReactFlow
             {...flowConfig}
             selectionMode={SelectionMode.Partial}

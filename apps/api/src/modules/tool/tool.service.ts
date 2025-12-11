@@ -170,9 +170,7 @@ export class ToolService {
     return Object.values(builtinToolsetInventory)
       .filter(
         (toolset) =>
-          Boolean(toolset.definition) &&
-          !toolset.definition.internal &&
-          this.shouldExposeToolset(toolset.definition.key),
+          Boolean(toolset.definition) && this.shouldExposeToolset(toolset.definition.key),
       )
       .map((toolset) => ({
         type: ToolsetType.REGULAR,
