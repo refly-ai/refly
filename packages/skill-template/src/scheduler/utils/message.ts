@@ -45,6 +45,11 @@ type ContentItem = TextContent | ImageUrlContent;
 // Different Claude models have minimum requirements for caching:
 // - 1024 tokens: Claude 3.7 Sonnet, Claude 3.5 Sonnet, Claude 3 Opus
 // - 2048 tokens: Claude 3.5 Haiku, Claude 3 Haiku
+//
+// Note about LangChain AWS cachePoint format:
+// - LangChain AWS v1.1.0+ uses cachePoint markers for Bedrock
+// - Format: { cachePoint: { type: 'default' } }
+// - Place the cachePoint marker AFTER the content to cache
 
 export const buildFinalRequestMessages = ({
   systemPrompt,
@@ -94,6 +99,7 @@ export const buildFinalRequestMessages = ({
 
   // Check if context caching should be enabled and the model supports it
   const shouldEnableContextCaching = !!modelInfo?.capabilities?.contextCaching;
+
   if (shouldEnableContextCaching) {
     // Note: In a production system, you might want to:
     // 1. Estimate token count based on model name
@@ -107,13 +113,12 @@ export const buildFinalRequestMessages = ({
 };
 
 /**
- * Applies context caching to messages - only caches up to 3 most recent messages
- * before the final message
+ * Applies context caching to messages using LangChain's cachePoint format
  *
- * According to Anthropic documentation:
- * - All messages except the final one should be marked with cache_control
- * - Images are included in caching but don't have their own cache_control parameter
- * - Changing whether there are images in a prompt will break the cache
+ * LangChain AWS uses cachePoint markers instead of cache_control:
+ * - Add a cachePoint object after the content you want to cache
+ * - Format: { cachePoint: { type: 'default' } }
+ * - Only cache messages before the final message (not the last user query)
  */
 const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
   if (messages.length <= 1) return messages;
@@ -129,17 +134,19 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
     // Don't cache messages beyond the 3 most recent (before the last one)
     if (index < minCacheIndex) return message;
 
-    // Apply caching only to the 3 most recent messages (before the last one)
+    // Apply caching using LangChain's cachePoint format
     if (message instanceof SystemMessage) {
+      const textContent =
+        typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+
       return new SystemMessage({
         content: [
           {
             type: 'text',
-            text:
-              typeof message.content === 'string'
-                ? message.content
-                : JSON.stringify(message.content),
-            cache_control: { type: 'ephemeral' },
+            text: textContent,
+          },
+          {
+            cachePoint: { type: 'default' },
           },
         ],
       } as BaseMessageFields);
@@ -152,29 +159,24 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
             {
               type: 'text',
               text: message.content,
-              cache_control: { type: 'ephemeral' },
+            },
+            {
+              cachePoint: { type: 'default' },
             },
           ],
         } as BaseMessageFields);
       }
 
       if (Array.isArray(message.content)) {
-        // Handle array content (like images mixed with text)
-        // According to Anthropic docs, we only apply cache_control to text blocks,
-        // but images are still included in the cached content
-        const updatedContent = message.content.map((item: any) => {
-          if (item.type === 'text') {
-            return {
-              ...item,
-              cache_control: { type: 'ephemeral' },
-            };
-          }
-          // For image content, we don't add cache_control
-          return item;
-        });
-
+        // For array content (like images mixed with text),
+        // add cachePoint marker at the end
         return new HumanMessage({
-          content: updatedContent,
+          content: [
+            ...message.content,
+            {
+              cachePoint: { type: 'default' },
+            },
+          ],
         } as BaseMessageFields);
       }
     }
