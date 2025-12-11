@@ -2,7 +2,7 @@ import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-s
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, Form, Typography, message, Tooltip, Avatar } from 'antd';
 import { IconShare } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 
 import cn from 'classnames';
@@ -19,7 +19,7 @@ import { Question } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useTemplateGenerationStatus } from '../../hooks/useTemplateGenerationStatus';
 import { TemplateStatusBadge } from './template-status-badge';
-import { shouldShowStatusBadge, type TemplateGenerationStatus } from '../../utils/templateStatus';
+import { shouldShowStatusBadge } from '../../utils/templateStatus';
 
 const EmptyContent = () => {
   const { t } = useTranslation();
@@ -115,27 +115,12 @@ export const WorkflowAPPForm = ({
   const [form] = Form.useForm();
   const [variableValues, setVariableValues] = useState<Record<string, any>>({});
   const [templateVariables, setTemplateVariables] = useState<WorkflowVariable[]>([]);
-  const [userHasSwitched, setUserHasSwitched] = useState(false);
-
-  // Track initial status to distinguish between "refresh with existing template" and "generation completed"
-  const initialStatusRef = useRef<TemplateGenerationStatus | null>(null);
-  const hasCheckedAutoSwitchRef = useRef(false);
-  // Track previous status to detect status changes (e.g., completed -> pending for regeneration)
-  const previousStatusRef = useRef<TemplateGenerationStatus | null>(null);
-
-  // Restore user switch state from localStorage
-  useEffect(() => {
-    if (workflowApp?.appId) {
-      const switched = localStorage.getItem(`template_switched_${workflowApp.appId}`) === 'true';
-      setUserHasSwitched(switched);
-    } else {
-      setUserHasSwitched(false);
-    }
-  }, [workflowApp?.appId]);
 
   // Poll template generation status
-  // Use state to dynamically control polling
-  const [pollingEnabled, setPollingEnabled] = useState(false);
+  // Initial polling condition: no templateContent
+  const [pollingEnabled, setPollingEnabled] = useState(
+    () => !templateContent && !!workflowApp?.appId,
+  );
 
   const {
     status: templateStatus,
@@ -148,43 +133,20 @@ export const WorkflowAPPForm = ({
     maxAttempts: 30,
   });
 
-  // Update polling enabled state based on various conditions
-  // This handles regeneration scenarios where old templateContent exists but status is pending/generating
+  // Update polling state based on templateContent and status
   useEffect(() => {
     if (!workflowApp?.appId) {
       setPollingEnabled(false);
       return;
     }
 
-    // Basic case: user hasn't switched and no templateContent (initial generation)
-    const baseCase = !userHasSwitched && !templateContent;
+    // Poll if no templateContent or status is pending/generating (regeneration in progress)
+    const shouldPoll =
+      !templateContent ||
+      (isStatusInitialized && (templateStatus === 'pending' || templateStatus === 'generating'));
 
-    // Regeneration case: user hasn't switched but templateContent exists and status is pending/generating
-    // This handles the scenario where regeneration is triggered but old templateContent still exists in DB
-    const regenerationCase =
-      !userHasSwitched &&
-      !!templateContent &&
-      isStatusInitialized &&
-      (templateStatus === 'pending' || templateStatus === 'generating');
-
-    // User in editor but content was cleared during regeneration
-    const editorRegenerationCase = userHasSwitched && !templateContent;
-
-    // User in editor and status changed from completed to pending/generating (regeneration started)
-    // Need to poll to get new content even if old content still exists
-    const editorRegenerationWithContent =
-      userHasSwitched &&
-      !!templateContent &&
-      isStatusInitialized &&
-      (templateStatus === 'pending' || templateStatus === 'generating');
-
-    setPollingEnabled(
-      baseCase || regenerationCase || editorRegenerationCase || editorRegenerationWithContent,
-    );
-  }, [userHasSwitched, templateContent, workflowApp?.appId, templateStatus, isStatusInitialized]);
-
-  // Computed shouldPoll for other logic that needs to know if polling is active
-  const shouldPoll = pollingEnabled;
+    setPollingEnabled(shouldPoll);
+  }, [templateContent, workflowApp?.appId, templateStatus, isStatusInitialized]);
 
   // Determine effective template content
   // Priority: polled content (if available and status is completed) > prop content > polled content
@@ -194,112 +156,13 @@ export const WorkflowAPPForm = ({
       ? polledTemplateContent
       : (templateContent ?? polledTemplateContent);
 
-  // Track initial status when status is first initialized
-  useEffect(() => {
-    if (isStatusInitialized && initialStatusRef.current === null) {
-      initialStatusRef.current = templateStatus;
-      previousStatusRef.current = templateStatus;
-    }
-  }, [isStatusInitialized, templateStatus]);
-
-  // Track status changes to handle regeneration scenarios
-  useEffect(() => {
-    if (isStatusInitialized && previousStatusRef.current !== null) {
-      const prevStatus = previousStatusRef.current;
-      const currentStatus = templateStatus;
-
-      // Detect status change from pending/generating to completed (regeneration completed)
-      if (
-        (prevStatus === 'pending' || prevStatus === 'generating') &&
-        currentStatus === 'completed'
-      ) {
-        // Regeneration completed
-        // - If user is in editor view: content will automatically update via effectiveTemplateContent
-        // - If user is not in editor view: Badge will show (completed state), user can click to switch
-        // We don't auto-switch here to avoid interrupting user's form filling
-      }
-
-      // Detect status change from completed to pending/generating (regeneration triggered)
-      if (
-        prevStatus === 'completed' &&
-        (currentStatus === 'pending' || currentStatus === 'generating')
-      ) {
-        // Regeneration started
-        // - If user is in editor view: keep them there, they'll see old content until new content is ready
-        // - If user is not in editor view: they'll see the form with status badge
-        // Polling will handle content updates
-      }
-
-      previousStatusRef.current = currentStatus;
-    }
-  }, [isStatusInitialized, templateStatus]);
-
-  // Auto-switch to editor if page refresh with existing completed template
-  // Only auto-switch if:
-  // 1. Status has been initialized
-  // 2. Initial status was 'completed' (not 'pending' or 'generating')
-  // 3. Template content exists
-  // 4. User hasn't manually switched before (userHasSwitched is false means no localStorage record)
-  // 5. We haven't already checked for auto-switch
-  useEffect(() => {
-    if (
-      isStatusInitialized &&
-      !hasCheckedAutoSwitchRef.current &&
-      workflowApp?.appId &&
-      effectiveTemplateContent &&
-      initialStatusRef.current === 'completed' &&
-      !userHasSwitched
-    ) {
-      // userHasSwitched is false means no localStorage record (already checked in restore effect)
-      // This means it's a fresh page load with existing template
-      setUserHasSwitched(true);
-      localStorage.setItem(`template_switched_${workflowApp.appId}`, 'true');
-      hasCheckedAutoSwitchRef.current = true;
-    }
-  }, [isStatusInitialized, effectiveTemplateContent, workflowApp?.appId, userHasSwitched]);
-
-  // Reset refs and polling state when appId changes
-  useEffect(() => {
-    if (workflowApp?.appId) {
-      initialStatusRef.current = null;
-      hasCheckedAutoSwitchRef.current = false;
-      previousStatusRef.current = null;
-      // Reset polling state when switching apps
-      setPollingEnabled(false);
-    }
-  }, [workflowApp?.appId]);
-
-  // Reset userHasSwitched if stored state is inconsistent with actual content
-  useEffect(() => {
-    if (workflowApp?.appId) {
-      const storedSwitched =
-        localStorage.getItem(`template_switched_${workflowApp.appId}`) === 'true';
-
-      // If localStorage says switched but there's no effectiveTemplateContent, reset it
-      // This handles cases where template generation failed or was reset on backend
-      if (storedSwitched && !effectiveTemplateContent && !shouldPoll) {
-        // Only reset if not actively polling, to prevent resetting during active polling
-        setUserHasSwitched(false);
-        localStorage.removeItem(`template_switched_${workflowApp.appId}`);
-      }
-    }
-  }, [effectiveTemplateContent, shouldPoll, workflowApp?.appId]);
-
   // Determine if status badge should be shown
-  // Only show badge if status has been initialized to prevent flickering
+  // Show badge when generating (pending/generating) or failed, and hide when content is available
   const shouldShowBadge =
-    isStatusInitialized && shouldShowStatusBadge(templateStatus, userHasSwitched);
+    isStatusInitialized && shouldShowStatusBadge(templateStatus) && !effectiveTemplateContent;
 
-  // Handle switch to editor view (only when user manually clicks)
-  const handleSwitchToEditor = useCallback(() => {
-    if (effectiveTemplateContent && workflowApp?.appId) {
-      setUserHasSwitched(true);
-      localStorage.setItem(`template_switched_${workflowApp.appId}`, 'true');
-    }
-  }, [effectiveTemplateContent, workflowApp?.appId]);
-
-  // Only show MixedTextEditor if user has manually switched AND templateContent exists
-  const shouldShowEditor = userHasSwitched && !!effectiveTemplateContent;
+  // Show editor directly when template content is available
+  const shouldShowEditor = !!effectiveTemplateContent;
 
   // Check if form should be disabled
   const isFormDisabled = loading || isRunning || isPolling;
@@ -1002,16 +865,7 @@ export const WorkflowAPPForm = ({
               className={cn('w-full h-full gap-3 flex flex-col rounded-2xl relative', className)}
             >
               {/* Status badge in top-right corner */}
-              {shouldShowBadge && (
-                <TemplateStatusBadge
-                  status={templateStatus}
-                  onSwitchToEditor={
-                    templateStatus === 'completed' && effectiveTemplateContent
-                      ? handleSwitchToEditor
-                      : undefined
-                  }
-                />
-              )}
+              {shouldShowBadge && <TemplateStatusBadge status={templateStatus} />}
               <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
                 {/* Show loading state when loading */}
                 {workflowVariables.length > 0 ? (

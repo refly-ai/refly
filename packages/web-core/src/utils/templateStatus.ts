@@ -22,25 +22,14 @@ export interface TemplateStatusResponse {
 /**
  * Determine if status badge should be shown
  * @param status - Current generation status
- * @param userHasSwitched - Whether user has manually switched to editor view
  * @returns true if badge should be shown
  */
-export function shouldShowStatusBadge(
-  status: TemplateGenerationStatus,
-  userHasSwitched: boolean,
-): boolean {
+export function shouldShowStatusBadge(status: TemplateGenerationStatus): boolean {
   // Don't show if idle (no generation needed)
   if (status === 'idle') {
     return false;
   }
 
-  // Don't show if completed and user has already switched
-  if (status === 'completed' && userHasSwitched) {
-    return false;
-  }
-
-  // Show for: pending, generating, failed, completed (but not switched)
-  return (
-    status === 'pending' || status === 'generating' || status === 'failed' || status === 'completed'
-  );
+  // Show for: pending, generating, failed
+  return status === 'pending' || status === 'generating' || status === 'failed';
 }
