@@ -3,6 +3,7 @@ import { Modal } from 'antd';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { ensureIndexedDbSupport } from '@refly-packages/ai-workspace-common/utils/indexeddb';
 import { isPublicAccessPageByPath } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
+import { useUserStoreShallow } from '@refly/stores';
 
 // Clear IndexedDB
 const deleteIndexedDB = async () => {
@@ -38,8 +39,10 @@ let isLoggingOut = false;
 
 export const logout = async ({
   callRemoteLogout,
+  resetUserState,
 }: {
   callRemoteLogout?: boolean;
+  resetUserState?: () => void;
 } = {}) => {
   // Return early if already logging out
   if (isLoggingOut) {
@@ -61,6 +64,9 @@ export const logout = async ({
     // Clear localStorage
     localStorage.clear();
 
+    // Reset user state in store
+    resetUserState?.();
+
     // Redirect to login page after logout
     // But don't redirect if we're on a public access page (like /app/:shareId or /workflow-template/:shareId)
     // Public pages should continue to work even when not logged in
@@ -79,6 +85,9 @@ export const logout = async ({
 
 export const useLogout = () => {
   const { t } = useTranslation();
+  const { resetState } = useUserStoreShallow((state) => ({
+    resetState: state.resetState,
+  }));
 
   const [modal, contextHolder] = Modal.useModal();
 
@@ -90,7 +99,7 @@ export const useLogout = () => {
       content: t('settings.account.logoutConfirmation.message'),
       centered: true,
       async onOk() {
-        await logout({ callRemoteLogout: true });
+        await logout({ callRemoteLogout: true, resetUserState: resetState });
       },
     });
   };
