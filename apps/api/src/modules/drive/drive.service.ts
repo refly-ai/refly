@@ -68,7 +68,6 @@ export class DriveService implements OnModuleInit {
     private redis: RedisService,
     private providerService: ProviderService,
     private moduleRef: ModuleRef,
-    private subscriptionService: SubscriptionService,
     private miscService: MiscService,
   ) {
     this.logger.setContext(DriveService.name);
