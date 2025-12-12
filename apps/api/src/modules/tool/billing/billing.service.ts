@@ -91,7 +91,6 @@ export class BillingService {
       };
 
       await this.creditService.syncToolCreditUsage(jobData);
-      this.logger.debug(`Recorded ${finalDiscountedPrice} credits for ${toolsetKey}.${toolName}`);
 
       return {
         success: true,

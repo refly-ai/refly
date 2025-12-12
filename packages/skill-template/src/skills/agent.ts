@@ -218,11 +218,6 @@ export class Agent extends BaseSkill {
             }
 
             try {
-              // Log tool arguments before invocation
-              this.engine.logger.info(
-                `Invoking tool '${toolName}' with args:\n${JSON.stringify(toolArgs, null, 2)}`,
-              );
-
               // Each invocation awaited to ensure strict serial execution
               const rawResult = await matchedTool.invoke(toolArgs);
               const stringified =

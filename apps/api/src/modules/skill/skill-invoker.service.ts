@@ -218,7 +218,7 @@ export class SkillInvokerService {
       const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine, {
         context,
       });
-      config.configurable.selectedTools = tools;
+      config.configurable.selectedTools = tools as any;
     }
 
     config.configurable.installedToolsets = await this.toolService.listTools(user, {
@@ -285,6 +285,41 @@ export class SkillInvokerService {
       userFriendlyMessage,
       logLevel,
     };
+  }
+
+  /**
+   * Detect whether an error is caused by exceeding token/context limits.
+   */
+  private isTokenLimitError(err: unknown): boolean {
+    if (!err) return false;
+    const message = (err as { message?: string })?.message?.toLowerCase() ?? '';
+    const code = (err as { code?: string })?.code?.toLowerCase?.() ?? '';
+    return (
+      /token limit|context length|maximum context|max context|too many tokens/.test(message) ||
+      code === 'context_length_exceeded' ||
+      code === 'max_tokens_exceeded'
+    );
+  }
+
+  /**
+   * For most tool failures, only persist/stream the user-facing `output` field.
+   * Preserve full payloads when the error looks like a token/context limit issue,
+   * since those may be saved to a debug document.
+   */
+  private normalizeToolOutputForPersistence(toolOutput: any): any {
+    if (!toolOutput || typeof toolOutput !== 'object') return toolOutput;
+
+    const errorText = String((toolOutput as any).error ?? (toolOutput as any).message ?? '');
+    const codeText = String((toolOutput as any).code ?? '');
+    if (this.isTokenLimitError({ message: errorText, code: codeText })) {
+      return toolOutput;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(toolOutput, 'output')) {
+      return (toolOutput as any).output;
+    }
+
+    return toolOutput;
   }
 
   private async _invokeSkill(user: User, data: InvokeSkillJobData, res?: Response) {
@@ -589,6 +624,10 @@ export class SkillInvokerService {
         }),
     ].filter(Boolean);
 
+    // Track latest tool call metadata for error handling
+    let lastStepName: string | undefined;
+    let lastToolCallMeta: ToolCallMeta | undefined;
+
     try {
       // Check if already aborted before starting execution (handles queued aborts)
       const isAlreadyAborted = await this.actionService.isAbortRequested(resultId, version);
@@ -673,6 +712,17 @@ export class SkillInvokerService {
               if (!toolCallIds.has(toolCallId)) {
                 toolCallIds.add(toolCallId);
                 const toolStartTs = Date.now();
+
+                // Track for error handling
+                lastStepName = stepName;
+                lastToolCallMeta = {
+                  toolName,
+                  toolsetKey,
+                  toolsetId,
+                  toolCallId,
+                  startTs: toolStartTs,
+                  status: 'executing',
+                };
                 toolCallStartTimes.set(toolCallId, toolStartTs);
                 await persistToolCall(ToolCallStatus.EXECUTING, {
                   input: event.data?.input,
@@ -728,7 +778,6 @@ export class SkillInvokerService {
                 output: errorToolOutput,
                 errorMessage: errorMsg,
               });
-
               // Add ToolMessage for failed tool execution
               const toolStartTs = toolCallStartTimes.get(toolCallId);
               const toolEndTs = Date.now();
@@ -971,27 +1020,6 @@ export class SkillInvokerService {
 
       this.logger.error(`Full error stack: ${err.stack}`);
 
-      // Log token count summary only when "too many tokens" error occurs
-      if (errorMessage.toLowerCase().includes('too many tokens')) {
-        try {
-          const inputTokens = encode(JSON.stringify(input)).length;
-          const contextTokens = encode(JSON.stringify(config.configurable.context || {})).length;
-          const historyTokens = encode(
-            JSON.stringify(config.configurable.chatHistory || []),
-          ).length;
-          const toolsTokens = encode(
-            JSON.stringify(config.configurable.selectedTools || []),
-          ).length;
-          const totalEstimatedTokens = inputTokens + contextTokens + historyTokens + toolsTokens;
-
-          this.logger.error(
-            `🔍 Token breakdown - Total: ${totalEstimatedTokens} | Input: ${inputTokens} | Context: ${contextTokens} | History: ${historyTokens} | Tools: ${toolsTokens} | Model: ${runMeta?.ls_model_name || data.providerItem?.name}`,
-          );
-        } catch (tokenCountError) {
-          this.logger.error(`Failed to count tokens: ${tokenCountError?.message}`);
-        }
-      }
-
       // For user aborts, estimate token usage from generated content
       if (errorInfo.isAbortError && runMeta) {
         try {
@@ -1008,14 +1036,61 @@ export class SkillInvokerService {
         }
       }
 
-      if (res) {
-        writeSSEResponse(res, {
-          event: 'error',
-          resultId,
-          version,
-          error: genBaseRespDataFromError(new Error(errorInfo.userFriendlyMessage)),
-          originError: err.message,
-        });
+      const isTokenLimitError = this.isTokenLimitError(err);
+      const shouldHandleErrorFallback = !errorInfo.isAbortError;
+      const failureReason = isTokenLimitError
+        ? 'token_limit_exceeded'
+        : errorInfo.isNetworkError
+          ? 'network_error'
+          : 'execution_error';
+      const failureMessage = isTokenLimitError
+        ? 'Token limit exceeded. Tool execution results have been saved to file.'
+        : `${errorInfo.userFriendlyMessage}. Tool execution results have been saved to file.`;
+
+      const fallbackHandled = shouldHandleErrorFallback
+        ? await this.handleErrorFallback({
+            input,
+            config,
+            user,
+            resultId,
+            version,
+            canvasId,
+            res,
+            runMeta,
+            providerItem: data.providerItem,
+            toolCallMeta: lastToolCallMeta,
+            stepName: lastStepName ?? runMeta?.step?.name,
+            failureReason,
+            failureMessage,
+          })
+        : null;
+
+      if (fallbackHandled) {
+        // If fallback was successfully handled, add message to step content for persistence
+        const errorRecoveryMessage = `\n\nTool execution failed. Results have been saved to ${fallbackHandled.internalUrl}. Please retry in a new node based on the final results.\n\n`;
+        // Add to step content for persistence
+        resultAggregator.handleStreamContent(runMeta, errorRecoveryMessage);
+        if (res) {
+          // Send as stream content, not error - so frontend renders it normally (no popup)
+          writeSSEResponse(res, {
+            event: 'stream',
+            resultId,
+            version,
+            content: errorRecoveryMessage,
+            step: runMeta?.step,
+          });
+        }
+      } else {
+        // Normal error handling - send error SSE (triggers popup) and set failed status
+        if (res) {
+          writeSSEResponse(res, {
+            event: 'error',
+            resultId,
+            version,
+            error: genBaseRespDataFromError(new Error(errorInfo.userFriendlyMessage)),
+            originError: err.message,
+          });
+        }
       }
       if (errorInfo.isAbortError) {
         result.status = 'failed';
@@ -1567,5 +1642,339 @@ export class SkillInvokerService {
       userId: params.userId,
       tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent'],
     });
+  }
+
+  /**
+   * Accurately estimate token count using LangChain's model-specific tokenizer
+   * This provides precise token counting that matches actual LLM API usage
+   */
+  private async estimateTokenCount(
+    input: any,
+    config: SkillRunnableConfig,
+  ): Promise<{
+    totalTokens: number;
+    breakdown: {
+      inputTokens: number;
+      contextTokens: number;
+      historyTokens: number;
+      toolsTokens: number;
+    };
+  }> {
+    try {
+      // Get the chat model instance to use its tokenizer
+      const chatModel = this.skillEngine.chatModel();
+
+      // Count input tokens
+      const inputTokens = await chatModel.getNumTokens(JSON.stringify(input));
+
+      // Count context tokens
+      const contextTokens = await chatModel.getNumTokens(
+        JSON.stringify(config.configurable.context || {}),
+      );
+
+      // Count history tokens
+      const historyTokens = await chatModel.getNumTokens(
+        JSON.stringify(config.configurable.chatHistory || []),
+      );
+
+      // Count tools tokens - this includes tool definitions/schemas
+      const toolsTokens = await chatModel.getNumTokens(
+        JSON.stringify(config.configurable.selectedTools || []),
+      );
+
+      const totalTokens = inputTokens + contextTokens + historyTokens + toolsTokens;
+
+      return {
+        totalTokens,
+        breakdown: {
+          inputTokens,
+          contextTokens,
+          historyTokens,
+          toolsTokens,
+        },
+      };
+    } catch (error) {
+      // Fallback to basic estimation if LangChain tokenizer fails
+      this.logger.warn(
+        `Failed to use LangChain tokenizer, falling back to basic estimation: ${error instanceof Error ? error.message : error}`,
+      );
+
+      const inputTokens = encode(JSON.stringify(input)).length;
+      const contextTokens = encode(JSON.stringify(config.configurable.context || {})).length;
+      const historyTokens = encode(JSON.stringify(config.configurable.chatHistory || [])).length;
+      const toolsTokens = encode(JSON.stringify(config.configurable.selectedTools || [])).length;
+      const totalTokens = inputTokens + contextTokens + historyTokens + toolsTokens;
+
+      return {
+        totalTokens,
+        breakdown: {
+          inputTokens,
+          contextTokens,
+          historyTokens,
+          toolsTokens,
+        },
+      };
+    }
+  }
+
+  /**
+   * Handle error fallback by saving tool outputs and sending error_handler event
+   * Returns saved file info for use in error event
+   */
+  private async handleErrorFallback(params: {
+    input: any;
+    config: SkillRunnableConfig;
+    user: User;
+    resultId: string;
+    version: number;
+    canvasId: string;
+    res: Response;
+    runMeta: SkillRunnableMeta;
+    providerItem?: ProviderItem;
+    toolCallMeta: ToolCallMeta;
+    stepName: string;
+    failureReason?: string;
+    failureMessage?: string;
+  }): Promise<{ fileId: string; name: string; internalUrl: string } | null> {
+    const {
+      input,
+      config,
+      user,
+      resultId,
+      version,
+      canvasId,
+      res,
+      runMeta,
+      providerItem,
+      toolCallMeta,
+      stepName,
+      failureReason,
+      failureMessage,
+    } = params;
+
+    try {
+      const normalizedFailureReason = failureReason ?? 'token_limit_exceeded';
+      const normalizedFailureMessage =
+        failureMessage ?? 'Tool execution results have been saved to file.';
+
+      // Calculate token breakdown for logging
+      const { totalTokens, breakdown } = await this.estimateTokenCount(input, config);
+      const { inputTokens, contextTokens, historyTokens, toolsTokens } = breakdown;
+
+      this.logger.error(
+        `🔍 Token breakdown - Total: ${totalTokens} | Input: ${inputTokens} | Context: ${contextTokens} | History: ${historyTokens} | Tools: ${toolsTokens} | Model: ${runMeta?.ls_model_name || providerItem?.name}`,
+      );
+
+      const saveResult = await this.saveToolOutputsToFile(user, resultId, version, canvasId);
+      if (!saveResult) {
+        return null;
+      }
+
+      const { file: savedFile, toolCallCount } = saveResult;
+
+      const now = Date.now();
+      const normalizedToolCallMeta: ToolCallMeta = {
+        ...toolCallMeta,
+        toolCallId: toolCallMeta?.toolCallId,
+        toolName: toolCallMeta?.toolName ?? 'error_fallback',
+        toolsetId: toolCallMeta?.toolsetId ?? toolCallMeta?.toolsetKey ?? 'error_fallback',
+        toolsetKey: toolCallMeta?.toolsetKey ?? toolCallMeta?.toolsetId ?? 'error_fallback',
+        startTs: toolCallMeta?.startTs ?? now,
+        status: toolCallMeta?.status ?? 'failed',
+      };
+
+      if (!normalizedToolCallMeta.toolCallId) {
+        this.logger.warn('Error fallback skipped: missing tool call id');
+        return null;
+      }
+
+      const toolCallId = normalizedToolCallMeta.toolCallId;
+
+      // Prepare output data structure for frontend rendering
+      // Frontend expects result.data.fileId structure (see render.tsx:255)
+      const outputData = {
+        data: {
+          fileId: savedFile.fileId,
+          canvasId,
+          fileName: savedFile.name,
+          mimeType: savedFile.mimeType,
+          message: `${normalizedFailureMessage} (saved ${toolCallCount} tool execution results)`,
+        },
+      };
+
+      // Update tool_call_result record using toolCallService (uses upsert internally)
+      await this.toolCallService.persistToolCallResult(
+        res,
+        user.uid,
+        { resultId, version },
+        normalizedToolCallMeta.toolsetId,
+        normalizedToolCallMeta.toolName,
+        JSON.stringify({
+          reason: normalizedFailureReason,
+          toolCount: toolCallCount,
+        }),
+        JSON.stringify(outputData),
+        ToolCallStatus.FAILED,
+        toolCallId,
+        stepName,
+        normalizedToolCallMeta.startTs ?? now,
+        now,
+        '',
+      );
+
+      // Send SSE stream event with tool_call XML data (as failed)
+      const xmlContent = this.toolCallService.generateToolUseXML({
+        toolCallId,
+        includeResult: true,
+        errorMsg: normalizedFailureMessage,
+        metadata: {
+          name: normalizedToolCallMeta.toolName,
+          toolsetKey: normalizedToolCallMeta.toolsetKey,
+        },
+        input: {
+          reason: normalizedFailureReason,
+          toolCount: toolCallCount,
+        },
+        output: outputData,
+        startTs: normalizedToolCallMeta.startTs ?? now,
+        updatedTs: now,
+      });
+
+      if (xmlContent) {
+        this.toolCallService.emitToolUseStream(res, {
+          resultId,
+          step: runMeta?.step,
+          xmlContent,
+          toolCallId,
+          toolName: normalizedToolCallMeta.toolName,
+          event_name: 'stream',
+        });
+      }
+
+      return {
+        fileId: savedFile.fileId,
+        internalUrl: savedFile.internalUrl,
+        name: savedFile.name,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to handle error fallback: ${error instanceof Error ? error.message : error}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Format tool call results as Markdown content
+   */
+  private formatToolCallsAsMarkdown(toolCalls: any[], resultId: string, version: number): string {
+    const header = [
+      '# Tool Execution Results',
+      `Result ID: ${resultId}`,
+      `Version: ${version}`,
+      `Generated: ${new Date().toISOString()}`,
+      `Total tool calls: ${toolCalls.length}`,
+      '',
+      '---',
+      '',
+    ].join('\n');
+
+    const addJsonSection = (label: string, data: any): string[] => {
+      if (!data) return [];
+      return ['', `**${label}**:`, '```json', JSON.stringify(data, null, 2), '```'];
+    };
+
+    const toolCallSections = toolCalls
+      .map((call, index) => {
+        const sections = [
+          `## Tool Call ${index + 1}: ${call.toolName}`,
+          `**Status**: ${call.status}`,
+          `**Executed at**: ${call.createdAt.toISOString()}`,
+          ...addJsonSection('Input', call.input),
+          ...addJsonSection('Output', call.output),
+        ];
+
+        return sections.join('\n');
+      })
+      .join('\n\n---\n\n');
+
+    return `${header}\n${toolCallSections}`;
+  }
+
+  /**
+   * Save all tool outputs from current version to a text file
+   * Returns the saved file info and tool call count if successful
+   */
+  private async saveToolOutputsToFile(
+    user: User,
+    resultId: string,
+    version: number,
+    canvasId: string,
+  ): Promise<{
+    file: { fileId: string; internalUrl: string; mimeType: string; name: string };
+    toolCallCount: number;
+  } | null> {
+    try {
+      // Query all tool call results for current version
+      const toolCalls = await this.prisma.toolCallResult.findMany({
+        where: {
+          resultId,
+          version,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+
+      if (toolCalls.length === 0) {
+        this.logger.info(`No tool outputs to save for ${resultId} v${version}`);
+        return null;
+      }
+
+      // Format tool outputs as readable Markdown
+      const fileContent = this.formatToolCallsAsMarkdown(toolCalls, resultId, version);
+      // Upload file directly using DriveService and MiscService to avoid AsyncLocalStorage context issues
+      const filename = 'agent-execution-failed.md';
+      const buffer = Buffer.from(fileContent, 'utf-8');
+
+      // Upload to storage
+      const uploadResult = await this.miscService.uploadFile(user, {
+        file: {
+          buffer,
+          mimetype: 'text/markdown',
+          originalname: filename,
+        },
+        visibility: 'private',
+      });
+
+      // Create drive file record with explicit resultId and version
+      const file = await this.driveService.createDriveFile(user, {
+        canvasId,
+        name: filename,
+        storageKey: uploadResult.storageKey,
+        source: 'agent',
+        resultId,
+        resultVersion: version,
+      });
+
+      if (!file) {
+        this.logger.warn('Failed to upload tool outputs file');
+        return null;
+      }
+      return {
+        file: {
+          fileId: file.fileId,
+          internalUrl: file.url,
+          mimeType: file.type,
+          name: file.name,
+        },
+        toolCallCount: toolCalls.length,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to save tool outputs: ${error instanceof Error ? error.message : error}`,
+      );
+      return null;
+    }
   }
 }
