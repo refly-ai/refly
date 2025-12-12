@@ -4,6 +4,7 @@ import {
   WorkflowVariable,
   GenericToolset,
   CanvasNode,
+  CanvasEdge,
   RawCanvasData,
   ListWorkflowAppsData,
 } from '@refly/openapi-schema';
@@ -12,12 +13,18 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { PrismaService } from '../common/prisma.service';
 import { CanvasService } from '../canvas/canvas.service';
 import { MiscService } from '../misc/misc.service';
-import { genCanvasID, genWorkflowAppID, replaceResourceMentionsInQuery } from '@refly/utils';
+import {
+  genCanvasID,
+  genWorkflowAppID,
+  replaceResourceMentionsInQuery,
+  safeParseJSON,
+} from '@refly/utils';
 import { WorkflowService } from '../workflow/workflow.service';
 import { Injectable } from '@nestjs/common';
 import { ShareCommonService } from '../share/share-common.service';
 import { ShareCreationService } from '../share/share-creation.service';
 import { ShareNotFoundError, WorkflowAppNotFoundError } from '@refly/errors';
+import type { ShareExtraData } from '../share/share.dto';
 import { ToolService } from '../tool/tool.service';
 import { VariableExtractionService } from '../variable-extraction/variable-extraction.service';
 import { ResponseNodeMeta } from '@refly/canvas-common';
@@ -510,20 +517,88 @@ export class WorkflowAppService {
 
     this.logger.log(`Executing workflow app via shareId: ${shareId} for user: ${user.uid}`);
 
-    const shareDataRaw = await this.shareCommonService.getSharedData(shareRecord.storageKey);
-    if (!shareDataRaw) {
-      throw new ShareNotFoundError('Workflow app data not found');
-    }
-
     let canvasData: RawCanvasData;
 
-    if (shareDataRaw.canvasData) {
-      const shareData = shareDataRaw as SharedWorkflowAppData;
-      canvasData = shareData.canvasData;
-    } else if (shareDataRaw.nodes && shareDataRaw.edges) {
-      canvasData = shareDataRaw as RawCanvasData;
+    // 1. Try to get executionStorageKey from extraData
+    const extraData = shareRecord.extraData
+      ? (safeParseJSON(shareRecord.extraData) as ShareExtraData)
+      : {};
+
+    const executionStorageKey = extraData?.executionStorageKey;
+
+    if (executionStorageKey) {
+      // Load complete execution data from private storage
+      try {
+        const executionBuffer = await this.miscService.downloadFile({
+          storageKey: executionStorageKey,
+          visibility: 'private',
+        });
+
+        const executionData = safeParseJSON(executionBuffer.toString()) as {
+          nodes: CanvasNode[];
+          edges: CanvasEdge[];
+          files?: any[];
+          resources?: any[];
+          variables: WorkflowVariable[];
+          title?: string;
+          canvasId?: string;
+          owner?: any;
+          minimapUrl?: string;
+        };
+
+        // executionData contains complete data, use it directly
+        canvasData = {
+          title: executionData.title,
+          canvasId: executionData.canvasId,
+          variables: executionData.variables,
+          nodes: executionData.nodes, // Complete nodes (including all agent nodes)
+          edges: executionData.edges, // Complete edges (workflow connections)
+          files: executionData.files || [],
+          resources: executionData.resources || [],
+        } as any;
+
+        this.logger.log(`Loaded execution data from private storage: ${executionStorageKey}`);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to load execution data from private storage: ${executionStorageKey}, fallback to public data. Error: ${error.message}`,
+        );
+        // Fallback to public data
+        const shareDataRaw = await this.shareCommonService.getSharedData(shareRecord.storageKey);
+        if (shareDataRaw?.canvasData) {
+          canvasData = shareDataRaw.canvasData as RawCanvasData;
+        } else {
+          throw new ShareNotFoundError('Canvas data not found in workflow app storage');
+        }
+      }
     } else {
-      throw new ShareNotFoundError('Canvas data not found in workflow app storage');
+      // ✅ Backward compatibility: Old data without executionStorageKey
+      this.logger.warn(
+        `No executionStorageKey found for shareId=${shareId}, using legacy public data (may have incomplete edges)`,
+      );
+
+      const shareDataRaw = await this.shareCommonService.getSharedData(shareRecord.storageKey);
+
+      if (shareDataRaw?.canvasData) {
+        const shareData = shareDataRaw as SharedWorkflowAppData;
+        canvasData = shareData.canvasData;
+      } else if (shareDataRaw?.nodes && shareDataRaw?.edges) {
+        canvasData = shareDataRaw as RawCanvasData;
+      } else {
+        throw new ShareNotFoundError('Canvas data not found in workflow app storage');
+      }
+    }
+
+    // ✅ Validate canvasData completeness
+    if (!canvasData.nodes || canvasData.nodes.length === 0) {
+      this.logger.warn(
+        `Canvas data has no nodes for shareId=${shareId}, workflow execution may fail`,
+      );
+    }
+
+    if (!canvasData.edges || canvasData.edges.length === 0) {
+      this.logger.warn(
+        `Canvas data has no edges for shareId=${shareId}, workflow execution may fail`,
+      );
     }
 
     const { nodes = [], edges = [] } = canvasData;

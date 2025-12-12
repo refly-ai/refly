@@ -5,6 +5,10 @@ import { useCanvasStoreShallow, useUserStoreShallow } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import type { WorkflowVariable } from '@refly/openapi-schema';
 
+interface SetVariablesOptions {
+  archiveOldFiles?: boolean;
+}
+
 export const useVariablesManagement = (canvasId: string) => {
   const isSharePage = location?.pathname?.startsWith('/share/') ?? false;
   const isLogin = useUserStoreShallow((state) => state.isLogin);
@@ -41,12 +45,13 @@ export const useVariablesManagement = (canvasId: string) => {
 
   // Debounced function to update server
   const debouncedUpdateVariables = useDebouncedCallback(
-    async (variables: WorkflowVariable[]) => {
+    async (variables: WorkflowVariable[], options?: SetVariablesOptions) => {
       try {
         await getClient().updateWorkflowVariables({
           body: {
             canvasId,
             variables,
+            archiveOldFiles: options?.archiveOldFiles,
           },
         });
       } catch (error) {
@@ -59,12 +64,12 @@ export const useVariablesManagement = (canvasId: string) => {
   );
 
   const setVariables = useCallback(
-    (variables: WorkflowVariable[]) => {
+    (variables: WorkflowVariable[], options?: SetVariablesOptions) => {
       // Update local state immediately for optimistic UI
       setLocalVariables(canvasId, variables);
 
       // Asynchronously update server with debounce (fire-and-forget)
-      debouncedUpdateVariables(variables);
+      debouncedUpdateVariables(variables, options);
     },
     [canvasId, remoteVariables, setLocalVariables, debouncedUpdateVariables],
   );

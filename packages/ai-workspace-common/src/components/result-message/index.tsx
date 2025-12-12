@@ -42,7 +42,7 @@ export const AIMessageCard = memo(({ message, resultId, stepStatus }: AIMessageC
           <ReasoningContentPreview
             content={reasoningContent}
             stepStatus={stepStatus}
-            className="my-3"
+            className={hasContent ? 'mb-3' : ''}
             resultId={resultId}
           />
         )}

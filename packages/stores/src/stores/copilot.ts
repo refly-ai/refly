@@ -1,3 +1,4 @@
+import { CopilotSession } from '@refly/openapi-schema';
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
@@ -8,6 +9,7 @@ interface CopilotState {
   sessionResultIds: Record<string, string[]>;
   createdCopilotSessionIds: Record<string, boolean>;
   canvasCopilotWidth: Record<string, number | null | undefined>;
+  historyTemplateSessions: Record<string, CopilotSession[]>;
 
   // method
   setCurrentSessionId: (canvasId: string, sessionId: string | null) => void;
@@ -15,6 +17,8 @@ interface CopilotState {
   appendSessionResultId: (sessionId: string, resultId: string) => void;
   setCreatedCopilotSessionId: (sessionId: string) => void;
   setCanvasCopilotWidth: (canvasId: string, width: number) => void;
+  addHistoryTemplateSession: (canvasId: string, session: CopilotSession) => void;
+  removeHistoryTemplateSession: (canvasId: string, sessionId: string) => void;
 }
 
 export const useCopilotStore = create<CopilotState>()(
@@ -25,6 +29,7 @@ export const useCopilotStore = create<CopilotState>()(
         sessionResultIds: {},
         createdCopilotSessionIds: {},
         canvasCopilotWidth: {},
+        historyTemplateSessions: {},
 
         setCurrentSessionId: (canvasId: string, sessionId: string | null) =>
           set((state) => ({
@@ -65,12 +70,31 @@ export const useCopilotStore = create<CopilotState>()(
               [canvasId]: width,
             },
           })),
+
+        addHistoryTemplateSession: (canvasId: string, session: CopilotSession) =>
+          set((state) => ({
+            historyTemplateSessions: {
+              ...state.historyTemplateSessions,
+              [canvasId]: [...(state.historyTemplateSessions[canvasId] || []), session],
+            },
+          })),
+
+        removeHistoryTemplateSession: (canvasId: string, sessionId: string) =>
+          set((state) => ({
+            historyTemplateSessions: {
+              ...state.historyTemplateSessions,
+              [canvasId]:
+                state.historyTemplateSessions[canvasId]?.filter((s) => s.sessionId !== sessionId) ??
+                [],
+            },
+          })),
       }),
       {
         name: 'copilot-storage',
         partialize: (state) => ({
           currentSessionId: state.currentSessionId,
           canvasCopilotWidth: state.canvasCopilotWidth,
+          historyTemplateSessions: state.historyTemplateSessions,
         }),
       },
     ),

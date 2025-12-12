@@ -289,6 +289,65 @@ export class DriveService {
   }
 
   /**
+   * Delete files by condition (soft delete + remove from OSS)
+   */
+  async deleteFilesByCondition(
+    user: User,
+    canvasId: string,
+    conditions: {
+      source?: DriveFileSource;
+      variableId?: string;
+      resultId?: string;
+    },
+  ): Promise<void> {
+    this.logger.info(
+      `Deleting files - uid: ${user.uid}, canvasId: ${canvasId}, conditions: ${JSON.stringify(conditions)}`,
+    );
+
+    // First find all files to get their storage keys
+    const files = await this.prisma.driveFile.findMany({
+      select: { fileId: true, storageKey: true },
+      where: {
+        canvasId,
+        uid: user.uid,
+        deletedAt: null,
+        ...conditions,
+      },
+    });
+
+    if (files.length === 0) {
+      this.logger.info(`No files found to delete for conditions: ${JSON.stringify(conditions)}`);
+      return;
+    }
+
+    // Soft delete in database
+    await this.prisma.driveFile.updateMany({
+      where: {
+        canvasId,
+        uid: user.uid,
+        deletedAt: null,
+        ...conditions,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    // Remove files from OSS
+    for (const file of files) {
+      if (file.storageKey) {
+        try {
+          await this.internalOss.removeObject(file.storageKey, true);
+        } catch (error) {
+          this.logger.warn(`Failed to remove file ${file.fileId} from OSS: ${error?.message}`);
+        }
+      }
+    }
+
+    this.logger.info(`Deleted ${files.length} files for conditions: ${JSON.stringify(conditions)}`);
+  }
+
+  /**
    * Process drive file content and store it in object storage
    * @param user - User information
    * @param requests - Array of drive file requests to process
@@ -886,12 +945,14 @@ export class DriveService {
    * Create a new drive file
    */
   async createDriveFile(user: User, request: ExtendedUpsertDriveFileRequest): Promise<DriveFile> {
-    const { canvasId } = request;
+    const { canvasId, archiveFiles } = request;
     if (!canvasId) {
       throw new ParamsError('Canvas ID is required for create operation');
     }
 
-    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request]);
+    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request], {
+      archiveFiles,
+    });
     const processedReq = processedResults[0];
 
     if (!processedReq) {

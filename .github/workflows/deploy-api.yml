@@ -107,4 +107,4 @@ jobs:
       - name: Update API deployment image on EKS
         run: |
           kubectl set image deployment/${{ inputs.deployment_name }} refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
-          kubectl rollout status deployment/${{ inputs.deployment_name }} -n refly-app --timeout=300s
+          kubectl rollout status deployment/${{ inputs.deployment_name }} -n refly-app --timeout=600s

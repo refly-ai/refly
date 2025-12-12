@@ -1158,6 +1158,29 @@ export class ShareCreationService {
   }
 
   /**
+   * Sanitize node metadata - keep only whitelisted safe fields
+   */
+  private sanitizeNodeMetadata(metadata: Record<string, any>): Record<string, any> {
+    // Keep essential fields for public sharing - include media URLs for result display
+    const ALLOWED_FIELDS = [
+      'shareId', // Public share identifier - needed for frontend functionality
+      'imageUrl', // Published image URL - useful for result display
+      'videoUrl', // Published video URL - useful for result display
+      'audioUrl', // Published audio URL - useful for result display
+      'selectedToolsets', // Toolset configuration - needed for displaying tool usage
+    ];
+
+    // Handle null/undefined metadata gracefully
+    if (!metadata || typeof metadata !== 'object') {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(metadata).filter(([key]) => ALLOWED_FIELDS.includes(key)),
+    );
+  }
+
+  /**
    * Create or update a workflow app share record
    * This helper method reduces code duplication between regular and template shares
    */
@@ -1173,21 +1196,24 @@ export class ShareCreationService {
     existingShareRecord: ShareRecord | null,
     logPrefix: string,
   ): Promise<ShareRecord> {
-    // Add canvasId to canvasData for frontend access
-    const canvasDataWithId = {
-      ...canvasData,
-      canvasId: workflowApp.canvasId,
-    };
+    // Step 1: Sanitize nodes metadata for public exposure
+    const sanitizedNodes = canvasData.nodes?.map((node) => ({
+      id: node.id,
+      type: node.type, // Required for frontend to determine how to render the node
+      data: {
+        entityId: node.data?.entityId || '',
+        title: node.data?.title || '',
+        metadata: this.sanitizeNodeMetadata(node.data?.metadata || {}),
+      },
+    }));
 
-    // Publish minimap if available
-    if (canvasDataWithId.minimapUrl) {
-      canvasDataWithId.minimapUrl = await this.miscService.publishFile(canvasDataWithId.minimapUrl);
-    }
+    // minimapUrl is already a published public URL from processCanvasForShare
+    const publishedMinimapUrl = canvasData.minimapUrl;
 
-    // Create public workflow app data
+    // Step 2: Create public workflow app data (sanitized data for public access)
     const publicData = {
       appId: workflowApp.appId,
-      title: title || canvasDataWithId.title,
+      title: title || canvasData.title,
       description: workflowApp.description,
       remixEnabled: workflowApp.remixEnabled,
       coverUrl: workflowApp.coverStorageKey
@@ -1197,14 +1223,42 @@ export class ShareCreationService {
       resultNodeIds: workflowApp.resultNodeIds,
       query: workflowApp.query,
       variables: safeParseJSON(workflowApp.variables || '[]'),
-      canvasData: canvasDataWithId,
-      // creditUsage already has markup applied (from database or calculated above)
       creditUsage: creditUsage,
       createdAt: workflowApp.createdAt,
       updatedAt: workflowApp.updatedAt,
+
+      // Top-level canvas identifiers for frontend compatibility
+      canvasId: workflowApp.canvasId,
+      minimapUrl: publishedMinimapUrl,
+
+      // Unified canvasData structure (sanitized data, no preview field)
+      canvasData: {
+        edges: [], // Always empty to protect workflow structure
+        nodes: sanitizedNodes, // Sanitized nodes with metadata filtered
+        files: canvasData.files || [],
+        resources: canvasData.resources || [],
+        variables: canvasData.variables || [],
+        title: canvasData.title,
+        canvasId: canvasData.canvasId,
+        owner: canvasData.owner,
+        minimapUrl: canvasData.minimapUrl,
+      },
     };
 
-    // Upload public workflow app data to Minio
+    // Step 3: Create execution data (complete data for workflow execution)
+    const executionData = {
+      nodes: canvasData.nodes, // Complete nodes (including all agent nodes)
+      edges: canvasData.edges, // Complete edges (workflow connections)
+      files: canvasData.files || [],
+      resources: canvasData.resources || [],
+      variables: canvasData.variables || [],
+      title: canvasData.title,
+      canvasId: canvasData.canvasId,
+      owner: canvasData.owner,
+      minimapUrl: canvasData.minimapUrl,
+    };
+
+    // Step 4: Upload public data to public storage
     const { storageKey } = await this.miscService.uploadBuffer(user, {
       fpath: 'workflow-app.json',
       buf: Buffer.from(JSON.stringify(publicData)),
@@ -1214,8 +1268,28 @@ export class ShareCreationService {
       storageKey: `share/${shareId}.json`,
     });
 
-    // Create or update share record
+    // Step 5: Upload execution data to private storage
+    const { storageKey: executionStorageKey } = await this.miscService.uploadBuffer(user, {
+      fpath: 'workflow-app-execution.json',
+      buf: Buffer.from(JSON.stringify(executionData)),
+      entityId: workflowApp.appId,
+      entityType: 'workflowApp',
+      visibility: 'private',
+      storageKey: `share/${shareId}-execution.json`,
+    });
+
+    // Step 6: Prepare extraData with executionStorageKey
+    const extraData: ShareExtraData = {
+      executionStorageKey,
+    };
+
+    // Step 7: Create or update share record
     if (existingShareRecord) {
+      // Merge existing extraData (e.g., vectorStorageKey if present)
+      const existingExtraData = existingShareRecord.extraData
+        ? (safeParseJSON(existingShareRecord.extraData) as ShareExtraData)
+        : {};
+
       const shareRecord = await this.prisma.shareRecord.update({
         where: { pk: existingShareRecord.pk },
         data: {
@@ -1223,6 +1297,10 @@ export class ShareCreationService {
           storageKey,
           parentShareId,
           allowDuplication,
+          extraData: JSON.stringify({
+            ...existingExtraData,
+            executionStorageKey,
+          }),
           updatedAt: new Date(),
         },
       });
@@ -1241,6 +1319,7 @@ export class ShareCreationService {
           storageKey,
           parentShareId,
           allowDuplication,
+          extraData: JSON.stringify(extraData),
         },
       });
       this.logger.log(

@@ -10610,6 +10610,11 @@ export const UpdateWorkflowVariablesRequestSchema = {
         $ref: '#/components/schemas/WorkflowVariable',
       },
     },
+    archiveOldFiles: {
+      type: 'boolean',
+      description:
+        'Whether to archive existing drive files associated with old resource variables before updating',
+    },
   },
 } as const;
 
@@ -10796,6 +10801,11 @@ export const UpsertDriveFileRequestSchema = {
     resultVersion: {
       type: 'number',
       description: 'Related agent result version',
+    },
+    archiveFiles: {
+      type: 'boolean',
+      description:
+        'Whether to archive existing files with the same variableId or resultId before creating new file',
     },
   },
 } as const;
