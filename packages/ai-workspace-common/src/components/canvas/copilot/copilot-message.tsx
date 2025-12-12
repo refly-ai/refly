@@ -15,13 +15,15 @@ import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { CanvasNode } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
+import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 
 interface CopilotMessageProps {
   result: ActionResult;
   isFinal: boolean;
+  sessionId: string;
 }
 
-export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
+export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessageProps) => {
   const { resultId, input, steps, status } = result;
 
   const workflowPlan = useMemo(() => {
@@ -51,6 +53,8 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
   }, [status, resultId, fetchActionResult]);
 
   const { canvasId } = useCanvasContext();
+  const { invokeAction } = useInvokeAction();
+
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
 
@@ -149,6 +153,22 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
     onLayout,
   ]);
 
+  const handleRetry = useCallback(() => {
+    invokeAction(
+      {
+        query: result?.input?.query,
+        resultId,
+        modelInfo: null,
+        agentMode: 'copilot_agent',
+        copilotSessionId: sessionId,
+      },
+      {
+        entityId: canvasId,
+        entityType: 'canvas',
+      },
+    );
+  }, [resultId, canvasId, invokeAction, result.input.query]);
+
   return (
     <div className="flex flex-col gap-2">
       {/* User query - right aligned blue bubble */}
@@ -158,7 +178,7 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
         </div>
       </div>
       {/* AI response - left aligned */}
-      <MessageList result={result} stepStatus="finish" />
+      <MessageList result={result} stepStatus="finish" handleRetry={handleRetry} />
       {workflowPlan && (
         <div className="mt-1">
           <Button type="primary" onClick={handleApprove}>
