@@ -296,7 +296,7 @@ export class ShareCommonService {
   }
 
   /**
-   * Replace all fileIds in a JSON string using regex
+   * Replace all fileIds in a JSON string
    * FileId format: df-{24 char cuid2}
    */
   replaceFileIdsInJsonString(jsonString: string, fileIdMap: Map<string, string>): string {
@@ -306,8 +306,8 @@ export class ShareCommonService {
 
     let result = jsonString;
     for (const [oldId, newId] of fileIdMap.entries()) {
-      // Replace all occurrences of oldId with newId
-      result = result.replace(new RegExp(oldId, 'g'), newId);
+      // Use replaceAll for safe string replacement (avoids ReDoS risks with RegExp)
+      result = result.replaceAll(oldId, newId);
     }
     return result;
   }

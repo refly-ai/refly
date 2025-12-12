@@ -11,7 +11,7 @@ import {
   useCanvasStoreShallow,
 } from '@refly/stores';
 import { Segmented, Button } from 'antd';
-import { memo, useCallback, useEffect, useMemo } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
@@ -80,14 +80,18 @@ const SkillResponseNodePreviewComponent = ({
   // - false: explicitly fetch from API (workflow execution products, canvas editing)
   // - undefined: default to false (fetch from API)
   const useShareDataFromContext = useShareDataContext();
-  const shouldUseShareData = useMemo(() => {
-    // If context explicitly specifies, use that
-    if (useShareDataFromContext !== undefined) {
-      return useShareDataFromContext;
-    }
-    // Default: don't use shareData, always fetch from API
-    return false;
-  }, [useShareDataFromContext]);
+  const shouldUseShareData = useShareDataFromContext ?? false;
+
+  // Use refs to avoid stale closures in useEffect while preventing infinite loops
+  const nodeRef = useRef(node);
+  useEffect(() => {
+    nodeRef.current = node;
+  }, [node]);
+
+  const resultRef = useRef(result);
+  useEffect(() => {
+    resultRef.current = result;
+  }, [result]);
 
   // Only fetch shareData when shouldUseShareData is true and shareId exists
   const { data: shareData, loading: shareDataLoading } = useFetchShareData(
@@ -110,9 +114,8 @@ const SkillResponseNodePreviewComponent = ({
     }
     if (resultId) {
       // Always refresh in background to keep store up-to-date
-      fetchActionResult(resultId, { silent: !!result, nodeToUpdate: node });
+      fetchActionResult(resultId, { silent: !!resultRef.current, nodeToUpdate: nodeRef.current });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultId, shouldUseShareData, isStreaming, nodeStatus, fetchActionResult]);
 
   const { data } = node;
