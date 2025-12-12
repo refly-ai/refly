@@ -15,6 +15,7 @@ import { GithubStar } from '@refly-packages/ai-workspace-common/components/commo
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { WorkflowAppProducts } from '@refly-packages/ai-workspace-common/components/workflow-app/products';
 import { PublicFileUrlProvider } from '@refly-packages/ai-workspace-common/context/public-file-url';
+import { UseShareDataProvider } from '@refly-packages/ai-workspace-common/context/use-share-data';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useWorkflowExecutionPolling } from '@refly-packages/ai-workspace-common/hooks/use-workflow-execution-polling';
 import { ReactFlowProvider } from '@refly-packages/ai-workspace-common/components/canvas';
@@ -936,9 +937,11 @@ const WorkflowAppPage: React.FC = () => {
                       <div className="bg-[var(--refly-bg-float-z3)] rounded-lg border border-[var(--refly-Card-Border)] dark:bg-[var(--bg---refly-bg-body-z0,#0E0E0E)] relative z-20 transition-all duration-300 ease-in-out">
                         <div className="transition-opacity duration-300 ease-in-out">
                           {activeTab === 'products' ? (
-                            <PublicFileUrlProvider value={false}>
-                              <WorkflowAppProducts products={products || []} />
-                            </PublicFileUrlProvider>
+                            <UseShareDataProvider value={false}>
+                              <PublicFileUrlProvider value={false}>
+                                <WorkflowAppProducts products={products || []} />
+                              </PublicFileUrlProvider>
+                            </UseShareDataProvider>
                           ) : activeTab ===
                             'runLogs' ? // <WorkflowAppRunLogs nodeExecutions={logs || []} />
 
@@ -959,14 +962,16 @@ const WorkflowAppPage: React.FC = () => {
                 <div className="text-center z-10 text-[var(--refly-text-0)] dark:text-[var(--refly-text-StaticWhite)] font-['PingFang_SC'] font-semibold text-[14px] leading-[1.4285714285714286em]">
                   {t('workflowApp.resultPreview')}
                 </div>
-                <PublicFileUrlProvider>
-                  <SelectedResultsGrid
-                    fillRow
-                    bordered
-                    selectedResults={workflowApp?.resultNodeIds ?? []}
-                    options={previewOptions}
-                  />
-                </PublicFileUrlProvider>
+                <UseShareDataProvider value={true}>
+                  <PublicFileUrlProvider>
+                    <SelectedResultsGrid
+                      fillRow
+                      bordered
+                      selectedResults={workflowApp?.resultNodeIds ?? []}
+                      options={previewOptions}
+                    />
+                  </PublicFileUrlProvider>
+                </UseShareDataProvider>
               </div>
             )}
           </div>

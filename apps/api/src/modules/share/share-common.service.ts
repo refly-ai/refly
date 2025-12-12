@@ -269,50 +269,46 @@ export class ShareCommonService {
   }
 
   /**
-   * Update file references in canvas nodes
-   * Replaces old fileIds with new fileIds in node metadata (e.g., contextItems)
+   * Update canvasData.files with new fileIds and storageKeys
    */
-  private updateFileReferencesInNodes(nodes: any[], fileIdMap: Map<string, string>): void {
-    if (!nodes || nodes.length === 0 || fileIdMap.size === 0) {
-      return;
+  updateFilesWithNewIds(
+    files: any[],
+    fileIdMap: Map<string, string>,
+    storageKeyMap: Map<string, string>,
+  ): any[] {
+    if (!files || files.length === 0 || fileIdMap.size === 0) {
+      return files;
     }
 
-    for (const node of nodes) {
-      // Check skillResponse nodes for contextItems
-      if (node.type === 'skillResponse' && node.data?.metadata?.contextItems) {
-        const contextItems = node.data.metadata.contextItems;
-        for (const item of contextItems) {
-          if (item.type === 'file' && item.entityId) {
-            const newFileId = fileIdMap.get(item.entityId);
-            if (newFileId) {
-              item.entityId = newFileId;
-              this.logger.debug(
-                `Updated file reference in node ${node.id}: ${item.entityId} -> ${newFileId}`,
-              );
-            }
-          }
-        }
+    return files.map((file) => {
+      const newFileId = fileIdMap.get(file.fileId);
+      const newStorageKey = storageKeyMap.get(file.fileId);
+
+      if (newFileId) {
+        return {
+          ...file,
+          fileId: newFileId,
+          storageKey: newStorageKey ?? file.storageKey,
+        };
       }
+      return file;
+    });
+  }
 
-      // Check for query string that might contain file references
-      if (node.data?.metadata?.query && typeof node.data.metadata.query === 'string') {
-        let query = node.data.metadata.query;
-        let updated = false;
-
-        // Replace file references in query string (format: @{type=file,id=df-xxx,...})
-        for (const [oldId, newId] of fileIdMap.entries()) {
-          const oldPattern = new RegExp(`id=${oldId}`, 'g');
-          if (oldPattern.test(query)) {
-            query = query.replace(oldPattern, `id=${newId}`);
-            updated = true;
-          }
-        }
-
-        if (updated) {
-          node.data.metadata.query = query;
-          this.logger.debug(`Updated file references in query for node ${node.id}`);
-        }
-      }
+  /**
+   * Replace all fileIds in a JSON string using regex
+   * FileId format: df-{24 char cuid2}
+   */
+  replaceFileIdsInJsonString(jsonString: string, fileIdMap: Map<string, string>): string {
+    if (!jsonString || fileIdMap.size === 0) {
+      return jsonString;
     }
+
+    let result = jsonString;
+    for (const [oldId, newId] of fileIdMap.entries()) {
+      // Replace all occurrences of oldId with newId
+      result = result.replace(new RegExp(oldId, 'g'), newId);
+    }
+    return result;
   }
 }

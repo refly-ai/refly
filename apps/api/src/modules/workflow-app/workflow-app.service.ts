@@ -615,11 +615,11 @@ export class WorkflowAppService {
     // variables with old resource entity ids (need to be replaced)
     const oldVariables = variables || canvasData.variables || [];
 
-    const tempCanvasId = genCanvasID();
+    const newCanvasId = genCanvasID();
 
     const finalVariables = await this.canvasService.processResourceVariables(
       user,
-      tempCanvasId,
+      newCanvasId,
       oldVariables,
       true,
     );
@@ -682,8 +682,6 @@ export class WorkflowAppService {
       nodes: updatedNodes,
       edges,
     };
-
-    const newCanvasId = genCanvasID();
 
     const executionId = await this.workflowService.initializeWorkflowExecution(
       user,
