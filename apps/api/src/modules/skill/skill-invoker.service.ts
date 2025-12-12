@@ -915,14 +915,15 @@ export class SkillInvokerService {
               // Anthropic (via LangChain) uses: input_token_details.cache_read
               const bedrockUsage = responseMetadata?.metadata?.usage;
 
-              const cacheRead =
+              const inputTokens = usageMetadata?.input_tokens ?? 0;
+              const outputTokens = usageMetadata?.output_tokens ?? 0;
+              const cacheReadTokens =
                 usageMetadata?.input_token_details?.cache_read ??
                 bedrockUsage?.cacheReadInputTokenCount ??
                 bedrockUsage?.cacheReadInputTokens ??
                 bedrockUsage?.cacheReadInputTokensCount ??
                 0;
-
-              const _cacheWrite =
+              const cacheWriteTokens =
                 usageMetadata?.input_token_details?.cache_creation ??
                 bedrockUsage?.cacheWriteInputTokenCount ??
                 bedrockUsage?.cacheWriteInputTokens ??
@@ -941,14 +942,15 @@ export class SkillInvokerService {
                 modelName: String(runMeta.ls_model_name),
                 modelLabel: providerItem?.name,
                 providerItemId: providerItem?.itemId,
-                inputTokens: usageMetadata?.input_tokens ?? 0,
-                outputTokens: usageMetadata?.output_tokens ?? 0,
-                cacheReadTokens: cacheRead,
+                inputTokens,
+                outputTokens,
+                cacheReadTokens,
+                cacheWriteTokens,
               };
 
-              if (cacheRead > 0) {
+              if (cacheReadTokens > 0) {
                 this.logger.info(
-                  `Prompt cache hit, model: ${usage.modelName}, inputTokens: ${usage.inputTokens}, outputTokens: ${usage.outputTokens}, cacheReadTokens: ${usage.cacheReadTokens}`,
+                  `Prompt cache hit, model: ${usage.modelName}, inputTokens: ${usage.inputTokens}, outputTokens: ${usage.outputTokens}, cacheReadTokens: ${usage.cacheReadTokens}, cacheWriteTokens: ${usage.cacheWriteTokens}`,
                 );
               }
 
@@ -1370,6 +1372,8 @@ export class SkillInvokerService {
 
       const inputTokens = encode(input.query || '').length;
       const outputTokens = encode(generatedContent).length;
+      const cacheReadTokens = 0;
+      const cacheWriteTokens = 0;
 
       const usage: TokenUsageItem = {
         tier: providerItem?.tier,
@@ -1379,6 +1383,8 @@ export class SkillInvokerService {
         providerItemId: providerItem?.itemId,
         inputTokens,
         outputTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
       };
 
       resultAggregator.addUsageItem(runMeta, usage);

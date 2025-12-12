@@ -2048,6 +2048,10 @@ export const TokenUsageItemSchema = {
       type: 'number',
       description: 'Cache read tokens',
     },
+    cacheWriteTokens: {
+      type: 'number',
+      description: 'Cache write tokens',
+    },
     providerItemId: {
       type: 'string',
       description: 'Provider item ID',
