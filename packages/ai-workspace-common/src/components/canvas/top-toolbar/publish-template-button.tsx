@@ -135,10 +135,6 @@ const PublishTemplateButton = React.memo(
 
     const handleUpdateTemplate = useCallback(async () => {
       // Make sure the canvas data is synced to the remote
-      logEvent('update_template', null, {
-        canvas_id: canvasId,
-      });
-
       await forceSyncState({ syncRemote: true });
 
       // Validate canvas before opening modal
@@ -147,7 +143,7 @@ const PublishTemplateButton = React.memo(
       }
 
       setCreateTemplateModalVisible(true);
-    }, [forceSyncState, validateCanvas, canvasId, logEvent]);
+    }, [forceSyncState, validateCanvas, canvasId]);
 
     const handlePublishSuccess = useCallback(async () => {
       // Refresh workflow apps data after successful publish

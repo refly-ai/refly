@@ -4,6 +4,7 @@ export default () => ({
   port: Number.parseInt(process.env.PORT) || 5800,
   wsPort: Number.parseInt(process.env.WS_PORT) || 5801,
   origin: process.env.ORIGIN || 'http://localhost:5700',
+  endpoint: process.env.ENDPOINT || 'http://localhost:5800',
   static: {
     public: {
       endpoint: process.env.STATIC_PUBLIC_ENDPOINT || 'http://localhost:5800/v1/misc/public',
@@ -178,6 +179,7 @@ export default () => ({
   },
   defaultModel: {
     chat: process.env.DEFAULT_MODEL_CHAT,
+    copilot: process.env.DEFAULT_MODEL_COPILOT || process.env.DEFAULT_MODEL_CHAT,
     agent: process.env.DEFAULT_MODEL_AGENT,
     queryAnalysis: process.env.DEFAULT_MODEL_QUERY_ANALYSIS,
     titleGeneration: process.env.DEFAULT_MODEL_TITLE_GENERATION,
@@ -214,7 +216,6 @@ export default () => ({
     },
   },
   langfuse: {
-    enabled: process.env.LANGFUSE_ENABLED === 'true',
     publicKey: process.env.LANGFUSE_PUBLIC_KEY,
     secretKey: process.env.LANGFUSE_SECRET_KEY,
     baseUrl: process.env.LANGFUSE_BASE_URL,

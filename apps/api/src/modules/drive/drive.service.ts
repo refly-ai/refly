@@ -25,9 +25,9 @@ import {
   isPlainTextMimeType,
   pick,
 } from '@refly/utils';
-import { ParamsError, DriveFileNotFoundError } from '@refly/errors';
+import { ParamsError, DriveFileNotFoundError, DocumentNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
-import { streamToBuffer } from '../../utils';
+import { streamToBuffer, streamToString } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
 import { isEmbeddableLinkFile } from './drive.utils';
 import path from 'node:path';
@@ -35,6 +35,9 @@ import { ProviderService } from '../provider/provider.service';
 import { ParserFactory } from '../knowledge/parsers/factory';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { readingTime } from 'reading-time-estimator';
+import { MiscService } from '../misc/misc.service';
+import { DocxParser } from '../knowledge/parsers/docx.parser';
+import { PdfParser } from '../knowledge/parsers/pdf.parser';
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -65,6 +68,8 @@ export class DriveService implements OnModuleInit {
     private redis: RedisService,
     private providerService: ProviderService,
     private moduleRef: ModuleRef,
+    private subscriptionService: SubscriptionService,
+    private miscService: MiscService,
   ) {
     this.logger.setContext(DriveService.name);
   }
@@ -91,11 +96,15 @@ export class DriveService implements OnModuleInit {
     return this.config.get<string>('origin');
   }
 
+  private get endpoint(): string | undefined {
+    return this.config.get<string>('endpoint');
+  }
+
   /**
    * Transform DriveFile Prisma model to DTO with URL
    */
   toDTO(driveFile: DriveFileModel): DriveFile {
-    return driveFilePO2DTO(driveFile, this.origin);
+    return driveFilePO2DTO(driveFile, this.endpoint);
   }
 
   private generateStorageKey(
@@ -290,6 +299,65 @@ export class DriveService implements OnModuleInit {
   }
 
   /**
+   * Delete files by condition (soft delete + remove from OSS)
+   */
+  async deleteFilesByCondition(
+    user: User,
+    canvasId: string,
+    conditions: {
+      source?: DriveFileSource;
+      variableId?: string;
+      resultId?: string;
+    },
+  ): Promise<void> {
+    this.logger.info(
+      `Deleting files - uid: ${user.uid}, canvasId: ${canvasId}, conditions: ${JSON.stringify(conditions)}`,
+    );
+
+    // First find all files to get their storage keys
+    const files = await this.prisma.driveFile.findMany({
+      select: { fileId: true, storageKey: true },
+      where: {
+        canvasId,
+        uid: user.uid,
+        deletedAt: null,
+        ...conditions,
+      },
+    });
+
+    if (files.length === 0) {
+      this.logger.info(`No files found to delete for conditions: ${JSON.stringify(conditions)}`);
+      return;
+    }
+
+    // Soft delete in database
+    await this.prisma.driveFile.updateMany({
+      where: {
+        canvasId,
+        uid: user.uid,
+        deletedAt: null,
+        ...conditions,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    // Remove files from OSS
+    for (const file of files) {
+      if (file.storageKey) {
+        try {
+          await this.internalOss.removeObject(file.storageKey, true);
+        } catch (error) {
+          this.logger.warn(`Failed to remove file ${file.fileId} from OSS: ${error?.message}`);
+        }
+      }
+    }
+
+    this.logger.info(`Deleted ${files.length} files for conditions: ${JSON.stringify(conditions)}`);
+  }
+
+  /**
    * Process drive file content and store it in object storage
    * @param user - User information
    * @param requests - Array of drive file requests to process
@@ -327,7 +395,7 @@ export class DriveService implements OnModuleInit {
         existingFileNames.add(uniqueName); // Add to set to prevent future conflicts in this batch
 
         // Skip requests that don't have content to process
-        if (content === undefined && !storageKey && !externalUrl) {
+        if (content === undefined && !storageKey && !externalUrl && !buffer) {
           continue;
         }
 
@@ -887,12 +955,14 @@ export class DriveService implements OnModuleInit {
    * Create a new drive file
    */
   async createDriveFile(user: User, request: ExtendedUpsertDriveFileRequest): Promise<DriveFile> {
-    const { canvasId } = request;
+    const { canvasId, archiveFiles } = request;
     if (!canvasId) {
       throw new ParamsError('Canvas ID is required for create operation');
     }
 
-    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request]);
+    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request], {
+      archiveFiles,
+    });
     const processedReq = processedResults[0];
 
     if (!processedReq) {
@@ -1448,6 +1518,62 @@ export class DriveService implements OnModuleInit {
         return { updatedAt: 'desc' };
       default:
         return { createdAt: 'desc' };
+    }
+  }
+
+  async exportDocument(
+    user: User,
+    params: { fileId: string; format: 'markdown' | 'docx' | 'pdf' },
+  ): Promise<Buffer> {
+    const { fileId, format } = params;
+
+    if (!fileId) {
+      throw new ParamsError('Document ID is required');
+    }
+
+    const doc = await this.prisma.driveFile.findFirst({
+      where: {
+        fileId,
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    if (!doc) {
+      throw new DocumentNotFoundError('Document not found');
+    }
+
+    let content: string;
+    if (doc.storageKey) {
+      const contentStream = await this.internalOss.getObject(doc.storageKey);
+      content = await streamToString(contentStream);
+    }
+
+    // Process images in the document content
+    if (content) {
+      content = await this.miscService.processContentImages(content);
+    }
+
+    // add title as H1 title
+    const title = doc.name ?? 'Untitled';
+    const markdownContent = `# ${title}\n\n${content ?? ''}`;
+
+    // convert content to the format
+    switch (format) {
+      case 'markdown':
+        return Buffer.from(markdownContent);
+      case 'docx': {
+        const docxParser = new DocxParser();
+        const docxData = await docxParser.parse(markdownContent);
+        return docxData.buffer;
+      }
+      case 'pdf': {
+        const pdfParser = new PdfParser();
+        const pdfData = await pdfParser.parse(markdownContent);
+        return pdfData.buffer;
+      }
+      default:
+        throw new ParamsError('Unsupported format');
     }
   }
 }

@@ -292,7 +292,7 @@ export const ModelSelector = memo(
       ({ key }: { key: string }) => {
         const selectedModel = modelList?.find((model) => model.providerItemId === key);
         if (selectedModel) {
-          logEvent('choose_model', null, {
+          logEvent('choose_model', Date.now(), {
             model: selectedModel.name,
           });
           setModel(selectedModel);

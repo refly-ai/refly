@@ -38,8 +38,6 @@ import {
   ProjectNotFoundError,
 } from '@refly/errors';
 import { DeleteCanvasNodesJobData } from '../canvas/canvas.dto';
-import { DocxParser } from '../knowledge/parsers/docx.parser';
-import { PdfParser } from '../knowledge/parsers/pdf.parser';
 import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { CollabService } from '../collab/collab.service';
@@ -119,62 +117,6 @@ export class DocumentService {
     }
 
     return { ...doc, content };
-  }
-
-  async exportDocument(
-    user: User,
-    params: { docId: string; format: 'markdown' | 'docx' | 'pdf' },
-  ): Promise<Buffer> {
-    const { docId, format } = params;
-
-    if (!docId) {
-      throw new ParamsError('Document ID is required');
-    }
-
-    const doc = await this.prisma.document.findFirst({
-      where: {
-        docId,
-        uid: user.uid,
-        deletedAt: null,
-      },
-    });
-
-    if (!doc) {
-      throw new DocumentNotFoundError('Document not found');
-    }
-
-    let content: string;
-    if (doc.storageKey) {
-      const contentStream = await this.oss.getObject(doc.storageKey);
-      content = await streamToString(contentStream);
-    }
-
-    // Process images in the document content
-    if (content) {
-      content = await this.miscService.processContentImages(content);
-    }
-
-    // 添加文档标题作为 H1 标题
-    const title = doc.title || 'Untitled';
-    const markdownContent = `# ${title}\n\n${content || ''}`;
-
-    // 根据格式转换内容
-    switch (format) {
-      case 'markdown':
-        return Buffer.from(markdownContent);
-      case 'docx': {
-        const docxParser = new DocxParser();
-        const docxData = await docxParser.parse(markdownContent);
-        return docxData.buffer;
-      }
-      case 'pdf': {
-        const pdfParser = new PdfParser();
-        const pdfData = await pdfParser.parse(markdownContent);
-        return pdfData.buffer;
-      }
-      default:
-        throw new ParamsError('Unsupported format');
-    }
   }
 
   private async saveDocumentState(user: User, document: DocumentPO, content: string) {

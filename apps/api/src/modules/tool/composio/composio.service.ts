@@ -28,7 +28,6 @@ export class ComposioService {
   private readonly logger = new Logger(ComposioService.name);
   private composio: Composio;
   private readonly DEFINITION_CACHE_PREFIX = 'oauth:definition:';
-
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
@@ -602,14 +601,11 @@ export class ComposioService {
         _runManager: unknown,
         runnableConfig: RunnableConfig,
       ) => {
+        const { file_name_title, ...toolInput } = input as Record<string, unknown>;
         try {
-          const inputRecord = input as Record<string, unknown>;
-
-          // Extract file_name_title before calling Composio API (it's not part of the actual schema)
-          const { file_name_title, ...toolInput } = inputRecord;
-
-          // Run tool execution within context (similar to dynamic-tooling)
-          const { result, user } = await runInContext(
+          // Run tool execution AND post-processing within context
+          // This ensures getCanvasId() works correctly in post-handler
+          const { executionResult, postResult } = await runInContext(
             {
               langchainConfig: runnableConfig as SkillRunnableConfig,
               requestId: `composio-${toolName}-${Date.now()}`,
@@ -631,32 +627,52 @@ export class ComposioService {
                 toolName,
                 processedRequest.params,
               );
-              return { result: executionResult, user: currentUser };
+
+              const resultId = runnableConfig?.configurable?.resultId as string | undefined;
+              const version = runnableConfig?.configurable?.version as number | undefined;
+
+              // Only run postHandler (billing/upload) on real successes.
+              const postResult = executionResult.successful
+                ? await this.postHandlerService.process(executionResult, {
+                    user: currentUser,
+                    toolName,
+                    toolsetName: context.toolsetName,
+                    toolsetKey: context.toolsetKey,
+                    creditCost: context.creditCost,
+                    fileNameTitle: (file_name_title as string) || 'untitled',
+                    resultId,
+                    version,
+                  })
+                : { data: executionResult.data };
+
+              return {
+                executionResult,
+                postResult,
+              };
             },
           );
 
-          // Use postHandler for billing and resource processing
-          const postResult = await this.postHandlerService.process(result, {
-            user,
-            toolName,
-            toolsetName: context.toolsetName,
-            toolsetKey: context.toolsetKey,
-            creditCost: context.creditCost,
-            fileNameTitle: (file_name_title as string) || 'untitled',
-          });
-
-          if (result?.successful) {
-            return JSON.stringify(postResult.data ?? null);
+          // Treat absence of error logs as success; any error log triggers failure document
+          if (!executionResult.successful) {
+            const errorMessage = executionResult.error ?? 'Tool execution failed';
+            return JSON.stringify({
+              status: 'error',
+              error: errorMessage,
+            });
           }
-          return JSON.stringify({
-            error: result?.error ?? 'Unknown Composio execution error',
-          });
+          const dataToReturn =
+            postResult && typeof postResult === 'object' && 'data' in postResult
+              ? (postResult as any).data
+              : (executionResult as any)?.data;
+          return JSON.stringify(dataToReturn ?? null);
         } catch (error) {
           this.logger.error(
             `Failed to execute ${context.authType} tool ${toolName}: ${error instanceof Error ? error.message : error}`,
           );
+          const errorMessage = error instanceof Error ? error.message : String(error);
           return JSON.stringify({
-            error: error instanceof Error ? error.message : String(error),
+            status: 'error',
+            error: errorMessage,
           });
         }
       },

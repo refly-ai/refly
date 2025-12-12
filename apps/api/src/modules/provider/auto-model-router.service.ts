@@ -3,10 +3,9 @@ import { ProviderItem as ProviderItemModel } from '@prisma/client';
 import { LLMModelConfig } from '@refly/openapi-schema';
 import {
   isAutoModel,
-  AUTO_MODEL_ID,
+  selectAutoModel,
   AUTO_MODEL_ROUTING_PRIORITY,
   safeParseJSON,
-  safeStringifyJSON,
 } from '@refly/utils';
 import { ProviderItemNotFoundError } from '@refly/errors';
 
@@ -39,7 +38,6 @@ export class AutoModelRouter {
   /**
    * Route Auto model to the target model with monitoring metadata
    * If the input is not an Auto model, returns it unchanged
-   * Routes to the first available model from the priority list
    *
    * @param chatItem The chat model item to potentially route
    * @returns The routed model item or original item
@@ -50,30 +48,21 @@ export class AutoModelRouter {
       return chatItem;
     }
 
-    // Find the first available model from the priority list
     const routedItem = this.findAvailableModel();
 
     this.logger.log(
       `Routed auto model to ${routedItem.name} (itemId: ${routedItem.itemId}) for user ${this.context.userId}`,
     );
 
-    // Inject route data for monitoring
-    const config = safeParseJSON(routedItem.config || '{}');
-    config.routeData = {
-      originalItemId: chatItem.itemId,
-      originalModelId: AUTO_MODEL_ID,
-    };
-
-    return {
-      ...routedItem,
-      config: safeStringifyJSON(config),
-    };
+    return routedItem;
   }
 
   /**
    * Find an available LLM provider item for Auto model routing
-   * This method iterates through the AUTO_MODEL_ROUTING_PRIORITY list and returns
-   * the first available and valid model
+   * This method implements a three-tier priority system:
+   * 1. Check AUTO_MODEL_ROUTING_RANDOM_LIST env var and randomly select from it
+   * 2. Fallback to AUTO_MODEL_ROUTING_PRIORITY constant array
+   * 3. Final fallback to the first available model
    * Reasoning models (capabilities.reasoning = true) are excluded
    *
    * @returns The selected provider item
@@ -101,7 +90,16 @@ export class AutoModelRouter {
       }
     }
 
-    // Find the first available model from the priority list
+    // Priority 1: Try to select a model from the random list
+    const selectedCandidate = selectAutoModel();
+    if (selectedCandidate) {
+      const item = modelMap.get(selectedCandidate);
+      if (item) {
+        return item;
+      }
+    }
+
+    // Priority 2: Fallback to AUTO_MODEL_ROUTING_PRIORITY list
     for (const candidateModelId of AUTO_MODEL_ROUTING_PRIORITY) {
       const item = modelMap.get(candidateModelId);
       if (item) {
@@ -109,7 +107,7 @@ export class AutoModelRouter {
       }
     }
 
-    // Fallback to the first available model
+    // Priority 3: the first available model
     if (llmItems.length > 0) {
       return llmItems[0];
     }

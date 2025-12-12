@@ -1,0 +1,3 @@
+export const SKILL_DEFAULTS = {
+  INVOKE_WORKER_CONCURRENCY: 20,
+};

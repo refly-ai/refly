@@ -13,6 +13,8 @@ import { cn } from '@refly/utils/cn';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { useStore } from '@xyflow/react';
 import React, {
   forwardRef,
@@ -90,14 +92,8 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const { setToolStoreModalOpen } = useToolStoreShallow((state) => ({
       setToolStoreModalOpen: state.setToolStoreModalOpen,
     }));
-    const {
-      query,
-      setQuery,
-      contextItems = [],
-      setContextItems,
-      selectedToolsets = [],
-      setSelectedToolsets,
-    } = useAgentNodeManagement(nodeId);
+    const { query, setQuery, setContextItems, setSelectedToolsets } =
+      useAgentNodeManagement(nodeId);
     const { connectToUpstreamAgent } = useAgentConnections();
     const { data: workflowVariables } = useVariablesManagement(canvasId);
 
@@ -127,14 +123,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const hasCheckedOAuthCacheRef = useRef(false);
     // Ref to hold the MentionList component instance for external updates
     const mentionComponentRef = useRef<any>(null);
-    // Track mentions mirrored into state so removals in the editor prune linked selections
-    const mentionTrackingRef = useRef<{
-      files: Map<string, number>;
-      tools: Map<string, number>;
-    }>({
-      files: new Map(),
-      tools: new Map(),
-    });
 
     // Helper function to add item to context items
     const addToContextItems = useCallback(
@@ -417,22 +405,89 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     }, [selectedSkillNodeId]);
 
     // Create placeholder extension with dynamic placeholder
+    // Only show placeholder when the entire editor is empty (no content including line breaks)
     const placeholderExtension = useMemo(() => {
-      return Placeholder.configure({
-        placeholder: placeholder || t('canvas.richChatInput.defaultPlaceholder'),
+      const placeholderText = placeholder || t('canvas.richChatInput.defaultPlaceholder');
+
+      return Placeholder.extend({
+        addProseMirrorPlugins() {
+          return [
+            new Plugin({
+              key: new PluginKey('placeholder'),
+              props: {
+                decorations: (state) => {
+                  const { doc } = state;
+
+                  const isEmpty =
+                    doc.childCount === 1 && (doc.content?.content[0] as any)?.content?.size === 0;
+
+                  if (!isEmpty) {
+                    return DecorationSet.empty;
+                  }
+
+                  // Show placeholder on the first paragraph
+                  const firstChild = doc.firstChild;
+                  if (!firstChild || firstChild.type.name !== 'paragraph') {
+                    return DecorationSet.empty;
+                  }
+
+                  const placeholderDecoration = Decoration.node(0, firstChild.nodeSize, {
+                    class: 'is-empty',
+                    'data-placeholder': placeholderText,
+                  });
+
+                  return DecorationSet.create(doc, [placeholderDecoration]);
+                },
+              },
+            }),
+          ];
+        },
+      }).configure({
+        placeholder: placeholderText,
+        showOnlyCurrent: false,
       });
     }, [placeholder, t]);
 
     // Create all extensions array
+    // Configure StarterKit to disable all rich text formatting (bold, italic, lists, etc.)
+    // Only keep basic structure: Document, Paragraph, Text, HardBreak
+    // This ensures only plain text and mentions are supported
+    const minimalStarterKit = useMemo(
+      () =>
+        StarterKit.configure({
+          bold: false,
+          italic: false,
+          strike: false,
+          code: false,
+          heading: false,
+          bulletList: false,
+          orderedList: false,
+          listItem: false,
+          blockquote: false,
+          codeBlock: false,
+          horizontalRule: false,
+          dropcursor: false,
+          gapcursor: false,
+          // History is enabled by default, no need to configure it
+        }),
+      [],
+    );
+
     const extensions = useMemo(
       () => [
+        minimalStarterKit,
         AtomicInlineKeymap,
-        StarterKit,
         mentionExtension,
         placeholderExtension,
         PasteCleanupExtension,
       ],
-      [mentionExtension, placeholderExtension, PasteCleanupExtension, AtomicInlineKeymap],
+      [
+        minimalStarterKit,
+        mentionExtension,
+        placeholderExtension,
+        PasteCleanupExtension,
+        AtomicInlineKeymap,
+      ],
     );
 
     const editor = useEditor(
@@ -444,7 +499,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           const content = serializeDocToTokens(editor?.state?.doc);
           // Keep raw text in state for UX; content is already serialized with mentions
           setQuery(content);
-          syncMentionsToState();
         },
         onFocus: () => {
           handleFocus();
@@ -458,7 +512,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           },
         },
       },
-      [placeholder, nodeId],
+      [nodeId],
     );
 
     // Expose focus and insertAtSymbol methods through ref
@@ -493,33 +547,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       [editor, readonly, hasUserInteractedRef, popupInstanceRef],
     );
 
-    // Remove mention nodes by predicate, deleting from end to avoid shifting positions
-    const removeMentionsByFilter = useCallback(
-      (filterFn: (attrs: any) => boolean) => {
-        if (!editor) return false;
-        const positions: { from: number; to: number }[] = [];
-        const doc = editor.state?.doc;
-        if (!doc) return false;
-
-        doc.descendants((node: any, pos: number) => {
-          if (node?.type?.name === 'mention' && filterFn(node?.attrs ?? {})) {
-            positions.push({ from: pos, to: pos + node.nodeSize });
-          }
-        });
-
-        if (!positions.length) return false;
-
-        let tr = editor.state.tr;
-        for (let i = positions.length - 1; i >= 0; i -= 1) {
-          const { from, to } = positions[i];
-          tr = tr.delete(from, to);
-        }
-        editor.view.dispatch(tr);
-        return true;
-      },
-      [editor],
-    );
-
     // Sync all mentions in the editor to contextItems/selectedToolsets
     const syncMentionsToState = useCallback(() => {
       if (!editor) return;
@@ -534,171 +561,72 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         }
       });
 
-      const fileMentions = mentionNodes
-        .map((node) => {
-          const attrs = node?.attrs ?? {};
-          const source = attrs.source;
-          const variableType = attrs.variableType;
-          const isFileSource =
-            source === 'files' ||
-            source === 'products' ||
-            (source === 'variables' && variableType === 'resource');
-          if (!isFileSource) return null;
+      // Collect file mentions and sync to contextItems
+      const fileMentions = mentionNodes.filter(
+        (node) => node?.attrs?.source === 'files' || node?.attrs?.source === 'products',
+      );
 
-          const entityId = String(attrs.entityId || attrs.id || '').trim();
-          if (!entityId) return null;
-
-          return {
-            entityId,
-            title: (attrs.label || attrs.id || '') as string,
-            source: (attrs.source as string) || 'files',
-            resourceType: attrs.resourceType ?? attrs.metadata?.resourceType,
-            resourceMeta: attrs.resourceMeta ?? attrs.metadata?.resourceMeta,
-          };
-        })
-        .filter(Boolean) as {
-        entityId: string;
-        title: string;
-        source: string;
-        resourceType?: any;
-        resourceMeta?: any;
-      }[];
-
-      const toolMentions = mentionNodes
-        .map((node) => {
-          const attrs = node?.attrs ?? {};
-          const source = attrs.source;
-          if (source !== 'tools' && source !== 'toolsets') return null;
-
-          const id = String(attrs.toolsetId || attrs.id || '').trim();
-          if (!id) return null;
-
-          return {
-            id,
-            toolsetId: attrs.toolsetId as string | undefined,
-            toolset: attrs.toolset as GenericToolset | undefined,
-          };
-        })
-        .filter(Boolean) as { id: string; toolsetId?: string; toolset?: GenericToolset }[];
-
-      const currentFileCounts = new Map<string, number>();
-      for (const mention of fileMentions) {
-        currentFileCounts.set(mention.entityId, (currentFileCounts.get(mention.entityId) ?? 0) + 1);
-      }
-      const currentToolCounts = new Map<string, number>();
-      for (const mention of toolMentions) {
-        const key = mention.id;
-        currentToolCounts.set(key, (currentToolCounts.get(key) ?? 0) + 1);
-      }
-
-      const { files: prevFiles, tools: prevTools } = mentionTrackingRef.current;
-
-      const currentFileIds = new Set(currentFileCounts.keys());
-      const currentToolIds = new Set(currentToolCounts.keys());
-
-      const removedFileIds = [...prevFiles.keys()].filter((id) => !currentFileIds.has(id));
-      const removedToolIds = [...prevTools.keys()].filter((id) => !currentToolIds.has(id));
-
-      if (removedFileIds.length > 0 || fileMentions.length > 0) {
-        setContextItems((prevContextItems) => {
-          const existing = prevContextItems ?? [];
-          let next = existing;
-
-          if (removedFileIds.length > 0) {
-            next = existing.filter((item) => !removedFileIds.includes(item.entityId));
+      if (fileMentions.length > 0) {
+        const newContextItems: IContextItem[] = [];
+        for (const mention of fileMentions) {
+          const attrs = mention?.attrs;
+          if (attrs?.entityId) {
+            const contextItem: IContextItem = {
+              entityId: attrs.entityId,
+              title: attrs.label || attrs.id,
+              type: 'file',
+              metadata: {
+                source: attrs.source || 'files',
+                resourceType: attrs.resourceType,
+                resourceMeta: attrs.resourceMeta,
+              },
+            };
+            newContextItems.push(contextItem);
           }
+        }
 
-          for (const mention of fileMentions) {
-            const isExisting = next.some((ctx) => ctx.entityId === mention.entityId);
-            if (!isExisting) {
-              next = [
-                ...next,
-                {
-                  entityId: mention.entityId,
-                  title: mention.title,
-                  type: 'file',
-                  metadata: {
-                    source: mention.source,
-                    resourceType: mention.resourceType,
-                    resourceMeta: mention.resourceMeta,
-                  },
-                },
-              ];
+        if (newContextItems.length > 0) {
+          setContextItems((prevContextItems) => {
+            const existing = prevContextItems ?? [];
+            const merged = [...existing];
+            for (const item of newContextItems) {
+              if (!existing.some((ctx) => ctx.entityId === item.entityId)) {
+                merged.push(item);
+              }
             }
-          }
-
-          return next;
-        });
+            return merged;
+          });
+        }
       }
 
-      if (removedToolIds.length > 0 || toolMentions.length > 0) {
-        setSelectedToolsets((prevToolsets) => {
-          const existing = prevToolsets ?? [];
-          let next = existing;
+      // Collect tool mentions and sync to selectedToolsets
+      const toolMentions = mentionNodes.filter(
+        (node) => node?.attrs?.source === 'tools' || node?.attrs?.source === 'toolsets',
+      );
 
-          if (removedToolIds.length > 0) {
-            next = existing.filter((toolset) => !removedToolIds.includes(toolset.id));
+      if (toolMentions.length > 0) {
+        const newToolsets: GenericToolset[] = [];
+        for (const mention of toolMentions) {
+          const attrs = mention?.attrs;
+          if (attrs?.toolset && attrs?.toolsetId) {
+            newToolsets.push(attrs.toolset);
           }
+        }
 
-          for (const mention of toolMentions) {
-            const toolsetId = mention.toolsetId || mention.toolset?.id || mention.id;
-            if (!toolsetId || !mention.toolset) {
-              continue;
+        if (newToolsets.length > 0) {
+          setSelectedToolsets((prevToolsets) => {
+            const existing = prevToolsets ?? [];
+            const merged = [...existing];
+            for (const toolset of newToolsets) {
+              if (!existing.some((t) => t.id === toolset.id)) {
+                merged.push(toolset);
+              }
             }
-
-            const alreadySelected = next.some((toolset) => toolset.id === toolsetId);
-            if (!alreadySelected) {
-              next = [...next, mention.toolset];
-            }
-          }
-
-          return next;
-        });
+            return merged;
+          });
+        }
       }
-
-      mentionTrackingRef.current = {
-        files: currentFileCounts,
-        tools: currentToolCounts,
-      };
-    }, [editor, nodeId, setContextItems, setSelectedToolsets]);
-
-    useEffect(() => {
-      syncMentionsToState();
-    }, [editor, syncMentionsToState]);
-
-    // Prune prompt mentions when chips are removed from the sidebar
-    useEffect(() => {
-      if (!editor) return;
-
-      const tracked = mentionTrackingRef.current;
-      const allowedFileIds = new Set((contextItems ?? []).map((item) => item.entityId));
-      const allowedToolIds = new Set((selectedToolsets ?? []).map((toolset) => toolset.id));
-
-      const hasMissingFile = [...tracked.files.keys()].some((id) => !allowedFileIds.has(id));
-      const hasMissingTool = [...tracked.tools.keys()].some((id) => !allowedToolIds.has(id));
-
-      if (hasMissingFile) {
-        removeMentionsByFilter((attrs) => {
-          const source = attrs?.source;
-          const variableType = attrs?.variableType;
-          const entityId = String(attrs?.entityId || attrs?.id || '').trim();
-          const isFileSource =
-            source === 'files' ||
-            source === 'products' ||
-            (source === 'variables' && variableType === 'resource');
-          return isFileSource && entityId && !allowedFileIds.has(entityId);
-        });
-      }
-
-      if (hasMissingTool) {
-        removeMentionsByFilter((attrs) => {
-          const source = attrs?.source;
-          const id = String(attrs?.toolsetId || attrs?.id || '').trim();
-          const isToolSource = source === 'tools' || source === 'toolsets';
-          return isToolSource && id && !allowedToolIds.has(id);
-        });
-      }
-    }, [editor, contextItems, selectedToolsets, removeMentionsByFilter]);
+    }, [editor, setContextItems, setSelectedToolsets]);
 
     // Enhanced handleSendMessage that converts mentions to Handlebars
     const handleSendMessageWithMentions = useCallback(() => {
@@ -930,11 +858,9 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         const imageFiles: File[] = [];
 
         for (const item of Array.from(items)) {
-          if (item.type.startsWith('image/')) {
-            const file = item.getAsFile();
-            if (file) {
-              imageFiles.push(file);
-            }
+          const file = item.getAsFile();
+          if (file) {
+            imageFiles.push(file);
           }
         }
 

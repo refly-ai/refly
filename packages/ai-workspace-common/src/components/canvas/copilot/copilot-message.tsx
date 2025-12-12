@@ -15,14 +15,17 @@ import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { CanvasNode } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
+import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 
 interface CopilotMessageProps {
   result: ActionResult;
   isFinal: boolean;
+  sessionId: string;
 }
 
-export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) => {
+export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessageProps) => {
   const { resultId, input, steps, status } = result;
+  const query = useMemo(() => input?.query ?? '', [input]);
 
   const workflowPlan = useMemo(() => {
     const toolCalls = steps?.[0]?.toolCalls ?? [];
@@ -51,6 +54,8 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
   }, [status, resultId, fetchActionResult]);
 
   const { canvasId } = useCanvasContext();
+  const { invokeAction } = useInvokeAction();
+
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
 
@@ -118,8 +123,18 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
     );
     setNodes(nodes);
     setEdges(edges);
-    setVariables(variables ?? []);
+    setVariables(variables ?? [], { archiveOldFiles: true });
     setShowWorkflowRun(true);
+
+    for (const node of nodes) {
+      if (node.type === 'skillResponse') {
+        logEvent('create_agent_node', Date.now(), {
+          canvasId,
+          nodeId: node.id,
+          source: 'copilot_generate',
+        });
+      }
+    }
 
     setTimeout(() => {
       onLayout('LR');
@@ -139,6 +154,25 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
     onLayout,
   ]);
 
+  const handleRetry = useCallback(() => {
+    if (!resultId || !sessionId || !canvasId) {
+      return;
+    }
+    invokeAction(
+      {
+        query,
+        resultId,
+        modelInfo: null,
+        agentMode: 'copilot_agent',
+        copilotSessionId: sessionId,
+      },
+      {
+        entityId: canvasId,
+        entityType: 'canvas',
+      },
+    );
+  }, [resultId, canvasId, invokeAction, sessionId, query]);
+
   return (
     <div className="flex flex-col gap-2">
       {/* User query - right aligned blue bubble */}
@@ -148,7 +182,7 @@ export const CopilotMessage = memo(({ result, isFinal }: CopilotMessageProps) =>
         </div>
       </div>
       {/* AI response - left aligned */}
-      <MessageList result={result} stepStatus="finish" />
+      <MessageList result={result} stepStatus="finish" handleRetry={handleRetry} />
       {workflowPlan && (
         <div className="mt-1">
           <Button type="primary" onClick={handleApprove}>

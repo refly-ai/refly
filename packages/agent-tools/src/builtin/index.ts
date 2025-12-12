@@ -431,7 +431,10 @@ Use the fileId string directly (format: 'df-' followed by alphanumeric), NOT bas
         'The email address of the recipient. If not provided, the email will be sent to the user.',
       )
       .optional(),
-    attachments: z.array(z.string()).describe('The URLs of the attachments').optional(),
+    attachments: z
+      .array(z.string())
+      .describe('File attachments using file-content://df-<fileId> format')
+      .optional(),
   });
 
   description = `Send an email to a specified recipient with subject and HTML content.
@@ -457,7 +460,9 @@ IMPORTANT: Use \`file-content://\` for <img>, <video>, <audio> src attributes. U
         subject: input.subject,
         html: htmlWithResolvedFiles,
         to: input.to,
-        attachments: input.attachments,
+        attachments: await Promise.all(
+          input.attachments?.map((file) => this.replaceFilePlaceholders(file)) || [],
+        ),
       });
 
       if (!result.success) {
@@ -607,10 +612,18 @@ export class BuiltinReadFile extends AgentBaseTool<BuiltinToolParams> {
   toolsetKey = 'read_file';
 
   schema = z.object({
-    fileId: z.string().describe('The ID of the file to read'),
+    fileId: z.string().describe('The ID of the file to read (format: df-xxx, from context)'),
   });
 
-  description = 'Read content from a drive file.';
+  description = `Read content from a file.
+
+Supported types:
+- Text files (txt, md, json, csv, js, py, xml, yaml...): Returns raw content
+- PDF / Word (.docx) / EPUB: Returns extracted text (max 3000 words, truncated if exceeded)
+
+NOT supported: Images, Audio, Video (returns error)
+
+Latency: <2s`;
 
   protected params: BuiltinToolParams;
 

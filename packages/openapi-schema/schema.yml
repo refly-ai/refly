@@ -1602,21 +1602,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetDocumentDetailResponse'
-  /knowledge/document/export/document:
+  /drive/document/export:
     get:
       tags:
-        - knowledge
+        - drive
       summary: Export document to Markdown, DOCX or PDF format
       description: Export a document to Markdown, DOCX or PDF format
       operationId: exportDocument
       parameters:
-        - name: docId
+        - name: fileId
           in: query
-          description: Export document ID to retrieve
+          description: Export file ID to retrieve
           required: true
           schema:
             type: string
-            example: d-g30e1b80b5g1itbemc0g5jj3
+            example: df-g30e1b80b5g1itbemc0g5jj3
         - name: format
           in: query
           description: Export format
@@ -5015,6 +5015,7 @@ components:
         - image
         - video
         - audio
+        - text/plain
     IndexError:
       type: object
       description: Error message for resource indexing
@@ -6353,6 +6354,7 @@ components:
       description: Model usage scene
       enum:
         - chat
+        - copilot
         - agent
         - queryAnalysis
         - titleGeneration
@@ -6365,6 +6367,9 @@ components:
       properties:
         chat:
           description: Default chat model to use
+          $ref: '#/components/schemas/ProviderItem'
+        copilot:
+          description: Default copilot model to use
           $ref: '#/components/schemas/ProviderItem'
         agent:
           description: Default agent model to use
@@ -10832,6 +10837,9 @@ components:
         key:
           type: string
           description: Toolset key
+        type:
+          $ref: '#/components/schemas/GenericToolsetType'
+          description: Toolset type (regular, mcp, external_oauth)
         builtin:
           type: boolean
           description: Whether this is a builtin toolset
@@ -11049,6 +11057,12 @@ components:
         fileNameTitle:
           type: string
           description: File name title from input params
+        resultId:
+          type: string
+          description: Result ID from execution context
+        version:
+          type: number
+          description: Result version from execution context
     PostHandlerResult:
       type: object
       description: Result from post-processing tool execution
@@ -11835,6 +11849,9 @@ components:
           description: List of workflow variables
           items:
             $ref: '#/components/schemas/WorkflowVariable'
+        archiveOldFiles:
+          type: boolean
+          description: Whether to archive existing drive files associated with old resource variables before updating
     UpdateWorkflowVariablesResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -11977,6 +11994,9 @@ components:
         resultVersion:
           type: number
           description: Related agent result version
+        archiveFiles:
+          type: boolean
+          description: Whether to archive existing files with the same variableId or resultId before creating new file
     BatchCreateDriveFilesRequest:
       type: object
       required:

@@ -199,13 +199,51 @@ export const createMentionExtension = ({
           const base = String(resolved).split('-')[0];
           return base === 'top' ? 'top' : 'bottom';
         };
+        const resolveCommandRange = (
+          rangeOverride?: { from: number; to: number } | null,
+          editor?: any,
+        ) => {
+          if (
+            rangeOverride &&
+            typeof rangeOverride.from === 'number' &&
+            typeof rangeOverride.to === 'number'
+          ) {
+            return rangeOverride;
+          }
+
+          if (latestProps?.range) {
+            return latestProps.range;
+          }
+
+          const selection = editor?.state?.selection;
+          if (selection) {
+            return { from: selection.from, to: selection.to };
+          }
+
+          return null;
+        };
+        const runCommand = (
+          item: MentionItem,
+          options?: { range?: { from: number; to: number } },
+        ) => {
+          const editor = latestProps?.editor;
+          if (!editor) return;
+
+          const commandRange = resolveCommandRange(options?.range ?? null, editor);
+
+          handleCommand({
+            editor,
+            range: commandRange,
+            props: item,
+          });
+        };
 
         return {
           onStart: (props) => {
-            latestProps = props; // Store latest props
+            latestProps = { ...props, command: runCommand }; // Store latest props
             component = new ReactRenderer(MentionList, {
               props: {
-                ...props,
+                ...latestProps,
                 placement: mentionPosition,
                 query: props.query || '',
                 openOAuthPopup,
@@ -283,8 +321,8 @@ export const createMentionExtension = ({
             // Note: This is not accessible here, so we'll need to handle popup instance management differently
           },
           onUpdate(props) {
-            latestProps = props; // Update latest props
-            component.updateProps({ ...props, query: props.query || '' });
+            latestProps = { ...props, command: runCommand }; // Update latest props
+            component.updateProps({ ...latestProps, query: props.query || '' });
             // Update the reference rect while guarding against null during IME composition
             popup[0].setProps({
               getReferenceClientRect: () => {
@@ -298,7 +336,11 @@ export const createMentionExtension = ({
               try {
                 const instance = popup?.[0];
                 const placement = parsePlacement(instance);
-                component.updateProps({ ...props, placement, query: props.query || '' });
+                component.updateProps({
+                  ...latestProps,
+                  placement,
+                  query: props.query || '',
+                });
               } catch {
                 // noop
               }

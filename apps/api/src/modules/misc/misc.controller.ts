@@ -104,10 +104,12 @@ export class MiscController {
       storageKey,
     );
 
-    // Check HTTP cache and get cache headers
+    // Check HTTP cache with revalidation (always verify freshness)
     const cacheResult = checkHttpCache(req, {
       identifier: storageKey,
       lastModified,
+      maxAge: 0,
+      immutable: false,
     });
 
     const corsHeaders = {
@@ -150,10 +152,12 @@ export class MiscController {
     const { contentType, lastModified } =
       await this.miscService.getExternalFileMetadata(storageKey);
 
-    // Check HTTP cache and get cache headers
+    // Check HTTP cache with revalidation (always verify freshness)
     const cacheResult = checkHttpCache(req, {
       identifier: storageKey,
       lastModified,
+      maxAge: 0,
+      immutable: false,
     });
 
     const corsHeaders = {

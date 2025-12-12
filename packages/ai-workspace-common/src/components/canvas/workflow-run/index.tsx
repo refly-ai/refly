@@ -99,6 +99,8 @@ export const WorkflowRun = () => {
           console.warn('Workflow initialization failed');
           // Reset running state on failure
           setIsRunning(false);
+        } else {
+          setShowWorkflowRun(false);
         }
       } catch (error) {
         console.error('Error initializing workflow:', error);
@@ -106,7 +108,7 @@ export const WorkflowRun = () => {
         setIsRunning(false);
       }
     },
-    [canvasId, initializeWorkflow, setVariables, setIsRunning],
+    [canvasId, initializeWorkflow, setVariables, setIsRunning, setShowWorkflowRun],
   );
 
   if (!showWorkflowRun) return null;

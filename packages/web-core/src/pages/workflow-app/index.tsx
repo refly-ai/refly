@@ -10,16 +10,12 @@ import {
   DriveFile,
   CanvasNode,
 } from '@refly/openapi-schema';
-import {
-  mapDriveFilesToCanvasNodes,
-  mapDriveFilesToWorkflowNodeExecutions,
-  getWorkflowAppCanvasData,
-  WorkflowAppData,
-} from '@refly/utils';
+import { mapDriveFilesToCanvasNodes, mapDriveFilesToWorkflowNodeExecutions } from '@refly/utils';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { WorkflowAppProducts } from '@refly-packages/ai-workspace-common/components/workflow-app/products';
 import { PublicFileUrlProvider } from '@refly-packages/ai-workspace-common/context/public-file-url';
+import { UseShareDataProvider } from '@refly-packages/ai-workspace-common/context/use-share-data';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useWorkflowExecutionPolling } from '@refly-packages/ai-workspace-common/hooks/use-workflow-execution-polling';
 import { ReactFlowProvider } from '@refly-packages/ai-workspace-common/components/canvas';
@@ -100,32 +96,33 @@ const WorkflowAppPage: React.FC = () => {
   const { refetchUsage } = useSubscriptionUsage();
 
   // Use shareId to directly access static JSON file
-  const { data: rawWorkflowApp, loading: isLoading } = useFetchShareData(shareId, {
+  const { data: workflowApp, loading: isLoading } = useFetchShareData(shareId, {
     cache: 'no-store',
     headers: {
       'Cache-Control': 'no-store',
     },
   });
-  const workflowApp = rawWorkflowApp as WorkflowAppData;
 
   // Track enter_template_page event when page loads
   useEffect(() => {
     if (shareId) {
-      logEvent('enter_template_page', null, { shareId });
+      logEvent('enter_template_page', Date.now(), { shareId });
     }
   }, [shareId]);
+
+  // Track view_template_detail event when page loads completely
+  useEffect(() => {
+    if (shareId && !isLoading && workflowApp) {
+      logEvent('view_template_detail', null, { shareId });
+    }
+  }, [shareId, isLoading, workflowApp]);
 
   const workflowVariables = useMemo(() => {
     return workflowApp?.variables ?? [];
   }, [workflowApp]);
 
-  // Get canvas data using compatibility helper
-  const canvasData = useMemo(() => {
-    return getWorkflowAppCanvasData(workflowApp);
-  }, [workflowApp]);
-
   // Fetch drive files for preview when workflowApp loads
-  const previewDriveFiles = canvasData.files;
+  const previewDriveFiles = workflowApp?.canvasData?.files ?? [];
 
   const {
     data: workflowDetail,
@@ -297,19 +294,16 @@ const WorkflowAppPage: React.FC = () => {
 
   const canvasFilesById = useMemo(() => {
     const map = new Map<string, DriveFile>();
-    const files = canvasData.files;
+    const files = workflowApp?.canvasData?.files ?? [];
     for (const file of files) {
-      // Defensive check: only add files with valid fileId
-      if (file?.fileId) {
-        map.set(file.fileId, file);
-      }
+      map.set(file.fileId, file);
     }
     return map;
-  }, [canvasData.files]);
+  }, [workflowApp?.canvasData?.files]);
 
   const canvasNodesByResultId = useMemo(() => {
     const map = new Map<string, string>();
-    const nodes = canvasData.nodes;
+    const nodes = workflowApp?.canvasData?.nodes ?? [];
     for (const node of nodes as CanvasNode[]) {
       const resultId = node?.data?.entityId;
       if (resultId) {
@@ -317,7 +311,7 @@ const WorkflowAppPage: React.FC = () => {
       }
     }
     return map;
-  }, [canvasData.nodes]);
+  }, [workflowApp?.canvasData?.nodes]);
 
   const parsedNodeExecutions = useMemo(() => {
     const map = new Map<string, string>();
@@ -407,7 +401,7 @@ const WorkflowAppPage: React.FC = () => {
   const previewOptions = useMemo(() => {
     const serverOrigin = window.location.origin;
     const driveFileNodes = mapDriveFilesToCanvasNodes(previewDriveFiles, serverOrigin);
-    const canvasNodes = canvasData.nodes;
+    const canvasNodes = workflowApp?.canvasData?.nodes || [];
 
     // Merge and deduplicate by node ID
     const allNodes = [...driveFileNodes, ...canvasNodes];
@@ -415,13 +409,12 @@ const WorkflowAppPage: React.FC = () => {
 
     for (const node of allNodes) {
       if (node?.id && !uniqueMap.has(node.id)) {
-        // Cast to CanvasNode since we've validated it has an id
-        uniqueMap.set(node.id, node as CanvasNode);
+        uniqueMap.set(node.id, node);
       }
     }
 
     return Array.from(uniqueMap.values());
-  }, [previewDriveFiles, canvasData.nodes]);
+  }, [previewDriveFiles, workflowApp?.canvasData?.nodes]);
 
   const onSubmit = useCallback(
     async (variables: WorkflowVariable[]) => {
@@ -505,10 +498,10 @@ const WorkflowAppPage: React.FC = () => {
       return;
     }
 
-    openDuplicateModal(canvasData.canvasId || '', workflowApp.title, shareId);
+    openDuplicateModal(workflowApp.canvasData?.canvasId || '', workflowApp.title, shareId);
   }, [
     shareId,
-    canvasData.canvasId,
+    workflowApp?.canvasData?.canvasId,
     workflowApp?.title,
     openDuplicateModal,
     t,
@@ -549,7 +542,7 @@ const WorkflowAppPage: React.FC = () => {
       },
       onOk: async () => {
         // Get all executing skillResponse nodes
-        logEvent('stop_template_run', null, {
+        logEvent('stop_template_run', Date.now(), {
           canvasId: workflowDetail?.canvasId ?? '',
           executionId,
         });
@@ -633,7 +626,7 @@ const WorkflowAppPage: React.FC = () => {
 
   return (
     <ReactFlowProvider>
-      <CanvasProvider readonly={true} canvasId={canvasData.canvasId ?? ''}>
+      <CanvasProvider readonly={true} canvasId={workflowApp?.canvasData?.canvasId ?? ''}>
         <style>
           {`
           .refly.ant-layout {
@@ -945,9 +938,11 @@ const WorkflowAppPage: React.FC = () => {
                       <div className="bg-[var(--refly-bg-float-z3)] rounded-lg border border-[var(--refly-Card-Border)] dark:bg-[var(--bg---refly-bg-body-z0,#0E0E0E)] relative z-20 transition-all duration-300 ease-in-out">
                         <div className="transition-opacity duration-300 ease-in-out">
                           {activeTab === 'products' ? (
-                            <PublicFileUrlProvider value={false}>
-                              <WorkflowAppProducts products={products || []} />
-                            </PublicFileUrlProvider>
+                            <UseShareDataProvider value={false}>
+                              <PublicFileUrlProvider value={false}>
+                                <WorkflowAppProducts products={products || []} />
+                              </PublicFileUrlProvider>
+                            </UseShareDataProvider>
                           ) : activeTab ===
                             'runLogs' ? // <WorkflowAppRunLogs nodeExecutions={logs || []} />
 
@@ -968,14 +963,16 @@ const WorkflowAppPage: React.FC = () => {
                 <div className="text-center z-10 text-[var(--refly-text-0)] dark:text-[var(--refly-text-StaticWhite)] font-['PingFang_SC'] font-semibold text-[14px] leading-[1.4285714285714286em]">
                   {t('workflowApp.resultPreview')}
                 </div>
-                <PublicFileUrlProvider>
-                  <SelectedResultsGrid
-                    fillRow
-                    bordered
-                    selectedResults={workflowApp?.resultNodeIds ?? []}
-                    options={previewOptions}
-                  />
-                </PublicFileUrlProvider>
+                <UseShareDataProvider value={true}>
+                  <PublicFileUrlProvider>
+                    <SelectedResultsGrid
+                      fillRow
+                      bordered
+                      selectedResults={workflowApp?.resultNodeIds ?? []}
+                      options={previewOptions}
+                    />
+                  </PublicFileUrlProvider>
+                </UseShareDataProvider>
               </div>
             )}
           </div>

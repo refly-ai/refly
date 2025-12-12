@@ -32,7 +32,7 @@ import {
   ListAccountsResponse,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils';
-import { hours, minutes, seconds, Throttle } from '@nestjs/throttler';
+import { seconds, Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { REFRESH_TOKEN_COOKIE } from '@refly/utils';
 import { accountPO2DTO } from './auth.dto';
@@ -54,7 +54,7 @@ export class AuthController {
     return buildSuccessResponse(this.authService.getAuthConfig());
   }
 
-  @Throttle({ default: { limit: 5, ttl: hours(1) } })
+  @Throttle({ default: { limit: 10, ttl: seconds(10) } })
   @Post('email/signup')
   async emailSignup(@Body() { email, password }: EmailSignupRequest, @Res() res: Response) {
     const { sessionId, tokenData } = await this.authService.emailSignup(email, password);
@@ -66,14 +66,14 @@ export class AuthController {
     return res.status(200).json(buildSuccessResponse({ sessionId }));
   }
 
-  @Throttle({ default: { limit: 5, ttl: minutes(10) } })
+  @Throttle({ default: { limit: 10, ttl: seconds(10) } })
   @Post('email/login')
   async emailLogin(@Body() { email, password }: EmailLoginRequest, @Res() res: Response) {
     const tokens = await this.authService.emailLogin(email, password);
     return this.authService.setAuthCookie(res, tokens).json(buildSuccessResponse());
   }
 
-  @Throttle({ default: { limit: 5, ttl: minutes(10) } })
+  @Throttle({ default: { limit: 10, ttl: seconds(10) } })
   @Post('verification/create')
   async createVerification(
     @Body() params: CreateVerificationRequest,
@@ -82,7 +82,7 @@ export class AuthController {
     return buildSuccessResponse({ sessionId });
   }
 
-  @Throttle({ default: { limit: 1, ttl: seconds(30) } })
+  @Throttle({ default: { limit: 10, ttl: seconds(10) } })
   @Post('verification/resend')
   async resendVerification(
     @Body() { sessionId }: ResendVerificationRequest,
@@ -91,7 +91,7 @@ export class AuthController {
     return buildSuccessResponse();
   }
 
-  @Throttle({ default: { limit: 5, ttl: minutes(10) } })
+  @Throttle({ default: { limit: 10, ttl: seconds(10) } })
   @Post('verification/check')
   async checkVerification(@Body() params: CheckVerificationRequest, @Res() res: Response) {
     const tokens = await this.authService.checkVerification(params);

@@ -63,6 +63,10 @@ export const useAddAgentGlobal = () => {
         }
       }
 
+      logEvent('create_agent_node', Date.now(), {
+        source: source === 'bottomBar' ? 'bottom_bar' : 'other_agent_node',
+      });
+
       addNode(
         {
           type: 'skillResponse',
@@ -82,12 +86,8 @@ export const useAddAgentGlobal = () => {
         true,
         true,
       );
-
-      logEvent('canvas::create_agent_node', Date.now(), {
-        source: source === 'bottomBar' ? 'bottom_bar' : 'other_agent_node',
-      });
     },
-    [addNode, nodes],
+    [addNode, nodes, logEvent],
   );
   return { addGlobalAgent };
 };

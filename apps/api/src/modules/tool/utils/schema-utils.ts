@@ -394,20 +394,63 @@ export function findMatchingObjectOption(
 // ============================================================================
 
 /**
- * Check if a field name or description suggests it's a URL-related field
+ * Check if a field name suggests it's a URL-related field
  * @param fieldName - The name of the field
- * @param description - Optional description of the field
  * @returns true if the field appears to be URL-related
  */
-function isUrlRelatedField(fieldName: string, description?: string): boolean {
+function isUrlRelatedField(fieldName: string): boolean {
   const fieldLower = fieldName.toLowerCase();
 
-  // URL-related field name patterns
-  const urlNamePatterns = [
-    '_url',
-    'url', // image_url, video_url, file_url
-    '_uri',
-    'uri', // resource_uri
+  // Skip fields that are ID references (e.g., fileId, imageId, documentId, media_ids, media_ids[0])
+  // These are ID references, not actual URLs
+  if (
+    fieldLower.endsWith('id') ||
+    fieldLower.endsWith('_id') ||
+    fieldLower.endsWith('ids') ||
+    fieldLower.endsWith('_ids') ||
+    /ids?\[\d*\]$/.test(fieldLower) // handles media_ids[0], file_id[1], etc.
+  ) {
+    return false;
+  }
+
+  // Skip fields that are metadata/classification fields, not actual resources
+  // e.g., media_category, file_type, image_format, image_width, document_status
+  const nonResourceSuffixes = [
+    '_category',
+    '_height',
+    '_length',
+    '_type',
+    '_format',
+    '_method',
+    '_mode',
+    '_status',
+    '_version',
+    '_width',
+    '_name',
+    '_title',
+    '_label',
+    '_kind',
+    '_class',
+    '_size',
+    '_count',
+    '_index',
+    '_order',
+    '_position',
+  ];
+  if (nonResourceSuffixes.some((suffix) => fieldLower.endsWith(suffix))) {
+    return false;
+  }
+
+  // URL/URI patterns - always match these with includes()
+  const urlUriPatterns = ['_url', 'url', '_uri', 'uri'];
+  if (urlUriPatterns.some((pattern) => fieldLower.includes(pattern))) {
+    return true;
+  }
+
+  // Resource-related words that need strict word boundary matching
+  // Matches: image, images, video, videos, etc.
+  // Does NOT match: media_category, image_type (already excluded above)
+  const resourceWords = [
     'image',
     'video',
     'audio',
@@ -419,15 +462,12 @@ function isUrlRelatedField(fieldName: string, description?: string): boolean {
     'document',
   ];
 
-  if (urlNamePatterns.some((pattern) => fieldLower.includes(pattern))) {
-    return true;
-  }
-
-  // Check description for URL indicators
-  if (description) {
-    const descLower = description.toLowerCase();
-    const urlDescPatterns = ['url', 'link', 'href', 'uri'];
-    if (urlDescPatterns.some((pattern) => descLower.includes(pattern))) {
+  // Build regex pattern for strict word matching (with optional 's' for plurals)
+  // Word boundaries: start of string, underscore, or end of string
+  // Pattern: (^|_)word(s)?(_|$) matches "image", "images", "my_image", "image_data", "images_data"
+  for (const word of resourceWords) {
+    const pattern = new RegExp(`(^|_)${word}s?(_|$)`);
+    if (pattern.test(fieldLower)) {
       return true;
     }
   }
@@ -448,7 +488,7 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
   for (const [fieldName, fieldSchema] of Object.entries(schema.properties)) {
     // Only enhance string-type fields
     if (fieldSchema.type === 'string') {
-      if (isUrlRelatedField(fieldName, fieldSchema.description)) {
+      if (isUrlRelatedField(fieldName)) {
         // Mark as resource field (collectResourceFields will find this)
         fieldSchema.isResource = true;
         // Set format to 'url' (resolveFileIdToFormat will use this)

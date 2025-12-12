@@ -41,6 +41,9 @@ import { ceil } from 'lodash';
 import { SkillInvokerService } from '../skill/skill-invoker.service';
 
 const WORKFLOW_POLL_INTERVAL = 1500;
+const WORKFLOW_EXECUTION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const NODE_EXECUTION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const POLL_LOCK_TTL_MS = 5000; // 5 seconds
 
 @Injectable()
 export class WorkflowService {
@@ -522,168 +525,311 @@ export class WorkflowService {
   async pollWorkflow(data: PollWorkflowJobData): Promise<void> {
     const { user, executionId, nodeBehavior } = data;
 
-    // Load all nodes for this execution in a single query
-    const allNodes = await this.prisma.workflowNodeExecution.findMany({
-      select: {
-        nodeId: true,
-        nodeType: true,
-        status: true,
-        parentNodeIds: true,
-        childNodeIds: true,
-      },
-      where: { executionId },
-    });
-
-    if (!allNodes?.length) {
+    // Acquire distributed lock to prevent multiple pods from polling the same execution
+    const lockKey = `workflow:poll:${executionId}`;
+    const releaseLock = await this.redis.acquireLock(lockKey, POLL_LOCK_TTL_MS);
+    if (!releaseLock) {
+      this.logger.debug(`[pollWorkflow] Lock not acquired for ${executionId}, skipping`);
       return;
     }
 
-    const statusByNodeId = new Map<string, string>();
-    for (const n of allNodes) {
-      if (n?.nodeId) {
-        statusByNodeId.set(n.nodeId, n.status ?? 'init');
-      }
-    }
-
-    // Find waiting skillResponse nodes and check parent readiness in-memory
-    const waitingSkillNodes = allNodes.filter(
-      (n) => (n.status === 'init' || n.status === 'waiting') && n.nodeType === 'skillResponse',
-    );
-
-    for (const n of waitingSkillNodes) {
-      const parents = (safeParseJSON(n.parentNodeIds) ?? []) as string[];
-      const allParentsFinished =
-        (parents?.length ?? 0) === 0
-          ? true
-          : parents.every((p) => statusByNodeId.get(p) === 'finish');
-
-      if (!allParentsFinished) {
-        continue;
-      }
-
-      if (this.runWorkflowQueue) {
-        await this.runWorkflowQueue.add(
-          'runWorkflow',
-          {
-            user: { uid: user.uid },
-            executionId,
-            nodeId: n.nodeId,
-            nodeBehavior,
-          },
-          {
-            jobId: `run:${executionId}:${n.nodeId}`,
-            removeOnComplete: true,
-          },
-        );
-        this.logger.log(
-          `[pollWorkflow] Enqueued node ${n.nodeId} for execution ${executionId} as parents are finished`,
-        );
-      }
-    }
-
-    // For finished skillResponse nodes, mark their non-skillResponse children as finish if not already finished
-    const finishedSkillResponseNodes = allNodes.filter(
-      (n) => n.status === 'finish' && n.nodeType === 'skillResponse',
-    );
-
-    const nodesToUpdate: string[] = [];
-    for (const finishedNode of finishedSkillResponseNodes) {
-      const childNodeIds = (safeParseJSON(finishedNode.childNodeIds) ?? []) as string[];
-      for (const childId of childNodeIds) {
-        const childNode = allNodes.find((n) => n.nodeId === childId);
-        if (childNode && childNode.nodeType !== 'skillResponse' && childNode.status !== 'finish') {
-          nodesToUpdate.push(childId);
-        }
-      }
-    }
-
-    // Update the status of child nodes to finish
-    if (nodesToUpdate.length > 0) {
-      await this.prisma.workflowNodeExecution.updateMany({
-        where: {
-          executionId,
-          nodeId: { in: nodesToUpdate },
-          status: { not: 'finish' },
-          nodeType: { not: 'skillResponse' },
-        },
-        data: {
-          status: 'finish',
-          progress: 100,
-          endTime: new Date(),
-        },
-      });
-      this.logger.log(
-        `[pollWorkflow] Marked ${nodesToUpdate.length} child nodes as finished for execution ${executionId}`,
-      );
-    }
-
-    // Determine if we should continue polling for this execution
-    const hasPendingOrExecuting = allNodes.some(
-      (n) => n.status === 'init' || n.status === 'waiting' || n.status === 'executing',
-    );
-
-    // Update workflow execution statistics using in-memory snapshot
     try {
-      const executedNodes = allNodes.filter((n) => n.status === 'finish')?.length ?? 0;
-      const failedNodes = allNodes.filter((n) => n.status === 'failed')?.length ?? 0;
-      const pendingNodes =
-        allNodes.filter((n) => n.status === 'init' || n.status === 'waiting')?.length ?? 0;
-      const executingNodes = allNodes.filter((n) => n.status === 'executing')?.length ?? 0;
+      // Check workflow execution status and timeout first
+      const workflowExecution = await this.prisma.workflowExecution.findUnique({
+        select: {
+          executionId: true,
+          status: true,
+          createdAt: true,
+          appId: true,
+          canvasId: true,
+        },
+        where: { executionId },
+      });
 
-      let status: 'executing' | 'failed' | 'finish' = 'executing';
-      if (failedNodes > 0) {
-        status = 'failed';
-      } else if (pendingNodes === 0 && executingNodes === 0) {
-        status = 'finish';
+      if (!workflowExecution) {
+        this.logger.warn(`[pollWorkflow] Workflow execution ${executionId} not found`);
+        return;
+      }
 
-        // Check workflow execution for appId and validate uid consistency
-        const workflowExecution = await this.prisma.workflowExecution.findUnique({
-          select: {
-            executionId: true,
-            appId: true,
-            canvasId: true,
+      // Early exit if workflow is already in terminal state
+      if (workflowExecution.status === 'failed' || workflowExecution.status === 'finish') {
+        this.logger.log(
+          `[pollWorkflow] Workflow ${executionId} is ${workflowExecution.status}, stopping poll`,
+        );
+        return;
+      }
+
+      // Check if workflow execution has exceeded timeout
+      const executionAge = Date.now() - workflowExecution.createdAt.getTime();
+      if (executionAge > WORKFLOW_EXECUTION_TIMEOUT_MS) {
+        this.logger.warn(
+          `[pollWorkflow] Workflow ${executionId} timed out after ${executionAge}ms (limit: ${WORKFLOW_EXECUTION_TIMEOUT_MS}ms)`,
+        );
+
+        // Mark all non-terminal nodes as failed
+        await this.prisma.workflowNodeExecution.updateMany({
+          where: {
+            executionId,
+            status: { notIn: ['finish', 'failed'] },
           },
-          where: { executionId },
+          data: {
+            status: 'failed',
+            errorMessage: `Workflow execution timeout exceeded (${Math.floor(executionAge / 1000)}s)`,
+            endTime: new Date(),
+          },
         });
 
-        if (workflowExecution?.appId) {
+        // Mark workflow as failed and STOP POLLING
+        await this.prisma.workflowExecution.update({
+          where: { executionId },
+          data: { status: 'failed' },
+        });
+
+        this.logger.error(`[pollWorkflow] Workflow ${executionId} marked as failed due to timeout`);
+        return;
+      }
+
+      // Load all nodes for this execution in a single query
+      const allNodes = await this.prisma.workflowNodeExecution.findMany({
+        select: {
+          nodeId: true,
+          nodeType: true,
+          status: true,
+          parentNodeIds: true,
+          childNodeIds: true,
+          nodeExecutionId: true,
+          startTime: true,
+        },
+        where: { executionId },
+      });
+
+      if (!allNodes?.length) {
+        return;
+      }
+
+      // Check for stuck executing nodes and timeout them
+      const now = new Date();
+      const stuckExecutingNodes = allNodes.filter((n) => {
+        if (n.status !== 'executing' || !n.startTime) return false;
+        const nodeAge = now.getTime() - n.startTime.getTime();
+        return nodeAge > NODE_EXECUTION_TIMEOUT_MS;
+      });
+
+      if (stuckExecutingNodes.length > 0) {
+        const timedOutNodeIds = stuckExecutingNodes.map((n) => n.nodeExecutionId);
+        await this.prisma.workflowNodeExecution.updateMany({
+          where: { nodeExecutionId: { in: timedOutNodeIds } },
+          data: {
+            status: 'failed',
+            errorMessage: `Node execution timeout exceeded (${Math.floor(NODE_EXECUTION_TIMEOUT_MS / 1000)}s)`,
+            endTime: now,
+          },
+        });
+        this.logger.warn(
+          `[pollWorkflow] Marked ${stuckExecutingNodes.length} nodes as failed due to timeout in execution ${executionId}`,
+        );
+      }
+
+      const statusByNodeId = new Map<string, string>();
+      for (const n of allNodes) {
+        if (n?.nodeId) {
+          // Update status in-memory if we just timed it out
+          const wasTimedOut = stuckExecutingNodes.some((s) => s.nodeId === n.nodeId);
+          statusByNodeId.set(n.nodeId, wasTimedOut ? 'failed' : (n.status ?? 'init'));
+        }
+      }
+
+      // Find waiting skillResponse nodes and check parent readiness in-memory
+      const waitingSkillNodes = allNodes.filter(
+        (n) => (n.status === 'init' || n.status === 'waiting') && n.nodeType === 'skillResponse',
+      );
+
+      for (const n of waitingSkillNodes) {
+        const parents = (safeParseJSON(n.parentNodeIds) ?? []) as string[];
+        const allParentsFinished =
+          (parents?.length ?? 0) === 0
+            ? true
+            : parents.every((p) => statusByNodeId.get(p) === 'finish');
+
+        if (!allParentsFinished) {
+          continue;
+        }
+
+        if (this.runWorkflowQueue) {
+          await this.runWorkflowQueue.add(
+            'runWorkflow',
+            {
+              user: { uid: user.uid },
+              executionId,
+              nodeId: n.nodeId,
+              nodeBehavior,
+            },
+            {
+              jobId: `run:${executionId}:${n.nodeId}`,
+              removeOnComplete: true,
+            },
+          );
+          this.logger.log(
+            `[pollWorkflow] Enqueued node ${n.nodeId} for execution ${executionId} as parents are finished`,
+          );
+        }
+      }
+
+      // For finished skillResponse nodes, mark their non-skillResponse children as finish if not already finished
+      const finishedSkillResponseNodes = allNodes.filter(
+        (n) => n.status === 'finish' && n.nodeType === 'skillResponse',
+      );
+
+      const nodesToUpdate: string[] = [];
+      for (const finishedNode of finishedSkillResponseNodes) {
+        const childNodeIds = (safeParseJSON(finishedNode.childNodeIds) ?? []) as string[];
+        for (const childId of childNodeIds) {
+          const childNode = allNodes.find((n) => n.nodeId === childId);
+          if (
+            childNode &&
+            childNode.nodeType !== 'skillResponse' &&
+            childNode.status !== 'finish'
+          ) {
+            nodesToUpdate.push(childId);
+          }
+        }
+      }
+
+      // Update the status of child nodes to finish
+      if (nodesToUpdate.length > 0) {
+        await this.prisma.workflowNodeExecution.updateMany({
+          where: {
+            executionId,
+            nodeId: { in: nodesToUpdate },
+            status: { not: 'finish' },
+            nodeType: { not: 'skillResponse' },
+          },
+          data: {
+            status: 'finish',
+            progress: 100,
+            endTime: new Date(),
+          },
+        });
+        this.logger.log(
+          `[pollWorkflow] Marked ${nodesToUpdate.length} child nodes as finished for execution ${executionId}`,
+        );
+      }
+
+      // Calculate node statistics (after timeout updates)
+      const executedNodes =
+        allNodes.filter((n) => {
+          const wasTimedOut = stuckExecutingNodes.some((s) => s.nodeId === n.nodeId);
+          return wasTimedOut ? false : n.status === 'finish';
+        })?.length ?? 0;
+
+      const failedNodes =
+        allNodes.filter((n) => {
+          const wasTimedOut = stuckExecutingNodes.some((s) => s.nodeId === n.nodeId);
+          return wasTimedOut ? true : n.status === 'failed';
+        })?.length ?? 0;
+
+      const pendingNodes =
+        allNodes.filter((n) => {
+          const wasTimedOut = stuckExecutingNodes.some((s) => s.nodeId === n.nodeId);
+          return wasTimedOut ? false : n.status === 'init' || n.status === 'waiting';
+        })?.length ?? 0;
+
+      const executingNodes =
+        allNodes.filter((n) => {
+          const wasTimedOut = stuckExecutingNodes.some((s) => s.nodeId === n.nodeId);
+          return wasTimedOut ? false : n.status === 'executing';
+        })?.length ?? 0;
+
+      // Determine workflow status
+      let newStatus: 'executing' | 'failed' | 'finish' = 'executing';
+      if (failedNodes > 0) {
+        newStatus = 'failed';
+      } else if (pendingNodes === 0 && executingNodes === 0) {
+        newStatus = 'finish';
+
+        // Handle commission credits for workflow apps on completion
+        if (workflowExecution.appId) {
           const workflowApp = await this.prisma.workflowApp.findUnique({
             where: { appId: workflowExecution.appId },
           });
 
           if (workflowApp) {
-            const creditUsage = await this.creditService.countExecutionCreditUsageByExecutionId(
-              user,
-              executionId,
-            );
-            const commissionCredit = ceil(creditUsage * 0.2);
-            await this.creditService.createCommissionCreditUsageAndRecharge(
-              user.uid,
-              workflowApp.uid,
-              executionId,
-              commissionCredit,
-              workflowExecution.appId,
-              workflowApp.title,
-              workflowApp.shareId,
-            );
+            try {
+              const creditUsage = await this.creditService.countExecutionCreditUsageByExecutionId(
+                user,
+                executionId,
+              );
+              const commissionCredit = ceil(creditUsage * 0.2);
+              await this.creditService.createCommissionCreditUsageAndRecharge(
+                user.uid,
+                workflowApp.uid,
+                executionId,
+                commissionCredit,
+                workflowExecution.appId,
+                workflowApp.title,
+                workflowApp.shareId,
+              );
+            } catch (creditErr: any) {
+              this.logger.warn(
+                `[pollWorkflow] Failed to process credits for execution ${executionId}: ${creditErr?.message}`,
+              );
+            }
           }
         }
       }
 
-      await this.prisma.workflowExecution.update({
-        where: { executionId },
-        data: { executedNodes, failedNodes, status },
-      });
-    } catch (err: any) {
-      this.logger.warn(`[pollWorkflow] failed to update execution stats: ${err?.message ?? err}`);
-    }
+      // Only update workflow execution if status or counts actually changed
+      try {
+        const currentStatus = await this.prisma.workflowExecution.findUnique({
+          select: { status: true, executedNodes: true, failedNodes: true },
+          where: { executionId },
+        });
 
-    if (hasPendingOrExecuting && this.pollWorkflowQueue) {
-      await this.pollWorkflowQueue.add(
-        'pollWorkflow',
-        { user, executionId, nodeBehavior },
-        { delay: WORKFLOW_POLL_INTERVAL, removeOnComplete: true },
+        const statusChanged = currentStatus?.status !== newStatus;
+        const countsChanged =
+          currentStatus?.executedNodes !== executedNodes ||
+          currentStatus?.failedNodes !== failedNodes;
+
+        if (statusChanged || countsChanged) {
+          await this.prisma.workflowExecution.update({
+            where: { executionId },
+            data: { executedNodes, failedNodes, status: newStatus },
+          });
+          this.logger.log(
+            `[pollWorkflow] Updated workflow ${executionId}: status=${newStatus}, executed=${executedNodes}, failed=${failedNodes}`,
+          );
+        }
+      } catch (err: any) {
+        this.logger.warn(`[pollWorkflow] Failed to update execution stats: ${err?.message ?? err}`);
+      }
+
+      // Determine if we should continue polling
+      const hasPendingOrExecuting = pendingNodes > 0 || executingNodes > 0;
+
+      // Only reschedule poll if there are still pending/executing nodes AND status is not terminal
+      if (hasPendingOrExecuting && newStatus === 'executing' && this.pollWorkflowQueue) {
+        await this.pollWorkflowQueue.add(
+          'pollWorkflow',
+          { user, executionId, nodeBehavior },
+          { delay: WORKFLOW_POLL_INTERVAL, removeOnComplete: true },
+        );
+      } else {
+        this.logger.log(
+          `[pollWorkflow] Stopping poll for execution ${executionId} (status=${newStatus}, pending=${pendingNodes}, executing=${executingNodes})`,
+        );
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `[pollWorkflow] Error polling workflow ${executionId}: ${error?.message ?? error}`,
       );
+      throw error;
+    } finally {
+      // Always release the lock
+      try {
+        await releaseLock?.();
+      } catch {
+        this.logger.warn(`[pollWorkflow] Failed to release lock ${lockKey}`);
+      }
     }
   }
 

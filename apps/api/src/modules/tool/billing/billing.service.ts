@@ -81,8 +81,8 @@ export class BillingService {
         discountedPrice: finalDiscountedPrice,
         originalPrice: finalOriginalPrice,
         timestamp: new Date(),
-        resultId: getResultId(),
-        version: getResultVersion(),
+        resultId: options.resultId ?? getResultId(),
+        version: options.version ?? getResultVersion(),
         toolCallId: getToolCallId(),
         toolCallMeta: {
           toolName,
@@ -91,7 +91,6 @@ export class BillingService {
       };
 
       await this.creditService.syncToolCreditUsage(jobData);
-      this.logger.debug(`Recorded ${finalDiscountedPrice} credits for ${toolsetKey}.${toolName}`);
 
       return {
         success: true,

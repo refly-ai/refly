@@ -67,7 +67,7 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
   }, [addGlobalAgent]);
 
   const handleAddMemo = useCallback(() => {
-    logEvent('add_note', null, {
+    logEvent('add_note', Date.now(), {
       canvasId,
     });
     createMemo(null);

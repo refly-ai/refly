@@ -79,7 +79,12 @@ export class Agent extends BaseSkill {
           })
         : buildNodeAgentSystemPrompt();
 
-    const userPrompt = buildUserPrompt(optimizedQuery, context);
+    // Use copilot scene for copilot_agent mode, otherwise use chat scene
+    const modelConfigScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
+    const modelInfo = config?.configurable?.modelConfigMap?.[modelConfigScene];
+    const hasVisionCapability = modelInfo?.capabilities?.vision ?? false;
+
+    const userPrompt = buildUserPrompt(optimizedQuery, context, { hasVisionCapability });
 
     const requestMessages = buildFinalRequestMessages({
       systemPrompt,
@@ -87,7 +92,7 @@ export class Agent extends BaseSkill {
       chatHistory: usedChatHistory,
       messages,
       images,
-      modelInfo: config?.configurable?.modelConfigMap.chat,
+      modelInfo,
     });
 
     return { requestMessages, sources };
@@ -97,20 +102,33 @@ export class Agent extends BaseSkill {
     _user: User,
     config?: SkillRunnableConfig,
   ): Promise<AgentComponents> {
-    const { selectedTools = [] } = config?.configurable ?? {};
+    const { selectedTools = [], mode = 'node_agent' } = config?.configurable ?? {};
 
     let actualToolNodeInstance: ToolNode<typeof MessagesAnnotation.State> | null = null;
     let availableToolsForNode: StructuredToolInterface[] = [];
 
     // LLM and LangGraph Setup
-    const baseLlm = this.engine.chatModel({ temperature: 0.1 });
+    // Use copilot scene for copilot_agent mode, otherwise use chat scene
+    const modelScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
+    const baseLlm = this.engine.chatModel({ temperature: 0.1 }, modelScene);
     let llmForGraph: Runnable<BaseMessage[], AIMessage>;
 
     if (selectedTools.length > 0) {
       // Ensure tool definitions are valid before binding
-      const validTools = selectedTools.filter(
-        (tool) => tool.name && tool.description && tool.schema,
-      );
+      // Also filter out tools with names exceeding 64 characters (OpenAI limit)
+      const validTools = selectedTools.filter((tool) => {
+        if (!tool.name || !tool.description || !tool.schema) {
+          this.engine.logger.warn(`Skipping invalid tool: ${tool.name || 'unnamed'}`);
+          return false;
+        }
+        if (tool.name.length > 64) {
+          this.engine.logger.warn(
+            `Skipping tool with name exceeding 64 characters: ${tool.name} (${tool.name.length} chars)`,
+          );
+          return false;
+        }
+        return true;
+      });
 
       if (validTools.length > 0) {
         const toolNames = validTools.map((tool) => tool.name);
@@ -203,11 +221,6 @@ export class Agent extends BaseSkill {
             }
 
             try {
-              // Log tool arguments before invocation
-              this.engine.logger.info(
-                `Invoking tool '${toolName}' with args:\n${JSON.stringify(toolArgs, null, 2)}`,
-              );
-
               // Each invocation awaited to ensure strict serial execution
               const rawResult = await matchedTool.invoke(toolArgs);
               const stringified =

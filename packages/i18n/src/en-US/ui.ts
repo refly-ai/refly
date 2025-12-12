@@ -189,6 +189,11 @@ const translations = {
     sharing: 'Sharing...',
     view: 'View',
     joinDiscord: 'Join Discord Community',
+    clipboard: {
+      permissionDenied:
+        'Clipboard read permission denied. Please allow clipboard access in your browser settings.',
+      readFailed: 'Failed to read clipboard. Please try again.',
+    },
   },
   mode: {
     ask: 'Ask',
@@ -966,9 +971,9 @@ const translations = {
     exportSuccess: 'Export successfully',
     exportFailed: 'Export failed',
     exportAs: 'Export as',
-    exportDocumentToMarkdown: 'Export to Markdown',
-    exportDocumentToDocx: 'Export to DOCX',
-    exportDocumentToPdf: 'Export to PDF',
+    exportDocumentToMarkdown: 'Markdown Document (.md)',
+    exportDocumentToDocx: 'Word Document (.docx)',
+    exportDocumentToPdf: 'PDF Document (.pdf)',
     openWebpage: 'Open Original Webpage',
     downloadFile: 'Download File',
     canvasListModal: {
@@ -1490,6 +1495,8 @@ const translations = {
           success: 'The workflow has been stopped successfully.',
           failed: 'Failed to stop workflow',
         },
+        forbiddenToAddNodeWhenWorkflowIsRunning:
+          'Workflow is running, cannot add node, please try again later',
       },
     },
     connectionTimeout: {
@@ -2023,6 +2030,7 @@ const translations = {
       fileTooLarge: 'File size cannot exceed {{size}}',
       fileParsingUsage:
         'Advanced file parsing (including PDF): {{used}}/{{limit}} pages used today',
+      fileSizeLimit: 'Maximum upload size: {{size}}',
       fromWeblink: 'Paste Weblink',
       selectAll: 'Select All',
       webLinkPlaceholer: 'Enter or paste valid web links, one per line...',
@@ -3229,11 +3237,11 @@ const translations = {
       subtitle: 'Explore your curiosity together',
       youCanTry: 'Get new inspiration',
       query1:
-        "Help me track and analyze Warren Buffett's U.S. stock portfolio changes this quarter.",
+        "Use a 13F data tool to research Warren Buffett's holdings in Q2 vs Q3 2025, list all increases and decreases, and generate a summary with simple charts.",
       query2:
-        '‍Help me fetch the Product Hunt Top 10 today, generate a summary document and product podcast, and send the links to my email.',
+        "Use Perplexity to fetch yesterday's Product Hunt Top 5, create a summary document and a podcast, and email them to me.",
       query3:
-        'Help me generate a sequence of animation scenes in the style of Makoto Shinkai, telling the story of "growing up" from childhood to adulthood.',
+        'Help me generate a five-image animation series in the style of Makoto Shinkai, themed around "growth", and use an image-generation tool to create all images.',
     },
     sessionDetail: {
       thinking: 'Refly is thinking',
@@ -4027,10 +4035,10 @@ const translations = {
       'Generated {{count}} results for you, used {{executionCost}} credits',
     emptyLogs: 'No run logs, click to create app, start running',
     coverImage: 'Cover Image',
-    coverImageHint: 'Support JPG, PNG, WebP formats, file size within 5MB',
+    coverImageHint: 'Support JPG, PNG, WebP formats, file size within 30MB',
     uploadCover: 'Upload Cover',
     invalidImageType: 'Invalid image type, please upload JPG, PNG, or WebP format',
-    imageTooLarge: 'Image size exceeds 5MB, please upload a smaller image',
+    imageTooLarge: 'Image size exceeds 30MB, please upload a smaller image',
     coverImageRequired: 'Cover image is required',
     enableRemix: 'Enable Remix',
     remixHint: 'Allow others to remix and modify this workflow app',

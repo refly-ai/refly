@@ -1094,7 +1094,7 @@ export const ResourceMetaSchema = {
 export const ResourceTypeSchema = {
   type: 'string',
   description: 'Resource type',
-  enum: ['weblink', 'text', 'file', 'document', 'image', 'video', 'audio'],
+  enum: ['weblink', 'text', 'file', 'document', 'image', 'video', 'audio', 'text/plain'],
 } as const;
 
 export const IndexErrorSchema = {
@@ -2767,7 +2767,7 @@ export const ProviderConfigSchema = {
 export const ModelSceneSchema = {
   type: 'string',
   description: 'Model usage scene',
-  enum: ['chat', 'agent', 'queryAnalysis', 'titleGeneration', 'image', 'video', 'audio'],
+  enum: ['chat', 'copilot', 'agent', 'queryAnalysis', 'titleGeneration', 'image', 'video', 'audio'],
 } as const;
 
 export const DefaultModelConfigSchema = {
@@ -2776,6 +2776,10 @@ export const DefaultModelConfigSchema = {
   properties: {
     chat: {
       description: 'Default chat model to use',
+      $ref: '#/components/schemas/ProviderItem',
+    },
+    copilot: {
+      description: 'Default copilot model to use',
       $ref: '#/components/schemas/ProviderItem',
     },
     agent: {
@@ -9245,6 +9249,10 @@ export const ToolsetDefinitionSchema = {
       type: 'string',
       description: 'Toolset key',
     },
+    type: {
+      $ref: '#/components/schemas/GenericToolsetType',
+      description: 'Toolset type (regular, mcp, external_oauth)',
+    },
     builtin: {
       type: 'boolean',
       description: 'Whether this is a builtin toolset',
@@ -9540,6 +9548,14 @@ export const PostHandlerContextSchema = {
     fileNameTitle: {
       type: 'string',
       description: 'File name title from input params',
+    },
+    resultId: {
+      type: 'string',
+      description: 'Result ID from execution context',
+    },
+    version: {
+      type: 'number',
+      description: 'Result version from execution context',
     },
   },
 } as const;
@@ -10618,6 +10634,11 @@ export const UpdateWorkflowVariablesRequestSchema = {
         $ref: '#/components/schemas/WorkflowVariable',
       },
     },
+    archiveOldFiles: {
+      type: 'boolean',
+      description:
+        'Whether to archive existing drive files associated with old resource variables before updating',
+    },
   },
 } as const;
 
@@ -10804,6 +10825,11 @@ export const UpsertDriveFileRequestSchema = {
     resultVersion: {
       type: 'number',
       description: 'Related agent result version',
+    },
+    archiveFiles: {
+      type: 'boolean',
+      description:
+        'Whether to archive existing files with the same variableId or resultId before creating new file',
     },
   },
 } as const;

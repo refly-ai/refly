@@ -736,7 +736,15 @@ export type ResourceMeta = {
 /**
  * Resource type
  */
-export type ResourceType = 'weblink' | 'text' | 'file' | 'document' | 'image' | 'video' | 'audio';
+export type ResourceType =
+  | 'weblink'
+  | 'text'
+  | 'file'
+  | 'document'
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'text/plain';
 
 /**
  * Error message for resource indexing
@@ -2142,6 +2150,7 @@ export type ProviderConfig = {
  */
 export type ModelScene =
   | 'chat'
+  | 'copilot'
   | 'agent'
   | 'queryAnalysis'
   | 'titleGeneration'
@@ -2157,6 +2166,10 @@ export type DefaultModelConfig = {
    * Default chat model to use
    */
   chat?: ProviderItem;
+  /**
+   * Default copilot model to use
+   */
+  copilot?: ProviderItem;
   /**
    * Default agent model to use
    */
@@ -6557,6 +6570,10 @@ export type ToolsetDefinition = {
    */
   key: string;
   /**
+   * Toolset type (regular, mcp, external_oauth)
+   */
+  type?: GenericToolsetType;
+  /**
    * Whether this is a builtin toolset
    */
   builtin?: boolean;
@@ -6775,6 +6792,14 @@ export type PostHandlerContext = {
    * File name title from input params
    */
   fileNameTitle?: string;
+  /**
+   * Result ID from execution context
+   */
+  resultId?: string;
+  /**
+   * Result version from execution context
+   */
+  version?: number;
 };
 
 /**
@@ -7540,6 +7565,10 @@ export type UpdateWorkflowVariablesRequest = {
    * List of workflow variables
    */
   variables: Array<WorkflowVariable>;
+  /**
+   * Whether to archive existing drive files associated with old resource variables before updating
+   */
+  archiveOldFiles?: boolean;
 };
 
 export type UpdateWorkflowVariablesResponse = BaseResponse & {
@@ -7682,6 +7711,10 @@ export type UpsertDriveFileRequest = {
    * Related agent result version
    */
   resultVersion?: number;
+  /**
+   * Whether to archive existing files with the same variableId or resultId before creating new file
+   */
+  archiveFiles?: boolean;
 };
 
 export type BatchCreateDriveFilesRequest = {
@@ -10062,9 +10095,9 @@ export type GetDocumentDetailError = unknown;
 export type ExportDocumentData = {
   query: {
     /**
-     * Export document ID to retrieve
+     * Export file ID to retrieve
      */
-    docId: string;
+    fileId: string;
     /**
      * Export format
      */

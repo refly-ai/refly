@@ -736,7 +736,15 @@ export type ResourceMeta = {
 /**
  * Resource type
  */
-export type ResourceType = 'weblink' | 'text' | 'file' | 'document' | 'image' | 'video' | 'audio';
+export type ResourceType =
+  | 'weblink'
+  | 'text'
+  | 'file'
+  | 'document'
+  | 'image'
+  | 'video'
+  | 'audio'
+  | 'text/plain';
 
 /**
  * Error message for resource indexing
@@ -5798,6 +5806,10 @@ export type ModelInfo = {
    */
   creditBilling?: CreditBilling;
   /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
+  /**
    * Input parameter configurations
    */
   inputParameters?: Array<MediaModelParameter>;
@@ -5885,6 +5897,10 @@ export type LLMModelConfig = {
    * Model capabilities
    */
   capabilities?: ModelCapabilities;
+  /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
 };
 
 /**
@@ -5943,6 +5959,10 @@ export type MediaGenerationModelConfig = {
    * Model description
    */
   description?: string;
+  /**
+   * Tooltip text for the model (e.g., "Smart Routing")
+   */
+  tooltip?: string;
   /**
    * Supported languages for translation
    */
@@ -6541,6 +6561,10 @@ export type ToolsetDefinition = {
    */
   key: string;
   /**
+   * Toolset type (regular, mcp, external_oauth)
+   */
+  type?: GenericToolsetType;
+  /**
    * Whether this is a builtin toolset
    */
   builtin?: boolean;
@@ -6759,6 +6783,14 @@ export type PostHandlerContext = {
    * File name title from input params
    */
   fileNameTitle?: string;
+  /**
+   * Result ID from execution context
+   */
+  resultId?: string;
+  /**
+   * Result version from execution context
+   */
+  version?: number;
 };
 
 /**
@@ -9781,9 +9813,9 @@ export type GetDocumentDetailError = unknown;
 export type ExportDocumentData = {
   query: {
     /**
-     * Export document ID to retrieve
+     * Export file ID to retrieve
      */
-    docId: string;
+    fileId: string;
     /**
      * Export format
      */

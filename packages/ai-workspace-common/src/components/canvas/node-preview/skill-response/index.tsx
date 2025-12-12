@@ -11,7 +11,7 @@ import {
   useCanvasStoreShallow,
 } from '@refly/stores';
 import { Segmented, Button } from 'antd';
-import { memo, useCallback, useEffect } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
@@ -25,6 +25,7 @@ import { ProductCard } from '@refly-packages/ai-workspace-common/components/mark
 import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
 import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
 import { logEvent } from '@refly/telemetry-web';
+import { useShareDataContext } from '@refly-packages/ai-workspace-common/context/use-share-data';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -73,25 +74,49 @@ const SkillResponseNodePreviewComponent = ({
 
   const shareId = node.data?.metadata?.shareId;
   const nodeStatus = node.data?.metadata?.status;
-  const { data: shareData, loading: shareDataLoading } = useFetchShareData(shareId);
+
+  // Determine whether to use shareData based on context provider
+  // - true: explicitly use shareData (workflow app result preview)
+  // - false: explicitly fetch from API (workflow execution products, canvas editing)
+  // - undefined: default to false (fetch from API)
+  const useShareDataFromContext = useShareDataContext();
+  const shouldUseShareData = useShareDataFromContext ?? false;
+
+  // Use refs to avoid stale closures in useEffect while preventing infinite loops
+  const nodeRef = useRef(node);
+  useEffect(() => {
+    nodeRef.current = node;
+  }, [node]);
+
+  const resultRef = useRef(result);
+  useEffect(() => {
+    resultRef.current = result;
+  }, [result]);
+
+  // Only fetch shareData when shouldUseShareData is true and shareId exists
+  const { data: shareData, loading: shareDataLoading } = useFetchShareData(
+    shouldUseShareData ? shareId : undefined,
+  );
   const loading = fetchActionResultLoading || shareDataLoading;
 
+  // Use shareData when explicitly enabled via context
   useEffect(() => {
-    if (shareData && !result && shareData?.resultId === resultId) {
+    if (shouldUseShareData && shareData && shareData.resultId === resultId) {
       updateActionResult(resultId, shareData);
     }
-  }, [shareData, result, resultId, updateActionResult]);
+  }, [shouldUseShareData, shareData, resultId, updateActionResult]);
 
+  // Fetch action result when NOT using shareData
   useEffect(() => {
-    // Do not fetch action result if streaming
-    if (isStreaming || nodeStatus === 'init') {
+    // Skip if using shareData, streaming, or node is initializing
+    if (shouldUseShareData || isStreaming || nodeStatus === 'init') {
       return;
     }
-    if (!!resultId && shareData?.resultId !== resultId) {
+    if (resultId) {
       // Always refresh in background to keep store up-to-date
-      fetchActionResult(resultId, { silent: !!result, nodeToUpdate: node });
+      fetchActionResult(resultId, { silent: !!resultRef.current, nodeToUpdate: nodeRef.current });
     }
-  }, [resultId, shareId, isStreaming, shareData, nodeStatus]);
+  }, [resultId, shouldUseShareData, isStreaming, nodeStatus, fetchActionResult]);
 
   const { data } = node;
 
@@ -123,7 +148,7 @@ const SkillResponseNodePreviewComponent = ({
       },
     });
 
-    logEvent('run_agent_node', null, {
+    logEvent('run_agent_node', Date.now(), {
       canvasId,
       nodeId: node.id,
     });

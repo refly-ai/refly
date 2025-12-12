@@ -39,6 +39,16 @@ export interface ProcessBillingOptions {
    * Required when using billingConfig
    */
   params?: Record<string, unknown>;
+
+  /**
+   * Result ID from context (optional, falls back to context if not provided)
+   */
+  resultId?: string;
+
+  /**
+   * Result version from context (optional, falls back to context if not provided)
+   */
+  version?: number;
 }
 
 /**
