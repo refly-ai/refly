@@ -192,6 +192,7 @@ export const useAddNode = () => {
       t,
       layoutBranchAndUpdatePositions,
       defaultAgentModel,
+      workflowIsRunning,
     ],
   );
 

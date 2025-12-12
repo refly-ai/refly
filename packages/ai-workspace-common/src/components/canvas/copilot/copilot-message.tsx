@@ -25,6 +25,7 @@ interface CopilotMessageProps {
 
 export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessageProps) => {
   const { resultId, input, steps, status } = result;
+  const query = useMemo(() => input?.query ?? '', [input]);
 
   const workflowPlan = useMemo(() => {
     const toolCalls = steps?.[0]?.toolCalls ?? [];
@@ -154,9 +155,12 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
   ]);
 
   const handleRetry = useCallback(() => {
+    if (!resultId || !sessionId || !canvasId) {
+      return;
+    }
     invokeAction(
       {
-        query: result?.input?.query,
+        query,
         resultId,
         modelInfo: null,
         agentMode: 'copilot_agent',
@@ -167,7 +171,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
         entityType: 'canvas',
       },
     );
-  }, [resultId, canvasId, invokeAction, result.input.query]);
+  }, [resultId, canvasId, invokeAction, sessionId, query]);
 
   return (
     <div className="flex flex-col gap-2">
