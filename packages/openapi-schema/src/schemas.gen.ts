@@ -2057,6 +2057,45 @@ export const TokenUsageItemSchema = {
       description: 'Model tier',
       deprecated: true,
     },
+    originalModelId: {
+      type: 'string',
+      description: "Original model ID before routing (e.g., 'auto')",
+    },
+    modelRoutedData: {
+      type: 'object',
+      description: 'Complete model routing metadata (JSON)',
+      properties: {
+        isRouted: {
+          type: 'boolean',
+          description: 'Whether this request was routed',
+        },
+        originalItemId: {
+          type: 'string',
+          description: 'Original provider item ID before routing',
+        },
+        originalModelId: {
+          type: 'string',
+          description: "Original model ID (e.g., 'auto')",
+        },
+        originalProvider: {
+          type: 'string',
+          description: 'Original model provider name',
+        },
+        originalModelName: {
+          type: 'string',
+          description: 'Original model name/label for display',
+        },
+        routedAt: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Routing timestamp',
+        },
+        routingStrategy: {
+          type: 'string',
+          description: "Routing strategy used (e.g., 'auto', 'load_balance', 'region')",
+        },
+      },
+    },
   },
 } as const;
 

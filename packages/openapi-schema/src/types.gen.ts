@@ -1568,6 +1568,43 @@ export type TokenUsageItem = {
    * @deprecated
    */
   tier?: string;
+  /**
+   * Original model ID before routing (e.g., 'auto')
+   */
+  originalModelId?: string;
+  /**
+   * Complete model routing metadata (JSON)
+   */
+  modelRoutedData?: {
+    /**
+     * Whether this request was routed
+     */
+    isRouted?: boolean;
+    /**
+     * Original provider item ID before routing
+     */
+    originalItemId?: string;
+    /**
+     * Original model ID (e.g., 'auto')
+     */
+    originalModelId?: string;
+    /**
+     * Original model provider name
+     */
+    originalProvider?: string;
+    /**
+     * Original model name/label for display
+     */
+    originalModelName?: string;
+    /**
+     * Routing timestamp
+     */
+    routedAt?: string;
+    /**
+     * Routing strategy used (e.g., 'auto', 'load_balance', 'region')
+     */
+    routingStrategy?: string;
+  };
 };
 
 /**

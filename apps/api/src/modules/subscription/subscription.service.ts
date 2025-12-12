@@ -1003,6 +1003,8 @@ export class SubscriptionService implements OnModuleInit {
             'outputTokens',
           ]),
           tier: usage.tier ?? '',
+          originalModelId: usage.originalModelId ?? null,
+          modelRoutedData: usage.modelRoutedData ? JSON.stringify(usage.modelRoutedData) : null,
         },
       }),
       ...(usage.tier !== 'free'
