@@ -1482,11 +1482,6 @@ const translations = {
         },
       },
       template: {
-        pending: 'Template description string generation in progress, please wait...',
-        generating: 'Generating template description string, please wait...',
-        completed: 'Template description string generated!',
-        failed: 'Template description string generation failed, please try again later',
-        clickToSwitch: 'Click to switch to editor',
         updating: 'The template description string you are using is being updated...',
       },
     },

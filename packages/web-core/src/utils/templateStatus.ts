@@ -18,18 +18,3 @@ export interface TemplateStatusResponse {
   updatedAt: string;
   createdAt: string;
 }
-
-/**
- * Determine if status badge should be shown
- * @param status - Current generation status
- * @returns true if badge should be shown
- */
-export function shouldShowStatusBadge(status: TemplateGenerationStatus): boolean {
-  // Don't show if idle (no generation needed)
-  if (status === 'idle') {
-    return false;
-  }
-
-  // Show for: pending, generating, failed
-  return status === 'pending' || status === 'generating' || status === 'failed';
-}

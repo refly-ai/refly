@@ -1553,12 +1553,7 @@ const translations = {
         },
       },
       template: {
-        pending: '模板描述字符串生成中，请稍候...',
-        generating: '正在生成模板描述字符串，请稍候...',
-        completed: '模板描述字符串已生成！',
-        failed: '模板描述字符串生成失败，请稍后重试',
-        clickToSwitch: '点击切换到编辑器',
-        updating: '你使用的模板描述字符串正在更新中...',
+        updating: '模板正在发布中...',
       },
     },
     connectionTimeout: {

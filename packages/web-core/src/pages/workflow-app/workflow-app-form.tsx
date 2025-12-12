@@ -18,9 +18,7 @@ import { getFileType } from '@refly-packages/ai-workspace-common/components/canv
 import { Question } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useTemplateGenerationStatus } from '../../hooks/useTemplateGenerationStatus';
-import { TemplateStatusBadge } from './template-status-badge';
 import { TemplateEditorSkeleton } from './template-editor-skeleton';
-import { shouldShowStatusBadge } from '../../utils/templateStatus';
 
 const EmptyContent = () => {
   const { t } = useTranslation();
@@ -156,11 +154,6 @@ export const WorkflowAPPForm = ({
     polledTemplateContent && templateStatus === 'completed'
       ? polledTemplateContent
       : (templateContent ?? polledTemplateContent);
-
-  // Determine if status badge should be shown
-  // Show badge when generating (pending/generating) or failed, and hide when content is available
-  const shouldShowBadge =
-    isStatusInitialized && shouldShowStatusBadge(templateStatus) && !effectiveTemplateContent;
 
   // Show editor when template content is available and status is completed or idle
   const shouldShowEditor =
@@ -1049,8 +1042,6 @@ export const WorkflowAPPForm = ({
             <div
               className={cn('w-full h-full gap-3 flex flex-col rounded-2xl relative', className)}
             >
-              {/* Status badge in top-right corner */}
-              {shouldShowBadge && <TemplateStatusBadge status={templateStatus} />}
               <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
                 {/* Show loading state when loading */}
                 {workflowVariables.length > 0 ? (
