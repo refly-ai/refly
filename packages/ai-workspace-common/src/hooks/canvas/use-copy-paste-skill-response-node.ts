@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { useStore } from '@xyflow/react';
+import { useStore, useReactFlow } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 import { CanvasNode } from '@refly/canvas-common';
 import { useDuplicateNode } from './use-duplicate-node';
@@ -24,6 +24,7 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
   const { canvasId, readonly } = options;
   const { workflow: workflowRun } = useCanvasContext();
   const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
+  const { getNode } = useReactFlow<CanvasNode<any>>();
   const { nodes } = useStore(
     useShallow((state) => ({
       nodes: state.nodes,
@@ -52,7 +53,11 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
 
     if (selectedNodes.length > 0) {
       // Use utility function with fallback for better compatibility
-      await copyToClipboard(JSON.stringify(selectedNodes));
+      const simplifiedSelectedNodes = selectedNodes.map((node) => ({
+        type: node.type,
+        id: node.id,
+      }));
+      await copyToClipboard(JSON.stringify(simplifiedSelectedNodes));
     }
   }, [nodes, readonly, workflowIsRunning]);
 
@@ -99,7 +104,10 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
 
       // Paste all copied nodes with fixed offset from original position
       for (const node of copiedNodes) {
-        duplicateNode(node, canvasId, { offset: fixedOffset });
+        const originalNode = getNode(node.id);
+        if (originalNode) {
+          duplicateNode(originalNode, canvasId, { offset: fixedOffset });
+        }
       }
     },
     [duplicateNode, canvasId, readonly, workflowIsRunning, safeJsonParse],

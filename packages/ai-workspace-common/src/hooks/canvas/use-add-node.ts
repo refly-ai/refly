@@ -41,10 +41,12 @@ export const useAddNode = () => {
   const edgeStyles = useEdgeStyles();
   const { setSelectedNode } = useNodeSelection();
   const { getState, setState } = useStoreApi();
-  const { canvasId } = useCanvasContext();
+  const { canvasId, workflow: workflowRun } = useCanvasContext();
   const { layoutBranchAndUpdatePositions, setNodeCenter } = useNodePosition();
   const { previewNode } = useNodePreviewControl({ canvasId });
   const { setNodes, setEdges } = useReactFlow();
+
+  const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
 
   // Clean up ghost nodes when menu closes
   const handleCleanGhost = () => {
@@ -66,6 +68,11 @@ export const useAddNode = () => {
       retryCount = 0,
       skipPurgeToolsets = false,
     ): XYPosition | undefined => {
+      if (workflowIsRunning) {
+        message.warning(t('canvas.workflow.run.forbiddenToAddNodeWhenWorkflowIsRunning'));
+        return undefined;
+      }
+
       const { canvasInitialized } = useCanvasStore.getState();
 
       if (!canvasInitialized[canvasId]) {
