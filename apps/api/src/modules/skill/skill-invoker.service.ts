@@ -940,24 +940,30 @@ export class SkillInvokerService {
                 bedrockUsage?.cacheWriteInputTokensCount ??
                 0;
 
+              // According to AWS Bedrock semantics (https://docs.aws.amazon.com/bedrock/latest/userguide/quotas-token-burndown.html):
+              // - InputTokenCount: tokens that need to be processed by the model (billable at full rate)
+              // - CacheReadInputTokens: tokens retrieved from cache (billable at discounted rate)
+              // - CacheWriteInputTokens: tokens written to cache
+              // These are separate categories, NOT a total that needs to be subtracted.
+              // Formula: totalTokens = inputTokens + cacheReadTokens + outputTokens
               const usage: TokenUsageItem = {
                 tier: providerItem?.tier,
                 modelProvider: providerItem?.provider?.name,
                 modelName: String(runMeta.ls_model_name),
                 modelLabel: providerItem?.name,
                 providerItemId: providerItem?.itemId,
-                inputTokens: (usageMetadata?.input_tokens ?? 0) - cacheRead,
+                inputTokens: usageMetadata?.input_tokens ?? 0,
                 outputTokens: usageMetadata?.output_tokens ?? 0,
                 cacheReadTokens: cacheRead,
               };
 
               // DEBUG: Log cache details (using console.log to ensure visibility)
               console.log('[Prompt Caching Debug - Step 5] Token usage from LLM:', {
-                totalInputTokens: usageMetadata?.input_tokens ?? 0,
+                inputTokens: usage.inputTokens,
                 cacheRead,
                 cacheWrite,
-                calculatedInputTokens: usage.inputTokens,
                 outputTokens: usage.outputTokens,
+                totalTokens: usageMetadata?.total_tokens ?? 0,
                 fullUsageMetadata: usageMetadata,
               });
 
