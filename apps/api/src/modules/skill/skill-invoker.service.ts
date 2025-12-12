@@ -901,12 +901,22 @@ export class SkillInvokerService {
               if (!providerItem) {
                 this.logger.error(`model not found: ${String(runMeta.ls_model_name)}`);
               }
+
+              // Extract routing data if model was routed (e.g., from Auto model)
+              const config =
+                typeof data.providerItem?.config === 'string'
+                  ? safeParseJSON(data.providerItem?.config)
+                  : data.providerItem?.config;
+              const routedData = config?.routedData;
+
               const usage: TokenUsageItem = {
                 tier: providerItem?.tier,
                 modelProvider: providerItem?.provider?.name,
                 modelName: String(runMeta.ls_model_name),
                 modelLabel: providerItem?.name,
                 providerItemId: providerItem?.itemId,
+                originalModelId: routedData?.originalModelId,
+                modelRoutedData: routedData,
                 inputTokens:
                   (chunk.usage_metadata?.input_tokens ?? 0) -
                   (chunk.usage_metadata?.input_token_details?.cache_read ?? 0),

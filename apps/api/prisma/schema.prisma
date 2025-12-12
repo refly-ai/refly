@@ -426,31 +426,36 @@ enum ActionStatus {
 
 model TokenUsage {
   /// Primary key
-  pk             BigInt   @id @default(autoincrement())
+  pk              BigInt   @id @default(autoincrement())
   /// UID
-  uid            String   @map("uid")
+  uid             String   @map("uid")
   /// Action result id
-  resultId       String?  @map("result_id")
+  resultId        String?  @map("result_id")
   /// Model tier
-  tier           String   @map("tier")
+  tier            String   @map("tier")
   /// Model provider
-  modelProvider  String   @default("") @map("model_provider")
+  modelProvider   String   @default("") @map("model_provider")
   /// Model name
-  modelName      String   @default("") @map("model_name")
+  modelName       String   @default("") @map("model_name")
   /// Model label
-  modelLabel     String   @default("") @map("model_label")
+  modelLabel      String   @default("") @map("model_label")
   /// Provider item id
-  providerItemId String?  @map("provider_item_id")
+  providerItemId  String?  @map("provider_item_id")
+  /// Original model ID before routing (e.g., 'auto')
+  originalModelId String?  @map("original_model_id")
+  /// Model routing metadata (JSON)
+  modelRoutedData String?  @map("model_routed_data")
   /// Input tokens
-  inputTokens    Int      @default(0) @map("input_tokens")
+  inputTokens     Int      @default(0) @map("input_tokens")
   /// Output tokens
-  outputTokens   Int      @default(0) @map("output_tokens")
+  outputTokens    Int      @default(0) @map("output_tokens")
   /// Create timestamp
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@index([uid, createdAt])
+  @@index([originalModelId, createdAt])
   @@map("token_usages")
 }
 
