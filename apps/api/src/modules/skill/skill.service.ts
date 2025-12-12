@@ -585,20 +585,6 @@ export class SkillService implements OnModuleInit {
         : undefined,
     };
 
-    // DEBUG: Log model config for context caching
-    console.log('[Prompt Caching Debug - Step 1] modelConfigMap constructed:', {
-      chat: {
-        modelId: modelConfigMap.chat?.modelId,
-        contextCaching: modelConfigMap.chat?.capabilities?.contextCaching,
-      },
-      copilot: modelConfigMap.copilot
-        ? {
-            modelId: modelConfigMap.copilot?.modelId,
-            contextCaching: modelConfigMap.copilot?.capabilities?.contextCaching,
-          }
-        : null,
-    });
-
     if (param.context) {
       param.context = await this.populateSkillContext(user, param.context);
     }

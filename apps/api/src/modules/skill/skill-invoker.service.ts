@@ -895,18 +895,6 @@ export class SkillInvokerService {
             if (runMeta && chunk) {
               this.logger.info(`ls_model_name: ${String(runMeta.ls_model_name)}`);
 
-              // DEBUG: Log the raw chunk to see AWS Bedrock response structure
-              console.log('[Prompt Caching Debug - Step 5.1] Raw chunk from LLM:');
-              console.log('  usage_metadata:', chunk.usage_metadata);
-
-              // Type assertion for response_metadata
-              const responseMetadata = chunk.response_metadata as any;
-              console.log('  response_metadata.metadata.usage:', responseMetadata?.metadata?.usage);
-              console.log(
-                '  response_metadata.metadata.metrics:',
-                responseMetadata?.metadata?.metrics,
-              );
-
               const providerItem = await this.providerService.findLLMProviderItemByModelID(
                 user,
                 String(runMeta.ls_model_name),
@@ -917,6 +905,7 @@ export class SkillInvokerService {
 
               // Type assertions for usage metadata
               const usageMetadata = chunk.usage_metadata as any;
+              const responseMetadata = chunk.response_metadata as any;
 
               // Extract cache-related tokens from different possible sources
               // AWS Bedrock uses multiple possible field names:
@@ -933,7 +922,7 @@ export class SkillInvokerService {
                 bedrockUsage?.cacheReadInputTokensCount ??
                 0;
 
-              const cacheWrite =
+              const _cacheWrite =
                 usageMetadata?.input_token_details?.cache_creation ??
                 bedrockUsage?.cacheWriteInputTokenCount ??
                 bedrockUsage?.cacheWriteInputTokens ??
@@ -957,15 +946,11 @@ export class SkillInvokerService {
                 cacheReadTokens: cacheRead,
               };
 
-              // DEBUG: Log cache details (using console.log to ensure visibility)
-              console.log('[Prompt Caching Debug - Step 5] Token usage from LLM:', {
-                inputTokens: usage.inputTokens,
-                cacheRead,
-                cacheWrite,
-                outputTokens: usage.outputTokens,
-                totalTokens: usageMetadata?.total_tokens ?? 0,
-                fullUsageMetadata: usageMetadata,
-              });
+              if (cacheRead > 0) {
+                this.logger.info(
+                  `Prompt cache hit, model: ${usage.modelName}, inputTokens: ${usage.inputTokens}, outputTokens: ${usage.outputTokens}, cacheReadTokens: ${usage.cacheReadTokens}`,
+                );
+              }
 
               resultAggregator.addUsageItem(runMeta, usage);
 

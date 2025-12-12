@@ -100,28 +100,15 @@ export const buildFinalRequestMessages = ({
   // Check if context caching should be enabled and the model supports it
   const shouldEnableContextCaching = !!modelInfo?.capabilities?.contextCaching;
 
-  // DEBUG: Log context caching decision
-  console.log('[Prompt Caching Debug - Step 3] Context caching decision:', {
-    shouldEnableContextCaching,
-    modelInfo: {
-      modelId: modelInfo?.modelId,
-      contextCaching: modelInfo?.capabilities?.contextCaching,
-      allCapabilities: modelInfo?.capabilities,
-    },
-    messageCount: requestMessages.length,
-  });
-
   if (shouldEnableContextCaching) {
     // Note: In a production system, you might want to:
     // 1. Estimate token count based on model name
     // 2. Check against minimum token thresholds
     // 3. Skip caching if below the threshold
 
-    console.log('[Prompt Caching Debug - Step 3.1] Applying context caching to messages');
     return applyContextCaching(requestMessages);
   }
 
-  console.log('[Prompt Caching Debug - Step 3.2] Context caching NOT applied');
   return requestMessages;
 };
 
@@ -140,27 +127,12 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
   // We want to cache at most 3 messages before the last message
   const minCacheIndex = Math.max(0, messages.length - 4);
 
-  // DEBUG: Log caching application
-  console.log('[Prompt Caching Debug - Step 4] Applying cachePoint to messages:', {
-    totalMessages: messages.length,
-    minCacheIndex,
-    willCacheMessages: messages.length - 1 - minCacheIndex,
-  });
-
   return messages.map((message, index) => {
     // Don't cache the last message (final user query)
     if (index === messages.length - 1) return message;
 
     // Don't cache messages beyond the 3 most recent (before the last one)
     if (index < minCacheIndex) return message;
-
-    // DEBUG: Log each message being cached
-    console.log(`[Prompt Caching Debug - Step 4.${index}] Adding cachePoint to message:`, {
-      index,
-      type: message.constructor.name,
-      contentType: typeof message.content,
-      isArray: Array.isArray(message.content),
-    });
 
     // Apply caching using LangChain's cachePoint format
     if (message instanceof SystemMessage) {
