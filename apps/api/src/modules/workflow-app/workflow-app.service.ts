@@ -13,6 +13,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { PrismaService } from '../common/prisma.service';
 import { CanvasService } from '../canvas/canvas.service';
 import { MiscService } from '../misc/misc.service';
+import { DriveService } from '../drive/drive.service';
 import {
   genCanvasID,
   genWorkflowAppID,
@@ -61,6 +62,7 @@ export class WorkflowAppService {
     private readonly prisma: PrismaService,
     private readonly canvasService: CanvasService,
     private readonly miscService: MiscService,
+    private readonly driveService: DriveService,
     private readonly workflowService: WorkflowService,
     private readonly shareCommonService: ShareCommonService,
     private readonly shareCreationService: ShareCreationService,
@@ -627,6 +629,35 @@ export class WorkflowAppService {
     // Resource entity id map from old resource entity ids to new resource entity ids
     const entityIdMap = this.buildEntityIdMap(oldVariables, finalVariables);
 
+    // Duplicate files from canvasData.files to the new canvas
+    // Only duplicate manual uploads (source: 'manual') that are not variable files
+    const fileIdMap: Record<string, string> = {};
+    const files = (canvasData as any).files || [];
+    if (files.length > 0) {
+      for (const file of files) {
+        try {
+          // Only duplicate manual uploads without variableId
+          if (file.source !== 'manual' || file.variableId) {
+            continue;
+          }
+          const duplicatedFile = await this.driveService.duplicateDriveFile(
+            user,
+            file,
+            newCanvasId,
+          );
+          fileIdMap[file.fileId] = duplicatedFile.fileId;
+          this.logger.log(
+            `Duplicated file ${file.fileId} to ${duplicatedFile.fileId} for canvas ${newCanvasId}`,
+          );
+        } catch (error) {
+          this.logger.error(`Failed to duplicate file ${file.fileId}: ${error.message}`);
+        }
+      }
+    }
+
+    // Merge fileIdMap into entityIdMap for unified reference replacement
+    const combinedEntityIdMap = { ...entityIdMap, ...fileIdMap };
+
     const updatedNodes: CanvasNode[] = nodes.map((node) => {
       if (node.type !== 'skillResponse') {
         return node;
@@ -636,7 +667,11 @@ export class WorkflowAppService {
 
       // Replace the resource variable with the new entity id
       if (metadata.query) {
-        metadata.query = replaceResourceMentionsInQuery(metadata.query, variables, entityIdMap);
+        metadata.query = replaceResourceMentionsInQuery(
+          metadata.query,
+          variables,
+          combinedEntityIdMap,
+        );
       }
 
       if (metadata.structuredData?.query) {
@@ -644,7 +679,7 @@ export class WorkflowAppService {
           replaceResourceMentionsInQuery(
             metadata.structuredData.query as string,
             variables,
-            entityIdMap,
+            combinedEntityIdMap,
           );
       }
 
@@ -659,10 +694,10 @@ export class WorkflowAppService {
       // Replace the context items with the new context items
       if (metadata.contextItems) {
         metadata.contextItems = metadata.contextItems.map((item) => {
-          if (item.type !== 'resource') {
+          if (item.type !== 'resource' && item.type !== 'file') {
             return item;
           }
-          const newEntityId = entityIdMap[item.entityId];
+          const newEntityId = combinedEntityIdMap[item.entityId];
           if (newEntityId) {
             return {
               ...item,

@@ -5,6 +5,7 @@ import { WorkflowAppController } from './workflow-app.controller';
 import { WorkflowAppService } from './workflow-app.service';
 import { CanvasModule } from '../canvas/canvas.module';
 import { MiscModule } from '../misc/misc.module';
+import { DriveModule } from '../drive/drive.module';
 import { WorkflowModule } from '../workflow/workflow.module';
 import { ShareModule } from '../share/share.module';
 import { ToolModule } from '../tool/tool.module';
@@ -19,6 +20,7 @@ import { WorkflowAppTemplateProcessor } from './workflow-app.processor';
     CommonModule,
     CanvasModule,
     MiscModule,
+    DriveModule,
     WorkflowModule,
     ShareModule,
     ToolModule,
