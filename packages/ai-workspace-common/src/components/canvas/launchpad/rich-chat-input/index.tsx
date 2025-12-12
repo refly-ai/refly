@@ -13,6 +13,8 @@ import { cn } from '@refly/utils/cn';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { useStore } from '@xyflow/react';
 import React, {
   forwardRef,
@@ -403,9 +405,46 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     }, [selectedSkillNodeId]);
 
     // Create placeholder extension with dynamic placeholder
+    // Only show placeholder when the entire editor is empty (no content including line breaks)
     const placeholderExtension = useMemo(() => {
-      return Placeholder.configure({
-        placeholder: placeholder || t('canvas.richChatInput.defaultPlaceholder'),
+      const placeholderText = placeholder || t('canvas.richChatInput.defaultPlaceholder');
+
+      return Placeholder.extend({
+        addProseMirrorPlugins() {
+          return [
+            new Plugin({
+              key: new PluginKey('placeholder'),
+              props: {
+                decorations: (state) => {
+                  const { doc } = state;
+
+                  const isEmpty =
+                    doc.childCount === 1 && (doc.content?.content[0] as any)?.content?.size === 0;
+
+                  if (!isEmpty) {
+                    return DecorationSet.empty;
+                  }
+
+                  // Show placeholder on the first paragraph
+                  const firstChild = doc.firstChild;
+                  if (!firstChild || firstChild.type.name !== 'paragraph') {
+                    return DecorationSet.empty;
+                  }
+
+                  const placeholderDecoration = Decoration.node(0, firstChild.nodeSize, {
+                    class: 'is-empty',
+                    'data-placeholder': placeholderText,
+                  });
+
+                  return DecorationSet.create(doc, [placeholderDecoration]);
+                },
+              },
+            }),
+          ];
+        },
+      }).configure({
+        placeholder: placeholderText,
+        showOnlyCurrent: false,
       });
     }, [placeholder, t]);
 
@@ -473,7 +512,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
           },
         },
       },
-      [placeholder, nodeId],
+      [nodeId],
     );
 
     // Expose focus and insertAtSymbol methods through ref
