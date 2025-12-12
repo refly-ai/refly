@@ -2,7 +2,7 @@ import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-s
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, Form, Typography, message, Tooltip, Avatar } from 'antd';
 import { IconShare } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 
 import cn from 'classnames';
@@ -179,6 +179,46 @@ export const WorkflowAPPForm = ({
   // Show skeleton screen by default (during initialization, pending, generating, or uninitialized idle)
   // This covers: uninitialized state, pending, generating, and idle without initialization
   const shouldShowSkeleton = !shouldShowEditor && !shouldShowForm;
+
+  // Track previous status to show toast only when entering pending/generating state
+  const previousStatusRef = useRef<string | null>(null);
+  const hasShownToastRef = useRef(false);
+
+  // Reset refs when appId changes
+  useEffect(() => {
+    previousStatusRef.current = null;
+    hasShownToastRef.current = false;
+  }, [workflowApp?.appId]);
+
+  // Show toast when entering pending/generating state and showing skeleton
+  useEffect(() => {
+    const isGeneratingState =
+      isStatusInitialized &&
+      (templateStatus === 'pending' || templateStatus === 'generating') &&
+      shouldShowSkeleton;
+
+    // Show toast when entering generating state (from other states or initial load)
+    if (isGeneratingState) {
+      const prevStatus = previousStatusRef.current;
+      const isEnteringGenerating =
+        prevStatus === null || (prevStatus !== 'pending' && prevStatus !== 'generating');
+
+      if (isEnteringGenerating && !hasShownToastRef.current) {
+        message.info(t('canvas.workflow.template.updating'));
+        hasShownToastRef.current = true;
+      }
+    } else {
+      // Reset toast flag when leaving generating state
+      if (previousStatusRef.current === 'pending' || previousStatusRef.current === 'generating') {
+        hasShownToastRef.current = false;
+      }
+    }
+
+    // Update previous status
+    if (isStatusInitialized) {
+      previousStatusRef.current = templateStatus;
+    }
+  }, [templateStatus, isStatusInitialized, shouldShowSkeleton, t]);
 
   // Check if form should be disabled
   const isFormDisabled = loading || isRunning || isPolling;

@@ -1558,6 +1558,7 @@ const translations = {
         completed: '模板描述字符串已生成！',
         failed: '模板描述字符串生成失败，请稍后重试',
         clickToSwitch: '点击切换到编辑器',
+        updating: '你使用的模板描述字符串正在更新中...',
       },
     },
     connectionTimeout: {
