@@ -97,6 +97,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getTemplateGenerationStatus,
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
@@ -358,6 +359,8 @@ import {
   GetSettingsError,
   GetSubscriptionPlansError,
   GetSubscriptionUsageError,
+  GetTemplateGenerationStatusData,
+  GetTemplateGenerationStatusError,
   GetToolCallResultData,
   GetToolCallResultError,
   GetWorkflowAppDetailData,
@@ -1150,6 +1153,23 @@ export const useListWorkflowApps = <
     queryKey: Common.UseListWorkflowAppsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listWorkflowApps({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetTemplateGenerationStatus = <
+  TData = Common.GetTemplateGenerationStatusDefaultResponse,
+  TError = GetTemplateGenerationStatusError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetTemplateGenerationStatusData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetTemplateGenerationStatusKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getTemplateGenerationStatus({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetSettings = <

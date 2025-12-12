@@ -1410,6 +1410,8 @@ export class ShareCreationService {
         templateShareId: true,
         coverStorageKey: true,
         templateContent: true,
+        templateGenerationStatus: true,
+        templateGenerationError: true,
         remixEnabled: true,
         publishToCommunity: true,
         publishReviewStatus: true,

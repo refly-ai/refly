@@ -34,6 +34,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getTemplateGenerationStatus,
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
@@ -97,6 +98,7 @@ import {
   GetPilotSessionDetailData,
   GetProjectDetailData,
   GetResourceDetailData,
+  GetTemplateGenerationStatusData,
   GetToolCallResultData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
@@ -462,6 +464,15 @@ export const ensureUseListWorkflowAppsData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListWorkflowAppsKeyFn(clientOptions),
     queryFn: () => listWorkflowApps({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetTemplateGenerationStatusData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetTemplateGenerationStatusData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetTemplateGenerationStatusKeyFn(clientOptions),
+    queryFn: () =>
+      getTemplateGenerationStatus({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetSettingsData = (
   queryClient: QueryClient,
