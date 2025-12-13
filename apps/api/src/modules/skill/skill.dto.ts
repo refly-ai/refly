@@ -17,22 +17,24 @@ import {
 import { pick } from '../../utils';
 import { safeParseJSON } from '@refly/utils';
 
+export type ModelConfigMap = {
+  chat?: LLMModelConfig;
+  copilot?: LLMModelConfig;
+  agent?: LLMModelConfig;
+  queryAnalysis?: LLMModelConfig;
+  titleGeneration?: LLMModelConfig;
+  image?: MediaGenerationModelConfig;
+  video?: MediaGenerationModelConfig;
+  audio?: MediaGenerationModelConfig;
+};
+
 export interface InvokeSkillJobData extends InvokeSkillRequest {
   uid: string;
   rawParam: string;
   result?: ActionResult;
   provider?: Provider;
   providerItem?: ProviderItem;
-  modelConfigMap?: {
-    chat?: LLMModelConfig;
-    copilot?: LLMModelConfig;
-    agent?: LLMModelConfig;
-    queryAnalysis?: LLMModelConfig;
-    titleGeneration?: LLMModelConfig;
-    image?: MediaGenerationModelConfig;
-    video?: MediaGenerationModelConfig;
-    audio?: MediaGenerationModelConfig;
-  };
+  modelConfigMap?: ModelConfigMap;
 }
 
 export function skillInstancePO2DTO(skill: SkillInstanceModel): SkillInstance {

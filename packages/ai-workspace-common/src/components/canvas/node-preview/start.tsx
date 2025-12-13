@@ -31,17 +31,15 @@ const RESOURCE_TYPE_ICON_MAP = {
 
 const VariableItem = memo(
   ({
-    canvasId,
-    totalVariables,
     variable,
     onEdit,
+    onDelete,
     readonly,
     isHighlighted = false,
   }: {
-    canvasId: string;
-    totalVariables: WorkflowVariable[];
     variable: WorkflowVariable;
     onEdit?: (variable: WorkflowVariable) => void;
+    onDelete?: (variable: WorkflowVariable) => void;
     readonly: boolean;
     isHighlighted?: boolean;
   }) => {
@@ -49,13 +47,11 @@ const VariableItem = memo(
     const { t } = useTranslation();
     const [isPopconfirmOpen, setIsPopconfirmOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const { setVariables } = useVariablesManagement(canvasId);
 
     const handleDeleteVariable = async (variable: WorkflowVariable) => {
-      const newVariables = totalVariables.filter((v) => v.variableId !== variable.variableId);
       try {
         setIsDeleting(true);
-        setVariables(newVariables);
+        onDelete?.(variable);
         message.success(
           t('canvas.workflow.variables.deleteSuccess') || 'Variable deleted successfully',
         );
@@ -178,6 +174,7 @@ const VariableTypeSection = ({
   const Icon = VARIABLE_TYPE_ICON_MAP[type] ?? BiText;
   const [showCreateVariablesModal, setShowCreateVariablesModal] = useState(false);
   const [currentVariable, setCurrentVariable] = useState<WorkflowVariable | null>(null);
+  const { setVariables } = useVariablesManagement(canvasId);
 
   const handleCloseModal = () => {
     setShowCreateVariablesModal(false);
@@ -193,6 +190,14 @@ const VariableTypeSection = ({
     setCurrentVariable(variable);
     setShowCreateVariablesModal(true);
   }, []);
+
+  const handleDeleteVariable = useCallback(
+    (variable: WorkflowVariable) => {
+      const newVariables = totalVariables.filter((v) => v.variableId !== variable.variableId);
+      setVariables(newVariables);
+    },
+    [totalVariables, setVariables],
+  );
 
   return (
     <div className="space-y-3">
@@ -221,10 +226,9 @@ const VariableTypeSection = ({
           {variables.map((variable) => (
             <VariableItem
               key={variable.name}
-              canvasId={canvasId}
-              totalVariables={totalVariables}
               variable={variable}
               onEdit={handleEditVariable}
+              onDelete={handleDeleteVariable}
               readonly={readonly}
               isHighlighted={highlightedVariableId === variable.variableId}
             />

@@ -463,7 +463,7 @@ export const ResultItemPreview = memo(
           </div>
         </Modal>
         <div
-          className="w-full h-full relative cursor-pointer position-relative"
+          className="w-full h-full relative position-relative"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >

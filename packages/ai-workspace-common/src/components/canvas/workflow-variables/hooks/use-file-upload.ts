@@ -196,6 +196,7 @@ export const useFileUpload = () => {
                     storageKey: data.storageKey,
                     source: 'variable',
                     variableId,
+                    archiveFiles: true,
                   },
                 });
 

@@ -6,6 +6,7 @@ import * as Y from 'yjs';
 import {
   ActionResult,
   CanvasNode,
+  CanvasEdge,
   CodeArtifact,
   Document,
   DuplicateShareRequest,
@@ -15,6 +16,7 @@ import {
   Resource,
   SharedCanvasData,
   User,
+  WorkflowVariable,
 } from '@refly/openapi-schema';
 import {
   ParamsError,
@@ -531,7 +533,53 @@ export class ShareDuplicationService {
     // Try to parse as workflow app first
     const workflowAppData = safeParseJSON(dataBuffer.toString());
     if (workflowAppData?.canvasData) {
-      canvasData = workflowAppData.canvasData;
+      // Try to load complete data from private storage
+      const extraData = record.extraData ? (safeParseJSON(record.extraData) as ShareExtraData) : {};
+
+      const executionStorageKey = extraData?.executionStorageKey;
+
+      if (executionStorageKey) {
+        try {
+          // Load complete execution data from private storage
+          const executionBuffer = await this.miscService.downloadFile({
+            storageKey: executionStorageKey,
+            visibility: 'private',
+          });
+
+          const executionData = safeParseJSON(executionBuffer.toString()) as {
+            nodes: CanvasNode[];
+            edges: CanvasEdge[];
+            files?: any[];
+            resources?: any[];
+            variables: WorkflowVariable[];
+            title?: string;
+            canvasId?: string;
+            owner?: any;
+            minimapUrl?: string;
+          };
+
+          // executionData contains complete data, use it directly
+          canvasData = {
+            ...executionData,
+            // Ensure all fields exist
+            files: executionData.files || [],
+            resources: executionData.resources || [],
+            variables: executionData.variables || [],
+          };
+
+          this.logger.log(`Loaded complete execution data for duplication: ${executionStorageKey}`);
+        } catch (error) {
+          this.logger.warn(
+            `Failed to load execution data for duplication, using public data. Error: ${error.message}`,
+          );
+          // Fallback to public data
+          canvasData = workflowAppData.canvasData;
+        }
+      } else {
+        // Backward compatibility: Use public data
+        canvasData = workflowAppData.canvasData;
+      }
+
       isWorkflowApp = true;
     } else {
       // Parse as direct canvas data

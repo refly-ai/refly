@@ -1283,9 +1283,11 @@ export class CanvasService {
 
     // If fileId exists and duplicateDriveFile is true, duplicate it
     if (resource.fileId) {
-      // Fetch the DriveFile to check its uid
+      // Fetch the DriveFile - include deleted files when duplicating
+      // This allows workflow app execution to work even if original file was deleted,
+      // as long as the file was published to external OSS during share creation
       let driveFile: any = await this.prisma.driveFile.findFirst({
-        where: { fileId: resource.fileId, deletedAt: null },
+        where: { fileId: resource.fileId }, // Allow deleted files when duplicating
       });
 
       if (!driveFile) {
@@ -1378,9 +1380,14 @@ export class CanvasService {
    */
   async updateWorkflowVariables(
     user: User,
-    param: { canvasId: string; variables: WorkflowVariable[]; duplicateDriveFile?: boolean },
+    param: {
+      canvasId: string;
+      variables: WorkflowVariable[];
+      duplicateDriveFile?: boolean;
+      archiveOldFiles?: boolean;
+    },
   ): Promise<WorkflowVariable[]> {
-    const { canvasId, variables, duplicateDriveFile = false } = param;
+    const { canvasId, variables, duplicateDriveFile = false, archiveOldFiles = false } = param;
     const canvas = await this.prisma.canvas.findUnique({
       select: { workflow: true },
       where: { canvasId, uid: user.uid, deletedAt: null },
@@ -1390,6 +1397,47 @@ export class CanvasService {
       try {
         workflowObj = safeParseJSON(canvas.workflow) ?? {};
       } catch {}
+    }
+
+    const oldVariables = workflowObj.variables ?? [];
+    const newVariableIds = new Set(variables.map((v) => v.variableId));
+
+    // Find deleted resource variables (exist in old but not in new)
+    const deletedResourceVariables = oldVariables.filter(
+      (v) => v.variableType === 'resource' && v.variableId && !newVariableIds.has(v.variableId),
+    );
+
+    // Delete files associated with deleted resource variables
+    for (const variable of deletedResourceVariables) {
+      try {
+        await this.driveService.deleteFilesByCondition(user, canvasId, {
+          source: 'variable',
+          variableId: variable.variableId,
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Failed to delete files for removed variable ${variable.variableId}: ${error?.message}`,
+        );
+      }
+    }
+
+    // Archive old resource variable files if requested (for approve scenario)
+    if (archiveOldFiles && oldVariables.length > 0) {
+      const oldResourceVariables = oldVariables.filter(
+        (v) => v.variableType === 'resource' && v.variableId && newVariableIds.has(v.variableId),
+      );
+      for (const variable of oldResourceVariables) {
+        try {
+          await this.driveService.archiveFiles(user, canvasId, {
+            source: 'variable',
+            variableId: variable.variableId,
+          });
+        } catch (error) {
+          this.logger.warn(
+            `Failed to archive files for variable ${variable.variableId}: ${error?.message}`,
+          );
+        }
+      }
     }
 
     workflowObj.variables = await this.processResourceVariables(

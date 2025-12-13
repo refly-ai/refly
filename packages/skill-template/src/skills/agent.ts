@@ -79,17 +79,20 @@ export class Agent extends BaseSkill {
           })
         : buildNodeAgentSystemPrompt();
 
-    const userPrompt = buildUserPrompt(optimizedQuery, context);
-
     // Use copilot scene for copilot_agent mode, otherwise use chat scene
     const modelConfigScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
+    const modelInfo = config?.configurable?.modelConfigMap?.[modelConfigScene];
+    const hasVisionCapability = modelInfo?.capabilities?.vision ?? false;
+
+    const userPrompt = buildUserPrompt(optimizedQuery, context, { hasVisionCapability });
+
     const requestMessages = buildFinalRequestMessages({
       systemPrompt,
       userPrompt,
       chatHistory: usedChatHistory,
       messages,
       images,
-      modelInfo: config?.configurable?.modelConfigMap?.[modelConfigScene],
+      modelInfo,
     });
 
     return { requestMessages, sources };
@@ -218,11 +221,6 @@ export class Agent extends BaseSkill {
             }
 
             try {
-              // Log tool arguments before invocation
-              this.engine.logger.info(
-                `Invoking tool '${toolName}' with args:\n${JSON.stringify(toolArgs, null, 2)}`,
-              );
-
               // Each invocation awaited to ensure strict serial execution
               const rawResult = await matchedTool.invoke(toolArgs);
               const stringified =

@@ -413,12 +413,44 @@ function isUrlRelatedField(fieldName: string): boolean {
     return false;
   }
 
-  // URL-related field name patterns
-  const urlNamePatterns = [
-    '_url',
-    'url', // image_url, video_url, file_url
-    '_uri',
-    'uri', // resource_uri
+  // Skip fields that are metadata/classification fields, not actual resources
+  // e.g., media_category, file_type, image_format, image_width, document_status
+  const nonResourceSuffixes = [
+    '_category',
+    '_height',
+    '_length',
+    '_type',
+    '_format',
+    '_method',
+    '_mode',
+    '_status',
+    '_version',
+    '_width',
+    '_name',
+    '_title',
+    '_label',
+    '_kind',
+    '_class',
+    '_size',
+    '_count',
+    '_index',
+    '_order',
+    '_position',
+  ];
+  if (nonResourceSuffixes.some((suffix) => fieldLower.endsWith(suffix))) {
+    return false;
+  }
+
+  // URL/URI patterns - always match these with includes()
+  const urlUriPatterns = ['_url', 'url', '_uri', 'uri'];
+  if (urlUriPatterns.some((pattern) => fieldLower.includes(pattern))) {
+    return true;
+  }
+
+  // Resource-related words that need strict word boundary matching
+  // Matches: image, images, video, videos, etc.
+  // Does NOT match: media_category, image_type (already excluded above)
+  const resourceWords = [
     'image',
     'video',
     'audio',
@@ -430,8 +462,14 @@ function isUrlRelatedField(fieldName: string): boolean {
     'document',
   ];
 
-  if (urlNamePatterns.some((pattern) => fieldLower.includes(pattern))) {
-    return true;
+  // Build regex pattern for strict word matching (with optional 's' for plurals)
+  // Word boundaries: start of string, underscore, or end of string
+  // Pattern: (^|_)word(s)?(_|$) matches "image", "images", "my_image", "image_data", "images_data"
+  for (const word of resourceWords) {
+    const pattern = new RegExp(`(^|_)${word}s?(_|$)`);
+    if (pattern.test(fieldLower)) {
+      return true;
+    }
   }
 
   return false;

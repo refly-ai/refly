@@ -226,7 +226,7 @@ export class CanvasController {
   @Post('workflow/variables')
   async updateWorkflowVariables(
     @LoginedUser() user: User,
-    @Body() body: { canvasId: string; variables: WorkflowVariable[] },
+    @Body() body: { canvasId: string; variables: WorkflowVariable[]; archiveOldFiles?: boolean },
   ) {
     const variables = await this.canvasService.updateWorkflowVariables(user, body);
     return buildSuccessResponse(variables);

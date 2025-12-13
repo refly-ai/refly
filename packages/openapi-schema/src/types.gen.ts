@@ -7541,6 +7541,10 @@ export type UpdateWorkflowVariablesRequest = {
    * List of workflow variables
    */
   variables: Array<WorkflowVariable>;
+  /**
+   * Whether to archive existing drive files associated with old resource variables before updating
+   */
+  archiveOldFiles?: boolean;
 };
 
 export type UpdateWorkflowVariablesResponse = BaseResponse & {
@@ -7683,6 +7687,10 @@ export type UpsertDriveFileRequest = {
    * Related agent result version
    */
   resultVersion?: number;
+  /**
+   * Whether to archive existing files with the same variableId or resultId before creating new file
+   */
+  archiveFiles?: boolean;
 };
 
 export type BatchCreateDriveFilesRequest = {

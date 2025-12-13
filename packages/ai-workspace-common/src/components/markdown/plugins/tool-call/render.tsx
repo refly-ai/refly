@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DriveFile } from '@refly/openapi-schema';
 
@@ -275,24 +275,6 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   });
   const toolsetDefinition = data?.data?.find((t) => t.key === toolsetKey);
   const toolsetName = toolsetDefinition?.labelDict?.[currentLanguage] ?? toolsetKey;
-
-  useEffect(() => {
-    let timeout: NodeJS.Timeout | null = null;
-
-    if (toolCallStatus === ToolCallStatus.EXECUTING) {
-      setIsCollapsed(false);
-    } else {
-      timeout = setTimeout(() => {
-        setIsCollapsed(true);
-      }, 1000);
-    }
-
-    return () => {
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-    };
-  }, [toolCallStatus]);
 
   return (
     <>

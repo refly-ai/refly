@@ -68,8 +68,17 @@ let _globalConfig: MonitoringConfig = {
  * Initialize monitoring with configuration
  */
 export function initializeMonitoring(config: MonitoringConfig) {
+  console.log('[Providers Monitoring] initializeMonitoring called with:', {
+    enabled: config.enabled,
+    hasPublicKey: !!config.publicKey,
+    hasSecretKey: !!config.secretKey,
+    baseUrl: config.baseUrl,
+  });
+
   _globalConfig = { ...config };
   isMonitoringEnabled = config.enabled && !!config.publicKey && !!config.secretKey;
+
+  console.log('[Providers Monitoring] isMonitoringEnabled:', isMonitoringEnabled);
 
   if (isMonitoringEnabled) {
     try {
@@ -80,6 +89,7 @@ export function initializeMonitoring(config: MonitoringConfig) {
         secretKey: config.secretKey,
         baseUrl: config.baseUrl,
       });
+      console.log('[Providers Monitoring] Langfuse SDK instance created');
     } catch (error) {
       console.warn(
         '[Providers Monitoring] Langfuse not available, monitoring disabled:',
@@ -95,11 +105,18 @@ export function initializeMonitoring(config: MonitoringConfig) {
  */
 function createTrace(userId?: string, metadata: Record<string, any> = {}) {
   if (!isMonitoringEnabled || !langfuseInstance) {
+    console.log(
+      '[Providers Monitoring] createTrace skipped - isMonitoringEnabled:',
+      isMonitoringEnabled,
+      'hasInstance:',
+      !!langfuseInstance,
+    );
     return null;
   }
 
   try {
     const traceId = createId();
+    console.log('[Providers Monitoring] Creating trace:', { traceId, userId, metadata });
     const trace = langfuseInstance.trace({
       id: traceId,
       name: 'Model Operation',

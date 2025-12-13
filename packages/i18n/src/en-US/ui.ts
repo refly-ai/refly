@@ -1485,6 +1485,8 @@ const translations = {
           success: 'The workflow has been stopped successfully.',
           failed: 'Failed to stop workflow',
         },
+        forbiddenToAddNodeWhenWorkflowIsRunning:
+          'Workflow is running, cannot add node, please try again later',
       },
     },
     connectionTimeout: {

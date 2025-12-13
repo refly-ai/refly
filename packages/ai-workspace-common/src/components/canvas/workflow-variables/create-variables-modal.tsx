@@ -452,6 +452,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
                   storageKey,
                   source: 'variable',
                   variableId,
+                  archiveFiles: true,
                 },
               });
 

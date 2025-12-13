@@ -23,7 +23,8 @@ export interface CreateShareJobData {
 }
 
 export interface ShareExtraData {
-  vectorStorageKey: string;
+  vectorStorageKey?: string; // Existing field (used by document/resource)
+  executionStorageKey?: string; // New field: execution data storage location (used by workflowApp)
 }
 
 export interface SharePageData {

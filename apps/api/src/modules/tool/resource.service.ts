@@ -913,6 +913,8 @@ export class ResourceHandler {
     options?: {
       /** Treat string as base64 encoded */
       isBase64?: boolean;
+      resultId?: string;
+      resultVersion?: number;
     },
   ): Promise<DriveFile | null> {
     try {

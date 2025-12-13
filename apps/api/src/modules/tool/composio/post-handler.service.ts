@@ -160,27 +160,39 @@ export class PostHandlerService {
 
     for (const [key, value] of Object.entries(data)) {
       if (typeof value === 'string') {
-        if (
-          value.startsWith('data:') ||
-          value.startsWith('http://') ||
-          value.startsWith('https://') ||
-          value.length > this.uploadThreshold
-        ) {
+        // Process strategy:
+        // 1. data: URI (base64) → Upload to OSS as public resource, return OSS URL
+        // 2. http/https URL → Keep as-is, do NOT download
+        // 3. Large text (non-URL) → Upload to OSS as text file
+        const shouldProcess =
+          value.startsWith('data:') || // Base64 embedded data (images, files, etc.)
+          (value.length > this.uploadThreshold && !value.startsWith('http')); // Large text (but not URLs)
+
+        if (shouldProcess) {
           const isBase64 =
             !value.startsWith('data:') && !value.startsWith('http') && this.isLikelyBase64(value);
 
-          const file = await this.resourceHandler.uploadResource(
-            context.user,
-            canvasId,
-            value,
-            context.fileNameTitle ?? key ?? 'untitled',
-            { isBase64 },
-          );
-          if (file) {
-            files.push(file);
-            processedData[key] = { fileId: file.fileId, mimeType: file.type, name: file.name };
+          try {
+            const file = await this.resourceHandler.uploadResource(
+              context.user,
+              canvasId,
+              value,
+              context.fileNameTitle ?? key ?? 'untitled',
+              { isBase64 },
+            );
+            if (file) {
+              files.push(file);
+              // Return OSS URL as public resource
+              processedData[key] = { fileId: file.fileId, mimeType: file.type, name: file.name };
+            }
+          } catch (error) {
+            // If upload fails, keep original data
+            this.logger.warn(
+              `Failed to upload resource for key ${key}: ${error instanceof Error ? error.message : error}`,
+            );
           }
         }
+        // else: http/https URLs are kept as-is in processedData
       } else if (value && typeof value === 'object' && !Array.isArray(value)) {
         const nestedResult = await this.processObjectData(
           value as Record<string, unknown>,
