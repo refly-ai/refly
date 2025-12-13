@@ -151,7 +151,6 @@ data:
   REFLY_COOKIE_SECURE: ''
   REFLY_COOKIE_SAME_SITE: ''
   LOGIN_REDIRECT_URL: ''
-  JWT_SECRET: 'C0mpl3xR@nd0mS3cr3t!2023'
   JWT_EXPIRATION_TIME: 6h
   JWT_REFRESH_EXPIRATION_TIME: 7d
 
@@ -1004,6 +1003,16 @@ spec:
         envFrom:
         - configMapRef:
             name: refly-shared-config
+        # NOTE: JWT_SECRET should be provided via a Kubernetes Secret created separately
+        # Create the secret before deploying: 
+        # kubectl create secret generic refly-jwt-secret --from-literal=JWT_SECRET='your-strong-random-secret' -n refly
+        # Then uncomment the section below to inject it into the deployment
+        # env:
+        # - name: JWT_SECRET
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: refly-jwt-secret
+        #       key: JWT_SECRET
         ports:
         - containerPort: 5800
           name: api-http
