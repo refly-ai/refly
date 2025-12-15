@@ -146,6 +146,10 @@ model ActionResult {
   duplicateFrom           String?      @map("duplicate_from")
   /// Provider item id
   providerItemId          String?      @map("provider_item_id")
+  /// Actual provider item id (for execution, when routed)
+  actualProviderItemId    String?      @map("actual_provider_item_id")
+  /// Whether this action used auto model routing
+  isAutoModelRouted       Boolean      @default(false) @map("is_auto_model_routed")
   /// Pilot step id
   pilotStepId             String?      @map("pilot_step_id")
   /// Pilot session id

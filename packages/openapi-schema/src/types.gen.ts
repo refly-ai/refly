@@ -1887,6 +1887,14 @@ export type ActionResult = {
    */
   modelInfo?: ModelInfo;
   /**
+   * Actual provider item ID used for execution after routing (e.g. routed from Auto)
+   */
+  actualProviderItemId?: string;
+  /**
+   * Whether the action execution was routed from the Auto model
+   */
+  isAutoModelRouted?: boolean;
+  /**
    * Action target type
    */
   targetType?: EntityType;

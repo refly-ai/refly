@@ -2422,6 +2422,15 @@ export const ActionResultSchema = {
       description: 'Selected model',
       $ref: '#/components/schemas/ModelInfo',
     },
+    actualProviderItemId: {
+      type: 'string',
+      description:
+        'Actual provider item ID used for execution after routing (e.g. routed from Auto)',
+    },
+    isAutoModelRouted: {
+      type: 'boolean',
+      description: 'Whether the action execution was routed from the Auto model',
+    },
     targetType: {
       description: 'Action target type',
       $ref: '#/components/schemas/EntityType',
