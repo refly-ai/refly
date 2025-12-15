@@ -12,7 +12,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { MultiSelectResult } from './multi-select-result';
 import { SelectedResultsGrid } from './selected-results-grid';
 import { UseShareDataProvider } from '@refly-packages/ai-workspace-common/context/use-share-data';
-import BannerSvg from './banner.svg';
+import BannerSvg from './banner.png';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
 import { CanvasNode, DriveFile, VoucherTriggerResult } from '@refly/openapi-schema';
 import { useGetCanvasCommissionByCanvasId } from '../../queries/queries';
