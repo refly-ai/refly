@@ -95,8 +95,11 @@ class CustomThrottlerGuard extends ThrottlerGuard {
           return traceId ? { traceId } : {};
         },
         // Development: pino-pretty for colored output
-        // Production: JSON to stdout (collected by k8s log aggregator)
-        transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
+        // Production or LOG_JSON=true: JSON to stdout (collected by k8s log aggregator / Alloy)
+        transport:
+          process.env.NODE_ENV === 'production' || process.env.LOG_JSON === 'true'
+            ? undefined
+            : { target: 'pino-pretty' },
         formatters: {
           level: (level) => ({ level }),
         },

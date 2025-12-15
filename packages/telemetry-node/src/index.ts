@@ -5,14 +5,12 @@ let statsig: Statsig | null = null;
 export const setupStatsig = async () => {
   const secretKey = process.env.STATSIG_SECRET_KEY;
   if (!secretKey) {
-    console.warn('STATSIG_CLIENT_KEY is not set, skipping statsig setup');
+    // STATSIG_SECRET_KEY not set - skip setup silently
     return;
   }
 
   statsig = new Statsig(secretKey, { environment: process.env.NODE_ENV });
   await statsig.initialize();
-
-  console.log(`statsig initialized for env: ${process.env.NODE_ENV}`);
 };
 
 export const logEvent = (

@@ -8,7 +8,7 @@ try {
   const observabilityModule = require('@refly/observability/trace-manager');
   TraceManager = observabilityModule.TraceManager;
 } catch (_error) {
-  console.warn('[Providers Monitoring] TraceManager not available, using basic span tracking');
+  // TraceManager not available - silent fallback
 }
 
 /**
@@ -29,8 +29,8 @@ const calculateAccurateTokenUsage = (input: any, output: string) => {
       completionTokens,
       totalTokens: promptTokens + completionTokens,
     };
-  } catch (error) {
-    console.warn('[Providers Monitoring] gpt-tokenizer error:', error);
+  } catch (_error) {
+    // gpt-tokenizer error - fallback to estimation
     const promptTokens = Math.ceil(inputText.length / 4);
     const completionTokens = Math.ceil((output || '').length / 4);
 
@@ -68,17 +68,8 @@ let _globalConfig: MonitoringConfig = {
  * Initialize monitoring with configuration
  */
 export function initializeMonitoring(config: MonitoringConfig) {
-  console.log('[Providers Monitoring] initializeMonitoring called with:', {
-    enabled: config.enabled,
-    hasPublicKey: !!config.publicKey,
-    hasSecretKey: !!config.secretKey,
-    baseUrl: config.baseUrl,
-  });
-
   _globalConfig = { ...config };
   isMonitoringEnabled = config.enabled && !!config.publicKey && !!config.secretKey;
-
-  console.log('[Providers Monitoring] isMonitoringEnabled:', isMonitoringEnabled);
 
   if (isMonitoringEnabled) {
     try {
@@ -89,12 +80,7 @@ export function initializeMonitoring(config: MonitoringConfig) {
         secretKey: config.secretKey,
         baseUrl: config.baseUrl,
       });
-      console.log('[Providers Monitoring] Langfuse SDK instance created');
-    } catch (error) {
-      console.warn(
-        '[Providers Monitoring] Langfuse not available, monitoring disabled:',
-        error.message,
-      );
+    } catch (_error) {
       isMonitoringEnabled = false;
     }
   }
@@ -105,18 +91,11 @@ export function initializeMonitoring(config: MonitoringConfig) {
  */
 function createTrace(userId?: string, metadata: Record<string, any> = {}) {
   if (!isMonitoringEnabled || !langfuseInstance) {
-    console.log(
-      '[Providers Monitoring] createTrace skipped - isMonitoringEnabled:',
-      isMonitoringEnabled,
-      'hasInstance:',
-      !!langfuseInstance,
-    );
     return null;
   }
 
   try {
     const traceId = createId();
-    console.log('[Providers Monitoring] Creating trace:', { traceId, userId, metadata });
     const trace = langfuseInstance.trace({
       id: traceId,
       name: 'Model Operation',
@@ -160,8 +139,7 @@ function createTrace(userId?: string, metadata: Record<string, any> = {}) {
         };
       },
     };
-  } catch (error) {
-    console.error('[Providers Monitoring] Failed to create trace:', error);
+  } catch (_error) {
     return null;
   }
 }
@@ -408,8 +386,8 @@ export async function shutdownMonitoring(): Promise<void> {
   if (langfuseInstance) {
     try {
       await langfuseInstance.shutdownAsync();
-    } catch (error) {
-      console.error('[Providers Monitoring] Error shutting down:', error);
+    } catch (_error) {
+      // Shutdown error - silent
     }
   }
 }
