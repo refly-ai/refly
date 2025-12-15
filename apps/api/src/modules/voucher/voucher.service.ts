@@ -21,7 +21,6 @@ import {
 } from './voucher.dto';
 import {
   DAILY_POPUP_TRIGGER_LIMIT,
-  VOUCHER_EXPIRATION_DAYS,
   VoucherStatus,
   VoucherSource,
   InvitationStatus,
@@ -211,9 +210,11 @@ export class VoucherService implements OnModuleInit {
         scoringResult.score,
       );
 
+      const VOUCHER_EXPIRATION_MINUTES = this.configService.get('voucher.expirationMinutes');
+
       // 4. Generate voucher
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + VOUCHER_EXPIRATION_DAYS);
+      expiresAt.setMinutes(expiresAt.getMinutes() + VOUCHER_EXPIRATION_MINUTES);
 
       const voucher = await this.createVoucher({
         uid: user.uid,
@@ -284,6 +285,9 @@ export class VoucherService implements OnModuleInit {
 
     // Generate email content based on user's locale
     const userName = userPo.nickname || userPo.name || 'Refly User';
+    const expirationMinutes = this.configService.get('voucher.expirationMinutes');
+    // Convert minutes to days for email display (round up)
+    const expirationDays = Math.max(1, Math.ceil(expirationMinutes / (60 * 24)));
     const { subject, html } = generateVoucherEmail(
       {
         userName,
@@ -291,7 +295,7 @@ export class VoucherService implements OnModuleInit {
         discountValue,
         discountedPrice,
         inviteLink,
-        expirationDays: VOUCHER_EXPIRATION_DAYS,
+        expirationDays,
       },
       userPo.uiLocale || undefined,
     );
@@ -684,7 +688,9 @@ export class VoucherService implements OnModuleInit {
 
     // Create voucher for invitee
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + VOUCHER_EXPIRATION_DAYS);
+    expiresAt.setMinutes(
+      expiresAt.getMinutes() + this.configService.get('voucher.expirationMinutes'),
+    );
 
     const voucher = await this.createVoucher({
       uid: inviteeUid,

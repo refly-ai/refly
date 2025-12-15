@@ -233,7 +233,11 @@ export default () => ({
     firstSubscriptionGiftCreditExpiresInMonths:
       Number(process.env.CREDIT_FIRST_SUBSCRIPTION_GIFT_CREDIT_EXPIRES_IN_MONTHS) || 1,
   },
-
+  voucher: {
+    // Expiration time in minutes (default: 7 days = 10080 minutes)
+    // For testing, use smaller values like 7 (7 minutes)
+    expirationMinutes: Number(process.env.VOUCHER_EXPIRATION_MINUTES) || 10080,
+  },
   audio: {
     fish: {
       apiKey: process.env.FISH_AUDIO_API_KEY,
