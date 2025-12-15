@@ -11,12 +11,14 @@ import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { logEvent } from '@refly/telemetry-web';
 import { MultiSelectResult } from './multi-select-result';
 import { SelectedResultsGrid } from './selected-results-grid';
+import { UseShareDataProvider } from '@refly-packages/ai-workspace-common/context/use-share-data';
 import BannerSvg from './banner.svg';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
-import { CanvasNode, DriveFile } from '@refly/openapi-schema';
+import { CanvasNode, DriveFile, VoucherTriggerResult } from '@refly/openapi-schema';
 import { useGetCanvasCommissionByCanvasId } from '../../queries/queries';
 import { mapDriveFilesToCanvasNodes } from '@refly/utils';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { VoucherPopup } from '@refly-packages/ai-workspace-common/components/voucher/voucher-popup';
 
 interface CreateWorkflowAppModalProps {
   title: string;
@@ -134,6 +136,9 @@ export const CreateWorkflowAppModal = ({
   // Copy share link state
   const [linkCopied, setLinkCopied] = useState(false);
 
+  // Voucher popup state
+  const [voucherPopupVisible, setVoucherPopupVisible] = useState(false);
+  const [voucherResult, setVoucherResult] = useState<VoucherTriggerResult | null>(null);
   // Initial form data state for change detection
   const [initialFormData, setInitialFormData] = useState<{
     publishToCommunity: boolean;
@@ -342,8 +347,8 @@ export const CreateWorkflowAppModal = ({
       return false;
     }
 
-    const isLt5M = file.size / 1024 / 1024 < 5;
-    if (!isLt5M) {
+    const isLt30M = file.size / 1024 / 1024 < 30;
+    if (!isLt30M) {
       message.error(t('workflowApp.imageTooLarge'));
       return false;
     }
@@ -408,6 +413,11 @@ export const CreateWorkflowAppModal = ({
       });
 
       const shareId = data?.data?.shareId ?? '';
+      // Get voucher result directly from createWorkflowApp response
+      const voucherResult = (data?.data as any)?.voucherTriggerResult as
+        | VoucherTriggerResult
+        | null
+        | undefined;
 
       if (data?.success && shareId) {
         const workflowAppLink = getShareLink('workflowApp', shareId);
@@ -420,15 +430,21 @@ export const CreateWorkflowAppModal = ({
 
         setVisible(false);
 
-        const messageInstance = messageApi.open({
-          content: <SuccessMessage shareId={shareId} onClose={() => messageInstance()} />,
-          duration: 2000, // Auto close after 3000ms
-        });
-
-        // Ensure the message closes after 3000ms
-        setTimeout(() => {
-          messageInstance();
-        }, 2000);
+        // Check if voucher was generated (included in createWorkflowApp response)
+        if (voucherResult?.voucher) {
+          // Show voucher popup if a voucher was generated
+          setVoucherResult(voucherResult);
+          setVoucherPopupVisible(true);
+        } else {
+          // No voucher generated, show normal success message
+          const messageInstance = messageApi.open({
+            content: <SuccessMessage shareId={shareId} onClose={() => messageInstance()} />,
+            duration: 2000,
+          });
+          setTimeout(() => {
+            messageInstance();
+          }, 2000);
+        }
 
         onPublishSuccess?.();
       } else if (!data?.success) {
@@ -449,7 +465,9 @@ export const CreateWorkflowAppModal = ({
       return;
     }
 
-    logEvent('publish_template', Date.now(), {
+    const eventName = isUpdate ? 'update_template' : 'publish_template';
+
+    logEvent(eventName, Date.now(), {
       canvas_id: canvasId,
     });
 
@@ -959,10 +977,12 @@ export const CreateWorkflowAppModal = ({
                       borderColor: 'var(--refly-Card-Border)',
                     }}
                   >
-                    <SelectedResultsGrid
-                      selectedResults={selectedResults}
-                      options={displayNodes as unknown as CanvasNode[]}
-                    />
+                    <UseShareDataProvider value={false}>
+                      <SelectedResultsGrid
+                        selectedResults={selectedResults}
+                        options={displayNodes as unknown as CanvasNode[]}
+                      />
+                    </UseShareDataProvider>
                   </div>
                 </div>
                 {/* Remix Settings */}
@@ -1042,6 +1062,13 @@ export const CreateWorkflowAppModal = ({
           />
         </Modal>
       </Modal>
+
+      {/* Voucher Popup - now handles share logic internally */}
+      <VoucherPopup
+        visible={voucherPopupVisible}
+        onClose={() => setVoucherPopupVisible(false)}
+        voucherResult={voucherResult}
+      />
     </>
   );
 };

@@ -426,31 +426,36 @@ enum ActionStatus {
 
 model TokenUsage {
   /// Primary key
-  pk             BigInt   @id @default(autoincrement())
+  pk              BigInt   @id @default(autoincrement())
   /// UID
-  uid            String   @map("uid")
+  uid             String   @map("uid")
   /// Action result id
-  resultId       String?  @map("result_id")
+  resultId        String?  @map("result_id")
   /// Model tier
-  tier           String   @map("tier")
+  tier            String   @map("tier")
   /// Model provider
-  modelProvider  String   @default("") @map("model_provider")
+  modelProvider   String   @default("") @map("model_provider")
   /// Model name
-  modelName      String   @default("") @map("model_name")
+  modelName       String   @default("") @map("model_name")
   /// Model label
-  modelLabel     String   @default("") @map("model_label")
+  modelLabel      String   @default("") @map("model_label")
   /// Provider item id
-  providerItemId String?  @map("provider_item_id")
+  providerItemId  String?  @map("provider_item_id")
+  /// Original model ID before routing (e.g., 'auto')
+  originalModelId String?  @map("original_model_id")
+  /// Model routing metadata (JSON)
+  modelRoutedData String?  @map("model_routed_data")
   /// Input tokens
-  inputTokens    Int      @default(0) @map("input_tokens")
+  inputTokens     Int      @default(0) @map("input_tokens")
   /// Output tokens
-  outputTokens   Int      @default(0) @map("output_tokens")
+  outputTokens    Int      @default(0) @map("output_tokens")
   /// Create timestamp
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@index([uid, createdAt])
+  @@index([originalModelId, createdAt])
   @@map("token_usages")
 }
 
@@ -1256,6 +1261,29 @@ model SubscriptionPlan {
   @@map("subscription_plans")
 }
 
+model CreditPackPlan {
+  /// Primary key
+  pk          BigInt   @id @default(autoincrement())
+  /// Credit pack ID (business identifier)
+  packId      String   @unique @map("pack_id")
+  /// Stripe price lookup key
+  lookupKey   String   @map("lookup_key")
+  /// Credit amount for this pack
+  creditQuota Int      @map("credit_quota")
+  /// Whether this pack is enabled
+  enabled     Boolean  @default(true) @map("enabled")
+  /// Display name
+  name        String   @map("name")
+  /// Display description
+  description String?  @map("description")
+  /// Create timestamp
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("credit_pack_plans")
+}
+
 model Subscription {
   /// Primary key
   pk             BigInt    @id @default(autoincrement())
@@ -1541,6 +1569,10 @@ model CheckoutSession {
   invoiceId      String?  @map("invoice_id")
   /// Stripe customer ID
   customerId     String?  @map("customer_id")
+  /// Current plan
+  currentPlan    String?  @map("current_plan")
+  /// Source (canvas, template, pricing, etc.)
+  source         String?  @map("source")
   /// Create timestamp
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
@@ -1999,4 +2031,146 @@ model FormSubmission {
   @@index([formId, uid])
   @@index([uid, createdAt])
   @@map("form_submissions")
+}
+
+/// Voucher/discount code for template publishing rewards
+model Voucher {
+  /// Primary key
+  pk                BigInt    @id @default(autoincrement())
+  /// Voucher ID
+  voucherId         String    @unique @map("voucher_id")
+  /// User ID who owns this voucher
+  uid               String    @map("uid")
+  /// Discount rate (10-90, representing 10% to 90% off)
+  discountPercent   Int       @map("discount_percent")
+  /// Voucher status: unused, used, expired, invalid
+  status            String    @default("unused") @map("status")
+  /// Voucher source: template_publish, invitation_claim
+  source            String    @map("source")
+  /// Source entity ID (template_id for publish, invitation_id for claim)
+  sourceId          String?   @map("source_id")
+  /// LLM score that generated this voucher (0-100)
+  llmScore          Int?      @map("llm_score")
+  /// Expiration timestamp (created_at + 7 days)
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz()
+  /// Used timestamp
+  usedAt            DateTime? @map("used_at") @db.Timestamptz()
+  /// Subscription ID when used
+  subscriptionId    String?   @map("subscription_id")
+  /// Stripe Promotion Code ID
+  stripePromoCodeId String?   @map("stripe_promo_code_id")
+  /// Create timestamp
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([uid, status, expiresAt])
+  @@index([status, expiresAt])
+  @@map("vouchers")
+}
+
+/// Stripe coupon templates for voucher system
+model StripeCoupon {
+  /// Primary key
+  pk              BigInt   @id @default(autoincrement())
+  /// Discount percentage (10, 20, 30...90)
+  discountPercent Int      @unique @map("discount_percent")
+  /// Stripe Coupon ID (e.g., coupon_plus_20_test)
+  stripeCouponId  String   @unique @map("stripe_coupon_id")
+  /// Whether this coupon is active
+  isActive        Boolean  @default(true) @map("is_active")
+  /// Create timestamp
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("stripe_coupons")
+}
+
+/// Voucher invitation/sharing records
+model VoucherInvitation {
+  /// Primary key
+  pk              BigInt    @id @default(autoincrement())
+  /// Invitation ID
+  invitationId    String    @unique @map("invitation_id")
+  /// Inviter user ID
+  inviterUid      String    @map("inviter_uid")
+  /// Invitee user ID (NULL if not yet registered)
+  inviteeUid      String?   @map("invitee_uid")
+  /// Unique invitation code for URL parameter
+  inviteCode      String    @unique @map("invite_code")
+  /// Voucher ID associated with this invitation
+  voucherId       String    @map("voucher_id")
+  /// Discount rate of the shared voucher
+  discountPercent Int       @map("discount_percent")
+  /// Invitation status: unclaimed, claimed, expired
+  status          String    @default("unclaimed") @map("status")
+  /// Claimed timestamp
+  claimedAt       DateTime? @map("claimed_at") @db.Timestamptz()
+  /// Whether inviter reward (2000 credits) has been granted
+  rewardGranted   Boolean   @default(false) @map("reward_granted")
+  /// Create timestamp
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([inviterUid, status])
+  @@index([inviteeUid])
+  @@index([inviteCode])
+  @@index([status, claimedAt])
+  @@map("voucher_invitations")
+}
+
+/// User voucher popup display logs (for daily trigger limit)
+model VoucherPopupLog {
+  /// Primary key
+  pk         BigInt   @id @default(autoincrement())
+  /// User ID
+  uid        String   @map("uid")
+  /// Template ID that triggered the popup
+  templateId String   @map("template_id")
+  /// Popup date (YYYY-MM-DD) for daily counting
+  popupDate  String   @map("popup_date")
+  /// Voucher ID generated from this popup
+  voucherId  String?  @map("voucher_id")
+  /// Create timestamp
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([uid, popupDate])
+  @@index([voucherId])
+  @@map("voucher_popup_logs")
+}
+
+/// Promotion activity configuration (read by frontend)
+model PromotionActivity {
+  /// Primary key
+  pk               BigInt    @id @default(autoincrement())
+  /// Activity ID
+  activityId       String    @unique @map("activity_id")
+  /// Activity name (for admin reference)
+  activityName     String    @map("activity_name")
+  /// Activity text to display at entry point
+  activityText     String    @map("activity_text")
+  /// Activity image URL (required)
+  imageUrl         String    @map("image_url")
+  /// Default landing page URL
+  landingPageUrl   String    @map("landing_page_url")
+  /// Chinese landing page URL (optional)
+  landingPageUrlZh String?   @map("landing_page_url_zh")
+  /// English landing page URL (optional)
+  landingPageUrlEn String?   @map("landing_page_url_en")
+  /// Display positions (JSON array): ["dashboard", "marketplace"]
+  positions        String[]  @default([]) @map("positions")
+  /// Activity status: draft, published, unpublished
+  status           String    @default("draft") @map("status")
+  /// Create timestamp
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([status, deletedAt])
+  @@index([createdAt])
+  @@map("promotion_activities")
 }

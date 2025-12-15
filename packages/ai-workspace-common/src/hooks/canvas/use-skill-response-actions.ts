@@ -7,6 +7,7 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { logEvent } from '@refly/telemetry-web';
 import { useCleanupAbortedNode } from './use-cleanup-aborted-node';
 import { useAbortAction } from './use-abort-action';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 
 interface UseSkillResponseActionsProps {
   nodeId: string;
@@ -22,6 +23,9 @@ export const useSkillResponseActions = ({
   const { cleanupAbortedNode } = useCleanupAbortedNode();
   const { abortAction } = useAbortAction();
   const { workflow: workflowRun } = useCanvasContext();
+  const { setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setShowWorkflowRun: state.setShowWorkflowRun,
+  }));
 
   // Check if workflow is running
   const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
@@ -32,7 +36,7 @@ export const useSkillResponseActions = ({
   }, [nodeId]);
 
   // Rerun workflow from this node
-  const handleRerunFromHere = useCallback(() => {
+  const handleRerunFromHere = useCallback(async () => {
     if (!canvasId) {
       console.warn('Cannot rerun workflow: canvasId is missing');
       return;
@@ -48,17 +52,21 @@ export const useSkillResponseActions = ({
       return;
     }
 
-    logEvent('run_from_here', null, {
+    logEvent('run_from_here', Date.now(), {
       canvasId,
       nodeId,
     });
 
     // Initialize workflow starting from this node
-    workflowRun.initializeWorkflow({
+    const success = await workflowRun.initializeWorkflow({
       canvasId,
       startNodes: [nodeId],
     });
-  }, [nodeId, canvasId, workflowRun]);
+
+    if (success) {
+      setShowWorkflowRun(false);
+    }
+  }, [nodeId, canvasId, workflowRun, setShowWorkflowRun]);
 
   // Stop the running node
   const handleStop = useCallback(async () => {

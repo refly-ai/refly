@@ -1,4 +1,4 @@
-import type { LLMModelConfig } from '@refly/openapi-schema';
+import type { ProviderItemConfig } from '@refly/openapi-schema';
 import { safeParseJSON } from './parse';
 
 /**
@@ -8,29 +8,68 @@ import { safeParseJSON } from './parse';
 export const AUTO_MODEL_ID = 'auto';
 
 /**
- * Auto model routing priority list.
+ * Auto model routing priority list (legacy fallback).
  * The model router will try to route to models in this order until it finds an available one
  */
 export const AUTO_MODEL_ROUTING_PRIORITY = [
   // Primary
   'global.anthropic.claude-opus-4-5-20251101-v1:0',
   // Fallbacks
+  'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
   'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-  'us.anthropic.claude-sonnet-4-20250514-v1:0',
 ];
 
 /**
+ * Get the random list for Auto model routing from environment variable
+ * @returns Array of model IDs to rotate between, or empty array if not configured
+ */
+const getAutoModelRandomList = (): string[] => {
+  const randomListStr = process.env.AUTO_MODEL_ROUTING_RANDOM_LIST;
+  if (!randomListStr?.trim()) {
+    return [];
+  }
+  return randomListStr
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+};
+
+/**
+ * Randomly select one model ID from the random list
+ * @returns A randomly selected model ID, or null if list is empty
+ */
+export const selectAutoModel = (): string | null => {
+  const randomList = getAutoModelRandomList();
+  if (randomList.length === 0) {
+    return null;
+  }
+  const randomIndex = Math.floor(Math.random() * randomList.length);
+  return randomList[randomIndex];
+};
+
+/**
  * Check if the given provider item config is the Auto model
- * @param configStr The provider item config string
+ * @param config The provider item config (string or ProviderItemConfig)
  * @returns True if this is the Auto model
  */
-export const isAutoModel = (configStr: string | null | undefined): boolean => {
-  if (!configStr) {
-    return false;
-  }
-  const config: LLMModelConfig = safeParseJSON(configStr);
+export const isAutoModel = (config: string | ProviderItemConfig | null | undefined): boolean => {
   if (!config) {
     return false;
   }
-  return config.modelId === AUTO_MODEL_ID;
+
+  // If config is already an object, use it directly
+  let modelConfig: ProviderItemConfig | null = null;
+  if (typeof config === 'string') {
+    modelConfig = safeParseJSON(config);
+  } else {
+    modelConfig = config;
+  }
+
+  if (!modelConfig) {
+    return false;
+  }
+
+  // Check if config has modelId property and if it equals AUTO_MODEL_ID
+  // This works for all config types in the union (LLMModelConfig, EmbeddingModelConfig, etc.)
+  return 'modelId' in modelConfig && modelConfig.modelId === AUTO_MODEL_ID;
 };

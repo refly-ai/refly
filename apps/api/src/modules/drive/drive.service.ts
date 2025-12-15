@@ -1,4 +1,5 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { PinoLogger } from 'nestjs-pino';
 import mime from 'mime';
 import pLimit from 'p-limit';
@@ -54,7 +55,10 @@ type ListDriveFilesParams = ListDriveFilesData['query'] &
   };
 
 @Injectable()
-export class DriveService {
+export class DriveService implements OnModuleInit {
+  // Lazy-loaded to avoid circular dependency
+  private subscriptionService: SubscriptionService;
+
   constructor(
     private readonly logger: PinoLogger,
     private config: ConfigService,
@@ -63,10 +67,15 @@ export class DriveService {
     @Inject(OSS_EXTERNAL) private externalOss: ObjectStorageService,
     private redis: RedisService,
     private providerService: ProviderService,
-    private subscriptionService: SubscriptionService,
+    private moduleRef: ModuleRef,
     private miscService: MiscService,
   ) {
     this.logger.setContext(DriveService.name);
+  }
+
+  async onModuleInit() {
+    // Use moduleRef.get with { strict: false } to resolve circular dependency at runtime
+    this.subscriptionService = this.moduleRef.get(SubscriptionService, { strict: false });
   }
 
   /**
@@ -86,11 +95,15 @@ export class DriveService {
     return this.config.get<string>('origin');
   }
 
+  private get endpoint(): string | undefined {
+    return this.config.get<string>('endpoint');
+  }
+
   /**
    * Transform DriveFile Prisma model to DTO with URL
    */
   toDTO(driveFile: DriveFileModel): DriveFile {
-    return driveFilePO2DTO(driveFile, this.origin);
+    return driveFilePO2DTO(driveFile, this.endpoint);
   }
 
   private generateStorageKey(
@@ -285,6 +298,65 @@ export class DriveService {
   }
 
   /**
+   * Delete files by condition (soft delete + remove from OSS)
+   */
+  async deleteFilesByCondition(
+    user: User,
+    canvasId: string,
+    conditions: {
+      source?: DriveFileSource;
+      variableId?: string;
+      resultId?: string;
+    },
+  ): Promise<void> {
+    this.logger.info(
+      `Deleting files - uid: ${user.uid}, canvasId: ${canvasId}, conditions: ${JSON.stringify(conditions)}`,
+    );
+
+    // First find all files to get their storage keys
+    const files = await this.prisma.driveFile.findMany({
+      select: { fileId: true, storageKey: true },
+      where: {
+        canvasId,
+        uid: user.uid,
+        deletedAt: null,
+        ...conditions,
+      },
+    });
+
+    if (files.length === 0) {
+      this.logger.info(`No files found to delete for conditions: ${JSON.stringify(conditions)}`);
+      return;
+    }
+
+    // Soft delete in database
+    await this.prisma.driveFile.updateMany({
+      where: {
+        canvasId,
+        uid: user.uid,
+        deletedAt: null,
+        ...conditions,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    // Remove files from OSS
+    for (const file of files) {
+      if (file.storageKey) {
+        try {
+          await this.internalOss.removeObject(file.storageKey, true);
+        } catch (error) {
+          this.logger.warn(`Failed to remove file ${file.fileId} from OSS: ${error?.message}`);
+        }
+      }
+    }
+
+    this.logger.info(`Deleted ${files.length} files for conditions: ${JSON.stringify(conditions)}`);
+  }
+
+  /**
    * Process drive file content and store it in object storage
    * @param user - User information
    * @param requests - Array of drive file requests to process
@@ -322,7 +394,7 @@ export class DriveService {
         existingFileNames.add(uniqueName); // Add to set to prevent future conflicts in this batch
 
         // Skip requests that don't have content to process
-        if (content === undefined && !storageKey && !externalUrl) {
+        if (content === undefined && !storageKey && !externalUrl && !buffer) {
           continue;
         }
 
@@ -882,12 +954,14 @@ export class DriveService {
    * Create a new drive file
    */
   async createDriveFile(user: User, request: ExtendedUpsertDriveFileRequest): Promise<DriveFile> {
-    const { canvasId } = request;
+    const { canvasId, archiveFiles } = request;
     if (!canvasId) {
       throw new ParamsError('Canvas ID is required for create operation');
     }
 
-    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request]);
+    const processedResults = await this.batchProcessDriveFileRequests(user, canvasId, [request], {
+      archiveFiles,
+    });
     const processedReq = processedResults[0];
 
     if (!processedReq) {

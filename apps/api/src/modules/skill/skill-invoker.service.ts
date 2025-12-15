@@ -7,7 +7,11 @@ import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/c
 import { CallbackHandler as LangfuseCallbackHandler } from '@langfuse/langchain';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
-import { ProjectNotFoundError } from '@refly/errors';
+import {
+  ModelUsageQuotaExceeded,
+  ProjectNotFoundError,
+  WorkflowExecutionNotFoundError,
+} from '@refly/errors';
 import {
   ActionResult,
   ActionStep,
@@ -28,7 +32,7 @@ import {
   SkillRunnableMeta,
   createSkillInventory,
 } from '@refly/skill-template';
-import { genImageID, getWholeParsedContent, safeParseJSON, isAutoModel } from '@refly/utils';
+import { genImageID, getWholeParsedContent, safeParseJSON } from '@refly/utils';
 import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
@@ -218,7 +222,7 @@ export class SkillInvokerService {
       const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine, {
         context,
       });
-      config.configurable.selectedTools = tools;
+      config.configurable.selectedTools = tools as any;
     }
 
     config.configurable.installedToolsets = await this.toolService.listTools(user, {
@@ -251,11 +255,17 @@ export class SkillInvokerService {
   } {
     const errorMessage = err.message || 'Unknown error';
 
+    // Special handling for credit-related errors - preserve original message
+    const isCreditError =
+      err instanceof ModelUsageQuotaExceeded || /credit not available/i.test(err.message);
+
     // Categorize errors more reliably
     const isTimeoutError =
       err instanceof Error && (err.name === 'TimeoutError' || /timeout/i.test(err.message));
     const isAbortError =
-      err instanceof Error && (err.name === 'AbortError' || /abort/i.test(err.message));
+      err instanceof Error &&
+      (err.name === 'AbortError' || /abort/i.test(err.message)) &&
+      !isCreditError;
     const isNetworkError =
       err instanceof Error && (err.name === 'NetworkError' || /network|fetch/i.test(err.message));
     const isGeneralTimeout = isTimeoutError;
@@ -269,7 +279,11 @@ export class SkillInvokerService {
       ABORT_ERROR: 'Operation was aborted.',
     } as const;
 
-    if (isGeneralTimeout) {
+    if (isCreditError) {
+      // For credit errors, preserve the original detailed message
+      userFriendlyMessage = errorMessage;
+      logLevel = 'error';
+    } else if (isGeneralTimeout) {
       userFriendlyMessage = ERROR_MESSAGES.GENERAL_TIMEOUT;
     } else if (isNetworkError) {
       userFriendlyMessage = ERROR_MESSAGES.NETWORK_ERROR;
@@ -287,6 +301,41 @@ export class SkillInvokerService {
     };
   }
 
+  /**
+   * Detect whether an error is caused by exceeding token/context limits.
+   */
+  private isTokenLimitError(err: unknown): boolean {
+    if (!err) return false;
+    const message = (err as { message?: string })?.message?.toLowerCase() ?? '';
+    const code = (err as { code?: string })?.code?.toLowerCase?.() ?? '';
+    return (
+      /token limit|context length|maximum context|max context|too many tokens/.test(message) ||
+      code === 'context_length_exceeded' ||
+      code === 'max_tokens_exceeded'
+    );
+  }
+
+  /**
+   * For most tool failures, only persist/stream the user-facing `output` field.
+   * Preserve full payloads when the error looks like a token/context limit issue,
+   * since those may be saved to a debug document.
+   */
+  private normalizeToolOutputForPersistence(toolOutput: any): any {
+    if (!toolOutput || typeof toolOutput !== 'object') return toolOutput;
+
+    const errorText = String((toolOutput as any).error ?? (toolOutput as any).message ?? '');
+    const codeText = String((toolOutput as any).code ?? '');
+    if (this.isTokenLimitError({ message: errorText, code: codeText })) {
+      return toolOutput;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(toolOutput, 'output')) {
+      return (toolOutput as any).output;
+    }
+
+    return toolOutput;
+  }
+
   private async _invokeSkill(user: User, data: InvokeSkillJobData, res?: Response) {
     const { input, result, context } = data;
     const { resultId, version, actionMeta, tier } = result;
@@ -302,10 +351,10 @@ export class SkillInvokerService {
       (data.providerItem?.config as LLMModelConfig)?.capabilities?.vision ?? false;
     const providerWithKey = data.provider as { key?: string } | undefined;
     const providerKey = providerWithKey?.key ?? data.provider?.providerKey ?? '';
-    const forceBase64ForImages = providerKey === 'bedrock';
+    const forceBase64ForImages = providerKey === 'bedrock' || providerKey === 'vertex';
 
     if (imageFiles.length > 0 && hasVisionCapability) {
-      // Bedrock must receive embedded base64 payloads regardless of URL configuration.
+      // Bedrock and Vertex providers must receive embedded base64 payloads regardless of URL configuration.
       const modeOverride = forceBase64ForImages ? 'base64' : undefined;
       input.images = await this.driveService.generateDriveFileUrls(user, imageFiles, modeOverride);
     } else {
@@ -575,19 +624,27 @@ export class SkillInvokerService {
       startTimeoutCheck();
     }
 
-    // Create Langfuse callback handler if enabled
+    // Create Langfuse callback handler if baseUrl is configured
     // New @langfuse/langchain v4 API: simpler initialization, trace ID via runId parameter
-    const langfuseEnabled = this.config.get<boolean>('langfuse.enabled');
-
-    const callbacks = [
-      langfuseEnabled &&
-        this.createLangfuseHandler({
+    const callbacks = [];
+    const langfuseBaseUrl = this.config.get<string>('langfuse.baseUrl');
+    if (langfuseBaseUrl) {
+      try {
+        const handler = this.createLangfuseHandler({
           sessionId: data.target?.entityId,
           userId: user.uid,
           skillName: data.skillName,
           mode: data.mode,
-        }),
-    ].filter(Boolean);
+        });
+        callbacks.push(handler);
+      } catch (err) {
+        this.logger.warn(`Failed to create Langfuse callback handler: ${err.message}`);
+      }
+    }
+
+    // Track latest tool call metadata for error handling
+    let lastStepName: string | undefined;
+    let lastToolCallMeta: ToolCallMeta | undefined;
 
     try {
       // Check if already aborted before starting execution (handles queued aborts)
@@ -673,6 +730,17 @@ export class SkillInvokerService {
               if (!toolCallIds.has(toolCallId)) {
                 toolCallIds.add(toolCallId);
                 const toolStartTs = Date.now();
+
+                // Track for error handling
+                lastStepName = stepName;
+                lastToolCallMeta = {
+                  toolName,
+                  toolsetKey,
+                  toolsetId,
+                  toolCallId,
+                  startTs: toolStartTs,
+                  status: 'executing',
+                };
                 toolCallStartTimes.set(toolCallId, toolStartTs);
                 await persistToolCall(ToolCallStatus.EXECUTING, {
                   input: event.data?.input,
@@ -728,7 +796,6 @@ export class SkillInvokerService {
                 output: errorToolOutput,
                 errorMessage: errorMsg,
               });
-
               // Add ToolMessage for failed tool execution
               const toolStartTs = toolCallStartTimes.get(toolCallId);
               const toolEndTs = Date.now();
@@ -901,12 +968,22 @@ export class SkillInvokerService {
               if (!providerItem) {
                 this.logger.error(`model not found: ${String(runMeta.ls_model_name)}`);
               }
+
+              // Extract routing data if model was routed (e.g., from Auto model)
+              const config =
+                typeof data.providerItem?.config === 'string'
+                  ? safeParseJSON(data.providerItem?.config)
+                  : data.providerItem?.config;
+              const routedData = config?.routedData;
+
               const usage: TokenUsageItem = {
                 tier: providerItem?.tier,
                 modelProvider: providerItem?.provider?.name,
                 modelName: String(runMeta.ls_model_name),
                 modelLabel: providerItem?.name,
                 providerItemId: providerItem?.itemId,
+                originalModelId: routedData?.originalModelId,
+                modelRoutedData: routedData,
                 inputTokens:
                   (chunk.usage_metadata?.input_tokens ?? 0) -
                   (chunk.usage_metadata?.input_token_details?.cache_read ?? 0),
@@ -946,6 +1023,13 @@ export class SkillInvokerService {
                   timestamp: new Date(),
                 };
                 await this.usageReportQueue.add(`usage_report:${resultId}`, tokenUsage);
+              }
+              // Process credit billing for all steps after skill completion
+              // Bill credits for successful completions and user aborts (partial usage should be charged)
+              const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
+
+              if (shouldBillCredits) {
+                await this.processCreditUsageReport(user, resultId, version, resultAggregator);
               }
             }
             break;
@@ -987,14 +1071,61 @@ export class SkillInvokerService {
         }
       }
 
-      if (res) {
-        writeSSEResponse(res, {
-          event: 'error',
-          resultId,
-          version,
-          error: genBaseRespDataFromError(new Error(errorInfo.userFriendlyMessage)),
-          originError: err.message,
-        });
+      const isTokenLimitError = this.isTokenLimitError(err);
+      const shouldHandleErrorFallback = !errorInfo.isAbortError;
+      const failureReason = isTokenLimitError
+        ? 'token_limit_exceeded'
+        : errorInfo.isNetworkError
+          ? 'network_error'
+          : 'execution_error';
+      const failureMessage = isTokenLimitError
+        ? 'Token limit exceeded. Tool execution results have been saved to file.'
+        : `${errorInfo.userFriendlyMessage}. Tool execution results have been saved to file.`;
+
+      const fallbackHandled = shouldHandleErrorFallback
+        ? await this.handleErrorFallback({
+            input,
+            config,
+            user,
+            resultId,
+            version,
+            canvasId,
+            res,
+            runMeta,
+            providerItem: data.providerItem,
+            toolCallMeta: lastToolCallMeta,
+            stepName: lastStepName ?? runMeta?.step?.name,
+            failureReason,
+            failureMessage,
+          })
+        : null;
+
+      if (fallbackHandled) {
+        // If fallback was successfully handled, add message to step content for persistence
+        const errorRecoveryMessage = `\n\nTool execution failed. Results have been saved to ${fallbackHandled.internalUrl}. Please retry in a new node based on the final results.\n\n`;
+        // Add to step content for persistence
+        resultAggregator.handleStreamContent(runMeta, errorRecoveryMessage);
+        if (res) {
+          // Send as stream content, not error - so frontend renders it normally (no popup)
+          writeSSEResponse(res, {
+            event: 'stream',
+            resultId,
+            version,
+            content: errorRecoveryMessage,
+            step: runMeta?.step,
+          });
+        }
+      } else {
+        // Normal error handling - send error SSE (triggers popup) and set failed status
+        if (res) {
+          writeSSEResponse(res, {
+            event: 'error',
+            resultId,
+            version,
+            error: genBaseRespDataFromError(new Error(errorInfo.userFriendlyMessage)),
+            originError: err.message,
+          });
+        }
       }
       if (errorInfo.isAbortError) {
         result.status = 'failed';
@@ -1124,7 +1255,13 @@ export class SkillInvokerService {
       const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
 
       if (shouldBillCredits) {
-        await this.processCreditUsageReport(user, resultId, version, resultAggregator);
+        await this.processCreditUsageReport(
+          user,
+          resultId,
+          version,
+          resultAggregator,
+          data.providerItem,
+        );
       }
 
       // Dispose message aggregator to clean up resources (stop auto-save timer)
@@ -1352,30 +1489,36 @@ export class SkillInvokerService {
     resultId: string,
     version: number,
     resultAggregator: ResultAggregator,
+    providerItem?: ProviderItem,
   ): Promise<void> {
     const steps = await resultAggregator.getSteps({ resultId, version });
 
-    // If this is an Auto model request, use Auto model's billing rate instead of the actual model's rate
-    let autoProviderItem: any = null;
-    try {
-      const actionResult = await this.prisma.actionResult.findFirst({
-        where: { resultId, version },
-      });
+    // If this is routed (from Auto model), use Auto model's billing rate instead of the actual model's rate
+    let autoBillingConfig: { creditBilling: any; name: string } | null = null;
+    if (providerItem?.config) {
+      const config = providerItem.config as any;
+      const routedData = config.routedData;
 
-      if (actionResult?.providerItemId) {
-        const originalItem = await this.providerService.findProviderItemById(
-          user,
-          actionResult.providerItemId,
-        );
-
-        if (originalItem) {
-          if (isAutoModel(originalItem.config)) {
-            autoProviderItem = originalItem;
+      if (routedData?.isRouted) {
+        try {
+          const originalItemId = routedData.originalItemId;
+          const originalItem = await this.providerService.findProviderItemById(
+            user,
+            originalItemId,
+          );
+          if (originalItem) {
+            autoBillingConfig = {
+              creditBilling: originalItem.creditBilling,
+              name: originalItem.name,
+            };
           }
+        } catch (error) {
+          // Fallback to actual model billing if failed to fetch Auto model config
+          this.logger.warn(
+            `Failed to fetch Auto model config, fallback to actual model: ${error?.message}`,
+          );
         }
       }
-    } catch (error) {
-      this.logger.warn(`[Billing] Failed to check Auto model routing: ${error?.message}`);
     }
 
     // Collect all model names used in token usage
@@ -1426,10 +1569,15 @@ export class SkillInvokerService {
 
           // Use Auto model's billing rate if this request was routed from Auto
           // This ensures: token count from real model + billing rate from Auto model
-          const billingItem = autoProviderItem || providerItem;
+          const billingConfig = autoBillingConfig || {
+            creditBilling: providerItem?.creditBilling,
+            name: providerItem?.name,
+          };
 
-          if (billingItem?.creditBilling) {
-            const creditBilling = normalizeCreditBilling(safeParseJSON(billingItem.creditBilling));
+          if (billingConfig?.creditBilling) {
+            const creditBilling = normalizeCreditBilling(
+              safeParseJSON(billingConfig.creditBilling),
+            );
 
             if (!creditBilling) {
               continue;
@@ -1448,7 +1596,7 @@ export class SkillInvokerService {
             creditUsageSteps.push({
               usage,
               creditBilling,
-              billingModelName: billingItem.name,
+              billingModelName: billingConfig.name,
             });
           }
         }
@@ -1465,7 +1613,11 @@ export class SkillInvokerService {
         timestamp: new Date(),
       };
 
-      await this.creditService.syncBatchTokenCreditUsage(batchTokenCreditUsage);
+      const requireRecharge =
+        await this.creditService.syncBatchTokenCreditUsage(batchTokenCreditUsage);
+      if (requireRecharge) {
+        throw new ModelUsageQuotaExceeded('credit not available: Insufficient credits.');
+      }
 
       this.logger.info(
         `Batch credit billing processed for ${resultId}: ${creditUsageSteps.length} usage items`,
@@ -1524,10 +1676,438 @@ export class SkillInvokerService {
     skillName?: string;
     mode?: string;
   }): LangfuseCallbackHandler {
-    return new LangfuseCallbackHandler({
+    this.logger.info(
+      `[Langfuse Debug] Creating LangfuseCallbackHandler with params: ${JSON.stringify(params)}`,
+    );
+    const handler = new LangfuseCallbackHandler({
       sessionId: params.sessionId,
       userId: params.userId,
       tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent'],
     });
+    this.logger.info('[Langfuse Debug] LangfuseCallbackHandler created successfully');
+    return handler;
+  }
+
+  /**
+   * Accurately estimate token count using LangChain's model-specific tokenizer
+   * This provides precise token counting that matches actual LLM API usage
+   */
+  private async estimateTokenCount(
+    input: any,
+    config: SkillRunnableConfig,
+  ): Promise<{
+    totalTokens: number;
+    breakdown: {
+      inputTokens: number;
+      contextTokens: number;
+      historyTokens: number;
+      toolsTokens: number;
+    };
+  }> {
+    try {
+      // Get the chat model instance to use its tokenizer
+      const chatModel = this.skillEngine.chatModel();
+
+      // Count input tokens
+      const inputTokens = await chatModel.getNumTokens(JSON.stringify(input));
+
+      // Count context tokens
+      const contextTokens = await chatModel.getNumTokens(
+        JSON.stringify(config.configurable.context || {}),
+      );
+
+      // Count history tokens
+      const historyTokens = await chatModel.getNumTokens(
+        JSON.stringify(config.configurable.chatHistory || []),
+      );
+
+      // Count tools tokens - this includes tool definitions/schemas
+      const toolsTokens = await chatModel.getNumTokens(
+        JSON.stringify(config.configurable.selectedTools || []),
+      );
+
+      const totalTokens = inputTokens + contextTokens + historyTokens + toolsTokens;
+
+      return {
+        totalTokens,
+        breakdown: {
+          inputTokens,
+          contextTokens,
+          historyTokens,
+          toolsTokens,
+        },
+      };
+    } catch (error) {
+      // Fallback to basic estimation if LangChain tokenizer fails
+      this.logger.warn(
+        `Failed to use LangChain tokenizer, falling back to basic estimation: ${error instanceof Error ? error.message : error}`,
+      );
+
+      const inputTokens = encode(JSON.stringify(input)).length;
+      const contextTokens = encode(JSON.stringify(config.configurable.context || {})).length;
+      const historyTokens = encode(JSON.stringify(config.configurable.chatHistory || [])).length;
+      const toolsTokens = encode(JSON.stringify(config.configurable.selectedTools || [])).length;
+      const totalTokens = inputTokens + contextTokens + historyTokens + toolsTokens;
+
+      return {
+        totalTokens,
+        breakdown: {
+          inputTokens,
+          contextTokens,
+          historyTokens,
+          toolsTokens,
+        },
+      };
+    }
+  }
+
+  /**
+   * Handle error fallback by saving tool outputs and sending error_handler event
+   * Returns saved file info for use in error event
+   */
+  private async handleErrorFallback(params: {
+    input: any;
+    config: SkillRunnableConfig;
+    user: User;
+    resultId: string;
+    version: number;
+    canvasId: string;
+    res: Response;
+    runMeta: SkillRunnableMeta;
+    providerItem?: ProviderItem;
+    toolCallMeta: ToolCallMeta;
+    stepName: string;
+    failureReason?: string;
+    failureMessage?: string;
+  }): Promise<{ fileId: string; name: string; internalUrl: string } | null> {
+    const {
+      input,
+      config,
+      user,
+      resultId,
+      version,
+      canvasId,
+      res,
+      runMeta,
+      providerItem,
+      toolCallMeta,
+      stepName,
+      failureReason,
+      failureMessage,
+    } = params;
+
+    try {
+      const normalizedFailureReason = failureReason ?? 'token_limit_exceeded';
+      const normalizedFailureMessage =
+        failureMessage ?? 'Tool execution results have been saved to file.';
+
+      // Calculate token breakdown for logging
+      const { totalTokens, breakdown } = await this.estimateTokenCount(input, config);
+      const { inputTokens, contextTokens, historyTokens, toolsTokens } = breakdown;
+
+      this.logger.error(
+        `🔍 Token breakdown - Total: ${totalTokens} | Input: ${inputTokens} | Context: ${contextTokens} | History: ${historyTokens} | Tools: ${toolsTokens} | Model: ${runMeta?.ls_model_name || providerItem?.name}`,
+      );
+
+      const saveResult = await this.saveToolOutputsToFile(user, resultId, version, canvasId);
+      if (!saveResult) {
+        return null;
+      }
+
+      const { file: savedFile, toolCallCount } = saveResult;
+
+      const now = Date.now();
+      const normalizedToolCallMeta: ToolCallMeta = {
+        ...toolCallMeta,
+        toolCallId: toolCallMeta?.toolCallId,
+        toolName: toolCallMeta?.toolName ?? 'error_fallback',
+        toolsetId: toolCallMeta?.toolsetId ?? toolCallMeta?.toolsetKey ?? 'error_fallback',
+        toolsetKey: toolCallMeta?.toolsetKey ?? toolCallMeta?.toolsetId ?? 'error_fallback',
+        startTs: toolCallMeta?.startTs ?? now,
+        status: toolCallMeta?.status ?? 'failed',
+      };
+
+      if (!normalizedToolCallMeta.toolCallId) {
+        this.logger.warn('Error fallback skipped: missing tool call id');
+        return null;
+      }
+
+      const toolCallId = normalizedToolCallMeta.toolCallId;
+
+      // Prepare output data structure for frontend rendering
+      // Frontend expects result.data.fileId structure (see render.tsx:255)
+      const outputData = {
+        data: {
+          fileId: savedFile.fileId,
+          canvasId,
+          fileName: savedFile.name,
+          mimeType: savedFile.mimeType,
+          message: `${normalizedFailureMessage} (saved ${toolCallCount} tool execution results)`,
+        },
+      };
+
+      // Update tool_call_result record using toolCallService (uses upsert internally)
+      await this.toolCallService.persistToolCallResult(
+        res,
+        user.uid,
+        { resultId, version },
+        normalizedToolCallMeta.toolsetId,
+        normalizedToolCallMeta.toolName,
+        JSON.stringify({
+          reason: normalizedFailureReason,
+          toolCount: toolCallCount,
+        }),
+        JSON.stringify(outputData),
+        ToolCallStatus.FAILED,
+        toolCallId,
+        stepName,
+        normalizedToolCallMeta.startTs ?? now,
+        now,
+        '',
+      );
+
+      // Send SSE stream event with tool_call XML data (as failed)
+      const xmlContent = this.toolCallService.generateToolUseXML({
+        toolCallId,
+        includeResult: true,
+        errorMsg: normalizedFailureMessage,
+        metadata: {
+          name: normalizedToolCallMeta.toolName,
+          toolsetKey: normalizedToolCallMeta.toolsetKey,
+        },
+        input: {
+          reason: normalizedFailureReason,
+          toolCount: toolCallCount,
+        },
+        output: outputData,
+        startTs: normalizedToolCallMeta.startTs ?? now,
+        updatedTs: now,
+      });
+
+      if (xmlContent) {
+        this.toolCallService.emitToolUseStream(res, {
+          resultId,
+          step: runMeta?.step,
+          xmlContent,
+          toolCallId,
+          toolName: normalizedToolCallMeta.toolName,
+          event_name: 'stream',
+        });
+      }
+
+      return {
+        fileId: savedFile.fileId,
+        internalUrl: savedFile.internalUrl,
+        name: savedFile.name,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to handle error fallback: ${error instanceof Error ? error.message : error}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Format tool call results as Markdown content
+   */
+  private formatToolCallsAsMarkdown(toolCalls: any[], resultId: string, version: number): string {
+    const header = [
+      '# Tool Execution Results',
+      `Result ID: ${resultId}`,
+      `Version: ${version}`,
+      `Generated: ${new Date().toISOString()}`,
+      `Total tool calls: ${toolCalls.length}`,
+      '',
+      '---',
+      '',
+    ].join('\n');
+
+    const addJsonSection = (label: string, data: any): string[] => {
+      if (!data) return [];
+      return ['', `**${label}**:`, '```json', JSON.stringify(data, null, 2), '```'];
+    };
+
+    const toolCallSections = toolCalls
+      .map((call, index) => {
+        const sections = [
+          `## Tool Call ${index + 1}: ${call.toolName}`,
+          `**Status**: ${call.status}`,
+          `**Executed at**: ${call.createdAt.toISOString()}`,
+          ...addJsonSection('Input', call.input),
+          ...addJsonSection('Output', call.output),
+        ];
+
+        return sections.join('\n');
+      })
+      .join('\n\n---\n\n');
+
+    return `${header}\n${toolCallSections}`;
+  }
+
+  /**
+   * Save all tool outputs from current version to a text file
+   * Returns the saved file info and tool call count if successful
+   */
+  private async saveToolOutputsToFile(
+    user: User,
+    resultId: string,
+    version: number,
+    canvasId: string,
+  ): Promise<{
+    file: { fileId: string; internalUrl: string; mimeType: string; name: string };
+    toolCallCount: number;
+  } | null> {
+    try {
+      // Query all tool call results for current version
+      const toolCalls = await this.prisma.toolCallResult.findMany({
+        where: {
+          resultId,
+          version,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+
+      if (toolCalls.length === 0) {
+        this.logger.info(`No tool outputs to save for ${resultId} v${version}`);
+        return null;
+      }
+
+      // Format tool outputs as readable Markdown
+      const fileContent = this.formatToolCallsAsMarkdown(toolCalls, resultId, version);
+      // Upload file directly using DriveService and MiscService to avoid AsyncLocalStorage context issues
+      const filename = 'agent-execution-failed.md';
+      const buffer = Buffer.from(fileContent, 'utf-8');
+
+      // Upload to storage
+      const uploadResult = await this.miscService.uploadFile(user, {
+        file: {
+          buffer,
+          mimetype: 'text/markdown',
+          originalname: filename,
+        },
+        visibility: 'private',
+      });
+
+      // Create drive file record with explicit resultId and version
+      const file = await this.driveService.createDriveFile(user, {
+        canvasId,
+        name: filename,
+        storageKey: uploadResult.storageKey,
+        source: 'agent',
+        resultId,
+        resultVersion: version,
+      });
+
+      if (!file) {
+        this.logger.warn('Failed to upload tool outputs file');
+        return null;
+      }
+      return {
+        file: {
+          fileId: file.fileId,
+          internalUrl: file.url,
+          mimeType: file.type,
+          name: file.name,
+        },
+        toolCallCount: toolCalls.length,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to save tool outputs: ${error instanceof Error ? error.message : error}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Abort workflow execution - stop all running/waiting nodes
+   * @param user - The user
+   * @param executionId - The workflow execution ID to abort
+   */
+  async abortWorkflowExecution(user: User, executionId: string): Promise<void> {
+    // Verify workflow execution exists and belongs to user
+    const workflowExecution = await this.prisma.workflowExecution.findUnique({
+      where: { executionId, uid: user.uid },
+    });
+
+    if (!workflowExecution) {
+      throw new WorkflowExecutionNotFoundError(`Workflow execution ${executionId} not found`);
+    }
+
+    // Check if workflow is already finished or failed
+    if (workflowExecution.status === 'finish' || workflowExecution.status === 'failed') {
+      this.logger.warn(
+        `Workflow execution ${executionId} is already ${workflowExecution.status}, cannot abort`,
+      );
+      return;
+    }
+
+    // Get all executing and waiting nodes
+    const nodesToAbort = await this.prisma.workflowNodeExecution.findMany({
+      where: {
+        executionId,
+        status: { in: ['waiting', 'executing'] },
+      },
+    });
+
+    this.logger.info(
+      `Aborting workflow ${executionId}: found ${nodesToAbort.length} nodes to abort`,
+    );
+
+    // Abort all executing skillResponse nodes by calling abort action
+    const executingSkillNodes = nodesToAbort.filter((n) => n.nodeType === 'skillResponse');
+
+    // Abort all executing nodes in parallel for better performance
+    const abortResults = await Promise.allSettled(
+      executingSkillNodes.map(async (node) => {
+        try {
+          await this.actionService.abortActionFromReq(
+            user,
+            { resultId: node.entityId },
+            'Workflow aborted by user',
+          );
+          this.logger.info(`Aborted action ${node.entityId} for node ${node.nodeId}`);
+          return { success: true, nodeId: node.nodeId };
+        } catch (error) {
+          this.logger.warn(
+            `Failed to abort action ${node.entityId}: ${(error as any)?.message ?? error}`,
+          );
+          return { success: false, nodeId: node.nodeId, error };
+        }
+      }),
+    );
+
+    const successCount = abortResults.filter((r) => r.status === 'fulfilled').length;
+    this.logger.info(`Aborted ${successCount}/${executingSkillNodes.length} executing skill nodes`);
+
+    // Update all non-terminal nodes to failed (not just waiting/executing)
+    await this.prisma.workflowNodeExecution.updateMany({
+      where: {
+        executionId,
+        status: { notIn: ['finish', 'failed'] },
+      },
+      data: {
+        status: 'failed',
+        errorMessage: 'Workflow aborted by user',
+        endTime: new Date(),
+      },
+    });
+
+    // Update workflow execution to failed if not already terminal
+    await this.prisma.workflowExecution.updateMany({
+      where: {
+        executionId,
+        status: { notIn: ['finish', 'failed'] },
+      },
+      data: {
+        status: 'failed',
+        abortedByUser: true,
+      },
+    });
+
+    this.logger.info(`Workflow execution ${executionId} aborted by user ${user.uid}`);
   }
 }

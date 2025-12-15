@@ -1,5 +1,9 @@
 import { useCallback, useRef, useEffect } from 'react';
-import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
+import {
+  useActionResultStore,
+  useActionResultStoreShallow,
+  useSubscriptionStoreShallow,
+} from '@refly/stores';
 import {
   ActionResultNotFoundError,
   ModelUsageQuotaExceeded,
@@ -34,6 +38,10 @@ export const useActionPolling = () => {
     startTimeout: state.startTimeout,
     updateLastEventTime: state.updateLastEventTime,
     clearTimeout: state.clearTimeout,
+  }));
+
+  const { setCreditInsufficientModalVisible } = useSubscriptionStoreShallow((state) => ({
+    setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
   }));
 
   const onUpdateResult = useUpdateActionResult();
@@ -107,6 +115,8 @@ export const useActionPolling = () => {
                 return guessedError instanceof ModelUsageQuotaExceeded;
               });
               if (hasCreditError) {
+                console.log('credit insufficient error');
+                setCreditInsufficientModalVisible(true, undefined, 'canvas');
               }
             }
 

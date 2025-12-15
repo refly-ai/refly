@@ -349,8 +349,7 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
             <Button
               type="text"
               size="small"
-              className="!w-4 !h-4 !rounded-[4px]"
-              icon={isCollapsed ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
+              icon={isCollapsed ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
               onClick={() => setIsCollapsed(!isCollapsed)}
             />
           </div>

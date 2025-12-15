@@ -1953,7 +1953,7 @@ export type SubscriptionInterval = 'monthly' | 'yearly';
 /**
  * Subscription plan type
  */
-export type SubscriptionPlanType = 'free' | 'starter' | 'maker' | 'enterprise' | 'plus';
+export type SubscriptionPlanType = 'free' | 'starter' | 'maker' | 'enterprise' | 'plus' | 'pro';
 
 /**
  * Subscription status
@@ -5074,6 +5074,14 @@ export type CreateCheckoutSessionRequest = {
    * Subscription billing interval
    */
   interval?: SubscriptionInterval;
+  /**
+   * Current plan
+   */
+  currentPlan?: string;
+  /**
+   * Source
+   */
+  source?: string;
 };
 
 export type CreateCreditPackCheckoutSessionRequest = {
@@ -5081,6 +5089,14 @@ export type CreateCreditPackCheckoutSessionRequest = {
    * Credit pack identifier
    */
   packId: string;
+  /**
+   * Current plan
+   */
+  currentPlan?: string;
+  /**
+   * Source
+   */
+  source?: string;
 };
 
 export type CreateCheckoutSessionResponse = BaseResponse & {

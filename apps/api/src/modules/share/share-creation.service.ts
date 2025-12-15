@@ -66,7 +66,7 @@ export class ShareCreationService {
     shareId: string,
     allowDuplication: boolean,
     title?: string,
-  ): Promise<SharedCanvasData> {
+  ): Promise<{ canvasData: SharedCanvasData; fileIdMap: Map<string, string> }> {
     const canvasData: SharedCanvasData = await this.canvasService.getCanvasRawData(user, canvasId);
 
     // If title is provided, use it as the title of the canvas
@@ -128,6 +128,23 @@ export class ShareCreationService {
       // Include internal storageKey for duplication (not in public API)
       storageKey: file.storageKey ?? undefined,
     }));
+
+    // Duplicate drive files to make share independent from original canvas
+    const { fileIdMap, storageKeyMap } = await this.shareCommonService.duplicateDriveFilesForShare(
+      user,
+      canvasData.files,
+      shareId,
+    );
+
+    // Update canvasData.files with new fileIds and storageKeys
+    // This is needed because processFilesForShare depends on the new storageKey
+    if (fileIdMap.size > 0) {
+      canvasData.files = this.shareCommonService.updateFilesWithNewIds(
+        canvasData.files,
+        fileIdMap,
+        storageKeyMap,
+      );
+    }
 
     // Find all image video audio nodes
     const mediaNodes =
@@ -237,12 +254,16 @@ export class ShareCreationService {
       const promises = nodesByType.skillResponse.map((node) =>
         nodeProcessingLimit(async () => {
           try {
-            const { shareRecord } = await this.createShareForSkillResponse(user, {
-              entityId: node.data?.entityId,
-              entityType: 'skillResponse',
-              parentShareId: shareId,
-              allowDuplication,
-            });
+            const { shareRecord } = await this.createShareForSkillResponse(
+              user,
+              {
+                entityId: node.data?.entityId,
+                entityType: 'skillResponse',
+                parentShareId: shareId,
+                allowDuplication,
+              },
+              fileIdMap,
+            );
 
             // Query credit usage for this skill response
             const creditCost = await this.creditService.countResultCreditUsage(
@@ -302,7 +323,7 @@ export class ShareCreationService {
       processCodeArtifactNodes(),
     ]);
 
-    return canvasData;
+    return { canvasData, fileIdMap };
   }
 
   async createShareForCanvas(user: User, param: CreateShareRequest) {
@@ -331,7 +352,7 @@ export class ShareCreationService {
     }
 
     // Process canvas data using common method
-    const canvasData = await this.processCanvasForShare(
+    const { canvasData, fileIdMap } = await this.processCanvasForShare(
       user,
       canvasId,
       shareId,
@@ -348,10 +369,19 @@ export class ShareCreationService {
       canvasData.minimapUrl = minimapUrl;
     }
 
+    // Serialize canvasData and replace all fileIds in the JSON string
+    let canvasDataJson = JSON.stringify(canvasData);
+    if (fileIdMap.size > 0) {
+      canvasDataJson = this.shareCommonService.replaceFileIdsInJsonString(
+        canvasDataJson,
+        fileIdMap,
+      );
+    }
+
     // Upload public canvas data to Minio
     const { storageKey } = await this.miscService.uploadBuffer(user, {
       fpath: 'canvas.json',
-      buf: Buffer.from(JSON.stringify(canvasData)),
+      buf: Buffer.from(canvasDataJson),
       entityId: canvasId,
       entityType: 'canvas',
       visibility: 'public',
@@ -753,7 +783,11 @@ export class ShareCreationService {
     return { shareRecord };
   }
 
-  async createShareForSkillResponse(user: User, param: CreateShareRequest) {
+  async createShareForSkillResponse(
+    user: User,
+    param: CreateShareRequest,
+    fileIdMap?: Map<string, string>,
+  ) {
     const { entityId: resultId, parentShareId, allowDuplication, coverStorageKey } = param;
 
     // Check if shareRecord already exists
@@ -774,9 +808,18 @@ export class ShareCreationService {
     });
     const actionResult = actionResultPO2DTO(actionResultDetail);
 
+    // Serialize actionResult and replace fileIds in the JSON string
+    let actionResultJson = JSON.stringify(actionResult);
+    if (fileIdMap && fileIdMap.size > 0) {
+      actionResultJson = this.shareCommonService.replaceFileIdsInJsonString(
+        actionResultJson,
+        fileIdMap,
+      );
+    }
+
     const { storageKey } = await this.miscService.uploadBuffer(user, {
       fpath: 'skillResponse.json',
-      buf: Buffer.from(JSON.stringify(actionResult)),
+      buf: Buffer.from(actionResultJson),
       entityId: resultId,
       entityType: 'skillResponse',
       visibility: 'public',
@@ -1158,6 +1201,29 @@ export class ShareCreationService {
   }
 
   /**
+   * Sanitize node metadata - keep only whitelisted safe fields
+   */
+  private sanitizeNodeMetadata(metadata: Record<string, any>): Record<string, any> {
+    // Keep essential fields for public sharing - include media URLs for result display
+    const ALLOWED_FIELDS = [
+      'shareId', // Public share identifier - needed for frontend functionality
+      'imageUrl', // Published image URL - useful for result display
+      'videoUrl', // Published video URL - useful for result display
+      'audioUrl', // Published audio URL - useful for result display
+      'selectedToolsets', // Toolset configuration - needed for displaying tool usage
+    ];
+
+    // Handle null/undefined metadata gracefully
+    if (!metadata || typeof metadata !== 'object') {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(metadata).filter(([key]) => ALLOWED_FIELDS.includes(key)),
+    );
+  }
+
+  /**
    * Create or update a workflow app share record
    * This helper method reduces code duplication between regular and template shares
    */
@@ -1166,6 +1232,7 @@ export class ShareCreationService {
     workflowApp: Omit<WorkflowApp, 'pk'>,
     shareId: string,
     canvasData: SharedCanvasData,
+    fileIdMap: Map<string, string>,
     creditUsage: number,
     title: string | undefined,
     parentShareId: string | null,
@@ -1173,21 +1240,24 @@ export class ShareCreationService {
     existingShareRecord: ShareRecord | null,
     logPrefix: string,
   ): Promise<ShareRecord> {
-    // Add canvasId to canvasData for frontend access
-    const canvasDataWithId = {
-      ...canvasData,
-      canvasId: workflowApp.canvasId,
-    };
+    // Step 1: Sanitize nodes metadata for public exposure
+    const sanitizedNodes = canvasData.nodes?.map((node) => ({
+      id: node.id,
+      type: node.type, // Required for frontend to determine how to render the node
+      data: {
+        entityId: node.data?.entityId || '',
+        title: node.data?.title || '',
+        metadata: this.sanitizeNodeMetadata(node.data?.metadata || {}),
+      },
+    }));
 
-    // Publish minimap if available
-    if (canvasDataWithId.minimapUrl) {
-      canvasDataWithId.minimapUrl = await this.miscService.publishFile(canvasDataWithId.minimapUrl);
-    }
+    // minimapUrl is already a published public URL from processCanvasForShare
+    const publishedMinimapUrl = canvasData.minimapUrl;
 
-    // Create public workflow app data
+    // Step 2: Create public workflow app data (sanitized data for public access)
     const publicData = {
       appId: workflowApp.appId,
-      title: title || canvasDataWithId.title,
+      title: title || canvasData.title,
       description: workflowApp.description,
       remixEnabled: workflowApp.remixEnabled,
       coverUrl: workflowApp.coverStorageKey
@@ -1197,25 +1267,91 @@ export class ShareCreationService {
       resultNodeIds: workflowApp.resultNodeIds,
       query: workflowApp.query,
       variables: safeParseJSON(workflowApp.variables || '[]'),
-      canvasData: canvasDataWithId,
-      // creditUsage already has markup applied (from database or calculated above)
       creditUsage: creditUsage,
       createdAt: workflowApp.createdAt,
       updatedAt: workflowApp.updatedAt,
+
+      // Top-level canvas identifiers for frontend compatibility
+      canvasId: workflowApp.canvasId,
+      minimapUrl: publishedMinimapUrl,
+
+      // Unified canvasData structure (sanitized data, no preview field)
+      canvasData: {
+        edges: [], // Always empty to protect workflow structure
+        nodes: sanitizedNodes, // Sanitized nodes with metadata filtered
+        files: canvasData.files || [],
+        resources: canvasData.resources || [],
+        variables: canvasData.variables || [],
+        title: canvasData.title,
+        canvasId: canvasData.canvasId,
+        owner: canvasData.owner,
+        minimapUrl: canvasData.minimapUrl,
+      },
     };
 
-    // Upload public workflow app data to Minio
+    // Step 3: Create execution data (complete data for workflow execution)
+    const executionData = {
+      nodes: canvasData.nodes, // Complete nodes (including all agent nodes)
+      edges: canvasData.edges, // Complete edges (workflow connections)
+      files: canvasData.files || [],
+      resources: canvasData.resources || [],
+      variables: canvasData.variables || [],
+      title: canvasData.title,
+      canvasId: canvasData.canvasId,
+      owner: canvasData.owner,
+      minimapUrl: canvasData.minimapUrl,
+    };
+
+    // Serialize publicData and replace all fileIds in the JSON string
+    let publicDataJson = JSON.stringify(publicData);
+    if (fileIdMap.size > 0) {
+      publicDataJson = this.shareCommonService.replaceFileIdsInJsonString(
+        publicDataJson,
+        fileIdMap,
+      );
+    }
+
+    // Serialize executionData and replace all fileIds in the JSON string
+    let executionDataJson = JSON.stringify(executionData);
+    if (fileIdMap.size > 0) {
+      executionDataJson = this.shareCommonService.replaceFileIdsInJsonString(
+        executionDataJson,
+        fileIdMap,
+      );
+    }
+
+    // Step 4: Upload public data to public storage
     const { storageKey } = await this.miscService.uploadBuffer(user, {
       fpath: 'workflow-app.json',
-      buf: Buffer.from(JSON.stringify(publicData)),
+      buf: Buffer.from(publicDataJson),
       entityId: workflowApp.appId,
       entityType: 'workflowApp',
       visibility: 'public',
       storageKey: `share/${shareId}.json`,
     });
 
-    // Create or update share record
+    // Step 5: Upload execution data to private storage
+    const { storageKey: executionStorageKey } = await this.miscService.uploadBuffer(user, {
+      fpath: 'workflow-app-execution.json',
+      buf: Buffer.from(executionDataJson),
+      entityId: workflowApp.appId,
+      entityType: 'workflowApp',
+      visibility: 'private',
+      storageKey: `share/${shareId}-execution.json`,
+    });
+
+    // Step 6: Prepare extraData with executionStorageKey
+    const extraData: ShareExtraData = {
+      executionStorageKey,
+    };
+
+    // Step 7: Create or update share record
     if (existingShareRecord) {
+      // Merge existing extraData (e.g., vectorStorageKey if present)
+      const existingExtraData = existingShareRecord.extraData
+        ? (safeParseJSON(existingShareRecord.extraData) as ShareExtraData)
+        : {};
+
       const shareRecord = await this.prisma.shareRecord.update({
         where: { pk: existingShareRecord.pk },
         data: {
@@ -1223,6 +1359,10 @@ export class ShareCreationService {
           storageKey,
           parentShareId,
           allowDuplication,
+          extraData: JSON.stringify({
+            ...existingExtraData,
+            executionStorageKey,
+          }),
           updatedAt: new Date(),
         },
       });
@@ -1241,6 +1381,7 @@ export class ShareCreationService {
           storageKey,
           parentShareId,
           allowDuplication,
+          extraData: JSON.stringify(extraData),
         },
       });
       this.logger.log(
@@ -1322,7 +1463,7 @@ export class ShareCreationService {
     const shareId = existingShareRecord?.shareId ?? genShareId('workflowApp');
 
     // Process canvas data for regular share
-    const canvasData = await this.processCanvasForShare(
+    const { canvasData, fileIdMap } = await this.processCanvasForShare(
       user,
       workflowApp.canvasId,
       shareId,
@@ -1339,6 +1480,7 @@ export class ShareCreationService {
       workflowApp,
       shareId,
       canvasData,
+      fileIdMap,
       finalCreditUsage,
       title,
       parentShareId,
@@ -1354,13 +1496,14 @@ export class ShareCreationService {
 
       // Process canvas data again with new shareId to create independent share records
       // This ensures all nested entities get new share records, making shares independent
-      const independentCanvasData = await this.processCanvasForShare(
-        user,
-        workflowApp.canvasId,
-        templateShareId,
-        allowDuplication,
-        title,
-      );
+      const { canvasData: independentCanvasData, fileIdMap: templateFileIdMap } =
+        await this.processCanvasForShare(
+          user,
+          workflowApp.canvasId,
+          templateShareId,
+          allowDuplication,
+          title,
+        );
 
       // Process files for the template share (no existing record for template shares)
       await this.shareCommonService.processFilesForShare(independentCanvasData, templateShareId);
@@ -1371,6 +1514,7 @@ export class ShareCreationService {
         workflowApp,
         templateShareId,
         independentCanvasData,
+        templateFileIdMap,
         finalCreditUsage,
         title,
         null, // Template share has no parent

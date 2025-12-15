@@ -11,7 +11,7 @@ import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.sv
 import React from 'react';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import cn from 'classnames';
-import { useUserStoreShallow } from '@refly/stores';
+import { useUserStoreShallow, useSiderStoreShallow } from '@refly/stores';
 import { useNodePosition } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-position';
 import { useReactFlow } from '@xyflow/react';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
@@ -40,9 +40,9 @@ const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): bo
   // Find matching user tool by key
   const matchingUserTool = userTools.find((t) => t.key === toolset.toolset?.key);
 
-  // If not in userTools list, it's not an external OAuth tool, so it's available
+  // If not in userTools list, user hasn't installed/authorized this tool
   if (!matchingUserTool) {
-    return true;
+    return false;
   }
 
   // For external OAuth tools, check authorized status
@@ -494,15 +494,30 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
+  const { showSettingModal } = useSiderStoreShallow((state) => ({
+    showSettingModal: state.showSettingModal,
+  }));
 
   const nodes = canvasData?.nodes || [];
 
-  const { data: userToolsData, isLoading: toolsLoading } = useListUserTools({}, [], {
+  const {
+    data: userToolsData,
+    isLoading: toolsLoading,
+    refetch: refetchUserTools,
+  } = useListUserTools({}, [], {
     enabled: isLogin,
     refetchOnWindowFocus: false,
   });
 
   const userTools = userToolsData?.data ?? [];
+
+  // Refetch user tools when settings modal closes (after tool installation)
+  useEffect(() => {
+    if (!showSettingModal && isLogin) {
+      // Settings modal was closed, refetch user tools to get updated installation status
+      refetchUserTools();
+    }
+  }, [showSettingModal, isLogin, refetchUserTools]);
 
   // Build toolset definitions from userTools for display purposes
   const toolsetDefinitions = useMemo(() => {

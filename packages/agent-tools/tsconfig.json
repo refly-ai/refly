@@ -17,7 +17,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "inlineSources": true,
-    "baseUrl": "./",
     "rootDir": "./src",
     "sourceRoot": "/",
     "composite": true,

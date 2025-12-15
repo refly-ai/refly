@@ -5,8 +5,9 @@ import { Job } from 'bullmq';
 import { SkillService } from './skill.service';
 import { QUEUE_SKILL, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils/const';
 import { InvokeSkillJobData } from './skill.dto';
+import { SKILL_DEFAULTS } from './skill.constant';
 
-@Processor(QUEUE_SKILL)
+@Processor(QUEUE_SKILL, { concurrency: SKILL_DEFAULTS.INVOKE_WORKER_CONCURRENCY })
 export class SkillProcessor extends WorkerHost {
   private readonly logger = new Logger(SkillProcessor.name);
 

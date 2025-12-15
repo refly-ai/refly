@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { CanvasController } from './canvas.controller';
 import { CanvasService } from './canvas.service';
@@ -36,7 +36,7 @@ import { DriveModule } from '../drive/drive.module';
     ProviderModule,
     CanvasSyncModule,
     CodeArtifactModule,
-    SubscriptionModule,
+    forwardRef(() => SubscriptionModule),
     DriveModule,
     ...(isDesktop()
       ? []

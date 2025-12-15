@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { SettingModal } from '@refly-packages/ai-workspace-common/components/settings';
 import { InvitationModal } from '@refly-packages/ai-workspace-common/components/settings/invitation-modal';
 import { StorageExceededModal } from '@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal';
+import { CreditInsufficientModal } from '@refly-packages/ai-workspace-common/components/subscription/credit-insufficient-modal';
 // hooks
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
@@ -30,14 +31,19 @@ import {
 } from 'refly-icons';
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
-import { useKnowledgeBaseStoreShallow, useUserStoreShallow } from '@refly/stores';
+import GiftPromotionIcon from '@refly-packages/ai-workspace-common/assets/community.svg';
+import {
+  useKnowledgeBaseStoreShallow,
+  useUserStoreShallow,
+  useSubscriptionStoreShallow,
+} from '@refly/stores';
 import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
 import { SiderLoggedOut } from './sider-logged-out';
 
 import './layout.scss';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
-import { RightOutlined } from '@ant-design/icons';
-
+import { RightOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { logEvent } from '@refly/telemetry-web';
 const Sider = Layout.Sider;
 
 // Reusable section header component
@@ -153,6 +159,80 @@ export const SiderLogo = (props: {
   );
 };
 
+export const PromotionItem = React.memo(
+  ({
+    collapsed = false,
+    promotionUrl,
+    userType,
+  }: {
+    collapsed?: boolean;
+    promotionUrl: string;
+    userType: string;
+  }) => {
+    const { t } = useTranslation();
+
+    const handleClick = useCallback(() => {
+      window.open(promotionUrl, '_blank', 'noopener,noreferrer');
+      logEvent('activity_entry_click_dashboard', userType);
+    }, [promotionUrl, userType]);
+
+    if (collapsed) {
+      return null;
+    }
+
+    return (
+      <div
+        className={cn(
+          'w-[240px] flex flex-col cursor-pointer rounded-[20px] bg-gradient-to-b from-[#9810FA] to-[#FFFFFF] p-4 transition-all duration-500 shadow-lg',
+        )}
+        onClick={handleClick}
+        data-cy="promotion-menu-item"
+      >
+        {/* Header with gift icon and title */}
+        <div className="flex items-center gap-1">
+          <div className="flex-shrink-0">
+            <img src={GiftPromotionIcon} className="w-12 h-15" />
+          </div>
+          <div className="flex flex-col pl-1">
+            <div className="flex items-baseline flex-wrap">
+              <span className="text-[20px] font-regular text-white">
+                {t('common.promotion.title')}
+              </span>
+              <span className="text-[25px] font-semibold text-[#FFE066]">
+                {t('common.promotion.discount')}
+              </span>
+              <span className="text-[20px] font-regular text-white">
+                {t('common.promotion.titleSuffix')}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="text-[11px] text-white/80 mb-2 leading-relaxed">
+          {t('common.promotion.description')}
+        </p>
+
+        {/* Tags */}
+        <div className="flex gap-2 mb-3">
+          <span className="py-1 px-2 rounded-full bg-black/10 text-[12px] font-medium text-white">
+            {t('common.promotion.tag1')}
+          </span>
+          <span className="py-1 px-2 rounded-full bg-black/10 text-[12px] font-medium text-white">
+            {t('common.promotion.tag2')}
+          </span>
+        </div>
+
+        {/* CTA Button */}
+        <Button className="w-32 py-2.5 bg-white dark:bg-white !text-[#9810FA] dark:hover:!text-[#9810FA] font-semibold text-sm flex items-center justify-center gap-1 dark:hover:!bg-black/10 transition-colors">
+          {t('common.promotion.button')}
+          <ArrowRightOutlined />
+        </Button>
+      </div>
+    );
+  },
+);
+
 export const InvitationItem = React.memo(
   ({
     collapsed = false,
@@ -219,6 +299,10 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
 
   const { userProfile } = useUserStoreShallow((state) => ({
     userProfile: state.userProfile,
+  }));
+
+  const { userType } = useSubscriptionStoreShallow((state) => ({
+    userType: state.userType,
   }));
 
   const {
@@ -439,10 +523,21 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
             <Divider className="m-0 border-refly-Card-Border" />
           </div>
 
-          {!!userProfile?.uid &&
-            authConfig?.data?.some((item) => item.provider === 'invitation') && (
-              <InvitationItem collapsed={isCollapsed} onClick={handleInvitationClick} />
+          {/* Promotion entry - show above invitation */}
+          <div className="flex flex-col gap-2">
+            {!isCollapsed && (
+              <PromotionItem
+                collapsed={isCollapsed}
+                promotionUrl={`${window.location.origin}/activities`}
+                userType={userType}
+              />
             )}
+
+            {!!userProfile?.uid &&
+              authConfig?.data?.some((item) => item.provider === 'invitation') && (
+                <InvitationItem collapsed={isCollapsed} onClick={handleInvitationClick} />
+              )}
+          </div>
 
           <div>
             {/* Contact in collapsed state - above Settings */}
@@ -521,6 +616,7 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
       <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
       <InvitationModal visible={showInvitationModal} setVisible={setShowInvitationModal} />
       <StorageExceededModal />
+      <CreditInsufficientModal />
       <CanvasTemplateModal />
 
       {isLogin ? <SiderLoggedIn source={source} /> : <SiderLoggedOut source={source} />}

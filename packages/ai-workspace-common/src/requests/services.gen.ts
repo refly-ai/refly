@@ -509,6 +509,25 @@ import type {
   ConvertData,
   ConvertError,
   ConvertResponse2,
+  GetAvailableVouchersError,
+  GetAvailableVouchersResponse2,
+  ListUserVouchersError,
+  ListUserVouchersResponse2,
+  ValidateVoucherData,
+  ValidateVoucherError,
+  ValidateVoucherResponse2,
+  CreateVoucherInvitationData,
+  CreateVoucherInvitationError,
+  CreateVoucherInvitationResponse2,
+  VerifyVoucherInvitationData,
+  VerifyVoucherInvitationError,
+  VerifyVoucherInvitationResponse2,
+  ClaimVoucherInvitationData,
+  ClaimVoucherInvitationError,
+  ClaimVoucherInvitationResponse2,
+  TriggerVoucherData,
+  TriggerVoucherError,
+  TriggerVoucherResponse2,
 } from './types.gen';
 
 export const client = createClient(createConfig());
@@ -3297,5 +3316,124 @@ export const convert = <ThrowOnError extends boolean = false>(
       ...options?.headers,
     },
     url: '/misc/convert',
+  });
+};
+
+/**
+ * Get available vouchers
+ * Get user's available (unused, not expired) vouchers
+ */
+export const getAvailableVouchers = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetAvailableVouchersResponse2,
+    GetAvailableVouchersError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/available',
+  });
+};
+
+/**
+ * List user vouchers
+ * List all vouchers for the current user
+ */
+export const listUserVouchers = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListUserVouchersResponse2,
+    ListUserVouchersError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/list',
+  });
+};
+
+/**
+ * Validate voucher
+ * Validate a voucher before use
+ */
+export const validateVoucher = <ThrowOnError extends boolean = false>(
+  options: Options<ValidateVoucherData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    ValidateVoucherResponse2,
+    ValidateVoucherError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/validate',
+  });
+};
+
+/**
+ * Create voucher invitation
+ * Create a sharing invitation for a voucher
+ */
+export const createVoucherInvitation = <ThrowOnError extends boolean = false>(
+  options: Options<CreateVoucherInvitationData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateVoucherInvitationResponse2,
+    CreateVoucherInvitationError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/invitation/create',
+  });
+};
+
+/**
+ * Verify invitation code
+ * Verify an invitation code (public endpoint)
+ */
+export const verifyVoucherInvitation = <ThrowOnError extends boolean = false>(
+  options: Options<VerifyVoucherInvitationData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    VerifyVoucherInvitationResponse2,
+    VerifyVoucherInvitationError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/invitation/verify',
+  });
+};
+
+/**
+ * Claim invitation
+ * Claim an invitation and receive a voucher
+ */
+export const claimVoucherInvitation = <ThrowOnError extends boolean = false>(
+  options: Options<ClaimVoucherInvitationData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    ClaimVoucherInvitationResponse2,
+    ClaimVoucherInvitationError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/invitation/claim',
+  });
+};
+
+/**
+ * Trigger voucher generation
+ * Trigger voucher generation on template publish. Scores the template and generates a discount voucher.
+ */
+export const triggerVoucher = <ThrowOnError extends boolean = false>(
+  options: Options<TriggerVoucherData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    TriggerVoucherResponse2,
+    TriggerVoucherError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/trigger',
   });
 };

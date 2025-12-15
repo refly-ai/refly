@@ -79,7 +79,12 @@ export class Agent extends BaseSkill {
           })
         : buildNodeAgentSystemPrompt();
 
-    const userPrompt = buildUserPrompt(optimizedQuery, context);
+    // Use copilot scene for copilot_agent mode, otherwise use chat scene
+    const modelConfigScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
+    const modelInfo = config?.configurable?.modelConfigMap?.[modelConfigScene];
+    const hasVisionCapability = modelInfo?.capabilities?.vision ?? false;
+
+    const userPrompt = buildUserPrompt(optimizedQuery, context, { hasVisionCapability });
 
     const requestMessages = buildFinalRequestMessages({
       systemPrompt,
@@ -87,7 +92,7 @@ export class Agent extends BaseSkill {
       chatHistory: usedChatHistory,
       messages,
       images,
-      modelInfo: config?.configurable?.modelConfigMap.chat,
+      modelInfo,
     });
 
     return { requestMessages, sources };
@@ -97,13 +102,15 @@ export class Agent extends BaseSkill {
     _user: User,
     config?: SkillRunnableConfig,
   ): Promise<AgentComponents> {
-    const { selectedTools = [] } = config?.configurable ?? {};
+    const { selectedTools = [], mode = 'node_agent' } = config?.configurable ?? {};
 
     let actualToolNodeInstance: ToolNode<typeof MessagesAnnotation.State> | null = null;
     let availableToolsForNode: StructuredToolInterface[] = [];
 
     // LLM and LangGraph Setup
-    const baseLlm = this.engine.chatModel({ temperature: 0.1 });
+    // Use copilot scene for copilot_agent mode, otherwise use chat scene
+    const modelScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
+    const baseLlm = this.engine.chatModel({ temperature: 0.1 }, modelScene);
     let llmForGraph: Runnable<BaseMessage[], AIMessage>;
 
     if (selectedTools.length > 0) {
@@ -214,11 +221,6 @@ export class Agent extends BaseSkill {
             }
 
             try {
-              // Log tool arguments before invocation
-              this.engine.logger.info(
-                `Invoking tool '${toolName}' with args:\n${JSON.stringify(toolArgs, null, 2)}`,
-              );
-
               // Each invocation awaited to ensure strict serial execution
               const rawResult = await matchedTool.invoke(toolArgs);
               const stringified =

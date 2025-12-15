@@ -42,7 +42,7 @@ export const AIMessageCard = memo(({ message, resultId, stepStatus }: AIMessageC
           <ReasoningContentPreview
             content={reasoningContent}
             stepStatus={stepStatus}
-            className="my-3"
+            className={hasContent ? 'mb-3' : ''}
             resultId={resultId}
           />
         )}
@@ -113,7 +113,7 @@ export const MessageList = memo(({ result, stepStatus, handleRetry }: MessageLis
       );
     }
     if (status === 'failed') {
-      return <FailureNotice result={result} />;
+      return <FailureNotice result={result} handleRetry={handleRetry} />;
     }
     return null;
   }

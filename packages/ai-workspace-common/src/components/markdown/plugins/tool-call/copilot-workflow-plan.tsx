@@ -176,7 +176,7 @@ export const CopilotWorkflowPlan = memo(({ data }: CopilotWorkflowPlanProps) => 
             {variables?.map((variable) => (
               <InputParameterRow
                 key={variable.name}
-                variableType={variable.variableType}
+                variableType={variable.variableType as 'string' | 'option' | 'resource'}
                 label={variable.name}
                 isRequired={true}
                 isSingle={true}

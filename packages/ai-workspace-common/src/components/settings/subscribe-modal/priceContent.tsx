@@ -1,6 +1,6 @@
 import { memo, useMemo, useState, useCallback, useEffect } from 'react';
 
-import { Row, Col, Tag, Tooltip } from 'antd';
+import { Row, Col, Tag, Tooltip, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { logEvent } from '@refly/telemetry-web';
 // styles
@@ -15,7 +15,8 @@ import {
   useAuthStoreShallow,
 } from '@refly/stores';
 import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
-import { SubscriptionPlanType } from '@refly/openapi-schema';
+import { SubscriptionPlanType, Voucher } from '@refly/openapi-schema';
+import { SUBSCRIPTION_PRICES } from '@refly-packages/ai-workspace-common/constants/pricing';
 
 export type SubscriptionInterval = 'monthly' | 'yearly';
 export type PriceSource = 'page' | 'modal';
@@ -193,11 +194,12 @@ interface PlanItemProps {
     isLoading: boolean;
     plan: string;
   };
+  voucher?: Voucher | null;
 }
 
 const PlanItem = memo((props: PlanItemProps) => {
   const { t } = useTranslation('ui');
-  const { planType, title, description, features, handleClick, loadingInfo } = props;
+  const { planType, title, description, features, handleClick, loadingInfo, voucher } = props;
   const [interval, setInterval] = useState<SubscriptionInterval>('monthly');
 
   const { isLogin, userProfile } = useUserStoreShallow((state) => ({
@@ -220,18 +222,7 @@ const PlanItem = memo((props: PlanItemProps) => {
     PlanPriorityMap[planType as keyof typeof PlanPriorityMap];
   const isButtonDisabled = (isCurrentPlan || isDowngrade) && planType !== 'enterprise';
 
-  // Price data
-  const prices = useMemo(
-    () =>
-      ({
-        plus: { monthly: 19.9, yearly: 15.9, yearlyTotal: 190 },
-        starter: { monthly: 24.9, yearly: 19.9, yearlyTotal: 238.8 },
-        maker: { monthly: 49.9, yearly: 39.9, yearlyTotal: 478.8 },
-      }) as const,
-    [],
-  );
-
-  const priceInfo = prices[planType as keyof typeof prices];
+  const priceInfo = SUBSCRIPTION_PRICES[planType as keyof typeof SUBSCRIPTION_PRICES];
 
   const handleIntervalChange = useCallback((newInterval: 'monthly' | 'yearly') => {
     setInterval(newInterval);
@@ -386,6 +377,21 @@ const PlanItem = memo((props: PlanItemProps) => {
         </div>
       )}
 
+      {/* Voucher discount badge */}
+      {voucher && planType !== 'free' && !isCurrentPlan && (
+        <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg border border-green-200 dark:border-green-700">
+          <div className="flex items-center gap-2">
+            <span className="text-green-600 dark:text-green-400 text-lg">🎁</span>
+            <span className="text-sm font-medium text-green-700 dark:text-green-300">
+              {t('voucher.discountApplied', {
+                percent: voucher.discountPercent,
+                defaultValue: `${voucher.discountPercent}% discount will be applied at checkout!`,
+              })}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Button */}
       <Tooltip
         title={
@@ -399,6 +405,7 @@ const PlanItem = memo((props: PlanItemProps) => {
           type="button"
           className={`
             w-full h-11 rounded-lg text-sm font-semibold transition-all duration-200 hover:cursor-pointer
+            flex items-center justify-center gap-2
             ${
               isButtonDisabled
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -440,8 +447,18 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
   const { t } = useTranslation('ui');
   const navigate = useNavigate();
   const { source } = props;
-  const { setSubscribeModalVisible: setVisible } = useSubscriptionStoreShallow((state) => ({
+  const {
+    setSubscribeModalVisible: setVisible,
+    availableVoucher,
+    setAvailableVoucher,
+    setVoucherLoading,
+    userType,
+  } = useSubscriptionStoreShallow((state) => ({
     setSubscribeModalVisible: state.setSubscribeModalVisible,
+    availableVoucher: state.availableVoucher,
+    setAvailableVoucher: state.setAvailableVoucher,
+    setVoucherLoading: state.setVoucherLoading,
+    userType: state.userType,
   }));
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
@@ -455,12 +472,38 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
 
   const currentPlan: string = userProfile?.subscription?.planType || 'free';
 
+  // Fetch available vouchers when component mounts
+  useEffect(() => {
+    if (!isLogin) return;
+
+    const fetchVouchers = async () => {
+      setVoucherLoading(true);
+      try {
+        const response = await getClient().getAvailableVouchers();
+        if (response.data?.success && response.data.data?.bestVoucher) {
+          setAvailableVoucher(response.data.data.bestVoucher);
+        } else {
+          setAvailableVoucher(null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch available vouchers:', error);
+        setAvailableVoucher(null);
+      } finally {
+        setVoucherLoading(false);
+      }
+    };
+
+    fetchVouchers();
+  }, [isLogin, setAvailableVoucher, setVoucherLoading]);
+
   // Report pricing view event when component mounts
   useEffect(() => {
     logEvent('pricing_view', Date.now(), {
       user_plan: currentPlan,
+      has_voucher: !!availableVoucher,
+      voucher_discount: availableVoucher?.discountPercent,
     });
-  }, [currentPlan]);
+  }, [currentPlan, availableVoucher]);
 
   const plansData = useMemo(() => {
     const planTypes = ['free', 'plus'];
@@ -501,22 +544,72 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
 
       setLoadingInfo({ isLoading: true, plan });
       try {
+        // Include voucherId if available
+        const body: {
+          planType: SubscriptionPlanType;
+          interval: SubscriptionInterval;
+          voucherId?: string;
+        } = {
+          planType,
+          interval: interval,
+        };
+
+        // Validate voucher before creating checkout session
+        if (availableVoucher?.voucherId) {
+          const validateRes = await getClient().validateVoucher({
+            body: { voucherId: availableVoucher.voucherId },
+          });
+
+          if (validateRes.data?.data?.valid) {
+            body.voucherId = availableVoucher.voucherId;
+
+            // Log voucher applied event
+            logEvent('voucher_applied', null, {
+              voucher_value: Math.round((100 - availableVoucher.discountPercent) / 10),
+              entry_point: 'pricing_page',
+              user_type: userType,
+            });
+          } else {
+            // Voucher is invalid - show message and clear it
+            const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';
+            message.warning(
+              t('voucher.validation.invalid', {
+                reason,
+                defaultValue: `Your coupon cannot be applied: ${reason}`,
+              }),
+            );
+
+            // Clear the invalid voucher from store
+            setAvailableVoucher(null);
+
+            // Log voucher validation failed event
+            logEvent('voucher_validation_failed', null, {
+              voucherId: availableVoucher.voucherId,
+              reason,
+              planType,
+              interval,
+            });
+
+            // Continue without voucher - user can still proceed with full price
+          }
+        }
+
         const res = await getClient().createCheckoutSession({
-          body: {
-            planType,
-            interval: interval,
-          },
+          body,
         });
         if (res.data?.data?.url) {
           window.location.href = res.data.data.url;
         }
       } catch (error) {
         console.error('Failed to create checkout session:', error);
+        message.error(
+          t('subscription.checkoutFailed', 'Failed to start checkout. Please try again.'),
+        );
       } finally {
         setLoadingInfo({ isLoading: false, plan: '' });
       }
     },
-    [loadingInfo.isLoading],
+    [loadingInfo.isLoading, availableVoucher, source, setAvailableVoucher, t],
   );
 
   const handleContactSales = useCallback(() => {
@@ -566,6 +659,7 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
                   features={plansData[planType].features}
                   handleClick={handlePlanClick(planType)}
                   loadingInfo={loadingInfo}
+                  voucher={availableVoucher}
                 />
               </Col>
             );
