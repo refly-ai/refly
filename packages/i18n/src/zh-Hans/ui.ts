@@ -119,6 +119,7 @@ const translations = {
       },
     },
     plans: {
+      getStarted: '立即开始',
       memberBenefits: '会员权益',
       free: {
         title: 'Free',

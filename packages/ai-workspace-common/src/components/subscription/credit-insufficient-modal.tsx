@@ -524,9 +524,23 @@ export const CreditInsufficientModal = memo(() => {
 
   // Single selection state - can be 'monthly', 'yearly', or a credit pack id
   const [selectedId, setSelectedId] = useState<SelectionId>(
-    hasPaidSubscription && shouldShowCreditPacks ? 'credit_pack_1000' : 'yearly',
+    hasPaidSubscription && shouldShowCreditPacks ? 'credit_pack_100' : 'yearly',
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  // Reset default selection when the modal opens to avoid stale state from previous opens.
+  useEffect(() => {
+    if (!creditInsufficientModalVisible) return;
+
+    // Only credit packs are shown for paid users (or when Plus card is hidden) — default to the $1 pack.
+    if (hasPaidSubscription && shouldShowCreditPacks) {
+      setSelectedId('credit_pack_100');
+      return;
+    }
+
+    // Default to yearly when Plus plan is available.
+    setSelectedId('yearly');
+  }, [creditInsufficientModalVisible, hasPaidSubscription, shouldShowCreditPacks]);
 
   const handleSelect = useCallback((id: SelectionId) => {
     setSelectedId(id);

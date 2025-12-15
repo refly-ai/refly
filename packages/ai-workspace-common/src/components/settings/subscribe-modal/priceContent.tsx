@@ -217,6 +217,7 @@ interface PlanItemProps {
   description: string;
   features: Feature[];
   handleClick?: (interval: SubscriptionInterval) => void;
+  source: PriceSource;
   loadingInfo: {
     isLoading: boolean;
     plan: string;
@@ -233,11 +234,13 @@ const PlanItem = memo((props: PlanItemProps) => {
     description,
     features,
     handleClick,
+    source,
     loadingInfo,
     voucher,
     voucherValidDays,
   } = props;
   const [interval, setInterval] = useState<SubscriptionInterval>('monthly');
+  const navigate = useNavigate();
 
   const { isLogin, userProfile } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
@@ -257,7 +260,10 @@ const PlanItem = memo((props: PlanItemProps) => {
   const isDowngrade =
     PlanPriorityMap[currentPlan as keyof typeof PlanPriorityMap] >
     PlanPriorityMap[planType as keyof typeof PlanPriorityMap];
-  const isButtonDisabled = (isCurrentPlan || isDowngrade) && planType !== 'enterprise';
+  const isButtonDisabledForLoggedIn = (isCurrentPlan || isDowngrade) && planType !== 'enterprise';
+  const isButtonDisabled = isLogin ? isButtonDisabledForLoggedIn : false;
+  const isLoadingThisPlan = isLogin && loadingInfo.isLoading && loadingInfo.plan === planType;
+  const shouldShowGetStarted = !isLogin;
 
   const priceInfo = SUBSCRIPTION_PRICES[planType as keyof typeof SUBSCRIPTION_PRICES];
 
@@ -277,12 +283,28 @@ const PlanItem = memo((props: PlanItemProps) => {
     if (isLogin) {
       handleClick?.(interval);
     } else {
-      setLoginModalOpen(true);
+      if (source === 'page') {
+        navigate('/login?returnUrl=%2Fpricing');
+      } else {
+        setLoginModalOpen(true);
+      }
     }
-  }, [isButtonDisabled, isLogin, planType, interval, handleClick, setLoginModalOpen]);
+  }, [
+    handleClick,
+    interval,
+    isButtonDisabled,
+    isLogin,
+    navigate,
+    planType,
+    setLoginModalOpen,
+    source,
+  ]);
 
   const getButtonText = useCallback(() => {
-    if (loadingInfo.isLoading && loadingInfo.plan === planType) {
+    if (shouldShowGetStarted) {
+      return t('subscription.plans.getStarted');
+    }
+    if (isLoadingThisPlan) {
       return (
         <div className="flex items-center justify-center gap-2">
           <Spin size="small" />
@@ -311,7 +333,7 @@ const PlanItem = memo((props: PlanItemProps) => {
         })}
       </span>
     );
-  }, [loadingInfo, planType, isCurrentPlan, isHovered, t]);
+  }, [isCurrentPlan, isHovered, isLoadingThisPlan, planType, shouldShowGetStarted, t]);
 
   // Free plan card - simplified version
   if (planType === 'free') {
@@ -344,13 +366,15 @@ const PlanItem = memo((props: PlanItemProps) => {
           className={`
             w-full h-11 rounded-lg text-sm font-semibold transition-all duration-200 !border-[1px] !border-solid !border-gray-200
             ${
-              isButtonDisabled
-                ? 'bg-gray-100 text-refly-text-0 cursor-pointer'
-                : 'bg-gray-900 text-white hover:bg-gray-800 cursor-pointer'
+              shouldShowGetStarted
+                ? 'bg-gray-900 text-white hover:bg-gray-800 cursor-pointer'
+                : isButtonDisabled
+                  ? 'bg-gray-100 text-refly-text-0 cursor-pointer'
+                  : 'bg-gray-900 text-white hover:bg-gray-800 cursor-pointer'
             }
           `}
           onClick={handleButtonClick}
-          disabled={isButtonDisabled}
+          disabled={isLogin && isButtonDisabledForLoggedIn}
         >
           {getButtonText()}
         </button>
@@ -434,15 +458,17 @@ const PlanItem = memo((props: PlanItemProps) => {
             w-full h-11 rounded-lg text-sm font-semibold transition-all duration-200 hover:cursor-pointer
             flex items-center justify-center gap-2
             ${
-              isButtonDisabled
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : loadingInfo.isLoading && loadingInfo.plan === planType
-                  ? 'bg-gray-800 text-white cursor-not-allowed opacity-80'
-                  : 'bg-gray-900 text-white hover:bg-gray-800'
+              shouldShowGetStarted
+                ? 'bg-gray-900 text-white hover:bg-gray-800'
+                : isButtonDisabled
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : isLoadingThisPlan
+                    ? 'bg-gray-800 text-white cursor-not-allowed opacity-80'
+                    : 'bg-gray-900 text-white hover:bg-gray-800'
             }
           `}
           onClick={handleButtonClick}
-          disabled={isButtonDisabled || (loadingInfo.isLoading && loadingInfo.plan === planType)}
+          disabled={isLogin && (isButtonDisabledForLoggedIn || isLoadingThisPlan)}
         >
           {getButtonText()}
         </button>
@@ -696,6 +722,7 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
                   description={plansData[planType].description}
                   features={plansData[planType].features}
                   handleClick={handlePlanClick(planType)}
+                  source={source}
                   loadingInfo={loadingInfo}
                   voucher={availableVoucher}
                   voucherValidDays={voucherValidDays}

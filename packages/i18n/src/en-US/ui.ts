@@ -3649,6 +3649,7 @@ const translations = {
       },
     },
     plans: {
+      getStarted: 'Get Started',
       priceMonthly: '{{price}}/month',
       priceYearly: '{{price}}/month',
       priceYearlyTotal: '{{price}}/year Save 20%',
