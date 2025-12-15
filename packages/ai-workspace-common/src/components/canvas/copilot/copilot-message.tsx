@@ -152,12 +152,18 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     setShowWorkflowRun,
     defaultAgentModel,
     onLayout,
+    logEvent,
   ]);
 
   const handleRetry = useCallback(() => {
     if (!resultId || !sessionId || !canvasId) {
       return;
     }
+
+    logEvent('copilot_prompt_sent', Date.now(), {
+      source_type: 'retry_button_click',
+    });
+
     invokeAction(
       {
         query,
@@ -171,7 +177,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
         entityType: 'canvas',
       },
     );
-  }, [resultId, canvasId, invokeAction, sessionId, query]);
+  }, [resultId, canvasId, invokeAction, sessionId, query, logEvent]);
 
   return (
     <div className="flex flex-col gap-2">
