@@ -116,11 +116,27 @@ const UserInfo = React.memo(
     const planType = userProfile?.subscription?.planType || 'free';
     const nickname = userProfile?.nickname || 'No nickname';
     const email = userProfile?.email || 'No email';
+    const { setShowSettingModal, setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
+      setShowSettingModal: state.setShowSettingModal,
+      setSettingsModalActiveTab: state.setSettingsModalActiveTab,
+    }));
+
+    const handleSettingsClick = useCallback(() => {
+      setOpen(false);
+      setSettingsModalActiveTab(SettingsModalActiveTab.Account);
+      setShowSettingModal(true);
+    }, [setShowSettingModal, setSettingsModalActiveTab, setOpen]);
 
     return (
       <div className="py-2 flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <Avatar icon={<Account />} src={userProfile?.avatar || defaultAvatar} size={36} />
+          <Avatar
+            icon={<Account />}
+            src={userProfile?.avatar || defaultAvatar}
+            size={36}
+            className="cursor-pointer"
+            onClick={handleSettingsClick}
+          />
 
           <div>
             <div className="max-w-40 text-sm font-semibold text-refly-text-0 leading-5 truncate">

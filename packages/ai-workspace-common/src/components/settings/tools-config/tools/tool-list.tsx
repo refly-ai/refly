@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { ToolInstallModal } from './tool-install-modal';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Favicon } from '@refly-packages/ai-workspace-common/components/common/favicon';
-import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
+import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 
 const ActionDropdown = ({
   tool,
@@ -167,11 +167,23 @@ const ToolItem = ({
   return (
     <div
       className="mb-2 px-2 py-3 rounded-[8px] cursor-pointer hover:bg-refly-tertiary-hover flex items-start gap-3"
-      key={tool.toolsetId}
+      key={tool.key}
     >
       <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-refly-tertiary-default flex items-center justify-center">
         {isBuiltin ? (
-          <Logo logoProps={{ show: true, className: '!w-6 !h-6' }} textProps={{ show: false }} />
+          <ToolsetIcon
+            toolset={{
+              type: 'regular',
+              id: tool.key,
+              name: tool.name,
+            }}
+            toolsetKey={tool.key}
+            config={{
+              size: 24,
+              className: 'flex-shrink-0',
+              builtinClassName: '!w-6 !h-6',
+            }}
+          />
         ) : (
           <Favicon url={tool.definition?.domain} size={24} />
         )}
