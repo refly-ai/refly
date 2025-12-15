@@ -15,13 +15,14 @@ import { COMPOSIO_CONNECTION_STATUS } from '../constant/constant';
 import { genToolsetID } from '@refly/utils';
 import { PrismaService } from '../../common/prisma.service';
 import { RedisService } from '../../common/redis.service';
-import { PostHandlerService } from './post-handler.service';
+import type { ComposioPostHandlerInput } from '../tool-execution/post-execution/post.interface';
 import { ToolInventoryService } from '../inventory/inventory.service';
 import { getCurrentUser, runInContext } from '../tool-context';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { SkillRunnableConfig } from '@refly/skill-template';
 import { enhanceToolSchema } from '../utils/schema-utils';
 import { ResourceHandler } from '../resource.service';
+import { ComposioToolPostHandlerService } from '../tool-execution/post-execution/composio-post.service';
 
 @Injectable()
 export class ComposioService {
@@ -33,7 +34,7 @@ export class ComposioService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly postHandlerService: PostHandlerService,
+    private readonly composioPostHandler: ComposioToolPostHandlerService,
     private readonly inventoryService: ToolInventoryService,
     private readonly resourceHandler: ResourceHandler,
   ) {
@@ -609,7 +610,7 @@ export class ComposioService {
           const { file_name_title, ...toolInput } = inputRecord;
 
           // Run tool execution within context (similar to dynamic-tooling)
-          const { result, user, resultId, version } = await runInContext(
+          const { result, user, resultId, version, canvasId } = await runInContext(
             {
               langchainConfig: runnableConfig as SkillRunnableConfig,
               requestId: `composio-${toolName}-${Date.now()}`,
@@ -636,24 +637,31 @@ export class ComposioService {
                 user: currentUser,
                 resultId: runnableConfig?.configurable?.resultId as string | undefined,
                 version: runnableConfig?.configurable?.version as number | undefined,
+                canvasId: runnableConfig?.configurable?.canvasId as string | undefined,
               };
             },
           );
 
-          // Use postHandler for billing and resource processing
-          const postResult = await this.postHandlerService.process(result, {
-            user,
+          // Use composioPostHandler for billing and result compression
+          const postHandlerInput: ComposioPostHandlerInput = {
             toolName,
-            toolsetName: context.toolsetName,
             toolsetKey: context.toolsetKey,
+            rawResult: result,
             creditCost: context.creditCost,
+            toolsetName: context.toolsetName,
             fileNameTitle: (file_name_title as string) || 'untitled',
-            resultId,
-            version,
-          });
+            context: {
+              user,
+              resultId,
+              resultVersion: version,
+              canvasId,
+            },
+          };
+
+          const postResult = await this.composioPostHandler.process(postHandlerInput);
 
           if (result?.successful) {
-            return JSON.stringify(postResult.data ?? null);
+            return postResult.content;
           }
           return JSON.stringify({
             error: result?.error ?? 'Unknown Composio execution error',

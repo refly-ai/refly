@@ -15,6 +15,7 @@ import { Icon, SkillTemplateConfigDefinition, User } from '@refly/openapi-schema
 import { GraphState } from '../scheduler/types';
 // utils
 import { buildFinalRequestMessages } from '../scheduler/utils/message';
+import { compressAgentLoopMessages } from '../utils/context-manager';
 
 // prompts
 import { buildNodeAgentSystemPrompt } from '../prompts/node-agent';
@@ -148,11 +149,43 @@ export class Agent extends BaseSkill {
       this.engine.logger.info('No tools selected, using base LLM without tools');
       llmForGraph = baseLlm;
     }
+    // Get compression context from config
+    const { user, canvasId, resultId, version } = config?.configurable ?? {};
 
     const llmNodeForCachedGraph = async (nodeState: typeof MessagesAnnotation.State) => {
       try {
+        let currentMessages = nodeState.messages ?? [];
+        // Attempt compression using standalone function
+        if (this.engine?.service && user && canvasId && resultId && version) {
+          try {
+            const modelInfo = config?.configurable?.modelConfigMap?.agent;
+            const contextLimit = modelInfo?.contextLimit ?? 128000;
+            const maxOutput = modelInfo?.maxOutput ?? 8000;
+            const compressionResult = await compressAgentLoopMessages({
+              messages: currentMessages,
+              contextLimit,
+              maxOutput,
+              user,
+              canvasId,
+              resultId,
+              resultVersion: version,
+              service: this.engine.service,
+              logger: this.engine.logger,
+            });
+
+            if (compressionResult.wasCompressed) {
+              currentMessages = compressionResult.messages;
+            }
+          } catch (compressionError) {
+            // Log but don't fail - compression is optional optimization
+            this.engine.logger.error('Agent loop compression failed', {
+              error: (compressionError as Error)?.message,
+            });
+          }
+        }
+
         // Use llmForGraph, which is the (potentially tool-bound) LLM instance for the graph
-        const response = await llmForGraph.invoke(nodeState.messages);
+        const response = await llmForGraph.invoke(currentMessages);
         return { messages: [response] };
       } catch (error) {
         this.engine.logger.error(`LLM node execution failed: ${error.stack}`);
