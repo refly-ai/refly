@@ -65,11 +65,21 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       membershipLevel?: string,
       triggeredFrom?: string,
     ) =>
-      set({
+      set((state) => ({
         creditInsufficientModalVisible: val,
-        creditInsufficientMembershipLevel: membershipLevel || '',
-        creditInsufficientTriggeredFrom: triggeredFrom || '',
-      }),
+        // Keep context stable during the modal close animation.
+        // Only reset these fields when explicitly provided, or when opening the modal.
+        creditInsufficientMembershipLevel: val
+          ? membershipLevel || ''
+          : membershipLevel !== undefined
+            ? membershipLevel
+            : state.creditInsufficientMembershipLevel,
+        creditInsufficientTriggeredFrom: val
+          ? triggeredFrom || ''
+          : triggeredFrom !== undefined
+            ? triggeredFrom
+            : state.creditInsufficientTriggeredFrom,
+      })),
     setOpenedFromSettings: (val: boolean) => set({ openedFromSettings: val }),
     setAvailableVoucher: (voucher: Voucher | null) => set({ availableVoucher: voucher }),
     setVoucherLoading: (loading: boolean) => set({ voucherLoading: loading }),

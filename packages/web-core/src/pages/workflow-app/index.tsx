@@ -21,8 +21,9 @@ import { useWorkflowExecutionPolling } from '@refly-packages/ai-workspace-common
 import { ReactFlowProvider } from '@refly-packages/ai-workspace-common/components/canvas';
 import SettingModal from '@refly-packages/ai-workspace-common/components/settings';
 import {
-  useSiderStoreShallow,
   useCanvasOperationStoreShallow,
+  useSiderStoreShallow,
+  useSubscriptionStoreShallow,
   useUserStoreShallow,
 } from '@refly/stores';
 import { CanvasProvider } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -77,6 +78,9 @@ const WorkflowAppPage: React.FC = () => {
 
   // Drive files state for preview and runtime
   const [runtimeDriveFiles, setRuntimeDriveFiles] = useState<DriveFile[]>([]);
+  const { creditInsufficientModalVisible } = useSubscriptionStoreShallow((state) => ({
+    creditInsufficientModalVisible: state.creditInsufficientModalVisible,
+  }));
 
   // Settings modal state
   const { showSettingModal, setShowSettingModal } = useSiderStoreShallow((state) => ({
@@ -176,9 +180,9 @@ const WorkflowAppPage: React.FC = () => {
         // Auto switch to products tab when workflow completes successfully
         products.length > 0 && setActiveTab('products');
       } else if (status === 'failed') {
-        notification.error({
-          message: t('workflowApp.run.failed'),
-        });
+        if (!creditInsufficientModalVisible) {
+          message.error(t('workflowApp.run.failed'));
+        }
       }
     },
     onError: (_error) => {

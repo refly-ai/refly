@@ -10,6 +10,7 @@ import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.sv
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 import { useUserStoreShallow } from '@refly/stores';
 import { useAuthStoreShallow } from '@refly/stores';
+import { useSubscriptionStoreShallow } from '@refly/stores';
 import { ToolsDependencyChecker } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';
 import { MixedTextEditor } from '@refly-packages/ai-workspace-common/components/workflow-app/mixed-text-editor';
 import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/resource-upload';
@@ -17,6 +18,7 @@ import { useFileUpload } from '@refly-packages/ai-workspace-common/components/ca
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
 import { Question } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { useTemplateGenerationStatus } from '../../hooks/useTemplateGenerationStatus';
 import { TemplateEditorSkeleton } from './template-editor-skeleton';
 
@@ -106,6 +108,10 @@ export const WorkflowAPPForm = ({
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
   }));
+  const { setCreditInsufficientModalVisible } = useSubscriptionStoreShallow((state) => ({
+    setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
+  }));
+  const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
 
   const [internalIsRunning, setInternalIsRunning] = useState(false);
 
@@ -462,6 +468,15 @@ export const WorkflowAPPForm = ({
     // Check if user is logged in
     if (!isLogin) {
       setLoginModalOpen(true);
+      return;
+    }
+
+    // Frontend pre-check: if current credit balance is insufficient, open the modal and stop.
+    // This is best-effort and only runs when balance data is available, to avoid false negatives.
+    const requiredCredits = Number(workflowApp?.creditUsage ?? 0);
+    const isRequiredCreditsValid = Number.isFinite(requiredCredits) && requiredCredits > 0;
+    if (isBalanceSuccess && isRequiredCreditsValid && creditBalance < requiredCredits) {
+      setCreditInsufficientModalVisible(true, undefined, 'template');
       return;
     }
 
