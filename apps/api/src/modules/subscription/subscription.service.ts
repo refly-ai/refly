@@ -1136,6 +1136,8 @@ export class SubscriptionService implements OnModuleInit {
           tier: usage.tier ?? '',
           originalModelId: usage.originalModelId ?? null,
           modelRoutedData: usage.modelRoutedData ? JSON.stringify(usage.modelRoutedData) : null,
+          cacheReadTokens: usage.cacheReadTokens ?? 0,
+          cacheWriteTokens: usage.cacheWriteTokens ?? 0,
         },
       }),
       ...(usage.tier !== 'free'

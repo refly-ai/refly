@@ -42,6 +42,8 @@ export interface ModelUsageDetail {
   actualModelName?: string;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
   creditCost: number;
 }
 

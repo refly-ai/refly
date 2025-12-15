@@ -1626,6 +1626,8 @@ export class SkillInvokerService {
               modelName: providerItem?.name,
               inputTokens: tokenUsage.inputTokens || 0,
               outputTokens: tokenUsage.outputTokens || 0,
+              cacheReadTokens: tokenUsage.cacheReadTokens || 0,
+              cacheWriteTokens: tokenUsage.cacheWriteTokens || 0,
             };
 
             // billingModelName: model name used for billing (Auto or direct model)

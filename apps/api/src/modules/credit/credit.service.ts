@@ -988,6 +988,8 @@ export class CreditService {
 
       const inputTokens = usage.inputTokens || 0;
       const outputTokens = usage.outputTokens || 0;
+      const cacheReadTokens = usage.cacheReadTokens || 0;
+      const cacheWriteTokens = usage.cacheWriteTokens || 0;
 
       // Calculate credit cost for this usage
       let creditCost = 0;
@@ -995,15 +997,29 @@ export class CreditService {
         if (creditBilling.unit === '5k_tokens') {
           const perInputUnit = creditBilling.inputCost || 0;
           const perOutputUnit = creditBilling.outputCost || 0;
-          creditCost = Math.ceil(
-            (inputTokens / 5000) * perInputUnit + (outputTokens / 5000) * perOutputUnit,
-          );
+          // Fallback: use inputCost for both cache read and cache write (cache operations are on input side)
+          const perCacheReadUnit = creditBilling.cacheReadCost ?? perInputUnit;
+          const perCacheWriteUnit = creditBilling.cacheWriteCost ?? perInputUnit;
+
+          const inputCost = (inputTokens / 5000) * perInputUnit;
+          const outputCost = (outputTokens / 5000) * perOutputUnit;
+          const cacheReadCost = (cacheReadTokens / 5000) * perCacheReadUnit;
+          const cacheWriteCost = (cacheWriteTokens / 5000) * perCacheWriteUnit;
+
+          creditCost = Math.ceil(inputCost + outputCost + cacheReadCost + cacheWriteCost);
         } else if (creditBilling.unit === '1m_tokens') {
           const perInputUnit = creditBilling.inputCost || 0;
           const perOutputUnit = creditBilling.outputCost || 0;
-          creditCost = Math.ceil(
-            (inputTokens / 1000000) * perInputUnit + (outputTokens / 1000000) * perOutputUnit,
-          );
+          // Fallback: use inputCost for both cache read and cache write (cache operations are on input side)
+          const perCacheReadUnit = creditBilling.cacheReadCost ?? perInputUnit;
+          const perCacheWriteUnit = creditBilling.cacheWriteCost ?? perInputUnit;
+
+          const inputCost = (inputTokens / 1000000) * perInputUnit;
+          const outputCost = (outputTokens / 1000000) * perOutputUnit;
+          const cacheReadCost = (cacheReadTokens / 1000000) * perCacheReadUnit;
+          const cacheWriteCost = (cacheWriteTokens / 1000000) * perCacheWriteUnit;
+
+          creditCost = Math.ceil(inputCost + outputCost + cacheReadCost + cacheWriteCost);
         } else {
           creditCost = Math.max(creditBilling.inputCost, creditBilling.outputCost);
         }
@@ -1030,6 +1046,8 @@ export class CreditService {
         actualModelName: usage.modelName,
         inputTokens,
         outputTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
         creditCost: creditCost,
       });
     }

@@ -6098,6 +6098,14 @@ export type CreditBilling = {
    */
   outputCost: number;
   /**
+   * Credit consumption per unit for cache read tokens (typically 10% of input cost)
+   */
+  cacheReadCost?: number;
+  /**
+   * Credit consumption per unit for cache write tokens (typically higher than input cost)
+   */
+  cacheWriteCost?: number;
+  /**
    * Minimum credit charge per request
    */
   minCharge: number;
