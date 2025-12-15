@@ -95,7 +95,7 @@ export class Agent extends BaseSkill {
       modelInfo,
     });
 
-    return { requestMessages, sources };
+    return { requestMessages, sources, systemPrompt, modelInfo };
   };
 
   private async initializeAgentComponents(
@@ -338,7 +338,7 @@ export class Agent extends BaseSkill {
       config,
     );
 
-    const { requestMessages } = await this.commonPreprocess(state, config);
+    const { requestMessages, systemPrompt, modelInfo } = await this.commonPreprocess(state, config);
 
     config.metadata.step = { name: 'answerQuestion' };
 
@@ -353,6 +353,19 @@ export class Agent extends BaseSkill {
             ...currentSkill,
             toolsAvailable,
             toolCount: tools?.length || 0,
+            // Reproducible context for Langfuse tracing
+            toolDefinitions: tools?.map((t) => ({
+              name: t.name,
+              description: t.description,
+            })),
+            systemPrompt,
+            modelConfig: {
+              modelId: modelInfo?.modelId,
+              modelName: modelInfo?.modelName,
+              temperature: 0.1, // Hardcoded in chatModel call
+              maxTokens: modelInfo?.maxOutput,
+              provider: config.configurable?.provider?.providerKey,
+            },
           },
         },
       );
