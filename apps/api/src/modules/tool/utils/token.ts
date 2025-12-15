@@ -15,8 +15,8 @@ export const DEFAULT_MAX_TOKENS = 4000; // Max tokens for entire tool result (~1
 export const MAX_SNIPPET_TOKENS = 800; // Max tokens per content snippet (~3.2KB)
 
 // Link filtering constants
-export const TOP_K_LINKS = 10; // Keep top 10 links total
-export const MAX_PER_DOMAIN = 3; // Max 3 links per domain (allows diversity while not losing all same-domain results)
+export const TOP_K_LINKS = 30; // Keep top 10 links total
+export const MAX_PER_DOMAIN = 10; // Max 3 links per domain (allows diversity while not losing all same-domain results)
 export const MIN_CONTENT_LENGTH = 100; // Skip items with content < 100 chars (low quality)
 
 // ============================================================================
