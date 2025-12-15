@@ -1064,13 +1064,6 @@ export class SkillInvokerService {
                 };
                 await this.usageReportQueue.add(`usage_report:${resultId}`, tokenUsage);
               }
-              // Process credit billing for all steps after skill completion
-              // Bill credits for successful completions and user aborts (partial usage should be charged)
-              const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
-
-              if (shouldBillCredits) {
-                await this.processCreditUsageReport(user, resultId, version, resultAggregator);
-              }
             }
             break;
         }
