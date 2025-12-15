@@ -30,6 +30,9 @@ export {
   createLangfuseCallbacks,
 } from './langchain-callback';
 
+// Export filtered callback handler (removes internal LangGraph/LangChain metadata)
+export { FilteredLangfuseCallbackHandler } from './filtered-langfuse-callback';
+
 // Convenience function to initialize the observability system
 export function initializeObservability(
   langfuseConfig: LangfuseConfig,

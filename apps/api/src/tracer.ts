@@ -120,6 +120,39 @@ function createLangfuseProcessor(config: LangfuseConfig): SpanProcessor | null {
       baseUrl,
       shouldExportSpan: ({ otelSpan }) =>
         !EXCLUDED_SCOPES.has(otelSpan.instrumentationScope?.name ?? ''),
+      // Slim down resourceAttributes in trace/observation metadata
+      // Note: mask receives serialized JSON strings, operates on values not keys
+      // Key-based filtering (langgraph_*, ls_*) is done in FilteredLangfuseCallbackHandler
+      mask: ({ data }) => {
+        if (typeof data !== 'string') return data;
+
+        try {
+          const parsed = JSON.parse(data);
+          if (typeof parsed !== 'object' || parsed === null) return data;
+
+          // Slim down resourceAttributes if present (verbose OTEL attributes)
+          if (parsed.resourceAttributes && typeof parsed.resourceAttributes === 'object') {
+            const KEPT_RESOURCE_ATTRS = new Set([
+              'service.name',
+              'host.name',
+              'process.runtime.version',
+            ]);
+            const slimmed = {
+              ...parsed,
+              resourceAttributes: Object.fromEntries(
+                Object.entries(parsed.resourceAttributes as Record<string, unknown>).filter(([k]) =>
+                  KEPT_RESOURCE_ATTRS.has(k),
+                ),
+              ),
+            };
+            return JSON.stringify(slimmed);
+          }
+
+          return data;
+        } catch {
+          return data;
+        }
+      },
     });
   } catch (_error) {
     return null;

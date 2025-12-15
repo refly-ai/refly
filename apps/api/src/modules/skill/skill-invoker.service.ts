@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { DirectConnection } from '@hocuspocus/server';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/messages';
-import { CallbackHandler as LangfuseCallbackHandler } from '@langfuse/langchain';
+import { FilteredLangfuseCallbackHandler } from '@refly/observability';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -1719,16 +1719,18 @@ export class SkillInvokerService {
     userId: string;
     skillName?: string;
     mode?: string;
-  }): LangfuseCallbackHandler {
+  }): FilteredLangfuseCallbackHandler {
     this.logger.info(
-      `[Langfuse Debug] Creating LangfuseCallbackHandler with params: ${JSON.stringify(params)}`,
+      `[Langfuse Debug] Creating FilteredLangfuseCallbackHandler with params: ${JSON.stringify(params)}`,
     );
-    const handler = new LangfuseCallbackHandler({
+    // Use FilteredLangfuseCallbackHandler to remove internal LangGraph/LangChain metadata
+    // (langgraph_*, ls_* fields) that duplicate top-level Langfuse fields
+    const handler = new FilteredLangfuseCallbackHandler({
       sessionId: params.sessionId,
       userId: params.userId,
       tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent'],
     });
-    this.logger.info('[Langfuse Debug] LangfuseCallbackHandler created successfully');
+    this.logger.info('[Langfuse Debug] FilteredLangfuseCallbackHandler created successfully');
     return handler;
   }
 
