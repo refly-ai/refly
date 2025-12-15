@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { PricingModal } from '@refly-packages/ai-workspace-common/components/settings/subscribe-modal/pricing-modal';
+import { PriceContent } from '@refly-packages/ai-workspace-common/components/settings/subscribe-modal/priceContent';
 import Header from '../../components/landing-page-partials/Header';
 import { Helmet } from 'react-helmet';
 import { useTranslation } from 'react-i18next';
@@ -31,7 +31,7 @@ const PricingPage = () => {
         </>
       )}
       <div className="my-10 bg-white/95 dark:bg-gray-900/95">
-        <PricingModal mode="page" />
+        <PriceContent source="page" />
       </div>
       {!isLogin && (
         <>

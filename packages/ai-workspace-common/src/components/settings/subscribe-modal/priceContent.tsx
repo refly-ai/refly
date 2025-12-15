@@ -45,6 +45,33 @@ enum PlanPriorityMap {
   enterprise = 3,
 }
 
+// Voucher discount tag - orange style
+const VoucherTag = memo(
+  ({ discountPercent, validDays }: { discountPercent: number; validDays: number }) => {
+    const { t } = useTranslation('ui');
+    return (
+      <div className="flex items-center gap-1.5 bg-[#FC8800] text-[#FEF2CF] px-3 py-1.5 rounded text-sm font-medium">
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+          <path
+            d="M13.5 4.5L6.5 11.5L2.5 7.5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span>
+          {discountPercent}% {t('voucher.off', 'OFF')}
+        </span>
+        <span className="text-white/40 mx-0.5">|</span>
+        <span>{t('voucher.validForDays', 'Valid for {{days}} days', { days: validDays })}</span>
+      </div>
+    );
+  },
+);
+
+VoucherTag.displayName = 'VoucherTag';
+
 // Price option card for monthly/yearly selection
 interface PriceOptionProps {
   type: 'monthly' | 'yearly';
@@ -195,11 +222,21 @@ interface PlanItemProps {
     plan: string;
   };
   voucher?: Voucher | null;
+  voucherValidDays?: number;
 }
 
 const PlanItem = memo((props: PlanItemProps) => {
   const { t } = useTranslation('ui');
-  const { planType, title, description, features, handleClick, loadingInfo, voucher } = props;
+  const {
+    planType,
+    title,
+    description,
+    features,
+    handleClick,
+    loadingInfo,
+    voucher,
+    voucherValidDays,
+  } = props;
   const [interval, setInterval] = useState<SubscriptionInterval>('monthly');
 
   const { isLogin, userProfile } = useUserStoreShallow((state) => ({
@@ -347,13 +384,18 @@ const PlanItem = memo((props: PlanItemProps) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 mb-1">
-        <Subscription size={20} className="text-gray-900" />
-        <span className="text-xl font-normal text-refly-text-0">{title}</span>
-        {isCurrentPlan && (
-          <Tag className="!m-0 !px-2 !py-0.5 !text-sm !font-light !rounded !bg-gray-100 !text-refly-text-2 !border-gray-200">
-            {t('subscription.plans.currentPlan')}
-          </Tag>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <Subscription size={20} className="text-gray-900" />
+          <span className="text-xl font-normal text-refly-text-0">{title}</span>
+          {isCurrentPlan && (
+            <Tag className="!m-0 !px-2 !py-0.5 !text-sm !font-light !rounded !bg-gray-100 !text-refly-text-2 !border-gray-200">
+              {t('subscription.plans.currentPlan')}
+            </Tag>
+          )}
+        </div>
+        {voucher && !isCurrentPlan && voucherValidDays && (
+          <VoucherTag discountPercent={voucher.discountPercent} validDays={voucherValidDays} />
         )}
       </div>
       <p className="text-sm text-gray-500 mb-4">{description}</p>
@@ -374,21 +416,6 @@ const PlanItem = memo((props: PlanItemProps) => {
             yearlyTotal={priceInfo.yearlyTotal}
             onSelect={handleIntervalChange}
           />
-        </div>
-      )}
-
-      {/* Voucher discount badge */}
-      {voucher && planType !== 'free' && !isCurrentPlan && (
-        <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg border border-green-200 dark:border-green-700">
-          <div className="flex items-center gap-2">
-            <span className="text-green-600 dark:text-green-400 text-lg">🎁</span>
-            <span className="text-sm font-medium text-green-700 dark:text-green-300">
-              {t('voucher.discountApplied', {
-                percent: voucher.discountPercent,
-                defaultValue: `${voucher.discountPercent}% discount will be applied at checkout!`,
-              })}
-            </span>
-          </div>
         </div>
       )}
 
@@ -471,6 +498,17 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
   }));
 
   const currentPlan: string = userProfile?.subscription?.planType || 'free';
+
+  // Calculate voucher valid days
+  const voucherValidDays = useMemo(() => {
+    if (!availableVoucher?.expiresAt) return 7;
+    return Math.max(
+      1,
+      Math.ceil(
+        (new Date(availableVoucher.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+      ),
+    );
+  }, [availableVoucher]);
 
   // Fetch available vouchers when component mounts
   useEffect(() => {
@@ -609,7 +647,7 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
         setLoadingInfo({ isLoading: false, plan: '' });
       }
     },
-    [loadingInfo.isLoading, availableVoucher, source, setAvailableVoucher, t],
+    [loadingInfo.isLoading, availableVoucher, source, setAvailableVoucher, t, userType],
   );
 
   const handleContactSales = useCallback(() => {
@@ -660,6 +698,7 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
                   handleClick={handlePlanClick(planType)}
                   loadingInfo={loadingInfo}
                   voucher={availableVoucher}
+                  voucherValidDays={voucherValidDays}
                 />
               </Col>
             );

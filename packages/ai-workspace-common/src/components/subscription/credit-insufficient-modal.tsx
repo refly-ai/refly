@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useState, useEffect } from 'react';
-import { Modal, Button, Row, Col, Tag } from 'antd';
+import { Modal, Button, Row, Col, Tag, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import {
   useSubscriptionStoreShallow,
@@ -11,7 +11,7 @@ import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin
 import { IconSubscription } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { Checked, Subscription } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { SubscriptionPlanType } from '@refly/openapi-schema';
+import { SubscriptionPlanType, Voucher } from '@refly/openapi-schema';
 
 type SubscriptionInterval = 'monthly' | 'yearly';
 
@@ -27,6 +27,33 @@ interface CreditPackOption {
   price: string;
   credits: string;
 }
+
+// Voucher discount tag - orange style
+const VoucherTag = memo(
+  ({ discountPercent, validDays }: { discountPercent: number; validDays: number }) => {
+    const { t } = useTranslation('ui');
+    return (
+      <div className="flex items-center gap-1 bg-[#FC8800] text-[#FEF2CF] px-2 py-1 rounded text-xs font-medium">
+        <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none">
+          <path
+            d="M13.5 4.5L6.5 11.5L2.5 7.5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span>
+          {discountPercent}% {t('voucher.off', 'OFF')}
+        </span>
+        <span className="text-white/40 mx-0.5">|</span>
+        <span>{t('voucher.validForDays', 'Valid for {{days}} days', { days: validDays })}</span>
+      </div>
+    );
+  },
+);
+
+VoucherTag.displayName = 'VoucherTag';
 
 // Price option card for monthly/yearly selection (compact version)
 interface PriceOptionProps {
@@ -225,9 +252,13 @@ const PlusPlanCard = memo(
   ({
     selectedId,
     onSelect,
+    voucher,
+    voucherValidDays,
   }: {
     selectedId: string;
     onSelect: (id: string) => void;
+    voucher?: Voucher | null;
+    voucherValidDays?: number;
   }) => {
     const { t } = useTranslation('ui');
 
@@ -269,15 +300,20 @@ const PlusPlanCard = memo(
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Header */}
-        <div className="flex items-center gap-2 mb-1">
-          <Subscription size={18} className="text-[#0E9F77]" />
-          <span className="text-base font-semibold text-gray-900">
-            {t('subscription.plans.plus.title')}
-          </span>
-          {isCurrentPlan && (
-            <Tag className="!m-0 !px-1.5 !py-0 !text-[10px] !font-medium !rounded !bg-gray-100 !text-gray-600 !border-gray-200">
-              {t('subscription.plans.currentPlan')}
-            </Tag>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Subscription size={18} className="text-[#0E9F77]" />
+            <span className="text-base font-semibold text-gray-900">
+              {t('subscription.plans.plus.title')}
+            </span>
+            {isCurrentPlan && (
+              <Tag className="!m-0 !px-1.5 !py-0 !text-[10px] !font-medium !rounded !bg-gray-100 !text-gray-600 !border-gray-200">
+                {t('subscription.plans.currentPlan')}
+              </Tag>
+            )}
+          </div>
+          {voucher && !isCurrentPlan && voucherValidDays && (
+            <VoucherTag discountPercent={voucher.discountPercent} validDays={voucherValidDays} />
           )}
         </div>
 
@@ -399,10 +435,18 @@ export const CreditInsufficientModal = memo(() => {
     creditInsufficientModalVisible,
     setCreditInsufficientModalVisible,
     creditInsufficientTriggeredFrom,
+    availableVoucher,
+    setAvailableVoucher,
+    setVoucherLoading,
+    userType,
   } = useSubscriptionStoreShallow((state) => ({
     creditInsufficientModalVisible: state.creditInsufficientModalVisible,
     setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
     creditInsufficientTriggeredFrom: state.creditInsufficientTriggeredFrom,
+    availableVoucher: state.availableVoucher,
+    setAvailableVoucher: state.setAvailableVoucher,
+    setVoucherLoading: state.setVoucherLoading,
+    userType: state.userType,
   }));
 
   const { isLogin, userProfile } = useUserStoreShallow((state) => ({
@@ -417,6 +461,41 @@ export const CreditInsufficientModal = memo(() => {
   // Determine if user has a paid subscription
   const currentPlan = userProfile?.subscription?.planType || 'free';
   const hasPaidSubscription = currentPlan !== 'free';
+
+  // Calculate voucher valid days
+  const voucherValidDays = useMemo(() => {
+    if (!availableVoucher?.expiresAt) return 7;
+    return Math.max(
+      1,
+      Math.ceil(
+        (new Date(availableVoucher.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+      ),
+    );
+  }, [availableVoucher]);
+
+  // Fetch available vouchers when modal opens
+  useEffect(() => {
+    if (!creditInsufficientModalVisible || !isLogin) return;
+
+    const fetchVouchers = async () => {
+      setVoucherLoading(true);
+      try {
+        const response = await getClient().getAvailableVouchers();
+        if (response.data?.success && response.data.data?.bestVoucher) {
+          setAvailableVoucher(response.data.data.bestVoucher);
+        } else {
+          setAvailableVoucher(null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch available vouchers:', error);
+        setAvailableVoucher(null);
+      } finally {
+        setVoucherLoading(false);
+      }
+    };
+
+    fetchVouchers();
+  }, [creditInsufficientModalVisible, isLogin, setAvailableVoucher, setVoucherLoading]);
 
   // If triggered from canvas and user is free, don't show credit packs
   const isTriggeredFromCanvas = creditInsufficientTriggeredFrom === 'canvas';
@@ -474,19 +553,74 @@ export const CreditInsufficientModal = memo(() => {
       if (isPlanSelected) {
         // Buy Plus Plan
         const interval = selectedId as SubscriptionInterval;
+
+        console.log('[CreditInsufficientModal] Creating checkout session:', {
+          interval,
+          hasVoucher: !!availableVoucher,
+          voucherId: availableVoucher?.voucherId,
+        });
+
         logEvent('subscription::upgrade_click', 'credit_insufficient_modal', {
           plan_type: 'plus',
           interval: interval,
+          has_voucher: !!availableVoucher,
         });
 
-        const res = await getClient().createCheckoutSession({
-          body: {
-            planType: 'plus' as SubscriptionPlanType,
-            interval: interval,
-            currentPlan,
-            source: creditInsufficientTriggeredFrom,
-          },
-        });
+        const body: {
+          planType: SubscriptionPlanType;
+          interval: SubscriptionInterval;
+          currentPlan?: string;
+          source?: string;
+          voucherId?: string;
+        } = {
+          planType: 'plus' as SubscriptionPlanType,
+          interval: interval,
+          currentPlan,
+          source: creditInsufficientTriggeredFrom,
+        };
+
+        // Validate voucher before creating checkout session
+        if (availableVoucher?.voucherId) {
+          console.log('[CreditInsufficientModal] Validating voucher:', availableVoucher.voucherId);
+          const validateRes = await getClient().validateVoucher({
+            body: { voucherId: availableVoucher.voucherId },
+          });
+
+          console.log(
+            '[CreditInsufficientModal] Voucher validation result:',
+            validateRes.data?.data,
+          );
+
+          if (validateRes.data?.data?.valid) {
+            body.voucherId = availableVoucher.voucherId;
+            console.log('[CreditInsufficientModal] Voucher added to body:', body.voucherId);
+
+            logEvent('voucher_applied', null, {
+              voucher_value: Math.round((100 - availableVoucher.discountPercent) / 10),
+              entry_point: 'credit_insufficient_modal',
+              user_type: userType,
+            });
+          } else {
+            const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';
+            message.warning(
+              t('voucher.validation.invalid', {
+                reason,
+                defaultValue: `Your coupon cannot be applied: ${reason}`,
+              }),
+            );
+            setAvailableVoucher(null);
+
+            logEvent('voucher_validation_failed', null, {
+              voucherId: availableVoucher.voucherId,
+              reason,
+              planType: 'plus',
+              interval,
+            });
+          }
+        }
+
+        console.log('[CreditInsufficientModal] Final body:', body);
+        const res = await getClient().createCheckoutSession({ body });
         if (res.data?.data?.url) {
           window.location.href = res.data.data.url;
         }
@@ -512,7 +646,19 @@ export const CreditInsufficientModal = memo(() => {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, isLogin, isPlanSelected, selectedId, setLoginModalOpen]);
+  }, [
+    isLoading,
+    isLogin,
+    isPlanSelected,
+    selectedId,
+    setLoginModalOpen,
+    availableVoucher,
+    userType,
+    t,
+    setAvailableVoucher,
+    currentPlan,
+    creditInsufficientTriggeredFrom,
+  ]);
 
   return (
     <Modal
@@ -534,7 +680,12 @@ export const CreditInsufficientModal = memo(() => {
           className={`flex gap-4 ${hasPaidSubscription || !shouldShowCreditPacks ? 'justify-center' : ''}`}
         >
           {(!hasPaidSubscription || !shouldShowCreditPacks) && (
-            <PlusPlanCard selectedId={selectedId} onSelect={handleSelect} />
+            <PlusPlanCard
+              selectedId={selectedId}
+              onSelect={handleSelect}
+              voucher={availableVoucher}
+              voucherValidDays={voucherValidDays}
+            />
           )}
           {shouldShowCreditPacks && (
             <CreditPacksCard selectedId={selectedId} onSelect={handleSelect} />
