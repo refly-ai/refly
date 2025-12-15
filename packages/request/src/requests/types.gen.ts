@@ -1953,7 +1953,7 @@ export type SubscriptionInterval = 'monthly' | 'yearly';
 /**
  * Subscription plan type
  */
-export type SubscriptionPlanType = 'free' | 'starter' | 'maker' | 'enterprise' | 'plus';
+export type SubscriptionPlanType = 'free' | 'starter' | 'maker' | 'enterprise' | 'plus' | 'pro';
 
 /**
  * Subscription status
@@ -5079,6 +5079,14 @@ export type CreateCheckoutSessionRequest = {
    * Subscription billing interval
    */
   interval?: SubscriptionInterval;
+  /**
+   * Current plan
+   */
+  currentPlan?: string;
+  /**
+   * Source
+   */
+  source?: string;
 };
 
 export type CreateCreditPackCheckoutSessionRequest = {
@@ -5086,6 +5094,14 @@ export type CreateCreditPackCheckoutSessionRequest = {
    * Credit pack identifier
    */
   packId: string;
+  /**
+   * Current plan
+   */
+  currentPlan?: string;
+  /**
+   * Source
+   */
+  source?: string;
 };
 
 export type CreateCheckoutSessionResponse = BaseResponse & {
@@ -7404,6 +7420,33 @@ export type ListWorkflowAppsResponse = BaseResponse & {
    * List of workflow apps
    */
   data?: Array<WorkflowApp>;
+};
+
+/**
+ * Template generation status
+ */
+export type TemplateGenerationStatus = 'idle' | 'pending' | 'generating' | 'completed' | 'failed';
+
+export type GetTemplateGenerationStatusResponse = BaseResponse & {
+  data: {
+    status: TemplateGenerationStatus;
+    /**
+     * Generated template content
+     */
+    templateContent?: string | null;
+    /**
+     * Error message if generation failed
+     */
+    error?: string | null;
+    /**
+     * Last update time
+     */
+    updatedAt: string;
+    /**
+     * Creation time
+     */
+    createdAt: string;
+  };
 };
 
 export type ExecuteWorkflowAppRequest = {
@@ -10523,6 +10566,19 @@ export type ListWorkflowAppsData = {
 export type ListWorkflowAppsResponse2 = ListWorkflowAppsResponse;
 
 export type ListWorkflowAppsError = unknown;
+
+export type GetTemplateGenerationStatusData = {
+  query: {
+    /**
+     * Workflow app ID
+     */
+    appId: string;
+  };
+};
+
+export type GetTemplateGenerationStatusResponse2 = GetTemplateGenerationStatusResponse;
+
+export type GetTemplateGenerationStatusError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 

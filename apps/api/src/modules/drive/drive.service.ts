@@ -1,4 +1,5 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { PinoLogger } from 'nestjs-pino';
 import mime from 'mime';
 import pLimit from 'p-limit';
@@ -54,7 +55,10 @@ type ListDriveFilesParams = ListDriveFilesData['query'] &
   };
 
 @Injectable()
-export class DriveService {
+export class DriveService implements OnModuleInit {
+  // Lazy-loaded to avoid circular dependency
+  private subscriptionService: SubscriptionService;
+
   constructor(
     private readonly logger: PinoLogger,
     private config: ConfigService,
@@ -63,10 +67,15 @@ export class DriveService {
     @Inject(OSS_EXTERNAL) private externalOss: ObjectStorageService,
     private redis: RedisService,
     private providerService: ProviderService,
-    private subscriptionService: SubscriptionService,
+    private moduleRef: ModuleRef,
     private miscService: MiscService,
   ) {
     this.logger.setContext(DriveService.name);
+  }
+
+  async onModuleInit() {
+    // Use moduleRef.get with { strict: false } to resolve circular dependency at runtime
+    this.subscriptionService = this.moduleRef.get(SubscriptionService, { strict: false });
   }
 
   /**

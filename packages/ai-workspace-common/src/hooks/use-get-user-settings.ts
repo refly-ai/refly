@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from '@refly-packages/ai-workspace-common/utils/router';
 
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { LocalSettings, useUserStoreShallow } from '@refly/stores';
+import { LocalSettings, useSubscriptionStore, useUserStoreShallow } from '@refly/stores';
 import { safeStringifyJSON } from '@refly-packages/ai-workspace-common/utils/parse';
 import { mapDefaultLocale } from '@refly-packages/ai-workspace-common/utils/locale';
 import { LOCALE, OutputLocale } from '@refly/common-types';
@@ -73,6 +73,36 @@ export const useGetUserSettings = () => {
     }
 
     userStore.setUserProfile(settings);
+    const subscriptionPlanType = settings?.subscription?.planType;
+    const subscriptionLookupKey = settings?.subscription?.lookupKey;
+
+    const { setPlanType, setUserType } = useSubscriptionStore.getState();
+    if (!subscriptionPlanType) {
+      setPlanType('free');
+      setUserType('Free');
+    }
+    if (subscriptionPlanType) {
+      setPlanType(subscriptionPlanType);
+    }
+    if (subscriptionLookupKey) {
+      let userType = subscriptionLookupKey;
+      if (subscriptionPlanType === 'starter' || subscriptionPlanType === 'maker') {
+        userType = subscriptionPlanType.charAt(0).toUpperCase() + subscriptionPlanType.slice(1);
+      } else if (subscriptionPlanType === 'plus') {
+        if (
+          subscriptionLookupKey === 'refly_plus_monthly_stable_v3' ||
+          subscriptionLookupKey === 'refly_plus_yearly_stable_v3'
+        ) {
+          userType = 'Plus';
+        } else {
+          userType = 'Plus_old';
+        }
+      } else if (subscriptionPlanType === 'pro') {
+        userType = 'Pro_old';
+      }
+      setUserType(userType);
+    }
+
     localStorage.setItem('refly-user-profile', safeStringifyJSON(settings));
     userStore.setIsLogin(true);
 

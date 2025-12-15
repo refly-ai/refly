@@ -15,19 +15,22 @@ import { GithubStar } from '@refly-packages/ai-workspace-common/components/commo
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { WorkflowAppProducts } from '@refly-packages/ai-workspace-common/components/workflow-app/products';
 import { PublicFileUrlProvider } from '@refly-packages/ai-workspace-common/context/public-file-url';
+import { UseShareDataProvider } from '@refly-packages/ai-workspace-common/context/use-share-data';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useWorkflowExecutionPolling } from '@refly-packages/ai-workspace-common/hooks/use-workflow-execution-polling';
 import { ReactFlowProvider } from '@refly-packages/ai-workspace-common/components/canvas';
 import SettingModal from '@refly-packages/ai-workspace-common/components/settings';
 import {
-  useSiderStoreShallow,
   useCanvasOperationStoreShallow,
+  useSiderStoreShallow,
+  useSubscriptionStoreShallow,
   useUserStoreShallow,
 } from '@refly/stores';
 import { CanvasProvider } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { logEvent } from '@refly/telemetry-web';
+import { CreditInsufficientModal } from '@refly-packages/ai-workspace-common/components/subscription/credit-insufficient-modal';
 import { Helmet } from 'react-helmet';
 import FooterSection from '@refly-packages/ai-workspace-common/components/workflow-app/FooterSection';
 import WhyChooseRefly from './WhyChooseRefly';
@@ -75,6 +78,9 @@ const WorkflowAppPage: React.FC = () => {
 
   // Drive files state for preview and runtime
   const [runtimeDriveFiles, setRuntimeDriveFiles] = useState<DriveFile[]>([]);
+  const { creditInsufficientModalVisible } = useSubscriptionStoreShallow((state) => ({
+    creditInsufficientModalVisible: state.creditInsufficientModalVisible,
+  }));
 
   // Settings modal state
   const { showSettingModal, setShowSettingModal } = useSiderStoreShallow((state) => ({
@@ -174,9 +180,9 @@ const WorkflowAppPage: React.FC = () => {
         // Auto switch to products tab when workflow completes successfully
         products.length > 0 && setActiveTab('products');
       } else if (status === 'failed') {
-        notification.error({
-          message: t('workflowApp.run.failed'),
-        });
+        if (!creditInsufficientModalVisible) {
+          message.error(t('workflowApp.run.failed'));
+        }
       }
     },
     onError: (_error) => {
@@ -936,9 +942,11 @@ const WorkflowAppPage: React.FC = () => {
                       <div className="bg-[var(--refly-bg-float-z3)] rounded-lg border border-[var(--refly-Card-Border)] dark:bg-[var(--bg---refly-bg-body-z0,#0E0E0E)] relative z-20 transition-all duration-300 ease-in-out">
                         <div className="transition-opacity duration-300 ease-in-out">
                           {activeTab === 'products' ? (
-                            <PublicFileUrlProvider value={false}>
-                              <WorkflowAppProducts products={products || []} />
-                            </PublicFileUrlProvider>
+                            <UseShareDataProvider value={false}>
+                              <PublicFileUrlProvider value={false}>
+                                <WorkflowAppProducts products={products || []} />
+                              </PublicFileUrlProvider>
+                            </UseShareDataProvider>
                           ) : activeTab ===
                             'runLogs' ? // <WorkflowAppRunLogs nodeExecutions={logs || []} />
 
@@ -959,14 +967,16 @@ const WorkflowAppPage: React.FC = () => {
                 <div className="text-center z-10 text-[var(--refly-text-0)] dark:text-[var(--refly-text-StaticWhite)] font-['PingFang_SC'] font-semibold text-[14px] leading-[1.4285714285714286em]">
                   {t('workflowApp.resultPreview')}
                 </div>
-                <PublicFileUrlProvider>
-                  <SelectedResultsGrid
-                    fillRow
-                    bordered
-                    selectedResults={workflowApp?.resultNodeIds ?? []}
-                    options={previewOptions}
-                  />
-                </PublicFileUrlProvider>
+                <UseShareDataProvider value={true}>
+                  <PublicFileUrlProvider>
+                    <SelectedResultsGrid
+                      fillRow
+                      bordered
+                      selectedResults={workflowApp?.resultNodeIds ?? []}
+                      options={previewOptions}
+                    />
+                  </PublicFileUrlProvider>
+                </UseShareDataProvider>
               </div>
             )}
           </div>
@@ -978,6 +988,9 @@ const WorkflowAppPage: React.FC = () => {
 
           {/* Settings Modal */}
           <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
+
+          {/* Credit Insufficient Modal */}
+          <CreditInsufficientModal />
         </div>
       </CanvasProvider>
     </ReactFlowProvider>

@@ -2,7 +2,7 @@ import type { WorkflowVariable, WorkflowExecutionStatus } from '@refly/openapi-s
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select, Form, Typography, message, Tooltip, Avatar } from 'antd';
 import { IconShare } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 
 import cn from 'classnames';
@@ -10,6 +10,7 @@ import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.sv
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 import { useUserStoreShallow } from '@refly/stores';
 import { useAuthStoreShallow } from '@refly/stores';
+import { useSubscriptionStoreShallow } from '@refly/stores';
 import { ToolsDependencyChecker } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';
 import { MixedTextEditor } from '@refly-packages/ai-workspace-common/components/workflow-app/mixed-text-editor';
 import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/resource-upload';
@@ -17,6 +18,9 @@ import { useFileUpload } from '@refly-packages/ai-workspace-common/components/ca
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
 import { Question } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
+import { useTemplateGenerationStatus } from '../../hooks/useTemplateGenerationStatus';
+import { TemplateEditorSkeleton } from './template-editor-skeleton';
 
 const EmptyContent = () => {
   const { t } = useTranslation();
@@ -104,6 +108,10 @@ export const WorkflowAPPForm = ({
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
   }));
+  const { setCreditInsufficientModalVisible } = useSubscriptionStoreShallow((state) => ({
+    setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
+  }));
+  const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
 
   const [internalIsRunning, setInternalIsRunning] = useState(false);
 
@@ -112,6 +120,104 @@ export const WorkflowAPPForm = ({
   const [form] = Form.useForm();
   const [variableValues, setVariableValues] = useState<Record<string, any>>({});
   const [templateVariables, setTemplateVariables] = useState<WorkflowVariable[]>([]);
+
+  // Poll template generation status
+  // Initial polling condition: no templateContent
+  const [pollingEnabled, setPollingEnabled] = useState(
+    () => !templateContent && !!workflowApp?.appId,
+  );
+
+  const {
+    status: templateStatus,
+    templateContent: polledTemplateContent,
+    isInitialized: isStatusInitialized,
+  } = useTemplateGenerationStatus({
+    appId: workflowApp?.appId ?? null,
+    enabled: pollingEnabled,
+    pollingInterval: 2000,
+    maxAttempts: 30,
+  });
+
+  // Update polling state based on templateContent and status
+  useEffect(() => {
+    if (!workflowApp?.appId) {
+      setPollingEnabled(false);
+      return;
+    }
+
+    // Poll if no templateContent or status is pending/generating (regeneration in progress)
+    const shouldPoll =
+      !templateContent ||
+      (isStatusInitialized && (templateStatus === 'pending' || templateStatus === 'generating'));
+
+    setPollingEnabled(shouldPoll);
+  }, [templateContent, workflowApp?.appId, templateStatus, isStatusInitialized]);
+
+  // Determine effective template content
+  // Priority: polled content (if available and status is completed) > prop content > polled content
+  // This ensures newly generated content from polling is used even if prop hasn't updated yet
+  const effectiveTemplateContent =
+    polledTemplateContent && templateStatus === 'completed'
+      ? polledTemplateContent
+      : (templateContent ?? polledTemplateContent);
+
+  // Show editor when template content is available and status is completed or idle
+  const shouldShowEditor =
+    !!effectiveTemplateContent && (templateStatus === 'completed' || templateStatus === 'idle');
+
+  // Show form when:
+  // 1. Failed and no content (explicit failure)
+  // 2. Completed but no content (abnormal case, allow user to interact)
+  // 3. Idle and no content and initialized (no generation needed, show form for user input)
+  const shouldShowForm =
+    !shouldShowEditor &&
+    isStatusInitialized &&
+    !effectiveTemplateContent &&
+    (templateStatus === 'failed' || templateStatus === 'completed' || templateStatus === 'idle');
+
+  // Show skeleton screen by default (during initialization, pending, generating, or uninitialized idle)
+  // This covers: uninitialized state, pending, generating, and idle without initialization
+  const shouldShowSkeleton = !shouldShowEditor && !shouldShowForm;
+
+  // Track previous status to show toast only when entering pending/generating state
+  const previousStatusRef = useRef<string | null>(null);
+  const hasShownToastRef = useRef(false);
+
+  // Reset refs when appId changes
+  useEffect(() => {
+    previousStatusRef.current = null;
+    hasShownToastRef.current = false;
+  }, [workflowApp?.appId]);
+
+  // Show toast when entering pending/generating state and showing skeleton
+  useEffect(() => {
+    const isGeneratingState =
+      isStatusInitialized &&
+      (templateStatus === 'pending' || templateStatus === 'generating') &&
+      shouldShowSkeleton;
+
+    // Show toast when entering generating state (from other states or initial load)
+    if (isGeneratingState) {
+      const prevStatus = previousStatusRef.current;
+      const isEnteringGenerating =
+        prevStatus === null || (prevStatus !== 'pending' && prevStatus !== 'generating');
+
+      if (isEnteringGenerating && !hasShownToastRef.current) {
+        message.info(t('canvas.workflow.template.updating'));
+        hasShownToastRef.current = true;
+      }
+    } else {
+      // Reset toast flag when leaving generating state
+      if (previousStatusRef.current === 'pending' || previousStatusRef.current === 'generating') {
+        hasShownToastRef.current = false;
+      }
+    }
+
+    // Update previous status
+    if (isStatusInitialized) {
+      previousStatusRef.current = templateStatus;
+    }
+  }, [templateStatus, isStatusInitialized, shouldShowSkeleton, t]);
 
   // Check if form should be disabled
   const isFormDisabled = loading || isRunning || isPolling;
@@ -340,12 +446,12 @@ export const WorkflowAPPForm = ({
     [refreshFile, variableValues, handleValueChange, form, workflowVariables, canvasId],
   );
 
-  // Initialize template variables when templateContent changes
+  // Initialize template variables when effectiveTemplateContent changes
   useEffect(() => {
-    if (templateContent) {
+    if (effectiveTemplateContent) {
       setTemplateVariables(workflowVariables);
     }
-  }, [templateContent, workflowVariables]);
+  }, [effectiveTemplateContent, workflowVariables]);
 
   // Update form values when workflowVariables change
   useEffect(() => {
@@ -365,10 +471,19 @@ export const WorkflowAPPForm = ({
       return;
     }
 
+    // Frontend pre-check: if current credit balance is insufficient, open the modal and stop.
+    // This is best-effort and only runs when balance data is available, to avoid false negatives.
+    const requiredCredits = Number(workflowApp?.creditUsage ?? 0);
+    const isRequiredCreditsValid = Number.isFinite(requiredCredits) && requiredCredits > 0;
+    if (isBalanceSuccess && isRequiredCreditsValid && creditBalance < requiredCredits) {
+      setCreditInsufficientModalVisible(true, undefined, 'template');
+      return;
+    }
+
     try {
       let newVariables: WorkflowVariable[] = [];
 
-      if (templateContent) {
+      if (effectiveTemplateContent) {
         // Validate templateVariables values
         const hasInvalidValues = templateVariables.some((variable) => {
           if (!variable.value || variable.value.length === 0) {
@@ -636,12 +751,145 @@ export const WorkflowAPPForm = ({
     <div>
       {
         <>
-          {/* default show Form */}
-          {templateContent ? (
+          {/* Show skeleton during generation */}
+          {shouldShowSkeleton ? (
             <>
-              <div className={cn('w-full h-full gap-3 flex flex-col rounded-2xl', className)}>
+              <div
+                className={cn('w-full h-full gap-3 flex flex-col rounded-2xl relative', className)}
+              >
+                <TemplateEditorSkeleton />
+                {/* Tools Dependency Form */}
+                {workflowApp?.canvasData && (
+                  <div className="mt-3 flex items-center justify-between">
+                    <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
+
+                    <Tooltip title={t('canvas.workflow.run.toolsGuide') || 'Tools Guide'}>
+                      <Button
+                        className="flex items-center justify-center !h-7 !w-7 rounded-2xl hover:bg-refly-tertiary-hover bg-transparent border-none shadow-none"
+                        type="text"
+                        size="small"
+                        icon={
+                          <Question
+                            size={16}
+                            color="var(--refly-text-2)"
+                            className="flex items-center"
+                          />
+                        }
+                      />
+                    </Tooltip>
+                  </div>
+                )}
+              </div>
+
+              {/* owner */}
+              {workflowApp?.canvasData?.owner && (
+                <div className="mt-2 flex items-center gap-1.5 cursor-pointer">
+                  <Avatar
+                    size={16}
+                    src={workflowApp.canvasData.owner?.avatar || defaultAvatar}
+                    className="flex-shrink-0"
+                  />
+                  <span className="text-[11px] leading-[1.4545em] text-[rgba(28,31,35,0.35)] dark:text-refly-text-3">
+                    {workflowApp.canvasData.owner.nickname ||
+                      workflowApp.canvasData.owner?.name ||
+                      ''}
+                  </span>
+                  <div className="w-[1px] h-[10px] bg-[#E7E7E7] dark:bg-refly-Card-Border rounded-[3px] flex-shrink-0" />
+                  <span className="text-[11px] leading-[1.4545em] text-[rgba(28,31,35,0.35)] dark:text-refly-text-3">
+                    {formatDate(workflowApp?.updatedAt)}
+                  </span>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-refly-Card-Border rounded-b-lg">
+                <div className="w-full flex flex-row justify-end items-center gap-3">
+                  {/* Credit Info Block */}
+                  {
+                    <Tooltip title={t('subscription.creditBilling.description.canvasTotal')}>
+                      <div className="flex items-center bg-[#F6F6F6] dark:bg-[#232323] rounded-tl-[12px] rounded-bl-[12px] rounded-tr-[-12px] rounded-br-[-12px] px-4 pr-6 h-10 min-w-[94px] gap-1 border border-transparent select-none font-roboto mr-[-24px]">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="22"
+                          height="22"
+                          viewBox="0 0 22 22"
+                          fill="none"
+                        >
+                          <path
+                            d="M10.9992 2.19922C11.3806 2.19922 11.7186 2.44489 11.8363 2.80766C12.9673 6.29581 15.7026 9.03109 19.1908 10.1622C19.5535 10.2799 19.7992 10.6178 19.7992 10.9992C19.7992 11.3806 19.5535 11.7186 19.1908 11.8363C15.7026 12.9673 12.9673 15.7026 11.8363 19.1908C11.7186 19.5535 11.3806 19.7992 10.9992 19.7992C10.6178 19.7992 10.2799 19.5535 10.1622 19.1908C9.03109 15.7026 6.29581 12.9673 2.80766 11.8363C2.44489 11.7186 2.19922 11.3806 2.19922 10.9992C2.19922 10.6178 2.44489 10.2799 2.80766 10.1622C6.29581 9.03109 9.03109 6.29581 10.1622 2.80766L10.2163 2.67703C10.3651 2.38714 10.6656 2.19922 10.9992 2.19922Z"
+                            fill="url(#paint0_linear_1586_21457)"
+                          />
+                          <defs>
+                            <linearGradient
+                              id="paint0_linear_1586_21457"
+                              x1="10"
+                              y1="3.49902"
+                              x2="16.5"
+                              y2="19.999"
+                              gradientUnits="userSpaceOnUse"
+                            >
+                              <stop stop-color="#32E2BB" />
+                              <stop offset="1" stop-color="#0E9F77" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+
+                        <span className="font-semibold text-[20px] leading-[1.25em] font-roboto text-[#1C1F23] dark:text-white inline-flex items-center gap-[3px]">
+                          {workflowApp?.creditUsage ?? 0}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="15"
+                            height="5"
+                            viewBox="0 0 15 5"
+                            fill="none"
+                            className="fill-[#1C1F23] dark:fill-white"
+                          >
+                            <path d="M14.4697 0.915887C14.6995 1.06906 14.7639 1.38042 14.6121 1.61108C14.1144 2.36723 13.2896 3.54082 12.123 4.25476C11.3679 4.71688 10.4467 5.00886 9.37402 4.91199C8.3174 4.81654 7.2266 4.3538 6.09668 3.50867C5.53542 3.08897 5.09464 2.96119 4.76562 2.94421C4.43374 2.92718 4.1032 3.01782 3.75781 3.2157C3.15311 3.56226 2.61452 4.17132 2.17089 4.78259C2.00869 5.00607 1.69948 5.06906 1.46972 4.91589L0.22169 4.08387C-0.00807451 3.93069 -0.0713753 3.61969 0.0889509 3.39486C0.625529 2.64239 1.44023 1.6619 2.51562 1.04578C3.18379 0.663049 3.98585 0.401539 4.89355 0.44812C5.8041 0.49491 6.71106 0.845772 7.59473 1.50671C8.46471 2.15741 9.12402 2.37983 9.59863 2.42273C10.0571 2.46414 10.4486 2.34826 10.8184 2.12195C11.5184 1.69342 12.0448 0.950943 12.5293 0.223192C12.6824 -0.00666726 12.9919 -0.0693076 13.2217 0.0838687L14.4697 0.915887Z" />
+                          </svg>
+                        </span>
+                        <span className="inline text-xs font-roboto font-normal text-[#1C1F23] dark:text-white opacity-60 ml-0.5">
+                          / {t('canvas.workflow.run.run') || 'run'}
+                        </span>
+                      </div>
+                    </Tooltip>
+                  }
+                  {/* RUN Button - disabled during generation */}
+                  <Button
+                    className={cn(
+                      'h-10 flex items-center justify-center',
+                      'w-[120px] sm:w-[200px] min-w-[109px]',
+                      'px-4 sm:px-[46px] gap-2',
+                      'text-white dark:text-[var(--text-icon-refly-text-flip,#1C1F23)] dark:hover:text-[var(--text-icon-refly-text-flip,#1C1F23)] font-roboto font-semibold text-[16px] leading-[1.25em]',
+                      'border-none shadow-none rounded-[12px]',
+                      'transition-colors duration-150 ease-in-out',
+                      'bg-refly-bg-control-z1 hover:!bg-refly-tertiary-hover dark:bg-[var(--bg---refly-bg-dark,#ECECEC)] dark:hover:!bg-[var(--bg---refly-bg-dark,#ECECEC)]',
+                    )}
+                    type="primary"
+                    disabled
+                  >
+                    <span className="inline-flex items-center gap-[2px]">
+                      {t('canvas.workflow.run.executing')}
+                    </span>
+                  </Button>
+                  {/* Share Icon Button */}
+                  {onCopyShareLink && (
+                    <Button
+                      className="flex items-center justify-center rounded-[12px] bg-[#fff] dark:bg-[#232323] border-[0.5px] border-solid border-[rgba(28,31,35,0.30)] text-[#1C1F23] dark:text-white hover:bg-[#eaeaea] shadow-none font-roboto h-10 !w-10"
+                      type="default"
+                      icon={<IconShare size={16} className="" />}
+                      onClick={onCopyShareLink}
+                      title={t('canvas.workflow.run.copyShareLink') || 'Copy Share Link'}
+                    />
+                  )}
+                </div>
+              </div>
+            </>
+          ) : shouldShowEditor ? (
+            <>
+              <div
+                className={cn('w-full h-full gap-3 flex flex-col rounded-2xl relative', className)}
+              >
                 <MixedTextEditor
-                  templateContent={templateContent ?? ''}
+                  templateContent={effectiveTemplateContent ?? ''}
                   variables={templateVariables.length > 0 ? templateVariables : workflowVariables}
                   onVariablesChange={handleTemplateVariableChange}
                   disabled={isFormDisabled}
@@ -807,8 +1055,10 @@ export const WorkflowAPPForm = ({
                 </div>
               </div>
             </>
-          ) : (
-            <div className={cn('w-full h-full gap-3 flex flex-col rounded-2xl', className)}>
+          ) : shouldShowForm ? (
+            <div
+              className={cn('w-full h-full gap-3 flex flex-col rounded-2xl relative', className)}
+            >
               <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
                 {/* Show loading state when loading */}
                 {workflowVariables.length > 0 ? (
@@ -950,7 +1200,7 @@ export const WorkflowAPPForm = ({
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </>
       }
     </div>

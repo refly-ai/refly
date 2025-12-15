@@ -48,6 +48,8 @@ tags:
     description: Workflow management endpoints
   - name: app
     description: APP management endpoints
+  - name: voucher
+    description: Voucher and discount coupon management endpoints
 
 paths:
   /variable-extraction/extract:
@@ -3010,6 +3012,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListWorkflowAppsResponse'
+  /workflow-app/template-status:
+    get:
+      tags:
+        - app
+      summary: Get template generation status
+      description: Get template generation status for a workflow app
+      operationId: getTemplateGenerationStatus
+      parameters:
+        - name: appId
+          in: query
+          description: Workflow app ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTemplateGenerationStatusResponse'
+        '400':
+          description: Bad request (missing appId)
+        '404':
+          description: Workflow app not found
+      security:
+        - api_key: []
   /user/settings:
     get:
       tags:
@@ -4043,6 +4072,155 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConvertResponse'
+
+  # Voucher endpoints
+  /voucher/available:
+    get:
+      tags:
+        - voucher
+      summary: Get available vouchers
+      description: Get user's available (unused, not expired) vouchers
+      operationId: getAvailableVouchers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAvailableVouchersResponse'
+
+  /voucher/list:
+    get:
+      tags:
+        - voucher
+      summary: List user vouchers
+      description: List all vouchers for the current user
+      operationId: listUserVouchers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListUserVouchersResponse'
+
+  /voucher/validate:
+    post:
+      tags:
+        - voucher
+      summary: Validate voucher
+      description: Validate a voucher before use
+      operationId: validateVoucher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateVoucherRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateVoucherResponse'
+
+  /voucher/invitation/create:
+    post:
+      tags:
+        - voucher
+      summary: Create voucher invitation
+      description: Create a sharing invitation for a voucher
+      operationId: createVoucherInvitation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVoucherInvitationRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateVoucherInvitationResponse'
+
+  /voucher/invitation/verify:
+    get:
+      tags:
+        - voucher
+      summary: Verify invitation code
+      description: Verify an invitation code (public endpoint)
+      operationId: verifyVoucherInvitation
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Invitation code
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyVoucherInvitationResponse'
+
+  /voucher/invitation/claim:
+    post:
+      tags:
+        - voucher
+      summary: Claim invitation
+      description: Claim an invitation and receive a voucher
+      operationId: claimVoucherInvitation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimVoucherInvitationRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimVoucherInvitationResponse'
+
+  /voucher/trigger:
+    post:
+      tags:
+        - voucher
+      summary: Trigger voucher generation
+      description: Trigger voucher generation on template publish. Scores the template and generates a discount voucher.
+      operationId: triggerVoucher
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerVoucherRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerVoucherResponse'
 
 components:
   schemas:
@@ -5614,6 +5792,9 @@ components:
         cacheReadTokens:
           type: number
           description: Cache read tokens
+        cacheWriteTokens:
+          type: number
+          description: Cache write tokens
         providerItemId:
           type: string
           description: Provider item ID
@@ -5621,6 +5802,35 @@ components:
           type: string
           description: Model tier
           deprecated: true
+        originalModelId:
+          type: string
+          description: Original model ID before routing (e.g., 'auto')
+        modelRoutedData:
+          type: object
+          description: Complete model routing metadata (JSON)
+          properties:
+            isRouted:
+              type: boolean
+              description: Whether this request was routed
+            originalItemId:
+              type: string
+              description: Original provider item ID before routing
+            originalModelId:
+              type: string
+              description: Original model ID (e.g., 'auto')
+            originalProvider:
+              type: string
+              description: Original model provider name
+            originalModelName:
+              type: string
+              description: Original model name/label for display
+            routedAt:
+              type: string
+              format: date-time
+              description: Routing timestamp
+            routingStrategy:
+              type: string
+              description: Routing strategy used (e.g., 'auto', 'load_balance', 'region')
     ActionStatus:
       type: string
       description: Action status
@@ -5887,6 +6097,12 @@ components:
         modelInfo:
           description: Selected model
           $ref: '#/components/schemas/ModelInfo'
+        actualProviderItemId:
+          type: string
+          description: Actual provider item ID used for execution after routing (e.g. routed from Auto)
+        isAutoModelRouted:
+          type: boolean
+          description: Whether the action execution was routed from the Auto model
         targetType:
           description: Action target type
           $ref: '#/components/schemas/EntityType'
@@ -6000,6 +6216,7 @@ components:
         - maker
         - enterprise
         - plus
+        - pro
     SubscriptionStatus:
       type: string
       description: Subscription status
@@ -9203,6 +9420,15 @@ components:
         interval:
           description: Subscription billing interval
           $ref: '#/components/schemas/SubscriptionInterval'
+        voucherId:
+          type: string
+          description: Optional voucher ID to apply discount
+        currentPlan:
+          type: string
+          description: Current plan
+        source:
+          type: string
+          description: Source
     CreateCreditPackCheckoutSessionRequest:
       type: object
       required: 
@@ -9211,6 +9437,12 @@ components:
         packId:
           type: string
           description: Credit pack identifier
+        currentPlan:
+          type: string
+          description: Current plan
+        source:
+          type: string
+          description: Source
     CreateCheckoutSessionResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -11497,6 +11729,9 @@ components:
           type: string
           format: date-time
           description: Workflow app update timestamp
+        voucherTriggerResult:
+          $ref: '#/components/schemas/VoucherTriggerResult'
+          description: Voucher trigger result when publishing to community
     CreateWorkflowAppResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -11521,6 +11756,48 @@ components:
               description: List of workflow apps
               items:
                 $ref: '#/components/schemas/WorkflowApp'
+    TemplateGenerationStatus:
+      type: string
+      description: Template generation status
+      enum:
+        - idle
+        - pending
+        - generating
+        - completed
+        - failed
+      example: "completed"
+    GetTemplateGenerationStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              type: object
+              required:
+                - status
+                - updatedAt
+                - createdAt
+              properties:
+                status:
+                  $ref: '#/components/schemas/TemplateGenerationStatus'
+                templateContent:
+                  type: string
+                  nullable: true
+                  description: Generated template content
+                error:
+                  type: string
+                  nullable: true
+                  description: Error message if generation failed
+                updatedAt:
+                  type: string
+                  format: date-time
+                  description: Last update time
+                createdAt:
+                  type: string
+                  format: date-time
+                  description: Creation time
     ExecuteWorkflowAppRequest:
       type: object
       required:
@@ -13188,6 +13465,330 @@ components:
           type: string
           format: date-time
           description: Last update timestamp
+
+    # Voucher Schemas
+    VoucherStatus:
+      type: string
+      enum:
+        - unused
+        - used
+        - expired
+        - invalid
+      description: Voucher status
+
+    VoucherSource:
+      type: string
+      enum:
+        - template_publish
+        - invitation_claim
+      description: Voucher source
+
+    InvitationStatus:
+      type: string
+      enum:
+        - unclaimed
+        - claimed
+        - expired
+      description: Invitation status
+
+    Voucher:
+      type: object
+      required:
+        - voucherId
+        - uid
+        - discountPercent
+        - status
+        - source
+        - expiresAt
+        - createdAt
+        - updatedAt
+      properties:
+        voucherId:
+          type: string
+          description: Unique voucher ID
+        uid:
+          type: string
+          description: User ID who owns the voucher
+        discountPercent:
+          type: number
+          description: Discount percentage (10-90)
+        status:
+          $ref: '#/components/schemas/VoucherStatus'
+        source:
+          $ref: '#/components/schemas/VoucherSource'
+        sourceId:
+          type: string
+          description: Source entity ID (template ID or invitation ID)
+        llmScore:
+          type: number
+          description: LLM scoring result (0-100)
+        expiresAt:
+          type: string
+          format: date-time
+          description: Voucher expiration time
+        usedAt:
+          type: string
+          format: date-time
+          description: Voucher usage time
+        subscriptionId:
+          type: string
+          description: Subscription ID if voucher was used
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Update timestamp
+
+    VoucherInvitation:
+      type: object
+      required:
+        - invitationId
+        - inviterUid
+        - inviteCode
+        - voucherId
+        - discountPercent
+        - status
+        - rewardGranted
+        - createdAt
+        - updatedAt
+      properties:
+        invitationId:
+          type: string
+          description: Unique invitation ID
+        inviterUid:
+          type: string
+          description: Inviter user ID
+        inviteeUid:
+          type: string
+          description: Invitee user ID
+        inviteCode:
+          type: string
+          description: Short invitation code for sharing
+        voucherId:
+          type: string
+          description: Source voucher ID
+        discountPercent:
+          type: number
+          description: Discount percentage
+        status:
+          $ref: '#/components/schemas/InvitationStatus'
+        claimedAt:
+          type: string
+          format: date-time
+          description: Claim timestamp
+        rewardGranted:
+          type: boolean
+          description: Whether inviter reward has been granted
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Update timestamp
+
+    VoucherTriggerResult:
+      type: object
+      required:
+        - voucher
+        - score
+      properties:
+        voucher:
+          $ref: '#/components/schemas/Voucher'
+        score:
+          type: number
+          description: LLM score (0-100)
+        feedback:
+          type: string
+          description: LLM feedback for improvement
+        triggerLimitReached:
+          type: boolean
+          description: Whether daily trigger limit was reached
+
+    VoucherAvailableResult:
+      type: object
+      required:
+        - hasAvailableVoucher
+        - vouchers
+      properties:
+        hasAvailableVoucher:
+          type: boolean
+          description: Whether user has available vouchers
+        vouchers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Voucher'
+          description: List of available vouchers
+        bestVoucher:
+          $ref: '#/components/schemas/Voucher'
+          description: Best available voucher (highest discount)
+
+    VoucherValidateResult:
+      type: object
+      required:
+        - valid
+      properties:
+        valid:
+          type: boolean
+          description: Whether voucher is valid
+        voucher:
+          $ref: '#/components/schemas/Voucher'
+          description: Voucher details
+        reason:
+          type: string
+          description: Reason if not valid
+
+    CreateInvitationResult:
+      type: object
+      required:
+        - invitation
+      properties:
+        invitation:
+          $ref: '#/components/schemas/VoucherInvitation'
+          description: Created invitation
+
+    ClaimInvitationResult:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+          description: Whether claim was successful
+        voucher:
+          $ref: '#/components/schemas/Voucher'
+          description: Created voucher for invitee
+        inviterName:
+          type: string
+          description: Name of the user who sent the invitation
+        message:
+          type: string
+          description: Error message if failed
+
+    # Voucher Request/Response Schemas
+    ValidateVoucherRequest:
+      type: object
+      required:
+        - voucherId
+      properties:
+        voucherId:
+          type: string
+          description: Voucher ID to validate
+
+    CreateVoucherInvitationRequest:
+      type: object
+      required:
+        - voucherId
+      properties:
+        voucherId:
+          type: string
+          description: Voucher ID to create invitation for
+
+    ClaimVoucherInvitationRequest:
+      type: object
+      required:
+        - inviteCode
+      properties:
+        inviteCode:
+          type: string
+          description: Invitation code to claim
+
+    GetAvailableVouchersResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/VoucherAvailableResult'
+
+    ListUserVouchersResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Voucher'
+
+    ValidateVoucherResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/VoucherValidateResult'
+
+    CreateVoucherInvitationResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/CreateInvitationResult'
+
+    VerifyInvitationResult:
+      type: object
+      required:
+        - valid
+      properties:
+        valid:
+          type: boolean
+          description: Whether the invitation is valid and can be claimed
+        invitation:
+          $ref: '#/components/schemas/VoucherInvitation'
+        claimedByUid:
+          type: string
+          description: If already claimed, the UID of the user who claimed it
+        message:
+          type: string
+          description: Error or status message
+
+    VerifyVoucherInvitationResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/VerifyInvitationResult'
+
+    ClaimVoucherInvitationResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ClaimInvitationResult'
+
+    TriggerVoucherRequest:
+      type: object
+      required:
+        - canvasId
+        - triggerType
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID of the template being published
+        templateId:
+          type: string
+          description: Optional template ID (defaults to canvasId if not provided)
+        triggerType:
+          type: string
+          enum:
+            - template_publish
+          description: Type of trigger event
+
+    TriggerVoucherResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/VoucherTriggerResult'
 
   securitySchemes:
     api_key:

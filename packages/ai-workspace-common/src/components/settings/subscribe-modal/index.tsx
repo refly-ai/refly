@@ -42,6 +42,7 @@ export const SubscribeModal = () => {
       }}
       open={visible}
       footer={null}
+      destroyOnClose
       className="subscribe-modal !p-0"
       onCancel={() => {
         setVisible(false);

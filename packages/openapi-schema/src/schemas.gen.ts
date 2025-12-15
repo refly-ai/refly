@@ -2048,6 +2048,10 @@ export const TokenUsageItemSchema = {
       type: 'number',
       description: 'Cache read tokens',
     },
+    cacheWriteTokens: {
+      type: 'number',
+      description: 'Cache write tokens',
+    },
     providerItemId: {
       type: 'string',
       description: 'Provider item ID',
@@ -2056,6 +2060,45 @@ export const TokenUsageItemSchema = {
       type: 'string',
       description: 'Model tier',
       deprecated: true,
+    },
+    originalModelId: {
+      type: 'string',
+      description: "Original model ID before routing (e.g., 'auto')",
+    },
+    modelRoutedData: {
+      type: 'object',
+      description: 'Complete model routing metadata (JSON)',
+      properties: {
+        isRouted: {
+          type: 'boolean',
+          description: 'Whether this request was routed',
+        },
+        originalItemId: {
+          type: 'string',
+          description: 'Original provider item ID before routing',
+        },
+        originalModelId: {
+          type: 'string',
+          description: "Original model ID (e.g., 'auto')",
+        },
+        originalProvider: {
+          type: 'string',
+          description: 'Original model provider name',
+        },
+        originalModelName: {
+          type: 'string',
+          description: 'Original model name/label for display',
+        },
+        routedAt: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Routing timestamp',
+        },
+        routingStrategy: {
+          type: 'string',
+          description: "Routing strategy used (e.g., 'auto', 'load_balance', 'region')",
+        },
+      },
     },
   },
 } as const;
@@ -2379,6 +2422,15 @@ export const ActionResultSchema = {
       description: 'Selected model',
       $ref: '#/components/schemas/ModelInfo',
     },
+    actualProviderItemId: {
+      type: 'string',
+      description:
+        'Actual provider item ID used for execution after routing (e.g. routed from Auto)',
+    },
+    isAutoModelRouted: {
+      type: 'boolean',
+      description: 'Whether the action execution was routed from the Auto model',
+    },
     targetType: {
       description: 'Action target type',
       $ref: '#/components/schemas/EntityType',
@@ -2513,7 +2565,7 @@ export const SubscriptionIntervalSchema = {
 export const SubscriptionPlanTypeSchema = {
   type: 'string',
   description: 'Subscription plan type',
-  enum: ['free', 'starter', 'maker', 'enterprise', 'plus'],
+  enum: ['free', 'starter', 'maker', 'enterprise', 'plus', 'pro'],
 } as const;
 
 export const SubscriptionStatusSchema = {
@@ -7100,6 +7152,18 @@ export const CreateCheckoutSessionRequestSchema = {
       description: 'Subscription billing interval',
       $ref: '#/components/schemas/SubscriptionInterval',
     },
+    voucherId: {
+      type: 'string',
+      description: 'Optional voucher ID to apply discount',
+    },
+    currentPlan: {
+      type: 'string',
+      description: 'Current plan',
+    },
+    source: {
+      type: 'string',
+      description: 'Source',
+    },
   },
 } as const;
 
@@ -7110,6 +7174,14 @@ export const CreateCreditPackCheckoutSessionRequestSchema = {
     packId: {
       type: 'string',
       description: 'Credit pack identifier',
+    },
+    currentPlan: {
+      type: 'string',
+      description: 'Current plan',
+    },
+    source: {
+      type: 'string',
+      description: 'Source',
     },
   },
 } as const;
@@ -10350,6 +10422,10 @@ export const WorkflowAppSchema = {
       format: 'date-time',
       description: 'Workflow app update timestamp',
     },
+    voucherTriggerResult: {
+      $ref: '#/components/schemas/VoucherTriggerResult',
+      description: 'Voucher trigger result when publishing to community',
+    },
   },
 } as const;
 
@@ -10398,6 +10474,56 @@ export const ListWorkflowAppsResponseSchema = {
           description: 'List of workflow apps',
           items: {
             $ref: '#/components/schemas/WorkflowApp',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const TemplateGenerationStatusSchema = {
+  type: 'string',
+  description: 'Template generation status',
+  enum: ['idle', 'pending', 'generating', 'completed', 'failed'],
+  example: 'completed',
+} as const;
+
+export const GetTemplateGenerationStatusResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      required: ['data'],
+      properties: {
+        data: {
+          type: 'object',
+          required: ['status', 'updatedAt', 'createdAt'],
+          properties: {
+            status: {
+              $ref: '#/components/schemas/TemplateGenerationStatus',
+            },
+            templateContent: {
+              type: 'string',
+              nullable: true,
+              description: 'Generated template content',
+            },
+            error: {
+              type: 'string',
+              nullable: true,
+              description: 'Error message if generation failed',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Last update time',
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Creation time',
+            },
           },
         },
       },
@@ -12495,4 +12621,438 @@ export const ToolRegistryEntrySchema = {
       description: 'Last update timestamp',
     },
   },
+} as const;
+
+export const VoucherStatusSchema = {
+  type: 'string',
+  enum: ['unused', 'used', 'expired', 'invalid'],
+  description: 'Voucher status',
+} as const;
+
+export const VoucherSourceSchema = {
+  type: 'string',
+  enum: ['template_publish', 'invitation_claim'],
+  description: 'Voucher source',
+} as const;
+
+export const InvitationStatusSchema = {
+  type: 'string',
+  enum: ['unclaimed', 'claimed', 'expired'],
+  description: 'Invitation status',
+} as const;
+
+export const VoucherSchema = {
+  type: 'object',
+  required: [
+    'voucherId',
+    'uid',
+    'discountPercent',
+    'status',
+    'source',
+    'expiresAt',
+    'createdAt',
+    'updatedAt',
+  ],
+  properties: {
+    voucherId: {
+      type: 'string',
+      description: 'Unique voucher ID',
+    },
+    uid: {
+      type: 'string',
+      description: 'User ID who owns the voucher',
+    },
+    discountPercent: {
+      type: 'number',
+      description: 'Discount percentage (10-90)',
+    },
+    status: {
+      $ref: '#/components/schemas/VoucherStatus',
+    },
+    source: {
+      $ref: '#/components/schemas/VoucherSource',
+    },
+    sourceId: {
+      type: 'string',
+      description: 'Source entity ID (template ID or invitation ID)',
+    },
+    llmScore: {
+      type: 'number',
+      description: 'LLM scoring result (0-100)',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Voucher expiration time',
+    },
+    usedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Voucher usage time',
+    },
+    subscriptionId: {
+      type: 'string',
+      description: 'Subscription ID if voucher was used',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Creation timestamp',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Update timestamp',
+    },
+  },
+} as const;
+
+export const VoucherInvitationSchema = {
+  type: 'object',
+  required: [
+    'invitationId',
+    'inviterUid',
+    'inviteCode',
+    'voucherId',
+    'discountPercent',
+    'status',
+    'rewardGranted',
+    'createdAt',
+    'updatedAt',
+  ],
+  properties: {
+    invitationId: {
+      type: 'string',
+      description: 'Unique invitation ID',
+    },
+    inviterUid: {
+      type: 'string',
+      description: 'Inviter user ID',
+    },
+    inviteeUid: {
+      type: 'string',
+      description: 'Invitee user ID',
+    },
+    inviteCode: {
+      type: 'string',
+      description: 'Short invitation code for sharing',
+    },
+    voucherId: {
+      type: 'string',
+      description: 'Source voucher ID',
+    },
+    discountPercent: {
+      type: 'number',
+      description: 'Discount percentage',
+    },
+    status: {
+      $ref: '#/components/schemas/InvitationStatus',
+    },
+    claimedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Claim timestamp',
+    },
+    rewardGranted: {
+      type: 'boolean',
+      description: 'Whether inviter reward has been granted',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Creation timestamp',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Update timestamp',
+    },
+  },
+} as const;
+
+export const VoucherTriggerResultSchema = {
+  type: 'object',
+  required: ['voucher', 'score'],
+  properties: {
+    voucher: {
+      $ref: '#/components/schemas/Voucher',
+    },
+    score: {
+      type: 'number',
+      description: 'LLM score (0-100)',
+    },
+    feedback: {
+      type: 'string',
+      description: 'LLM feedback for improvement',
+    },
+    triggerLimitReached: {
+      type: 'boolean',
+      description: 'Whether daily trigger limit was reached',
+    },
+  },
+} as const;
+
+export const VoucherAvailableResultSchema = {
+  type: 'object',
+  required: ['hasAvailableVoucher', 'vouchers'],
+  properties: {
+    hasAvailableVoucher: {
+      type: 'boolean',
+      description: 'Whether user has available vouchers',
+    },
+    vouchers: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/Voucher',
+      },
+      description: 'List of available vouchers',
+    },
+    bestVoucher: {
+      $ref: '#/components/schemas/Voucher',
+      description: 'Best available voucher (highest discount)',
+    },
+  },
+} as const;
+
+export const VoucherValidateResultSchema = {
+  type: 'object',
+  required: ['valid'],
+  properties: {
+    valid: {
+      type: 'boolean',
+      description: 'Whether voucher is valid',
+    },
+    voucher: {
+      $ref: '#/components/schemas/Voucher',
+      description: 'Voucher details',
+    },
+    reason: {
+      type: 'string',
+      description: 'Reason if not valid',
+    },
+  },
+} as const;
+
+export const CreateInvitationResultSchema = {
+  type: 'object',
+  required: ['invitation'],
+  properties: {
+    invitation: {
+      $ref: '#/components/schemas/VoucherInvitation',
+      description: 'Created invitation',
+    },
+  },
+} as const;
+
+export const ClaimInvitationResultSchema = {
+  type: 'object',
+  required: ['success'],
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether claim was successful',
+    },
+    voucher: {
+      $ref: '#/components/schemas/Voucher',
+      description: 'Created voucher for invitee',
+    },
+    inviterName: {
+      type: 'string',
+      description: 'Name of the user who sent the invitation',
+    },
+    message: {
+      type: 'string',
+      description: 'Error message if failed',
+    },
+  },
+} as const;
+
+export const ValidateVoucherRequestSchema = {
+  type: 'object',
+  required: ['voucherId'],
+  properties: {
+    voucherId: {
+      type: 'string',
+      description: 'Voucher ID to validate',
+    },
+  },
+} as const;
+
+export const CreateVoucherInvitationRequestSchema = {
+  type: 'object',
+  required: ['voucherId'],
+  properties: {
+    voucherId: {
+      type: 'string',
+      description: 'Voucher ID to create invitation for',
+    },
+  },
+} as const;
+
+export const ClaimVoucherInvitationRequestSchema = {
+  type: 'object',
+  required: ['inviteCode'],
+  properties: {
+    inviteCode: {
+      type: 'string',
+      description: 'Invitation code to claim',
+    },
+  },
+} as const;
+
+export const GetAvailableVouchersResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/VoucherAvailableResult',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ListUserVouchersResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            $ref: '#/components/schemas/Voucher',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ValidateVoucherResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/VoucherValidateResult',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const CreateVoucherInvitationResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/CreateInvitationResult',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const VerifyInvitationResultSchema = {
+  type: 'object',
+  required: ['valid'],
+  properties: {
+    valid: {
+      type: 'boolean',
+      description: 'Whether the invitation is valid and can be claimed',
+    },
+    invitation: {
+      $ref: '#/components/schemas/VoucherInvitation',
+    },
+    claimedByUid: {
+      type: 'string',
+      description: 'If already claimed, the UID of the user who claimed it',
+    },
+    message: {
+      type: 'string',
+      description: 'Error or status message',
+    },
+  },
+} as const;
+
+export const VerifyVoucherInvitationResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/VerifyInvitationResult',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ClaimVoucherInvitationResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/ClaimInvitationResult',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const TriggerVoucherRequestSchema = {
+  type: 'object',
+  required: ['canvasId', 'triggerType'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID of the template being published',
+    },
+    templateId: {
+      type: 'string',
+      description: 'Optional template ID (defaults to canvasId if not provided)',
+    },
+    triggerType: {
+      type: 'string',
+      enum: ['template_publish'],
+      description: 'Type of trigger event',
+    },
+  },
+} as const;
+
+export const TriggerVoucherResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/VoucherTriggerResult',
+        },
+      },
+    },
+  ],
 } as const;

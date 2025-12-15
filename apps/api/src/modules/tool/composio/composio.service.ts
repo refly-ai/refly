@@ -29,7 +29,6 @@ export class ComposioService {
   private readonly logger = new Logger(ComposioService.name);
   private composio: Composio;
   private readonly DEFINITION_CACHE_PREFIX = 'oauth:definition:';
-
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
@@ -670,8 +669,10 @@ export class ComposioService {
           this.logger.error(
             `Failed to execute ${context.authType} tool ${toolName}: ${error instanceof Error ? error.message : error}`,
           );
+          const errorMessage = error instanceof Error ? error.message : String(error);
           return JSON.stringify({
-            error: error instanceof Error ? error.message : String(error),
+            status: 'error',
+            error: errorMessage,
           });
         }
       },

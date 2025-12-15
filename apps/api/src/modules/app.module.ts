@@ -44,6 +44,7 @@ import { VariableExtractionModule } from './variable-extraction/variable-extract
 import { InvitationModule } from './invitation/invitation.module';
 import { DriveModule } from './drive/drive.module';
 import { FormModule } from './form/form.module';
+import { VoucherModule } from './voucher/voucher.module';
 import { CommonModule } from './common/common.module';
 import { RedisService } from './common/redis.service';
 
@@ -53,7 +54,7 @@ import { initTracer } from '../tracer';
 // Initialize OpenTelemetry tracing
 // Tracer handles its own configuration via environment variables:
 // - OTLP_TRACES_ENDPOINT: Tempo/Grafana (full observability)
-// - LANGFUSE_ENABLED + LANGFUSE_*: Langfuse (LLM spans only)
+// - LANGFUSE_BASE_URL + LANGFUSE_*: Langfuse (LLM spans only)
 initTracer();
 
 class CustomThrottlerGuard extends ThrottlerGuard {
@@ -135,6 +136,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     VariableExtractionModule,
     DriveModule,
     FormModule,
+    VoucherModule,
     ...(isDesktop()
       ? []
       : [

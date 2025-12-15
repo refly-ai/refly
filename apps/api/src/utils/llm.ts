@@ -23,10 +23,11 @@ export const extractChunkContent = (chunk: BaseMessageChunk): ChunkContent => {
   let reasoningContent = '';
 
   for (const item of chunk.content) {
-    if (item.type === 'text') {
-      content += item.text;
-    } else if (item.type === 'reasoning_content') {
-      reasoningContent += item.reasoningText?.text ?? '';
+    const itemAny = item as any;
+    if (itemAny.type === 'text') {
+      content += itemAny.text;
+    } else if (itemAny.type === 'reasoning_content') {
+      reasoningContent += itemAny.reasoningText?.text ?? '';
     }
   }
 

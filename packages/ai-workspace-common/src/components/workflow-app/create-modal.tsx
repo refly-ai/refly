@@ -11,12 +11,16 @@ import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { logEvent } from '@refly/telemetry-web';
 import { MultiSelectResult } from './multi-select-result';
 import { SelectedResultsGrid } from './selected-results-grid';
-import BannerSvg from './banner.svg';
+import { UseShareDataProvider } from '@refly-packages/ai-workspace-common/context/use-share-data';
+import BannerSvg from './banner.webp';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
-import { CanvasNode, DriveFile } from '@refly/openapi-schema';
+import { CanvasNode, DriveFile, VoucherTriggerResult } from '@refly/openapi-schema';
 import { useGetCanvasCommissionByCanvasId } from '../../queries/queries';
 import { mapDriveFilesToCanvasNodes } from '@refly/utils';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { VoucherPopup } from '@refly-packages/ai-workspace-common/components/voucher/voucher-popup';
+import { compressImageWithPreview } from '../../utils/image-compression';
+import { preloadImage } from '../../utils/image-preload';
 
 interface CreateWorkflowAppModalProps {
   title: string;
@@ -97,6 +101,25 @@ SuccessMessage.displayName = 'SuccessMessage';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
+const MAX_COVER_IMAGE_BYTES = 5 * 1024 * 1024; // Target under 5MB for faster upload
+const MAX_COVER_IMAGE_DIMENSION = 2048; // Dimension cap to keep clarity while limiting size
+const ENABLE_COVER_UPLOAD_LOG = true; // Toggle for debugging compression/upload flow
+const COVER_COMPRESSION_OPTIONS = {
+  maxBytes: MAX_COVER_IMAGE_BYTES,
+  maxDimension: MAX_COVER_IMAGE_DIMENSION,
+  qualityStart: 0.88,
+  qualityMin: 0.45,
+  maxAttempts: 8,
+  minDimension: 100,
+  enableLog: ENABLE_COVER_UPLOAD_LOG,
+  logPrefix: '[CoverUpload]',
+};
+
+const createObjectUrlSafe = (file: File): string => {
+  const url = URL.createObjectURL(file);
+  return url;
+};
+
 export const CreateWorkflowAppModal = ({
   canvasId,
   title,
@@ -134,6 +157,9 @@ export const CreateWorkflowAppModal = ({
   // Copy share link state
   const [linkCopied, setLinkCopied] = useState(false);
 
+  // Voucher popup state
+  const [voucherPopupVisible, setVoucherPopupVisible] = useState(false);
+  const [voucherResult, setVoucherResult] = useState<VoucherTriggerResult | null>(null);
   // Initial form data state for change detection
   const [initialFormData, setInitialFormData] = useState<{
     publishToCommunity: boolean;
@@ -172,6 +198,16 @@ export const CreateWorkflowAppModal = ({
     const total = creditUsageData?.data?.total ?? 0;
     return total;
   }, [creditUsageData]);
+
+  // Preload banner image on component mount for faster loading and browser caching
+  useEffect(() => {
+    const cleanup = preloadImage(BannerSvg, {
+      withLink: true,
+      crossOrigin: 'anonymous',
+    });
+
+    return cleanup;
+  }, []);
 
   // Fetch drive files when modal is visible
   useEffect(() => {
@@ -314,15 +350,70 @@ export const CreateWorkflowAppModal = ({
     }
   };
 
-  // Custom upload request for cover image
+  // Custom upload request for cover image with compression optimization
   const customUploadRequest: UploadProps['customRequest'] = async ({
     file,
     onSuccess,
     onError,
+    onProgress,
   }) => {
     setCoverUploading(true);
     try {
-      const storageKey = await uploadCoverImage(file as File);
+      let fileToUpload = file as File;
+
+      // Validate file before processing
+      if (!fileToUpload || fileToUpload.size === 0) {
+        throw new Error('Invalid file: file is empty or null');
+      }
+
+      // Compress image if it's too large (> 2MB) to optimize upload speed
+      const shouldCompress = fileToUpload.size > 2 * 1024 * 1024; // Larger than 2MB
+
+      let previewUrl: string | undefined;
+
+      if (shouldCompress) {
+        onProgress?.({ percent: 10 });
+        if (ENABLE_COVER_UPLOAD_LOG) {
+          console.info(
+            '[CoverUpload] Start compression',
+            'origSizeMB',
+            (fileToUpload.size / 1024 / 1024).toFixed(2),
+          );
+        }
+        const { file: compressedFile, previewUrl: compressedPreview } =
+          await compressImageWithPreview(fileToUpload, COVER_COMPRESSION_OPTIONS);
+        fileToUpload = compressedFile;
+        previewUrl = compressedPreview ?? createObjectUrlSafe(fileToUpload);
+        onProgress?.({ percent: 50 });
+      } else {
+        onProgress?.({ percent: 50 });
+        previewUrl = createObjectUrlSafe(fileToUpload);
+      }
+
+      if (ENABLE_COVER_UPLOAD_LOG) {
+        console.info(
+          '[CoverUpload] Upload payload',
+          'sizeMB',
+          (fileToUpload.size / 1024 / 1024).toFixed(2),
+          'name',
+          fileToUpload.name,
+        );
+      }
+
+      // Update preview/thumb with compressed (or fallback original) file
+      if (previewUrl) {
+        const uploadFile = file as UploadFile;
+        uploadFile.thumbUrl = previewUrl;
+        uploadFile.url = previewUrl;
+        uploadFile.preview = previewUrl;
+      }
+
+      // Upload the file (compressed or original)
+      const storageKey = await uploadCoverImage(fileToUpload);
+
+      // Complete progress
+      onProgress?.({ percent: 100 });
+
       setCoverStorageKey(storageKey);
       onSuccess?.(storageKey);
       message.success(t('common.uploadSuccess'));
@@ -334,7 +425,7 @@ export const CreateWorkflowAppModal = ({
     }
   };
 
-  // Before upload validation
+  // Before upload validation - allow larger files as they will be compressed
   const beforeUpload = (file: File) => {
     const isAllowedType = ALLOWED_IMAGE_TYPES.includes(file.type);
     if (!isAllowedType) {
@@ -342,6 +433,7 @@ export const CreateWorkflowAppModal = ({
       return false;
     }
 
+    // Allow files up to 30MB, they will be compressed before upload if needed
     const isLt30M = file.size / 1024 / 1024 < 30;
     if (!isLt30M) {
       message.error(t('workflowApp.imageTooLarge'));
@@ -408,6 +500,11 @@ export const CreateWorkflowAppModal = ({
       });
 
       const shareId = data?.data?.shareId ?? '';
+      // Get voucher result directly from createWorkflowApp response
+      const voucherResult = (data?.data as any)?.voucherTriggerResult as
+        | VoucherTriggerResult
+        | null
+        | undefined;
 
       if (data?.success && shareId) {
         const workflowAppLink = getShareLink('workflowApp', shareId);
@@ -420,15 +517,21 @@ export const CreateWorkflowAppModal = ({
 
         setVisible(false);
 
-        const messageInstance = messageApi.open({
-          content: <SuccessMessage shareId={shareId} onClose={() => messageInstance()} />,
-          duration: 2000, // Auto close after 3000ms
-        });
-
-        // Ensure the message closes after 3000ms
-        setTimeout(() => {
-          messageInstance();
-        }, 2000);
+        // Check if voucher was generated (included in createWorkflowApp response)
+        if (voucherResult?.voucher) {
+          // Show voucher popup if a voucher was generated
+          setVoucherResult(voucherResult);
+          setVoucherPopupVisible(true);
+        } else {
+          // No voucher generated, show normal success message
+          const messageInstance = messageApi.open({
+            content: <SuccessMessage shareId={shareId} onClose={() => messageInstance()} />,
+            duration: 2000,
+          });
+          setTimeout(() => {
+            messageInstance();
+          }, 2000);
+        }
 
         onPublishSuccess?.();
       } else if (!data?.success) {
@@ -961,10 +1064,12 @@ export const CreateWorkflowAppModal = ({
                       borderColor: 'var(--refly-Card-Border)',
                     }}
                   >
-                    <SelectedResultsGrid
-                      selectedResults={selectedResults}
-                      options={displayNodes as unknown as CanvasNode[]}
-                    />
+                    <UseShareDataProvider value={false}>
+                      <SelectedResultsGrid
+                        selectedResults={selectedResults}
+                        options={displayNodes as unknown as CanvasNode[]}
+                      />
+                    </UseShareDataProvider>
                   </div>
                 </div>
                 {/* Remix Settings */}
@@ -1044,6 +1149,13 @@ export const CreateWorkflowAppModal = ({
           />
         </Modal>
       </Modal>
+
+      {/* Voucher Popup - now handles share logic internally */}
+      <VoucherPopup
+        visible={voucherPopupVisible}
+        onClose={() => setVoucherPopupVisible(false)}
+        voucherResult={voucherResult}
+      />
     </>
   );
 };

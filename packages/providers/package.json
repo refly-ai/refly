@@ -12,9 +12,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@langchain/aws": "^0.1.13",
+    "@langchain/aws": "1.1.0",
     "@langchain/community": "0.3.50",
-    "@langchain/core": "0.3.68",
+    "@langchain/core": "1.1.4",
     "@langchain/deepseek": "^0.0.1",
     "@langchain/ollama": "^0.2.0",
     "@langchain/openai": "0.6.7",

@@ -76,8 +76,12 @@ export function initTracer(): void {
 
   // Langfuse processor - receives filtered LLM spans only
   if (langfuse.baseUrl) {
+    console.log('[Tracer] Creating Langfuse processor...');
     const processor = createLangfuseProcessor(langfuse);
-    if (processor) spanProcessors.push(processor);
+    if (processor) {
+      spanProcessors.push(processor);
+      console.log('[Tracer] Langfuse processor added to span processors');
+    }
   }
 
   // OTLP metric exporter for Prometheus - receives application metrics

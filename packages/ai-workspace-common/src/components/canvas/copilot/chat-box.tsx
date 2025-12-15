@@ -8,6 +8,7 @@ import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas
 import { ChatActions } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
 import { useTranslation } from 'react-i18next';
 import { useListCopilotSessions } from '@refly-packages/ai-workspace-common/queries';
+import { logEvent } from '@refly/telemetry-web';
 
 interface ChatBoxProps {
   canvasId: string;
@@ -72,55 +73,62 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
 
   const { invokeAction, abortAction } = useInvokeAction();
 
-  const handleSendMessage = useCallback(async () => {
-    if (isExecuting) {
-      return;
-    }
+  const handleSendMessage = useCallback(
+    async (type: 'input_enter_send' | 'button_click_send') => {
+      if (isExecuting) {
+        return;
+      }
 
-    const resultId = genActionResultID();
-    let sessionId = currentSessionId;
+      const resultId = genActionResultID();
+      let sessionId = currentSessionId;
 
-    if (!sessionId) {
-      sessionId = genCopilotSessionID();
-    }
-    onSendMessage?.();
+      if (!sessionId) {
+        sessionId = genCopilotSessionID();
+      }
+      onSendMessage?.();
+      logEvent('copilot_prompt_sent', Date.now(), {
+        source: type,
+      });
 
-    invokeAction(
-      {
-        query,
-        resultId,
-        modelInfo: null,
-        agentMode: 'copilot_agent',
-        copilotSessionId: sessionId,
-      },
-      {
-        entityId: canvasId,
-        entityType: 'canvas',
-      },
-    );
-    setQuery('');
+      invokeAction(
+        {
+          query,
+          resultId,
+          modelInfo: null,
+          agentMode: 'copilot_agent',
+          copilotSessionId: sessionId,
+        },
+        {
+          entityId: canvasId,
+          entityType: 'canvas',
+        },
+      );
+      setQuery('');
 
-    setCurrentSessionId(canvasId, sessionId);
-    appendSessionResultId(sessionId, resultId);
-    setCreatedCopilotSessionId(sessionId);
-    addHistoryTemplateSession(canvasId, {
-      sessionId,
-      title: query,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-  }, [
-    isExecuting,
-    currentSessionId,
-    query,
-    canvasId,
-    invokeAction,
-    setQuery,
-    setCurrentSessionId,
-    appendSessionResultId,
-    setCreatedCopilotSessionId,
-    addHistoryTemplateSession,
-  ]);
+      setCurrentSessionId(canvasId, sessionId);
+      appendSessionResultId(sessionId, resultId);
+      setCreatedCopilotSessionId(sessionId);
+      addHistoryTemplateSession(canvasId, {
+        sessionId,
+        title: query,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    },
+    [
+      isExecuting,
+      currentSessionId,
+      query,
+      canvasId,
+      invokeAction,
+      setQuery,
+      setCurrentSessionId,
+      appendSessionResultId,
+      setCreatedCopilotSessionId,
+      addHistoryTemplateSession,
+      logEvent,
+    ],
+  );
 
   const handleAbort = useCallback(() => {
     if (!currentExecutingResult) {
@@ -153,13 +161,13 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
           setQuery(value);
         }}
         maxRows={6}
-        handleSendMessage={handleSendMessage}
+        handleSendMessage={() => handleSendMessage('input_enter_send')}
         placeholder={t('copilot.placeholder')}
       />
 
       <ChatActions
         query={query}
-        handleSendMessage={handleSendMessage}
+        handleSendMessage={() => handleSendMessage('button_click_send')}
         onUploadImage={() => Promise.resolve()}
         isExecuting={isExecuting}
         showLeftActions={false}

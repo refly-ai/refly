@@ -18,6 +18,7 @@ import { useAuthStoreShallow } from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
 import { ActionsInCanvasDropdown } from '@refly-packages/ai-workspace-common/components/canvas/top-toolbar/actions-in-canvas-dropdown';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
+import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
 
 interface TopToolbarProps {
   canvasId: string;
@@ -101,6 +102,9 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId }) => {
                 syncFailureCount={syncFailureCount}
                 canvasId={canvasId}
               />
+
+              <Divider type="vertical" className="m-0 h-5 bg-refly-Card-Border" />
+              <GithubStar />
             </div>
           )}
         </div>

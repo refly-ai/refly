@@ -31,13 +31,6 @@ const PricingPage = () => {
         </>
       )}
       <div className="my-10 bg-white/95 dark:bg-gray-900/95">
-        <div className="my-10 flex flex-col items-center justify-center gap-5">
-          <div className="w-fit bg-gradient-to-r from-green-700 to-green-400 bg-clip-text text-lg font-bold text-transparent">
-            {t('landingPage.pricing.title')}
-          </div>
-          <div className="text-4xl font-bold">{t('landingPage.pricing.subtitle')}</div>
-          <div className="text-base text-gray-500">{t('landingPage.pricing.description')}</div>
-        </div>
         <PriceContent source="page" />
       </div>
       {!isLogin && (

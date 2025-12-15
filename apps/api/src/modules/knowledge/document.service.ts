@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional, forwardRef } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Document as DocumentPO, Prisma } from '@prisma/client';
@@ -53,6 +53,7 @@ export class DocumentService {
     private miscService: MiscService,
     private collabService: CollabService,
     private canvasSyncService: CanvasSyncService,
+    @Inject(forwardRef(() => SubscriptionService))
     private subscriptionService: SubscriptionService,
     @Inject(OSS_INTERNAL) private oss: ObjectStorageService,
     @Inject(FULLTEXT_SEARCH) private fts: FulltextSearchService,
