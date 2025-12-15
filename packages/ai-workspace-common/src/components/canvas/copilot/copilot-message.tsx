@@ -161,7 +161,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     }
 
     logEvent('copilot_prompt_sent', Date.now(), {
-      source_type: 'retry_button_click',
+      source: 'retry_button_click',
     });
 
     invokeAction(
