@@ -1,4 +1,6 @@
 /* Image compression helper for cover uploads and other image uploads */
+type ImageFormat = 'jpeg' | 'webp';
+
 interface CompressOptions {
   maxBytes: number;
   maxDimension: number;
@@ -6,6 +8,7 @@ interface CompressOptions {
   qualityMin: number;
   maxAttempts: number;
   minDimension: number;
+  format?: ImageFormat;
   enableLog?: boolean;
   logPrefix?: string;
 }
@@ -16,10 +19,7 @@ interface CompressResult {
   wasCompressed: boolean;
 }
 
-const createObjectUrl = (file: File): string => {
-  const url = URL.createObjectURL(file);
-  return url;
-};
+const createObjectUrl = (file: File): string => URL.createObjectURL(file);
 
 const loadImageFromFile = (file: File, enableLog?: boolean, logPrefix?: string) => {
   return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -76,8 +76,33 @@ const loadImageFromFile = (file: File, enableLog?: boolean, logPrefix?: string) 
   });
 };
 
-const canvasToBlob = (canvas: HTMLCanvasElement, quality: number): Promise<Blob> => {
+let webpSupported: boolean | null = null;
+
+const checkWebPSupport = (): boolean => {
+  if (webpSupported === null) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    webpSupported = canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+  }
+  return webpSupported;
+};
+
+const getActualFormat = (format: ImageFormat): ImageFormat => {
+  if (format === 'webp' && !checkWebPSupport()) {
+    console.warn('[ImageCompression] WebP not supported, falling back to JPEG');
+    return 'jpeg';
+  }
+  return format;
+};
+
+const canvasToBlob = (
+  canvas: HTMLCanvasElement,
+  quality: number,
+  format: ImageFormat,
+): Promise<Blob> => {
   return new Promise((resolve, reject) => {
+    const actualFormat = getActualFormat(format);
     canvas.toBlob(
       (blob) => {
         if (!blob) {
@@ -86,7 +111,7 @@ const canvasToBlob = (canvas: HTMLCanvasElement, quality: number): Promise<Blob>
         }
         resolve(blob);
       },
-      'image/jpeg',
+      actualFormat === 'webp' ? 'image/webp' : 'image/jpeg',
       quality,
     );
   });
@@ -103,6 +128,7 @@ export const compressImageWithPreview = async (
     qualityMin,
     maxAttempts,
     minDimension,
+    format = 'webp',
     enableLog,
     logPrefix,
   } = options;
@@ -145,7 +171,7 @@ export const compressImageWithPreview = async (
       ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
 
       // eslint-disable-next-line no-await-in-loop
-      blob = await canvasToBlob(canvas, quality);
+      blob = await canvasToBlob(canvas, quality, format);
 
       if (enableLog) {
         console.info(
@@ -178,12 +204,11 @@ export const compressImageWithPreview = async (
       throw new Error('Compression failed: no blob output after attempts');
     }
 
-    const originalExt = file.name.match(/\.[^.]+$/)?.[0] ?? '.jpg';
-    const fileName = `${file.name.replace(/\.[^.]+$/, '')}${
-      originalExt === '.png' ? '.jpg' : originalExt
-    }`;
+    const actualFormat = getActualFormat(format);
+    const isWebP = actualFormat === 'webp';
+    const fileName = `${file.name.replace(/\.[^.]+$/, '')}${isWebP ? '.webp' : '.jpg'}`;
     const compressedFile = new File([blob], fileName, {
-      type: 'image/jpeg',
+      type: isWebP ? 'image/webp' : 'image/jpeg',
       lastModified: Date.now(),
     });
 
