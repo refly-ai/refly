@@ -462,15 +462,15 @@ User instructions take precedence for overridable rules.
 
 ---
 
-### Example 6: File-based Data Analysis (Optional File Input)
+### Example 6: File-based Data Analysis (Required File Input)
 
-**Request**: "帮我分析用户上传的财务报表，生成投资建议报告"
+**Request**: "Analyze my financial report and generate an investment recommendation."
 
 **Design Thinking & Decisions**:
 
 1. **Input Recognition**
-   - "用户上传的财务报表" → file input variable (resource type)
-   - No strong constraint words like "必须" → required: false
+   - "my financial report" → file input variable (resource type)
+   - No explicit "optional" keywords → required: true (default)
 
 2. **Analysis & Output**
    - Parse and analyze uploaded document → execute_code
@@ -478,6 +478,7 @@ User instructions take precedence for overridable rules.
 
 3. **Variable Design**
    - File input with resourceTypes: ["document"] for PDF/Excel/CSV
+   - Empty value array - user must upload file before running
 
 **Variables**:
 \`\`\`json
@@ -485,56 +486,8 @@ User instructions take precedence for overridable rules.
   {
     "variableId": "var-1",
     "variableType": "resource",
-    "name": "财务报表",
-    "description": "上传需要分析的财务报表文件（支持 PDF、Excel、CSV）",
-    "required": false,
-    "resourceTypes": ["document"],
-    "value": []
-  },
-  {
-    "variableId": "var-2",
-    "variableType": "string",
-    "name": "分析重点",
-    "description": "分析的重点方向，如：盈利能力、资产负债、现金流等",
-    "value": [{ "type": "text", "text": "综合分析" }]
-  }
-]
-\`\`\`
-
-**Workflow Structure**:
-
-| Task | Tool | Purpose |
-|------|------|---------|
-| Analyze Data | \`execute_code\` | Parse @{type=var,id=var-1,name=财务报表} and extract key metrics based on @{type=var,id=var-2,name=分析重点} |
-| Generate Report | \`generate_doc\` | Create investment recommendation report |
-
-**Data Flow**: analyze → report
-
----
-
-### Example 7: Required File Upload
-
-**Request**: "I need to analyze the CSV file that user must upload, and generate a statistical report with charts"
-
-**Design Thinking & Decisions**:
-
-1. **Input Recognition**
-   - "must upload" → strong constraint → required: true
-   - "CSV file" → resource type with document
-
-2. **Analysis Tasks**
-   - Data parsing and statistical analysis → execute_code
-   - Chart generation → execute_code
-   - Final report → generate_doc
-
-**Variables**:
-\`\`\`json
-[
-  {
-    "variableId": "var-1",
-    "variableType": "resource",
-    "name": "data_file",
-    "description": "Upload the CSV file to analyze (required)",
+    "name": "financial_report",
+    "description": "Upload the financial report file for analysis (supports PDF, Excel, CSV)",
     "required": true,
     "resourceTypes": ["document"],
     "value": []
@@ -542,9 +495,10 @@ User instructions take precedence for overridable rules.
   {
     "variableId": "var-2",
     "variableType": "string",
-    "name": "analysis_type",
-    "description": "Type of statistical analysis: descriptive, correlation, regression, all",
-    "value": [{ "type": "text", "text": "descriptive" }]
+    "name": "analysis_focus",
+    "description": "Focus areas for analysis, e.g., profitability, assets & liabilities, cash flow",
+    "required": true,
+    "value": [{ "type": "text", "text": "comprehensive analysis" }]
   }
 ]
 \`\`\`
@@ -553,11 +507,10 @@ User instructions take precedence for overridable rules.
 
 | Task | Tool | Purpose |
 |------|------|---------|
-| Parse & Analyze | \`execute_code\` | Read @{type=var,id=var-1,name=data_file}, perform @{type=var,id=var-2,name=analysis_type} analysis |
-| Generate Charts | \`execute_code\` | Create visualizations based on analysis results |
-| Final Report | \`generate_doc\` | Compile statistical findings with chart references |
+| Analyze Data | \`execute_code\` | Parse @{type=var,id=var-1,name=financial_report} and extract key metrics based on @{type=var,id=var-2,name=analysis_focus} |
+| Generate Report | \`generate_doc\` | Create investment recommendation report |
 
-**Data Flow**: parse → charts → report
+**Data Flow**: analyze → report
 </examples>
 
 ## Available Tools

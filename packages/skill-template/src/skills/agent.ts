@@ -85,7 +85,6 @@ export class Agent extends BaseSkill {
     const hasVisionCapability = modelInfo?.capabilities?.vision ?? false;
 
     const userPrompt = buildUserPrompt(optimizedQuery, context, { hasVisionCapability });
-    console.log('build user prompt', userPrompt);
     const requestMessages = buildFinalRequestMessages({
       systemPrompt,
       userPrompt,

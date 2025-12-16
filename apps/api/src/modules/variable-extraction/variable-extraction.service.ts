@@ -33,6 +33,7 @@ interface LLMVariableResponse {
   value: string[] | VariableValue[];
   description?: string;
   variableType?: 'string' | 'option' | 'resource';
+  required?: boolean;
   source?: string;
   extractionReason?: string;
   confidence?: number;
@@ -769,6 +770,8 @@ export class VariableExtractionService {
             value,
             description: v.description || `Extracted variable ${index + 1}`,
             variableType: v.variableType || 'string',
+            // Default required to true for all variable types
+            required: v.required ?? true,
           };
         },
       );
