@@ -19,6 +19,16 @@ import { AudioRenderer } from './audio';
 import { UnsupportedRenderer } from './unsupported';
 import { HtmlRenderer } from './html';
 import { MarkdownRenderer } from './markdown';
+import DocViewer from 'react-doc-viewer';
+
+const reactDocViewerAcceptFileTypes = {
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+};
 
 const useHandleDownload = (url: string | undefined, fileName: string) => {
   return useCallback(() => {
@@ -39,6 +49,7 @@ interface ContentCategoryResult {
 }
 
 const extractContentCategory = (contentType: string, fileName: string): ContentCategoryResult => {
+  console.log('----extractContentCategory', contentType, fileName);
   // Media types
   if (contentType === 'image/svg+xml') return { category: 'svg' };
   if (contentType.startsWith('image/')) return { category: 'image' };
@@ -59,6 +70,12 @@ const extractContentCategory = (contentType: string, fileName: string): ContentC
 
     return { category: 'text' };
   }
+
+  if (reactDocViewerAcceptFileTypes[contentType as keyof typeof reactDocViewerAcceptFileTypes])
+    return {
+      category:
+        reactDocViewerAcceptFileTypes[contentType as keyof typeof reactDocViewerAcceptFileTypes],
+    };
 
   return { category: 'unsupported' };
 };
@@ -179,6 +196,8 @@ export const FilePreview = memo(
       const isCardMode = source === 'card' || !!isShareFile;
 
       const rendererSource = isCardMode ? 'card' : 'preview';
+      console.log('----fileContent', fileContent);
+      console.log('----file', file);
 
       switch (category) {
         case 'svg':
@@ -225,6 +244,22 @@ export const FilePreview = memo(
           return <VideoRenderer fileContent={fileContent} file={file} />;
         case 'audio':
           return <AudioRenderer fileContent={fileContent} file={file} />;
+        case 'doc':
+        case 'docx':
+        case 'ppt':
+        case 'pptx':
+        case 'xls':
+        case 'xlsx':
+          return (
+            <DocViewer
+              documents={[
+                {
+                  uri: file.url,
+                  fileType: category,
+                },
+              ]}
+            />
+          );
         default:
           return (
             <UnsupportedRenderer
