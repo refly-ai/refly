@@ -413,12 +413,16 @@ export class SkillInvokerService {
           try {
             const shouldAbort = await this.actionService.isAbortRequested(resultId, version);
             if (shouldAbort) {
-              this.logger.info(`Detected cross-pod abort request for ${resultId}`);
+              this.logger.info(
+                `[WORKFLOW_ABORT][POLL] resultId=${resultId} version=${version} phase=cross_pod_abort_detected`,
+              );
               abortController.abort('Aborted by user');
               clearInterval(abortCheckInterval);
             }
           } catch (error) {
-            this.logger.error(`Error checking abort status for ${resultId}: ${error?.message}`);
+            this.logger.error(
+              `[WORKFLOW_ABORT][POLL] resultId=${resultId} version=${version} error="${error?.message}" phase=check_failed`,
+            );
           }
         },
         3000, // Check every 3 seconds
@@ -2069,19 +2073,30 @@ export class SkillInvokerService {
    * @param executionId - The workflow execution ID to abort
    */
   async abortWorkflowExecution(user: User, executionId: string): Promise<void> {
+    const startTime = Date.now();
+
+    this.logger.info(
+      `[WORKFLOW_ABORT][SVC] executionId=${executionId} uid=${user.uid} phase=start`,
+    );
+
     // Verify workflow execution exists and belongs to user
     const workflowExecution = await this.prisma.workflowExecution.findUnique({
       where: { executionId, uid: user.uid },
     });
 
     if (!workflowExecution) {
+      this.logger.warn(`[WORKFLOW_ABORT][SVC] executionId=${executionId} phase=not_found`);
       throw new WorkflowExecutionNotFoundError(`Workflow execution ${executionId} not found`);
     }
+
+    this.logger.info(
+      `[WORKFLOW_ABORT][SVC] executionId=${executionId} currentStatus=${workflowExecution.status} canvasId=${workflowExecution.canvasId} phase=found`,
+    );
 
     // Check if workflow is already finished or failed
     if (workflowExecution.status === 'finish' || workflowExecution.status === 'failed') {
       this.logger.warn(
-        `Workflow execution ${executionId} is already ${workflowExecution.status}, cannot abort`,
+        `[WORKFLOW_ABORT][SVC] executionId=${executionId} status=${workflowExecution.status} phase=skip_terminal`,
       );
       return;
     }
@@ -2094,12 +2109,12 @@ export class SkillInvokerService {
       },
     });
 
-    this.logger.info(
-      `Aborting workflow ${executionId}: found ${nodesToAbort.length} nodes to abort`,
-    );
-
     // Abort all executing skillResponse nodes by calling abort action
     const executingSkillNodes = nodesToAbort.filter((n) => n.nodeType === 'skillResponse');
+
+    this.logger.info(
+      `[WORKFLOW_ABORT][SVC] executionId=${executionId} nodesToAbort=${nodesToAbort.length} skillNodes=${executingSkillNodes.length} phase=nodes_found`,
+    );
 
     // Abort all executing nodes in parallel for better performance
     const abortResults = await Promise.allSettled(
@@ -2110,22 +2125,25 @@ export class SkillInvokerService {
             { resultId: node.entityId },
             'Workflow aborted by user',
           );
-          this.logger.info(`Aborted action ${node.entityId} for node ${node.nodeId}`);
+          this.logger.info(
+            `[WORKFLOW_ABORT][SVC] executionId=${executionId} nodeId=${node.nodeId} resultId=${node.entityId} phase=node_abort_success`,
+          );
           return { success: true, nodeId: node.nodeId };
         } catch (error) {
           this.logger.warn(
-            `Failed to abort action ${node.entityId}: ${(error as any)?.message ?? error}`,
+            `[WORKFLOW_ABORT][SVC] executionId=${executionId} nodeId=${node.nodeId} resultId=${node.entityId} error="${(error as any)?.message ?? error}" phase=node_abort_failed`,
           );
           return { success: false, nodeId: node.nodeId, error };
         }
       }),
     );
 
-    const successCount = abortResults.filter((r) => r.status === 'fulfilled').length;
-    this.logger.info(`Aborted ${successCount}/${executingSkillNodes.length} executing skill nodes`);
+    const successCount = abortResults.filter(
+      (r) => r.status === 'fulfilled' && (r.value as any)?.success,
+    ).length;
 
     // Update all non-terminal nodes to failed (not just waiting/executing)
-    await this.prisma.workflowNodeExecution.updateMany({
+    const nodeUpdateResult = await this.prisma.workflowNodeExecution.updateMany({
       where: {
         executionId,
         status: { notIn: ['finish', 'failed'] },
@@ -2138,7 +2156,7 @@ export class SkillInvokerService {
     });
 
     // Update workflow execution to failed if not already terminal
-    await this.prisma.workflowExecution.updateMany({
+    const workflowUpdateResult = await this.prisma.workflowExecution.updateMany({
       where: {
         executionId,
         status: { notIn: ['finish', 'failed'] },
@@ -2149,6 +2167,8 @@ export class SkillInvokerService {
       },
     });
 
-    this.logger.info(`Workflow execution ${executionId} aborted by user ${user.uid}`);
+    this.logger.info(
+      `[WORKFLOW_ABORT][SVC] executionId=${executionId} abortedNodes=${successCount}/${executingSkillNodes.length} dbNodesUpdated=${nodeUpdateResult.count} dbWorkflowUpdated=${workflowUpdateResult.count} phase=completed elapsed=${Date.now() - startTime}ms`,
+    );
   }
 }

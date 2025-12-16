@@ -1,31 +1,33 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createHighlighter } from 'shiki/bundle/web';
 
+const SUPPORTED_LANGUAGES = new Set([
+  'html',
+  'css',
+  'js',
+  'graphql',
+  'javascript',
+  'json',
+  'jsx',
+  'markdown',
+  'md',
+  'mdx',
+  'plaintext',
+  'py',
+  'python',
+  'sh',
+  'shell',
+  'sql',
+  'text',
+  'ts',
+  'tsx',
+  'txt',
+  'typescript',
+  'zsh',
+]);
+
 const highlighterPromise = createHighlighter({
-  langs: [
-    'html',
-    'css',
-    'js',
-    'graphql',
-    'javascript',
-    'json',
-    'jsx',
-    'markdown',
-    'md',
-    'mdx',
-    'plaintext',
-    'py',
-    'python',
-    'sh',
-    'shell',
-    'sql',
-    'text',
-    'ts',
-    'tsx',
-    'txt',
-    'typescript',
-    'zsh',
-  ],
+  langs: Array.from(SUPPORTED_LANGUAGES),
   themes: ['github-light-default'],
 });
 
@@ -47,8 +49,10 @@ export default function SyntaxHighlighter({
       try {
         const highlighter = await highlighterPromise;
         if (isMounted) {
+          // Fall back to plaintext for unsupported languages
+          const lang = SUPPORTED_LANGUAGES.has(language) ? language : 'plaintext';
           const highlightedHtml = highlighter.codeToHtml(code, {
-            lang: language || 'plaintext',
+            lang,
             theme: 'github-light-default',
           });
           setHtml(highlightedHtml);

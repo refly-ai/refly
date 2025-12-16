@@ -48,6 +48,7 @@ const extractContentCategory = (contentType: string, fileName: string): ContentC
   // Document types
   if (contentType === 'application/pdf') return { category: 'pdf' };
   if (contentType === 'application/json') return { category: 'json' };
+  if (contentType === 'application/javascript') return { category: 'code' };
 
   // Text types - further categorize by file extension
   if (contentType.startsWith('text/')) {
@@ -207,11 +208,20 @@ export const FilePreview = memo(
             />
           );
         case 'code':
-          return <CodeRenderer fileContent={fileContent} file={file} language={language!} />;
+          return (
+            <CodeRenderer
+              source={rendererSource}
+              fileContent={fileContent}
+              file={file}
+              language={language!}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+            />
+          );
         case 'text':
           return (
             <MarkdownRenderer
-              source="card"
+              source={rendererSource}
               fileContent={fileContent}
               file={file}
               className={markdownClassName}
@@ -220,7 +230,7 @@ export const FilePreview = memo(
         case 'pdf':
           return <PdfRenderer fileContent={fileContent} file={file} />;
         case 'json':
-          return <JsonRenderer fileContent={fileContent} file={file} />;
+          return <JsonRenderer source={rendererSource} fileContent={fileContent} file={file} />;
         case 'video':
           return <VideoRenderer fileContent={fileContent} file={file} />;
         case 'audio':

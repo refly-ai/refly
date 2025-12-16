@@ -4288,6 +4288,10 @@ const translations = {
     test: 'TEST ENVIRONMENT. FEATURES MAY BE UNSTABLE.',
     staging: 'STAGING ENVIRONMENT. PLEASE USE WITH CAUTION.',
   },
+  filePreview: {
+    contentTruncated:
+      'Only the first {{maxLines}} lines are displayed. \nDownload the file to see the complete content.',
+  },
 };
 
 export default translations;

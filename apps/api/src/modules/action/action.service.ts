@@ -636,6 +636,11 @@ export class ActionService {
     errorType?: ActionErrorType,
   ) {
     const { resultId, version } = req;
+    const startTime = Date.now();
+
+    this.logger.log(
+      `[WORKFLOW_ABORT][ACTION] resultId=${resultId} version=${version} phase=start reason="${reason || 'User requested abort'}"`,
+    );
 
     // Try exact version first, fallback to latest version if not found (handles rapid start-stop)
     let result = await this.prisma.actionResult.findFirst({
@@ -649,7 +654,7 @@ export class ActionService {
     // If exact version not found, try to find the latest version for this resultId
     if (!result) {
       this.logger.warn(
-        `Action result ${resultId} version ${version} not found, trying to find latest version`,
+        `[WORKFLOW_ABORT][ACTION] resultId=${resultId} version=${version} phase=version_fallback`,
       );
       result = await this.prisma.actionResult.findFirst({
         where: {
@@ -663,11 +668,19 @@ export class ActionService {
     }
 
     if (!result) {
+      this.logger.error(
+        `[WORKFLOW_ABORT][ACTION] resultId=${resultId} phase=not_found elapsed=${Date.now() - startTime}ms`,
+      );
       throw new ActionResultNotFoundError();
     }
 
     const abortReason = reason || 'User requested abort';
     const actualVersion = result.version;
+    const currentStatus = result.status;
+
+    this.logger.log(
+      `[WORKFLOW_ABORT][ACTION] resultId=${resultId} actualVersion=${actualVersion} currentStatus=${currentStatus} phase=found`,
+    );
 
     await this.markAbortRequested(resultId, actualVersion, abortReason, errorType);
 
@@ -677,8 +690,13 @@ export class ActionService {
     if (entry) {
       entry.controller.abort(abortReason);
       this.unregisterAbortController(resultId);
-      // Update database status
-      this.logger.log(`Successfully aborted executing action (same pod): ${resultId}`);
+      this.logger.log(
+        `[WORKFLOW_ABORT][ACTION] resultId=${resultId} phase=controller_aborted method=same_pod elapsed=${Date.now() - startTime}ms`,
+      );
+    } else {
+      this.logger.log(
+        `[WORKFLOW_ABORT][ACTION] resultId=${resultId} phase=no_controller method=cross_pod_or_queued`,
+      );
     }
 
     // Step 2: Check if job is still queued in BullMQ
@@ -688,9 +706,19 @@ export class ActionService {
       if (job) {
         await job.remove();
         await this.deleteQueuedJob(resultId);
-        this.logger.log(`Successfully aborted queued job: ${resultId}`);
+        this.logger.log(
+          `[WORKFLOW_ABORT][ACTION] resultId=${resultId} jobId=${jobId} phase=queue_job_removed elapsed=${Date.now() - startTime}ms`,
+        );
+      } else {
+        this.logger.log(
+          `[WORKFLOW_ABORT][ACTION] resultId=${resultId} jobId=${jobId} phase=queue_job_not_found`,
+        );
       }
     }
+
+    this.logger.log(
+      `[WORKFLOW_ABORT][ACTION] resultId=${resultId} phase=completed elapsed=${Date.now() - startTime}ms`,
+    );
   }
 
   /**
@@ -745,11 +773,11 @@ export class ActionService {
 
     if (updated.count > 0) {
       this.logger.log(
-        `Marked abort requested for action: ${resultId} v${version} by setting status to failed`,
+        `[WORKFLOW_ABORT][DB] resultId=${resultId} version=${version} phase=status_updated updatedCount=${updated.count}`,
       );
     } else {
       this.logger.warn(
-        `Action ${resultId} v${version} not found or already in terminal state, skipping abort mark`,
+        `[WORKFLOW_ABORT][DB] resultId=${resultId} version=${version} phase=skip_update reason=not_found_or_terminal`,
       );
     }
   }

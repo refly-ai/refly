@@ -35,12 +35,14 @@ const SimpleTextEditor = React.memo(
 
     return (
       <div className="h-full flex flex-col bg-white dark:bg-gray-900">
-        <div className="bg-blue-50 text-blue-800 px-4 py-2 text-sm flex items-center justify-between dark:bg-blue-900 dark:text-blue-200">
-          <div className="flex items-center">
-            <div className="mr-2 w-3 h-3 bg-blue-500 rounded-full animate-pulse dark:bg-blue-400" />
-            {t('codeArtifact.editor.generatingContent')}
+        {isGenerating && (
+          <div className="bg-blue-50 text-blue-800 px-4 py-2 text-sm flex items-center justify-between dark:bg-blue-900 dark:text-blue-200">
+            <div className="flex items-center">
+              <div className="mr-2 w-3 h-3 bg-blue-500 rounded-full animate-pulse dark:bg-blue-400" />
+              {t('codeArtifact.editor.generatingContent')}
+            </div>
           </div>
-        </div>
+        )}
 
         {isContentTruncated && (
           <div className="bg-yellow-50 text-yellow-800 px-4 py-2 text-sm dark:bg-yellow-50 dark:text-yellow-600">

@@ -4319,6 +4319,9 @@ const translations = {
     test: '当前为测试环境，功能可能不稳定。',
     staging: '当前为预发布环境，请谨慎使用。',
   },
+  filePreview: {
+    contentTruncated: '仅显示前 {{maxLines}} 行。\n下载文件以查看完整内容。',
+  },
 };
 
 export default translations;
