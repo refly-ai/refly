@@ -18,6 +18,7 @@ export type Language =
   | 'java'
   | 'bash'
   | 'node'
+  | 'nodejs'
   | 'deno';
 
 /**
