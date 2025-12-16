@@ -53,7 +53,7 @@ import { initTracer } from '../tracer';
 // Initialize OpenTelemetry tracing
 // Tracer handles its own configuration via environment variables:
 // - OTLP_TRACES_ENDPOINT: Tempo/Grafana (full observability)
-// - LANGFUSE_ENABLED + LANGFUSE_*: Langfuse (LLM spans only)
+// - LANGFUSE_BASE_URL + LANGFUSE_*: Langfuse (LLM spans only)
 initTracer();
 
 class CustomThrottlerGuard extends ThrottlerGuard {

@@ -47,7 +47,7 @@ import {
 } from '@refly/utils';
 import { PrismaService } from '../common/prisma.service';
 import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
-import { InvokeSkillJobData } from './skill.dto';
+import { InvokeSkillJobData, ModelConfigMap } from './skill.dto';
 import { CreditService } from '../credit/credit.service';
 import {
   ModelUsageQuotaExceeded,
@@ -800,7 +800,19 @@ export class SkillService implements OnModuleInit {
       param,
     );
     const resultId = data.resultId;
-    const modelConfigMap = data.modelConfigMap ?? {};
+    const modelConfigMap: ModelConfigMap = data.modelConfigMap ?? {};
+
+    // Select model name based on mode to correctly record in action_results
+    const getModelNameForMode = (): string => {
+      if (data.mode === 'copilot_agent' && modelConfigMap?.copilot) {
+        return modelConfigMap.copilot.modelId;
+      }
+      if (data.mode === 'node_agent' && modelConfigMap?.agent) {
+        return modelConfigMap.agent.modelId;
+      }
+      return modelConfigMap?.chat?.modelId ?? 'unknown';
+    };
+    const modelName = getModelNameForMode();
 
     const purgeResultHistory = (resultHistory: ActionResult[] = []) => {
       // remove extra unnecessary fields from result history to save storage
@@ -845,7 +857,7 @@ export class SkillService implements OnModuleInit {
               title: data.title || data.input?.query,
               targetId: data.target?.entityId,
               targetType: data.target?.entityType,
-              modelName: modelConfigMap.chat.modelId,
+              modelName,
               projectId: data.projectId ?? null,
               errors: JSON.stringify([]),
               input: JSON.stringify(data.input),
@@ -878,7 +890,7 @@ export class SkillService implements OnModuleInit {
           targetId: data.target?.entityId,
           targetType: data.target?.entityType,
           title: data.title || data.input?.query,
-          modelName: modelConfigMap.chat.modelId,
+          modelName,
           type: 'skill',
           status: 'executing',
           projectId: data.projectId,

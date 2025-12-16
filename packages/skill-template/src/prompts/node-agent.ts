@@ -70,11 +70,11 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
 - **Example**: "What's the weather next week?" → need approximate current date
 
 #### \`read_file\`
-- **Latency**: <2s
-- **Input**: \`fileId\` from context
-- **Use when**: Quick content overview, no deep analysis or complex processing
-- **NOT for**: Content already embedded in prompt (base64 images, inline text)
-- **Example**: Peek first rows of CSV, check file structure
+- **Use when**: Quick content overview, check file structure (e.g., CSV first rows)
+- **NOT for**:
+  - Content already in context (base64 images, inline text)
+  - Complex data processing (use \`execute_code\` instead)
+- **Note**: This tool does NOT support images. If the model has vision capability, images are already in context; otherwise use \`execute_code\` with Python libraries to process images
 
 #### \`execute_code\`
 - **Latency**: >5s
@@ -85,8 +85,9 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
 > **Efficiency**: Embed time/file operations in code to reduce round-trips when possible.
 
 ### Tool Coordination
+- Image files → If you can see the image in context, respond directly; otherwise use \`execute_code\` with Python
+- Text/PDF/DOCX files needing content → \`read_file\` first, then \`execute_code\` if needed
 - Content-independent processing → \`execute_code\` directly
-- Content-dependent processing → \`read_file\` first, then \`execute_code\`
 
 ### Selection
 - Choose freely when multiple tools offer similar functionality

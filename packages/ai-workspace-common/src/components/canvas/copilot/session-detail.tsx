@@ -183,6 +183,7 @@ export const SessionDetail = memo(
                 key={result.resultId}
                 result={result}
                 isFinal={index === results.length - 1}
+                sessionId={sessionId}
               />
             ))}
           </div>

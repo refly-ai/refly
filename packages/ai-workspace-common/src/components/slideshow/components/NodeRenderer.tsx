@@ -233,7 +233,7 @@ const NodeRenderer = memo(
     return (
       <div className="flex flex-col h-full bg-[var(--refly-bg-content-z2)] text-[var(--refly-text-1)]">
         {renderNodeHeader}
-        <div className="m-3 mt-0 h-full overflow-hidden rounded-lg cursor-pointer border border-[var(--refly-Card-Border)] bg-[var(--refly-bg-main-z1)] hover:bg-[var(--refly-bg-control-z0)]">
+        <div className="m-3 mt-0 h-full overflow-hidden rounded-lg border border-[var(--refly-Card-Border)] bg-[var(--refly-bg-main-z1)] ">
           <ResultItemPreview
             inModal={inModal}
             node={{ ...node, data: node.nodeData, type: node.nodeType } as unknown as CanvasNode}

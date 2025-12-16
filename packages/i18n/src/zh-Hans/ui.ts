@@ -1555,6 +1555,7 @@ const translations = {
           success: '工作流已成功终止。',
           failed: '终止工作流失败',
         },
+        forbiddenToAddNodeWhenWorkflowIsRunning: '工作流正在运行中，无法添加节点，请稍后再试',
       },
     },
     connectionTimeout: {

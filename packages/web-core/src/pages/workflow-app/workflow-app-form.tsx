@@ -264,6 +264,7 @@ export const WorkflowAPPForm = ({
                   storageKey: result.storageKey,
                   source: 'variable',
                   variableId: variable.variableId,
+                  archiveFiles: true,
                 },
               });
 
@@ -433,6 +434,7 @@ export const WorkflowAPPForm = ({
                   storageKey: storageKey,
                   source: 'variable',
                   variableId: variable.variableId,
+                  archiveFiles: true,
                 },
               });
 

@@ -32,14 +32,18 @@ export const workflowPlanSchema = z.object({
       z.object({
         variableId: z.string().describe('Variable ID, unique and readonly'),
         variableType: z
-          .literal('string')
-          .describe('Variable type (currently only string is supported)'),
+          .string()
+          .describe('Variable type (currently only string is supported)')
+          .default('string'),
         name: z.string().describe('Variable name used in the workflow'),
         description: z.string().describe('Description of what this variable represents'),
         value: z
           .array(
             z.object({
-              type: z.literal('text'),
+              type: z
+                .string()
+                .describe('Variable type (currently only text is supported)')
+                .default('text'),
               text: z.string().describe('Variable text value'),
             }),
           )
@@ -100,10 +104,10 @@ export const planVariableToWorkflowVariable = (
 ): WorkflowVariable => {
   return {
     variableId: planVariable.variableId,
-    variableType: planVariable.variableType,
+    variableType: planVariable.variableType as 'string' | 'option' | 'resource',
     name: planVariable.name,
     value: planVariable.value?.map((value) => ({
-      type: value?.type,
+      type: value?.type as 'text' | 'resource',
       text: value?.text,
     })),
     description: planVariable.description,

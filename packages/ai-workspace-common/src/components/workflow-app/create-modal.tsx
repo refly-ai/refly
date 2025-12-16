@@ -11,6 +11,7 @@ import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { logEvent } from '@refly/telemetry-web';
 import { MultiSelectResult } from './multi-select-result';
 import { SelectedResultsGrid } from './selected-results-grid';
+import { UseShareDataProvider } from '@refly-packages/ai-workspace-common/context/use-share-data';
 import BannerSvg from './banner.svg';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
 import { CanvasNode, DriveFile } from '@refly/openapi-schema';
@@ -961,10 +962,12 @@ export const CreateWorkflowAppModal = ({
                       borderColor: 'var(--refly-Card-Border)',
                     }}
                   >
-                    <SelectedResultsGrid
-                      selectedResults={selectedResults}
-                      options={displayNodes as unknown as CanvasNode[]}
-                    />
+                    <UseShareDataProvider value={false}>
+                      <SelectedResultsGrid
+                        selectedResults={selectedResults}
+                        options={displayNodes as unknown as CanvasNode[]}
+                      />
+                    </UseShareDataProvider>
                   </div>
                 </div>
                 {/* Remix Settings */}
