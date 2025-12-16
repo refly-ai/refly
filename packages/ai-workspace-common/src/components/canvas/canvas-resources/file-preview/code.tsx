@@ -8,8 +8,8 @@ import type { SourceRendererProps } from './types';
 // Truncation limits
 const MAX_CARD_LINES = 20;
 const MAX_CARD_CHARS = 2000;
-const MAX_PREVIEW_LINES = 2000;
-const MAX_PREVIEW_CHARS = 500000;
+const MAX_PREVIEW_LINES = 1000;
+const MAX_PREVIEW_CHARS = 100000;
 
 const truncateContent = (content: string, maxLines: number, maxChars: number) => {
   const lines = content.split('\n');
@@ -48,13 +48,27 @@ const CardRenderer = memo(({ source, fileContent, file, language }: CodeRenderer
     [rawContent, maxLines, maxChars],
   );
 
-  // Preview 模式下显示截断提示
+  // Preview 模式下使用 CodeViewer（Monaco Editor 有虚拟化）
   if (isPreview) {
     return (
       <div className="h-full flex flex-col">
         {isTruncated && <TruncationNotice maxLines={maxLines} />}
-        <div className="flex-1 overflow-y-auto min-h-0">
-          <SyntaxHighlighter code={truncatedContent} language={detectedLanguage} />
+        <div className="flex-1 min-h-0">
+          <CodeViewer
+            code={truncatedContent}
+            language={detectedLanguage}
+            title={file.name}
+            entityId={file.fileId}
+            isGenerating={false}
+            activeTab="code"
+            onTabChange={() => {}}
+            onClose={() => {}}
+            onRequestFix={() => {}}
+            readOnly={true}
+            type="text/plain"
+            showActions={false}
+            purePreview={true}
+          />
         </div>
       </div>
     );

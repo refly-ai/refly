@@ -7,8 +7,8 @@ import type { SourceRendererProps } from './types';
 // Truncation limits
 const MAX_CARD_LINES = 20;
 const MAX_CARD_CHARS = 2000;
-const MAX_PREVIEW_LINES = 2000;
-const MAX_PREVIEW_CHARS = 500000;
+const MAX_PREVIEW_LINES = 1000;
+const MAX_PREVIEW_CHARS = 100000;
 
 const truncateContent = (content: string, maxLines: number, maxChars: number) => {
   const lines = content.split('\n');
