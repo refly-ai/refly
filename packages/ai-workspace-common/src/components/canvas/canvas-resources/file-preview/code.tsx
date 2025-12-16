@@ -19,7 +19,7 @@ const truncateContent = (content: string, maxLines: number, maxChars: number) =>
   return { content: lines.slice(0, maxLines).join('\n').slice(0, maxChars), isTruncated: true };
 };
 
-// 截断提示
+// Truncation notice
 const TruncationNotice = memo(({ maxLines }: { maxLines: number }) => {
   const { t } = useTranslation();
   return (
@@ -38,7 +38,7 @@ const CardRenderer = memo(({ source, fileContent, file, language }: CodeRenderer
   const rawContent = new TextDecoder().decode(fileContent.data);
   const detectedLanguage = language || getCodeLanguage(file.name) || 'text';
 
-  // 根据 source 使用不同的截断限制
+  // Use different truncation limits based on source
   const isPreview = source === 'preview';
   const maxLines = isPreview ? MAX_PREVIEW_LINES : MAX_CARD_LINES;
   const maxChars = isPreview ? MAX_PREVIEW_CHARS : MAX_CARD_CHARS;
@@ -48,7 +48,7 @@ const CardRenderer = memo(({ source, fileContent, file, language }: CodeRenderer
     [rawContent, maxLines, maxChars],
   );
 
-  // Preview 模式下使用 CodeViewer（Monaco Editor 有虚拟化）
+  // Preview mode: use CodeViewer (Monaco Editor has virtualization)
   if (isPreview) {
     return (
       <div className="h-full flex flex-col">
@@ -123,7 +123,7 @@ const PreviewRenderer = memo(
   },
 );
 
-// 支持预览的语言类型（对应 artifact.ts 的 typeMapping）
+// Languages that support preview (corresponding to artifact.ts typeMapping)
 const PREVIEWABLE_LANGUAGES = new Set(['html', 'markdown', 'mermaid', 'svg']);
 
 export const CodeRenderer = memo(
@@ -131,14 +131,14 @@ export const CodeRenderer = memo(
     const detectedLanguage = language || getCodeLanguage(file.name) || 'text';
     const supportsPreview = PREVIEWABLE_LANGUAGES.has(detectedLanguage.toLowerCase());
 
-    // Card 模式或不支持预览的语言，使用 CardRenderer
+    // Use CardRenderer for non-previewable languages
     if (!supportsPreview) {
       return (
         <CardRenderer source={source} fileContent={fileContent} file={file} language={language} />
       );
     }
 
-    // Preview 模式且支持预览，使用 PreviewRenderer
+    // Use PreviewRenderer for previewable languages
     return (
       <PreviewRenderer
         source={source}
@@ -162,7 +162,7 @@ export const JsonRenderer = memo(({ fileContent, source = 'card' }: SourceRender
     [textContent, source],
   );
 
-  // Card 模式不显示截断提示
+  // Card mode: no truncation notice
   if (source === 'card') {
     return (
       <div className="h-full overflow-y-auto">

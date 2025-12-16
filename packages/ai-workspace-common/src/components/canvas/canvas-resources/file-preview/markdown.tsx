@@ -18,7 +18,7 @@ const truncateContent = (content: string, maxLines: number, maxChars: number) =>
   return { content: lines.slice(0, maxLines).join('\n').slice(0, maxChars), isTruncated: true };
 };
 
-// 截断提示
+// Truncation notice
 const TruncationNotice = memo(({ maxLines }: { maxLines: number }) => {
   const { t } = useTranslation();
   return (
