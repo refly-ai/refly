@@ -203,6 +203,9 @@ importers:
       '@refly/errors':
         specifier: workspace:*
         version: link:../../packages/errors
+      '@refly/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       '@refly/openapi-schema':
         specifier: workspace:*
         version: link:../../packages/openapi-schema
@@ -1327,8 +1330,11 @@ importers:
   packages/observability:
     dependencies:
       '@langchain/core':
-        specifier: 1.1.4
+        specifier: '>=0.3.0'
         version: 1.1.4(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))(openai@6.7.0(ws@8.18.3)(zod@3.25.76))
+      '@langfuse/langchain':
+        specifier: ^4.4.2
+        version: 4.4.2(@langchain/core@1.1.4(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))(openai@6.7.0(ws@8.18.3)(zod@3.25.76)))(@opentelemetry/api@1.9.0)
       '@nestjs/common':
         specifier: ~10.3.9
         version: 10.3.10(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -1344,9 +1350,6 @@ importers:
       langfuse-core:
         specifier: ^3.37.3
         version: 3.38.4
-      langfuse-langchain:
-        specifier: ^3.30.0
-        version: 3.38.4(langchain@0.3.30(darshuazirsgabgmjlb5s5iyve))
 
   packages/openapi-schema:
     dependencies:
@@ -17727,6 +17730,13 @@ snapshots:
   '@langfuse/langchain@4.4.2(@langchain/core@1.1.4(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))(openai@6.7.0(ws@8.17.1)(zod@3.25.76)))(@opentelemetry/api@1.9.0)':
     dependencies:
       '@langchain/core': 1.1.4(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))(openai@6.7.0(ws@8.17.1)(zod@3.25.76))
+      '@langfuse/core': 4.4.2(@opentelemetry/api@1.9.0)
+      '@langfuse/tracing': 4.4.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/api': 1.9.0
+
+  '@langfuse/langchain@4.4.2(@langchain/core@1.1.4(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))(openai@6.7.0(ws@8.18.3)(zod@3.25.76)))(@opentelemetry/api@1.9.0)':
+    dependencies:
+      '@langchain/core': 1.1.4(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.208.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))(openai@6.7.0(ws@8.18.3)(zod@3.25.76))
       '@langfuse/core': 4.4.2(@opentelemetry/api@1.9.0)
       '@langfuse/tracing': 4.4.2(@opentelemetry/api@1.9.0)
       '@opentelemetry/api': 1.9.0

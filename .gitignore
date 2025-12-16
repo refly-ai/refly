@@ -4,6 +4,8 @@
 **/node_modules/**
 .DS_Store
 *.tsbuildinfo
+.scratch
+.task
 
 dist
 packed

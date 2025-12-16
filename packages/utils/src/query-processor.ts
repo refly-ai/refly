@@ -63,6 +63,7 @@ export interface ProcessQueryResult {
   llmInputQuery: string;
   updatedQuery: string;
   resourceVars: WorkflowVariable[];
+  optionalVarsNotProvided: WorkflowVariable[];
 }
 
 type MentionFormatMode = 'display' | 'llm_input';
@@ -102,11 +103,12 @@ function processMention(
     files: DriveFile[];
     mode: MentionFormatMode;
     resourceVars: WorkflowVariable[];
+    optionalVarsNotProvided: WorkflowVariable[];
     updatedQuery: string;
     lookupToolsetDefinitionById?: (id: string) => ToolsetDefinition;
   },
 ): { replacement: string; updatedQuery: string } {
-  const { replaceVars, variables, files, mode, resourceVars } = options;
+  const { replaceVars, variables, files, mode, resourceVars, optionalVarsNotProvided } = options;
   let updatedQuery = options.updatedQuery;
 
   const params: Record<string, string> = {};
@@ -130,6 +132,34 @@ function processMention(
 
       if (variable && 'value' in variable) {
         if (variable.variableType === 'resource') {
+          // Check if the resource variable has a value
+          const hasValue =
+            variable.value && variable.value.length > 0 && variable.value[0]?.resource;
+
+          if (!hasValue) {
+            // Resource variable has no value - check if it's optional
+            const isOptional = variable.required === false;
+            if (isOptional) {
+              // Track this optional variable that was not provided
+              if (mode === 'display') {
+                const alreadyAdded = optionalVarsNotProvided.some(
+                  (v) => v.variableId === variable.variableId,
+                );
+                if (!alreadyAdded) {
+                  optionalVarsNotProvided.push(variable);
+                }
+              }
+              // Return a placeholder indicating the variable was not provided
+              if (mode === 'llm_input') {
+                return {
+                  replacement: `[OPTIONAL FILE NOT PROVIDED: ${variable.name}]`,
+                  updatedQuery,
+                };
+              }
+              return { replacement: '', updatedQuery };
+            }
+          }
+
           // Mark resource variables for injection when replaceVars is true
           // Only add to resourceVars once (when processing display mode)
           if (mode === 'display') {
@@ -257,10 +287,17 @@ export function processQueryWithMentions(
   } = options ?? {};
 
   if (!query) {
-    return { processedQuery: query, llmInputQuery: query, updatedQuery: query, resourceVars: [] };
+    return {
+      processedQuery: query,
+      llmInputQuery: query,
+      updatedQuery: query,
+      resourceVars: [],
+      optionalVarsNotProvided: [],
+    };
   }
 
   const resourceVars: WorkflowVariable[] = [];
+  const optionalVarsNotProvided: WorkflowVariable[] = [];
   let updatedQuery = query;
 
   // Regex to match mentions like @{type=var,id=var-1,name=cv_folder_url}
@@ -274,6 +311,7 @@ export function processQueryWithMentions(
       files,
       mode: 'display',
       resourceVars,
+      optionalVarsNotProvided,
       updatedQuery,
       lookupToolsetDefinitionById,
     });
@@ -289,13 +327,14 @@ export function processQueryWithMentions(
       files,
       mode: 'llm_input',
       resourceVars: [], // Don't modify resourceVars in llm_input mode
+      optionalVarsNotProvided: [], // Don't modify optionalVarsNotProvided in llm_input mode
       updatedQuery: '', // Don't modify updatedQuery in llm_input mode
       lookupToolsetDefinitionById,
     });
     return result.replacement;
   });
 
-  return { processedQuery, llmInputQuery, updatedQuery, resourceVars };
+  return { processedQuery, llmInputQuery, updatedQuery, resourceVars, optionalVarsNotProvided };
 }
 
 /**

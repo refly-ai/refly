@@ -8,6 +8,7 @@ import {
 } from '@langchain/langgraph';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
 import { Icon, SkillTemplateConfigDefinition, User } from '@refly/openapi-schema';
 
@@ -34,6 +35,29 @@ const MAX_TOOL_ITERATIONS = 25;
 const DEFAULT_RECURSION_LIMIT = 2 * MAX_TOOL_ITERATIONS + 1;
 // Max consecutive identical tool calls to detect infinite loops
 const MAX_IDENTICAL_TOOL_CALLS = 3;
+
+// WeakMap cache for Zod to JSON Schema conversion (avoids repeated conversions)
+const zodSchemaCache = new WeakMap<object, object>();
+
+/**
+ * Convert Zod schema to JSON Schema with caching.
+ * Uses WeakMap so cached entries are automatically garbage collected
+ * when the original Zod schema is no longer referenced.
+ *
+ * Note: StructuredToolInterface.schema is typed as ToolInputSchemaBase which
+ * is a union type, but at runtime it's always a Zod schema for DynamicStructuredTool.
+ */
+function getJsonSchema(zodSchema: unknown): object | undefined {
+  if (!zodSchema || typeof zodSchema !== 'object') return undefined;
+
+  let cached = zodSchemaCache.get(zodSchema);
+  if (!cached) {
+    // zodToJsonSchema accepts ZodType, runtime schema is always Zod
+    cached = zodToJsonSchema(zodSchema as z.ZodTypeAny, { target: 'openApi3' });
+    zodSchemaCache.set(zodSchema, cached);
+  }
+  return cached;
+}
 
 // Define a more specific type for the compiled graph
 type CompiledGraphApp = {
@@ -87,7 +111,6 @@ export class Agent extends BaseSkill {
     const hasVisionCapability = modelInfo?.capabilities?.vision ?? false;
 
     const userPrompt = buildUserPrompt(optimizedQuery, context, { hasVisionCapability });
-
     const requestMessages = buildFinalRequestMessages({
       systemPrompt,
       userPrompt,
@@ -97,7 +120,7 @@ export class Agent extends BaseSkill {
       modelInfo,
     });
 
-    return { requestMessages, sources };
+    return { requestMessages, sources, systemPrompt, modelInfo };
   };
 
   private async initializeAgentComponents(
@@ -398,6 +421,18 @@ export class Agent extends BaseSkill {
             ...currentSkill,
             toolsAvailable,
             toolCount: tools?.length || 0,
+            // Reproducible context for Langfuse tracing
+            // Tool definitions with full JSON Schema for offline replay
+            toolDefinitions: tools?.map((t) => ({
+              type: 'function',
+              name: t.name,
+              description: t.description,
+              parameters: getJsonSchema(t.schema),
+            })),
+            // Runtime config for reproducibility
+            // Note: systemPrompt already in input[0], modelConfig duplicates modelParameters
+            toolChoice: toolsAvailable ? 'auto' : undefined,
+            graphRecursionLimit: DEFAULT_RECURSION_LIMIT,
           },
         },
       );

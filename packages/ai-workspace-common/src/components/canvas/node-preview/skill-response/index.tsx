@@ -10,7 +10,7 @@ import {
   type ResultActiveTab,
   useCanvasStoreShallow,
 } from '@refly/stores';
-import { Segmented, Button } from 'antd';
+import { Segmented, Button, message } from 'antd';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
@@ -24,6 +24,7 @@ import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
 import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
 import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
+import { useVariableView } from '@refly-packages/ai-workspace-common/hooks/canvas/use-variable-view';
 import { logEvent } from '@refly/telemetry-web';
 import { useShareDataContext } from '@refly-packages/ai-workspace-common/context/use-share-data';
 
@@ -69,8 +70,9 @@ const SkillResponseNodePreviewComponent = ({
   const { resetFailedState } = useActionPolling();
 
   const { t } = useTranslation();
-  const { data: variables } = useVariablesManagement(canvasId);
+  const { data: variables = [] } = useVariablesManagement(canvasId);
   const { processQuery } = useQueryProcessor();
+  const { handleVariableView } = useVariableView(canvasId);
 
   const shareId = node.data?.metadata?.shareId;
   const nodeStatus = node.data?.metadata?.status;
@@ -132,6 +134,19 @@ const SkillResponseNodePreviewComponent = ({
   const { steps = [] } = result ?? {};
 
   const handleRetry = useCallback(() => {
+    // Check for empty required file variables
+    const emptyRequiredFileVar = variables.find(
+      (v) => v.required && v.variableType === 'resource' && (!v.value || v.value.length === 0),
+    );
+    if (emptyRequiredFileVar) {
+      message.warning(
+        t('canvas.workflow.run.requiredFileInputsMissing') ||
+          'This agent has required file inputs. Please upload the missing files before running.',
+      );
+      handleVariableView(emptyRequiredFileVar, { autoOpenEdit: true, showError: true });
+      return;
+    }
+
     // Reset failed state before retrying
     resetFailedState(resultId);
     const { llmInputQuery } = processQuery(query, {
@@ -184,6 +199,8 @@ const SkillResponseNodePreviewComponent = ({
     node.id,
     node.data,
     variables,
+    handleVariableView,
+    t,
   ]);
 
   const outputStep = steps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));

@@ -28,10 +28,21 @@ interface ResourceTypeFormProps {
   onFileRemove: (file: UploadFile) => void;
   onRefreshFile: () => void;
   form?: any;
+  showError?: boolean;
+  isRequired?: boolean;
 }
 
 export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
-  ({ fileList, uploading, onFileUpload, onFileRemove, onRefreshFile, form }) => {
+  ({
+    fileList,
+    uploading,
+    onFileUpload,
+    onFileRemove,
+    onRefreshFile,
+    form,
+    showError,
+    isRequired = true,
+  }) => {
     const { t } = useTranslation();
 
     const selectedResourceTypes = useWatch('resourceTypes', form);
@@ -183,16 +194,21 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
           />
         </Form.Item>
         <Form.Item
-          required
+          required={isRequired}
           label={t('canvas.workflow.variables.value') || 'Variable Value'}
           name="value"
-          rules={[
-            {
-              required: true,
-              message:
-                t('canvas.workflow.variables.fileRequired') || 'Please upload at least one file',
-            },
-          ]}
+          rules={
+            isRequired
+              ? [
+                  {
+                    required: true,
+                    message:
+                      t('canvas.workflow.variables.fileRequired') ||
+                      'Please upload at least one file',
+                  },
+                ]
+              : []
+          }
         >
           <Upload
             className="file-upload-container"
@@ -254,6 +270,12 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
             )}
           </Upload>
         </Form.Item>
+        {showError && (
+          <div className="text-red-500 text-xs -mt-4 mb-4">
+            {t('canvas.workflow.variables.uploadBeforeRunning') ||
+              'Upload a file before running Agent.'}
+          </div>
+        )}
       </>
     );
   },

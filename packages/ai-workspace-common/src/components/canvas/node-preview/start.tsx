@@ -162,6 +162,8 @@ const VariableTypeSection = ({
   totalVariables,
   readonly,
   highlightedVariableId,
+  autoEditVariable,
+  onAutoEditComplete,
 }: {
   canvasId: string;
   type: VariableType;
@@ -169,25 +171,44 @@ const VariableTypeSection = ({
   totalVariables: WorkflowVariable[];
   readonly: boolean;
   highlightedVariableId?: string;
+  autoEditVariable?: { variableId: string; showError: boolean } | null;
+  onAutoEditComplete?: () => void;
 }) => {
   const { t } = useTranslation();
   const Icon = VARIABLE_TYPE_ICON_MAP[type] ?? BiText;
   const [showCreateVariablesModal, setShowCreateVariablesModal] = useState(false);
   const [currentVariable, setCurrentVariable] = useState<WorkflowVariable | null>(null);
+  const [showFileUploadError, setShowFileUploadError] = useState(false);
   const { setVariables } = useVariablesManagement(canvasId);
+
+  // Handle auto-edit when variable is passed
+  useEffect(() => {
+    if (autoEditVariable) {
+      const variable = variables.find((v) => v.variableId === autoEditVariable.variableId);
+      if (variable) {
+        setCurrentVariable(variable);
+        setShowFileUploadError(autoEditVariable.showError);
+        setShowCreateVariablesModal(true);
+        onAutoEditComplete?.();
+      }
+    }
+  }, [autoEditVariable, variables, onAutoEditComplete]);
 
   const handleCloseModal = () => {
     setShowCreateVariablesModal(false);
     setCurrentVariable(null);
+    setShowFileUploadError(false);
   };
 
   const handleAddVariable = useCallback(() => {
     setCurrentVariable(null);
+    setShowFileUploadError(false);
     setShowCreateVariablesModal(true);
   }, []);
 
   const handleEditVariable = useCallback((variable: WorkflowVariable) => {
     setCurrentVariable(variable);
+    setShowFileUploadError(false);
     setShowCreateVariablesModal(true);
   }, []);
 
@@ -259,6 +280,7 @@ const VariableTypeSection = ({
         defaultValue={currentVariable}
         mode={currentVariable ? 'edit' : 'create'}
         onViewCreatedVariable={handleEditVariable}
+        showFileUploadError={showFileUploadError}
       />
     </div>
   );
@@ -275,6 +297,14 @@ export const StartNodePreview = () => {
   const workflowVariablesLoading = shareLoading || variablesLoading;
 
   const [highlightedVariableId, setHighlightedVariableId] = useState<string | undefined>();
+  const [autoEditVariable, setAutoEditVariable] = useState<{
+    variableId: string;
+    showError: boolean;
+  } | null>(null);
+
+  const handleAutoEditComplete = useCallback(() => {
+    setAutoEditVariable(null);
+  }, []);
 
   useEffect(() => {
     const handleLocateToVariable = (event: {
@@ -282,10 +312,20 @@ export const StartNodePreview = () => {
       nodeId: string;
       variableId: string;
       variableName: string;
+      autoOpenEdit?: boolean;
+      showError?: boolean;
     }) => {
       if (event.canvasId === canvasId) {
         // Set the highlighted variable
         setHighlightedVariableId(event.variableId);
+
+        // If autoOpenEdit is true, set the variable to auto-edit
+        if (event.autoOpenEdit) {
+          setAutoEditVariable({
+            variableId: event.variableId,
+            showError: event.showError ?? false,
+          });
+        }
 
         // Scroll to the variable section
         setTimeout(() => {
@@ -367,6 +407,8 @@ export const StartNodePreview = () => {
           totalVariables={workflowVariables}
           readonly={readonly}
           highlightedVariableId={highlightedVariableId}
+          autoEditVariable={autoEditVariable}
+          onAutoEditComplete={handleAutoEditComplete}
         />
 
         <VariableTypeSection

@@ -236,6 +236,7 @@ export class WorkflowAppService {
     });
     let isTemplateContentValid = false;
     let shouldSkipGeneration = false;
+    let shouldEnqueueGeneration = false;
 
     // Decide whether to enqueue template generation (stable mode comparison)
     try {
@@ -315,15 +316,8 @@ export class WorkflowAppService {
           `Skip template generation for workflow app ${appId}: stable prompt dependencies unchanged`,
         );
       } else if (this.templateQueue) {
-        await this.templateQueue.add(
-          'generate',
-          { appId, canvasId, uid: user.uid },
-          {
-            removeOnComplete: true,
-            removeOnFail: false,
-          },
-        );
-        this.logger.log(`Enqueued template generation for workflow app: ${appId}`);
+        // Mark for enqueue after shareRecord is created (to ensure processor can find it)
+        shouldEnqueueGeneration = true;
       } else {
         // Always async: do not perform sync generation even if queue is unavailable
         this.logger.log(
@@ -439,6 +433,26 @@ export class WorkflowAppService {
     } catch (error) {
       this.logger.error(`Failed to create share for workflow app ${appId}: ${error.stack}`);
       // Don't throw error, just log it - workflow app creation should still succeed
+    }
+
+    // Enqueue template generation after shareRecord is created
+    // This ensures the processor can find the shareRecord when updating storage
+    if (shouldEnqueueGeneration && this.templateQueue) {
+      try {
+        await this.templateQueue.add(
+          'generate',
+          { appId, canvasId, uid: user.uid },
+          {
+            removeOnComplete: true,
+            removeOnFail: false,
+          },
+        );
+        this.logger.log(`Enqueued template generation for workflow app: ${appId}`);
+      } catch (error) {
+        this.logger.error(
+          `Failed to enqueue template generation for workflow app ${appId}: ${error?.stack}`,
+        );
+      }
     }
 
     // Send email notification if template is submitted for review

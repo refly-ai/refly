@@ -39,7 +39,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
-    bufferLogs: false,
+    bufferLogs: true,
   });
   const logger = app.get(Logger);
   app.useLogger(logger);

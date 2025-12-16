@@ -18,7 +18,7 @@ export class LangfuseCallbackHandler extends BaseCallbackHandler {
     enabled: boolean;
   };
   private traceManager: TraceManager;
-  private runIdToSpanId = new Map<string, string>();
+  private runIdToGenerationId = new Map<string, string>();
   private traceId: string;
 
   constructor(
@@ -56,7 +56,7 @@ export class LangfuseCallbackHandler extends BaseCallbackHandler {
     });
   }
 
-  // LLM callbacks
+  // LLM callbacks - Using Generation for better Langfuse integration
   async handleLLMStart(
     llm: { [key: string]: any },
     prompts: string[],
@@ -68,21 +68,52 @@ export class LangfuseCallbackHandler extends BaseCallbackHandler {
   ): Promise<void> {
     if (!this.config.enabled) return;
 
+    // Extract reproducible context from metadata (passed from agent.ts)
+    const toolDefinitions = metadata?.toolDefinitions as
+      | Array<{ name: string; description: string }>
+      | undefined;
+    const systemPrompt = metadata?.systemPrompt as string | undefined;
+    const modelConfig = metadata?.modelConfig as
+      | {
+          modelId?: string;
+          modelName?: string;
+          temperature?: number;
+          maxTokens?: number;
+          provider?: string;
+        }
+      | undefined;
+
     console.log('[Langfuse Custom] LLM Start:', {
       runId,
       parentRunId,
       llmName: llm.constructor?.name,
       promptsCount: prompts.length,
       tags: [...(tags || []), ...(this.config.tags || [])],
+      hasToolDefinitions: !!toolDefinitions?.length,
+      hasSystemPrompt: !!systemPrompt,
+      hasModelConfig: !!modelConfig,
     });
 
-    const spanId = createId();
-    this.runIdToSpanId.set(runId, spanId);
+    const generationId = createId();
+    this.runIdToGenerationId.set(runId, generationId);
 
-    this.traceManager.createSpan(this.traceId, spanId, {
+    // Use createGeneration for LLM calls - supports modelParameters and unlimited input size
+    this.traceManager.createGeneration(this.traceId, generationId, {
       name: this.config.traceName || `LLM: ${llm.constructor?.name || 'Unknown'}`,
+      model: modelConfig?.modelId || modelConfig?.modelName,
+      modelParameters: {
+        temperature: modelConfig?.temperature,
+        maxTokens: modelConfig?.maxTokens,
+        provider: modelConfig?.provider,
+      },
       input: {
-        prompts: prompts.map((p) => this.truncateText(p, 1000)),
+        // Full prompts without truncation for reproducibility
+        prompts,
+        // System prompt stored separately for clarity
+        systemPrompt,
+        // Tool definitions for reproducibility (no size limit in input field)
+        toolDefinitions,
+        // Extra params from LangChain
         ...this.sanitizeData(extraParams || {}),
       },
       metadata: {
@@ -91,7 +122,6 @@ export class LangfuseCallbackHandler extends BaseCallbackHandler {
         runId,
         parentRunId,
         tags: [...(tags || []), ...(this.config.tags || [])],
-        ...metadata,
         sessionId: this.config.sessionId,
         userId: this.config.userId,
       },
@@ -101,28 +131,41 @@ export class LangfuseCallbackHandler extends BaseCallbackHandler {
   async handleLLMEnd(output: LLMResult, runId: string): Promise<void> {
     if (!this.config.enabled) return;
 
+    // Extract token usage from llmOutput if available
+    const tokenUsage = output.llmOutput?.tokenUsage || output.llmOutput?.usage;
+
     console.log('[Langfuse Custom] LLM End:', {
       runId,
       generations: output.generations?.length,
       llmOutput: output.llmOutput,
+      hasTokenUsage: !!tokenUsage,
     });
 
-    const spanId = this.runIdToSpanId.get(runId);
-    if (spanId) {
+    const generationId = this.runIdToGenerationId.get(runId);
+    if (generationId) {
       const generation = output.generations[0]?.[0];
 
-      this.traceManager.endSpan(
-        spanId,
+      // Use endGeneration with full output and usage data
+      this.traceManager.endGeneration(
+        generationId,
         {
-          text: generation?.text ? this.truncateText(generation.text, 1000) : undefined,
+          // Full text without truncation for reproducibility
+          text: generation?.text,
           generationInfo: generation?.generationInfo,
           llmOutput: output.llmOutput,
         },
+        tokenUsage
+          ? {
+              promptTokens: tokenUsage.promptTokens || tokenUsage.prompt_tokens,
+              completionTokens: tokenUsage.completionTokens || tokenUsage.completion_tokens,
+              totalTokens: tokenUsage.totalTokens || tokenUsage.total_tokens,
+            }
+          : undefined,
         undefined,
         'DEFAULT',
       );
 
-      this.runIdToSpanId.delete(runId);
+      this.runIdToGenerationId.delete(runId);
     }
   }
 
@@ -134,19 +177,20 @@ export class LangfuseCallbackHandler extends BaseCallbackHandler {
       error: err.message,
     });
 
-    const spanId = this.runIdToSpanId.get(runId);
-    if (spanId) {
-      this.traceManager.endSpan(
-        spanId,
+    const generationId = this.runIdToGenerationId.get(runId);
+    if (generationId) {
+      this.traceManager.endGeneration(
+        generationId,
         {
           error: err.message,
           stack: err.stack,
         },
+        undefined,
         err.message,
         'ERROR',
       );
 
-      this.runIdToSpanId.delete(runId);
+      this.runIdToGenerationId.delete(runId);
     }
   }
 

@@ -325,6 +325,16 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
             setTimeout(() => {
               addToContextItems(contextItem);
             }, 100);
+          } else {
+            // For empty resource variables (no file uploaded yet), still insert the mention
+            // This allows referencing optional file variables that haven't been filled
+            insertMention(editor, range, {
+              id: item.variableId,
+              label: item.name,
+              source: 'variables',
+              variableType: 'resource',
+              entityId: item.variableId,
+            });
           }
         } else {
           // For regular variables (startNode and resourceLibrary), insert as normal mention

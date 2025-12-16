@@ -239,7 +239,7 @@ const PlanItem = memo((props: PlanItemProps) => {
     voucher,
     voucherValidDays,
   } = props;
-  const [interval, setInterval] = useState<SubscriptionInterval>('monthly');
+  const [interval, setInterval] = useState<SubscriptionInterval>('yearly');
   const navigate = useNavigate();
 
   const { isLogin, userProfile } = useUserStoreShallow((state) => ({

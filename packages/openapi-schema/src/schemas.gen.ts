@@ -8620,6 +8620,18 @@ export const CreditBillingSchema = {
       description: 'Credit consumption per unit for output tokens',
       minimum: 0,
     },
+    cacheReadCost: {
+      type: 'number',
+      description:
+        'Credit consumption per unit for cache read tokens (typically 10% of input cost)',
+      minimum: 0,
+    },
+    cacheWriteCost: {
+      type: 'number',
+      description:
+        'Credit consumption per unit for cache write tokens (typically higher than input cost)',
+      minimum: 0,
+    },
     minCharge: {
       type: 'number',
       description: 'Minimum credit charge per request',

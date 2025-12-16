@@ -66,11 +66,29 @@ ${historicalContextText}
 - **Naming**: topic, title, style, language, requirement
 - **Limit**: Maximum 10 string variables per extraction
 
-### 2. resource (Resource Variable) 
+### 2. resource (Resource Variable)
 - **Purpose**: Files, documents, images that users need to upload
 - **Examples**: Resume files, reference documents, image materials, etc.
 - **Naming**: resume_file, reference_doc, source_image
 - **Limit**: Maximum 10 resource variables per extraction
+- **DETECTION PATTERNS** - Generate \`variableType: "resource"\` when user mentions:
+  - File upload keywords: "upload", "attach", "provide file", "submit document"
+  - Document types: "PDF", "CSV", "Excel", "Word", "spreadsheet", "document"
+  - Media types: "image", "photo", "picture", "video", "audio", "screenshot"
+  - Analysis patterns: "analyze the file", "based on the uploaded", "from the document"
+  - User input patterns: "user provides a file", "user uploads", "input file"
+  - Processing patterns: "process the document", "extract from file", "read the PDF"
+- **IMPORTANT**: When detecting file/upload intent, create resource variable with EMPTY value:
+  \`\`\`json
+  {
+    "name": "user_file",
+    "value": [],
+    "description": "File uploaded by user for analysis",
+    "variableType": "resource",
+    "required": true
+  }
+  \`\`\`
+- **Required Field**: Set \`required: true\` by default (files are typically required for the workflow to function properly). Only set \`required: false\` when user explicitly indicates the file is optional (e.g., "optionally upload", "if available", "can provide")
 
 ### 3. option (Option Variable)
 - **Purpose**: Predefined selection items, enumeration values
@@ -152,9 +170,20 @@ ${historicalContextText}
       ],
       "description": "Name of the marketing project",
       "variableType": "string",
+      "required": true,
       "source": "startNode",
       "extractionReason": "User specified project name in prompt",
       "confidence": 0.9
+    },
+    {
+      "name": "reference_document",
+      "value": [],
+      "description": "Document uploaded by user for reference",
+      "variableType": "resource",
+      "required": true,
+      "source": "startNode",
+      "extractionReason": "User mentioned uploading a document for analysis",
+      "confidence": 0.85
     }
   ],
   "reusedVariables": [
@@ -175,8 +204,13 @@ ${historicalContextText}
 Each variable must have a \`value\` array containing \`VariableValue\` objects:
 
 - **For string variables**: Use \`{"type": "text", "text": "actual value"}\`
-- **For resource variables**: Use \`{"type": "resource", "resource": {"name": "file_name", "fileType": "document", "storageKey": ""}}\`
+- **For resource variables**: Use \`{"type": "resource", "resource": {"name": "file_name", "fileType": "document", "storageKey": ""}}\` OR empty array \`[]\` for user-uploaded files
 - **For option variables**: Use \`{"type": "text", "text": "selected_option"}\`
+
+### Required Field
+Each variable should include a \`required\` field (boolean):
+- **Default to \`true\`** for all variable types (user input is typically necessary for workflow)
+- Set \`required: false\` only when user explicitly indicates optional input (e.g., "optionally", "if available", "can provide", "optional")
 
 ## Quality Standards & Validation Checklist
 

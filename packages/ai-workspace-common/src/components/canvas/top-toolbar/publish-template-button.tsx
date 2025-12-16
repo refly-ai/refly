@@ -11,6 +11,7 @@ import { TurnRight } from 'refly-icons';
 import { cn } from '@refly/utils/cn';
 import { PublishTemplatePopover } from './publish-template-popover';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 
 interface PublishTemplateButtonProps {
   canvasId: string;
@@ -41,6 +42,9 @@ const PublishTemplateButton = React.memo(
     // Get canvas data for validation
     const { nodes } = useRealtimeCanvasData();
 
+    // Get workflow variables for validation
+    const { data: workflowVariables } = useVariablesManagement(canvasId);
+
     // Filter skillResponse nodes for validation
     const skillResponseNodesForValidation = useMemo(() => {
       return nodes.filter((node) => node.type === 'skillResponse');
@@ -59,11 +63,39 @@ const PublishTemplateButton = React.memo(
       // Returns true if there are no Agent nodes in the canvas
       const hasNoSkillResponseNodes = skillResponseNodesForValidation.length === 0;
 
+      // Check for required variables without values
+      // Returns true if any required variable has no value
+      const hasEmptyRequiredVariables = workflowVariables?.some((variable) => {
+        // Only check required variables
+        if (variable.required === false) {
+          return false;
+        }
+        // Check if variable has no value
+        if (!variable.value || variable.value.length === 0) {
+          return true;
+        }
+        // For resource type, check if the resource value exists
+        if (variable.variableType === 'resource') {
+          return !variable.value[0]?.resource;
+        }
+        // For string type, check if text value is empty
+        if (variable.variableType === 'string') {
+          const textValue = variable.value[0]?.text?.trim();
+          return !textValue;
+        }
+        // For option type, check if text value exists
+        if (variable.variableType === 'option') {
+          return !variable.value[0]?.text;
+        }
+        return false;
+      });
+
       return {
         hasFailedOrUnrunNodes,
         hasNoSkillResponseNodes,
+        hasEmptyRequiredVariables: hasEmptyRequiredVariables ?? false,
       };
-    }, [skillResponseNodesForValidation]);
+    }, [skillResponseNodesForValidation, workflowVariables]);
 
     // Validate canvas before publishing
     // Returns true if validation passes, false otherwise
@@ -115,6 +147,12 @@ const PublishTemplateButton = React.memo(
             }),
           );
         }
+        return false;
+      }
+
+      // Check for empty required variables (only when all agents have run successfully)
+      if (canvasValidation.hasEmptyRequiredVariables) {
+        message.error(t('workflowApp.validationRequiredInputsEmpty'));
         return false;
       }
 

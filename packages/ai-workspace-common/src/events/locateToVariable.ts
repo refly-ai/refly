@@ -6,6 +6,8 @@ export type Events = {
     nodeId: string;
     variableId: string;
     variableName: string;
+    autoOpenEdit?: boolean;
+    showError?: boolean;
   };
 };
 

@@ -73,6 +73,7 @@
     "@refly/canvas-common": "workspace:*",
     "@refly/common-types": "workspace:*",
     "@refly/errors": "workspace:*",
+    "@refly/observability": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
     "@refly/providers": "workspace:*",
     "@refly/skill-template": "workspace:*",
