@@ -3801,6 +3801,7 @@ const translations = {
     validationNoUserInputs: '请在发布模板前添加输入项。',
     validationNoAgents: '请在发布模板前添加 Agent 节点。',
     validationAgentsNotRun: '请在发布模板前确保所有 Agent 节点运行成功。',
+    validationRequiredInputsEmpty: '请在发布前填写所有必填输入项。',
     confirmCloseContent: '关闭后未保存的内容将丢失，确定要关闭吗？',
     resultPreview: '产物预览',
     notLoggedIn: '未登录',

@@ -4062,6 +4062,7 @@ const translations = {
     validationNoUserInputs: 'Please add User Inputs before publishing your template.',
     validationNoAgents: 'Please add agents before publishing your template.',
     validationAgentsNotRun: 'Please run all agents successfully before publishing your template.',
+    validationRequiredInputsEmpty: 'Please complete all required input fields before publishing.',
     confirmCloseContent:
       'Unsaved content will be lost after closing. Are you sure you want to close?',
     resultPreview: 'Result Preview',
