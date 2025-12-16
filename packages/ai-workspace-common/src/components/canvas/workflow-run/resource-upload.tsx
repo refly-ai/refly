@@ -27,6 +27,7 @@ interface ResourceUploadProps {
   maxCount?: number;
   className?: string;
   'data-field-name'?: string;
+  hasError?: boolean;
 }
 
 export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
@@ -41,6 +42,7 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
     maxCount = 1,
     className,
     'data-field-name': dataFieldName,
+    hasError = false,
   }) => {
     const { t } = useTranslation();
     const [uploading, setUploading] = useState(false);
@@ -168,7 +170,7 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
         >
           {(!value || value.length === 0) && (
             <Button
-              className="w-full bg-refly-bg-control-z0 border-none"
+              className={`w-full bg-refly-bg-control-z0 ${hasError ? 'border-red-500 border-solid' : 'border-none'}`}
               type="default"
               disabled={disabled || uploading}
               loading={uploading}

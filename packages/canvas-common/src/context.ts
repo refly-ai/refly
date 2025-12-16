@@ -166,6 +166,10 @@ export const convertContextItemsToInvokeParams = (
     string,
     { fileId: string; variableId: string; variableName: string }
   >();
+
+  // Collect all files from resource variables
+  const filesFromVariables: SkillContextFileItem[] = [];
+
   if (workflowVariables) {
     for (const variable of workflowVariables) {
       if (variable.variableType === 'resource' && variable.value?.length > 0) {
@@ -176,37 +180,44 @@ export const convertContextItemsToInvokeParams = (
             variableId: variable.variableId,
             variableName: variable.name,
           });
+          // Also add to filesFromVariables for direct inclusion
+          filesFromVariables.push({
+            fileId,
+            variableId: variable.variableId,
+            variableName: variable.name,
+          });
         }
       }
     }
   }
 
+  // Get files from context items (for backward compatibility)
+  const filesFromContextItems = purgedItems
+    ?.filter((item) => item?.type === 'file')
+    .map((item) => {
+      // For resource variables, resolve variableId to fileId
+      if (item.metadata?.source === 'variable' && item.metadata?.variableId) {
+        const detail = variableToFileIdMap.get(item.metadata.variableId);
+        if (detail) {
+          // Find the variable to get its name
+          return detail;
+        }
+        // If variableId cannot be resolved, skip this item
+        console.warn(`Cannot resolve variableId ${item.metadata.variableId} to fileId, skipping`);
+        return null;
+      }
+      // For direct file references, use entityId as fileId
+      return {
+        fileId: item.entityId,
+      };
+    })
+    .filter((item): item is SkillContextFileItem => item !== null);
+
+  // Merge files from both sources, deduplicating by fileId
+  const allFiles = [...filesFromVariables, ...(filesFromContextItems ?? [])];
+
   const context: SkillContext = {
-    files: deduplicate(
-      purgedItems
-        ?.filter((item) => item?.type === 'file')
-        .map((item) => {
-          // For resource variables, resolve variableId to fileId
-          if (item.metadata?.source === 'variable' && item.metadata?.variableId) {
-            const detail = variableToFileIdMap.get(item.metadata.variableId);
-            if (detail) {
-              // Find the variable to get its name
-              return detail;
-            }
-            // If variableId cannot be resolved, skip this item
-            console.warn(
-              `Cannot resolve variableId ${item.metadata.variableId} to fileId, skipping`,
-            );
-            return null;
-          }
-          // For direct file references, use entityId as fileId
-          return {
-            fileId: item.entityId,
-          };
-        })
-        .filter((item): item is SkillContextFileItem => item !== null),
-      (item) => item.fileId,
-    ),
+    files: deduplicate(allFiles, (item) => item.fileId),
     results: deduplicate(
       resultIds.map((resultId) => ({
         resultId,

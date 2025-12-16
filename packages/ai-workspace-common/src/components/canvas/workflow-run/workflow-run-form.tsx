@@ -94,6 +94,7 @@ export const WorkflowRunForm = ({
   const navigate = useNavigate();
 
   const [internalIsRunning, setInternalIsRunning] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   // Use external isRunning if provided, otherwise use internal state
   const isRunning = externalIsRunning ?? internalIsRunning;
@@ -149,6 +150,38 @@ export const WorkflowRunForm = ({
       return false;
     });
   }, [workflowVariables, variableValues]);
+
+  // Get list of invalid required fields
+  const getInvalidFields = useCallback(() => {
+    const invalidFields: string[] = [];
+    for (const variable of workflowVariables) {
+      if (!variable.required) continue;
+
+      const value = variableValues[variable.name];
+      let isValid = false;
+
+      if (variable.variableType === 'string') {
+        isValid = value && value.trim() !== '';
+      } else if (variable.variableType === 'option') {
+        isValid = value && (Array.isArray(value) ? value.length > 0 : !!value);
+      } else if (variable.variableType === 'resource') {
+        isValid = value && Array.isArray(value) && value.length > 0;
+      }
+
+      if (!isValid) {
+        invalidFields.push(variable.name);
+      }
+    }
+    return invalidFields;
+  }, [workflowVariables, variableValues]);
+
+  // Check if a specific field is invalid (for showing error state)
+  const isFieldInvalid = useCallback(
+    (variableName: string) => {
+      return attemptedSubmit && getInvalidFields().includes(variableName);
+    },
+    [attemptedSubmit, getInvalidFields],
+  );
 
   const convertVariableToFormValue = useCallback(() => {
     const formValues: Record<string, any> = {};
@@ -229,6 +262,12 @@ export const WorkflowRunForm = ({
                 },
               },
             ],
+          });
+        } else {
+          // Keep the variable even if no file is uploaded (with empty value)
+          newVariables.push({
+            ...variable,
+            value: [],
           });
         }
       }
@@ -372,6 +411,9 @@ export const WorkflowRunForm = ({
   }, [workflowVariables, form]);
 
   const handleRun = async () => {
+    // Mark that user has attempted to submit (for showing validation errors)
+    setAttemptedSubmit(true);
+
     if (loading || isRunning) {
       return;
     }
@@ -514,6 +556,7 @@ export const WorkflowRunForm = ({
     const value = variableValues[name];
 
     if (variableType === 'string') {
+      const hasError = isFieldInvalid(name);
       return (
         <Form.Item
           key={name}
@@ -525,6 +568,13 @@ export const WorkflowRunForm = ({
               : []
           }
           data-field-name={name}
+          className={cn({ 'has-validation-error': hasError })}
+          validateStatus={hasError ? 'error' : undefined}
+          help={
+            hasError
+              ? t('canvas.workflow.variables.thisFieldIsRequired') || 'This field is required'
+              : undefined
+          }
         >
           <Input.TextArea
             variant="filled"
@@ -534,12 +584,14 @@ export const WorkflowRunForm = ({
             data-field-name={name}
             autoSize={{ minRows: 1, maxRows: 5 }}
             disabled={isFormDisabled}
+            status={hasError ? 'error' : undefined}
           />
         </Form.Item>
       );
     }
 
     if (variableType === 'option') {
+      const hasError = isFieldInvalid(name);
       return (
         <Form.Item
           key={name}
@@ -549,6 +601,13 @@ export const WorkflowRunForm = ({
             required
               ? [{ required: true, message: t('canvas.workflow.variables.selectPlaceholder') }]
               : []
+          }
+          className={cn({ 'has-validation-error': hasError })}
+          validateStatus={hasError ? 'error' : undefined}
+          help={
+            hasError
+              ? t('canvas.workflow.variables.thisFieldIsRequired') || 'This field is required'
+              : undefined
           }
         >
           <Select
@@ -560,12 +619,14 @@ export const WorkflowRunForm = ({
             options={options?.map((opt) => ({ label: opt, value: opt })) ?? []}
             data-field-name={name}
             disabled={isFormDisabled}
+            status={hasError ? 'error' : undefined}
           />
         </Form.Item>
       );
     }
 
     if (variableType === 'resource') {
+      const hasError = isFieldInvalid(name);
       return (
         <Form.Item
           key={name}
@@ -575,6 +636,13 @@ export const WorkflowRunForm = ({
             required
               ? [{ required: true, message: t('canvas.workflow.variables.uploadPlaceholder') }]
               : []
+          }
+          className={cn({ 'has-validation-error': hasError })}
+          validateStatus={hasError ? 'error' : undefined}
+          help={
+            hasError
+              ? t('canvas.workflow.variables.thisFieldIsRequired') || 'This field is required'
+              : undefined
           }
         >
           <ResourceUpload
@@ -586,6 +654,7 @@ export const WorkflowRunForm = ({
             disabled={uploading || isFormDisabled}
             maxCount={1}
             data-field-name={name}
+            hasError={hasError}
           />
         </Form.Item>
       );

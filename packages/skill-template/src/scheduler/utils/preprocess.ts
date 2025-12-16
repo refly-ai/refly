@@ -33,6 +33,7 @@ export const preprocess = async (
     usedChatHistory,
   };
 
+  console.log('needpreparecontext', needPrepareContext, JSON.stringify(context));
   if (needPrepareContext) {
     result.context = await prepareContext(context, {
       maxTokens: remainingTokens,

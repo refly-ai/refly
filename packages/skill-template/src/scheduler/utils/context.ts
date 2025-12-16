@@ -43,6 +43,7 @@ export async function prepareContext(
     summarizerConcurrentLimit?: number;
   },
 ): Promise<ContextBlock> {
+  console.log(`preparecontext ${JSON.stringify(context)}`);
   if (!context) {
     return { files: [], results: [], totalTokens: 0 };
   }

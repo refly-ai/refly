@@ -83,10 +83,12 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 | Field | Type | Description |
 |-------|------|-------------|
 | variableId | string | Unique identifier (e.g., "var-1") |
-| variableType | string | Currently only "string" |
+| variableType | string | "string" for text input, "resource" for file upload |
 | name | string | Variable name for reference |
 | description | string | What this variable represents |
-| value | array | \`[{ type: "text", text: "value" }]\` |
+| required | boolean | Whether this input is required (default: false) |
+| resourceTypes | array | For resource type only: ["document", "image", "audio", "video"] |
+| value | array | For string: \`[{ type: "text", text: "value" }]\`; For resource: \`[]\` (always empty) |
 
 **Variable Design Principles**:
 - **Maximize Extensibility** — Always identify user-configurable parameters that would make the workflow reusable
@@ -95,6 +97,25 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 - **Descriptive Names** — Use clear, self-documenting names that are meaningful in the user's language
 - **Helpful Descriptions** — Explain purpose and expected format in user's language (e.g., "Company name to analyze, e.g., Apple, Tesla")
 - **Sensible Defaults** — Provide reasonable default values when possible to reduce user friction
+
+**File Input Recognition** — Generate \`variableType: "resource"\` when user mentions:
+- "上传文件/账单/报告/图片/视频..."
+- "upload a PDF/CSV/Excel/image/file..."
+- "用户上传一个文件，然后..."
+- "根据用户上传的xxx进行分析"
+- "based on the uploaded file..."
+- "analyze the document/image/video that user provides"
+
+**Required vs Optional**:
+- **required: true** — When user uses strong constraint words:
+  - "必须上传" / "需要上传" / "请上传" / "上传...来..."
+  - "must upload" / "need to upload" / "require" / "based on the uploaded file only"
+- **required: false** (default) — When:
+  - "可以上传" / "可选上传" / "optionally upload"
+  - No explicit constraint mentioned
+  - User says "if available" / "如果有的话"
+
+**File Input Value**: Always generate with empty value array: \`value: []\`
 
 ## Task Design
 
@@ -438,6 +459,105 @@ User instructions take precedence for overridable rules.
 | Competitive Report | \`generate_doc\` | Synthesize findings into @{type=var,id=var-2,name=analysis_depth} competitive analysis |
 
 **Data Flow**: research → feature analysis → report
+
+---
+
+### Example 6: File-based Data Analysis (Optional File Input)
+
+**Request**: "帮我分析用户上传的财务报表，生成投资建议报告"
+
+**Design Thinking & Decisions**:
+
+1. **Input Recognition**
+   - "用户上传的财务报表" → file input variable (resource type)
+   - No strong constraint words like "必须" → required: false
+
+2. **Analysis & Output**
+   - Parse and analyze uploaded document → execute_code
+   - Generate investment report → generate_doc
+
+3. **Variable Design**
+   - File input with resourceTypes: ["document"] for PDF/Excel/CSV
+
+**Variables**:
+\`\`\`json
+[
+  {
+    "variableId": "var-1",
+    "variableType": "resource",
+    "name": "财务报表",
+    "description": "上传需要分析的财务报表文件（支持 PDF、Excel、CSV）",
+    "required": false,
+    "resourceTypes": ["document"],
+    "value": []
+  },
+  {
+    "variableId": "var-2",
+    "variableType": "string",
+    "name": "分析重点",
+    "description": "分析的重点方向，如：盈利能力、资产负债、现金流等",
+    "value": [{ "type": "text", "text": "综合分析" }]
+  }
+]
+\`\`\`
+
+**Workflow Structure**:
+
+| Task | Tool | Purpose |
+|------|------|---------|
+| Analyze Data | \`execute_code\` | Parse @{type=var,id=var-1,name=财务报表} and extract key metrics based on @{type=var,id=var-2,name=分析重点} |
+| Generate Report | \`generate_doc\` | Create investment recommendation report |
+
+**Data Flow**: analyze → report
+
+---
+
+### Example 7: Required File Upload
+
+**Request**: "I need to analyze the CSV file that user must upload, and generate a statistical report with charts"
+
+**Design Thinking & Decisions**:
+
+1. **Input Recognition**
+   - "must upload" → strong constraint → required: true
+   - "CSV file" → resource type with document
+
+2. **Analysis Tasks**
+   - Data parsing and statistical analysis → execute_code
+   - Chart generation → execute_code
+   - Final report → generate_doc
+
+**Variables**:
+\`\`\`json
+[
+  {
+    "variableId": "var-1",
+    "variableType": "resource",
+    "name": "data_file",
+    "description": "Upload the CSV file to analyze (required)",
+    "required": true,
+    "resourceTypes": ["document"],
+    "value": []
+  },
+  {
+    "variableId": "var-2",
+    "variableType": "string",
+    "name": "analysis_type",
+    "description": "Type of statistical analysis: descriptive, correlation, regression, all",
+    "value": [{ "type": "text", "text": "descriptive" }]
+  }
+]
+\`\`\`
+
+**Workflow Structure**:
+
+| Task | Tool | Purpose |
+|------|------|---------|
+| Parse & Analyze | \`execute_code\` | Read @{type=var,id=var-1,name=data_file}, perform @{type=var,id=var-2,name=analysis_type} analysis |
+| Generate Charts | \`execute_code\` | Create visualizations based on analysis results |
+| Final Report | \`generate_doc\` | Compile statistical findings with chart references |
+
+**Data Flow**: parse → charts → report
 </examples>
 
 ## Available Tools

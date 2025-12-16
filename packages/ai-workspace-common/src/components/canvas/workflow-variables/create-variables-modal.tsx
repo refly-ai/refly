@@ -31,6 +31,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
     mode,
     disableChangeVariableType,
     isFromResource,
+    showFileUploadError,
   }) => {
     const { t } = useTranslation();
     const [form] = Form.useForm<VariableFormData>();
@@ -42,6 +43,9 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
     const { canvasId } = useCanvasContext();
     const { handleVariableView } = useVariableView(canvasId);
     const { data: workflowVariables, setVariables } = useVariablesManagement(canvasId);
+
+    // Watch the required field to pass to ResourceTypeForm
+    const isRequired = Form.useWatch('required', form) ?? true;
 
     const title = useMemo(() => {
       if (disableChangeVariableType) {
@@ -168,10 +172,10 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
             setCurrentOption('');
           }
         }
-      } else {
-        setVariableType(initialVariableType || 'string');
-        resetState();
       }
+      // Note: We don't reset state here when visible becomes false
+      // because it causes visual glitches during the close animation.
+      // Instead, we reset state in the afterClose callback of the Modal.
     }, [visible]);
 
     // Update form when variable type changes
@@ -315,6 +319,12 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       resetOptions();
       form.resetFields();
     }, [resetFormData, resetOptions, form]);
+
+    // Handle modal close animation completion
+    const handleAfterClose = useCallback(() => {
+      setVariableType(initialVariableType || 'string');
+      resetState();
+    }, [initialVariableType, resetState]);
 
     const logVariableCreationEvent = useCallback(
       (variable: WorkflowVariable) => {
@@ -492,8 +502,8 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
           finalValue = [];
         }
 
-        // Check if final value is empty and show error message
-        if (!finalValue || finalValue.length === 0) {
+        // Check if final value is empty and show error message (only for required variables)
+        if (values.required && (!finalValue || finalValue.length === 0)) {
           message.error(
             t('canvas.workflow.variables.valueRequired') || 'Variable value is required',
           );
@@ -575,6 +585,8 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
               onFileRemove={handleFileRemove}
               onRefreshFile={handleRefreshFile}
               form={form}
+              showError={showFileUploadError && fileList.length === 0}
+              isRequired={isRequired}
             />
           );
         case 'option':
@@ -604,6 +616,8 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       handleFileUpload,
       handleFileRemove,
       handleRefreshFile,
+      showFileUploadError,
+      isRequired,
       options,
       editingIndex,
       currentOption,
@@ -625,6 +639,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
         centered
         open={visible}
         onCancel={handleModalClose}
+        afterClose={handleAfterClose}
         closable={false}
         title={null}
         footer={null}

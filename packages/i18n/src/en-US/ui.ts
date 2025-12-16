@@ -1432,6 +1432,8 @@ const translations = {
         selectOptions: 'Select options',
         clickToEdit: 'Click to edit',
         deleteSuccess: 'Variable deleted successfully',
+        thisFieldIsRequired: 'This field is required',
+        uploadBeforeRunning: 'Upload a file before running Agent.',
         inputPlaceholder: 'Please enter',
         selectPlaceholder: 'Please select',
         uploadPlaceholder: 'Please upload file',
@@ -1478,6 +1480,10 @@ const translations = {
         failed: 'Workflow execution failed',
         error: 'Error monitoring workflow execution',
         validationError: 'Please fill in all required fields before running the workflow',
+        requiredFileInputsMissing:
+          'This agent has required file inputs. Please upload the missing files before running.',
+        requiredFileInputsMissingForChain:
+          'Some required file inputs for this step or later steps are missing. Please upload them before running.',
         toolsGuide: 'Click "Run" to experience, the green parts support editing input content',
         nodeStatus: {
           waiting: 'Waiting',
