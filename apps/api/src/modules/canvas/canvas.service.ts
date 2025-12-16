@@ -326,10 +326,11 @@ export class CanvasService {
       const driveFiles = await this.prisma.driveFile.findMany({
         where: {
           canvasId,
+          scope: 'present',
           deletedAt: null,
         },
       });
-      const fileIdMap = new Map<string, string>();
+      const fileIdMap: Record<string, string> = {};
       const limit = pLimit(10);
 
       const promises = driveFiles.map((file: any) =>
@@ -341,7 +342,7 @@ export class CanvasService {
               newCanvasId,
             )) as any;
 
-            fileIdMap.set(file.fileId, newFileId);
+            fileIdMap[file.fileId] = newFileId;
 
             this.logger.log(
               `Successfully duplicated drive file ${file.fileId} to ${newFileId} for share ${newCanvasId}`,
@@ -406,22 +407,27 @@ export class CanvasService {
         );
       }
 
-      // Process workflow variables to update entity IDs
+      // Process workflow variables to update entity IDs and file IDs
       if (workflowVariables && workflowVariables.length > 0) {
         const updatedWorkflowVariables = workflowVariables.map((variable) => ({
           ...variable,
           value: (variable.value ?? []).map((value) => {
-            if (
-              value.type === 'resource' &&
-              value.resource?.entityId &&
-              replaceEntityMap[value.resource.entityId]
-            ) {
+            if (value.type === 'resource' && value.resource) {
+              const updatedResource = { ...value.resource };
+
+              // Replace entityId if mapping exists
+              if (updatedResource.entityId && replaceEntityMap[updatedResource.entityId]) {
+                updatedResource.entityId = replaceEntityMap[updatedResource.entityId];
+              }
+
+              // Replace fileId if mapping exists
+              if (updatedResource.fileId && fileIdMap[updatedResource.fileId]) {
+                updatedResource.fileId = fileIdMap[updatedResource.fileId];
+              }
+
               return {
                 ...value,
-                resource: {
-                  ...value.resource,
-                  entityId: replaceEntityMap[value.resource.entityId],
-                },
+                resource: updatedResource,
               };
             }
             return value;
@@ -445,6 +451,33 @@ export class CanvasService {
         targetId: newCanvasId,
         targetType: 'canvas',
         replaceEntityMap,
+        fileIdMap,
+      });
+
+      // Build resultIdMap from replaceEntityMap (action result IDs are added during duplication)
+      const resultIdMap: Record<string, string> = {};
+      for (const oldResultId of actionResultIds) {
+        if (replaceEntityMap[oldResultId]) {
+          resultIdMap[oldResultId] = replaceEntityMap[oldResultId];
+        }
+      }
+
+      // Create combined replace map for message and tool call duplication
+      const combinedReplaceMap = { ...replaceEntityMap, ...fileIdMap };
+
+      // Duplicate tool call results first to get callIdMap
+      const { callIdMap } = await this.actionService.duplicateToolCallResults(user, {
+        sourceResultIds: actionResultIds,
+        resultIdMap,
+        replaceIdMap: combinedReplaceMap,
+      });
+
+      // Then duplicate action messages with callIdMap to update toolCallId references
+      await this.actionService.duplicateActionMessages({
+        sourceResultIds: actionResultIds,
+        resultIdMap,
+        replaceIdMap: combinedReplaceMap,
+        callIdMap,
       });
 
       for (const node of nodes) {
@@ -459,13 +492,13 @@ export class CanvasService {
 
         if (metadata.contextItems) {
           metadata.contextItems = safeParseJSON(
-            batchReplaceRegex(JSON.stringify(metadata.contextItems), replaceEntityMap),
+            batchReplaceRegex(JSON.stringify(metadata.contextItems), combinedReplaceMap),
           );
         }
 
         if (metadata.structuredData) {
           metadata.structuredData = safeParseJSON(
-            batchReplaceRegex(JSON.stringify(metadata.structuredData), replaceEntityMap),
+            batchReplaceRegex(JSON.stringify(metadata.structuredData), combinedReplaceMap),
           );
         }
 

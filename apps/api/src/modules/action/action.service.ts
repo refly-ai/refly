@@ -9,7 +9,13 @@ import {
   GetActionResultData,
   User,
 } from '@refly/openapi-schema';
-import { batchReplaceRegex, genActionResultID, pick, safeParseJSON } from '@refly/utils';
+import {
+  batchReplaceRegex,
+  genActionResultID,
+  genActionMessageID,
+  pick,
+  safeParseJSON,
+} from '@refly/utils';
 import pLimit from 'p-limit';
 import {
   ActionResult,
@@ -207,10 +213,11 @@ export class ActionService {
       targetId: string;
       targetType: EntityType;
       replaceEntityMap: Record<string, string>;
+      fileIdMap?: Record<string, string>;
     },
     options?: { checkOwnership?: boolean },
   ) {
-    const { sourceResultIds, targetId, targetType, replaceEntityMap } = param;
+    const { sourceResultIds, targetId, targetType, replaceEntityMap, fileIdMap } = param;
 
     // Get all action results for the given resultIds
     const allResults = await this.prisma.actionResult.findMany({
@@ -244,6 +251,12 @@ export class ActionService {
     // Generate new resultIds beforehand to facilitate the replacement of history results
     for (const sourceResultId of sourceResultIds) {
       replaceEntityMap[sourceResultId] = genActionResultID();
+    }
+
+    // Create a combined replacement map that includes both entity IDs and file IDs
+    const combinedReplaceMap: Record<string, string> = { ...replaceEntityMap };
+    if (fileIdMap) {
+      Object.assign(combinedReplaceMap, fileIdMap);
     }
 
     const limit = pLimit(5);
@@ -297,8 +310,8 @@ export class ActionService {
               'errors',
               'errorType',
             ]),
-            context: batchReplaceRegex(JSON.stringify(context), replaceEntityMap),
-            history: batchReplaceRegex(JSON.stringify(history), replaceEntityMap),
+            context: batchReplaceRegex(context ?? '{}', combinedReplaceMap),
+            history: batchReplaceRegex(history ?? '[]', combinedReplaceMap),
             resultId: newResultId,
             uid: user.uid,
             targetId,
@@ -322,7 +335,7 @@ export class ActionService {
                 'tokenUsage',
               ]),
               resultId: newResult.resultId,
-              artifacts: batchReplaceRegex(JSON.stringify(step.artifacts), replaceEntityMap),
+              artifacts: batchReplaceRegex(JSON.stringify(step.artifacts), combinedReplaceMap),
               version: 0, // Reset version to 0 for the new duplicate
             })),
           });
@@ -336,6 +349,206 @@ export class ActionService {
     const results = await Promise.all(newResultsPromises);
 
     return results.filter((result) => result !== null);
+  }
+
+  /**
+   * Duplicate ActionMessage records for given resultIds
+   * @param param.sourceResultIds - Source result IDs to duplicate messages from
+   * @param param.resultIdMap - Map of old resultId -> new resultId
+   * @param param.replaceIdMap - Optional map for replacing IDs in content fields (includes entityIds and fileIds)
+   * @param param.callIdMap - Optional map for replacing toolCallId references (old callId -> new callId)
+   */
+  async duplicateActionMessages(param: {
+    sourceResultIds: string[];
+    resultIdMap: Record<string, string>;
+    replaceIdMap?: Record<string, string>;
+    callIdMap?: Record<string, string>;
+  }) {
+    const { sourceResultIds, resultIdMap, replaceIdMap, callIdMap } = param;
+
+    if (!sourceResultIds.length) {
+      return [];
+    }
+
+    // Get all action messages for the given resultIds (latest version only)
+    // Order by createdAt to preserve message ordering
+    const allMessages = await this.prisma.actionMessage.findMany({
+      where: {
+        resultId: { in: sourceResultIds },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (!allMessages?.length) {
+      return [];
+    }
+
+    // Filter to keep only the latest version messages for each resultId
+    const latestVersionMap = new Map<string, number>();
+    for (const msg of allMessages) {
+      const currentMax = latestVersionMap.get(msg.resultId) ?? -1;
+      if (msg.version > currentMax) {
+        latestVersionMap.set(msg.resultId, msg.version);
+      }
+    }
+
+    const filteredMessages = allMessages.filter(
+      (msg) => msg.version === latestVersionMap.get(msg.resultId),
+    );
+
+    if (!filteredMessages.length) {
+      return [];
+    }
+
+    // Create new messages with new IDs, preserving order
+    const newMessages = filteredMessages.map((msg) => {
+      const newResultId = resultIdMap[msg.resultId];
+      if (!newResultId) {
+        return null; // Skip if no mapping exists
+      }
+
+      let content = msg.content;
+      let toolCallMeta = msg.toolCallMeta;
+
+      // Apply ID replacements if provided
+      if (replaceIdMap && Object.keys(replaceIdMap).length > 0) {
+        content = batchReplaceRegex(content, replaceIdMap);
+        if (toolCallMeta) {
+          toolCallMeta = batchReplaceRegex(toolCallMeta, replaceIdMap);
+        }
+      }
+
+      // Replace toolCallId with new callId if mapping exists
+      let newToolCallId = msg.toolCallId;
+      if (msg.toolCallId && callIdMap && callIdMap[msg.toolCallId]) {
+        newToolCallId = callIdMap[msg.toolCallId];
+      }
+
+      return {
+        messageId: genActionMessageID(),
+        resultId: newResultId,
+        version: 0, // Reset version to 0 for the new duplicate
+        type: msg.type,
+        content,
+        reasoningContent: msg.reasoningContent,
+        usageMeta: msg.usageMeta,
+        toolCallMeta,
+        toolCallId: newToolCallId,
+      };
+    });
+
+    const validMessages = newMessages.filter((msg) => msg !== null);
+
+    if (validMessages.length > 0) {
+      await this.prisma.actionMessage.createMany({
+        data: validMessages,
+      });
+    }
+
+    return validMessages;
+  }
+
+  /**
+   * Duplicate ToolCallResult records for given resultIds
+   * @param user - User performing the duplication
+   * @param param.sourceResultIds - Source result IDs to duplicate tool calls from
+   * @param param.resultIdMap - Map of old resultId -> new resultId
+   * @param param.replaceIdMap - Optional map for replacing IDs in input/output fields (includes entityIds and fileIds)
+   * @returns Object containing the created tool calls and callIdMap (old callId -> new callId)
+   */
+  async duplicateToolCallResults(
+    user: User,
+    param: {
+      sourceResultIds: string[];
+      resultIdMap: Record<string, string>;
+      replaceIdMap?: Record<string, string>;
+    },
+  ): Promise<{ toolCalls: any[]; callIdMap: Record<string, string> }> {
+    const { sourceResultIds, resultIdMap, replaceIdMap } = param;
+    const callIdMap: Record<string, string> = {};
+
+    if (!sourceResultIds.length) {
+      return { toolCalls: [], callIdMap };
+    }
+
+    // Get all tool call results for the given resultIds (latest version only)
+    const allToolCalls = await this.prisma.toolCallResult.findMany({
+      where: {
+        resultId: { in: sourceResultIds },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (!allToolCalls?.length) {
+      return { toolCalls: [], callIdMap };
+    }
+
+    // Filter to keep only the latest version tool calls for each resultId
+    const latestVersionMap = new Map<string, number>();
+    for (const tc of allToolCalls) {
+      const currentMax = latestVersionMap.get(tc.resultId) ?? -1;
+      if (tc.version > currentMax) {
+        latestVersionMap.set(tc.resultId, tc.version);
+      }
+    }
+
+    const filteredToolCalls = allToolCalls.filter(
+      (tc) => tc.version === latestVersionMap.get(tc.resultId),
+    );
+
+    if (!filteredToolCalls.length) {
+      return { toolCalls: [], callIdMap };
+    }
+
+    // Create new tool call results with new IDs and build callIdMap
+    const newToolCalls = filteredToolCalls.map((tc) => {
+      const newResultId = resultIdMap[tc.resultId];
+      if (!newResultId) {
+        return null; // Skip if no mapping exists
+      }
+
+      let input = tc.input;
+      let output = tc.output;
+
+      // Apply ID replacements if provided
+      if (replaceIdMap && Object.keys(replaceIdMap).length > 0) {
+        input = batchReplaceRegex(input, replaceIdMap);
+        output = batchReplaceRegex(output, replaceIdMap);
+      }
+
+      const newCallId = this.toolCallService.getOrCreateToolCallId({
+        resultId: newResultId,
+        version: 0,
+        toolsetId: tc.toolsetId,
+        toolName: tc.toolName,
+      });
+      // Build callIdMap for ActionMessage.toolCallId replacement
+      callIdMap[tc.callId] = newCallId;
+
+      return {
+        callId: newCallId,
+        resultId: newResultId,
+        version: 0, // Reset version to 0 for the new duplicate
+        uid: user.uid,
+        toolsetId: tc.toolsetId,
+        toolName: tc.toolName,
+        stepName: tc.stepName,
+        input,
+        output,
+        status: tc.status,
+        error: tc.error,
+      };
+    });
+
+    const validToolCalls = newToolCalls.filter((tc) => tc !== null);
+
+    if (validToolCalls.length > 0) {
+      await this.prisma.toolCallResult.createMany({
+        data: validToolCalls,
+      });
+    }
+
+    return { toolCalls: validToolCalls, callIdMap };
   }
 
   /**

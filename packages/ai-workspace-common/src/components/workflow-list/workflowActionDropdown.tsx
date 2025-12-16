@@ -17,7 +17,6 @@ interface WorkflowActionDropdown {
 }
 
 export const WorkflowActionDropdown = memo((props: WorkflowActionDropdown) => {
-  const showRemix = false;
   const { workflow, children, onRenameSuccess, onDeleteSuccess } = props;
   const { t } = useTranslation();
   const [popupVisible, setPopupVisible] = useState(false);
@@ -111,48 +110,46 @@ export const WorkflowActionDropdown = memo((props: WorkflowActionDropdown) => {
       ),
       key: 'rename',
     },
-    ...(showRemix
-      ? [
-          {
-            label: (
-              <div
-                className="flex items-center gap-1 min-w-28"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDuplicate();
-                }}
-              >
-                {t('canvas.toolbar.duplicate')}
-                <Spin spinning={duplicateLoading} size="small" className="text-refly-text-3" />
-              </div>
-            ),
-            key: 'duplicate',
-            disabled: duplicateLoading,
-          },
-          {
-            label: (
-              <Tooltip
-                title={!isShared ? t('workflowList.copyLinkTooltip') : undefined}
-                placement="right"
-              >
-                <div
-                  className={`flex items-center gap-1 min-w-28 ${!isShared ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!isShared) return;
-                    handleCopyLink();
-                  }}
-                >
-                  <Spin spinning={copyLinkLoading} size="small" className="text-refly-text-3" />
-                  {t('workflowList.copyLink')}
-                </div>
-              </Tooltip>
-            ),
-            key: 'copyLink',
-            disabled: !isShared || copyLinkLoading,
-          },
-        ]
-      : []),
+    ...[
+      {
+        label: (
+          <div
+            className="flex items-center gap-1 min-w-28"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDuplicate();
+            }}
+          >
+            {t('canvas.toolbar.duplicate')}
+            <Spin spinning={duplicateLoading} size="small" className="text-refly-text-3" />
+          </div>
+        ),
+        key: 'duplicate',
+        disabled: duplicateLoading,
+      },
+      {
+        label: (
+          <Tooltip
+            title={!isShared ? t('workflowList.copyLinkTooltip') : undefined}
+            placement="right"
+          >
+            <div
+              className={`flex items-center gap-1 min-w-28 ${!isShared ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isShared) return;
+                handleCopyLink();
+              }}
+            >
+              <Spin spinning={copyLinkLoading} size="small" className="text-refly-text-3" />
+              {t('workflowList.copyLink')}
+            </div>
+          </Tooltip>
+        ),
+        key: 'copyLink',
+        disabled: !isShared || copyLinkLoading,
+      },
+    ],
 
     {
       label: (
