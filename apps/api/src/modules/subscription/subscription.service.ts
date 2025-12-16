@@ -537,28 +537,6 @@ export class SubscriptionService implements OnModuleInit {
         data: { deletedAt: now },
       });
 
-      // Expire all active credit recharge records for this user
-      await prisma.creditRecharge.updateMany({
-        where: {
-          uid: sub.uid,
-          enabled: true,
-          createdAt: {
-            lte: now,
-          },
-          expiresAt: {
-            gte: now,
-          },
-        },
-        data: {
-          enabled: false,
-          updatedAt: now,
-        },
-      });
-
-      this.logger.log(
-        `Expired credit recharge records for user ${sub.uid} due to subscription cancellation`,
-      );
-
       const freePlan = await this.prisma.subscriptionPlan.findFirst({
         where: { planType: 'free' },
       });
