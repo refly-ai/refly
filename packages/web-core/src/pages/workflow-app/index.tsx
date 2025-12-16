@@ -295,17 +295,23 @@ const WorkflowAppPage: React.FC = () => {
     return workflowDetail?.nodeExecutions || finalNodeExecutions || [];
   }, [workflowDetail, finalNodeExecutions]);
 
-  // Fetch drive files for runtime products after execution completes
+  // Fetch drive files for runtime products during execution and after completion
   useEffect(() => {
-    // Only fetch when workflow is not running and we have canvasId
+    // Only fetch when we have canvasId
     // executionId is kept in URL for result viewing, so we don't check it here
-    if (!canvasId || isRunning) {
+    if (!canvasId) {
       return;
     }
 
     // Fetch when execution has completed (finalNodeExecutions present)
     // or when page loads with existing products (to support refresh)
-    if (finalNodeExecutions.length > 0) {
+    // or during execution when we have nodeExecutions with finished nodes
+    const hasCompletedNodes =
+      finalNodeExecutions.length > 0 ||
+      (nodeExecutions.length > 0 &&
+        nodeExecutions.some((node: WorkflowNodeExecution) => node.status === 'finish'));
+
+    if (hasCompletedNodes) {
       const fetchRuntimeFiles = async () => {
         try {
           const allFiles: DriveFile[] = [];
@@ -342,7 +348,7 @@ const WorkflowAppPage: React.FC = () => {
 
       fetchRuntimeFiles();
     }
-  }, [canvasId, isRunning, finalNodeExecutions.length]);
+  }, [canvasId, finalNodeExecutions.length, nodeExecutions]);
 
   const canvasFilesById = useMemo(() => {
     const map = new Map<string, DriveFile>();
