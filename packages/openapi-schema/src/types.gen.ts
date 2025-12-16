@@ -9375,9 +9375,17 @@ export type VerifyInvitationResult = {
   valid: boolean;
   invitation?: VoucherInvitation;
   /**
+   * The original voucher being shared (for unclaimed invitations)
+   */
+  voucher?: Voucher;
+  /**
    * If already claimed, the UID of the user who claimed it
    */
   claimedByUid?: string;
+  /**
+   * Inviter's name (for display)
+   */
+  inviterName?: string;
   /**
    * Error or status message
    */

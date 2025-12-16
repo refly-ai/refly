@@ -278,7 +278,7 @@ export class VoucherService implements OnModuleInit {
     // Create invitation for the share link
     const invitation = await this.createInvitation(uid, voucherId);
     const origin = this.configService.get('origin') || 'https://refly.ai';
-    const inviteLink = `${origin}/workspace?invite=${invitation.invitation.inviteCode}`;
+    const inviteLink = `${origin}/?invite=${invitation.invitation.inviteCode}`;
 
     // Calculate discount values
     const { discountValue, discountedPrice } = calculateDiscountValues(discountPercent);
@@ -415,12 +415,14 @@ export class VoucherService implements OnModuleInit {
 
   /**
    * Get user's available (unused, not expired) vouchers
+   * New logic: Returns both owned vouchers AND claimed vouchers (via invitation)
    * bestVoucher prioritizes vouchers with stripePromoCodeId (actually usable in Stripe)
    */
   async getAvailableVouchers(uid: string): Promise<VoucherAvailableResult> {
     const now = new Date();
 
-    const vouchers = await this.prisma.voucher.findMany({
+    // 1. Get vouchers owned by the user
+    const ownedVouchers = await this.prisma.voucher.findMany({
       where: {
         uid,
         status: VoucherStatus.UNUSED,
@@ -428,13 +430,44 @@ export class VoucherService implements OnModuleInit {
           gt: now,
         },
       },
-      orderBy: [
-        { discountPercent: 'desc' }, // Best discount first
-        { createdAt: 'desc' }, // Newer vouchers first
-      ],
+      orderBy: [{ discountPercent: 'desc' }, { createdAt: 'desc' }],
     });
 
-    const voucherDTOs = vouchers.map((v) => this.toVoucherDTO(v));
+    // 2. Get vouchers claimed via invitation
+    const claimedInvitations = await this.prisma.voucherInvitation.findMany({
+      where: {
+        inviteeUid: uid,
+        status: InvitationStatus.CLAIMED,
+      },
+    });
+
+    const claimedVoucherIds = claimedInvitations.map((inv) => inv.voucherId);
+
+    let claimedVouchers: any[] = [];
+    if (claimedVoucherIds.length > 0) {
+      claimedVouchers = await this.prisma.voucher.findMany({
+        where: {
+          voucherId: { in: claimedVoucherIds },
+          status: VoucherStatus.UNUSED,
+          expiresAt: { gt: now },
+        },
+        orderBy: [{ discountPercent: 'desc' }, { createdAt: 'desc' }],
+      });
+    }
+
+    // 3. Merge and deduplicate (in case of overlap)
+    const voucherMap = new Map<string, any>();
+    for (const v of ownedVouchers) {
+      voucherMap.set(v.voucherId, v);
+    }
+    for (const v of claimedVouchers) {
+      if (!voucherMap.has(v.voucherId)) {
+        voucherMap.set(v.voucherId, v);
+      }
+    }
+
+    const allVouchers = Array.from(voucherMap.values());
+    const voucherDTOs = allVouchers.map((v) => this.toVoucherDTO(v));
 
     // Separate vouchers with and without stripePromoCodeId
     const vouchersWithPromo = voucherDTOs.filter((v) => v.stripePromoCodeId);
@@ -479,17 +512,29 @@ export class VoucherService implements OnModuleInit {
 
   /**
    * Validate a voucher for use
+   * New logic: Allow owner OR claimant (via invitation) to use the voucher
    */
   async validateVoucher(uid: string, voucherId: string): Promise<VoucherValidateResult> {
     const voucher = await this.prisma.voucher.findFirst({
-      where: {
-        voucherId,
-        uid,
-      },
+      where: { voucherId },
     });
 
     if (!voucher) {
       return { valid: false, reason: 'Voucher not found' };
+    }
+
+    // Check permission: owner OR claimant
+    const isOwner = voucher.uid === uid;
+    const isClaimant = await this.prisma.voucherInvitation.findFirst({
+      where: {
+        voucherId,
+        inviteeUid: uid,
+        status: InvitationStatus.CLAIMED,
+      },
+    });
+
+    if (!isOwner && !isClaimant) {
+      return { valid: false, reason: 'You do not have permission to use this voucher' };
     }
 
     if (voucher.status !== VoucherStatus.UNUSED) {
@@ -522,6 +567,8 @@ export class VoucherService implements OnModuleInit {
 
   /**
    * Mark a voucher as used
+   * New logic: Grant reward to voucher OWNER when someone else (invitee) successfully pays
+   * Scenario: A creates voucher → A shares to B (Plus) → B shares to C → C pays → A gets reward
    */
   async useVoucher(input: UseVoucherInput): Promise<VoucherDTO | null> {
     const voucher = await this.prisma.voucher.findFirst({
@@ -547,6 +594,39 @@ export class VoucherService implements OnModuleInit {
     });
 
     this.logger.log(`Voucher used: ${input.voucherId}`);
+
+    // Grant reward to voucher OWNER if the payer is NOT the owner
+    // Find the subscription to get the payer's uid
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { subscriptionId: input.subscriptionId },
+      select: { uid: true },
+    });
+
+    if (subscription) {
+      const payerUid = subscription.uid;
+      const voucherOwnerUid = voucher.uid;
+      const isOwner = voucherOwnerUid === payerUid;
+
+      if (!isOwner) {
+        // Payer is not the voucher owner
+        // Find any claimed invitation for this voucher to use for idempotency
+        const invitation = await this.prisma.voucherInvitation.findFirst({
+          where: {
+            voucherId: input.voucherId,
+            status: InvitationStatus.CLAIMED,
+          },
+        });
+
+        if (invitation) {
+          // Grant reward to voucher OWNER (not invitation.inviterUid)
+          // This ensures A gets reward even if B (Plus user) shared to C
+          await this.grantInviterReward(voucherOwnerUid, invitation.invitationId);
+          this.logger.log(
+            `Voucher owner reward granted to ${voucherOwnerUid} for voucher ${input.voucherId} (payer: ${payerUid})`,
+          );
+        }
+      }
+    }
 
     return this.toVoucherDTO(updatedVoucher);
   }
@@ -590,75 +670,106 @@ export class VoucherService implements OnModuleInit {
   /**
    * Verify an invitation code
    * Returns detailed information about the invitation status
+   * New logic: Check original voucher status (used/expired) before returning valid
    */
   async verifyInvitation(inviteCode: string): Promise<VerifyInvitationResult> {
-    // First try to find unclaimed invitation
-    const unclaimedInvitation = await this.prisma.voucherInvitation.findFirst({
-      where: {
-        inviteCode,
-        status: InvitationStatus.UNCLAIMED,
-      },
+    // First try to find any invitation with this code (unclaimed or claimed)
+    const invitation = await this.prisma.voucherInvitation.findFirst({
+      where: { inviteCode },
     });
 
-    if (unclaimedInvitation) {
+    if (!invitation) {
+      return {
+        valid: false,
+        message: 'Invalid or expired invitation',
+      };
+    }
+
+    // Get inviter's name
+    const inviter = await this.prisma.user.findUnique({
+      where: { uid: invitation.inviterUid },
+      select: { name: true },
+    });
+
+    // Find the original voucher that is being shared
+    const voucher = await this.prisma.voucher.findFirst({
+      where: { voucherId: invitation.voucherId },
+    });
+
+    if (!voucher) {
+      return {
+        valid: false,
+        invitation: this.toInvitationDTO(invitation),
+        inviterName: inviter?.name || undefined,
+        message: 'Voucher not found',
+      };
+    }
+
+    // Check if voucher has already been used
+    if (voucher.status === VoucherStatus.USED) {
+      return {
+        valid: false,
+        invitation: this.toInvitationDTO(invitation),
+        voucher: this.toVoucherDTO(voucher),
+        inviterName: inviter?.name || undefined,
+        message: 'Voucher has already been used',
+      };
+    }
+
+    // Check if voucher has expired
+    if (voucher.status === VoucherStatus.EXPIRED || voucher.expiresAt < new Date()) {
+      // Mark as expired if not already
+      if (voucher.status !== VoucherStatus.EXPIRED) {
+        await this.prisma.voucher.update({
+          where: { pk: voucher.pk },
+          data: { status: VoucherStatus.EXPIRED, updatedAt: new Date() },
+        });
+      }
+      return {
+        valid: false,
+        invitation: this.toInvitationDTO(invitation),
+        voucher: this.toVoucherDTO({ ...voucher, status: VoucherStatus.EXPIRED }),
+        inviterName: inviter?.name || undefined,
+        message: 'Voucher has expired',
+      };
+    }
+
+    // For unclaimed invitations - voucher is valid and can be claimed
+    if (invitation.status === InvitationStatus.UNCLAIMED) {
       return {
         valid: true,
-        invitation: this.toInvitationDTO(unclaimedInvitation),
+        invitation: this.toInvitationDTO(invitation),
+        voucher: this.toVoucherDTO(voucher),
+        inviterName: inviter?.name || undefined,
       };
     }
 
-    // Check if invitation exists but is already claimed
-    const claimedInvitation = await this.prisma.voucherInvitation.findFirst({
-      where: {
-        inviteCode,
-        status: InvitationStatus.CLAIMED,
-      },
-    });
-
-    if (claimedInvitation) {
-      const result: VerifyInvitationResult = {
+    // For claimed invitations - voucher is still valid but this specific invitation is claimed
+    // The user who claimed can still use the voucher
+    if (invitation.status === InvitationStatus.CLAIMED) {
+      return {
         valid: false,
-        invitation: this.toInvitationDTO(claimedInvitation),
-        claimedByUid: claimedInvitation.inviteeUid || undefined,
+        invitation: this.toInvitationDTO(invitation),
+        voucher: this.toVoucherDTO(voucher),
+        claimedByUid: invitation.inviteeUid || undefined,
+        inviterName: inviter?.name || undefined,
         message: 'Invitation already claimed',
       };
-
-      // If claimed, find the voucher that was created from this invitation
-      if (claimedInvitation.inviteeUid) {
-        const voucher = await this.prisma.voucher.findFirst({
-          where: {
-            uid: claimedInvitation.inviteeUid,
-            source: VoucherSource.INVITATION_CLAIM,
-            sourceId: claimedInvitation.invitationId,
-          },
-        });
-
-        if (voucher) {
-          result.claimedVoucher = this.toVoucherDTO(voucher);
-        }
-
-        // Get inviter's name
-        const inviter = await this.prisma.user.findUnique({
-          where: { uid: claimedInvitation.inviterUid },
-          select: { name: true },
-        });
-        if (inviter?.name) {
-          result.inviterName = inviter.name;
-        }
-      }
-
-      return result;
     }
 
-    // Invitation not found or expired
+    // Invitation expired or other status
     return {
       valid: false,
-      message: 'Invalid or expired invitation',
+      invitation: this.toInvitationDTO(invitation),
+      inviterName: inviter?.name || undefined,
+      message: 'Invitation is no longer valid',
     };
   }
 
   /**
-   * Claim an invitation - creates a voucher for the invitee
+   * Claim an invitation - records the claim relationship (no longer creates new voucher)
+   * New logic: B claims → gets usage rights to the SAME voucher as A
+   * Stripe PromotionCode max_redemptions=1 ensures only one person can use it
    */
   async claimInvitation(input: ClaimInvitationInput): Promise<ClaimInvitationResult> {
     const { inviteCode, inviteeUid } = input;
@@ -686,21 +797,35 @@ export class VoucherService implements OnModuleInit {
       };
     }
 
-    // Create voucher for invitee
-    const expiresAt = new Date();
-    expiresAt.setMinutes(
-      expiresAt.getMinutes() + this.configService.get('voucher.expirationMinutes'),
-    );
-
-    const voucher = await this.createVoucher({
-      uid: inviteeUid,
-      discountPercent: invitation.discountPercent,
-      source: VoucherSource.INVITATION_CLAIM,
-      sourceId: invitation.invitationId,
-      expiresAt,
+    // Find the original voucher
+    const voucher = await this.prisma.voucher.findFirst({
+      where: { voucherId: invitation.voucherId },
     });
 
-    // Update invitation status
+    if (!voucher) {
+      return {
+        success: false,
+        message: 'Voucher not found',
+      };
+    }
+
+    // Check if voucher has already been used
+    if (voucher.status === VoucherStatus.USED) {
+      return {
+        success: false,
+        message: 'Voucher has already been used',
+      };
+    }
+
+    // Check if voucher has expired
+    if (voucher.status === VoucherStatus.EXPIRED || voucher.expiresAt < new Date()) {
+      return {
+        success: false,
+        message: 'Voucher has expired',
+      };
+    }
+
+    // Key change: Don't create new voucher, just update invitation status
     await this.prisma.voucherInvitation.update({
       where: { pk: invitation.pk },
       data: {
@@ -711,8 +836,8 @@ export class VoucherService implements OnModuleInit {
       },
     });
 
-    // Grant reward to inviter (2000 credits) - idempotent
-    await this.grantInviterReward(invitation.inviterUid, invitation.invitationId);
+    // Note: Inviter reward (2000 credits) is now granted when invitee successfully pays
+    // See useVoucher() method for the reward logic
 
     // Track analytics
     this.trackEvent(AnalyticsEvents.VOUCHER_CLAIM, {
@@ -723,7 +848,7 @@ export class VoucherService implements OnModuleInit {
     });
 
     this.logger.log(
-      `Invitation claimed: ${inviteCode} by ${inviteeUid}, inviter: ${invitation.inviterUid}`,
+      `Invitation claimed: ${inviteCode} by ${inviteeUid}, inviter: ${invitation.inviterUid} (shared voucher mode)`,
     );
 
     // Get inviter name
@@ -732,9 +857,10 @@ export class VoucherService implements OnModuleInit {
       select: { name: true },
     });
 
+    // Return the ORIGINAL voucher (not a new one)
     return {
       success: true,
-      voucher,
+      voucher: this.toVoucherDTO(voucher),
       inviterName: inviter?.name || undefined,
     };
   }

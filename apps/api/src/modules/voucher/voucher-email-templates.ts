@@ -154,7 +154,7 @@ export function generateVoucherEmailEN(data: VoucherEmailData): { subject: strin
                 </tr>
               </table>
 
-              <!-- Discord Section -->
+              <!-- Community Section -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top: 1px solid #e5e7eb;">
                 <tr>
                   <td style="text-align: center; padding-top: 32px;">
@@ -162,12 +162,41 @@ export function generateVoucherEmailEN(data: VoucherEmailData): { subject: strin
                     <p style="margin: 0 0 20px; font-size: 14px; color: #666666;">
                       Connect with fellow creators for feedback, inspiration, and best practices.
                     </p>
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+
+                    <!-- Two columns: WeChat + Discord -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
-                        <td style="background-color: #5865f2; border-radius: 12px;">
-                          <a href="https://discord.com/invite/YVuYFjFvRC" style="display: inline-block; padding: 14px 28px; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none;">
-                            💬 Join Discord
-                          </a>
+                        <!-- WeChat QR Code -->
+                        <td width="50%" style="padding: 0 8px; vertical-align: top;">
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafb; border-radius: 12px; border: 1px solid #e5e7eb; height: 200px;">
+                            <tr>
+                              <td style="padding: 20px; text-align: center; vertical-align: middle;">
+                                <p style="margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #1a1a1a;">Follow on WeChat</p>
+                                <img src="https://api.refly.ai/v1/drive/file/public/df-h2el23mfac4kyk0r6wintfu7" alt="Refly WeChat" width="100" height="100" style="display: block; margin: 0 auto; border-radius: 8px;" />
+                                <p style="margin: 12px 0 0; font-size: 12px; color: #888888;">Scan for latest updates</p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                        <!-- Discord -->
+                        <td width="50%" style="padding: 0 8px; vertical-align: top;">
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafb; border-radius: 12px; border: 1px solid #e5e7eb; height: 200px;">
+                            <tr>
+                              <td style="padding: 20px; text-align: center; vertical-align: middle;">
+                                <p style="margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #1a1a1a;">Join Discord</p>
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+                                  <tr>
+                                    <td style="background-color: #5865f2; border-radius: 12px;">
+                                      <a href="https://discord.com/invite/YVuYFjFvRC" style="display: inline-block; padding: 14px 24px; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none;">
+                                        💬 Join Community
+                                      </a>
+                                    </td>
+                                  </tr>
+                                </table>
+                                <p style="margin: 12px 0 0; font-size: 12px; color: #888888;">Chat with global creators</p>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
                       </tr>
                     </table>
@@ -179,9 +208,6 @@ export function generateVoucherEmailEN(data: VoucherEmailData): { subject: strin
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top: 1px solid #e5e7eb; margin-top: 32px;">
                 <tr>
                   <td style="text-align: center; padding-top: 32px;">
-                    <p style="margin: 0 0 16px; font-size: 14px; color: #888888;">
-                      Questions? Just reply to this email — we're here to help!
-                    </p>
                     <p style="margin: 0; font-size: 16px; font-weight: 500; color: #1a1a1a;">Happy Creating!</p>
                     <p style="margin: 8px 0 0; font-size: 18px; font-weight: 700; color: #0E9F77;">The Refly Team</p>
                   </td>
@@ -362,7 +388,7 @@ export function generateVoucherEmailZH(data: VoucherEmailData): { subject: strin
                 </tr>
               </table>
 
-              <!-- Discord Section -->
+              <!-- Community Section -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top: 1px solid #e5e7eb;">
                 <tr>
                   <td style="text-align: center; padding-top: 32px;">
@@ -370,12 +396,41 @@ export function generateVoucherEmailZH(data: VoucherEmailData): { subject: strin
                     <p style="margin: 0 0 20px; font-size: 14px; color: #666666;">
                       与其他创作者交流，获取反馈、灵感和最佳实践。
                     </p>
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+
+                    <!-- Two columns: WeChat + Discord -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
-                        <td style="background-color: #5865f2; border-radius: 12px;">
-                          <a href="https://discord.com/invite/YVuYFjFvRC" style="display: inline-block; padding: 14px 28px; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none;">
-                            💬 加入 Discord
-                          </a>
+                        <!-- WeChat QR Code -->
+                        <td width="50%" style="padding: 0 8px; vertical-align: top;">
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafb; border-radius: 12px; border: 1px solid #e5e7eb; height: 200px;">
+                            <tr>
+                              <td style="padding: 20px; text-align: center; vertical-align: middle;">
+                                <p style="margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #1a1a1a;">关注微信公众号</p>
+                                <img src="https://api.refly.ai/v1/drive/file/public/df-h2el23mfac4kyk0r6wintfu7" alt="Refly 微信公众号" width="100" height="100" style="display: block; margin: 0 auto; border-radius: 8px;" />
+                                <p style="margin: 12px 0 0; font-size: 12px; color: #888888;">扫码关注获取最新动态</p>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                        <!-- Discord -->
+                        <td width="50%" style="padding: 0 8px; vertical-align: top;">
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafb; border-radius: 12px; border: 1px solid #e5e7eb; height: 200px;">
+                            <tr>
+                              <td style="padding: 20px; text-align: center; vertical-align: middle;">
+                                <p style="margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #1a1a1a;">加入 Discord</p>
+                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto;">
+                                  <tr>
+                                    <td style="background-color: #5865f2; border-radius: 12px;">
+                                      <a href="https://discord.com/invite/YVuYFjFvRC" style="display: inline-block; padding: 14px 24px; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none;">
+                                        💬 加入社区
+                                      </a>
+                                    </td>
+                                  </tr>
+                                </table>
+                                <p style="margin: 12px 0 0; font-size: 12px; color: #888888;">与全球创作者交流</p>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
                       </tr>
                     </table>
@@ -387,9 +442,6 @@ export function generateVoucherEmailZH(data: VoucherEmailData): { subject: strin
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top: 1px solid #e5e7eb; margin-top: 32px;">
                 <tr>
                   <td style="text-align: center; padding-top: 32px;">
-                    <p style="margin: 0 0 16px; font-size: 14px; color: #888888;">
-                      有问题？直接回复此邮件，我们随时为您服务！
-                    </p>
                     <p style="margin: 0; font-size: 16px; font-weight: 500; color: #1a1a1a;">祝您创作愉快！</p>
                     <p style="margin: 8px 0 0; font-size: 18px; font-weight: 700; color: #0E9F77;">Refly 团队</p>
                   </td>

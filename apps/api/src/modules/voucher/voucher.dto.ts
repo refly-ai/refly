@@ -168,6 +168,8 @@ export interface UseVoucherInput {
 export interface VerifyInvitationResult {
   valid: boolean;
   invitation?: VoucherInvitationDTO;
+  /** The original voucher being shared (for unclaimed invitations) */
+  voucher?: VoucherDTO;
   /** If already claimed, who claimed it */
   claimedByUid?: string;
   /** If claimed by current user, the voucher they received */

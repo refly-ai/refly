@@ -271,9 +271,9 @@ const translations = {
       coupon: '优惠券',
       validFor: '有效期 {{days}} 天',
       nonPlusUserDesc1:
-        '为了感谢你贡献了如此优秀的模板到 Marketplace，我们特别奖励你 ${{value}} 优惠券（7天有效）。',
+        '为了感谢你贡献了如此优秀的模板到 Marketplace，我们特别奖励你 ${{value}} 优惠券。',
       nonPlusUserDesc2: '仅需 ${{discountedPrice}} 即可享受完整权益！',
-      plusUserDesc1: '为了感谢你的出色工作，我们特别奖励你 ${{value}} 优惠券（7天有效）。',
+      plusUserDesc1: '为了感谢你的出色工作，我们特别奖励你 ${{value}} 优惠券。',
       plusUserDesc2: '邀请朋友通过你的链接注册并购买会员，双方都将获得奖励：',
       plusUserReward1: '你：+2,000 额外积分',
       plusUserReward2: '你的朋友：购买会员时享受特别折扣。',

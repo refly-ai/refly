@@ -3,7 +3,7 @@
  */
 
 // Daily popup trigger limit per user
-export const DAILY_POPUP_TRIGGER_LIMIT = 3;
+export const DAILY_POPUP_TRIGGER_LIMIT = 999;
 
 // Default LLM score when scoring fails (50 = 50% discount)
 export const DEFAULT_LLM_SCORE = 50;

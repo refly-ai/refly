@@ -3938,10 +3938,9 @@ const translations = {
       coupon: 'Coupon',
       validFor: 'Valid for {{days}} days',
       nonPlusUserDesc1:
-        "To celebrate your amazing work, we're giving you a ${{value}} discount (valid for 7 days)—our way of saying thanks for contributing such a high-quality template to the Marketplace.",
+        "To celebrate your amazing work, we're giving you a ${{value}} discount—our way of saying thanks for contributing such a high-quality template to the Marketplace.",
       nonPlusUserDesc2: 'Enjoy full access for just ${{discountedPrice}}!',
-      plusUserDesc1:
-        "To celebrate your amazing work, we're giving you a ${{value}} discount (valid for 7 days).",
+      plusUserDesc1: "To celebrate your amazing work, we're giving you a ${{value}} discount.",
       plusUserDesc2:
         "Invite a friend to register with your link and purchase a membership, and you'll both get rewards:",
       plusUserReward1: 'You: +2,000 bonus credits',

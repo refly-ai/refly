@@ -12990,9 +12990,17 @@ export const VerifyInvitationResultSchema = {
     invitation: {
       $ref: '#/components/schemas/VoucherInvitation',
     },
+    voucher: {
+      $ref: '#/components/schemas/Voucher',
+      description: 'The original voucher being shared (for unclaimed invitations)',
+    },
     claimedByUid: {
       type: 'string',
       description: 'If already claimed, the UID of the user who claimed it',
+    },
+    inviterName: {
+      type: 'string',
+      description: "Inviter's name (for display)",
     },
     message: {
       type: 'string',

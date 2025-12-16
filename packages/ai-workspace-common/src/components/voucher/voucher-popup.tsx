@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { VoucherTriggerResult } from '@refly/openapi-schema';
 import { useState, useEffect } from 'react';
 import { logEvent } from '@refly/telemetry-web';
-import { createVoucherInvitation } from '../../requests/services.gen';
 import { SharePoster } from './share-poster';
 import { useSubscriptionStoreShallow } from '@refly/stores';
 import { Confetti } from './confetti';
@@ -32,7 +31,7 @@ export const VoucherPopup = ({
   useOnlyMode = false,
   inviterName,
 }: VoucherPopupProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [showSharePoster, setShowSharePoster] = useState(false);
   const [shareInvitation, setShareInvitation] = useState<any>(null);
   const [shareUrl, setShareUrl] = useState('');
@@ -175,7 +174,7 @@ export const VoucherPopup = ({
     // Create invitation
     setCreatingInvitation(true);
     try {
-      const response = await createVoucherInvitation({
+      const response = await getClient().createVoucherInvitation({
         body: {
           voucherId: voucher.voucherId,
         },
@@ -185,13 +184,12 @@ export const VoucherPopup = ({
         const invitation = response.data.data.invitation;
         setShareInvitation(invitation);
 
-        // Build share URL - pointing to workspace with invite parameter
+        // Build share URL - pointing to homepage with invite parameter
         const baseUrl = window.location.origin;
-        const url = `${baseUrl}/workspace?invite=${invitation.inviteCode}`;
+        const url = `${baseUrl}/?invite=${invitation.inviteCode}`;
         setShareUrl(url);
 
-        // Close the voucher popup and show share poster
-        onClose();
+        // Show share poster (don't close voucher popup yet - it will be closed when SharePoster closes)
         setShowSharePoster(true);
       } else {
         message.error(t('voucher.share.createFailed', 'Failed to create invitation'));
@@ -243,10 +241,17 @@ export const VoucherPopup = ({
             }}
           />
 
-          {/* Content Container - shorter height for useOnlyMode non-Plus users (simpler content) */}
+          {/* Content Container - height varies by mode and language */}
           <div
             className="relative"
-            style={{ minHeight: useOnlyMode && !isPlusUser ? '420px' : '520px' }}
+            style={{
+              minHeight:
+                useOnlyMode && !isPlusUser
+                  ? '420px'
+                  : i18n.language?.startsWith('zh')
+                    ? '500px'
+                    : '540px',
+            }}
           >
             {/* Top Section - Congratulations and Coupon with green gradient background */}
             {/* 16px margin from left, right, top and bottom, with rounded corners on all sides */}
@@ -326,7 +331,7 @@ export const VoucherPopup = ({
                     <p>
                       {t(
                         'voucher.popup.plusUserDesc1',
-                        "To celebrate your amazing work, we're giving you a ${{value}} discount (valid for 7 days).",
+                        "To celebrate your amazing work, we're giving you a ${{value}} discount.",
                         { value: discountValue },
                       )}
                     </p>
@@ -352,7 +357,7 @@ export const VoucherPopup = ({
                     <p>
                       {t(
                         'voucher.popup.nonPlusUserDesc1',
-                        "To celebrate your amazing work, we're giving you a ${{value}} discount (valid for 7 days)—our way of saying thanks for contributing such a high-quality template to the Marketplace.",
+                        "To celebrate your amazing work, we're giving you a ${{value}} discount—our way of saying thanks for contributing such a high-quality template to the Marketplace.",
                         { value: discountValue },
                       )}
                     </p>
@@ -369,27 +374,30 @@ export const VoucherPopup = ({
 
               {/* Button group */}
               <div className="mt-5 flex flex-col gap-3 max-w-[320px]">
-                <Button
-                  type="primary"
-                  size="large"
-                  block
-                  shape="round"
-                  onClick={handleUseNow}
-                  loading={isCheckingOut}
-                  style={{
-                    height: 48,
-                    backgroundColor: '#1C1F23',
-                    borderColor: '#1C1F23',
-                    fontSize: 16,
-                    fontWeight: 500,
-                  }}
-                >
-                  {useOnlyMode && isPlusUser
-                    ? t('voucher.popup.claim', 'Claim')
-                    : useOnlyMode
-                      ? t('voucher.popup.useCoupon', 'Use Coupon')
-                      : t('voucher.popup.useNow', 'Use It Now')}
-                </Button>
+                {/* Use/Claim button: hide for Plus users in normal mode (they can only share) */}
+                {(useOnlyMode || !isPlusUser) && (
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    shape="round"
+                    onClick={handleUseNow}
+                    loading={isCheckingOut}
+                    style={{
+                      height: 48,
+                      backgroundColor: '#1C1F23',
+                      borderColor: '#1C1F23',
+                      fontSize: 16,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {useOnlyMode && isPlusUser
+                      ? t('voucher.popup.claim', 'Claim')
+                      : useOnlyMode
+                        ? t('voucher.popup.useCoupon', 'Use Coupon')
+                        : t('voucher.popup.useNow', 'Use It Now')}
+                  </Button>
+                )}
                 {/* Show share button: always when not useOnlyMode, or when Plus user in useOnlyMode */}
                 {(!useOnlyMode || (useOnlyMode && isPlusUser)) && (
                   <Button
@@ -418,7 +426,10 @@ export const VoucherPopup = ({
       {showSharePoster && (
         <SharePoster
           visible={showSharePoster}
-          onClose={() => setShowSharePoster(false)}
+          onClose={() => {
+            setShowSharePoster(false);
+            onClose(); // Also close the voucher popup when SharePoster closes
+          }}
           invitation={shareInvitation}
           shareUrl={shareUrl}
           discountPercent={discountPercent}

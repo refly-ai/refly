@@ -33,7 +33,7 @@ export const TicketBottomCard = ({ children, className = '' }: TicketBottomCardP
         <div
           className="absolute left-1/2 -translate-x-1/2 -top-[1px] w-[24px] h-[13px]"
           style={{
-            background: 'linear-gradient(90deg, #CDFFEA 0%, #E9FFFE 100%)',
+            background: '#DBFFF4',
             borderRadius: '0 0 12px 12px',
           }}
         />
