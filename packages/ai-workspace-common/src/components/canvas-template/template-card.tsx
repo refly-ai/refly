@@ -17,7 +17,6 @@ interface TemplateCardProps {
 }
 
 export const TemplateCard = ({ template, className, showUser = true }: TemplateCardProps) => {
-  const showRemix = false;
   const { t } = useTranslation();
   const { setVisible: setModalVisible } = useCanvasTemplateModal((state) => ({
     setVisible: state.setVisible,
@@ -213,7 +212,7 @@ export const TemplateCard = ({ template, className, showUser = true }: TemplateC
 
           {/* Action buttons section */}
           <div className="flex items-center justify-between gap-3 mt-3">
-            {showRemix && (
+            {
               <Button
                 loading={duplicating}
                 type="primary"
@@ -222,7 +221,7 @@ export const TemplateCard = ({ template, className, showUser = true }: TemplateC
               >
                 {t('template.use')}
               </Button>
-            )}
+            }
 
             {template.shareId && (
               <Button type="primary" className="flex-1 min-w-20 px-2" onClick={handlePreview}>

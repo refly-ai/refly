@@ -169,17 +169,17 @@ export const ActionsInCanvasDropdown = memo((props: ActionsInCanvasDropdownProps
         label: <MenuItemLabel text={t('canvas.toolbar.rename')} handleClick={handleRename} />,
         key: 'rename',
       },
-      // {
-      //   label: (
-      //     <MenuItemLabel
-      //       text={t('canvas.toolbar.tooltip.duplicateWorkflow')}
-      //       handleClick={handleDuplicate}
-      //       loading={duplicateLoading}
-      //     />
-      //   ),
-      //   key: 'duplicate',
-      //   disabled: duplicateLoading,
-      // },
+      {
+        label: (
+          <MenuItemLabel
+            text={t('canvas.toolbar.tooltip.duplicateWorkflow')}
+            handleClick={handleDuplicate}
+            loading={duplicateLoading}
+          />
+        ),
+        key: 'duplicate',
+        disabled: duplicateLoading,
+      },
       {
         label: (
           <div

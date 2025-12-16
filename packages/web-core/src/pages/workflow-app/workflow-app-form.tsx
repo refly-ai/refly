@@ -100,7 +100,6 @@ export const WorkflowAPPForm = ({
   templateContent,
   workflowApp,
 }: WorkflowAPPFormProps) => {
-  const showRemix = false;
   const { t } = useTranslation();
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
@@ -1032,7 +1031,7 @@ export const WorkflowAPPForm = ({
                   </Button>
                   {/* Remix Button */}
                   {/* hide for temporary */}
-                  {/* {onCopyWorkflow && workflowApp?.remixEnabled && (
+                  {onCopyWorkflow && workflowApp?.remixEnabled && (
                     <Button
                       className="h-10 w-[94px] flex items-center justify-center px-0 rounded-[12px] bg-[#fff] dark:bg-[#232323] border-[0.5px] border-solid border-[rgba(28,31,35,0.3)] text-[#1C1F23] dark:text-white hover:bg-[#eaeaea] shadow-none font-semibold font-roboto text-[16px] leading-[1.25em] gap-0"
                       type="default"
@@ -1041,7 +1040,7 @@ export const WorkflowAPPForm = ({
                     >
                       <span className="">{t('canvas.workflow.run.remix')}</span>
                     </Button>
-                  )} */}
+                  )}
                   {/* Share Icon Button */}
                   {onCopyShareLink && (
                     <Button
@@ -1177,7 +1176,7 @@ export const WorkflowAPPForm = ({
                     </span>
                   </Button>
                   {/* Remix Button */}
-                  {showRemix && onCopyWorkflow && workflowApp?.remixEnabled && (
+                  {onCopyWorkflow && workflowApp?.remixEnabled && (
                     <Button
                       className="h-10 w-[94px] flex items-center justify-center px-0 rounded-[12px] bg-[#F6F6F6] dark:bg-[#232323] border-[0.5px] border-solid border-[rgba(28,31,35,0.3)] text-[#1C1F23] dark:text-white hover:bg-[#eaeaea] shadow-none font-semibold font-roboto text-[16px] leading-[1.25em] gap-0"
                       type="default"

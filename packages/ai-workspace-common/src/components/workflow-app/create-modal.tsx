@@ -132,7 +132,6 @@ export const CreateWorkflowAppModal = ({
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const showRemix = false;
 
   // Cover image upload state
   const [coverFileList, setCoverFileList] = useState<UploadFile[]>([]);
@@ -573,7 +572,7 @@ export const CreateWorkflowAppModal = ({
         ...values,
         title: values.title,
         description: values.description ?? '',
-        remixEnabled: showRemix ? (values.remixEnabled ?? false) : false,
+        remixEnabled: values.remixEnabled ?? false,
         publishToCommunity: values.publishToCommunity ?? false,
       });
     } catch (error) {
@@ -1073,7 +1072,7 @@ export const CreateWorkflowAppModal = ({
                   </div>
                 </div>
                 {/* Remix Settings */}
-                {showRemix && (
+                {
                   <div className="flex flex-col gap-2 mt-5">
                     <div className="flex items-center justify-between">
                       <label
@@ -1088,7 +1087,7 @@ export const CreateWorkflowAppModal = ({
                     </div>
                     <div className="text-xs text-refly-text-2">{t('workflowApp.remixHint')}</div>
                   </div>
-                )}
+                }
 
                 {/* Cover Image Upload */}
                 <div className="flex flex-col gap-2 mt-5">
