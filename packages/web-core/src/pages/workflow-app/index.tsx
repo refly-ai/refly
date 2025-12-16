@@ -1,7 +1,7 @@
-import React, { memo, useCallback, useMemo, useState, useEffect } from 'react';
+import React, { memo, useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { Avatar, message, Modal, notification, Skeleton, Tooltip } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   CanvasNodeType,
@@ -66,8 +66,35 @@ const WorkflowAppPage: React.FC = () => {
   const { t } = useTranslation();
   const { shareId: routeShareId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const shareId = routeShareId ?? '';
-  const [executionId, setExecutionId] = useState<string | null>(null);
+
+  // Get executionId from URL query parameter
+  const executionId = searchParams.get('executionId');
+
+  // Track previous shareId to detect actual changes
+  const prevShareIdRef = useRef<string>(shareId);
+  // Store stopPolling in ref to avoid unnecessary re-renders
+  const stopPollingRef = useRef<(() => void) | null>(null);
+
+  // Helper function to update executionId in URL
+  const updateExecutionId = useCallback(
+    (newExecutionId: string | null) => {
+      setSearchParams(
+        (prevParams) => {
+          const newParams = new URLSearchParams(prevParams);
+          if (newExecutionId) {
+            newParams.set('executionId', newExecutionId);
+          } else {
+            newParams.delete('executionId');
+          }
+          return newParams;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
   const [activeTab, setActiveTab] = useState<string>('runLogs');
   const [canvasId, setCanvasId] = useState<string | null>(null);
   const [finalNodeExecutions, setFinalNodeExecutions] = useState<WorkflowNodeExecution[]>([]);
@@ -133,12 +160,12 @@ const WorkflowAppPage: React.FC = () => {
     status,
     stopPolling,
   } = useWorkflowExecutionPolling({
-    executionId,
-    enabled: true,
+    executionId: executionId ?? null,
+    enabled: Boolean(executionId),
     interval: 1000,
 
     onComplete: async (status, data) => {
-      // Save final nodeExecutions before clearing executionId
+      // Save final nodeExecutions
       if (data?.data?.nodeExecutions) {
         setFinalNodeExecutions(data.data.nodeExecutions);
       }
@@ -146,13 +173,11 @@ const WorkflowAppPage: React.FC = () => {
         setCanvasId(data.data.canvasId);
       }
 
-      // Clear executionId when workflow completes or fails
+      // Keep executionId in URL for result viewing
       const currentExecutionId = executionId;
-      setExecutionId(null);
 
       // Reset running state when workflow completes
       setIsRunning(false);
-      // Clear executionId from URL
 
       // Refresh credit balance after workflow completion
       refetchUsage();
@@ -185,18 +210,26 @@ const WorkflowAppPage: React.FC = () => {
         }
       }
     },
-    onError: (_error) => {
-      notification.error({
-        message: t('workflowApp.run.error'),
-      });
+    onError: (error) => {
+      // WorkflowExecutionNotFoundError
+      if (error?.errCode !== 'E1021') {
+        notification.error({
+          message: t('workflowApp.run.error'),
+        });
+      }
 
-      // Clear executionId on error
-      setExecutionId(null);
+      // Keep executionId in URL even on error for debugging
       // Reset running state on error
       setIsRunning(false);
+      updateExecutionId(null);
       // Keep execution credit usage and products state to preserve the scene
     },
   });
+
+  // Update stopPolling ref whenever it changes
+  useEffect(() => {
+    stopPollingRef.current = stopPolling;
+  }, [stopPolling]);
 
   useEffect(() => {
     if (workflowDetail?.canvasId) {
@@ -236,13 +269,26 @@ const WorkflowAppPage: React.FC = () => {
   }, [isRunning, isStopped]);
 
   useEffect(() => {
-    if (shareId) {
+    // Only clear executionId when shareId actually changes
+    if (shareId && prevShareIdRef.current !== shareId) {
       setFinalNodeExecutions([]);
-      stopPolling();
+      // Use ref to avoid dependency on stopPolling
+      stopPollingRef.current?.();
       setIsRunning(false);
       setIsStopped(false);
+      // Clear executionId when shareId changes
+      setSearchParams(
+        (prevParams) => {
+          const newParams = new URLSearchParams(prevParams);
+          newParams.delete('executionId');
+          return newParams;
+        },
+        { replace: true },
+      );
+      // Update ref to track current shareId
+      prevShareIdRef.current = shareId;
     }
-  }, [shareId]);
+  }, [shareId, setSearchParams]);
 
   const nodeExecutions = useMemo(() => {
     // Use current workflowDetail if available, otherwise use final cached results
@@ -251,7 +297,9 @@ const WorkflowAppPage: React.FC = () => {
 
   // Fetch drive files for runtime products after execution completes
   useEffect(() => {
-    if (!canvasId || isRunning || executionId) {
+    // Only fetch when workflow is not running and we have canvasId
+    // executionId is kept in URL for result viewing, so we don't check it here
+    if (!canvasId || isRunning) {
       return;
     }
 
@@ -294,7 +342,7 @@ const WorkflowAppPage: React.FC = () => {
 
       fetchRuntimeFiles();
     }
-  }, [canvasId, isRunning, executionId, finalNodeExecutions.length]);
+  }, [canvasId, isRunning, finalNodeExecutions.length]);
 
   const canvasFilesById = useMemo(() => {
     const map = new Map<string, DriveFile>();
@@ -460,9 +508,9 @@ const WorkflowAppPage: React.FC = () => {
 
         const newExecutionId = data?.data?.executionId ?? null;
         if (newExecutionId) {
-          setExecutionId(newExecutionId);
+          updateExecutionId(newExecutionId);
           message.success(t('workflowApp.run.workflowStarted'));
-          // Update URL with executionId to enable page refresh recovery
+          // URL is automatically updated by updateExecutionId to enable page refresh recovery
 
           // Auto switch to runLogs tab when workflow starts
           setActiveTab('runLogs');
@@ -480,7 +528,7 @@ const WorkflowAppPage: React.FC = () => {
         // Keep execution credit usage and products state to preserve the scene
       }
     },
-    [shareId, isLoggedRef, navigate],
+    [shareId, isLoggedRef, navigate, t, updateExecutionId],
   );
 
   const handleCopyWorkflow = useCallback(() => {
@@ -613,7 +661,7 @@ const WorkflowAppPage: React.FC = () => {
         }
 
         // Clean up frontend state (but preserve completed results and credit usage)
-        setExecutionId(null);
+        // Keep executionId in URL for viewing stopped execution results
         setIsRunning(false);
         setIsStopped(true);
         // Don't clear executionCreditUsage - it's set above if available
@@ -626,7 +674,16 @@ const WorkflowAppPage: React.FC = () => {
         message.success(t('workflowApp.run.stopSuccess'));
       },
     });
-  }, [nodeExecutions, stopPolling, t, executionId, workflowDetail, refetchUsage, logEvent]);
+  }, [
+    nodeExecutions,
+    stopPolling,
+    t,
+    executionId,
+    workflowDetail,
+    refetchUsage,
+    logEvent,
+    updateExecutionId,
+  ]);
 
   return (
     <ReactFlowProvider>

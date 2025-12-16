@@ -256,11 +256,15 @@ export const useWorkflowExecutionPolling = ({
 
   // Handle errors
   useEffect(() => {
-    if (error && currentExecutionId && !completedExecutions.has(currentExecutionId)) {
+    if (
+      (error || !!data?.errCode) &&
+      currentExecutionId &&
+      !completedExecutions.has(currentExecutionId)
+    ) {
       completedExecutions.add(currentExecutionId);
-      onErrorRef.current?.(error);
+      onErrorRef.current?.(error ?? data);
     }
-  }, [error, currentExecutionId]);
+  }, [error, data?.errCode, currentExecutionId]);
 
   // Auto-start polling when executionId is available and enabled
   useEffect(() => {
