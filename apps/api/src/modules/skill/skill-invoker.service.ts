@@ -1064,6 +1064,20 @@ export class SkillInvokerService {
                 };
                 await this.usageReportQueue.add(`usage_report:${resultId}`, tokenUsage);
               }
+
+              // Process credit billing for all steps after skill completion
+              // Bill credits for successful completions and user aborts (partial usage should be charged)
+              const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
+
+              if (shouldBillCredits) {
+                await this.processCreditUsageReport(
+                  user,
+                  resultId,
+                  version,
+                  resultAggregator,
+                  data.providerItem,
+                );
+              }
             }
             break;
         }
@@ -1282,19 +1296,6 @@ export class SkillInvokerService {
         if (key.startsWith(`${resultId}:`)) {
           this.addedFilesMap.delete(key);
         }
-      }
-      // Process credit billing for all steps after skill completion
-      // Bill credits for successful completions and user aborts (partial usage should be charged)
-      const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
-
-      if (shouldBillCredits) {
-        await this.processCreditUsageReport(
-          user,
-          resultId,
-          version,
-          resultAggregator,
-          data.providerItem,
-        );
       }
 
       // Dispose message aggregator to clean up resources (stop auto-save timer)
