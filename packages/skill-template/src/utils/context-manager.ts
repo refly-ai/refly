@@ -6,11 +6,11 @@
  */
 
 import type { BaseMessage } from '@langchain/core/messages';
-import { HumanMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
+import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { LLMModelConfig, User, DriveFile } from '@refly/openapi-schema';
 import type { ReflyService } from '@refly/agent-tools';
 import type { ContextBlock, ArchivedRef, ArchivedRefType } from '../scheduler/utils/context';
-import { truncateContent, estimateTokens, estimateMessagesTokens } from '../scheduler/utils/token';
+import { truncateContent, countToken, countMessagesTokens } from '../scheduler/utils/token';
 
 // ============================================================================
 // Constants (only for item-level limits, not token budgets)
@@ -22,8 +22,21 @@ const DEFAULT_MAX_CONTEXT_OUTPUT_FILES = 100;
 const DEFAULT_MIN_CONTEXT_ITEM_CONTENT_TOKENS = 1000;
 
 // History compression thresholds
-const REMAINING_SPACE_THRESHOLD = 0.05; // 5%
+const REMAINING_SPACE_THRESHOLD = 0.2; // 20%
 const HISTORY_COMPRESS_RATIO = 0.7; // 70% archived, 30% kept
+
+/**
+ * Minimum tokens required for prompt caching by model family.
+ */
+export const CACHE_MIN_TOKENS = 4096;
+
+/**
+ * Number of messages to keep in cache prefix (after system message)
+ */
+const CACHE_PREFIX_MESSAGE_COUNT = 2;
+
+// Maximum tokens to keep per ToolMessage after truncation
+const MAX_TOOL_MESSAGE_TOKENS = 4096;
 
 // ============================================================================
 // Types for History Compression
@@ -42,6 +55,7 @@ export interface HistoryCompressionContext {
   resultVersion: number;
   service: ReflyService;
   logger?: ContextManagerLogger;
+  modelInfo?: LLMModelConfig;
 }
 
 export interface HistoryCompressionResult {
@@ -68,7 +82,7 @@ export interface HistoryCompressionResult {
  */
 function serializeMessagesForFile(messages: BaseMessage[]): string {
   const serialized = messages.map((msg, idx) => {
-    const role = msg.getType();
+    const role = msg.type;
     const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
 
     // Include tool call info for AI messages
@@ -88,51 +102,22 @@ function serializeMessagesForFile(messages: BaseMessage[]): string {
 }
 
 /**
- * Create a summary message that references the archived history file
+ * Create an AIMessage that references the archived history file.
+ * Using AIMessage (instead of HumanMessage) avoids tool_use/tool_result pairing issues
+ * when replacing archived tool calls.
+ *
+ * Pattern:
+ *   Before: [Human1][AI(tool_call:A)][Tool(A)][Human2]
+ *   After:  [Human1][AI("Tool calls archived...")][Human2]
  */
 function createHistoryReferenceMessage(
   fileId: string,
   archivedCount: number,
   summary: string,
-): HumanMessage {
-  return new HumanMessage({
-    content: `[Earlier conversation history (${archivedCount} messages) has been archived to file: ${fileId}]\n\nSummary of archived conversation:\n${summary}`,
+): AIMessage {
+  return new AIMessage({
+    content: `[Earlier conversation (${archivedCount} messages including tool calls) has been archived to file: ${fileId}]\n\nSummary: ${summary}\n\nYou can use read_file tool to retrieve details if needed.`,
   });
-}
-
-/**
- * Create a placeholder AIMessage + ToolMessage pair to replace archived tool calls.
- * This maintains the required tool_use/tool_result pairing while reducing tokens.
- *
- * @returns [AIMessage with tool_call, ToolMessage with result] pair
- */
-function createToolPairPlaceholder(
-  fileId: string,
-  toolNames: string[],
-  originalToolCallId: string,
-): [AIMessage, ToolMessage] {
-  const toolCallId = originalToolCallId || `archived_${Date.now()}`;
-
-  const aiMessage = new AIMessage({
-    content: '',
-    tool_calls: [
-      {
-        id: toolCallId,
-        name: 'archived_tool_calls',
-        args: {
-          file_id: fileId,
-          archived_tools: toolNames,
-        },
-      },
-    ],
-  });
-
-  const toolMessage = new ToolMessage({
-    content: `[Tool calls archived to file: ${fileId}]\n\nArchived tools: ${toolNames.join(', ')}\n\n⚠️ Note: Reading this file directly may consume too much context. Only use read_file if you need to retrieve specific details from these tool results.`,
-    tool_call_id: toolCallId,
-  });
-
-  return [aiMessage, toolMessage];
 }
 
 /**
@@ -143,7 +128,7 @@ function generateHistorySummary(messages: BaseMessage[]): string {
   const toolsUsed: Set<string> = new Set();
 
   for (const msg of messages) {
-    const type = msg.getType();
+    const type = msg.type;
     messageTypes[type] = (messageTypes[type] || 0) + 1;
 
     // Track tool usage
@@ -203,18 +188,385 @@ async function uploadHistoryToFile(args: {
   }
 }
 
+// ============================================================================
+// Cache-Friendly Compression Helper Functions
+// ============================================================================
+
+/** Message entry for compression tracking */
+interface MessageEntry {
+  msg: BaseMessage;
+  index: number;
+  tokens: number;
+}
+
+/** Tool pair group (AIMessage with tool_calls + corresponding ToolMessages) */
+interface ToolPairGroup {
+  aiMessage: MessageEntry;
+  toolMessages: MessageEntry[];
+  totalTokens: number;
+  oldestIndex: number;
+}
+
 /**
- * Compress chat history when remaining context space is below threshold.
+ * Calculate cache prefix boundary index.
+ * Messages before this index form the stable cache prefix and should never be compressed.
  *
- * Token-based compression strategy:
- * 1. Calculate how many tokens need to be freed (tokensToFree)
- * 2. Archive messages from oldest to newest until we free enough tokens
- * 3. Upload archived messages to a DriveFile
- * 4. Replace with a single reference message containing fileId and summary
- * 5. Keep the most recent messages intact
+ * Strategy:
+ * 1. Always include System message (index 0)
+ * 2. Add CACHE_PREFIX_MESSAGE_COUNT messages after system
+ * 3. Ensure prefix has at least CACHE_MIN_TOKENS
+ * 4. Return the first index that can be compressed
+ */
+function calculateCachePrefixBoundary(messages: BaseMessage[]): number {
+  if (messages.length === 0) return 0;
+
+  const minTokens = CACHE_MIN_TOKENS;
+
+  // Start with system message (index 0) + CACHE_PREFIX_MESSAGE_COUNT
+  let prefixEndIndex = 1 + CACHE_PREFIX_MESSAGE_COUNT;
+
+  // Ensure we don't exceed message count
+  prefixEndIndex = Math.min(prefixEndIndex, messages.length);
+
+  // Accumulate tokens and extend prefix if needed to meet minimum
+  let prefixTokens = 0;
+  for (let i = 0; i < prefixEndIndex; i++) {
+    prefixTokens += countToken(messages[i].content);
+  }
+
+  // Extend prefix until we meet minimum token requirement
+  // Allow including all messages if needed to maximize cache effectiveness
+  while (prefixEndIndex < messages.length && prefixTokens < minTokens) {
+    prefixTokens += countToken(messages[prefixEndIndex].content);
+    prefixEndIndex++;
+  }
+
+  // Adjust boundary to ensure tool pairing integrity
+  // If the last message in prefix has tool_calls, include all its ToolMessages
+  prefixEndIndex = adjustPrefixBoundaryForToolPairing(messages, prefixEndIndex);
+
+  return prefixEndIndex;
+}
+
+/**
+ * Adjust cache prefix boundary to ensure tool pairing integrity.
+ * If the last message in the prefix has tool_calls, include all its ToolMessages.
  *
- * This ensures we archive exactly enough to fit within budget while preserving
- * the most recent conversation context.
+ * @param messages - All messages
+ * @param initialPrefixEndIndex - Initial prefix boundary
+ * @returns Adjusted prefix boundary that respects tool pairing
+ */
+function adjustPrefixBoundaryForToolPairing(
+  messages: BaseMessage[],
+  initialPrefixEndIndex: number,
+): number {
+  let prefixEndIndex = initialPrefixEndIndex;
+
+  // Check if we need to extend the prefix to include ToolMessages
+  while (prefixEndIndex > 0 && prefixEndIndex < messages.length) {
+    const lastPrefixMsg = messages[prefixEndIndex - 1];
+
+    // If last message in prefix has tool_calls, we need to include the results
+    if (lastPrefixMsg.type === 'ai') {
+      const toolCalls = (lastPrefixMsg as AIMessage).tool_calls;
+      if (toolCalls && toolCalls.length > 0) {
+        // Find all corresponding ToolMessages and extend prefix
+        let maxToolIndex = prefixEndIndex - 1;
+        for (const tc of toolCalls) {
+          for (let i = prefixEndIndex; i < messages.length; i++) {
+            const msg = messages[i];
+            if (msg.type === 'tool') {
+              const toolCallId = (msg as ToolMessage).tool_call_id;
+              if (toolCallId === tc.id) {
+                maxToolIndex = Math.max(maxToolIndex, i);
+              }
+            }
+          }
+        }
+        prefixEndIndex = maxToolIndex + 1;
+      } else {
+        break; // No tool calls, boundary is valid
+      }
+    } else {
+      break; // Not an AI message with tool calls
+    }
+  }
+
+  return prefixEndIndex;
+}
+
+/**
+ * Calculate the end index of the compressible range.
+ * Excludes recent messages based on the last message type to preserve context continuity.
+ *
+ * IMPORTANT: After adjustment by adjustEndIndexForToolPairing(), all messages in
+ * [startIndex, endIndex) are guaranteed to be compressible without breaking tool pairs.
+ *
+ * @param chatHistory - Full chat history
+ * @param compressibleStartIndex - Start of compressible range
+ * @param logger - Optional logger
+ * @returns End index of compressible range (exclusive)
+ */
+function calculateCompressibleEndIndex(
+  chatHistory: BaseMessage[],
+  compressibleStartIndex: number,
+): number {
+  let compressibleEndIndex = chatHistory.length - 1;
+  const lastMessage = chatHistory[chatHistory.length - 1];
+  const lastMessageType = lastMessage?.type;
+
+  if (lastMessageType === 'tool') {
+    // ToolMessage: Find the parent AIMessage and exclude the entire tool pair
+    const lastToolCallId = (lastMessage as ToolMessage).tool_call_id;
+
+    // Find the parent AIMessage that initiated this tool call
+    let parentAiIndex = -1;
+    for (let i = chatHistory.length - 2; i >= 0; i--) {
+      const msg = chatHistory[i];
+      if (msg.type === 'ai') {
+        const toolCalls = (msg as AIMessage).tool_calls;
+        if (toolCalls?.some((tc) => tc.id === lastToolCallId)) {
+          parentAiIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (parentAiIndex >= 0) {
+      compressibleEndIndex = parentAiIndex;
+    }
+  } else if (lastMessageType === 'ai') {
+    // AIMessage: Exclude the last 2 messages (preserve HumanMessage + AIMessage pair)
+    compressibleEndIndex = Math.max(compressibleStartIndex, chatHistory.length - 2);
+  } else if (lastMessageType === 'human') {
+    // HumanMessage: Exclude only the last message (current user input)
+    compressibleEndIndex = chatHistory.length - 1;
+  }
+
+  // Adjust boundary to avoid cutting tool pairs
+  compressibleEndIndex = adjustEndIndexForToolPairing(
+    chatHistory,
+    compressibleStartIndex,
+    compressibleEndIndex,
+  );
+
+  return compressibleEndIndex;
+}
+
+/**
+ * Adjust compressible end index to avoid cutting tool pairs.
+ * If the boundary falls in the middle of a tool pair, exclude the entire pair.
+ *
+ * @param messages - All messages
+ * @param startIndex - Start of compressible range
+ * @param endIndex - Initial end index
+ * @returns Adjusted end index that doesn't cut tool pairs
+ */
+function adjustEndIndexForToolPairing(
+  messages: BaseMessage[],
+  startIndex: number,
+  endIndex: number,
+): number {
+  if (endIndex <= startIndex) return endIndex;
+
+  let adjustedEndIndex = endIndex;
+
+  // Check if there's an AIMessage with tool_calls just before adjustedEndIndex
+  // whose ToolMessages extend beyond adjustedEndIndex
+  for (let i = adjustedEndIndex - 1; i >= startIndex; i--) {
+    const msg = messages[i];
+    if (msg.type === 'ai') {
+      const toolCalls = (msg as AIMessage).tool_calls;
+      if (toolCalls && toolCalls.length > 0) {
+        // Check if any ToolMessages for this AI are at or beyond adjustedEndIndex
+        let hasToolMessagesOutside = false;
+        for (const tc of toolCalls) {
+          for (let j = adjustedEndIndex; j < messages.length; j++) {
+            const toolMsg = messages[j];
+            if (toolMsg.type === 'tool') {
+              const toolCallId = (toolMsg as ToolMessage).tool_call_id;
+              if (toolCallId === tc.id) {
+                hasToolMessagesOutside = true;
+                break;
+              }
+            }
+          }
+          if (hasToolMessagesOutside) break;
+        }
+
+        // If this AIMessage has ToolMessages outside, exclude it from compressible range
+        if (hasToolMessagesOutside) {
+          adjustedEndIndex = i; // Exclude this AIMessage and continue checking
+        }
+      }
+    }
+  }
+
+  return adjustedEndIndex;
+}
+
+/**
+ * Build compressible tool pair groups from messages in the range [startIndex, endIndex).
+ *
+ * PRECONDITION: The range [startIndex, endIndex) is guaranteed by adjustPrefixBoundaryForToolPairing()
+ * and adjustEndIndexForToolPairing() to not cut any tool pairs. All AIMessages with tool_calls in this
+ * range have all their corresponding ToolMessages also in this range.
+ */
+function buildCompressibleToolPairGroups(
+  messages: BaseMessage[],
+  startIndex: number,
+  endIndex: number,
+): {
+  toolPairGroups: ToolPairGroup[];
+  standaloneMessages: MessageEntry[];
+} {
+  const toolPairGroups: ToolPairGroup[] = [];
+  const standaloneMessages: MessageEntry[] = [];
+  const toolMessagesByCallId = new Map<string, MessageEntry>();
+  const aiMessagesWithToolCalls: MessageEntry[] = [];
+
+  // First pass: classify messages in the compressible range
+  for (let i = startIndex; i < endIndex; i++) {
+    const msg = messages[i];
+    const msgType = msg.type;
+    const msgTokens = countToken(msg.content);
+    const entry: MessageEntry = { msg, index: i, tokens: msgTokens };
+
+    switch (msgType) {
+      case 'tool': {
+        const toolCallId = (msg as ToolMessage).tool_call_id;
+        if (toolCallId) {
+          toolMessagesByCallId.set(toolCallId, entry);
+        }
+        break;
+      }
+      case 'ai': {
+        const toolCalls = (msg as AIMessage).tool_calls;
+        if (toolCalls && toolCalls.length > 0) {
+          aiMessagesWithToolCalls.push(entry);
+        } else {
+          standaloneMessages.push(entry);
+        }
+        break;
+      }
+      case 'human':
+        standaloneMessages.push(entry);
+        break;
+      default:
+        standaloneMessages.push(entry);
+    }
+  }
+
+  // Second pass: build tool pair groups
+  for (const aiEntry of aiMessagesWithToolCalls) {
+    const toolCalls = (aiEntry.msg as AIMessage).tool_calls || [];
+    const pairedToolMessages: MessageEntry[] = [];
+
+    for (const tc of toolCalls) {
+      const toolEntry = toolMessagesByCallId.get(tc.id);
+      if (toolEntry) {
+        pairedToolMessages.push(toolEntry);
+        toolMessagesByCallId.delete(tc.id); // Mark as paired
+      }
+    }
+
+    const totalTokens = aiEntry.tokens + pairedToolMessages.reduce((sum, t) => sum + t.tokens, 0);
+
+    toolPairGroups.push({
+      aiMessage: aiEntry,
+      toolMessages: pairedToolMessages,
+      totalTokens,
+      oldestIndex: aiEntry.index,
+    });
+  }
+
+  // Sort tool pair groups by index DESCENDING (newest first for cache-friendly compression)
+  toolPairGroups.sort((a, b) => b.oldestIndex - a.oldestIndex);
+
+  // Sort standalone messages by index DESCENDING (newest first)
+  standaloneMessages.sort((a, b) => b.index - a.index);
+
+  return { toolPairGroups, standaloneMessages };
+}
+
+/**
+ * Collect tool names from archived tool pair groups
+ */
+function collectArchivedToolNames(
+  toolPairGroups: ToolPairGroup[],
+  archivedIndices: Set<number>,
+): string[] {
+  const toolNames: string[] = [];
+  for (const group of toolPairGroups) {
+    if (archivedIndices.has(group.aiMessage.index)) {
+      const toolCalls = (group.aiMessage.msg as AIMessage).tool_calls || [];
+      for (const tc of toolCalls) {
+        toolNames.push(tc.name);
+      }
+    }
+  }
+  return toolNames;
+}
+
+/**
+ * Build compressed history by replacing archived messages with a reference message.
+ *
+ * @param chatHistory - Original chat history
+ * @param archivedIndices - Set of indices of messages to archive
+ * @param messagesToArchive - Messages being archived
+ * @param toolPairGroups - Tool pair groups for collecting archived tool names
+ * @param fileId - File ID where archived messages are stored
+ * @returns Compressed chat history with archive reference inserted
+ */
+function buildCompressedHistory(
+  chatHistory: BaseMessage[],
+  archivedIndices: Set<number>,
+  messagesToArchive: BaseMessage[],
+  toolPairGroups: ToolPairGroup[],
+  fileId: string,
+): BaseMessage[] {
+  const compressedHistory: BaseMessage[] = [];
+
+  const archivedToolNames = collectArchivedToolNames(toolPairGroups, archivedIndices);
+  const summary = generateHistorySummary(messagesToArchive);
+  const referenceSummary =
+    summary +
+    (archivedToolNames.length > 0 ? `\nTools archived: ${archivedToolNames.join(', ')}` : '');
+
+  const archiveReferenceMessages: BaseMessage[] = [
+    createHistoryReferenceMessage(fileId, messagesToArchive.length, referenceSummary),
+  ];
+
+  let referenceInserted = false;
+  for (let i = 0; i < chatHistory.length; i++) {
+    if (archivedIndices.has(i)) {
+      if (!referenceInserted) {
+        compressedHistory.push(...archiveReferenceMessages);
+        referenceInserted = true;
+      }
+      continue; // skip archived messages
+    }
+    compressedHistory.push(chatHistory[i]);
+  }
+
+  return compressedHistory;
+}
+
+/**
+ * Compress chat history using cache-friendly strategy.
+ *
+ * CACHE-FRIENDLY COMPRESSION STRATEGY:
+ * - Preserve prefix (system + first N messages) for prompt caching hits
+ * - Compress NEWEST messages first (after the cache prefix)
+ * - Keep the final user message intact
+ *
+ * Before: [System][Msg1][Msg2][Msg3][Msg4][Msg5][Current]
+ * After:  [System][Msg1][Msg2][Ref][Current]
+ *                  ↑________↑
+ *                 Cache prefix (stable, enables 90% cost reduction)
+ *
+ * This ensures the message prefix remains byte-identical across requests,
+ * enabling prompt caching benefits (Anthropic: 90%, OpenAI: 50%).
  */
 export async function compressHistoryMessage(args: {
   chatHistory: BaseMessage[];
@@ -236,178 +588,76 @@ export async function compressHistoryMessage(args: {
     };
   }
 
-  // Calculate total tokens in chat history (use estimation for speed)
-  const totalHistoryTokens = estimateMessagesTokens(chatHistory);
+  // Calculate total tokens using exact counting
+  const totalHistoryTokens = countMessagesTokens(chatHistory);
 
-  // Calculate how many tokens we need to free
-  // We want to have at least (targetBudget * REMAINING_SPACE_THRESHOLD) remaining after compression
+  // 1. Calculate cache prefix boundary (messages before this are never compressed)
+  const prefixEndIndex = calculateCachePrefixBoundary(chatHistory);
+
+  // Early exit if cache prefix covers all or nearly all messages
+  if (prefixEndIndex >= chatHistory.length - 1) {
+    return {
+      compressedHistory: chatHistory,
+      wasCompressed: false,
+      archivedMessageCount: 0,
+      tokensSaved: 0,
+    };
+  }
+
+  // 2. Define compressible range: [prefixEndIndex, compressibleEndIndex)
+  const compressibleStartIndex = prefixEndIndex;
+  const compressibleEndIndex = calculateCompressibleEndIndex(chatHistory, compressibleStartIndex);
+
+  // If no messages can be compressed, return original
+  if (compressibleStartIndex >= compressibleEndIndex) {
+    return {
+      compressedHistory: chatHistory,
+      wasCompressed: false,
+      archivedMessageCount: 0,
+      tokensSaved: 0,
+    };
+  }
+
+  // 3. Calculate how many tokens we need to free
   const minRemainingTokens = targetBudget * REMAINING_SPACE_THRESHOLD;
   const tokensToFree = Math.max(0, -remainingBudget + minRemainingTokens);
 
-  // Also apply minimum compression ratio (archive at least HISTORY_COMPRESS_RATIO of tokens)
-  const minTokensToArchive = Math.floor(totalHistoryTokens * HISTORY_COMPRESS_RATIO);
+  const compressibleTokens = countMessagesTokens(
+    chatHistory.slice(compressibleStartIndex, compressibleEndIndex),
+  );
+  const minTokensToArchive = Math.floor(compressibleTokens * HISTORY_COMPRESS_RATIO);
   const targetTokensToArchive = Math.max(tokensToFree, minTokensToArchive);
 
-  // Priority-based compression with TOOL PAIRING:
-  //
-  // CRITICAL: AIMessage with tool_calls MUST be kept together with corresponding ToolMessages
-  // Claude/Bedrock requires each tool_use to have a matching tool_result immediately after.
-  //
-  // Message groups:
-  // 1. System messages - NEVER archive
-  // 2. Tool pairs (AIMessage with tool_calls + corresponding ToolMessages) - archive first (oldest pairs first)
-  // 3. Standalone AIMessages (no tool_calls) - archive second
-  // 4. Human messages - archive last
-  //
-  // TODO: Make MIN_KEEP_COUNT dynamic based on context/model capacity
-  const MIN_KEEP_COUNT = 5; // minimum number of keeping
+  // 4. Build compressible tool pair groups (sorted newest first)
+  const { toolPairGroups, standaloneMessages } = buildCompressibleToolPairGroups(
+    chatHistory,
+    compressibleStartIndex,
+    compressibleEndIndex,
+  );
 
-  // First pass: identify all messages and build tool call mappings
-  interface MessageEntry {
-    msg: BaseMessage;
-    index: number;
-    tokens: number;
-  }
-
-  interface ToolPairGroup {
-    aiMessage: MessageEntry;
-    toolMessages: MessageEntry[];
-    totalTokens: number;
-    oldestIndex: number; // For sorting by age
-  }
-
-  const systemMessages: MessageEntry[] = [];
-  const humanMessages: MessageEntry[] = [];
-  const standaloneAiMessages: MessageEntry[] = []; // AI messages without tool_calls
-  const toolPairGroups: ToolPairGroup[] = [];
-
-  // Map tool_call_id -> ToolMessage entry
-  const toolMessagesByCallId = new Map<string, MessageEntry>();
-  // Map to track which AI messages have tool_calls
-  const aiMessagesWithToolCalls: MessageEntry[] = [];
-
-  // First pass: classify all messages (use estimation for speed)
-  for (let i = 0; i < chatHistory.length; i++) {
-    const msg = chatHistory[i];
-    const msgType = msg.getType();
-    const msgTokens = estimateTokens(msg.content);
-    const entry: MessageEntry = { msg, index: i, tokens: msgTokens };
-
-    switch (msgType) {
-      case 'system':
-        systemMessages.push(entry);
-        break;
-      case 'human':
-        humanMessages.push(entry);
-        break;
-      case 'tool': {
-        const toolCallId = (msg as ToolMessage).tool_call_id;
-        if (toolCallId) {
-          toolMessagesByCallId.set(toolCallId, entry);
-        }
-        break;
-      }
-      case 'ai': {
-        const toolCalls = (msg as AIMessage).tool_calls;
-        if (toolCalls && toolCalls.length > 0) {
-          aiMessagesWithToolCalls.push(entry);
-        } else {
-          standaloneAiMessages.push(entry);
-        }
-        break;
-      }
-      default:
-        // Unknown type, treat as standalone AI message
-        standaloneAiMessages.push(entry);
-    }
-  }
-
-  // Second pass: build tool pair groups (AIMessage + its ToolMessages)
-  for (const aiEntry of aiMessagesWithToolCalls) {
-    const toolCalls = (aiEntry.msg as AIMessage).tool_calls || [];
-    const pairedToolMessages: MessageEntry[] = [];
-
-    for (const tc of toolCalls) {
-      const toolEntry = toolMessagesByCallId.get(tc.id);
-      if (toolEntry) {
-        pairedToolMessages.push(toolEntry);
-        // Remove from map so we know which tool messages are orphaned
-        toolMessagesByCallId.delete(tc.id);
-      }
-    }
-
-    const totalTokens = aiEntry.tokens + pairedToolMessages.reduce((sum, t) => sum + t.tokens, 0);
-
-    toolPairGroups.push({
-      aiMessage: aiEntry,
-      toolMessages: pairedToolMessages,
-      totalTokens,
-      oldestIndex: aiEntry.index,
-    });
-  }
-
-  // Any remaining tool messages without paired AI message (orphaned) - treat as standalone
-  const orphanedToolMessages = Array.from(toolMessagesByCallId.values());
-
-  // Archive messages in priority order (oldest first) until we reach target tokens
+  // 5. Compress from NEWEST to OLDEST until we reach target
   let archivedTokens = 0;
   const archivedIndices = new Set<number>();
 
-  // Helper: archive tool pair groups (oldest first, keep at least MIN_KEEP_COUNT groups)
-  const archiveToolPairGroups = (): void => {
-    // Sort by oldest index (oldest groups first)
-    const sortedGroups = [...toolPairGroups].sort((a, b) => a.oldestIndex - b.oldestIndex);
-    const archivableCount = Math.max(0, sortedGroups.length - MIN_KEEP_COUNT);
+  // 5a. Compress tool pair groups first (newest first)
+  for (const group of toolPairGroups) {
+    if (archivedTokens >= targetTokensToArchive) break;
 
-    for (let i = 0; i < archivableCount; i++) {
-      if (archivedTokens >= targetTokensToArchive) {
-        return;
-      }
-
-      const group = sortedGroups[i];
-      // Archive the entire group together
-      archivedIndices.add(group.aiMessage.index);
-      for (const toolEntry of group.toolMessages) {
-        archivedIndices.add(toolEntry.index);
-      }
-      archivedTokens += group.totalTokens;
+    archivedIndices.add(group.aiMessage.index);
+    for (const toolEntry of group.toolMessages) {
+      archivedIndices.add(toolEntry.index);
     }
-  };
-
-  // Helper: archive from a simple list (oldest first, keep at least MIN_KEEP_COUNT)
-  const archiveFromList = (list: MessageEntry[]): void => {
-    const archivableCount = Math.max(0, list.length - MIN_KEEP_COUNT);
-
-    for (let i = 0; i < archivableCount; i++) {
-      if (archivedTokens >= targetTokensToArchive) {
-        return;
-      }
-
-      const entry = list[i]; // Oldest first (list is in chronological order)
-      archivedIndices.add(entry.index);
-      archivedTokens += entry.tokens;
-    }
-  };
-
-  // Archive in priority order:
-  // 1. Tool pair groups (oldest first) - this keeps tool_use/tool_result together
-  // 2. Orphaned tool messages (shouldn't happen often, but handle gracefully)
-  // 3. Standalone AI messages (no tool_calls)
-  // 4. Human messages
-  // System messages are NEVER archived
-
-  archiveToolPairGroups();
-
-  if (archivedTokens < targetTokensToArchive && orphanedToolMessages.length > 0) {
-    archiveFromList(orphanedToolMessages);
+    archivedTokens += group.totalTokens;
   }
 
-  if (archivedTokens < targetTokensToArchive) {
-    archiveFromList(standaloneAiMessages);
-  }
+  // 5b. Compress standalone messages (newest first)
+  // All messages in the compressible range are safe to archive thanks to boundary adjustments
+  for (const entry of standaloneMessages) {
+    if (archivedTokens >= targetTokensToArchive) break;
+    if (archivedIndices.has(entry.index)) continue;
 
-  if (archivedTokens < targetTokensToArchive) {
-    archiveFromList(humanMessages);
+    archivedIndices.add(entry.index);
+    archivedTokens += entry.tokens;
   }
 
   // Need at least 1 message to archive
@@ -420,28 +670,15 @@ export async function compressHistoryMessage(args: {
     };
   }
 
-  // Collect archived messages for file upload
-  const messagesToArchive: BaseMessage[] = [];
-  for (let i = 0; i < chatHistory.length; i++) {
-    if (archivedIndices.has(i)) {
-      messagesToArchive.push(chatHistory[i]);
-    }
-  }
+  // 6. Collect archived messages and upload to file
+  const messagesToArchive = chatHistory.filter((_, i) => archivedIndices.has(i));
 
-  const archiveCount = messagesToArchive.length;
-
-  // Recalculate actual archived tokens (use estimation for speed)
-  archivedTokens = estimateMessagesTokens(messagesToArchive);
-
-  // Upload archived messages to file
   const { fileId, driveFile } = await uploadHistoryToFile({
     messages: messagesToArchive,
     context,
   });
 
   if (!fileId) {
-    // Upload failed, return original history
-    context.logger?.error?.('History compression failed: could not upload to file');
     return {
       compressedHistory: chatHistory,
       wasCompressed: false,
@@ -450,74 +687,30 @@ export async function compressHistoryMessage(args: {
     };
   }
 
-  // Collect tool names from archived tool pair groups for the placeholder
-  const archivedToolNames: string[] = [];
-  for (const group of toolPairGroups) {
-    if (archivedIndices.has(group.aiMessage.index)) {
-      const toolCalls = (group.aiMessage.msg as AIMessage).tool_calls || [];
-      for (const tc of toolCalls) {
-        archivedToolNames.push(tc.name);
-      }
-    }
-  }
+  // 7. Build compressed history
+  // Insert a single reference message at the position of the first archived message
+  const compressedHistory = buildCompressedHistory(
+    chatHistory,
+    archivedIndices,
+    messagesToArchive,
+    toolPairGroups,
+    fileId,
+  );
 
-  // Build compressed history with placeholder for tool calls
-  // Strategy: Replace archived tool pairs with a single placeholder pair,
-  // keep system messages and other kept messages in order
-  const compressedHistory: BaseMessage[] = [];
-  let placeholderInserted = false;
-
-  for (let i = 0; i < chatHistory.length; i++) {
-    const msg = chatHistory[i];
-
-    if (archivedIndices.has(i)) {
-      // This message is archived
-      // Insert placeholder once at the position of the first archived tool pair
-      if (!placeholderInserted && archivedToolNames.length > 0) {
-        const firstArchivedToolCall = toolPairGroups.find((g) =>
-          archivedIndices.has(g.aiMessage.index),
-        );
-        if (firstArchivedToolCall) {
-          const firstToolCallId =
-            (firstArchivedToolCall.aiMessage.msg as AIMessage).tool_calls?.[0]?.id ||
-            `archived_${Date.now()}`;
-          const [placeholderAi, placeholderTool] = createToolPairPlaceholder(
-            fileId,
-            archivedToolNames,
-            firstToolCallId,
-          );
-          compressedHistory.push(placeholderAi);
-          compressedHistory.push(placeholderTool);
-          placeholderInserted = true;
-        }
-      }
-      // Skip this archived message (already represented by placeholder or will be in file)
-      continue;
-    }
-
-    // Keep this message
-    compressedHistory.push(msg);
-  }
-
-  // If we archived non-tool messages (human/standalone AI) without tool pairs,
-  // add a simple reference message at the beginning
-  if (!placeholderInserted && archiveCount > 0) {
-    const summary = generateHistorySummary(messagesToArchive);
-    const referenceMessage = createHistoryReferenceMessage(fileId, archiveCount, summary);
-    compressedHistory.unshift(referenceMessage);
-  }
-
-  // Calculate tokens saved (use estimation for speed)
-  const compressedTokens = estimateMessagesTokens(compressedHistory);
+  // Calculate tokens saved using exact counting
+  const compressedTokens = countMessagesTokens(compressedHistory);
   const tokensSaved = Math.max(0, totalHistoryTokens - compressedTokens);
 
-  context.logger?.info?.('Chat history compressed with tool placeholder', {
+  context.logger?.info?.('Chat history compressed (cache-friendly)', {
+    prefixEndIndex,
     totalHistoryTokens,
     targetTokensToArchive,
-    archivedTokens,
-    archivedMessageCount: archiveCount,
+    archivedMessageCount: messagesToArchive.length,
     compressedMessageCount: compressedHistory.length,
+    compressedTokens,
     tokensSaved,
+    targetBudget,
+    stillOverBudget: compressedTokens > targetBudget,
     historyFileId: fileId,
     remainingRatio: `${(remainingRatio * 100).toFixed(1)}%`,
   });
@@ -527,7 +720,7 @@ export async function compressHistoryMessage(args: {
     wasCompressed: true,
     historyFileId: fileId,
     historyFile: driveFile,
-    archivedMessageCount: archiveCount,
+    archivedMessageCount: messagesToArchive.length,
     tokensSaved,
   };
 }
@@ -567,12 +760,12 @@ export function truncateContextBlockForPrompt(
     if (usedTokens >= maxTokens) break;
 
     const baseText = `${file.name ?? ''}\n${file.summary ?? ''}`;
-    const baseTokens = estimateTokens(baseText);
+    const baseTokens = countToken(baseText);
     const remaining = Math.max(0, maxTokens - usedTokens - baseTokens);
     if (remaining <= 0) break;
 
     let content = String(file.content ?? '');
-    const originalContentTokens = estimateTokens(content);
+    const originalContentTokens = countToken(content);
     if (originalContentTokens > remaining) {
       if (remaining < minItemContentTokens) {
         // Not enough budget to keep meaningful content; skip this item.
@@ -582,19 +775,19 @@ export function truncateContextBlockForPrompt(
     }
 
     files.push({ ...file, content });
-    usedTokens += baseTokens + estimateTokens(content);
+    usedTokens += baseTokens + countToken(content);
   }
 
   for (const result of (context.results ?? []).slice(0, maxResults)) {
     if (usedTokens >= maxTokens) break;
 
     const baseText = `${result.title ?? ''}`;
-    const baseTokens = estimateTokens(baseText);
+    const baseTokens = countToken(baseText);
     const remaining = Math.max(0, maxTokens - usedTokens - baseTokens);
     if (remaining <= 0) break;
 
     let content = String(result.content ?? '');
-    const originalContentTokens = estimateTokens(content);
+    const originalContentTokens = countToken(content);
     if (originalContentTokens > remaining) {
       if (remaining < minItemContentTokens) {
         continue;
@@ -609,7 +802,7 @@ export function truncateContextBlockForPrompt(
     }));
 
     results.push({ ...result, content, outputFiles });
-    usedTokens += baseTokens + estimateTokens(content);
+    usedTokens += baseTokens + countToken(content);
   }
 
   // Return with preserved archivedRefs
@@ -693,9 +886,9 @@ export function truncateContextBlockForModelPrompt(
   // Rough overhead reserve for formatting / role tokens.
   const overhead = 600 + (args.images?.length ? 2000 : 0);
   const fixedTokens =
-    estimateTokens(args.systemPrompt) +
-    estimateTokens(args.optimizedQuery) +
-    estimateMessagesTokens([...(args.usedChatHistory ?? []), ...(args.messages ?? [])]) +
+    countToken(args.systemPrompt) +
+    countToken(args.optimizedQuery) +
+    countMessagesTokens([...(args.usedChatHistory ?? []), ...(args.messages ?? [])]) +
     overhead;
 
   // Context budget is purely based on model capacity minus fixed tokens
@@ -745,6 +938,10 @@ export interface AgentLoopCompressionOptions {
   service: ReflyService;
   /** Optional logger */
   logger?: ContextManagerLogger;
+  /** Model info for cache-aware compression */
+  modelInfo?: LLMModelConfig;
+  /** Additional tokens consumed by tools, system prompt, etc. */
+  additionalTokens?: number;
 }
 
 export interface AgentLoopCompressionResult {
@@ -792,10 +989,14 @@ export async function compressAgentLoopMessages(
     resultVersion,
     service,
     logger,
+    modelInfo,
   } = options;
 
   const targetBudget = contextLimit - maxOutput;
-  const currentTokens = estimateMessagesTokens(messages);
+  const messagesTokens = countMessagesTokens(messages);
+  const additionalTokens = options.additionalTokens ?? 0;
+  // Include additional tokens (tools, system prompt, etc.) in the calculation
+  const currentTokens = messagesTokens + additionalTokens;
   const remainingBudget = targetBudget - currentTokens;
 
   // Skip if missing required context or not enough messages
@@ -813,6 +1014,7 @@ export async function compressAgentLoopMessages(
     resultVersion,
     service,
     logger,
+    modelInfo,
   };
 
   const compressionResult = await compressHistoryMessage({
@@ -822,9 +1024,90 @@ export async function compressAgentLoopMessages(
     context: compressionContext,
   });
 
+  // After compression, check if still over budget
+  // If so, truncate ToolMessage contents (not in cache prefix)
+  let finalMessages = compressionResult.compressedHistory;
+  const compressedTokens = countMessagesTokens(finalMessages) + additionalTokens;
+
+  if (compressedTokens > targetBudget) {
+    finalMessages = truncateToolMessagesForBudget({
+      messages: finalMessages,
+      targetBudget,
+      additionalTokens,
+      logger,
+    });
+  }
+
   return {
-    messages: compressionResult.compressedHistory,
+    messages: finalMessages,
     wasCompressed: compressionResult.wasCompressed,
     historyFileId: compressionResult.historyFileId,
   };
+}
+
+/**
+ * Truncate ToolMessage contents to fit within budget.
+ * Only truncates ToolMessages after the cache prefix (system + first few messages).
+ * Uses head+tail truncation to preserve important context.
+ * Each ToolMessage is capped at MAX_TOOL_MESSAGE_TOKENS (4000) after truncation.
+ */
+function truncateToolMessagesForBudget(args: {
+  messages: BaseMessage[];
+  targetBudget: number;
+  additionalTokens: number;
+  logger?: ContextManagerLogger;
+}): BaseMessage[] {
+  const { messages, targetBudget, additionalTokens, logger } = args;
+
+  const currentTokens = countMessagesTokens(messages) + additionalTokens;
+  const tokensToSave = currentTokens - targetBudget;
+
+  if (tokensToSave <= 0) {
+    return messages;
+  }
+
+  // Find ToolMessages and their token counts (skip system message at index 0)
+  const toolMessageInfos: { index: number; tokens: number }[] = [];
+  for (let i = 1; i < messages.length; i++) {
+    const msg = messages[i];
+    if (msg.type === 'tool') {
+      const tokens = countToken(msg.content);
+      toolMessageInfos.push({ index: i, tokens });
+    }
+  }
+
+  // Simple strategy: cap each ToolMessage at MAX_TOOL_MESSAGE_TOKENS (4000)
+  const truncateMap = new Map<number, number>(); // index -> targetTokens
+
+  for (const info of toolMessageInfos) {
+    if (info.tokens > MAX_TOOL_MESSAGE_TOKENS) {
+      truncateMap.set(info.index, MAX_TOOL_MESSAGE_TOKENS);
+    }
+  }
+
+  if (truncateMap.size === 0) {
+    return messages;
+  }
+
+  // Apply truncation using truncateContent (head + tail)
+  const truncatedMessages = messages.map((msg, index) => {
+    const targetTokens = truncateMap.get(index);
+    if (targetTokens === undefined) return msg;
+
+    const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+    const truncatedContent = truncateContent(content, targetTokens);
+    logger?.info?.('Truncated ToolMessage content for budget', {
+      messageIndex: index,
+      originalTokens: countToken(content),
+      targetTokens,
+    });
+
+    return new ToolMessage({
+      content: truncatedContent,
+      tool_call_id: (msg as ToolMessage).tool_call_id,
+      name: (msg as ToolMessage).name,
+    });
+  });
+
+  return truncatedMessages;
 }

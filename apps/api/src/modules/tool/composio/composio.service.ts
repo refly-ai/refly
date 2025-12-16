@@ -474,8 +474,9 @@ export class ComposioService {
       // Determine which API key field to use based on integration
       const integrationIdLower = integrationId.toLowerCase();
       const useGenericApiKey =
-        integrationIdLower === 'alpha_vantage' || integrationIdLower === 'hunter';
-
+        integrationIdLower === 'alpha_vantage' ||
+        integrationIdLower === 'hunter' ||
+        integrationIdLower === 'heygen';
       const apiKeyConfig = useGenericApiKey ? { generic_api_key: apiKey } : { api_key: apiKey };
 
       const connectionRequest = await this.composio.connectedAccounts.initiate(
@@ -611,7 +612,7 @@ export class ComposioService {
           // Run tool execution within context (similar to dynamic-tooling)
           const { result, user, resultId, version, canvasId } = await runInContext(
             {
-              langchainConfig: runnableConfig as SkillRunnableConfig,
+              langchainConfig: runnableConfig as unknown as SkillRunnableConfig,
               requestId: `composio-${toolName}-${Date.now()}`,
             },
             async () => {
@@ -662,9 +663,8 @@ export class ComposioService {
           if (result?.successful) {
             return postResult.content;
           }
-          return JSON.stringify({
-            error: result?.error ?? 'Unknown Composio execution error',
-          });
+          // Return full result object including logId and other fields
+          return JSON.stringify(result);
         } catch (error) {
           this.logger.error(
             `Failed to execute ${context.authType} tool ${toolName}: ${error instanceof Error ? error.message : error}`,
