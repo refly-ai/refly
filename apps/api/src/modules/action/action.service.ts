@@ -516,7 +516,7 @@ export class ActionService {
         output = batchReplaceRegex(output, replaceIdMap);
       }
 
-      const newCallId = this.toolCallService.getOrCreateToolCallId({
+      const newCallId = this.toolCallService.generateToolCallId({
         resultId: newResultId,
         version: 0,
         toolsetId: tc.toolsetId,

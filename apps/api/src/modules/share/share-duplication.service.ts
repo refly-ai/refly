@@ -470,7 +470,7 @@ export class ShareDuplicationService {
         if (step.toolCalls?.length > 0) {
           for (const tc of step.toolCalls) {
             // Generate callId using toolCallService
-            const newCallId = this.toolCallService.getOrCreateToolCallId({
+            const newCallId = this.toolCallService.generateToolCallId({
               resultId: newResultId,
               version: 0,
               toolsetId: tc.toolsetId,

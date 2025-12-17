@@ -1,5 +1,6 @@
 import { HomeRedirect } from '@refly-packages/ai-workspace-common/components/home-redirect';
 import BackendRedirect from '@refly-packages/ai-workspace-common/components/backend-redirect';
+import { InviteRedirect } from '@refly-packages/ai-workspace-common/components/invite-redirect';
 import {
   Pricing,
   ShareCanvasPage,
@@ -28,6 +29,10 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/invite',
+    element: <InviteRedirect />,
   },
   {
     path: '/pricing',
