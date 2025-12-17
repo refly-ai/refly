@@ -76,6 +76,8 @@ const WorkflowAppPage: React.FC = () => {
   const prevShareIdRef = useRef<string>(shareId);
   // Store stopPolling in ref to avoid unnecessary re-renders
   const stopPollingRef = useRef<(() => void) | null>(null);
+  // Track if executionId exists on initial mount (from URL) to avoid showing success notification
+  const isInitialLoadWithExecutionIdRef = useRef<boolean>(Boolean(executionId));
 
   // Helper function to update executionId in URL
   const updateExecutionId = useCallback(
@@ -199,29 +201,46 @@ const WorkflowAppPage: React.FC = () => {
       }
 
       if (status === 'finish') {
-        notification.success({
-          message: t('workflowApp.run.completed'),
-        });
+        // Only show success notification if this is NOT an initial load from URL
+        // When user opens a link with executionId, we don't want to show the notification
+        if (!isInitialLoadWithExecutionIdRef.current) {
+          notification.success({
+            message: t('workflowApp.run.completed'),
+          });
+        }
+        // Reset the flag after first completion check
+        isInitialLoadWithExecutionIdRef.current = false;
         // Auto switch to products tab when workflow completes successfully
         products.length > 0 && setActiveTab('products');
       } else if (status === 'failed') {
-        if (!creditInsufficientModalVisible) {
+        // Only show error notification if this is NOT an initial load from URL
+        if (!isInitialLoadWithExecutionIdRef.current && !creditInsufficientModalVisible) {
           message.error(t('workflowApp.run.failed'));
         }
+        // Reset the flag after first completion check
+        isInitialLoadWithExecutionIdRef.current = false;
       }
     },
     onError: (error) => {
       // WorkflowExecutionNotFoundError
-      if (error?.errCode !== 'E1021') {
+      // Only show error notification if this is NOT an initial load from URL
+      // When user opens a link with executionId, we don't want to show the error notification
+      if (!isInitialLoadWithExecutionIdRef.current) {
         notification.error({
           message: t('workflowApp.run.error'),
         });
       }
+      // Reset the flag after first error check
+      isInitialLoadWithExecutionIdRef.current = false;
 
       // Keep executionId in URL even on error for debugging
       // Reset running state on error
       setIsRunning(false);
-      updateExecutionId(null);
+
+      if (error?.errCode === 'E1021') {
+        updateExecutionId(null);
+      }
+
       // Keep execution credit usage and products state to preserve the scene
     },
   });
@@ -496,6 +515,8 @@ const WorkflowAppPage: React.FC = () => {
         // Reset products state when starting a new run
         setFinalNodeExecutions([]);
         setRuntimeDriveFiles([]);
+        // Reset initial load flag when user starts a new execution
+        isInitialLoadWithExecutionIdRef.current = false;
 
         const { data, error } = await getClient().executeWorkflowApp({
           body: {
@@ -933,14 +954,18 @@ const WorkflowAppPage: React.FC = () => {
                                                 <span className="whitespace-nowrap flex-shrink-0">
                                                   Step {stepNumber + index}/{totalNodes}:{' '}
                                                 </span>
-                                                <span>{node.title ?? ''}</span>
+                                                <span>
+                                                  {node.title ??
+                                                    t('workflowApp.run.defaultAgentTitle')}
+                                                </span>
                                               </div>
                                             );
                                           })}
                                         </div>
                                       ) : (
                                         <div className="overflow-hidden text-ellipsis whitespace-nowrap">
-                                          {currentStep?.title ?? ''}
+                                          {currentStep?.title ??
+                                            t('workflowApp.run.defaultAgentTitle')}
                                         </div>
                                       )}
                                     </div>

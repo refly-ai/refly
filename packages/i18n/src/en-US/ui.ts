@@ -4086,6 +4086,7 @@ const translations = {
         'The run will be terminated immediately, and credits already consumed will not be refunded.',
       stopSuccess: 'The template run has been stopped successfully.',
       confirm: 'Confirm Stop',
+      defaultAgentTitle: 'Agent',
     },
     revenueSharing: {
       title: 'Earn credits by running templates',

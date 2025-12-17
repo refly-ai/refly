@@ -3824,6 +3824,7 @@ const translations = {
       stopConfirmNote: '运行将立即终止，已消耗的积分不会退还。',
       stopSuccess: '模板运行已成功停止。',
       confirm: '确定停止',
+      defaultAgentTitle: '智能体',
     },
     revenueSharing: {
       title: '模板被运行可享受积分收益分成',

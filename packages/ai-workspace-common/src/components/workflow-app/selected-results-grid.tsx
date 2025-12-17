@@ -126,7 +126,7 @@ export const SelectedResultsGrid = memo(
     const lastRowItems = isLastRowIncomplete ? selectedNodes.slice(fullRows * itemsPerRow) : [];
 
     return (
-      <div ref={containerRef} className="w-full h-full overflow-y-auto">
+      <div ref={containerRef} className="w-full h-full">
         <div className="space-y-3">
           {/* Full rows */}
           {fullRowItems.length > 0 && (
