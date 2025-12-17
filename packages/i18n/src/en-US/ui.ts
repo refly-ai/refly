@@ -3230,6 +3230,10 @@ const translations = {
         generating: 'Generating workflow...',
         invalidData: 'Invalid workflow data',
       },
+      internalTool: {
+        readFile: 'Reading',
+        listFiles: 'Browsing file list',
+      },
     },
   },
   copilot: {

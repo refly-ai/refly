@@ -35,6 +35,14 @@ export const BuiltinToolsetDefinition: ToolsetDefinition = {
       modelOnly: true,
     },
     {
+      name: 'list_files',
+      descriptionDict: {
+        en: 'List all files in the current canvas.',
+        'zh-CN': '列出当前画布中的所有文件。',
+      },
+      modelOnly: true,
+    },
+    {
       name: 'generate_doc',
       descriptionDict: {
         en: 'Generate a new document based on a title and content.',
@@ -139,7 +147,7 @@ export const BuiltinSendEmailDefinition: ToolsetDefinition = {
 
 export const BuiltinGetTimeDefinition: ToolsetDefinition = {
   key: 'get_time',
-  internal: true,
+  // internal: true - This tool should be visible in mentionList for user selection
   labelDict: {
     en: 'Get Time',
     'zh-CN': '获取时间',
@@ -152,6 +160,7 @@ export const BuiltinGetTimeDefinition: ToolsetDefinition = {
 
 export const BuiltinReadFileDefinition: ToolsetDefinition = {
   key: 'read_file',
+  //  System-level tool, auto-included, hidden from mentionList, uses compact rendering
   internal: true,
   labelDict: {
     en: 'Read File',
@@ -165,7 +174,7 @@ export const BuiltinReadFileDefinition: ToolsetDefinition = {
 
 export const BuiltinExecuteCodeDefinition: ToolsetDefinition = {
   key: 'execute_code',
-  internal: true,
+  // internal: true - This tool should be visible in mentionList for user selection
   labelDict: {
     en: 'Execute Code',
     'zh-CN': '执行代码',
@@ -173,6 +182,20 @@ export const BuiltinExecuteCodeDefinition: ToolsetDefinition = {
   descriptionDict: {
     en: 'Execute code in a secure sandbox environment.',
     'zh-CN': '在安全的沙箱环境中执行代码。',
+  },
+};
+
+export const BuiltinListFilesDefinition: ToolsetDefinition = {
+  key: 'list_files',
+  // System-level tool, auto-included, hidden from mentionList, uses compact rendering
+  internal: true,
+  labelDict: {
+    en: 'List Files',
+    'zh-CN': '列出文件',
+  },
+  descriptionDict: {
+    en: 'List all files in the current canvas.',
+    'zh-CN': '列出当前画布中的所有文件。',
   },
 };
 
@@ -613,6 +636,10 @@ export class BuiltinReadFile extends AgentBaseTool<BuiltinToolParams> {
 
   schema = z.object({
     fileId: z.string().describe('The ID of the file to read (format: df-xxx, from context)'),
+    fileName: z
+      .string()
+      .optional()
+      .describe('Optional file name for frontend display purpose only'),
   });
 
   description = `Read content from a file.
@@ -648,6 +675,74 @@ Latency: <2s`;
         error: 'Error reading file',
         summary:
           error instanceof Error ? error.message : 'Unknown error occurred while reading file',
+      };
+    }
+  }
+}
+
+export class BuiltinListFiles extends AgentBaseTool<BuiltinToolParams> {
+  name = 'list_files';
+  toolsetKey = 'list_files';
+
+  // No parameters needed - canvasId is obtained from context automatically
+  schema = z.object({});
+
+  description = `List all files in the current canvas.
+
+Returns a list of files with their IDs and names. Use the fileId with read_file tool to read file content.`;
+
+  protected params: BuiltinToolParams;
+
+  constructor(params: BuiltinToolParams) {
+    super(params);
+    this.params = params;
+  }
+
+  async _call(
+    _input: z.infer<typeof this.schema>,
+    _: unknown,
+    config: RunnableConfig,
+  ): Promise<ToolCallResult> {
+    try {
+      const { reflyService, user } = this.params;
+      const canvasId = config.configurable?.canvasId;
+
+      if (!canvasId) {
+        return {
+          status: 'error',
+          error: 'Canvas ID not found in context',
+          summary: 'Cannot list files: canvas context is not available',
+        };
+      }
+
+      const files = await reflyService.listFiles(user, canvasId);
+
+      if (!files || files.length === 0) {
+        return {
+          status: 'success',
+          data: [],
+          summary: 'No files found in the current canvas',
+        };
+      }
+
+      // Return simplified file info for LLM consumption
+      const fileList = files.map((f) => ({
+        fileId: f.fileId,
+        fileName: f.name,
+        type: f.type,
+      }));
+
+      return {
+        status: 'success',
+        data: fileList,
+        summary: `Found ${files.length} file(s) in the canvas: ${files.map((f) => f.name).join(', ')}`,
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        error: 'Error listing files',
+        summary:
+          error instanceof Error ? error.message : 'Unknown error occurred while listing files',
       };
     }
   }
@@ -690,6 +785,11 @@ export class BuiltinReadFileToolset extends AgentBaseToolset<BuiltinToolParams> 
   tools = [BuiltinReadFile] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
 }
 
+export class BuiltinListFilesToolset extends AgentBaseToolset<BuiltinToolParams> {
+  toolsetKey = BuiltinListFilesDefinition.key;
+  tools = [BuiltinListFiles] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
+}
+
 export class BuiltinExecuteCodeToolset extends AgentBaseToolset<BuiltinToolParams> {
   toolsetKey = BuiltinExecuteCodeDefinition.key;
   tools = [BuiltinExecuteCode] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
@@ -704,6 +804,7 @@ export class BuiltinToolset extends AgentBaseToolset<BuiltinToolParams> {
     BuiltinSendEmail,
     BuiltinGetTime,
     BuiltinReadFile,
+    BuiltinListFiles,
     BuiltinExecuteCode,
   ] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
 }
