@@ -483,6 +483,9 @@ export class SkillService implements OnModuleInit {
     param.input ||= { query: '' };
     param.skillName ||= 'commonQnA';
 
+    // Calculate action result version for routing result association
+    const actionResultVersion = existingResult ? (existingResult.version ?? 0) + 1 : 0;
+
     // Auto model routing
     const llmItems = await this.providerService.findProviderItemsByCategory(user, 'llm');
 
@@ -490,6 +493,9 @@ export class SkillService implements OnModuleInit {
     const routingContext: RoutingContext = {
       llmItems,
       userId: user.uid,
+      // Association info (for linking routing result to action result)
+      actionResultId: resultId,
+      actionResultVersion,
       // Task metadata
       mode: param.mode,
       skillName: param.skillName,
@@ -499,8 +505,6 @@ export class SkillService implements OnModuleInit {
       // Tool features
       toolsets: param.toolsets, // For tool-based routing
       availableTools: undefined, // Will be populated later if available for rule-based routing
-      // Default options
-      originalModelId: param.modelItemId,
     };
 
     // Use rule-based router service for routing decisions
@@ -511,8 +515,12 @@ export class SkillService implements OnModuleInit {
 
     // Route each model through the AutoModelRoutingService
     const routedEntries = await Promise.all(
-      Object.entries(originalModelProviderMap).map(async ([scene, providerItem]) => {
-        const result = await this.autoModelRoutingService.route(providerItem, routingContext);
+      Object.entries(originalModelProviderMap).map(async ([scene, originalProviderItem]) => {
+        const result = await this.autoModelRoutingService.route(
+          originalProviderItem,
+          routingContext,
+          scene,
+        );
         return [scene, result.providerItem] as const;
       }),
     );

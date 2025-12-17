@@ -79,6 +79,17 @@ export interface RoutingContext {
    */
   userId: string;
 
+  // ===== Association info =====
+  /**
+   * Action result ID (for associating routing decision with execution result)
+   */
+  actionResultId?: string;
+
+  /**
+   * Action result version (combined with actionResultId for unique identification)
+   */
+  actionResultVersion?: number;
+
   // ===== Task metadata =====
   /**
    * Mode (e.g., 'copilot_agent', 'node_agent')
@@ -113,12 +124,6 @@ export interface RoutingContext {
    * Used by rule-based routing for tool keyword matching
    */
   availableTools?: ToolDefinition[];
-
-  // ===== Default options =====
-  /**
-   * Original model ID (user selected or system default)
-   */
-  originalModelId?: string;
 }
 
 /**
@@ -213,14 +218,26 @@ export class AutoModelRoutingService {
    * If the input is not an Auto model, returns it unchanged
    *
    * Note: Scene is derived from mode internally to avoid unreliable external scene values
-   * (e.g., external callers might incorrectly pass 'chat' as scene)
+   * (e.g., external callers might incorrectly pass 'chat' as scene).
+   * The external scene parameter is only used for validation: routing results are logged
+   * only when the derived scene matches the external scene.
    *
    * @param chatItem The chat model item to potentially route
    * @param context The routing context
+   * @param externalScene External scene value for validation (routing result is logged only if it matches derived scene)
    * @returns Routing result with selected model and metadata
    */
-  async route(chatItem: ProviderItemModel, context: RoutingContext): Promise<RoutingResult> {
+  async route(
+    chatItem: ProviderItemModel,
+    context: RoutingContext,
+    externalScene: string,
+  ): Promise<RoutingResult> {
     const routingResultId = uuidv4();
+
+    // Extract original item and model IDs from the input chatItem (original provider item)
+    const originalItemId = chatItem.itemId;
+    const originalConfig = safeParseJSON(chatItem.config) as LLMModelConfig;
+    const originalModelId = originalConfig?.modelId ?? chatItem.itemId;
 
     // If not an Auto model, return unchanged
     if (!isAutoModel(chatItem.config)) {
@@ -232,18 +249,29 @@ export class AutoModelRoutingService {
     }
 
     // Derive scene from mode internally (instead of trusting external scene parameter)
-    const scene = this.deriveSceneFromMode(context.mode);
+    const derivedScene = this.deriveSceneFromMode(context.mode);
+
+    // Check if derived scene matches external scene for logging
+    const shouldLogResult = derivedScene === externalScene;
 
     // Build model map for routing
     const modelMap = this.buildModelMap(context.llmItems);
 
     // Priority 1: Try rule-based routing first
-    const ruleResult = await this.routeByRules(context, modelMap, scene);
+    const ruleResult = await this.routeByRules(context, modelMap, derivedScene);
     if (ruleResult) {
-      // Log routing result asynchronously (fire and forget)
-      this.logRoutingResult(routingResultId, context, ruleResult, 'rule_based', scene).catch(
-        (err) => this.logger.warn('Failed to log routing result', err),
-      );
+      // Log routing result asynchronously only if scenes match
+      if (shouldLogResult) {
+        this.logRoutingResult(
+          routingResultId,
+          context,
+          ruleResult,
+          'rule_based',
+          originalItemId,
+          originalModelId,
+          derivedScene,
+        ).catch((err) => this.logger.warn('Failed to log routing result', err));
+      }
 
       this.logger.log(
         `Rule-based routing: ${ruleResult.matchedRule.name} -> ${ruleResult.providerItem.name}`,
@@ -258,16 +286,20 @@ export class AutoModelRoutingService {
     }
 
     // Priority 2: Try tool-based routing (temporary solution)
-    const toolBasedItem = this.tryToolBasedRouting(context, modelMap, scene);
+    const toolBasedItem = this.tryToolBasedRouting(context, modelMap, derivedScene);
     if (toolBasedItem) {
-      // Log tool-based routing result asynchronously
-      this.logRoutingResult(
-        routingResultId,
-        context,
-        { providerItem: toolBasedItem },
-        'tool_based',
-        scene,
-      ).catch((err) => this.logger.warn('Failed to log routing result', err));
+      // Log tool-based routing result asynchronously only if scenes match
+      if (shouldLogResult) {
+        this.logRoutingResult(
+          routingResultId,
+          context,
+          { providerItem: toolBasedItem },
+          'tool_based',
+          originalItemId,
+          originalModelId,
+          derivedScene,
+        ).catch((err) => this.logger.warn('Failed to log routing result', err));
+      }
 
       this.logger.log(
         `Tool-based routing: ${toolBasedItem.name} (itemId: ${toolBasedItem.itemId}) for user ${context.userId}`,
@@ -284,14 +316,18 @@ export class AutoModelRoutingService {
     const fallbackItem = this.findAvailableModelLegacy(context.llmItems, modelMap);
     const strategy = selectAutoModel() ? 'random' : 'fallback';
 
-    // Log fallback routing result asynchronously
-    this.logRoutingResult(
-      routingResultId,
-      context,
-      { providerItem: fallbackItem },
-      strategy,
-      scene,
-    ).catch((err) => this.logger.warn('Failed to log routing result', err));
+    // Log fallback routing result asynchronously only if scenes match
+    if (shouldLogResult) {
+      this.logRoutingResult(
+        routingResultId,
+        context,
+        { providerItem: fallbackItem },
+        strategy,
+        originalItemId,
+        originalModelId,
+        derivedScene,
+      ).catch((err) => this.logger.warn('Failed to log routing result', err));
+    }
 
     this.logger.log(
       `${strategy} routing: ${fallbackItem.name} (itemId: ${fallbackItem.itemId}) for user ${context.userId}`,
@@ -600,6 +636,8 @@ export class AutoModelRoutingService {
     context: RoutingContext,
     result: { providerItem: ProviderItemModel; matchedRule?: { ruleId: string; name: string } },
     strategy: 'rule_based' | 'tool_based' | 'fallback' | 'random',
+    originalItemId: string,
+    originalModelId: string,
     scene?: string,
   ): Promise<void> {
     const config = safeParseJSON(result.providerItem.config) as LLMModelConfig;
@@ -608,15 +646,16 @@ export class AutoModelRoutingService {
       data: {
         routingResultId,
         userId: context.userId,
+        actionResultId: context.actionResultId,
+        actionResultVersion: context.actionResultVersion,
         scene,
-        mode: context.mode,
-        skillName: context.skillName,
-        estimatedInputTokens: context.inputLength,
         routingStrategy: strategy,
         matchedRuleId: result.matchedRule?.ruleId,
         matchedRuleName: result.matchedRule?.name,
+        selectedItemId: result.providerItem.itemId,
         selectedModelId: config?.modelId ?? result.providerItem.itemId,
-        originalModelId: context.originalModelId,
+        originalItemId,
+        originalModelId,
       },
     });
   }
