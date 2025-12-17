@@ -29,8 +29,14 @@ export const SelectedResultsGrid = memo(
         setCurrentFile: state.setCurrentFile,
       }));
 
-    // Filter options to only show selected ones
-    const selectedNodes = options.filter((node) => selectedResults.includes(node.id));
+    // Map options by ID for quick lookup
+    const optionsById = new Map(options.map((node) => [node.id, node]));
+
+    // Filter and order nodes according to selectedResults array order
+    // This ensures the display order matches the configured resultNodeIds order
+    const selectedNodes = selectedResults
+      .map((id) => optionsById.get(id))
+      .filter((node): node is CanvasNode => node !== undefined);
 
     // Calculate items per row based on container width
     useEffect(() => {

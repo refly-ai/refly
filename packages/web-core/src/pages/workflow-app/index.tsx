@@ -393,7 +393,7 @@ const WorkflowAppPage: React.FC = () => {
   const parsedNodeExecutions = useMemo(() => {
     const map = new Map<string, string>();
     for (const execution of nodeExecutions) {
-      if (!execution?.nodeData) return;
+      if (!execution?.nodeData) continue; // Skip invalid entries instead of returning
       try {
         const parsed = JSON.parse(execution.nodeData);
         const resultId = parsed?.data?.entityId;
@@ -450,19 +450,95 @@ const WorkflowAppPage: React.FC = () => {
       return parentNodeId ? sourceDriveFiles.has(parentNodeId) : false;
     });
 
-    // Merge: priority order is legacyNodeProducts > legacySkillProducts > driveProducts
-    // This ensures existing node executions take precedence over drive files
-    const allProducts = [...legacyNodeProducts, ...legacySkillProducts, ...driveProducts];
-    const uniqueMap = new Map<string, WorkflowNodeExecution>();
+    // Gather all candidates
+    const allCandidates = [...legacyNodeProducts, ...legacySkillProducts, ...driveProducts];
 
-    for (const product of allProducts) {
-      if (product?.nodeId && !uniqueMap.has(product.nodeId)) {
-        uniqueMap.set(product.nodeId, product);
+    // If no resultNodeIds configured, use original logic (preserve backward compatibility)
+    const resultNodeIds = (workflowApp?.resultNodeIds as string[]) ?? [];
+
+    if (resultNodeIds.length === 0) {
+      // Original behavior: simple deduplication
+      const uniqueMap = new Map<string, WorkflowNodeExecution>();
+      for (const product of allCandidates) {
+        if (product?.nodeId && !uniqueMap.has(product.nodeId)) {
+          uniqueMap.set(product.nodeId, product);
+        }
+      }
+      return Array.from(uniqueMap.values());
+    }
+
+    // Optimization: Apply ordering based on resultNodeIds
+    // Group products by their Source Node ID
+    const productsBySourceId = new Map<string, WorkflowNodeExecution[]>();
+    const usedProducts = new Set<string>(); // Track which products we've already placed
+
+    for (const product of allCandidates) {
+      let sourceId = product.nodeId;
+
+      // Attempt to resolve parent Node ID for drive files
+      if (product.entityId && parsedNodeExecutions?.has(product.entityId)) {
+        const parentId = parsedNodeExecutions.get(product.entityId);
+        if (parentId && sourceDriveFiles.has(parentId)) {
+          sourceId = parentId;
+        }
+      }
+
+      if (!productsBySourceId.has(sourceId)) {
+        productsBySourceId.set(sourceId, []);
+      }
+      productsBySourceId.get(sourceId)!.push(product);
+    }
+
+    // Construct final list based on resultNodeIds order
+    const orderedProducts: WorkflowNodeExecution[] = [];
+
+    for (const id of resultNodeIds) {
+      let targetSourceId = id;
+
+      // Resolve file ID to source Node ID if needed
+      if (id.startsWith('df-')) {
+        const file = canvasFilesById.get(id);
+        const resultId = file?.resultId;
+        if (resultId) {
+          const nodeId = canvasNodesByResultId.get(resultId);
+          if (nodeId) {
+            targetSourceId = nodeId;
+          }
+        }
+      }
+
+      // Add ALL products from this source (not just the first one)
+      const candidates = productsBySourceId.get(targetSourceId);
+
+      if (candidates && candidates.length > 0) {
+        for (const product of candidates) {
+          if (!usedProducts.has(product.nodeId)) {
+            orderedProducts.push(product);
+            usedProducts.add(product.nodeId);
+          }
+        }
       }
     }
 
-    return Array.from(uniqueMap.values());
-  }, [nodeExecutions, runtimeDriveFiles, sourceDriveFiles, parsedNodeExecutions]);
+    // IMPORTANT: Add remaining products that weren't in resultNodeIds
+    // This ensures backward compatibility - no products are lost
+    for (const product of allCandidates) {
+      if (!usedProducts.has(product.nodeId)) {
+        orderedProducts.push(product);
+        usedProducts.add(product.nodeId);
+      }
+    }
+
+    return orderedProducts;
+  }, [
+    nodeExecutions,
+    runtimeDriveFiles,
+    sourceDriveFiles,
+    parsedNodeExecutions,
+    workflowApp?.resultNodeIds,
+    canvasFilesById,
+    canvasNodesByResultId,
+  ]);
 
   useEffect(() => {
     products.length > 0 && setActiveTab('products');
