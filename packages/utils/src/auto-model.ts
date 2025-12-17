@@ -48,6 +48,43 @@ export const selectAutoModel = (): string | null => {
 };
 
 /**
+ * Tool-based routing configuration
+ */
+export interface ToolBasedRoutingConfig {
+  enabled: boolean;
+  targetTools: string[];
+  matchedModelId: string | null;
+  unmatchedModelId: string | null;
+}
+
+/**
+ * Get tool-based routing configuration from environment variables
+ * @returns Tool-based routing configuration
+ */
+export const getToolBasedRoutingConfig = (): ToolBasedRoutingConfig => {
+  const enabled = process.env.AUTO_MODEL_ROUTING_TOOL_BASED_ENABLED === 'true';
+
+  const targetToolsStr = process.env.AUTO_MODEL_ROUTING_TOOL_BASED_TARGET_TOOLS;
+  const targetTools = targetToolsStr
+    ? targetToolsStr
+        .split(',')
+        .map((tool) => tool.trim())
+        .filter((tool) => tool.length > 0)
+    : [];
+
+  const matchedModelId = process.env.AUTO_MODEL_ROUTING_TOOL_BASED_MATCHED_MODEL_ID?.trim() || null;
+  const unmatchedModelId =
+    process.env.AUTO_MODEL_ROUTING_TOOL_BASED_UNMATCHED_MODEL_ID?.trim() || null;
+
+  return {
+    enabled,
+    targetTools,
+    matchedModelId,
+    unmatchedModelId,
+  };
+};
+
+/**
  * Check if the given provider item config is the Auto model
  * @param config The provider item config (string or ProviderItemConfig)
  * @returns True if this is the Auto model

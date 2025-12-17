@@ -335,6 +335,7 @@ export class WorkflowService {
         entityType: 'canvas' as const,
         entityId: canvasId,
       },
+      mode: 'node_agent',
       modelName: modelInfo?.name,
       modelItemId: modelInfo?.providerItemId,
       context,
