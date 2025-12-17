@@ -189,7 +189,7 @@ export const VoucherPopup = ({
 
         // Build share URL - pointing to homepage with invite parameter
         const baseUrl = window.location.origin;
-        const url = `${baseUrl}/?invite=${invitation.inviteCode}`;
+        const url = `${baseUrl}/invite?invite=${invitation.inviteCode}`;
         setShareUrl(url);
 
         // Show share poster (don't close voucher popup yet - it will be closed when SharePoster closes)

@@ -41,10 +41,9 @@ export const InviteRedirect = () => {
       navigate(targetPath, { replace: true });
     } else {
       // User is not logged in, redirect to landing page with invite param
-      const landingUrl = inviteCode
-        ? `${window.location.origin}/?invite=${inviteCode}`
-        : `${window.location.origin}/`;
-      window.location.replace(landingUrl);
+      // Use SPA navigation to preserve app state and avoid hard reload
+      const targetPath = inviteCode ? `/?invite=${inviteCode}` : '/';
+      navigate(targetPath, { replace: true });
     }
   }, [isLogin, isCheckingLoginStatus, searchParams, navigate]);
 
