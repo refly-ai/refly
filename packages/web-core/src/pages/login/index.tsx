@@ -26,6 +26,7 @@ import {
   getPendingVoucherCode,
   storePendingVoucherCode,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
+import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
 
 interface FormValues {
   email: string;
@@ -130,9 +131,14 @@ const LoginPage = () => {
       logEvent('auth::oauth_login_click', provider);
       authStore.setLoginInProgress(true);
       authStore.setLoginProvider(provider);
+      // Store returnUrl for redirect after OAuth callback
+      const returnUrl = searchParams.get('returnUrl');
+      if (returnUrl) {
+        storePendingRedirect(decodeURIComponent(returnUrl));
+      }
       window.location.href = `${serverOrigin}/v1/auth/${provider}`;
     },
-    [authStore],
+    [authStore, searchParams],
   );
 
   const handleEmailAuth = useCallback(async () => {

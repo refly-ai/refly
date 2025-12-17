@@ -12,6 +12,7 @@ import { IconSubscription } from '@refly-packages/ai-workspace-common/components
 import { Checked, Subscription } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { SubscriptionPlanType, Voucher } from '@refly/openapi-schema';
+import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
 
 type SubscriptionInterval = 'monthly' | 'yearly';
 
@@ -636,6 +637,8 @@ export const CreditInsufficientModal = memo(() => {
         console.log('[CreditInsufficientModal] Final body:', body);
         const res = await getClient().createCheckoutSession({ body });
         if (res.data?.data?.url) {
+          // Store current page for redirect after payment callback
+          storePendingRedirect();
           window.location.href = res.data.data.url;
         }
       } else {
@@ -652,6 +655,8 @@ export const CreditInsufficientModal = memo(() => {
           },
         });
         if (res.data?.data?.url) {
+          // Store current page for redirect after payment callback
+          storePendingRedirect();
           window.location.href = res.data.data.url;
         }
       }

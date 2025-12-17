@@ -8,6 +8,7 @@ import { IconSubscription } from '@refly-packages/ai-workspace-common/components
 import { Checked } from 'refly-icons';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useUserStoreShallow, useAuthStoreShallow } from '@refly/stores';
+import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
 
 interface CreditPackOption {
   id: string;
@@ -156,6 +157,8 @@ export const CreditPacksModal = memo(({ onCancel, onSuccess }: CreditPacksModalP
         },
       });
       if (res.data?.data?.url) {
+        // Store current page for redirect after payment callback
+        storePendingRedirect();
         window.location.href = res.data.data.url;
         onSuccess?.();
       }
