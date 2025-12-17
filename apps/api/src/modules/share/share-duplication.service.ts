@@ -30,6 +30,7 @@ import pLimit, { type Limit } from 'p-limit';
 import { SubscriptionService } from '../subscription/subscription.service';
 import {
   genActionResultID,
+  genActionMessageID,
   genCanvasID,
   genCodeArtifactID,
   genDocumentID,
@@ -47,6 +48,7 @@ import { SHARE_CODE_PREFIX } from './const';
 import { initEmptyCanvasState } from '@refly/canvas-common';
 import { CanvasService } from '../canvas/canvas.service';
 import { ToolService } from '../tool/tool.service';
+import { ToolCallService } from '../tool-call/tool-call.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 
 interface DuplicateOptions {
@@ -65,6 +67,7 @@ export class ShareDuplicationService {
     private readonly canvasService: CanvasService,
     private readonly canvasSyncService: CanvasSyncService,
     private readonly toolService: ToolService,
+    private readonly toolCallService: ToolCallService,
     private readonly subscriptionService: SubscriptionService,
     private readonly shareCommonService: ShareCommonService,
     @Inject(OSS_INTERNAL) private oss: ObjectStorageService,
@@ -457,6 +460,45 @@ export class ShareDuplicationService {
       (toolset) => replaceToolsetMap?.[toolset.id] || toolset,
     );
 
+    // Pre-generate callIdMap and toolCallsData for tool call duplication
+    // This allows us to update ActionMessage.toolCallId with the new callIds
+    const callIdMap: Record<string, string> = {};
+    const toolCallsData: any[] = [];
+
+    if (result.steps?.length > 0) {
+      for (const step of result.steps) {
+        if (step.toolCalls?.length > 0) {
+          for (const tc of step.toolCalls) {
+            // Generate callId using toolCallService
+            const newCallId = this.toolCallService.getOrCreateToolCallId({
+              resultId: newResultId,
+              version: 0,
+              toolsetId: tc.toolsetId,
+              toolName: tc.toolName,
+            });
+            // Build callIdMap for ActionMessage.toolCallId replacement
+            if (tc.callId) {
+              callIdMap[tc.callId] = newCallId;
+            }
+
+            toolCallsData.push({
+              callId: newCallId,
+              resultId: newResultId,
+              version: 0,
+              uid: user.uid,
+              toolsetId: tc.toolsetId,
+              toolName: tc.toolName,
+              stepName: tc.stepName ?? step.name,
+              input: batchReplaceRegex(JSON.stringify(tc.input), replaceEntityMap),
+              output: batchReplaceRegex(JSON.stringify(tc.output), replaceEntityMap),
+              status: tc.status ?? 'completed',
+              error: tc.error,
+            });
+          }
+        }
+      }
+    }
+
     // Create a new action result record
     await this.prisma.$transaction([
       this.prisma.actionResult.create({
@@ -496,6 +538,41 @@ export class ShareDuplicationService {
                 tokenUsage: JSON.stringify(step.tokenUsage),
                 version: 0, // Reset version to 0 for the new duplicate
               })),
+            }),
+          ]
+        : []),
+      // Duplicate action messages if they exist
+      ...(result.messages?.length > 0
+        ? [
+            this.prisma.actionMessage.createMany({
+              data: result.messages.map((msg) => {
+                // Replace toolCallId with new callId if mapping exists
+                let newToolCallId = msg.toolCallId;
+                if (msg.toolCallId && callIdMap[msg.toolCallId]) {
+                  newToolCallId = callIdMap[msg.toolCallId];
+                }
+
+                return {
+                  messageId: genActionMessageID(),
+                  resultId: newResultId,
+                  version: 0,
+                  type: msg.type,
+                  content: batchReplaceRegex(msg.content, replaceEntityMap),
+                  reasoningContent: msg.reasoningContent,
+                  toolCallMeta: msg.toolCallMeta
+                    ? batchReplaceRegex(JSON.stringify(msg.toolCallMeta), replaceEntityMap)
+                    : null,
+                  toolCallId: newToolCallId,
+                };
+              }),
+            }),
+          ]
+        : []),
+      // Duplicate tool call results if they exist in steps
+      ...(toolCallsData.length > 0
+        ? [
+            this.prisma.toolCallResult.createMany({
+              data: toolCallsData,
             }),
           ]
         : []),
@@ -834,20 +911,34 @@ export class ShareDuplicationService {
       `File duplication completed. New canvasId: ${newCanvasId}, FileId mappings: ${JSON.stringify(Array.from(fileIdMap.entries()))}`,
     );
 
-    // Replace resource variables with new entity ids
+    // Replace resource variables with new entity ids and file ids
     const updatedVariables = canvasData.variables?.map((variable) => {
       if (variable.variableType !== 'resource') {
         return variable;
       }
       return {
         ...variable,
-        value: (variable.value ?? []).map((value) => ({
-          ...value,
-          resource: {
-            ...value.resource,
-            entityId: replaceEntityMap[value.resource?.entityId ?? ''],
-          },
-        })),
+        value: (variable.value ?? []).map((value) => {
+          if (!value.resource) {
+            return value;
+          }
+          const updatedResource = { ...value.resource };
+
+          // Replace entityId if mapping exists
+          if (updatedResource.entityId && replaceEntityMap[updatedResource.entityId]) {
+            updatedResource.entityId = replaceEntityMap[updatedResource.entityId];
+          }
+
+          // Replace fileId if mapping exists (fileIdMap is merged into replaceEntityMap)
+          if (updatedResource.fileId && replaceEntityMap[updatedResource.fileId]) {
+            updatedResource.fileId = replaceEntityMap[updatedResource.fileId];
+          }
+
+          return {
+            ...value,
+            resource: updatedResource,
+          };
+        }),
       };
     });
 

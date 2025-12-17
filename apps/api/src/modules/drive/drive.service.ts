@@ -1263,9 +1263,9 @@ export class DriveService implements OnModuleInit {
    * Copies the file from internal OSS to external OSS and returns the public URL
    * Creates a new storage key for the public file to avoid conflicts with internal file deletion
    */
-  async publishDriveFile(storageKey: string, fileId: string): Promise<string> {
+  async publishDriveFile(storageKey: string, fileId: string): Promise<void> {
     if (!storageKey || !fileId) {
-      return '';
+      return;
     }
 
     // Check if file already exists in external OSS
@@ -1281,6 +1281,10 @@ export class DriveService implements OnModuleInit {
     try {
       // Copy file from internal to external OSS
       const stream = await this.internalOss.getObject(storageKey);
+      if (!stream) {
+        throw new NotFoundException(`Source file not found in internal storage: ${fileId}`);
+      }
+
       await this.externalOss.putObject(storageKey, stream);
     } catch (error) {
       this.logger.error(
@@ -1311,11 +1315,16 @@ export class DriveService implements OnModuleInit {
       throw new NotFoundException(`Public file with id ${fileId} not found`);
     }
 
-    const filename = path.basename(driveFile.storageKey) || 'file';
+    const storageKey = driveFile.storageKey ?? '';
+    if (!storageKey) {
+      throw new NotFoundException(`Public file storage key missing: ${fileId}`);
+    }
+
+    const filename = path.basename(storageKey) || 'file';
     const contentType = getSafeMimeType(filename, mime.getType(filename) ?? undefined);
 
     // Get lastModified from OSS, throw 404 if file doesn't exist in OSS
-    const objectInfo = await this.externalOss.statObject(driveFile.storageKey);
+    const objectInfo = await this.externalOss.statObject(storageKey);
     if (!objectInfo) {
       throw new NotFoundException(`Public file not found in storage: ${fileId}`);
     }
@@ -1352,10 +1361,20 @@ export class DriveService implements OnModuleInit {
         where: { fileId },
       });
 
-      const storageKey = driveFile.storageKey;
+      if (!driveFile) {
+        throw new NotFoundException(`Public file with id ${fileId} not found`);
+      }
+
+      const storageKey = driveFile.storageKey ?? '';
+      if (!storageKey) {
+        throw new NotFoundException(`Public file storage key missing: ${fileId}`);
+      }
 
       // Get file from external OSS
       const readable = await this.externalOss.getObject(storageKey);
+      if (!readable) {
+        throw new NotFoundException(`Public file with id ${fileId} not found`);
+      }
       const data = await streamToBuffer(readable);
 
       // Extract filename from storageKey
@@ -1376,6 +1395,8 @@ export class DriveService implements OnModuleInit {
     } catch (error) {
       if (
         error?.code === 'NoSuchKey' ||
+        error?.code === 'NotFound' ||
+        error?.code === 'NoSuchBucket' ||
         error?.message?.includes('The specified key does not exist')
       ) {
         throw new NotFoundException(`Public file with id ${fileId} not found`);

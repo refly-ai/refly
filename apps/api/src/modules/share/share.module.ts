@@ -17,6 +17,7 @@ import { ShareCreationService } from './share-creation.service';
 import { ShareDuplicationService } from './share-duplication.service';
 import { ShareRateLimitService } from './share-rate-limit.service';
 import { ToolModule } from '../tool/tool.module';
+import { ToolCallModule } from '../tool-call/tool-call.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { CreditModule } from '../credit/credit.module';
 import { ConfigModule } from '@nestjs/config';
@@ -32,6 +33,7 @@ import { ProviderModule } from '../provider/provider.module';
     RAGModule,
     MiscModule,
     ToolModule,
+    ToolCallModule,
     ActionModule,
     CodeArtifactModule,
     SubscriptionModule,
