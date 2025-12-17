@@ -28,7 +28,7 @@ export const InviteRedirect = () => {
       return;
     }
 
-    const inviteCode = searchParams.get('code');
+    const inviteCode = searchParams.get('invite');
 
     if (inviteCode) {
       // Store invite code for later claiming
