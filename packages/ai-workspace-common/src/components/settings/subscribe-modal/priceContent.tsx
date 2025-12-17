@@ -41,7 +41,7 @@ interface Feature {
 enum PlanPriorityMap {
   free = 0,
   plus = 1,
-  starter = 1,
+  starter = 2,
   maker = 2,
   enterprise = 3,
 }

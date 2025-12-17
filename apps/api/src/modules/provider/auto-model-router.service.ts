@@ -1,11 +1,12 @@
 import { Logger } from '@nestjs/common';
 import { ProviderItem as ProviderItemModel } from '@prisma/client';
-import { LLMModelConfig } from '@refly/openapi-schema';
+import { LLMModelConfig, GenericToolset } from '@refly/openapi-schema';
 import {
   isAutoModel,
   selectAutoModel,
   AUTO_MODEL_ROUTING_PRIORITY,
   safeParseJSON,
+  getToolBasedRoutingConfig,
 } from '@refly/utils';
 import { ProviderItemNotFoundError } from '@refly/errors';
 
@@ -24,6 +25,18 @@ export interface RouterContext {
    * User identifier for logging purposes
    */
   userId: string;
+
+  /**
+   * Scene/mode for the skill invocation (e.g., 'node_agent', 'copilot_agent', 'chat')
+   * Used by tool-based routing to determine if tool-based routing should be applied
+   */
+  scene?: string;
+
+  /**
+   * Toolsets selected for the skill invocation
+   * Used by tool-based routing to check for specific tools
+   */
+  toolsets?: GenericToolset[];
 }
 
 /**
@@ -59,10 +72,11 @@ export class AutoModelRouter {
 
   /**
    * Find an available LLM provider item for Auto model routing
-   * This method implements a three-tier priority system:
-   * 1. Check AUTO_MODEL_ROUTING_RANDOM_LIST env var and randomly select from it
-   * 2. Fallback to AUTO_MODEL_ROUTING_PRIORITY constant array
-   * 3. Final fallback to the first available model
+   * This method implements a multi-tier priority system:
+   * 1. Tool-based routing (if enabled and conditions are met)
+   * 2. Check AUTO_MODEL_ROUTING_RANDOM_LIST env var and randomly select from it
+   * 3. Fallback to AUTO_MODEL_ROUTING_PRIORITY constant array
+   * 4. Final fallback to the first available model
    * Reasoning models (capabilities.reasoning = true) are excluded
    *
    * @returns The selected provider item
@@ -90,6 +104,12 @@ export class AutoModelRouter {
       }
     }
 
+    // Priority 0: Tool-based routing (if enabled)
+    const toolBasedModel = this.tryToolBasedRouting(modelMap);
+    if (toolBasedModel) {
+      return toolBasedModel;
+    }
+
     // Priority 1: Try to select a model from the random list
     const selectedCandidate = selectAutoModel();
     if (selectedCandidate) {
@@ -113,5 +133,49 @@ export class AutoModelRouter {
     }
 
     throw new ProviderItemNotFoundError('Auto model routing failed: no model available');
+  }
+
+  /**
+   * Try tool-based routing logic
+   * This implements the temporary tool-based routing strategy controlled by environment variables
+   *
+   * @param modelMap Map of available models (modelId -> ProviderItem)
+   * @returns The selected provider item, or null if tool-based routing should not be applied
+   */
+  private tryToolBasedRouting(modelMap: Map<string, ProviderItemModel>): ProviderItemModel | null {
+    if (this.context.scene !== 'node_agent') {
+      return null;
+    }
+
+    const config = getToolBasedRoutingConfig();
+    if (!config.enabled) {
+      return null;
+    }
+
+    const toolKeysSet = new Set(
+      this.context.toolsets?.map((t) => t.toolset?.key).filter((key): key is string => !!key) ?? [],
+    );
+
+    const hasTargetTool = config.targetTools.some((targetTool) => toolKeysSet.has(targetTool));
+
+    const targetModelId = hasTargetTool ? config.matchedModelId : config.unmatchedModelId;
+    if (!targetModelId) {
+      return null;
+    }
+
+    const targetModel = modelMap.get(targetModelId);
+
+    if (!targetModel) {
+      this.logger.warn(
+        `[AutoModelRouter] Tool-based routing fallback: target model '${targetModelId}' not available for user ${this.context.userId}`,
+      );
+      return null;
+    }
+
+    this.logger.log(
+      `[AutoModelRouter] Tool-based routing applied: tools ${hasTargetTool ? 'matched' : 'unmatched'}, ` +
+        `routing to ${targetModel.name} (modelId: ${targetModelId})`,
+    );
+    return targetModel;
   }
 }

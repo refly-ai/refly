@@ -487,6 +487,8 @@ export class SkillService implements OnModuleInit {
     const routerContext = {
       llmItems,
       userId: user.uid,
+      scene: param.mode,
+      toolsets: param.toolsets,
     };
     const autoModelRouter = new AutoModelRouter(routerContext);
 
