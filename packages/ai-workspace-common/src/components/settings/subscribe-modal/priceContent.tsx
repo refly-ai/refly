@@ -17,6 +17,7 @@ import {
 import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
 import { SubscriptionPlanType, Voucher } from '@refly/openapi-schema';
 import { SUBSCRIPTION_PRICES } from '@refly-packages/ai-workspace-common/constants/pricing';
+import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
 
 export type SubscriptionInterval = 'monthly' | 'yearly';
 export type PriceSource = 'page' | 'modal';
@@ -662,6 +663,8 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
           body,
         });
         if (res.data?.data?.url) {
+          // Store current page for redirect after payment callback
+          storePendingRedirect();
           window.location.href = res.data.data.url;
         }
       } catch (error) {

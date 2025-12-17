@@ -15,6 +15,7 @@ import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/u
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { logEvent } from '@refly/telemetry-web';
 import { getPendingVoucherCode } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
+import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
 
 interface FormValues {
   email: string;
@@ -107,6 +108,8 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
       logEvent('auth::oauth_login_click', provider);
       authStore.setLoginInProgress(true);
       authStore.setLoginProvider(provider);
+      // Store current page for redirect after OAuth callback
+      storePendingRedirect();
       window.location.href = `${serverOrigin}/v1/auth/${provider}`;
     },
     [authStore],

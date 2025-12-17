@@ -9,6 +9,7 @@ import { Confetti } from './confetti';
 import { TicketBottomCard } from './ticket-bottom-card';
 import getClient from '../../requests/proxiedRequest';
 import { getBaseMonthlyPrice } from '../../constants/pricing';
+import { storePendingRedirect } from '../../hooks/use-pending-redirect';
 
 interface VoucherPopupProps {
   visible: boolean;
@@ -145,6 +146,8 @@ export const VoucherPopup = ({
       const res = await getClient().createCheckoutSession({ body });
       console.log('[voucher-popup] createCheckoutSession res:', res.data);
       if (res.data?.data?.url) {
+        // Store current page for redirect after payment callback
+        storePendingRedirect();
         window.location.href = res.data.data.url;
       }
     } catch (error) {

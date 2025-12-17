@@ -92,7 +92,6 @@ export const buildFinalRequestMessages = ({
   ];
 
   // Apply message list truncation if model info is available
-
   if (modelInfo?.contextLimit) {
     requestMessages = truncateMessageList(requestMessages, modelInfo);
   }
@@ -115,27 +114,42 @@ export const buildFinalRequestMessages = ({
 /**
  * Applies context caching to messages using LangChain's cachePoint format
  *
- * LangChain AWS uses cachePoint markers instead of cache_control:
- * - Add a cachePoint object after the content you want to cache
+ * Two-level caching strategy:
+ * 1. Global Static Point: After System Prompt (index 0)
+ *    - Shared across all users and sessions
+ *    - Contains: System Prompt + Tool Definitions + Examples
+ *    - Benefits: Write once, reuse globally
+ * 2. Session Dynamic Point: After the second-to-last message (messages.length - 2)
+ *    - Caches the conversation history for the current user
+ *    - Benefits: Reuses multi-turn conversation context within a session
+ *
+ * LangChain AWS uses cachePoint markers:
  * - Format: { cachePoint: { type: 'default' } }
- * - Only cache messages before the final message (not the last user query)
+ * - Place the cachePoint marker AFTER the content to cache
  */
 const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
   if (messages.length <= 1) return messages;
 
-  // Calculate the minimum index to start caching from
-  // We want to cache at most 3 messages before the last message
-  const minCacheIndex = Math.max(0, messages.length - 4);
-
   return messages.map((message, index) => {
-    // Don't cache the last message (final user query)
-    if (index === messages.length - 1) return message;
+    // Determine if this message should have a cache point
+    // 1. Global Static Point: After System Prompt (index 0)
+    // 2. Session Dynamic Point: After the last 3 messages except the last user message (index -2, -3, -4)
+    const isGlobalStaticPoint = index === 0;
+    const isSessionDynamicPoint =
+      index === messages.length - 2 ||
+      index === messages.length - 3 ||
+      index === messages.length - 4;
+    const shouldAddCachePoint = isGlobalStaticPoint || isSessionDynamicPoint;
 
-    // Don't cache messages beyond the 3 most recent (before the last one)
-    if (index < minCacheIndex) return message;
+    if (!shouldAddCachePoint) {
+      return message;
+    }
 
     // Apply caching using LangChain's cachePoint format
-    if (message instanceof SystemMessage) {
+    // Use _getType() instead of instanceof to handle deserialized messages
+    const messageType = message._getType();
+
+    if (messageType === 'system') {
       const textContent =
         typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
 
@@ -152,7 +166,7 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
       } as BaseMessageFields);
     }
 
-    if (message instanceof HumanMessage) {
+    if (messageType === 'human') {
       if (typeof message.content === 'string') {
         return new HumanMessage({
           content: [
@@ -179,6 +193,26 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
           ],
         } as BaseMessageFields);
       }
+    }
+
+    if (messageType === 'ai') {
+      const textContent =
+        typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+
+      const aiMessage = message as AIMessage;
+      return new AIMessage({
+        content: [
+          {
+            type: 'text',
+            text: textContent,
+          },
+          {
+            cachePoint: { type: 'default' },
+          },
+        ],
+        tool_calls: aiMessage.tool_calls,
+        additional_kwargs: aiMessage.additional_kwargs,
+      } as BaseMessageFields);
     }
 
     // Return original message if we can't apply caching
