@@ -52,7 +52,7 @@ import { MessageAggregator } from '../../utils/message-aggregator';
 import { ActionService } from '../action/action.service';
 import { AutoNameCanvasJobData } from '../canvas/canvas.dto';
 import { PrismaService } from '../common/prisma.service';
-import { CreditUsageStep, SyncBatchTokenCreditUsageJobData } from '../credit/credit.dto';
+import { SyncTokenCreditUsageJobData } from '../credit/credit.dto';
 import { CreditService } from '../credit/credit.service';
 import { MiscService } from '../misc/misc.service';
 import { SyncPilotStepJobData } from '../pilot/pilot.processor';
@@ -1065,16 +1065,20 @@ export class SkillInvokerService {
                 await this.usageReportQueue.add(`usage_report:${resultId}`, tokenUsage);
               }
 
-              // Process credit billing for all steps after skill completion
+              // Process credit billing directly on model call completion
               // Bill credits for successful completions and user aborts (partial usage should be charged)
               const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
 
               if (shouldBillCredits) {
-                await this.processCreditUsageReport(
+                await this.processCreditBilling(
                   user,
                   resultId,
                   version,
-                  resultAggregator,
+                  inputTokens,
+                  outputTokens,
+                  cacheReadTokens,
+                  cacheWriteTokens,
+                  providerItem,
                   data.providerItem,
                 );
               }
@@ -1519,23 +1523,34 @@ export class SkillInvokerService {
   }
 
   /**
-   * Process credit usage report for all steps after skill completion
-   * This method extracts token usage from steps and prepares batch credit billing data
+   * Process credit billing directly on model call completion
+   * Simplified version that handles single model call billing
    */
-  private async processCreditUsageReport(
+  private async processCreditBilling(
     user: User,
     resultId: string,
     version: number,
-    resultAggregator: ResultAggregator,
-    providerItem?: ProviderItem,
+    inputTokens: number,
+    outputTokens: number,
+    cacheReadTokens: number,
+    cacheWriteTokens: number,
+    actualProviderItem:
+      | { name?: string; creditBilling?: string; tier?: string; provider?: { name?: string } }
+      | null
+      | undefined,
+    requestProviderItem?: ProviderItem,
   ): Promise<void> {
-    const steps = await resultAggregator.getSteps({ resultId, version });
+    // Determine billing config: use Auto model's rate if routed, otherwise use actual model's rate
+    let billingModelName = actualProviderItem?.name;
+    let creditBillingRaw: string | undefined = actualProviderItem?.creditBilling;
 
-    // If this is routed (from Auto model), use Auto model's billing rate instead of the actual model's rate
-    let autoBillingConfig: { creditBilling: any; name: string } | null = null;
-    if (providerItem?.config) {
-      const config = providerItem.config as any;
-      const routedData = config.routedData;
+    // Check if this is routed (from Auto model)
+    if (requestProviderItem?.config) {
+      const config =
+        typeof requestProviderItem.config === 'string'
+          ? safeParseJSON(requestProviderItem.config)
+          : requestProviderItem.config;
+      const routedData = (config as any)?.routedData;
 
       if (routedData?.isRouted) {
         try {
@@ -1545,10 +1560,9 @@ export class SkillInvokerService {
             originalItemId,
           );
           if (originalItem) {
-            autoBillingConfig = {
-              creditBilling: originalItem.creditBilling,
-              name: originalItem.name,
-            };
+            // Use Auto model's billing rate
+            creditBillingRaw = originalItem.creditBilling;
+            billingModelName = originalItem.name;
           }
         } catch (error) {
           // Fallback to actual model billing if failed to fetch Auto model config
@@ -1559,110 +1573,41 @@ export class SkillInvokerService {
       }
     }
 
-    // Collect all model names used in token usage
-    const modelNames = new Set<string>();
-    for (const step of steps) {
-      if (step.tokenUsage) {
-        const tokenUsageArray = safeParseJSON(step.tokenUsage);
-        const tokenUsages = Array.isArray(tokenUsageArray) ? tokenUsageArray : [tokenUsageArray];
+    // Normalize credit billing
+    const creditBilling = normalizeCreditBilling(
+      typeof creditBillingRaw === 'string' ? safeParseJSON(creditBillingRaw) : creditBillingRaw,
+    );
 
-        for (const tokenUsage of tokenUsages) {
-          if (tokenUsage.modelName) {
-            modelNames.add(String(tokenUsage.modelName));
-          }
-        }
-      }
+    if (!creditBilling) {
+      this.logger.warn(`No credit billing config found for model ${billingModelName}`);
+      return;
     }
 
-    // Batch fetch all provider items for the models used
-    const providerItemsMap = new Map<string, any>();
-    if (modelNames.size > 0) {
-      const providerItems = await this.providerService.findProviderItemsByCategory(user, 'llm');
-      for (const item of providerItems) {
-        try {
-          const config = safeParseJSON(item.config || '{}');
-          if (config.modelId && modelNames.has(config.modelId)) {
-            providerItemsMap.set(config.modelId, item);
-          }
-        } catch (error) {
-          this.logger.warn(
-            `Failed to parse config for provider item ${item.itemId}: ${error?.message}`,
-          );
-        }
-      }
+    // Build credit usage data
+    const creditUsageData: SyncTokenCreditUsageJobData = {
+      uid: user.uid,
+      resultId,
+      version,
+      inputTokens,
+      outputTokens,
+      cacheReadTokens,
+      cacheWriteTokens,
+      creditBilling,
+      modelName: billingModelName || 'unknown',
+      actualModelName: actualProviderItem?.name,
+      modelProvider: actualProviderItem?.provider?.name,
+      timestamp: new Date(),
+    };
+
+    // Process credit billing
+    const requireRecharge = await this.creditService.syncTokenCreditUsage(creditUsageData);
+    if (requireRecharge) {
+      throw new ModelUsageQuotaExceeded('credit not available: Insufficient credits.');
     }
 
-    // Collect all credit usage steps
-    const creditUsageSteps: CreditUsageStep[] = [];
-
-    for (const step of steps) {
-      if (step.tokenUsage) {
-        const tokenUsageArray = safeParseJSON(step.tokenUsage);
-
-        // Handle both array and single object cases
-        const tokenUsages = Array.isArray(tokenUsageArray) ? tokenUsageArray : [tokenUsageArray];
-
-        for (const tokenUsage of tokenUsages) {
-          const providerItem = providerItemsMap.get(String(tokenUsage.modelName));
-
-          // Use Auto model's billing rate if this request was routed from Auto
-          // This ensures: token count from real model + billing rate from Auto model
-          const billingConfig = autoBillingConfig || {
-            creditBilling: providerItem?.creditBilling,
-            name: providerItem?.name,
-          };
-
-          if (billingConfig?.creditBilling) {
-            const creditBilling = normalizeCreditBilling(
-              safeParseJSON(billingConfig.creditBilling),
-            );
-
-            if (!creditBilling) {
-              continue;
-            }
-
-            const usage: TokenUsageItem = {
-              tier: providerItem?.tier,
-              modelProvider: providerItem?.provider?.name,
-              modelName: providerItem?.name,
-              inputTokens: tokenUsage.inputTokens || 0,
-              outputTokens: tokenUsage.outputTokens || 0,
-              cacheReadTokens: tokenUsage.cacheReadTokens || 0,
-              cacheWriteTokens: tokenUsage.cacheWriteTokens || 0,
-            };
-
-            // billingModelName: model name used for billing (Auto or direct model)
-            // usage.modelName already contains the actual model name
-            creditUsageSteps.push({
-              usage,
-              creditBilling,
-              billingModelName: billingConfig.name,
-            });
-          }
-        }
-      }
-    }
-
-    // Process credit billing for all usages in one batch
-    if (creditUsageSteps.length > 0) {
-      const batchTokenCreditUsage: SyncBatchTokenCreditUsageJobData = {
-        uid: user.uid,
-        resultId,
-        version,
-        creditUsageSteps,
-        timestamp: new Date(),
-      };
-
-      const requireRecharge =
-        await this.creditService.syncBatchTokenCreditUsage(batchTokenCreditUsage);
-      if (requireRecharge) {
-        throw new ModelUsageQuotaExceeded('credit not available: Insufficient credits.');
-      }
-
-      this.logger.info(
-        `Batch credit billing processed for ${resultId}: ${creditUsageSteps.length} usage items`,
-      );
-    }
+    this.logger.info(
+      `Credit billing processed for ${resultId}: model=${billingModelName}, inputTokens=${inputTokens}, outputTokens=${outputTokens}`,
+    );
   }
 
   async streamInvokeSkill(user: User, data: InvokeSkillJobData, res?: Response) {
