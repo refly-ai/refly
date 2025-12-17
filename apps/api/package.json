@@ -21,6 +21,7 @@
     "sync-db-schema": "prisma format && prisma generate && node -r ts-node/register --env-file=.env src/scripts/sync-db-schema.ts",
     "dev": "prisma format && prisma generate && nodemon src/main.ts",
     "dev:debug": "nodemon --inspect src/main.ts",
+    "dev:node": "node --trace-warnings --inspect=0.0.0.0:9229 -r ts-node/register -r tsconfig-paths/register src/main.ts",
     "start": "node -r ./scripts/preload.js dist/main.js",
     "test": "jest",
     "test:watch": "jest --watch",

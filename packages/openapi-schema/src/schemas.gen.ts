@@ -6741,6 +6741,14 @@ export const SandboxExecuteResponseSchema = {
                 $ref: '#/components/schemas/DriveFile',
               },
             },
+            warnings: {
+              type: 'array',
+              description:
+                'System warnings from sandbox (e.g., file rename due to conflict, temporary directory creation)',
+              items: {
+                type: 'string',
+              },
+            },
           },
         },
       },
