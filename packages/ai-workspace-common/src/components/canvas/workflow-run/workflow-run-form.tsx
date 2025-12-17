@@ -15,6 +15,8 @@ import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/c
 import { useFileUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables';
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useSubscriptionStoreShallow } from '@refly/stores';
+import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 
 const RequiredTagText = () => {
   const { t } = useTranslation();
@@ -92,6 +94,10 @@ export const WorkflowRunForm = ({
   const { t } = useTranslation();
   const { isLoggedRef } = useIsLogin();
   const navigate = useNavigate();
+  const { setCreditInsufficientModalVisible } = useSubscriptionStoreShallow((state) => ({
+    setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
+  }));
+  const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
 
   const [internalIsRunning, setInternalIsRunning] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
@@ -423,6 +429,15 @@ export const WorkflowRunForm = ({
       // Redirect to login with return URL
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
       navigate(`/?autoLogin=true&returnUrl=${returnUrl}`);
+      return;
+    }
+
+    // Frontend pre-check: if current credit balance is insufficient, open the modal and stop.
+    // This is best-effort and only runs when balance data is available, to avoid false negatives.
+    const requiredCredits = Number(creditUsage ?? 0);
+    const isRequiredCreditsValid = Number.isFinite(requiredCredits) && requiredCredits > 0;
+    if (isBalanceSuccess && isRequiredCreditsValid && creditBalance < requiredCredits) {
+      setCreditInsufficientModalVisible(true, undefined, 'canvas');
       return;
     }
 
