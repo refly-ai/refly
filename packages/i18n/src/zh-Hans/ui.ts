@@ -3385,7 +3385,7 @@ const translations = {
       subtitle: '一起探索好奇心',
       youCanTry: '获取新灵感',
       query1:
-        '使用13F数据工具研究沃伦·巴菲特在2025年第二季度与第三季度的持仓情况，列出所有增持和减持的股票，并生成一份包含简易图表的摘要。',
+        '使用 Perplexity 查找十位制作过该产品相关视频的高浏览量 YouTube 创作者，进行分析和比较，并将报告通过电子邮件发送给我。',
       query2:
         '使用 Perplexity 获取昨天 Product Hunt 排行榜前五的产品，创建一份摘要文档和一集播客，并通过电子邮件发送给我。',
       query3:
@@ -3828,6 +3828,7 @@ const translations = {
       stopConfirmNote: '运行将立即终止，已消耗的积分不会退还。',
       stopSuccess: '模板运行已成功停止。',
       confirm: '确定停止',
+      defaultAgentTitle: '智能体',
     },
     revenueSharing: {
       title: '模板被运行可享受积分收益分成',
