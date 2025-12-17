@@ -65,7 +65,7 @@ import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
 import { DriveService } from '../drive/drive.service';
-import { AutoModelRouter } from '../provider/auto-model-router.service';
+import { AutoModelRoutingService, RoutingContext } from '../provider/auto-model-router.service';
 
 /**
  * Fixed builtin toolsets that are always available for node_agent mode.
@@ -105,6 +105,7 @@ export class SkillService implements OnModuleInit {
     private readonly driveService: DriveService,
     private readonly skillInvokerService: SkillInvokerService,
     private readonly actionService: ActionService,
+    private readonly autoModelRoutingService: AutoModelRoutingService,
     @Optional()
     @InjectQueue(QUEUE_SKILL)
     private skillQueue?: Queue<InvokeSkillJobData>,
@@ -484,25 +485,38 @@ export class SkillService implements OnModuleInit {
 
     // Auto model routing
     const llmItems = await this.providerService.findProviderItemsByCategory(user, 'llm');
-    const routerContext = {
+
+    // Build RoutingContext with rich context information for rule-based routing
+    const routingContext: RoutingContext = {
       llmItems,
       userId: user.uid,
-      scene: param.mode,
-      toolsets: param.toolsets,
+      // Task metadata
+      mode: param.mode,
+      skillName: param.skillName,
+      // Input features
+      inputPrompt: param.input?.query,
+      inputLength: param.input?.query?.length ?? 0,
+      // Tool features
+      toolsets: param.toolsets, // For tool-based routing
+      availableTools: undefined, // Will be populated later if available for rule-based routing
+      // Default options
+      originalModelId: param.modelItemId,
     };
-    const autoModelRouter = new AutoModelRouter(routerContext);
 
+    // Use rule-based router service for routing decisions
     const originalModelProviderMap = await this.providerService.prepareModelProviderMap(
       user,
       param.modelItemId,
     );
 
-    const modelProviderMap = Object.fromEntries(
-      Object.entries(originalModelProviderMap).map(([scene, providerItem]) => [
-        scene,
-        autoModelRouter.route(providerItem),
-      ]),
+    // Route each model through the AutoModelRoutingService
+    const routedEntries = await Promise.all(
+      Object.entries(originalModelProviderMap).map(async ([scene, providerItem]) => {
+        const result = await this.autoModelRoutingService.route(providerItem, routingContext);
+        return [scene, result.providerItem] as const;
+      }),
     );
+    const modelProviderMap = Object.fromEntries(routedEntries);
 
     // modelItemId is the routed model for actual execution
     // param.modelItemId should be the surface model (original, not routed) for billing and UI

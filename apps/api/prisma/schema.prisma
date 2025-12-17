@@ -2182,3 +2182,92 @@ model PromotionActivity {
   @@index([createdAt])
   @@map("promotion_activities")
 }
+
+/// Auto model routing rule for rule-based model selection
+model AutoModelRoutingRule {
+  /// Primary key
+  pk          BigInt  @id @default(autoincrement())
+  /// Rule ID
+  ruleId      String  @unique @default(uuid()) @map("rule_id")
+  /// Rule name
+  name        String  @map("name")
+  /// Description
+  description String? @map("description")
+
+  /// Match conditions (JSON)
+  /// Defines criteria the request must satisfy. Implicit AND logic.
+  match String @default("{}") @map("match")
+
+  /// Routing target (JSON)
+  /// Defines the model or strategy to select when matched.
+  target String @map("target")
+
+  /// Priority
+  /// Higher number = higher priority.
+  priority Int @default(0) @map("priority")
+
+  /// Enabled status
+  enabled Boolean @default(true) @map("enabled")
+
+  /// Create timestamp
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@index([enabled, priority])
+  @@map("auto_model_rules")
+}
+
+/// Auto model routing result for tracking routing decisions
+model AutoModelRoutingResult {
+  /// Primary key
+  pk              BigInt @id @default(autoincrement())
+  /// Routing result ID (linked to ActionResult)
+  routingResultId String @unique @default(uuid()) @map("routing_result_id")
+
+  // ===== Association info =====
+  /// User ID
+  userId         String  @map("user_id")
+  /// Related action result ID (may be null since routing can happen before action creation)
+  actionResultId String? @map("action_result_id")
+
+  // ===== Input context features =====
+  /// Scene (e.g., "copilot", "agent")
+  scene                String? @map("scene")
+  /// Mode (e.g., "copilot_agent")
+  mode                 String? @map("mode")
+  /// Skill name
+  skillName            String? @map("skill_name")
+  /// Estimated input tokens (for long context routing analysis)
+  estimatedInputTokens Int?    @map("estimated_input_tokens")
+
+  // ===== Routing decision =====
+  /// Routing strategy type
+  /// "rule_based" | "fallback" | "random"
+  routingStrategy String  @map("routing_strategy")
+  /// Matched rule ID
+  matchedRuleId   String? @map("matched_rule_id")
+  /// Matched rule name (denormalized for easy viewing)
+  matchedRuleName String? @map("matched_rule_name")
+
+  // ===== Model selection =====
+  /// Selected model ID
+  selectedModelId String  @map("selected_model_id")
+  /// Original/default model ID (for comparison)
+  originalModelId String? @map("original_model_id")
+
+  // ===== Performance =====
+  /// Routing duration (milliseconds)
+  routingDurationMs Int? @map("routing_duration_ms")
+
+  /// Create timestamp
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([userId, createdAt])
+  @@index([matchedRuleId])
+  @@index([routingStrategy])
+  @@index([actionResultId])
+  @@map("auto_model_routing_results")
+}
