@@ -9,6 +9,7 @@ import { useWorkflowExecutionPolling } from './use-workflow-execution-polling';
 import { useCanvasStoreShallow } from '@refly/stores';
 import { InitializeWorkflowRequest } from '@refly/openapi-schema';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { guessModelProviderError, ModelUsageQuotaExceeded } from '@refly/errors';
 
 export const useInitializeWorkflow = (
   canvasId: string,
@@ -34,8 +35,18 @@ export const useInitializeWorkflow = (
           t('canvas.workflow.run.completed') || 'Workflow execution completed successfully',
         );
       } else if (status === 'failed') {
-        // Only show error notification if NOT aborted by user
-        if (!data?.data?.abortedByUser) {
+        // Check if this is a credit insufficient error
+        const nodeExecutions = data?.data?.nodeExecutions || [];
+        const hasCreditInsufficientError = nodeExecutions.some((nodeExecution: any) => {
+          if (nodeExecution.errorMessage) {
+            const error = guessModelProviderError(nodeExecution.errorMessage);
+            return error instanceof ModelUsageQuotaExceeded;
+          }
+          return false;
+        });
+
+        // Only show error notification if NOT aborted by user and NOT credit insufficient
+        if (!data?.data?.abortedByUser && !hasCreditInsufficientError) {
           message.error(t('canvas.workflow.run.failed') || 'Workflow execution failed');
         }
       }

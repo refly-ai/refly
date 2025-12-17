@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, message } from 'antd';
+import { message } from 'antd';
 import { logEvent } from '@refly/telemetry-web';
 import { useSubscriptionStoreShallow } from '@refly/stores';
 import { Close, Refresh, Copy } from 'refly-icons';
@@ -140,31 +140,25 @@ export const ErrorNotice: React.FC<ErrorNoticeProps> = React.memo((props) => {
   );
 
   const renderButton = () => {
-    if (errorType === 'creditInsufficient') {
-      const upgradeButtonText = 'upgradeButtonText' in props ? props.upgradeButtonText : undefined;
-      const displayUpgradeText = upgradeButtonText || t(getTranslationKey('upgradeButton'));
-
-      return (
-        <Button
-          size="small"
-          className="text-sm font-semibold h-8 bg-white dark:bg-gray-800 text-[#0E9F77] dark:text-green-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 leading-[1.429]"
-          onClick={handleUpgradeClick}
-        >
-          {displayUpgradeText}
-        </Button>
-      );
-    } else if (errorType === 'userAbort') {
+    if (errorType === 'userAbort') {
       // No button for user abort
       return null;
-    } else {
+    }
+
+    if (errorType === 'creditInsufficient') {
+      // Use same style as other errors, but trigger upgrade modal on click
       return (
         <Refresh
           className="text-refly-text-0 cursor-pointer"
           size={22}
-          onClick={handleRetryClick}
+          onClick={handleUpgradeClick}
         />
       );
     }
+
+    return (
+      <Refresh className="text-refly-text-0 cursor-pointer" size={22} onClick={handleRetryClick} />
+    );
   };
 
   // Determine styles based on error type
