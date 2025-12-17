@@ -10,7 +10,11 @@ import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { LLMModelConfig, User, DriveFile } from '@refly/openapi-schema';
 import type { ReflyService } from '@refly/agent-tools';
 import type { ContextBlock, ArchivedRef, ArchivedRefType } from '../scheduler/utils/context';
-import { truncateContent, countToken, countMessagesTokens } from '../scheduler/utils/token';
+import {
+  truncateContentFast,
+  estimateToken,
+  estimateMessagesTokens,
+} from '../scheduler/utils/token';
 
 // ============================================================================
 // Constants (only for item-level limits, not token budgets)
@@ -231,13 +235,13 @@ function calculateCachePrefixBoundary(messages: BaseMessage[]): number {
   // Accumulate tokens and extend prefix if needed to meet minimum
   let prefixTokens = 0;
   for (let i = 0; i < prefixEndIndex; i++) {
-    prefixTokens += countToken(messages[i].content);
+    prefixTokens += estimateToken(messages[i].content);
   }
 
   // Extend prefix until we meet minimum token requirement
   // Allow including all messages if needed to maximize cache effectiveness
   while (prefixEndIndex < messages.length && prefixTokens < minTokens) {
-    prefixTokens += countToken(messages[prefixEndIndex].content);
+    prefixTokens += estimateToken(messages[prefixEndIndex].content);
     prefixEndIndex++;
   }
 
@@ -429,7 +433,7 @@ function buildCompressibleToolPairGroups(
   for (let i = startIndex; i < endIndex; i++) {
     const msg = messages[i];
     const msgType = msg.type;
-    const msgTokens = countToken(msg.content);
+    const msgTokens = estimateToken(msg.content);
     const entry: MessageEntry = { msg, index: i, tokens: msgTokens };
 
     switch (msgType) {
@@ -588,8 +592,8 @@ export async function compressHistoryMessage(args: {
     };
   }
 
-  // Calculate total tokens using exact counting
-  const totalHistoryTokens = countMessagesTokens(chatHistory);
+  // Calculate total tokens
+  const totalHistoryTokens = estimateMessagesTokens(chatHistory);
 
   // 1. Calculate cache prefix boundary (messages before this are never compressed)
   const prefixEndIndex = calculateCachePrefixBoundary(chatHistory);
@@ -622,9 +626,10 @@ export async function compressHistoryMessage(args: {
   const minRemainingTokens = targetBudget * REMAINING_SPACE_THRESHOLD;
   const tokensToFree = Math.max(0, -remainingBudget + minRemainingTokens);
 
-  const compressibleTokens = countMessagesTokens(
+  const compressibleTokens = estimateMessagesTokens(
     chatHistory.slice(compressibleStartIndex, compressibleEndIndex),
   );
+
   const minTokensToArchive = Math.floor(compressibleTokens * HISTORY_COMPRESS_RATIO);
   const targetTokensToArchive = Math.max(tokensToFree, minTokensToArchive);
 
@@ -677,7 +682,6 @@ export async function compressHistoryMessage(args: {
     messages: messagesToArchive,
     context,
   });
-
   if (!fileId) {
     return {
       compressedHistory: chatHistory,
@@ -697,8 +701,8 @@ export async function compressHistoryMessage(args: {
     fileId,
   );
 
-  // Calculate tokens saved using exact counting
-  const compressedTokens = countMessagesTokens(compressedHistory);
+  // Calculate tokens saved
+  const compressedTokens = estimateMessagesTokens(compressedHistory);
   const tokensSaved = Math.max(0, totalHistoryTokens - compressedTokens);
 
   context.logger?.info?.('Chat history compressed (cache-friendly)', {
@@ -760,39 +764,43 @@ export function truncateContextBlockForPrompt(
     if (usedTokens >= maxTokens) break;
 
     const baseText = `${file.name ?? ''}\n${file.summary ?? ''}`;
-    const baseTokens = countToken(baseText);
+    const baseTokens = estimateToken(baseText);
+
     const remaining = Math.max(0, maxTokens - usedTokens - baseTokens);
     if (remaining <= 0) break;
 
     let content = String(file.content ?? '');
-    const originalContentTokens = countToken(content);
+    const originalContentTokens = estimateToken(content);
+
     if (originalContentTokens > remaining) {
       if (remaining < minItemContentTokens) {
         // Not enough budget to keep meaningful content; skip this item.
         continue;
       }
-      content = truncateContent(content, remaining);
+      content = truncateContentFast(content, remaining);
     }
 
     files.push({ ...file, content });
-    usedTokens += baseTokens + countToken(content);
+    usedTokens += baseTokens + estimateToken(content);
   }
 
   for (const result of (context.results ?? []).slice(0, maxResults)) {
     if (usedTokens >= maxTokens) break;
 
     const baseText = `${result.title ?? ''}`;
-    const baseTokens = countToken(baseText);
+    const baseTokens = estimateToken(baseText);
+
     const remaining = Math.max(0, maxTokens - usedTokens - baseTokens);
     if (remaining <= 0) break;
 
     let content = String(result.content ?? '');
-    const originalContentTokens = countToken(content);
+    const originalContentTokens = estimateToken(content);
+
     if (originalContentTokens > remaining) {
       if (remaining < minItemContentTokens) {
         continue;
       }
-      content = truncateContent(content, remaining);
+      content = truncateContentFast(content, remaining);
     }
 
     // outputFiles can be huge; keep metadata only.
@@ -802,7 +810,7 @@ export function truncateContextBlockForPrompt(
     }));
 
     results.push({ ...result, content, outputFiles });
-    usedTokens += baseTokens + countToken(content);
+    usedTokens += baseTokens + estimateToken(content);
   }
 
   // Return with preserved archivedRefs
@@ -886,9 +894,9 @@ export function truncateContextBlockForModelPrompt(
   // Rough overhead reserve for formatting / role tokens.
   const overhead = 600 + (args.images?.length ? 2000 : 0);
   const fixedTokens =
-    countToken(args.systemPrompt) +
-    countToken(args.optimizedQuery) +
-    countMessagesTokens([...(args.usedChatHistory ?? []), ...(args.messages ?? [])]) +
+    estimateToken(args.systemPrompt) +
+    estimateToken(args.optimizedQuery) +
+    estimateMessagesTokens([...(args.usedChatHistory ?? []), ...(args.messages ?? [])]) +
     overhead;
 
   // Context budget is purely based on model capacity minus fixed tokens
@@ -993,7 +1001,7 @@ export async function compressAgentLoopMessages(
   } = options;
 
   const targetBudget = contextLimit - maxOutput;
-  const messagesTokens = countMessagesTokens(messages);
+  const messagesTokens = estimateMessagesTokens(messages);
   const additionalTokens = options.additionalTokens ?? 0;
   // Include additional tokens (tools, system prompt, etc.) in the calculation
   const currentTokens = messagesTokens + additionalTokens;
@@ -1027,7 +1035,7 @@ export async function compressAgentLoopMessages(
   // After compression, check if still over budget
   // If so, truncate ToolMessage contents (not in cache prefix)
   let finalMessages = compressionResult.compressedHistory;
-  const compressedTokens = countMessagesTokens(finalMessages) + additionalTokens;
+  const compressedTokens = estimateMessagesTokens(finalMessages) + additionalTokens;
 
   if (compressedTokens > targetBudget) {
     finalMessages = truncateToolMessagesForBudget({
@@ -1059,7 +1067,7 @@ function truncateToolMessagesForBudget(args: {
 }): BaseMessage[] {
   const { messages, targetBudget, additionalTokens, logger } = args;
 
-  const currentTokens = countMessagesTokens(messages) + additionalTokens;
+  const currentTokens = estimateMessagesTokens(messages) + additionalTokens;
   const tokensToSave = currentTokens - targetBudget;
 
   if (tokensToSave <= 0) {
@@ -1071,7 +1079,7 @@ function truncateToolMessagesForBudget(args: {
   for (let i = 1; i < messages.length; i++) {
     const msg = messages[i];
     if (msg.type === 'tool') {
-      const tokens = countToken(msg.content);
+      const tokens = estimateToken(msg.content);
       toolMessageInfos.push({ index: i, tokens });
     }
   }
@@ -1089,16 +1097,16 @@ function truncateToolMessagesForBudget(args: {
     return messages;
   }
 
-  // Apply truncation using truncateContent (head + tail)
+  // Apply truncation using truncateContentFast (head + tail)
   const truncatedMessages = messages.map((msg, index) => {
     const targetTokens = truncateMap.get(index);
     if (targetTokens === undefined) return msg;
 
     const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-    const truncatedContent = truncateContent(content, targetTokens);
+    const truncatedContent = truncateContentFast(content, targetTokens);
     logger?.info?.('Truncated ToolMessage content for budget', {
       messageIndex: index,
-      originalTokens: countToken(content),
+      originalTokens: estimateToken(content),
       targetTokens,
     });
 
