@@ -2186,20 +2186,22 @@ model PromotionActivity {
 /// Auto model routing rule for rule-based model selection
 model AutoModelRoutingRule {
   /// Primary key
-  pk          BigInt  @id @default(autoincrement())
+  pk       BigInt @id @default(autoincrement())
   /// Rule ID
-  ruleId      String  @unique @default(uuid()) @map("rule_id")
+  ruleId   String @unique @default(uuid()) @map("rule_id")
   /// Rule name
-  name        String  @map("name")
-  /// Description
-  description String? @map("description")
+  ruleName String @map("rule_name")
 
-  /// Match conditions (JSON)
+  /// Scene (required, single value)
+  /// e.g., "agent", "copilot", "chat"
+  scene String @map("scene")
+
+  /// Condition (JSON)
   /// Defines criteria the request must satisfy. Implicit AND logic.
-  match String @default("{}") @map("match")
+  condition String @default("{}") @map("condition")
 
   /// Routing target (JSON)
-  /// Defines the model or strategy to select when matched.
+  /// Defines the model to select when matched.
   target String @map("target")
 
   /// Priority
@@ -2216,7 +2218,7 @@ model AutoModelRoutingRule {
   /// Soft delete timestamp
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
 
-  @@index([enabled, priority])
+  @@index([enabled, scene, priority])
   @@map("auto_model_routing_rules")
 }
 

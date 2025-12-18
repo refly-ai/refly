@@ -3,7 +3,7 @@ import {
   AutoModelRoutingRule as AutoModelRoutingRuleModel,
   ProviderItem as ProviderItemModel,
 } from '@prisma/client';
-import { LLMModelConfig, ToolDefinition, GenericToolset } from '@refly/openapi-schema';
+import { LLMModelConfig, GenericToolset } from '@refly/openapi-schema';
 import {
   isAutoModel,
   selectAutoModel,
@@ -16,28 +16,17 @@ import { PrismaService } from '../common/prisma.service';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Match conditions for routing rules
+ * Condition for routing rules
  * All defined conditions must be satisfied simultaneously (AND logic)
+ * Note: Scene matching is done via the rule's `scene` column, not in conditions
  */
-export interface MatchConditions {
+export interface RuleCondition {
   /**
-   * Scene list. If request scene is in the list, matches.
-   * e.g., ["copilot", "agent"]
+   * Toolset inventory keys list.
+   * If any toolset in the request has an inventory key matching any in this list, matches.
+   * Used for matching specific toolsets like "fal_image", "fal_video", etc.
    */
-  scenes?: string[];
-
-  /**
-   * Mode list.
-   * e.g., ["copilot_agent", "node_agent"]
-   */
-  modes?: string[];
-
-  /**
-   * Tool keywords list.
-   * If any tool in the request contains any keyword, matches.
-   * Used to identify complex tools (e.g., "search", "code_interpreter").
-   */
-  toolKeywords?: string[];
+  toolsetInventoryKeys?: string[];
 
   /**
    * Input length limits (estimated tokens or characters).
@@ -58,10 +47,9 @@ export interface MatchConditions {
 /**
  * Routing target definition
  */
-export type RoutingTarget =
-  | { type: 'single'; modelId: string }
-  | { type: 'random'; candidates: string[] }
-  | { type: 'weighted'; candidates: { modelId: string; weight: number }[] };
+export interface RoutingTarget {
+  model: string;
+}
 
 /**
  * Context for Auto model routing
@@ -115,15 +103,9 @@ export interface RoutingContext {
   // ===== Tool features =====
   /**
    * Toolsets selected for the skill invocation
-   * Used by tool-based routing to check for specific tools
+   * Used for tool-based routing to check for specific tools
    */
   toolsets?: GenericToolset[];
-
-  /**
-   * Currently enabled tools list
-   * Used by rule-based routing for tool keyword matching
-   */
-  availableTools?: ToolDefinition[];
 }
 
 /**
@@ -150,7 +132,7 @@ export interface RoutingResult {
    */
   matchedRule?: {
     ruleId: string;
-    name: string;
+    ruleName: string;
   };
 }
 
@@ -190,13 +172,14 @@ export class AutoModelRoutingService {
   }
 
   /**
-   * Get rules from database (no caching for easier testing)
+   * Get rules from database filtered by scene (no caching for easier testing)
    */
-  private async getRulesAsync(): Promise<AutoModelRoutingRuleModel[]> {
+  private async getRulesAsync(scene: string): Promise<AutoModelRoutingRuleModel[]> {
     try {
       return await this.prisma.autoModelRoutingRule.findMany({
         where: {
           enabled: true,
+          scene,
           deletedAt: null,
         },
         orderBy: {
@@ -274,7 +257,7 @@ export class AutoModelRoutingService {
       }
 
       this.logger.log(
-        `Rule-based routing: ${ruleResult.matchedRule.name} -> ${ruleResult.providerItem.name}`,
+        `Rule-based routing: ${ruleResult.matchedRule.ruleName} -> ${ruleResult.providerItem.name}`,
       );
 
       return {
@@ -342,33 +325,35 @@ export class AutoModelRoutingService {
 
   /**
    * Route by database rules
+   * Rules are filtered by scene column and then matched by additional conditions
    */
   private async routeByRules(
     context: RoutingContext,
     modelMap: Map<string, ProviderItemModel>,
-    scene?: string,
+    scene: string,
   ): Promise<{
     providerItem: ProviderItemModel;
-    matchedRule: { ruleId: string; name: string };
+    matchedRule: { ruleId: string; ruleName: string };
   } | null> {
-    const rules = await this.getRulesAsync();
+    const rules = await this.getRulesAsync(scene);
 
     for (const rule of rules) {
-      const matchConditions = safeParseJSON(rule.match) as MatchConditions;
+      const condition = safeParseJSON(rule.condition) as RuleCondition;
       const target = safeParseJSON(rule.target) as RoutingTarget;
 
-      if (!matchConditions || !target) {
+      if (!target) {
         continue;
       }
 
-      if (this.matchRule(matchConditions, context, scene)) {
+      // condition can be empty (matches all requests for this scene)
+      if (this.matchRule(condition ?? {}, context)) {
         const selectedModel = this.selectModelFromTarget(target, modelMap);
         if (selectedModel) {
           return {
             providerItem: selectedModel,
             matchedRule: {
               ruleId: rule.ruleId,
-              name: rule.name,
+              ruleName: rule.ruleName,
             },
           };
         }
@@ -381,43 +366,30 @@ export class AutoModelRoutingService {
   /**
    * Check if context matches rule conditions
    * All defined conditions must be satisfied (AND logic)
+   * Note: Scene matching is done at the database query level via the `scene` column
    */
-  private matchRule(conditions: MatchConditions, context: RoutingContext, scene?: string): boolean {
-    // Match scenes
-    if (conditions.scenes && conditions.scenes.length > 0) {
-      if (!scene || !conditions.scenes.includes(scene)) {
-        return false;
-      }
-    }
-
-    // Match modes
-    if (conditions.modes && conditions.modes.length > 0) {
-      if (!context.mode || !conditions.modes.includes(context.mode)) {
-        return false;
-      }
-    }
-
-    // Match tool keywords
-    if (conditions.toolKeywords && conditions.toolKeywords.length > 0) {
-      if (!this.matchToolKeywords(conditions.toolKeywords, context.availableTools)) {
+  private matchRule(condition: RuleCondition, context: RoutingContext): boolean {
+    // Match toolset inventory keys
+    if (condition.toolsetInventoryKeys && condition.toolsetInventoryKeys.length > 0) {
+      if (!this.matchToolsetInventoryKeys(condition.toolsetInventoryKeys, context.toolsets)) {
         return false;
       }
     }
 
     // Match input length
-    if (conditions.inputLength) {
+    if (condition.inputLength) {
       const length = context.inputLength ?? 0;
-      if (conditions.inputLength.min !== undefined && length < conditions.inputLength.min) {
+      if (condition.inputLength.min !== undefined && length < condition.inputLength.min) {
         return false;
       }
-      if (conditions.inputLength.max !== undefined && length > conditions.inputLength.max) {
+      if (condition.inputLength.max !== undefined && length > condition.inputLength.max) {
         return false;
       }
     }
 
     // Match regex
-    if (conditions.regex) {
-      if (!this.matchRegex(conditions.regex, context.inputPrompt)) {
+    if (condition.regex) {
+      if (!this.matchRegex(condition.regex, context.inputPrompt)) {
         return false;
       }
     }
@@ -426,31 +398,20 @@ export class AutoModelRoutingService {
   }
 
   /**
-   * Check if any tool matches the keywords
+   * Check if any toolset inventory key matches the provided keys
+   * This is used for matching specific toolsets like "fal_image", "fal_video", etc.
    */
-  private matchToolKeywords(keywords: string[], tools?: ToolDefinition[]): boolean {
-    if (!tools || tools.length === 0) {
+  private matchToolsetInventoryKeys(inventoryKeys: string[], toolsets?: GenericToolset[]): boolean {
+    if (!toolsets || toolsets.length === 0) {
       return false;
     }
 
-    const keywordsLower = keywords.map((k) => k.toLowerCase());
+    const keysSet = new Set(inventoryKeys);
 
-    for (const tool of tools) {
-      const toolName = tool.name?.toLowerCase() ?? '';
-
-      // Get description from descriptionDict (try 'en' first, then first available)
-      let toolDesc = '';
-      if (tool.descriptionDict) {
-        const desc = tool.descriptionDict.en ?? Object.values(tool.descriptionDict)[0];
-        if (typeof desc === 'string') {
-          toolDesc = desc.toLowerCase();
-        }
-      }
-
-      for (const keyword of keywordsLower) {
-        if (toolName.includes(keyword) || toolDesc.includes(keyword)) {
-          return true;
-        }
+    for (const toolset of toolsets) {
+      const inventoryKey = toolset.toolset?.key;
+      if (inventoryKey && keysSet.has(inventoryKey)) {
+        return true;
       }
     }
 
@@ -501,43 +462,7 @@ export class AutoModelRoutingService {
     target: RoutingTarget,
     modelMap: Map<string, ProviderItemModel>,
   ): ProviderItemModel | null {
-    switch (target.type) {
-      case 'single': {
-        return modelMap.get(target.modelId) ?? null;
-      }
-
-      case 'random': {
-        const availableCandidates = target.candidates.filter((id) => modelMap.has(id));
-        if (availableCandidates.length === 0) {
-          return null;
-        }
-        const randomIndex = Math.floor(Math.random() * availableCandidates.length);
-        return modelMap.get(availableCandidates[randomIndex]) ?? null;
-      }
-
-      case 'weighted': {
-        const availableCandidates = target.candidates.filter((c) => modelMap.has(c.modelId));
-        if (availableCandidates.length === 0) {
-          return null;
-        }
-
-        const totalWeight = availableCandidates.reduce((sum, c) => sum + c.weight, 0);
-        let random = Math.random() * totalWeight;
-
-        for (const candidate of availableCandidates) {
-          random -= candidate.weight;
-          if (random <= 0) {
-            return modelMap.get(candidate.modelId) ?? null;
-          }
-        }
-
-        // Fallback to first candidate
-        return modelMap.get(availableCandidates[0].modelId) ?? null;
-      }
-
-      default:
-        return null;
-    }
+    return modelMap.get(target.model) ?? null;
   }
 
   /**
@@ -634,7 +559,7 @@ export class AutoModelRoutingService {
   private async logRoutingResult(
     routingResultId: string,
     context: RoutingContext,
-    result: { providerItem: ProviderItemModel; matchedRule?: { ruleId: string; name: string } },
+    result: { providerItem: ProviderItemModel; matchedRule?: { ruleId: string; ruleName: string } },
     strategy: 'rule_based' | 'tool_based' | 'fallback' | 'random',
     originalItemId: string,
     originalModelId: string,
@@ -651,7 +576,7 @@ export class AutoModelRoutingService {
         scene,
         routingStrategy: strategy,
         matchedRuleId: result.matchedRule?.ruleId,
-        matchedRuleName: result.matchedRule?.name,
+        matchedRuleName: result.matchedRule?.ruleName,
         selectedItemId: result.providerItem.itemId,
         selectedModelId: config?.modelId ?? result.providerItem.itemId,
         originalItemId,

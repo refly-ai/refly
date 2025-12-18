@@ -503,8 +503,7 @@ export class SkillService implements OnModuleInit {
       inputPrompt: param.input?.query,
       inputLength: param.input?.query?.length ?? 0,
       // Tool features
-      toolsets: param.toolsets, // For tool-based routing
-      availableTools: undefined, // Will be populated later if available for rule-based routing
+      toolsets: param.toolsets, // For toolsetInventoryKeys matching
     };
 
     // Use rule-based router service for routing decisions
