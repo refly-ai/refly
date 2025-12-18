@@ -51,6 +51,8 @@ export enum IDPrefix {
   ACTION_MESSAGE = 'am-',
   VOUCHER = 'voucher-',
   VOUCHER_INVITATION = 'vi-',
+  ROUTING_RESULT = 'rrt-',
+  ROUTING_RULE = 'rrl-',
 }
 
 export function genUID(): string {
@@ -322,6 +324,14 @@ export function genVoucherID(): string {
 
 export function genVoucherInvitationID(): string {
   return IDPrefix.VOUCHER_INVITATION + createId();
+}
+
+export function genRoutingResultID(): string {
+  return IDPrefix.ROUTING_RESULT + createId();
+}
+
+export function genRoutingRuleID(): string {
+  return IDPrefix.ROUTING_RULE + createId();
 }
 
 export function genInviteCode(): string {

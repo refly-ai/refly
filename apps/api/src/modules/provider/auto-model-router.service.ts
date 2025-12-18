@@ -10,10 +10,10 @@ import {
   AUTO_MODEL_ROUTING_PRIORITY,
   safeParseJSON,
   getToolBasedRoutingConfig,
+  genRoutingResultID,
 } from '@refly/utils';
 import { ProviderItemNotFoundError } from '@refly/errors';
 import { PrismaService } from '../common/prisma.service';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Condition for routing rules
@@ -118,8 +118,6 @@ export interface RoutingResult {
  * Encapsulates all rule-based routing logic without external dependencies
  */
 class RuleRouter {
-  private readonly logger = new Logger(RuleRouter.name);
-
   constructor(private readonly context: RoutingContext) {}
 
   route(
@@ -259,27 +257,22 @@ export class AutoModelRoutingService {
    * The external scene parameter is only used for validation: routing results are logged
    * only when the derived scene matches the external scene.
    *
-   * @param chatItem The chat model item to potentially route
+   * @param originalProviderItem The chat model item to potentially route
    * @param context The routing context
    * @param externalScene External scene value for validation (routing result is logged only if it matches derived scene)
    * @returns Routing result with selected model and metadata
    */
   async route(
-    chatItem: ProviderItemModel,
+    originalProviderItem: ProviderItemModel,
     context: RoutingContext,
     externalScene: string,
   ): Promise<RoutingResult> {
-    const routingResultId = uuidv4();
-
-    // Extract original item and model IDs from the input chatItem (original provider item)
-    const originalItemId = chatItem.itemId;
-    const originalConfig = safeParseJSON(chatItem.config) as LLMModelConfig;
-    const originalModelId = originalConfig?.modelId ?? chatItem.itemId;
+    const routingResultId = genRoutingResultID();
 
     // If not an Auto model, return unchanged
-    if (!isAutoModel(chatItem.config)) {
+    if (!isAutoModel(originalProviderItem.config)) {
       return {
-        providerItem: chatItem,
+        providerItem: originalProviderItem,
         routingResultId,
         strategy: RoutingStrategy.FALLBACK,
       };
@@ -297,84 +290,53 @@ export class AutoModelRoutingService {
     // Priority 1: Try rule-based routing first
     const ruleResult = await this.routeByRules(context, modelMap, derivedScene);
     if (ruleResult) {
-      // Log routing result asynchronously only if scenes match
-      if (shouldSaveRoutingResult) {
-        this.saveRoutingResult(
-          routingResultId,
-          context,
-          ruleResult,
-          RoutingStrategy.RULE_BASED,
-          originalItemId,
-          originalModelId,
-          derivedScene,
-        ).catch((err) => this.logger.warn('Failed to log routing result', err));
-      }
-
-      this.logger.log(
-        `Rule-based routing: ${ruleResult.matchedRule.ruleName} -> ${ruleResult.providerItem.name}`,
-      );
-
-      return {
+      const routingResult: RoutingResult = {
         providerItem: ruleResult.providerItem,
         routingResultId,
         strategy: RoutingStrategy.RULE_BASED,
         matchedRule: ruleResult.matchedRule,
       };
+
+      if (shouldSaveRoutingResult) {
+        this.saveRoutingResult(routingResult, context, originalProviderItem, derivedScene).catch(
+          (err) => this.logger.warn('Failed to save routing result', err),
+        );
+      }
+
+      return routingResult;
     }
 
     // Priority 2: Try tool-based routing (temporary solution)
     const toolBasedItem = this.tryToolBasedRouting(context, modelMap, derivedScene);
     if (toolBasedItem) {
-      // Log tool-based routing result asynchronously only if scenes match
-      if (shouldSaveRoutingResult) {
-        this.saveRoutingResult(
-          routingResultId,
-          context,
-          { providerItem: toolBasedItem },
-          RoutingStrategy.TOOL_BASED,
-          originalItemId,
-          originalModelId,
-          derivedScene,
-        ).catch((err) => this.logger.warn('Failed to log routing result', err));
-      }
-
-      this.logger.log(
-        `Tool-based routing: ${toolBasedItem.name} (itemId: ${toolBasedItem.itemId}) for user ${context.userId}`,
-      );
-
-      return {
+      const routingResult: RoutingResult = {
         providerItem: toolBasedItem,
         routingResultId,
         strategy: RoutingStrategy.TOOL_BASED,
       };
+
+      return routingResult;
     }
 
     // Priority 3: Fallback to legacy routing
     const fallbackItem = this.findAvailableModelLegacy(context.llmItems, modelMap);
-    const strategy = RoutingStrategy.FALLBACK;
+    const routingResult: RoutingResult = {
+      providerItem: fallbackItem,
+      routingResultId,
+      strategy: RoutingStrategy.FALLBACK,
+    };
 
-    // Save routing result only if scenes match
     if (shouldSaveRoutingResult) {
-      this.saveRoutingResult(
-        routingResultId,
-        context,
-        { providerItem: fallbackItem },
-        strategy,
-        originalItemId,
-        originalModelId,
-        derivedScene,
-      ).catch((err) => this.logger.warn('Failed to log routing result', err));
+      this.saveRoutingResult(routingResult, context, originalProviderItem, derivedScene).catch(
+        (err) => this.logger.warn('Failed to log routing result', err),
+      );
     }
 
     this.logger.log(
-      `${strategy} routing: ${fallbackItem.name} (itemId: ${fallbackItem.itemId}) for user ${context.userId}`,
+      `Fallback routing: ${fallbackItem.name} (itemId: ${fallbackItem.itemId}) for user ${context.userId}`,
     );
 
-    return {
-      providerItem: fallbackItem,
-      routingResultId,
-      strategy,
-    };
+    return routingResult;
   }
 
   /**
@@ -510,16 +472,9 @@ export class AutoModelRoutingService {
     const targetModel = modelMap.get(targetModelId);
 
     if (!targetModel) {
-      this.logger.warn(
-        `[AutoModelRouter] Tool-based routing fallback: target model '${targetModelId}' not available for user ${context.userId}`,
-      );
       return null;
     }
 
-    this.logger.log(
-      `[AutoModelRouter] Tool-based routing applied: tools ${hasTargetTool ? 'matched' : 'unmatched'}, ` +
-        `routing to ${targetModel.name} (modelId: ${targetModelId})`,
-    );
     return targetModel;
   }
 
@@ -527,31 +482,34 @@ export class AutoModelRoutingService {
    * Log routing result to database (async, non-blocking)
    */
   private async saveRoutingResult(
-    routingResultId: string,
+    routingResult: any,
     context: RoutingContext,
-    result: { providerItem: ProviderItemModel; matchedRule?: { ruleId: string; ruleName: string } },
-    strategy: RoutingStrategy,
-    originalItemId: string,
-    originalModelId: string,
+    originalProviderItem: ProviderItemModel,
     scene?: string,
   ): Promise<void> {
-    const config = safeParseJSON(result.providerItem.config) as LLMModelConfig;
-
     await this.prisma.autoModelRoutingResult.create({
       data: {
-        routingResultId,
+        routingResultId: routingResult.routingResultId,
         userId: context.userId,
         actionResultId: context.actionResultId,
         actionResultVersion: context.actionResultVersion,
         scene,
-        routingStrategy: strategy,
-        matchedRuleId: result.matchedRule?.ruleId,
-        matchedRuleName: result.matchedRule?.ruleName,
-        selectedItemId: result.providerItem.itemId,
-        selectedModelId: config?.modelId ?? result.providerItem.itemId,
-        originalItemId,
-        originalModelId,
+        routingStrategy: routingResult.strategy,
+        matchedRuleId: routingResult.matchedRule?.ruleId,
+        matchedRuleName: routingResult.matchedRule?.ruleName,
+        originalItemId: originalProviderItem.itemId,
+        originalModelId: this.getModelIdFromProviderItem(originalProviderItem),
+        selectedItemId: routingResult.providerItem.itemId,
+        selectedModelId: this.getModelIdFromProviderItem(routingResult.providerItem),
       },
     });
+  }
+
+  private getModelIdFromProviderItem(providerItem: ProviderItemModel): string | null {
+    const config = safeParseJSON(providerItem.config) as LLMModelConfig;
+    if (!config) {
+      return null;
+    }
+    return config.modelId;
   }
 }
