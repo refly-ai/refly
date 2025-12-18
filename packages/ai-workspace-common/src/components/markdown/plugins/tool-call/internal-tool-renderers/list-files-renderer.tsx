@@ -1,4 +1,4 @@
-import React from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { InternalToolRendererProps } from './types';
 import { ToolCallStatus } from '../types';
@@ -7,7 +7,7 @@ import { ToolCallStatus } from '../types';
  * Compact renderer for list_files tool
  * Display format: "Browsing file list"
  */
-export const ListFilesRenderer: React.FC<InternalToolRendererProps> = ({ toolCallStatus }) => {
+export const ListFilesRenderer = memo<InternalToolRendererProps>(({ toolCallStatus }) => {
   const { t } = useTranslation();
   const isExecuting = toolCallStatus === ToolCallStatus.EXECUTING;
   const label = t('components.markdown.internalTool.listFiles');
@@ -17,4 +17,6 @@ export const ListFilesRenderer: React.FC<InternalToolRendererProps> = ({ toolCal
       <span className={isExecuting ? 'text-shimmer' : 'text-refly-text-0'}>{label}</span>
     </div>
   );
-};
+});
+
+ListFilesRenderer.displayName = 'ListFilesRenderer';
