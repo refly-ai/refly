@@ -47,7 +47,6 @@ import {
   FallbackReranker,
   getReranker,
   getChatModel,
-  initializeMonitoring,
   ProviderChecker,
   ProviderCheckResult,
 } from '@refly/providers';
@@ -82,7 +81,7 @@ export class ProviderService implements OnModuleInit {
   async onModuleInit() {
     await runModuleInitWithTimeoutAndRetry(
       async () => {
-        const langfuseConfig = {
+        const _langfuseConfig = {
           publicKey: this.configService.get('langfuse.publicKey'),
           secretKey: this.configService.get('langfuse.secretKey'),
           baseUrl: this.configService.get('langfuse.baseUrl'),
@@ -92,12 +91,8 @@ export class ProviderService implements OnModuleInit {
           ),
         };
 
-        if (langfuseConfig.enabled) {
-          initializeMonitoring(langfuseConfig);
-          this.logger.log('Langfuse monitoring initialized successfully');
-        } else {
-          this.logger.warn('Langfuse monitoring disabled - missing configuration');
-        }
+        // Disable Langfuse JS SDK monitoring (Model Operation trace) to avoid empty traces
+        this.logger.warn('Langfuse monitoring via provider.wrapper is disabled by configuration');
       },
       {
         logger: this.logger,

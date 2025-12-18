@@ -1,7 +1,7 @@
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { resourceFromAttributes } from '@opentelemetry/resources';
+import { defaultResource, resourceFromAttributes } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { BatchSpanProcessor, type SpanProcessor } from '@opentelemetry/sdk-trace-base';
@@ -10,17 +10,8 @@ import { LangfuseSpanProcessor } from '@langfuse/otel';
 
 let sdk: NodeSDK | null = null;
 
-// Instrumentation scopes to exclude from Langfuse (infrastructure spans)
-// Use exact scope names for O(1) lookup
-const EXCLUDED_SCOPES = new Set([
-  'prisma',
-  '@opentelemetry/instrumentation-fs',
-  '@opentelemetry/instrumentation-http',
-  '@opentelemetry/instrumentation-https',
-  '@opentelemetry/instrumentation-net',
-  '@opentelemetry/instrumentation-dns',
-  '@opentelemetry/instrumentation-ioredis',
-]);
+// Instrumentation scopes to include (langchain/langgraph/langfuse only)
+const INCLUDED_SCOPE_PREFIXES = ['langchain', 'langgraph', 'langfuse'];
 
 interface LangfuseConfig {
   publicKey?: string;
@@ -93,10 +84,14 @@ export function initTracer(): void {
   sdk = new NodeSDK({
     spanProcessors: spanProcessors.length > 0 ? spanProcessors : undefined,
     metricReader,
+    // Disable default resource detectors (host/process/etc.) and set minimal service.name
+    resource: defaultResource().merge(
+      resourceFromAttributes({
+        [ATTR_SERVICE_NAME]: 'reflyd',
+      }),
+    ),
+    resourceDetectors: [],
     instrumentations: [getNodeAutoInstrumentations()],
-    resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: 'reflyd',
-    }),
   });
 
   sdk.start();
@@ -118,8 +113,18 @@ function createLangfuseProcessor(config: LangfuseConfig): SpanProcessor | null {
       publicKey,
       secretKey,
       baseUrl,
-      shouldExportSpan: ({ otelSpan }) =>
-        !EXCLUDED_SCOPES.has(otelSpan.instrumentationScope?.name ?? ''),
+      shouldExportSpan: ({ otelSpan }) => {
+        const scopeName = otelSpan.instrumentationScope?.name ?? '';
+        // Pure whitelist: only langchain/langgraph/langfuse scopes are exported
+        const inWhitelist = INCLUDED_SCOPE_PREFIXES.some((prefix) => scopeName.startsWith(prefix));
+        if (!inWhitelist) return false;
+
+        // Drop spans without meaningful input/output/attributes to avoid empty traces
+        const hasAttributes =
+          (otelSpan.attributes && Object.keys(otelSpan.attributes).length > 0) ||
+          otelSpan.events?.length;
+        return hasAttributes;
+      },
       // Slim down resourceAttributes in trace/observation metadata
       // Note: mask receives serialized JSON strings, operates on values not keys
       // Key-based filtering (langgraph_*, ls_*) is done in FilteredLangfuseCallbackHandler
