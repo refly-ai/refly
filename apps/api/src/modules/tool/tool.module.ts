@@ -23,6 +23,11 @@ import { ToolInventoryService } from './inventory/inventory.service';
 import { ScaleboxModule } from './sandbox/scalebox.module';
 import { ToolController } from './tool.controller';
 import { ToolService } from './tool.service';
+import {
+  RegularToolPostHandlerService,
+  ComposioToolPostHandlerService,
+  ToolWrapperFactoryService,
+} from './tool-execution';
 
 @Module({
   imports: [
@@ -53,6 +58,10 @@ import { ToolService } from './tool.service';
     AdapterFactory,
     // Resource handler for input/output resource preprocessing
     ResourceHandler,
+    // Post-handler and wrapper factory for tool result processing
+    RegularToolPostHandlerService,
+    ComposioToolPostHandlerService,
+    ToolWrapperFactoryService,
   ],
   exports: [ToolService, ToolInventoryService, ToolFactory],
 })

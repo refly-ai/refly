@@ -36,7 +36,13 @@ export const AIMessageCard = memo(({ message, resultId, stepStatus }: AIMessageC
   if (!hasContent && !hasReasoningContent) return null;
 
   return (
-    <div className="my-2 text-base">
+    <div
+      className="my-2 text-base"
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 100px',
+      }}
+    >
       <div className={`skill-response-content-${resultId}-${message.messageId}`}>
         {hasReasoningContent && (
           <ReasoningContentPreview
@@ -82,7 +88,13 @@ export const ToolMessageCard = memo(({ message }: ToolMessageCardProps) => {
   );
 
   return (
-    <div className="my-2">
+    <div
+      className="my-2"
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 300px',
+      }}
+    >
       <ToolCall {...toolProps} />
     </div>
   );

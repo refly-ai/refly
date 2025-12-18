@@ -1021,4 +1021,55 @@ export class ResourceHandler {
       return false;
     }
   }
+
+  /**
+   * Upload tool execution result to DriveService as a JSON file
+   * Used by tool post-handlers to archive full results when truncated
+   *
+   * @param user - User context
+   * @param options - Upload options
+   * @returns DriveFile if upload successful, null otherwise
+   */
+  async uploadToolResult(
+    user: User,
+    options: {
+      canvasId: string;
+      toolsetKey: string;
+      toolName: string;
+      content: string;
+      resultId: string;
+      resultVersion?: number;
+    },
+  ): Promise<DriveFile | null> {
+    const { canvasId, toolsetKey, toolName, content, resultId, resultVersion } = options;
+
+    if (!canvasId) {
+      return null;
+    }
+
+    try {
+      const rid = resultId ?? 'r';
+      const version = resultVersion ?? 0;
+      const fileName = `${toolsetKey}-${toolName}-${rid}-v${version}.txt`;
+
+      const driveFile = await this.driveService.createDriveFile(user, {
+        canvasId,
+        name: fileName,
+        type: 'text/plain',
+        content, // Pass raw text directly - DriveService handles encoding
+        summary: `${toolsetKey} ${toolName} result (${content.length} chars)`,
+        source: 'agent',
+        resultId,
+        resultVersion,
+      });
+
+      return driveFile;
+    } catch (error) {
+      this.logger.error(`Failed to upload tool result: ${(error as Error)?.message}`, {
+        toolsetKey,
+        toolName,
+      });
+      return null;
+    }
+  }
 }

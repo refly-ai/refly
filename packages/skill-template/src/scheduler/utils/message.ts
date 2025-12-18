@@ -45,6 +45,11 @@ type ContentItem = TextContent | ImageUrlContent;
 // Different Claude models have minimum requirements for caching:
 // - 1024 tokens: Claude 3.7 Sonnet, Claude 3.5 Sonnet, Claude 3 Opus
 // - 2048 tokens: Claude 3.5 Haiku, Claude 3 Haiku
+//
+// Note about LangChain AWS cachePoint format:
+// - LangChain AWS v1.1.0+ uses cachePoint markers for Bedrock
+// - Format: { cachePoint: { type: 'default' } }
+// - Place the cachePoint marker AFTER the content to cache
 
 export const buildFinalRequestMessages = ({
   systemPrompt,
@@ -87,13 +92,13 @@ export const buildFinalRequestMessages = ({
   ];
 
   // Apply message list truncation if model info is available
-
   if (modelInfo?.contextLimit) {
     requestMessages = truncateMessageList(requestMessages, modelInfo);
   }
 
   // Check if context caching should be enabled and the model supports it
   const shouldEnableContextCaching = !!modelInfo?.capabilities?.contextCaching;
+
   if (shouldEnableContextCaching) {
     // Note: In a production system, you might want to:
     // 1. Estimate token count based on model name
@@ -107,76 +112,107 @@ export const buildFinalRequestMessages = ({
 };
 
 /**
- * Applies context caching to messages - only caches up to 3 most recent messages
- * before the final message
+ * Applies context caching to messages using LangChain's cachePoint format
  *
- * According to Anthropic documentation:
- * - All messages except the final one should be marked with cache_control
- * - Images are included in caching but don't have their own cache_control parameter
- * - Changing whether there are images in a prompt will break the cache
+ * Two-level caching strategy:
+ * 1. Global Static Point: After System Prompt (index 0)
+ *    - Shared across all users and sessions
+ *    - Contains: System Prompt + Tool Definitions + Examples
+ *    - Benefits: Write once, reuse globally
+ * 2. Session Dynamic Point: After the second-to-last message (messages.length - 2)
+ *    - Caches the conversation history for the current user
+ *    - Benefits: Reuses multi-turn conversation context within a session
+ *
+ * LangChain AWS uses cachePoint markers:
+ * - Format: { cachePoint: { type: 'default' } }
+ * - Place the cachePoint marker AFTER the content to cache
  */
 const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
   if (messages.length <= 1) return messages;
 
-  // Calculate the minimum index to start caching from
-  // We want to cache at most 3 messages before the last message
-  const minCacheIndex = Math.max(0, messages.length - 4);
-
   return messages.map((message, index) => {
-    // Don't cache the last message (final user query)
-    if (index === messages.length - 1) return message;
+    // Determine if this message should have a cache point
+    // 1. Global Static Point: After System Prompt (index 0)
+    // 2. Session Dynamic Point: After the last 3 messages except the last user message (index -2, -3, -4)
+    const isGlobalStaticPoint = index === 0;
+    const isSessionDynamicPoint =
+      index === messages.length - 2 ||
+      index === messages.length - 3 ||
+      index === messages.length - 4;
+    const shouldAddCachePoint = isGlobalStaticPoint || isSessionDynamicPoint;
 
-    // Don't cache messages beyond the 3 most recent (before the last one)
-    if (index < minCacheIndex) return message;
+    if (!shouldAddCachePoint) {
+      return message;
+    }
 
-    // Apply caching only to the 3 most recent messages (before the last one)
-    if (message instanceof SystemMessage) {
+    // Apply caching using LangChain's cachePoint format
+    // Use _getType() instead of instanceof to handle deserialized messages
+    const messageType = message._getType();
+
+    if (messageType === 'system') {
+      const textContent =
+        typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+
       return new SystemMessage({
         content: [
           {
             type: 'text',
-            text:
-              typeof message.content === 'string'
-                ? message.content
-                : JSON.stringify(message.content),
-            cache_control: { type: 'ephemeral' },
+            text: textContent,
+          },
+          {
+            cachePoint: { type: 'default' },
           },
         ],
       } as BaseMessageFields);
     }
 
-    if (message instanceof HumanMessage) {
+    if (messageType === 'human') {
       if (typeof message.content === 'string') {
         return new HumanMessage({
           content: [
             {
               type: 'text',
               text: message.content,
-              cache_control: { type: 'ephemeral' },
+            },
+            {
+              cachePoint: { type: 'default' },
             },
           ],
         } as BaseMessageFields);
       }
 
       if (Array.isArray(message.content)) {
-        // Handle array content (like images mixed with text)
-        // According to Anthropic docs, we only apply cache_control to text blocks,
-        // but images are still included in the cached content
-        const updatedContent = message.content.map((item: any) => {
-          if (item.type === 'text') {
-            return {
-              ...item,
-              cache_control: { type: 'ephemeral' },
-            };
-          }
-          // For image content, we don't add cache_control
-          return item;
-        });
-
+        // For array content (like images mixed with text),
+        // add cachePoint marker at the end
         return new HumanMessage({
-          content: updatedContent,
+          content: [
+            ...message.content,
+            {
+              cachePoint: { type: 'default' },
+            },
+          ],
         } as BaseMessageFields);
       }
+    }
+
+    if (messageType === 'ai') {
+      const textContent =
+        typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+
+      const aiMessage = message as AIMessage;
+      return new AIMessage({
+        content: [
+          {
+            type: 'text',
+            text: textContent,
+          },
+          {
+            cachePoint: { type: 'default' },
+          },
+        ],
+        tool_calls: aiMessage.tool_calls,
+        additional_kwargs: aiMessage.additional_kwargs,
+      } as BaseMessageFields);
     }
 
     // Return original message if we can't apply caching

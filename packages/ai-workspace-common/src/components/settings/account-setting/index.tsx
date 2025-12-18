@@ -109,7 +109,7 @@ export const AccountSetting = () => {
   const [loadingAvatar, setLoadingAvatar] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
-  const [avatarKey, setAvatarKey] = useState('');
+  const [avatarKey, setAvatarKey] = useState<string | undefined>(undefined);
   const [avatarUrl, setAvatarUrl] = useState('');
   const userProfile = useUserStoreShallow((state) => state.userProfile);
 
@@ -227,7 +227,7 @@ export const AccountSetting = () => {
         body: {
           name,
           nickname,
-          avatarStorageKey: avatarKey,
+          avatarStorageKey: avatarKey ?? undefined,
         },
       });
       if (error) {
@@ -248,7 +248,7 @@ export const AccountSetting = () => {
       name: userProfile?.name,
       nickname: userProfile?.nickname,
     });
-    setAvatarKey(userProfile?.avatar ?? '');
+    setAvatarKey(undefined);
     setAvatarUrl(userProfile?.avatar ?? '');
     setAvatarError(false);
   };
@@ -256,7 +256,7 @@ export const AccountSetting = () => {
   const handleCancelEdit = () => {
     setIsEditModalVisible(false);
     form.resetFields();
-    setAvatarKey(userProfile?.avatar ?? '');
+    setAvatarKey(undefined);
     setAvatarUrl(userProfile?.avatar ?? '');
     setAvatarError(false);
     setNameStatus('success');

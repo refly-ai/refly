@@ -1,6 +1,6 @@
 import { memo, useMemo, useState, useCallback, useEffect } from 'react';
 
-import { Row, Col, Tag, Tooltip } from 'antd';
+import { Row, Col, Tag, Tooltip, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { logEvent } from '@refly/telemetry-web';
 // styles
@@ -15,7 +15,9 @@ import {
   useAuthStoreShallow,
 } from '@refly/stores';
 import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
-import { SubscriptionPlanType } from '@refly/openapi-schema';
+import { SubscriptionPlanType, Voucher } from '@refly/openapi-schema';
+import { SUBSCRIPTION_PRICES } from '@refly-packages/ai-workspace-common/constants/pricing';
+import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
 
 export type SubscriptionInterval = 'monthly' | 'yearly';
 export type PriceSource = 'page' | 'modal';
@@ -39,10 +41,37 @@ interface Feature {
 enum PlanPriorityMap {
   free = 0,
   plus = 1,
-  starter = 1,
+  starter = 2,
   maker = 2,
   enterprise = 3,
 }
+
+// Voucher discount tag - orange style
+const VoucherTag = memo(
+  ({ discountPercent, validDays }: { discountPercent: number; validDays: number }) => {
+    const { t } = useTranslation('ui');
+    return (
+      <div className="flex items-center gap-1.5 bg-[#FC8800] text-[#FEF2CF] px-3 py-1.5 rounded text-sm font-medium">
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+          <path
+            d="M13.5 4.5L6.5 11.5L2.5 7.5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span>
+          {discountPercent}% {t('voucher.off', 'OFF')}
+        </span>
+        <span className="text-white/40 mx-0.5">|</span>
+        <span>{t('voucher.validForDays', 'Valid for {{days}} days', { days: validDays })}</span>
+      </div>
+    );
+  },
+);
+
+VoucherTag.displayName = 'VoucherTag';
 
 // Price option card for monthly/yearly selection
 interface PriceOptionProps {
@@ -189,16 +218,30 @@ interface PlanItemProps {
   description: string;
   features: Feature[];
   handleClick?: (interval: SubscriptionInterval) => void;
+  source: PriceSource;
   loadingInfo: {
     isLoading: boolean;
     plan: string;
   };
+  voucher?: Voucher | null;
+  voucherValidDays?: number;
 }
 
 const PlanItem = memo((props: PlanItemProps) => {
   const { t } = useTranslation('ui');
-  const { planType, title, description, features, handleClick, loadingInfo } = props;
-  const [interval, setInterval] = useState<SubscriptionInterval>('monthly');
+  const {
+    planType,
+    title,
+    description,
+    features,
+    handleClick,
+    source,
+    loadingInfo,
+    voucher,
+    voucherValidDays,
+  } = props;
+  const [interval, setInterval] = useState<SubscriptionInterval>('yearly');
+  const navigate = useNavigate();
 
   const { isLogin, userProfile } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
@@ -218,20 +261,12 @@ const PlanItem = memo((props: PlanItemProps) => {
   const isDowngrade =
     PlanPriorityMap[currentPlan as keyof typeof PlanPriorityMap] >
     PlanPriorityMap[planType as keyof typeof PlanPriorityMap];
-  const isButtonDisabled = (isCurrentPlan || isDowngrade) && planType !== 'enterprise';
+  const isButtonDisabledForLoggedIn = (isCurrentPlan || isDowngrade) && planType !== 'enterprise';
+  const isButtonDisabled = isLogin ? isButtonDisabledForLoggedIn : false;
+  const isLoadingThisPlan = isLogin && loadingInfo.isLoading && loadingInfo.plan === planType;
+  const shouldShowGetStarted = !isLogin;
 
-  // Price data
-  const prices = useMemo(
-    () =>
-      ({
-        plus: { monthly: 19.9, yearly: 15.9, yearlyTotal: 190 },
-        starter: { monthly: 24.9, yearly: 19.9, yearlyTotal: 238.8 },
-        maker: { monthly: 49.9, yearly: 39.9, yearlyTotal: 478.8 },
-      }) as const,
-    [],
-  );
-
-  const priceInfo = prices[planType as keyof typeof prices];
+  const priceInfo = SUBSCRIPTION_PRICES[planType as keyof typeof SUBSCRIPTION_PRICES];
 
   const handleIntervalChange = useCallback((newInterval: 'monthly' | 'yearly') => {
     setInterval(newInterval);
@@ -249,12 +284,28 @@ const PlanItem = memo((props: PlanItemProps) => {
     if (isLogin) {
       handleClick?.(interval);
     } else {
-      setLoginModalOpen(true);
+      if (source === 'page') {
+        navigate('/login?returnUrl=%2Fpricing');
+      } else {
+        setLoginModalOpen(true);
+      }
     }
-  }, [isButtonDisabled, isLogin, planType, interval, handleClick, setLoginModalOpen]);
+  }, [
+    handleClick,
+    interval,
+    isButtonDisabled,
+    isLogin,
+    navigate,
+    planType,
+    setLoginModalOpen,
+    source,
+  ]);
 
   const getButtonText = useCallback(() => {
-    if (loadingInfo.isLoading && loadingInfo.plan === planType) {
+    if (shouldShowGetStarted) {
+      return t('subscription.plans.getStarted');
+    }
+    if (isLoadingThisPlan) {
       return (
         <div className="flex items-center justify-center gap-2">
           <Spin size="small" />
@@ -283,7 +334,7 @@ const PlanItem = memo((props: PlanItemProps) => {
         })}
       </span>
     );
-  }, [loadingInfo, planType, isCurrentPlan, isHovered, t]);
+  }, [isCurrentPlan, isHovered, isLoadingThisPlan, planType, shouldShowGetStarted, t]);
 
   // Free plan card - simplified version
   if (planType === 'free') {
@@ -316,13 +367,15 @@ const PlanItem = memo((props: PlanItemProps) => {
           className={`
             w-full h-11 rounded-lg text-sm font-semibold transition-all duration-200 !border-[1px] !border-solid !border-gray-200
             ${
-              isButtonDisabled
-                ? 'bg-gray-100 text-refly-text-0 cursor-pointer'
-                : 'bg-gray-900 text-white hover:bg-gray-800 cursor-pointer'
+              shouldShowGetStarted
+                ? 'bg-gray-900 text-white hover:bg-gray-800 cursor-pointer'
+                : isButtonDisabled
+                  ? 'bg-gray-100 text-refly-text-0 cursor-pointer'
+                  : 'bg-gray-900 text-white hover:bg-gray-800 cursor-pointer'
             }
           `}
           onClick={handleButtonClick}
-          disabled={isButtonDisabled}
+          disabled={isLogin && isButtonDisabledForLoggedIn}
         >
           {getButtonText()}
         </button>
@@ -356,13 +409,18 @@ const PlanItem = memo((props: PlanItemProps) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 mb-1">
-        <Subscription size={20} className="text-gray-900" />
-        <span className="text-xl font-normal text-refly-text-0">{title}</span>
-        {isCurrentPlan && (
-          <Tag className="!m-0 !px-2 !py-0.5 !text-sm !font-light !rounded !bg-gray-100 !text-refly-text-2 !border-gray-200">
-            {t('subscription.plans.currentPlan')}
-          </Tag>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <Subscription size={20} className="text-gray-900" />
+          <span className="text-xl font-normal text-refly-text-0">{title}</span>
+          {isCurrentPlan && (
+            <Tag className="!m-0 !px-2 !py-0.5 !text-sm !font-light !rounded !bg-gray-100 !text-refly-text-2 !border-gray-200">
+              {t('subscription.plans.currentPlan')}
+            </Tag>
+          )}
+        </div>
+        {voucher && !isCurrentPlan && voucherValidDays && (
+          <VoucherTag discountPercent={voucher.discountPercent} validDays={voucherValidDays} />
         )}
       </div>
       <p className="text-sm text-gray-500 mb-4">{description}</p>
@@ -399,16 +457,19 @@ const PlanItem = memo((props: PlanItemProps) => {
           type="button"
           className={`
             w-full h-11 rounded-lg text-sm font-semibold transition-all duration-200 hover:cursor-pointer
+            flex items-center justify-center gap-2
             ${
-              isButtonDisabled
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : loadingInfo.isLoading && loadingInfo.plan === planType
-                  ? 'bg-gray-800 text-white cursor-not-allowed opacity-80'
-                  : 'bg-gray-900 text-white hover:bg-gray-800'
+              shouldShowGetStarted
+                ? 'bg-gray-900 text-white hover:bg-gray-800'
+                : isButtonDisabled
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : isLoadingThisPlan
+                    ? 'bg-gray-800 text-white cursor-not-allowed opacity-80'
+                    : 'bg-gray-900 text-white hover:bg-gray-800'
             }
           `}
           onClick={handleButtonClick}
-          disabled={isButtonDisabled || (loadingInfo.isLoading && loadingInfo.plan === planType)}
+          disabled={isLogin && (isButtonDisabledForLoggedIn || isLoadingThisPlan)}
         >
           {getButtonText()}
         </button>
@@ -440,8 +501,18 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
   const { t } = useTranslation('ui');
   const navigate = useNavigate();
   const { source } = props;
-  const { setSubscribeModalVisible: setVisible } = useSubscriptionStoreShallow((state) => ({
+  const {
+    setSubscribeModalVisible: setVisible,
+    availableVoucher,
+    setAvailableVoucher,
+    setVoucherLoading,
+    userType,
+  } = useSubscriptionStoreShallow((state) => ({
     setSubscribeModalVisible: state.setSubscribeModalVisible,
+    availableVoucher: state.availableVoucher,
+    setAvailableVoucher: state.setAvailableVoucher,
+    setVoucherLoading: state.setVoucherLoading,
+    userType: state.userType,
   }));
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
@@ -455,12 +526,49 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
 
   const currentPlan: string = userProfile?.subscription?.planType || 'free';
 
+  // Calculate voucher valid days
+  const voucherValidDays = useMemo(() => {
+    if (!availableVoucher?.expiresAt) return 7;
+    return Math.max(
+      1,
+      Math.ceil(
+        (new Date(availableVoucher.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+      ),
+    );
+  }, [availableVoucher]);
+
+  // Fetch available vouchers when component mounts
+  useEffect(() => {
+    if (!isLogin) return;
+
+    const fetchVouchers = async () => {
+      setVoucherLoading(true);
+      try {
+        const response = await getClient().getAvailableVouchers();
+        if (response.data?.success && response.data.data?.bestVoucher) {
+          setAvailableVoucher(response.data.data.bestVoucher);
+        } else {
+          setAvailableVoucher(null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch available vouchers:', error);
+        setAvailableVoucher(null);
+      } finally {
+        setVoucherLoading(false);
+      }
+    };
+
+    fetchVouchers();
+  }, [isLogin, setAvailableVoucher, setVoucherLoading]);
+
   // Report pricing view event when component mounts
   useEffect(() => {
     logEvent('pricing_view', Date.now(), {
       user_plan: currentPlan,
+      has_voucher: !!availableVoucher,
+      voucher_discount: availableVoucher?.discountPercent,
     });
-  }, [currentPlan]);
+  }, [currentPlan, availableVoucher]);
 
   const plansData = useMemo(() => {
     const planTypes = ['free', 'plus'];
@@ -501,22 +609,74 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
 
       setLoadingInfo({ isLoading: true, plan });
       try {
+        // Include voucherId if available
+        const body: {
+          planType: SubscriptionPlanType;
+          interval: SubscriptionInterval;
+          voucherId?: string;
+        } = {
+          planType,
+          interval: interval,
+        };
+
+        // Validate voucher before creating checkout session
+        if (availableVoucher?.voucherId) {
+          const validateRes = await getClient().validateVoucher({
+            body: { voucherId: availableVoucher.voucherId },
+          });
+
+          if (validateRes.data?.data?.valid) {
+            body.voucherId = availableVoucher.voucherId;
+
+            // Log voucher applied event
+            logEvent('voucher_applied', null, {
+              voucher_value: Math.round((100 - availableVoucher.discountPercent) / 10),
+              entry_point: 'pricing_page',
+              user_type: userType,
+            });
+          } else {
+            // Voucher is invalid - show message and clear it
+            const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';
+            message.warning(
+              t('voucher.validation.invalid', {
+                reason,
+                defaultValue: `Your coupon cannot be applied: ${reason}`,
+              }),
+            );
+
+            // Clear the invalid voucher from store
+            setAvailableVoucher(null);
+
+            // Log voucher validation failed event
+            logEvent('voucher_validation_failed', null, {
+              voucherId: availableVoucher.voucherId,
+              reason,
+              planType,
+              interval,
+            });
+
+            // Continue without voucher - user can still proceed with full price
+          }
+        }
+
         const res = await getClient().createCheckoutSession({
-          body: {
-            planType,
-            interval: interval,
-          },
+          body,
         });
         if (res.data?.data?.url) {
+          // Store current page for redirect after payment callback
+          storePendingRedirect();
           window.location.href = res.data.data.url;
         }
       } catch (error) {
         console.error('Failed to create checkout session:', error);
+        message.error(
+          t('subscription.checkoutFailed', 'Failed to start checkout. Please try again.'),
+        );
       } finally {
         setLoadingInfo({ isLoading: false, plan: '' });
       }
     },
-    [loadingInfo.isLoading],
+    [loadingInfo.isLoading, availableVoucher, source, setAvailableVoucher, t, userType],
   );
 
   const handleContactSales = useCallback(() => {
@@ -565,7 +725,10 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
                   description={plansData[planType].description}
                   features={plansData[planType].features}
                   handleClick={handlePlanClick(planType)}
+                  source={source}
                   loadingInfo={loadingInfo}
+                  voucher={availableVoucher}
+                  voucherValidDays={voucherValidDays}
                 />
               </Col>
             );

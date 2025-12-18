@@ -20,10 +20,40 @@ export interface AgentResult {
   outputFiles: ContextFile[];
 }
 
+// ============================================================================
+// Archived Reference - Protected routing table for compressed/archived content
+// This field is NEVER truncated and allows quick retrieval of archived data
+// ============================================================================
+
+export type ArchivedRefType = 'search_result' | 'chat_history' | 'tool_output' | 'context_file';
+
+export interface ArchivedRef {
+  /** Unique file ID for retrieval */
+  fileId: string;
+  /** Type of archived content */
+  type: ArchivedRefType;
+  /** Source identifier (tool name, "history", file name, etc.) */
+  source: string;
+  /** Brief description of archived content */
+  summary: string;
+  /** Timestamp when archived */
+  archivedAt: number;
+  /** Tokens saved by archiving */
+  tokensSaved: number;
+  /** Optional: original item count (messages, results, etc.) */
+  itemCount?: number;
+}
+
 export interface ContextBlock {
   files: ContextFile[];
   results: AgentResult[];
   totalTokens?: number;
+  /**
+   * Protected routing table for archived/compressed content references.
+   * This field is NEVER truncated during context compression.
+   * Allows model to quickly identify and retrieve archived data.
+   */
+  archivedRefs?: ArchivedRef[];
 }
 
 // Maximum tokens for a single result/file to prevent one item from consuming too much space

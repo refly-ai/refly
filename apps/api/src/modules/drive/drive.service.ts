@@ -1,4 +1,5 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { PinoLogger } from 'nestjs-pino';
 import mime from 'mime';
 import pLimit from 'p-limit';
@@ -54,7 +55,10 @@ type ListDriveFilesParams = ListDriveFilesData['query'] &
   };
 
 @Injectable()
-export class DriveService {
+export class DriveService implements OnModuleInit {
+  // Lazy-loaded to avoid circular dependency
+  private subscriptionService: SubscriptionService;
+
   constructor(
     private readonly logger: PinoLogger,
     private config: ConfigService,
@@ -63,10 +67,15 @@ export class DriveService {
     @Inject(OSS_EXTERNAL) private externalOss: ObjectStorageService,
     private redis: RedisService,
     private providerService: ProviderService,
-    private subscriptionService: SubscriptionService,
+    private moduleRef: ModuleRef,
     private miscService: MiscService,
   ) {
     this.logger.setContext(DriveService.name);
+  }
+
+  async onModuleInit() {
+    // Use moduleRef.get with { strict: false } to resolve circular dependency at runtime
+    this.subscriptionService = this.moduleRef.get(SubscriptionService, { strict: false });
   }
 
   /**
@@ -1254,9 +1263,9 @@ export class DriveService {
    * Copies the file from internal OSS to external OSS and returns the public URL
    * Creates a new storage key for the public file to avoid conflicts with internal file deletion
    */
-  async publishDriveFile(storageKey: string, fileId: string): Promise<string> {
+  async publishDriveFile(storageKey: string, fileId: string): Promise<void> {
     if (!storageKey || !fileId) {
-      return '';
+      return;
     }
 
     // Check if file already exists in external OSS
@@ -1272,6 +1281,10 @@ export class DriveService {
     try {
       // Copy file from internal to external OSS
       const stream = await this.internalOss.getObject(storageKey);
+      if (!stream) {
+        throw new NotFoundException(`Source file not found in internal storage: ${fileId}`);
+      }
+
       await this.externalOss.putObject(storageKey, stream);
     } catch (error) {
       this.logger.error(
@@ -1302,11 +1315,16 @@ export class DriveService {
       throw new NotFoundException(`Public file with id ${fileId} not found`);
     }
 
-    const filename = path.basename(driveFile.storageKey) || 'file';
+    const storageKey = driveFile.storageKey ?? '';
+    if (!storageKey) {
+      throw new NotFoundException(`Public file storage key missing: ${fileId}`);
+    }
+
+    const filename = path.basename(storageKey) || 'file';
     const contentType = getSafeMimeType(filename, mime.getType(filename) ?? undefined);
 
     // Get lastModified from OSS, throw 404 if file doesn't exist in OSS
-    const objectInfo = await this.externalOss.statObject(driveFile.storageKey);
+    const objectInfo = await this.externalOss.statObject(storageKey);
     if (!objectInfo) {
       throw new NotFoundException(`Public file not found in storage: ${fileId}`);
     }
@@ -1343,10 +1361,20 @@ export class DriveService {
         where: { fileId },
       });
 
-      const storageKey = driveFile.storageKey;
+      if (!driveFile) {
+        throw new NotFoundException(`Public file with id ${fileId} not found`);
+      }
+
+      const storageKey = driveFile.storageKey ?? '';
+      if (!storageKey) {
+        throw new NotFoundException(`Public file storage key missing: ${fileId}`);
+      }
 
       // Get file from external OSS
       const readable = await this.externalOss.getObject(storageKey);
+      if (!readable) {
+        throw new NotFoundException(`Public file with id ${fileId} not found`);
+      }
       const data = await streamToBuffer(readable);
 
       // Extract filename from storageKey
@@ -1367,6 +1395,8 @@ export class DriveService {
     } catch (error) {
       if (
         error?.code === 'NoSuchKey' ||
+        error?.code === 'NotFound' ||
+        error?.code === 'NoSuchBucket' ||
         error?.message?.includes('The specified key does not exist')
       ) {
         throw new NotFoundException(`Public file with id ${fileId} not found`);

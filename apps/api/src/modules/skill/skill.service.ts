@@ -487,6 +487,8 @@ export class SkillService implements OnModuleInit {
     const routerContext = {
       llmItems,
       userId: user.uid,
+      scene: param.mode,
+      toolsets: param.toolsets,
     };
     const autoModelRouter = new AutoModelRouter(routerContext);
 
@@ -539,6 +541,10 @@ export class SkillService implements OnModuleInit {
       };
     }
 
+    const actualProviderItemId = providerItem?.itemId ?? null;
+    const isAutoModelRouted =
+      !!actualProviderItemId && !!param.modelItemId && actualProviderItemId !== param.modelItemId;
+
     const tiers = [];
     for (const providerItem of Object.values(modelProviderMap)) {
       if (providerItem?.tier) {
@@ -561,6 +567,7 @@ export class SkillService implements OnModuleInit {
           uid,
           `Credit not available: ${creditUsageResult.message}`,
           param,
+          { actualProviderItemId, isAutoModelRouted },
         );
         throw new ModelUsageQuotaExceeded(`credit not available: ${creditUsageResult.message}`);
       }
@@ -606,6 +613,7 @@ export class SkillService implements OnModuleInit {
           uid,
           `Project ${param.projectId} not found`,
           param,
+          { actualProviderItemId, isAutoModelRouted },
         );
         throw new ProjectNotFoundError(`project ${param.projectId} not found`);
       }
@@ -663,6 +671,7 @@ export class SkillService implements OnModuleInit {
           uid,
           `Workflow execution ${workflowExecutionId} not found`,
           param,
+          { actualProviderItemId, isAutoModelRouted },
         );
         throw new ParamsError(`workflow execution ${workflowExecutionId} not found`);
       }
@@ -674,6 +683,7 @@ export class SkillService implements OnModuleInit {
           uid,
           `Workflow execution ${workflowExecutionId} does not belong to current user`,
           param,
+          { actualProviderItemId, isAutoModelRouted },
         );
         throw new ParamsError(
           `workflow execution ${workflowExecutionId} does not belong to current user`,
@@ -694,6 +704,7 @@ export class SkillService implements OnModuleInit {
           uid,
           `Workflow node execution ${workflowNodeExecutionId} not found`,
           param,
+          { actualProviderItemId, isAutoModelRouted },
         );
         throw new ParamsError(`workflow node execution ${workflowNodeExecutionId} not found`);
       }
@@ -710,6 +721,7 @@ export class SkillService implements OnModuleInit {
           uid,
           `Workflow node execution ${workflowNodeExecutionId} does not belong to current user`,
           param,
+          { actualProviderItemId, isAutoModelRouted },
         );
         throw new ParamsError(
           `workflow node execution ${workflowNodeExecutionId} does not belong to current user`,
@@ -814,6 +826,10 @@ export class SkillService implements OnModuleInit {
     };
     const modelName = getModelNameForMode();
 
+    const actualProviderItemId = providerItem?.itemId ?? null;
+    const isAutoModelRouted =
+      !!actualProviderItemId && !!param.modelItemId && actualProviderItemId !== param.modelItemId;
+
     const purgeResultHistory = (resultHistory: ActionResult[] = []) => {
       // remove extra unnecessary fields from result history to save storage
       if (!Array.isArray(resultHistory)) {
@@ -858,6 +874,8 @@ export class SkillService implements OnModuleInit {
               targetId: data.target?.entityId,
               targetType: data.target?.entityType,
               modelName,
+              actualProviderItemId,
+              isAutoModelRouted,
               projectId: data.projectId ?? null,
               errors: JSON.stringify([]),
               input: JSON.stringify(data.input),
@@ -891,6 +909,8 @@ export class SkillService implements OnModuleInit {
           targetType: data.target?.entityType,
           title: data.title || data.input?.query,
           modelName,
+          actualProviderItemId,
+          isAutoModelRouted,
           type: 'skill',
           status: 'executing',
           projectId: data.projectId,
@@ -920,6 +940,7 @@ export class SkillService implements OnModuleInit {
     uid: string,
     errorMessage: string,
     param: InvokeSkillRequest,
+    routing?: { actualProviderItemId?: string | null; isAutoModelRouted?: boolean },
   ): Promise<void> {
     try {
       // Find the latest version for this resultId
@@ -964,6 +985,8 @@ export class SkillService implements OnModuleInit {
           targetId: param.target?.entityId,
           targetType: param.target?.entityType,
           modelName: param.modelName ?? 'unknown',
+          actualProviderItemId: routing?.actualProviderItemId ?? null,
+          isAutoModelRouted: routing?.isAutoModelRouted ?? false,
           projectId: param.projectId,
           errors: JSON.stringify([errorMessage]),
           input: JSON.stringify(param.input ?? {}),

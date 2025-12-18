@@ -81,6 +81,8 @@ export function actionResultPO2DTO(result: ActionDetail): ActionResult {
       'pilotStepId',
       'workflowExecutionId',
       'workflowNodeExecutionId',
+      'actualProviderItemId',
+      'isAutoModelRouted',
     ]),
     type: result.type as ActionType,
     tier: result.tier as ModelTier,

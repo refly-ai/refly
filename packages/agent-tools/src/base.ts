@@ -3,6 +3,19 @@ import type { ISkillEngine } from '@refly/common-types';
 import { ReflyService } from './builtin/interface';
 import { DriveFile } from '@refly/openapi-schema';
 
+/**
+ * Type of tool for post-processing selection
+ */
+export type ToolType =
+  | 'builtin'
+  | 'regular'
+  | 'dynamic'
+  | 'composio'
+  | 'mcp'
+  | 'config_based'
+  | 'external_api'
+  | 'external_oauth';
+
 export interface ToolCallResult {
   /**
    * Status of the tool call result
@@ -58,6 +71,12 @@ export abstract class AgentBaseTool<TParams = unknown> extends StructuredTool {
    * Used to retrieve the toolset instance from the database.
    */
   abstract toolsetKey: string;
+
+  /**
+   * The type of the tool for post-processing selection.
+   * Defaults to 'regular' if not overridden.
+   */
+  toolType: ToolType = 'regular';
 
   /**
    * Provide a permissive constructor so tools can be instantiated with or without params.

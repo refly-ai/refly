@@ -13,6 +13,7 @@ export const isPublicAccessPageByPath = (pathname: string): boolean => {
   const isWorkflowTemplatePage = pathname?.startsWith('/workflow-template/') ?? false;
   const isLoginPage = (pathname ?? '') === '/login';
   const isPricingPage = pathname === '/pricing';
+  const isInvitePage = pathname === '/invite';
   return (
     isPreviewPage ||
     isSharePage ||
@@ -21,7 +22,8 @@ export const isPublicAccessPageByPath = (pathname: string): boolean => {
     isAppPage ||
     isWorkflowTemplatePage ||
     isLoginPage ||
-    isPricingPage
+    isPricingPage ||
+    isInvitePage
   );
 };
 

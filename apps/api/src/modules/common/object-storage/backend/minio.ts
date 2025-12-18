@@ -25,6 +25,34 @@ export class MinioStorageBackend implements ObjectStorageBackend {
     },
   ) {}
 
+  private normalizeObjectKey(key: string): string {
+    // MinIO expects object names without a leading slash.
+    const normalizedKey = key.replace(/\/+/g, '/');
+    return normalizedKey.startsWith('/') ? normalizedKey.slice(1) : normalizedKey;
+  }
+
+  private isNotFoundError(error: unknown): boolean {
+    const code = (error as { code?: string })?.code;
+    const statusCode = (error as { statusCode?: number })?.statusCode;
+    const message = (error as { message?: string })?.message ?? '';
+
+    if (statusCode === 404) {
+      return true;
+    }
+
+    // MinIO/minio-js may surface missing objects/buckets with different codes/messages.
+    if (code === 'NoSuchKey' || code === 'NotFound' || code === 'NoSuchBucket') {
+      return true;
+    }
+
+    return (
+      message.includes('Not Found') ||
+      message.includes('The specified key does not exist') ||
+      message.includes('NoSuchKey') ||
+      message.includes('NoSuchBucket')
+    );
+  }
+
   async initialize(): Promise<void> {
     if (this.initialized) {
       return;
@@ -66,22 +94,26 @@ export class MinioStorageBackend implements ObjectStorageBackend {
   }
 
   async getObject(key: string): Promise<Readable | null> {
+    const objectKey = this.normalizeObjectKey(key);
     try {
-      return await this.client.getObject(this.config.bucket, key);
+      return await this.client.getObject(this.config.bucket, objectKey);
     } catch (error) {
-      if (error?.code === 'NoSuchKey') {
+      if (this.isNotFoundError(error)) {
         return null;
       }
-      this.logger.error(`Failed to get object with key ${key}`, error);
+      this.logger.error(`Failed to get object with key ${objectKey}`, error);
       throw error;
     }
   }
 
   async presignedGetObject(key: string, expiresIn: number): Promise<string | null> {
+    const objectKey = this.normalizeObjectKey(key);
     try {
-      return await this.client.presignedGetObject(this.config.bucket, key, expiresIn);
+      return await this.client.presignedGetObject(this.config.bucket, objectKey, expiresIn);
     } catch (error) {
-      this.logger.error(`Failed to get presigned URL for object with key ${key}: ${error.stack}`);
+      this.logger.error(
+        `Failed to get presigned URL for object with key ${objectKey}: ${error?.stack}`,
+      );
       throw error;
     }
   }
@@ -91,17 +123,18 @@ export class MinioStorageBackend implements ObjectStorageBackend {
     stream: Readable | Buffer | string,
     metaData?: Record<string, string>,
   ): Promise<ObjectInfo> {
+    const objectKey = this.normalizeObjectKey(key);
     try {
-      await this.client.putObject(this.config.bucket, key, stream, metaData);
+      await this.client.putObject(this.config.bucket, objectKey, stream, metaData);
 
-      const stat = await this.client.statObject(this.config.bucket, key);
+      const stat = await this.client.statObject(this.config.bucket, objectKey);
       return {
         size: stat.size,
         lastModified: stat.lastModified,
         metaData: stat.metaData,
       };
     } catch (error) {
-      this.logger.error(`Failed to put object with key ${key}: ${error.stack}`);
+      this.logger.error(`Failed to put object with key ${objectKey}: ${error?.stack}`);
       throw error;
     }
   }
@@ -114,21 +147,22 @@ export class MinioStorageBackend implements ObjectStorageBackend {
       return false;
     }
 
+    const objectKey = this.normalizeObjectKey(key);
     try {
       // Check if object exists before trying to remove
       try {
-        await this.client.statObject(this.config.bucket, key);
+        await this.client.statObject(this.config.bucket, objectKey);
       } catch (error) {
-        if (error?.code === 'NoSuchKey') {
+        if (this.isNotFoundError(error)) {
           return false;
         }
         throw error;
       }
 
-      await this.client.removeObject(this.config.bucket, key);
+      await this.client.removeObject(this.config.bucket, objectKey);
       return true;
     } catch (error) {
-      this.logger.error(`Failed to remove object with key ${key}: ${error.stack}`);
+      this.logger.error(`Failed to remove object with key ${objectKey}: ${error?.stack}`);
       throw error;
     }
   }
@@ -142,7 +176,8 @@ export class MinioStorageBackend implements ObjectStorageBackend {
     }
 
     try {
-      await this.client.removeObjects(this.config.bucket, keys);
+      const objectKeys = keys?.map((key) => this.normalizeObjectKey(key)) ?? [];
+      await this.client.removeObjects(this.config.bucket, objectKeys);
       return true;
     } catch (error) {
       this.logger.error(`Failed to remove objects with keys ${keys}: ${error.stack}`);
@@ -151,32 +186,34 @@ export class MinioStorageBackend implements ObjectStorageBackend {
   }
 
   async statObject(key: string): Promise<ObjectInfo | null> {
+    const objectKey = this.normalizeObjectKey(key);
     try {
-      return await this.client.statObject(this.config.bucket, key);
+      return await this.client.statObject(this.config.bucket, objectKey);
     } catch (error) {
-      if (error?.code === 'NoSuchKey') {
+      if (this.isNotFoundError(error)) {
         return null;
       }
 
-      this.logger.error(`Failed to stat object with key ${key}: ${error.stack}`);
+      this.logger.error(`Failed to stat object with key ${objectKey}: ${error?.stack}`);
       throw error;
     }
   }
 
   async duplicateFile(sourceKey: string, targetKey: string): Promise<ObjectInfo | null> {
     try {
-      const sourceObject = `/${this.config.bucket}/${sourceKey}`;
+      const sourceObject = `/${this.config.bucket}/${this.normalizeObjectKey(sourceKey)}`;
+      const targetObjectKey = this.normalizeObjectKey(targetKey);
 
       // Copy the object to the new location
       await this.client.copyObject(
         this.config.bucket,
-        targetKey,
+        targetObjectKey,
         sourceObject,
         new CopyConditions(),
       );
 
       // Get the new object's info
-      const stat = await this.client.statObject(this.config.bucket, targetKey);
+      const stat = await this.client.statObject(this.config.bucket, targetObjectKey);
       return {
         size: stat.size,
         lastModified: stat.lastModified,
@@ -184,7 +221,7 @@ export class MinioStorageBackend implements ObjectStorageBackend {
       };
     } catch (error) {
       this.logger.error(
-        `Failed to duplicate file from ${sourceKey} to ${targetKey}: ${error.stack}`,
+        `Failed to duplicate file from ${sourceKey} to ${targetKey}: ${error?.stack}`,
       );
       throw error;
     }
@@ -192,21 +229,23 @@ export class MinioStorageBackend implements ObjectStorageBackend {
 
   async moveObject(sourceKey: string, targetKey: string): Promise<ObjectInfo | null> {
     try {
-      const sourceObject = `/${this.config.bucket}/${sourceKey}`;
+      const sourceObject = `/${this.config.bucket}/${this.normalizeObjectKey(sourceKey)}`;
+      const sourceObjectKey = this.normalizeObjectKey(sourceKey);
+      const targetObjectKey = this.normalizeObjectKey(targetKey);
 
       // Copy the object to the new location
       await this.client.copyObject(
         this.config.bucket,
-        targetKey,
+        targetObjectKey,
         sourceObject,
         new CopyConditions(),
       );
 
       // Remove the original object
-      await this.client.removeObject(this.config.bucket, sourceKey);
+      await this.client.removeObject(this.config.bucket, sourceObjectKey);
 
       // Get the new object's info
-      const stat = await this.client.statObject(this.config.bucket, targetKey);
+      const stat = await this.client.statObject(this.config.bucket, targetObjectKey);
       return {
         size: stat.size,
         lastModified: stat.lastModified,

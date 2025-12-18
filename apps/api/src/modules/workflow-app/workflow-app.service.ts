@@ -13,6 +13,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { PrismaService } from '../common/prisma.service';
 import { CanvasService } from '../canvas/canvas.service';
 import { MiscService } from '../misc/misc.service';
+import { DriveService } from '../drive/drive.service';
 import {
   genCanvasID,
   genWorkflowAppID,
@@ -38,6 +39,7 @@ import {
 import type { GenerateWorkflowAppTemplateJobData } from './workflow-app.dto';
 import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
 import type { Queue } from 'bullmq';
+import { VoucherService } from '../voucher/voucher.service';
 
 /**
  * Structure of shared workflow app data
@@ -61,6 +63,7 @@ export class WorkflowAppService {
     private readonly prisma: PrismaService,
     private readonly canvasService: CanvasService,
     private readonly miscService: MiscService,
+    private readonly driveService: DriveService,
     private readonly workflowService: WorkflowService,
     private readonly shareCommonService: ShareCommonService,
     private readonly shareCreationService: ShareCreationService,
@@ -69,6 +72,7 @@ export class WorkflowAppService {
     private readonly creditService: CreditService,
     private readonly notificationService: NotificationService,
     private readonly configService: ConfigService,
+    private readonly voucherService: VoucherService,
     @Optional()
     @InjectQueue(QUEUE_WORKFLOW_APP_TEMPLATE)
     private readonly templateQueue?: Queue<GenerateWorkflowAppTemplateJobData>,
@@ -231,10 +235,11 @@ export class WorkflowAppService {
       visibility: 'public',
     });
     let isTemplateContentValid = false;
+    let shouldSkipGeneration = false;
+    let shouldEnqueueGeneration = false;
 
     // Decide whether to enqueue template generation (stable mode comparison)
     try {
-      let shouldSkipGeneration = false;
       if (existingWorkflowApp) {
         // Previous variables fingerprint
         const prevVariables: WorkflowVariable[] = (() => {
@@ -311,15 +316,8 @@ export class WorkflowAppService {
           `Skip template generation for workflow app ${appId}: stable prompt dependencies unchanged`,
         );
       } else if (this.templateQueue) {
-        await this.templateQueue.add(
-          'generate',
-          { appId, canvasId, uid: user.uid },
-          {
-            removeOnComplete: true,
-            removeOnFail: false,
-          },
-        );
-        this.logger.log(`Enqueued template generation for workflow app: ${appId}`);
+        // Mark for enqueue after shareRecord is created (to ensure processor can find it)
+        shouldEnqueueGeneration = true;
       } else {
         // Always async: do not perform sync generation even if queue is unavailable
         this.logger.log(
@@ -331,6 +329,24 @@ export class WorkflowAppService {
         `Failed to start template generation for workflow app ${appId}: ${error?.stack}`,
       );
     }
+
+    // Determine template generation status for database update
+    // - 'idle': no generation needed (shouldSkipGeneration = true)
+    // - 'pending': generation queued (will be updated to 'generating' by processor)
+    // - Keep existing status if template is valid
+    const templateGenerationStatus = shouldSkipGeneration
+      ? 'idle'
+      : isTemplateContentValid
+        ? undefined // Keep existing status
+        : 'pending';
+    // Start voucher scoring in parallel with DB operations
+    // This promise will be awaited later after all DB operations complete
+    const voucherPromise = this.voucherService
+      .handleTemplatePublish({ uid: user.uid } as any, canvasData, variables, appId, description)
+      .catch((error) => {
+        this.logger.error(`Failed to trigger voucher for workflow app ${appId}: ${error?.stack}`);
+        return null;
+      });
 
     if (existingWorkflowApp) {
       await this.prisma.workflowApp.update({
@@ -348,7 +364,15 @@ export class WorkflowAppService {
           resultNodeIds,
           creditUsage,
           updatedAt: new Date(),
+          // Reset templateContent if invalid
           ...{ ...(isTemplateContentValid ? {} : { templateContent: null }) },
+          // Update generation status
+          ...(templateGenerationStatus
+            ? {
+                templateGenerationStatus,
+                templateGenerationError: null, // Clear previous error
+              }
+            : {}),
         },
       });
     } else {
@@ -368,6 +392,8 @@ export class WorkflowAppService {
           publishReviewStatus: publishToCommunity ? 'reviewing' : 'init',
           resultNodeIds,
           creditUsage,
+          // Set initial generation status
+          templateGenerationStatus: shouldSkipGeneration ? 'idle' : 'pending',
         },
       });
     }
@@ -407,6 +433,26 @@ export class WorkflowAppService {
     } catch (error) {
       this.logger.error(`Failed to create share for workflow app ${appId}: ${error.stack}`);
       // Don't throw error, just log it - workflow app creation should still succeed
+    }
+
+    // Enqueue template generation after shareRecord is created
+    // This ensures the processor can find the shareRecord when updating storage
+    if (shouldEnqueueGeneration && this.templateQueue) {
+      try {
+        await this.templateQueue.add(
+          'generate',
+          { appId, canvasId, uid: user.uid },
+          {
+            removeOnComplete: true,
+            removeOnFail: false,
+          },
+        );
+        this.logger.log(`Enqueued template generation for workflow app: ${appId}`);
+      } catch (error) {
+        this.logger.error(
+          `Failed to enqueue template generation for workflow app ${appId}: ${error?.stack}`,
+        );
+      }
     }
 
     // Send email notification if template is submitted for review
@@ -453,7 +499,15 @@ export class WorkflowAppService {
       where: { uid: user.uid },
     });
 
-    return { ...workflowApp, owner: userPo };
+    // Wait for voucher scoring to complete (was started in parallel earlier)
+    const voucherTriggerResult = await voucherPromise;
+    if (voucherTriggerResult) {
+      this.logger.log(
+        `Voucher triggered for workflow app ${appId}: ${voucherTriggerResult.voucher.voucherId} (${voucherTriggerResult.voucher.discountPercent}% off)`,
+      );
+    }
+
+    return { ...workflowApp, owner: userPo, voucherTriggerResult };
   }
 
   async getWorkflowAppDetail(user: User, appId: string) {
@@ -475,6 +529,66 @@ export class WorkflowAppService {
     });
 
     return { ...workflowApp, owner: userPo };
+  }
+
+  /**
+   * Get template generation status for a workflow app
+   * This is a lightweight method to check generation status directly from database
+   */
+  async getTemplateGenerationStatus(
+    user: User,
+    appId: string,
+  ): Promise<{
+    status: 'idle' | 'pending' | 'generating' | 'completed' | 'failed';
+    templateContent?: string | null;
+    error?: string | null;
+    updatedAt: string;
+    createdAt: string;
+  }> {
+    const workflowApp = await this.prisma.workflowApp.findFirst({
+      where: { appId, uid: user.uid, deletedAt: null },
+      select: {
+        appId: true,
+        templateContent: true,
+        templateGenerationStatus: true,
+        templateGenerationError: true,
+        updatedAt: true,
+        createdAt: true,
+      },
+    });
+
+    if (!workflowApp) {
+      throw new WorkflowAppNotFoundError();
+    }
+
+    // Read status directly from database
+    // Handle null values from old records (before migration)
+    const dbStatus = (workflowApp.templateGenerationStatus ?? 'idle') as
+      | 'idle'
+      | 'pending'
+      | 'generating'
+      | 'completed'
+      | 'failed';
+
+    // Validate status: if we have templateContent, status should be 'completed' or 'idle'
+    let status = dbStatus;
+    if (workflowApp.templateContent && workflowApp.templateContent.trim() !== '') {
+      // Has content - if status is still pending/generating/failed, treat as completed
+      if (status === 'pending' || status === 'generating' || status === 'failed') {
+        this.logger.warn(
+          `Status mismatch for appId=${appId}: content exists but status=${status}, treating as completed`,
+        );
+        status = 'completed';
+      }
+    }
+
+    return {
+      status,
+      templateContent: workflowApp.templateContent,
+      error: workflowApp.templateGenerationError,
+      updatedAt: workflowApp.updatedAt.toISOString(),
+      createdAt: workflowApp.createdAt.toISOString(),
+    };
   }
 
   async executeWorkflowApp(user: User, shareId: string, variables: WorkflowVariable[]) {
@@ -627,6 +741,35 @@ export class WorkflowAppService {
     // Resource entity id map from old resource entity ids to new resource entity ids
     const entityIdMap = this.buildEntityIdMap(oldVariables, finalVariables);
 
+    // Duplicate files from canvasData.files to the new canvas
+    // Only duplicate manual uploads (source: 'manual') that are not variable files
+    const fileIdMap: Record<string, string> = {};
+    const files = (canvasData as any).files || [];
+    if (files.length > 0) {
+      for (const file of files) {
+        try {
+          // Only duplicate manual uploads without variableId
+          if (file.source !== 'manual' || file.variableId) {
+            continue;
+          }
+          const duplicatedFile = await this.driveService.duplicateDriveFile(
+            user,
+            file,
+            newCanvasId,
+          );
+          fileIdMap[file.fileId] = duplicatedFile.fileId;
+          this.logger.log(
+            `Duplicated file ${file.fileId} to ${duplicatedFile.fileId} for canvas ${newCanvasId}`,
+          );
+        } catch (error) {
+          this.logger.error(`Failed to duplicate file ${file.fileId}: ${error.message}`);
+        }
+      }
+    }
+
+    // Merge fileIdMap into entityIdMap for unified reference replacement
+    const combinedEntityIdMap = { ...entityIdMap, ...fileIdMap };
+
     const updatedNodes: CanvasNode[] = nodes.map((node) => {
       if (node.type !== 'skillResponse') {
         return node;
@@ -636,7 +779,11 @@ export class WorkflowAppService {
 
       // Replace the resource variable with the new entity id
       if (metadata.query) {
-        metadata.query = replaceResourceMentionsInQuery(metadata.query, variables, entityIdMap);
+        metadata.query = replaceResourceMentionsInQuery(
+          metadata.query,
+          variables,
+          combinedEntityIdMap,
+        );
       }
 
       if (metadata.structuredData?.query) {
@@ -644,7 +791,7 @@ export class WorkflowAppService {
           replaceResourceMentionsInQuery(
             metadata.structuredData.query as string,
             variables,
-            entityIdMap,
+            combinedEntityIdMap,
           );
       }
 
@@ -659,10 +806,10 @@ export class WorkflowAppService {
       // Replace the context items with the new context items
       if (metadata.contextItems) {
         metadata.contextItems = metadata.contextItems.map((item) => {
-          if (item.type !== 'resource') {
+          if (item.type !== 'resource' && item.type !== 'file') {
             return item;
           }
-          const newEntityId = entityIdMap[item.entityId];
+          const newEntityId = combinedEntityIdMap[item.entityId];
           if (newEntityId) {
             return {
               ...item,

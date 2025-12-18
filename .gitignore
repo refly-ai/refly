@@ -4,6 +4,8 @@
 **/node_modules/**
 .DS_Store
 *.tsbuildinfo
+.scratch
+.task
 
 dist
 packed
@@ -52,3 +54,5 @@ docs/.vitepress/cache/*
 *.opt
 
 .claude/settings.local.json
+
+.codex/*

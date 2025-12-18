@@ -4,10 +4,14 @@ import { randomUUID } from 'node:crypto';
 import { DirectConnection } from '@hocuspocus/server';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/messages';
-import { CallbackHandler as LangfuseCallbackHandler } from '@langfuse/langchain';
+import { FilteredLangfuseCallbackHandler } from '@refly/observability';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
-import { ProjectNotFoundError } from '@refly/errors';
+import {
+  ModelUsageQuotaExceeded,
+  ProjectNotFoundError,
+  WorkflowExecutionNotFoundError,
+} from '@refly/errors';
 import {
   ActionResult,
   ActionStep,
@@ -150,7 +154,7 @@ export class SkillInvokerService {
           })
         : [];
 
-    return [new HumanMessage({ content: messageContent }), ...aiMessages];
+    return [new HumanMessage({ content: messageContent } as any), ...aiMessages];
   }
 
   private async buildInvokeConfig(
@@ -251,11 +255,17 @@ export class SkillInvokerService {
   } {
     const errorMessage = err.message || 'Unknown error';
 
+    // Special handling for credit-related errors - preserve original message
+    const isCreditError =
+      err instanceof ModelUsageQuotaExceeded || /credit not available/i.test(err.message);
+
     // Categorize errors more reliably
     const isTimeoutError =
       err instanceof Error && (err.name === 'TimeoutError' || /timeout/i.test(err.message));
     const isAbortError =
-      err instanceof Error && (err.name === 'AbortError' || /abort/i.test(err.message));
+      err instanceof Error &&
+      (err.name === 'AbortError' || /abort/i.test(err.message)) &&
+      !isCreditError;
     const isNetworkError =
       err instanceof Error && (err.name === 'NetworkError' || /network|fetch/i.test(err.message));
     const isGeneralTimeout = isTimeoutError;
@@ -269,7 +279,11 @@ export class SkillInvokerService {
       ABORT_ERROR: 'Operation was aborted.',
     } as const;
 
-    if (isGeneralTimeout) {
+    if (isCreditError) {
+      // For credit errors, preserve the original detailed message
+      userFriendlyMessage = errorMessage;
+      logLevel = 'error';
+    } else if (isGeneralTimeout) {
       userFriendlyMessage = ERROR_MESSAGES.GENERAL_TIMEOUT;
     } else if (isNetworkError) {
       userFriendlyMessage = ERROR_MESSAGES.NETWORK_ERROR;
@@ -399,12 +413,16 @@ export class SkillInvokerService {
           try {
             const shouldAbort = await this.actionService.isAbortRequested(resultId, version);
             if (shouldAbort) {
-              this.logger.info(`Detected cross-pod abort request for ${resultId}`);
+              this.logger.info(
+                `[WORKFLOW_ABORT][POLL] resultId=${resultId} version=${version} phase=cross_pod_abort_detected`,
+              );
               abortController.abort('Aborted by user');
               clearInterval(abortCheckInterval);
             }
           } catch (error) {
-            this.logger.error(`Error checking abort status for ${resultId}: ${error?.message}`);
+            this.logger.error(
+              `[WORKFLOW_ABORT][POLL] resultId=${resultId} version=${version} error="${error?.message}" phase=check_failed`,
+            );
           }
         },
         3000, // Check every 3 seconds
@@ -947,6 +965,7 @@ export class SkillInvokerService {
           case 'on_chat_model_end':
             if (runMeta && chunk) {
               this.logger.info(`ls_model_name: ${String(runMeta.ls_model_name)}`);
+
               const providerItem = await this.providerService.findLLMProviderItemByModelID(
                 user,
                 String(runMeta.ls_model_name),
@@ -954,18 +973,67 @@ export class SkillInvokerService {
               if (!providerItem) {
                 this.logger.error(`model not found: ${String(runMeta.ls_model_name)}`);
               }
+
+              // Extract routing data if model was routed (e.g., from Auto model)
+              const config =
+                typeof data.providerItem?.config === 'string'
+                  ? safeParseJSON(data.providerItem?.config)
+                  : data.providerItem?.config;
+              const routedData = config?.routedData;
+
+              // Type assertions for usage metadata
+              const usageMetadata = chunk.usage_metadata as any;
+              const responseMetadata = chunk.response_metadata as any;
+
+              // Extract cache-related tokens from different possible sources
+              // AWS Bedrock uses multiple possible field names:
+              //   - cacheReadInputTokenCount (singular, without 's')
+              //   - cacheReadInputTokens (plural, with 's')
+              //   - cacheReadInputTokensCount (legacy)
+              // Anthropic (via LangChain) uses: input_token_details.cache_read
+              const bedrockUsage = responseMetadata?.metadata?.usage;
+
+              const inputTokens = usageMetadata?.input_tokens ?? 0;
+              const outputTokens = usageMetadata?.output_tokens ?? 0;
+              const cacheReadTokens =
+                usageMetadata?.input_token_details?.cache_read ??
+                bedrockUsage?.cacheReadInputTokenCount ??
+                bedrockUsage?.cacheReadInputTokens ??
+                bedrockUsage?.cacheReadInputTokensCount ??
+                0;
+              const cacheWriteTokens =
+                usageMetadata?.input_token_details?.cache_creation ??
+                bedrockUsage?.cacheWriteInputTokenCount ??
+                bedrockUsage?.cacheWriteInputTokens ??
+                bedrockUsage?.cacheWriteInputTokensCount ??
+                0;
+
+              // According to AWS Bedrock semantics (https://docs.aws.amazon.com/bedrock/latest/userguide/quotas-token-burndown.html):
+              // - InputTokenCount: tokens that need to be processed by the model (billable at full rate)
+              // - CacheReadInputTokens: tokens retrieved from cache (billable at discounted rate)
+              // - CacheWriteInputTokens: tokens written to cache
+              // These are separate categories, NOT a total that needs to be subtracted.
+              // Formula: totalTokens = inputTokens + cacheReadTokens + outputTokens
               const usage: TokenUsageItem = {
                 tier: providerItem?.tier,
                 modelProvider: providerItem?.provider?.name,
                 modelName: String(runMeta.ls_model_name),
                 modelLabel: providerItem?.name,
                 providerItemId: providerItem?.itemId,
-                inputTokens:
-                  (chunk.usage_metadata?.input_tokens ?? 0) -
-                  (chunk.usage_metadata?.input_token_details?.cache_read ?? 0),
-                outputTokens: chunk.usage_metadata?.output_tokens ?? 0,
-                cacheReadTokens: chunk.usage_metadata?.input_token_details?.cache_read ?? 0,
+                originalModelId: routedData?.originalModelId,
+                modelRoutedData: routedData,
+                inputTokens,
+                outputTokens,
+                cacheReadTokens,
+                cacheWriteTokens,
               };
+
+              if (cacheReadTokens > 0) {
+                this.logger.info(
+                  `Prompt cache hit, model: ${usage.modelName}, inputTokens: ${usage.inputTokens}, outputTokens: ${usage.outputTokens}, cacheReadTokens: ${usage.cacheReadTokens}, cacheWriteTokens: ${usage.cacheWriteTokens}`,
+                );
+              }
+
               resultAggregator.addUsageItem(runMeta, usage);
 
               // Get the current AI message ID before finalizing
@@ -974,8 +1042,8 @@ export class SkillInvokerService {
               // Record usage metadata for message persistence
               if (messageAggregator.hasCurrentAIMessage()) {
                 messageAggregator.setAIMessageUsage(
-                  chunk.usage_metadata?.input_tokens ?? 0,
-                  chunk.usage_metadata?.output_tokens ?? 0,
+                  usageMetadata?.input_tokens ?? 0,
+                  usageMetadata?.output_tokens ?? 0,
                 );
 
                 // Finalize the current AI message
@@ -1431,6 +1499,8 @@ export class SkillInvokerService {
 
       const inputTokens = encode(input.query || '').length;
       const outputTokens = encode(generatedContent).length;
+      const cacheReadTokens = 0;
+      const cacheWriteTokens = 0;
 
       const usage: TokenUsageItem = {
         tier: providerItem?.tier,
@@ -1440,6 +1510,8 @@ export class SkillInvokerService {
         providerItemId: providerItem?.itemId,
         inputTokens,
         outputTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
       };
 
       resultAggregator.addUsageItem(runMeta, usage);
@@ -1558,6 +1630,8 @@ export class SkillInvokerService {
               modelName: providerItem?.name,
               inputTokens: tokenUsage.inputTokens || 0,
               outputTokens: tokenUsage.outputTokens || 0,
+              cacheReadTokens: tokenUsage.cacheReadTokens || 0,
+              cacheWriteTokens: tokenUsage.cacheWriteTokens || 0,
             };
 
             // billingModelName: model name used for billing (Auto or direct model)
@@ -1582,7 +1656,11 @@ export class SkillInvokerService {
         timestamp: new Date(),
       };
 
-      await this.creditService.syncBatchTokenCreditUsage(batchTokenCreditUsage);
+      const requireRecharge =
+        await this.creditService.syncBatchTokenCreditUsage(batchTokenCreditUsage);
+      if (requireRecharge) {
+        throw new ModelUsageQuotaExceeded('credit not available: Insufficient credits.');
+      }
 
       this.logger.info(
         `Batch credit billing processed for ${resultId}: ${creditUsageSteps.length} usage items`,
@@ -1640,16 +1718,18 @@ export class SkillInvokerService {
     userId: string;
     skillName?: string;
     mode?: string;
-  }): LangfuseCallbackHandler {
+  }): FilteredLangfuseCallbackHandler {
     this.logger.info(
-      `[Langfuse Debug] Creating LangfuseCallbackHandler with params: ${JSON.stringify(params)}`,
+      `[Langfuse Debug] Creating FilteredLangfuseCallbackHandler with params: ${JSON.stringify(params)}`,
     );
-    const handler = new LangfuseCallbackHandler({
+    // Use FilteredLangfuseCallbackHandler to remove internal LangGraph/LangChain metadata
+    // (langgraph_*, ls_* fields) that duplicate top-level Langfuse fields
+    const handler = new FilteredLangfuseCallbackHandler({
       sessionId: params.sessionId,
       userId: params.userId,
       tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent'],
     });
-    this.logger.info('[Langfuse Debug] LangfuseCallbackHandler created successfully');
+    this.logger.info('[Langfuse Debug] FilteredLangfuseCallbackHandler created successfully');
     return handler;
   }
 
@@ -1985,5 +2065,110 @@ export class SkillInvokerService {
       );
       return null;
     }
+  }
+
+  /**
+   * Abort workflow execution - stop all running/waiting nodes
+   * @param user - The user
+   * @param executionId - The workflow execution ID to abort
+   */
+  async abortWorkflowExecution(user: User, executionId: string): Promise<void> {
+    const startTime = Date.now();
+
+    this.logger.info(
+      `[WORKFLOW_ABORT][SVC] executionId=${executionId} uid=${user.uid} phase=start`,
+    );
+
+    // Verify workflow execution exists and belongs to user
+    const workflowExecution = await this.prisma.workflowExecution.findUnique({
+      where: { executionId, uid: user.uid },
+    });
+
+    if (!workflowExecution) {
+      this.logger.warn(`[WORKFLOW_ABORT][SVC] executionId=${executionId} phase=not_found`);
+      throw new WorkflowExecutionNotFoundError(`Workflow execution ${executionId} not found`);
+    }
+
+    this.logger.info(
+      `[WORKFLOW_ABORT][SVC] executionId=${executionId} currentStatus=${workflowExecution.status} canvasId=${workflowExecution.canvasId} phase=found`,
+    );
+
+    // Check if workflow is already finished or failed
+    if (workflowExecution.status === 'finish' || workflowExecution.status === 'failed') {
+      this.logger.warn(
+        `[WORKFLOW_ABORT][SVC] executionId=${executionId} status=${workflowExecution.status} phase=skip_terminal`,
+      );
+      return;
+    }
+
+    // Get all executing and waiting nodes
+    const nodesToAbort = await this.prisma.workflowNodeExecution.findMany({
+      where: {
+        executionId,
+        status: { in: ['waiting', 'executing'] },
+      },
+    });
+
+    // Abort all executing skillResponse nodes by calling abort action
+    const executingSkillNodes = nodesToAbort.filter((n) => n.nodeType === 'skillResponse');
+
+    this.logger.info(
+      `[WORKFLOW_ABORT][SVC] executionId=${executionId} nodesToAbort=${nodesToAbort.length} skillNodes=${executingSkillNodes.length} phase=nodes_found`,
+    );
+
+    // Abort all executing nodes in parallel for better performance
+    const abortResults = await Promise.allSettled(
+      executingSkillNodes.map(async (node) => {
+        try {
+          await this.actionService.abortActionFromReq(
+            user,
+            { resultId: node.entityId },
+            'Workflow aborted by user',
+          );
+          this.logger.info(
+            `[WORKFLOW_ABORT][SVC] executionId=${executionId} nodeId=${node.nodeId} resultId=${node.entityId} phase=node_abort_success`,
+          );
+          return { success: true, nodeId: node.nodeId };
+        } catch (error) {
+          this.logger.warn(
+            `[WORKFLOW_ABORT][SVC] executionId=${executionId} nodeId=${node.nodeId} resultId=${node.entityId} error="${(error as any)?.message ?? error}" phase=node_abort_failed`,
+          );
+          return { success: false, nodeId: node.nodeId, error };
+        }
+      }),
+    );
+
+    const successCount = abortResults.filter(
+      (r) => r.status === 'fulfilled' && (r.value as any)?.success,
+    ).length;
+
+    // Update all non-terminal nodes to failed (not just waiting/executing)
+    const nodeUpdateResult = await this.prisma.workflowNodeExecution.updateMany({
+      where: {
+        executionId,
+        status: { notIn: ['finish', 'failed'] },
+      },
+      data: {
+        status: 'failed',
+        errorMessage: 'Workflow aborted by user',
+        endTime: new Date(),
+      },
+    });
+
+    // Update workflow execution to failed if not already terminal
+    const workflowUpdateResult = await this.prisma.workflowExecution.updateMany({
+      where: {
+        executionId,
+        status: { notIn: ['finish', 'failed'] },
+      },
+      data: {
+        status: 'failed',
+        abortedByUser: true,
+      },
+    });
+
+    this.logger.info(
+      `[WORKFLOW_ABORT][SVC] executionId=${executionId} abortedNodes=${successCount}/${executingSkillNodes.length} dbNodesUpdated=${nodeUpdateResult.count} dbWorkflowUpdated=${workflowUpdateResult.count} phase=completed elapsed=${Date.now() - startTime}ms`,
+    );
   }
 }

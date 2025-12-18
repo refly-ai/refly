@@ -37,10 +37,15 @@ export const normalizeCreditBilling = (raw: unknown): CreditBilling | undefined 
     outputCost = half;
   }
 
+  const cacheReadCost = parseNumber(legacy.cacheReadCost);
+  const cacheWriteCost = parseNumber(legacy.cacheWriteCost);
+
   const normalized: CreditBilling = {
     unit: typeof legacy.unit === 'string' ? legacy.unit : 'request',
     inputCost,
     outputCost,
+    cacheReadCost,
+    cacheWriteCost,
     minCharge: parseNumber(legacy.minCharge) ?? 0,
   };
 

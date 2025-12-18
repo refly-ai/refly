@@ -97,6 +97,9 @@ const translations = {
     },
     yearly: '按年',
     monthly: '按月',
+    days: '天',
+    monthUnit: '月',
+    yearUnit: '年',
     save20: '立减20%',
     mostPopular: '最受欢迎',
     storageExceeded: {
@@ -116,6 +119,7 @@ const translations = {
       },
     },
     plans: {
+      getStarted: '立即开始',
       memberBenefits: '会员权益',
       free: {
         title: 'Free',
@@ -131,7 +135,7 @@ const translations = {
         title: 'PRO',
       },
       plus: {
-        title: 'Plus',
+        title: 'Plus Plan',
         titleCn: 'Plus',
         description: '适合运行高频自动化任务',
         priceMonthly: '$ {{price}}/月',
@@ -139,9 +143,9 @@ const translations = {
         priceYearlyTotal: '$ {{price}}/年 节省 20%',
         buttonText: '升级到 {{planName}}',
         features: [
-          '每日可获取新积分\n100点',
-          '每月积分\n2000点',
-          //'首次订阅额外赠送\n2000点',
+          '每日新增积分：100点',
+          '每月积分：2,000点',
+          '新订阅用户额外获得 2,000 积分',
           '访问丰富的工具库',
           {
             name: '免积分使用工具',
@@ -158,6 +162,7 @@ const translations = {
           },
           '服务支持\n高优邮件支持',
         ],
+        support: '服务支持：高优邮件支持',
       },
       max: {
         title: 'MAX',
@@ -254,6 +259,74 @@ const translations = {
         '随时扩展\n适合高负载工作或突发需求。',
       ],
     },
+    insufficientCredits: '积分不足',
+    buyNow: '立即购买',
+    checkoutFailed: '启动支付失败，请重试。',
+  },
+  voucher: {
+    off: '折扣',
+    validForDays: '有效期 {{days}} 天',
+    popup: {
+      congratulations: '恭喜',
+      coupon: '优惠券',
+      validFor: '有效期 {{days}} 天',
+      nonPlusUserDesc1:
+        '为了感谢你贡献了如此优秀的模板到 Marketplace，我们特别奖励你 ${{value}} 优惠券。',
+      nonPlusUserDesc2: '仅需 ${{discountedPrice}} 即可享受完整权益！',
+      plusUserDesc1: '为了感谢你的出色工作，我们特别奖励你 ${{value}} 优惠券。',
+      plusUserDesc2: '邀请朋友通过你的链接注册并购买会员，双方都将获得奖励：',
+      plusUserReward1: '你：+2,000 额外积分',
+      plusUserReward2: '你的朋友：购买会员时享受特别折扣。',
+      plusUserClaimedDesc: '你已经是 Plus 会员了。\n把这张优惠券送给朋友吧！',
+      claimedDesc: '{{name}} 送你一张优惠券 — 快来领取吧！',
+      useNow: '立即使用',
+      useCoupon: '使用优惠券',
+      shareWithFriend: '分享给朋友',
+      publishToGetCoupon: '发布获取优惠券',
+      claim: '领取',
+    },
+    share: {
+      posterTitle: '仅需 ${{discountedPrice}}\n解锁 Plus！',
+      posterDesc: '诚邀您以 {{discount}} 折扣享受 Refly Plus 完整权益。',
+      ctaText: '加入 Refly AI，{{discount}} 优惠券助你起步！',
+      validDays: '有效期 7 天。',
+      linkCopied: '链接已复制！',
+      copyFailed: '复制失败',
+      downloaded: '已下载',
+      downloadFailed: '下载失败',
+      downloading: '下载中...',
+      download: '下载',
+      copyLink: '复制链接',
+      copyLinkText:
+        '解锁 Refly.ai 的 vibe-workflow，用 Banana Pro、Gemini 3.0 等顶级 AI 模型为你的自动化工作流加速——${{value}} 折扣助你开启！立即加入 → {{link}}',
+      createFailed: '创建邀请失败',
+    },
+    invite: {
+      title: '你收到了礼物！',
+      subtitle: '朋友给你分享了一张优惠券',
+      off: '折扣',
+      forSubscription: '用于订阅',
+      validFor: '领取后 7 天内有效',
+      claimBtn: '领取优惠券',
+      loginToClaim: '登录领取',
+      newUser: '还没有账号？',
+      signUp: '免费注册',
+      invalidTitle: '邀请无效',
+      invalidCode: '邀请码无效或已过期',
+      invalidDesc: '此邀请链接无效或已过期。',
+      verifyError: '验证邀请失败',
+      goHome: '返回首页',
+      successTitle: '优惠券已领取！',
+      successDesc: '优惠券已添加到您的账户，下次订阅时可使用！',
+      goWorkspace: '前往工作区',
+      usePricing: '立即订阅',
+      claimSuccess: '优惠券领取成功！',
+      claimError: '领取优惠券失败',
+      alreadyClaimed: '优惠码已被领取。发布模板即可获取属于你的优惠券。',
+    },
+    validation: {
+      invalid: '优惠券无法使用：{{reason}}',
+    },
   },
   onboarding: {
     rewardTitle: '获得奖励积分',
@@ -334,6 +407,16 @@ const translations = {
     upgradeSubscription: '升级订阅',
     inviteFriends: '邀请好友，领取奖励积分',
     inviteRewardText: '与好友各得500积分',
+    promotion: {
+      title: '最低',
+      discount: '1折',
+      titleSuffix: '拿会员',
+      subtitle: '首次发布AI工作流',
+      description: '解锁Nano banana pro、Gemini 3.0等全平台顶级模型',
+      tag1: '100%获奖',
+      tag2: '3000积分',
+      button: '立即参与',
+    },
     dismiss: '关闭',
     copyRequestInfo: '复制请求信息',
     tryAgain: '重试',
@@ -1495,6 +1578,8 @@ const translations = {
         selectOptions: '选择可选项',
         clickToEdit: '点击编辑',
         deleteSuccess: '输入项删除成功',
+        thisFieldIsRequired: '此字段为必填项',
+        uploadBeforeRunning: '运行 Agent 前请先上传文件。',
         inputPlaceholder: '请输入',
         selectPlaceholder: '请选择',
         uploadPlaceholder: '请上传',
@@ -1538,6 +1623,9 @@ const translations = {
         failed: 'Workflow 运行失败',
         error: 'Workflow 运行状态时出错',
         validationError: '请填写所有必填字段后再运行工作流',
+        requiredFileInputsMissing: '此智能体包含必填的文件输入项，请先上传所需文件后再运行。',
+        requiredFileInputsMissingForChain:
+          '当前步骤或后续步骤存在必填的文件输入项未填写，请先上传所需文件后再运行。',
         toolsGuide: '请点击「运行」即可体验，绿色部分支持修改输入内容',
         nodeStatus: {
           waiting: '等待中',
@@ -1556,6 +1644,9 @@ const translations = {
           failed: '终止工作流失败',
         },
         forbiddenToAddNodeWhenWorkflowIsRunning: '工作流正在运行中，无法添加节点，请稍后再试',
+      },
+      template: {
+        updating: '模板正在发布中...',
       },
     },
     connectionTimeout: {
@@ -3290,7 +3381,7 @@ const translations = {
       subtitle: '一起探索好奇心',
       youCanTry: '获取新灵感',
       query1:
-        '使用13F数据工具研究沃伦·巴菲特在2025年第二季度与第三季度的持仓情况，列出所有增持和减持的股票，并生成一份包含简易图表的摘要。',
+        '使用 Perplexity 查找十位制作过该产品相关视频的高浏览量 YouTube 创作者，进行分析和比较，并将报告通过电子邮件发送给我。',
       query2:
         '使用 Perplexity 获取昨天 Product Hunt 排行榜前五的产品，创建一份摘要文档和一集播客，并通过电子邮件发送给我。',
       query3:
@@ -3710,6 +3801,7 @@ const translations = {
     validationNoUserInputs: '请在发布模板前添加输入项。',
     validationNoAgents: '请在发布模板前添加 Agent 节点。',
     validationAgentsNotRun: '请在发布模板前确保所有 Agent 节点运行成功。',
+    validationRequiredInputsEmpty: '请在发布前填写所有必填输入项。',
     confirmCloseContent: '关闭后未保存的内容将丢失，确定要关闭吗？',
     resultPreview: '产物预览',
     notLoggedIn: '未登录',
@@ -3732,6 +3824,7 @@ const translations = {
       stopConfirmNote: '运行将立即终止，已消耗的积分不会退还。',
       stopSuccess: '模板运行已成功停止。',
       confirm: '确定停止',
+      defaultAgentTitle: '智能体',
     },
     revenueSharing: {
       title: '模板被运行可享受积分收益分成',
@@ -4226,6 +4319,9 @@ const translations = {
   environmentBanner: {
     test: '当前为测试环境，功能可能不稳定。',
     staging: '当前为预发布环境，请谨慎使用。',
+  },
+  filePreview: {
+    contentTruncated: '仅显示前 {{maxLines}} 行。\n下载文件以查看完整内容。',
   },
 };
 

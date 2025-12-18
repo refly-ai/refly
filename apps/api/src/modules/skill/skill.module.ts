@@ -43,7 +43,7 @@ import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
     SearchModule,
     KnowledgeModule,
     RAGModule,
-    SubscriptionModule,
+    forwardRef(() => SubscriptionModule),
     CreditModule,
     MiscModule,
     DriveModule,

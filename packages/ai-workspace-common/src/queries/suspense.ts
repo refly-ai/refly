@@ -9,6 +9,7 @@ import {
   exportDocument,
   getActionResult,
   getAuthConfig,
+  getAvailableVouchers,
   getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
@@ -34,6 +35,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getTemplateGenerationStatus,
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
@@ -69,8 +71,10 @@ import {
   listToolsetInventory,
   listToolsets,
   listUserTools,
+  listUserVouchers,
   listWorkflowApps,
   serveStatic,
+  verifyVoucherInvitation,
 } from '../requests/services.gen';
 import {
   CheckSettingsFieldData,
@@ -84,6 +88,7 @@ import {
   GetActionResultData,
   GetActionResultError,
   GetAuthConfigError,
+  GetAvailableVouchersError,
   GetCanvasCommissionByCanvasIdData,
   GetCanvasCommissionByCanvasIdError,
   GetCanvasDataData,
@@ -128,6 +133,8 @@ import {
   GetSettingsError,
   GetSubscriptionPlansError,
   GetSubscriptionUsageError,
+  GetTemplateGenerationStatusData,
+  GetTemplateGenerationStatusError,
   GetToolCallResultData,
   GetToolCallResultError,
   GetWorkflowAppDetailData,
@@ -189,9 +196,12 @@ import {
   ListToolsetsData,
   ListToolsetsError,
   ListUserToolsError,
+  ListUserVouchersError,
   ListWorkflowAppsData,
   ListWorkflowAppsError,
   ServeStaticError,
+  VerifyVoucherInvitationData,
+  VerifyVoucherInvitationError,
 } from '../requests/types.gen';
 import * as Common from './common';
 export const useListMcpServersSuspense = <
@@ -840,6 +850,23 @@ export const useListWorkflowAppsSuspense = <
       listWorkflowApps({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
+export const useGetTemplateGenerationStatusSuspense = <
+  TData = Common.GetTemplateGenerationStatusDefaultResponse,
+  TError = GetTemplateGenerationStatusError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetTemplateGenerationStatusData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetTemplateGenerationStatusKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getTemplateGenerationStatus({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
 export const useGetSettingsSuspense = <
   TData = Common.GetSettingsDefaultResponse,
   TError = GetSettingsError,
@@ -1246,5 +1273,54 @@ export const useServeStaticSuspense = <
     queryKey: Common.UseServeStaticKeyFn(clientOptions, queryKey),
     queryFn: () =>
       serveStatic({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetAvailableVouchersSuspense = <
+  TData = Common.GetAvailableVouchersDefaultResponse,
+  TError = GetAvailableVouchersError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetAvailableVouchersKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getAvailableVouchers({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useListUserVouchersSuspense = <
+  TData = Common.ListUserVouchersDefaultResponse,
+  TError = ListUserVouchersError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseListUserVouchersKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listUserVouchers({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useVerifyVoucherInvitationSuspense = <
+  TData = Common.VerifyVoucherInvitationDefaultResponse,
+  TError = VerifyVoucherInvitationError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<VerifyVoucherInvitationData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseVerifyVoucherInvitationKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      verifyVoucherInvitation({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });

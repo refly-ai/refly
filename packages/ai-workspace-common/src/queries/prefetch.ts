@@ -9,6 +9,7 @@ import {
   exportDocument,
   getActionResult,
   getAuthConfig,
+  getAvailableVouchers,
   getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
@@ -34,6 +35,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getTemplateGenerationStatus,
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
@@ -69,8 +71,10 @@ import {
   listToolsetInventory,
   listToolsets,
   listUserTools,
+  listUserVouchers,
   listWorkflowApps,
   serveStatic,
+  verifyVoucherInvitation,
 } from '../requests/services.gen';
 import {
   CheckSettingsFieldData,
@@ -97,6 +101,7 @@ import {
   GetPilotSessionDetailData,
   GetProjectDetailData,
   GetResourceDetailData,
+  GetTemplateGenerationStatusData,
   GetToolCallResultData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
@@ -124,6 +129,7 @@ import {
   ListToolsData,
   ListToolsetsData,
   ListWorkflowAppsData,
+  VerifyVoucherInvitationData,
 } from '../requests/types.gen';
 import * as Common from './common';
 export const prefetchUseListMcpServers = (
@@ -463,6 +469,15 @@ export const prefetchUseListWorkflowApps = (
     queryKey: Common.UseListWorkflowAppsKeyFn(clientOptions),
     queryFn: () => listWorkflowApps({ ...clientOptions }).then((response) => response.data),
   });
+export const prefetchUseGetTemplateGenerationStatus = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetTemplateGenerationStatusData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetTemplateGenerationStatusKeyFn(clientOptions),
+    queryFn: () =>
+      getTemplateGenerationStatus({ ...clientOptions }).then((response) => response.data),
+  });
 export const prefetchUseGetSettings = (
   queryClient: QueryClient,
   clientOptions: Options<unknown, true> = {},
@@ -673,4 +688,28 @@ export const prefetchUseServeStatic = (
   queryClient.prefetchQuery({
     queryKey: Common.UseServeStaticKeyFn(clientOptions),
     queryFn: () => serveStatic({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetAvailableVouchers = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetAvailableVouchersKeyFn(clientOptions),
+    queryFn: () => getAvailableVouchers({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListUserVouchers = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListUserVouchersKeyFn(clientOptions),
+    queryFn: () => listUserVouchers({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseVerifyVoucherInvitation = (
+  queryClient: QueryClient,
+  clientOptions: Options<VerifyVoucherInvitationData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseVerifyVoucherInvitationKeyFn(clientOptions),
+    queryFn: () => verifyVoucherInvitation({ ...clientOptions }).then((response) => response.data),
   });

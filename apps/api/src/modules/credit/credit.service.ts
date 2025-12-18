@@ -21,10 +21,13 @@ import {
   safeParseJSON,
   genDailyCreditRechargeId,
   genSubscriptionRechargeId,
+  genCreditPackRechargeId,
   genCommissionCreditUsageId,
   genCommissionCreditRechargeId,
   genRegistrationCreditRechargeId,
   genInvitationActivationCreditRechargeId,
+  genVoucherInviterRewardRechargeId,
+  genFirstSubscriptionGiftRechargeId,
 } from '@refly/utils';
 
 import { CreditBalance } from './credit.dto';
@@ -51,7 +54,7 @@ export class CreditService {
     creditAmount: number,
     rechargeData: {
       rechargeId: string;
-      source: 'gift' | 'subscription' | 'commission' | 'invitation';
+      source: 'gift' | 'subscription' | 'commission' | 'invitation' | 'purchase';
       description?: string;
       createdAt: Date;
       expiresAt: Date;
@@ -186,6 +189,78 @@ export class CreditService {
         rechargeId: genSubscriptionRechargeId(uid, now),
         source: 'subscription',
         description,
+        createdAt: now,
+        expiresAt,
+      },
+      now,
+    );
+  }
+
+  /**
+   * Create first subscription gift credit recharge for a user
+   * This method creates a one-time 2000 credit gift for first-time subscribers
+   * Each user can only receive this gift once (uid unique constraint)
+   */
+  async createFirstSubscriptionGiftRecharge(uid: string, now: Date = new Date()): Promise<void> {
+    // Check if user already has first subscription gift
+    const existingGift = await this.prisma.creditRecharge.findFirst({
+      where: {
+        uid,
+        source: 'gift',
+        description: 'First subscription gift credit recharge',
+        enabled: true,
+      },
+    });
+
+    if (existingGift) {
+      this.logger.log(`User ${uid} already has first subscription gift, skipping`);
+      return;
+    }
+
+    const giftCreditAmount = this.configService.get('credit.firstSubscriptionGiftCreditAmount');
+    const giftCreditExpiresInMonths = this.configService.get(
+      'credit.firstSubscriptionGiftCreditExpiresInMonths',
+    );
+
+    // Calculate expiration date
+    const expiresAt = new Date(now);
+    expiresAt.setMonth(expiresAt.getMonth() + giftCreditExpiresInMonths);
+
+    await this.processCreditRecharge(
+      uid,
+      giftCreditAmount,
+      {
+        rechargeId: genFirstSubscriptionGiftRechargeId(uid),
+        source: 'gift',
+        description: 'First subscription gift credit recharge',
+        createdAt: now,
+        expiresAt,
+      },
+      now,
+    );
+
+    this.logger.log(
+      `Created first subscription gift recharge for user ${uid}: ${giftCreditAmount} credits, expires at ${expiresAt}`,
+    );
+  }
+
+  async createCreditPackRecharge(
+    uid: string,
+    creditAmount: number,
+    sessionId: string,
+    description?: string,
+    now: Date = new Date(),
+  ): Promise<void> {
+    const expiresInDays = this.configService.get('credit.creditPackExpiresInDays');
+    const expiresAt = new Date(now);
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+    await this.processCreditRecharge(
+      uid,
+      creditAmount,
+      {
+        rechargeId: genCreditPackRechargeId(uid, sessionId),
+        source: 'purchase',
+        description: description ?? 'Credit pack purchase',
         createdAt: now,
         expiresAt,
       },
@@ -356,6 +431,55 @@ export class CreditService {
 
     this.logger.log(
       `Created invitation activation credits: ${inviterUid} received ${inviterCreditAmount} credits (expires at ${inviterExpiresAt.toISOString()}), ${inviteeUid} received ${inviteeCreditAmount} credits (expires at ${inviteeExpiresAt.toISOString()})`,
+    );
+  }
+
+  /**
+   * Create voucher inviter reward credit recharge
+   * Called when an invitee claims a voucher invitation
+   *
+   * @param inviterUid - The user who shared the voucher
+   * @param invitationId - The invitation ID for idempotency
+   * @param creditAmount - Amount of credits to reward (default: 2000)
+   */
+  async createVoucherInviterRewardRecharge(
+    inviterUid: string,
+    invitationId: string,
+    creditAmount = 2000,
+    now: Date = new Date(),
+  ): Promise<void> {
+    // Use invitation ID to ensure idempotency
+    const rechargeId = genVoucherInviterRewardRechargeId(invitationId);
+
+    // Check if reward already exists
+    const existing = await this.prisma.creditRecharge.findUnique({
+      where: { rechargeId },
+    });
+
+    if (existing) {
+      this.logger.log(`Voucher inviter reward already exists for invitation ${invitationId}`);
+      return;
+    }
+
+    // Calculate expiration (3 months from now)
+    const expiresAt = new Date(now);
+    expiresAt.setMonth(expiresAt.getMonth() + 3);
+
+    await this.processCreditRecharge(
+      inviterUid,
+      creditAmount,
+      {
+        rechargeId,
+        source: 'invitation',
+        description: `Voucher sharing reward for invitation ${invitationId}`,
+        createdAt: now,
+        expiresAt,
+      },
+      now,
+    );
+
+    this.logger.log(
+      `Created voucher inviter reward: ${inviterUid} received ${creditAmount} credits for invitation ${invitationId}`,
     );
   }
 
@@ -617,6 +741,7 @@ export class CreditService {
   /**
    * Deduct credits from user's recharge records and create usage record
    * If insufficient credits, create debt record instead of negative balance
+   * @returns true if balance is zero or has debt after deduction, false otherwise
    */
   private async deductCreditsAndCreateUsage(
     uid: string,
@@ -637,7 +762,7 @@ export class CreditService {
     },
     dueAmount?: number,
     extraData?: CreditUsageExtraData,
-  ): Promise<void> {
+  ): Promise<boolean> {
     // Lazy load daily gift recharge
     await this.lazyLoadDailyGiftCredits(uid);
 
@@ -661,6 +786,7 @@ export class CreditService {
     // Prepare deduction operations
     const deductionOperations = [];
     let remainingCost = creditCost;
+    let totalNewBalance = 0;
 
     // Deduct from available credits first
     for (const recharge of creditRecharges) {
@@ -676,6 +802,7 @@ export class CreditService {
         }),
       );
 
+      totalNewBalance += newBalance;
       remainingCost -= deductAmount;
     }
 
@@ -727,6 +854,8 @@ export class CreditService {
 
     // Execute transaction
     await this.prisma.$transaction(transactionOperations);
+
+    return remainingCost > 0 || totalNewBalance === 0;
   }
 
   private async isEarlyBirdUser(user: User) {
@@ -837,7 +966,7 @@ export class CreditService {
     );
   }
 
-  async syncBatchTokenCreditUsage(data: SyncBatchTokenCreditUsageJobData) {
+  async syncBatchTokenCreditUsage(data: SyncBatchTokenCreditUsageJobData): Promise<boolean> {
     const { uid, creditUsageSteps, timestamp, resultId, version } = data;
 
     // Find user
@@ -859,6 +988,8 @@ export class CreditService {
 
       const inputTokens = usage.inputTokens || 0;
       const outputTokens = usage.outputTokens || 0;
+      const cacheReadTokens = usage.cacheReadTokens || 0;
+      const cacheWriteTokens = usage.cacheWriteTokens || 0;
 
       // Calculate credit cost for this usage
       let creditCost = 0;
@@ -866,15 +997,29 @@ export class CreditService {
         if (creditBilling.unit === '5k_tokens') {
           const perInputUnit = creditBilling.inputCost || 0;
           const perOutputUnit = creditBilling.outputCost || 0;
-          creditCost = Math.ceil(
-            (inputTokens / 5000) * perInputUnit + (outputTokens / 5000) * perOutputUnit,
-          );
+          // Fallback: use inputCost for both cache read and cache write (cache operations are on input side)
+          const perCacheReadUnit = creditBilling.cacheReadCost ?? perInputUnit;
+          const perCacheWriteUnit = creditBilling.cacheWriteCost ?? perInputUnit;
+
+          const inputCost = (inputTokens / 5000) * perInputUnit;
+          const outputCost = (outputTokens / 5000) * perOutputUnit;
+          const cacheReadCost = (cacheReadTokens / 5000) * perCacheReadUnit;
+          const cacheWriteCost = (cacheWriteTokens / 5000) * perCacheWriteUnit;
+
+          creditCost = Math.ceil(inputCost + outputCost + cacheReadCost + cacheWriteCost);
         } else if (creditBilling.unit === '1m_tokens') {
           const perInputUnit = creditBilling.inputCost || 0;
           const perOutputUnit = creditBilling.outputCost || 0;
-          creditCost = Math.ceil(
-            (inputTokens / 1000000) * perInputUnit + (outputTokens / 1000000) * perOutputUnit,
-          );
+          // Fallback: use inputCost for both cache read and cache write (cache operations are on input side)
+          const perCacheReadUnit = creditBilling.cacheReadCost ?? perInputUnit;
+          const perCacheWriteUnit = creditBilling.cacheWriteCost ?? perInputUnit;
+
+          const inputCost = (inputTokens / 1000000) * perInputUnit;
+          const outputCost = (outputTokens / 1000000) * perOutputUnit;
+          const cacheReadCost = (cacheReadTokens / 1000000) * perCacheReadUnit;
+          const cacheWriteCost = (cacheWriteTokens / 1000000) * perCacheWriteUnit;
+
+          creditCost = Math.ceil(inputCost + outputCost + cacheReadCost + cacheWriteCost);
         } else {
           creditCost = Math.max(creditBilling.inputCost, creditBilling.outputCost);
         }
@@ -901,6 +1046,8 @@ export class CreditService {
         actualModelName: usage.modelName,
         inputTokens,
         outputTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
         creditCost: creditCost,
       });
     }
@@ -926,7 +1073,7 @@ export class CreditService {
     }
 
     // Use the extracted method to handle credit deduction with model usage details
-    await this.deductCreditsAndCreateUsage(
+    const requireRecharge = await this.deductCreditsAndCreateUsage(
       uid,
       totalCreditCost,
       {
@@ -938,6 +1085,7 @@ export class CreditService {
       },
       dueAmount,
     );
+    return requireRecharge;
   }
 
   async getCreditRecharge(

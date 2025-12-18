@@ -44,6 +44,7 @@ import { VariableExtractionModule } from './variable-extraction/variable-extract
 import { InvitationModule } from './invitation/invitation.module';
 import { DriveModule } from './drive/drive.module';
 import { FormModule } from './form/form.module';
+import { VoucherModule } from './voucher/voucher.module';
 import { CommonModule } from './common/common.module';
 import { RedisService } from './common/redis.service';
 
@@ -94,8 +95,11 @@ class CustomThrottlerGuard extends ThrottlerGuard {
           return traceId ? { traceId } : {};
         },
         // Development: pino-pretty for colored output
-        // Production: JSON to stdout (collected by k8s log aggregator)
-        transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
+        // Production or LOG_JSON=true: JSON to stdout (collected by k8s log aggregator / Alloy)
+        transport:
+          process.env.NODE_ENV === 'production' || process.env.LOG_JSON === 'true'
+            ? undefined
+            : { target: 'pino-pretty' },
         formatters: {
           level: (level) => ({ level }),
         },
@@ -135,6 +139,7 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     VariableExtractionModule,
     DriveModule,
     FormModule,
+    VoucherModule,
     ...(isDesktop()
       ? []
       : [

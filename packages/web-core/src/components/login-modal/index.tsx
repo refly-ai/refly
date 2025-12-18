@@ -14,6 +14,8 @@ import { useGetAuthConfig } from '@refly-packages/ai-workspace-common/queries';
 import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { logEvent } from '@refly/telemetry-web';
+import { getPendingVoucherCode } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
+import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
 
 interface FormValues {
   email: string;
@@ -53,11 +55,29 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
     const currentPath = location.pathname;
     // Check if current route matches template page patterns
     if (currentPath?.startsWith('/app/') || currentPath?.startsWith('/workflow-template/')) {
-      return 'template_page';
+      return 'template_detail';
     }
     // Fallback to URL parameter or props
     return searchParams.get('from') ?? props.from ?? undefined;
   }, [location.pathname, searchParams, props.from]);
+
+  // Determine entry_point for signup tracking (voucher invite flow)
+  const entryPoint = useMemo(() => {
+    // Check if user came from voucher invite link
+    const hasPendingVoucher = !!getPendingVoucherCode();
+    const hasInviteParam = !!searchParams.get('invite');
+
+    if (hasPendingVoucher || hasInviteParam) {
+      const currentPath = location.pathname;
+      // If on template page, entry point is template_detail
+      if (currentPath?.startsWith('/app/') || currentPath?.startsWith('/workflow-template/')) {
+        return 'template_detail';
+      }
+      // Otherwise it's visitor page (homepage)
+      return 'visitor_page';
+    }
+    return undefined;
+  }, [location.pathname, searchParams]);
 
   // Provide default values if config is not loaded
   const { isGithubEnabled, isGoogleEnabled, isEmailEnabled } = useMemo(() => {
@@ -88,6 +108,8 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
       logEvent('auth::oauth_login_click', provider);
       authStore.setLoginInProgress(true);
       authStore.setLoginProvider(provider);
+      // Store current page for redirect after OAuth callback
+      storePendingRedirect();
       window.location.href = `${serverOrigin}/v1/auth/${provider}`;
     },
     [authStore],
@@ -119,15 +141,19 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
         authStore.setLoginModalOpen(false);
 
         if (data.data?.skipVerification) {
-          // Log signup success event with source
-          logEvent('signup_success', null, source ? { source } : undefined);
+          // Log signup success event with source and entry_point
+          logEvent('signup_success', null, {
+            ...(source ? { source } : {}),
+            ...(entryPoint ? { entry_point: entryPoint } : {}),
+            user_type: 'free',
+          });
           authStore.reset();
           const returnUrl = searchParams.get('returnUrl');
           const redirectUrl = returnUrl
             ? decodeURIComponent(returnUrl)
             : isPublicAccessPage
               ? window.location.href
-              : '/';
+              : '/workspace';
           window.location.replace(redirectUrl);
         } else {
           authStore.setEmail(values.email);
@@ -155,11 +181,11 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
           ? decodeURIComponent(returnUrl)
           : isPublicAccessPage
             ? window.location.href
-            : '/';
+            : '/workspace';
         window.location.replace(redirectUrl);
       }
     }
-  }, [authStore, form, isPublicAccessPage, searchParams, source]);
+  }, [authStore, form, isPublicAccessPage, searchParams, source, entryPoint]);
 
   const handleResetPassword = useCallback(() => {
     authStore.setLoginModalOpen(false);

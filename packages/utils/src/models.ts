@@ -16,11 +16,13 @@ export const aggregateTokenUsage = (usageItems: TokenUsageItem[]): TokenUsageIte
         inputTokens: 0,
         outputTokens: 0,
         cacheReadTokens: 0,
+        cacheWriteTokens: 0,
       };
     }
     aggregatedUsage[key].inputTokens += item.inputTokens;
     aggregatedUsage[key].outputTokens += item.outputTokens;
     aggregatedUsage[key].cacheReadTokens += item.cacheReadTokens ?? 0;
+    aggregatedUsage[key].cacheWriteTokens += item.cacheWriteTokens ?? 0;
   }
 
   return Object.entries(aggregatedUsage).map(([key, value]) => {
@@ -34,6 +36,7 @@ export const aggregateTokenUsage = (usageItems: TokenUsageItem[]): TokenUsageIte
         'inputTokens',
         'outputTokens',
         'cacheReadTokens',
+        'cacheWriteTokens',
       ]),
     };
   });

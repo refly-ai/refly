@@ -1953,7 +1953,7 @@ export type SubscriptionInterval = 'monthly' | 'yearly';
 /**
  * Subscription plan type
  */
-export type SubscriptionPlanType = 'free' | 'starter' | 'maker' | 'enterprise' | 'plus';
+export type SubscriptionPlanType = 'free' | 'starter' | 'maker' | 'enterprise' | 'plus' | 'pro';
 
 /**
  * Subscription status
@@ -2150,6 +2150,7 @@ export type ProviderConfig = {
  */
 export type ModelScene =
   | 'chat'
+  | 'copilot'
   | 'agent'
   | 'queryAnalysis'
   | 'titleGeneration'
@@ -2165,6 +2166,10 @@ export type DefaultModelConfig = {
    * Default chat model to use
    */
   chat?: ProviderItem;
+  /**
+   * Default copilot model to use
+   */
+  copilot?: ProviderItem;
   /**
    * Default agent model to use
    */
@@ -5074,6 +5079,14 @@ export type CreateCheckoutSessionRequest = {
    * Subscription billing interval
    */
   interval?: SubscriptionInterval;
+  /**
+   * Current plan
+   */
+  currentPlan?: string;
+  /**
+   * Source
+   */
+  source?: string;
 };
 
 export type CreateCreditPackCheckoutSessionRequest = {
@@ -5081,6 +5094,14 @@ export type CreateCreditPackCheckoutSessionRequest = {
    * Credit pack identifier
    */
   packId: string;
+  /**
+   * Current plan
+   */
+  currentPlan?: string;
+  /**
+   * Source
+   */
+  source?: string;
 };
 
 export type CreateCheckoutSessionResponse = BaseResponse & {
@@ -7401,6 +7422,33 @@ export type ListWorkflowAppsResponse = BaseResponse & {
   data?: Array<WorkflowApp>;
 };
 
+/**
+ * Template generation status
+ */
+export type TemplateGenerationStatus = 'idle' | 'pending' | 'generating' | 'completed' | 'failed';
+
+export type GetTemplateGenerationStatusResponse = BaseResponse & {
+  data: {
+    status: TemplateGenerationStatus;
+    /**
+     * Generated template content
+     */
+    templateContent?: string | null;
+    /**
+     * Error message if generation failed
+     */
+    error?: string | null;
+    /**
+     * Last update time
+     */
+    updatedAt: string;
+    /**
+     * Creation time
+     */
+    createdAt: string;
+  };
+};
+
 export type ExecuteWorkflowAppRequest = {
   /**
    * Workflow app share ID for execution
@@ -7536,6 +7584,10 @@ export type UpdateWorkflowVariablesRequest = {
    * List of workflow variables
    */
   variables: Array<WorkflowVariable>;
+  /**
+   * Whether to archive existing drive files associated with old resource variables before updating
+   */
+  archiveOldFiles?: boolean;
 };
 
 export type UpdateWorkflowVariablesResponse = BaseResponse & {
@@ -7678,6 +7730,10 @@ export type UpsertDriveFileRequest = {
    * Related agent result version
    */
   resultVersion?: number;
+  /**
+   * Whether to archive existing files with the same variableId or resultId before creating new file
+   */
+  archiveFiles?: boolean;
 };
 
 export type BatchCreateDriveFilesRequest = {
@@ -10510,6 +10566,19 @@ export type ListWorkflowAppsData = {
 export type ListWorkflowAppsResponse2 = ListWorkflowAppsResponse;
 
 export type ListWorkflowAppsError = unknown;
+
+export type GetTemplateGenerationStatusData = {
+  query: {
+    /**
+     * Workflow app ID
+     */
+    appId: string;
+  };
+};
+
+export type GetTemplateGenerationStatusResponse2 = GetTemplateGenerationStatusResponse;
+
+export type GetTemplateGenerationStatusError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 

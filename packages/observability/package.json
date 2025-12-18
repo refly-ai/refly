@@ -10,14 +10,14 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@langfuse/langchain": "^4.4.2",
     "@nestjs/common": "~10.3.9",
     "@opentelemetry/api": "^1.8.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "langfuse": "^3.30.0",
-    "langfuse-core": "^3.37.3",
-    "langfuse-langchain": "^3.30.0"
+    "langfuse-core": "^3.37.3"
   },
   "peerDependencies": {
-    "@langchain/core": "0.3.68"
+    "@langchain/core": ">=0.3.0"
   }
 }

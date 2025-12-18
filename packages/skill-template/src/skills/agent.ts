@@ -8,6 +8,7 @@ import {
 } from '@langchain/langgraph';
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
 import { Icon, SkillTemplateConfigDefinition, User } from '@refly/openapi-schema';
 
@@ -15,6 +16,7 @@ import { Icon, SkillTemplateConfigDefinition, User } from '@refly/openapi-schema
 import { GraphState } from '../scheduler/types';
 // utils
 import { buildFinalRequestMessages } from '../scheduler/utils/message';
+import { compressAgentLoopMessages } from '../utils/context-manager';
 
 // prompts
 import { buildNodeAgentSystemPrompt } from '../prompts/node-agent';
@@ -25,6 +27,7 @@ import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { type StructuredToolInterface } from '@langchain/core/tools';
+import { countToken } from '../scheduler/utils/token';
 
 // Constants for recursion control
 const MAX_TOOL_ITERATIONS = 25;
@@ -32,6 +35,29 @@ const MAX_TOOL_ITERATIONS = 25;
 const DEFAULT_RECURSION_LIMIT = 2 * MAX_TOOL_ITERATIONS + 1;
 // Max consecutive identical tool calls to detect infinite loops
 const MAX_IDENTICAL_TOOL_CALLS = 3;
+
+// WeakMap cache for Zod to JSON Schema conversion (avoids repeated conversions)
+const zodSchemaCache = new WeakMap<object, object>();
+
+/**
+ * Convert Zod schema to JSON Schema with caching.
+ * Uses WeakMap so cached entries are automatically garbage collected
+ * when the original Zod schema is no longer referenced.
+ *
+ * Note: StructuredToolInterface.schema is typed as ToolInputSchemaBase which
+ * is a union type, but at runtime it's always a Zod schema for DynamicStructuredTool.
+ */
+function getJsonSchema(zodSchema: unknown): object | undefined {
+  if (!zodSchema || typeof zodSchema !== 'object') return undefined;
+
+  let cached = zodSchemaCache.get(zodSchema);
+  if (!cached) {
+    // zodToJsonSchema accepts ZodType, runtime schema is always Zod
+    cached = zodToJsonSchema(zodSchema as z.ZodTypeAny, { target: 'openApi3' });
+    zodSchemaCache.set(zodSchema, cached);
+  }
+  return cached;
+}
 
 // Define a more specific type for the compiled graph
 type CompiledGraphApp = {
@@ -85,7 +111,6 @@ export class Agent extends BaseSkill {
     const hasVisionCapability = modelInfo?.capabilities?.vision ?? false;
 
     const userPrompt = buildUserPrompt(optimizedQuery, context, { hasVisionCapability });
-
     const requestMessages = buildFinalRequestMessages({
       systemPrompt,
       userPrompt,
@@ -95,7 +120,7 @@ export class Agent extends BaseSkill {
       modelInfo,
     });
 
-    return { requestMessages, sources };
+    return { requestMessages, sources, systemPrompt, modelInfo };
   };
 
   private async initializeAgentComponents(
@@ -148,11 +173,54 @@ export class Agent extends BaseSkill {
       this.engine.logger.info('No tools selected, using base LLM without tools');
       llmForGraph = baseLlm;
     }
+    // Get compression context from config
+    const { user, canvasId, resultId, version } = config?.configurable ?? {};
 
     const llmNodeForCachedGraph = async (nodeState: typeof MessagesAnnotation.State) => {
       try {
+        let currentMessages = nodeState.messages ?? [];
+        if (this.engine?.service && user && canvasId && resultId && version) {
+          try {
+            // Calculate tools tokens once (tools schema is static during the agent loop)
+            const toolSchemaTokens = availableToolsForNode?.length
+              ? countToken(
+                  JSON.stringify(
+                    availableToolsForNode.map((t) => ({
+                      name: t.name,
+                      description: t.description,
+                      schema: t.schema,
+                    })),
+                  ),
+                )
+              : 0;
+            const modelInfo = config?.configurable?.modelConfigMap?.agent;
+            const contextLimit = modelInfo?.contextLimit ?? 128000;
+            const maxOutput = modelInfo?.maxOutput ?? 8000;
+            const compressionResult = await compressAgentLoopMessages({
+              messages: currentMessages,
+              contextLimit,
+              maxOutput,
+              user,
+              canvasId,
+              resultId,
+              resultVersion: version,
+              service: this.engine.service,
+              logger: this.engine.logger,
+              modelInfo,
+              // Include tools tokens in the calculation for accurate budget estimation
+              additionalTokens: toolSchemaTokens,
+            });
+            currentMessages = compressionResult.messages;
+          } catch (compressionError) {
+            // Log but don't fail - compression is optional optimization
+            this.engine.logger.error('Agent loop compression failed', {
+              error: (compressionError as Error)?.message,
+            });
+          }
+        }
+
         // Use llmForGraph, which is the (potentially tool-bound) LLM instance for the graph
-        const response = await llmForGraph.invoke(nodeState.messages);
+        const response = await llmForGraph.invoke(currentMessages);
         return { messages: [response] };
       } catch (error) {
         this.engine.logger.error(`LLM node execution failed: ${error.stack}`);
@@ -353,6 +421,18 @@ export class Agent extends BaseSkill {
             ...currentSkill,
             toolsAvailable,
             toolCount: tools?.length || 0,
+            // Reproducible context for Langfuse tracing
+            // Tool definitions with full JSON Schema for offline replay
+            toolDefinitions: tools?.map((t) => ({
+              type: 'function',
+              name: t.name,
+              description: t.description,
+              parameters: getJsonSchema(t.schema),
+            })),
+            // Runtime config for reproducibility
+            // Note: systemPrompt already in input[0], modelConfig duplicates modelParameters
+            toolChoice: toolsAvailable ? 'auto' : undefined,
+            graphRecursionLimit: DEFAULT_RECURSION_LIMIT,
           },
         },
       );

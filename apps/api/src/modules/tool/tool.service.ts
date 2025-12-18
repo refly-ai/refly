@@ -40,7 +40,6 @@ import { SyncToolCreditUsageJobData } from '../credit/credit.dto';
 import { CreditService } from '../credit/credit.service';
 import { mcpServerPO2DTO } from '../mcp-server/mcp-server.dto';
 import { McpServerService } from '../mcp-server/mcp-server.service';
-import { MiscService } from '../misc/misc.service';
 import { ComposioService } from './composio/composio.service';
 import { AuthType, ToolsetType } from './constant';
 import { ToolFactory } from './dynamic-tooling/factory.service';
@@ -51,6 +50,7 @@ import {
   toolsetPo2GenericOAuthToolset,
   toolsetPo2GenericToolset,
 } from './tool.dto';
+import { ToolWrapperFactoryService } from './tool-execution/wrapper/wrapper.service';
 
 @Injectable()
 export class ToolService {
@@ -65,8 +65,8 @@ export class ToolService {
     private readonly composioService: ComposioService,
     private readonly creditService: CreditService,
     private readonly toolFactory: ToolFactory,
-    private readonly miscService: MiscService,
     private readonly inventoryService: ToolInventoryService,
+    private readonly toolWrapperFactory: ToolWrapperFactoryService,
   ) {
     // Cache toolset inventory with 5-minute TTL
     this.toolsetInventoryCache = new SingleFlightCache(this.loadToolsetInventory.bind(this), {
@@ -1114,7 +1114,6 @@ export class ToolService {
       const config = t.config ? safeParseJSON(t.config) : {};
       const authData = t.authData ? safeParseJSON(this.encryptionService.decrypt(t.authData)) : {};
 
-      // TODO: check for constructor parameters
       const toolsetInstance = new toolset.class({
         ...config,
         ...authData,
@@ -1134,9 +1133,13 @@ export class ToolService {
               description: tool.description,
               schema: tool.schema,
               func: async (input, runManager, config) => {
-                const result = await tool.invoke(input);
+                const result = await this.toolWrapperFactory.invoke(
+                  tool as StructuredToolInterface,
+                  input,
+                  config,
+                );
                 const isGlobal = t?.isGlobal ?? false;
-                const creditCost = (result as any)?.creditCost ?? 0;
+                const { creditCost } = result;
                 const skillConfig = config as SkillRunnableConfig;
                 const resultId = skillConfig?.configurable?.resultId;
                 const version = skillConfig?.configurable?.version;
@@ -1157,7 +1160,7 @@ export class ToolService {
                   };
                   await this.creditService.syncToolCreditUsage(jobData);
                 }
-                return result;
+                return result.content;
               },
               metadata: {
                 name: tool.name,

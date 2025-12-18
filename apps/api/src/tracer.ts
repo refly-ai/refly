@@ -61,7 +61,6 @@ export function initTracer(): void {
   };
 
   if (!otlp.tracesUrl && !otlp.metricsUrl && !langfuse.baseUrl) {
-    console.log('[Tracer] No observability backend configured, skipping initialization');
     return;
   }
 
@@ -71,16 +70,13 @@ export function initTracer(): void {
   if (otlp.tracesUrl) {
     const traceExporter = new OTLPTraceExporter({ url: otlp.tracesUrl });
     spanProcessors.push(new BatchSpanProcessor(traceExporter));
-    console.log('[Tracer] OTLP trace exporter configured:', { url: otlp.tracesUrl });
   }
 
   // Langfuse processor - receives filtered LLM spans only
   if (langfuse.baseUrl) {
-    console.log('[Tracer] Creating Langfuse processor...');
     const processor = createLangfuseProcessor(langfuse);
     if (processor) {
       spanProcessors.push(processor);
-      console.log('[Tracer] Langfuse processor added to span processors');
     }
   }
 
@@ -91,10 +87,6 @@ export function initTracer(): void {
     metricReader = new PeriodicExportingMetricReader({
       exporter: metricExporter,
       exportIntervalMillis: otlp.metricsIntervalMs,
-    });
-    console.log('[Tracer] OTLP metric exporter configured:', {
-      url: otlp.metricsUrl,
-      intervalMs: otlp.metricsIntervalMs,
     });
   }
 
@@ -108,14 +100,9 @@ export function initTracer(): void {
   });
 
   sdk.start();
-  console.log('[Tracer] OpenTelemetry SDK started');
 
   process.on('SIGTERM', () => {
-    sdk
-      ?.shutdown()
-      .then(() => console.log('[Tracer] Tracing terminated'))
-      .catch((error) => console.log('[Tracer] Error terminating tracing', error))
-      .finally(() => process.exit(0));
+    sdk?.shutdown().finally(() => process.exit(0));
   });
 }
 
@@ -123,25 +110,51 @@ function createLangfuseProcessor(config: LangfuseConfig): SpanProcessor | null {
   const { publicKey, secretKey, baseUrl } = config;
 
   if (!publicKey || !secretKey || !baseUrl) {
-    console.error('[Tracer] Langfuse missing required config:', {
-      hasPublicKey: !!publicKey,
-      hasSecretKey: !!secretKey,
-      hasBaseUrl: !!baseUrl,
-    });
     return null;
   }
 
   try {
-    console.log('[Tracer] Langfuse processor configured:', { baseUrl });
     return new LangfuseSpanProcessor({
       publicKey,
       secretKey,
       baseUrl,
       shouldExportSpan: ({ otelSpan }) =>
         !EXCLUDED_SCOPES.has(otelSpan.instrumentationScope?.name ?? ''),
+      // Slim down resourceAttributes in trace/observation metadata
+      // Note: mask receives serialized JSON strings, operates on values not keys
+      // Key-based filtering (langgraph_*, ls_*) is done in FilteredLangfuseCallbackHandler
+      mask: ({ data }) => {
+        if (typeof data !== 'string') return data;
+
+        try {
+          const parsed = JSON.parse(data);
+          if (typeof parsed !== 'object' || parsed === null) return data;
+
+          // Slim down resourceAttributes if present (verbose OTEL attributes)
+          if (parsed.resourceAttributes && typeof parsed.resourceAttributes === 'object') {
+            const KEPT_RESOURCE_ATTRS = new Set([
+              'service.name',
+              'host.name',
+              'process.runtime.version',
+            ]);
+            const slimmed = {
+              ...parsed,
+              resourceAttributes: Object.fromEntries(
+                Object.entries(parsed.resourceAttributes as Record<string, unknown>).filter(([k]) =>
+                  KEPT_RESOURCE_ATTRS.has(k),
+                ),
+              ),
+            };
+            return JSON.stringify(slimmed);
+          }
+
+          return data;
+        } catch {
+          return data;
+        }
+      },
     });
-  } catch (error) {
-    console.error('[Tracer] Failed to initialize Langfuse:', error);
+  } catch (_error) {
     return null;
   }
 }

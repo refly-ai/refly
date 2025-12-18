@@ -10,6 +10,7 @@ import { LOCALE } from '@refly/common-types';
 
 import { LoginModal } from '../../components/login-modal';
 import { SubscribeModal } from '@refly-packages/ai-workspace-common/components/settings/subscribe-modal';
+import { ClaimedVoucherPopup } from '@refly-packages/ai-workspace-common/components/voucher/claimed-voucher-popup';
 import { VerificationModal } from '../../components/verification-modal';
 import { ResetPasswordModal } from '../../components/reset-password-modal';
 import { InvitationCodeModal } from '../../components/invitation-code-modal';
@@ -103,11 +104,15 @@ export const AppLayout = (props: AppLayoutProps) => {
       if (userStore.isLogin && userStore.userProfile) {
         navigate('/workspace', { replace: true });
       } else {
-        navigate('/login', { replace: true });
+        // Preserve query parameters (e.g., invite code) when redirecting to login
+        const searchParams = new URLSearchParams(location.search);
+        const loginPath = searchParams.toString() ? `/login?${searchParams.toString()}` : '/login';
+        navigate(loginPath, { replace: true });
       }
     }
   }, [
     location.pathname,
+    location.search,
     userStore.isLogin,
     userStore.userProfile,
     userStore.isCheckingLoginStatus,
@@ -168,6 +173,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         <InvitationCodeModal />
         <ResetPasswordModal />
         <SubscribeModal />
+        <ClaimedVoucherPopup />
         <CanvasListModal visible={showCanvasListModal} setVisible={setShowCanvasListModal} />
         <LibraryModal visible={showLibraryModal} setVisible={setShowLibraryModal} />
         <ImportResourceModal />

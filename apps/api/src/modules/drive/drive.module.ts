@@ -4,10 +4,9 @@ import { DriveService } from './drive.service';
 import { CommonModule } from '../common/common.module';
 import { MiscModule } from '../misc/misc.module';
 import { ProviderModule } from '../provider/provider.module';
-import { SubscriptionModule } from '../subscription/subscription.module';
 
 @Module({
-  imports: [CommonModule, MiscModule, ProviderModule, SubscriptionModule],
+  imports: [CommonModule, MiscModule, ProviderModule],
   controllers: [DriveController],
   providers: [DriveService],
   exports: [DriveService],

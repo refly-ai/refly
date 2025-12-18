@@ -287,6 +287,14 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
         'overflow-hidden flex flex-col',
         source === 'card' ? 'rounded-lg border-[1px] border-solid border-refly-Card-Border' : '',
       )}
+      style={
+        source === 'card'
+          ? {
+              contentVisibility: 'auto',
+              containIntrinsicSize: '0 300px',
+            }
+          : undefined
+      }
     >
       <div className="w-full px-3 py-4 flex justify-between">
         <div className="flex items-center gap-2 flex-1 min-w-0">

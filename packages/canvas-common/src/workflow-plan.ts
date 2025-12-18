@@ -32,19 +32,36 @@ export const workflowPlanSchema = z.object({
       z.object({
         variableId: z.string().describe('Variable ID, unique and readonly'),
         variableType: z
-          .string()
-          .describe('Variable type (currently only string is supported)')
+          .enum(['string', 'resource'])
+          .describe('Variable type: string for text input, resource for file upload')
           .default('string'),
         name: z.string().describe('Variable name used in the workflow'),
         description: z.string().describe('Description of what this variable represents'),
+        required: z
+          .boolean()
+          .describe('Whether this variable is required. Defaults to false.')
+          .default(false),
+        resourceTypes: z
+          .array(z.enum(['document', 'image', 'audio', 'video']))
+          .optional()
+          .describe('Accepted resource types (only for resource type variables)'),
         value: z
           .array(
             z.object({
               type: z
-                .string()
-                .describe('Variable type (currently only text is supported)')
+                .enum(['text', 'resource'])
+                .describe('Value type: text for string variables, resource for file uploads')
                 .default('text'),
-              text: z.string().describe('Variable text value'),
+              text: z.string().optional().describe('Text value (for text type)'),
+              resource: z
+                .object({
+                  name: z.string().describe('Resource file name'),
+                  fileType: z
+                    .enum(['document', 'image', 'audio', 'video'])
+                    .describe('Resource file type'),
+                })
+                .optional()
+                .describe('Resource value (for resource type)'),
             }),
           )
           .describe('Variable values'),
@@ -109,8 +126,19 @@ export const planVariableToWorkflowVariable = (
     value: planVariable.value?.map((value) => ({
       type: value?.type as 'text' | 'resource',
       text: value?.text,
+      // Only include resource if it has the required fields
+      ...(value?.resource?.name && value?.resource?.fileType
+        ? {
+            resource: {
+              name: value.resource.name,
+              fileType: value.resource.fileType,
+            },
+          }
+        : {}),
     })),
     description: planVariable.description,
+    required: planVariable.required ?? false,
+    resourceTypes: planVariable.resourceTypes,
   };
 };
 

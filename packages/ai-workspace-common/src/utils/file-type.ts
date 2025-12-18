@@ -17,10 +17,63 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   py: 'python',
   pyw: 'python',
 
+  // Java
+  java: 'java',
+
+  // C/C++
+  c: 'c',
+  h: 'c',
+  cpp: 'cpp',
+  cc: 'cpp',
+  cxx: 'cpp',
+  hpp: 'cpp',
+  hxx: 'cpp',
+
+  // C#
+  cs: 'csharp',
+
+  // Go
+  go: 'go',
+
+  // Rust
+  rs: 'rust',
+
+  // Ruby
+  rb: 'ruby',
+  rake: 'ruby',
+
+  // PHP
+  php: 'php',
+
+  // Swift
+  swift: 'swift',
+
+  // Kotlin
+  kt: 'kotlin',
+  kts: 'kotlin',
+
+  // Scala
+  scala: 'scala',
+
+  // Lua
+  lua: 'lua',
+
+  // Perl
+  pl: 'perl',
+  pm: 'perl',
+
+  // R
+  r: 'r',
+
   // Web
   html: 'html',
   htm: 'html',
   css: 'css',
+  scss: 'scss',
+  sass: 'sass',
+  less: 'less',
+  vue: 'vue',
+  svelte: 'svelte',
 
   // Data formats
   json: 'json',
@@ -28,6 +81,9 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   json5: 'json',
   yaml: 'yaml',
   yml: 'yaml',
+  toml: 'toml',
+  xml: 'xml',
+  svg: 'svg',
 
   // Markdown
   md: 'markdown',
@@ -45,10 +101,25 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   sh: 'shell',
   bash: 'shell',
   zsh: 'zsh',
+  fish: 'fish',
+  ps1: 'powershell',
+
+  // Config files
+  dockerfile: 'dockerfile',
+  makefile: 'makefile',
+  cmake: 'cmake',
+  nginx: 'nginx',
+
+  // Other
+  diff: 'diff',
+  ini: 'ini',
+  latex: 'latex',
+  tex: 'latex',
 
   // Plain text
   txt: 'plaintext',
   text: 'text',
+  log: 'log',
 };
 
 /**

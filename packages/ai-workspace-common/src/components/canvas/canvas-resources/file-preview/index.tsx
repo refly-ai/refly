@@ -4,6 +4,7 @@ import { DriveFile } from '@refly/openapi-schema';
 import { File } from 'refly-icons';
 import { getCodeLanguage } from '@refly-packages/ai-workspace-common/utils/file-type';
 import { useDriveFileUrl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drive-file-url';
+import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/canvas/use-download-file';
 import { cn } from '@refly/utils/cn';
 import { useMatch } from 'react-router-dom';
 
@@ -20,19 +21,6 @@ import { UnsupportedRenderer } from './unsupported';
 import { HtmlRenderer } from './html';
 import { MarkdownRenderer } from './markdown';
 
-const useHandleDownload = (url: string | undefined, fileName: string) => {
-  return useCallback(() => {
-    if (!url) return;
-
-    const link = document.createElement('a');
-    link.href = `${url}?download=1`;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }, [url, fileName]);
-};
-
 interface ContentCategoryResult {
   category: string;
   language?: string;
@@ -48,6 +36,7 @@ const extractContentCategory = (contentType: string, fileName: string): ContentC
   // Document types
   if (contentType === 'application/pdf') return { category: 'pdf' };
   if (contentType === 'application/json') return { category: 'json' };
+  if (contentType === 'application/javascript') return { category: 'code' };
 
   // Text types - further categorize by file extension
   if (contentType.startsWith('text/')) {
@@ -164,7 +153,11 @@ export const FilePreview = memo(
       };
     }, [fetchFileContent]);
 
-    const handleDownload = useHandleDownload(fileContent?.url, file.name);
+    const contentType = (file?.type ?? '') as string;
+    const { handleDownload: downloadFile, isDownloading } = useDownloadFile();
+    const handleDownload = useCallback(() => {
+      downloadFile({ currentFile: file, contentType });
+    }, [downloadFile, file, contentType]);
 
     const handleTabChange = useCallback((tab: 'code' | 'preview') => {
       setActiveTab(tab);
@@ -207,11 +200,20 @@ export const FilePreview = memo(
             />
           );
         case 'code':
-          return <CodeRenderer fileContent={fileContent} file={file} language={language!} />;
+          return (
+            <CodeRenderer
+              source={rendererSource}
+              fileContent={fileContent}
+              file={file}
+              language={language!}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+            />
+          );
         case 'text':
           return (
             <MarkdownRenderer
-              source="card"
+              source={rendererSource}
               fileContent={fileContent}
               file={file}
               className={markdownClassName}
@@ -220,7 +222,7 @@ export const FilePreview = memo(
         case 'pdf':
           return <PdfRenderer fileContent={fileContent} file={file} />;
         case 'json':
-          return <JsonRenderer fileContent={fileContent} file={file} />;
+          return <JsonRenderer source={rendererSource} fileContent={fileContent} file={file} />;
         case 'video':
           return <VideoRenderer fileContent={fileContent} file={file} />;
         case 'audio':
@@ -231,6 +233,7 @@ export const FilePreview = memo(
               fileContent={fileContent}
               file={file}
               onDownload={handleDownload}
+              isDownloading={isDownloading}
             />
           );
       }

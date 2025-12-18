@@ -97,6 +97,7 @@ import {
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
+  getTemplateGenerationStatus,
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
@@ -635,6 +636,18 @@ export const UseListWorkflowAppsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListWorkflowAppsKey, ...(queryKey ?? [clientOptions])];
+export type GetTemplateGenerationStatusDefaultResponse = Awaited<
+  ReturnType<typeof getTemplateGenerationStatus>
+>['data'];
+export type GetTemplateGenerationStatusQueryResult<
+  TData = GetTemplateGenerationStatusDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetTemplateGenerationStatusKey = 'GetTemplateGenerationStatus';
+export const UseGetTemplateGenerationStatusKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetTemplateGenerationStatusKey, ...(queryKey ?? [clientOptions])];
 export type GetSettingsDefaultResponse = Awaited<ReturnType<typeof getSettings>>['data'];
 export type GetSettingsQueryResult<
   TData = GetSettingsDefaultResponse,

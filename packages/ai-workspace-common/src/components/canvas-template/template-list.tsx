@@ -184,7 +184,7 @@ export const TemplateList = ({
         <div
           id={source === 'template-library' ? scrollableTargetId : undefined}
           className={cn(
-            'w-full h-full overflow-y-auto transition-opacity duration-300 ease-in-out',
+            'w-full h-full overflow-y-auto transition-opacity duration-1 ease-in-out',
             isFading ? 'opacity-0' : 'opacity-100',
           )}
         >

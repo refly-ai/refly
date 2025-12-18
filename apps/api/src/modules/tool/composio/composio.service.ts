@@ -15,13 +15,14 @@ import { COMPOSIO_CONNECTION_STATUS } from '../constant/constant';
 import { genToolsetID } from '@refly/utils';
 import { PrismaService } from '../../common/prisma.service';
 import { RedisService } from '../../common/redis.service';
-import { PostHandlerService } from './post-handler.service';
+import type { ComposioPostHandlerInput } from '../tool-execution/post-execution/post.interface';
 import { ToolInventoryService } from '../inventory/inventory.service';
 import { getCurrentUser, runInContext } from '../tool-context';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { SkillRunnableConfig } from '@refly/skill-template';
 import { enhanceToolSchema } from '../utils/schema-utils';
 import { ResourceHandler } from '../resource.service';
+import { ComposioToolPostHandlerService } from '../tool-execution/post-execution/composio-post.service';
 
 @Injectable()
 export class ComposioService {
@@ -32,7 +33,7 @@ export class ComposioService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly postHandlerService: PostHandlerService,
+    private readonly composioPostHandler: ComposioToolPostHandlerService,
     private readonly inventoryService: ToolInventoryService,
     private readonly resourceHandler: ResourceHandler,
   ) {
@@ -473,8 +474,9 @@ export class ComposioService {
       // Determine which API key field to use based on integration
       const integrationIdLower = integrationId.toLowerCase();
       const useGenericApiKey =
-        integrationIdLower === 'alpha_vantage' || integrationIdLower === 'hunter';
-
+        integrationIdLower === 'alpha_vantage' ||
+        integrationIdLower === 'hunter' ||
+        integrationIdLower === 'heygen';
       const apiKeyConfig = useGenericApiKey ? { generic_api_key: apiKey } : { api_key: apiKey };
 
       const connectionRequest = await this.composio.connectedAccounts.initiate(
@@ -601,13 +603,16 @@ export class ComposioService {
         _runManager: unknown,
         runnableConfig: RunnableConfig,
       ) => {
-        const { file_name_title, ...toolInput } = input as Record<string, unknown>;
         try {
-          // Run tool execution AND post-processing within context
-          // This ensures getCanvasId() works correctly in post-handler
-          const { executionResult, postResult } = await runInContext(
+          const inputRecord = input as Record<string, unknown>;
+
+          // Extract file_name_title before calling Composio API (it's not part of the actual schema)
+          const { file_name_title, ...toolInput } = inputRecord;
+
+          // Run tool execution within context (similar to dynamic-tooling)
+          const { result, user, resultId, version, canvasId } = await runInContext(
             {
-              langchainConfig: runnableConfig as SkillRunnableConfig,
+              langchainConfig: runnableConfig as unknown as SkillRunnableConfig,
               requestId: `composio-${toolName}-${Date.now()}`,
             },
             async () => {
@@ -627,44 +632,39 @@ export class ComposioService {
                 toolName,
                 processedRequest.params,
               );
-
-              const resultId = runnableConfig?.configurable?.resultId as string | undefined;
-              const version = runnableConfig?.configurable?.version as number | undefined;
-
-              // Only run postHandler (billing/upload) on real successes.
-              const postResult = executionResult.successful
-                ? await this.postHandlerService.process(executionResult, {
-                    user: currentUser,
-                    toolName,
-                    toolsetName: context.toolsetName,
-                    toolsetKey: context.toolsetKey,
-                    creditCost: context.creditCost,
-                    fileNameTitle: (file_name_title as string) || 'untitled',
-                    resultId,
-                    version,
-                  })
-                : { data: executionResult.data };
-
               return {
-                executionResult,
-                postResult,
+                result: executionResult,
+                user: currentUser,
+                resultId: runnableConfig?.configurable?.resultId as string | undefined,
+                version: runnableConfig?.configurable?.version as number | undefined,
+                canvasId: runnableConfig?.configurable?.canvasId as string | undefined,
               };
             },
           );
 
-          // Treat absence of error logs as success; any error log triggers failure document
-          if (!executionResult.successful) {
-            const errorMessage = executionResult.error ?? 'Tool execution failed';
-            return JSON.stringify({
-              status: 'error',
-              error: errorMessage,
-            });
+          // Use composioPostHandler for billing and result compression
+          const postHandlerInput: ComposioPostHandlerInput = {
+            toolName,
+            toolsetKey: context.toolsetKey,
+            rawResult: result,
+            creditCost: context.creditCost,
+            toolsetName: context.toolsetName,
+            fileNameTitle: (file_name_title as string) || 'untitled',
+            context: {
+              user,
+              resultId,
+              resultVersion: version,
+              canvasId,
+            },
+          };
+
+          const postResult = await this.composioPostHandler.process(postHandlerInput);
+
+          if (result?.successful) {
+            return postResult.content;
           }
-          const dataToReturn =
-            postResult && typeof postResult === 'object' && 'data' in postResult
-              ? (postResult as any).data
-              : (executionResult as any)?.data;
-          return JSON.stringify(dataToReturn ?? null);
+          // Return full result object including logId and other fields
+          return JSON.stringify(result);
         } catch (error) {
           this.logger.error(
             `Failed to execute ${context.authType} tool ${toolName}: ${error instanceof Error ? error.message : error}`,
