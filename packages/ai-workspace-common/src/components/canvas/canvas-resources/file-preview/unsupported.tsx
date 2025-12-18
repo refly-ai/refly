@@ -5,10 +5,11 @@ import type { FileRendererProps } from './types';
 
 interface UnsupportedRendererProps extends FileRendererProps {
   onDownload: () => void;
+  isDownloading?: boolean;
 }
 
 export const UnsupportedRenderer = memo(
-  ({ fileContent, file, onDownload }: UnsupportedRendererProps) => {
+  ({ fileContent, file, onDownload, isDownloading }: UnsupportedRendererProps) => {
     const { contentType } = fileContent;
 
     return (
@@ -19,7 +20,13 @@ export const UnsupportedRenderer = memo(
           <div className="text-sm text-gray-500 mb-4">File type: {contentType}</div>
           <div className="text-sm text-gray-400">Preview not available for this file type</div>
         </div>
-        <Button type="primary" icon={<Download className="w-4 h-4" />} onClick={onDownload}>
+        <Button
+          type="primary"
+          icon={<Download className="w-4 h-4" />}
+          onClick={onDownload}
+          loading={isDownloading}
+          disabled={isDownloading}
+        >
           Download File
         </Button>
       </div>

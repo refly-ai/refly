@@ -45,7 +45,13 @@ export const ImportResourceModal = memo(() => {
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(projectId);
 
   const disableSave = useMemo(() => {
-    return saveLoading || waitingList.length === 0 || waitingList.length > canImportCount;
+    const hasUploadingFiles = waitingList.some((item) => item.file?.status === 'uploading');
+    return (
+      saveLoading ||
+      waitingList.length === 0 ||
+      waitingList.length > canImportCount ||
+      hasUploadingFiles
+    );
   }, [waitingList, canImportCount, saveLoading]);
 
   useEffect(() => {
