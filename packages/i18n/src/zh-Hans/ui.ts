@@ -435,15 +435,10 @@ const translations = {
     uploadFailed: '上传失败',
     upload: {
       notification: {
-        uploading: '正在上传 {{count}} 个文件',
-        progress: '已完成 {{completed}}/{{total}}',
-        complete: '完成',
-        success: '成功上传 {{count}} 个文件',
+        uploading: '文件上传中',
         allUploaded: '上传完成！您上传的文件现在可以使用了',
-        partialSuccess: '上传完成，部分失败',
-        partialSuccessDesc: '成功 {{success}} 个，失败 {{error}} 个',
-        failed: '上传失败',
-        allFailed: '所有文件上传失败',
+        partialSuccessDesc: '上传完成，成功 {{success}} 个，失败 {{error}} 个',
+        allFailed: '文件上传失败',
       },
     },
     errorNotice: {

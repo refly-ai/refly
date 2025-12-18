@@ -103,14 +103,9 @@ const translations = {
     uploadFailed: 'Upload failed',
     upload: {
       notification: {
-        uploading: 'Uploading {{count}} file{{suffix}}',
-        progress: '{{completed}} of {{total}} completed',
-        complete: 'complete',
-        success: 'Successfully uploaded {{count}} file{{suffix}}',
+        uploading: 'Uploading files',
         allUploaded: 'Upload complete! Your content is now ready to be used',
-        partialSuccess: 'Upload completed with some errors',
-        partialSuccessDesc: '{{success}} successful, {{error}} failed',
-        failed: 'Upload failed',
+        partialSuccessDesc: 'Upload completed, {{success}} successful, {{error}} failed',
         allFailed: 'All files failed to upload',
       },
     },
