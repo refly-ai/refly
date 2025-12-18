@@ -34,7 +34,6 @@ import { genSkillID, genMemoID } from '@refly/utils/id';
 import { IContextItem } from '@refly/common-types';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useNodeSize } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-size';
-import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
@@ -47,7 +46,6 @@ export const MemoNode = ({ data, selected, id, isPreview = false, onNodeClick }:
   const setNodeDataByEntity = useSetNodeDataByEntity();
   const { t } = useTranslation();
   const { addNode } = useAddNode();
-  useSelectedNodeZIndex(id, selected);
 
   const { getNode } = useReactFlow();
   const node = getNode(id);

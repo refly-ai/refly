@@ -250,13 +250,13 @@ export const SkillResponseNode = memo(
     // Handle node hover events
     const handleMouseEnter = useCallback(() => {
       setIsHovered(true);
-      onHoverStart();
-    }, [onHoverStart]);
+      onHoverStart(selected);
+    }, [onHoverStart, selected]);
 
     const handleMouseLeave = useCallback(() => {
       setIsHovered(false);
-      onHoverEnd();
-    }, [onHoverEnd]);
+      onHoverEnd(selected);
+    }, [onHoverEnd, selected]);
 
     // Get current pilot session info
     const activeSessionId = usePilotStoreShallow(
