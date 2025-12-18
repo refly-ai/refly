@@ -1058,3 +1058,100 @@ export function extractVolcengineError(response: unknown): string | null {
 
   return `Volcengine error (code: ${resp.code})`;
 }
+
+/**
+ * Options for applying Volcengine signing to an HTTP request
+ */
+export interface ApplyVolcengineSigningOptions {
+  /** Request credentials containing Volcengine auth config */
+  credentials: Record<string, unknown>;
+  /** Request parameters */
+  params: Record<string, unknown>;
+  /** Original endpoint URL */
+  endpoint: string;
+  /** HTTP method */
+  method: string;
+  /** Request data (body) */
+  requestData: unknown;
+  /** Request headers */
+  headers: Record<string, string | undefined>;
+}
+
+/**
+ * Result of applying Volcengine signing
+ */
+export interface ApplyVolcengineSigningResult {
+  /** Whether signing was applied */
+  signed: boolean;
+  /** Final endpoint URL (with Action, Version, and query string if signed) */
+  endpoint: string;
+  /** Updated headers (with signing headers if signed) */
+  headers: Record<string, string | undefined>;
+}
+
+/**
+ * Apply Volcengine HMAC-SHA256 signing to an HTTP request
+ * This is a convenience function that extracts config, signs the request,
+ * and returns the updated endpoint and headers.
+ *
+ * @param options - Signing options
+ * @returns Result with signed endpoint and headers, or original values if signing not applicable
+ */
+export function applyVolcengineSigning(
+  options: ApplyVolcengineSigningOptions,
+): ApplyVolcengineSigningResult {
+  const { credentials, params, endpoint, method, requestData, headers } = options;
+
+  const volcengineConfig = extractVolcengineConfig(credentials, params, endpoint);
+
+  if (!volcengineConfig) {
+    return {
+      signed: false,
+      endpoint,
+      headers,
+    };
+  }
+
+  const url = new URL(endpoint);
+  const host = url.host;
+  const path = url.pathname || '/';
+
+  // Prepare body string for signing
+  let bodyStr = '';
+  if (method.toUpperCase() !== 'GET' && requestData) {
+    if (typeof requestData === 'object') {
+      bodyStr = JSON.stringify(requestData);
+    } else if (typeof requestData === 'string') {
+      bodyStr = requestData;
+    }
+  }
+
+  // Extract existing query parameters (excluding Action/Version which are added by signing)
+  const existingQuery: Record<string, string> = {};
+  url.searchParams.forEach((value, key) => {
+    if (key !== 'Action' && key !== 'Version') {
+      existingQuery[key] = value;
+    }
+  });
+
+  const signResult = signVolcengineRequest(volcengineConfig, {
+    method: method.toUpperCase(),
+    host,
+    path,
+    query: existingQuery,
+    body: bodyStr,
+    contentType: method.toUpperCase() === 'GET' ? undefined : (headers['Content-Type'] as string),
+  });
+
+  // Build updated headers
+  const updatedHeaders: Record<string, string | undefined> = { ...headers };
+  for (const [key, value] of Object.entries(signResult.headers)) {
+    updatedHeaders[key] = value;
+  }
+
+  return {
+    signed: true,
+    endpoint: signResult.url,
+    headers: updatedHeaders,
+  };
+}

@@ -15,7 +15,7 @@ import { AdapterType, HttpMethod, AdapterError } from '../../constant/constant';
 import { BaseAdapter, type IHttpAdapter } from '../core/adapter';
 import { HttpClient } from './http-client';
 import { getToolName, getToolsetKey } from '../../tool-context';
-import { isVolcengineAuth, VolcenginePollingHelper } from './volcengine';
+import { isVolcengineAuth, VolcenginePollingHelper, applyVolcengineSigning } from './volcengine';
 
 /**
  * HTTP adapter for making HTTP API calls with intelligent polling support
@@ -168,11 +168,34 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
         this.addAuthHeaders(headers, request.credentials);
       }
 
-      // Check for Volcengine signing requirement
+      // Apply Volcengine HMAC-SHA256 signing for initial request
       const method = request.method?.toUpperCase() || HttpMethod.POST;
+      let finalEndpoint = request.endpoint;
+
+      if (skipAuth && request.credentials) {
+        const signResult = applyVolcengineSigning({
+          credentials: request.credentials as Record<string, unknown>,
+          params: (params as Record<string, unknown>) || {},
+          endpoint: request.endpoint,
+          method,
+          requestData,
+          headers,
+        });
+
+        if (signResult.signed) {
+          // Apply signed headers
+          for (const [key, value] of Object.entries(signResult.headers)) {
+            if (value !== undefined) {
+              headers[key] = value;
+            }
+          }
+          // Use the signed URL (includes Action, Version, and proper query string)
+          finalEndpoint = signResult.endpoint;
+        }
+      }
       const response = await this.sendHttpRequest(
         method,
-        request.endpoint,
+        finalEndpoint,
         params,
         requestData,
         headers,
