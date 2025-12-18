@@ -146,7 +146,7 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
           </Upload>
         </Form.Item>
         {showError && (
-          <div className="text-red-500 text-xs -mt-4 mb-4">
+          <div className="text-red-500 text-xs mt-1 mb-2">
             {t('canvas.workflow.variables.uploadBeforeRunning') ||
               'Upload a file before running Agent.'}
           </div>

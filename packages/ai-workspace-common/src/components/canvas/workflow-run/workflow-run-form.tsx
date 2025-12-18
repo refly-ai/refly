@@ -414,6 +414,11 @@ export const WorkflowRunForm = ({
     // Mark that user has attempted to submit (for showing validation errors)
     setAttemptedSubmit(true);
 
+    // Check if form is valid - if not, return early (errors will be shown due to attemptedSubmit)
+    if (!isFormValid) {
+      return;
+    }
+
     if (loading || isRunning) {
       return;
     }
@@ -740,11 +745,7 @@ export const WorkflowRunForm = ({
               }
               onClick={workflowIsRunning ? handleAbort : handleRun}
               loading={loading}
-              disabled={
-                loading ||
-                (workflowIsRunning && !executionId) ||
-                (!workflowIsRunning && !isFormValid)
-              }
+              disabled={loading || (workflowIsRunning && !executionId)}
             >
               {workflowIsRunning
                 ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
