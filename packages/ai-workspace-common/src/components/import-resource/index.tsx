@@ -90,7 +90,7 @@ export const ImportResourceModal = memo(() => {
       refetchUsage();
       refetchDriveFiles();
 
-      message.success(t('common.putSuccess'));
+      message.success(t('common.upload.notification.allUploaded'));
 
       const mediaFiles = waitingList.filter(
         (item) =>
