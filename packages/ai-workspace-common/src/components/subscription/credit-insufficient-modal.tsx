@@ -362,19 +362,9 @@ const CreditPacksCard = memo(
     const creditPackOptions: CreditPackOption[] = useMemo(
       () => [
         {
-          id: 'credit_pack_100',
-          price: t('subscription.creditPacks.credit_pack_100.price'),
-          credits: t('subscription.creditPacks.credit_pack_100.credits'),
-        },
-        {
           id: 'credit_pack_1000',
           price: t('subscription.creditPacks.credit_pack_1000.price'),
           credits: t('subscription.creditPacks.credit_pack_1000.credits'),
-        },
-        {
-          id: 'credit_pack_500',
-          price: t('subscription.creditPacks.credit_pack_500.price'),
-          credits: t('subscription.creditPacks.credit_pack_500.credits'),
         },
         {
           id: 'credit_pack_2000',
@@ -525,7 +515,7 @@ export const CreditInsufficientModal = memo(() => {
 
   // Single selection state - can be 'monthly', 'yearly', or a credit pack id
   const [selectedId, setSelectedId] = useState<SelectionId>(
-    hasPaidSubscription && shouldShowCreditPacks ? 'credit_pack_100' : 'yearly',
+    hasPaidSubscription && shouldShowCreditPacks ? 'credit_pack_1000' : 'yearly',
   );
   const [isLoading, setIsLoading] = useState(false);
 
@@ -535,7 +525,7 @@ export const CreditInsufficientModal = memo(() => {
 
     // Only credit packs are shown for paid users (or when Plus card is hidden) — default to the $1 pack.
     if (hasPaidSubscription && shouldShowCreditPacks) {
-      setSelectedId('credit_pack_100');
+      setSelectedId('credit_pack_1000');
       return;
     }
 
