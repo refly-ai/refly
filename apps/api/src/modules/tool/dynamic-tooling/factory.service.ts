@@ -225,6 +225,7 @@ export class ToolFactory {
             runManager,
             langchainConfig: runnableConfig as SkillRunnableConfig,
             requestId: `tool-${definition.name}-${Date.now()}`,
+            metadata: { toolName: definition.name, toolsetKey: config.inventoryKey },
           },
           async () => {
             // Prepare request with defaults and resource preprocessing

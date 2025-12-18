@@ -14,6 +14,8 @@ import { supportedMimeTypes } from 'file-type';
 import { AdapterType, HttpMethod, AdapterError } from '../../constant/constant';
 import { BaseAdapter, type IHttpAdapter } from '../core/adapter';
 import { HttpClient } from './http-client';
+import { getToolName, getToolsetKey } from '../../tool-context';
+import { isVolcengineAuth, VolcenginePollingHelper } from './volcengine';
 
 /**
  * HTTP adapter for making HTTP API calls with intelligent polling support
@@ -86,6 +88,22 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
     initialResponse: AdapterResponse,
     request: AdapterRequest,
   ): Promise<AdapterResponse> {
+    const toolsetKey = getToolsetKey() || '';
+    // Use Volcengine-specific polling for Volcengine toolsets
+    // This handles task_id extraction from data.task_id (not request_id)
+    if (toolsetKey.startsWith('volcengine')) {
+      const volcengineHelper = new VolcenginePollingHelper();
+      return await volcengineHelper.handleVolcenginePolling(initialResponse, {
+        httpClient: this.httpClient,
+        pollingConfig: this.pollingConfig!,
+        credentials: request.credentials || {},
+        params: (request.params as Record<string, unknown>) || {},
+        headers: request.headers,
+        timeout: request.timeout,
+        toolName: getToolName() || undefined,
+      });
+    }
+
     // Auto-detect task ID from initial response
     const taskId = this.autoDetectTaskId(initialResponse.data);
     if (!taskId) {
@@ -119,10 +137,6 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
         ...request.headers,
       };
 
-      // Add authentication headers from credentials
-      if (request.credentials) {
-        this.addAuthHeaders(headers, request.credentials);
-      }
       // Prepare request data
       let requestData: unknown;
       const contentType = headers['Content-Type'] || headers['content-type'];
@@ -144,7 +158,17 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
         }
       }
 
-      // Execute request based on HTTP method
+      // Add authentication headers from credentials
+      // Skip addAuthHeaders for Volcengine auth since it has its own signing
+      const skipAuth =
+        getToolsetKey().startsWith('volcengine') ||
+        (request.credentials && isVolcengineAuth(request.credentials as Record<string, unknown>));
+
+      if (request.credentials && !skipAuth) {
+        this.addAuthHeaders(headers, request.credentials);
+      }
+
+      // Check for Volcengine signing requirement
       const method = request.method?.toUpperCase() || HttpMethod.POST;
       const response = await this.sendHttpRequest(
         method,
@@ -524,31 +548,6 @@ export class HttpAdapter extends BaseAdapter implements IHttpAdapter {
     }
 
     return null;
-  }
-
-  /**
-   * Auto-download file if response contains URL pointing to binary content
-   * If URL returns non-binary content (like JSON), return original data
-   */
-  private async autoDownloadIfNeeded(data: any, taskId: string): Promise<any> {
-    // Recursively find all URLs
-    const urls = this.findAllUrls(data);
-
-    if (urls.length === 0) {
-      return data;
-    }
-
-    // Check if the URL points to downloadable binary content
-    const primaryUrl = urls[0];
-    const isDownloadable = await this.isDownloadableUrl(primaryUrl.value);
-
-    if (!isDownloadable) {
-      this.logger.log(`URL ${primaryUrl.path} does not point to binary content, skipping download`);
-      return data;
-    }
-
-    this.logger.log(`🔽 Downloading from: ${primaryUrl.path} = ${primaryUrl.value}`);
-    return await this.downloadFile(primaryUrl.value, data, taskId);
   }
 
   /**

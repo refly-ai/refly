@@ -25,7 +25,14 @@ import {
   removeFieldsRecursively,
   type ResourceField,
 } from './utils/schema-utils';
-import { getCanvasId, getCurrentUser, getResultId, getResultVersion } from './tool-context';
+import {
+  getCanvasId,
+  getCurrentUser,
+  getResultId,
+  getResultVersion,
+  getToolName,
+  getToolsetKey,
+} from './tool-context';
 
 /**
  * Error thrown when fileId format is invalid
@@ -697,6 +704,17 @@ export class ResourceHandler {
     title: string,
     fallbackMediaType: string,
   ): { filename: string; contentType: string } {
+    // Special handling for generate-avatar-video: force mp4 extension
+    if (getToolsetKey()?.startsWith('volcengine') && getToolName() === 'generate-avatar-video') {
+      const baseName = title
+        ? title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '')
+        : `avatar_video_${Date.now()}`;
+      return {
+        filename: `${baseName}.mp4`,
+        contentType: 'video/mp4',
+      };
+    }
+
     if (!url) {
       const extension = mime.getExtension(fallbackMediaType) || fallbackMediaType;
       const baseName = title

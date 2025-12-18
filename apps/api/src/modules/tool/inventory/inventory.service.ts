@@ -316,12 +316,34 @@ export class ToolInventoryService implements OnModuleInit {
       };
     });
 
-    const credentials = inventory.apiKey
-      ? {
-          apiKey: inventory.apiKey,
-          ...(apiKeyHeaderFromAdapter ? { apiKeyHeader: apiKeyHeaderFromAdapter } : {}),
+    // Build credentials from inventory.apiKey and any auth config from adapter
+    // Collect auth configs from all methods (should be same for all methods in a toolset)
+    const authConfigFromAdapter = parsedMethods.reduce(
+      (acc, method) => {
+        const methodObj = dedupedMethods.find((m) => m.name === method.name);
+        if (methodObj?.adapterConfig) {
+          try {
+            const config = JSON.parse(methodObj.adapterConfig);
+            if (config.auth) {
+              return config.auth;
+            }
+          } catch {
+            // Ignore parse errors
+          }
         }
-      : undefined;
+        return acc;
+      },
+      undefined as Record<string, unknown> | undefined,
+    );
+
+    const credentials =
+      inventory.apiKey || authConfigFromAdapter
+        ? {
+            ...(inventory.apiKey ? { apiKey: inventory.apiKey } : {}),
+            ...(apiKeyHeaderFromAdapter ? { apiKeyHeader: apiKeyHeaderFromAdapter } : {}),
+            ...(authConfigFromAdapter ? { auth: authConfigFromAdapter } : {}),
+          }
+        : undefined;
 
     return {
       inventoryKey: inventory.key,

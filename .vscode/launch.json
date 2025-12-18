@@ -38,60 +38,6 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Debug API (Direct)",
-      "program": "${workspaceFolder}/apps/api/src/main.ts",
-      "preLaunchTask": "npm: build:api",
-      "cwd": "${workspaceFolder}/apps/api",
-      "console": "integratedTerminal",
-      "runtimeArgs": ["--inspect-brk", "-r", "ts-node/register", "-r", "tsconfig-paths/register"],
-      "skipFiles": ["<node_internals>/**"],
-      "sourceMaps": true,
-      "outFiles": ["${workspaceFolder}/apps/api/dist/**/*.js"]
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug Fish TTS - Basic Usage",
-      "program": "${workspaceFolder}/scripts/demo/fish-tts/config-based-demo/examples/basic-usage.ts",
-      "cwd": "${workspaceFolder}/scripts/demo/fish-tts/config-based-demo",
-      "console": "integratedTerminal",
-      "runtimeArgs": ["-r", "ts-node/register"],
-      "skipFiles": ["<node_internals>/**"],
-      "sourceMaps": true,
-      "env": {
-        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.json"
-      }
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug Fish TTS - Custom Handlers",
-      "program": "${workspaceFolder}/scripts/demo/fish-tts/config-based-demo/examples/custom-handlers.ts",
-      "cwd": "${workspaceFolder}/scripts/demo/fish-tts/config-based-demo",
-      "console": "integratedTerminal",
-      "runtimeArgs": ["-r", "ts-node/register"],
-      "skipFiles": ["<node_internals>/**"],
-      "sourceMaps": true,
-      "env": {
-        "TS_NODE_PROJECT": "${workspaceFolder}/tsconfig.json"
-      }
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug Tool Service Tests",
-      "program": "${workspaceFolder}/node_modules/.bin/jest",
-      "args": ["--runInBand", "--no-cache", "--watchAll=false", "tool.service.spec.ts"],
-      "cwd": "${workspaceFolder}/apps/api",
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "env": {
-        "NODE_ENV": "test"
-      }
-    },
-    {
-      "type": "node",
-      "request": "launch",
       "name": "Debug Backend",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "api", "dev"],
