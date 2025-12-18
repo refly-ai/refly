@@ -61,3 +61,23 @@ export function extractErrorMessage(output: ExecutorOutput): string {
 
   return '';
 }
+
+/**
+ * Extract warnings from executor log
+ *
+ * Executor log format:
+ * - [INFO] Inline code: 45 bytes
+ * - [WARN] ⚠️ File 'x' exists, saved as 'revN--x'. Please save to a different filename.
+ *
+ * @param log - Executor log string with [WARN], [INFO] prefixes
+ * @returns Array of warning messages (without [WARN] prefix)
+ */
+export function extractWarnings(log: string | undefined): string[] {
+  if (!log) return [];
+
+  return log
+    .split('\n')
+    .filter((line) => line.startsWith('[WARN]'))
+    .map((line) => line.replace(/^\[WARN\]\s*/, '').trim())
+    .filter(Boolean);
+}

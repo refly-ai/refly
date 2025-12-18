@@ -271,14 +271,15 @@ const translations = {
       coupon: '优惠券',
       validFor: '有效期 {{days}} 天',
       nonPlusUserDesc1:
-        '为了感谢你贡献了如此优秀的模板到 Marketplace，我们特别奖励你 ${{value}} 优惠券。',
+        '感谢你贡献如此优秀的模板，我们为你准备了一张 Plus 会员 {{voucherValue}} 折优惠券。',
       nonPlusUserDesc2: '仅需 ${{discountedPrice}} 即可享受完整权益！',
-      plusUserDesc1: '为了感谢你的出色工作，我们特别奖励你 ${{value}} 优惠券。',
-      plusUserDesc2: '邀请朋友通过你的链接注册并购买会员，双方都将获得奖励：',
+      plusUserDesc1:
+        '感谢你贡献如此优秀的模板，我们为你准备了一张 Plus 会员 {{voucherValue}} 折优惠券。',
+      plusUserDesc2: '邀请朋友通过你的链接注册并购买会员，你将获得 2000 积分奖励。',
       plusUserReward1: '你：+2,000 额外积分',
       plusUserReward2: '你的朋友：购买会员时享受特别折扣。',
-      plusUserClaimedDesc: '你已经是 Plus 会员了。\n把这张优惠券送给朋友吧！',
-      claimedDesc: '{{name}} 送你一张优惠券 — 快来领取吧！',
+      plusUserClaimedDesc: '你已经是 Plus 会员了，把这张优惠券送给朋友吧！',
+      claimedDesc: '升级 Refly.ai Plus 会员，畅享 Gemini 3 等高级模型。',
       useNow: '立即使用',
       useCoupon: '使用优惠券',
       shareWithFriend: '分享给朋友',
@@ -286,11 +287,13 @@ const translations = {
       claim: '领取',
     },
     share: {
-      posterTitle: '仅需 ${{discountedPrice}}\n解锁 Plus！',
-      posterDesc: '诚邀您以 {{discount}} 折扣享受 Refly Plus 完整权益。',
-      ctaText: '加入 Refly AI，{{discount}} 优惠券助你起步！',
+      posterTitle: '仅需 ${{discountedPrice}}\n即可升级 Plus 会员！',
+      posterDesc:
+        '使用 {{voucherValue}} 折优惠，升级 Refly.ai Plus 会员，畅享完整功能与更高使用上限。',
+      ctaText: '加入 Refly AI，使用 {{voucherValue}} 折 Plus 优惠券开始体验！',
       validDays: '有效期 7 天。',
       linkCopied: '链接已复制！',
+      copied: '已复制',
       copyFailed: '复制失败',
       downloaded: '已下载',
       downloadFailed: '下载失败',
@@ -3327,6 +3330,10 @@ const translations = {
         generating: '生成工作流中...',
         invalidData: '无效的工作流数据',
       },
+      internalTool: {
+        readFile: '阅读',
+        listFiles: '翻阅文件列表',
+      },
     },
     artifact: {
       webRender: '网页渲染',
@@ -3381,7 +3388,7 @@ const translations = {
       subtitle: '一起探索好奇心',
       youCanTry: '获取新灵感',
       query1:
-        '使用13F数据工具研究沃伦·巴菲特在2025年第二季度与第三季度的持仓情况，列出所有增持和减持的股票，并生成一份包含简易图表的摘要。',
+        '使用 Perplexity 查找十位制作过该产品相关视频的高浏览量 YouTube 创作者，进行分析和比较，并将报告通过电子邮件发送给我。',
       query2:
         '使用 Perplexity 获取昨天 Product Hunt 排行榜前五的产品，创建一份摘要文档和一集播客，并通过电子邮件发送给我。',
       query3:

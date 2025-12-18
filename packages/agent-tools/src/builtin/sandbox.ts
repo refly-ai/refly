@@ -40,6 +40,7 @@ export class BuiltinExecuteCode extends AgentBaseTool<BuiltinSandboxParams> {
 - 🔸 Include ALL necessary imports in EVERY code block
 - 🔸 Reload data from files when continuing previous work
 - 🔸 Write self-contained code (treat each call as a fresh Python session)
+- 🔸 Treat ALL WARNINGS strictly, they are always related to prohibited operations
 
 # Installed Packages (Python)
 
@@ -47,10 +48,13 @@ export class BuiltinExecuteCode extends AgentBaseTool<BuiltinSandboxParams> {
 - **Machine learning**: scikit-learn
 - **Symbolic math**: sympy
 - **Visualization**: matplotlib, seaborn, plotly
-- **Image**: pillow
+- **Image**: pillow, opencv-python-headless
+- **Video**: moviepy
+- **Audio**: pydub
 - **File processing**: openpyxl, python-docx, pypdf, pymupdf, reportlab, python-pptx
 - **Format parsing**: pyyaml, toml, orjson, lxml, beautifulsoup4
 - **Network**: requests
+- **Text / NLP**: jieba, feedparser
 - **Utilities**: python-dateutil, pytz, tabulate
 
 # Example
@@ -125,6 +129,7 @@ plt.savefig('chart.png')
         const exitCode = result.data?.exitCode ?? 0;
         const executionTime = result.data?.executionTime || 0;
         const files = result.data?.files || [];
+        const warnings = result.data?.warnings;
 
         // Code error: exitCode != 0 means user's code has issues
         if (exitCode !== 0) {
@@ -132,7 +137,6 @@ plt.savefig('chart.png')
             status: 'error',
             error: error || 'Code execution returned non-zero exit code',
             data: { output, exitCode, executionTime },
-            summary: this.formatCodeErrorSummary(error, output),
             creditCost: 1,
           };
         }
@@ -146,8 +150,8 @@ plt.savefig('chart.png')
             executionTime,
             parentResultId: config.configurable?.resultId,
             files,
+            warnings,
           },
-          summary: this.formatSuccessSummary(output, files),
           creditCost: 1,
         };
       }
@@ -160,57 +164,11 @@ plt.savefig('chart.png')
       return {
         status: 'error',
         error: errorMsg,
-        summary: `[SYSTEM_ERROR] ${errorMsg}`,
       };
     }
   }
 
-  private formatSuccessSummary(
-    output: string,
-    files: Array<{ name?: string; storageKey?: string }>,
-  ): string {
-    // Summary should be concise since data.output already contains full content
-    const parts: string[] = [];
-
-    if (files.length > 0) {
-      const fileNames = files.map((f) => f.name || f.storageKey || 'unnamed').join(', ');
-      parts.push(`[OK] Files created: ${fileNames}`);
-    } else if (output) {
-      parts.push('[OK] Execution completed with output');
-    } else {
-      parts.push('[OK] Execution completed (no output)');
-    }
-
-    return parts.join('\n');
-  }
-
-  private formatCodeErrorSummary(error: string, output: string): string {
-    const MAX_ERROR_LENGTH = 1500;
-    const MAX_OUTPUT_LENGTH = 500;
-
-    const truncatedError =
-      error.length > MAX_ERROR_LENGTH
-        ? `${error.slice(0, MAX_ERROR_LENGTH)}... [truncated]`
-        : error;
-
-    const parts = [`[CODE_ERROR] ${truncatedError}`];
-
-    if (output) {
-      const truncatedOutput =
-        output.length > MAX_OUTPUT_LENGTH
-          ? `${output.slice(0, MAX_OUTPUT_LENGTH)}... [truncated]`
-          : output;
-      parts.push(`Output before error: ${truncatedOutput}`);
-    }
-
-    parts.push('Fix the code and retry.');
-
-    return parts.join('\n');
-  }
-
   private formatSystemError(errors?: Array<{ code?: string; message?: string }>): ToolCallResult {
-    const TRANSIENT_ERROR_CODE = 'SANDBOX_TRANSIENT_ERROR';
-
     if (!errors || errors.length === 0) {
       return {
         status: 'error',
@@ -220,16 +178,11 @@ plt.savefig('chart.png')
     }
 
     const errorMessages = errors.map((e) => e.message || e.code || 'Unknown').join('; ');
-    const isTransient = errors.some((e) => e.code === TRANSIENT_ERROR_CODE);
-
-    const summary = isTransient
-      ? `[SYSTEM_ERROR] ${errorMessages}\nThis is a temporary issue. Retry the request.`
-      : `[SYSTEM_ERROR] ${errorMessages}`;
 
     return {
       status: 'error',
       error: errorMessages,
-      summary,
+      // summary,
     };
   }
 }

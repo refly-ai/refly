@@ -3230,6 +3230,10 @@ const translations = {
         generating: 'Generating workflow...',
         invalidData: 'Invalid workflow data',
       },
+      internalTool: {
+        readFile: 'Reading',
+        listFiles: 'Browsing file list',
+      },
     },
   },
   copilot: {
@@ -3246,7 +3250,7 @@ const translations = {
       subtitle: 'Explore your curiosity together',
       youCanTry: 'Get new inspiration',
       query1:
-        "Use a 13F data tool to research Warren Buffett's holdings in Q2 vs Q3 2025, list all increases and decreases, and generate a summary with simple charts.",
+        'Using perplexity to find 10 high-view YouTube creators who’ve made videos about the product, then analyze and compare them and email me the report.',
       query2:
         "Use Perplexity to fetch yesterday's Product Hunt Top 5, create a summary document and a podcast, and email them to me.",
       query3:
@@ -3938,15 +3942,16 @@ const translations = {
       coupon: 'Coupon',
       validFor: 'Valid for {{days}} days',
       nonPlusUserDesc1:
-        "To celebrate your amazing work, we're giving you a ${{value}} discount—our way of saying thanks for contributing such a high-quality template to the Marketplace.",
+        "To celebrate your amazing work, we're giving you a {{discountPercent}}% off coupon - our way of saying thanks for contributing such a high-quality template.",
       nonPlusUserDesc2: 'Enjoy full access for just ${{discountedPrice}}!',
-      plusUserDesc1: "To celebrate your amazing work, we're giving you a ${{value}} discount.",
+      plusUserDesc1:
+        "To celebrate your amazing work, we're giving you a {{discountPercent}}% off coupon.",
       plusUserDesc2:
-        "Invite a friend to register with your link and purchase a membership, and you'll both get rewards:",
+        "Invite a friend to sign up and purchase a membership using your link, and you'll receive 2,000 bonus credits.",
       plusUserReward1: 'You: +2,000 bonus credits',
       plusUserReward2: 'Your friend: A special discount for their membership purchase.',
-      plusUserClaimedDesc: "You're already a Plus member.\nGift this voucher to a friend!",
-      claimedDesc: '{{name}} sent you a coupon — go claim it!',
+      plusUserClaimedDesc: "You're already a Plus member. Gift this coupon to a friend!",
+      claimedDesc: 'Upgrade to Refly.ai Plus and unlock advanced models like Gemini 3.',
       useNow: 'Use It Now',
       useCoupon: 'Use Coupon',
       shareWithFriend: 'Share With Friend',
@@ -3959,6 +3964,7 @@ const translations = {
       ctaText: 'Join Refly AI, a {{discount}} Coupon to get you started!',
       validDays: 'Valid for 7 days.',
       linkCopied: 'Link copied!',
+      copied: 'Copied',
       copyFailed: 'Copy failed',
       downloaded: 'Downloaded',
       downloadFailed: 'Download failed',
