@@ -127,7 +127,7 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
         }
       }
     },
-    [duplicateNode, canvasId, readonly, workflowIsRunning, nodeActionEmitter, safeJsonParse],
+    [duplicateNode, canvasId, readonly, workflowIsRunning, safeJsonParse, getNode],
   );
 
   /**
