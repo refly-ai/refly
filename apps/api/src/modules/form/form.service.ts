@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { FormDefinition, FormSubmission } from '@refly/openapi-schema';
 import { ConfigService } from '@nestjs/config';
+import { logEvent, updateUserProperties } from '@refly/telemetry-node';
 
 @Injectable()
 export class FormService {
@@ -9,6 +10,20 @@ export class FormService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {}
+
+  private extractRoleFromAnswers(answers: string): string | null {
+    if (!answers?.trim()) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(answers) as { role?: unknown } | null;
+      const role = typeof parsed?.role === 'string' ? parsed.role.trim() : null;
+      return role || null;
+    } catch {
+      return null;
+    }
+  }
 
   async getFormDefinition(_uid: string): Promise<FormDefinition | null> {
     const formDefinition = await this.prisma.formDefinition.findFirst();
@@ -42,7 +57,7 @@ export class FormService {
     // Update user preferences
     const user = await this.prisma.user.findUnique({
       where: { uid },
-      select: { preferences: true },
+      select: { email: true, preferences: true, uid: true },
     });
 
     const currentPreferences = user?.preferences ? JSON.parse(user.preferences) : {};
@@ -57,6 +72,13 @@ export class FormService {
         preferences: JSON.stringify(updatedPreferences),
       },
     });
+
+    const role = this.extractRoleFromAnswers(formSubmission.answers);
+    if (role) {
+      updateUserProperties({ uid, email: user?.email }, { user_identity: role });
+    }
+
+    logEvent({ uid, email: user?.email }, 'form_submit', null);
   }
 
   async hasFilledForm(uid: string): Promise<boolean> {
