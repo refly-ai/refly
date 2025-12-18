@@ -493,17 +493,11 @@ export class SkillService implements OnModuleInit {
     const routingContext: RoutingContext = {
       llmItems,
       userId: user.uid,
-      // Association info (for linking routing result to action result)
       actionResultId: resultId,
       actionResultVersion,
-      // Task metadata
       mode: param.mode,
-      skillName: param.skillName,
-      // Input features
       inputPrompt: param.input?.query,
-      inputLength: param.input?.query?.length ?? 0,
-      // Tool features
-      toolsets: param.toolsets, // For toolsetInventoryKeys matching
+      toolsets: param.toolsets,
     };
 
     // Use rule-based router service for routing decisions

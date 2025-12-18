@@ -27,21 +27,12 @@ export interface RuleCondition {
    * Used for matching specific toolsets like "fal_image", "fal_video", etc.
    */
   toolsetInventoryKeys?: string[];
+}
 
-  /**
-   * Input length limits (estimated tokens or characters).
-   * Used to distinguish short tasks from long context tasks.
-   */
-  inputLength?: {
-    min?: number;
-    max?: number;
-  };
-
-  /**
-   * Regex pattern.
-   * Used to match specific instructions in User Prompt or System Prompt.
-   */
-  regex?: string;
+export enum RoutingStrategy {
+  RULE_BASED = 'rule_based', // Rule-based routing
+  TOOL_BASED = 'tool_based', // Tool-based routing
+  FALLBACK = 'fallback', // Fallback to legacy routing
 }
 
 /**
@@ -67,7 +58,6 @@ export interface RoutingContext {
    */
   userId: string;
 
-  // ===== Association info =====
   /**
    * Action result ID (for associating routing decision with execution result)
    */
@@ -78,29 +68,16 @@ export interface RoutingContext {
    */
   actionResultVersion?: number;
 
-  // ===== Task metadata =====
   /**
    * Mode (e.g., 'copilot_agent', 'node_agent')
    */
   mode?: string;
 
   /**
-   * Skill name (e.g., 'summarize_page')
-   */
-  skillName?: string;
-
-  // ===== Input features =====
-  /**
    * User original input (for regex matching, note: not stored for privacy)
    */
   inputPrompt?: string;
 
-  /**
-   * Character count or estimated token count
-   */
-  inputLength?: number;
-
-  // ===== Tool features =====
   /**
    * Toolsets selected for the skill invocation
    * Used for tool-based routing to check for specific tools
@@ -125,7 +102,7 @@ export interface RoutingResult {
   /**
    * Strategy used for routing
    */
-  strategy: 'rule_based' | 'tool_based' | 'fallback' | 'random';
+  strategy: RoutingStrategy;
 
   /**
    * Matched rule (if any)
@@ -134,6 +111,104 @@ export interface RoutingResult {
     ruleId: string;
     ruleName: string;
   };
+}
+
+/**
+ * Rule-based router that handles rule matching and selection
+ * Encapsulates all rule-based routing logic without external dependencies
+ */
+class RuleRouter {
+  private readonly logger = new Logger(RuleRouter.name);
+
+  constructor(private readonly context: RoutingContext) {}
+
+  route(
+    rules: AutoModelRoutingRuleModel[],
+    modelMap: Map<string, ProviderItemModel>,
+  ): {
+    providerItem: ProviderItemModel;
+    matchedRule: { ruleId: string; ruleName: string };
+  } | null {
+    for (const rule of rules) {
+      if (this.matchRule(rule)) {
+        const target = safeParseJSON(rule.target) as RoutingTarget;
+        if (!target) {
+          continue;
+        }
+
+        const selectedModel = this.selectModelFromTarget(target, modelMap);
+        if (selectedModel) {
+          return {
+            providerItem: selectedModel,
+            matchedRule: {
+              ruleId: rule.ruleId,
+              ruleName: rule.ruleName,
+            },
+          };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private matchRule(rule: AutoModelRoutingRuleModel): boolean {
+    const condition = safeParseJSON(rule.condition) as RuleCondition;
+    return this.matchCondition(condition);
+  }
+
+  /**
+   * Check if context matches rule conditions
+   * All defined conditions must be satisfied (AND logic)
+   * Note: Scene matching is done at the database query level via the `scene` column
+   */
+  private matchCondition(condition?: RuleCondition): boolean {
+    // condition can be empty (matches all requests for this scene)
+    if (!condition) {
+      return true;
+    }
+
+    // Match toolset inventory keys
+    if (condition.toolsetInventoryKeys && condition.toolsetInventoryKeys.length > 0) {
+      if (!this.matchToolsetInventoryKeys(condition.toolsetInventoryKeys)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Check if any toolset inventory key matches the provided keys
+   * This is used for matching specific toolsets like "fal_image", "fal_video", etc.
+   */
+  private matchToolsetInventoryKeys(inventoryKeys: string[]): boolean {
+    const toolsets = this.context.toolsets;
+    if (!toolsets || toolsets.length === 0) {
+      return false;
+    }
+
+    const keysSet = new Set(inventoryKeys);
+
+    for (const toolset of toolsets) {
+      const inventoryKey = toolset.toolset?.key;
+      if (inventoryKey && keysSet.has(inventoryKey)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Select a model based on target configuration
+   */
+  private selectModelFromTarget(
+    target: RoutingTarget,
+    modelMap: Map<string, ProviderItemModel>,
+  ): ProviderItemModel | null {
+    return modelMap.get(target.model) ?? null;
+  }
 }
 
 /**
@@ -172,27 +247,6 @@ export class AutoModelRoutingService {
   }
 
   /**
-   * Get rules from database filtered by scene (no caching for easier testing)
-   */
-  private async getRulesAsync(scene: string): Promise<AutoModelRoutingRuleModel[]> {
-    try {
-      return await this.prisma.autoModelRoutingRule.findMany({
-        where: {
-          enabled: true,
-          scene,
-          deletedAt: null,
-        },
-        orderBy: {
-          priority: 'desc',
-        },
-      });
-    } catch (error) {
-      this.logger.error('Failed to fetch rules', error);
-      return [];
-    }
-  }
-
-  /**
    * Route Auto model to the target model based on rules
    * This method implements a multi-tier priority system:
    * 1. Rule-based routing (from database rules)
@@ -227,7 +281,7 @@ export class AutoModelRoutingService {
       return {
         providerItem: chatItem,
         routingResultId,
-        strategy: 'fallback',
+        strategy: RoutingStrategy.FALLBACK,
       };
     }
 
@@ -235,7 +289,7 @@ export class AutoModelRoutingService {
     const derivedScene = this.deriveSceneFromMode(context.mode);
 
     // Check if derived scene matches external scene for logging
-    const shouldLogResult = derivedScene === externalScene;
+    const shouldSaveRoutingResult = derivedScene === externalScene;
 
     // Build model map for routing
     const modelMap = this.buildModelMap(context.llmItems);
@@ -244,12 +298,12 @@ export class AutoModelRoutingService {
     const ruleResult = await this.routeByRules(context, modelMap, derivedScene);
     if (ruleResult) {
       // Log routing result asynchronously only if scenes match
-      if (shouldLogResult) {
-        this.logRoutingResult(
+      if (shouldSaveRoutingResult) {
+        this.saveRoutingResult(
           routingResultId,
           context,
           ruleResult,
-          'rule_based',
+          RoutingStrategy.RULE_BASED,
           originalItemId,
           originalModelId,
           derivedScene,
@@ -263,7 +317,7 @@ export class AutoModelRoutingService {
       return {
         providerItem: ruleResult.providerItem,
         routingResultId,
-        strategy: 'rule_based',
+        strategy: RoutingStrategy.RULE_BASED,
         matchedRule: ruleResult.matchedRule,
       };
     }
@@ -272,12 +326,12 @@ export class AutoModelRoutingService {
     const toolBasedItem = this.tryToolBasedRouting(context, modelMap, derivedScene);
     if (toolBasedItem) {
       // Log tool-based routing result asynchronously only if scenes match
-      if (shouldLogResult) {
-        this.logRoutingResult(
+      if (shouldSaveRoutingResult) {
+        this.saveRoutingResult(
           routingResultId,
           context,
           { providerItem: toolBasedItem },
-          'tool_based',
+          RoutingStrategy.TOOL_BASED,
           originalItemId,
           originalModelId,
           derivedScene,
@@ -291,17 +345,17 @@ export class AutoModelRoutingService {
       return {
         providerItem: toolBasedItem,
         routingResultId,
-        strategy: 'tool_based',
+        strategy: RoutingStrategy.TOOL_BASED,
       };
     }
 
     // Priority 3: Fallback to legacy routing
     const fallbackItem = this.findAvailableModelLegacy(context.llmItems, modelMap);
-    const strategy = selectAutoModel() ? 'random' : 'fallback';
+    const strategy = RoutingStrategy.FALLBACK;
 
-    // Log fallback routing result asynchronously only if scenes match
-    if (shouldLogResult) {
-      this.logRoutingResult(
+    // Save routing result only if scenes match
+    if (shouldSaveRoutingResult) {
+      this.saveRoutingResult(
         routingResultId,
         context,
         { providerItem: fallbackItem },
@@ -324,7 +378,28 @@ export class AutoModelRoutingService {
   }
 
   /**
-   * Route by database rules
+   * Get rules from database filtered by scene (no caching for easier testing)
+   */
+  private async getRules(scene: string): Promise<AutoModelRoutingRuleModel[]> {
+    try {
+      return await this.prisma.autoModelRoutingRule.findMany({
+        where: {
+          enabled: true,
+          scene,
+          deletedAt: null,
+        },
+        orderBy: {
+          priority: 'desc',
+        },
+      });
+    } catch (error) {
+      this.logger.warn(`Failed to fetch rules for scene ${scene}`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Route by database rules (delegates to RuleRouter)
    * Rules are filtered by scene column and then matched by additional conditions
    */
   private async routeByRules(
@@ -335,104 +410,9 @@ export class AutoModelRoutingService {
     providerItem: ProviderItemModel;
     matchedRule: { ruleId: string; ruleName: string };
   } | null> {
-    const rules = await this.getRulesAsync(scene);
-
-    for (const rule of rules) {
-      const condition = safeParseJSON(rule.condition) as RuleCondition;
-      const target = safeParseJSON(rule.target) as RoutingTarget;
-
-      if (!target) {
-        continue;
-      }
-
-      // condition can be empty (matches all requests for this scene)
-      if (this.matchRule(condition ?? {}, context)) {
-        const selectedModel = this.selectModelFromTarget(target, modelMap);
-        if (selectedModel) {
-          return {
-            providerItem: selectedModel,
-            matchedRule: {
-              ruleId: rule.ruleId,
-              ruleName: rule.ruleName,
-            },
-          };
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Check if context matches rule conditions
-   * All defined conditions must be satisfied (AND logic)
-   * Note: Scene matching is done at the database query level via the `scene` column
-   */
-  private matchRule(condition: RuleCondition, context: RoutingContext): boolean {
-    // Match toolset inventory keys
-    if (condition.toolsetInventoryKeys && condition.toolsetInventoryKeys.length > 0) {
-      if (!this.matchToolsetInventoryKeys(condition.toolsetInventoryKeys, context.toolsets)) {
-        return false;
-      }
-    }
-
-    // Match input length
-    if (condition.inputLength) {
-      const length = context.inputLength ?? 0;
-      if (condition.inputLength.min !== undefined && length < condition.inputLength.min) {
-        return false;
-      }
-      if (condition.inputLength.max !== undefined && length > condition.inputLength.max) {
-        return false;
-      }
-    }
-
-    // Match regex
-    if (condition.regex) {
-      if (!this.matchRegex(condition.regex, context.inputPrompt)) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * Check if any toolset inventory key matches the provided keys
-   * This is used for matching specific toolsets like "fal_image", "fal_video", etc.
-   */
-  private matchToolsetInventoryKeys(inventoryKeys: string[], toolsets?: GenericToolset[]): boolean {
-    if (!toolsets || toolsets.length === 0) {
-      return false;
-    }
-
-    const keysSet = new Set(inventoryKeys);
-
-    for (const toolset of toolsets) {
-      const inventoryKey = toolset.toolset?.key;
-      if (inventoryKey && keysSet.has(inventoryKey)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Check if input matches regex pattern
-   */
-  private matchRegex(pattern: string, input?: string): boolean {
-    if (!input) {
-      return false;
-    }
-
-    try {
-      const regex = new RegExp(pattern, 'i');
-      return regex.test(input);
-    } catch {
-      this.logger.warn(`Invalid regex pattern: ${pattern}`);
-      return false;
-    }
+    const rules = await this.getRules(scene);
+    const ruleRouter = new RuleRouter(context);
+    return ruleRouter.route(rules, modelMap);
   }
 
   /**
@@ -456,16 +436,6 @@ export class AutoModelRoutingService {
   }
 
   /**
-   * Select a model based on target configuration
-   */
-  private selectModelFromTarget(
-    target: RoutingTarget,
-    modelMap: Map<string, ProviderItemModel>,
-  ): ProviderItemModel | null {
-    return modelMap.get(target.model) ?? null;
-  }
-
-  /**
    * Legacy fallback routing logic
    * Keeps backward compatibility with existing behavior
    */
@@ -473,7 +443,7 @@ export class AutoModelRoutingService {
     llmItems: ProviderItemModel[],
     modelMap: Map<string, ProviderItemModel>,
   ): ProviderItemModel {
-    // Priority 1: Try random selection from env var
+    // Priority 1: Try to select a model from the random list
     const selectedCandidate = selectAutoModel();
     if (selectedCandidate) {
       const item = modelMap.get(selectedCandidate);
@@ -482,7 +452,7 @@ export class AutoModelRoutingService {
       }
     }
 
-    // Priority 2: Fallback to priority list
+    // Priority 2: Fallback to AUTO_MODEL_ROUTING_PRIORITY list
     for (const candidateModelId of AUTO_MODEL_ROUTING_PRIORITY) {
       const item = modelMap.get(candidateModelId);
       if (item) {
@@ -490,7 +460,7 @@ export class AutoModelRoutingService {
       }
     }
 
-    // Priority 3: First available model
+    // Priority 3: the first available model
     if (llmItems.length > 0) {
       return llmItems[0];
     }
@@ -556,11 +526,11 @@ export class AutoModelRoutingService {
   /**
    * Log routing result to database (async, non-blocking)
    */
-  private async logRoutingResult(
+  private async saveRoutingResult(
     routingResultId: string,
     context: RoutingContext,
     result: { providerItem: ProviderItemModel; matchedRule?: { ruleId: string; ruleName: string } },
-    strategy: 'rule_based' | 'tool_based' | 'fallback' | 'random',
+    strategy: RoutingStrategy,
     originalItemId: string,
     originalModelId: string,
     scene?: string,

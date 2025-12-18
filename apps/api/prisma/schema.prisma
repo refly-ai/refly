@@ -2229,7 +2229,6 @@ model AutoModelRoutingResult {
   /// Routing result ID (linked to ActionResult)
   routingResultId String @unique @default(uuid()) @map("routing_result_id")
 
-  // ===== Association info =====
   /// User ID
   userId              String  @map("user_id")
   /// Related action result ID (may be null since routing can happen before action creation)
@@ -2237,20 +2236,17 @@ model AutoModelRoutingResult {
   /// Related action result version (combined with actionResultId for unique identification)
   actionResultVersion Int?    @map("action_result_version")
 
-  // ===== Input context features =====
   /// Scene (e.g., "copilot", "agent")
   scene String? @map("scene")
 
-  // ===== Routing decision =====
   /// Routing strategy type
-  /// "rule_based" | "fallback" | "random"
+  /// "rule_based" | "tool_based" | "fallback"
   routingStrategy String  @map("routing_strategy")
   /// Matched rule ID
   matchedRuleId   String? @map("matched_rule_id")
   /// Matched rule name (denormalized for easy viewing)
   matchedRuleName String? @map("matched_rule_name")
 
-  // ===== Model selection =====
   /// Selected provider item ID
   selectedItemId  String  @map("selected_item_id")
   /// Selected model ID
