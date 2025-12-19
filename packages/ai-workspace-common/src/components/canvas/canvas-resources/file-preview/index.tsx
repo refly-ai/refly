@@ -251,10 +251,14 @@ export const FilePreview = memo(
       }
     };
 
+    // Check if the file is a video to skip max-height constraint
+    const isVideo = file?.type?.startsWith('video/');
+
     return (
       <div
-        className={cn('flex-1 h-full overflow-hidden', {
-          'max-h-[230px]': source === 'card',
+        className={cn('flex-1 overflow-hidden', {
+          'h-full': !isVideo,
+          'max-h-[230px]': source === 'card' && !isVideo,
         })}
       >
         {renderFilePreview()}
