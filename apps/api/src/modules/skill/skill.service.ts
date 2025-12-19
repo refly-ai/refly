@@ -44,6 +44,7 @@ import {
   safeStringifyJSON,
   runModuleInitWithTimeoutAndRetry,
   AUTO_MODEL_ID,
+  getModelSceneFromMode,
 } from '@refly/utils';
 import { PrismaService } from '../common/prisma.service';
 import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
@@ -508,14 +509,7 @@ export class SkillService implements OnModuleInit {
 
     // Determine the primary model scene based on mode
     // Only route the primary model, keep auxiliary models unchanged
-    let primaryScene: string;
-    if (param.mode === 'copilot_agent') {
-      primaryScene = 'copilot';
-    } else if (param.mode === 'node_agent') {
-      primaryScene = 'agent';
-    } else {
-      primaryScene = 'chat';
-    }
+    const primaryScene = getModelSceneFromMode(param.mode);
 
     // Route only the primary model through the AutoModelRoutingService
     // Keep all other auxiliary models (titleGeneration, queryAnalysis, image, video, audio) unchanged
@@ -837,13 +831,8 @@ export class SkillService implements OnModuleInit {
 
     // Select model name based on mode to correctly record in action_results
     const getModelNameForMode = (): string => {
-      if (data.mode === 'copilot_agent' && modelConfigMap?.copilot) {
-        return modelConfigMap.copilot.modelId;
-      }
-      if (data.mode === 'node_agent' && modelConfigMap?.agent) {
-        return modelConfigMap.agent.modelId;
-      }
-      return modelConfigMap?.chat?.modelId ?? 'unknown';
+      const scene = getModelSceneFromMode(data.mode);
+      return modelConfigMap?.[scene]?.modelId ?? 'unknown';
     };
     const modelName = getModelNameForMode();
 
