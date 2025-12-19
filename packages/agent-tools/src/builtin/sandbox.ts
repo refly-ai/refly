@@ -151,6 +151,8 @@ plt.savefig('chart.png')
             parentResultId: config.configurable?.resultId,
             warnings,
             files: files.map((origin) => ({
+              type: origin.type,
+              name: origin.name,
               fileId: origin.fileId,
               url: origin.url,
             })),
