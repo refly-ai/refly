@@ -7,7 +7,6 @@ import { ToolCallStatus, parseToolCallStatus } from './types';
 import { CopilotWorkflowPlan } from './copilot-workflow-plan';
 import { WorkflowPlan } from '@refly/canvas-common';
 import { safeParseJSON } from '@refly/utils/parse';
-import { InternalToolRenderer } from './internal-tool-renderers';
 import { ProductCard } from './product-card';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { Button, Typography } from 'antd';
@@ -175,20 +174,6 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   // Check if result exists
   const hasResult = !!resultContent;
 
-  // Parse result content as object for internal tool renderers
-  const resultContentParsed = useMemo(() => {
-    if (!resultContent || typeof resultContent !== 'string') {
-      return {};
-    }
-    try {
-      const parsed = JSON.parse(resultContent);
-      // Handle nested data structure (e.g., { data: { fileName: '...' } })
-      return parsed?.data ?? parsed ?? {};
-    } catch {
-      return {};
-    }
-  }, [resultContent]);
-
   // Compute execution duration when timestamps are provided
   const durationText = useMemo(() => {
     let createdAt: number;
@@ -290,20 +275,6 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   });
   const toolsetDefinition = data?.data?.find((t) => t.key === toolsetKey);
   const toolsetName = toolsetDefinition?.labelDict?.[currentLanguage] ?? toolsetKey;
-
-  // Compact rendering for internal/system-level tools (read_file, list_files)
-  const isInternalTool = toolsetDefinition?.internal === true;
-  if (isInternalTool) {
-    return (
-      <InternalToolRenderer
-        toolsetKey={toolsetKey}
-        toolsetName={toolsetName}
-        toolCallStatus={toolCallStatus}
-        parametersContent={parametersContent as Record<string, unknown>}
-        resultContent={resultContentParsed}
-      />
-    );
-  }
 
   return (
     <>

@@ -155,3 +155,21 @@ export function getResultVersion(): number | undefined {
   const context = asyncLocalStorage.getStore();
   return context?.langchainConfig?.configurable?.version as number | undefined;
 }
+
+/**
+ * Get tool name from context metadata
+ * Returns the current tool/method name being executed
+ */
+export function getToolName(): string {
+  const context = asyncLocalStorage.getStore();
+  return (context?.metadata?.toolName as string) ?? '';
+}
+
+/**
+ * Get toolset key from context metadata
+ * Returns the current toolset key being executed (e.g., 'volcengine', 'heygen')
+ */
+export function getToolsetKey(): string {
+  const context = asyncLocalStorage.getStore();
+  return (context?.metadata?.toolsetKey as string) ?? '';
+}

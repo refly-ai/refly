@@ -1,6 +1,7 @@
 import { Button, Modal, Tooltip, message } from 'antd';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDebouncedCallback } from 'use-debounce';
 import { Play, StopCircle, Preview } from 'refly-icons';
 import { ActionStatus } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
@@ -8,10 +9,7 @@ import { logEvent } from '@refly/telemetry-web';
 interface SkillResponseActionsProps {
   nodeIsExecuting: boolean;
   workflowIsRunning: boolean;
-  // Variant: 'node' shows two buttons (rerunFromHere and rerunSingle), 'preview' shows simple button
   variant?: 'node' | 'preview';
-  // For node variant
-  onRerunSingle?: () => void;
   onRerunFromHere?: () => void;
   // For preview variant
   onRerun?: () => void;
@@ -27,7 +25,6 @@ const SkillResponseActionsComponent = ({
   nodeIsExecuting,
   workflowIsRunning,
   variant = 'node',
-  onRerunSingle,
   onRerunFromHere,
   onRerun,
   onStop,
@@ -47,16 +44,6 @@ const SkillResponseActionsComponent = ({
       ? t('canvas.skillResponse.rerunSingle')
       : t('canvas.skillResponse.runSingle');
 
-  const handleRerunSingleClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (onRerunSingle) {
-        onRerunSingle();
-      }
-    },
-    [onRerunSingle],
-  );
-
   const handleRerunFromHereClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -65,6 +52,16 @@ const SkillResponseActionsComponent = ({
       }
     },
     [onRerunFromHere],
+  );
+
+  const handleRerunClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onRerun) {
+        onRerun();
+      }
+    },
+    [onRerun],
   );
 
   const handleStopClick = useCallback(
@@ -100,16 +97,6 @@ const SkillResponseActionsComponent = ({
     [nodeIsExecuting, onStop, t, logEvent],
   );
 
-  const handleRerunClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (onRerun) {
-        onRerun();
-      }
-    },
-    [onRerun],
-  );
-
   // Determine which icon to show
   const iconSize = variant === 'preview' ? 20 : 12;
   const iconClassName = variant === 'preview' ? '' : 'translate-y-[-1px]';
@@ -123,6 +110,21 @@ const SkillResponseActionsComponent = ({
       ? 'flex items-center justify-center'
       : '!h-5 !w-5 p-0 flex items-center justify-center hover:!bg-refly-tertiary-hover';
 
+  const handleToggleWorkflowRun = useDebouncedCallback(
+    async (e: React.MouseEvent) => {
+      if (nodeIsExecuting) {
+        handleStopClick(e);
+      } else {
+        handleRerunClick(e);
+      }
+    },
+    500,
+    {
+      leading: true,
+      trailing: false,
+    },
+  );
+
   // Preview variant: simple button(s)
   if (variant === 'preview') {
     return (
@@ -130,7 +132,7 @@ const SkillResponseActionsComponent = ({
         <Button
           type="text"
           icon={icon}
-          onClick={nodeIsExecuting ? handleStopClick : handleRerunClick}
+          onClick={handleToggleWorkflowRun}
           disabled={disabled}
           className={buttonClassName}
         />
@@ -158,7 +160,7 @@ const SkillResponseActionsComponent = ({
           type="text"
           size="small"
           icon={icon}
-          onClick={nodeIsExecuting ? handleStopClick : handleRerunSingleClick}
+          onClick={handleToggleWorkflowRun}
           disabled={disabled}
           className={buttonClassName}
           title={singleButtonTitle}

@@ -78,17 +78,9 @@ export class ToolService {
     return key === 'web_search';
   }
 
-  /**
-   * Check if a toolset should be exposed to users in mentionList.
-   * Filters out deprecated and internal (system-level) toolsets.
-   * Internal toolsets are auto-included by the system and not user-selectable.
-   */
-  private shouldExposeToolset(key?: string, options?: { internal?: boolean }): boolean {
+  private shouldExposeToolset(key?: string): boolean {
     if (!key) return true;
-    if (this.isDeprecatedToolset(key)) return false;
-    // Filter out internal/system-level toolsets (e.g., read_file, list_files)
-    if (options?.internal) return false;
-    return true;
+    return !this.isDeprecatedToolset(key);
   }
 
   async getToolsetInventory(): Promise<
@@ -115,8 +107,6 @@ export class ToolService {
 
   /**
    * Load toolset inventory from sources (builtin + external)
-   * Note: This is for /tool/inventory/list API, which includes all tools for rendering.
-   * Internal tools are NOT filtered here as they need to be available for ToolCall rendering.
    */
   private async loadToolsetInventory(): Promise<ToolsetDefinition[]> {
     const builtinInventory = Object.values(builtinToolsetInventory).map((toolset) => ({
@@ -176,18 +166,11 @@ export class ToolService {
     return [...authorizedItems, ...unauthorizedItems];
   }
 
-  /**
-   * List builtin tools for mentionList.
-   * Filters out internal (system-level) tools that are auto-included.
-   */
   listBuiltinTools(): GenericToolset[] {
     return Object.values(builtinToolsetInventory)
       .filter(
         (toolset) =>
-          Boolean(toolset.definition) &&
-          this.shouldExposeToolset(toolset.definition.key, {
-            internal: toolset.definition.internal,
-          }),
+          Boolean(toolset.definition) && this.shouldExposeToolset(toolset.definition.key),
       )
       .map((toolset) => ({
         type: ToolsetType.REGULAR,

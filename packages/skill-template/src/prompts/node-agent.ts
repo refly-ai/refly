@@ -69,15 +69,8 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
 - **Use when**: Time queries with high tolerance for slight inaccuracy
 - **Example**: "What's the weather next week?" → need approximate current date
 
-#### \`list_files\`
-- **Latency**: <1s
-- **Use when**: Need to see what files are available in the current canvas
-- **Returns**: List of files with \`fileId\` and \`fileName\`
-- **Note**: Use the returned \`fileId\` with \`read_file\` to read file content
-
 #### \`read_file\`
 - **Use when**: Quick content overview, check file structure (e.g., CSV first rows)
-- **Input**: \`fileId\` (from context or \`list_files\`), optional \`fileName\` for display
 - **NOT for**:
   - Content already in context (base64 images, inline text)
   - Complex data processing (use \`execute_code\` instead)

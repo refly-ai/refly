@@ -248,13 +248,6 @@ export class SkillEngineService implements OnModuleInit {
         const result = await this.driveService.getDriveFileDetail(user, fileId);
         return result;
       },
-      listFiles: async (user, canvasId) => {
-        const result = await this.driveService.listDriveFiles(user, {
-          canvasId,
-          scope: 'present',
-        });
-        return result;
-      },
       writeFile: async (user, param) => {
         return await this.driveService.createDriveFile(user, param);
       },

@@ -82,7 +82,6 @@ export interface ReflyService {
     options?: { topN?: number; relevanceThreshold?: number },
   ) => Promise<RerankResponse>;
   readFile: (user: User, fileId: string) => Promise<DriveFile>;
-  listFiles: (user: User, canvasId: string) => Promise<DriveFile[]>;
   writeFile: (user: User, param: UpsertDriveFileRequest) => Promise<DriveFile>;
   inMemorySearchWithIndexing: (
     user: User,

@@ -70,13 +70,11 @@ import { AutoModelRouter } from '../provider/auto-model-router.service';
 /**
  * Fixed builtin toolsets that are always available for node_agent mode.
  * These toolsets will be automatically appended to user-selected toolsets.
- * Internal tools (read_file, list_files) are system-level tools hidden from mentionList.
  * Note: IDs must match BuiltinToolsetDefinition.tools[].name for instantiateBuiltinToolsets to work.
  */
 const FIXED_BUILTIN_TOOLSETS: GenericToolset[] = [
   { type: 'regular', id: 'execute_code', name: 'execute_code', builtin: true },
   { type: 'regular', id: 'read_file', name: 'read_file', builtin: true },
-  { type: 'regular', id: 'list_files', name: 'list_files', builtin: true },
   { type: 'regular', id: 'get_time', name: 'get_time', builtin: true },
 ];
 
