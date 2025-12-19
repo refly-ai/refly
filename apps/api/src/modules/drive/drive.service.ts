@@ -1450,7 +1450,12 @@ export class DriveService implements OnModuleInit {
     }
 
     // Step 1: Check if file exists in externalOss (public)
-    const externalObjectInfo = await this.externalOss.statObject(storageKey);
+    let externalObjectInfo: Awaited<ReturnType<typeof this.externalOss.statObject>> | null = null;
+    try {
+      externalObjectInfo = await this.externalOss.statObject(storageKey);
+    } catch (error) {
+      this.logger.debug(`External OSS stat failed for ${storageKey}: ${error.message}`);
+    }
     if (externalObjectInfo) {
       const filename = driveFile.name || path.basename(storageKey) || 'file';
       const contentType =

@@ -360,7 +360,7 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
 
     // Check for placeholder formats
     const hasFileContent = content.includes('file-content://df-');
-    const hasFile = /(?<!-)file:\/\/df-/.test(content);
+    const hasFile = content.includes('file://df-');
 
     if (!hasFileContent && !hasFile) {
       return content;
@@ -369,7 +369,7 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
     try {
       // Match both formats
       const contentMatchPattern = /file-content:\/\/(df-[a-z0-9]+)/gi;
-      const shareMatchPattern = /(?<!-)file:\/\/(df-[a-z0-9]+)/gi;
+      const shareMatchPattern = /file:\/\/(df-[a-z0-9]+)/gi;
 
       const contentMatches = Array.from(content.matchAll(contentMatchPattern));
       const shareMatches = Array.from(content.matchAll(shareMatchPattern));
@@ -429,7 +429,7 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
 
       // Replace file://df-xxx with share page URLs (but not file-content://)
       result = result.replace(
-        /(?<!-)file:\/\/(df-[a-z0-9]+)/gi,
+        /file:\/\/(df-[a-z0-9]+)/gi,
         (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
       );
 
@@ -536,7 +536,7 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
 
     // Check for placeholder formats
     const hasFileContent = content.includes('file-content://df-');
-    const hasFile = /(?<!-)file:\/\/df-/.test(content);
+    const hasFile = content.includes('file://df-');
 
     if (!hasFileContent && !hasFile) {
       return content;
@@ -545,7 +545,7 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
     try {
       // Match both formats
       const contentMatchPattern = /file-content:\/\/(df-[a-z0-9]+)/gi;
-      const shareMatchPattern = /(?<!-)file:\/\/(df-[a-z0-9]+)/gi;
+      const shareMatchPattern = /file:\/\/(df-[a-z0-9]+)/gi;
 
       const contentMatches = Array.from(content.matchAll(contentMatchPattern));
       const shareMatches = Array.from(content.matchAll(shareMatchPattern));
@@ -605,7 +605,7 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
 
       // Replace file://df-xxx with share page URLs (but not file-content://)
       result = result.replace(
-        /(?<!-)file:\/\/(df-[a-z0-9]+)/gi,
+        /file:\/\/(df-[a-z0-9]+)/gi,
         (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
       );
 
@@ -703,7 +703,7 @@ IMPORTANT: Use \`file-content://\` for <img>, <video>, <audio> src attributes. U
 
     // Match both formats: file-content://df-xxx and file://df-xxx
     const contentMatchPattern = /file-content:\/\/(df-[a-zA-Z0-9]+)/g;
-    const shareMatchPattern = /(?<!file-content:\/\/)file:\/\/(df-[a-zA-Z0-9]+)/g;
+    const shareMatchPattern = /file:\/\/(df-[a-zA-Z0-9]+)/g;
 
     const contentMatches = Array.from(html.matchAll(contentMatchPattern));
     const shareMatches = Array.from(html.matchAll(shareMatchPattern));
@@ -764,7 +764,7 @@ IMPORTANT: Use \`file-content://\` for <img>, <video>, <audio> src attributes. U
 
     // Replace file:// with share page URLs (but not file-content://)
     result = result.replace(
-      /(?<!-)file:\/\/(df-[a-zA-Z0-9]+)/g,
+      /file:\/\/(df-[a-zA-Z0-9]+)/g,
       (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
     );
 
