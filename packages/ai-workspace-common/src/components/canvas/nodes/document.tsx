@@ -22,7 +22,6 @@ import { useCreateDocument } from '@refly-packages/ai-workspace-common/hooks/can
 import { useDeleteDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-delete-document';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
-import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { NodeActionButtons } from './shared/node-action-buttons';
 import { message } from 'antd';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
@@ -56,7 +55,6 @@ export const DocumentNode = memo(
     const { setNodeStyle } = useNodeData();
 
     const { getNode } = useReactFlow();
-    useSelectedNodeZIndex(id, selected);
 
     const node = useMemo(() => getNode(id), [id, getNode]);
 

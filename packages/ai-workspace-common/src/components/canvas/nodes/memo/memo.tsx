@@ -47,7 +47,7 @@ export const MemoNode = ({ data, selected, id, isPreview = false, onNodeClick }:
   const { t } = useTranslation();
   const { addNode } = useAddNode();
 
-  const { getNode } = useReactFlow();
+  const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const targetRef = useRef<HTMLDivElement>(null);
   const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
@@ -396,6 +396,15 @@ export const MemoNode = ({ data, selected, id, isPreview = false, onNodeClick }:
     nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
     nodeActionEmitter.on(createNodeEventName(id, 'askAI'), handleNodeAskAI);
     nodeActionEmitter.on(createNodeEventName(id, 'duplicate'), handleNodeDuplicate);
+
+    setNodes((nodes) =>
+      nodes.map((n) => {
+        if (n.id === id) {
+          return { ...n, style: { ...n.style, zIndex: 0 } };
+        }
+        return n;
+      }),
+    );
 
     return () => {
       // Cleanup events when component unmounts

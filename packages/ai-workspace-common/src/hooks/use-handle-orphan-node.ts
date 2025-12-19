@@ -75,6 +75,10 @@ export const useHandleOrphanNode = () => {
     // Process each non-start node
     for (const node of nodes) {
       if (node.type === 'start') continue;
+      if (node.type === 'memo') {
+        disconnectFromStart(node.id);
+        continue;
+      }
 
       const hasUpstream = hasUpstreamConnections(node.id);
       const hasStartConnection = edges?.some(
