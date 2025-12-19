@@ -18,7 +18,6 @@ import { useDeleteNode } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import cn from 'classnames';
-import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { NodeActionButtons } from './shared/node-action-buttons';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
@@ -62,7 +61,6 @@ export const VideoNode = memo(
     const [videoError, setVideoError] = useState(false);
     const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
     const videoRef = useRef<HTMLVideoElement>(null);
-    useSelectedNodeZIndex(id, selected);
     const { addNode } = useAddNode();
     const { addToContext } = useAddToContext();
     const { deleteNode } = useDeleteNode();

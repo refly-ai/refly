@@ -30,7 +30,6 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
-import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { NodeActionButtons } from './shared/node-action-buttons';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
@@ -79,7 +78,6 @@ export const ResourceNode = memo(
     const { edges } = useCanvasData();
     const setNodeDataByEntity = useSetNodeDataByEntity();
     const { getNode } = useReactFlow();
-    useSelectedNodeZIndex(id, selected);
     const updateNodeTitle = useUpdateNodeTitle();
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
     const { setNodeStyle } = useNodeData();

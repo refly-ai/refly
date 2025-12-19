@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { message, QRCode, Avatar, Modal } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { Download, Copy } from 'lucide-react';
+import { Download, Copy, X, Check } from 'lucide-react';
 import { VoucherInvitation } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import cn from 'classnames';
@@ -58,7 +58,13 @@ const ReflyLogo = ({ className }: { className?: string }) => (
 );
 
 // Gradient coupon badge component
-const GradientCouponBadge = ({ discount }: { discount: string }) => (
+const GradientCouponBadge = ({
+  discount,
+  couponLabel,
+}: {
+  discount: string;
+  couponLabel: string;
+}) => (
   <div className="relative w-[140px] h-[66px]">
     {/* Background gradient image */}
     <div className="absolute -inset-x-[17px] -inset-y-[28px] rounded-xl overflow-hidden">
@@ -79,7 +85,7 @@ const GradientCouponBadge = ({ discount }: { discount: string }) => (
         className="text-[12px] font-normal leading-[18px] mt-0.5"
         style={{ color: 'rgba(28, 31, 35, 0.60)' }}
       >
-        Coupon
+        {couponLabel}
       </span>
     </div>
   </div>
@@ -95,9 +101,10 @@ const TicketDivider = () => (
 );
 
 export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: SharePosterProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const posterRef = useRef<HTMLDivElement>(null);
   const [copying, setCopying] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   // Get user info for the poster
@@ -118,25 +125,25 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
   const handleCopyLink = useCallback(async () => {
     setCopying(true);
     try {
-      // Build promotional text with link
-      // Note: We don't use i18n here because it escapes HTML entities in URLs
-      const basePrice = getBaseMonthlyPrice('plus');
-      const discountValue = Math.round((basePrice * discountPercent) / 100);
-      const promotionalText = `Unlock Refly.ai's vibe-workflow and supercharge your automation with Banana Pro, Gemini 3.0, and other top-tier AI models — A $${discountValue} discount to get you started! Join here → ${shareUrl}`;
+      // Build promotional text with link based on language
+      const isZhLang = i18n.language?.startsWith('zh');
+      const promotionalText = isZhLang
+        ? `解锁 Refly.ai Vibe Workflow，用 Gemini 3、Banana Pro 等顶级模型加速你的自动化流程。现在使用 ${voucherValue} 折优惠券开启 Plus 体验 → ${shareUrl}`
+        : `Unlock Refly.ai's vibe-workflow and supercharge your automation with Banana Pro, Gemini 3.0, and other top-tier AI models — ${discountPercent}% discount to get you started! Join here → ${shareUrl}`;
       console.log('[share-poster] promotionalText:', promotionalText);
       console.log('[share-poster] shareUrl:', shareUrl);
       await navigator.clipboard.writeText(promotionalText);
+      setCopied(true);
       message.success(t('voucher.share.linkCopied', 'Link copied!'));
       logEvent('share_link_copied', null, {
         voucher_value: voucherValue,
         user_type: userType,
       });
-      onClose();
     } catch {
       message.error(t('voucher.share.copyFailed', 'Copy failed'));
     }
     setCopying(false);
-  }, [shareUrl, t, discountPercent, onClose, voucherValue, userType]);
+  }, [shareUrl, t, discountPercent, voucherValue, userType, i18n.language]);
 
   const handleDownload = useCallback(async () => {
     if (!posterRef.current || downloading) return;
@@ -167,18 +174,19 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
         voucher_value: voucherValue,
         user_type: userType,
       });
-      onClose();
     } catch (error) {
       console.error('Failed to download poster:', error);
       message.error(t('voucher.share.downloadFailed', 'Download failed'));
     } finally {
       setDownloading(false);
     }
-  }, [downloading, discountPercent, t, onClose, voucherValue]);
+  }, [downloading, discountPercent, t, voucherValue, userType]);
 
   if (!visible) return null;
 
-  const discountText = `${discountPercent}% OFF`;
+  const isZh = i18n.language?.startsWith('zh');
+  const discountText = isZh ? `会员 ${voucherValue}折` : `${discountPercent}% OFF`;
+  const couponLabel = isZh ? '优惠券' : 'Coupon';
   // Calculate discounted price using shared pricing constant
   const originalPrice = getBaseMonthlyPrice('plus');
   const discountedPrice = Math.round(originalPrice * (1 - discountPercent / 100));
@@ -234,7 +242,7 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
                 <ReflyLogo />
                 <span className="text-base font-semibold text-gray-900">Refly AI</span>
               </div>
-              <GradientCouponBadge discount={discountText} />
+              <GradientCouponBadge discount={discountText} couponLabel={couponLabel} />
             </div>
 
             {/* User Info */}
@@ -263,7 +271,7 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
               {t(
                 'voucher.share.posterDesc',
                 "You're invited to enjoy full access to Refly Plus with a {{discount}} discount.",
-                { discount: discountText },
+                { discount: discountText, voucherValue },
               )}
             </p>
 
@@ -283,7 +291,7 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
                   {t(
                     'voucher.share.ctaText',
                     'Join Refly AI, a {{discount}} Coupon to get you started!',
-                    { discount: discountText },
+                    { discount: discountText, voucherValue },
                   )}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
@@ -312,11 +320,28 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
           <button
             type="button"
             onClick={handleCopyLink}
-            disabled={copying}
-            className="flex items-center gap-2 px-7 py-2.5 bg-gray-900 text-white font-medium text-sm rounded-full hover:bg-gray-800 active:bg-gray-700 transition-colors duration-150 disabled:opacity-50"
+            disabled={copying || copied}
+            className={cn(
+              'flex items-center gap-2 px-7 py-2.5 font-medium text-sm rounded-full transition-colors duration-150 disabled:opacity-50',
+              copied
+                ? 'bg-emerald-600 text-white'
+                : 'bg-gray-900 text-white hover:bg-gray-800 active:bg-gray-700',
+            )}
           >
-            <Copy className="w-4 h-4" />
-            <span>{t('voucher.share.copyLink', 'Copy link')}</span>
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            <span>
+              {copied
+                ? t('voucher.share.copied', 'Copied')
+                : t('voucher.share.copyLink', 'Copy link')}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center justify-center w-10 h-10 bg-white text-gray-600 rounded-full border border-gray-200 hover:bg-gray-50 active:bg-gray-100 transition-colors duration-150"
+            aria-label={t('common.close', 'Close')}
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
       </div>

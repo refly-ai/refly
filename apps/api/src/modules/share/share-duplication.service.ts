@@ -970,6 +970,30 @@ export class ShareDuplicationService {
 
     await Promise.all([...libDupPromises, ...skillDupPromises]);
 
+    // Update resultId for duplicated drive files
+    // The files were duplicated with old resultId, now we need to update them with new resultId
+    if (fileIdMap.size > 0) {
+      const newFileIds = Array.from(fileIdMap.values());
+      const driveFilesToUpdate = await this.prisma.driveFile.findMany({
+        where: { fileId: { in: newFileIds } },
+        select: { pk: true, fileId: true, resultId: true },
+      });
+
+      const updatePromises = driveFilesToUpdate
+        .filter((file) => file.resultId && replaceEntityMap[file.resultId])
+        .map((file) =>
+          this.prisma.driveFile.update({
+            where: { pk: file.pk },
+            data: { resultId: replaceEntityMap[file.resultId!] },
+          }),
+        );
+
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
+        this.logger.log(`Updated resultId for ${updatePromises.length} duplicated drive files`);
+      }
+    }
+
     // Update canvas state and save
     state.nodes = nodes;
     state.edges = edges;

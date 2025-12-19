@@ -168,22 +168,6 @@ const MixedTextEditor: React.FC<MixedTextEditorProps> = memo(
             if (segment.variable?.variableType === 'resource') {
               const currentFile = segment.variable.value?.[0]?.resource;
 
-              // Map resourceTypes to proper MIME types
-              const getAcceptTypes = (resourceTypes: string[] | undefined) => {
-                if (!resourceTypes || resourceTypes.length === 0) return '*';
-
-                const typeMap: Record<string, string> = {
-                  image: 'image/*',
-                  document: '.pdf,.doc,.docx,.txt,.rtf,.md,.json,.xml,.csv,.xlsx,.xls',
-                  audio: 'audio/*',
-                  video: 'video/*',
-                };
-
-                return resourceTypes.map((type) => typeMap[type] || `.${type}`).join(',');
-              };
-
-              const acceptTypes = getAcceptTypes(segment.variable.resourceTypes);
-
               return (
                 <FileInput
                   key={`${segment.id}-${index}`}
@@ -192,7 +176,6 @@ const MixedTextEditor: React.FC<MixedTextEditorProps> = memo(
                   placeholder={segment.variable?.name || segment.placeholder}
                   onChange={(value) => handleVariableChange(segment.id || '', value)}
                   disabled={disabled}
-                  accept={acceptTypes}
                   isDefaultValue={segment.isDefaultValue}
                   isModified={segment.isModified}
                 />

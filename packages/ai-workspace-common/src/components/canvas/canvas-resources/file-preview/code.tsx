@@ -11,7 +11,15 @@ const MAX_CARD_CHARS = 2000;
 const MAX_PREVIEW_LINES = 2000;
 const MAX_PREVIEW_CHARS = 100000;
 
-const truncateContent = (content: string, maxLines: number, maxChars: number) => {
+const truncateContent = (
+  content: string,
+  maxLines: number,
+  maxChars: number,
+  disableTruncation = false,
+) => {
+  if (disableTruncation) {
+    return { content, isTruncated: false };
+  }
   const lines = content.split('\n');
   if (lines.length <= maxLines && content.length <= maxChars) {
     return { content, isTruncated: false };
@@ -34,63 +42,72 @@ interface CodeRendererProps extends SourceRendererProps {
 }
 
 // Card mode: truncated content with SyntaxHighlighter
-const CardRenderer = memo(({ source, fileContent, file, language }: CodeRendererProps) => {
-  const rawContent = new TextDecoder().decode(fileContent.data);
-  const detectedLanguage = language || getCodeLanguage(file.name) || 'text';
+const CardRenderer = memo(
+  ({ source, fileContent, file, language, disableTruncation }: CodeRendererProps) => {
+    const rawContent = new TextDecoder().decode(fileContent.data);
+    const detectedLanguage = language || getCodeLanguage(file.name) || 'text';
 
-  // Use different truncation limits based on source
-  const isPreview = source === 'preview';
-  const maxLines = isPreview ? MAX_PREVIEW_LINES : MAX_CARD_LINES;
-  const maxChars = isPreview ? MAX_PREVIEW_CHARS : MAX_CARD_CHARS;
+    // Use different truncation limits based on source
+    const isPreview = source === 'preview';
+    const maxLines = isPreview ? MAX_PREVIEW_LINES : MAX_CARD_LINES;
+    const maxChars = isPreview ? MAX_PREVIEW_CHARS : MAX_CARD_CHARS;
 
-  const { content: truncatedContent, isTruncated } = useMemo(
-    () => truncateContent(rawContent, maxLines, maxChars),
-    [rawContent, maxLines, maxChars],
-  );
+    const { content: truncatedContent, isTruncated } = useMemo(
+      () => truncateContent(rawContent, maxLines, maxChars, disableTruncation),
+      [rawContent, maxLines, maxChars, disableTruncation],
+    );
 
-  // Preview mode: use CodeViewer (Monaco Editor has virtualization)
-  if (isPreview) {
-    return (
-      <div className="h-full flex flex-col">
-        {isTruncated && <TruncationNotice maxLines={maxLines} />}
-        <div className="flex-1 min-h-0">
-          <CodeViewer
-            code={truncatedContent}
-            language={detectedLanguage}
-            title={file.name}
-            entityId={file.fileId}
-            isGenerating={false}
-            activeTab="code"
-            onTabChange={() => {}}
-            onClose={() => {}}
-            onRequestFix={() => {}}
-            readOnly={true}
-            type="text/plain"
-            showActions={false}
-            purePreview={true}
-          />
+    // Preview mode: use CodeViewer (Monaco Editor has virtualization)
+    if (isPreview) {
+      return (
+        <div className="h-full flex flex-col">
+          {isTruncated && <TruncationNotice maxLines={maxLines} />}
+          <div className="flex-1 min-h-0">
+            <CodeViewer
+              code={truncatedContent}
+              language={detectedLanguage}
+              title={file.name}
+              entityId={file.fileId}
+              isGenerating={false}
+              activeTab="code"
+              onTabChange={() => {}}
+              onClose={() => {}}
+              onRequestFix={() => {}}
+              readOnly={true}
+              type="text/plain"
+              showActions={false}
+              purePreview={true}
+            />
+          </div>
         </div>
+      );
+    }
+
+    return (
+      <div className="h-full overflow-y-auto">
+        <SyntaxHighlighter code={truncatedContent} language={detectedLanguage} />
       </div>
     );
-  }
-
-  return (
-    <div className="h-full overflow-y-auto">
-      <SyntaxHighlighter code={truncatedContent} language={detectedLanguage} />
-    </div>
-  );
-});
+  },
+);
 
 // Preview mode: with Monaco Editor (virtualized) but still truncated for very large files
 const PreviewRenderer = memo(
-  ({ fileContent, file, language, activeTab, onTabChange }: CodeRendererProps) => {
+  ({
+    fileContent,
+    file,
+    language,
+    activeTab,
+    onTabChange,
+    disableTruncation,
+  }: CodeRendererProps) => {
     const rawContent = new TextDecoder().decode(fileContent.data);
     const detectedLanguage = language || getCodeLanguage(file.name) || 'text';
     const [tab, setTab] = useState<'code' | 'preview'>(activeTab || 'code');
 
     const { content: textContent, isTruncated } = useMemo(
-      () => truncateContent(rawContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS),
-      [rawContent],
+      () => truncateContent(rawContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS, disableTruncation),
+      [rawContent, disableTruncation],
     );
 
     const handleTabChange = (v: 'code' | 'preview') => {
@@ -127,14 +144,28 @@ const PreviewRenderer = memo(
 const PREVIEWABLE_LANGUAGES = new Set(['html', 'markdown', 'mermaid', 'svg']);
 
 export const CodeRenderer = memo(
-  ({ source = 'card', fileContent, file, language, activeTab, onTabChange }: CodeRendererProps) => {
+  ({
+    source = 'card',
+    fileContent,
+    file,
+    language,
+    activeTab,
+    onTabChange,
+    disableTruncation,
+  }: CodeRendererProps) => {
     const detectedLanguage = language || getCodeLanguage(file.name) || 'text';
     const supportsPreview = PREVIEWABLE_LANGUAGES.has(detectedLanguage.toLowerCase());
 
     // Use CardRenderer for non-previewable languages
     if (!supportsPreview) {
       return (
-        <CardRenderer source={source} fileContent={fileContent} file={file} language={language} />
+        <CardRenderer
+          source={source}
+          fileContent={fileContent}
+          file={file}
+          language={language}
+          disableTruncation={disableTruncation}
+        />
       );
     }
 
@@ -147,36 +178,39 @@ export const CodeRenderer = memo(
         language={language}
         activeTab={activeTab}
         onTabChange={onTabChange}
+        disableTruncation={disableTruncation}
       />
     );
   },
 );
 
-export const JsonRenderer = memo(({ fileContent, source = 'card' }: SourceRendererProps) => {
-  const textContent = new TextDecoder().decode(fileContent.data);
-  const { content: displayContent, isTruncated } = useMemo(
-    () =>
-      source === 'card'
-        ? truncateContent(textContent, MAX_CARD_LINES, MAX_CARD_CHARS)
-        : truncateContent(textContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS),
-    [textContent, source],
-  );
+export const JsonRenderer = memo(
+  ({ fileContent, source = 'card', disableTruncation }: SourceRendererProps) => {
+    const textContent = new TextDecoder().decode(fileContent.data);
+    const { content: displayContent, isTruncated } = useMemo(
+      () =>
+        source === 'card'
+          ? truncateContent(textContent, MAX_CARD_LINES, MAX_CARD_CHARS, disableTruncation)
+          : truncateContent(textContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS, disableTruncation),
+      [textContent, source, disableTruncation],
+    );
 
-  // Card mode: no truncation notice
-  if (source === 'card') {
+    // Card mode: no truncation notice
+    if (source === 'card') {
+      return (
+        <div className="h-full overflow-y-auto">
+          <SyntaxHighlighter code={displayContent} language="json" />
+        </div>
+      );
+    }
+
     return (
-      <div className="h-full overflow-y-auto">
-        <SyntaxHighlighter code={displayContent} language="json" />
+      <div className="h-full flex flex-col">
+        {isTruncated && <TruncationNotice maxLines={MAX_PREVIEW_LINES} />}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <SyntaxHighlighter code={displayContent} language="json" />
+        </div>
       </div>
     );
-  }
-
-  return (
-    <div className="h-full flex flex-col">
-      {isTruncated && <TruncationNotice maxLines={MAX_PREVIEW_LINES} />}
-      <div className="flex-1 overflow-y-auto min-h-0">
-        <SyntaxHighlighter code={displayContent} language="json" />
-      </div>
-    </div>
-  );
-});
+  },
+);

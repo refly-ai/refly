@@ -25,7 +25,14 @@ import {
   removeFieldsRecursively,
   type ResourceField,
 } from './utils/schema-utils';
-import { getCanvasId, getCurrentUser, getResultId, getResultVersion } from './tool-context';
+import {
+  getCanvasId,
+  getCurrentUser,
+  getResultId,
+  getResultVersion,
+  getToolName,
+  getToolsetKey,
+} from './tool-context';
 
 /**
  * Error thrown when fileId format is invalid
@@ -559,7 +566,6 @@ export class ResourceHandler {
         }
         return value;
       }
-
       if (!isValidFileId(value)) {
         // If this is an optional resource (part of oneOf/anyOf), skip processing for non-fileId values
         if (isOptionalResource) {
@@ -697,6 +703,17 @@ export class ResourceHandler {
     title: string,
     fallbackMediaType: string,
   ): { filename: string; contentType: string } {
+    // Special handling for generate-avatar-video: force mp4 extension
+    if (getToolsetKey()?.startsWith('volcengine') && getToolName() === 'generate-avatar-video') {
+      const baseName = title
+        ? title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '')
+        : `avatar_video_${Date.now()}`;
+      return {
+        filename: `${baseName}.mp4`,
+        contentType: 'video/mp4',
+      };
+    }
+
     if (!url) {
       const extension = mime.getExtension(fallbackMediaType) || fallbackMediaType;
       const baseName = title
@@ -947,22 +964,14 @@ export class ResourceHandler {
    * Resolve fileId to specified format
    */
   private async resolveFileIdToFormat(value: unknown, format: string): Promise<string | Buffer> {
-    // Public URLs should pass through unchanged; do not force Drive lookup
-    if (this.isPublicUrl(value)) {
-      return value as string;
-    }
-
     // Extract fileId from value
-    let fileId = typeof value === 'string' ? value : (value as any)?.fileId;
+    const fileId = extractFileId(value);
     if (!fileId) {
-      throw new Error('Invalid resource value: missing fileId');
-    }
-
-    // Strip prefix if present ('fileId://' or '@file:')
-    if (fileId.startsWith('fileId://')) {
-      fileId = fileId.slice('fileId://'.length);
-    } else if (fileId.startsWith('@file:')) {
-      fileId = fileId.slice('@file:'.length);
+      const valuePreview =
+        typeof value === 'string' ? value.slice(0, 50) : JSON.stringify(value)?.slice(0, 50);
+      throw new Error(
+        `Unable to extract fileId from resource value: ${valuePreview}. Expected formats: "df-xxx", "fileId://df-xxx", "@file:df-xxx", or { fileId: "df-xxx" }. Tip: Use @ in the input box to select and reference files.`,
+      );
     }
 
     // Get user context

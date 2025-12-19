@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { VoucherTriggerResult } from '@refly/openapi-schema';
 import { useState, useEffect } from 'react';
 import { logEvent } from '@refly/telemetry-web';
+import { X } from 'lucide-react';
 import { SharePoster } from './share-poster';
 import { useSubscriptionStoreShallow } from '@refly/stores';
 import { Confetti } from './confetti';
@@ -30,7 +31,6 @@ export const VoucherPopup = ({
   onUseNow: onUseNowProp,
   onShare: onShareProp,
   useOnlyMode = false,
-  inviterName,
 }: VoucherPopupProps) => {
   const { t, i18n } = useTranslation();
   const [showSharePoster, setShowSharePoster] = useState(false);
@@ -79,6 +79,17 @@ export const VoucherPopup = ({
   const validDays = voucher.expiresAt
     ? Math.ceil((new Date(voucher.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 7;
+
+  // Calculate min height based on mode, user type and language
+  const isZh = i18n.language?.startsWith('zh');
+  const getMinHeight = () => {
+    if (useOnlyMode) {
+      if (!isPlusUser) return '380px';
+      return isZh ? '380px' : '390px';
+    }
+    if (!isPlusUser) return isZh ? '480px' : '510px';
+    return isZh ? '450px' : '480px';
+  };
 
   // Handle "Use It Now" / "Use Coupon" / "Publish to Get Coupon" / "Claim" button click
   const handleUseNow = async () => {
@@ -245,17 +256,7 @@ export const VoucherPopup = ({
           />
 
           {/* Content Container - height varies by mode and language */}
-          <div
-            className="relative"
-            style={{
-              minHeight:
-                useOnlyMode && !isPlusUser
-                  ? '420px'
-                  : i18n.language?.startsWith('zh')
-                    ? '500px'
-                    : '540px',
-            }}
-          >
+          <div className="relative" style={{ minHeight: getMinHeight() }}>
             {/* Top Section - Congratulations and Coupon with green gradient background */}
             {/* 16px margin from left, right, top and bottom, with rounded corners on all sides */}
             <div
@@ -265,6 +266,16 @@ export const VoucherPopup = ({
                 border: '0.5px solid rgba(9, 9, 9, 0.07)',
               }}
             >
+              {/* Close button */}
+              <button
+                type="button"
+                onClick={onClose}
+                className="absolute top-3 right-3 flex items-center justify-center w-6 h-6 bg-transparent text-emerald-700/50 hover:text-emerald-700 transition-colors duration-150 outline-none focus:outline-none border-none"
+                aria-label={t('common.close', 'Close')}
+              >
+                <X className="w-4 h-4" />
+              </button>
+
               {/* Header - Congratulations */}
               <div className="flex items-center justify-center gap-3">
                 <span
@@ -292,7 +303,9 @@ export const VoucherPopup = ({
                       backgroundClip: 'text',
                     }}
                   >
-                    {discountPercent}% OFF
+                    {i18n.language?.startsWith('zh')
+                      ? `会员 ${voucherValue}折`
+                      : `${discountPercent}% OFF`}
                   </span>
                   <span className="text-xl text-black/80">
                     {t('voucher.popup.coupon', 'Coupon')}
@@ -310,7 +323,7 @@ export const VoucherPopup = ({
             <TicketBottomCard>
               {/* Description text - different based on user status and mode */}
               <div
-                className="text-center text-sm leading-relaxed px-2"
+                className="text-center text-sm leading-relaxed"
                 style={{ color: 'rgba(28, 31, 35, 0.6)' }}
               >
                 {useOnlyMode && isPlusUser ? (
@@ -318,15 +331,16 @@ export const VoucherPopup = ({
                   <p>
                     {t(
                       'voucher.popup.plusUserClaimedDesc',
-                      "You're already a Plus member.\nGift this voucher to a friend!",
+                      "You're already a Plus member. Gift this coupon to a friend!",
                     )}
                   </p>
                 ) : useOnlyMode ? (
-                  // Non-Plus user who claimed via invite: show sender name
+                  // Non-Plus user who claimed via invite: show upgrade description
                   <p>
-                    {t('voucher.popup.claimedDesc', '{{name}} sent you a coupon — go claim it!', {
-                      name: inviterName || 'A friend',
-                    })}
+                    {t(
+                      'voucher.popup.claimedDesc',
+                      'Upgrade to Refly.ai Plus and unlock advanced models like Gemini 3.',
+                    )}
                   </p>
                 ) : isPlusUser ? (
                   // Plus user who earned voucher: show invite description
@@ -334,25 +348,16 @@ export const VoucherPopup = ({
                     <p>
                       {t(
                         'voucher.popup.plusUserDesc1',
-                        "To celebrate your amazing work, we're giving you a ${{value}} discount.",
-                        { value: discountValue },
+                        "To celebrate your amazing work, we're giving you a {{discountPercent}}% off coupon.",
+                        { discountPercent, voucherValue },
                       )}
                     </p>
                     <p className="mt-2">
                       {t(
                         'voucher.popup.plusUserDesc2',
-                        "Invite a friend to register with your link and purchase a membership, and you'll both get rewards:",
+                        "Invite a friend to sign up and purchase a membership using your link, and you'll receive 2,000 bonus credits.",
                       )}
                     </p>
-                    <ul className="mt-1 text-left pl-4 list-disc">
-                      <li>{t('voucher.popup.plusUserReward1', 'You: +2,000 bonus credits')}</li>
-                      <li>
-                        {t(
-                          'voucher.popup.plusUserReward2',
-                          'Your friend: A special discount for their membership purchase.',
-                        )}
-                      </li>
-                    </ul>
                   </>
                 ) : (
                   // Non-Plus user who earned voucher: show discount and price description
@@ -360,8 +365,8 @@ export const VoucherPopup = ({
                     <p>
                       {t(
                         'voucher.popup.nonPlusUserDesc1',
-                        "To celebrate your amazing work, we're giving you a ${{value}} discount—our way of saying thanks for contributing such a high-quality template to the Marketplace.",
-                        { value: discountValue },
+                        "To celebrate your amazing work, we're giving you a {{discountPercent}}% off coupon - our way of saying thanks for contributing such a high-quality template.",
+                        { discountPercent, voucherValue },
                       )}
                     </p>
                     <p className="mt-1">
@@ -377,8 +382,8 @@ export const VoucherPopup = ({
 
               {/* Button group */}
               <div className="mt-5 flex flex-col gap-3 max-w-[320px]">
-                {/* Use/Claim button: hide for Plus users in normal mode (they can only share) */}
-                {(useOnlyMode || !isPlusUser) && (
+                {/* Use button: only for non-Plus users */}
+                {!isPlusUser && (
                   <Button
                     type="primary"
                     size="large"
@@ -394,11 +399,9 @@ export const VoucherPopup = ({
                       fontWeight: 500,
                     }}
                   >
-                    {useOnlyMode && isPlusUser
-                      ? t('voucher.popup.claim', 'Claim')
-                      : useOnlyMode
-                        ? t('voucher.popup.useCoupon', 'Use Coupon')
-                        : t('voucher.popup.useNow', 'Use It Now')}
+                    {useOnlyMode
+                      ? t('voucher.popup.useCoupon', 'Use Coupon')
+                      : t('voucher.popup.useNow', 'Use It Now')}
                   </Button>
                 )}
                 {/* Show share button: always when not useOnlyMode, or when Plus user in useOnlyMode */}

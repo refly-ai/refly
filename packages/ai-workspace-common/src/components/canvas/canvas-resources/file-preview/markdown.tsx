@@ -10,7 +10,15 @@ const MAX_CARD_CHARS = 2000;
 const MAX_PREVIEW_LINES = 2000;
 const MAX_PREVIEW_CHARS = 100000;
 
-const truncateContent = (content: string, maxLines: number, maxChars: number) => {
+const truncateContent = (
+  content: string,
+  maxLines: number,
+  maxChars: number,
+  disableTruncation = false,
+) => {
+  if (disableTruncation) {
+    return { content, isTruncated: false };
+  }
   const lines = content.split('\n');
   if (lines.length <= maxLines && content.length <= maxChars) {
     return { content, isTruncated: false };
@@ -28,11 +36,11 @@ const TruncationNotice = memo(({ maxLines }: { maxLines: number }) => {
   );
 });
 
-const Card = memo(({ fileContent, className }: SourceRendererProps) => {
+const Card = memo(({ fileContent, className, disableTruncation }: SourceRendererProps) => {
   const textContent = new TextDecoder().decode(fileContent.data);
   const { content: truncatedContent } = useMemo(
-    () => truncateContent(textContent, MAX_CARD_LINES, MAX_CARD_CHARS),
-    [textContent],
+    () => truncateContent(textContent, MAX_CARD_LINES, MAX_CARD_CHARS, disableTruncation),
+    [textContent, disableTruncation],
   );
 
   return (
@@ -42,42 +50,60 @@ const Card = memo(({ fileContent, className }: SourceRendererProps) => {
   );
 });
 
-const Preview = memo(({ fileContent, file, activeTab, onTabChange }: SourceRendererProps) => {
-  const rawContent = new TextDecoder().decode(fileContent.data);
+const Preview = memo(
+  ({ fileContent, file, activeTab, onTabChange, disableTruncation }: SourceRendererProps) => {
+    const rawContent = new TextDecoder().decode(fileContent.data);
 
-  const { content: textContent, isTruncated } = useMemo(
-    () => truncateContent(rawContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS),
-    [rawContent],
-  );
+    const { content: textContent, isTruncated } = useMemo(
+      () => truncateContent(rawContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS, disableTruncation),
+      [rawContent, disableTruncation],
+    );
 
-  return (
-    <div className="h-full flex flex-col">
-      {isTruncated && <TruncationNotice maxLines={MAX_PREVIEW_LINES} />}
-      <div className="flex-1 min-h-0">
-        <CodeViewer
-          code={textContent}
-          language="markdown"
-          title={file.name}
-          entityId={file.fileId}
-          isGenerating={false}
-          activeTab={activeTab!}
-          onTabChange={onTabChange!}
-          onClose={() => {}}
-          onRequestFix={() => {}}
-          readOnly={true}
-          type="text/markdown"
-          showActions={false}
-          purePreview={false}
-        />
+    return (
+      <div className="h-full flex flex-col">
+        {isTruncated && <TruncationNotice maxLines={MAX_PREVIEW_LINES} />}
+        <div className="flex-1 min-h-0">
+          <CodeViewer
+            code={textContent}
+            language="markdown"
+            title={file.name}
+            entityId={file.fileId}
+            isGenerating={false}
+            activeTab={activeTab!}
+            onTabChange={onTabChange!}
+            onClose={() => {}}
+            onRequestFix={() => {}}
+            readOnly={true}
+            type="text/markdown"
+            showActions={false}
+            purePreview={false}
+          />
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 export const MarkdownRenderer = memo(
-  ({ source, fileContent, file, className, activeTab, onTabChange }: SourceRendererProps) => {
+  ({
+    source,
+    fileContent,
+    file,
+    className,
+    activeTab,
+    onTabChange,
+    disableTruncation,
+  }: SourceRendererProps) => {
     if (source === 'card') {
-      return <Card source={source} fileContent={fileContent} file={file} className={className} />;
+      return (
+        <Card
+          source={source}
+          fileContent={fileContent}
+          file={file}
+          className={className}
+          disableTruncation={disableTruncation}
+        />
+      );
     }
     return (
       <Preview
@@ -86,6 +112,7 @@ export const MarkdownRenderer = memo(
         file={file}
         activeTab={activeTab}
         onTabChange={onTabChange}
+        disableTruncation={disableTruncation}
       />
     );
   },

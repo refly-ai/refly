@@ -30,7 +30,6 @@ import { useGetCodeArtifactDetail } from '@refly-packages/ai-workspace-common/qu
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
 import { useUserStoreShallow } from '@refly/stores';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
-import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { NodeActionButtons } from './shared/node-action-buttons';
@@ -107,7 +106,6 @@ export const CodeArtifactNode = memo(
     const { addNode } = useAddNode();
     const { t } = useTranslation();
     const updateNodeTitle = useUpdateNodeTitle();
-    useSelectedNodeZIndex(id, selected);
     const setNodeDataByEntity = useSetNodeDataByEntity();
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
     const { setNodeStyle } = useNodeData();

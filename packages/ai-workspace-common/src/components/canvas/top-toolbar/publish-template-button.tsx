@@ -79,8 +79,11 @@ const PublishTemplateButton = React.memo(
           return !variable.value[0]?.resource;
         }
         // For string type, check if text value is empty
+
         if (variable.variableType === 'string') {
-          const textValue = variable.value[0]?.text?.trim();
+          const text = variable.value[0]?.text;
+          // Handle non-string values gracefully to prevent crash (e.g. if value is a number)
+          const textValue = typeof text === 'string' ? text.trim() : String(text ?? '').trim();
           return !textValue;
         }
         // For option type, check if text value exists

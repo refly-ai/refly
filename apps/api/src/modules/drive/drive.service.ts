@@ -270,6 +270,7 @@ export class DriveService implements OnModuleInit {
 
           // Move object in storage
           await this.internalOss.moveObject(originalStorageKey, archiveStorageKey);
+          await this.externalOss.moveObject(originalStorageKey, archiveStorageKey);
 
           this.logger.debug(`Successfully archived file ${file.fileId} to ${archiveStorageKey}`);
           return { success: true, fileId: file.fileId };

@@ -7,7 +7,10 @@ import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/ca
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
-
+import {
+  nodeActionEmitter,
+  createNodeEventName,
+} from '@refly-packages/ai-workspace-common/events/nodeActions';
 interface CopyPasteSkillResponseNodeOptions {
   /** Canvas ID */
   canvasId?: string;
@@ -31,7 +34,6 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
     })),
   );
   const { duplicateNode } = useDuplicateNode();
-
   /**
    * Copy selected skillResponse nodes
    */
@@ -48,7 +50,7 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
 
     if (readonly || workflowIsRunning) return;
     const selectedNodes = nodes.filter(
-      (node) => node.selected && node.type === 'skillResponse',
+      (node) => node.selected && ['skillResponse', 'memo'].includes(node.type),
     ) as CanvasNode[];
 
     if (selectedNodes.length > 0) {
@@ -94,10 +96,11 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
   const handlePaste = useCallback(
     (clipboardData: string) => {
       const copiedNodes = safeJsonParse(clipboardData);
-      const isCopySkillResponseNodes =
-        copiedNodes?.length > 0 && copiedNodes?.every((node) => node.type === 'skillResponse');
+      const isCopyValidNodes =
+        copiedNodes?.length > 0 &&
+        copiedNodes?.every((node) => ['skillResponse', 'memo'].includes(node.type));
 
-      if (readonly || !canvasId || workflowIsRunning || !isCopySkillResponseNodes) return;
+      if (readonly || !canvasId || workflowIsRunning || !isCopyValidNodes) return;
 
       // Fixed offset for pasted nodes (bottom right of original position)
       const fixedOffset = { x: 0, y: 200 };
@@ -105,12 +108,26 @@ export const useCopyPasteSkillResponseNode = (options: CopyPasteSkillResponseNod
       // Paste all copied nodes with fixed offset from original position
       for (const node of copiedNodes) {
         const originalNode = getNode(node.id);
-        if (originalNode) {
+        if (!originalNode) {
+          continue;
+        }
+        if (originalNode.type === 'skillResponse') {
           duplicateNode(originalNode, canvasId, { offset: fixedOffset });
+        } else if (originalNode.type === 'memo') {
+          nodeActionEmitter.emit(createNodeEventName(originalNode.id, 'duplicate'), {
+            dragCreateInfo: {
+              nodeId: originalNode.id,
+              handleType: 'source',
+              position: {
+                x: originalNode.position.x,
+                y: originalNode.position.y + 300,
+              },
+            },
+          });
         }
       }
     },
-    [duplicateNode, canvasId, readonly, workflowIsRunning, safeJsonParse],
+    [duplicateNode, canvasId, readonly, workflowIsRunning, safeJsonParse, getNode],
   );
 
   /**

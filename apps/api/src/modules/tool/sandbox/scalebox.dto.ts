@@ -8,6 +8,7 @@ import {
 
 import { SandboxException } from './scalebox.exception';
 import { ExecutorLanguage, ExecutorLimits, LANGUAGE_MAP } from './scalebox.constants';
+import { extractWarnings } from './scalebox.utils';
 
 // S3 configuration interface (shared between dto and wrapper)
 export interface S3Config {
@@ -195,6 +196,8 @@ export const ScaleboxResponseFactory = {
    */
   success(result: ScaleboxExecutionResult, executionTime: number): SandboxExecuteResponse {
     const { executorOutput, error, exitCode, files } = result;
+    const warnings = extractWarnings(executorOutput.log);
+
     return {
       status: 'success',
       data: {
@@ -203,6 +206,7 @@ export const ScaleboxResponseFactory = {
         exitCode: exitCode ?? 0,
         executionTime,
         files,
+        warnings: warnings.length > 0 ? warnings : undefined,
       },
     };
   },

@@ -7,7 +7,6 @@ import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { getNodeCommonStyles } from './shared/styles';
 import { CustomHandle } from './shared/custom-handle';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-data';
-import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-hover';
 import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -97,7 +96,6 @@ export const StartNode = memo(({ id, onNodeClick, data }: StartNodeProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const { edges } = useCanvasData();
   const { setNodeStyle } = useNodeData();
-  useSelectedNodeZIndex(id, selected);
   const { handleMouseEnter: onHoverStart, handleMouseLeave: onHoverEnd } = useNodeHoverEffect(id);
 
   const [showCreateVariablesModal, setShowCreateVariablesModal] = useState(false);
@@ -113,16 +111,16 @@ export const StartNode = memo(({ id, onNodeClick, data }: StartNodeProps) => {
   const handleMouseEnter = useCallback(() => {
     if (!isHovered) {
       setIsHovered(true);
-      onHoverStart();
+      onHoverStart(selected);
     }
-  }, [isHovered, onHoverStart]);
+  }, [isHovered, onHoverStart, selected]);
 
   const handleMouseLeave = useCallback(() => {
     if (isHovered) {
       setIsHovered(false);
-      onHoverEnd();
+      onHoverEnd(selected);
     }
-  }, [isHovered, onHoverEnd]);
+  }, [isHovered, onHoverEnd, selected]);
 
   const handleAskAI = useCallback(
     (event?: {

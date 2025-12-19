@@ -6741,6 +6741,14 @@ export const SandboxExecuteResponseSchema = {
                 $ref: '#/components/schemas/DriveFile',
               },
             },
+            warnings: {
+              type: 'array',
+              description:
+                'System warnings from sandbox (e.g., file rename due to conflict, temporary directory creation)',
+              items: {
+                type: 'string',
+              },
+            },
           },
         },
       },
@@ -11943,6 +11951,45 @@ export const PollingConfigSchema = {
       type: 'string',
       description:
         'Status check endpoint template (e.g., "/v1/tasks/{id}" or "/v1/video_status.get?video_id={id}")',
+    },
+    statusMethod: {
+      type: 'string',
+      enum: ['GET', 'POST'],
+      default: 'GET',
+      description: 'HTTP method for status check (GET or POST)',
+    },
+    statusBody: {
+      type: 'object',
+      additionalProperties: true,
+      description:
+        'Request body template for POST status check. Supports placeholders like {task_id}, {req_key}',
+    },
+    taskIdPath: {
+      type: 'string',
+      description: 'JSON path to extract task ID from initial response (e.g., "data.task_id")',
+    },
+    statusPath: {
+      type: 'string',
+      description: 'JSON path to extract status from polling response (e.g., "data.status")',
+    },
+    resultPath: {
+      type: 'string',
+      description:
+        'JSON path to extract result data from completed response (e.g., "data.resp_data")',
+    },
+    completedStatuses: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'List of status values indicating completion (e.g., ["done", "completed"])',
+    },
+    failedStatuses: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'List of status values indicating failure (e.g., ["failed", "error"])',
     },
     maxWaitSeconds: {
       type: 'number',
