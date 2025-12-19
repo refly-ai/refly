@@ -22,7 +22,7 @@ import {
   ActionMessage as ActionMessageModel,
   ToolCallResult as ToolCallResultModel,
 } from '@prisma/client';
-import { ActionDetail, actionMessagePO2DTO } from '../action/action.dto';
+import { ActionDetail, actionMessagePO2DTO, sanitizeToolOutput } from '../action/action.dto';
 import { PrismaService } from '../common/prisma.service';
 import { providerItem2ModelInfo } from '../provider/provider.dto';
 import { ProviderService } from '../provider/provider.service';
@@ -35,6 +35,7 @@ import { InvokeSkillJobData } from '../skill/skill.dto';
 
 type GetActionResultParams = GetActionResultData['query'] & {
   includeFiles?: boolean;
+  sanitizeForDisplay?: boolean;
 };
 
 @Injectable()
@@ -60,7 +61,7 @@ export class ActionService {
   ) {}
 
   async getActionResult(user: User, param: GetActionResultParams): Promise<ActionDetail> {
-    const { resultId, version, includeFiles = false } = param;
+    const { resultId, version, includeFiles = false, sanitizeForDisplay = false } = param;
 
     const result = await this.prisma.actionResult.findFirst({
       where: {
@@ -74,7 +75,9 @@ export class ActionService {
       throw new ActionResultNotFoundError();
     }
 
-    const enrichedResult = await this.enrichActionResultWithDetails(user, result);
+    const enrichedResult = await this.enrichActionResultWithDetails(user, result, {
+      sanitizeForDisplay,
+    });
 
     if (includeFiles) {
       enrichedResult.files = await this.driveService.listAllDriveFiles(user, {
@@ -92,6 +95,7 @@ export class ActionService {
   private async enrichActionResultWithDetails(
     user: User,
     result: ActionResult,
+    options?: { sanitizeForDisplay?: boolean },
   ): Promise<ActionDetail> {
     const item =
       (result.providerItemId
@@ -131,6 +135,14 @@ export class ActionService {
       if (message.type === 'tool' && message.toolCallId) {
         const toolCallResult = toolCallResultMap.get(message.toolCallId);
         if (toolCallResult) {
+          const rawOutput = safeParseJSON(toolCallResult.output || '{}') ?? {
+            rawOutput: toolCallResult.output,
+          };
+          // Apply sanitization if needed
+          const output = options?.sanitizeForDisplay
+            ? sanitizeToolOutput(toolCallResult.toolName, rawOutput)
+            : rawOutput;
+
           // Attach the tool call result to the message
           enrichedMessage.toolCallResult = {
             callId: toolCallResult.callId,
@@ -139,9 +151,7 @@ export class ActionService {
             toolName: toolCallResult.toolName,
             stepName: toolCallResult.stepName,
             input: safeParseJSON(toolCallResult.input || '{}') ?? {},
-            output: safeParseJSON(toolCallResult.output || '{}') ?? {
-              rawOutput: toolCallResult.output,
-            },
+            output,
             error: toolCallResult.error || '',
             status: toolCallResult.status as 'executing' | 'completed' | 'failed',
             createdAt: toolCallResult.createdAt.getTime(),

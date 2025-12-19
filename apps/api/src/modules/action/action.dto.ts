@@ -32,14 +32,16 @@ export type ActionDetail = ActionResultModel & {
   modelInfo?: ModelInfo;
 };
 
-export function actionStepPO2DTO(step: ActionStepDetail): ActionStep {
+export type SanitizeOptions = { sanitizeForDisplay?: boolean };
+
+export function actionStepPO2DTO(step: ActionStepDetail, options?: SanitizeOptions): ActionStep {
   return {
     ...pick(step, ['name', 'content', 'reasoningContent']),
     logs: safeParseJSON(step.logs || '[]'),
     artifacts: safeParseJSON(step.artifacts || '[]'),
     structuredData: safeParseJSON(step.structuredData || '{}'),
     tokenUsage: safeParseJSON(step.tokenUsage || '[]'),
-    toolCalls: step.toolCalls?.map(toolCallResultPO2DTO),
+    toolCalls: step.toolCalls?.map((tc) => toolCallResultPO2DTO(tc, options)),
   };
 }
 
@@ -57,7 +59,7 @@ export function actionMessagePO2DTO(message: ActionMessageModel): ActionMessage 
  * Sanitize tool output for frontend display
  * Removes large content fields that are not needed for display
  */
-function sanitizeToolOutput(
+export function sanitizeToolOutput(
   toolName: string,
   output: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -77,9 +79,14 @@ function sanitizeToolOutput(
   return output;
 }
 
-export function toolCallResultPO2DTO(toolCall: ToolCallResultModel): ToolCallResult {
+export function toolCallResultPO2DTO(
+  toolCall: ToolCallResultModel,
+  options?: { sanitizeForDisplay?: boolean },
+): ToolCallResult {
   const rawOutput = safeParseJSON(toolCall.output || '{}');
-  const output = sanitizeToolOutput(toolCall.toolName, rawOutput);
+  const output = options?.sanitizeForDisplay
+    ? sanitizeToolOutput(toolCall.toolName, rawOutput)
+    : rawOutput;
 
   return {
     callId: toolCall.callId,
@@ -97,7 +104,7 @@ export function toolCallResultPO2DTO(toolCall: ToolCallResultModel): ToolCallRes
   };
 }
 
-export function actionResultPO2DTO(result: ActionDetail): ActionResult {
+export function actionResultPO2DTO(result: ActionDetail, options?: SanitizeOptions): ActionResult {
   return {
     ...pick(result, [
       'resultId',
@@ -127,7 +134,7 @@ export function actionResultPO2DTO(result: ActionDetail): ActionResult {
     storageKey: result.storageKey,
     createdAt: result.createdAt.toJSON(),
     updatedAt: result.updatedAt.toJSON(),
-    steps: result.steps?.map(actionStepPO2DTO),
+    steps: result.steps?.map((s) => actionStepPO2DTO(s, options)),
     messages: result.messages,
     files: result.files,
     toolsets: safeParseJSON(result.toolsets || '[]'),
