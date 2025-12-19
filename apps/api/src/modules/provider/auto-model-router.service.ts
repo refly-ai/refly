@@ -30,9 +30,11 @@ export interface RuleCondition {
 }
 
 export enum RoutingStrategy {
-  RULE_BASED = 'rule_based', // Rule-based routing
-  TOOL_BASED = 'tool_based', // Tool-based routing
-  FALLBACK = 'fallback', // Fallback to legacy routing
+  RULE_BASED = 'rule_based',
+  TOOL_BASED = 'tool_based',
+  FALLBACK_RANDOM_SELECTION = 'fallback_random_selection',
+  FALLBACK_BUILT_IN_PRIORITY = 'fallback_built_in_priority',
+  FALLBACK_FIRST_AVAILABLE = 'fallback_first_available',
 }
 
 /**
@@ -40,6 +42,14 @@ export enum RoutingStrategy {
  */
 export interface RoutingTarget {
   model: string;
+}
+
+/**
+ * Result of rule-based routing
+ */
+export interface RuleRouteResult {
+  providerItem: ProviderItemModel;
+  matchedRule: { ruleId: string; ruleName: string };
 }
 
 /**
@@ -86,34 +96,6 @@ export interface RoutingContext {
 }
 
 /**
- * Routing result returned by the router
- */
-export interface RoutingResult {
-  /**
-   * Selected provider item
-   */
-  providerItem: ProviderItemModel;
-
-  /**
-   * Routing result ID for tracing
-   */
-  routingResultId: string;
-
-  /**
-   * Strategy used for routing
-   */
-  strategy: RoutingStrategy;
-
-  /**
-   * Matched rule (if any)
-   */
-  matchedRule?: {
-    ruleId: string;
-    ruleName: string;
-  };
-}
-
-/**
  * Rule-based router that handles rule matching and selection
  * Encapsulates all rule-based routing logic without external dependencies
  */
@@ -123,10 +105,7 @@ class RuleRouter {
   route(
     rules: AutoModelRoutingRuleModel[],
     modelMap: Map<string, ProviderItemModel>,
-  ): {
-    providerItem: ProviderItemModel;
-    matchedRule: { ruleId: string; ruleName: string };
-  } | null {
+  ): RuleRouteResult | null {
     for (const rule of rules) {
       if (this.matchRule(rule)) {
         const target = safeParseJSON(rule.target) as RoutingTarget;
@@ -247,96 +226,153 @@ export class AutoModelRoutingService {
   /**
    * Route Auto model to the target model based on rules
    * This method implements a multi-tier priority system:
-   * 1. Rule-based routing (from database rules)
-   * 2. Tool-based routing (if enabled and conditions are met)
-   * 3. Legacy routing (random list or priority list)
-   * If the input is not an Auto model, returns it unchanged
+   * 1. Rule-based routing (from database)
+   * 2. Tool-based routing (from environment variables)
+   * 3. Random selection (from environment variables)
+   * 4. Built-in priority list (from code literals)
+   * 5. Fallback to the first available model
    *
-   * Note: Scene is derived from mode internally to avoid unreliable external scene values
-   * (e.g., external callers might incorrectly pass 'chat' as scene).
-   * The external scene parameter is only used for validation: routing results are logged
-   * only when the derived scene matches the external scene.
-   *
-   * @param originalProviderItem The chat model item to potentially route
+   * @param originalProviderItem The original provider item to potentially route
    * @param context The routing context
-   * @param externalScene External scene value for validation (routing result is logged only if it matches derived scene)
-   * @returns Routing result with selected model and metadata
+   * @param externalScene External scene value for validation (routing result is saved only if it matches derived scene)
+   * @returns The selected provider item, or the original provider item if no routing is performed
    */
   async route(
     originalProviderItem: ProviderItemModel,
     context: RoutingContext,
     externalScene: string,
-  ): Promise<RoutingResult> {
-    const routingResultId = genRoutingResultID();
-
-    // If not an Auto model, return unchanged
+  ): Promise<ProviderItemModel> {
+    // Return unchanged if not an Auto model
     if (!isAutoModel(originalProviderItem.config)) {
-      return {
-        providerItem: originalProviderItem,
-        routingResultId,
-        strategy: RoutingStrategy.FALLBACK,
-      };
+      return originalProviderItem;
     }
 
-    // Derive scene from mode internally (instead of trusting external scene parameter)
+    // Check if derived scene matches external scene for saving routing result
     const derivedScene = this.deriveSceneFromMode(context.mode);
-
-    // Check if derived scene matches external scene for logging
     const shouldSaveRoutingResult = derivedScene === externalScene;
 
-    // Build model map for routing
     const modelMap = this.buildModelMap(context.llmItems);
+    const routingResultId = genRoutingResultID();
 
-    // Priority 1: Try rule-based routing first
+    // Priority 1: Rule-based routing
     const ruleResult = await this.routeByRules(context, modelMap, derivedScene);
     if (ruleResult) {
-      const routingResult: RoutingResult = {
-        providerItem: ruleResult.providerItem,
-        routingResultId,
-        strategy: RoutingStrategy.RULE_BASED,
-        matchedRule: ruleResult.matchedRule,
-      };
-
       if (shouldSaveRoutingResult) {
-        this.saveRoutingResult(routingResult, context, originalProviderItem, derivedScene).catch(
-          (err) => this.logger.warn('Failed to save routing result', err),
+        this.saveRoutingResult(
+          context,
+          routingResultId,
+          derivedScene,
+          RoutingStrategy.RULE_BASED,
+          ruleResult.providerItem,
+          originalProviderItem,
+          ruleResult.matchedRule,
         );
       }
 
-      return routingResult;
+      return ruleResult.providerItem;
     }
 
-    // Priority 2: Try tool-based routing (temporary solution)
-    const toolBasedItem = this.tryToolBasedRouting(context, modelMap, derivedScene);
+    // Priority 2: Tool-based routing
+    const toolBasedItem = this.routeByTools(context, modelMap, derivedScene);
     if (toolBasedItem) {
-      const routingResult: RoutingResult = {
-        providerItem: toolBasedItem,
-        routingResultId,
-        strategy: RoutingStrategy.TOOL_BASED,
-      };
-
-      return routingResult;
+      if (shouldSaveRoutingResult) {
+        this.saveRoutingResult(
+          context,
+          routingResultId,
+          derivedScene,
+          RoutingStrategy.TOOL_BASED,
+          toolBasedItem,
+          originalProviderItem,
+        );
+      }
+      return toolBasedItem;
     }
 
-    // Priority 3: Fallback to legacy routing
-    const fallbackItem = this.findAvailableModelLegacy(context.llmItems, modelMap);
-    const routingResult: RoutingResult = {
-      providerItem: fallbackItem,
-      routingResultId,
-      strategy: RoutingStrategy.FALLBACK,
-    };
-
-    if (shouldSaveRoutingResult) {
-      this.saveRoutingResult(routingResult, context, originalProviderItem, derivedScene).catch(
-        (err) => this.logger.warn('Failed to log routing result', err),
-      );
+    // Priority 3: Random selection
+    const randomSelectedItem = this.routeByRandomSelection(modelMap);
+    if (randomSelectedItem) {
+      if (shouldSaveRoutingResult) {
+        this.saveRoutingResult(
+          context,
+          routingResultId,
+          derivedScene,
+          RoutingStrategy.FALLBACK_RANDOM_SELECTION,
+          randomSelectedItem,
+          originalProviderItem,
+        );
+      }
+      return randomSelectedItem;
     }
 
-    this.logger.log(
-      `Fallback routing: ${fallbackItem.name} (itemId: ${fallbackItem.itemId}) for user ${context.userId}`,
-    );
+    // Priority 4: Built-in priority list
+    const prioritySelectedItem = this.routeByBuiltInPriorityList(modelMap);
+    if (prioritySelectedItem) {
+      if (shouldSaveRoutingResult) {
+        this.saveRoutingResult(
+          context,
+          routingResultId,
+          derivedScene,
+          RoutingStrategy.FALLBACK_BUILT_IN_PRIORITY,
+          prioritySelectedItem,
+          originalProviderItem,
+        );
+      }
+      return prioritySelectedItem;
+    }
 
-    return routingResult;
+    // Priority 5: Fallback to the first available model
+    if (context.llmItems.length > 0) {
+      const fallbackItem = context.llmItems[0];
+
+      if (shouldSaveRoutingResult) {
+        this.saveRoutingResult(
+          context,
+          routingResultId,
+          derivedScene,
+          RoutingStrategy.FALLBACK_FIRST_AVAILABLE,
+          fallbackItem,
+          originalProviderItem,
+        );
+      }
+
+      return fallbackItem;
+    }
+
+    throw new ProviderItemNotFoundError('Auto model routing failed: no model available');
+  }
+
+  /**
+   * Build a map of modelId -> ProviderItemModel
+   * Filters out invalid configs and reasoning models
+   */
+  private buildModelMap(items: ProviderItemModel[]): Map<string, ProviderItemModel> {
+    const modelMap = new Map<string, ProviderItemModel>();
+
+    for (const item of items) {
+      const config = safeParseJSON(item.config) as LLMModelConfig;
+      if (!config) continue;
+      // Exclude reasoning models from routing
+      if (config.capabilities?.reasoning === true) continue;
+      if (config.modelId) {
+        modelMap.set(config.modelId, item);
+      }
+    }
+
+    return modelMap;
+  }
+
+  /**
+   * Rule-based routing
+   * Rules are filtered by scene column and then matched by additional conditions
+   */
+  private async routeByRules(
+    context: RoutingContext,
+    modelMap: Map<string, ProviderItemModel>,
+    scene: string,
+  ): Promise<RuleRouteResult | null> {
+    const rules = await this.getRules(scene);
+    const ruleRouter = new RuleRouter(context);
+    return ruleRouter.route(rules, modelMap);
   }
 
   /**
@@ -361,77 +397,7 @@ export class AutoModelRoutingService {
   }
 
   /**
-   * Route by database rules (delegates to RuleRouter)
-   * Rules are filtered by scene column and then matched by additional conditions
-   */
-  private async routeByRules(
-    context: RoutingContext,
-    modelMap: Map<string, ProviderItemModel>,
-    scene: string,
-  ): Promise<{
-    providerItem: ProviderItemModel;
-    matchedRule: { ruleId: string; ruleName: string };
-  } | null> {
-    const rules = await this.getRules(scene);
-    const ruleRouter = new RuleRouter(context);
-    return ruleRouter.route(rules, modelMap);
-  }
-
-  /**
-   * Build a map of modelId -> ProviderItemModel
-   * Filters out invalid configs and reasoning models
-   */
-  private buildModelMap(items: ProviderItemModel[]): Map<string, ProviderItemModel> {
-    const modelMap = new Map<string, ProviderItemModel>();
-
-    for (const item of items) {
-      const config = safeParseJSON(item.config) as LLMModelConfig;
-      if (!config) continue;
-      // Exclude reasoning models from routing
-      if (config.capabilities?.reasoning === true) continue;
-      if (config.modelId) {
-        modelMap.set(config.modelId, item);
-      }
-    }
-
-    return modelMap;
-  }
-
-  /**
-   * Legacy fallback routing logic
-   * Keeps backward compatibility with existing behavior
-   */
-  private findAvailableModelLegacy(
-    llmItems: ProviderItemModel[],
-    modelMap: Map<string, ProviderItemModel>,
-  ): ProviderItemModel {
-    // Priority 1: Try to select a model from the random list
-    const selectedCandidate = selectAutoModel();
-    if (selectedCandidate) {
-      const item = modelMap.get(selectedCandidate);
-      if (item) {
-        return item;
-      }
-    }
-
-    // Priority 2: Fallback to AUTO_MODEL_ROUTING_PRIORITY list
-    for (const candidateModelId of AUTO_MODEL_ROUTING_PRIORITY) {
-      const item = modelMap.get(candidateModelId);
-      if (item) {
-        return item;
-      }
-    }
-
-    // Priority 3: the first available model
-    if (llmItems.length > 0) {
-      return llmItems[0];
-    }
-
-    throw new ProviderItemNotFoundError('Auto model routing failed: no model available');
-  }
-
-  /**
-   * Try tool-based routing logic
+   * Tool-based routing
    * This implements the temporary tool-based routing strategy controlled by environment variables
    *
    * @param context The routing context
@@ -439,7 +405,7 @@ export class AutoModelRoutingService {
    * @param scene The derived scene for this routing
    * @returns The selected provider item, or null if tool-based routing should not be applied
    */
-  private tryToolBasedRouting(
+  private routeByTools(
     context: RoutingContext,
     modelMap: Map<string, ProviderItemModel>,
     scene?: string,
@@ -479,28 +445,86 @@ export class AutoModelRoutingService {
   }
 
   /**
-   * Log routing result to database (async, non-blocking)
+   * Select a model from the random list defined in AUTO_MODEL_ROUTING_PRIORITY
    */
-  private async saveRoutingResult(
-    routingResult: any,
+  private routeByRandomSelection(
+    modelMap: Map<string, ProviderItemModel>,
+  ): ProviderItemModel | null {
+    const selectedCandidate = selectAutoModel();
+    if (!selectedCandidate) {
+      return null;
+    }
+
+    const item = modelMap.get(selectedCandidate);
+    if (!item) {
+      return null;
+    }
+
+    return item;
+  }
+
+  /**
+   * Select a model from the built-in priority list
+   */
+  private routeByBuiltInPriorityList(
+    modelMap: Map<string, ProviderItemModel>,
+  ): ProviderItemModel | null {
+    for (const candidateModelId of AUTO_MODEL_ROUTING_PRIORITY) {
+      const item = modelMap.get(candidateModelId);
+      if (item) {
+        return item;
+      }
+    }
+
+    return null;
+  }
+
+  private saveRoutingResult(
     context: RoutingContext,
+    routingResultId: string,
+    scene: string,
+    strategy: RoutingStrategy,
+    selectedProviderItem: ProviderItemModel,
     originalProviderItem: ProviderItemModel,
-    scene?: string,
+    matchedRule?: { ruleId: string; ruleName: string },
+  ) {
+    this.saveRoutingResultAsync(
+      context,
+      routingResultId,
+      scene,
+      strategy,
+      selectedProviderItem,
+      originalProviderItem,
+      matchedRule,
+    ).catch((err) => this.logger.warn('Failed to save routing result', err));
+  }
+
+  /**
+   * Save routing result to database (async, non-blocking)
+   */
+  private async saveRoutingResultAsync(
+    context: RoutingContext,
+    routingResultId: string,
+    scene: string,
+    strategy: RoutingStrategy,
+    selectedProviderItem: ProviderItemModel,
+    originalProviderItem: ProviderItemModel,
+    matchedRule?: { ruleId: string; ruleName: string },
   ): Promise<void> {
     await this.prisma.autoModelRoutingResult.create({
       data: {
-        routingResultId: routingResult.routingResultId,
+        routingResultId,
         userId: context.userId,
         actionResultId: context.actionResultId,
         actionResultVersion: context.actionResultVersion,
         scene,
-        routingStrategy: routingResult.strategy,
-        matchedRuleId: routingResult.matchedRule?.ruleId,
-        matchedRuleName: routingResult.matchedRule?.ruleName,
+        routingStrategy: strategy,
+        matchedRuleId: matchedRule?.ruleId,
+        matchedRuleName: matchedRule?.ruleName,
         originalItemId: originalProviderItem.itemId,
         originalModelId: this.getModelIdFromProviderItem(originalProviderItem),
-        selectedItemId: routingResult.providerItem.itemId,
-        selectedModelId: this.getModelIdFromProviderItem(routingResult.providerItem),
+        selectedItemId: selectedProviderItem.itemId,
+        selectedModelId: this.getModelIdFromProviderItem(selectedProviderItem),
       },
     });
   }

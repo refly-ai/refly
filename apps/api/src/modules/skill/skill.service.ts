@@ -509,12 +509,12 @@ export class SkillService implements OnModuleInit {
     // Route each model through the AutoModelRoutingService
     const routedEntries = await Promise.all(
       Object.entries(originalModelProviderMap).map(async ([scene, originalProviderItem]) => {
-        const result = await this.autoModelRoutingService.route(
+        const routedProviderItem = await this.autoModelRoutingService.route(
           originalProviderItem,
           routingContext,
           scene,
         );
-        return [scene, result.providerItem] as const;
+        return [scene, routedProviderItem] as const;
       }),
     );
     const modelProviderMap = Object.fromEntries(routedEntries);
