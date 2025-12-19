@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { FormDefinition, FormSubmission } from '@refly/openapi-schema';
 import { ConfigService } from '@nestjs/config';
-import { logEvent, updateUserProperties } from '@refly/telemetry-node';
+import { updateUserProperties } from '@refly/telemetry-node';
 
 @Injectable()
 export class FormService {
@@ -77,8 +77,6 @@ export class FormService {
     if (role) {
       updateUserProperties({ uid, email: user?.email }, { user_identity: role });
     }
-
-    logEvent({ uid, email: user?.email }, 'form_submit', null);
   }
 
   async hasFilledForm(uid: string): Promise<boolean> {
