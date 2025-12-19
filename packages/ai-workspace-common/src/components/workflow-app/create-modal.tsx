@@ -597,7 +597,7 @@ export const CreateWorkflowAppModal = ({
           title,
           description: '',
           remixEnabled: false, // Default to false (remix disabled)
-          publishToCommunity: false, // Default to false (not published to community)
+          publishToCommunity: true, // Default to true (published to community)
         });
         setCoverFileList([]);
         setCoverStorageKey(undefined);
@@ -675,7 +675,7 @@ export const CreateWorkflowAppModal = ({
           ?.map((node) => node.id) ?? [];
 
       setInitialFormData({
-        publishToCommunity: formValues.publishToCommunity ?? false,
+        publishToCommunity: formValues.publishToCommunity ?? true,
         title: formValues.title ?? title,
         description: formValues.description ?? '',
         selectedResults: [...validNodeIds].sort(),
