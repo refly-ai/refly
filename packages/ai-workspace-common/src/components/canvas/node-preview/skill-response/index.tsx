@@ -27,6 +27,7 @@ import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hoo
 import { useVariableView } from '@refly-packages/ai-workspace-common/hooks/canvas/use-variable-view';
 import { logEvent } from '@refly/telemetry-web';
 import { useShareDataContext } from '@refly-packages/ai-workspace-common/context/use-share-data';
+import { parseMentionsFromQuery } from '@refly/utils';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -134,10 +135,22 @@ const SkillResponseNodePreviewComponent = ({
   const { steps = [] } = result ?? {};
 
   const handleRetry = useCallback(() => {
-    // Check for empty required file variables
-    const emptyRequiredFileVar = variables.find(
-      (v) => v.required && v.variableType === 'resource' && (!v.value || v.value.length === 0),
+    // Check for empty required file variables that are referenced in the current query
+    // Extract variable references from the query using utility function
+    const mentions = parseMentionsFromQuery(query || '');
+    const referencedVariableIds = new Set<string>(
+      mentions.filter((m) => m.type === 'var').map((m) => m.id),
     );
+
+    // Find empty required file variables that are referenced in the query
+    const emptyRequiredFileVar = variables.find(
+      (v) =>
+        referencedVariableIds.has(v.variableId) &&
+        v.required &&
+        v.variableType === 'resource' &&
+        (!v.value || v.value.length === 0),
+    );
+
     if (emptyRequiredFileVar) {
       message.warning(
         t('canvas.workflow.run.requiredFileInputsMissing') ||
@@ -201,6 +214,7 @@ const SkillResponseNodePreviewComponent = ({
     variables,
     handleVariableView,
     t,
+    processQuery,
   ]);
 
   const outputStep = steps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));
@@ -216,6 +230,7 @@ const SkillResponseNodePreviewComponent = ({
     nodeId: node.id,
     entityId: data.entityId,
     canvasId,
+    query,
   });
 
   useEffect(() => {
