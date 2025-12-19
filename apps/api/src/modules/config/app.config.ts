@@ -93,6 +93,9 @@ export default () => ({
     sender: process.env.EMAIL_SENDER || 'Refly <notifications@refly.ai>',
     payloadMode: process.env.EMAIL_PAYLOAD_MODE || 'base64', // 'url' or 'base64'
     resendApiKey: process.env.RESEND_API_KEY || 're_123',
+    maxRetries: Number.parseInt(process.env.EMAIL_MAX_RETRIES) || 3,
+    baseDelayMs: Number.parseInt(process.env.EMAIL_BASE_DELAY_MS) || 500,
+    minTimeBetweenEmailsMs: Number.parseInt(process.env.EMAIL_MIN_TIME_BETWEEN_MS) || 500, // 2 QPS = 500ms between emails
   },
   auth: {
     skipVerification: process.env.AUTH_SKIP_VERIFICATION === 'true' || false,

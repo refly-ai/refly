@@ -1,15 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Attachment, Resend } from 'resend';
+import { Attachment, ErrorResponse, Resend } from 'resend';
 import { SendEmailRequest, User } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
 import { ParamsError } from '@refly/errors';
 import { MiscService } from '../misc/misc.service';
+import { guard } from '../../utils/guard';
 
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
   private readonly resend: Resend;
+  private readonly maxRetries: number;
+  private readonly baseDelayMs: number;
+  private lastEmailSentAt = 0;
+  private readonly minTimeBetweenEmailsMs: number;
 
   constructor(
     private readonly configService: ConfigService,
@@ -17,6 +22,90 @@ export class NotificationService {
     private readonly miscService: MiscService,
   ) {
     this.resend = new Resend(this.configService.get('email.resendApiKey'));
+    this.maxRetries = this.configService.get<number>('email.maxRetries') ?? 3;
+    this.baseDelayMs = this.configService.get<number>('email.baseDelayMs') ?? 500;
+    this.minTimeBetweenEmailsMs =
+      this.configService.get<number>('email.minTimeBetweenEmailsMs') ?? 500;
+  }
+
+  /**
+   * Ensure minimum time between email sends to respect rate limits
+   */
+  private async enforceRateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastEmail = now - this.lastEmailSentAt;
+
+    if (timeSinceLastEmail < this.minTimeBetweenEmailsMs) {
+      const delayNeeded = this.minTimeBetweenEmailsMs - timeSinceLastEmail;
+      this.logger.debug(`Rate limiting: waiting ${delayNeeded}ms before sending next email`);
+      await new Promise((resolve) => setTimeout(resolve, delayNeeded));
+    }
+
+    this.lastEmailSentAt = Date.now();
+  }
+
+  /**
+   * Check if error is rate limit related
+   */
+  private isRateLimitError(error: ErrorResponse): boolean {
+    return (
+      error?.name === 'rate_limit_exceeded' ||
+      error?.message?.toLowerCase().includes('rate') ||
+      error?.message?.toLowerCase().includes('limit')
+    );
+  }
+
+  /**
+   * Send email with retry logic for rate limit errors using guard.retry
+   * @param emailData - Email data to send
+   * @returns Resend response
+   */
+  private async sendEmailWithRetry(emailData: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+    attachments?: Attachment[];
+  }): Promise<any> {
+    return guard
+      .retry(
+        async () => {
+          // Enforce rate limit before sending
+          await this.enforceRateLimit();
+
+          const res = await this.resend.emails.send(emailData);
+
+          // Check for rate limit error in response
+          if (res.error) {
+            if (this.isRateLimitError(res.error)) {
+              // Throw to trigger retry
+              throw new Error(`Rate limit exceeded: ${res.error.message}`);
+            }
+            // Other errors should not be retried
+            throw new Error(res.error.message);
+          }
+
+          return res;
+        },
+        {
+          maxAttempts: this.maxRetries,
+          initialDelay: this.baseDelayMs,
+          maxDelay: this.baseDelayMs * 2 ** (this.maxRetries - 1),
+          backoffFactor: 2,
+          retryIf: (error: any) => this.isRateLimitError(error),
+          onRetry: (error: any, attempt: number) => {
+            this.logger.warn(
+              `Rate limit error detected. Retrying... (attempt ${attempt}/${this.maxRetries}): ${error.message}`,
+            );
+          },
+        },
+      )
+      .orThrow((error: any) => {
+        this.logger.error(
+          `Failed to send email after ${this.maxRetries} retries: ${error.message}`,
+        );
+        return new Error(`Failed to send email: ${error.message}`);
+      });
   }
 
   /**
@@ -171,7 +260,7 @@ export class NotificationService {
       attachments = await Promise.all(attachmentUrls.map((url) => this.processAttachmentURL(url)));
     }
 
-    const res = await this.resend.emails.send({
+    await this.sendEmailWithRetry({
       from: sender,
       to: receiver,
       subject,
@@ -179,12 +268,8 @@ export class NotificationService {
       attachments,
     });
 
-    this.logger.log(`Email sent successfully to ${receiver}`);
-
-    if (res.error) {
-      throw new Error(res.error?.message);
-    }
-
-    this.logger.log(`Email sent to successfully in ${new Date().getTime() - now.getTime()}ms`);
+    this.logger.log(
+      `Email sent successfully to ${receiver} in ${new Date().getTime() - now.getTime()}ms`,
+    );
   }
 }

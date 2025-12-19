@@ -129,7 +129,7 @@
     "redis": "^4.6.13",
     "reflect-metadata": "^0.1.13",
     "replicate": "^1.1.0",
-    "resend": "^4.0.1",
+    "resend": "^6.6.0",
     "rxjs": "^7.2.0",
     "sharp": "^0.33.5",
     "strip-ansi": "^7.1.2",
