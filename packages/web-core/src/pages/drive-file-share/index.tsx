@@ -72,7 +72,7 @@ const DriveFileSharePage = () => {
           )}
 
           <div className={`flex-grow h-full ${isHtmlFile ? '' : 'pb-16'}`}>
-            <FilePreview file={file} source="preview" />
+            <FilePreview file={file} source="preview" disableTruncation />
           </div>
         </div>
       </div>

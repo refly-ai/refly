@@ -92,9 +92,7 @@ export const usePendingVoucherClaim = () => {
             verifyData.claimedVoucher.status === 'unused' &&
             new Date(verifyData.claimedVoucher.expiresAt) > new Date()
           ) {
-            setTimeout(() => {
-              showClaimedVoucherPopup(verifyData.claimedVoucher!, verifyData.inviterName);
-            }, 500);
+            showClaimedVoucherPopup(verifyData.claimedVoucher!, verifyData.inviterName);
           }
           return;
         }
@@ -133,10 +131,8 @@ export const usePendingVoucherClaim = () => {
             duration: 3,
           });
 
-          // Show the voucher popup (use-only mode) after a short delay
-          setTimeout(() => {
-            showClaimedVoucherPopup(voucher, inviterName);
-          }, 500);
+          // Show the voucher popup (use-only mode)
+          showClaimedVoucherPopup(voucher, inviterName);
         } else {
           // Claim failed - check the specific error message
           const errorMessage = claimResponse.data?.data?.message;

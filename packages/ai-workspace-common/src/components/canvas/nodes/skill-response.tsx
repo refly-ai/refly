@@ -29,7 +29,6 @@ import {
 } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
-import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
 import {
   useGetCreditBalance,
@@ -240,7 +239,6 @@ export const SkillResponseNode = memo(
         (connection?.toNode?.id === id || isHovered),
       [connection, id, isHovered],
     );
-    useSelectedNodeZIndex(id, selected);
 
     const { setNodeData, setNodeStyle } = useNodeData();
     const { getEdges, setEdges } = useReactFlow();
@@ -250,13 +248,13 @@ export const SkillResponseNode = memo(
     // Handle node hover events
     const handleMouseEnter = useCallback(() => {
       setIsHovered(true);
-      onHoverStart();
-    }, [onHoverStart]);
+      onHoverStart(selected);
+    }, [onHoverStart, selected]);
 
     const handleMouseLeave = useCallback(() => {
       setIsHovered(false);
-      onHoverEnd();
-    }, [onHoverEnd]);
+      onHoverEnd(selected);
+    }, [onHoverEnd, selected]);
 
     // Get current pilot session info
     const activeSessionId = usePilotStoreShallow(

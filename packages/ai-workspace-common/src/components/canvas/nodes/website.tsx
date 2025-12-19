@@ -22,7 +22,6 @@ import { IContextItem } from '@refly/common-types';
 import { genSkillID } from '@refly/utils/id';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
 import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/use-update-node-title';
-import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { NodeActionButtons } from './shared/node-action-buttons';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
@@ -377,7 +376,6 @@ export const WebsiteNode = memo(
   }: WebsiteNodeProps) => {
     const { t } = useTranslation();
     const [isHovered, setIsHovered] = useState(false);
-    useSelectedNodeZIndex(id, selected);
 
     const { addToContext } = useAddToContext();
     const { deleteNode } = useDeleteNode();
