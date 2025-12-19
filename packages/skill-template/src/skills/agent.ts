@@ -221,6 +221,22 @@ export class Agent extends BaseSkill {
 
         // Use llmForGraph, which is the (potentially tool-bound) LLM instance for the graph
         const response = await llmForGraph.invoke(currentMessages);
+        // Clean up empty signatures in the response
+        if (
+          (response as any).response_metadata?.model_provider === 'google-vertexai' &&
+          typeof response === 'object'
+        ) {
+          // Clean additional_kwargs.signatures
+          if (
+            response.additional_kwargs?.signatures &&
+            Array.isArray(response.additional_kwargs.signatures)
+          ) {
+            response.additional_kwargs.signatures = response.additional_kwargs.signatures.filter(
+              (signature: any) =>
+                signature && typeof signature === 'string' && signature.trim() !== '',
+            );
+          }
+        }
         return { messages: [response] };
       } catch (error) {
         this.engine.logger.error(`LLM node execution failed: ${error.stack}`);
@@ -318,7 +334,9 @@ export class Agent extends BaseSkill {
               );
             }
           }
-
+          if ((lastMessage as any).response_metadata?.model_provider === 'google-vertexai') {
+            lastMessage.content = '';
+          }
           return { messages: [...priorMessages, ...toolResultMessages] };
         } catch (error) {
           this.engine.logger.error('Tool node execution failed:', error);
