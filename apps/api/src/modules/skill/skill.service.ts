@@ -506,37 +506,43 @@ export class SkillService implements OnModuleInit {
       param.modelItemId,
     );
 
-    // Route each model through the AutoModelRoutingService
-    const routedEntries = await Promise.all(
-      Object.entries(originalModelProviderMap).map(async ([scene, originalProviderItem]) => {
-        const routedProviderItem = await this.autoModelRoutingService.route(
-          originalProviderItem,
-          routingContext,
-          scene,
-        );
-        return [scene, routedProviderItem] as const;
-      }),
-    );
-    const modelProviderMap = Object.fromEntries(routedEntries);
-
-    // modelItemId is the routed model for actual execution
-    // param.modelItemId should be the surface model (original, not routed) for billing and UI
-    let modelItemId: string;
-    if (param.modelItemId) {
-      modelItemId = modelProviderMap.chat.itemId;
+    // Determine the primary model scene based on mode
+    // Only route the primary model, keep auxiliary models unchanged
+    let primaryScene: string;
+    if (param.mode === 'copilot_agent') {
+      primaryScene = 'copilot';
+    } else if (param.mode === 'node_agent') {
+      primaryScene = 'agent';
     } else {
-      if (param.mode === 'copilot_agent') {
-        modelItemId = modelProviderMap.copilot.itemId;
-        param.modelItemId = originalModelProviderMap.copilot.itemId;
-      } else if (param.mode === 'node_agent') {
-        modelItemId = modelProviderMap.agent.itemId;
-        param.modelItemId = originalModelProviderMap.agent.itemId;
-      } else {
-        modelItemId = modelProviderMap.chat.itemId;
-        param.modelItemId = originalModelProviderMap.chat.itemId;
-      }
+      primaryScene = 'chat';
     }
-    let providerItem = await this.providerService.findProviderItemById(user, modelItemId);
+
+    // Route only the primary model through the AutoModelRoutingService
+    // Keep all other auxiliary models (titleGeneration, queryAnalysis, image, video, audio) unchanged
+    const modelProviderMap = { ...originalModelProviderMap };
+    if (originalModelProviderMap[primaryScene]) {
+      const routedItem = await this.autoModelRoutingService.route(
+        originalModelProviderMap[primaryScene],
+        routingContext,
+        primaryScene,
+      );
+      modelProviderMap[primaryScene] = routedItem;
+    }
+
+    // Extract routed and original provider items based on primary scene
+    // param.modelItemId: surface model (original, not routed) for billing and UI
+    // providerItem: routed provider item for actual execution
+    const originalProviderItem = originalModelProviderMap[primaryScene];
+    const routedProviderItem = modelProviderMap[primaryScene];
+
+    if (!param.modelItemId) {
+      param.modelItemId = originalProviderItem?.itemId;
+    }
+
+    let providerItem = await this.providerService.findProviderItemById(
+      user,
+      routedProviderItem?.itemId,
+    );
 
     if (!providerItem || providerItem.category !== 'llm' || !providerItem.enabled) {
       throw new ProviderItemNotFoundError(`provider item ${param.modelItemId} not valid`);
