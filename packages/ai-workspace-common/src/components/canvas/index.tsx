@@ -1076,6 +1076,24 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
     );
   }, [selectedEdgeId, reactFlowInstance, edgeStyles]);
 
+  useEffect(() => {
+    const { setNodes } = reactFlowInstance;
+    setNodes((nodes) => {
+      return nodes.map((node) => {
+        if (node.type !== 'memo') {
+          return {
+            ...node,
+            style: {
+              ...node.style,
+              zIndex: node.id === selectedNode?.id ? 1000 : 1,
+            },
+          };
+        }
+        return node;
+      });
+    });
+  }, [selectedNode?.id, reactFlowInstance]);
+
   // Add event listener for node operations
   useListenNodeOperationEvents();
 

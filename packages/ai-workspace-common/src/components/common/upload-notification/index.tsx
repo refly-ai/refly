@@ -1,14 +1,15 @@
 import React, { memo, useEffect } from 'react';
-import { notification } from 'antd';
+import { message as antMessage } from 'antd';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { useTranslation } from 'react-i18next';
 import { useImageUploadStoreShallow } from '@refly/stores';
-import { cn } from '@refly/utils';
-import { IconImportResource } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { Completed, Close } from 'refly-icons';
+import { Cancelled, CheckCircle, SadFace } from 'refly-icons';
 
 interface UploadNotificationProps {
   className?: string;
 }
+
+const UPLOAD_NOTIFICATION_MESSAGE_KEY = 'upload-notification';
 
 export const UploadNotification: React.FC<UploadNotificationProps> = memo(({ className }) => {
   const { t } = useTranslation();
@@ -21,131 +22,79 @@ export const UploadNotification: React.FC<UploadNotificationProps> = memo(({ cla
       clearUploads: state.clearUploads,
     }));
 
+  // Ensure the singleton message is cleaned up when the component unmounts.
+  useEffect(() => {
+    return () => {
+      antMessage.destroy(UPLOAD_NOTIFICATION_MESSAGE_KEY);
+    };
+  }, []);
+
   // Update notification with progress and completion status
   useEffect(() => {
-    if (uploads.length > 0) {
-      const key = 'image-upload-progress';
-      const progress = Math.round((completedFiles / totalFiles) * 100);
-      const successCount = uploads.filter((upload) => upload.status === 'success').length;
-      const errorCount = uploads.filter((upload) => upload.status === 'error').length;
-      const isCompleted = !isUploading && completedFiles === totalFiles;
+    const safeUploads = uploads ?? [];
+    const safeTotalFiles = totalFiles ?? 0;
+    const safeCompletedFiles = completedFiles ?? 0;
+
+    if (safeUploads.length > 0) {
+      const successCount = safeUploads.filter((upload) => upload.status === 'success').length;
+      const errorCount = safeUploads.filter((upload) => upload.status === 'error').length;
+      const isCompleted = !isUploading && safeCompletedFiles === safeTotalFiles;
 
       // Determine notification type and content based on completion status
       let notificationType: 'open' | 'success' | 'warning' | 'error' = 'open';
-      let icon = <IconImportResource className="text-refly-primary-default" />;
-      let message =
-        t('common.upload.notification.uploading', {
-          count: totalFiles,
-          suffix: totalFiles > 1 ? 's' : '',
-        }) || `Uploading ${totalFiles} files`;
+
       let duration = 0;
 
       if (isCompleted) {
         if (errorCount === 0) {
           // All successful
           notificationType = 'success';
-          icon = <Completed color="var(--refly-func-success-default)" />;
-          message =
-            t('common.upload.notification.success', {
-              count: successCount,
-              suffix: successCount > 1 ? 's' : '',
-            }) || `Successfully uploaded ${successCount} files`;
           duration = 3;
         } else if (successCount > 0) {
           // Partial success
           notificationType = 'warning';
-          icon = <Close color="var(--refly-func-warning-default)" />;
-          message =
-            t('common.upload.notification.partialSuccess') || 'Upload completed with some errors';
           duration = 5;
         } else {
           // All failed
           notificationType = 'error';
-          icon = <Close color="var(--refly-func-danger-default)" />;
-          message = t('common.upload.notification.failed') || 'Upload failed';
           duration = 5;
         }
       }
 
-      const description = isCompleted ? (
-        <div className="space-y-2">
-          {errorCount === 0 ? (
-            <div className="text-sm text-refly-func-success-default">
-              {t('common.upload.notification.allUploaded') ||
-                'All images have been uploaded successfully'}
-            </div>
-          ) : successCount > 0 ? (
-            <div className="text-sm text-refly-func-warning-default">
-              {t('common.upload.notification.partialSuccessDesc', {
-                success: successCount,
-                error: errorCount,
-              }) || `${successCount} successful, ${errorCount} failed`}
-            </div>
-          ) : (
-            <div className="text-sm text-refly-func-danger-default">
-              {t('common.upload.notification.allFailed') || 'All images failed to upload'}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <div className="text-sm text-refly-text-1">
-            {t('common.upload.notification.progress', {
-              completed: completedFiles,
-              total: totalFiles,
-            }) || `${completedFiles} of ${totalFiles} completed`}
-          </div>
-          <div className="w-full bg-refly-bg-control-z0 rounded-full h-2">
-            <div
-              className="bg-refly-primary-default h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <div className="text-xs text-refly-text-2">
-            {progress}% {t('common.upload.notification.complete') || 'complete'}
-          </div>
-        </div>
-      );
-
       // Show notification based on type
       if (notificationType === 'success') {
-        notification.success({
-          key,
-          message,
-          description,
+        antMessage.success({
+          key: UPLOAD_NOTIFICATION_MESSAGE_KEY,
+          icon: <CheckCircle className="mr-1" size={18} />,
+          content: t('common.upload.notification.allUploaded'),
           duration,
-          icon,
-          className: cn('upload-notification', className),
         });
       } else if (notificationType === 'warning') {
-        notification.warning({
-          key,
-          message,
-          description,
+        antMessage.warning({
+          key: UPLOAD_NOTIFICATION_MESSAGE_KEY,
+          icon: <Cancelled color="var(--refly-func-warning-default)" className="mr-1" size={18} />,
+          content: t('common.upload.notification.partialSuccessDesc', {
+            success: successCount,
+            error: errorCount,
+          }),
           duration,
-          icon,
-          className: cn('upload-notification', className),
         });
       } else if (notificationType === 'error') {
-        notification.error({
-          key,
-          message,
-          description,
+        antMessage.error({
+          key: UPLOAD_NOTIFICATION_MESSAGE_KEY,
+          icon: <SadFace className="mr-1" size={18} />,
+          content: t('common.upload.notification.allFailed'),
           duration,
-          icon,
-          className: cn('upload-notification', className),
         });
       } else {
-        notification.open({
-          key,
-          message,
-          description,
+        antMessage.loading({
+          key: UPLOAD_NOTIFICATION_MESSAGE_KEY,
+          content: t('common.upload.notification.uploading'),
           duration,
-          icon,
-          className: cn('upload-notification', className),
+          icon: <Spin className="text-refly-primary-default mr-2" size="small" />,
         });
       }
-      let clearTimeoutId: NodeJS.Timeout;
+      let clearTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
       // Clear uploads after completion notification
       if (isCompleted) {
@@ -160,6 +109,9 @@ export const UploadNotification: React.FC<UploadNotificationProps> = memo(({ cla
         }
       };
     }
+
+    // If uploads are cleared, ensure we don't leave an infinite-duration message hanging around.
+    antMessage.destroy(UPLOAD_NOTIFICATION_MESSAGE_KEY);
   }, [uploads, isUploading, completedFiles, totalFiles, t, clearUploads, className]);
 
   return null;

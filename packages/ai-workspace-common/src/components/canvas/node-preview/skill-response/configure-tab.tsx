@@ -32,7 +32,7 @@ const ConfigureTabComponent = ({
   readonly = false,
 }: ConfigureTabProps) => {
   const { t } = useTranslation();
-  const { handleUploadImage } = useUploadImage();
+  const { handleUploadMultipleImages } = useUploadImage();
   const [dragging, setDragging] = useState(false);
   const dragCounterRef = useRef(0);
   const chatComposerRef = useRef<ChatComposerRef>(null);
@@ -73,17 +73,15 @@ const ConfigureTabComponent = ({
       }
 
       const newContextItems: IContextItem[] = [];
-      for (const file of files) {
-        const driveFile = await handleUploadImage(file, canvasId ?? '');
-        const entityId = driveFile?.fileId ?? '';
-        if (!entityId) {
+      const driveFiles = await handleUploadMultipleImages(files, canvasId ?? '');
+      for (const driveFile of driveFiles ?? []) {
+        if (!driveFile.fileId) {
           continue;
         }
-
         newContextItems.push({
           type: 'file',
-          entityId,
-          title: driveFile?.name ?? '',
+          entityId: driveFile.fileId,
+          title: driveFile.name,
         });
       }
 
@@ -91,7 +89,7 @@ const ConfigureTabComponent = ({
         setContextItems((prevContextItems) => [...prevContextItems, ...newContextItems]);
       }
     },
-    [canvasId, handleUploadImage, setContextItems],
+    [canvasId, handleUploadMultipleImages, setContextItems],
   );
 
   const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {

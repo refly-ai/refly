@@ -70,7 +70,7 @@ export const prepareAddNode = (
   }
 
   // If connectTo is not provided, connect the new node to the start node
-  if (!connectTo?.length) {
+  if (!connectTo?.length && node.type !== 'memo') {
     const startNode = nodes.find((n) => n.type === 'start');
     const connectToStart: CanvasNodeFilter = {
       type: 'start',

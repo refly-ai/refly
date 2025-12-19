@@ -24,7 +24,6 @@ import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hook
 import { useThrottledCallback } from 'use-debounce';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
-import { useSelectedNodeZIndex } from '@refly-packages/ai-workspace-common/hooks/canvas/use-selected-node-zIndex';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { CanvasNodeType } from '@refly/openapi-schema';
@@ -85,7 +84,6 @@ export const GroupNode = memo(
     const { setNodeStyle } = useNodeData();
     const { onLayoutWithGroup } = useCanvasLayout();
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
-    useSelectedNodeZIndex(id, selected);
 
     // Memoize node and its measurements
     const node = useMemo(() => getNode(id), [id, getNode]);
