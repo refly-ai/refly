@@ -3325,10 +3325,6 @@ const translations = {
         generating: '生成工作流中...',
         invalidData: '无效的工作流数据',
       },
-      internalTool: {
-        readFile: '阅读',
-        listFiles: '翻阅文件列表',
-      },
     },
     artifact: {
       webRender: '网页渲染',
