@@ -120,9 +120,10 @@ function createLangfuseProcessor(config: LangfuseConfig): SpanProcessor | null {
         if (!inWhitelist) return false;
 
         // Drop spans without meaningful input/output/attributes to avoid empty traces
-        const hasAttributes =
+        const hasAttributes = Boolean(
           (otelSpan.attributes && Object.keys(otelSpan.attributes).length > 0) ||
-          otelSpan.events?.length;
+            (otelSpan.events?.length ?? 0) > 0,
+        );
         return hasAttributes;
       },
       // Slim down resourceAttributes in trace/observation metadata
