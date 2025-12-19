@@ -37,11 +37,10 @@ const TruncationNotice = memo(({ maxLines }: { maxLines: number }) => {
 });
 
 const Card = memo(({ fileContent, className, disableTruncation }: SourceRendererProps) => {
-  const textContent = new TextDecoder().decode(fileContent.data);
-  const { content: truncatedContent } = useMemo(
-    () => truncateContent(textContent, MAX_CARD_LINES, MAX_CARD_CHARS, disableTruncation),
-    [textContent, disableTruncation],
-  );
+  const { content: truncatedContent } = useMemo(() => {
+    const textContent = new TextDecoder().decode(fileContent.data);
+    return truncateContent(textContent, MAX_CARD_LINES, MAX_CARD_CHARS, disableTruncation);
+  }, [fileContent.data, disableTruncation]);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -52,12 +51,10 @@ const Card = memo(({ fileContent, className, disableTruncation }: SourceRenderer
 
 const Preview = memo(
   ({ fileContent, file, activeTab, onTabChange, disableTruncation }: SourceRendererProps) => {
-    const rawContent = new TextDecoder().decode(fileContent.data);
-
-    const { content: textContent, isTruncated } = useMemo(
-      () => truncateContent(rawContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS, disableTruncation),
-      [rawContent, disableTruncation],
-    );
+    const { content: textContent, isTruncated } = useMemo(() => {
+      const rawContent = new TextDecoder().decode(fileContent.data);
+      return truncateContent(rawContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS, disableTruncation);
+    }, [fileContent.data, disableTruncation]);
 
     return (
       <div className="h-full flex flex-col">

@@ -314,22 +314,13 @@ export class BuiltinGenerateDoc extends AgentBaseTool<BuiltinToolParams> {
   schema = z.object({
     title: z.string().describe('Title of the document to generate'),
     content: z.string().describe(
-      `Document content. When referencing files from context, replace the filename with its fileId using these formats:
+      `Document content. When embedding files from context, use these placeholder formats:
+- \`file-content://df-<fileId>\` - Direct content URL (for <img src="">, embedded media)
+- \`file://df-<fileId>\` - Share page URL (for <a href="">, clickable links)
 
-Supported fileId placeholder formats:
-- \`file-content://df-<fileId>\` - Direct content URL (for embedded media)
-- \`file://df-<fileId>\` - Share page URL (for clickable links)
-- \`fileId://df-<fileId>\` - Share page URL
-- \`@file:df-<fileId>\` - Share page URL
-- \`files/df-<fileId>\` - Share page URL
-- \`df-<fileId>\` - Direct content URL (standalone)
+Example: ![image](file-content://df-xxx) or <img src="file-content://df-xxx">
 
-Usage by document type:
-- Markdown: \`![alt text](df-<fileId>)\` or \`![alt text](file-content://df-<fileId>)\`
-- HTML: \`<img src="file-content://df-<fileId>">\` or \`<a href="file://df-<fileId>">\`
-- Plain text/other: Use direct fileId \`df-<fileId>\` which converts to content URL
-
-IMPORTANT: Always use the fileId (format: df-xxx) from context, NOT the original filename.`,
+IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filename.`,
     ),
   });
   description =
@@ -381,32 +372,45 @@ IMPORTANT: Always use the fileId (format: df-xxx) from context, NOT the original
 
   /**
    * Replace file placeholders in content with HTTP URLs.
-   * Supports multiple formats:
-   * - `file-content://df-xxx` → Direct file content URL (for images, etc.)
-   * - `file://df-xxx` → Share page URL (for links/previews)
-   * - `fileId://df-xxx` → Share page URL
-   * - `@file:df-xxx` → Share page URL
-   * - `files/df-xxx` → Share page URL
-   * - `df-xxx` (standalone) → Direct file content URL
+   * Supported formats:
+   * - `file-content://df-xxx` → Direct file content URL (for images, embedded media)
+   * - `file://df-xxx` → Share page URL (for links)
    */
   private async replaceFilePlaceholders(content: string): Promise<string> {
     if (!content) {
       return content;
     }
 
-    try {
-      // Pattern to find all fileIds in various formats
-      // Uses lookbehind to ensure 'df-' is not preceded by alphanumeric (avoid matching 'pdf-xxx')
-      const fileIdPattern = /(?<![a-z0-9])(df-[a-z0-9]+)\b/gi;
-      const allMatches = Array.from(content.matchAll(fileIdPattern));
+    // Check for placeholder formats
+    const hasFileContent = content.includes('file-content://df-');
+    const hasFile = /(?<!-)file:\/\/df-/.test(content);
 
-      if (allMatches.length === 0) {
+    if (!hasFileContent && !hasFile) {
+      return content;
+    }
+
+    try {
+      // Match both formats
+      const contentMatchPattern = /file-content:\/\/(df-[a-z0-9]+)/gi;
+      const shareMatchPattern = /(?<!-)file:\/\/(df-[a-z0-9]+)/gi;
+
+      const contentMatches = Array.from(content.matchAll(contentMatchPattern));
+      const shareMatches = Array.from(content.matchAll(shareMatchPattern));
+
+      // Collect all unique file IDs
+      const allFileIds = new Set<string>();
+      for (const [, fileId] of contentMatches) {
+        allFileIds.add(fileId);
+      }
+      for (const [, fileId] of shareMatches) {
+        allFileIds.add(fileId);
+      }
+
+      if (allFileIds.size === 0) {
         return content;
       }
 
-      // Collect unique file IDs
-      const uniqueFileIds = [...new Set(allMatches.map(([, fileId]) => fileId))];
-
+      const uniqueFileIds = Array.from(allFileIds);
       const { reflyService, user } = this.params;
 
       // Fetch all drive files and generate URLs
@@ -416,7 +420,6 @@ IMPORTANT: Always use the fileId (format: df-xxx) from context, NOT the original
             const { url, contentUrl } = await reflyService.createShareForDriveFile(user, fileId);
             return { fileId, shareUrl: url, contentUrl };
           } catch (error) {
-            // If file not found or URL generation fails, log and keep original placeholder
             console.error(
               `[BuiltinGenerateDoc] Failed to create share URL for fileId ${fileId}:`,
               error,
@@ -453,34 +456,8 @@ IMPORTANT: Always use the fileId (format: df-xxx) from context, NOT the original
         (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
       );
 
-      // Replace fileId://df-xxx with share page URLs
-      result = result.replace(
-        /fileId:\/\/(df-[a-z0-9]+)/gi,
-        (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
-      );
-
-      // Replace @file:df-xxx with share page URLs
-      result = result.replace(
-        /@file:(df-[a-z0-9]+)/gi,
-        (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
-      );
-
-      // Replace files/df-xxx with share page URLs
-      result = result.replace(
-        /files\/(df-[a-z0-9]+)/gi,
-        (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
-      );
-
-      // Replace standalone df-xxx (not already processed) with content URLs
-      // This handles cases like markdown images: ![image](df-xxx)
-      result = result.replace(/(?<![a-z0-9:/])(df-[a-z0-9]+)\b/gi, (match, fileId: string) => {
-        // Only replace if we have a URL for this fileId
-        return contentUrlMap.get(fileId) ?? match;
-      });
-
       return result;
     } catch (error) {
-      // Log error and return original content to avoid breaking document generation
       console.error('[BuiltinGenerateDoc] Error replacing file placeholders:', error);
       return content;
     }
@@ -495,7 +472,15 @@ export class BuiltinGenerateCodeArtifact extends AgentBaseTool<BuiltinToolParams
     filename: z
       .string()
       .describe('Name of the file to generate, must include extension (.md, .html, .svg, etc.)'),
-    content: z.string().describe('File content (markdown, HTML, SVG markup, etc.)'),
+    content: z.string().describe(
+      `File content (markdown, HTML, SVG markup, etc.). When embedding files from context, use these placeholder formats:
+- \`file-content://df-<fileId>\` - Direct content URL (for <img src="">, <image href="">, embedded media)
+- \`file://df-<fileId>\` - Share page URL (for <a href="">, clickable links)
+
+Example: ![image](file-content://df-xxx) or <img src="file-content://df-xxx">
+
+IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filename.`,
+    ),
   });
 
   description = `Generate renderable content files that display as rich previews in the UI.
@@ -514,10 +499,8 @@ export class BuiltinGenerateCodeArtifact extends AgentBaseTool<BuiltinToolParams
 - ❌ Executable code files (.py, .js, .ts) — use execute_code tool instead
 - ❌ Data files (CSV, JSON, Excel) — use execute_code to generate these
 
-## Important
-- Always use **full URLs** for embedded images/links (e.g., http://localhost:5173/v1/drive/file/content/df-xxx)
-- SVG \`<image>\` tag requires **explicit numeric width and height** (e.g., \`width="300" height="200"\`). Do NOT use \`auto\` — it's invalid in SVG
-- Markdown supports standard image syntax: ![alt](full-url)`;
+## Note
+- SVG \`<image>\` tag requires explicit numeric width and height (e.g., \`width="300" height="200"\`)`;
 
   protected params: BuiltinToolParams;
 
@@ -533,10 +516,14 @@ export class BuiltinGenerateCodeArtifact extends AgentBaseTool<BuiltinToolParams
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
+
+      // Replace file placeholders with HTTP URLs before writing
+      const processedContent = await this.replaceFilePlaceholders(input.content);
+
       const file = await reflyService.writeFile(user, {
         name: input.filename,
         type: 'text/plain',
-        content: input.content,
+        content: processedContent,
         canvasId: config.configurable?.canvasId,
         resultId: config.configurable?.resultId,
         resultVersion: config.configurable?.version,
@@ -556,6 +543,99 @@ export class BuiltinGenerateCodeArtifact extends AgentBaseTool<BuiltinToolParams
             ? error.message
             : 'Unknown error occurred while generating code artifact',
       };
+    }
+  }
+
+  /**
+   * Replace file placeholders in content with HTTP URLs.
+   * Supported formats:
+   * - `file-content://df-xxx` → Direct file content URL (for images, embedded media)
+   * - `file://df-xxx` → Share page URL (for links)
+   */
+  private async replaceFilePlaceholders(content: string): Promise<string> {
+    if (!content) {
+      return content;
+    }
+
+    // Check for placeholder formats
+    const hasFileContent = content.includes('file-content://df-');
+    const hasFile = /(?<!-)file:\/\/df-/.test(content);
+
+    if (!hasFileContent && !hasFile) {
+      return content;
+    }
+
+    try {
+      // Match both formats
+      const contentMatchPattern = /file-content:\/\/(df-[a-z0-9]+)/gi;
+      const shareMatchPattern = /(?<!-)file:\/\/(df-[a-z0-9]+)/gi;
+
+      const contentMatches = Array.from(content.matchAll(contentMatchPattern));
+      const shareMatches = Array.from(content.matchAll(shareMatchPattern));
+
+      // Collect all unique file IDs
+      const allFileIds = new Set<string>();
+      for (const [, fileId] of contentMatches) {
+        allFileIds.add(fileId);
+      }
+      for (const [, fileId] of shareMatches) {
+        allFileIds.add(fileId);
+      }
+
+      if (allFileIds.size === 0) {
+        return content;
+      }
+
+      const uniqueFileIds = Array.from(allFileIds);
+      const { reflyService, user } = this.params;
+
+      // Fetch all drive files and generate URLs
+      const urlResults = await Promise.all(
+        uniqueFileIds.map(async (fileId) => {
+          try {
+            const { url, contentUrl } = await reflyService.createShareForDriveFile(user, fileId);
+            return { fileId, shareUrl: url, contentUrl };
+          } catch (error) {
+            console.error(
+              `[BuiltinGenerateCodeArtifact] Failed to create share URL for fileId ${fileId}:`,
+              error,
+            );
+            return { fileId, shareUrl: null, contentUrl: null };
+          }
+        }),
+      );
+
+      // Build URL maps
+      const shareUrlMap = new Map<string, string>();
+      const contentUrlMap = new Map<string, string>();
+
+      for (const { fileId, shareUrl, contentUrl } of urlResults) {
+        if (shareUrl) {
+          shareUrlMap.set(fileId, shareUrl);
+        }
+        if (contentUrl) {
+          contentUrlMap.set(fileId, contentUrl);
+        }
+      }
+
+      let result = content;
+
+      // Replace file-content://df-xxx with direct content URLs
+      result = result.replace(
+        /file-content:\/\/(df-[a-z0-9]+)/gi,
+        (match, fileId: string) => contentUrlMap.get(fileId) ?? match,
+      );
+
+      // Replace file://df-xxx with share page URLs (but not file-content://)
+      result = result.replace(
+        /(?<!-)file:\/\/(df-[a-z0-9]+)/gi,
+        (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
+      );
+
+      return result;
+    } catch (error) {
+      console.error('[BuiltinGenerateCodeArtifact] Error replacing file placeholders:', error);
+      return content;
     }
   }
 }

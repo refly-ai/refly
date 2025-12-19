@@ -603,10 +603,16 @@ export class DriveService implements OnModuleInit {
         .replace(/[ \t]+/g, ' ')
         // Compress more than 2 consecutive line breaks to 2 line breaks
         .replace(/\n{3,}/g, '\n\n')
+        // Normalize excessive horizontal rules (4+ dashes/underscores/equals) to standard markdown hr
+        .replace(/^[ \t]*[-_=]{4,}[ \t]*$/gm, '---')
+        // Deduplicate consecutive horizontal rules (--- followed by newlines and ---)
+        .replace(/(^---\n)+---$/gm, '---')
         // Trim whitespace at start and end of each line
         .split('\n')
         .map((line) => line.trim())
         .join('\n')
+        // Deduplicate consecutive horizontal rules after trimming
+        .replace(/(\n---)+\n---/g, '\n---')
         // Trim overall content
         .trim()
     );
@@ -650,12 +656,10 @@ export class DriveService implements OnModuleInit {
     if (cache?.parseStatus === 'success') {
       try {
         const stream = await this.internalOss.getObject(cache.contentStorageKey);
+        // Content is already normalized and processed during storage
         let content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
 
-        content = content?.replace(/x00/g, '') || '';
-        content = this.normalizeWhitespace(content);
-
-        // Truncate content if it exceeds max word limit before storing
+        // Re-apply truncation in case maxWords config changed
         const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
         content = this.truncateContent(content, maxWords);
 
@@ -741,16 +745,16 @@ export class DriveService implements OnModuleInit {
       let processedContent = result.content?.replace(/x00/g, '') || '';
       processedContent = this.normalizeWhitespace(processedContent);
 
-      // Truncate content if it exceeds max word limit before storing
-      const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
-      processedContent = this.truncateContent(processedContent, maxWords);
-
-      // Store to OSS
+      // Store normalized content to OSS (without truncation, so we can adjust limits later)
       const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
-      await this.internalOss.putObject(contentStorageKey, result.content);
+      await this.internalOss.putObject(contentStorageKey, processedContent);
 
-      // Calculate word count
-      const wordCount = readingTime(processedContent).words;
+      // Truncate content for return (but not for storage)
+      const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
+      const truncatedContent = this.truncateContent(processedContent, maxWords);
+
+      // Calculate word count from truncated content
+      const wordCount = readingTime(truncatedContent).words;
 
       // Save cache record (upsert ensures concurrency safety)
       await this.prisma.driveFileParseCache.upsert({
@@ -791,10 +795,10 @@ export class DriveService implements OnModuleInit {
       }
 
       this.logger.info(
-        `Successfully parsed and cached file ${fileId}, content length: ${processedContent.length}, word count: ${wordCount}`,
+        `Successfully parsed and cached file ${fileId}, content length: ${truncatedContent.length}, word count: ${wordCount}`,
       );
 
-      return { ...this.toDTO(driveFile), content: processedContent };
+      return { ...this.toDTO(driveFile), content: truncatedContent };
     } catch (error) {
       this.logger.error(
         `Failed to parse drive file ${fileId}: ${JSON.stringify({ message: error.message })}`,
@@ -1404,6 +1408,179 @@ export class DriveService implements OnModuleInit {
       }
       throw error;
     }
+  }
+
+  /**
+   * Unified file access - checks externalOss first (public), then internalOss (private with auth)
+   * This consolidates both public and private file access into a single method.
+   *
+   * Access logic:
+   * 1. First check if file exists in externalOss (public bucket) - no auth required
+   * 2. If not in externalOss, check if user is logged in
+   * 3. If logged in, verify file belongs to user and serve from internalOss
+   * 4. Otherwise return 404
+   */
+  async getUnifiedFileMetadata(
+    fileId: string,
+    user?: User | null,
+  ): Promise<{
+    contentType: string;
+    filename: string;
+    lastModified: Date;
+    isPublic: boolean;
+  }> {
+    const driveFile = await this.prisma.driveFile.findFirst({
+      select: {
+        uid: true,
+        name: true,
+        type: true,
+        storageKey: true,
+        updatedAt: true,
+      },
+      where: { fileId, deletedAt: null },
+    });
+
+    if (!driveFile) {
+      throw new NotFoundException(`Drive file not found: ${fileId}`);
+    }
+
+    const storageKey = driveFile.storageKey ?? '';
+    if (!storageKey) {
+      throw new NotFoundException(`Drive file storage key missing: ${fileId}`);
+    }
+
+    // Step 1: Check if file exists in externalOss (public)
+    const externalObjectInfo = await this.externalOss.statObject(storageKey);
+    if (externalObjectInfo) {
+      const filename = driveFile.name || path.basename(storageKey) || 'file';
+      const contentType =
+        driveFile.type || getSafeMimeType(filename, mime.getType(filename) ?? undefined);
+
+      const dbUpdatedAt = new Date(driveFile.updatedAt);
+      const ossLastModified = externalObjectInfo.lastModified;
+      const lastModified = ossLastModified > dbUpdatedAt ? ossLastModified : dbUpdatedAt;
+
+      return {
+        contentType,
+        filename,
+        lastModified,
+        isPublic: true,
+      };
+    }
+
+    // Step 2: File not in externalOss, check user authentication and ownership
+    if (!user?.uid) {
+      throw new NotFoundException(`Drive file not found: ${fileId}`);
+    }
+
+    if (driveFile.uid !== user.uid) {
+      throw new NotFoundException(`Drive file not found: ${fileId}`);
+    }
+
+    // Step 3: User owns the file, check internalOss
+    const internalObjectInfo = await this.internalOss.statObject(storageKey);
+    if (!internalObjectInfo) {
+      throw new NotFoundException(`Drive file not found in storage: ${fileId}`);
+    }
+
+    const dbUpdatedAt = new Date(driveFile.updatedAt);
+    const ossLastModified = internalObjectInfo.lastModified;
+    const lastModified = ossLastModified > dbUpdatedAt ? ossLastModified : dbUpdatedAt;
+
+    return {
+      contentType: driveFile.type || 'application/octet-stream',
+      filename: driveFile.name,
+      lastModified,
+      isPublic: false,
+    };
+  }
+
+  /**
+   * Unified file stream - checks externalOss first (public), then internalOss (private with auth)
+   */
+  async getUnifiedFileStream(
+    fileId: string,
+    user?: User | null,
+  ): Promise<{
+    data: Buffer;
+    contentType: string;
+    filename: string;
+    lastModified: Date;
+    isPublic: boolean;
+  }> {
+    const driveFile = await this.prisma.driveFile.findFirst({
+      select: {
+        uid: true,
+        canvasId: true,
+        name: true,
+        storageKey: true,
+        type: true,
+        updatedAt: true,
+      },
+      where: { fileId, deletedAt: null },
+    });
+
+    if (!driveFile) {
+      throw new NotFoundException(`Drive file not found: ${fileId}`);
+    }
+
+    const storageKey = driveFile.storageKey ?? '';
+    if (!storageKey) {
+      throw new NotFoundException(`Drive file storage key missing: ${fileId}`);
+    }
+
+    // Step 1: Try to get from externalOss (public)
+    try {
+      const externalReadable = await this.externalOss.getObject(storageKey);
+      if (externalReadable) {
+        const data = await streamToBuffer(externalReadable);
+        const filename = driveFile.name || path.basename(storageKey) || 'file';
+        const contentType =
+          driveFile.type || getSafeMimeType(filename, mime.getType(filename) ?? undefined);
+
+        return {
+          data,
+          contentType,
+          filename,
+          lastModified: new Date(driveFile.updatedAt),
+          isPublic: true,
+        };
+      }
+    } catch (error) {
+      // File not in externalOss, continue to check internalOss
+      if (
+        error?.code !== 'NoSuchKey' &&
+        error?.code !== 'NotFound' &&
+        !error?.message?.includes('The specified key does not exist')
+      ) {
+        this.logger.warn(`Error checking externalOss for ${fileId}: ${error.message}`);
+      }
+    }
+
+    // Step 2: File not in externalOss, check user authentication and ownership
+    if (!user?.uid) {
+      throw new NotFoundException(`Drive file not found: ${fileId}`);
+    }
+
+    if (driveFile.uid !== user.uid) {
+      throw new NotFoundException(`Drive file not found: ${fileId}`);
+    }
+
+    // Step 3: User owns the file, get from internalOss
+    const internalReadable = await this.internalOss.getObject(storageKey);
+    if (!internalReadable) {
+      throw new NotFoundException(`File content not found: ${fileId}`);
+    }
+
+    const data = await streamToBuffer(internalReadable);
+
+    return {
+      data,
+      contentType: driveFile.type || 'application/octet-stream',
+      filename: driveFile.name,
+      lastModified: new Date(driveFile.updatedAt),
+      isPublic: false,
+    };
   }
 
   /**

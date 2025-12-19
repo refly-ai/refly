@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guard/optional-jwt-auth.guard';
 import { DriveService } from './drive.service';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
 import {
@@ -101,9 +102,9 @@ export class DriveController {
   }
 
   @Get('file/content/:fileId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   async serveDriveFile(
-    @LoginedUser() user: User,
+    @LoginedUser() user: User | null,
     @Param('fileId') fileId: string,
     @Query('download') download: string,
     @Res() res: Response,
@@ -112,10 +113,9 @@ export class DriveController {
     const origin = req.headers.origin;
 
     // First, get only metadata (no file content loaded yet)
-    const { contentType, filename, lastModified } = await this.driveService.getDriveFileMetadata(
-      user,
-      fileId,
-    );
+    // Uses unified access: checks externalOss (public) first, then internalOss (private) if user is authenticated
+    const { contentType, filename, lastModified, isPublic } =
+      await this.driveService.getUnifiedFileMetadata(fileId, user);
 
     // Check HTTP cache and get cache headers
     const cacheResult = checkHttpCache(req, {
@@ -136,10 +136,11 @@ export class DriveController {
     }
 
     // Cache is stale, load the full file content
-    let { data } = await this.driveService.getDriveFileStream(user, fileId);
+    let { data } = await this.driveService.getUnifiedFileStream(fileId, user);
 
     // Process content for download: replace private URLs with public URLs in markdown/html
-    if (download) {
+    // Only process if user is authenticated (private files)
+    if (download && user && !isPublic) {
       data = await this.driveService.processContentForDownload(user, data, filename, contentType);
     }
 

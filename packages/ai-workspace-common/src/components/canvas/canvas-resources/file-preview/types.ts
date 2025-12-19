@@ -19,4 +19,5 @@ export interface SourceRendererProps extends FileRendererProps {
   activeTab?: 'code' | 'preview';
   onTabChange?: (tab: 'code' | 'preview') => void;
   disableTruncation?: boolean;
+  purePreview?: boolean;
 }

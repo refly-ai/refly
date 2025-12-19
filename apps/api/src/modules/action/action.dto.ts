@@ -53,7 +53,34 @@ export function actionMessagePO2DTO(message: ActionMessageModel): ActionMessage 
   };
 }
 
+/**
+ * Sanitize tool output for frontend display
+ * Removes large content fields that are not needed for display
+ */
+function sanitizeToolOutput(
+  toolName: string,
+  output: Record<string, unknown>,
+): Record<string, unknown> {
+  // For read_file, remove the content field from data as it can be very large
+  if (toolName === 'read_file' && output?.data && typeof output.data === 'object') {
+    const data = output.data as Record<string, unknown>;
+    if ('content' in data) {
+      return {
+        ...output,
+        data: {
+          ...data,
+          content: '[Content omitted for display]',
+        },
+      };
+    }
+  }
+  return output;
+}
+
 export function toolCallResultPO2DTO(toolCall: ToolCallResultModel): ToolCallResult {
+  const rawOutput = safeParseJSON(toolCall.output || '{}');
+  const output = sanitizeToolOutput(toolCall.toolName, rawOutput);
+
   return {
     callId: toolCall.callId,
     uid: toolCall.uid,
@@ -61,7 +88,7 @@ export function toolCallResultPO2DTO(toolCall: ToolCallResultModel): ToolCallRes
     toolName: toolCall.toolName,
     stepName: toolCall.stepName,
     input: safeParseJSON(toolCall.input || '{}'),
-    output: safeParseJSON(toolCall.output || '{}'),
+    output,
     error: toolCall.error || '',
     status: toolCall.status as 'executing' | 'completed' | 'failed',
     createdAt: toolCall.createdAt.getTime(),
