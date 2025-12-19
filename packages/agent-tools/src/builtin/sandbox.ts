@@ -149,8 +149,11 @@ plt.savefig('chart.png')
             exitCode,
             executionTime,
             parentResultId: config.configurable?.resultId,
-            files,
             warnings,
+            files: files.map((origin) => ({
+              fileId: origin.fileId,
+              url: origin.url,
+            })),
           },
           creditCost: 1,
         };
