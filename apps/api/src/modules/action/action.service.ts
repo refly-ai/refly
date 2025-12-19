@@ -168,7 +168,9 @@ export class ActionService {
       return { ...result, steps: [], messages: enrichedMessages, modelInfo };
     }
 
-    const stepsWithToolCalls = this.toolCallService.attachToolCallsToSteps(steps, toolCalls);
+    const stepsWithToolCalls = this.toolCallService.attachToolCallsToSteps(steps, toolCalls, {
+      sanitizeForDisplay: options?.sanitizeForDisplay,
+    });
     return { ...result, steps: stepsWithToolCalls, messages: enrichedMessages, modelInfo };
   }
 
