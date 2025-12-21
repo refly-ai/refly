@@ -33,6 +33,16 @@ export {
 // Export filtered callback handler (removes internal LangGraph/LangChain metadata)
 export { FilteredLangfuseCallbackHandler } from './filtered-langfuse-callback';
 
+// Export error reporting utilities for LLM stability monitoring
+export {
+  LLMErrorCategory,
+  classifyError,
+  reportLLMError,
+  reportTokenUsageWarning,
+  addLLMBreadcrumb,
+} from './error-reporter';
+export type { ErrorClassification } from './error-reporter';
+
 // Convenience function to initialize the observability system
 export function initializeObservability(
   langfuseConfig: LangfuseConfig,

@@ -28,6 +28,7 @@ import type { BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { type StructuredToolInterface } from '@langchain/core/tools';
 import { countToken } from '../scheduler/utils/token';
+import { reportLLMError } from '@refly/observability';
 
 // Constants for recursion control
 const MAX_TOOL_ITERATIONS = 25;
@@ -141,6 +142,8 @@ export class Agent extends BaseSkill {
     if (selectedTools.length > 0) {
       // Ensure tool definitions are valid before binding
       // Also filter out tools with names exceeding 64 characters (OpenAI limit)
+      // And deduplicate tools by name (keep the first occurrence)
+      const seenToolNames = new Set<string>();
       const validTools = selectedTools.filter((tool) => {
         if (!tool.name || !tool.description || !tool.schema) {
           this.engine.logger.warn(`Skipping invalid tool: ${tool.name || 'unnamed'}`);
@@ -152,6 +155,12 @@ export class Agent extends BaseSkill {
           );
           return false;
         }
+        // Check for duplicate tool names
+        if (seenToolNames.has(tool.name)) {
+          this.engine.logger.warn(`Skipping duplicate tool: ${tool.name} (already registered)`);
+          return false;
+        }
+        seenToolNames.add(tool.name);
         return true;
       });
 
@@ -224,6 +233,13 @@ export class Agent extends BaseSkill {
         return { messages: [response] };
       } catch (error) {
         this.engine.logger.error(`LLM node execution failed: ${error.stack}`);
+        // Report error for monitoring and alerting
+        const agentModelInfo = config?.configurable?.modelConfigMap?.agent;
+        reportLLMError(error as Error, {
+          userId: user?.uid,
+          modelId: agentModelInfo?.modelId,
+          operation: 'llm_node_invoke',
+        });
         throw error;
       }
     };

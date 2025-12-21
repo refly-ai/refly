@@ -3,6 +3,7 @@ import { LLMResult } from '@langchain/core/outputs';
 import { LangfuseClientManager } from './langfuse-client';
 import { TraceManager } from './trace-manager';
 import { createId } from '@paralleldrive/cuid2';
+import { reportLLMError, reportTokenUsageWarning, addLLMBreadcrumb } from './error-reporter';
 
 /**
  * Custom Langfuse callback handler that uses our TraceManager
@@ -94,6 +95,13 @@ export class LangfuseCallbackHandler extends BaseCallbackHandler {
       hasModelConfig: !!modelConfig,
     });
 
+    // Add Sentry breadcrumb for LLM operation start
+    addLLMBreadcrumb({
+      operation: 'invoke',
+      modelId: modelConfig?.modelId,
+      status: 'started',
+    });
+
     const generationId = createId();
     this.runIdToGenerationId.set(runId, generationId);
 
@@ -141,6 +149,32 @@ export class LangfuseCallbackHandler extends BaseCallbackHandler {
       hasTokenUsage: !!tokenUsage,
     });
 
+    // Add Sentry breadcrumb for successful completion
+    addLLMBreadcrumb({
+      operation: 'invoke',
+      tokenCount: tokenUsage?.totalTokens || tokenUsage?.total_tokens,
+      status: 'completed',
+    });
+
+    // Check token usage and report warning if approaching limits
+    if (tokenUsage) {
+      const promptTokens = tokenUsage.promptTokens || tokenUsage.prompt_tokens || 0;
+      // Get context limit from metadata or use default
+      const contextLimit = (output.llmOutput as any)?.contextLimit || 128000;
+      const usagePercent = (promptTokens / contextLimit) * 100;
+
+      // Report warning if usage is high
+      if (usagePercent >= 80) {
+        reportTokenUsageWarning({
+          userId: this.config.userId,
+          traceId: this.traceId,
+          tokenCount: promptTokens,
+          contextLimit,
+          usagePercent,
+        });
+      }
+    }
+
     const generationId = this.runIdToGenerationId.get(runId);
     if (generationId) {
       const generation = output.generations[0]?.[0];
@@ -172,9 +206,31 @@ export class LangfuseCallbackHandler extends BaseCallbackHandler {
   async handleLLMError(err: Error, runId: string): Promise<void> {
     if (!this.config.enabled) return;
 
+    // Classify and report error to Sentry
+    const classification = reportLLMError(err, {
+      userId: this.config.userId,
+      sessionId: this.config.sessionId,
+      traceId: this.traceId,
+      operation: 'llm_invoke',
+      extra: {
+        runId,
+        tags: this.config.tags,
+      },
+    });
+
     console.log('[Langfuse Custom] LLM Error:', {
       runId,
       error: err.message,
+      category: classification.category,
+      isRetryable: classification.isRetryable,
+      severity: classification.severity,
+    });
+
+    // Add Sentry breadcrumb for error
+    addLLMBreadcrumb({
+      operation: 'invoke',
+      status: 'failed',
+      message: classification.userMessage,
     });
 
     const generationId = this.runIdToGenerationId.get(runId);
@@ -184,6 +240,9 @@ export class LangfuseCallbackHandler extends BaseCallbackHandler {
         {
           error: err.message,
           stack: err.stack,
+          errorCategory: classification.category,
+          isRetryable: classification.isRetryable,
+          userMessage: classification.userMessage,
         },
         undefined,
         err.message,

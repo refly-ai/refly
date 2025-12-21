@@ -23,6 +23,7 @@
     "@refly/agent-tools": "workspace:*",
     "@refly/common-types": "workspace:*",
     "@refly/errors": "workspace:*",
+    "@refly/observability": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
     "@refly/providers": "workspace:*",
     "@refly/utils": "workspace:*",
