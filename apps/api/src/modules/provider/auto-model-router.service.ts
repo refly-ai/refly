@@ -251,7 +251,6 @@ class RuleCache implements OnModuleDestroy {
         where: {
           enabled: true,
           scene,
-          deletedAt: null,
         },
         orderBy: [{ priority: 'desc' }, { ruleId: 'asc' }],
       });

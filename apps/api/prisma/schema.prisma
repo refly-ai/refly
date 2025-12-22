@@ -2212,11 +2212,9 @@ model AutoModelRoutingRule {
   enabled Boolean @default(true) @map("enabled")
 
   /// Create timestamp
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
-  /// Soft delete timestamp
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@index([enabled, scene, priority])
   @@map("auto_model_routing_rules")
