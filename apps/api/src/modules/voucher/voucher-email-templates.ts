@@ -323,7 +323,7 @@ export function generateVoucherEmailZH(data: VoucherEmailData): { subject: strin
                     </table>
 
                     <p style="margin: 0 0 8px; font-size: 12px; color: #888888; text-transform: uppercase; letter-spacing: 1px;">您的折扣</p>
-                    <p style="margin: 0 0 24px; font-size: 56px; font-weight: 700; color: #0E9F77;">${(100 - data.discountPercent) / 10}折</p>
+                    <p style="margin: 0 0 24px; font-size: 56px; font-weight: 700; color: #0E9F77;">${Math.round((100 - data.discountPercent) / 10)}折</p>
 
                     <!-- Info Grid -->
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
