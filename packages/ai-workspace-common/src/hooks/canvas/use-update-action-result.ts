@@ -1,6 +1,6 @@
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { CanvasNodeData, ResponseNodeMeta } from '@refly/canvas-common';
-import { ActionResult, ActionStep, SkillEvent } from '@refly/openapi-schema';
+import { ActionMessage, ActionResult, ActionStep, SkillEvent } from '@refly/openapi-schema';
 import { useActionResultStore, useActionResultStoreShallow } from '@refly/stores';
 import { aggregateTokenUsage, mergeActionResults } from '@refly/utils';
 import { useReactFlow } from '@xyflow/react';
@@ -116,6 +116,44 @@ const isNonEmptyEvent = (event: SkillEvent) => {
     return !!event?.toolCallMeta || !!event?.toolCallResult;
   }
   return false;
+};
+
+const isFinalToolStatus = (status?: string): status is 'completed' | 'failed' => {
+  return status === 'completed' || status === 'failed';
+};
+
+// In some edge cases the client may miss tool_call_end/tool_call_error, leaving toolCallMeta.status
+// stuck on "executing". toolCallResult is treated as the source of truth for final status.
+const normalizeToolMessageStatuses = (messages?: ActionMessage[]): ActionMessage[] | undefined => {
+  if (!Array.isArray(messages) || messages.length === 0) return messages;
+
+  let hasChanges = false;
+  const next = messages.map((msg) => {
+    if (msg?.type !== 'tool') return msg;
+
+    const metaStatus = msg.toolCallMeta?.status;
+    const resultStatus = msg.toolCallResult?.status;
+
+    // Only allow non-final -> final transitions; never downgrade final status.
+    if (!isFinalToolStatus(metaStatus) && isFinalToolStatus(resultStatus)) {
+      hasChanges = true;
+      return {
+        ...msg,
+        toolCallMeta: {
+          ...(msg.toolCallMeta ?? {}),
+          status: resultStatus,
+          endTs: msg.toolCallMeta?.endTs ?? msg.toolCallResult?.updatedAt,
+          ...(resultStatus === 'failed' && msg.toolCallResult?.error
+            ? { error: msg.toolCallMeta?.error ?? msg.toolCallResult.error }
+            : {}),
+        },
+      };
+    }
+
+    return msg;
+  });
+
+  return hasChanges ? next : messages;
 };
 
 export const useUpdateActionResult = () => {
@@ -337,6 +375,12 @@ export const useUpdateActionResult = () => {
     (resultId: string, payload: Partial<ActionResult>, event?: SkillEvent) => {
       actionEmitter.emit('updateResult', { resultId, payload });
 
+      // Normalize tool message status using toolCallResult as source of truth for final states.
+      // This allows UI recovery when the tool_call_end/tool_call_error SSE is missed.
+      const normalizedPayload: Partial<ActionResult> = payload?.messages
+        ? { ...payload, messages: normalizeToolMessageStatuses(payload.messages) }
+        : payload;
+
       // Handle stream choke detection - clear existing timer and reset choked state
       const existingTimer = chokeTimerRef.current[resultId];
       if (existingTimer) {
@@ -350,7 +394,8 @@ export const useUpdateActionResult = () => {
       }
 
       // Set a new timer to detect if stream becomes choked (no updates for CHOKE_THRESHOLD_MS)
-      const isStreamingStatus = payload?.status === 'executing' || payload?.status === 'waiting';
+      const isStreamingStatus =
+        normalizedPayload?.status === 'executing' || normalizedPayload?.status === 'waiting';
       if (isStreamingStatus) {
         chokeTimerRef.current[resultId] = window.setTimeout(() => {
           setStreamChoked(resultId, true);
@@ -360,7 +405,7 @@ export const useUpdateActionResult = () => {
       // If event is empty, reset accumulation and perform initial update immediately
       if (!event) {
         clearAccumulator(resultId);
-        updateActionResult(resultId, { resultId, ...payload } as ActionResult);
+        updateActionResult(resultId, { resultId, ...normalizedPayload } as ActionResult);
 
         const nodes = getNodes();
         const currentNode = nodes.find(
@@ -369,7 +414,7 @@ export const useUpdateActionResult = () => {
         if (!currentNode) return;
 
         const nodeVersion = (currentNode?.data?.metadata as ResponseNodeMeta)?.version;
-        const resultVersion = payload?.version;
+        const resultVersion = normalizedPayload?.version;
         if (
           nodeVersion !== undefined &&
           resultVersion !== undefined &&
@@ -379,7 +424,7 @@ export const useUpdateActionResult = () => {
         }
 
         const nodeUpdates = JSON.parse(
-          JSON.stringify(buildNodeUpdates(resultId, payload as Partial<ActionResult>)),
+          JSON.stringify(buildNodeUpdates(resultId, normalizedPayload as Partial<ActionResult>)),
         );
 
         if (
@@ -403,11 +448,13 @@ export const useUpdateActionResult = () => {
         };
         accumRef.current[resultId] = entry;
       }
-      entry.updates.push({ resultId, ...payload });
+      entry.updates.push({ resultId, ...normalizedPayload });
 
       // Determine if we should flush immediately
       const isCriticalUpdate =
-        event?.event === 'end' || event?.event === 'error' || payload?.status === 'failed';
+        event?.event === 'end' ||
+        event?.event === 'error' ||
+        normalizedPayload?.status === 'failed';
 
       // Stream events should be flushed more aggressively for real-time updates
       const isStreamEvent = event?.event === 'stream' || event?.event === 'tool_call_stream';

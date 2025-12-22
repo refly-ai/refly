@@ -647,8 +647,8 @@ export class SkillInvokerService {
     }
 
     // Track latest tool call metadata for error handling
-    let lastStepName: string | undefined;
-    let lastToolCallMeta: ToolCallMeta | undefined;
+    let _lastStepName: string | undefined;
+    let _lastToolCallMeta: ToolCallMeta | undefined;
 
     try {
       // Check if already aborted before starting execution (handles queued aborts)
@@ -736,8 +736,8 @@ export class SkillInvokerService {
                 const toolStartTs = Date.now();
 
                 // Track for error handling
-                lastStepName = stepName;
-                lastToolCallMeta = {
+                _lastStepName = stepName;
+                _lastToolCallMeta = {
                   toolName,
                   toolsetKey,
                   toolsetId,
@@ -1108,61 +1108,44 @@ export class SkillInvokerService {
         }
       }
 
-      const isTokenLimitError = this.isTokenLimitError(err);
-      const shouldHandleErrorFallback = !errorInfo.isAbortError;
-      const failureReason = isTokenLimitError
-        ? 'token_limit_exceeded'
-        : errorInfo.isNetworkError
-          ? 'network_error'
-          : 'execution_error';
-      const failureMessage = isTokenLimitError
-        ? 'Token limit exceeded. Tool execution results have been saved to file.'
-        : `${errorInfo.userFriendlyMessage}. Tool execution results have been saved to file.`;
+      // const isTokenLimitError = this.isTokenLimitError(err);
+      // const shouldHandleErrorFallback = !errorInfo.isAbortError;
+      // const failureReason = isTokenLimitError
+      //   ? 'token_limit_exceeded'
+      //   : errorInfo.isNetworkError
+      //     ? 'network_error'
+      //     : 'execution_error';
+      // const failureMessage = isTokenLimitError
+      //   ? 'Token limit exceeded. Tool execution results have been saved to file.'
+      //   : `${errorInfo.userFriendlyMessage}. Tool execution results have been saved to file.`;
 
-      const fallbackHandled = shouldHandleErrorFallback
-        ? await this.handleErrorFallback({
-            input,
-            config,
-            user,
-            resultId,
-            version,
-            canvasId,
-            res,
-            runMeta,
-            providerItem: data.providerItem,
-            toolCallMeta: lastToolCallMeta,
-            stepName: lastStepName ?? runMeta?.step?.name,
-            failureReason,
-            failureMessage,
-          })
-        : null;
+      // const fallbackHandled = shouldHandleErrorFallback
+      //   ? await this.handleErrorFallback({
+      //       input,
+      //       config,
+      //       user,
+      //       resultId,
+      //       version,
+      //       canvasId,
+      //       res,
+      //       runMeta,
+      //       providerItem: data.providerItem,
+      //       toolCallMeta: lastToolCallMeta,
+      //       stepName: lastStepName ?? runMeta?.step?.name,
+      //       failureReason,
+      //       failureMessage,
+      //     })
+      //   : null;
 
-      if (fallbackHandled) {
-        // If fallback was successfully handled, add message to step content for persistence
-        const errorRecoveryMessage = `\n\nTool execution failed. Results have been saved to ${fallbackHandled.internalUrl}. Please retry in a new node based on the final results.\n\n`;
-        // Add to step content for persistence
-        resultAggregator.handleStreamContent(runMeta, errorRecoveryMessage);
-        if (res) {
-          // Send as stream content, not error - so frontend renders it normally (no popup)
-          writeSSEResponse(res, {
-            event: 'stream',
-            resultId,
-            version,
-            content: errorRecoveryMessage,
-            step: runMeta?.step,
-          });
-        }
-      } else {
-        // Normal error handling - send error SSE (triggers popup) and set failed status
-        if (res) {
-          writeSSEResponse(res, {
-            event: 'error',
-            resultId,
-            version,
-            error: genBaseRespDataFromError(new Error(errorInfo.userFriendlyMessage)),
-            originError: err.message,
-          });
-        }
+      // Normal error handling - send error SSE (triggers popup) and set failed status
+      if (res) {
+        writeSSEResponse(res, {
+          event: 'error',
+          resultId,
+          version,
+          error: genBaseRespDataFromError(new Error(errorInfo.userFriendlyMessage)),
+          originError: err.message,
+        });
       }
       if (errorInfo.isAbortError) {
         result.status = 'failed';
