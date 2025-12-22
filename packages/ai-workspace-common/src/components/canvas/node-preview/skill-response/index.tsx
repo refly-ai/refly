@@ -156,7 +156,7 @@ const SkillResponseNodePreviewComponent = ({
 
     // Update node status immediately to show "waiting" state
     const nextVersion =
-      node.data?.metadata?.status === 'init' ? 0 : (node.data?.metadata?.version || 0) + 1;
+      node.data?.metadata?.status === 'init' ? 0 : (node.data?.metadata?.version ?? 0) + 1;
     setNodeData(node.id, {
       metadata: {
         status: 'waiting',
