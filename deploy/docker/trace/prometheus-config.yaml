@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'refly-local'
+    environment: 'development'
+
+# 抓取配置
+scrape_configs:
+  # Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # OTEL Collector 监控
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+    metric_relabel_configs:
+      # 可选：重命名或过滤 metrics
+      - source_labels: [__name__]
+        regex: 'go_.*'
+        action: drop  # 删除 Go runtime metrics（减少噪音）

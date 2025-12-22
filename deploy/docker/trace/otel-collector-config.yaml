@@ -7,10 +7,20 @@ receivers:
 exporters:
   debug:
     verbosity: detailed
+
+  # Traces exporter - Tempo
   otlp:
     endpoint: tempo:4317
     tls:
       insecure: true
+
+  # Metrics exporter - Prometheus Remote Write
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/write
+    tls:
+      insecure: true
+    resource_to_telemetry_conversion:
+      enabled: true  # Convert resource attributes to Prometheus labels
 
 processors:
   batch:
@@ -22,7 +32,8 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [otlp, debug]
+
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [prometheusremotewrite, debug]  # Export to Prometheus + debug

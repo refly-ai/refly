@@ -1,4 +1,4 @@
-# Trace & Logging Stack - Loki, Tempo, Grafana, OTEL Collector
+# Trace & Logging Stack - Loki, Tempo, Prometheus, Grafana, OTEL Collector
 # For distributed tracing, metrics, and log aggregation
 #
 # Usage:
@@ -6,9 +6,10 @@
 #   docker-compose up -d
 #
 # Services:
-#   - otel-collector: OTLP receiver, forwards traces to Tempo, metrics to debug (exposed: 34318)
+#   - otel-collector: OTLP receiver, forwards traces to Tempo, metrics to Prometheus (exposed: 34318)
 #   - loki: Log aggregation (exposed: 33100)
 #   - tempo: Distributed tracing (exposed: 33200)
+#   - prometheus: Metrics storage and query (exposed: 39090)
 #   - grafana: Visualization dashboard (exposed: 33000)
 
 services:
@@ -23,6 +24,8 @@ services:
       - ./otel-collector-config.yaml:/etc/otelcol/config.yaml
     depends_on:
       tempo:
+        condition: service_healthy
+      prometheus:
         condition: service_healthy
     networks:
       - refly_trace_network
@@ -65,6 +68,32 @@ services:
     networks:
       - refly_trace_network
 
+  prometheus:
+    container_name: refly_prometheus
+    image: prom/prometheus:v2.48.0
+    restart: unless-stopped
+    ports:
+      - 39090:9090  # Prometheus UI and API
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+      - --web.enable-lifecycle
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./prometheus-config.yaml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:9090/-/ready || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - refly_trace_network
+
   grafana:
     container_name: refly_grafana
     image: grafana/grafana:10.2.0
@@ -77,11 +106,14 @@ services:
       - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:33000}
     volumes:
       - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./dashboards:/etc/grafana/provisioning/dashboards
       - grafana_data:/var/lib/grafana
     depends_on:
       loki:
         condition: service_healthy
       tempo:
+        condition: service_healthy
+      prometheus:
         condition: service_healthy
     healthcheck:
       test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1']
@@ -99,4 +131,5 @@ networks:
 volumes:
   loki_data:
   tempo_data:
+  prometheus_data:
   grafana_data:

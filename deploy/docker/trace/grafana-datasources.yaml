@@ -37,3 +37,19 @@ datasources:
         hide: false
       lokiSearch:
         datasourceUid: loki
+
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    uid: prometheus
+    url: http://prometheus:9090
+    editable: true
+    isDefault: false
+    jsonData:
+      timeInterval: 15s
+      queryTimeout: 60s
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: TraceID
+          datasourceUid: tempo
+          urlDisplayLabel: 'View Trace'
