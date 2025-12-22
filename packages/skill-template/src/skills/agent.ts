@@ -17,6 +17,7 @@ import { GraphState } from '../scheduler/types';
 // utils
 import { buildFinalRequestMessages } from '../scheduler/utils/message';
 import { compressAgentLoopMessages } from '../utils/context-manager';
+import { getModelSceneFromMode } from '@refly/utils';
 
 // prompts
 import { buildNodeAgentSystemPrompt } from '../prompts/node-agent';
@@ -105,8 +106,8 @@ export class Agent extends BaseSkill {
           })
         : buildNodeAgentSystemPrompt();
 
-    // Use copilot scene for copilot_agent mode, otherwise use chat scene
-    const modelConfigScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
+    // Use copilot scene for copilot_agent mode, agent scene for node_agent mode, otherwise use chat scene
+    const modelConfigScene = getModelSceneFromMode(mode);
     const modelInfo = config?.configurable?.modelConfigMap?.[modelConfigScene];
     const hasVisionCapability = modelInfo?.capabilities?.vision ?? false;
 
@@ -133,8 +134,8 @@ export class Agent extends BaseSkill {
     let availableToolsForNode: StructuredToolInterface[] = [];
 
     // LLM and LangGraph Setup
-    // Use copilot scene for copilot_agent mode, otherwise use chat scene
-    const modelScene = mode === 'copilot_agent' ? 'copilot' : 'chat';
+    // Use copilot scene for copilot_agent mode, agent scene for node_agent mode, otherwise use chat scene
+    const modelScene = getModelSceneFromMode(mode);
     const baseLlm = this.engine.chatModel({ temperature: 0.1 }, modelScene);
     let llmForGraph: Runnable<BaseMessage[], AIMessage>;
 

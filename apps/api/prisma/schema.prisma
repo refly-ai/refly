@@ -2182,3 +2182,67 @@ model PromotionActivity {
   @@index([createdAt])
   @@map("promotion_activities")
 }
+
+/// Auto model routing rule for rule-based model selection
+model AutoModelRoutingRule {
+  pk BigInt @id @default(autoincrement())
+
+  ruleId   String @unique @default(uuid()) @map("rule_id")
+  ruleName String @map("rule_name")
+
+  /// Scene. "copilot" | "agent"
+  scene String @map("scene")
+
+  /// Condition (JSON)
+  /// Defines criteria the request must satisfy. Implicit AND logic.
+  condition String @default("{}") @map("condition")
+
+  /// Routing target (JSON)
+  /// Defines the model to select when matched.
+  target String @map("target")
+
+  /// Priority. Higher number = higher priority.
+  priority Int @default(0) @map("priority")
+
+  enabled Boolean @default(true) @map("enabled")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([scene, enabled, priority(sort: Desc), ruleId])
+  @@map("auto_model_routing_rules")
+}
+
+/// Auto model routing result for tracking routing decisions
+model AutoModelRoutingResult {
+  pk              BigInt @id @default(autoincrement())
+  routingResultId String @unique @default(uuid()) @map("routing_result_id")
+
+  userId String @map("user_id")
+
+  /// Related action result ID and version
+  actionResultId      String? @map("action_result_id")
+  actionResultVersion Int?    @map("action_result_version")
+
+  /// Scene. "copilot" | "agent"
+  scene String? @map("scene")
+
+  /// Routing strategy type. "rule_based" | "tool_based" | "fallback"
+  routingStrategy String @map("routing_strategy")
+
+  /// Matched rule ID and rule name
+  matchedRuleId   String? @map("matched_rule_id")
+  matchedRuleName String? @map("matched_rule_name")
+
+  /// Original and selected provider item ID and model ID
+  originalItemId  String? @map("original_item_id")
+  originalModelId String? @map("original_model_id")
+  selectedItemId  String  @map("selected_item_id")
+  selectedModelId String  @map("selected_model_id")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@unique([actionResultId, actionResultVersion])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("auto_model_routing_results")
+}

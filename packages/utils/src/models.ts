@@ -1,5 +1,17 @@
-import { TokenUsageItem } from '@refly/openapi-schema';
+import type { AgentMode, TokenUsageItem } from '@refly/openapi-schema';
+import type { ModelScene } from '@refly/common-types';
 import { pick } from './typesafe';
+
+/**
+ * Map agent mode to model scene
+ * @param mode - Agent mode (copilot_agent, node_agent, or undefined)
+ * @returns Model scene (copilot, agent, or chat)
+ */
+export const getModelSceneFromMode = (mode?: AgentMode | string): ModelScene => {
+  if (mode === 'copilot_agent') return 'copilot';
+  if (mode === 'node_agent') return 'agent';
+  return 'chat';
+};
 
 /**
  * Aggregate token usage items by model name

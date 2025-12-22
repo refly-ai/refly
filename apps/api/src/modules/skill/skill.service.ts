@@ -44,6 +44,7 @@ import {
   safeStringifyJSON,
   runModuleInitWithTimeoutAndRetry,
   AUTO_MODEL_ID,
+  getModelSceneFromMode,
 } from '@refly/utils';
 import { PrismaService } from '../common/prisma.service';
 import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
@@ -65,7 +66,7 @@ import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
 import { DriveService } from '../drive/drive.service';
-import { AutoModelRouter } from '../provider/auto-model-router.service';
+import { AutoModelRoutingService, RoutingContext } from '../provider/auto-model-router.service';
 
 /**
  * Fixed builtin toolsets that are always available for node_agent mode.
@@ -105,6 +106,7 @@ export class SkillService implements OnModuleInit {
     private readonly driveService: DriveService,
     private readonly skillInvokerService: SkillInvokerService,
     private readonly actionService: ActionService,
+    private readonly autoModelRoutingService: AutoModelRoutingService,
     @Optional()
     @InjectQueue(QUEUE_SKILL)
     private skillQueue?: Queue<InvokeSkillJobData>,
@@ -482,46 +484,63 @@ export class SkillService implements OnModuleInit {
     param.input ||= { query: '' };
     param.skillName ||= 'commonQnA';
 
+    // Calculate action result version for routing result association
+    const actionResultVersion = existingResult ? (existingResult.version ?? 0) + 1 : 0;
+
     // Auto model routing
     const llmItems = await this.providerService.findProviderItemsByCategory(user, 'llm');
-    const routerContext = {
+
+    // Build RoutingContext with rich context information for rule-based routing
+    const routingContext: RoutingContext = {
       llmItems,
       userId: user.uid,
-      scene: param.mode,
+      actionResultId: resultId,
+      actionResultVersion,
+      mode: param.mode,
+      inputPrompt: param.input?.query,
       toolsets: param.toolsets,
     };
-    const autoModelRouter = new AutoModelRouter(routerContext);
 
+    // Use rule-based router service for routing decisions
     const originalModelProviderMap = await this.providerService.prepareModelProviderMap(
       user,
       param.modelItemId,
     );
 
-    const modelProviderMap = Object.fromEntries(
-      Object.entries(originalModelProviderMap).map(([scene, providerItem]) => [
-        scene,
-        autoModelRouter.route(providerItem),
-      ]),
-    );
+    // The primary scene is 'copilot' for copilot_agent mode, 'agent' for node_agent mode.
+    // The default model for copilot scene is determined by DEFAULT_MODEL_COPILOT.
+    // The default model for agent scene is determined by DEFAULT_MODEL_AGENT.
+    const primaryScene = getModelSceneFromMode(param.mode);
 
-    // modelItemId is the routed model for actual execution
-    // param.modelItemId should be the surface model (original, not routed) for billing and UI
-    let modelItemId: string;
+    // param.modelItemId: surface model (original, not routed) for billing and UI
+    // Fill param.modelItemId with the primary scene model if not provided
+    let originalProviderItem: ProviderItemModel;
     if (param.modelItemId) {
-      modelItemId = modelProviderMap.chat.itemId;
+      originalProviderItem = await this.providerService.findProviderItemById(
+        user,
+        param.modelItemId,
+      );
     } else {
-      if (param.mode === 'copilot_agent') {
-        modelItemId = modelProviderMap.copilot.itemId;
-        param.modelItemId = originalModelProviderMap.copilot.itemId;
-      } else if (param.mode === 'node_agent') {
-        modelItemId = modelProviderMap.agent.itemId;
-        param.modelItemId = originalModelProviderMap.agent.itemId;
-      } else {
-        modelItemId = modelProviderMap.chat.itemId;
-        param.modelItemId = originalModelProviderMap.chat.itemId;
-      }
+      originalProviderItem = originalModelProviderMap[primaryScene];
+      param.modelItemId = originalProviderItem?.itemId;
     }
-    let providerItem = await this.providerService.findProviderItemById(user, modelItemId);
+
+    // Route only the primary model through the AutoModelRoutingService
+    // Keep all other auxiliary models (titleGeneration, queryAnalysis, image, video, audio) unchanged
+    const routedProviderItem = await this.autoModelRoutingService.route(
+      originalProviderItem,
+      routingContext,
+    );
+    const modelProviderMap = { ...originalModelProviderMap };
+    if (originalModelProviderMap[primaryScene]) {
+      modelProviderMap[primaryScene] = routedProviderItem;
+    }
+
+    // providerItem: routed provider item for actual execution
+    let providerItem = await this.providerService.findProviderItemById(
+      user,
+      routedProviderItem.itemId,
+    );
 
     if (!providerItem || providerItem.category !== 'llm' || !providerItem.enabled) {
       throw new ProviderItemNotFoundError(`provider item ${param.modelItemId} not valid`);
@@ -816,13 +835,8 @@ export class SkillService implements OnModuleInit {
 
     // Select model name based on mode to correctly record in action_results
     const getModelNameForMode = (): string => {
-      if (data.mode === 'copilot_agent' && modelConfigMap?.copilot) {
-        return modelConfigMap.copilot.modelId;
-      }
-      if (data.mode === 'node_agent' && modelConfigMap?.agent) {
-        return modelConfigMap.agent.modelId;
-      }
-      return modelConfigMap?.chat?.modelId ?? 'unknown';
+      const scene = getModelSceneFromMode(data.mode);
+      return modelConfigMap?.[scene]?.modelId ?? 'unknown';
     };
     const modelName = getModelNameForMode();
 
