@@ -4,6 +4,7 @@ import { PinoLogger } from 'nestjs-pino';
 import mime from 'mime';
 import pLimit from 'p-limit';
 import pdf from 'pdf-parse';
+import sharp from 'sharp';
 import { PrismaService } from '../common/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../common/redis.service';
@@ -863,14 +864,39 @@ export class DriveService implements OnModuleInit {
                 chunks.push(chunk);
               }
 
-              const buffer = Buffer.concat(chunks);
+              let buffer = Buffer.concat(chunks);
+
+              // Compress image before converting to base64
+              const maxArea = Number.parseInt(process.env.IMAGE_MAX_AREA) || 600 * 600;
+              const metadata = await sharp(buffer).metadata();
+              const originalWidth = metadata?.width ?? 0;
+              const originalHeight = metadata?.height ?? 0;
+              const isGif = metadata?.format === 'gif';
+
+              // Calculate scaling factor based on max area
+              const originalArea = originalWidth * originalHeight;
+              const scaleFactor = originalArea > maxArea ? Math.sqrt(maxArea / originalArea) : 1;
+
+              // Resize and convert format if needed
+              if (scaleFactor < 1 || !isGif) {
+                const processedBuffer = await sharp(buffer)
+                  .resize({
+                    width: Math.round(originalWidth * scaleFactor),
+                    height: Math.round(originalHeight * scaleFactor),
+                    fit: 'fill',
+                  })
+                  [isGif ? 'toFormat' : 'toFormat'](isGif ? 'gif' : 'webp')
+                  .toBuffer();
+                buffer = Buffer.from(processedBuffer);
+              }
+
               const base64 = buffer.toString('base64');
-              const contentType = file.type ?? 'application/octet-stream';
+              const contentType = isGif ? 'image/gif' : 'image/webp';
 
               return `data:${contentType};base64,${base64}`;
             } catch (error) {
               this.logger.error(
-                `Failed to generate base64 for drive file ${file.fileId}: ${error.stack}`,
+                `Failed to generate compressed base64 for drive file ${file.fileId}: ${error.stack}`,
               );
               return '';
             }
