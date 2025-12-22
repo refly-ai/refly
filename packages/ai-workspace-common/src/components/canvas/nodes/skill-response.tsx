@@ -483,7 +483,8 @@ export const SkillResponseNode = memo(
         resetFailedState(entityId);
       }
 
-      const nextVersion = (data?.metadata?.version || 0) + 1;
+      const nextVersion =
+        data?.metadata?.status === 'init' ? 0 : (data?.metadata?.version ?? 0) + 1;
 
       setNodeData(id, {
         contentPreview: '',
