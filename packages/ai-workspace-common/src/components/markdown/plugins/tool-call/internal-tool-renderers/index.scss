@@ -1,0 +1,23 @@
+@keyframes shimmer {
+  0% {
+    background-position: -125px 0;
+  }
+
+  100% {
+    background-position: 125px 0;
+  }
+}
+
+.text-shimmer {
+  color: transparent;
+  background: linear-gradient(to right,
+      var(--refly-text-0) 0%,
+      var(--refly-text-3) 50%,
+      var(--refly-text-0) 100%);
+  background-size: 125px 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-repeat: repeat;
+  background-position: 0 0;
+  animation: shimmer 1.2s infinite linear;
+}

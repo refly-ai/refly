@@ -44,7 +44,6 @@ interface CodeRendererProps extends SourceRendererProps {
 // Card mode: truncated content with SyntaxHighlighter
 const CardRenderer = memo(
   ({ source, fileContent, file, language, disableTruncation }: CodeRendererProps) => {
-    const rawContent = new TextDecoder().decode(fileContent.data);
     const detectedLanguage = language || getCodeLanguage(file.name) || 'text';
 
     // Use different truncation limits based on source
@@ -52,10 +51,10 @@ const CardRenderer = memo(
     const maxLines = isPreview ? MAX_PREVIEW_LINES : MAX_CARD_LINES;
     const maxChars = isPreview ? MAX_PREVIEW_CHARS : MAX_CARD_CHARS;
 
-    const { content: truncatedContent, isTruncated } = useMemo(
-      () => truncateContent(rawContent, maxLines, maxChars, disableTruncation),
-      [rawContent, maxLines, maxChars, disableTruncation],
-    );
+    const { content: truncatedContent, isTruncated } = useMemo(() => {
+      const rawContent = new TextDecoder().decode(fileContent.data);
+      return truncateContent(rawContent, maxLines, maxChars, disableTruncation);
+    }, [fileContent.data, maxLines, maxChars, disableTruncation]);
 
     // Preview mode: use CodeViewer (Monaco Editor has virtualization)
     if (isPreview) {
@@ -101,14 +100,13 @@ const PreviewRenderer = memo(
     onTabChange,
     disableTruncation,
   }: CodeRendererProps) => {
-    const rawContent = new TextDecoder().decode(fileContent.data);
     const detectedLanguage = language || getCodeLanguage(file.name) || 'text';
     const [tab, setTab] = useState<'code' | 'preview'>(activeTab || 'code');
 
-    const { content: textContent, isTruncated } = useMemo(
-      () => truncateContent(rawContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS, disableTruncation),
-      [rawContent, disableTruncation],
-    );
+    const { content: textContent, isTruncated } = useMemo(() => {
+      const rawContent = new TextDecoder().decode(fileContent.data);
+      return truncateContent(rawContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS, disableTruncation);
+    }, [fileContent.data, disableTruncation]);
 
     const handleTabChange = (v: 'code' | 'preview') => {
       setTab(v);
@@ -186,14 +184,12 @@ export const CodeRenderer = memo(
 
 export const JsonRenderer = memo(
   ({ fileContent, source = 'card', disableTruncation }: SourceRendererProps) => {
-    const textContent = new TextDecoder().decode(fileContent.data);
-    const { content: displayContent, isTruncated } = useMemo(
-      () =>
-        source === 'card'
-          ? truncateContent(textContent, MAX_CARD_LINES, MAX_CARD_CHARS, disableTruncation)
-          : truncateContent(textContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS, disableTruncation),
-      [textContent, source, disableTruncation],
-    );
+    const { content: displayContent, isTruncated } = useMemo(() => {
+      const textContent = new TextDecoder().decode(fileContent.data);
+      return source === 'card'
+        ? truncateContent(textContent, MAX_CARD_LINES, MAX_CARD_CHARS, disableTruncation)
+        : truncateContent(textContent, MAX_PREVIEW_LINES, MAX_PREVIEW_CHARS, disableTruncation);
+    }, [fileContent.data, source, disableTruncation]);
 
     // Card mode: no truncation notice
     if (source === 'card') {

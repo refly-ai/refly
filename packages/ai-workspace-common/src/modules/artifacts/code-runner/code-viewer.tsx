@@ -224,6 +224,7 @@ export default memo(
   },
   (prevProps, nextProps) => {
     // Optimize re-renders by comparing only necessary props
+    // Note: onTabChange is intentionally not compared to ensure state updates propagate
     return (
       prevProps.code === nextProps.code &&
       prevProps.language === nextProps.language &&
@@ -231,8 +232,10 @@ export default memo(
       prevProps.isGenerating === nextProps.isGenerating &&
       prevProps.activeTab === nextProps.activeTab &&
       prevProps.readOnly === nextProps.readOnly &&
+      prevProps.canvasReadOnly === nextProps.canvasReadOnly &&
       prevProps.type === nextProps.type &&
-      prevProps.showActions === nextProps.showActions
+      prevProps.showActions === nextProps.showActions &&
+      prevProps.purePreview === nextProps.purePreview
     );
   },
 );

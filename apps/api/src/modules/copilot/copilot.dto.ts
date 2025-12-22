@@ -13,6 +13,6 @@ export const copilotSessionPO2DTO = (
     ...pick(session, ['sessionId', 'title', 'canvasId']),
     createdAt: session.createdAt.toJSON(),
     updatedAt: session.updatedAt.toJSON(),
-    results: session.results?.map(actionResultPO2DTO),
+    results: session.results?.map((result) => actionResultPO2DTO(result)),
   };
 };

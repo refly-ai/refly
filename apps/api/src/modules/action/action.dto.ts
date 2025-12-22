@@ -32,14 +32,16 @@ export type ActionDetail = ActionResultModel & {
   modelInfo?: ModelInfo;
 };
 
-export function actionStepPO2DTO(step: ActionStepDetail): ActionStep {
+export type SanitizeOptions = { sanitizeForDisplay?: boolean };
+
+export function actionStepPO2DTO(step: ActionStepDetail, options?: SanitizeOptions): ActionStep {
   return {
     ...pick(step, ['name', 'content', 'reasoningContent']),
     logs: safeParseJSON(step.logs || '[]'),
     artifacts: safeParseJSON(step.artifacts || '[]'),
     structuredData: safeParseJSON(step.structuredData || '{}'),
     tokenUsage: safeParseJSON(step.tokenUsage || '[]'),
-    toolCalls: step.toolCalls?.map(toolCallResultPO2DTO),
+    toolCalls: step.toolCalls?.map((tc) => toolCallResultPO2DTO(tc, options)),
   };
 }
 
@@ -53,7 +55,39 @@ export function actionMessagePO2DTO(message: ActionMessageModel): ActionMessage 
   };
 }
 
-export function toolCallResultPO2DTO(toolCall: ToolCallResultModel): ToolCallResult {
+/**
+ * Sanitize tool output for frontend display
+ * Removes large content fields that are not needed for display
+ */
+export function sanitizeToolOutput(
+  toolName: string,
+  output: Record<string, unknown>,
+): Record<string, unknown> {
+  // For read_file, remove the content field from data as it can be very large
+  if (toolName === 'read_file' && output?.data && typeof output.data === 'object') {
+    const data = output.data as Record<string, unknown>;
+    if ('content' in data) {
+      return {
+        ...output,
+        data: {
+          ...data,
+          content: '[Content omitted for display]',
+        },
+      };
+    }
+  }
+  return output;
+}
+
+export function toolCallResultPO2DTO(
+  toolCall: ToolCallResultModel,
+  options?: { sanitizeForDisplay?: boolean },
+): ToolCallResult {
+  const rawOutput = safeParseJSON(toolCall.output || '{}');
+  const output = options?.sanitizeForDisplay
+    ? sanitizeToolOutput(toolCall.toolName, rawOutput)
+    : rawOutput;
+
   return {
     callId: toolCall.callId,
     uid: toolCall.uid,
@@ -61,7 +95,7 @@ export function toolCallResultPO2DTO(toolCall: ToolCallResultModel): ToolCallRes
     toolName: toolCall.toolName,
     stepName: toolCall.stepName,
     input: safeParseJSON(toolCall.input || '{}'),
-    output: safeParseJSON(toolCall.output || '{}'),
+    output,
     error: toolCall.error || '',
     status: toolCall.status as 'executing' | 'completed' | 'failed',
     createdAt: toolCall.createdAt.getTime(),
@@ -70,7 +104,7 @@ export function toolCallResultPO2DTO(toolCall: ToolCallResultModel): ToolCallRes
   };
 }
 
-export function actionResultPO2DTO(result: ActionDetail): ActionResult {
+export function actionResultPO2DTO(result: ActionDetail, options?: SanitizeOptions): ActionResult {
   return {
     ...pick(result, [
       'resultId',
@@ -100,7 +134,7 @@ export function actionResultPO2DTO(result: ActionDetail): ActionResult {
     storageKey: result.storageKey,
     createdAt: result.createdAt.toJSON(),
     updatedAt: result.updatedAt.toJSON(),
-    steps: result.steps?.map(actionStepPO2DTO),
+    steps: result.steps?.map((s) => actionStepPO2DTO(s, options)),
     messages: result.messages,
     files: result.files,
     toolsets: safeParseJSON(result.toolsets || '[]'),

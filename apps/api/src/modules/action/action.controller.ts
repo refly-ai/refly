@@ -17,8 +17,11 @@ export class ActionController {
     @LoginedUser() user: UserModel,
     @Query('resultId') resultId: string,
   ): Promise<GetActionResultResponse> {
-    const result = await this.actionService.getActionResult(user, { resultId });
-    return buildSuccessResponse(actionResultPO2DTO(result));
+    const result = await this.actionService.getActionResult(user, {
+      resultId,
+      sanitizeForDisplay: true,
+    });
+    return buildSuccessResponse(actionResultPO2DTO(result, { sanitizeForDisplay: true }));
   }
 
   @UseGuards(JwtAuthGuard)

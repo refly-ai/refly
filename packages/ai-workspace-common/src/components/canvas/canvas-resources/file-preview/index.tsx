@@ -80,6 +80,7 @@ interface FilePreviewProps {
   markdownClassName?: string;
   source?: 'card' | 'preview';
   disableTruncation?: boolean;
+  purePreview?: boolean;
 }
 
 export const FilePreview = memo(
@@ -88,6 +89,7 @@ export const FilePreview = memo(
     markdownClassName = '',
     source = 'card',
     disableTruncation = false,
+    purePreview = false,
   }: FilePreviewProps) => {
     const [fileContent, setFileContent] = useState<FileContent | null>(null);
     const [loading, setLoading] = useState(true);
@@ -188,6 +190,7 @@ export const FilePreview = memo(
               activeTab={activeTab}
               onTabChange={handleTabChange}
               disableTruncation={disableTruncation}
+              purePreview={purePreview}
             />
           );
         case 'markdown':

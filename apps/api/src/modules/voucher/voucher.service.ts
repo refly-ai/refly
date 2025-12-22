@@ -633,14 +633,29 @@ export class VoucherService implements OnModuleInit {
 
   /**
    * Create a sharing invitation for a voucher
+   * Users can share if they are the owner OR if they claimed the voucher via invitation
    */
   async createInvitation(uid: string, voucherId: string): Promise<CreateInvitationResult> {
-    // Get the voucher
+    // Get the voucher (without uid filter - we'll check permission separately)
     const voucher = await this.prisma.voucher.findFirst({
-      where: { voucherId, uid },
+      where: { voucherId },
     });
 
     if (!voucher) {
+      throw new Error('Voucher not found');
+    }
+
+    // Check permission: owner OR claimant (same logic as validateVoucher)
+    const isOwner = voucher.uid === uid;
+    const isClaimant = await this.prisma.voucherInvitation.findFirst({
+      where: {
+        voucherId,
+        inviteeUid: uid,
+        status: InvitationStatus.CLAIMED,
+      },
+    });
+
+    if (!isOwner && !isClaimant) {
       throw new Error('Voucher not found');
     }
 
