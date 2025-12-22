@@ -171,7 +171,7 @@ export class SkillService implements OnModuleInit {
           pattern: `*/${intervalMinutes} * * * *`, // Run every N minutes
         },
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: true,
         jobId: 'check-stuck-actions', // Unique job ID to prevent duplicates
         attempts: 3,
         backoff: {

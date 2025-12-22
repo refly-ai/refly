@@ -146,7 +146,13 @@ class CustomThrottlerGuard extends ThrottlerGuard {
           BullModule.forRootAsync({
             imports: [CommonModule],
             useFactory: (redisService: RedisService) => {
-              return { connection: redisService.getClient() };
+              return {
+                connection: redisService.getClient(),
+                defaultJobOptions: {
+                  removeOnComplete: true,
+                  removeOnFail: true,
+                },
+              };
             },
             inject: [RedisService],
           }),

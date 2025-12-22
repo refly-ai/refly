@@ -123,7 +123,7 @@ export class SubscriptionService implements OnModuleInit {
           pattern: '0 * * * *', // Run every hour
         },
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: true,
         // Add job options for distributed environment
         jobId: 'check-canceled-subscriptions', // Unique job ID to prevent duplicates
         attempts: 3, // Number of retry attempts
@@ -156,7 +156,7 @@ export class SubscriptionService implements OnModuleInit {
           pattern: '*/10 * * * *',
         },
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: true,
         // Add job options for distributed environment
         jobId: 'expire-and-recharge-credits', // Unique job ID to prevent duplicates
         attempts: 3, // Number of retry attempts

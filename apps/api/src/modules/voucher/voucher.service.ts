@@ -97,7 +97,7 @@ export class VoucherService implements OnModuleInit {
           pattern: '30 */2 * * *', // Run every 2 hours at minute 30
         },
         removeOnComplete: true,
-        removeOnFail: false,
+        removeOnFail: true,
         jobId: 'cleanup-expired-vouchers', // Unique job ID to prevent duplicates
         attempts: 3,
         backoff: {

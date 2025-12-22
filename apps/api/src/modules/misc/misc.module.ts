@@ -14,14 +14,7 @@ import { isDesktop } from '../../utils/runtime';
       ? []
       : [
           BullModule.registerQueue({ name: QUEUE_IMAGE_PROCESSING }),
-          BullModule.registerQueue({
-            name: QUEUE_CLEAN_STATIC_FILES,
-            prefix: 'misc_cron',
-            defaultJobOptions: {
-              removeOnComplete: true,
-              removeOnFail: false,
-            },
-          }),
+          BullModule.registerQueue({ name: QUEUE_CLEAN_STATIC_FILES, prefix: 'misc_cron' }),
         ]),
   ],
   controllers: [MiscController],

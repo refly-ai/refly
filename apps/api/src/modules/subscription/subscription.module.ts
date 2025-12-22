@@ -31,18 +31,10 @@ import { isDesktop } from '../../utils/runtime';
           BullModule.registerQueue({
             name: QUEUE_CHECK_CANCELED_SUBSCRIPTIONS,
             prefix: 'subscription_cron',
-            defaultJobOptions: {
-              removeOnComplete: true,
-              removeOnFail: false,
-            },
           }),
           BullModule.registerQueue({
             name: QUEUE_EXPIRE_AND_RECHARGE_CREDITS,
             prefix: 'subscription_cron',
-            defaultJobOptions: {
-              removeOnComplete: true,
-              removeOnFail: false,
-            },
           }),
           StripeModule.externallyConfigured(StripeModule, 0),
         ]),

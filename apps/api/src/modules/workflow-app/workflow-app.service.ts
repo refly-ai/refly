@@ -444,7 +444,7 @@ export class WorkflowAppService {
           { appId, canvasId, uid: user.uid },
           {
             removeOnComplete: true,
-            removeOnFail: false,
+            removeOnFail: true,
           },
         );
         this.logger.log(`Enqueued template generation for workflow app: ${appId}`);

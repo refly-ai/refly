@@ -30,27 +30,9 @@ import {
     CommonModule,
     CanvasSyncModule,
     DriveModule,
-    BullModule.registerQueue({
-      name: QUEUE_SCALEBOX_EXECUTE,
-      defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: true,
-      },
-    }),
-    BullModule.registerQueue({
-      name: QUEUE_SCALEBOX_PAUSE,
-      defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: true,
-      },
-    }),
-    BullModule.registerQueue({
-      name: QUEUE_SCALEBOX_KILL,
-      defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: true,
-      },
-    }),
+    BullModule.registerQueue({ name: QUEUE_SCALEBOX_EXECUTE }),
+    BullModule.registerQueue({ name: QUEUE_SCALEBOX_PAUSE }),
+    BullModule.registerQueue({ name: QUEUE_SCALEBOX_KILL }),
   ],
   providers: [
     ScaleboxService,

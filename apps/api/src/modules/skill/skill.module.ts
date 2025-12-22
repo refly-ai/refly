@@ -58,14 +58,7 @@ import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
       ? []
       : [
           BullModule.registerQueue({ name: QUEUE_SKILL }),
-          BullModule.registerQueue({
-            name: QUEUE_CHECK_STUCK_ACTIONS,
-            prefix: 'skill_cron',
-            defaultJobOptions: {
-              removeOnComplete: true,
-              removeOnFail: false,
-            },
-          }),
+          BullModule.registerQueue({ name: QUEUE_CHECK_STUCK_ACTIONS, prefix: 'skill_cron' }),
           BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_USAGE }),
           BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_CREDIT_USAGE }),
           BullModule.registerQueue({ name: QUEUE_SYNC_REQUEST_USAGE }),
