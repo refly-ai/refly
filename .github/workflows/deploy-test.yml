@@ -2,16 +2,68 @@ name: Deploy To Test Environment
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: deploy-test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  linear-precheck:
+    name: Check Linear Issues
+    runs-on: ubuntu-latest
+    if: github.repository == 'refly-ai/refly'
+    outputs:
+      should_deploy: ${{ steps.check_issues.outputs.should_deploy }}
+      issue_ids: ${{ steps.check_issues.outputs.issue_ids }}
+    steps:
+      - name: Query Linear for deployment-ready issues
+        id: check_issues
+        env:
+          ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
+        run: |
+          # Query for merged issues in Scheduled/Staging projects
+          RESPONSE=$(curl -s -X POST "$ORBIT_API_URL/api/issues/query" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "filter": {
+                "state": { "name": { "eq": "Merged" } }
+              }
+            }')
+
+          echo "Linear API Response:"
+          echo "$RESPONSE" | jq .
+
+          # Extract issue IDs from response
+          MERGED_ISSUES=$(echo "$RESPONSE" | jq -c '[.data.nodes[].id]')
+
+          echo "Merged issues found:"
+          echo "$MERGED_ISSUES" | jq .
+
+          # Check if there are any merged issues
+          ISSUE_COUNT=$(echo "$MERGED_ISSUES" | jq 'length')
+
+          if [ "$ISSUE_COUNT" -gt 0 ]; then
+            echo "Found $ISSUE_COUNT merged issue(s). Proceeding with deployment."
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            echo "issue_ids=$MERGED_ISSUES" >> "$GITHUB_OUTPUT"
+          else
+            echo "No merged issues found. Skipping deployment."
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            echo "issue_ids=[]" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    if: github.repository == 'refly-ai/refly'
+    needs: linear-precheck
+    if: github.repository == 'refly-ai/refly' && needs.linear-precheck.outputs.should_deploy == 'true'
     strategy:
       matrix:
         app: ["api", "web"]
@@ -135,3 +187,46 @@ jobs:
         run: |
           kubectl set image deployment/refly-web refly-web=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
           kubectl rollout status deployment/refly-web -n refly-app --timeout=300s
+
+  update-linear-status:
+    name: Update Linear Issues to In Review
+    runs-on: ubuntu-latest
+    needs: [linear-precheck, deploy]
+    if: success() && needs.linear-precheck.outputs.should_deploy == 'true'
+    steps:
+      - name: Update issue statuses to In Review
+        env:
+          ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
+          ISSUE_IDS: ${{ needs.linear-precheck.outputs.issue_ids }}
+        run: |
+          echo "Updating issues to In Review status..."
+          echo "Issue IDs: $ISSUE_IDS"
+
+          # Batch update all issues to "In Review" status
+          RESPONSE=$(curl -s -X POST "$ORBIT_API_URL/api/issues/batch-update" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"ids\": $ISSUE_IDS,
+              \"state\": \"Merged\",
+              \"input\": {
+                \"status\": \"In Review\"
+              }
+            }")
+
+          echo "Batch update response:"
+          echo "$RESPONSE" | jq .
+
+          # Check if the update was successful
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.success // false')
+
+          if [ "$SUCCESS" = "true" ]; then
+            UPDATED_COUNT=$(echo "$RESPONSE" | jq -r '.data.updated | length // 0')
+            echo "✓ Successfully updated $UPDATED_COUNT issue(s) to In Review status"
+
+            # Display updated issues
+            echo "$RESPONSE" | jq -r '.data.updated[]? | "  - \(.identifier): \(.title)"'
+          else
+            ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // "Unknown error"')
+            echo "✗ Failed to update issues: $ERROR_MSG"
+            exit 1
+          fi
