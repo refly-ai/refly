@@ -215,9 +215,57 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
       } as BaseMessageFields);
     }
 
+    if (messageType === 'tool') {
+      const toolMessage = message as ToolMessage;
+      const textContent =
+        typeof toolMessage.content === 'string'
+          ? toolMessage.content
+          : JSON.stringify(toolMessage.content);
+
+      // ToolMessage requires tool_call_id at the top level
+      // We use type assertion to include cachePoint in content array
+      return new ToolMessage({
+        content: [
+          {
+            type: 'text',
+            text: textContent,
+          },
+          {
+            cachePoint: { type: 'default' },
+          },
+        ] as unknown as string,
+        tool_call_id: toolMessage.tool_call_id,
+        name: toolMessage.name,
+      });
+    }
+
     // Return original message if we can't apply caching
     return message;
   });
+};
+
+/**
+ * Applies context caching to messages for agent loop iterations.
+ * This function is designed for re-applying cache points during ReAct loops
+ * where new messages (AIMessage with tool_calls, ToolMessage) are added.
+ *
+ * Cache point strategy:
+ * 1. Global Static Point: After System Prompt (index 0)
+ * 2. Session Dynamic Points: Last 3 messages excluding the final user message
+ *
+ * @param messages - The current message array
+ * @param supportsContextCaching - Whether the model supports context caching
+ * @returns Messages with appropriate cache points applied
+ */
+export const applyAgentLoopCaching = (
+  messages: BaseMessage[],
+  supportsContextCaching: boolean,
+): BaseMessage[] => {
+  if (!supportsContextCaching || messages.length <= 1) {
+    return messages;
+  }
+
+  return applyContextCaching(messages);
 };
 
 /**
