@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import {
   AutoModelRoutingRule as AutoModelRoutingRuleModel,
   ProviderItem as ProviderItemModel,
@@ -189,14 +189,212 @@ class RuleRouter {
 }
 
 /**
+ * Cache entry for routing rules
+ */
+interface RuleCacheEntry {
+  rules: AutoModelRoutingRuleModel[];
+  cachedAt: number;
+}
+
+/**
+ * Rule cache manager that handles caching and refreshing of routing rules
+ * Encapsulates all cache-related logic with automatic refresh and lifecycle management
+ */
+class RuleCache implements OnModuleDestroy {
+  private readonly logger = new Logger(RuleCache.name);
+
+  /**
+   * In-memory cache for routing rules
+   * Key: scene name (e.g., 'agent', 'copilot', 'chat')
+   * Value: RuleCacheEntry containing rules and cache timestamp
+   */
+  private readonly cache = new Map<string, RuleCacheEntry>();
+
+  /**
+   * Cache TTL in milliseconds (3 minutes)
+   */
+  private readonly CACHE_TTL_MS = 3 * 60 * 1000;
+
+  /**
+   * Timer for periodic cache refresh
+   */
+  private refreshTimer?: NodeJS.Timeout;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.startRefreshTimer();
+  }
+
+  /**
+   * Get rules for a scene from cache or database
+   * Returns cached rules if valid, otherwise fetches from database
+   */
+  async get(scene: string): Promise<AutoModelRoutingRuleModel[]> {
+    const now = Date.now();
+    const cached = this.cache.get(scene);
+
+    if (cached && now - cached.cachedAt < this.CACHE_TTL_MS) {
+      return cached.rules;
+    }
+
+    return this.fetchAndCache(scene, now);
+  }
+
+  /**
+   * Fetch rules from database and update cache
+   */
+  private async fetchAndCache(
+    scene: string,
+    timestamp: number = Date.now(),
+  ): Promise<AutoModelRoutingRuleModel[]> {
+    try {
+      const rules = await this.prisma.autoModelRoutingRule.findMany({
+        where: {
+          enabled: true,
+          scene,
+          deletedAt: null,
+        },
+        orderBy: [{ priority: 'desc' }, { ruleId: 'asc' }],
+      });
+
+      // Log if rules have changed
+      const cached = this.cache.get(scene);
+      const hasChanged = !cached || this.hasRulesChanged(cached.rules, rules);
+      if (hasChanged) {
+        this.logger.log(`Rule cache updated for scene '${scene}': ${rules.length} rule(s) loaded`);
+      }
+
+      // Update cache
+      this.cache.set(scene, {
+        rules,
+        cachedAt: timestamp,
+      });
+
+      return rules;
+    } catch (error) {
+      this.logger.warn(`Failed to fetch rules for scene ${scene}`, error);
+      // Return cached rules even if expired
+      const cached = this.cache.get(scene);
+      return cached?.rules ?? [];
+    }
+  }
+
+  /**
+   * Check if rules have changed by deep comparison of rule content
+   * Compares all relevant fields including condition, target, enabled status, etc.
+   */
+  private hasRulesChanged(
+    oldRules: AutoModelRoutingRuleModel[],
+    newRules: AutoModelRoutingRuleModel[],
+  ): boolean {
+    if (oldRules.length !== newRules.length) {
+      return true;
+    }
+
+    for (let i = 0; i < oldRules.length; i++) {
+      if (!this.isRuleEqual(oldRules[i], newRules[i])) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if two rules are equal by comparing all relevant fields
+   */
+  private isRuleEqual(rule1: AutoModelRoutingRuleModel, rule2: AutoModelRoutingRuleModel): boolean {
+    // one field one if
+    if (rule1.ruleId !== rule2.ruleId) {
+      return false;
+    }
+    if (rule1.ruleName !== rule2.ruleName) {
+      return false;
+    }
+    if (rule1.scene !== rule2.scene) {
+      return false;
+    }
+    if (rule1.priority !== rule2.priority) {
+      return false;
+    }
+    if (rule1.enabled !== rule2.enabled) {
+      return false;
+    }
+    if (rule1.condition !== rule2.condition) {
+      return false;
+    }
+    if (rule1.target !== rule2.target) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Start periodic cache refresh timer
+   * Refreshes all cached rules every CACHE_TTL_MS milliseconds
+   */
+  private startRefreshTimer() {
+    this.refreshTimer = setInterval(() => {
+      this.refresh();
+    }, this.CACHE_TTL_MS);
+
+    // Ensure timer doesn't prevent process from exiting
+    this.refreshTimer.unref();
+  }
+
+  /**
+   * Refresh all cached rules from database
+   * This is called periodically by the refresh timer
+   */
+  private async refresh() {
+    const scenes = Array.from(this.cache.keys());
+
+    if (scenes.length === 0) {
+      return;
+    }
+
+    for (const scene of scenes) {
+      await this.fetchAndCache(scene);
+    }
+  }
+
+  /**
+   * Stop the cache refresh timer
+   * This should be called when the service is being destroyed
+   */
+  private stopRefreshTimer() {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = undefined;
+    }
+  }
+
+  /**
+   * Clean up resources when the module is destroyed
+   */
+  onModuleDestroy() {
+    this.stopRefreshTimer();
+  }
+}
+
+/**
  * Auto model routing service for rule-based model selection
  * This service loads rules from the database and performs synchronous routing decisions
  */
 @Injectable()
-export class AutoModelRoutingService {
+export class AutoModelRoutingService implements OnModuleDestroy {
   private readonly logger = new Logger(AutoModelRoutingService.name);
+  private readonly ruleCache: RuleCache;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {
+    this.ruleCache = new RuleCache(prisma);
+  }
+
+  /**
+   * Clean up resources when the module is destroyed
+   */
+  onModuleDestroy() {
+    this.ruleCache.onModuleDestroy();
+  }
 
   /**
    * Derive scene from mode
@@ -370,30 +568,9 @@ export class AutoModelRoutingService {
     modelMap: Map<string, ProviderItemModel>,
     scene: string,
   ): Promise<RuleRouteResult | null> {
-    const rules = await this.getRules(scene);
+    const rules = await this.ruleCache.get(scene);
     const ruleRouter = new RuleRouter(context);
     return ruleRouter.route(rules, modelMap);
-  }
-
-  /**
-   * Get rules from database filtered by scene (no caching for easier testing)
-   */
-  private async getRules(scene: string): Promise<AutoModelRoutingRuleModel[]> {
-    try {
-      return await this.prisma.autoModelRoutingRule.findMany({
-        where: {
-          enabled: true,
-          scene,
-          deletedAt: null,
-        },
-        orderBy: {
-          priority: 'desc',
-        },
-      });
-    } catch (error) {
-      this.logger.warn(`Failed to fetch rules for scene ${scene}`, error);
-      return [];
-    }
   }
 
   /**
