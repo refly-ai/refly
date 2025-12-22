@@ -1,0 +1,155 @@
+name: Deploy To Staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  prepare-staging-deploy:
+    name: Prepare Staging Deployment
+    runs-on: ubuntu-latest
+    if: github.repository == 'refly-ai/refly'
+    outputs:
+      should_deploy: ${{ steps.check_release.outputs.should_deploy }}
+      project_id: ${{ steps.check_release.outputs.project_id }}
+      start_date: ${{ steps.check_release.outputs.start_date }}
+      release_branch: ${{ steps.check_release.outputs.release_branch }}
+    steps:
+      - name: Query active release project
+        id: check_release
+        env:
+          ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
+          ORBIT_API_KEY: ${{ secrets.ORBIT_API_KEY }}
+        run: |
+          echo "Querying for active release project..."
+
+          # Query for active release project (Scheduled or Staging status with Release label)
+          RESPONSE=$(curl -s -G "$ORBIT_API_URL/api/projects/active-release" \
+            -H "X-Orbit-API-Key: $ORBIT_API_KEY")
+
+          echo "Orbit API Response:"
+          echo "$RESPONSE" | jq .
+
+          # Check if project exists
+          PROJECT_ID=$(echo "$RESPONSE" | jq -r '.id // empty')
+
+          if [ -z "$PROJECT_ID" ]; then
+            echo "No active release project found. Skipping deployment."
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            echo "project_id=" >> "$GITHUB_OUTPUT"
+            echo "start_date=" >> "$GITHUB_OUTPUT"
+            echo "release_branch=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Extract project information
+          START_DATE=$(echo "$RESPONSE" | jq -r '.startDate // empty')
+          PROJECT_NAME=$(echo "$RESPONSE" | jq -r '.name // "Unknown"')
+          PROJECT_STATUS=$(echo "$RESPONSE" | jq -r '.status // "Unknown"')
+
+          if [ -z "$START_DATE" ]; then
+            echo "Error: Project found but startDate is missing"
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          RELEASE_BRANCH="release/${START_DATE}"
+
+          echo "Found active release project:"
+          echo "  - ID: $PROJECT_ID"
+          echo "  - Name: $PROJECT_NAME"
+          echo "  - Status: $PROJECT_STATUS"
+          echo "  - Start Date: $START_DATE"
+          echo "  - Release Branch: $RELEASE_BRANCH"
+
+          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+          echo "start_date=$START_DATE" >> "$GITHUB_OUTPUT"
+          echo "release_branch=$RELEASE_BRANCH" >> "$GITHUB_OUTPUT"
+
+  deploy-api-staging:
+    name: Deploy API to Staging
+    needs: prepare-staging-deploy
+    if: needs.prepare-staging-deploy.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
+
+      - name: Trigger API Staging Deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_BRANCH: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
+        run: |
+          echo "Triggering deploy-api-staging workflow on branch $RELEASE_BRANCH..."
+
+          gh workflow run deploy-api-staging.yml \
+            --ref "$RELEASE_BRANCH"
+
+          echo "API staging deployment workflow triggered successfully"
+
+  deploy-web-staging:
+    name: Deploy Web to Staging
+    needs: [prepare-staging-deploy, deploy-api-staging]
+    if: needs.prepare-staging-deploy.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
+
+      - name: Trigger Web Staging Deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_BRANCH: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
+        run: |
+          echo "Triggering deploy-web-staging workflow on branch $RELEASE_BRANCH..."
+
+          gh workflow run deploy-web-staging.yml \
+            --ref "$RELEASE_BRANCH"
+
+          echo "Web staging deployment workflow triggered successfully"
+
+  update-project-status:
+    name: Update Project Status to Staging
+    runs-on: ubuntu-latest
+    needs: [prepare-staging-deploy, deploy-api-staging, deploy-web-staging]
+    if: success() && needs.prepare-staging-deploy.outputs.should_deploy == 'true'
+    steps:
+      - name: Update project status
+        env:
+          ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
+          ORBIT_API_KEY: ${{ secrets.ORBIT_API_KEY }}
+          PROJECT_ID: ${{ needs.prepare-staging-deploy.outputs.project_id }}
+        run: |
+          echo "Updating project status to Staging..."
+
+          # Update project status to Staging
+          RESPONSE=$(curl -s -X POST "$ORBIT_API_URL/api/projects/update" \
+            -H "Content-Type: application/json" \
+            -H "X-Orbit-API-Key: $ORBIT_API_KEY" \
+            -d '{
+              "input": {
+                "status": "Staging"
+              }
+            }')
+
+          echo "Update response:"
+          echo "$RESPONSE" | jq .
+
+          # Check if the update was successful
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.success // false')
+
+          if [ "$SUCCESS" = "true" ]; then
+            echo "✓ Successfully updated project status to Staging"
+          else
+            ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // "Unknown error"')
+            echo "✗ Failed to update project status: $ERROR_MSG"
+            exit 1
+          fi
