@@ -29,14 +29,17 @@ datasources:
         spanEndTimeShift: '1h'
         filterByTraceID: true
         filterBySpanID: false
-      serviceMap:
-        datasourceUid: tempo
       nodeGraph:
         enabled: true
       search:
         hide: false
       lokiSearch:
         datasourceUid: loki
+      # Disable TraceQL metrics queries (requires full metrics_generator setup)
+      tracesToMetrics:
+        datasourceUid: ''
+      serviceMap:
+        datasourceUid: ''
 
   - name: Prometheus
     type: prometheus

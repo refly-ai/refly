@@ -5,19 +5,57 @@ global:
     cluster: 'refly-local'
     environment: 'development'
 
+# ============================================================================
 # 抓取配置
+# ============================================================================
 scrape_configs:
-  # Prometheus 自身监控
+  # --------------------------------------------------------------------------
+  # Prometheus 自身监控 (本地环境保留，便于调试)
+  #
+  # 说明：
+  #   - 来源：Prometheus 服务器自己 (Go 语言编写)
+  #   - 指标：go_* (29个), prometheus_* (176个)
+  #   - 用途：监控 Prometheus 服务器的健康状态
+  #   - 占比：约 70% metrics
+  #
+  # 生产环境建议：
+  #   如果只关注业务应用监控，注释掉此 job 即可
+  #   (节省 ~200MB/月 存储，减少 205 个指标)
+  # --------------------------------------------------------------------------
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
+  # --------------------------------------------------------------------------
   # OTEL Collector 监控
+  #
+  # 说明：
+  #   - 来源：OpenTelemetry Collector (Go 语言编写)
+  #   - 指标：otelcol_* (数据管道健康)
+  #   - 已过滤：go_* (避免与 Prometheus 的 go_* 重复)
+  # --------------------------------------------------------------------------
   - job_name: 'otel-collector'
     static_configs:
       - targets: ['otel-collector:8888']
     metric_relabel_configs:
-      # 可选：重命名或过滤 metrics
       - source_labels: [__name__]
         regex: 'go_.*'
-        action: drop  # 删除 Go runtime metrics（减少噪音）
+        action: drop
+
+# ============================================================================
+# 生产环境过滤示例 (注释掉 prometheus job 即可)
+# ============================================================================
+# scrape_configs:
+#   # 生产环境：注释掉 Prometheus 自抓取，仅保留业务指标
+#   # - job_name: 'prometheus'
+#   #   static_configs:
+#   #     - targets: ['localhost:9090']
+#
+#   - job_name: 'otel-collector'
+#     static_configs:
+#       - targets: ['otel-collector:8888']
+#     metric_relabel_configs:
+#       - source_labels: [__name__]
+#         regex: 'go_.*'
+#         action: drop
+# ============================================================================

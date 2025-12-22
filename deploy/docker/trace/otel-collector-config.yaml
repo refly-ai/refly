@@ -26,6 +26,12 @@ processors:
   batch:
     timeout: 1s
 
+  # 生产环境可选：过滤不需要的 metrics (当前已注释，按需启用)
+  # filter/drop_internal:
+  #   metrics:
+  #     metric:
+  #       - 'name matches "^prometheus_.*"'  # 过滤 Prometheus 内部指标
+
 service:
   pipelines:
     traces:
@@ -35,5 +41,7 @@ service:
 
     metrics:
       receivers: [otlp]
-      processors: [batch]
-      exporters: [prometheusremotewrite, debug]  # Export to Prometheus + debug
+      processors:
+        - batch
+        # - filter/drop_internal  # 生产环境按需启用
+      exporters: [prometheusremotewrite, debug]

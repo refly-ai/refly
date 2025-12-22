@@ -96,7 +96,7 @@ services:
 
   grafana:
     container_name: refly_grafana
-    image: grafana/grafana:10.2.0
+    image: grafana/grafana:12.3.0
     restart: unless-stopped
     ports:
       - 33000:3000
@@ -124,6 +124,23 @@ services:
     networks:
       - refly_trace_network
 
+  alloy:
+    container_name: refly_alloy
+    image: grafana/alloy:v1.5.1
+    restart: unless-stopped
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    ports:
+      - 12345:12345  # Alloy HTTP API
+    volumes:
+      - ./alloy-local-config.alloy:/etc/alloy/config.alloy:ro
+      - /tmp/alloy/logs:/tmp/alloy/logs:ro  # Mount host log directory (read-only)
+      - alloy_data:/var/lib/alloy/data
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - refly_trace_network
+
 networks:
   refly_trace_network:
     driver: bridge
@@ -133,3 +150,4 @@ volumes:
   tempo_data:
   prometheus_data:
   grafana_data:
+  alloy_data:

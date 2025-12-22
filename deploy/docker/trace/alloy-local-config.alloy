@@ -1,0 +1,72 @@
+// =============================================================================
+// Alloy Configuration for Local Development Log Collection
+// =============================================================================
+//
+// Purpose: Collect refly-api logs from tmux output files and push to Loki
+//
+// Data Flow:
+//   /tmp/alloy/logs/refly/*.log -> loki.source.file -> loki.process -> loki.write
+//
+// Label Strategy (avoid high cardinality):
+//   - Labels (low cardinality): job, level, env
+//   - NOT labels (high cardinality): traceId, msg, err
+//     -> Query with: {job="refly-api"} | json | traceId="xxx"
+//
+// Usage:
+//   1. Start tmux session with logging:
+//      tmux pipe-pane -o -t refly-api "cat >> /tmp/alloy/logs/refly/api.log"
+//   2. Start alloy:
+//      alloy run deploy/docker/trace/alloy-local-config.alloy
+//   3. Query logs in Grafana:
+//      {job="refly-api"} | json | level="error"
+//
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// 1. File Source: Monitor log files in /tmp/alloy/logs/refly/
+// -----------------------------------------------------------------------------
+loki.source.file "refly_logs" {
+  targets = [
+    {
+      __path__ = "/tmp/alloy/logs/refly/api.log",
+      job      = "refly-api",
+      env      = "local",
+    },
+  ]
+  forward_to = [loki.process.logs.receiver]
+}
+
+// -----------------------------------------------------------------------------
+// 2. Process: Extract level from JSON logs using json stage
+// -----------------------------------------------------------------------------
+loki.process "logs" {
+  // Parse JSON and extract level field as a label
+  stage.json {
+    expressions = {
+      level = "level",
+    }
+  }
+
+  // Set level label from extracted value (or "unknown" if not found)
+  stage.labels {
+    values = {
+      level = "level",
+    }
+  }
+
+  // traceId, msg, err stay in log content (high cardinality)
+  // Query examples:
+  //   {job="refly-api"} | json | traceId="abc123"
+  //   {job="refly-api", level="error"} | json | err!=""
+
+  forward_to = [loki.write.local.receiver]
+}
+
+// -----------------------------------------------------------------------------
+// 3. Write to Local Loki
+// -----------------------------------------------------------------------------
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

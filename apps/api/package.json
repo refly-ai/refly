@@ -67,6 +67,7 @@
     "@opentelemetry/sdk-node": "~0.208.0",
     "@opentelemetry/sdk-trace-base": "^2.2.0",
     "@opentelemetry/semantic-conventions": "~1.36.0",
+    "@opentelemetry/sql-common": "^0.41.2",
     "@paralleldrive/cuid2": "^2.2.2",
     "@prisma/client": "5.16.1",
     "@qdrant/js-client-rest": "^1.9.0",
