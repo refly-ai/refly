@@ -2216,7 +2216,8 @@ model AutoModelRoutingRule {
   /// Update timestamp
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
-  @@index([enabled, scene, priority])
+  @@unique([scene, ruleName])
+  @@index([scene, enabled, priority(sort: Desc), ruleId])
   @@map("auto_model_routing_rules")
 }
 
@@ -2257,9 +2258,7 @@ model AutoModelRoutingResult {
   /// Create timestamp
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-  @@index([userId, createdAt])
-  @@index([matchedRuleId])
-  @@index([routingStrategy])
-  @@index([actionResultId, actionResultVersion])
+  @@unique([actionResultId, actionResultVersion])
+  @@index([userId, createdAt(sort: Desc)])
   @@map("auto_model_routing_results")
 }
