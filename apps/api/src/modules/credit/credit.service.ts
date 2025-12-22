@@ -14,6 +14,7 @@ import {
   SyncBatchTokenCreditUsageJobData,
   ModelUsageDetail,
   SyncToolCreditUsageJobData,
+  SyncTokenCreditUsageJobData,
 } from './credit.dto';
 import {
   genCreditUsageId,
@@ -1076,6 +1077,131 @@ export class CreditService {
     const requireRecharge = await this.deductCreditsAndCreateUsage(
       uid,
       totalCreditCost,
+      {
+        usageId: genCreditUsageId(),
+        actionResultId: resultId,
+        version,
+        modelUsageDetails: JSON.stringify(modelUsageDetails),
+        createdAt: timestamp,
+      },
+      dueAmount,
+    );
+    return requireRecharge;
+  }
+
+  /**
+   * Simple token credit usage billing for single model call
+   * Called directly on on_chat_model_end event
+   */
+  async syncTokenCreditUsage(data: SyncTokenCreditUsageJobData): Promise<boolean> {
+    const {
+      uid,
+      resultId,
+      version,
+      inputTokens,
+      outputTokens,
+      cacheReadTokens,
+      cacheWriteTokens,
+      creditBilling,
+      modelName,
+      actualModelName,
+      timestamp,
+    } = data;
+
+    // Find user
+    const user = await this.prisma.user.findUnique({ where: { uid } });
+    if (!user) {
+      throw new Error(`No user found for uid ${uid}`);
+    }
+
+    // Check if user is early bird user
+    const isEarlyBirdUser = await this.isEarlyBirdUser(user);
+
+    // Calculate credit cost based on billing unit
+    let creditCost = 0;
+    if (creditBilling) {
+      if (creditBilling.unit === '5k_tokens') {
+        const perInputUnit = creditBilling.inputCost || 0;
+        const perOutputUnit = creditBilling.outputCost || 0;
+        // Fallback: use inputCost for both cache read and cache write (cache operations are on input side)
+        const perCacheReadUnit = creditBilling.cacheReadCost ?? perInputUnit;
+        const perCacheWriteUnit = creditBilling.cacheWriteCost ?? perInputUnit;
+
+        const inputCostValue = (inputTokens / 5000) * perInputUnit;
+        const outputCostValue = (outputTokens / 5000) * perOutputUnit;
+        const cacheReadCostValue = (cacheReadTokens / 5000) * perCacheReadUnit;
+        const cacheWriteCostValue = (cacheWriteTokens / 5000) * perCacheWriteUnit;
+
+        creditCost = Math.ceil(
+          inputCostValue + outputCostValue + cacheReadCostValue + cacheWriteCostValue,
+        );
+      } else if (creditBilling.unit === '1m_tokens') {
+        const perInputUnit = creditBilling.inputCost || 0;
+        const perOutputUnit = creditBilling.outputCost || 0;
+        // Fallback: use inputCost for both cache read and cache write (cache operations are on input side)
+        const perCacheReadUnit = creditBilling.cacheReadCost ?? perInputUnit;
+        const perCacheWriteUnit = creditBilling.cacheWriteCost ?? perInputUnit;
+
+        const inputCostValue = (inputTokens / 1000000) * perInputUnit;
+        const outputCostValue = (outputTokens / 1000000) * perOutputUnit;
+        const cacheReadCostValue = (cacheReadTokens / 1000000) * perCacheReadUnit;
+        const cacheWriteCostValue = (cacheWriteTokens / 1000000) * perCacheWriteUnit;
+
+        creditCost = Math.ceil(
+          inputCostValue + outputCostValue + cacheReadCostValue + cacheWriteCostValue,
+        );
+      } else {
+        // Fixed cost per request
+        creditCost = Math.max(creditBilling.inputCost || 0, creditBilling.outputCost || 0);
+      }
+    }
+
+    // Track original due amount before early bird discount
+    const originalDueAmount = creditCost;
+
+    // Check if user is early bird and credit billing is free for early bird users
+    if (isEarlyBirdUser && creditBilling?.isEarlyBirdFree) {
+      this.logger.log(`Early bird user ${uid} skipping credit billing for model ${modelName}`);
+      creditCost = 0;
+    }
+
+    // Build model usage details
+    const modelUsageDetails: ModelUsageDetail[] = [
+      {
+        modelName,
+        actualModelName,
+        inputTokens,
+        outputTokens,
+        cacheReadTokens,
+        cacheWriteTokens,
+        creditCost,
+      },
+    ];
+
+    // Always record the original due amount, even for early bird users
+    const dueAmount = originalDueAmount > 0 ? originalDueAmount : creditCost;
+
+    // If no credit cost, just create usage record with details
+    if (creditCost <= 0) {
+      await this.prisma.creditUsage.create({
+        data: {
+          uid,
+          usageId: genCreditUsageId(),
+          actionResultId: resultId,
+          version,
+          amount: 0,
+          dueAmount,
+          modelUsageDetails: JSON.stringify(modelUsageDetails),
+          createdAt: timestamp,
+        },
+      });
+      return false;
+    }
+
+    // Use the extracted method to handle credit deduction with model usage details
+    const requireRecharge = await this.deductCreditsAndCreateUsage(
+      uid,
+      creditCost,
       {
         usageId: genCreditUsageId(),
         actionResultId: resultId,

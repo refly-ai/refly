@@ -1,9 +1,32 @@
-import { CreditBilling, TokenUsageItem, ToolCallMeta } from '@refly/openapi-schema';
+import { CreditBilling, TokenUsageItem, ToolCallMeta, ModelTier } from '@refly/openapi-schema';
 
 export type CheckRequestCreditUsageResult = {
   canUse: boolean;
   message: string;
 };
+
+/**
+ * Simple token credit usage data for single model call billing
+ * Called directly on on_chat_model_end event
+ */
+export interface SyncTokenCreditUsageJobData {
+  uid: string;
+  resultId: string;
+  version: number;
+  /** Token usage data */
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  /** Credit billing configuration */
+  creditBilling: CreditBilling;
+  /** Model info for usage details */
+  modelName: string;
+  actualModelName?: string;
+  modelProvider?: string;
+  tier?: ModelTier;
+  timestamp: Date;
+}
 
 export interface SyncMediaCreditUsageJobData {
   uid: string;
