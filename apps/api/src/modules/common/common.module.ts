@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from './prisma.service';
+import { PrismaMetrics } from './prisma.metrics';
 import { RedisService } from './redis.service';
 import { EncryptionService } from './encryption.service';
 import { createObjectStorageServiceFactory, OSS_EXTERNAL, OSS_INTERNAL } from './object-storage';
@@ -10,6 +11,7 @@ import { VECTOR_SEARCH, createVectorSearchFactory } from './vector-search';
 @Module({
   providers: [
     PrismaService,
+    PrismaMetrics, // Automatic Prisma query monitoring
     RedisService,
     EncryptionService,
     {
