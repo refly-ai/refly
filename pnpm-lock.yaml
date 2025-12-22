@@ -1530,6 +1530,9 @@ importers:
       '@refly/errors':
         specifier: workspace:*
         version: link:../errors
+      '@refly/observability':
+        specifier: workspace:*
+        version: link:../observability
       '@refly/openapi-schema':
         specifier: workspace:*
         version: link:../openapi-schema

@@ -18,8 +18,8 @@ function getEncoder(): Tiktoken {
 }
 
 /**
- * Count tokens in content using tiktoken
- * Much faster than gpt-tokenizer (Rust WASM vs pure JS)
+ * Count tokens in content using tiktoken (Rust WASM)
+ * ~10x faster than pure JS implementations
  */
 export const countToken = (content: string): number => {
   if (!content) return 0;
