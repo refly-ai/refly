@@ -27,6 +27,7 @@ import { McpServerModule } from '../mcp-server/mcp-server.module';
 import { MediaGeneratorModule } from '../media-generator/media-generator.module';
 import { SkillEngineService } from './skill-engine.service';
 import { SkillInvokerService } from './skill-invoker.service';
+import { SkillInvokeMetrics } from './skill-invoke.metrics';
 import { isDesktop } from '../../utils/runtime';
 import { ActionModule } from '../action/action.module';
 import { ToolModule } from '../tool/tool.module';
@@ -77,6 +78,7 @@ import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
     SkillService,
     SkillEngineService,
     SkillInvokerService,
+    SkillInvokeMetrics,
     ...(isDesktop() ? [] : [SkillProcessor, CheckStuckActionsProcessor]),
   ],
   controllers: [SkillController],

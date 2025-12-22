@@ -18,13 +18,14 @@ Distributed tracing, metrics, and log aggregation stack for local development.
 ┌───────────────┐    ┌───────────────┐    ┌───────────────┐
 │ OTEL Collector│    │ OTEL Collector│    │     Alloy     │
 │  (metrics)    │    │   (traces)    │    │  (log files)  │
-└───────────────┘    └───────────────┘    └───────────────┘
-        │                     │                     │
-        ↓                     ↓                     ↓
-┌───────────────┐    ┌───────────────┐    ┌───────────────┐
-│  Prometheus   │    │     Tempo     │    │     Loki      │
-│  (port 39090) │    │  (port 33200) │    │  (port 33100) │
-└───────────────┘    └───────────────┘    └───────────────┘
+│ Port 8889     │    └───────────────┘    └───────────────┘
+└───────────────┘            │                     │
+        │                     ↓                     ↓
+        ↓            ┌───────────────┐    ┌───────────────┐
+┌───────────────┐   │     Tempo     │    │     Loki      │
+│  Prometheus   │←──│  (port 33200) │    │  (port 33100) │
+│  (port 39090) │   └───────────────┘    └───────────────┘
+└───────────────┘            │                     │
         │                     │                     │
         └─────────────────────┼─────────────────────┘
                               ↓
@@ -32,6 +33,7 @@ Distributed tracing, metrics, and log aggregation stack for local development.
                       │    Grafana    │
                       │  (port 33000) │
                       └───────────────┘
+                 Exemplars: Metrics → Traces
 ```
 
 ## Components
@@ -42,7 +44,7 @@ Distributed tracing, metrics, and log aggregation stack for local development.
 | **Prometheus** | prom/prometheus:v2.48.0 | 39090 | Metrics storage and query |
 | **Tempo** | grafana/tempo:2.3.0 | 33200 | Distributed tracing |
 | **Loki** | grafana/loki:2.9.0 | 33100 | Log aggregation |
-| **OTEL Collector** | otel/opentelemetry-collector-contrib:0.91.0 | 34318 | OTLP receiver and exporter |
+| **OTEL Collector** | otel/opentelemetry-collector-contrib:0.91.0 | 34318 (OTLP), 38889 (Prometheus) | OTLP receiver and exporters |
 | **Alloy** | grafana/alloy:v1.5.1 | 12345 | Log collection from files |
 
 ## Quick Start
@@ -106,14 +108,26 @@ The refly-api automatically exports metrics via OTLP:
 - **Endpoint**: http://localhost:34318/v1/metrics
 - **Interval**: 60 seconds
 - **Storage**: Prometheus (30 days retention)
+- **Exemplars**: Enabled (metrics → traces correlation)
 
 **Available metrics**:
+
+**Business Metrics** (Level 1 - Core):
+- `llm.invocation.count{status, model_name}` - LLM invocation count
+- `llm.invocation.duration{model_name}` - LLM invocation latency
+- `llm.token.count{token_type, model_name}` - Token consumption
+- `tool.invocation.count{tool_name, toolset_key, status}` - Tool invocation count
+- `tool.execution.duration{tool_name, toolset_key}` - Tool execution latency
+
+**Infrastructure Metrics** (Level 0):
 - `db.query.duration{operation, model}` - Database query latency
 - `db.slow_query.count{operation, model}` - Slow query counter (>100ms)
 - `db.query.count{operation, model}` - Total query counter
 - `http_server_duration{http_route, http_method}` - HTTP request duration
 - `process_cpu_seconds_total` - CPU usage
 - `process_resident_memory_bytes` - Memory usage
+
+**Exemplars**: Prometheus scrapes metrics with sampled traceIds. Click exemplar points in Grafana to jump to the corresponding trace in Tempo.
 
 ### Traces (via OpenTelemetry)
 
@@ -165,7 +179,20 @@ histogram_quantile(0.99, rate(db_query_duration_bucket[5m]))
 
 # HTTP request rate by route
 rate(http_server_duration_count[1m])
+
+# LLM invocation rate by model
+rate(llm_invocation_count_total[5m])
+
+# Tool success rate
+sum(rate(tool_invocation_count_total{status="success"}[5m]))
+  / sum(rate(tool_invocation_count_total[5m]))
 ```
+
+**Using Exemplars**:
+1. Query metrics (e.g., `rate(llm_invocation_count_total[5m])`)
+2. Look for small circular points on the graph
+3. Click an exemplar point → Select "View Trace"
+4. Grafana opens the corresponding trace in Tempo
 
 ### Traces (Tempo)
 

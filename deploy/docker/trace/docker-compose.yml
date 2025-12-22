@@ -19,6 +19,7 @@ services:
     restart: unless-stopped
     ports:
       - 34318:4318  # OTLP HTTP receiver
+      - 38889:8889  # Prometheus exporter (for exemplars)
     command: --config=/etc/otelcol/config.yaml
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol/config.yaml

@@ -14,13 +14,20 @@ exporters:
     tls:
       insecure: true
 
-  # Metrics exporter - Prometheus Remote Write
+  # Metrics exporter - Prometheus Scrape (with Exemplars support)
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    enable_open_metrics: true  # Enable OpenMetrics format for exemplars
+    resource_to_telemetry_conversion:
+      enabled: true  # Convert resource attributes to Prometheus labels
+
+  # Metrics exporter - Prometheus Remote Write (backup, no exemplars)
   prometheusremotewrite:
     endpoint: http://prometheus:9090/api/v1/write
     tls:
       insecure: true
     resource_to_telemetry_conversion:
-      enabled: true  # Convert resource attributes to Prometheus labels
+      enabled: true
 
 processors:
   batch:
@@ -44,4 +51,4 @@ service:
       processors:
         - batch
         # - filter/drop_internal  # 生产环境按需启用
-      exporters: [prometheusremotewrite, debug]
+      exporters: [prometheus, prometheusremotewrite, debug]  # prometheus for exemplars, remotewrite for backup

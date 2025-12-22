@@ -67,6 +67,7 @@ import { InvokeSkillJobData } from './skill.dto';
 import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { normalizeCreditBilling } from '../../utils/credit-billing';
+import { SkillInvokeMetrics } from './skill-invoke.metrics';
 
 @Injectable()
 export class SkillInvokerService {
@@ -90,6 +91,7 @@ export class SkillInvokerService {
     private readonly stepService: StepService,
     private readonly creditService: CreditService,
     private readonly canvasSyncService: CanvasSyncService,
+    private readonly metrics: SkillInvokeMetrics,
     @Optional()
     @InjectQueue(QUEUE_SYNC_REQUEST_USAGE)
     private requestUsageQueue?: Queue<SyncRequestUsageJobData>,
@@ -665,6 +667,7 @@ export class SkillInvokerService {
       const startTs = Date.now();
       const toolCallIds: Set<string> = new Set();
       const toolCallStartTimes: Map<string, number> = new Map();
+      const llmCallStartTimes: Map<string, number> = new Map();
 
       for await (const event of skill.streamEvents(input, {
         ...config,
@@ -848,6 +851,14 @@ export class SkillInvokerService {
                 runId,
               });
               toolCallIds.delete(toolCallId);
+
+              // Record tool invocation metrics
+              if (toolStartTs) {
+                this.metrics.tool.duration(toolName, toolsetKey, Date.now() - toolStartTs);
+                toolCallStartTimes.delete(toolCallId);
+              }
+              this.metrics.tool.fail({ toolName, toolsetKey, error: errorMsg });
+
               break;
             }
             if (event.event === 'on_tool_end') {
@@ -931,6 +942,19 @@ export class SkillInvokerService {
                 runId,
               });
               toolCallIds.delete(toolCallId);
+
+              // Record tool invocation metrics
+              if (toolStartTs) {
+                this.metrics.tool.duration(toolName, toolsetKey, Date.now() - toolStartTs);
+                toolCallStartTimes.delete(toolCallId);
+              }
+
+              if (isErrorStatus) {
+                this.metrics.tool.fail({ toolName, toolsetKey, error: errorMessage || '' });
+              } else {
+                this.metrics.tool.success({ toolName, toolsetKey });
+              }
+
               break;
             }
             break;
@@ -959,6 +983,13 @@ export class SkillInvokerService {
                   messageId: messageAggregator.getCurrentAIMessageId(),
                 });
               }
+            }
+            break;
+          }
+          case 'on_chat_model_start': {
+            const runId = event.run_id;
+            if (runId) {
+              llmCallStartTimes.set(runId, Date.now());
             }
             break;
           }
@@ -1036,6 +1067,26 @@ export class SkillInvokerService {
 
               resultAggregator.addUsageItem(runMeta, usage);
 
+              // Record OpenTelemetry metrics: LLM invocation
+              const modelName = String(runMeta.ls_model_name);
+              const runId = event.run_id;
+              if (runId) {
+                const startTime = llmCallStartTimes.get(runId);
+                if (startTime) {
+                  this.metrics.llm.duration(modelName, Date.now() - startTime);
+                  llmCallStartTimes.delete(runId);
+                }
+              }
+
+              this.metrics.llm.success(modelName);
+              this.metrics.llm.token({
+                inputTokens,
+                outputTokens,
+                cacheReadTokens,
+                cacheWriteTokens,
+                modelName,
+              });
+
               // Get the current AI message ID before finalizing
               const aiMessageId = messageAggregator.getCurrentAIMessageId();
 
@@ -1073,6 +1124,9 @@ export class SkillInvokerService {
         }
       }
     } catch (err) {
+      // Record OpenTelemetry metrics: LLM invocation error
+      this.metrics.llm.fail(String(runMeta?.ls_model_name || 'unknown'));
+
       const errorInfo = this.categorizeError(err);
       const errorMessage = err.message || 'Unknown error';
       const errorType = err.name || 'Error';

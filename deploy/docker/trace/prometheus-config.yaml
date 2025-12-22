@@ -10,6 +10,20 @@ global:
 # ============================================================================
 scrape_configs:
   # --------------------------------------------------------------------------
+  # Refly API Metrics (via OTEL Collector - with Exemplars)
+  #
+  # 说明：
+  #   - 来源：Refly API 通过 OTEL Collector 暴露的指标
+  #   - 指标：llm_*, tool_*, db_*, http_*, process_* 等业务指标
+  #   - 格式：OpenMetrics (支持 Exemplars)
+  #   - 用途：核心业务监控 + Trace 关联
+  # --------------------------------------------------------------------------
+  - job_name: 'reflyd'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['otel-collector:8889']
+
+  # --------------------------------------------------------------------------
   # Prometheus 自身监控 (本地环境保留，便于调试)
   #
   # 说明：
