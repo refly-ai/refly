@@ -3,7 +3,7 @@ import { AgentBaseTool, ToolCallResult, AgentBaseToolset, AgentToolConstructor }
 import { ToolsetDefinition } from '@refly/openapi-schema';
 import { JinaClient } from './client';
 import { ToolParams } from '@langchain/core/tools';
-import { countToken, truncateContent } from '@refly/utils';
+import { countToken, truncateContent } from '@refly/utils/token';
 
 // Maximum tokens for a single tool result to prevent excessive context usage
 // Can be overridden via environment variable

@@ -55,6 +55,19 @@ export class PandocParser extends BaseParser {
     return stderr.toLowerCase().includes('warning');
   }
 
+  /**
+   * Clean up excessively long separator lines (e.g., -----, =====, _____)
+   * These can occur when Pandoc converts certain table or formatting elements
+   */
+  private cleanupLongSeparators(content: string): string {
+    // Replace any sequence of 50+ repeated separator characters with a reasonable length
+    // Matches: ---, ===, ___, ~~~, ***, etc.
+    return content.replace(/(-{50,}|={50,}|_{50,}|~{50,}|\*{50,})/g, (match) => {
+      // Keep only first 3 characters (standard markdown separator)
+      return match[0].repeat(3);
+    });
+  }
+
   private convertGridTablesToPipeTables(content: string): string {
     // Convert grid tables to pipe tables for better frontend compatibility
     const lines = content.split('\n');
@@ -251,6 +264,9 @@ export class PandocParser extends BaseParser {
                 processedContent = this.convertGridTablesToPipeTables(stdout);
               }
             }
+
+            // Clean up excessively long separator lines (50+ chars)
+            processedContent = this.cleanupLongSeparators(processedContent);
 
             // Only process images if extractMedia is enabled
             const images = this.options.extractMedia ? await this.readImagesFromDir(mediaDir) : {};

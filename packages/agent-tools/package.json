@@ -24,7 +24,6 @@
     "@scalebox/sdk": "3.4.0",
     "apify-client": "^2.19.0",
     "googleapis": "^159.0.0",
-    "gpt-tokenizer": "^2.9.0",
     "html-to-text": "^9.0.5",
     "nodemailer": "^6.7.8",
     "novita-sandbox": "^1.0.1",

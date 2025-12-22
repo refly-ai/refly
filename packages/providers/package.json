@@ -23,7 +23,7 @@
     "@refly/errors": "workspace:*",
     "@refly/observability": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
-    "gpt-tokenizer": "^2.9.0",
+    "@refly/utils": "workspace:*",
     "langfuse": "^3.6.0",
     "langfuse-langchain": "^3.6.0",
     "uuid": "^9.0.0",

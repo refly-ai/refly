@@ -508,30 +508,32 @@ export const ModelFormModal = memo(
     );
 
     const handleGlobalModelChange = useCallback(
-      (_value: string, option: ProviderItem | undefined) => {
-        if (!option) return;
+      (_value: string, option: ProviderItem | ProviderItem[] | undefined) => {
+        // Handle array case (shouldn't happen for single select, but type requires it)
+        const selectedOption = Array.isArray(option) ? option[0] : option;
+        if (!selectedOption) return;
 
         resetFormExcludeField(['providerId', 'modelId']);
 
         const capabilities = getCapabilitiesFromObject(
-          (option?.config as LLMModelConfig)?.capabilities as ModelCapabilities,
+          (selectedOption?.config as LLMModelConfig)?.capabilities as ModelCapabilities,
         );
 
         const formValues: any = {
-          globalItemId: option?.itemId ?? '',
+          globalItemId: selectedOption?.itemId ?? '',
           enabled: true,
         };
 
         if (filterProviderCategory === 'llm') {
-          formValues.contextLimit = (option?.config as LLMModelConfig)?.contextLimit;
-          formValues.maxOutput = (option?.config as LLMModelConfig)?.maxOutput;
+          formValues.contextLimit = (selectedOption?.config as LLMModelConfig)?.contextLimit;
+          formValues.maxOutput = (selectedOption?.config as LLMModelConfig)?.maxOutput;
           formValues.capabilities = capabilities;
         } else if (filterProviderCategory === 'mediaGeneration') {
           formValues.capabilities = capabilities;
           // Handle description for media generation models
-          if ((option?.config as any)?.description) {
+          if ((selectedOption?.config as any)?.description) {
             const currentLang = i18n.language?.startsWith('zh') ? 'zh' : 'en';
-            const description = (option.config as any).description;
+            const description = (selectedOption.config as any).description;
             formValues.description = description[currentLang] || description.en;
           }
         }

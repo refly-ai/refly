@@ -37,7 +37,7 @@ import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
 import * as Y from 'yjs';
-import { encode } from 'gpt-tokenizer';
+import { countToken } from '@refly/utils/token';
 import {
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_SYNC_PILOT_STEP,
@@ -1497,8 +1497,8 @@ export class SkillInvokerService {
         return;
       }
 
-      const inputTokens = encode(input.query || '').length;
-      const outputTokens = encode(generatedContent).length;
+      const inputTokens = countToken(input.query || '');
+      const outputTokens = countToken(generatedContent);
       const cacheReadTokens = 0;
       const cacheWriteTokens = 0;
 
@@ -1788,10 +1788,10 @@ export class SkillInvokerService {
         `Failed to use LangChain tokenizer, falling back to basic estimation: ${error instanceof Error ? error.message : error}`,
       );
 
-      const inputTokens = encode(JSON.stringify(input)).length;
-      const contextTokens = encode(JSON.stringify(config.configurable.context || {})).length;
-      const historyTokens = encode(JSON.stringify(config.configurable.chatHistory || [])).length;
-      const toolsTokens = encode(JSON.stringify(config.configurable.selectedTools || [])).length;
+      const inputTokens = countToken(JSON.stringify(input));
+      const contextTokens = countToken(JSON.stringify(config.configurable.context || {}));
+      const historyTokens = countToken(JSON.stringify(config.configurable.chatHistory || []));
+      const toolsTokens = countToken(JSON.stringify(config.configurable.selectedTools || []));
       const totalTokens = inputTokens + contextTokens + historyTokens + toolsTokens;
 
       return {

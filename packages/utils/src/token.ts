@@ -1,17 +1,42 @@
-import { encode } from 'gpt-tokenizer';
+import { get_encoding, type Tiktoken } from 'tiktoken';
 
-export const countToken = (content: string) => {
-  return encode(content || '').length;
+// Singleton encoder instance - avoid repeated WASM initialization
+let encoder: Tiktoken | null = null;
+
+// TextDecoder for converting Uint8Array to string
+const textDecoder = new TextDecoder();
+
+/**
+ * Get tiktoken encoder instance (lazy init, cached)
+ * Uses cl100k_base encoding (GPT-4, GPT-3.5-turbo)
+ */
+function getEncoder(): Tiktoken {
+  if (!encoder) {
+    encoder = get_encoding('cl100k_base');
+  }
+  return encoder;
+}
+
+/**
+ * Count tokens in content using tiktoken
+ * Much faster than gpt-tokenizer (Rust WASM vs pure JS)
+ */
+export const countToken = (content: string): number => {
+  if (!content) return 0;
+  return getEncoder().encode(content).length;
 };
 
 /**
  * Truncate content to target token count
  * Strategy: Keep head (70%) and tail (30%), remove middle part
+ *
+ * Optimized: Direct token slicing instead of iterative char adjustment
  */
 export const truncateContent = (content: string, targetTokens: number): string => {
-  const currentTokens = encode(content).length;
+  const enc = getEncoder();
+  const tokens = enc.encode(content);
 
-  if (currentTokens <= targetTokens) {
+  if (tokens.length <= targetTokens) {
     return content;
   }
 
@@ -23,45 +48,32 @@ export const truncateContent = (content: string, targetTokens: number): string =
   const truncationMessageTokens = 50;
   if (targetTokens <= truncationMessageTokens) {
     // Target too small to include truncation message, return minimal content
-    const minimalContent = content.substring(0, Math.min(content.length, targetTokens * 3));
-    return minimalContent.substring(0, Math.floor(targetTokens * 3));
+    const minimalTokens = tokens.slice(0, Math.min(tokens.length, targetTokens));
+    return textDecoder.decode(enc.decode(new Uint32Array(minimalTokens)));
   }
-  const availableTokens = targetTokens - truncationMessageTokens;
 
+  const availableTokens = targetTokens - truncationMessageTokens;
   const headTargetTokens = Math.floor(availableTokens * headRatio);
   const tailTargetTokens = Math.floor(availableTokens * tailRatio);
 
-  // Initial estimate: 1 token ≈ 3 chars (conservative for mixed content)
-  let headLength = Math.floor(headTargetTokens * 3);
-  let tailLength = Math.floor(tailTargetTokens * 3);
+  // Direct token slicing - no iteration needed (much faster than char-based approach)
+  const headTokens = tokens.slice(0, headTargetTokens);
+  const tailTokens = tokens.slice(-tailTargetTokens);
 
-  // Adjust head length to match target tokens (max 3 iterations)
-  for (let i = 0; i < 3; i++) {
-    const headContent = content.substring(0, headLength);
-    const headTokens = encode(headContent).length;
+  const headContent = textDecoder.decode(enc.decode(new Uint32Array(headTokens)));
+  const tailContent = textDecoder.decode(enc.decode(new Uint32Array(tailTokens)));
+  const removedTokens = tokens.length - headTargetTokens - tailTargetTokens;
 
-    if (headTokens <= headTargetTokens) {
-      break; // Good enough
-    }
-    // Too many tokens, reduce by the ratio
-    headLength = Math.floor(headLength * (headTargetTokens / headTokens) * 0.95);
+  return `${headContent}\n\n[... Truncated ~${removedTokens} tokens ...]\n\n${tailContent}`;
+};
+
+/**
+ * Dispose encoder instance (for cleanup on process exit)
+ * Call this if you need to free WASM memory
+ */
+export const disposeTokenizer = (): void => {
+  if (encoder) {
+    encoder.free();
+    encoder = null;
   }
-
-  // Adjust tail length to match target tokens (max 3 iterations)
-  for (let i = 0; i < 3; i++) {
-    const tailContent = content.substring(content.length - tailLength);
-    const tailTokens = encode(tailContent).length;
-
-    if (tailTokens <= tailTargetTokens) {
-      break; // Good enough
-    }
-    // Too many tokens, reduce by the ratio
-    tailLength = Math.floor(tailLength * (tailTargetTokens / tailTokens) * 0.95);
-  }
-
-  const headContent = content.substring(0, headLength);
-  const tailContent = content.substring(content.length - tailLength);
-  const removedChars = content.length - headLength - tailLength;
-
-  return `${headContent}\n\n[... Truncated ${removedChars} chars (≈${currentTokens - targetTokens} tokens) ...]\n\n${tailContent}`;
 };

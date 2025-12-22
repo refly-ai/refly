@@ -4,6 +4,15 @@
   "description": "Refly Code Utils",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./token": "./src/token.ts"
+  },
+  "typesVersions": {
+    "*": {
+      "token": ["src/token.ts"]
+    }
+  },
   "scripts": {
     "clean": "rimraf dist && rimraf tsconfig.tsbuildinfo",
     "test": "vitest run",
@@ -24,7 +33,7 @@
     "clsx": "^2.1.0",
     "dayjs": "~1.11.7",
     "deepmerge": "^4.3.1",
-    "gpt-tokenizer": "^2.9.0",
+    "tiktoken": "^1.0.18",
     "js-cookie": "^3.0.5",
     "jsonrepair": "^3.12.0",
     "linkify-it": "^5.0.0",

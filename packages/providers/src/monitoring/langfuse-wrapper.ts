@@ -1,6 +1,6 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { Embeddings } from '@langchain/core/embeddings';
-import { encode } from 'gpt-tokenizer';
+import { countToken } from '@refly/utils/token';
 
 // Try to import TraceManager from observability package if available
 let TraceManager: any = null;
@@ -21,8 +21,8 @@ const calculateAccurateTokenUsage = (input: any, output: string) => {
 
   // Use tiktoken for accurate calculation
   try {
-    const promptTokens = encode(inputText).length;
-    const completionTokens = encode(output || '').length;
+    const promptTokens = countToken(inputText);
+    const completionTokens = countToken(output || '');
 
     return {
       promptTokens,
@@ -30,7 +30,7 @@ const calculateAccurateTokenUsage = (input: any, output: string) => {
       totalTokens: promptTokens + completionTokens,
     };
   } catch (_error) {
-    // gpt-tokenizer error - fallback to estimation
+    // tiktoken error - fallback to estimation
     const promptTokens = Math.ceil(inputText.length / 4);
     const completionTokens = Math.ceil((output || '').length / 4);
 

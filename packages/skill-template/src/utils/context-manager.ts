@@ -763,25 +763,15 @@ export function truncateContextBlockForPrompt(
   for (const file of (context.files ?? []).slice(0, maxFiles)) {
     if (usedTokens >= maxTokens) break;
 
-    const baseText = `${file.name ?? ''}\n${file.summary ?? ''}`;
-    const baseTokens = estimateToken(baseText);
+    // Files now only contain metadata (no content) - just calculate metadata tokens
+    const metaText = `${file.name ?? ''}\n${file.summary ?? ''}`;
+    const metaTokens = estimateToken(metaText);
 
-    const remaining = Math.max(0, maxTokens - usedTokens - baseTokens);
+    const remaining = Math.max(0, maxTokens - usedTokens - metaTokens);
     if (remaining <= 0) break;
 
-    let content = String(file.content ?? '');
-    const originalContentTokens = estimateToken(content);
-
-    if (originalContentTokens > remaining) {
-      if (remaining < minItemContentTokens) {
-        // Not enough budget to keep meaningful content; skip this item.
-        continue;
-      }
-      content = truncateContentFast(content, remaining);
-    }
-
-    files.push({ ...file, content });
-    usedTokens += baseTokens + estimateToken(content);
+    files.push({ ...file });
+    usedTokens += metaTokens;
   }
 
   for (const result of (context.results ?? []).slice(0, maxResults)) {
