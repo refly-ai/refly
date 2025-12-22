@@ -854,7 +854,9 @@ export class BuiltinReadFile extends AgentBaseTool<BuiltinToolParams> {
 
 Supported types:
 - Text files (txt, md, json, csv, js, py, xml, yaml...): Returns raw content
-- PDF / Word (.docx) / EPUB: Returns extracted text (max 3000 words, truncated if exceeded)
+- PDF / Word (.docx) / EPUB: Returns extracted text
+
+Token limit: 25,000 tokens (~100K chars). Large files are truncated with head/tail preservation.
 
 NOT supported: Images, Audio, Video (returns error)
 

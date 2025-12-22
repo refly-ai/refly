@@ -25,6 +25,7 @@ import {
   isPlainTextMimeType,
   pick,
 } from '@refly/utils';
+import { truncateContent } from '@refly/utils/token';
 import { ParamsError, DriveFileNotFoundError, DocumentNotFoundError } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
 import { streamToBuffer, streamToString } from '../../utils';
@@ -581,9 +582,13 @@ export class DriveService implements OnModuleInit {
         content = driveFile.summary;
       }
 
+      // Apply token-based truncation (head/tail preservation)
+      const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+      const truncatedContent = truncateContent(content, maxTokens);
+
       return {
         ...this.toDTO(driveFile),
-        content,
+        content: truncatedContent,
       };
     }
 
@@ -619,28 +624,6 @@ export class DriveService implements OnModuleInit {
   }
 
   /**
-   * Truncate content by keeping head and tail, removing middle section
-   * @param content - Original content
-   * @param maxWords - Maximum word count to keep
-   * @returns Truncated content with ellipsis in the middle
-   */
-  private truncateContent(content: string, maxWords: number): string {
-    const words = content.split(/\s+/).filter((w) => w.length > 0);
-
-    if (words.length <= maxWords) {
-      return content;
-    }
-
-    const headWords = Math.floor(maxWords * 0.4); // Keep 40% at the beginning
-    const tailWords = Math.floor(maxWords * 0.4); // Keep 40% at the end
-
-    const head = words.slice(0, headWords).join('');
-    const tail = words.slice(-tailWords).join('');
-
-    return `${head}\n\n...[content truncated, ${words.length - maxWords} words removed]...\n\n${tail}`;
-  }
-
-  /**
    * Load drive file content from cache or parse if not cached
    */
   private async loadOrParseDriveFile(user: User, driveFile: DriveFileModel): Promise<DriveFile> {
@@ -659,9 +642,9 @@ export class DriveService implements OnModuleInit {
         // Content is already normalized and processed during storage
         let content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
 
-        // Re-apply truncation in case maxWords config changed
-        const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
-        content = this.truncateContent(content, maxWords);
+        // Apply token-based truncation (head/tail preservation)
+        const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+        content = truncateContent(content, maxTokens);
 
         this.logger.info(
           `Successfully loaded from cache for ${fileId}, content length: ${content.length}`,
@@ -749,9 +732,9 @@ export class DriveService implements OnModuleInit {
       const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
       await this.internalOss.putObject(contentStorageKey, processedContent);
 
-      // Truncate content for return (but not for storage)
-      const maxWords = this.config.get<number>('drive.maxContentWords') || 3000;
-      const truncatedContent = this.truncateContent(processedContent, maxWords);
+      // Apply token-based truncation for return (head/tail preservation)
+      const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+      const truncatedContent = truncateContent(processedContent, maxTokens);
 
       // Calculate word count from truncated content
       const wordCount = readingTime(truncatedContent).words;
