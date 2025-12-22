@@ -27,10 +27,12 @@ jobs:
         id: check_issues
         env:
           ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
+          ORBIT_API_KEY: ${{ secrets.ORBIT_API_KEY }}
         run: |
           # Query for merged issues in Scheduled/Staging projects
           RESPONSE=$(curl -s -X POST "$ORBIT_API_URL/api/issues/query" \
             -H "Content-Type: application/json" \
+            -H "X-Orbit-API-Key: $ORBIT_API_KEY" \
             -d '{
               "filter": {
                 "state": { "name": { "eq": "Merged" } }
@@ -197,6 +199,7 @@ jobs:
       - name: Update issue statuses to In Review
         env:
           ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
+          ORBIT_API_KEY: ${{ secrets.ORBIT_API_KEY }}
           ISSUE_IDS: ${{ needs.linear-precheck.outputs.issue_ids }}
         run: |
           echo "Updating issues to In Review status..."
@@ -205,6 +208,7 @@ jobs:
           # Batch update all issues to "In Review" status
           RESPONSE=$(curl -s -X POST "$ORBIT_API_URL/api/issues/batch-update" \
             -H "Content-Type: application/json" \
+            -H "X-Orbit-API-Key: $ORBIT_API_KEY" \
             -d "{
               \"ids\": $ISSUE_IDS,
               \"state\": \"Merged\",
