@@ -12,6 +12,8 @@ import {
   BuiltinGetTimeDefinition,
   BuiltinReadFileToolset,
   BuiltinReadFileDefinition,
+  BuiltinListFilesToolset,
+  BuiltinListFilesDefinition,
   BuiltinExecuteCodeToolset,
   BuiltinExecuteCodeDefinition,
 } from './builtin';
@@ -64,6 +66,10 @@ export const builtinToolsetInventory: Record<
   [BuiltinReadFileDefinition.key]: {
     class: BuiltinReadFileToolset,
     definition: BuiltinReadFileDefinition,
+  },
+  [BuiltinListFilesDefinition.key]: {
+    class: BuiltinListFilesToolset,
+    definition: BuiltinListFilesDefinition,
   },
   [BuiltinExecuteCodeDefinition.key]: {
     class: BuiltinExecuteCodeToolset,
