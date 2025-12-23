@@ -135,23 +135,10 @@ export const buildFinalRequestMessages = ({
  * - Place the cachePoint marker AFTER the content to cache
  */
 /**
- * Check if message content already has a cache point
- */
-const hasCachePoint = (content: unknown): boolean => {
-  if (!Array.isArray(content)) return false;
-  return content.some((item) => item && typeof item === 'object' && 'cachePoint' in item);
-};
-
-/**
  * Try to add cache point to a single message.
  * Returns the cached message if successful, or null if caching is not applicable.
  */
 const tryAddCachePoint = (message: BaseMessage): BaseMessage | null => {
-  // Skip if message already has a cache point
-  if (hasCachePoint(message.content)) {
-    return null;
-  }
-
   const messageType = message._getType();
 
   if (messageType === 'system') {
@@ -291,15 +278,7 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
   // 2. Session Dynamic Points: Scan from end, try to cache up to 3 messages
   // Skip index 0 (system message already handled)
   for (let i = result.length - 1; i > 0 && dynamicCacheCount < maxDynamicCachePoints; i--) {
-    const message = result[i];
-
-    // Check if message already has a cache point (count it but don't add another)
-    if (hasCachePoint(message.content)) {
-      dynamicCacheCount++;
-      continue;
-    }
-
-    const cachedMessage = tryAddCachePoint(message);
+    const cachedMessage = tryAddCachePoint(result[i]);
     if (cachedMessage) {
       result[i] = cachedMessage;
       dynamicCacheCount++;
