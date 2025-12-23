@@ -139,12 +139,12 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
   return messages.map((message, index) => {
     // Determine if this message should have a cache point
     // 1. Global Static Point: After System Prompt (index 0)
-    // 2. Session Dynamic Point: After the last 3 messages except the last user message (index -2, -3, -4)
+    // 2. Session Dynamic Point: After the last 3 messages (index -3, -2, -1)
     const isGlobalStaticPoint = index === 0;
     const isSessionDynamicPoint =
-      index === messages.length - 2 ||
       index === messages.length - 3 ||
-      index === messages.length - 4;
+      index === messages.length - 2 ||
+      index === messages.length - 1;
     const shouldAddCachePoint = isGlobalStaticPoint || isSessionDynamicPoint;
 
     if (!shouldAddCachePoint) {
