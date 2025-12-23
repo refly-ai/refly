@@ -68,7 +68,7 @@ import { ToolService } from '../tool/tool.service';
 import { DriveService } from '../drive/drive.service';
 import { AutoModelRoutingService, RoutingContext } from '../provider/auto-model-router.service';
 import { getTracer } from '@refly/observability';
-import { propagation, context, trace } from '@opentelemetry/api';
+import { propagation, context, trace, SpanStatusCode } from '@opentelemetry/api';
 
 /**
  * Fixed builtin toolsets that are always available for node_agent mode.
@@ -1151,8 +1151,16 @@ export class SkillService implements OnModuleInit {
         const traceCarrier: Record<string, string> = {};
         propagation.inject(trace.setSpan(context.active(), span), traceCarrier);
 
-        const job = await this.skillQueue.add('invokeSkill', { ...data, traceCarrier });
-        span.end();
+        let job: Awaited<ReturnType<typeof this.skillQueue.add>>;
+        try {
+          job = await this.skillQueue.add('invokeSkill', { ...data, traceCarrier });
+        } catch (err) {
+          span.recordException(err as Error);
+          span.setStatus({ code: SpanStatusCode.ERROR, message: (err as Error).message });
+          throw err;
+        } finally {
+          span.end();
+        }
 
         // Register the job in Redis for abortion support
         await this.actionService.registerQueuedJob(data.result.resultId, job.id);
