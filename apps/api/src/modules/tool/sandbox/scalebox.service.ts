@@ -28,7 +28,7 @@ import { extractErrorMessage } from './scalebox.utils';
 import { SandboxPool } from './scalebox.pool';
 import { ISandboxWrapper } from './wrapper/base';
 import { S3Config } from './scalebox.dto';
-import { Trace } from './scalebox.tracer';
+import { Trace } from '@refly/observability';
 import {
   S3_DEFAULT_CONFIG,
   SCALEBOX_DEFAULTS,

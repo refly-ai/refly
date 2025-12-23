@@ -2,7 +2,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { SandboxExecuteParams } from '@refly/openapi-schema';
 
 import { guard } from '../../../../utils/guard';
-import { Trace } from '../scalebox.tracer';
+import { Trace } from '@refly/observability';
 import {
   SandboxExecutionFailedException,
   SandboxLanguageNotSupportedException,
