@@ -119,9 +119,15 @@ export const buildFinalRequestMessages = ({
  *    - Shared across all users and sessions
  *    - Contains: System Prompt + Tool Definitions + Examples
  *    - Benefits: Write once, reuse globally
- * 2. Session Dynamic Point: After the second-to-last message (messages.length - 2)
+ * 2. Session Dynamic Points: After the last 3 messages excluding the final user message
  *    - Caches the conversation history for the current user
+ *    - Applies to System/Human/AI messages (NOT ToolMessage)
  *    - Benefits: Reuses multi-turn conversation context within a session
+ *
+ * Important: ToolMessage does NOT support cachePoint in AWS Bedrock
+ * - AWS Bedrock SDK fails to serialize ToolMessage with cachePoint
+ * - Cache benefit comes from caching AIMessage that contains tool_calls
+ * - ToolMessage results are included in subsequent context naturally
  *
  * LangChain AWS uses cachePoint markers:
  * - Format: { cachePoint: { type: 'default' } }
@@ -153,6 +159,12 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
       const textContent =
         typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
 
+      // Skip caching if content is empty
+      // Bedrock Converse API does not accept empty text blocks
+      if (!textContent || textContent.trim() === '') {
+        return message;
+      }
+
       return new SystemMessage({
         content: [
           {
@@ -168,6 +180,11 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
 
     if (messageType === 'human') {
       if (typeof message.content === 'string') {
+        // Skip caching if content is empty
+        if (!message.content || message.content.trim() === '') {
+          return message;
+        }
+
         return new HumanMessage({
           content: [
             {
@@ -182,6 +199,11 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
       }
 
       if (Array.isArray(message.content)) {
+        // Skip caching if content array is empty
+        if (message.content.length === 0) {
+          return message;
+        }
+
         // For array content (like images mixed with text),
         // add cachePoint marker at the end
         return new HumanMessage({
@@ -198,6 +220,12 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
     if (messageType === 'ai') {
       const textContent =
         typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+
+      // Skip caching if content is empty (e.g., AIMessage with only tool_calls)
+      // Bedrock Converse API does not accept empty text blocks
+      if (!textContent || textContent.trim() === '') {
+        return message;
+      }
 
       const aiMessage = message as AIMessage;
       return new AIMessage({
@@ -216,27 +244,8 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
     }
 
     if (messageType === 'tool') {
-      const toolMessage = message as ToolMessage;
-      const textContent =
-        typeof toolMessage.content === 'string'
-          ? toolMessage.content
-          : JSON.stringify(toolMessage.content);
-
-      // ToolMessage requires tool_call_id at the top level
-      // We use type assertion to include cachePoint in content array
-      return new ToolMessage({
-        content: [
-          {
-            type: 'text',
-            text: textContent,
-          },
-          {
-            cachePoint: { type: 'default' },
-          },
-        ] as unknown as string,
-        tool_call_id: toolMessage.tool_call_id,
-        name: toolMessage.name,
-      });
+      // Do not apply cachePoint on ToolMessage to avoid errors
+      return message;
     }
 
     // Return original message if we can't apply caching
