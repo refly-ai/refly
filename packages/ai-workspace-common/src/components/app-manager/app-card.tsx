@@ -5,8 +5,10 @@ import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useTranslation } from 'react-i18next';
 import { WiTime3 } from 'react-icons/wi';
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
+import { useUserStoreShallow, useAuthStoreShallow } from '@refly/stores';
 
 interface AppCardData extends WorkflowApp {
   publishReviewStatus?: string;
@@ -16,6 +18,11 @@ interface AppCardData extends WorkflowApp {
 export const AppCard = memo(({ data }: { data: AppCardData; onDelete?: () => void }) => {
   const { i18n, t } = useTranslation();
   const language = i18n.languages?.[0];
+  const { duplicateCanvas, loading: duplicating } = useDuplicateCanvas();
+  const isLogin = useUserStoreShallow((state) => state.isLogin);
+  const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
+    setLoginModalOpen: state.setLoginModalOpen,
+  }));
 
   const handleView = () => {
     window.open(`/app/${data.shareId}`, '_blank');
@@ -25,6 +32,21 @@ export const AppCard = memo(({ data }: { data: AppCardData; onDelete?: () => voi
     e.stopPropagation();
     handleView();
   };
+
+  const handleUse = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+
+      if (!isLogin) {
+        setLoginModalOpen(true);
+        return;
+      }
+      if (data.shareId) {
+        duplicateCanvas({ shareId: data.shareId });
+      }
+    },
+    [data.shareId, duplicateCanvas, isLogin, setLoginModalOpen],
+  );
 
   // Determine review status
   const reviewStatus = useMemo(() => {
@@ -50,6 +72,9 @@ export const AppCard = memo(({ data }: { data: AppCardData; onDelete?: () => voi
 
   const actionContent = (
     <>
+      <Button loading={duplicating} type="primary" onClick={handleUse} className="flex-1">
+        {t('template.use')}
+      </Button>
       <Button type="primary" onClick={(e) => handleViewButtonClick(e)} className="flex-1">
         {t('appManager.view')}
       </Button>

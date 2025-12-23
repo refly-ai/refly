@@ -106,9 +106,18 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
 
 ## Context (system-injected)
 
-- \`files\`: uploaded/referenced files; use \`fileId\` with \`read_file\`, use \`name\` with \`execute_code\`
+- \`files\`: uploaded/referenced files (**metadata only**: name, fileId, type, summary)
+  - **Important**: File content is NOT included to save context tokens
+  - Use \`read_file\` tool with \`fileId\` to retrieve full content when needed
+  - Use \`name\` with \`execute_code\` for file processing
 - \`results\`: outputs from upstream nodes; access via \`@agent:Title\` mention
+  - \`outputFiles\`: metadata only, use \`read_file\` to get content
 - \`summary\` fields: quick preview without reading full content
+
+### File Access Strategy
+1. **Check summary first** — often sufficient for understanding file purpose
+2. **Use read_file when needed** — call only when full content is required
+3. **Batch when possible** — read multiple files together in execute_code if processing
 
 ### @ Mentions
 

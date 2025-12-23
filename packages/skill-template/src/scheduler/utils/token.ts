@@ -1,7 +1,9 @@
-import { encode } from 'gpt-tokenizer';
 import { BaseMessage, MessageContent } from '@langchain/core/messages';
 import { SkillContext } from '@refly/openapi-schema';
-import { truncateContent as baseTruncateContent } from '@refly/utils';
+import {
+  truncateContent as baseTruncateContent,
+  countToken as baseCountToken,
+} from '@refly/utils/token';
 
 // ============================================================================
 // Token Estimation (Fast, ~1000x faster than exact counting)
@@ -73,12 +75,13 @@ export const truncateContentFast = (content: string, targetTokens: number): stri
 
 /**
  * Count tokens in MessageContent (supports both string and array formats)
+ * Uses tiktoken via @refly/utils for accurate counting
  */
 export const countToken = (content: MessageContent) => {
   const inputText = Array.isArray(content)
     ? content.map((msg) => (msg.type === 'text' ? msg.text : '')).join('')
     : String(content || '');
-  return encode(inputText).length;
+  return baseCountToken(inputText);
 };
 
 export const checkHasContext = (context: SkillContext) => {

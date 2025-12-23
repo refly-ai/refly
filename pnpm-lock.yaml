@@ -284,9 +284,6 @@ importers:
       get-port:
         specifier: ^5.1.1
         version: 5.1.1
-      gpt-tokenizer:
-        specifier: ^2.9.0
-        version: 2.9.0
       handlebars:
         specifier: ^4.7.8
         version: 4.7.8
@@ -700,9 +697,6 @@ importers:
       googleapis:
         specifier: ^159.0.0
         version: 159.0.0
-      gpt-tokenizer:
-        specifier: ^2.9.0
-        version: 2.9.0
       html-to-text:
         specifier: ^9.0.5
         version: 9.0.5
@@ -1402,9 +1396,9 @@ importers:
       '@refly/openapi-schema':
         specifier: workspace:*
         version: link:../openapi-schema
-      gpt-tokenizer:
-        specifier: ^2.9.0
-        version: 2.9.0
+      '@refly/utils':
+        specifier: workspace:*
+        version: link:../utils
       langfuse:
         specifier: ^3.6.0
         version: 3.38.4
@@ -1539,6 +1533,9 @@ importers:
       '@refly/errors':
         specifier: workspace:*
         version: link:../errors
+      '@refly/observability':
+        specifier: workspace:*
+        version: link:../observability
       '@refly/openapi-schema':
         specifier: workspace:*
         version: link:../openapi-schema
@@ -1566,9 +1563,6 @@ importers:
       extended-eventsource:
         specifier: ^2.1.0
         version: 2.1.0
-      gpt-tokenizer:
-        specifier: ^2.9.0
-        version: 2.9.0
       is-url:
         specifier: ~1.2.4
         version: 1.2.4
@@ -1754,9 +1748,6 @@ importers:
       deepmerge:
         specifier: ^4.3.1
         version: 4.3.1
-      gpt-tokenizer:
-        specifier: ^2.9.0
-        version: 2.9.0
       js-cookie:
         specifier: ^3.0.5
         version: 3.0.5
@@ -1793,6 +1784,9 @@ importers:
       tailwind-merge:
         specifier: ^2.2.2
         version: 2.6.0
+      tiktoken:
+        specifier: ^1.0.18
+        version: 1.0.22
       tlds:
         specifier: ^1.255.0
         version: 1.259.0
@@ -9761,9 +9755,6 @@ packages:
     resolution: {integrity: sha512-6tfZ91bOr7bOXnK7PRDCGBLa1H4U080YHNaAQ2KsMGlLEzRbk44nsZF2E1IeRc3vtJHPVbKCYgdFbaGO2ljd8g==}
     engines: {node: '>=10.19.0'}
 
-  gpt-tokenizer@2.9.0:
-    resolution: {integrity: sha512-YSpexBL/k4bfliAzMrRqn3M6+it02LutVyhVpDeMKrC/O9+pCe/5s8U2hYKa2vFLD5/vHhsKc8sOn/qGqII8Kg==}
-
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
@@ -13914,6 +13905,9 @@ packages:
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
+
+  tiktoken@1.0.22:
+    resolution: {integrity: sha512-PKvy1rVF1RibfF3JlXBSP0Jrcw2uq3yXdgcEXtKTYn3QJ/cBRBHDnrJ5jHky+MENZ6DIPwNUGWpkVx+7joCpNA==}
 
   timers-browserify@2.0.12:
     resolution: {integrity: sha512-9phl76Cqm6FhSX9Xe1ZUAMLtm1BLkKj2Qd5ApyWkXzsMRaA7dgr81kf4wJmQf/hAvg8EEyJxDo3du/0KlhPiKQ==}
@@ -24635,8 +24629,6 @@ snapshots:
       p-cancelable: 2.1.1
       responselike: 2.0.1
 
-  gpt-tokenizer@2.9.0: {}
-
   graceful-fs@4.2.11: {}
 
   graphemer@1.4.0: {}
@@ -29795,6 +29787,8 @@ snapshots:
       readable-stream: 3.6.2
 
   through@2.3.8: {}
+
+  tiktoken@1.0.22: {}
 
   timers-browserify@2.0.12:
     dependencies:

@@ -318,6 +318,7 @@ export const SkillResponseNode = memo(
         nodeId: id,
         entityId: data.entityId,
         canvasId,
+        query: data?.metadata?.query,
       });
 
     // Sync node status with action result status

@@ -1,5 +1,5 @@
 import { SkillContext } from '@refly/openapi-schema';
-import { encode } from 'gpt-tokenizer';
+import { countToken } from '@refly/utils/token';
 import { SkillEngine } from '../../engine';
 import { truncateContent } from './token';
 
@@ -13,11 +13,24 @@ export interface ContextFile {
   variableName?: string;
 }
 
+/**
+ * Metadata-only version of ContextFile (without content)
+ * Used in ContextBlock to reduce token usage - LLM should use read_file to get full content
+ */
+export interface ContextFileMeta {
+  name: string;
+  fileId: string;
+  type: string;
+  summary: string;
+  variableId?: string;
+  variableName?: string;
+}
+
 export interface AgentResult {
   resultId: string;
   title: string;
   content: string;
-  outputFiles: ContextFile[];
+  outputFiles: ContextFileMeta[];
 }
 
 // ============================================================================
@@ -45,7 +58,7 @@ export interface ArchivedRef {
 }
 
 export interface ContextBlock {
-  files: ContextFile[];
+  files: ContextFileMeta[];
   results: AgentResult[];
   totalTokens?: number;
   /**
@@ -59,7 +72,6 @@ export interface ContextBlock {
 // Maximum tokens for a single result/file to prevent one item from consuming too much space
 // Can be overridden via environment variables
 const MAX_SINGLE_RESULT_TOKENS = Number(process.env.MAX_SINGLE_RESULT_TOKENS) || 30000;
-const MAX_SINGLE_FILE_TOKENS = Number(process.env.MAX_SINGLE_FILE_TOKENS) || 20000;
 
 /**
  * Prepare context from SkillContext into a structured ContextBlock format
@@ -78,56 +90,32 @@ export async function prepareContext(
   }
 
   const maxTokens = options?.maxTokens ?? 0;
-  const selectedFiles: ContextFile[] = [];
+  const selectedFiles: ContextFileMeta[] = [];
   const selectedResults: AgentResult[] = [];
   let currentTokens = 0;
 
   // Helper function to estimate tokens for content
   const estimateTokens = (content: string): number => {
-    return encode(content ?? '').length;
+    return countToken(content);
   };
 
-  // Process files with token estimation
+  // Process files - only store metadata (no content) to save tokens
+  // LLM should use read_file tool to get full content when needed
   if (context?.files?.length > 0) {
-    // Sort files by content length (shortest first) to prioritize smaller files
-    // This ensures shorter files are less likely to be truncated later
-    const sortedFiles = [...context.files].sort((a, b) => {
-      const aContent = a?.file?.content ?? '';
-      const bContent = b?.file?.content ?? '';
-      return aContent.length - bContent.length;
-    });
-
-    for (const item of sortedFiles) {
+    for (const item of context.files) {
       const file = item?.file;
       if (!file) continue;
 
-      let fileContent = file?.content ?? '';
-      let contentTokens = estimateTokens(fileContent);
-
-      // Truncate single file if it exceeds the limit
-      if (contentTokens > MAX_SINGLE_FILE_TOKENS) {
-        fileContent = truncateContent(fileContent, MAX_SINGLE_FILE_TOKENS);
-        contentTokens = estimateTokens(fileContent);
-      }
-
-      // Check if adding this file would exceed token limit
-      if (maxTokens > 0 && currentTokens + contentTokens > maxTokens) {
-        // If we can't add the full file, skip it
-        continue;
-      }
-
-      const contextFile: ContextFile = {
+      const contextFile: ContextFileMeta = {
         name: file?.name ?? 'Untitled File',
         fileId: file?.fileId ?? 'unknown',
         type: file?.type ?? 'unknown',
         summary: file?.summary ?? '',
-        content: fileContent,
         ...(item.variableId && { variableId: item.variableId }),
         ...(item.variableName && { variableName: item.variableName }),
       };
 
       selectedFiles.push(contextFile);
-      currentTokens += contentTokens;
     }
   }
 
@@ -164,13 +152,14 @@ export async function prepareContext(
         resultId: result?.resultId ?? 'unknown',
         title: result?.title ?? 'Untitled Result',
         content: resultContent,
+        // outputFiles only contain metadata (no content) to save tokens
+        // LLM should use read_file tool to get full content when needed
         outputFiles:
           result?.files?.map((file) => ({
             name: file?.name ?? 'Untitled File',
             fileId: file?.fileId ?? 'unknown',
             type: file?.type ?? 'unknown',
             summary: file?.summary ?? '',
-            content: file?.content ?? '',
           })) ?? [],
       };
 

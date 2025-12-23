@@ -27,5 +27,6 @@ export * from './artifact';
 export * from './validator';
 export * from './query-processor';
 export * from './drive-file-mapper';
-export * from './token';
+// Note: token.ts uses tiktoken (WASM) which is not compatible with frontend bundlers
+// Backend should import directly: import { countToken } from '@refly/utils/src/token'
 export * from './on-module-init';

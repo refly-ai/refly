@@ -37,7 +37,7 @@ import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
 import * as Y from 'yjs';
-import { encode } from 'gpt-tokenizer';
+import { countToken } from '@refly/utils/token';
 import {
   QUEUE_AUTO_NAME_CANVAS,
   QUEUE_SYNC_PILOT_STEP,
@@ -177,10 +177,52 @@ export class SkillInvokerService {
       eventListener,
       toolsets,
     } = data;
-    const userPo = await this.prisma.user.findUnique({
-      select: { uiLocale: true, outputLocale: true },
-      where: { uid: user.uid },
-    });
+
+    // Collect fileIds that need to be fetched
+    const fileIdsToFetch =
+      context?.files?.filter((f) => f.fileId && !f.file).map((f) => f.fileId) ?? [];
+
+    // Parallel fetch: user preferences and drive files
+    const [userPo, driveFiles] = await Promise.all([
+      this.prisma.user.findUnique({
+        select: { uiLocale: true, outputLocale: true },
+        where: { uid: user.uid },
+      }),
+      fileIdsToFetch.length > 0
+        ? this.prisma.driveFile.findMany({
+            where: {
+              fileId: { in: fileIdsToFetch },
+              deletedAt: null,
+            },
+            select: {
+              fileId: true,
+              name: true,
+              type: true,
+              summary: true,
+              category: true,
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    // Populate empty file objects in context.files
+    if (driveFiles.length > 0 && context?.files) {
+      const fileMap = new Map(driveFiles.map((f) => [f.fileId, f]));
+      for (const fileItem of context.files) {
+        if (fileItem.fileId && !fileItem.file) {
+          const driveFile = fileMap.get(fileItem.fileId);
+          if (driveFile) {
+            fileItem.file = {
+              fileId: driveFile.fileId,
+              name: driveFile.name,
+              type: driveFile.type,
+              summary: driveFile.summary,
+              category: driveFile.category,
+            } as DriveFile;
+          }
+        }
+      }
+    }
 
     const outputLocale = data?.locale || userPo?.outputLocale;
     // Merge the current context with contexts from result history
@@ -1534,8 +1576,8 @@ export class SkillInvokerService {
         return;
       }
 
-      const inputTokens = encode(input.query || '').length;
-      const outputTokens = encode(generatedContent).length;
+      const inputTokens = countToken(input.query || '');
+      const outputTokens = countToken(generatedContent);
       const cacheReadTokens = 0;
       const cacheWriteTokens = 0;
 
@@ -1825,10 +1867,10 @@ export class SkillInvokerService {
         `Failed to use LangChain tokenizer, falling back to basic estimation: ${error instanceof Error ? error.message : error}`,
       );
 
-      const inputTokens = encode(JSON.stringify(input)).length;
-      const contextTokens = encode(JSON.stringify(config.configurable.context || {})).length;
-      const historyTokens = encode(JSON.stringify(config.configurable.chatHistory || [])).length;
-      const toolsTokens = encode(JSON.stringify(config.configurable.selectedTools || [])).length;
+      const inputTokens = countToken(JSON.stringify(input));
+      const contextTokens = countToken(JSON.stringify(config.configurable.context || {}));
+      const historyTokens = countToken(JSON.stringify(config.configurable.chatHistory || []));
+      const toolsTokens = countToken(JSON.stringify(config.configurable.selectedTools || []));
       const totalTokens = inputTokens + contextTokens + historyTokens + toolsTokens;
 
       return {

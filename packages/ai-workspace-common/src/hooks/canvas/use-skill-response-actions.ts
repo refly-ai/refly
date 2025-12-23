@@ -12,17 +12,20 @@ import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { useVariableView } from './use-variable-view';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useTranslation } from 'react-i18next';
+import { parseMentionsFromQuery } from '@refly/utils';
 
 interface UseSkillResponseActionsProps {
   nodeId: string;
   entityId: string;
   canvasId?: string;
+  query?: string | null;
 }
 
 export const useSkillResponseActions = ({
   nodeId,
   entityId,
   canvasId,
+  query,
 }: UseSkillResponseActionsProps) => {
   const { t } = useTranslation();
   const { cleanupAbortedNode } = useCleanupAbortedNode();
@@ -41,24 +44,44 @@ export const useSkillResponseActions = ({
   // Check if workflow is running
   const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
 
-  // Get first empty required file variable
-  const getFirstEmptyRequiredFileVariable = useCallback(() => {
-    for (const variable of workflowVariables) {
-      if (
-        variable.required &&
-        variable.variableType === 'resource' &&
-        (!variable.value || variable.value.length === 0)
-      ) {
-        return variable;
+  // Get first empty required file variable that is referenced in the query
+  const getFirstEmptyRequiredFileVariable = useCallback(
+    (query?: string | null) => {
+      // If no query is provided, don't check any variables
+      if (!query) {
+        return null;
       }
-    }
-    return null;
-  }, [workflowVariables]);
+
+      // Extract variable references from the query using utility function
+      const mentions = parseMentionsFromQuery(query);
+      const referencedVariableIds = new Set<string>(
+        mentions.filter((m) => m.type === 'var').map((m) => m.id),
+      );
+
+      // Check only the variables that are referenced in the query
+      for (const variable of workflowVariables) {
+        // Skip variables that are not referenced in the query
+        if (!referencedVariableIds.has(variable.variableId)) {
+          continue;
+        }
+
+        if (
+          variable.required &&
+          variable.variableType === 'resource' &&
+          (!variable.value || variable.value.length === 0)
+        ) {
+          return variable;
+        }
+      }
+      return null;
+    },
+    [workflowVariables],
+  );
 
   // Rerun only this node
   const handleRerunSingle = useCallback(() => {
-    // Check for empty required file variables
-    const emptyRequiredVar = getFirstEmptyRequiredFileVariable();
+    // Check for empty required file variables that are referenced in the query
+    const emptyRequiredVar = getFirstEmptyRequiredFileVariable(query);
     if (emptyRequiredVar) {
       message.warning(
         t('canvas.workflow.run.requiredFileInputsMissing') ||
@@ -70,7 +93,7 @@ export const useSkillResponseActions = ({
     }
 
     nodeActionEmitter.emit(createNodeEventName(nodeId, 'rerun'));
-  }, [nodeId, getFirstEmptyRequiredFileVariable, handleVariableView, t]);
+  }, [nodeId, query, getFirstEmptyRequiredFileVariable, handleVariableView, t]);
 
   // Rerun workflow from this node
   const handleRerunFromHere = useCallback(async () => {
@@ -80,7 +103,8 @@ export const useSkillResponseActions = ({
     }
 
     // Check for empty required file variables (for this step or later steps in the chain)
-    const emptyRequiredVar = getFirstEmptyRequiredFileVariable();
+    // Note: For "from here", we check all variables since we're running the full workflow
+    const emptyRequiredVar = getFirstEmptyRequiredFileVariable(null);
     if (emptyRequiredVar) {
       message.warning(
         t('canvas.workflow.run.requiredFileInputsMissingForChain') ||
