@@ -313,7 +313,7 @@ const PlusPlanCard = memo(
               </Tag>
             )}
           </div>
-          {voucher && !isCurrentPlan && voucherValidDays && (
+          {voucher && !isCurrentPlan && voucherValidDays && selectedId !== 'yearly' && (
             <VoucherTag discountPercent={voucher.discountPercent} validDays={voucherValidDays} />
           )}
         </div>
@@ -584,8 +584,8 @@ export const CreditInsufficientModal = memo(() => {
           source: creditInsufficientTriggeredFrom,
         };
 
-        // Validate voucher before creating checkout session
-        if (availableVoucher?.voucherId) {
+        // Validate voucher before creating checkout session (only for monthly subscriptions)
+        if (availableVoucher?.voucherId && interval !== 'yearly') {
           console.log('[CreditInsufficientModal] Validating voucher:', availableVoucher.voucherId);
           const validateRes = await getClient().validateVoucher({
             body: { voucherId: availableVoucher.voucherId },
