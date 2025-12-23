@@ -115,7 +115,7 @@ export class MessageAggregator {
       // Create new messages
       if (newMessages.length > 0) {
         const createData = newMessages.map((msg) => this.toPrismaInput(msg));
-        await this.prisma.actionMessage.createMany({ data: createData });
+        await this.prisma.actionMessage.createMany({ data: createData, skipDuplicates: true });
 
         // Mark as persisted
         for (const msg of newMessages) {
