@@ -55,3 +55,6 @@ export async function shutdownObservability(): Promise<void> {
 
 export { LangfuseListener, createLangfuseService } from './langfuse-listener';
 export { OpenTelemetryListener } from './types';
+
+// OpenTelemetry tracing decorators
+export { Trace, Measure, recordTiming, getCurrentSpan, getTracer } from './trace-decorator';

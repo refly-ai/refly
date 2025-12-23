@@ -8,6 +8,8 @@ import sharp from 'sharp';
 import { PrismaService } from '../common/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../common/redis.service';
+import { Trace, getCurrentSpan, getTracer } from '@refly/observability';
+import { SpanStatusCode } from '@opentelemetry/api';
 import {
   UpsertDriveFileRequest,
   DeleteDriveFileRequest,
@@ -557,7 +559,10 @@ export class DriveService implements OnModuleInit {
     return allFiles;
   }
 
+  @Trace('drive.getDriveFileDetail')
   async getDriveFileDetail(user: User, fileId: string, file?: DriveFileModel): Promise<DriveFile> {
+    getCurrentSpan()?.setAttribute('file.id', fileId);
+
     const driveFile =
       file ??
       (await this.prisma.driveFile.findFirst({
@@ -627,8 +632,11 @@ export class DriveService implements OnModuleInit {
   /**
    * Load drive file content from cache or parse if not cached
    */
+  @Trace('drive.loadOrParseDriveFile')
   private async loadOrParseDriveFile(user: User, driveFile: DriveFileModel): Promise<DriveFile> {
     const { fileId, type: contentType } = driveFile;
+    const tracer = getTracer();
+    getCurrentSpan()?.setAttributes({ 'file.id': fileId, 'file.type': contentType });
 
     this.logger.info(`Loading or parsing drive file ${fileId}, contentType: ${contentType}`);
 
@@ -638,57 +646,52 @@ export class DriveService implements OnModuleInit {
     });
 
     if (cache?.parseStatus === 'success') {
-      try {
-        const stream = await this.internalOss.getObject(cache.contentStorageKey);
-        // Content is already normalized and processed during storage
-        let content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
+      return tracer
+        .startActiveSpan('drive.loadFromCache', async (span) => {
+          try {
+            const stream = await this.internalOss.getObject(cache.contentStorageKey);
+            let content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
 
-        // Apply token-based truncation (head/tail preservation)
-        const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
-        content = truncateContent(content, maxTokens);
+            const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+            content = truncateContent(content, maxTokens);
 
-        this.logger.info(
-          `Successfully loaded from cache for ${fileId}, content length: ${content.length}`,
-        );
-        return { ...this.toDTO(driveFile), content };
-      } catch (error) {
-        this.logger.warn(`Cache read failed for ${fileId}, will re-parse:`, error);
-        // Continue to parse
-      }
+            span.setAttributes({ 'cache.hit': true, 'content.length': content.length });
+            span.end();
+            return { ...this.toDTO(driveFile), content };
+          } catch (error) {
+            this.logger.warn(`Cache read failed for ${fileId}, will re-parse:`, error);
+            span.setAttributes({ 'cache.hit': false, 'cache.error': true });
+            span.end();
+            throw error; // Rethrow to continue to parse below
+          }
+        })
+        .catch(() => null); // Return null to continue parsing if cache fails
     }
 
     // Step 2: No cache found, perform parsing
+    getCurrentSpan()?.setAttribute('cache.hit', false);
     try {
-      this.logger.info(`No cache found for ${fileId}, starting parse process`);
-
-      const parserFactory = new ParserFactory(this.config, this.providerService);
-      const parser = await parserFactory.createDocumentParser(user, contentType, {
-        resourceId: fileId,
-      });
-
       // Load file from storage
-      const storageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
-      const fileStream = await this.internalOss.getObject(storageKey);
-      const fileBuffer = await streamToBuffer(fileStream);
-      this.logger.info(`File loaded from storage for ${fileId}, size: ${fileBuffer.length} bytes`);
+      const fileBuffer = await tracer.startActiveSpan('drive.loadFromOSS', async (span) => {
+        const storageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
+        const fileStream = await this.internalOss.getObject(storageKey);
+        const buffer = await streamToBuffer(fileStream);
+        span.setAttribute('file.size', buffer.length);
+        span.end();
+        return buffer;
+      });
 
       // Check PDF page count
       let numPages: number | undefined = undefined;
       if (contentType === 'application/pdf') {
         const pdfInfo = await pdf(fileBuffer);
         numPages = pdfInfo.numpages;
+        getCurrentSpan()?.setAttribute('pdf.pages', numPages);
 
-        // Check page limit
         const { available, pageUsed, pageLimit } =
           await this.subscriptionService.checkFileParseUsage(user);
 
         if (numPages > available) {
-          const errorMessage = `Page limit exceeded: ${numPages} pages, available: ${available}`;
-          this.logger.info(
-            `Drive file ${fileId} parse failed due to page limit, numpages: ${numPages}, available: ${available}`,
-          );
-
-          // Record failure status
           await this.prisma.driveFileParseCache.upsert({
             where: { fileId },
             create: {
@@ -713,34 +716,51 @@ export class DriveService implements OnModuleInit {
               updatedAt: new Date(),
             },
           });
-
-          throw new Error(errorMessage);
+          throw new Error(`Page limit exceeded: ${numPages} pages, available: ${available}`);
         }
       }
 
-      // Perform parsing
-      this.logger.info(`Starting to parse file ${fileId} with parser: ${parser.name}`);
-      const result = await parser.parse(fileBuffer);
-      if (result.error) {
-        throw new Error(`Parse failed: ${result.error}`);
-      }
+      // Create parser
+      const parser = await tracer.startActiveSpan('drive.createParser', async (span) => {
+        const parserFactory = new ParserFactory(this.config, this.providerService);
+        const p = await parserFactory.createDocumentParser(user, contentType, {
+          resourceId: fileId,
+        });
+        span.setAttribute('parser.name', p.name);
+        span.end();
+        return p;
+      });
 
-      // Process content: remove null bytes and normalize whitespace
+      // Perform parsing - key performance point
+      const result = await tracer.startActiveSpan(`drive.parse.${parser.name}`, async (span) => {
+        span.setAttributes({ 'parser.name': parser.name, 'file.size': fileBuffer.length });
+        const r = await parser.parse(fileBuffer);
+        if (r.error) {
+          span.setStatus({ code: SpanStatusCode.ERROR, message: r.error });
+          span.end();
+          throw new Error(`Parse failed: ${r.error}`);
+        }
+        span.setAttribute('content.length', r.content?.length || 0);
+        span.end();
+        return r;
+      });
+
+      // Process and store content
       let processedContent = result.content?.replace(/x00/g, '') || '';
       processedContent = this.normalizeWhitespace(processedContent);
 
-      // Store normalized content to OSS (without truncation, so we can adjust limits later)
       const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
-      await this.internalOss.putObject(contentStorageKey, processedContent);
+      await tracer.startActiveSpan('drive.saveToCache', async (span) => {
+        await this.internalOss.putObject(contentStorageKey, processedContent);
+        span.setAttribute('content.length', processedContent.length);
+        span.end();
+      });
 
-      // Apply token-based truncation for return (head/tail preservation)
       const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
       const truncatedContent = truncateContent(processedContent, maxTokens);
-
-      // Calculate word count from truncated content
       const wordCount = readingTime(truncatedContent).words;
 
-      // Save cache record (upsert ensures concurrency safety)
+      // Save cache record
       await this.prisma.driveFileParseCache.upsert({
         where: { fileId },
         create: {
@@ -764,7 +784,7 @@ export class DriveService implements OnModuleInit {
         },
       });
 
-      // If PDF, record page usage to fileParseRecord
+      // If PDF, record page usage
       if (contentType === 'application/pdf' && numPages) {
         await this.prisma.fileParseRecord.create({
           data: {
@@ -777,10 +797,6 @@ export class DriveService implements OnModuleInit {
           },
         });
       }
-
-      this.logger.info(
-        `Successfully parsed and cached file ${fileId}, content length: ${truncatedContent.length}, word count: ${wordCount}`,
-      );
 
       return { ...this.toDTO(driveFile), content: truncatedContent };
     } catch (error) {

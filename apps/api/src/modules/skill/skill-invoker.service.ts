@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { DirectConnection } from '@hocuspocus/server';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/messages';
-import { FilteredLangfuseCallbackHandler } from '@refly/observability';
+import { FilteredLangfuseCallbackHandler, Trace, getTracer } from '@refly/observability';
+import { propagation, context, SpanStatusCode } from '@opentelemetry/api';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -159,6 +160,7 @@ export class SkillInvokerService {
     return [new HumanMessage({ content: messageContent } as any), ...aiMessages];
   }
 
+  @Trace('skill.buildInvokeConfig')
   private async buildInvokeConfig(
     user: User,
     data: InvokeSkillJobData & {
@@ -381,14 +383,60 @@ export class SkillInvokerService {
   }
 
   private async _invokeSkill(user: User, data: InvokeSkillJobData, res?: Response) {
-    const { input, result, context } = data;
+    // Restore parent context from queue (cross-pod) or use current context (direct call)
+    const parentCtx = data.traceCarrier
+      ? propagation.extract(context.active(), data.traceCarrier)
+      : context.active();
+
+    const tracer = getTracer();
+    return tracer.startActiveSpan(
+      'skill.invoke',
+      { attributes: { 'skill.fromQueue': !!data.traceCarrier } },
+      parentCtx,
+      async (span) => {
+        try {
+          const result = await this._invokeSkillInner(user, data, res, span);
+          span.setStatus({ code: SpanStatusCode.OK });
+          return result;
+        } catch (error) {
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          span.recordException(error as Error);
+          throw error;
+        } finally {
+          span.end();
+        }
+      },
+    );
+  }
+
+  private async _invokeSkillInner(
+    user: User,
+    data: InvokeSkillJobData,
+    res: Response | undefined,
+    span: import('@opentelemetry/api').Span,
+  ) {
+    const { input, result, context: ctx } = data;
     const { resultId, version, actionMeta, tier } = result;
+    const canvasId = data.target?.entityType === 'canvas' ? data.target?.entityId : undefined;
+
+    // Set searchable attributes on span
+    span.setAttributes({
+      'skill.resultId': resultId,
+      'skill.name': data.skillName || 'unknown',
+      'skill.version': version,
+      'canvas.id': canvasId,
+      'user.uid': user.uid,
+    });
+
     this.logger.info(
       `invoke skill with input: ${JSON.stringify(input)}, resultId: ${resultId}, version: ${version}`,
     );
 
     const imageFiles: DriveFile[] =
-      context?.files
+      ctx?.files
         ?.filter((item) => item.file?.category === 'image' || item.file?.type.startsWith('image/'))
         ?.map((item) => item.file) ?? [];
     const hasVisionCapability =
@@ -417,7 +465,6 @@ export class SkillInvokerService {
     }
 
     // Archive files from previous execution of this result
-    const canvasId = data.target?.entityType === 'canvas' ? data.target?.entityId : undefined;
     if (canvasId) {
       this.logger.info(
         { resultId, canvasId, uid: user.uid, source: 'agent' },

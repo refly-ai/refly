@@ -35,6 +35,8 @@ export interface InvokeSkillJobData extends InvokeSkillRequest {
   provider?: Provider;
   providerItem?: ProviderItem;
   modelConfigMap?: ModelConfigMap;
+  /** Serialized OpenTelemetry trace context for cross-pod propagation */
+  traceCarrier?: Record<string, string>;
 }
 
 export function skillInstancePO2DTO(skill: SkillInstanceModel): SkillInstance {
