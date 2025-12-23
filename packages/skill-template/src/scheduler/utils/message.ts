@@ -121,13 +121,14 @@ export const buildFinalRequestMessages = ({
  *    - Benefits: Write once, reuse globally
  * 2. Session Dynamic Points: After the last 3 messages excluding the final user message
  *    - Caches the conversation history for the current user
- *    - Applies to System/Human/AI messages (NOT ToolMessage)
+ *    - Applies to System/Human/AI/Tool messages
  *    - Benefits: Reuses multi-turn conversation context within a session
  *
- * Important: ToolMessage does NOT support cachePoint in AWS Bedrock
- * - AWS Bedrock SDK fails to serialize ToolMessage with cachePoint
- * - Cache benefit comes from caching AIMessage that contains tool_calls
- * - ToolMessage results are included in subsequent context naturally
+ * ToolMessage caching strategy:
+ * - AWS Bedrock Converse API requires cachePoint as a message-level block
+ * - For ToolMessage, we construct content as an array with cachePoint at the end
+ * - Format: content: [{ type: 'text', text: '...' }, { cachePoint: { type: 'default' } }]
+ * - @langchain/aws 1.1.0+ handles the proper serialization
  *
  * LangChain AWS uses cachePoint markers:
  * - Format: { cachePoint: { type: 'default' } }
@@ -218,33 +219,64 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
     }
 
     if (messageType === 'ai') {
-      const textContent =
-        typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+      const aiMessage = message as AIMessage;
+      const hasToolCalls = aiMessage.tool_calls && aiMessage.tool_calls.length > 0;
 
-      // Skip caching if content is empty (e.g., AIMessage with only tool_calls)
-      // Bedrock Converse API does not accept empty text blocks
-      if (!textContent || textContent.trim() === '') {
-        return message;
+      // For AIMessage with tool_calls but empty content, we still add cachePoint
+      // The cachePoint will cache the entire prefix including tool definitions and tool_calls
+      if (typeof message.content === 'string') {
+        const hasContent = message.content && message.content.trim() !== '';
+
+        // If no content and no tool_calls, skip caching
+        if (!hasContent && !hasToolCalls) {
+          return message;
+        }
+
+        // Build content array with optional text and cachePoint
+        const contentArray: unknown[] = [];
+        if (hasContent) {
+          contentArray.push({
+            type: 'text',
+            text: message.content,
+          });
+        }
+        contentArray.push({
+          cachePoint: { type: 'default' },
+        });
+
+        return new AIMessage({
+          content: contentArray,
+          tool_calls: aiMessage.tool_calls,
+          additional_kwargs: aiMessage.additional_kwargs,
+        } as BaseMessageFields);
       }
 
-      const aiMessage = message as AIMessage;
-      return new AIMessage({
-        content: [
-          {
-            type: 'text',
-            text: textContent,
-          },
-          {
-            cachePoint: { type: 'default' },
-          },
-        ],
-        tool_calls: aiMessage.tool_calls,
-        additional_kwargs: aiMessage.additional_kwargs,
-      } as BaseMessageFields);
+      // Handle array content
+      if (Array.isArray(message.content)) {
+        // If content array is empty and no tool_calls, skip caching
+        if (message.content.length === 0 && !hasToolCalls) {
+          return message;
+        }
+
+        return new AIMessage({
+          content: [
+            ...message.content,
+            {
+              cachePoint: { type: 'default' },
+            },
+          ],
+          tool_calls: aiMessage.tool_calls,
+          additional_kwargs: aiMessage.additional_kwargs,
+        } as BaseMessageFields);
+      }
     }
 
     if (messageType === 'tool') {
-      // Do not apply cachePoint on ToolMessage to avoid errors
+      // Note: AWS Bedrock Converse API's ToolResultContentBlock only supports:
+      // text, image, json, document types. cachePoint is NOT a valid type.
+      // Adding cachePoint to ToolMessage causes: "Cannot read properties of undefined (reading '0')"
+      // at se_ToolResultContentBlock in AWS SDK.
+      // Therefore, we skip caching for ToolMessage and return it unchanged.
       return message;
     }
 
