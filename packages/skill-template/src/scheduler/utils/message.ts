@@ -117,47 +117,113 @@ export const buildFinalRequestMessages = ({
  * Two-level caching strategy:
  * 1. Global Static Point: After System Prompt (index 0)
  *    - Shared across all users and sessions
- *    - Contains: System Prompt + Tool Definitions + Examples
  *    - Benefits: Write once, reuse globally
- * 2. Session Dynamic Point: After the second-to-last message (messages.length - 2)
+ * 2. Session Dynamic Points: After the last 3 messages which can add cache point
  *    - Caches the conversation history for the current user
+ *    - Applies to System/Human/AI messages, except ToolMessage
  *    - Benefits: Reuses multi-turn conversation context within a session
  *
  * LangChain AWS uses cachePoint markers:
  * - Format: { cachePoint: { type: 'default' } }
  * - Place the cachePoint marker AFTER the content to cache
  */
-const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
-  if (messages.length <= 1) return messages;
+/**
+ * Check if message content already has a cache point
+ */
+const hasCachePoint = (content: unknown): boolean => {
+  if (!Array.isArray(content)) return false;
+  return content.some((item) => item && typeof item === 'object' && 'cachePoint' in item);
+};
 
-  return messages.map((message, index) => {
-    // Determine if this message should have a cache point
-    // 1. Global Static Point: After System Prompt (index 0)
-    // 2. Session Dynamic Point: After the last 3 messages except the last user message (index -2, -3, -4)
-    const isGlobalStaticPoint = index === 0;
-    const isSessionDynamicPoint =
-      index === messages.length - 2 ||
-      index === messages.length - 3 ||
-      index === messages.length - 4;
-    const shouldAddCachePoint = isGlobalStaticPoint || isSessionDynamicPoint;
+/**
+ * Remove cache point from message content array
+ * Returns a new content array without cachePoint items
+ */
+const removeCachePoint = (content: unknown): unknown => {
+  if (!Array.isArray(content)) return content;
+  return content.filter((item) => !(item && typeof item === 'object' && 'cachePoint' in item));
+};
 
-    if (!shouldAddCachePoint) {
-      return message;
+/**
+ * Remove cache point from a message and return a clean version
+ * Returns the original message if no cache point was present
+ */
+const stripCachePoint = (message: BaseMessage): BaseMessage => {
+  if (!hasCachePoint(message.content)) {
+    return message;
+  }
+
+  const cleanContent = removeCachePoint(message.content);
+  const messageType = message._getType();
+
+  if (messageType === 'system') {
+    return new SystemMessage({
+      content: cleanContent,
+    } as BaseMessageFields);
+  }
+
+  if (messageType === 'human') {
+    return new HumanMessage({
+      content: cleanContent,
+    } as BaseMessageFields);
+  }
+
+  if (messageType === 'ai') {
+    const aiMessage = message as AIMessage;
+    return new AIMessage({
+      content: cleanContent,
+      tool_calls: aiMessage.tool_calls,
+      additional_kwargs: aiMessage.additional_kwargs,
+    } as BaseMessageFields);
+  }
+
+  // For other message types, return as-is
+  return message;
+};
+
+/**
+ * Try to add cache point to a single message.
+ * Returns the cached message if successful, or null if caching is not applicable.
+ * Note: Assumes cache points have been stripped from the message before calling.
+ */
+const tryAddCachePoint = (message: BaseMessage): BaseMessage | null => {
+  const messageType = message._getType();
+
+  if (messageType === 'system') {
+    const textContent =
+      typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+
+    // Skip caching if content is empty
+    // Bedrock Converse API does not accept empty text blocks
+    if (!textContent || textContent.trim() === '') {
+      return null;
     }
 
-    // Apply caching using LangChain's cachePoint format
-    // Use _getType() instead of instanceof to handle deserialized messages
-    const messageType = message._getType();
+    return new SystemMessage({
+      content: [
+        {
+          type: 'text',
+          text: textContent,
+        },
+        {
+          cachePoint: { type: 'default' },
+        },
+      ],
+    } as BaseMessageFields);
+  }
 
-    if (messageType === 'system') {
-      const textContent =
-        typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+  if (messageType === 'human') {
+    if (typeof message.content === 'string') {
+      // Skip caching if content is empty
+      if (!message.content || message.content.trim() === '') {
+        return null;
+      }
 
-      return new SystemMessage({
+      return new HumanMessage({
         content: [
           {
             type: 'text',
-            text: textContent,
+            text: message.content,
           },
           {
             cachePoint: { type: 'default' },
@@ -166,45 +232,45 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
       } as BaseMessageFields);
     }
 
-    if (messageType === 'human') {
-      if (typeof message.content === 'string') {
-        return new HumanMessage({
-          content: [
-            {
-              type: 'text',
-              text: message.content,
-            },
-            {
-              cachePoint: { type: 'default' },
-            },
-          ],
-        } as BaseMessageFields);
+    if (Array.isArray(message.content)) {
+      // Skip caching if content array is empty
+      if (message.content.length === 0) {
+        return null;
       }
 
-      if (Array.isArray(message.content)) {
-        // For array content (like images mixed with text),
-        // add cachePoint marker at the end
-        return new HumanMessage({
-          content: [
-            ...message.content,
-            {
-              cachePoint: { type: 'default' },
-            },
-          ],
-        } as BaseMessageFields);
-      }
+      // For array content (like images mixed with text),
+      // add cachePoint marker at the end
+      return new HumanMessage({
+        content: [
+          ...message.content,
+          {
+            cachePoint: { type: 'default' },
+          },
+        ],
+      } as BaseMessageFields);
     }
+  }
 
-    if (messageType === 'ai') {
-      const textContent =
-        typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+  if (messageType === 'ai') {
+    const aiMessage = message as AIMessage;
 
-      const aiMessage = message as AIMessage;
+    // For AIMessage, we need actual text content to add cachePoint
+    // AWS Bedrock requires content before cachePoint - cannot cache empty content
+    if (typeof message.content === 'string') {
+      const hasContent = message.content && message.content.trim() !== '';
+
+      // Skip caching if no actual text content
+      // Even if has tool_calls, cachePoint requires preceding content
+      if (!hasContent) {
+        return null;
+      }
+
+      // Build content array with text and cachePoint
       return new AIMessage({
         content: [
           {
             type: 'text',
-            text: textContent,
+            text: message.content,
           },
           {
             cachePoint: { type: 'default' },
@@ -215,9 +281,86 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
       } as BaseMessageFields);
     }
 
-    // Return original message if we can't apply caching
-    return message;
-  });
+    // Handle array content
+    if (Array.isArray(message.content)) {
+      // Skip caching if content array is empty - cachePoint requires preceding content
+      if (message.content.length === 0) {
+        return null;
+      }
+
+      return new AIMessage({
+        content: [
+          ...message.content,
+          {
+            cachePoint: { type: 'default' },
+          },
+        ],
+        tool_calls: aiMessage.tool_calls,
+        additional_kwargs: aiMessage.additional_kwargs,
+      } as BaseMessageFields);
+    }
+  }
+
+  // Tool messages and other types cannot be cached
+  // Note: AWS Bedrock Converse API's ToolResultContentBlock only supports:
+  // text, image, json, document types. cachePoint is NOT a valid type.
+  return null;
+};
+
+const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
+  if (messages.length <= 1) return messages;
+
+  // First, strip all existing cache points to ensure clean state
+  // This prevents accumulation of cache points from previous iterations
+  const result = messages.map((msg) => stripCachePoint(msg));
+
+  const maxDynamicCachePoints = 3;
+  let dynamicCacheCount = 0;
+
+  // 1. Global Static Point: Try to cache system message at index 0
+  if (result.length > 0) {
+    const cachedSystemMessage = tryAddCachePoint(result[0]);
+    if (cachedSystemMessage) {
+      result[0] = cachedSystemMessage;
+    }
+  }
+
+  // 2. Session Dynamic Points: Scan from end, try to cache up to 3 messages
+  // Skip index 0 (system message already handled)
+  for (let i = result.length - 1; i > 0 && dynamicCacheCount < maxDynamicCachePoints; i--) {
+    const cachedMessage = tryAddCachePoint(result[i]);
+    if (cachedMessage) {
+      result[i] = cachedMessage;
+      dynamicCacheCount++;
+    }
+    // If caching failed (returned null), continue to try the next message
+  }
+
+  return result;
+};
+
+/**
+ * Applies context caching to messages for agent loop iterations.
+ * This function is designed for re-applying cache points during ReAct loops
+ * where new messages (AIMessage with tool_calls, ToolMessage) are added.
+ *
+ * Cache point strategy:
+ * 1. Global Static Point: After System Prompt (index 0)
+ * 2. Session Dynamic Points: Last 3 messages which can add cache point
+ *
+ * @param messages - The current message array
+ * @param supportsContextCaching - Whether the model supports context caching
+ * @returns Messages with appropriate cache points applied
+ */
+export const applyAgentLoopCaching = (
+  messages: BaseMessage[],
+  supportsContextCaching: boolean,
+): BaseMessage[] => {
+  if (!supportsContextCaching || messages.length <= 1) {
+    return messages;
+  }
+
+  return applyContextCaching(messages);
 };
 
 /**

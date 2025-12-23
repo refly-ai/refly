@@ -15,7 +15,7 @@ import { Icon, SkillTemplateConfigDefinition, User } from '@refly/openapi-schema
 // types
 import { GraphState } from '../scheduler/types';
 // utils
-import { buildFinalRequestMessages } from '../scheduler/utils/message';
+import { buildFinalRequestMessages, applyAgentLoopCaching } from '../scheduler/utils/message';
 import { compressAgentLoopMessages } from '../utils/context-manager';
 import { getModelSceneFromMode } from '@refly/utils';
 
@@ -177,6 +177,10 @@ export class Agent extends BaseSkill {
     // Get compression context from config
     const { user, canvasId, resultId, version } = config?.configurable ?? {};
 
+    // Get model info for context caching check
+    const agentModelInfo = config?.configurable?.modelConfigMap?.agent;
+    const supportsContextCaching = !!agentModelInfo?.capabilities?.contextCaching;
+
     const llmNodeForCachedGraph = async (nodeState: typeof MessagesAnnotation.State) => {
       try {
         let currentMessages = nodeState.messages ?? [];
@@ -219,6 +223,10 @@ export class Agent extends BaseSkill {
             });
           }
         }
+
+        // Apply context caching for each iteration if the model supports it
+        // This ensures new messages (AIMessage with tool_calls, ToolMessage) get cache points
+        currentMessages = applyAgentLoopCaching(currentMessages, supportsContextCaching);
 
         // Use llmForGraph, which is the (potentially tool-bound) LLM instance for the graph
         const response = await llmForGraph.invoke(currentMessages);
