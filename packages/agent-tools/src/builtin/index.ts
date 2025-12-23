@@ -751,21 +751,28 @@ IMPORTANT: Use \`file-content://\` for <img>, <video>, <audio> src attributes. U
     // Get both URL types for each file
     const urlResults = await Promise.all(
       uniqueFileIds.map(async (fileId) => {
-        const { url, contentUrl } = await reflyService.createShareForDriveFile(user, fileId);
-        return { fileId: fileId, shareUrl: url, contentUrl };
+        try {
+          const { url, contentUrl } = await reflyService.createShareForDriveFile(user, fileId);
+          return { fileId, shareUrl: url, contentUrl };
+        } catch (error) {
+          console.error(
+            `[BuiltinShareFiles] Failed to create share URL for fileId ${fileId}:`,
+            error,
+          );
+          return { fileId, shareUrl: null, contentUrl: null };
+        }
       }),
     );
 
-    // Build maps for both URL types
+    // Build maps for both URL types (only include successful results)
     const shareUrlMap = new Map<string, string>();
     const contentUrlMap = new Map<string, string>();
 
     for (const { fileId, shareUrl, contentUrl } of urlResults) {
-      if (!shareUrl || !contentUrl) {
-        throw new Error(`Failed to generate URLs for drive file: ${fileId}`);
+      if (shareUrl && contentUrl) {
+        shareUrlMap.set(fileId, shareUrl);
+        contentUrlMap.set(fileId, contentUrl);
       }
-      shareUrlMap.set(fileId, shareUrl);
-      contentUrlMap.set(fileId, contentUrl);
     }
 
     // Replace file-content:// with direct content URLs
