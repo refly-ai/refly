@@ -45,6 +45,7 @@ import { readingTime } from 'reading-time-estimator';
 import { MiscService } from '../misc/misc.service';
 import { DocxParser } from '../knowledge/parsers/docx.parser';
 import { PdfParser } from '../knowledge/parsers/pdf.parser';
+import { ObjectInfo } from '../common/object-storage/backend/interface';
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -674,10 +675,17 @@ export class DriveService implements OnModuleInit {
 
     // Check file size limit before downloading - large files should use execute_code tool
     const storageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
-    const maxFileSizeMB = this.config.get<number>('drive.maxParseFileSizeMB') || 5;
+    const maxFileSizeMB = this.config.get<number>('drive.maxParseFileSizeMB') || 1;
     const maxFileSizeBytes = maxFileSizeMB * 1024 * 1024;
 
-    const fileStat = await this.internalOss.statObject(storageKey);
+    let fileStat: ObjectInfo | undefined;
+    try {
+      fileStat = await this.internalOss.statObject(storageKey);
+    } catch (error) {
+      this.logger.error(`Failed to stat drive file ${fileId}: ${(error as Error)?.message}`);
+      throw new DriveFileNotFoundError(`Drive file not found: ${fileId}`);
+    }
+
     if (fileStat && fileStat.size > maxFileSizeBytes) {
       const fileSizeMB = Number((fileStat.size / 1024 / 1024).toFixed(2));
       this.logger.info(
