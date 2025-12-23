@@ -134,43 +134,48 @@ export const buildFinalRequestMessages = ({
  * - Format: { cachePoint: { type: 'default' } }
  * - Place the cachePoint marker AFTER the content to cache
  */
-const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
-  if (messages.length <= 1) return messages;
+/**
+ * Try to add cache point to a single message.
+ * Returns the cached message if successful, or null if caching is not applicable.
+ */
+const tryAddCachePoint = (message: BaseMessage): BaseMessage | null => {
+  const messageType = message._getType();
 
-  return messages.map((message, index) => {
-    // Determine if this message should have a cache point
-    // 1. Global Static Point: After System Prompt (index 0)
-    // 2. Session Dynamic Point: After the last 3 messages (index -3, -2, -1)
-    const isGlobalStaticPoint = index === 0;
-    const isSessionDynamicPoint =
-      index === messages.length - 3 ||
-      index === messages.length - 2 ||
-      index === messages.length - 1;
-    const shouldAddCachePoint = isGlobalStaticPoint || isSessionDynamicPoint;
+  if (messageType === 'system') {
+    const textContent =
+      typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
 
-    if (!shouldAddCachePoint) {
-      return message;
+    // Skip caching if content is empty
+    // Bedrock Converse API does not accept empty text blocks
+    if (!textContent || textContent.trim() === '') {
+      return null;
     }
 
-    // Apply caching using LangChain's cachePoint format
-    // Use _getType() instead of instanceof to handle deserialized messages
-    const messageType = message._getType();
+    return new SystemMessage({
+      content: [
+        {
+          type: 'text',
+          text: textContent,
+        },
+        {
+          cachePoint: { type: 'default' },
+        },
+      ],
+    } as BaseMessageFields);
+  }
 
-    if (messageType === 'system') {
-      const textContent =
-        typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
-
+  if (messageType === 'human') {
+    if (typeof message.content === 'string') {
       // Skip caching if content is empty
-      // Bedrock Converse API does not accept empty text blocks
-      if (!textContent || textContent.trim() === '') {
-        return message;
+      if (!message.content || message.content.trim() === '') {
+        return null;
       }
 
-      return new SystemMessage({
+      return new HumanMessage({
         content: [
           {
             type: 'text',
-            text: textContent,
+            text: message.content,
           },
           {
             cachePoint: { type: 'default' },
@@ -179,107 +184,109 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
       } as BaseMessageFields);
     }
 
-    if (messageType === 'human') {
-      if (typeof message.content === 'string') {
-        // Skip caching if content is empty
-        if (!message.content || message.content.trim() === '') {
-          return message;
-        }
-
-        return new HumanMessage({
-          content: [
-            {
-              type: 'text',
-              text: message.content,
-            },
-            {
-              cachePoint: { type: 'default' },
-            },
-          ],
-        } as BaseMessageFields);
+    if (Array.isArray(message.content)) {
+      // Skip caching if content array is empty
+      if (message.content.length === 0) {
+        return null;
       }
 
-      if (Array.isArray(message.content)) {
-        // Skip caching if content array is empty
-        if (message.content.length === 0) {
-          return message;
-        }
+      // For array content (like images mixed with text),
+      // add cachePoint marker at the end
+      return new HumanMessage({
+        content: [
+          ...message.content,
+          {
+            cachePoint: { type: 'default' },
+          },
+        ],
+      } as BaseMessageFields);
+    }
+  }
 
-        // For array content (like images mixed with text),
-        // add cachePoint marker at the end
-        return new HumanMessage({
-          content: [
-            ...message.content,
-            {
-              cachePoint: { type: 'default' },
-            },
-          ],
-        } as BaseMessageFields);
+  if (messageType === 'ai') {
+    const aiMessage = message as AIMessage;
+
+    // For AIMessage, we need actual text content to add cachePoint
+    // AWS Bedrock requires content before cachePoint - cannot cache empty content
+    if (typeof message.content === 'string') {
+      const hasContent = message.content && message.content.trim() !== '';
+
+      // Skip caching if no actual text content
+      // Even if has tool_calls, cachePoint requires preceding content
+      if (!hasContent) {
+        return null;
       }
+
+      // Build content array with text and cachePoint
+      return new AIMessage({
+        content: [
+          {
+            type: 'text',
+            text: message.content,
+          },
+          {
+            cachePoint: { type: 'default' },
+          },
+        ],
+        tool_calls: aiMessage.tool_calls,
+        additional_kwargs: aiMessage.additional_kwargs,
+      } as BaseMessageFields);
     }
 
-    if (messageType === 'ai') {
-      const aiMessage = message as AIMessage;
-
-      // For AIMessage, we need actual text content to add cachePoint
-      // AWS Bedrock requires content before cachePoint - cannot cache empty content
-      if (typeof message.content === 'string') {
-        const hasContent = message.content && message.content.trim() !== '';
-
-        // Skip caching if no actual text content
-        // Even if has tool_calls, cachePoint requires preceding content
-        if (!hasContent) {
-          return message;
-        }
-
-        // Build content array with text and cachePoint
-        return new AIMessage({
-          content: [
-            {
-              type: 'text',
-              text: message.content,
-            },
-            {
-              cachePoint: { type: 'default' },
-            },
-          ],
-          tool_calls: aiMessage.tool_calls,
-          additional_kwargs: aiMessage.additional_kwargs,
-        } as BaseMessageFields);
+    // Handle array content
+    if (Array.isArray(message.content)) {
+      // Skip caching if content array is empty - cachePoint requires preceding content
+      if (message.content.length === 0) {
+        return null;
       }
 
-      // Handle array content
-      if (Array.isArray(message.content)) {
-        // Skip caching if content array is empty - cachePoint requires preceding content
-        if (message.content.length === 0) {
-          return message;
-        }
-
-        return new AIMessage({
-          content: [
-            ...message.content,
-            {
-              cachePoint: { type: 'default' },
-            },
-          ],
-          tool_calls: aiMessage.tool_calls,
-          additional_kwargs: aiMessage.additional_kwargs,
-        } as BaseMessageFields);
-      }
+      return new AIMessage({
+        content: [
+          ...message.content,
+          {
+            cachePoint: { type: 'default' },
+          },
+        ],
+        tool_calls: aiMessage.tool_calls,
+        additional_kwargs: aiMessage.additional_kwargs,
+      } as BaseMessageFields);
     }
+  }
 
-    if (messageType === 'tool') {
-      // Note: AWS Bedrock Converse API's ToolResultContentBlock only supports:
-      // text, image, json, document types. cachePoint is NOT a valid type.
-      // Adding cachePoint to ToolMessage causes: "Cannot read properties of undefined (reading '0')"
-      // at se_ToolResultContentBlock in AWS SDK.
-      // Therefore, we skip caching for ToolMessage and return it unchanged.
-      return message;
+  // Tool messages and other types cannot be cached
+  // Note: AWS Bedrock Converse API's ToolResultContentBlock only supports:
+  // text, image, json, document types. cachePoint is NOT a valid type.
+  return null;
+};
+
+const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
+  if (messages.length <= 1) return messages;
+
+  // Copy messages array to avoid mutation
+  const result = [...messages];
+  const maxDynamicCachePoints = 3;
+  let dynamicCacheCount = 0;
+
+  // 1. Global Static Point: Try to cache system message at index 0
+  if (result.length > 0) {
+    const cachedSystemMessage = tryAddCachePoint(result[0]);
+    if (cachedSystemMessage) {
+      result[0] = cachedSystemMessage;
     }
+  }
 
-    // Return original message if we can't apply caching
-    return message;
-  });
+  // 2. Session Dynamic Points: Scan from end, try to cache up to 3 messages
+  // Skip index 0 (system message already handled)
+  for (let i = result.length - 1; i > 0 && dynamicCacheCount < maxDynamicCachePoints; i--) {
+    const cachedMessage = tryAddCachePoint(result[i]);
+    if (cachedMessage) {
+      result[i] = cachedMessage;
+      dynamicCacheCount++;
+    }
+    // If caching failed (returned null), continue to try the next message
+  }
+
+  return result;
 };
 
 /**
