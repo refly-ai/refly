@@ -84,7 +84,7 @@ export class ActionService {
         canvasId: result.targetId,
         source: 'agent',
         resultId,
-        includeContent: true,
+        includeContent: false,
         ...(version ? { resultVersion: version } : { scope: 'present' }),
       });
     }

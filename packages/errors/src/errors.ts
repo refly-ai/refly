@@ -408,6 +408,22 @@ export class DuplicationNotAllowedError extends BaseError {
   };
 }
 
+export class FileTooLargeError extends BaseError {
+  code = 'E3006';
+  messageDict = {
+    en: 'File too large for direct parsing, use execute_code tool to process it',
+    'zh-CN': '文件过大无法直接解析，请使用 execute_code 工具处理',
+  };
+
+  constructor(
+    message?: string,
+    public fileSizeMB?: number,
+    public maxSizeMB?: number,
+  ) {
+    super(message);
+  }
+}
+
 // Create a mapping of error codes to error classes
 const errorMap = {
   E0000: UnknownError,
@@ -461,6 +477,7 @@ const errorMap = {
   E3003: ModelProviderTimeout,
   E3004: ActionAborted,
   E3005: DuplicationNotAllowedError,
+  E3006: FileTooLargeError,
 };
 
 export function getErrorMessage(code: string, locale: string): string {

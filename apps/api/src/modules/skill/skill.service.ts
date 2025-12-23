@@ -1033,17 +1033,20 @@ export class SkillService implements OnModuleInit {
   async populateSkillContext(user: User, context: SkillContext): Promise<SkillContext> {
     if (context.files?.length > 0) {
       const fileIds = [...new Set(context.files.map((item) => item.fileId).filter((id) => id))];
-      const limit = pLimit(5);
+      const limit = pLimit(10);
+      // Only fetch metadata, not content - LLM uses read_file tool when needed
       const files = (
         await Promise.all(
           fileIds.map((id) =>
             limit(() =>
-              this.driveService.getDriveFileDetail(user, id).catch((error) => {
-                this.logger.error(
-                  `Failed to get drive file detail for fileId ${id}: ${error?.message}`,
-                );
-                return null;
-              }),
+              this.driveService
+                .getDriveFileDetail(user, id, { includeContent: false })
+                .catch((error) => {
+                  this.logger.error(
+                    `Failed to get drive file detail for fileId ${id}: ${error?.message}`,
+                  );
+                  return null;
+                }),
             ),
           ),
         )
@@ -1068,14 +1071,12 @@ export class SkillService implements OnModuleInit {
         await Promise.all(
           resultIds.map((id) =>
             limit(() =>
-              this.actionService
-                .getActionResult(user, { resultId: id, includeFiles: true })
-                .catch((error) => {
-                  this.logger.error(
-                    `Failed to get action result detail for resultId ${id}: ${error?.message}`,
-                  );
-                  return null;
-                }),
+              this.actionService.getActionResult(user, { resultId: id }).catch((error) => {
+                this.logger.error(
+                  `Failed to get action result detail for resultId ${id}: ${error?.message}`,
+                );
+                return null;
+              }),
             ),
           ),
         )
