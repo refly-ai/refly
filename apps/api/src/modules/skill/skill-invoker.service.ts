@@ -175,10 +175,52 @@ export class SkillInvokerService {
       eventListener,
       toolsets,
     } = data;
-    const userPo = await this.prisma.user.findUnique({
-      select: { uiLocale: true, outputLocale: true },
-      where: { uid: user.uid },
-    });
+
+    // Collect fileIds that need to be fetched
+    const fileIdsToFetch =
+      context?.files?.filter((f) => f.fileId && !f.file).map((f) => f.fileId) ?? [];
+
+    // Parallel fetch: user preferences and drive files
+    const [userPo, driveFiles] = await Promise.all([
+      this.prisma.user.findUnique({
+        select: { uiLocale: true, outputLocale: true },
+        where: { uid: user.uid },
+      }),
+      fileIdsToFetch.length > 0
+        ? this.prisma.driveFile.findMany({
+            where: {
+              fileId: { in: fileIdsToFetch },
+              deletedAt: null,
+            },
+            select: {
+              fileId: true,
+              name: true,
+              type: true,
+              summary: true,
+              category: true,
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    // Populate empty file objects in context.files
+    if (driveFiles.length > 0 && context?.files) {
+      const fileMap = new Map(driveFiles.map((f) => [f.fileId, f]));
+      for (const fileItem of context.files) {
+        if (fileItem.fileId && !fileItem.file) {
+          const driveFile = fileMap.get(fileItem.fileId);
+          if (driveFile) {
+            fileItem.file = {
+              fileId: driveFile.fileId,
+              name: driveFile.name,
+              type: driveFile.type,
+              summary: driveFile.summary,
+              category: driveFile.category,
+            } as DriveFile;
+          }
+        }
+      }
+    }
 
     const outputLocale = data?.locale || userPo?.outputLocale;
     // Merge the current context with contexts from result history
