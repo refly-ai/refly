@@ -220,32 +220,29 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
 
     if (messageType === 'ai') {
       const aiMessage = message as AIMessage;
-      const hasToolCalls = aiMessage.tool_calls && aiMessage.tool_calls.length > 0;
 
-      // For AIMessage with tool_calls but empty content, we still add cachePoint
-      // The cachePoint will cache the entire prefix including tool definitions and tool_calls
+      // For AIMessage, we need actual text content to add cachePoint
+      // AWS Bedrock requires content before cachePoint - cannot cache empty content
       if (typeof message.content === 'string') {
         const hasContent = message.content && message.content.trim() !== '';
 
-        // If no content and no tool_calls, skip caching
-        if (!hasContent && !hasToolCalls) {
+        // Skip caching if no actual text content
+        // Even if has tool_calls, cachePoint requires preceding content
+        if (!hasContent) {
           return message;
         }
 
-        // Build content array with optional text and cachePoint
-        const contentArray: unknown[] = [];
-        if (hasContent) {
-          contentArray.push({
-            type: 'text',
-            text: message.content,
-          });
-        }
-        contentArray.push({
-          cachePoint: { type: 'default' },
-        });
-
+        // Build content array with text and cachePoint
         return new AIMessage({
-          content: contentArray,
+          content: [
+            {
+              type: 'text',
+              text: message.content,
+            },
+            {
+              cachePoint: { type: 'default' },
+            },
+          ],
           tool_calls: aiMessage.tool_calls,
           additional_kwargs: aiMessage.additional_kwargs,
         } as BaseMessageFields);
@@ -253,8 +250,8 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
 
       // Handle array content
       if (Array.isArray(message.content)) {
-        // If content array is empty and no tool_calls, skip caching
-        if (message.content.length === 0 && !hasToolCalls) {
+        // Skip caching if content array is empty - cachePoint requires preceding content
+        if (message.content.length === 0) {
           return message;
         }
 
