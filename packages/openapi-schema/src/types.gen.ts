@@ -5137,6 +5137,14 @@ export type CreateCheckoutSessionRequest = {
    */
   voucherId?: string;
   /**
+   * Entry point where voucher was applied (e.g., claimed_popup, discount_popup, credit_insufficient_modal, pricing_page)
+   */
+  voucherEntryPoint?: string;
+  /**
+   * User type when voucher was applied (e.g., new, returning)
+   */
+  voucherUserType?: string;
+  /**
    * Current plan
    */
   currentPlan?: string;

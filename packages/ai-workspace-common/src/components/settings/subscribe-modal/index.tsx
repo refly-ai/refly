@@ -12,11 +12,13 @@ export const SubscribeModal = () => {
   const {
     subscribeModalVisible: visible,
     setSubscribeModalVisible: setVisible,
+    subscribeModalSource,
     openedFromSettings,
     setOpenedFromSettings,
   } = useSubscriptionStoreShallow((state) => ({
     subscribeModalVisible: state.subscribeModalVisible,
     setSubscribeModalVisible: state.setSubscribeModalVisible,
+    subscribeModalSource: state.subscribeModalSource,
     openedFromSettings: state.openedFromSettings,
     setOpenedFromSettings: state.setOpenedFromSettings,
   }));
@@ -58,7 +60,7 @@ export const SubscribeModal = () => {
         <div className="font-bold text-2xl m-auto flex items-center gap-2 text-refly-text-0 text-[22px] font-semibold leading-8">
           {t('subscription.modalTitle')}
         </div>
-        <PriceContent source="modal" />
+        <PriceContent source="modal" entryPoint={subscribeModalSource || 'pricing_page'} />
       </div>
     </Modal>
   );

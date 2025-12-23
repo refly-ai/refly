@@ -30,7 +30,7 @@ export const FailureNotice = ({ result, handleRetry }: FailureNoticeProps) => {
   const handleSubscriptionClick = useCallback(
     (e?: React.MouseEvent) => {
       e?.stopPropagation();
-      setSubscribeModalVisible(true);
+      setSubscribeModalVisible(true, 'canvas');
 
       logEvent('subscription::upgrade_click', 'skill_invoke');
     },

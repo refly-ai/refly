@@ -9,6 +9,7 @@ import { memo, useMemo, useCallback } from 'react';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
 import { useUserStoreShallow, useAuthStoreShallow } from '@refly/stores';
+import { storeSignupEntryPoint } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 interface AppCardData extends WorkflowApp {
   publishReviewStatus?: string;
@@ -38,6 +39,7 @@ export const AppCard = memo(({ data }: { data: AppCardData; onDelete?: () => voi
       e.stopPropagation();
 
       if (!isLogin) {
+        storeSignupEntryPoint('template_detail');
         setLoginModalOpen(true);
         return;
       }

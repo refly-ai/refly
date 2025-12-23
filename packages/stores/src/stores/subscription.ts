@@ -8,6 +8,7 @@ interface SubscriptionState {
   planType: SubscriptionPlanType;
   userType: string;
   subscribeModalVisible: boolean;
+  subscribeModalSource: string; // Track where the subscribe modal was triggered from (canvas, template_detail, pricing_page, etc.)
   storageExceededModalVisible: boolean;
   creditInsufficientModalVisible: boolean;
   creditInsufficientMembershipLevel: string;
@@ -26,7 +27,7 @@ interface SubscriptionState {
   // method
   setPlanType: (val: SubscriptionPlanType) => void;
   setUserType: (val: string) => void;
-  setSubscribeModalVisible: (val: boolean) => void;
+  setSubscribeModalVisible: (val: boolean, source?: string) => void;
   setStorageExceededModalVisible: (val: boolean) => void;
   setCreditInsufficientModalVisible: (
     val: boolean,
@@ -45,6 +46,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     planType: 'free',
     userType: '',
     subscribeModalVisible: false,
+    subscribeModalSource: '',
     storageExceededModalVisible: false,
     creditInsufficientModalVisible: false,
     creditInsufficientMembershipLevel: '',
@@ -58,7 +60,14 @@ export const useSubscriptionStore = create<SubscriptionState>()(
 
     setPlanType: (val: SubscriptionPlanType) => set({ planType: val }),
     setUserType: (val: string) => set({ userType: val }),
-    setSubscribeModalVisible: (val: boolean) => set({ subscribeModalVisible: val }),
+    setSubscribeModalVisible: (val: boolean, source?: string) =>
+      set((state) => ({
+        subscribeModalVisible: val,
+        // Only update source when opening the modal with a source, preserve when closing
+        subscribeModalSource: val
+          ? source || state.subscribeModalSource
+          : state.subscribeModalSource,
+      })),
     setStorageExceededModalVisible: (val: boolean) => set({ storageExceededModalVisible: val }),
     setCreditInsufficientModalVisible: (
       val: boolean,

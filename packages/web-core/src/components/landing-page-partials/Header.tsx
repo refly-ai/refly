@@ -17,6 +17,7 @@ import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
 import { Language } from 'refly-icons';
 import logoIcon from '@refly-packages/ai-workspace-common/assets/logo.svg';
+import { storeSignupEntryPoint } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 function Header() {
   const navigate = useNavigate();
@@ -125,6 +126,7 @@ function Header() {
   useEffect(() => {
     const shouldOpenLogin = searchParams.get('openLogin');
     if (shouldOpenLogin) {
+      storeSignupEntryPoint('visitor_page');
       setLoginModalOpen(true);
       // Remove the openLogin parameter from URL
       searchParams.delete('openLogin');
@@ -196,7 +198,13 @@ function Header() {
           <span className="font-semibold text-refly-text-0">{t('landingPage.addToChrome')}</span>
         </Button>
 
-        <Button type="primary" onClick={() => setLoginModalOpen(true)}>
+        <Button
+          type="primary"
+          onClick={() => {
+            storeSignupEntryPoint('visitor_page');
+            setLoginModalOpen(true);
+          }}
+        >
           <img
             src={logoIcon}
             className="object-contain shrink-0 self-stretch my-auto w-4 aspect-square"

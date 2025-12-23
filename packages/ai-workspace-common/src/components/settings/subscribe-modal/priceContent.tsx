@@ -499,10 +499,10 @@ const PlanItem = memo((props: PlanItemProps) => {
 
 PlanItem.displayName = 'PlanItem';
 
-export const PriceContent = memo((props: { source: PriceSource }) => {
+export const PriceContent = memo((props: { source: PriceSource; entryPoint?: string }) => {
   const { t } = useTranslation('ui');
   const navigate = useNavigate();
-  const { source } = props;
+  const { source, entryPoint } = props;
   const {
     setSubscribeModalVisible: setVisible,
     availableVoucher,
@@ -616,6 +616,8 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
           planType: SubscriptionPlanType;
           interval: SubscriptionInterval;
           voucherId?: string;
+          voucherEntryPoint?: string;
+          voucherUserType?: string;
         } = {
           planType,
           interval: interval,
@@ -629,13 +631,8 @@ export const PriceContent = memo((props: { source: PriceSource }) => {
 
           if (validateRes.data?.data?.valid) {
             body.voucherId = availableVoucher.voucherId;
-
-            // Log voucher applied event
-            logEvent('voucher_applied', null, {
-              voucher_value: Math.round((100 - availableVoucher.discountPercent) / 10),
-              entry_point: 'pricing_page',
-              user_type: userType,
-            });
+            body.voucherEntryPoint = entryPoint || 'pricing_page';
+            body.voucherUserType = userType;
           } else {
             // Voucher is invalid - show message and clear it
             const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';

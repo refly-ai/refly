@@ -23,13 +23,16 @@
     "paths": {
       "@/*": ["./src/*"],
       "@refly-packages/ai-workspace-common/*": ["../../packages/ai-workspace-common/src/*"],
-      "@refly/utils/*": ["../../packages/utils/src/*"]
+      "@refly/utils/*": ["../../packages/utils/src/*"],
+      "@refly/canvas-common": ["../../packages/canvas-common/src"],
+      "@refly/canvas-common/*": ["../../packages/canvas-common/src/*"]
     }
   },
   "include": ["src"],
   "exclude": ["tailwind-colors.ts"],
   "references": [
     { "path": "../../packages/ai-workspace-common" },
-    { "path": "../../packages/utils" }
+    { "path": "../../packages/utils" },
+    { "path": "../../packages/canvas-common" }
   ]
 }

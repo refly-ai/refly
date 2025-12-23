@@ -125,7 +125,7 @@ export class SubscriptionWebhooks {
       customerId,
     });
 
-    // Mark voucher as used if one was applied
+    // Mark voucher as used if one was applied and log voucher_applied event
     const voucherId = session.metadata?.voucherId;
     if (voucherId) {
       try {
@@ -134,6 +134,21 @@ export class SubscriptionWebhooks {
           subscriptionId,
         });
         this.logger.log(`Marked voucher ${voucherId} as used for subscription ${subscriptionId}`);
+
+        // Log voucher_applied event after successful payment
+        const voucherDiscountPercent = session.metadata?.voucherDiscountPercent;
+        const voucherEntryPoint = session.metadata?.voucherEntryPoint;
+        const voucherUserType = session.metadata?.voucherUserType;
+        const voucherValue = voucherDiscountPercent
+          ? Math.round((100 - Number(voucherDiscountPercent)) / 10)
+          : undefined;
+
+        logEvent(user, 'voucher_applied', null, {
+          voucher_value: voucherValue,
+          entry_point: voucherEntryPoint,
+          user_type: voucherUserType,
+        });
+        this.logger.log(`Logged voucher_applied event for voucher ${voucherId}`);
       } catch (error) {
         this.logger.error(`Failed to mark voucher ${voucherId} as used: ${error.message}`);
         // Don't throw - subscription was already created successfully

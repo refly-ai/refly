@@ -7164,6 +7164,15 @@ export const CreateCheckoutSessionRequestSchema = {
       type: 'string',
       description: 'Optional voucher ID to apply discount',
     },
+    voucherEntryPoint: {
+      type: 'string',
+      description:
+        'Entry point where voucher was applied (e.g., claimed_popup, discount_popup, credit_insufficient_modal, pricing_page)',
+    },
+    voucherUserType: {
+      type: 'string',
+      description: 'User type when voucher was applied (e.g., new, returning)',
+    },
     currentPlan: {
       type: 'string',
       description: 'Current plan',

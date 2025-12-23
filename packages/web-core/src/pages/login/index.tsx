@@ -17,14 +17,14 @@ import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-log
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { logEvent } from '@refly/telemetry-web';
 import { useCookie } from 'react-use';
-import { UID_COOKIE } from '@refly/utils/cookie';
+import { UID_COOKIE } from '@refly/utils';
 import loginImage from '../../assets/login.png';
 import loginDarkImage from '../../assets/login-dark.png';
 import './index.css';
 import { useUserStoreShallow } from '@refly/stores';
 import {
-  getPendingVoucherCode,
   storePendingVoucherCode,
+  getAndClearSignupEntryPoint,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
 
@@ -156,11 +156,6 @@ const LoginPage = () => {
     // Get source from URL parameter
     const source = searchParams.get('from') ?? undefined;
 
-    // Determine entry_point for signup tracking (voucher invite flow)
-    const hasPendingVoucher = !!getPendingVoucherCode();
-    const hasInviteParam = !!searchParams.get('invite');
-    const entryPoint = hasPendingVoucher || hasInviteParam ? 'visitor_page' : undefined;
-
     if (authStore.isSignUpMode) {
       logEvent('auth::signup_click', 'email');
       const { data } = await getClient().emailSignup({
@@ -174,6 +169,8 @@ const LoginPage = () => {
       if (data?.success) {
         // Note: No need to close modal as this is a standalone login page
         if (data.data?.skipVerification) {
+          // Get entry_point from localStorage and clear it
+          const entryPoint = getAndClearSignupEntryPoint();
           // Log signup success event with source and entry_point
           logEvent('signup_success', null, {
             ...(source ? { source } : {}),

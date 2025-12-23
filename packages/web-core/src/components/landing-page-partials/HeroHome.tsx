@@ -11,6 +11,7 @@ import { Button, Modal } from 'antd';
 import BlurImage from '../../components/common/BlurImage';
 import { useAuthStoreShallow } from '@refly/stores';
 import { useState } from 'react';
+import { storeSignupEntryPoint } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 function HeroHome() {
   const { t, i18n } = useTranslation();
@@ -210,7 +211,10 @@ function HeroHome() {
             {/* Add buttons after the description paragraph */}
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
               <Button
-                onClick={() => setLoginModalOpen(true)}
+                onClick={() => {
+                  storeSignupEntryPoint('visitor_page');
+                  setLoginModalOpen(true);
+                }}
                 size="large"
                 type="primary"
                 className="cursor-pointer"

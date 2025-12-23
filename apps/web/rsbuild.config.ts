@@ -85,6 +85,7 @@ export default defineConfig({
         '../../packages/ai-workspace-common/src',
       ),
       '@refly/utils': path.resolve(__dirname, '../../packages/utils/src'),
+      '@refly/canvas-common': path.resolve(__dirname, '../../packages/canvas-common/src'),
     },
   },
   html: {

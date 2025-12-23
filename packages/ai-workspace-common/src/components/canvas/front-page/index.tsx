@@ -129,7 +129,7 @@ export const SettingItem = React.memo(
     const handleSubscriptionClick = useCallback(
       (e: React.MouseEvent) => {
         e.stopPropagation();
-        setSubscribeModalVisible(true);
+        setSubscribeModalVisible(true, 'canvas');
       },
       [setSubscribeModalVisible],
     );

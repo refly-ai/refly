@@ -27,6 +27,7 @@ import {
 } from '@refly-packages/ai-workspace-common/queries/queries';
 import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
 import { GenericToolset, UserTool } from '@refly/openapi-schema';
+import { storeSignupEntryPoint } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 /**
  * Check if a toolset is authorized/installed
@@ -536,6 +537,7 @@ export const WorkflowAPPForm = ({
 
     // Check if user is logged in
     if (!isLogin) {
+      storeSignupEntryPoint('template_detail');
       setLoginModalOpen(true);
       return;
     }
@@ -721,6 +723,7 @@ export const WorkflowAPPForm = ({
   const handleRemix = () => {
     // Check if user is logged in
     if (!isLogin) {
+      storeSignupEntryPoint('template_detail');
       setLoginModalOpen(true);
       return;
     }

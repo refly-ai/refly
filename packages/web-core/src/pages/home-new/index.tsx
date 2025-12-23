@@ -9,7 +9,10 @@ import { canvasTemplateEnabled } from '@refly/ui-kit';
 import Header from '../../components/landing-page-partials/Header';
 import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { storePendingVoucherCode } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
+import {
+  storePendingVoucherCode,
+  storeSignupEntryPoint,
+} from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 import cn from 'classnames';
 import { Title } from '@refly-packages/ai-workspace-common/components/canvas/front-page/title';
@@ -39,6 +42,7 @@ const UnsignedFrontPage = memo(() => {
   }));
 
   const handleLogin = useCallback(() => {
+    storeSignupEntryPoint('visitor_page');
     setLoginModalOpen(true);
   }, [setLoginModalOpen]);
 
@@ -46,6 +50,7 @@ const UnsignedFrontPage = memo(() => {
   useEffect(() => {
     const autoLogin = searchParams.get('autoLogin');
     if (autoLogin === 'true') {
+      storeSignupEntryPoint('visitor_page');
       setLoginModalOpen(true);
     }
   }, [searchParams, setLoginModalOpen]);

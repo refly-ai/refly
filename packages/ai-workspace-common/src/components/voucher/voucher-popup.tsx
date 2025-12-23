@@ -128,6 +128,8 @@ export const VoucherPopup = ({
         planType: 'plus';
         interval: 'monthly';
         voucherId?: string;
+        voucherEntryPoint?: string;
+        voucherUserType?: string;
       } = {
         planType: 'plus',
         interval: 'monthly',
@@ -135,13 +137,9 @@ export const VoucherPopup = ({
 
       if (validateRes.data?.data?.valid) {
         body.voucherId = voucher.voucherId;
+        body.voucherEntryPoint = useOnlyMode ? 'share_discount_popup' : 'discount_popup';
+        body.voucherUserType = userType;
         console.log('[voucher-popup] voucher is valid, adding to checkout body');
-
-        logEvent('voucher_applied', null, {
-          voucher_value: voucherValue,
-          entry_point: useOnlyMode ? 'claimed_popup' : 'discount_popup',
-          user_type: userType,
-        });
       } else {
         console.log('[voucher-popup] voucher is NOT valid:', validateRes.data?.data);
         const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';

@@ -577,6 +577,8 @@ export const CreditInsufficientModal = memo(() => {
           currentPlan?: string;
           source?: string;
           voucherId?: string;
+          voucherEntryPoint?: string;
+          voucherUserType?: string;
         } = {
           planType: 'plus' as SubscriptionPlanType,
           interval: interval,
@@ -598,13 +600,9 @@ export const CreditInsufficientModal = memo(() => {
 
           if (validateRes.data?.data?.valid) {
             body.voucherId = availableVoucher.voucherId;
+            body.voucherEntryPoint = 'canvas';
+            body.voucherUserType = userType;
             console.log('[CreditInsufficientModal] Voucher added to body:', body.voucherId);
-
-            logEvent('voucher_applied', null, {
-              voucher_value: Math.round((100 - availableVoucher.discountPercent) / 10),
-              entry_point: 'credit_insufficient_modal',
-              user_type: userType,
-            });
           } else {
             const reason = validateRes.data?.data?.reason || 'Voucher is no longer valid';
             message.warning(

@@ -9,6 +9,7 @@ import { useCallback, useState, useMemo, useEffect } from 'react';
 import type { SyntheticEvent } from 'react';
 import { AVATAR_PLACEHOLDER_IMAGE, CARD_PLACEHOLDER_IMAGE } from './constants';
 import diamondIcon from '@refly-packages/ai-workspace-common/assets/diamond.svg';
+import { storeSignupEntryPoint } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 interface TemplateCardProps {
   template: CanvasTemplate;
@@ -104,6 +105,7 @@ export const TemplateCard = ({ template, className, showUser = true }: TemplateC
       });
 
       if (!isLogin) {
+        storeSignupEntryPoint('template_detail');
         setLoginModalOpen(true);
         return;
       }

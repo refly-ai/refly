@@ -6,7 +6,7 @@ import { useAuthStore, useAuthStoreShallow } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { InvalidVerificationSession } from '@refly/errors';
 import { logEvent } from '@refly/telemetry-web';
-import { getPendingVoucherCode } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
+import { getAndClearSignupEntryPoint } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 const RESEND_INTERVAL = 30;
 
@@ -34,24 +34,6 @@ export const VerificationModal = () => {
     }
     // Fallback to URL parameter
     return searchParams.get('from') ?? undefined;
-  }, [location.pathname, searchParams]);
-
-  // Determine entry_point for signup tracking (voucher invite flow)
-  const entryPoint = useMemo(() => {
-    // Check if user came from voucher invite link
-    const hasPendingVoucher = !!getPendingVoucherCode();
-    const hasInviteParam = !!searchParams.get('invite');
-
-    if (hasPendingVoucher || hasInviteParam) {
-      const currentPath = location.pathname;
-      // If on template page, entry point is template_detail
-      if (currentPath?.startsWith('/app/') || currentPath?.startsWith('/workflow-template/')) {
-        return 'template_detail';
-      }
-      // Otherwise it's visitor page (homepage)
-      return 'visitor_page';
-    }
-    return undefined;
   }, [location.pathname, searchParams]);
 
   useEffect(() => {
@@ -93,6 +75,8 @@ export const VerificationModal = () => {
     }
 
     if (data?.success) {
+      // Get entry_point from localStorage and clear it
+      const entryPoint = getAndClearSignupEntryPoint();
       // Log signup success event with source and entry_point (verification completed)
       logEvent('signup_success', null, {
         ...(source ? { source } : {}),

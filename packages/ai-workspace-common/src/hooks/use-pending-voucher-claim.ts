@@ -9,6 +9,7 @@ import { useSubscriptionStoreShallow, useUserStoreShallow } from '@refly/stores'
 import type { Voucher } from '@refly/openapi-schema';
 
 const PENDING_VOUCHER_KEY = 'pendingVoucherInviteCode';
+const SIGNUP_ENTRY_POINT_KEY = 'signupEntryPoint';
 
 /**
  * Hook to handle claiming a voucher from URL parameter or localStorage.
@@ -162,9 +163,12 @@ export const usePendingVoucherClaim = () => {
 
 /**
  * Store a voucher invite code for claiming after login
+ * Also stores the signup entry point as voucher_share_link
  */
 export const storePendingVoucherCode = (inviteCode: string) => {
   localStorage.setItem(PENDING_VOUCHER_KEY, inviteCode);
+  // When storing voucher code, set entry point to voucher_share_link
+  localStorage.setItem(SIGNUP_ENTRY_POINT_KEY, 'voucher_share_link');
 };
 
 /**
@@ -179,4 +183,23 @@ export const clearPendingVoucherCode = () => {
  */
 export const getPendingVoucherCode = (): string | null => {
   return localStorage.getItem(PENDING_VOUCHER_KEY);
+};
+
+/**
+ * Store signup entry point for tracking
+ */
+export const storeSignupEntryPoint = (entryPoint: string) => {
+  // Only store if not already set (don't overwrite voucher_share_link)
+  if (!localStorage.getItem(SIGNUP_ENTRY_POINT_KEY)) {
+    localStorage.setItem(SIGNUP_ENTRY_POINT_KEY, entryPoint);
+  }
+};
+
+/**
+ * Get and clear signup entry point
+ */
+export const getAndClearSignupEntryPoint = (): string | null => {
+  const entryPoint = localStorage.getItem(SIGNUP_ENTRY_POINT_KEY);
+  localStorage.removeItem(SIGNUP_ENTRY_POINT_KEY);
+  return entryPoint;
 };
