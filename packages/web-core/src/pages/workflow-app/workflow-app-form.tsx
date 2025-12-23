@@ -21,6 +21,40 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { useTemplateGenerationStatus } from '../../hooks/useTemplateGenerationStatus';
 import { TemplateEditorSkeleton } from './template-editor-skeleton';
+import {
+  useListUserTools,
+  useGetCanvasData,
+} from '@refly-packages/ai-workspace-common/queries/queries';
+import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
+import { GenericToolset, UserTool } from '@refly/openapi-schema';
+
+/**
+ * Check if a toolset is authorized/installed
+ * - External OAuth tools: need authorization (check userTools.authorized)
+ * - Other tools (builtin, non-OAuth): always available, no installation needed
+ */
+const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): boolean => {
+  // MCP servers need to be checked separately
+  if (toolset.type === 'mcp') {
+    return userTools.some((t) => t.toolset?.name === toolset.name);
+  }
+
+  // Builtin tools are always available
+  if (toolset.builtin) {
+    return true;
+  }
+
+  // Find matching user tool by key
+  const matchingUserTool = userTools.find((t) => t.key === toolset.toolset?.key);
+
+  // If not in userTools list, user hasn't installed/authorized this tool
+  if (!matchingUserTool) {
+    return false;
+  }
+
+  // For external OAuth tools, check authorized status
+  return matchingUserTool.authorized ?? false;
+};
 
 const EmptyContent = () => {
   const { t } = useTranslation();
@@ -112,7 +146,43 @@ export const WorkflowAPPForm = ({
   }));
   const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
 
+  // Tool dependency checking
+  const { data: userToolsData } = useListUserTools({}, [], {
+    enabled: isLogin,
+    refetchOnWindowFocus: false,
+  });
+  const userTools = userToolsData?.data ?? [];
+
+  const { data: canvasResponse } = useGetCanvasData({ query: { canvasId: canvasId ?? '' } }, [], {
+    enabled: !!canvasId && isLogin,
+    refetchOnWindowFocus: false,
+  });
+
+  const canvasData = canvasResponse?.data;
+  const nodes = canvasData?.nodes || [];
+
+  // Check if there are uninstalled tools
+  const uninstalledCount = useMemo(() => {
+    if (!isLogin || !nodes.length) return 0;
+    const toolsetsWithNodes = extractToolsetsWithNodes(nodes);
+    return toolsetsWithNodes.filter((tool: ToolWithNodes) => {
+      return !isToolsetAuthorized(tool.toolset, userTools);
+    }).length;
+  }, [isLogin, userTools, nodes]);
+
   const [internalIsRunning, setInternalIsRunning] = useState(false);
+  const [toolsPanelOpen, setToolsPanelOpen] = useState(false);
+  const [highlightInstallButtons, setHighlightInstallButtons] = useState(false);
+
+  const handleToolsDependencyOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setToolsPanelOpen(nextOpen);
+      if (!nextOpen) {
+        setHighlightInstallButtons(false);
+      }
+    },
+    [setToolsPanelOpen, setHighlightInstallButtons],
+  );
 
   // Use external isRunning if provided, otherwise use internal state
   const isRunning = externalIsRunning ?? internalIsRunning;
@@ -470,6 +540,14 @@ export const WorkflowAPPForm = ({
       return;
     }
 
+    // Check if there are uninstalled tools
+    if (uninstalledCount > 0) {
+      message.warning(t('canvas.workflow.run.installToolsBeforeRunning'));
+      setToolsPanelOpen(true);
+      setHighlightInstallButtons(true);
+      return;
+    }
+
     // Frontend pre-check: if current credit balance is insufficient, open the modal and stop.
     // This is best-effort and only runs when balance data is available, to avoid false negatives.
     const requiredCredits = Number(workflowApp?.creditUsage ?? 0);
@@ -760,7 +838,12 @@ export const WorkflowAPPForm = ({
                 {/* Tools Dependency Form */}
                 {workflowApp?.canvasData && (
                   <div className="mt-3 flex items-center justify-between">
-                    <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
+                    <ToolsDependencyChecker
+                      canvasData={workflowApp?.canvasData}
+                      externalOpen={toolsPanelOpen}
+                      highlightInstallButtons={highlightInstallButtons}
+                      onOpenChange={handleToolsDependencyOpenChange}
+                    />
 
                     <Tooltip title={t('canvas.workflow.run.toolsGuide') || 'Tools Guide'}>
                       <Button
@@ -897,7 +980,12 @@ export const WorkflowAPPForm = ({
                 {/* Tools Dependency Form */}
                 {workflowApp?.canvasData && (
                   <div className="mt-3 flex items-center justify-between">
-                    <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
+                    <ToolsDependencyChecker
+                      canvasData={workflowApp?.canvasData}
+                      externalOpen={toolsPanelOpen}
+                      highlightInstallButtons={highlightInstallButtons}
+                      onOpenChange={handleToolsDependencyOpenChange}
+                    />
 
                     <Tooltip title={t('canvas.workflow.run.toolsGuide') || 'Tools Guide'}>
                       <Button
@@ -1074,7 +1162,12 @@ export const WorkflowAPPForm = ({
                     {/* Tools Dependency Form */}
                     {workflowApp?.canvasData && (
                       <div className="mt-5 ">
-                        <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
+                        <ToolsDependencyChecker
+                          canvasData={workflowApp?.canvasData}
+                          externalOpen={toolsPanelOpen}
+                          highlightInstallButtons={highlightInstallButtons}
+                          onOpenChange={handleToolsDependencyOpenChange}
+                        />
                       </div>
                     )}
                   </>

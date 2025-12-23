@@ -536,7 +536,7 @@ export class WorkflowAppService {
    * This is a lightweight method to check generation status directly from database
    */
   async getTemplateGenerationStatus(
-    user: User,
+    _user: User,
     appId: string,
   ): Promise<{
     status: 'idle' | 'pending' | 'generating' | 'completed' | 'failed';
@@ -546,7 +546,7 @@ export class WorkflowAppService {
     createdAt: string;
   }> {
     const workflowApp = await this.prisma.workflowApp.findFirst({
-      where: { appId, uid: user.uid, deletedAt: null },
+      where: { appId, deletedAt: null },
       select: {
         appId: true,
         templateContent: true,

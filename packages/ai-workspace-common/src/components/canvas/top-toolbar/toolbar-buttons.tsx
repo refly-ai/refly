@@ -28,13 +28,38 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
     setShowCreateVariablesModal(false);
   }, [setShowCreateVariablesModal]);
 
-  const { sidePanelVisible, setSidePanelVisible, showWorkflowRun, setShowWorkflowRun } =
-    useCanvasResourcesPanelStoreShallow((state) => ({
-      sidePanelVisible: state.sidePanelVisible,
-      setSidePanelVisible: state.setSidePanelVisible,
-      showWorkflowRun: state.showWorkflowRun,
-      setShowWorkflowRun: state.setShowWorkflowRun,
-    }));
+  const {
+    sidePanelVisible,
+    setSidePanelVisible,
+    showWorkflowRun,
+    setShowWorkflowRun,
+    toolsDependencyOpen,
+    toolsDependencyHighlight,
+    setToolsDependencyOpen,
+    setToolsDependencyHighlight,
+  } = useCanvasResourcesPanelStoreShallow((state) => ({
+    sidePanelVisible: state.sidePanelVisible,
+    setSidePanelVisible: state.setSidePanelVisible,
+    showWorkflowRun: state.showWorkflowRun,
+    setShowWorkflowRun: state.setShowWorkflowRun,
+    toolsDependencyOpen: state.toolsDependencyOpen,
+    toolsDependencyHighlight: state.toolsDependencyHighlight,
+    setToolsDependencyOpen: state.setToolsDependencyOpen,
+    setToolsDependencyHighlight: state.setToolsDependencyHighlight,
+  }));
+
+  const toolsPanelOpen = toolsDependencyOpen?.[canvasId] ?? false;
+  const highlightInstallButtons = toolsDependencyHighlight?.[canvasId] ?? false;
+
+  const handleToolsDependencyOpenChange = useCallback(
+    (open: boolean) => {
+      setToolsDependencyOpen(canvasId, open);
+      if (!open) {
+        setToolsDependencyHighlight(canvasId, false);
+      }
+    },
+    [canvasId, setToolsDependencyOpen, setToolsDependencyHighlight],
+  );
 
   const handleResourcesPanelOpen = useCallback(() => {
     setSidePanelVisible(!sidePanelVisible);
@@ -143,7 +168,12 @@ export const ToolbarButtons = memo(({ canvasId }: ToolbarButtonsProps) => {
         )}
         {!readonly && <Divider type="vertical" className="m-0 h-5 bg-refly-Card-Border" />}
 
-        <ToolsDependency canvasId={canvasId} />
+        <ToolsDependency
+          canvasId={canvasId}
+          externalOpen={toolsPanelOpen}
+          highlightInstallButtons={highlightInstallButtons}
+          onOpenChange={handleToolsDependencyOpenChange}
+        />
 
         {!readonly && (
           <Button
