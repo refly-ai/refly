@@ -100,14 +100,54 @@ function fileExists(filePath: string): boolean {
  * @returns Resolved path or null if not found
  */
 function resolveModulePath(modulePath: string): string | null {
-  // Check if this is a package we want to redirect
+  // Check if this is a package we want to redirect (exact match)
   const packageMapping = PACKAGE_MAPPING[modulePath];
-  if (!packageMapping) {
-    return null;
+  if (packageMapping) {
+    return packageMapping.resolvedPath;
   }
 
-  // Return pre-validated path (no file existence check needed)
-  return packageMapping.resolvedPath;
+  // Handle subpath imports like @refly/utils/token -> packages/utils/dist/token.js
+  if (modulePath.startsWith('@refly/')) {
+    const parts = modulePath.replace('@refly/', '').split('/');
+    const packageName = parts[0]; // e.g. 'utils'
+    const subPath = parts.slice(1).join('/'); // e.g. 'token'
+
+    if (subPath && PACKAGE_MAPPING[`@refly/${packageName}`]) {
+      // Try direct file first: @refly/utils/token -> packages/utils/dist/token.js
+      const targetPath = path.resolve(workspaceRoot, `packages/${packageName}/dist/${subPath}.js`);
+      const sourcePath = path.resolve(workspaceRoot, `packages/${packageName}/src/${subPath}.ts`);
+
+      if (fileExists(targetPath)) {
+        return targetPath;
+      }
+
+      // Try directory index: @refly/utils/editor -> packages/utils/dist/editor/index.js
+      const targetIndexPath = path.resolve(
+        workspaceRoot,
+        `packages/${packageName}/dist/${subPath}/index.js`,
+      );
+      const sourceIndexPath = path.resolve(
+        workspaceRoot,
+        `packages/${packageName}/src/${subPath}/index.ts`,
+      );
+
+      if (fileExists(targetIndexPath)) {
+        return targetIndexPath;
+      } else if (fileExists(sourceIndexPath)) {
+        console.warn(
+          `[preload] Warning: Subpath target ${targetIndexPath} not found, falling back to source ${sourceIndexPath}`,
+        );
+        return sourceIndexPath;
+      } else if (fileExists(sourcePath)) {
+        console.warn(
+          `[preload] Warning: Subpath target ${targetPath} not found, falling back to source ${sourcePath}`,
+        );
+        return sourcePath;
+      }
+    }
+  }
+
+  return null;
 }
 
 /**

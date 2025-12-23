@@ -772,6 +772,7 @@ export const SkillResponseNode = memo(
                     workflowIsRunning={workflowIsRunning}
                     onRerun={handleRerunSingle}
                     onRerunFromHere={handleRerunFromHere}
+                    selectedToolsets={data?.metadata?.selectedToolsets}
                     onStop={handleStop}
                     status={status}
                   />

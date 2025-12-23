@@ -29,7 +29,12 @@ import {
   pick,
 } from '@refly/utils';
 import { truncateContent } from '@refly/utils/token';
-import { ParamsError, DriveFileNotFoundError, DocumentNotFoundError } from '@refly/errors';
+import {
+  ParamsError,
+  DriveFileNotFoundError,
+  DocumentNotFoundError,
+  FileTooLargeError,
+} from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
 import { streamToBuffer, streamToString } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
@@ -42,6 +47,7 @@ import { readingTime } from 'reading-time-estimator';
 import { MiscService } from '../misc/misc.service';
 import { DocxParser } from '../knowledge/parsers/docx.parser';
 import { PdfParser } from '../knowledge/parsers/pdf.parser';
+import { ObjectInfo } from '../common/object-storage/backend/interface';
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -517,7 +523,7 @@ export class DriveService implements OnModuleInit {
 
     if (includeContent) {
       return Promise.all(
-        driveFiles.map((file) => this.getDriveFileDetail(user, file.fileId, file)),
+        driveFiles.map((file) => this.getDriveFileDetail(user, file.fileId, { file })),
       );
     }
     return driveFiles.map((file) => this.toDTO(file));
@@ -560,9 +566,14 @@ export class DriveService implements OnModuleInit {
   }
 
   @Trace('drive.getDriveFileDetail')
-  async getDriveFileDetail(user: User, fileId: string, file?: DriveFileModel): Promise<DriveFile> {
+  async getDriveFileDetail(
+    user: User,
+    fileId: string,
+    options?: { file?: DriveFileModel; includeContent?: boolean },
+  ): Promise<DriveFile> {
     getCurrentSpan()?.setAttribute('file.id', fileId);
 
+    const { file, includeContent = true } = options ?? {};
     const driveFile =
       file ??
       (await this.prisma.driveFile.findFirst({
@@ -570,6 +581,11 @@ export class DriveService implements OnModuleInit {
       }));
     if (!driveFile) {
       throw new DriveFileNotFoundError(`Drive file not found: ${fileId}`);
+    }
+
+    // Skip content loading if not needed (metadata only)
+    if (!includeContent) {
+      return this.toDTO(driveFile);
     }
 
     let content = driveFile.summary;
@@ -666,6 +682,30 @@ export class DriveService implements OnModuleInit {
           }
         })
         .catch(() => null); // Return null to continue parsing if cache fails
+    }
+
+    // Check file size limit before downloading - large files should use execute_code tool
+    const storageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
+    const maxFileSizeKB = this.config.get<number>('drive.maxParseFileSizeKB') || 512;
+    const maxFileSizeBytes = maxFileSizeKB * 1024;
+
+    let fileStat: ObjectInfo | undefined;
+    try {
+      fileStat = await this.internalOss.statObject(storageKey);
+    } catch (error) {
+      this.logger.error(`Failed to stat drive file ${fileId}: ${(error as Error)?.message}`);
+      throw new DriveFileNotFoundError(`Drive file not found: ${fileId}`);
+    }
+
+    if (fileStat && fileStat.size > maxFileSizeBytes) {
+      const fileSizeKB = Math.round(fileStat.size / 1024);
+      this.logger.info(
+        `Drive file ${fileId} exceeds size limit: ${fileSizeKB}KB > ${maxFileSizeKB}KB`,
+      );
+      throw new FileTooLargeError(
+        'File exceeds size limit. Use execute_code tool to process this file.',
+        fileSizeKB,
+      );
     }
 
     // Step 2: No cache found, perform parsing

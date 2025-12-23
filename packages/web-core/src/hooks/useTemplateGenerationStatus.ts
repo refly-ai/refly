@@ -36,8 +36,17 @@ export function useTemplateGenerationStatus({
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const cancelledRef = useRef(false);
 
+  const stopPolling = useCallback(() => {
+    cancelledRef.current = true;
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    setIsPolling(false);
+  }, []);
+
   // Use the generated hook with manual control
-  const { data, refetch } = useGetTemplateGenerationStatus(
+  const { data, refetch, error } = useGetTemplateGenerationStatus(
     {
       query: { appId: appId ?? '' },
     },
@@ -51,6 +60,15 @@ export function useTemplateGenerationStatus({
 
   // Update local state when data changes and stop polling if needed
   useEffect(() => {
+    const isRequestFailed = Boolean(error) || data?.success === false || !!data?.data?.error;
+    if (isRequestFailed) {
+      // Stop polling and update local state when the status API request fails.
+      setStatus('failed');
+      setTemplateContent(null);
+      setIsInitialized(true);
+      stopPolling();
+      return;
+    }
     if (data?.data) {
       const responseData = data.data;
       const newStatus = responseData.status as TemplateGenerationStatus;
@@ -63,14 +81,10 @@ export function useTemplateGenerationStatus({
         isPolling &&
         (newStatus === 'completed' || newStatus === 'idle' || newStatus === 'failed')
       ) {
-        setIsPolling(false);
-        if (pollingRef.current) {
-          clearInterval(pollingRef.current);
-          pollingRef.current = null;
-        }
+        stopPolling();
       }
     }
-  }, [data, isPolling]);
+  }, [data, error, isPolling, stopPolling]);
 
   // Polling function
   const pollOnce = useCallback(async () => {
@@ -159,15 +173,6 @@ export function useTemplateGenerationStatus({
       setIsPolling(false);
     };
   }, [appId, pollingInterval, maxAttempts, enabled, pollOnce, refetch]);
-
-  const stopPolling = useCallback(() => {
-    cancelledRef.current = true;
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-    setIsPolling(false);
-  }, []);
 
   return {
     status,

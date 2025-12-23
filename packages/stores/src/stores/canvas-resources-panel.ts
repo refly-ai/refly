@@ -19,6 +19,8 @@ interface CanvasResourcesPanelState {
   activeNodes: Record<string, CanvasNode | null>;
   searchKeyword: string;
   showWorkflowRun: boolean;
+  toolsDependencyOpen: Record<string, boolean>;
+  toolsDependencyHighlight: Record<string, boolean>;
 
   // Methods
   setCurrentResource: (resource: CanvasNode | null) => void;
@@ -31,6 +33,9 @@ interface CanvasResourcesPanelState {
   getActiveNode: (canvasId: string) => CanvasNode | null;
   setSearchKeyword: (keyword: string) => void;
   setShowWorkflowRun: (show: boolean) => void;
+  setToolsDependencyOpen: (canvasId: string, open: boolean) => void;
+  setToolsDependencyHighlight: (canvasId: string, highlight: boolean) => void;
+  resetToolsDependency: (canvasId: string) => void;
   resetState: () => void;
 }
 
@@ -48,6 +53,8 @@ export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
     (set, get) => ({
       // Default state
       activeNodes: {},
+      toolsDependencyOpen: {},
+      toolsDependencyHighlight: {},
       ...defaultState,
 
       // Methods
@@ -72,6 +79,29 @@ export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
       setShowWorkflowRun: (show: boolean) => {
         set({ showWorkflowRun: show });
       },
+      setToolsDependencyOpen: (canvasId: string, open: boolean) =>
+        set((state) => ({
+          toolsDependencyOpen: {
+            ...state.toolsDependencyOpen,
+            [canvasId]: open,
+          },
+        })),
+      setToolsDependencyHighlight: (canvasId: string, highlight: boolean) =>
+        set((state) => ({
+          toolsDependencyHighlight: {
+            ...state.toolsDependencyHighlight,
+            [canvasId]: highlight,
+          },
+        })),
+      resetToolsDependency: (canvasId: string) =>
+        set((state) => {
+          const { [canvasId]: _open, ...restOpen } = state.toolsDependencyOpen;
+          const { [canvasId]: _highlight, ...restHighlight } = state.toolsDependencyHighlight;
+          return {
+            toolsDependencyOpen: restOpen,
+            toolsDependencyHighlight: restHighlight,
+          };
+        }),
       resetState: () => set(defaultState),
     }),
     {

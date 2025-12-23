@@ -301,6 +301,7 @@ const ToolsDependencyContent = React.memo(
     isLogin,
     totalCount,
     showReferencedNodesDisplay = true,
+    highlightInstallButtons = false,
     isLoading = false,
   }: {
     uninstalledCount: number;
@@ -317,6 +318,7 @@ const ToolsDependencyContent = React.memo(
     isLogin: boolean;
     totalCount: number;
     showReferencedNodesDisplay?: boolean;
+    highlightInstallButtons?: boolean;
     isLoading?: boolean;
   }) => {
     const { t, i18n } = useTranslation();
@@ -418,7 +420,13 @@ const ToolsDependencyContent = React.memo(
                   return (
                     <div
                       key={toolset.id}
-                      className="border-solid border-[1px] border-refly-Card-Border rounded-xl p-2 md:p-3"
+                      className={cn(
+                        'border-solid border-[1px] border-refly-Card-Border rounded-xl p-2 md:p-3 transition-colors',
+                        !isInstalled &&
+                          isLogin &&
+                          highlightInstallButtons &&
+                          'border-[var(--refly-func-success-default)] bg-[rgba(18,183,106,0.12)] shadow-[0_0_0_3px_rgba(18,183,106,0.18)] animate-pulse',
+                      )}
                     >
                       {/* Tool Header */}
                       <div className="py-1 px-1 md:px-2 flex items-center justify-between gap-2 md:gap-3">
@@ -486,9 +494,42 @@ const ToolsDependencyContent = React.memo(
   },
 );
 
-export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasData }) => {
+export const ToolsDependencyChecker = ({
+  canvasData,
+  externalOpen,
+  highlightInstallButtons,
+  onOpenChange,
+}: {
+  canvasData?: RawCanvasData;
+  externalOpen?: boolean;
+  highlightInstallButtons?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+
+  const handlePopoverOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [onOpenChange],
+  );
+
+  // Sync with external open state
+  useEffect(() => {
+    if (externalOpen !== undefined) {
+      setOpen(externalOpen);
+    }
+  }, [externalOpen]);
+
+  // When opened externally due to missing tools, default to the "uninstalled" tab.
+  useEffect(() => {
+    if (externalOpen && highlightInstallButtons) {
+      setActiveTab('uninstalled');
+    }
+  }, [externalOpen, highlightInstallButtons]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const { isLogin } = useUserStoreShallow((state) => ({
@@ -629,15 +670,15 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
   }, [t]);
 
   const handleClose = useCallback(() => {
-    setOpen(false);
+    handlePopoverOpenChange(false);
     setSearchTerm('');
     setActiveTab('all');
-  }, []);
+  }, [handlePopoverOpenChange]);
 
   const handleGoInstall = useCallback(() => {
-    setOpen(true);
+    handlePopoverOpenChange(true);
     setActiveTab('uninstalled');
-  }, []);
+  }, [handlePopoverOpenChange]);
 
   const defaultTrigger = (
     <Tooltip title={t('tools.useTools')} placement="bottom">
@@ -681,11 +722,13 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
     </Tooltip>
   );
 
-  return toolsLoading ? null : (
+  if (toolsLoading) return null;
+
+  return (
     <Popover
       className="tools-in-canvas"
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={handlePopoverOpenChange}
       trigger="click"
       placement="bottomLeft"
       styles={{
@@ -709,8 +752,9 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
           userTools={userTools}
           toolsetDefinitions={toolsetDefinitions}
           totalCount={toolsetsWithNodes.length}
-          setOpen={setOpen}
+          setOpen={handlePopoverOpenChange}
           showReferencedNodesDisplay={false}
+          highlightInstallButtons={highlightInstallButtons}
           isLoading={toolsLoading}
         />
       }
@@ -731,7 +775,17 @@ export const ToolsDependencyChecker = ({ canvasData }: { canvasData?: RawCanvasD
   );
 };
 
-export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
+export const ToolsDependency = ({
+  canvasId,
+  externalOpen,
+  highlightInstallButtons,
+  onOpenChange,
+}: {
+  canvasId: string;
+  externalOpen?: boolean;
+  highlightInstallButtons?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -758,6 +812,28 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
   });
 
   const userTools = userToolsData?.data ?? [];
+
+  const handlePopoverOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [onOpenChange],
+  );
+
+  // Sync with external open state
+  useEffect(() => {
+    if (externalOpen !== undefined) {
+      setOpen(externalOpen);
+    }
+  }, [externalOpen]);
+
+  // When opened externally due to missing tools, default to the "uninstalled" tab.
+  useEffect(() => {
+    if (externalOpen && highlightInstallButtons) {
+      setActiveTab('uninstalled');
+    }
+  }, [externalOpen, highlightInstallButtons]);
 
   // Build toolset definitions from userTools for display purposes
   const toolsetDefinitions = useMemo(() => {
@@ -867,10 +943,10 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
   }, [t]);
 
   const handleClose = useCallback(() => {
-    setOpen(false);
+    handlePopoverOpenChange(false);
     setSearchTerm('');
     setActiveTab('all');
-  }, []);
+  }, [handlePopoverOpenChange]);
 
   // Only show the tools dependency button if there are uninstalled tools
   if (uninstalledCount === 0) {
@@ -882,7 +958,7 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
       className="tools-in-canvas"
       align={{ offset: [0, 10] }}
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={handlePopoverOpenChange}
       trigger="click"
       placement="bottomLeft"
       styles={{
@@ -906,7 +982,8 @@ export const ToolsDependency = ({ canvasId }: { canvasId: string }) => {
           userTools={userTools}
           toolsetDefinitions={toolsetDefinitions}
           totalCount={toolsetsWithNodes.length}
-          setOpen={setOpen}
+          setOpen={handlePopoverOpenChange}
+          highlightInstallButtons={highlightInstallButtons}
           isLoading={canvasLoading || toolsLoading}
         />
       }

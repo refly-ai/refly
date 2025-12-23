@@ -748,35 +748,31 @@ IMPORTANT: Use \`file-content://\` for <img>, <video>, <audio> src attributes. U
 
     const uniqueFileIds = Array.from(allFileIds);
 
-    // Fetch all drive files
-    const driveFiles = await Promise.all(
-      uniqueFileIds.map(async (fileId) => {
-        const file = await reflyService.readFile(user, fileId);
-        if (!file) {
-          throw new Error(`Drive file not found: ${fileId}`);
-        }
-        return file;
-      }),
-    );
-
     // Get both URL types for each file
     const urlResults = await Promise.all(
-      driveFiles.map(async (file) => {
-        const { url, contentUrl } = await reflyService.createShareForDriveFile(user, file.fileId);
-        return { fileId: file.fileId, shareUrl: url, contentUrl };
+      uniqueFileIds.map(async (fileId) => {
+        try {
+          const { url, contentUrl } = await reflyService.createShareForDriveFile(user, fileId);
+          return { fileId, shareUrl: url, contentUrl };
+        } catch (error) {
+          console.error(
+            `[BuiltinShareFiles] Failed to create share URL for fileId ${fileId}:`,
+            error,
+          );
+          return { fileId, shareUrl: null, contentUrl: null };
+        }
       }),
     );
 
-    // Build maps for both URL types
+    // Build maps for both URL types (only include successful results)
     const shareUrlMap = new Map<string, string>();
     const contentUrlMap = new Map<string, string>();
 
     for (const { fileId, shareUrl, contentUrl } of urlResults) {
-      if (!shareUrl || !contentUrl) {
-        throw new Error(`Failed to generate URLs for drive file: ${fileId}`);
+      if (shareUrl && contentUrl) {
+        shareUrlMap.set(fileId, shareUrl);
+        contentUrlMap.set(fileId, contentUrl);
       }
-      shareUrlMap.set(fileId, shareUrl);
-      contentUrlMap.set(fileId, contentUrl);
     }
 
     // Replace file-content:// with direct content URLs
@@ -880,11 +876,32 @@ Latency: <2s`;
         summary: `Successfully read file: "${file.name}" with file ID: ${file.fileId}`,
       };
     } catch (error) {
+      const err = error as { code?: string; message?: string };
+      const errorMessage = err.message || 'Unknown error';
+
+      // Check for file size limit error (E3006) - guide LLM to use execute_code
+      if (err.code === 'E3006') {
+        return {
+          status: 'error',
+          error: 'FILE_TOO_LARGE',
+          data: {
+            fileId: input.fileId,
+            fileName: input.fileName,
+            suggestion:
+              'This file exceeds the size limit for direct reading. Use the execute_code tool to process it with custom Python/JavaScript code.',
+          },
+          summary: errorMessage,
+        };
+      }
+
       return {
         status: 'error',
         error: 'Error reading file',
-        summary:
-          error instanceof Error ? error.message : 'Unknown error occurred while reading file',
+        data: {
+          fileId: input.fileId,
+          fileName: input.fileName,
+        },
+        summary: errorMessage,
       };
     }
   }
@@ -894,12 +911,23 @@ export class BuiltinListFiles extends AgentBaseTool<BuiltinToolParams> {
   name = 'list_files';
   toolsetKey = 'list_files';
 
-  // No parameters needed - canvasId is obtained from context automatically
-  schema = z.object({});
+  schema = z.object({
+    source: z
+      .enum(['manual', 'variable', 'agent'])
+      .optional()
+      .describe(
+        'Filter files by source: manual (user uploaded), variable (from workflow variables), agent (created by agent). If not specified, returns all files.',
+      ),
+  });
 
-  description = `List all files in the current canvas.
+  description = `List files in the current canvas.
 
-Returns a list of files with their IDs and names. Use the fileId with read_file tool to read file content.`;
+Returns a list of files with their IDs and names. Use the fileId with read_file tool to read file content.
+
+Optional filter by source:
+- manual: Files uploaded by user
+- variable: Files from workflow variables
+- agent: Files created by agent`;
 
   protected params: BuiltinToolParams;
 
@@ -909,7 +937,7 @@ Returns a list of files with their IDs and names. Use the fileId with read_file 
   }
 
   async _call(
-    _input: z.infer<typeof this.schema>,
+    input: z.infer<typeof this.schema>,
     _: unknown,
     config: RunnableConfig,
   ): Promise<ToolCallResult> {
@@ -925,27 +953,52 @@ Returns a list of files with their IDs and names. Use the fileId with read_file 
         };
       }
 
-      const files = await reflyService.listFiles(user, canvasId);
+      const files = await reflyService.listFiles(user, canvasId, input.source);
 
       if (!files || files.length === 0) {
+        const sourceFilter = input.source ? ` (source: ${input.source})` : '';
         return {
           status: 'success',
-          data: [],
-          summary: 'No files found in the current canvas',
+          data: input.source ? [] : { manual: [], variable: [], agent: [] },
+          summary: `No files found in the current canvas${sourceFilter}`,
         };
       }
 
-      // Return simplified file info for LLM consumption
-      const fileList = files.map((f) => ({
+      // Simplified file info for LLM consumption
+      const toFileInfo = (f: (typeof files)[0]) => ({
         fileId: f.fileId,
         fileName: f.name,
         type: f.type,
-      }));
+      });
+
+      // If source filter specified, return flat list; otherwise group by source
+      if (input.source) {
+        return {
+          status: 'success',
+          data: files.map(toFileInfo),
+          summary: `Found ${files.length} ${input.source} file(s): ${files.map((f) => f.name).join(', ')}`,
+        };
+      }
+
+      // Group by source for better LLM understanding
+      const grouped = {
+        manual: files.filter((f) => f.source === 'manual').map(toFileInfo),
+        variable: files.filter((f) => f.source === 'variable').map(toFileInfo),
+        agent: files.filter((f) => f.source === 'agent').map(toFileInfo),
+      };
+
+      const counts = [
+        grouped.manual.length && `${grouped.manual.length} manual`,
+        grouped.variable.length && `${grouped.variable.length} variable`,
+        grouped.agent.length && `${grouped.agent.length} agent`,
+      ]
+        .filter(Boolean)
+        .join(', ');
 
       return {
         status: 'success',
-        data: fileList,
-        summary: `Found ${files.length} file(s) in the canvas: ${files.map((f) => f.name).join(', ')}`,
+        data: grouped,
+        summary: `Found ${files.length} file(s) in canvas (${counts})`,
       };
     } catch (error) {
       return {

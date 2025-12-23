@@ -981,7 +981,9 @@ export class ResourceHandler {
     }
 
     // Get drive file details
-    const driveFile = await this.driveService.getDriveFileDetail(user, fileId);
+    const driveFile = await this.driveService.getDriveFileDetail(user, fileId, {
+      includeContent: false,
+    });
     if (!driveFile) {
       throw new Error(`Drive file not found: ${fileId}`);
     }
