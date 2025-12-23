@@ -27,9 +27,12 @@ export interface ChatCompletionRequest {
     search_recency_filter?: 'hour' | 'day' | 'week' | 'month' | 'year';
   };
   response_format?: {
-    type: 'text' | 'json_schema';
+    type: 'text' | 'json_schema' | 'regex';
     json_schema?: {
       schema: Record<string, any>;
+    };
+    regex?: {
+      regex: string;
     };
   };
 }

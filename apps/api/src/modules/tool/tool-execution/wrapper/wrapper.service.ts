@@ -8,6 +8,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { StructuredToolInterface } from '@langchain/core/tools';
 import type { RunnableConfig } from '@langchain/core/runnables';
+import { ZodError } from 'zod';
 import type {
   ToolType,
   IToolPostHandler,
@@ -72,7 +73,25 @@ export class ToolWrapperFactoryService implements IToolWrapperFactory {
     const toolType: ToolType = toolAny.toolType ?? 'regular';
     const toolName = tool.name;
 
-    const rawResult = await tool.invoke(input, config);
+    let rawResult: unknown;
+    try {
+      rawResult = await tool.invoke(input, config);
+    } catch (error) {
+      const message =
+        error instanceof ZodError
+          ? error.message || 'Invalid tool input'
+          : (error as Error)?.message || String(error ?? 'Unknown tool error');
+      this.logger.error('Tool invocation failed', {
+        toolName,
+        toolsetKey,
+        error: message,
+      });
+      return {
+        content: JSON.stringify({ status: 'error', error: message, summary: message }, null, 2),
+        status: 'error',
+        creditCost: 0,
+      };
+    }
 
     // Extract creditCost from raw result before post-processing
     const creditCost = (rawResult as any)?.creditCost ?? 0;
