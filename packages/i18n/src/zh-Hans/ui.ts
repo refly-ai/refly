@@ -1621,6 +1621,7 @@ const translations = {
         failed: 'Workflow 运行失败',
         error: 'Workflow 运行状态时出错',
         validationError: '请填写所有必填字段后再运行工作流',
+        installToolsBeforeRunning: '请先安装所需工具后再运行工作流',
         requiredFileInputsMissing: '此智能体包含必填的文件输入项，请先上传所需文件后再运行。',
         requiredFileInputsMissingForChain:
           '当前步骤或后续步骤存在必填的文件输入项未填写，请先上传所需文件后再运行。',

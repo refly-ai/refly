@@ -5,12 +5,46 @@ import { useDebouncedCallback } from 'use-debounce';
 import { Play, StopCircle, Preview } from 'refly-icons';
 import { ActionStatus } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
+import {
+  useGetCanvasData,
+  useListUserTools,
+} from '@refly-packages/ai-workspace-common/queries/queries';
+import type { CanvasNode } from '@refly/canvas-common';
+import type { GenericToolset, UserTool } from '@refly/openapi-schema';
+import { extractToolsetsWithNodes } from '@refly/canvas-common';
+
+/**
+ * Check if a toolset is authorized/installed.
+ * - MCP servers: installed if the server exists in userTools.
+ * - Builtin tools: always available.
+ * - OAuth tools: installed only when authorized.
+ */
+const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): boolean => {
+  if (toolset.type === 'mcp') {
+    return userTools.some((t) => t.toolset?.name === toolset.name);
+  }
+
+  if (toolset.builtin) {
+    return true;
+  }
+
+  const matchingUserTool = userTools.find((t) => t.key === toolset.toolset?.key);
+  if (!matchingUserTool) {
+    return false;
+  }
+
+  return matchingUserTool.authorized ?? false;
+};
 
 interface SkillResponseActionsProps {
   nodeIsExecuting: boolean;
   workflowIsRunning: boolean;
   variant?: 'node' | 'preview';
   onRerunFromHere?: () => void;
+  selectedToolsets?: GenericToolset[];
   // For preview variant
   onRerun?: () => void;
   // Common
@@ -26,6 +60,7 @@ const SkillResponseActionsComponent = ({
   workflowIsRunning,
   variant = 'node',
   onRerunFromHere,
+  selectedToolsets,
   onRerun,
   onStop,
   extraActions,
@@ -33,6 +68,34 @@ const SkillResponseActionsComponent = ({
   status,
 }: SkillResponseActionsProps) => {
   const { t } = useTranslation();
+  const { canvasId } = useCanvasContext();
+  const { isLoggedRef, userProfile } = useIsLogin();
+  const isLogin = !!userProfile?.uid;
+  const nodeToolsets = Array.isArray(selectedToolsets) ? selectedToolsets : [];
+  const hasNodeToolsets = nodeToolsets.some((toolset) => toolset?.id && toolset.id !== 'empty');
+  const shouldCheckUserTools =
+    variant !== 'preview' && (!!onRerunFromHere || (!!onRerun && hasNodeToolsets));
+  const shouldCheckCanvasTools = variant !== 'preview' && !!onRerunFromHere;
+  const { setToolsDependencyOpen, setToolsDependencyHighlight } =
+    useCanvasResourcesPanelStoreShallow((state) => ({
+      setToolsDependencyOpen: state.setToolsDependencyOpen,
+      setToolsDependencyHighlight: state.setToolsDependencyHighlight,
+    }));
+
+  const { data: userToolsData } = useListUserTools({}, [], {
+    enabled: isLogin && shouldCheckUserTools,
+    refetchOnWindowFocus: false,
+  });
+  const userTools = userToolsData?.data ?? [];
+
+  const { data: canvasResponse, refetch: refetchCanvasData } = useGetCanvasData(
+    { query: { canvasId: canvasId ?? '' } },
+    [],
+    {
+      enabled: !!canvasId && isLogin && shouldCheckCanvasTools,
+      refetchOnWindowFocus: false,
+    },
+  );
 
   // When workflow is running but current node is not executing, disable actions
   const disabled = readonly || workflowIsRunning;
@@ -44,14 +107,106 @@ const SkillResponseActionsComponent = ({
       ? t('canvas.skillResponse.rerunSingle')
       : t('canvas.skillResponse.runSingle');
 
+  const checkAndOpenToolsDependency = useCallback(async (): Promise<boolean> => {
+    // Tool dependency checking requires login and a valid canvasId.
+    if (!shouldCheckCanvasTools || !isLoggedRef.current || !canvasId) {
+      return false;
+    }
+
+    // Ensure we have canvas nodes to calculate tool dependencies.
+    const initialNodes = canvasResponse?.data?.nodes;
+    let effectiveNodes: CanvasNode[] = Array.isArray(initialNodes) ? initialNodes : [];
+    if (!effectiveNodes.length) {
+      try {
+        const result = await refetchCanvasData();
+        const nextNodes = (result as unknown as { data?: { data?: { nodes?: CanvasNode[] } } })
+          ?.data?.data?.nodes;
+        effectiveNodes = Array.isArray(nextNodes) ? nextNodes : [];
+      } catch {
+        effectiveNodes = [];
+      }
+    }
+
+    const uninstalledCount = (() => {
+      if (!effectiveNodes.length) return 0;
+      const toolsetsWithNodes = extractToolsetsWithNodes(effectiveNodes);
+      return toolsetsWithNodes.filter((tool) => !isToolsetAuthorized(tool.toolset, userTools))
+        .length;
+    })();
+
+    if (uninstalledCount <= 0) {
+      return false;
+    }
+
+    message.warning(t('canvas.workflow.run.installToolsBeforeRunning'));
+    setToolsDependencyOpen(canvasId, true);
+    setToolsDependencyHighlight(canvasId, true);
+    return true;
+  }, [
+    shouldCheckCanvasTools,
+    canvasId,
+    canvasResponse,
+    isLoggedRef,
+    refetchCanvasData,
+    setToolsDependencyHighlight,
+    setToolsDependencyOpen,
+    t,
+    userTools,
+  ]);
+
+  const checkAndOpenNodeToolsDependency = useCallback(async (): Promise<boolean> => {
+    // Single-node tool dependency checking requires login and a valid canvasId.
+    if (!isLoggedRef.current || !canvasId) {
+      return false;
+    }
+
+    // If current node doesn't use any tools, there's nothing to check.
+    if (!hasNodeToolsets) {
+      return false;
+    }
+
+    const missingCount = nodeToolsets.filter((toolset) => {
+      if (!toolset?.id || toolset.id === 'empty') {
+        return false;
+      }
+      return !isToolsetAuthorized(toolset, userTools);
+    }).length;
+
+    if (missingCount <= 0) {
+      return false;
+    }
+
+    message.warning(t('canvas.workflow.run.installToolsBeforeRunning'));
+    setToolsDependencyOpen(canvasId, true);
+    setToolsDependencyHighlight(canvasId, true);
+    return true;
+  }, [
+    canvasId,
+    hasNodeToolsets,
+    isLoggedRef,
+    nodeToolsets,
+    setToolsDependencyHighlight,
+    setToolsDependencyOpen,
+    t,
+    userTools,
+  ]);
+
   const handleRerunFromHereClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (onRerunFromHere) {
-        onRerunFromHere();
+      if (!onRerunFromHere) {
+        return;
       }
+
+      void (async () => {
+        const blocked = await checkAndOpenToolsDependency();
+        if (blocked) {
+          return;
+        }
+        onRerunFromHere();
+      })();
     },
-    [onRerunFromHere],
+    [checkAndOpenToolsDependency, onRerunFromHere],
   );
 
   const handleRerunClick = useCallback(
@@ -112,9 +267,14 @@ const SkillResponseActionsComponent = ({
 
   const handleToggleWorkflowRun = useDebouncedCallback(
     async (e: React.MouseEvent) => {
+      e.stopPropagation();
       if (nodeIsExecuting) {
         handleStopClick(e);
       } else {
+        const blocked = await checkAndOpenNodeToolsDependency();
+        if (blocked) {
+          return;
+        }
         handleRerunClick(e);
       }
     },
