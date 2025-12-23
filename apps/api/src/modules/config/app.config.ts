@@ -37,7 +37,7 @@ export default () => ({
     publicEndpoint:
       process.env.DRIVE_PUBLIC_ENDPOINT || 'http://localhost:5800/v1/drive/file/public',
     maxContentTokens: Number.parseInt(process.env.DRIVE_MAX_CONTENT_TOKENS) || 25000, // Maximum tokens in returned content (aligned with Claude Code's limit)
-    maxParseFileSizeMB: Number.parseInt(process.env.DRIVE_MAX_PARSE_FILE_SIZE_MB) || 1, // Maximum file size (MB) for direct parsing, larger files should use execute_code
+    maxParseFileSizeKB: Number.parseInt(process.env.DRIVE_MAX_PARSE_FILE_SIZE_KB) || 512, // Maximum file size (KB) for direct parsing, larger files should use execute_code
   },
   session: {
     secret: process.env.SESSION_SECRET || 'refly-session-secret-key-change-in-production',

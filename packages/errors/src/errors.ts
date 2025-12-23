@@ -417,8 +417,7 @@ export class FileTooLargeError extends BaseError {
 
   constructor(
     message?: string,
-    public fileSizeMB?: number,
-    public maxSizeMB?: number,
+    public fileSizeKB?: number,
   ) {
     super(message);
   }

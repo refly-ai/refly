@@ -869,12 +869,7 @@ Latency: <2s`;
         summary: `Successfully read file: "${file.name}" with file ID: ${file.fileId}`,
       };
     } catch (error) {
-      const err = error as {
-        code?: string;
-        message?: string;
-        fileSizeMB?: number;
-        maxSizeMB?: number;
-      };
+      const err = error as { code?: string; message?: string };
       const errorMessage = err.message || 'Unknown error';
 
       // Check for file size limit error (E3006) - guide LLM to use execute_code
@@ -885,8 +880,6 @@ Latency: <2s`;
           data: {
             fileId: input.fileId,
             fileName: input.fileName,
-            fileSizeMB: err.fileSizeMB,
-            maxSizeMB: err.maxSizeMB,
             suggestion:
               'This file exceeds the size limit for direct reading. Use the execute_code tool to process it with custom Python/JavaScript code.',
           },

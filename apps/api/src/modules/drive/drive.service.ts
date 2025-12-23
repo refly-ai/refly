@@ -675,8 +675,8 @@ export class DriveService implements OnModuleInit {
 
     // Check file size limit before downloading - large files should use execute_code tool
     const storageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
-    const maxFileSizeMB = this.config.get<number>('drive.maxParseFileSizeMB') || 1;
-    const maxFileSizeBytes = maxFileSizeMB * 1024 * 1024;
+    const maxFileSizeKB = this.config.get<number>('drive.maxParseFileSizeKB') || 512;
+    const maxFileSizeBytes = maxFileSizeKB * 1024;
 
     let fileStat: ObjectInfo | undefined;
     try {
@@ -687,14 +687,13 @@ export class DriveService implements OnModuleInit {
     }
 
     if (fileStat && fileStat.size > maxFileSizeBytes) {
-      const fileSizeMB = Number((fileStat.size / 1024 / 1024).toFixed(2));
+      const fileSizeKB = Math.round(fileStat.size / 1024);
       this.logger.info(
-        `Drive file ${fileId} exceeds size limit: ${fileSizeMB}MB (checked via stat)`,
+        `Drive file ${fileId} exceeds size limit: ${fileSizeKB}KB > ${maxFileSizeKB}KB`,
       );
       throw new FileTooLargeError(
-        `File too large (${fileSizeMB}MB > ${maxFileSizeMB}MB limit)`,
-        fileSizeMB,
-        maxFileSizeMB,
+        'File exceeds size limit. Use execute_code tool to process this file.',
+        fileSizeKB,
       );
     }
 
