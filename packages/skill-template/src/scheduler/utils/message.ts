@@ -143,15 +143,57 @@ const hasCachePoint = (content: unknown): boolean => {
 };
 
 /**
- * Try to add cache point to a single message.
- * Returns the cached message if successful, or null if caching is not applicable.
+ * Remove cache point from message content array
+ * Returns a new content array without cachePoint items
  */
-const tryAddCachePoint = (message: BaseMessage): BaseMessage | null => {
-  // Skip if message already has a cache point
-  if (hasCachePoint(message.content)) {
-    return null;
+const removeCachePoint = (content: unknown): unknown => {
+  if (!Array.isArray(content)) return content;
+  return content.filter((item) => !(item && typeof item === 'object' && 'cachePoint' in item));
+};
+
+/**
+ * Remove cache point from a message and return a clean version
+ * Returns the original message if no cache point was present
+ */
+const stripCachePoint = (message: BaseMessage): BaseMessage => {
+  if (!hasCachePoint(message.content)) {
+    return message;
   }
 
+  const cleanContent = removeCachePoint(message.content);
+  const messageType = message._getType();
+
+  if (messageType === 'system') {
+    return new SystemMessage({
+      content: cleanContent,
+    } as BaseMessageFields);
+  }
+
+  if (messageType === 'human') {
+    return new HumanMessage({
+      content: cleanContent,
+    } as BaseMessageFields);
+  }
+
+  if (messageType === 'ai') {
+    const aiMessage = message as AIMessage;
+    return new AIMessage({
+      content: cleanContent,
+      tool_calls: aiMessage.tool_calls,
+      additional_kwargs: aiMessage.additional_kwargs,
+    } as BaseMessageFields);
+  }
+
+  // For other message types, return as-is
+  return message;
+};
+
+/**
+ * Try to add cache point to a single message.
+ * Returns the cached message if successful, or null if caching is not applicable.
+ * Note: Assumes cache points have been stripped from the message before calling.
+ */
+const tryAddCachePoint = (message: BaseMessage): BaseMessage | null => {
   const messageType = message._getType();
 
   if (messageType === 'system') {
@@ -275,8 +317,10 @@ const tryAddCachePoint = (message: BaseMessage): BaseMessage | null => {
 const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
   if (messages.length <= 1) return messages;
 
-  // Copy messages array to avoid mutation
-  const result = [...messages];
+  // First, strip all existing cache points to ensure clean state
+  // This prevents accumulation of cache points from previous iterations
+  const result = messages.map((msg) => stripCachePoint(msg));
+
   const maxDynamicCachePoints = 3;
   let dynamicCacheCount = 0;
 
@@ -291,15 +335,7 @@ const applyContextCaching = (messages: BaseMessage[]): BaseMessage[] => {
   // 2. Session Dynamic Points: Scan from end, try to cache up to 3 messages
   // Skip index 0 (system message already handled)
   for (let i = result.length - 1; i > 0 && dynamicCacheCount < maxDynamicCachePoints; i--) {
-    const message = result[i];
-
-    // Check if message already has a cache point (count it but don't add another)
-    if (hasCachePoint(message.content)) {
-      dynamicCacheCount++;
-      continue;
-    }
-
-    const cachedMessage = tryAddCachePoint(message);
+    const cachedMessage = tryAddCachePoint(result[i]);
     if (cachedMessage) {
       result[i] = cachedMessage;
       dynamicCacheCount++;
