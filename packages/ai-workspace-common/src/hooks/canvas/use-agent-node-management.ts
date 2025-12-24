@@ -6,6 +6,51 @@ import { CanvasNodeData, ResponseNodeMeta } from '@refly/canvas-common';
 import { purgeContextItems } from '@refly/canvas-common';
 import { useRealtimeCanvasData } from './use-realtime-canvas-data';
 
+// Hook for batch updating toolsetId across all canvas nodes
+export const useCanvasToolsetUpdater = () => {
+  const { nodes } = useRealtimeCanvasData();
+
+  const updateToolsetIdForAllNodes = useCallback(
+    (toolsetKey: string, newToolsetId: string) => {
+      // Find all skillResponse nodes that have the matching toolset
+      console.log('toolsetKey', toolsetKey);
+      console.log('nodes', nodes.length);
+      const nodesToUpdate = nodes.filter((node) => {
+        if (node.type === 'skillResponse' && node.data?.metadata) {
+          const metadata = node.data.metadata as ResponseNodeMeta;
+          console.log('selectedToolsets', metadata.selectedToolsets);
+          if (metadata.selectedToolsets && Array.isArray(metadata.selectedToolsets)) {
+            const selectedToolsets = metadata.selectedToolsets as GenericToolset[];
+            return selectedToolsets.some((toolset) => toolset.toolset?.key === toolsetKey);
+          }
+        }
+        return false;
+      });
+
+      // Emit events for each node to update itself using setSelectedToolsets
+      for (const node of nodesToUpdate) {
+        if (node.id) {
+          // Emit event for this specific node to update itself
+          setTimeout(() => {
+            import('@refly-packages/ai-workspace-common/events/toolset').then(
+              ({ toolsetEmitter }) => {
+                toolsetEmitter.emit('updateNodeToolset', {
+                  nodeId: node.id,
+                  toolsetKey,
+                  newToolsetId,
+                });
+              },
+            );
+          }, 0);
+        }
+      }
+    },
+    [nodes],
+  );
+
+  return { updateToolsetIdForAllNodes };
+};
+
 export const useAgentNodeManagement = (nodeId: string) => {
   const { nodesLookup } = useRealtimeCanvasData();
   const node = nodesLookup.get(nodeId);

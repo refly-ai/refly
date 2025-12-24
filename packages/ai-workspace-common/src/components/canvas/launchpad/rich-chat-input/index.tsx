@@ -4,7 +4,9 @@ import {
   createNodeEventName,
   nodeActionEmitter,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
+import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/toolset';
 import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
+import { useCanvasToolsetUpdater } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import type { IContextItem } from '@refly/common-types';
 import type { GenericToolset } from '@refly/openapi-schema';
@@ -95,6 +97,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const { query, setQuery, setContextItems, setSelectedToolsets } =
       useAgentNodeManagement(nodeId);
     const { connectToUpstreamAgent } = useAgentConnections();
+    const { updateToolsetIdForAllNodes } = useCanvasToolsetUpdater();
     const { data: workflowVariables } = useVariablesManagement(canvasId);
 
     const [isMentionListVisible, setIsMentionListVisible] = useState(false);
@@ -210,6 +213,65 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         }
       }
     }, [allItems, addToSelectedToolsets]);
+
+    // Listen for toolset installation events and trigger batch updates
+    useEffect(() => {
+      const handleToolsetInstalled = ({ toolset }: { toolset: any }) => {
+        // Update toolsetId for all nodes that have this toolset key
+        updateToolsetIdForAllNodes(toolset.key, toolset.toolsetId);
+      };
+
+      toolsetEmitter.on('toolsetInstalled', handleToolsetInstalled);
+
+      return () => {
+        toolsetEmitter.off('toolsetInstalled', handleToolsetInstalled);
+      };
+    }, [updateToolsetIdForAllNodes]);
+
+    // Listen for individual node toolset updates
+    useEffect(() => {
+      const handleUpdateNodeToolset = ({
+        nodeId: eventNodeId,
+        toolsetKey,
+        newToolsetId,
+      }: {
+        nodeId: string;
+        toolsetKey: string;
+        newToolsetId: string;
+      }) => {
+        // Only update if this event is for the current node
+        if (eventNodeId === nodeId) {
+          setSelectedToolsets((prevToolsets) => {
+            if (!Array.isArray(prevToolsets)) return prevToolsets;
+
+            const updatedToolsets = prevToolsets.map((toolset) => {
+              // Update toolsetId if the toolset key matches
+              if (toolset.toolset?.key === toolsetKey) {
+                return {
+                  ...toolset,
+                  id: newToolsetId,
+                  toolset: toolset.toolset
+                    ? {
+                        ...toolset.toolset,
+                        toolsetId: newToolsetId,
+                      }
+                    : toolset.toolset,
+                };
+              }
+              return toolset;
+            });
+
+            return updatedToolsets;
+          });
+        }
+      };
+
+      toolsetEmitter.on('updateNodeToolset', handleUpdateNodeToolset);
+
+      return () => {
+        toolsetEmitter.off('updateNodeToolset', handleUpdateNodeToolset);
+      };
+    }, [nodeId, setSelectedToolsets]);
 
     const addToUpstreamAgents = useCallback(
       (resultId: string) => {
