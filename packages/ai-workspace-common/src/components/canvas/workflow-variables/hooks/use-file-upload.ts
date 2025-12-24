@@ -52,13 +52,11 @@ export const useFileUpload = () => {
 
   const validateFileSize = useCallback(
     (file: File) => {
-      const { maxSize, category } = getFileCategoryAndLimit(file);
+      const { maxSize } = getFileCategoryAndLimit(file);
 
       if (maxSize > 0 && file.size > maxSize) {
-        const maxSizeMB = maxSize / (1024 * 1024);
-        message.error(
-          t('common.fileTooLarge') || `${category} file size exceeds ${maxSizeMB}MB limit`,
-        );
+        const maxSizeMB = `${maxSize / (1024 * 1024)}MB`;
+        message.error(t('resource.import.fileTooLarge', { size: maxSizeMB }));
         return false;
       }
       return true;

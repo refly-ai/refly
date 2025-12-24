@@ -233,7 +233,8 @@ export const WorkflowAPPForm = ({
 
   // Show editor when template content is available and status is completed or idle
   const shouldShowEditor =
-    !!effectiveTemplateContent && (templateStatus === 'completed' || templateStatus === 'idle');
+    !!effectiveTemplateContent &&
+    (templateStatus === 'completed' || templateStatus === 'idle' || templateStatus === 'failed');
 
   // Show form when:
   // 1. Failed and no content (explicit failure)
@@ -748,7 +749,12 @@ export const WorkflowAPPForm = ({
           name={name}
           rules={
             required
-              ? [{ required: true, message: t('canvas.workflow.variables.inputPlaceholder') }]
+              ? [
+                  {
+                    required: true,
+                    message: t('canvas.workflow.variables.inputPlaceholder'),
+                  },
+                ]
               : []
           }
           data-field-name={name}
@@ -773,7 +779,12 @@ export const WorkflowAPPForm = ({
           name={name}
           rules={
             required
-              ? [{ required: true, message: t('canvas.workflow.variables.selectPlaceholder') }]
+              ? [
+                  {
+                    required: true,
+                    message: t('canvas.workflow.variables.selectPlaceholder'),
+                  },
+                ]
               : []
           }
         >
@@ -799,7 +810,12 @@ export const WorkflowAPPForm = ({
           name={name}
           rules={
             required
-              ? [{ required: true, message: t('canvas.workflow.variables.uploadPlaceholder') }]
+              ? [
+                  {
+                    required: true,
+                    message: t('canvas.workflow.variables.uploadPlaceholder'),
+                  },
+                ]
               : []
           }
         >

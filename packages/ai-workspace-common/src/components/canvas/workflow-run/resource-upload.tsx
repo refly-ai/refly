@@ -9,7 +9,6 @@ import {
 } from '@refly-packages/ai-workspace-common/components/common/resource-icon';
 import { getFileExtension } from '../workflow-variables/utils';
 import {
-  FILE_SIZE_LIMITS,
   IMAGE_FILE_EXTENSIONS,
   DOCUMENT_FILE_EXTENSIONS,
   AUDIO_FILE_EXTENSIONS,
@@ -187,12 +186,14 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
             {resourceTypes.map((type, index) => (
               <span key={type}>
                 {index > 0 && '、'}
-                {t('canvas.workflow.variables.fileSizeLimit', {
-                  type: t(`canvas.workflow.variables.resourceType.${type}`),
-                  size: FILE_SIZE_LIMITS[type],
-                })}
+                {t(`canvas.workflow.variables.resourceType.${type}`)}
               </span>
             ))}
+            （
+            {t('canvas.workflow.variables.fileSizeLimit', {
+              size: 50, // 50MB
+            })}
+            ）
           </div>
         )}
       </div>

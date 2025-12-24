@@ -89,7 +89,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
+          fetch-depth: 0
+
+      - name: Ensure release branch exists
+        env:
+          RELEASE_BRANCH: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
+        run: |
+          echo "Checking if branch $RELEASE_BRANCH exists..."
+
+          # Check if branch exists remotely
+          if git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q "$RELEASE_BRANCH"; then
+            echo "Branch $RELEASE_BRANCH exists, checking out..."
+            git checkout "$RELEASE_BRANCH"
+          else
+            echo "Error: Release branch $RELEASE_BRANCH does not exist"
+            echo "Production deployment requires an existing release branch from staging"
+            exit 1
+          fi
 
       - name: Trigger API Production Deployment
         env:
@@ -112,7 +128,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
+          fetch-depth: 0
+
+      - name: Ensure release branch exists
+        env:
+          RELEASE_BRANCH: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
+        run: |
+          echo "Checking if branch $RELEASE_BRANCH exists..."
+
+          # Check if branch exists remotely
+          if git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q "$RELEASE_BRANCH"; then
+            echo "Branch $RELEASE_BRANCH exists, checking out..."
+            git checkout "$RELEASE_BRANCH"
+          else
+            echo "Error: Release branch $RELEASE_BRANCH does not exist"
+            echo "Production deployment requires an existing release branch from staging"
+            exit 1
+          fi
 
       - name: Trigger Web Production Deployment
         env:

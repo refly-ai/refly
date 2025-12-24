@@ -66,11 +66,11 @@ export const ACCEPT_FILE_EXTENSIONS = [
 ];
 
 export const FILE_SIZE_LIMITS = {
-  document: 20, // 20MB
-  image: 10, // 10MB
+  document: 50, // 50MB
+  image: 50, // 50MB
   audio: 50, // 50MB
-  video: 100, // 100MB
-  unknown: 100, // 100MB
+  video: 50, // 50MB
+  unknown: 50, // 50MB
 } as const;
 
 export const RESOURCE_TYPE = ['document', 'image', 'audio', 'video'] as VariableResourceType[];
