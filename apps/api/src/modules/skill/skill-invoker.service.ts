@@ -758,6 +758,9 @@ export class SkillInvokerService {
       const toolCallStartTimes: Map<string, number> = new Map();
       const llmCallStartTimes: Map<string, number> = new Map();
 
+      // Track Vertex AI cache tokens from custom events (workaround for LangChain not extracting cachedContentTokenCount)
+      const vertexCacheTokens: Map<string, number> = new Map();
+
       for await (const event of skill.streamEvents(input, {
         ...config,
         version: 'v2',
@@ -772,6 +775,22 @@ export class SkillInvokerService {
         lastOutputTime = Date.now();
         hasAnyOutput = true;
         switch (event.event) {
+          case 'on_custom_event': {
+            // Extract Vertex AI cache tokens from google-chunk custom events
+            // This is a workaround for LangChain not extracting cachedContentTokenCount
+            const customEventName = event.name;
+            if (customEventName?.includes('google-chunk')) {
+              const customData = (event as any).data;
+              const output = customData?.output;
+              const cachedTokenCount = output?.usageMetadata?.cachedContentTokenCount;
+
+              // Store the cached token count if it exists and is positive
+              if (cachedTokenCount && cachedTokenCount > 0 && event.run_id) {
+                vertexCacheTokens.set(event.run_id, cachedTokenCount);
+              }
+            }
+            break;
+          }
           case 'on_tool_end':
           case 'on_tool_error':
           case 'on_tool_start': {
@@ -1111,12 +1130,32 @@ export class SkillInvokerService {
               //   - cacheReadInputTokens (plural, with 's')
               //   - cacheReadInputTokensCount (legacy)
               // Anthropic (via LangChain) uses: input_token_details.cache_read
+              // Vertex AI: Note that @langchain/google-vertexai v2.1.2 does NOT extract
+              //   cachedContentTokenCount from Vertex AI responses.
               const bedrockUsage = responseMetadata?.metadata?.usage;
 
-              const inputTokens = usageMetadata?.input_tokens ?? 0;
-              const outputTokens = usageMetadata?.output_tokens ?? 0;
+              // Extract Vertex AI cached tokens from our workaround storage
+              // Important: Keep as undefined if not found, so ?? operator can fall through to Bedrock fields
+              const vertexCachedTokens = event.run_id
+                ? vertexCacheTokens.get(event.run_id)
+                : undefined;
+
+              const rawInputTokens = usageMetadata?.input_tokens ?? 0;
+              const rawOutputTokens = usageMetadata?.output_tokens ?? 0;
+
+              // For Vertex AI: promptTokenCount includes cached tokens
+              // So we need to subtract cache tokens to get the actual new input tokens
+              // Vertex AI semantics: promptTokenCount = cachedContentTokenCount + new input
+              // Our semantics (Bedrock-like): inputTokens = new input only, cacheReadTokens = cached
+              const inputTokens = vertexCachedTokens
+                ? rawInputTokens - vertexCachedTokens
+                : rawInputTokens;
+
+              const outputTokens = rawOutputTokens;
+
               const cacheReadTokens =
                 usageMetadata?.input_token_details?.cache_read ??
+                vertexCachedTokens ??
                 bedrockUsage?.cacheReadInputTokenCount ??
                 bedrockUsage?.cacheReadInputTokens ??
                 bedrockUsage?.cacheReadInputTokensCount ??
@@ -1127,6 +1166,11 @@ export class SkillInvokerService {
                 bedrockUsage?.cacheWriteInputTokens ??
                 bedrockUsage?.cacheWriteInputTokensCount ??
                 0;
+
+              // Clean up the cached token count after using it
+              if (event.run_id && vertexCachedTokens && vertexCachedTokens > 0) {
+                vertexCacheTokens.delete(event.run_id);
+              }
 
               // According to AWS Bedrock semantics (https://docs.aws.amazon.com/bedrock/latest/userguide/quotas-token-burndown.html):
               // - InputTokenCount: tokens that need to be processed by the model (billable at full rate)
