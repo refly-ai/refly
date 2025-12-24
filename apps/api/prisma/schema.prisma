@@ -1394,6 +1394,8 @@ model CreditRecharge {
   @@index([uid, createdAt])
   @@index([uid, enabled, createdAt])
   @@index([expiresAt, enabled])
+  @@index([uid, enabled, expiresAt]) // For querying available credits
+  @@index([uid, source, enabled]) // For checking existing gift/bonus records
   @@map("credit_recharges")
 }
 
