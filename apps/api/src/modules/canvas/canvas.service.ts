@@ -1341,6 +1341,31 @@ export class CanvasService {
       };
     }
 
+    // If only storageKey exists (no fileId), create a new DriveFile from the storageKey
+    if (resource.storageKey) {
+      try {
+        const driveFile = await this.driveService.createDriveFile(user, {
+          canvasId,
+          name: resource.name || 'uploaded_file',
+          storageKey: resource.storageKey,
+          source: 'variable',
+        });
+
+        return {
+          ...value,
+          resource: {
+            ...resource,
+            fileId: driveFile.fileId,
+          },
+        };
+      } catch (error) {
+        this.logger.warn(
+          `Failed to create DriveFile from storageKey ${resource.storageKey}: ${error?.message}`,
+        );
+        return value;
+      }
+    }
+
     return value;
   }
 
