@@ -11,6 +11,7 @@ export type ErrorNoticeType =
   | 'modelCallFailure'
   | 'toolCallFailure'
   | 'multimodalFailure'
+  | 'contentFiltering'
   | 'userAbort';
 
 interface BaseErrorNoticeProps {
@@ -39,7 +40,7 @@ interface CreditInsufficientProps extends BaseErrorNoticeProps {
 }
 
 interface ExecutionFailureProps extends BaseErrorNoticeProps {
-  errorType: 'modelCallFailure' | 'toolCallFailure' | 'multimodalFailure';
+  errorType: 'modelCallFailure' | 'toolCallFailure' | 'multimodalFailure' | 'contentFiltering';
   /** Custom retry button text, if not provided will use default translation */
   retryButtonText?: string;
   /** Custom click handler for retry button */
@@ -80,6 +81,7 @@ export const ErrorNotice: React.FC<ErrorNoticeProps> = React.memo((props) => {
       modelCallFailure: 'modelCallFailure',
       toolCallFailure: 'toolCallFailure',
       multimodalFailure: 'multimodalFailure',
+      contentFiltering: 'contentFiltering',
       userAbort: 'userAbort',
     };
     return `canvas.skillResponse.${typeMap[errorType]}.${key}`;

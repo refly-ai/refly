@@ -370,6 +370,9 @@ export class VoucherService implements OnModuleInit {
           const promoCode = await this.stripeClient.promotionCodes.create({
             coupon: stripeCoupon.stripeCouponId,
             max_redemptions: 1, // One-time use
+            restrictions: {
+              first_time_transaction: true, // Only for users who haven't made a purchase
+            },
             expires_at: Math.floor(input.expiresAt.getTime() / 1000), // Convert to Unix timestamp
             metadata: {
               voucherId,

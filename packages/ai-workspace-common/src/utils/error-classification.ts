@@ -11,6 +11,7 @@ import {
   EmbeddingNotConfiguredError,
   MediaProviderNotConfiguredError,
   MediaModelNotConfiguredError,
+  ContentFilteringError,
   // System errors
   UnknownError,
   ConnectionError,
@@ -56,7 +57,7 @@ import {
 /**
  * Types of execution failures that can be classified
  */
-export type FailureType = 'modelCall' | 'toolCall' | 'multimodal' | 'workflow';
+export type FailureType = 'modelCall' | 'toolCall' | 'multimodal' | 'workflow' | 'contentFiltering';
 
 /**
  * Classify error types based on error instances and error codes
@@ -120,6 +121,11 @@ export function classifyExecutionError(
     // Workflow-related errors
     if (error instanceof WorkflowExecutionNotFoundError) {
       return 'workflow';
+    }
+
+    // Content filtering errors
+    if (error instanceof ContentFilteringError) {
+      return 'contentFiltering';
     }
 
     // Action aborted could be any type, need more context
@@ -189,6 +195,11 @@ export function classifyExecutionError(
  * Classify error by error code
  */
 function classifyByErrorCode(errorCode: string): FailureType | null {
+  // Content filtering error - must check before E30xx pattern
+  if (errorCode === 'E3007') {
+    return 'contentFiltering';
+  }
+
   // Model provider errors (E3xxx)
   if (errorCode.startsWith('E30')) {
     return 'modelCall';
@@ -285,6 +296,22 @@ function classifyByErrorCode(errorCode: string): FailureType | null {
  */
 function classifyByErrorMessage(errorMessage: string): FailureType | null {
   const lowerMessage = errorMessage.toLowerCase();
+
+  // Content filtering keywords - check first as they are specific
+  if (
+    lowerMessage.includes('content filtering') ||
+    lowerMessage.includes('content filter') ||
+    lowerMessage.includes('output blocked') ||
+    lowerMessage.includes('blocked by') ||
+    lowerMessage.includes('safety filter') ||
+    lowerMessage.includes('content policy') ||
+    lowerMessage.includes('content moderation') ||
+    lowerMessage.includes('harmful content') ||
+    lowerMessage.includes('violates') ||
+    lowerMessage.includes('inappropriate content')
+  ) {
+    return 'contentFiltering';
+  }
 
   // Model-related keywords
   if (

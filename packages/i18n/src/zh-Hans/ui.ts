@@ -1727,6 +1727,11 @@ const translations = {
         description: '生成失败，请稍后重试或更换模型。',
         retryButton: '重试',
       },
+      contentFiltering: {
+        title: '内容被过滤',
+        description: '您输入的内容包含敏感信息，请修改后重试',
+        retryButton: '重试',
+      },
       userAbort: {
         title: '任务已停止',
         description: '此任务已被手动终止。',

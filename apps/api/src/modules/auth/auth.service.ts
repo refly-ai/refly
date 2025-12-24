@@ -589,6 +589,10 @@ export class AuthService {
   }
 
   async checkVerification({ sessionId, code }: CheckVerificationRequest) {
+    if (!sessionId) {
+      throw new InvalidVerificationSession();
+    }
+
     const verification = await this.prisma.verificationSession.findUnique({
       where: { sessionId, expiresAt: { gt: new Date() } },
     });

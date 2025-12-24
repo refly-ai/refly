@@ -423,6 +423,14 @@ export class FileTooLargeError extends BaseError {
   }
 }
 
+export class ContentFilteringError extends BaseError {
+  code = 'E3007';
+  messageDict = {
+    en: 'The content you entered contains sensitive information. Please revise and try again.',
+    'zh-CN': '您输入的内容包含敏感信息，请修改后重试',
+  };
+}
+
 // Create a mapping of error codes to error classes
 const errorMap = {
   E0000: UnknownError,
@@ -477,6 +485,7 @@ const errorMap = {
   E3004: ActionAborted,
   E3005: DuplicationNotAllowedError,
   E3006: FileTooLargeError,
+  E3007: ContentFilteringError,
 };
 
 export function getErrorMessage(code: string, locale: string): string {

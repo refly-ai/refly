@@ -1586,6 +1586,12 @@ const translations = {
         description: 'Generation failed, please try again later or switch to another model.',
         retryButton: 'Retry',
       },
+      contentFiltering: {
+        title: 'Content Blocked',
+        description:
+          'The content you entered contains sensitive information. Please revise and try again.',
+        retryButton: 'Retry',
+      },
       userAbort: {
         title: 'Task Stopped',
         description: 'This task has been manually terminated.',

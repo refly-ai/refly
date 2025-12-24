@@ -3,7 +3,11 @@ import { ActionResult } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import { useSkillError } from '@refly-packages/ai-workspace-common/hooks/use-skill-error';
 import { useUserMembership } from '@refly-packages/ai-workspace-common/hooks/use-user-membership';
-import { guessModelProviderError, ModelUsageQuotaExceeded } from '@refly/errors';
+import {
+  guessModelProviderError,
+  ModelUsageQuotaExceeded,
+  ContentFilteringError,
+} from '@refly/errors';
 import { useGetCreditBalance } from '@refly-packages/ai-workspace-common/queries';
 import { useSubscriptionStoreShallow } from '@refly/stores';
 import { ErrorNotice } from '@refly-packages/ai-workspace-common/components/common/error-notice';
@@ -60,6 +64,9 @@ export const FailureNotice = ({ result, handleRetry }: FailureNoticeProps) => {
   const isCreditInsufficient =
     error instanceof ModelUsageQuotaExceeded && creditBalance <= 0 && isBalanceSuccess;
 
+  // Check if this is a content filtering error
+  const isContentFiltering = error instanceof ContentFilteringError;
+
   if (isCreditInsufficient) {
     return (
       <ErrorNotice
@@ -67,6 +74,19 @@ export const FailureNotice = ({ result, handleRetry }: FailureNoticeProps) => {
         errorType="creditInsufficient"
         membershipLevel={displayName}
         onUpgradeClick={handleSubscriptionClick}
+        trackingContext="skill_invoke"
+        className="mt-2"
+      />
+    );
+  }
+
+  // Handle content filtering error - show specific message without retry
+  if (isContentFiltering) {
+    return (
+      <ErrorNotice
+        result={result}
+        errorType="contentFiltering"
+        onRetryClick={handleRetry}
         trackingContext="skill_invoke"
         className="mt-2"
       />
@@ -83,6 +103,8 @@ export const FailureNotice = ({ result, handleRetry }: FailureNoticeProps) => {
           return 'toolCallFailure';
         case 'multimodal':
           return 'multimodalFailure';
+        case 'contentFiltering':
+          return 'contentFiltering';
         default:
           return 'modelCallFailure'; // fallback
       }
