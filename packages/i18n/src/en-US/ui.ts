@@ -1442,7 +1442,7 @@ const translations = {
         resourceLibrary: 'Resource Library',
         viewAndEdit: 'View',
         acceptResourceTypes: 'Accept Resource Types: ',
-        fileSizeLimit: '{{type}}(less than {{size}}M)',
+        fileSizeLimit: 'The maximum file size for uploads is {{size}}MB',
         unsupportedFileType: 'Unsupported file type: {{type}}',
         replaceFile: 'Replace File',
         duplicateFileName: 'File with the same name already exists, please replace the file',
@@ -2032,7 +2032,7 @@ const translations = {
       supportedFiles: 'Supported Files: {{formats}}.',
       fileUploadLimit: 'Limit for each file: {{size}}',
       unlockUploadLimit: 'Unlock upload limit',
-      fileTooLarge: 'File size cannot exceed {{size}}',
+      fileTooLarge: 'The maximum file size for uploads is {{size}}',
       fileParsingUsage:
         'Advanced file parsing (including PDF): {{used}}/{{limit}} pages used today',
       fileSizeLimit: 'Maximum upload size: {{size}}',
