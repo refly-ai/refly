@@ -31,7 +31,7 @@ function renderNodeIcon(source: MentionItemSource, variableType: string, nodeAtt
   if (source === 'toolsets' || source === 'tools') {
     return (
       <ToolsetIcon
-        toolsetKey={nodeAttrs?.id}
+        toolsetKey={nodeAttrs?.toolsetId}
         toolset={nodeAttrs?.toolset}
         config={TOOLSET_ICON_CONFIG}
       />
