@@ -14,6 +14,7 @@ interface FileInputProps {
   accept?: string;
   isDefaultValue?: boolean; // Whether this is a default value
   isModified?: boolean; // Whether the value has been modified by user
+  onUploadingChange?: (uploading: boolean) => void; // Callback when uploading state changes
 }
 
 // Loading dots animation component
@@ -71,6 +72,7 @@ const FileInput: React.FC<FileInputProps> = memo(
     accept = '*',
     isDefaultValue = false,
     isModified = false,
+    onUploadingChange,
   }) => {
     const { t } = useTranslation();
     const [isHovered, setIsHovered] = useState(false);
@@ -83,6 +85,7 @@ const FileInput: React.FC<FileInputProps> = memo(
       async (file: File) => {
         try {
           setUploading(true);
+          onUploadingChange?.(true);
           // Upload file and get storageKey
           const result = await uploadFile(file, []);
 
@@ -99,9 +102,10 @@ const FileInput: React.FC<FileInputProps> = memo(
           console.error('File upload failed:', error);
         } finally {
           setUploading(false);
+          onUploadingChange?.(false);
         }
       },
-      [onChange, uploadFile],
+      [onChange, uploadFile, onUploadingChange],
     );
 
     const handleMouseEnter = useCallback(() => {

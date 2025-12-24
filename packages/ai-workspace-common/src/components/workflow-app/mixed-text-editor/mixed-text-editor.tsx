@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo, useRef, useEffect } from 'react';
 import { MixedTextEditorProps, TextSegment } from './types';
 import VariableInput from './variable-input';
 import FileInput from './file-input';
@@ -14,8 +14,34 @@ const MixedTextEditor: React.FC<MixedTextEditorProps> = memo(
     className = '',
     disabled = false,
     originalVariables = [] as WorkflowVariable[],
+    onUploadingChange,
   }) => {
     const { t } = useTranslation();
+    // Track uploading state for multiple file inputs
+    const uploadingFilesRef = useRef<Set<string>>(new Set());
+
+    // Callback for individual FileInput uploading state changes
+    const handleFileUploadingChange = useCallback(
+      (fileId: string, uploading: boolean) => {
+        if (uploading) {
+          uploadingFilesRef.current.add(fileId);
+        } else {
+          uploadingFilesRef.current.delete(fileId);
+        }
+        // Notify parent about overall uploading state
+        onUploadingChange?.(uploadingFilesRef.current.size > 0);
+      },
+      [onUploadingChange],
+    );
+
+    // Reset uploading state when component unmounts
+    useEffect(() => {
+      return () => {
+        if (uploadingFilesRef.current.size > 0) {
+          onUploadingChange?.(false);
+        }
+      };
+    }, [onUploadingChange]);
     // Parse template content to extract variables and text segments
     const segments = useMemo((): TextSegment[] => {
       const segments: TextSegment[] = [];
@@ -167,17 +193,19 @@ const MixedTextEditor: React.FC<MixedTextEditorProps> = memo(
 
             if (segment.variable?.variableType === 'resource') {
               const currentFile = segment.variable.value?.[0]?.resource;
+              const fileId = segment.id || `file-${index}`;
 
               return (
                 <FileInput
                   key={`${segment.id}-${index}`}
-                  id={segment.id || ''}
+                  id={fileId}
                   value={currentFile}
                   placeholder={segment.variable?.name || segment.placeholder}
                   onChange={(value) => handleVariableChange(segment.id || '', value)}
                   disabled={disabled}
                   isDefaultValue={segment.isDefaultValue}
                   isModified={segment.isModified}
+                  onUploadingChange={(uploading) => handleFileUploadingChange(fileId, uploading)}
                 />
               );
             }

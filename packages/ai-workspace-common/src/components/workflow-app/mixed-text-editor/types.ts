@@ -17,6 +17,7 @@ export interface MixedTextEditorProps {
   className?: string;
   disabled?: boolean;
   originalVariables?: WorkflowVariable[]; // Original variable values for state comparison
+  onUploadingChange?: (uploading: boolean) => void; // Callback when any file is uploading
 }
 
 export interface VariableInputProps {
