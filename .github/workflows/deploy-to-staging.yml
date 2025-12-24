@@ -6,6 +6,7 @@ on:
 permissions:
   id-token: write
   contents: write
+  actions: write
 
 jobs:
   prepare-staging-deploy:
@@ -101,7 +102,7 @@ jobs:
 
       - name: Trigger API Staging Deployment
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
           RELEASE_BRANCH: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
         run: |
           echo "Triggering deploy-api-staging workflow on branch $RELEASE_BRANCH..."
@@ -141,7 +142,7 @@ jobs:
 
       - name: Trigger Web Staging Deployment
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
           RELEASE_BRANCH: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
         run: |
           echo "Triggering deploy-web-staging workflow on branch $RELEASE_BRANCH..."
