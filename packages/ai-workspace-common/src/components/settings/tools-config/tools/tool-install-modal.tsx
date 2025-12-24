@@ -524,8 +524,6 @@ export const ToolInstallModal = React.memo(
           return;
         }
 
-        console.log('toolsetItem:', response.data.data);
-
         refetchToolsOnUpdate();
         onSuccess?.();
         onToolInstallSuccess?.(response.data.data);
