@@ -1442,7 +1442,7 @@ const translations = {
         resourceLibrary: 'Resource Library',
         viewAndEdit: 'View',
         acceptResourceTypes: 'Accept Resource Types: ',
-        fileSizeLimit: 'The maximum file size for uploads is {{size}}MB',
+        fileSizeLimit: 'file size ≤ {{size}}MB',
         unsupportedFileType: 'Unsupported file type: {{type}}',
         replaceFile: 'Replace File',
         duplicateFileName: 'File with the same name already exists, please replace the file',
