@@ -24,7 +24,8 @@ import { extractToolsetsWithNodes } from '@refly/canvas-common';
  */
 const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): boolean => {
   if (toolset.type === 'mcp') {
-    return userTools.some((t) => t.toolset?.name === toolset.name);
+    const isAuthorized = userTools.some((t) => t.toolset?.name === toolset.name);
+    return isAuthorized;
   }
 
   if (toolset.builtin) {
@@ -36,7 +37,8 @@ const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): bo
     return false;
   }
 
-  return matchingUserTool.authorized ?? false;
+  const isAuthorized = matchingUserTool.authorized ?? false;
+  return isAuthorized;
 };
 
 interface SkillResponseActionsProps {
@@ -73,9 +75,10 @@ const SkillResponseActionsComponent = ({
   const isLogin = !!userProfile?.uid;
   const nodeToolsets = Array.isArray(selectedToolsets) ? selectedToolsets : [];
   const hasNodeToolsets = nodeToolsets.some((toolset) => toolset?.id && toolset.id !== 'empty');
-  const shouldCheckUserTools =
-    variant !== 'preview' && (!!onRerunFromHere || (!!onRerun && hasNodeToolsets));
-  const shouldCheckCanvasTools = variant !== 'preview' && !!onRerunFromHere;
+  const shouldCheckUserTools = !!onRerunFromHere || (!!onRerun && hasNodeToolsets);
+  const shouldCheckCanvasTools =
+    !!onRerunFromHere || (variant === 'preview' && !!onRerun && !hasNodeToolsets);
+
   const { setToolsDependencyOpen, setToolsDependencyHighlight } =
     useCanvasResourcesPanelStoreShallow((state) => ({
       setToolsDependencyOpen: state.setToolsDependencyOpen,
@@ -165,12 +168,15 @@ const SkillResponseActionsComponent = ({
       return false;
     }
 
-    const missingCount = nodeToolsets.filter((toolset) => {
+    const missingToolsets = nodeToolsets.filter((toolset) => {
       if (!toolset?.id || toolset.id === 'empty') {
         return false;
       }
-      return !isToolsetAuthorized(toolset, userTools);
-    }).length;
+      const isAuthorized = isToolsetAuthorized(toolset, userTools);
+      return !isAuthorized;
+    });
+
+    const missingCount = missingToolsets.length;
 
     if (missingCount <= 0) {
       return false;
@@ -271,7 +277,15 @@ const SkillResponseActionsComponent = ({
       if (nodeIsExecuting) {
         handleStopClick(e);
       } else {
-        const blocked = await checkAndOpenNodeToolsDependency();
+        let blocked = false;
+
+        // In preview mode, if we don't have node toolsets but have onRerun, check workflow-level tools
+        if (variant === 'preview' && !hasNodeToolsets && onRerun) {
+          blocked = await checkAndOpenToolsDependency();
+        } else {
+          blocked = await checkAndOpenNodeToolsDependency();
+        }
+
         if (blocked) {
           return;
         }
