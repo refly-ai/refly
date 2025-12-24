@@ -13,15 +13,18 @@ export const useCanvasToolsetUpdater = () => {
   const updateToolsetIdForAllNodes = useCallback(
     (toolsetKey: string, newToolsetId: string) => {
       // Find all skillResponse nodes that have the matching toolset
-      console.log('toolsetKey', toolsetKey);
-      console.log('nodes', nodes.length);
+
       const nodesToUpdate = nodes.filter((node) => {
         if (node.type === 'skillResponse' && node.data?.metadata) {
           const metadata = node.data.metadata as ResponseNodeMeta;
-          console.log('selectedToolsets', metadata.selectedToolsets);
+
           if (metadata.selectedToolsets && Array.isArray(metadata.selectedToolsets)) {
             const selectedToolsets = metadata.selectedToolsets as GenericToolset[];
-            return selectedToolsets.some((toolset) => toolset.toolset?.key === toolsetKey);
+            const hasMatchingToolset = selectedToolsets.some((toolset) => {
+              const match = toolset.toolset?.key === toolsetKey;
+              return match;
+            });
+            return hasMatchingToolset;
           }
         }
         return false;
@@ -32,15 +35,13 @@ export const useCanvasToolsetUpdater = () => {
         if (node.id) {
           // Emit event for this specific node to update itself
           setTimeout(() => {
-            import('@refly-packages/ai-workspace-common/events/toolset').then(
-              ({ toolsetEmitter }) => {
-                toolsetEmitter.emit('updateNodeToolset', {
-                  nodeId: node.id,
-                  toolsetKey,
-                  newToolsetId,
-                });
-              },
-            );
+            import('../../events/toolset').then(({ toolsetEmitter }) => {
+              toolsetEmitter.emit('updateNodeToolset', {
+                nodeId: node.id,
+                toolsetKey,
+                newToolsetId,
+              });
+            });
           }, 0);
         }
       }
