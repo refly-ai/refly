@@ -48,6 +48,15 @@ export const selectAutoModel = (): string | null => {
 };
 
 /**
+ * Get auto model trial count threshold from environment variable
+ * @returns Number of trial requests for new users (default: 20)
+ */
+export const getAutoModelTrialCount = (): number => {
+  const trialCount = Number.parseInt(process.env.AUTO_MODEL_TRIAL_COUNT || '20', 10);
+  return Number.isNaN(trialCount) ? 20 : trialCount;
+};
+
+/**
  * Tool-based routing configuration
  */
 export interface ToolBasedRoutingConfig {

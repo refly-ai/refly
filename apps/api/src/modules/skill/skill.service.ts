@@ -67,6 +67,7 @@ import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
 import { DriveService } from '../drive/drive.service';
 import { AutoModelRoutingService, RoutingContext } from '../provider/auto-model-router.service';
+import { AutoModelTrialService } from '../provider/auto-model-trial.service';
 import { getTracer } from '@refly/observability';
 import { propagation, context, trace, SpanStatusCode } from '@opentelemetry/api';
 
@@ -111,6 +112,7 @@ export class SkillService implements OnModuleInit {
     private readonly skillInvokerService: SkillInvokerService,
     private readonly actionService: ActionService,
     private readonly autoModelRoutingService: AutoModelRoutingService,
+    private readonly autoModelTrialService: AutoModelTrialService,
     @Optional()
     @InjectQueue(QUEUE_SKILL)
     private skillQueue?: Queue<InvokeSkillJobData>,
@@ -494,6 +496,9 @@ export class SkillService implements OnModuleInit {
     // Auto model routing
     const llmItems = await this.providerService.findProviderItemsByCategory(user, 'llm');
 
+    // Check if user is in auto model trial period
+    const trialStatus = await this.autoModelTrialService.checkAndUpdateTrialStatus(user.uid);
+
     // Build RoutingContext with rich context information for rule-based routing
     const routingContext: RoutingContext = {
       llmItems,
@@ -503,6 +508,7 @@ export class SkillService implements OnModuleInit {
       mode: param.mode,
       inputPrompt: param.input?.query,
       toolsets: param.toolsets,
+      inAutoModelTrial: trialStatus.inTrial,
     };
 
     // Use rule-based router service for routing decisions
