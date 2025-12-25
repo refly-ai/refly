@@ -101,10 +101,11 @@ export class KubectlProxySingleton {
     }
   }
 
-  getProxyUrl(host: string, port: number, path: string): string {
+  getProxyUrl(host: string, port: number, path: string, proxyEnabled?: boolean): string {
     const config = this.getConfig();
+    const enabled = proxyEnabled !== undefined ? proxyEnabled : config.enabled;
 
-    if (!config.enabled) {
+    if (!enabled) {
       return `http://${host}:${port}${path}`;
     }
 

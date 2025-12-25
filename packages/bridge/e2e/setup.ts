@@ -12,6 +12,7 @@ export async function setupBridge() {
   process.env.BRIDGE_KUBECTL_PROXY_ENABLED = 'true';
   process.env.BRIDGE_KUBECTL_PROXY_PORT = '18001';
   process.env.BRIDGE_K8S_NAMESPACE = 'test-env';
+  process.env.BRIDGE_SVC_SUFFIX = '.test-env.svc.cluster.local';
 }
 
 /**

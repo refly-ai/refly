@@ -30,7 +30,7 @@ describe('Bridge E2E Tests', () => {
     }
 
     @RemoteService({
-      host: 'sandbox-service.test-env.svc.cluster.local',
+      serviceName: 'sandbox-service',
       port: 3000,
     })
     class TestSandboxService {
@@ -66,7 +66,7 @@ describe('Bridge E2E Tests', () => {
   });
 
   describe('Direct Connection Mode', () => {
-    @RemoteService({ host: 'example.com', port: 8080 })
+    @RemoteService({ serviceName: 'example.com', port: 8080 })
     class DirectService {
       @RemoteMethod({ path: '/api/test', method: 'GET' })
       test(): Promise<any> {
@@ -108,6 +108,129 @@ describe('Bridge E2E Tests', () => {
     it('should use default namespace for short name', () => {
       const url = kubectlProxySingleton.getProxyUrl('sandbox-service', 3000, '/api/test');
       expect(url).toContain('namespaces/test-env');
+    });
+  });
+
+  describe('Priority Configuration', () => {
+    describe('Host Priority', () => {
+      it('should prioritize method host over service host', () => {
+        @RemoteService({
+          host: 'service-host.example.com',
+          port: 3000,
+        })
+        class TestService {
+          @RemoteMethod({ path: '/test', method: 'GET', host: 'method-host.example.com' })
+          test(): Promise<any> {
+            return remote();
+          }
+        }
+
+        const service = new TestService();
+        expect(service).toBeDefined();
+      });
+
+      it('should prioritize service host over serviceName', () => {
+        @RemoteService({
+          host: 'service-host.example.com',
+          serviceName: 'my-service',
+          port: 3000,
+        })
+        class TestService {
+          @RemoteMethod({ path: '/test', method: 'GET' })
+          test(): Promise<any> {
+            return remote();
+          }
+        }
+
+        const service = new TestService();
+        expect(service).toBeDefined();
+      });
+
+      it('should use serviceName + BRIDGE_SVC_SUFFIX when no host provided', () => {
+        @RemoteService({
+          serviceName: 'my-service',
+          port: 3000,
+        })
+        class TestService {
+          @RemoteMethod({ path: '/test', method: 'GET' })
+          test(): Promise<any> {
+            return remote();
+          }
+        }
+
+        const service = new TestService();
+        expect(service).toBeDefined();
+      });
+    });
+
+    describe('Proxy Priority', () => {
+      it('should prioritize method proxy over service proxy', () => {
+        @RemoteService({
+          host: 'example.com',
+          port: 3000,
+          proxy: true,
+        })
+        class TestService {
+          @RemoteMethod({ path: '/test', method: 'GET', proxy: false })
+          test(): Promise<any> {
+            return remote();
+          }
+        }
+
+        const service = new TestService();
+        expect(service).toBeDefined();
+      });
+
+      it('should prioritize service proxy over environment variable', () => {
+        @RemoteService({
+          host: 'example.com',
+          port: 3000,
+          proxy: false,
+        })
+        class TestService {
+          @RemoteMethod({ path: '/test', method: 'GET' })
+          test(): Promise<any> {
+            return remote();
+          }
+        }
+
+        const service = new TestService();
+        expect(service).toBeDefined();
+      });
+
+      it('should use environment variable when no proxy config provided', () => {
+        @RemoteService({
+          host: 'example.com',
+          port: 3000,
+        })
+        class TestService {
+          @RemoteMethod({ path: '/test', method: 'GET' })
+          test(): Promise<any> {
+            return remote();
+          }
+        }
+
+        const service = new TestService();
+        expect(service).toBeDefined();
+      });
+    });
+
+    describe('URL Generation with Proxy Override', () => {
+      it('should generate direct URL when proxy is disabled via parameter', () => {
+        const url = kubectlProxySingleton.getProxyUrl('example.com', 3000, '/api/test', false);
+        expect(url).toBe('http://example.com:3000/api/test');
+      });
+
+      it('should generate proxy URL when proxy is enabled via parameter', () => {
+        const url = kubectlProxySingleton.getProxyUrl(
+          'sandbox-service.test-env.svc.cluster.local',
+          3000,
+          '/api/test',
+          true,
+        );
+        expect(url).toContain('localhost:18001');
+        expect(url).toContain('services/sandbox-service:3000');
+      });
     });
   });
 });

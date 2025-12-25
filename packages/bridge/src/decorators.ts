@@ -8,13 +8,17 @@ export const REMOTE_SERVICE_CONFIG = Symbol('RemoteServiceConfig');
 export const REMOTE_METHOD_META = Symbol('RemoteMethodMeta');
 
 export interface RemoteServiceConfig {
-  host: string;
+  host?: string;
+  serviceName?: string;
   port: number;
+  proxy?: boolean;
 }
 
 export interface RemoteMethodMeta {
   path: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  host?: string;
+  proxy?: boolean;
 }
 
 export function remote(): never {
@@ -52,12 +56,40 @@ export function RemoteMethod(meta: RemoteMethodMeta) {
     descriptor.value = async function (this: any, ...args: any[]) {
       const serviceConfig = extractServiceConfig(target, propertyKey);
 
-      await kubectlProxySingleton.ensureRunning();
+      let host: string;
+      if (meta.host) {
+        host = meta.host;
+      } else if (serviceConfig.host) {
+        host = serviceConfig.host;
+      } else if (serviceConfig.serviceName) {
+        const svcSuffix = process.env.BRIDGE_SVC_SUFFIX || '';
+        host = `${serviceConfig.serviceName}${svcSuffix}`;
+      } else {
+        throw new RemoteMethodError(
+          'No host configuration found. Provide either host, serviceName in @RemoteService, or host in @RemoteMethod',
+          {
+            className: target.constructor.name,
+            methodName: String(propertyKey),
+          },
+        );
+      }
+
+      const proxyEnabled =
+        meta.proxy !== undefined
+          ? meta.proxy
+          : serviceConfig.proxy !== undefined
+            ? serviceConfig.proxy
+            : process.env.BRIDGE_KUBECTL_PROXY_ENABLED === 'true';
+
+      if (proxyEnabled) {
+        await kubectlProxySingleton.ensureRunning();
+      }
 
       const url = kubectlProxySingleton.getProxyUrl(
-        serviceConfig.host,
+        host,
         serviceConfig.port,
         meta.path,
+        proxyEnabled,
       );
 
       const response = await instance.request({

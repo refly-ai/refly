@@ -8,6 +8,7 @@
     "build": "tsc",
     "test": "vitest run",
     "test:e2e": "vitest run e2e",
+    "test:k8s": "vitest run e2e/k8s.spec.ts --no-coverage",
     "test:watch": "vitest watch",
     "clean": "rimraf dist"
   },
