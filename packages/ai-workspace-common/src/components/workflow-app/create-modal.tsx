@@ -59,13 +59,15 @@ const SuccessMessage = memo(({ shareId, onClose }: SuccessMessageProps) => {
     onClose?.();
   }, [onClose]);
 
-  // Auto copy link when component mounts
+  // Attempt auto-copy on mount (best-effort, may fail due to browser security restrictions)
+  // If it fails, user can still use the copy button
   useEffect(() => {
     if (shareLink) {
-      // Fire and forget; internal function handles errors and success flag
+      // Attempt copy silently - if it fails, the button is still available
       void handleCopy();
     }
-  }, [shareLink, handleCopy]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareLink]);
 
   return (
     <div className="flex items-center gap-2">
@@ -508,11 +510,11 @@ export const CreateWorkflowAppModal = ({
       if (data?.success && shareId) {
         const workflowAppLink = getShareLink('workflowApp', shareId);
 
-        // Copy to clipboard immediately after creation
-        const copied = await copyToClipboard(workflowAppLink).catch(() => false);
-        if (!copied) {
-          message.error('Failed to copy link to clipboard');
-        }
+        // Attempt auto-copy (best-effort, may fail due to browser security restrictions)
+        // If it fails silently, user can still use the copy button in SuccessMessage
+        void copyToClipboard(workflowAppLink).catch(() => {
+          // Silent failure - the SuccessMessage component provides a copy button as fallback
+        });
 
         setVisible(false);
 

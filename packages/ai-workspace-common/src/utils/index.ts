@@ -14,12 +14,32 @@ export const genUniqueId = () => {
 };
 
 /**
+ * Attempt to restore window/document focus before clipboard operations.
+ * This improves success rate when the page may have lost focus.
+ */
+function tryRestoreFocus(): void {
+  try {
+    // Only attempt focus restoration if document doesn't have focus
+    if (typeof document !== 'undefined' && !document.hasFocus()) {
+      // Try to regain window focus
+      window?.focus?.();
+    }
+  } catch {
+    // Ignore focus restoration errors
+  }
+}
+
+/**
  * Copy plain text to system clipboard with best-effort fallbacks.
+ * Includes focus restoration attempts to improve success rate after async operations.
  *
  * Returns true when the copy operation is believed to have succeeded,
  * otherwise returns false.
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
+  // Attempt to restore focus before clipboard operations
+  tryRestoreFocus();
+
   // Prefer modern async clipboard API when available
   try {
     const hasNavigator = typeof navigator !== 'undefined';
@@ -51,7 +71,38 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     const hasDocument = typeof document !== 'undefined';
     if (!hasDocument) return false;
 
-    // Attempt 'copy' event approach first (works in some Safari cases)
+    // Try focus restoration again before legacy approach
+    tryRestoreFocus();
+
+    // Fallback: use a temporary textarea selection (most reliable legacy approach)
+    const textarea = document.createElement('textarea');
+    textarea.value = text ?? '';
+    textarea.setAttribute('readonly', '');
+    // Position off-screen but still selectable
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    textarea.style.left = '-9999px';
+    textarea.style.opacity = '0';
+    textarea.style.pointerEvents = 'none';
+    // Prevent zoom on iOS
+    textarea.style.fontSize = '16px';
+
+    document.body.appendChild(textarea);
+
+    // Force focus and selection
+    textarea.focus({ preventScroll: true });
+    textarea.select();
+    // Ensure full selection on iOS
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    const successful = document.execCommand ? document.execCommand('copy') : false;
+    document.body.removeChild(textarea);
+
+    if (successful) {
+      return true;
+    }
+
+    // Last resort: try 'copy' event approach (works in some Safari cases)
     let copySucceeded = false;
     const onCopy = (e: ClipboardEvent) => {
       try {
@@ -59,34 +110,14 @@ export async function copyToClipboard(text: string): Promise<boolean> {
         e.preventDefault();
         copySucceeded = true;
       } catch {
-        // Ignore and continue to textarea approach
+        // Ignore
       }
     };
     document.addEventListener('copy', onCopy);
-    // execCommand returns boolean in some browsers
-    const execCopySupported = document.execCommand?.('copy');
+    document.execCommand?.('copy');
     document.removeEventListener('copy', onCopy);
-    if (execCopySupported && copySucceeded) {
-      return true;
-    }
 
-    // Fallback: use a temporary textarea selection
-    const textarea = document.createElement('textarea');
-    textarea.value = text ?? '';
-    textarea.setAttribute('readonly', '');
-    textarea.style.position = 'fixed';
-    textarea.style.top = '0';
-    textarea.style.left = '0';
-    textarea.style.opacity = '0';
-    textarea.style.pointerEvents = 'none';
-
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-
-    const successful = document.execCommand ? document.execCommand('copy') : false;
-    document.body.removeChild(textarea);
-    return !!successful;
+    return copySucceeded;
   } catch {
     // As a last resort, report failure
     return false;
