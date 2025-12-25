@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import mime from 'mime';
 import {
   User,
@@ -8,6 +8,7 @@ import {
   CanvasNode,
   MediaGenerationResult,
 } from '@refly/openapi-schema';
+import { PinoLogger } from 'nestjs-pino';
 
 import { PrismaService } from '../common/prisma.service';
 import { ProviderService } from '../provider/provider.service';
@@ -20,7 +21,7 @@ import { DriveService } from '../drive/drive.service';
 
 @Injectable()
 export class MediaGeneratorService {
-  private readonly logger = new Logger(MediaGeneratorService.name);
+  // private readonly logger = new Logger(MediaGeneratorService.name);
 
   // Timeout configurations for different media types (in milliseconds)
   private readonly timeoutConfig = {
@@ -36,7 +37,10 @@ export class MediaGeneratorService {
     private readonly prisma: PrismaService,
     private readonly driveService: DriveService,
     private readonly providerService: ProviderService,
-  ) {}
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(MediaGeneratorService.name);
+  }
 
   /**
    * Validate that the provided model and providerItemId are compatible with the requested media type
@@ -116,14 +120,13 @@ export class MediaGeneratorService {
       );
 
       if (!userMediaConfig) {
-        this.logger.warn(
-          `No media generation model configured for ${mediaType} for user ${user.uid}`,
-        );
+        this.logger.warn({ mediaType, uid: user.uid }, 'No media generation model configured.');
         return null;
       }
 
-      this.logger.log(
-        `Using user's default ${mediaType} model: ${userMediaConfig.model} from provider: ${userMediaConfig.provider}`,
+      this.logger.info(
+        { mediaType, model: userMediaConfig.model, provider: userMediaConfig.provider },
+        "Using user's default model from provider.",
       );
 
       return {
@@ -132,7 +135,8 @@ export class MediaGeneratorService {
       };
     } catch (error) {
       this.logger.warn(
-        `Failed to get user's default media model for ${mediaType}: ${error?.message || error}`,
+        { mediaType, error: error?.message || error },
+        "Failed to get user's default media model",
       );
       return null;
     }
@@ -150,25 +154,23 @@ export class MediaGeneratorService {
     let finalProviderItemId = providerItemId;
 
     if (!finalModel) {
-      this.logger.log(
-        `No model or providerItemId specified for ${mediaType} generation, using user's default configuration`,
+      this.logger.info(
+        { mediaType },
+        "No model or providerItemId specified for generation, using user's default configuration",
       );
+
       const defaultConfig = await this.getUserDefaultMediaModel(user, mediaType);
       if (defaultConfig) {
         finalModel = defaultConfig.model;
         finalProviderItemId = defaultConfig.providerItemId;
-        this.logger.log(
-          `Using default ${mediaType} model: ${finalModel} with providerItemId: ${finalProviderItemId}`,
-        );
+        this.logger.info({ mediaType, finalModel, finalProviderItemId }, 'Using default model');
       } else {
         throw new Error(
           `No media generation model configured for ${mediaType}. Please configure a model first using the settings.`,
         );
       }
     } else {
-      this.logger.log(
-        `Using specified ${mediaType} model: ${finalModel} with providerItemId: ${finalProviderItemId}`,
-      );
+      this.logger.info({ mediaType, finalModel, finalProviderItemId }, 'Using specified model');
     }
 
     const resultId = request.resultId || genActionResultID();
@@ -204,7 +206,7 @@ export class MediaGeneratorService {
 
     // Start media generation asynchronously and capture promise for optional return
     const mediaGeneratePromise = this.executeGenerate(user, result, finalRequest).catch((error) => {
-      this.logger.error(`Media generation failed for ${resultId}:`, error);
+      this.logger.error({ error, resultId }, 'Media generation failed');
       return null;
     });
 
@@ -330,7 +332,8 @@ export class MediaGeneratorService {
           });
         } catch (updateError) {
           this.logger.error(
-            `Failed to update workflow node execution status to failed: ${updateError.message}`,
+            { error: updateError.message },
+            'Failed to update workflow node execution status to failed',
           );
         }
       }
@@ -369,7 +372,7 @@ export class MediaGeneratorService {
 
       const input = request.input;
 
-      this.logger.log(`input: ${JSON.stringify(input)}`);
+      this.logger.info(`input: ${JSON.stringify(input)}`);
 
       let url = '';
 
@@ -401,7 +404,10 @@ export class MediaGeneratorService {
           logs: false,
           onQueueUpdate: (update) => {
             if (update.status === 'IN_PROGRESS') {
-              update.logs?.map((log) => log.message).forEach(console.log);
+              const messages = update.logs?.map((log) => log.message) ?? [];
+              for (const message of messages) {
+                this.logger.info({ message: message.substring(0, 3000) }, 'Fal in-progess');
+              }
             }
           },
         });
@@ -438,7 +444,7 @@ export class MediaGeneratorService {
         originalResult,
       };
     } catch (error) {
-      this.logger.error(`Media generation failed for ${resultId}: ${error.stack}`);
+      this.logger.error({ error, resultId }, 'Media generation failed');
 
       // Update status to failed
       await this.prisma.actionResult.update({
@@ -587,9 +593,7 @@ export class MediaGeneratorService {
 
       return await finalResponse.json();
     } catch (error) {
-      this.logger.error(
-        `Error generating media with fal: ${error instanceof Error ? error.stack : error}`,
-      );
+      this.logger.error({ error }, 'Error generating media with fal');
       throw error;
     }
   }
@@ -686,7 +690,7 @@ export class MediaGeneratorService {
 
       return { filename: baseFilename, contentType };
     } catch (error) {
-      this.logger.warn(`Failed to parse URL for file info: ${url}`, error);
+      this.logger.warn({ url, error }, 'Failed to parse URL for file info');
       const extension = mime.getExtension(fallbackMediaType) || fallbackMediaType;
       const baseName = title
         ? title.replace(/\.[a-zA-Z0-9]+(?:\?.*)?$/, '')
@@ -719,7 +723,7 @@ export class MediaGeneratorService {
       this.timeoutConfig[mediaType as keyof typeof this.timeoutConfig] ?? this.timeoutConfig.image;
     const startTime = Date.now();
 
-    this.logger.log(`Starting polling for ${mediaType} generation, timeout: ${timeout}ms`);
+    this.logger.info({ mediaType, timeout }, 'Starting polling for generation.');
 
     while (Date.now() - startTime < timeout) {
       // Wait for polling interval
@@ -737,7 +741,7 @@ export class MediaGeneratorService {
 
       // Check if completed
       if (actionResult.status === 'finish') {
-        this.logger.log(`Media generation completed for ${resultId}`);
+        this.logger.info({ resultId }, 'Media generation completed');
         return {
           outputUrl: actionResult.outputUrl,
           storageKey: actionResult.storageKey,
@@ -752,7 +756,7 @@ export class MediaGeneratorService {
       }
 
       // Continue polling if still executing or waiting
-      this.logger.debug(`Media generation status for ${resultId}: ${actionResult.status}`);
+      this.logger.debug({ resultId, status: actionResult.status }, 'Media generation status.');
     }
 
     // Timeout reached
