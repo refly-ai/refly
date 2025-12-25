@@ -15,6 +15,7 @@ const MixedTextEditor: React.FC<MixedTextEditorProps> = memo(
     disabled = false,
     originalVariables = [] as WorkflowVariable[],
     onUploadingChange,
+    onBeforeUpload,
   }) => {
     const { t } = useTranslation();
     // Track uploading state for multiple file inputs
@@ -206,6 +207,7 @@ const MixedTextEditor: React.FC<MixedTextEditorProps> = memo(
                   isDefaultValue={segment.isDefaultValue}
                   isModified={segment.isModified}
                   onUploadingChange={(uploading) => handleFileUploadingChange(fileId, uploading)}
+                  onBeforeUpload={onBeforeUpload}
                 />
               );
             }

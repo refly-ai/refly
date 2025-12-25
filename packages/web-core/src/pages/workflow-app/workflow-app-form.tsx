@@ -423,6 +423,13 @@ export const WorkflowAPPForm = ({
   // Handle file upload for resource type variables
   const handleFileUpload = useCallback(
     async (file: File, variableName: string) => {
+      // Check if user is logged in
+      if (!isLogin) {
+        storeSignupEntryPoint('template_detail');
+        setLoginModalOpen(true);
+        return false;
+      }
+
       const currentFileList = variableValues[variableName] || [];
       const result = await uploadFile(file, currentFileList);
 
@@ -481,6 +488,13 @@ export const WorkflowAPPForm = ({
   // Handle file removal for resource type variables
   const handleFileRemove = useCallback(
     (file: UploadFile, variableName: string) => {
+      // Check if user is logged in
+      if (!isLogin) {
+        storeSignupEntryPoint('template_detail');
+        setLoginModalOpen(true);
+        return;
+      }
+
       const currentFileList = variableValues[variableName] || [];
       const newFileList = currentFileList.filter((f: UploadFile) => f.uid !== file.uid);
       handleValueChange(variableName, newFileList);
@@ -488,12 +502,19 @@ export const WorkflowAPPForm = ({
         [variableName]: newFileList,
       });
     },
-    [variableValues, handleValueChange],
+    [variableValues, handleValueChange, isLogin, setLoginModalOpen],
   );
 
   // Handle file refresh for resource type variables
   const handleRefreshFile = useCallback(
     (variableName: string) => {
+      // Check if user is logged in
+      if (!isLogin) {
+        storeSignupEntryPoint('template_detail');
+        setLoginModalOpen(true);
+        return;
+      }
+
       const currentFileList = variableValues[variableName] || [];
       // Find the variable to get its resourceTypes
       const variable = workflowVariables.find((v) => v.name === variableName);
@@ -515,7 +536,16 @@ export const WorkflowAPPForm = ({
         variableId,
       );
     },
-    [refreshFile, variableValues, handleValueChange, form, workflowVariables, canvasId],
+    [
+      refreshFile,
+      variableValues,
+      handleValueChange,
+      form,
+      workflowVariables,
+      canvasId,
+      isLogin,
+      setLoginModalOpen,
+    ],
   );
 
   // Initialize template variables when effectiveTemplateContent changes
@@ -847,6 +877,17 @@ export const WorkflowAPPForm = ({
     setIsFileUploading(uploading);
   }, []);
 
+  // Handle before file upload check
+  const handleBeforeFileUpload = useCallback(() => {
+    // Check if user is logged in
+    if (!isLogin) {
+      storeSignupEntryPoint('template_detail');
+      setLoginModalOpen(true);
+      return false;
+    }
+    return true;
+  }, [isLogin, setLoginModalOpen]);
+
   // Separate executing state (for loading indicator) from disabled state
   const isExecuting = loading || isRunning;
   const isRunButtonDisabled = isExecuting || isFileUploading;
@@ -1004,6 +1045,7 @@ export const WorkflowAPPForm = ({
                   disabled={isFormDisabled}
                   originalVariables={workflowVariables}
                   onUploadingChange={handleFileUploadingChange}
+                  onBeforeUpload={handleBeforeFileUpload}
                 />
                 {/* Tools Dependency Form */}
                 {workflowApp?.canvasData && (
