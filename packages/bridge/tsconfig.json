@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "incremental": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": true,
+    "rootDir": ".",
+    "sourceRoot": "./src",
+    "composite": true,
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["src/**/*", "e2e/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
