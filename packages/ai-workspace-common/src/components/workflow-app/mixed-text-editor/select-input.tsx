@@ -133,7 +133,7 @@ const SelectInput: React.FC<SelectInputProps> = memo(
       <div ref={selectRef} className="relative inline-block">
         <div
           className={`
-              inline-flex items-center justify-between min-w-[30px] cursor-pointer
+              inline-flex items-center justify-center min-w-[30px] cursor-pointer
               bg-transparent border-b border-dashed border-refly-Card-Border rounded-none
               transition-all duration-200 ease-in-out
               ${isFocused || isOpen ? 'border-refly-primary-default' : 'border-refly-Card-Border'}
