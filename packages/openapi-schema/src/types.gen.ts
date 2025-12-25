@@ -5813,6 +5813,10 @@ export type ModelCapabilities = {
    */
   contextCaching?: boolean;
   /**
+   * Whether this model supports tool_choice parameter
+   */
+  supportToolChoice?: boolean;
+  /**
    * Whether this model supports image generation
    */
   image?: boolean;
