@@ -158,12 +158,20 @@ export class Agent extends BaseSkill {
 
       if (validTools.length > 0) {
         const toolNames = validTools.map((tool) => tool.name);
-        this.engine.logger.info(
-          `Binding ${validTools.length} valid tools to LLM with tool_choice="auto": [${toolNames.join(', ')}]`,
-        );
+
+        // Check if the model supports tool_choice parameter
+        // Claude Haiku models on Bedrock do not support tool_choice
+        const agentModelInfo = config?.configurable?.modelConfigMap?.agent;
+        const supportsToolChoice = agentModelInfo?.capabilities?.supportToolChoice !== false;
+
         // Use tool_choice="auto" to force LLM to decide when to use tools
         // This ensures proper tool_calls format generation
-        llmForGraph = baseLlm.bindTools(validTools, { tool_choice: 'auto' });
+        const bindOptions = supportsToolChoice ? { tool_choice: 'auto' } : undefined;
+        this.engine.logger.info(
+          `Binding ${validTools.length} valid tools to LLM with options: ${JSON.stringify(bindOptions)}: [${toolNames.join(', ')}]`,
+        );
+        llmForGraph = baseLlm.bindTools(validTools, bindOptions);
+
         actualToolNodeInstance = new ToolNode(validTools);
         availableToolsForNode = validTools;
       } else {
