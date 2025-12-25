@@ -1,8 +1,9 @@
 import mitt from 'mitt';
+import { GenericToolset } from '@refly/openapi-schema';
 
 export type ToolsetEvents = {
   toolsetInstalled: {
-    toolset: any;
+    toolset: GenericToolset;
   };
   updateNodeToolset: {
     nodeId: string;

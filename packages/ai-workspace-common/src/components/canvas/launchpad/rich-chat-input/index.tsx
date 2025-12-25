@@ -4,7 +4,7 @@ import {
   createNodeEventName,
   nodeActionEmitter,
 } from '@refly-packages/ai-workspace-common/events/nodeActions';
-import { toolsetEmitter } from '../../../../events/toolset';
+import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/toolset';
 import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 import { useCanvasToolsetUpdater } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';

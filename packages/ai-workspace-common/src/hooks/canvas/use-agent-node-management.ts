@@ -5,7 +5,7 @@ import { GenericToolset, ModelInfo } from '@refly/openapi-schema';
 import { CanvasNodeData, ResponseNodeMeta } from '@refly/canvas-common';
 import { purgeContextItems } from '@refly/canvas-common';
 import { useRealtimeCanvasData } from './use-realtime-canvas-data';
-
+import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/toolset';
 // Hook for batch updating toolsetId across all canvas nodes
 export const useCanvasToolsetUpdater = () => {
   const { nodes } = useRealtimeCanvasData();
@@ -35,12 +35,10 @@ export const useCanvasToolsetUpdater = () => {
         if (node.id) {
           // Emit event for this specific node to update itself
           setTimeout(() => {
-            import('../../events/toolset').then(({ toolsetEmitter }) => {
-              toolsetEmitter.emit('updateNodeToolset', {
-                nodeId: node.id,
-                toolsetKey,
-                newToolsetId,
-              });
+            toolsetEmitter.emit('updateNodeToolset', {
+              nodeId: node.id,
+              toolsetKey,
+              newToolsetId,
             });
           }, 0);
         }
