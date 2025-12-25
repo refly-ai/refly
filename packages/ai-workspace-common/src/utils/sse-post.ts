@@ -64,6 +64,7 @@ export const ssePost = async ({
   onSkillTokenUsage,
   onSkillError,
   onCompleted,
+  onAborted,
 }: {
   controller: AbortController;
   payload: InvokeSkillRequest;
@@ -82,6 +83,7 @@ export const ssePost = async ({
   onSkillTokenUsage?: (event: SkillEvent) => void;
   onSkillError?: (event: SkillEvent) => void;
   onCompleted?: (val?: boolean) => void;
+  onAborted?: (resultId: string) => void;
 }) => {
   let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   // Batch processing state - defined at function level so finally block can access it
@@ -324,6 +326,7 @@ export const ssePost = async ({
         // Type guard for AbortError
         if (err instanceof Error && err.name === 'AbortError') {
           console.log('Read operation aborted');
+          onAborted?.(payload.resultId ?? '');
           return;
         }
       }
@@ -334,6 +337,7 @@ export const ssePost = async ({
     // Type guard for AbortError
     if (error instanceof Error && error.name === 'AbortError') {
       console.log('Fetch aborted');
+      onAborted?.(payload.resultId ?? '');
     } else {
       console.error('Fetch error:', error);
       // Convert error to string for ConnectionError constructor

@@ -768,6 +768,9 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   const onCompleted = () => {};
   const onStart = () => {};
+  const onAborted = (resultId: string) => {
+    clearLatestSteps(resultId);
+  };
 
   const invokeAction = useCallback(
     async (payload: InvokeActionPayload, target: Entity) => {
@@ -874,6 +877,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
           onCompleted: wrapEventHandler(onCompleted),
           onSkillError: wrapEventHandler(onSkillError),
           onSkillTokenUsage: wrapEventHandler(onSkillTokenUsage),
+          onAborted: wrapEventHandler(onAborted),
         });
 
         return () => {
