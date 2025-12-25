@@ -281,5 +281,9 @@ export default () => ({
         maxProcesses: process.env.SCALEBOX_LIMITS_MAX_PROCESSES,
       },
     },
+
+    truncate: {
+      output: process.env.SANDBOX_TRUNCATE_OUTPUT,
+    },
   },
 });
