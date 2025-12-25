@@ -142,7 +142,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
     const stdout = output.stdout ?? '';
 
     if (stdout.length > this.truncateOutput) {
-      output.log += `\n[WARN] ⚠️ Origin stdout length ${stdout.length} is too long, truncate into ${this.truncateOutput}\n`;
+      output.log += `\n[WARN] ⚠️ Origin stdout length ${stdout.length} is too long, truncate into ${this.truncateOutput}, please save to file instead.\n`;
       output.stdout = stdout.substring(0, this.truncateOutput);
       this.logger.warn({ stdout: output.stdout }, 'Origin stdout truncated');
     }
