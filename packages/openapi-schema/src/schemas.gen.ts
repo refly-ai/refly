@@ -8223,6 +8223,10 @@ export const ModelCapabilitiesSchema = {
       type: 'boolean',
       description: 'Whether this model supports context caching',
     },
+    supportToolChoice: {
+      type: 'boolean',
+      description: 'Whether this model supports tool_choice parameter',
+    },
     image: {
       type: 'boolean',
       description: 'Whether this model supports image generation',

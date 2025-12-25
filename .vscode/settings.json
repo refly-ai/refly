@@ -16,7 +16,9 @@
   "[typescript]": {
     "editor.defaultFormatter": "prettier.prettier-vscode"
   },
-
+  "[yaml]": {
+    "editor.formatOnSave": false
+  },
   "typescript.tsserver.maxTsServerMemory": 8192,
   "files.exclude": {
     "**/node_modules/**": true,
