@@ -825,6 +825,9 @@ export const useInvokeAction = (params?: { source?: string }) => {
         copilotSessionId,
       };
 
+      // Clear cache for this resultId to prevent old messages from previous runs
+      clearLatestSteps(resultId);
+
       const initialResult: ActionResult = {
         resultId,
         version,
@@ -837,6 +840,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         context,
         status: 'executing' as ActionStatus,
         steps: [],
+        messages: [],
         errors: [],
       };
 
