@@ -6,6 +6,8 @@
  * Used by tool post-handlers and other services.
  */
 
+import { truncateContent as truncateByToken, countToken } from '@refly/utils/token';
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -24,10 +26,10 @@ export const MIN_CONTENT_LENGTH = 100; // Skip items with content < 100 chars (l
 // ============================================================================
 
 /**
- * Estimate token count from text (4 chars per token)
+ * Estimate token count from text (uses actual tokenizer)
  */
 export function estimateTokens(text: string): number {
-  return Math.ceil((text?.length ?? 0) / 4);
+  return countToken(text ?? '');
 }
 
 /**
@@ -36,15 +38,7 @@ export function estimateTokens(text: string): number {
  */
 export function truncateToTokens(text: string, maxTokens: number): string {
   if (!text) return '';
-  const maxChars = maxTokens * 4;
-  if (text.length <= maxChars) return text;
-
-  const headChars = Math.floor(maxChars * 0.7);
-  const tailChars = Math.floor(maxChars * 0.3);
-  const head = text.slice(0, headChars);
-  const tail = text.slice(-tailChars);
-
-  return `${head}\n\n...[truncated ~${Math.ceil((text.length - maxChars) / 4)} tokens]...\n\n${tail}`;
+  return truncateByToken(text, maxTokens);
 }
 
 // ============================================================================
@@ -141,57 +135,75 @@ function isNoiseLine(line: string): boolean {
   return false;
 }
 
+// ============================================================================
+// Content Truncation and Filtering
+// ============================================================================
+
 /**
- * Core function: Extract and filter content from raw text.
- * This is the internal implementation used by both truncateContent and extractAndFilterContent.
- * Uses simple truncation at the end to avoid circular dependency.
+ * Truncate text content to token limit
+ * Uses integration-based algorithm for O(1) performance on large content
+ *
+ * For web content, call this FIRST, then use filterContent on the result.
  */
-function extractAndFilterContentCore(
+export function truncateContent(text: string, maxTokens: number): string {
+  if (!text) return '';
+  return truncateByToken(text, maxTokens);
+}
+
+/**
+ * Truncate and filter web content in one call
+ * 1. Truncate first (O(1) - fast on large content)
+ * 2. Filter noise and extract URLs (on shorter truncated content)
+ *
+ * Use this for scraped web pages. For clean content (API responses, snippets),
+ * use truncateContent directly.
+ */
+export function truncateAndFilterContent(
   text: string,
   maxTokens: number,
 ): {
   content: string;
   urls: string[];
+} {
+  if (!text) return { content: '', urls: [] };
+  const truncated = truncateByToken(text, maxTokens);
+  const { content, urls } = filterContent(truncated);
+  return { content, urls };
+}
+
+/**
+ * Filter content: remove noise lines, dedupe, and extract URLs (no truncation)
+ *
+ * Call AFTER truncateContent to avoid performance issues with very long content.
+ * Example:
+ *   const truncated = truncateContent(rawText, maxTokens);  // O(1) - fast
+ *   const { content, urls } = filterContent(truncated);      // then filter
+ */
+export function filterContent(text: string): {
+  content: string;
+  urls: string[];
   originalUrlCount: number;
-  stats: {
-    originalLines: number;
-    keptLines: number;
-    originalTokens: number;
-    finalTokens: number;
-  };
 } {
   if (!text) {
-    return {
-      content: '',
-      urls: [],
-      originalUrlCount: 0,
-      stats: { originalLines: 0, keptLines: 0, originalTokens: 0, finalTokens: 0 },
-    };
+    return { content: '', urls: [], originalUrlCount: 0 };
   }
 
-  const originalTokens = estimateTokens(text);
-
-  // Step 1: Extract all URLs before cleaning
+  // Extract all URLs before cleaning
   const allUrls = extractUrlsFromText(text);
   const originalUrlCount = allUrls.length;
 
-  // Step 2: Filter and dedupe URLs
+  // Filter and dedupe URLs
   const filteredUrls = filterAndDedupeUrls(allUrls);
 
-  // Step 3: Clean content - remove noise lines
+  // Clean content - remove noise lines
   const lines = text.split('\n');
-  const originalLines = lines.length;
-
   const cleanedLines: string[] = [];
-  const seenContent = new Set<string>(); // Dedupe identical lines
+  const seenContent = new Set<string>();
 
   for (const line of lines) {
     const trimmed = line.trim();
-
-    // Skip noise
     if (isNoiseLine(trimmed)) continue;
 
-    // Skip duplicate content
     const normalized = trimmed.toLowerCase().replace(/\s+/g, ' ');
     if (seenContent.has(normalized)) continue;
     seenContent.add(normalized);
@@ -199,7 +211,6 @@ function extractAndFilterContentCore(
     cleanedLines.push(trimmed);
   }
 
-  // Step 4: Build final content with URLs section
   let cleanedContent = cleanedLines.join('\n');
 
   // Add filtered URLs section at the end
@@ -208,79 +219,11 @@ function extractAndFilterContentCore(
     cleanedContent += urlSection;
   }
 
-  // Step 5: Truncate if still too long (use simple truncation to avoid circular dependency)
-  const maxChars = maxTokens * 4;
-  let finalContent = cleanedContent;
-  if (cleanedContent.length > maxChars) {
-    const truncated = cleanedContent.slice(0, maxChars);
-    const omittedTokens = Math.ceil((cleanedContent.length - maxChars) / 4);
-    finalContent = `${truncated}... [${omittedTokens} tokens omitted]`;
-  }
-
-  const finalTokens = estimateTokens(finalContent);
-
   return {
-    content: finalContent,
+    content: cleanedContent,
     urls: filteredUrls,
     originalUrlCount,
-    stats: {
-      originalLines,
-      keptLines: cleanedLines.length,
-      originalTokens,
-      finalTokens,
-    },
   };
-}
-
-// ============================================================================
-// Content Truncation Functions
-// ============================================================================
-
-/**
- * Truncate text content cleanly for embedding in JSON
- * Simple head truncation only - no URL extraction or noise filtering
- */
-export function truncateContentSimple(text: string, maxTokens: number): string {
-  if (!text) return '';
-  const maxChars = maxTokens * 4;
-  if (text.length <= maxChars) return text;
-
-  // Keep head portion only, with clean truncation marker
-  const truncated = text.slice(0, maxChars);
-  const omittedTokens = Math.ceil((text.length - maxChars) / 4);
-  return `${truncated}... [${omittedTokens} tokens omitted]`;
-}
-
-/**
- * Truncate text content with smart processing:
- * - Extract and dedupe URLs by domain
- * - Remove noise lines (navigation, badges, image refs)
- * - Dedupe identical lines
- * - Append filtered URLs section
- * - Truncate to token budget
- *
- * Falls back to simple truncation for short content or non-web content.
- */
-export function truncateContent(text: string, maxTokens: number): string {
-  if (!text) return '';
-
-  const currentTokens = estimateTokens(text);
-
-  // If already within budget, return as-is
-  if (currentTokens <= maxTokens) return text;
-
-  // For short content or content without URLs, use simple truncation
-  // This avoids overhead for simple text fields
-  const hasUrls = /https?:\/\//.test(text);
-  const isShortContent = text.length < 500;
-
-  if (isShortContent || !hasUrls) {
-    return truncateContentSimple(text, maxTokens);
-  }
-
-  // Use smart extraction for web content with URLs
-  const result = extractAndFilterContentCore(text, maxTokens);
-  return result.content;
 }
 
 // ============================================================================
@@ -318,36 +261,6 @@ export function filterAndDedupeItems<
   }
 
   return { filtered, originalCount };
-}
-
-/**
- * Extract and dedupe URLs from raw text, returning cleaned content with filtered links.
- *
- * This function:
- * 1. Extracts all URLs from raw text content
- * 2. Filters and dedupes URLs by domain (respects TOP_K_LINKS and MAX_PER_DOMAIN)
- * 3. Removes noise lines (navigation, badges, image refs)
- * 4. Returns cleaned text content + filtered unique URLs
- *
- * @param text - Raw text content (e.g., scraped web page)
- * @param maxTokens - Maximum tokens for the cleaned content
- * @returns Object with cleaned content and filtered URLs
- */
-export function extractAndFilterContent(
-  text: string,
-  maxTokens: number,
-): {
-  content: string;
-  urls: string[];
-  originalUrlCount: number;
-  stats: {
-    originalLines: number;
-    keptLines: number;
-    originalTokens: number;
-    finalTokens: number;
-  };
-} {
-  return extractAndFilterContentCore(text, maxTokens);
 }
 
 // ============================================================================
