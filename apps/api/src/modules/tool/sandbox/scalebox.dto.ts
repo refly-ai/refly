@@ -195,6 +195,8 @@ export const ScaleboxResponseFactory = {
    * Code errors are indicated by non-zero exitCode
    */
   success(result: ScaleboxExecutionResult, executionTime: number): SandboxExecuteResponse {
+    console.log('DELETE ME', result);
+
     const { executorOutput, error, exitCode, files } = result;
     const warnings = extractWarnings(executorOutput.log);
 

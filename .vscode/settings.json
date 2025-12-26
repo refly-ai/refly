@@ -14,7 +14,7 @@
     "scss": "scss"
   },
   "[typescript]": {
-    "editor.defaultFormatter": "prettier.prettier-vscode"
+    "editor.defaultFormatter": "biomejs.biome"
   },
   "[yaml]": {
     "editor.formatOnSave": false
