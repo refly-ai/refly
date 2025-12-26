@@ -195,7 +195,6 @@ function integrationSearch(content: string, targetTokens: number, fromEnd: boole
  */
 function countTokenMedianIntegration(content: string): number {
   const len = content.length;
-
   // Integration parameters (aligned with truncation algorithm)
   const numIntervals = 40;
   const sampleSize = 200;
