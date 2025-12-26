@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
 // @ts-ignore - kitoken/node has no type declarations
 import { Kitoken } from 'kitoken/node';
 
@@ -10,18 +8,50 @@ const DEFAULT_CHARS_PER_TOKEN = 3.5;
 const HEAD_RATIO = 0.7;
 const SEPARATOR = '\n\n[... truncated ...]\n\n';
 const SEPARATOR_TOKENS = 5;
+const MODEL_URL = 'https://static.refly.ai/models/o200k_base.txt';
 
 // ============== Kitoken Initialization ==============
 
 const textDecoder = new TextDecoder();
 
-// Load model file and initialize encoder on module load
-const modelPath = path.join(__dirname, 'o200k_base.txt');
-if (!fs.existsSync(modelPath)) {
-  throw new Error(`Tokenizer model file not found: ${modelPath}`);
+let encoder: Kitoken | null = null;
+let initPromise: Promise<void> | null = null;
+
+/**
+ * Initialize the tokenizer by downloading the model from CDN
+ * Must be called before using countToken or truncateContent
+ */
+export async function initTokenizer(): Promise<void> {
+  if (encoder) return;
+
+  if (initPromise) {
+    return initPromise;
+  }
+
+  initPromise = (async () => {
+    const response = await fetch(MODEL_URL);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download tokenizer model: ${response.status} ${response.statusText}`,
+      );
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const model = Buffer.from(arrayBuffer);
+    encoder = new Kitoken(model);
+  })();
+
+  return initPromise;
 }
-const model = fs.readFileSync(modelPath);
-const encoder = new Kitoken(model);
+
+/**
+ * Get the encoder instance, throws if not initialized
+ */
+function getEncoder(): Kitoken {
+  if (!encoder) {
+    throw new Error('Tokenizer not initialized. Call initTokenizer() first.');
+  }
+  return encoder;
+}
 
 // ============== Public API ==============
 
@@ -40,7 +70,7 @@ export const countToken = (content: string): number => {
 
   // Small content: direct encode (accurate)
   if (len < SMALL_CONTENT_THRESHOLD) {
-    return encoder.encode(content, false).length;
+    return getEncoder().encode(content, false).length;
   }
 
   // Large content: median integration estimation (O(1))
@@ -53,7 +83,7 @@ export const countToken = (content: string): number => {
  */
 export const countTokenAccurate = (content: string): number => {
   if (!content) return 0;
-  return encoder.encode(content, false).length;
+  return getEncoder().encode(content, false).length;
 };
 
 /**
@@ -70,7 +100,7 @@ export const truncateContent = (content: string, targetTokens: number): string =
 
   // Small content: use direct token slicing (accurate)
   if (len < SMALL_CONTENT_THRESHOLD) {
-    const tokens = encoder.encode(content, false);
+    const tokens = getEncoder().encode(content, false);
     if (tokens.length <= targetTokens) {
       return content;
     }
@@ -79,8 +109,12 @@ export const truncateContent = (content: string, targetTokens: number): string =
     const headTokens = Math.floor(availableTokens * HEAD_RATIO);
     const tailTokens = availableTokens - headTokens;
 
-    const head = textDecoder.decode(encoder.decode(new Uint32Array(tokens.slice(0, headTokens))));
-    const tail = textDecoder.decode(encoder.decode(new Uint32Array(tokens.slice(-tailTokens))));
+    const head = textDecoder.decode(
+      getEncoder().decode(new Uint32Array(tokens.slice(0, headTokens))),
+    );
+    const tail = textDecoder.decode(
+      getEncoder().decode(new Uint32Array(tokens.slice(-tailTokens))),
+    );
 
     return `${head}${SEPARATOR}${tail}`;
   }
@@ -127,7 +161,7 @@ function integrationSearch(content: string, targetTokens: number, fromEnd: boole
       regionStart + Math.floor(((regionLen - quickSampleSize) * i) / (quickSampleCount - 1));
     sampledText += content.slice(pos, Math.min(pos + quickSampleSize, len));
   }
-  const totalTokens = encoder.encode(sampledText, false).length;
+  const totalTokens = getEncoder().encode(sampledText, false).length;
   const avgDensity = totalTokens > 0 ? sampledText.length / totalTokens : DEFAULT_CHARS_PER_TOKEN;
 
   // Estimate max chars needed with 50% margin
@@ -145,7 +179,7 @@ function integrationSearch(content: string, targetTokens: number, fromEnd: boole
     const sampleStart = Math.max(0, actualPos - sampleSize / 2);
     const sampleEnd = Math.min(len, sampleStart + sampleSize);
     const sample = content.slice(sampleStart, sampleEnd);
-    const tokens = encoder.encode(sample, false).length;
+    const tokens = getEncoder().encode(sample, false).length;
     const density = tokens > 0 ? sample.length / tokens : DEFAULT_CHARS_PER_TOKEN;
     return 1 / density;
   };
@@ -206,7 +240,7 @@ function countTokenMedianIntegration(content: string): number {
     const sampleStart = Math.max(0, Math.min(len - sampleSize, pos - sampleSize / 2));
     const sampleEnd = sampleStart + sampleSize;
     const sample = content.slice(sampleStart, sampleEnd);
-    const tokens = encoder.encode(sample, false).length;
+    const tokens = getEncoder().encode(sample, false).length;
     return tokens > 0 ? tokens / sample.length : 1 / DEFAULT_CHARS_PER_TOKEN;
   };
 

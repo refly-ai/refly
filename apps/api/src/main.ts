@@ -22,6 +22,7 @@ import { GlobalExceptionFilter } from './utils/filters/global-exception.filter';
 import { CustomWsAdapter } from './utils/adapters/ws-adapter';
 import { setupStatsig } from '@refly/telemetry-node';
 import { migrateDbSchema } from './utils/prisma';
+import { initTokenizer } from '@refly/utils/token';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
@@ -32,6 +33,9 @@ Sentry.init({
 });
 
 async function bootstrap() {
+  // Initialize tokenizer from CDN
+  await initTokenizer();
+
   // Auto migrate db schema if the environment variable is set
   if (process.env.AUTO_MIGRATE_DB_SCHEMA) {
     migrateDbSchema();
