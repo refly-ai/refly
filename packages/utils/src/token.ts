@@ -173,7 +173,10 @@ function integrationSearch(content: string, targetTokens: number, fromEnd: boole
   const avgDensity = totalTokens > 0 ? sampledText.length / totalTokens : DEFAULT_CHARS_PER_TOKEN;
 
   // Estimate max chars needed with 50% margin
-  const maxChars = Math.min(Math.ceil(targetTokens * avgDensity * 1.5), Math.floor(len * 0.7));
+  const maxChars = Math.min(
+    Math.ceil(targetTokens * avgDensity * 1.5),
+    Math.floor(len * HEAD_RATIO),
+  );
 
   // Integration params (scale with file size)
   const sampleSize = Math.round(100 + ratio * 100);
