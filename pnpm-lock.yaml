@@ -1760,6 +1760,9 @@ importers:
       jsonrepair:
         specifier: ^3.12.0
         version: 3.13.0
+      kitoken:
+        specifier: ^0.10.1
+        version: 0.10.1
       linkify-it:
         specifier: ^5.0.0
         version: 5.0.0
@@ -1790,9 +1793,6 @@ importers:
       tailwind-merge:
         specifier: ^2.2.2
         version: 2.6.0
-      tiktoken:
-        specifier: ^1.0.18
-        version: 1.0.22
       tlds:
         specifier: ^1.255.0
         version: 1.259.0
@@ -10800,6 +10800,10 @@ packages:
   khroma@2.1.0:
     resolution: {integrity: sha512-Ls993zuzfayK269Svk9hzpeGUKob/sIgZzyHYdjQoAdQetRKpOLj+k/QQQ/6Qi0Yz65mlROrfd+Ev+1+7dz9Kw==}
 
+  kitoken@0.10.1:
+    resolution: {integrity: sha512-4igfi0lg6AJSUR7zH5Q/TQVVmyDK+4E8/KSXxP7WKQxDxELUa4W73lyMANEBCyT0QMJjPOH4U12RF+mWi0PwVg==}
+    engines: {node: '>=18'}
+
   kleur@3.0.3:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
     engines: {node: '>=6'}
@@ -14060,9 +14064,6 @@ packages:
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
-
-  tiktoken@1.0.22:
-    resolution: {integrity: sha512-PKvy1rVF1RibfF3JlXBSP0Jrcw2uq3yXdgcEXtKTYn3QJ/cBRBHDnrJ5jHky+MENZ6DIPwNUGWpkVx+7joCpNA==}
 
   timers-browserify@2.0.12:
     resolution: {integrity: sha512-9phl76Cqm6FhSX9Xe1ZUAMLtm1BLkKj2Qd5ApyWkXzsMRaA7dgr81kf4wJmQf/hAvg8EEyJxDo3du/0KlhPiKQ==}
@@ -26148,6 +26149,8 @@ snapshots:
 
   khroma@2.1.0: {}
 
+  kitoken@0.10.1: {}
+
   kleur@3.0.3: {}
 
   kleur@4.1.5: {}
@@ -30145,8 +30148,6 @@ snapshots:
       readable-stream: 3.6.2
 
   through@2.3.8: {}
-
-  tiktoken@1.0.22: {}
 
   timers-browserify@2.0.12:
     dependencies:

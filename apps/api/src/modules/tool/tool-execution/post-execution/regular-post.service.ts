@@ -14,6 +14,7 @@ import {
   estimateTokens,
   truncateToTokens,
   truncateContent,
+  truncateAndFilterContent,
   filterAndDedupeItems,
   filterAndDedupeUrls,
   pick,
@@ -179,21 +180,27 @@ export class RegularToolPostHandlerService implements IToolPostHandler {
    */
   private compressJinaResult(compressed: any, data: any): string {
     if (Array.isArray(data)) {
-      // Jina serp: array of search results
+      // Jina serp: array of search results (content is scraped - needs filtering)
       const { filtered, originalCount } = filterAndDedupeItems(data);
-      compressed.data = filtered.map((item: any) => ({
-        ...pick(item, ['title', 'url', 'description', 'site', 'publishedTime', 'usage']),
-        content: truncateContent(String(item?.content ?? item?.snippet ?? ''), MAX_SNIPPET_TOKENS),
-      }));
+      compressed.data = filtered.map((item: any) => {
+        const rawContent = String(item?.content ?? item?.snippet ?? '');
+        // All search content may contain web noise - use truncateAndFilterContent
+        const { content } = truncateAndFilterContent(rawContent, MAX_SNIPPET_TOKENS);
+        return {
+          ...pick(item, ['title', 'url', 'description', 'site', 'publishedTime', 'usage']),
+          content,
+        };
+      });
 
       if (originalCount > filtered.length) {
         compressed.truncated = { total: originalCount, kept: filtered.length };
       }
     } else if (data && typeof data === 'object') {
-      // Jina read: single URL content
+      // Jina read: single URL content (full page scrape - needs filtering)
+      const { content } = truncateAndFilterContent(String(data?.content ?? ''), MAX_SNIPPET_TOKENS);
       compressed.data = {
         ...pick(data, ['url', 'title', 'usage']),
-        content: truncateContent(String(data?.content ?? ''), MAX_SNIPPET_TOKENS),
+        content,
       };
     } else {
       compressed.data = data;
@@ -204,7 +211,7 @@ export class RegularToolPostHandlerService implements IToolPostHandler {
 
   /**
    * Compress Perplexity AI response
-   * - Truncate response text
+   * - Truncate response text (AI generated - no filtering needed)
    * - Filter citations (dedupe by domain)
    * - Filter searchResults (dedupe by domain)
    */
@@ -214,7 +221,7 @@ export class RegularToolPostHandlerService implements IToolPostHandler {
         ...pick(data, ['model', 'usage']),
       };
 
-      // Truncate main response
+      // AI response - no filtering needed
       if (data.response) {
         compressed.data.response = truncateContent(String(data.response), MAX_SNIPPET_TOKENS);
       }
@@ -224,12 +231,17 @@ export class RegularToolPostHandlerService implements IToolPostHandler {
         compressed.data.citations = filterAndDedupeUrls(data.citations);
       }
 
-      // Filter search results
+      // Filter search results - these may contain web content
       if (Array.isArray(data.searchResults)) {
         const { filtered } = filterAndDedupeItems(data.searchResults);
-        compressed.data.searchResults = filtered.map((r: any) =>
-          pick(r, ['title', 'url', 'snippet']),
-        );
+        compressed.data.searchResults = filtered.map((r: any) => {
+          const rawContent = String(r?.snippet ?? r?.content ?? '');
+          const { content } = truncateAndFilterContent(rawContent, MAX_SNIPPET_TOKENS);
+          return {
+            ...pick(r, ['title', 'url']),
+            content,
+          };
+        });
       }
     } else {
       compressed.data = data;
@@ -244,10 +256,15 @@ export class RegularToolPostHandlerService implements IToolPostHandler {
   private compressGenericResult(compressed: any, data: any, rawObj: any): string {
     if (Array.isArray(data)) {
       const { filtered, originalCount } = filterAndDedupeItems(data);
-      compressed.data = filtered.map((item: any) => ({
-        ...pick(item, ['title', 'url', 'description', 'site', 'publishedTime']),
-        content: truncateContent(String(item?.content ?? item?.snippet ?? ''), MAX_SNIPPET_TOKENS),
-      }));
+      compressed.data = filtered.map((item: any) => {
+        const rawContent = String(item?.content ?? item?.snippet ?? '');
+        // All search content may contain web noise - use truncateAndFilterContent
+        const { content } = truncateAndFilterContent(rawContent, MAX_SNIPPET_TOKENS);
+        return {
+          ...pick(item, ['title', 'url', 'description', 'site', 'publishedTime']),
+          content,
+        };
+      });
 
       if (originalCount > filtered.length) {
         compressed.truncated = { total: originalCount, kept: filtered.length };
@@ -255,10 +272,13 @@ export class RegularToolPostHandlerService implements IToolPostHandler {
     } else if (data && typeof data === 'object') {
       compressed.data = { ...pick(data, ['url', 'title', 'model', 'usage']) };
 
+      // Web content - use truncateAndFilterContent
       if (data.content) {
-        compressed.data.content = truncateContent(String(data.content), MAX_SNIPPET_TOKENS);
+        const { content } = truncateAndFilterContent(String(data.content), MAX_SNIPPET_TOKENS);
+        compressed.data.content = content;
       }
 
+      // AI response - no filtering needed
       if (data.response) {
         compressed.data.response = truncateContent(String(data.response), MAX_SNIPPET_TOKENS);
       }
@@ -269,9 +289,14 @@ export class RegularToolPostHandlerService implements IToolPostHandler {
 
       if (Array.isArray(data.searchResults)) {
         const { filtered } = filterAndDedupeItems(data.searchResults);
-        compressed.data.searchResults = filtered.map((r: any) =>
-          pick(r, ['title', 'url', 'snippet']),
-        );
+        compressed.data.searchResults = filtered.map((r: any) => {
+          const rawContent = String(r?.snippet ?? r?.content ?? '');
+          const { content } = truncateAndFilterContent(rawContent, MAX_SNIPPET_TOKENS);
+          return {
+            ...pick(r, ['title', 'url']),
+            content,
+          };
+        });
       }
     } else {
       compressed.data = data ?? pick(rawObj, ['data']);

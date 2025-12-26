@@ -19,6 +19,7 @@ import {
   DEFAULT_MAX_TOKENS,
   MAX_SNIPPET_TOKENS,
   estimateTokens,
+  truncateAndFilterContent,
   filterAndDedupeItems,
   filterAndDedupeUrls,
   pick,
@@ -510,14 +511,17 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
     if (Array.isArray(results) && results.length > 0) {
       const { filtered, originalCount } = filterAndDedupeItems(results);
       compressed.data = {
-        results: filtered.map((item: any) => ({
-          ...pick(item, ['title', 'url', 'score', 'publishedDate', 'author']),
-          // Exa uses 'text' or 'highlights' for content
-          content: truncateContent(
-            String(item?.text ?? item?.highlights?.join('\n') ?? item?.snippet ?? ''),
-            MAX_SNIPPET_TOKENS,
-          ),
-        })),
+        results: filtered.map((item: any) => {
+          const rawContent = String(
+            item?.text ?? item?.highlights?.join('\n') ?? item?.snippet ?? '',
+          );
+          // All search content may contain web noise - use truncateAndFilterContent
+          const { content } = truncateAndFilterContent(rawContent, MAX_SNIPPET_TOKENS);
+          return {
+            ...pick(item, ['title', 'url', 'score', 'publishedDate', 'author']),
+            content,
+          };
+        }),
       };
 
       if (originalCount > filtered.length) {
@@ -548,13 +552,15 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
     if (Array.isArray(results) && results.length > 0) {
       const { filtered, originalCount } = filterAndDedupeItems(results);
       compressed.data = {
-        results: filtered.map((item: any) => ({
-          ...pick(item, ['title', 'url', 'score', 'publishedDate']),
-          content: truncateContent(
-            String(item?.content ?? item?.snippet ?? item?.raw_content ?? ''),
-            MAX_SNIPPET_TOKENS,
-          ),
-        })),
+        results: filtered.map((item: any) => {
+          const rawContent = String(item?.content ?? item?.snippet ?? item?.raw_content ?? '');
+          // All search content may contain web noise - use truncateAndFilterContent
+          const { content } = truncateAndFilterContent(rawContent, MAX_SNIPPET_TOKENS);
+          return {
+            ...pick(item, ['title', 'url', 'score', 'publishedDate']),
+            content,
+          };
+        }),
       };
 
       if (originalCount > filtered.length) {
@@ -564,7 +570,7 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
       compressed.data = { results: [] };
     }
 
-    // Include Tavily's AI-generated answer if available
+    // Include Tavily's AI-generated answer if available (no filtering needed for AI response)
     if (answer) {
       compressed.data.answer = truncateContent(String(answer), MAX_SNIPPET_TOKENS);
     }
@@ -584,13 +590,15 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
   private compressGenericResult(compressed: any, data: any, rawObj: any): string {
     if (Array.isArray(data)) {
       const { filtered, originalCount } = filterAndDedupeItems(data);
-      compressed.data = filtered.map((item: any) => ({
-        ...pick(item, ['title', 'url', 'description', 'site', 'publishedTime', 'score']),
-        content: truncateContent(
-          String(item?.content ?? item?.snippet ?? item?.text ?? ''),
-          MAX_SNIPPET_TOKENS,
-        ),
-      }));
+      compressed.data = filtered.map((item: any) => {
+        const rawContent = String(item?.content ?? item?.snippet ?? item?.text ?? '');
+        // All search content may contain web noise - use truncateAndFilterContent
+        const { content } = truncateAndFilterContent(rawContent, MAX_SNIPPET_TOKENS);
+        return {
+          ...pick(item, ['title', 'url', 'description', 'site', 'publishedTime', 'score']),
+          content,
+        };
+      });
 
       if (originalCount > filtered.length) {
         compressed.truncated = { total: originalCount, kept: filtered.length };
@@ -598,16 +606,21 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
     } else if (data && typeof data === 'object') {
       compressed.data = { ...pick(data, ['url', 'title', 'model', 'usage', 'answer']) };
 
+      // Web content - use truncateAndFilterContent
       if (data.content) {
-        compressed.data.content = truncateContent(String(data.content), MAX_SNIPPET_TOKENS);
+        const { content } = truncateAndFilterContent(String(data.content), MAX_SNIPPET_TOKENS);
+        compressed.data.content = content;
       }
 
+      // AI response - no filtering needed
       if (data.response) {
         compressed.data.response = truncateContent(String(data.response), MAX_SNIPPET_TOKENS);
       }
 
+      // Web content - use truncateAndFilterContent
       if (data.text) {
-        compressed.data.text = truncateContent(String(data.text), MAX_SNIPPET_TOKENS);
+        const { content } = truncateAndFilterContent(String(data.text), MAX_SNIPPET_TOKENS);
+        compressed.data.text = content;
       }
 
       if (Array.isArray(data.citations)) {
@@ -616,9 +629,14 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
 
       if (Array.isArray(data.results)) {
         const { filtered } = filterAndDedupeItems(data.results);
-        compressed.data.results = filtered.map((r: any) =>
-          pick(r, ['title', 'url', 'snippet', 'score']),
-        );
+        compressed.data.results = filtered.map((r: any) => {
+          const rawContent = String(r?.content ?? r?.snippet ?? r?.text ?? '');
+          const { content } = truncateAndFilterContent(rawContent, MAX_SNIPPET_TOKENS);
+          return {
+            ...pick(r, ['title', 'url', 'score']),
+            content,
+          };
+        });
       }
     } else {
       compressed.data = data ?? pick(rawObj, ['data']);

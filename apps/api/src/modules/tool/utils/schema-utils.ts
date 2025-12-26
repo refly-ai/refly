@@ -395,84 +395,16 @@ export function findMatchingObjectOption(
 
 /**
  * Check if a field name suggests it's a URL-related field
+ * Only matches fields ending with 'url' or 'urls' (case-insensitive)
  * @param fieldName - The name of the field
- * @returns true if the field appears to be URL-related
+ * @returns true if the field ends with 'url' or 'urls'
  */
 function isUrlRelatedField(fieldName: string): boolean {
   const fieldLower = fieldName.toLowerCase();
 
-  // Skip fields that are ID references (e.g., fileId, imageId, documentId, media_ids, media_ids[0])
-  // These are ID references, not actual URLs
-  if (
-    fieldLower.endsWith('id') ||
-    fieldLower.endsWith('_id') ||
-    fieldLower.endsWith('ids') ||
-    fieldLower.endsWith('_ids') ||
-    /ids?\[\d*\]$/.test(fieldLower) // handles media_ids[0], file_id[1], etc.
-  ) {
-    return false;
-  }
-
-  // Skip fields that are metadata/classification fields, not actual resources
-  // e.g., media_category, file_type, image_format, image_width, document_status
-  const nonResourceSuffixes = [
-    '_category',
-    '_height',
-    '_length',
-    '_type',
-    '_format',
-    '_method',
-    '_mode',
-    '_status',
-    '_version',
-    '_width',
-    '_name',
-    '_title',
-    '_label',
-    '_kind',
-    '_class',
-    '_size',
-    '_count',
-    '_index',
-    '_order',
-    '_position',
-  ];
-  if (nonResourceSuffixes.some((suffix) => fieldLower.endsWith(suffix))) {
-    return false;
-  }
-
-  // URL/URI patterns - always match these with includes()
-  const urlUriPatterns = ['_url', 'url', '_uri', 'uri'];
-  if (urlUriPatterns.some((pattern) => fieldLower.includes(pattern))) {
-    return true;
-  }
-
-  // Resource-related words that need strict word boundary matching
-  // Matches: image, images, video, videos, etc.
-  // Does NOT match: media_category, image_type (already excluded above)
-  const resourceWords = [
-    'image',
-    'video',
-    'audio',
-    'file',
-    'media',
-    'photo',
-    'picture',
-    'attachment',
-    'document',
-  ];
-
-  // Build regex pattern for strict word matching (with optional 's' for plurals)
-  // Word boundaries: start of string, underscore, or end of string
-  // Pattern: (^|_)word(s)?(_|$) matches "image", "images", "my_image", "image_data", "images_data"
-  for (const word of resourceWords) {
-    const pattern = new RegExp(`(^|_)${word}s?(_|$)`);
-    if (pattern.test(fieldLower)) {
-      return true;
-    }
-  }
-
-  return false;
+  // Only match fields ending with 'url' or 'urls'
+  // e.g., image_url, video_url, thumbnail_url, media_urls
+  return fieldLower.endsWith('url') || fieldLower.endsWith('urls');
 }
 
 /**
