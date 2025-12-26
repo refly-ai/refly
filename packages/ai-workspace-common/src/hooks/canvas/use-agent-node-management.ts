@@ -5,15 +5,14 @@ import { GenericToolset, ModelInfo } from '@refly/openapi-schema';
 import { CanvasNodeData, ResponseNodeMeta } from '@refly/canvas-common';
 import { purgeContextItems } from '@refly/canvas-common';
 import { useRealtimeCanvasData } from './use-realtime-canvas-data';
-import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/toolset';
 // Hook for batch updating toolsetId across all canvas nodes
 export const useCanvasToolsetUpdater = () => {
   const { nodes } = useRealtimeCanvasData();
+  const { setNodeData } = useNodeData();
 
   const updateToolsetIdForAllNodes = useCallback(
     (toolsetKey: string, newToolsetId: string) => {
       // Find all skillResponse nodes that have the matching toolset
-
       const nodesToUpdate = nodes.filter((node) => {
         if (node.type === 'skillResponse' && node.data?.metadata) {
           const metadata = node.data.metadata as ResponseNodeMeta;
@@ -30,21 +29,43 @@ export const useCanvasToolsetUpdater = () => {
         return false;
       });
 
-      // Emit events for each node to update itself using setSelectedToolsets
+      // Directly update each node's data instead of using events
       for (const node of nodesToUpdate) {
         if (node.id) {
-          // Emit event for this specific node to update itself
-          setTimeout(() => {
-            toolsetEmitter.emit('updateNodeToolset', {
-              nodeId: node.id,
-              toolsetKey,
-              newToolsetId,
+          setNodeData<ResponseNodeMeta>(node.id, (prevData) => {
+            const prevMetadata =
+              (prevData?.metadata as ResponseNodeMeta) ?? ({} as ResponseNodeMeta);
+            const prevToolsets = Array.isArray(prevMetadata?.selectedToolsets)
+              ? (prevMetadata?.selectedToolsets as GenericToolset[])
+              : [];
+
+            const nextToolsets = prevToolsets.map((toolset) => {
+              // Update toolsetId if the toolset key matches
+              if (toolset.toolset?.key === toolsetKey) {
+                return {
+                  ...toolset,
+                  id: newToolsetId,
+                  toolset: toolset.toolset
+                    ? {
+                        ...toolset.toolset,
+                        toolsetId: newToolsetId,
+                      }
+                    : toolset.toolset,
+                };
+              }
+              return toolset;
             });
-          }, 0);
+
+            return {
+              metadata: {
+                selectedToolsets: nextToolsets ?? [],
+              },
+            };
+          });
         }
       }
     },
-    [nodes],
+    [nodes, setNodeData],
   );
 
   return { updateToolsetIdForAllNodes };
