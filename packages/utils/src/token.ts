@@ -112,9 +112,10 @@ export const truncateContent = (content: string, targetTokens: number): string =
     const head = textDecoder.decode(
       getEncoder().decode(new Uint32Array(tokens.slice(0, headTokens))),
     );
-    const tail = textDecoder.decode(
-      getEncoder().decode(new Uint32Array(tokens.slice(-tailTokens))),
-    );
+    const tail =
+      tailTokens > 0
+        ? textDecoder.decode(getEncoder().decode(new Uint32Array(tokens.slice(-tailTokens))))
+        : '';
 
     return `${head}${SEPARATOR}${tail}`;
   }
@@ -128,7 +129,7 @@ export const truncateContent = (content: string, targetTokens: number): string =
   const tailPos = integrationSearch(content, tailTargetTokens, true);
 
   const head = content.slice(0, headPos);
-  const tail = content.slice(-tailPos);
+  const tail = tailPos > 0 ? content.slice(-tailPos) : '';
 
   return `${head}${SEPARATOR}${tail}`;
 };
