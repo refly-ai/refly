@@ -791,19 +791,20 @@ export class DriveService implements OnModuleInit {
       let processedContent = result.content?.replace(/x00/g, '') || '';
       processedContent = this.normalizeWhitespace(processedContent);
 
-      const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
-      await tracer.startActiveSpan('drive.saveToCache', async (span) => {
-        await this.internalOss.putObject(contentStorageKey, processedContent);
-        span.setAttribute('content.length', processedContent.length);
-        span.end();
-      });
-
       const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
       const truncateStart = performance.now();
       const truncatedContent = truncateContent(processedContent, maxTokens);
       this.logger.info(
         `[loadOrParseDriveFile] truncateContent after parse: fileId=${fileId}, len=${processedContent.length}, time=${(performance.now() - truncateStart).toFixed(2)}ms`,
       );
+
+      const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
+      await tracer.startActiveSpan('drive.saveToCache', async (span) => {
+        await this.internalOss.putObject(contentStorageKey, truncatedContent);
+        span.setAttribute('content.length', truncatedContent.length);
+        span.end();
+      });
+
       const wordCount = readingTime(truncatedContent).words;
 
       // Save cache record
