@@ -128,6 +128,11 @@ export const truncateContent = (content: string, targetTokens: number): string =
   const headPos = integrationSearch(content, headTargetTokens, false);
   const tailPos = integrationSearch(content, tailTargetTokens, true);
 
+  // If head + tail covers entire content, no truncation needed
+  if (headPos + tailPos >= len) {
+    return content;
+  }
+
   const head = content.slice(0, headPos);
   const tail = tailPos > 0 ? content.slice(-tailPos) : '';
 
@@ -139,27 +144,29 @@ export const truncateContent = (content: string, targetTokens: number): string =
 /**
  * Find truncation position using upper-bound integration
  *
- * Principle: Sample density curve, use max value in each interval for integration.
- * This guarantees the result never exceeds target token count.
- *
- * Time complexity: O(1) - fixed sampling amount regardless of content size
- * Space complexity: O(1) - only stores sample fragments
+ * Sampling parameters scale linearly with content size (10KB → 1MB)
+ * to avoid over-sampling on smaller files while maintaining accuracy on large ones.
  */
 function integrationSearch(content: string, targetTokens: number, fromEnd: boolean): number {
   const len = content.length;
 
-  // Quick sampling to estimate average density
-  const quickSampleSize = 50;
-  const quickSampleCount = 50;
-  const regionStart = fromEnd ? Math.floor(len / 2) : 0;
-  const regionEnd = fromEnd ? len : Math.floor(len / 2);
+  // Linear interpolation ratio: 0 at 10KB, 1 at 1MB+
+  const ratio = Math.min(1, Math.max(0, (len - 10000) / 990000));
+
+  // Quick sampling params (scale with file size)
+  const quickSampleSize = Math.round(20 + ratio * 30);
+  const quickSampleCount = Math.round(10 + ratio * 40);
+
+  // Sample region follows HEAD_RATIO (70/30 split)
+  const regionStart = fromEnd ? Math.floor(len * HEAD_RATIO) : 0;
+  const regionEnd = fromEnd ? len : Math.floor(len * HEAD_RATIO);
   const regionLen = regionEnd - regionStart;
 
-  // Concatenate samples and encode once (more efficient)
+  // Concatenate samples and encode once
   let sampledText = '';
   for (let i = 0; i < quickSampleCount; i++) {
     const pos =
-      regionStart + Math.floor(((regionLen - quickSampleSize) * i) / (quickSampleCount - 1));
+      regionStart + Math.floor(((regionLen - quickSampleSize) * i) / (quickSampleCount - 1 || 1));
     sampledText += content.slice(pos, Math.min(pos + quickSampleSize, len));
   }
   const totalTokens = getEncoder().encode(sampledText, false).length;
@@ -168,10 +175,10 @@ function integrationSearch(content: string, targetTokens: number, fromEnd: boole
   // Estimate max chars needed with 50% margin
   const maxChars = Math.min(Math.ceil(targetTokens * avgDensity * 1.5), Math.floor(len * 0.7));
 
-  // Integration parameters
-  const sampleSize = 200;
-  const numIntervals = 40;
-  const subSamplesPerInterval = 3;
+  // Integration params (scale with file size)
+  const sampleSize = Math.round(100 + ratio * 100);
+  const numIntervals = Math.round(10 + ratio * 30);
+  const subSamplesPerInterval = Math.round(2 + ratio * 2);
   const step = Math.max(sampleSize, Math.floor(maxChars / numIntervals));
 
   // Get inverse density at a position
@@ -185,7 +192,7 @@ function integrationSearch(content: string, targetTokens: number, fromEnd: boole
     return 1 / density;
   };
 
-  // Upper-bound integration: use max 1/d in each interval
+  // Upper-bound integration
   let integral = 0;
   let prevPos = 0;
 
@@ -193,23 +200,16 @@ function integrationSearch(content: string, targetTokens: number, fromEnd: boole
     const currPos = Math.min(i * step, maxChars);
     if (currPos <= prevPos) break;
 
-    // Find max inverse density in interval [prevPos, currPos]
+    // Find max inverse density in interval (j < subSamples to avoid boundary overlap)
     let maxInvD = 0;
-    for (let j = 0; j <= subSamplesPerInterval; j++) {
+    for (let j = 0; j < subSamplesPerInterval; j++) {
       const subPos = prevPos + ((currPos - prevPos) * j) / subSamplesPerInterval;
-      const invD = getInvDensity(subPos);
-      maxInvD = Math.max(maxInvD, invD);
+      maxInvD = Math.max(maxInvD, getInvDensity(subPos));
     }
 
-    // Upper-bound area = max height × width
-    const intervalWidth = currPos - prevPos;
-    const area = maxInvD * intervalWidth;
-
+    const area = maxInvD * (currPos - prevPos);
     if (integral + area >= targetTokens) {
-      // Found the interval, calculate exact position
-      const remaining = targetTokens - integral;
-      const deltaChars = remaining / maxInvD;
-      return Math.floor(prevPos + deltaChars);
+      return Math.floor(prevPos + (targetTokens - integral) / maxInvD);
     }
 
     integral += area;
