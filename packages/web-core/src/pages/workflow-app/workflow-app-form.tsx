@@ -27,6 +27,7 @@ import {
 } from '@refly-packages/ai-workspace-common/queries/queries';
 import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
 import { GenericToolset, UserTool } from '@refly/openapi-schema';
+import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/toolset';
 import { storeSignupEntryPoint } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 /**
@@ -148,18 +149,33 @@ export const WorkflowAPPForm = ({
   const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
 
   // Tool dependency checking
-  const { data: userToolsData } = useListUserTools({}, [], {
+  const { data: userToolsData, refetch: refetchUserTools } = useListUserTools({}, [], {
     enabled: isLogin,
     refetchOnWindowFocus: false,
   });
   const userTools = userToolsData?.data ?? [];
+
+  // Listen for toolset installation events and refetch user tools
+  useEffect(() => {
+    const handleToolsetInstalled = () => {
+      // Refetch user tools when a toolset is installed
+      refetchUserTools();
+    };
+
+    toolsetEmitter.on('toolsetInstalled', handleToolsetInstalled);
+
+    return () => {
+      toolsetEmitter.off('toolsetInstalled', handleToolsetInstalled);
+    };
+  }, [refetchUserTools]);
 
   const { data: canvasResponse } = useGetCanvasData({ query: { canvasId: canvasId ?? '' } }, [], {
     enabled: !!canvasId && isLogin,
     refetchOnWindowFocus: false,
   });
 
-  const canvasData = canvasResponse?.data;
+  // Use workflowApp canvasData as primary source, fallback to API data
+  const canvasData = workflowApp?.canvasData ?? canvasResponse?.data;
   const nodes = canvasData?.nodes || [];
 
   // Check if there are uninstalled tools

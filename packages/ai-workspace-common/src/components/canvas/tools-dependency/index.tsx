@@ -20,6 +20,7 @@ import { useOpenInstallTool } from '@refly-packages/ai-workspace-common/hooks/us
 import { useOpenInstallMcp } from '@refly-packages/ai-workspace-common/hooks/use-open-install-mcp';
 import { IoWarningOutline } from 'react-icons/io5';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/toolset';
 
 /**
  * Check if a toolset is authorized/installed
@@ -425,8 +426,15 @@ const ToolsDependencyContent = React.memo(
                         !isInstalled &&
                           isLogin &&
                           highlightInstallButtons &&
-                          'border-[var(--refly-func-success-default)] bg-[rgba(18,183,106,0.12)] shadow-[0_0_0_3px_rgba(18,183,106,0.18)] animate-pulse',
+                          'border-[var(--refly-func-success-default)] bg-[rgba(18,183,106,0.12)] shadow-[0_0_0_3px_rgba(18,183,106,0.18)]',
                       )}
+                      style={
+                        !isInstalled && isLogin && highlightInstallButtons
+                          ? {
+                              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 3',
+                            }
+                          : undefined
+                      }
                     >
                       {/* Tool Header */}
                       <div className="py-1 px-1 md:px-2 flex items-center justify-between gap-2 md:gap-3">
@@ -806,12 +814,30 @@ export const ToolsDependency = ({
 
   const nodes = shareData?.nodes || canvasResponse?.data?.nodes || [];
 
-  const { data: userToolsData, isLoading: toolsLoading } = useListUserTools({}, [], {
+  const {
+    data: userToolsData,
+    isLoading: toolsLoading,
+    refetch: refetchUserTools,
+  } = useListUserTools({}, [], {
     enabled: isLogin,
     refetchOnWindowFocus: false,
   });
 
   const userTools = userToolsData?.data ?? [];
+
+  // Listen for toolset installation events and refetch user tools
+  useEffect(() => {
+    const handleToolsetInstalled = () => {
+      // Refetch user tools when a toolset is installed
+      refetchUserTools();
+    };
+
+    toolsetEmitter.on('toolsetInstalled', handleToolsetInstalled);
+
+    return () => {
+      toolsetEmitter.off('toolsetInstalled', handleToolsetInstalled);
+    };
+  }, [refetchUserTools]);
 
   const handlePopoverOpenChange = useCallback(
     (nextOpen: boolean) => {

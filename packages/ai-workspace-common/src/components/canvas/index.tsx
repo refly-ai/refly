@@ -46,6 +46,8 @@ import { CustomEdge } from './edges/custom-edge';
 import NotFoundOverlay from './NotFoundOverlay';
 import { useDragToCreateNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drag-create-node';
 import { useDragDropPaste } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drag-drop-paste';
+import { useCanvasToolsetUpdater } from '@refly-packages/ai-workspace-common/hooks/canvas/use-agent-node-management';
+import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/toolset';
 
 import '@xyflow/react/dist/style.css';
 import './index.scss';
@@ -173,6 +175,21 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
   const { loading, readonly, shareNotFound, shareLoading, undo, redo } = useCanvasContext();
   const { onLayout } = useCanvasLayout();
   const { getNodes } = useReactFlow<CanvasNode<any>>();
+  const { updateToolsetIdForAllNodes } = useCanvasToolsetUpdater();
+
+  // Listen for toolset installation events and trigger batch updates across the entire canvas
+  useEffect(() => {
+    const handleToolsetInstalled = ({ toolset }: { toolset: any }) => {
+      // Update toolsetId for all nodes that have this toolset key across the entire canvas
+      updateToolsetIdForAllNodes(toolset.key, toolset.toolsetId);
+    };
+
+    toolsetEmitter.on('toolsetInstalled', handleToolsetInstalled);
+
+    return () => {
+      toolsetEmitter.off('toolsetInstalled', handleToolsetInstalled);
+    };
+  }, [updateToolsetIdForAllNodes]);
 
   // Clean up highlightedNodeIds when nodes are deleted
   // Use a ref to track previous node IDs to detect deletions accurately
