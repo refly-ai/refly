@@ -599,7 +599,11 @@ export class DriveService implements OnModuleInit {
 
       // Apply token-based truncation (head/tail preservation)
       const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+      const truncateStart = performance.now();
       const truncatedContent = truncateContent(content, maxTokens);
+      this.logger.info(
+        `[getDriveFileDetail] truncateContent: fileId=${fileId}, len=${content.length}, time=${(performance.now() - truncateStart).toFixed(2)}ms`,
+      );
 
       return {
         ...this.toDTO(driveFile),
@@ -662,7 +666,12 @@ export class DriveService implements OnModuleInit {
             let content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
 
             const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+            const originalLen = content.length;
+            const truncateStart = performance.now();
             content = truncateContent(content, maxTokens);
+            this.logger.info(
+              `[loadOrParseDriveFile] truncateContent from cache: fileId=${fileId}, len=${originalLen}, time=${(performance.now() - truncateStart).toFixed(2)}ms`,
+            );
 
             span.setAttributes({ 'cache.hit': true, 'content.length': content.length });
             span.end();
@@ -790,7 +799,11 @@ export class DriveService implements OnModuleInit {
       });
 
       const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+      const truncateStart = performance.now();
       const truncatedContent = truncateContent(processedContent, maxTokens);
+      this.logger.info(
+        `[loadOrParseDriveFile] truncateContent after parse: fileId=${fileId}, len=${processedContent.length}, time=${(performance.now() - truncateStart).toFixed(2)}ms`,
+      );
       const wordCount = readingTime(truncatedContent).words;
 
       // Save cache record
