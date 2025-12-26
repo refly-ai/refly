@@ -241,6 +241,7 @@ function countTokenMedianIntegration(content: string): number {
     const sampleStart = Math.max(0, Math.min(len - sampleSize, pos - sampleSize / 2));
     const sampleEnd = sampleStart + sampleSize;
     const sample = content.slice(sampleStart, sampleEnd);
+    if (sample.length === 0) return 1 / DEFAULT_CHARS_PER_TOKEN;
     const tokens = getEncoder().encode(sample, false).length;
     return tokens > 0 ? tokens / sample.length : 1 / DEFAULT_CHARS_PER_TOKEN;
   };
