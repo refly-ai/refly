@@ -81,8 +81,8 @@ jobs:
           echo "start_date=$START_DATE" >> "$GITHUB_OUTPUT"
           echo "release_branch=$RELEASE_BRANCH" >> "$GITHUB_OUTPUT"
 
-  deploy-api-prod:
-    name: Deploy API to Production
+  ensure-release-branch:
+    name: Ensure Release Branch Exists
     needs: prepare-prod-deploy
     if: needs.prepare-prod-deploy.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
@@ -101,65 +101,30 @@ jobs:
 
           # Check if branch exists remotely
           if git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q "$RELEASE_BRANCH"; then
-            echo "Branch $RELEASE_BRANCH exists, checking out..."
-            git checkout "$RELEASE_BRANCH"
+            echo "Branch $RELEASE_BRANCH exists"
           else
             echo "Error: Release branch $RELEASE_BRANCH does not exist"
             echo "Production deployment requires an existing release branch from staging"
             exit 1
           fi
 
-      - name: Trigger API Production Deployment
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
-          RELEASE_BRANCH: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
-        run: |
-          echo "Triggering deploy-api-prod workflow on branch $RELEASE_BRANCH..."
-
-          gh workflow run deploy-api-prod.yml \
-            --ref "$RELEASE_BRANCH"
-
-          echo "API production deployment workflow triggered successfully"
+  deploy-api-prod:
+    name: Deploy API to Production
+    needs: [prepare-prod-deploy, ensure-release-branch]
+    if: needs.prepare-prod-deploy.outputs.should_deploy == 'true'
+    uses: ./.github/workflows/deploy-api-prod.yml
+    with:
+      ref: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
+    secrets: inherit
 
   deploy-web-prod:
     name: Deploy Web to Production
-    needs: [prepare-prod-deploy, deploy-api-prod]
+    needs: [prepare-prod-deploy, ensure-release-branch, deploy-api-prod]
     if: needs.prepare-prod-deploy.outputs.should_deploy == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Ensure release branch exists
-        env:
-          RELEASE_BRANCH: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
-        run: |
-          echo "Checking if branch $RELEASE_BRANCH exists..."
-
-          # Check if branch exists remotely
-          if git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q "$RELEASE_BRANCH"; then
-            echo "Branch $RELEASE_BRANCH exists, checking out..."
-            git checkout "$RELEASE_BRANCH"
-          else
-            echo "Error: Release branch $RELEASE_BRANCH does not exist"
-            echo "Production deployment requires an existing release branch from staging"
-            exit 1
-          fi
-
-      - name: Trigger Web Production Deployment
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
-          RELEASE_BRANCH: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
-        run: |
-          echo "Triggering deploy-web-prod workflow on branch $RELEASE_BRANCH..."
-
-          gh workflow run deploy-web-prod.yml \
-            --ref "$RELEASE_BRANCH"
-
-          echo "Web production deployment workflow triggered successfully"
+    uses: ./.github/workflows/deploy-web-prod.yml
+    with:
+      ref: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
+    secrets: inherit
 
   update-project-status:
     name: Update Project Status to Done

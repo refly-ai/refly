@@ -58,6 +58,10 @@ on:
         required: false
         type: string
         default: "web"
+      ref:
+        description: "Git ref to deploy (branch, tag, or commit SHA)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -71,6 +75,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 2
 
       - uses: pnpm/action-setup@v4

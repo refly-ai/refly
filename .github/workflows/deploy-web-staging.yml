@@ -2,6 +2,17 @@ name: Deploy Web To Staging
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to deploy (branch, tag, or commit SHA)'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to deploy (branch, tag, or commit SHA)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -20,4 +31,5 @@ jobs:
       static_private_endpoint: https://staging-api.refly.ai/v1/misc
       canvas_template_enabled: true
       env_tag: staging
+      ref: ${{ inputs.ref || github.ref }}
     secrets: inherit

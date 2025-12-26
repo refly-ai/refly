@@ -2,6 +2,17 @@ name: Deploy API To Prod
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy (branch, tag, or commit SHA)"
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to deploy (branch, tag, or commit SHA)"
+        required: false
+        type: string
 
 permissions:
   id-token: write
@@ -15,4 +26,5 @@ jobs:
       deployment_name: refly-api
       eks_cluster_name: ${{ vars.AWS_EKS_CLUSTER_PROD }}
       aws_region: ${{ vars.AWS_REGION }}
+      ref: ${{ inputs.ref || github.ref }}
     secrets: inherit

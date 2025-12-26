@@ -10,6 +10,17 @@ on:
       - "!packages/skill-template/**"
       - "!packages/wxt/**"
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy (branch, tag, or commit SHA)"
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to deploy (branch, tag, or commit SHA)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -30,4 +41,5 @@ jobs:
       env_tag: production
       create_sentry_release: true
       sentry_project: web
+      ref: ${{ inputs.ref || github.ref }}
     secrets: inherit
