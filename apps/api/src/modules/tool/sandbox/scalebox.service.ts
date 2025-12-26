@@ -37,6 +37,7 @@ import {
   ExecutorLimits,
 } from './scalebox.constants';
 import { ScaleboxLock } from './scalebox.lock';
+import { truncateContent } from '@refly/utils/token';
 
 /**
  * Scalebox Service
@@ -143,7 +144,7 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
 
     if (stdout.length > this.truncateOutput) {
       output.log += `\n[WARN] ⚠️ Origin stdout length ${stdout.length} is too long, truncate into ${this.truncateOutput}, please save to file instead.\n`;
-      output.stdout = stdout.substring(0, this.truncateOutput);
+      output.stdout = truncateContent(stdout, this.truncateOutput);
       this.logger.warn({ stdout: output.stdout }, 'Origin stdout truncated');
     }
 
