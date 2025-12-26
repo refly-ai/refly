@@ -476,6 +476,15 @@ function isUrlRelatedField(fieldName: string): boolean {
 }
 
 /**
+ * Check if a field is marked as file_uploadable by Composio
+ * @param fieldSchema - The schema property to check
+ * @returns true if the field accepts file uploads
+ */
+function isFileUploadableField(fieldSchema: SchemaProperty): boolean {
+  return fieldSchema.file_uploadable === true;
+}
+
+/**
  * Recursively enhance schema properties to mark URL fields as resources
  * This follows the same pattern that ResourceHandler.collectResourceFields() expects
  * @param schema - Schema or schema property to enhance
@@ -488,7 +497,20 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
   for (const [fieldName, fieldSchema] of Object.entries(schema.properties)) {
     // Only enhance string-type fields
     if (fieldSchema.type === 'string') {
-      if (isUrlRelatedField(fieldName)) {
+      // Handle file_uploadable fields (Composio-specific)
+      if (isFileUploadableField(fieldSchema)) {
+        // Mark as resource field (collectResourceFields will find this)
+        fieldSchema.isResource = true;
+        // Set format to 'file_path' to distinguish from URL resources
+        fieldSchema.format = 'file_path';
+        // Enhance description to guide LLM
+        const originalDesc = fieldSchema.description || '';
+        if (!originalDesc.includes('fileId')) {
+          const hint =
+            '\n\n**IMPORTANT:** For files from context, provide the fileId (format: df-xxxx). The system will automatically download the file to a temporary location and pass the local file path to the tool.';
+          fieldSchema.description = originalDesc + hint;
+        }
+      } else if (isUrlRelatedField(fieldName)) {
         // Mark as resource field (collectResourceFields will find this)
         fieldSchema.isResource = true;
         // Set format to 'url' (resolveFileIdToFormat will use this)

@@ -8200,6 +8200,10 @@ export type SchemaProperty = {
    */
   format?: string;
   /**
+   * Whether this field accepts file uploads (Composio-specific marker)
+   */
+  file_uploadable?: boolean;
+  /**
    * Constant value for discriminator matching in oneOf/anyOf
    */
   const?: unknown;

@@ -1,5 +1,6 @@
-import { Composio, ToolExecuteResponse, AuthScheme } from '@composio/core';
+import { AuthScheme, Composio, ToolExecuteResponse } from '@composio/core';
 import { JSONSchemaToZod } from '@dmitryrechkin/json-schema-to-zod';
+import type { RunnableConfig } from '@langchain/core/runnables';
 import { DynamicStructuredTool, type StructuredToolInterface } from '@langchain/core/tools';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -7,22 +8,22 @@ import type {
   ComposioConnectedAccount,
   ComposioConnectionStatus,
   GenericToolset,
+  HandlerRequest,
   ToolCreationContext,
   User,
-  HandlerRequest,
 } from '@refly/openapi-schema';
-import { COMPOSIO_CONNECTION_STATUS } from '../constant/constant';
+import type { SkillRunnableConfig } from '@refly/skill-template';
 import { genToolsetID } from '@refly/utils';
 import { PrismaService } from '../../common/prisma.service';
 import { RedisService } from '../../common/redis.service';
-import type { ComposioPostHandlerInput } from '../tool-execution/post-execution/post.interface';
+import { COMPOSIO_CONNECTION_STATUS } from '../constant/constant';
 import { ToolInventoryService } from '../inventory/inventory.service';
-import { getCurrentUser, runInContext } from '../tool-context';
-import type { RunnableConfig } from '@langchain/core/runnables';
-import type { SkillRunnableConfig } from '@refly/skill-template';
-import { enhanceToolSchema } from '../utils/schema-utils';
 import { ResourceHandler } from '../resource.service';
+import { getContext, getCurrentUser, runInContext } from '../tool-context';
 import { ComposioToolPostHandlerService } from '../tool-execution/post-execution/composio-post.service';
+import type { ComposioPostHandlerInput } from '../tool-execution/post-execution/post.interface';
+import { PreHandlerRegistryService } from '../tool-execution/pre-execution/composio/pre-registry.service';
+import { enhanceToolSchema } from '../utils/schema-utils';
 
 @Injectable()
 export class ComposioService {
@@ -36,6 +37,7 @@ export class ComposioService {
     private readonly composioPostHandler: ComposioToolPostHandlerService,
     private readonly inventoryService: ToolInventoryService,
     private readonly resourceHandler: ResourceHandler,
+    private readonly preHandlerRegistry: PreHandlerRegistryService,
   ) {
     const apiKey = this.config.get<string>('composio.apiKey');
     if (!apiKey) {
@@ -603,6 +605,8 @@ export class ComposioService {
         _runManager: unknown,
         runnableConfig: RunnableConfig,
       ) => {
+        let cleanup: (() => Promise<void>) | undefined;
+
         try {
           const inputRecord = input as Record<string, unknown>;
 
@@ -618,9 +622,34 @@ export class ComposioService {
             async () => {
               // Capture user inside context before it's gone
               const currentUser = getCurrentUser();
+
+              // Pre-execution: Process file_uploadable fields
+              const preHandler = this.preHandlerRegistry.getHandler(context.toolsetKey, toolName);
+
+              // Use the current RequestContext from tool-context
+              const requestContext = getContext();
+              if (!requestContext) {
+                throw new Error('No request context available for pre-execution');
+              }
+
+              const preResult = await preHandler.process({
+                toolName,
+                toolsetKey: context.toolsetKey,
+                request: { params: toolInput } as HandlerRequest,
+                schema: enhancedSchema,
+                context: requestContext,
+              });
+
+              if (!preResult.success) {
+                throw new Error(`Pre-execution failed: ${preResult.error}`);
+              }
+
+              // Store cleanup function for later
+              cleanup = preResult.cleanup;
+
               // Convert fileIds to URLs using ResourceHandler
               const processedRequest = await this.resourceHandler.resolveInputResources(
-                { params: toolInput } as HandlerRequest,
+                preResult.request,
                 enhancedSchema,
               );
 
@@ -674,6 +703,11 @@ export class ComposioService {
             status: 'error',
             error: errorMessage,
           });
+        } finally {
+          // Always cleanup temp files
+          if (cleanup) {
+            await cleanup();
+          }
         }
       },
       metadata: {

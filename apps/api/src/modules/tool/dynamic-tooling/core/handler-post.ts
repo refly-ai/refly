@@ -120,7 +120,7 @@ export function createBasePostHandler(
  * @param response - Handler response to process
  * @returns Response with resource fields extracted to top level
  */
-function extractFileIdToTopLevel(response: HandlerResponse): HandlerResponse {
+export function extractFileIdToTopLevel(response: HandlerResponse): HandlerResponse {
   if (!response.success || !response.data || typeof response.data !== 'object') {
     return response;
   }

@@ -586,11 +586,12 @@ export class ResourceHandler {
     canvasId: string,
     buffer: Buffer,
     fileNameTitle: string,
+    explicitMimeType?: string,
   ): Promise<DriveFile> {
-    // Infer MIME type and extension from buffer
+    // Use explicit mimeType if provided, otherwise infer from buffer
     const fileTypeResult = await fileTypeFromBuffer(buffer);
-    const mimetype = fileTypeResult?.mime;
-    const ext = fileTypeResult?.ext;
+    const mimetype = explicitMimeType || fileTypeResult?.mime;
+    const ext = explicitMimeType ? mime.getExtension(explicitMimeType) : fileTypeResult?.ext;
     const filename = `${fileNameTitle}.${ext}`;
 
     const uploadResult = await this.miscService.uploadFile(user, {
@@ -623,6 +624,7 @@ export class ResourceHandler {
     value: string,
     fileName: string,
     schemaProperty?: SchemaProperty,
+    explicitMimeType?: string,
   ): Promise<DriveFile | null> {
     // Handle data URL (data:image/png;base64,...)
     if (value.startsWith('data:')) {
@@ -631,7 +633,7 @@ export class ResourceHandler {
 
     // Handle external URL
     if (value.startsWith('http://') || value.startsWith('https://')) {
-      return await this.uploadUrlResource(user, canvasId, value, fileName);
+      return await this.uploadUrlResource(user, canvasId, value, fileName, explicitMimeType);
     }
 
     // Handle pure base64 string
@@ -779,12 +781,31 @@ export class ResourceHandler {
     canvasId: string,
     url: string,
     fileName: string,
+    explicitMimeType?: string,
   ): Promise<DriveFile> {
-    const { filename } = this.inferFileInfoFromUrl(url, fileName, 'application/octet-stream');
+    // Use explicit mimeType if provided, otherwise infer from URL
+    const { filename, contentType: inferredContentType } = this.inferFileInfoFromUrl(
+      url,
+      fileName,
+      'text/plain',
+    );
+    const contentType = explicitMimeType || inferredContentType;
+
+    // If explicit mimeType provided, adjust filename extension
+    let finalFilename = filename;
+    if (explicitMimeType) {
+      const ext = mime.getExtension(explicitMimeType);
+      if (ext) {
+        // Replace extension in filename
+        const baseName = filename.replace(/\.[^.]+$/, '');
+        finalFilename = `${baseName}.${ext}`;
+      }
+    }
 
     const driveFile = await this.driveService.createDriveFile(user, {
       canvasId,
-      name: filename,
+      name: finalFilename,
+      type: contentType,
       externalUrl: url,
       source: 'agent',
       resultId: getResultId(),
@@ -932,12 +953,14 @@ export class ResourceHandler {
       isBase64?: boolean;
       resultId?: string;
       resultVersion?: number;
+      /** Explicit MIME type (takes priority over URL-inferred type) */
+      mimeType?: string;
     },
   ): Promise<DriveFile | null> {
     try {
       // Handle Buffer type
       if (Buffer.isBuffer(value)) {
-        return await this.uploadBufferResource(user, canvasId, value, fileName);
+        return await this.uploadBufferResource(user, canvasId, value, fileName, options?.mimeType);
       }
 
       // Handle string type (URL, base64, data URL)
@@ -946,7 +969,14 @@ export class ResourceHandler {
         const schemaProperty: SchemaProperty | undefined = options?.isBase64
           ? { type: 'string', format: 'base64' }
           : undefined;
-        return await this.uploadStringResource(user, canvasId, value, fileName, schemaProperty);
+        return await this.uploadStringResource(
+          user,
+          canvasId,
+          value,
+          fileName,
+          schemaProperty,
+          options?.mimeType,
+        );
       }
 
       // Handle object with buffer property
@@ -964,6 +994,14 @@ export class ResourceHandler {
    * Resolve fileId to specified format
    */
   private async resolveFileIdToFormat(value: unknown, format: string): Promise<string | Buffer> {
+    // For file_path format, check if value is already a local file path (from pre-handler)
+    if (format === 'file_path') {
+      if (typeof value === 'string' && (value.startsWith('/') || value.includes('composio-'))) {
+        // Already a local file path, return as-is
+        return value;
+      }
+    }
+
     // Extract fileId from value
     const fileId = extractFileId(value);
     if (!fileId) {
@@ -1013,6 +1051,18 @@ export class ResourceHandler {
         // binary (OpenAPI standard) or buffer (legacy, kept for backward compatibility)
         const result = await this.driveService.getDriveFileStream(user, fileId);
         return result.data;
+      }
+
+      case 'file_path': {
+        // file_path format: value should already be a local file path from pre-handler
+        // If it's already a path (not a fileId), return as-is
+        if (typeof value === 'string' && (value.startsWith('/') || value.includes('composio-'))) {
+          return value;
+        }
+        // Otherwise, this shouldn't happen - pre-handler should have converted it
+        throw new Error(
+          `file_path format expects a local file path, got: ${typeof value === 'string' ? value.slice(0, 50) : typeof value}. Pre-handler may not have processed this field.`,
+        );
       }
 
       default: {

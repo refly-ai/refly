@@ -99,52 +99,223 @@ export function filterAndDedupeUrls(urls: string[]): string[] {
 
 /**
  * Extract all URLs from raw text content
+ * Uses indexOf-based scanning for better performance on large texts
  */
 export function extractUrlsFromText(text: string): string[] {
   if (!text) return [];
 
-  // Match URLs in various formats:
-  // - Plain URLs: https://example.com/path
-  // - Markdown links: [text](https://example.com)
-  // - HTML links would be converted to markdown by scrapers
-  const urlRegex = /https?:\/\/[^\s\]\)>"']+/gi;
-  const matches = text.match(urlRegex) || [];
+  const urls: string[] = [];
+  const len = text.length;
+  let i = 0;
 
-  // Clean up URLs (remove trailing punctuation)
-  return matches.map((url: string) => url.replace(/[.,;:!?)]+$/, ''));
+  // URL terminator characters
+  const terminators = new Set([' ', '\t', '\n', '\r', ']', ')', '>', '"', "'"]);
+  // Trailing punctuation to remove
+  const trailingPunct = new Set(['.', ',', ';', ':', '!', '?', ')']);
+
+  while (i < len) {
+    // Fast scan for 'http'
+    const httpIdx = text.indexOf('http', i);
+    if (httpIdx === -1) break;
+
+    // Check for http:// or https://
+    const isHttps = text.startsWith('https://', httpIdx);
+    const isHttp = !isHttps && text.startsWith('http://', httpIdx);
+
+    if (!isHttp && !isHttps) {
+      i = httpIdx + 1;
+      continue;
+    }
+
+    // Find end of URL
+    const start = httpIdx;
+    let end = start + (isHttps ? 8 : 7); // Skip past protocol
+
+    while (end < len && !terminators.has(text[end])) {
+      end++;
+    }
+
+    // Extract and clean URL
+    let url = text.slice(start, end);
+
+    // Remove trailing punctuation
+    while (url.length > 0 && trailingPunct.has(url[url.length - 1])) {
+      url = url.slice(0, -1);
+    }
+
+    if (url.length > 10) {
+      // Minimum valid URL length
+      urls.push(url);
+    }
+
+    i = end;
+  }
+
+  return urls;
 }
 
-// Patterns to filter out noise from scraped web content
-const NOISE_PATTERNS = [
-  /^!\[Image \d+\]/i, // Markdown image references
-  /^\[?\]?\(https?:\/\/[^)]+\)$/i, // Standalone markdown links
-  /^(Sign in|Subscribe|Share|Download|Save|Cancel|Confirm)$/i, // Navigation buttons
-  /^(Show more|Show less|Load more|See more)$/i, // Pagination
-  /^\d+:\d+$/, // Video timestamps like "0:00"
-  /^(Live|New|Playlist|Mix)$/i, // YouTube badges
-  /^\d+[KMB]?\s*(views?|subscribers?)\s*•?\s*\d*\s*(days?|hours?|months?|years?)?\s*(ago)?$/i, // View counts
-  /^(About|Contact|Privacy|Terms|Help|Copyright)/i, // Footer links
-];
+// Fast noise detection using string matching instead of regex where possible
+// Pre-computed lowercase sets for O(1) lookup
+const NOISE_EXACT_LOWER = new Set([
+  'sign in',
+  'subscribe',
+  'share',
+  'download',
+  'save',
+  'cancel',
+  'confirm',
+  'show more',
+  'show less',
+  'load more',
+  'see more',
+  'live',
+  'new',
+  'playlist',
+  'mix',
+]);
+
+const NOISE_PREFIX_LOWER = ['about', 'contact', 'privacy', 'terms', 'help', 'copyright'];
+
+/**
+ * Check if string is a video timestamp like "0:00", "12:34", "1:23:45"
+ */
+function isTimestamp(s: string): boolean {
+  const len = s.length;
+  if (len < 3 || len > 8) return false;
+
+  let colonCount = 0;
+  for (let i = 0; i < len; i++) {
+    const c = s.charCodeAt(i);
+    if (c === 58) {
+      // ':'
+      colonCount++;
+      if (colonCount > 2) return false;
+    } else if (c < 48 || c > 57) {
+      // not 0-9
+      return false;
+    }
+  }
+  return colonCount >= 1;
+}
+
+/**
+ * Check if string is a markdown image reference like "![Image 1]"
+ */
+function isMarkdownImageRef(s: string): boolean {
+  return (
+    s.length > 8 &&
+    s.charCodeAt(0) === 33 &&
+    s.charCodeAt(1) === 91 && // "!["
+    s.startsWith('![Image ') &&
+    s.charCodeAt(s.length - 1) === 93
+  ); // ends with "]"
+}
+
+/**
+ * Check if string is a standalone markdown link like "[](url)" or "(url)"
+ */
+function isStandaloneLink(s: string): boolean {
+  const len = s.length;
+  if (len < 10) return false;
+
+  // Check for (http...) pattern
+  const first = s.charCodeAt(0);
+  if (first === 40 || (first === 91 && s.charCodeAt(1) === 93 && s.charCodeAt(2) === 40)) {
+    // '(' or '[]('
+    return s.includes('http') && s.charCodeAt(len - 1) === 41; // ends with ')'
+  }
+  return false;
+}
+
+/**
+ * Check if string looks like view count "123K views • 2 days ago"
+ */
+function isViewCount(s: string): boolean {
+  const lower = s.toLowerCase();
+  return (lower.includes('view') || lower.includes('subscriber')) && /^\d/.test(s); // starts with digit
+}
 
 /**
  * Check if a line is noise (navigation, badges, etc.)
+ * Optimized: uses string matching and Set lookup instead of regex iteration
+ * Note: expects pre-trimmed input from caller
  */
 function isNoiseLine(line: string): boolean {
-  const trimmed = line.trim();
-  if (!trimmed) return true;
-  if (trimmed.length < 3) return true;
+  if (!line) return true;
+  if (line.length < 3) return true;
 
-  for (const pattern of NOISE_PATTERNS) {
-    if (pattern.test(trimmed)) return true;
+  const lower = line.toLowerCase();
+
+  // O(1) exact match lookup
+  if (NOISE_EXACT_LOWER.has(lower)) return true;
+
+  // Prefix checks (short list, faster than regex)
+  for (const prefix of NOISE_PREFIX_LOWER) {
+    if (lower.startsWith(prefix)) return true;
   }
 
+  // Specific pattern checks (faster than regex for common cases)
+  if (isTimestamp(line)) return true;
+  if (isMarkdownImageRef(line)) return true;
+  if (isStandaloneLink(line)) return true;
+  if (isViewCount(line)) return true;
+
   return false;
+}
+
+/**
+ * Fast string hash for deduplication (FNV-1a variant)
+ * Much faster than storing full normalized strings
+ */
+function fastHash(str: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = (hash * 16777619) >>> 0;
+  }
+  return hash;
+}
+
+/**
+ * Normalize line for deduplication without regex
+ * Converts to lowercase and collapses whitespace in single pass
+ */
+function normalizeLineForDedupe(line: string): string {
+  const result: string[] = [];
+  let prevSpace = true; // Start true to skip leading spaces
+
+  for (let i = 0; i < line.length; i++) {
+    const c = line.charCodeAt(i);
+    // Check for whitespace (space, tab, newline, carriage return)
+    if (c === 32 || c === 9 || c === 10 || c === 13) {
+      if (!prevSpace) {
+        result.push(' ');
+        prevSpace = true;
+      }
+    } else {
+      // Convert to lowercase inline (A-Z: 65-90)
+      result.push(c >= 65 && c <= 90 ? String.fromCharCode(c + 32) : line[i]);
+      prevSpace = false;
+    }
+  }
+
+  // Remove trailing space if present
+  if (result.length > 0 && result[result.length - 1] === ' ') {
+    result.pop();
+  }
+
+  return result.join('');
 }
 
 /**
  * Core function: Extract and filter content from raw text.
  * This is the internal implementation used by both truncateContent and extractAndFilterContent.
  * Uses simple truncation at the end to avoid circular dependency.
+ *
+ * Optimized for performance:
+ * - Single-pass line processing with inline normalization
+ * - Hash-based deduplication instead of full string storage
+ * - Avoids regex in hot path
  */
 function extractAndFilterContentCore(
   text: string,
@@ -169,8 +340,6 @@ function extractAndFilterContentCore(
     };
   }
 
-  const originalTokens = estimateTokens(text);
-
   // Step 1: Extract all URLs before cleaning
   const allUrls = extractUrlsFromText(text);
   const originalUrlCount = allUrls.length;
@@ -179,24 +348,53 @@ function extractAndFilterContentCore(
   const filteredUrls = filterAndDedupeUrls(allUrls);
 
   // Step 3: Clean content - remove noise lines
-  const lines = text.split('\n');
-  const originalLines = lines.length;
-
+  // Process line by line without split() to reduce allocations
+  const len = text.length;
   const cleanedLines: string[] = [];
-  const seenContent = new Set<string>(); // Dedupe identical lines
+  const seenHashes = new Set<number>(); // Hash-based dedupe
+  let lineStart = 0;
+  let originalLines = 0;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
+  for (let i = 0; i <= len; i++) {
+    // Check for line end (newline or end of string)
+    if (i === len || text.charCodeAt(i) === 10) {
+      originalLines++;
 
-    // Skip noise
-    if (isNoiseLine(trimmed)) continue;
+      // Extract line and trim inline
+      let start = lineStart;
+      let end = i;
 
-    // Skip duplicate content
-    const normalized = trimmed.toLowerCase().replace(/\s+/g, ' ');
-    if (seenContent.has(normalized)) continue;
-    seenContent.add(normalized);
+      // Handle \r\n
+      if (end > start && text.charCodeAt(end - 1) === 13) {
+        end--;
+      }
 
-    cleanedLines.push(trimmed);
+      // Trim leading whitespace
+      while (start < end && (text.charCodeAt(start) === 32 || text.charCodeAt(start) === 9)) {
+        start++;
+      }
+
+      // Trim trailing whitespace
+      while (end > start && (text.charCodeAt(end - 1) === 32 || text.charCodeAt(end - 1) === 9)) {
+        end--;
+      }
+
+      const trimmed = text.slice(start, end);
+
+      // Skip noise
+      if (!isNoiseLine(trimmed)) {
+        // Normalize and hash for dedupe
+        const normalized = normalizeLineForDedupe(trimmed);
+        const hash = fastHash(normalized);
+
+        if (!seenHashes.has(hash)) {
+          seenHashes.add(hash);
+          cleanedLines.push(trimmed);
+        }
+      }
+
+      lineStart = i + 1;
+    }
   }
 
   // Step 4: Build final content with URLs section
@@ -204,7 +402,8 @@ function extractAndFilterContentCore(
 
   // Add filtered URLs section at the end
   if (filteredUrls.length > 0) {
-    const urlSection = `\n\n---\nRelevant URLs (${filteredUrls.length}/${originalUrlCount}):\n${filteredUrls.map((u) => `- ${u}`).join('\n')}`;
+    const urlLines = filteredUrls.map((u) => `- ${u}`);
+    const urlSection = `\n\n---\nRelevant URLs (${filteredUrls.length}/${originalUrlCount}):\n${urlLines.join('\n')}`;
     cleanedContent += urlSection;
   }
 
@@ -217,7 +416,9 @@ function extractAndFilterContentCore(
     finalContent = `${truncated}... [${omittedTokens} tokens omitted]`;
   }
 
-  const finalTokens = estimateTokens(finalContent);
+  // Calculate tokens only at the end when needed
+  const originalTokens = Math.ceil(text.length / 4);
+  const finalTokens = Math.ceil(finalContent.length / 4);
 
   return {
     content: finalContent,

@@ -11463,6 +11463,10 @@ export const SchemaPropertySchema = {
         'Format for the property value. For resources: base64, url, binary, text. For strings: date-time, uri, email, etc.',
       example: 'binary',
     },
+    file_uploadable: {
+      type: 'boolean',
+      description: 'Whether this field accepts file uploads (Composio-specific marker)',
+    },
     const: {
       description: 'Constant value for discriminator matching in oneOf/anyOf',
     },

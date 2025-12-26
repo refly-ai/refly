@@ -6,7 +6,6 @@ import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { CodeArtifactModule } from '../code-artifact/code-artifact.module';
 import { CollabModule } from '../collab/collab.module';
 import { CommonModule } from '../common/common.module';
-
 import { CreditModule } from '../credit/credit.module';
 import { SyncToolCreditUsageProcessor } from '../credit/credit.processor';
 import { DriveModule } from '../drive/drive.module';
@@ -18,16 +17,16 @@ import { BillingModule } from './billing/billing.module';
 import { ComposioModule } from './composio/composio.module';
 import { AdapterFactory } from './dynamic-tooling/adapters/factory';
 import { ToolFactory } from './dynamic-tooling/factory.service';
-import { ResourceHandler } from './resource.service';
 import { ToolInventoryService } from './inventory/inventory.service';
+import { ResourceHandler } from './resource.service';
 import { ScaleboxModule } from './sandbox/scalebox.module';
-import { ToolController } from './tool.controller';
-import { ToolService } from './tool.service';
 import {
-  RegularToolPostHandlerService,
   ComposioToolPostHandlerService,
+  RegularToolPostHandlerService,
   ToolWrapperFactoryService,
 } from './tool-execution';
+import { ToolController } from './tool.controller';
+import { ToolService } from './tool.service';
 
 @Module({
   imports: [
