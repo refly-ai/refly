@@ -266,19 +266,30 @@ export class WorkflowService {
    * @param nodeDiffs - The node diffs to sync
    */
   private async syncNodeDiffToCanvas(user: User, canvasId: string, nodeDiffs: NodeDiff[]) {
-    await this.canvasSyncService.syncState(user, {
-      canvasId,
-      transactions: [
-        {
-          txId: genTransactionId(),
-          createdAt: Date.now(),
-          syncedAt: Date.now(),
-          source: { type: 'system' },
-          nodeDiffs,
-          edgeDiffs: [],
-        },
-      ],
-    });
+    this.logger.debug(
+      `[syncNodeDiffToCanvas] Syncing ${nodeDiffs?.length ?? 0} node diffs to canvas ${canvasId}`,
+    );
+    try {
+      await this.canvasSyncService.syncState(user, {
+        canvasId,
+        transactions: [
+          {
+            txId: genTransactionId(),
+            createdAt: Date.now(),
+            syncedAt: Date.now(),
+            source: { type: 'system' },
+            nodeDiffs,
+            edgeDiffs: [],
+          },
+        ],
+      });
+      this.logger.debug(`[syncNodeDiffToCanvas] Successfully synced to canvas ${canvasId}`);
+    } catch (error) {
+      this.logger.error(
+        `[syncNodeDiffToCanvas] Failed to sync to canvas ${canvasId}: ${(error as any)?.message}`,
+      );
+      throw error;
+    }
   }
 
   /**
@@ -370,6 +381,9 @@ export class WorkflowService {
       return;
     }
 
+    this.logger.debug(
+      `[executeSkillResponseNode] Updating node ${nodeExecution.nodeId} status to executing`,
+    );
     await this.syncNodeDiffToCanvas(user, canvasId, [
       {
         type: 'update',
@@ -386,6 +400,9 @@ export class WorkflowService {
       },
     ]);
 
+    this.logger.log(
+      `[executeSkillResponseNode] Invoking skill task for node ${nodeExecution.nodeId}`,
+    );
     await this.invokeSkillTask(user, nodeExecution);
   }
 

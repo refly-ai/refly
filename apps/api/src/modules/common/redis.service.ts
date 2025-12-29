@@ -333,6 +333,41 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return newValue;
   }
 
+  /**
+   * Extend the TTL of an existing lock
+   * @param key - Lock key
+   * @param token - Lock token for verification
+   * @param ttlSeconds - New TTL in seconds
+   * @returns true if extended successfully, false otherwise
+   */
+  private async extendLock(key: string, token: string, ttlSeconds: number): Promise<boolean> {
+    if (!this.client) {
+      return true;
+    }
+
+    try {
+      // Only extend if the lock is still held by this token
+      const script = `
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+          return redis.call("expire", KEYS[1], ARGV[2])
+        else
+          return 0
+        end
+      `;
+
+      const success = await this.client.eval(script, 1, key, token, ttlSeconds);
+      if (success === 1) {
+        this.logger.debug(`Lock extended: key=${key}, token=${token}, ttl=${ttlSeconds}s`);
+        return true;
+      }
+      this.logger.warn(`Failed to extend lock (token mismatch or lock lost): key=${key}`);
+      return false;
+    } catch (err) {
+      this.logger.warn(`Error extending lock: key=${key}, error=${err}`);
+      return false;
+    }
+  }
+
   async acquireLock(key: string, ttlSeconds = 10): Promise<LockReleaseFn | null> {
     if (!this.client) {
       return async () => true;
@@ -343,36 +378,73 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const success = await this.client.set(key, token, 'EX', ttlSeconds, 'NX');
 
       if (success) {
-        return async () => await this.releaseLock(key, token);
+        this.logger.debug(`Lock acquired: key=${key}, token=${token}, ttl=${ttlSeconds}s`);
+
+        // Start auto-renewal timer: renew at 1/2 of TTL interval
+        const renewalInterval = (ttlSeconds * 1000) / 2;
+        const renewalTimer = setInterval(async () => {
+          const extended = await this.extendLock(key, token, ttlSeconds);
+          if (!extended) {
+            // If extension failed, clear the timer as we no longer hold the lock
+            clearInterval(renewalTimer);
+            this.logger.warn(
+              `Lock auto-renewal failed and timer cleared: key=${key}, token=${token}`,
+            );
+          }
+        }, renewalInterval);
+
+        // Return a release function that clears the timer and releases the lock
+        return async () => {
+          clearInterval(renewalTimer);
+          return await this.releaseLock(key, token);
+        };
       }
+      this.logger.debug(`Failed to acquire lock: key=${key} (already held by another process)`);
       return null;
     } catch (err) {
-      this.logger.warn('Error acquiring lock:', err);
+      this.logger.warn(`Error acquiring lock: key=${key}, error=${err}`);
       return null;
     }
   }
 
   async waitLock(
     key: string,
-    options?: { maxRetries?: number; initialDelay?: number; noThrow?: boolean },
+    options?: {
+      maxRetries?: number;
+      initialDelay?: number;
+      noThrow?: boolean;
+      ttlSeconds?: number;
+    },
   ) {
-    const { maxRetries = 3, initialDelay = 100, noThrow = false } = options ?? {};
+    const { maxRetries = 15, initialDelay = 100, noThrow = false, ttlSeconds = 10 } = options ?? {};
     let retries = 0;
     let delay = initialDelay;
+    const startTime = Date.now();
+
     while (true) {
-      const releaseLock = await this.acquireLock(key);
+      const releaseLock = await this.acquireLock(key, ttlSeconds);
       if (releaseLock) {
+        const waitTime = Date.now() - startTime;
+        this.logger.debug(
+          `Lock acquired after ${retries} retries and ${waitTime}ms wait: key=${key}`,
+        );
         return releaseLock;
       }
       if (retries >= maxRetries) {
+        const totalWaitTime = Date.now() - startTime;
+        this.logger.warn(
+          `Failed to acquire lock after ${retries} retries and ${totalWaitTime}ms wait: key=${key}`,
+        );
         if (noThrow) {
           return null;
         }
-        throw new OperationTooFrequent('Failed to get lock for canvas');
+        throw new OperationTooFrequent(
+          `Failed to get lock for key ${key} after ${retries} retries (waited ${totalWaitTime}ms)`,
+        );
       }
-      // Exponential backoff before next retry
+      // Exponential backoff before next retry, with max delay cap of 2000ms
       await new Promise((resolve) => setTimeout(resolve, delay));
-      delay *= 2;
+      delay = Math.min(delay * 2, 2000);
       retries += 1;
     }
   }
@@ -394,11 +466,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const success = await this.client.eval(script, 1, key, token);
 
       if (success === 1) {
+        this.logger.debug(`Lock released: key=${key}, token=${token}`);
         return true;
       }
+      this.logger.warn(
+        `Failed to release lock (token mismatch or already released): key=${key}, token=${token}`,
+      );
       return false;
     } catch (err) {
-      this.logger.error('Error releasing lock:', err);
+      this.logger.error(`Error releasing lock: key=${key}, error=${err}`);
       throw false;
     }
   }
