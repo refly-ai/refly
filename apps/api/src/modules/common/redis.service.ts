@@ -378,7 +378,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       const success = await this.client.set(key, token, 'EX', ttlSeconds, 'NX');
 
       if (success) {
-        this.logger.debug(`Lock acquired: key=${key}, token=${token}, ttl=${ttlSeconds}s`);
+        this.logger.log(`Lock acquired: key=${key}, token=${token}, ttl=${ttlSeconds}s`);
 
         // Start auto-renewal timer: renew at 1/2 of TTL interval
         const renewalInterval = (ttlSeconds * 1000) / 2;
@@ -399,7 +399,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
           return await this.releaseLock(key, token);
         };
       }
-      this.logger.debug(`Failed to acquire lock: key=${key} (already held by another process)`);
+      this.logger.log(`Failed to acquire lock: key=${key} (already held by another process)`);
       return null;
     } catch (err) {
       this.logger.warn(`Error acquiring lock: key=${key}, error=${err}`);
