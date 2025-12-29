@@ -23,7 +23,7 @@ import { getContext, getCurrentUser, runInContext } from '../tool-context';
 import { ComposioToolPostHandlerService } from '../tool-execution/post-execution/composio-post.service';
 import type { ComposioPostHandlerInput } from '../tool-execution/post-execution/post.interface';
 import { PreHandlerRegistryService } from '../tool-execution/pre-execution/composio/pre-registry.service';
-import { enhanceToolSchema } from '../utils/schema-utils';
+import { enhanceToolSchema, FILE_UPLOAD_GUIDANCE } from '../utils/schema-utils';
 
 @Injectable()
 export class ComposioService {
@@ -590,15 +590,19 @@ export class ComposioService {
     const toolName = fn?.name ?? 'unknown_tool';
 
     // Enhance schema: mark URL fields as resources, add file_name_title field, and guide LLM
-    const enhancedSchema = enhanceToolSchema((fn?.parameters ?? {}) as any);
+    const { schema: enhancedSchema, hasFileUpload } = enhanceToolSchema(
+      (fn?.parameters ?? {}) as any,
+    );
     // Convert to Zod schema (enhanced descriptions will be preserved)
     const toolSchema: any = JSONSchemaToZod.convert(enhancedSchema);
 
+    // Build description with file upload guidance if applicable
+    const baseDescription = fn?.description ?? toolName;
+    const description = hasFileUpload ? baseDescription + FILE_UPLOAD_GUIDANCE : baseDescription;
+
     return new DynamicStructuredTool({
       name: toolName,
-      description:
-        fn?.description ??
-        `${context.authType === 'oauth' ? 'OAuth' : 'API Key'} tool: ${toolName}`,
+      description,
       schema: toolSchema,
       func: async (
         input: Record<string, unknown>,

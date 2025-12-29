@@ -35,6 +35,27 @@ export interface ResourceField {
   isOptionalResource?: boolean;
 }
 
+/**
+ * Result of enhancing a tool schema
+ */
+export interface EnhancedSchemaResult {
+  /** The enhanced JSON schema */
+  schema: JsonSchema;
+  /** Whether the schema contains any file_uploadable fields */
+  hasFileUpload: boolean;
+}
+
+/**
+ * Multi-file upload guidance - appended to tool description when file_uploadable exists
+ */
+export const FILE_UPLOAD_GUIDANCE = `
+
+**File Upload Pattern:**
+- This tool uploads ONE file at a time and returns a media_id
+- To upload multiple files, call this tool multiple times (once per file)
+- Collect all returned media_ids into an array
+- Use the array of media_ids when creating the post (e.g., media_media_ids: ["id1", "id2"])`;
+
 // ============================================================================
 // Schema Parsing & Validation
 // ============================================================================
@@ -417,11 +438,22 @@ function isFileUploadableField(fieldSchema: SchemaProperty): boolean {
 }
 
 /**
+ * Context for tracking state during schema enhancement
+ */
+interface EnhanceContext {
+  hasFileUpload: boolean;
+}
+
+/**
  * Recursively enhance schema properties to mark URL fields as resources
  * This follows the same pattern that ResourceHandler.collectResourceFields() expects
  * @param schema - Schema or schema property to enhance
+ * @param context - Context object for tracking file_uploadable fields
  */
-function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
+function enhanceSchemaProperties(
+  schema: JsonSchema | SchemaProperty,
+  context: EnhanceContext,
+): void {
   if (!schema.properties) {
     return;
   }
@@ -431,6 +463,8 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
     if (fieldSchema.type === 'string') {
       // Handle file_uploadable fields (Composio-specific)
       if (isFileUploadableField(fieldSchema)) {
+        // Track that we found a file_uploadable field
+        context.hasFileUpload = true;
         // Mark as resource field (collectResourceFields will find this)
         fieldSchema.isResource = true;
         // Set format to 'file_path' to distinguish from URL resources
@@ -459,7 +493,7 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
 
     // Recursively process nested objects
     if (fieldSchema.type === 'object' && fieldSchema.properties) {
-      enhanceSchemaProperties(fieldSchema);
+      enhanceSchemaProperties(fieldSchema, context);
     }
 
     // Process array items
@@ -470,7 +504,7 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
         fieldSchema.items.format = 'url';
       } else if (fieldSchema.items.type === 'object') {
         // For arrays of objects containing URL fields
-        enhanceSchemaProperties(fieldSchema.items);
+        enhanceSchemaProperties(fieldSchema.items, context);
       }
     }
 
@@ -479,7 +513,7 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
       if (fieldSchema[key] && Array.isArray(fieldSchema[key])) {
         for (const option of fieldSchema[key] as SchemaProperty[]) {
           if (option.type === 'object') {
-            enhanceSchemaProperties(option);
+            enhanceSchemaProperties(option, context);
           }
         }
       }
@@ -496,13 +530,14 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
  * 2. Marks them with isResource: true and format: 'url'
  * 3. Enhances descriptions to guide LLM to use fileId format
  * 4. Adds file_name_title field for naming generated files
+ * 5. Detects file_uploadable fields and returns hasFileUpload flag
  *
  * The enhanced schema is used for:
  * - LLM guidance (via enhanced descriptions in Zod schema)
  * - Backend processing (via isResource markers for ResourceHandler)
  *
  * @param schema - Original JSON schema from Composio
- * @returns Enhanced schema with isResource markers for URL fields and file_name_title field
+ * @returns EnhancedSchemaResult with schema and hasFileUpload flag
  *
  * @example
  * ```typescript
@@ -513,37 +548,28 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
  *   }
  * };
  *
- * const enhanced = enhanceToolSchema(original);
- * // Result:
- * // {
- * //   type: 'object',
- * //   properties: {
- * //     image_url: {
- * //       type: 'string',
- * //       description: 'URL to the image\n\n**For uploaded files:** Provide a fileId...',
- * //       isResource: true,
- * //       format: 'url'
- * //     },
- * //     file_name_title: {
- * //       type: 'string',
- * //       description: 'The title for the generated file...'
- * //     }
- * //   },
- * //   required: ['file_name_title']
- * // }
+ * const { schema, hasFileUpload } = enhanceToolSchema(original);
+ * // schema contains enhanced properties
+ * // hasFileUpload is true if any file_uploadable field was found
  * ```
  */
-export function enhanceToolSchema(schema: JsonSchema): JsonSchema {
+export function enhanceToolSchema(schema: JsonSchema): EnhancedSchemaResult {
   // Deep clone to avoid mutation
   const enhanced = JSON.parse(JSON.stringify(schema)) as JsonSchema;
 
+  // Create context to track file_uploadable fields
+  const context: EnhanceContext = { hasFileUpload: false };
+
   // Enhance URL fields with resource markers
-  enhanceSchemaProperties(enhanced);
+  enhanceSchemaProperties(enhanced, context);
 
   // Add file_name_title field for naming generated files
   addFileNameTitleField(enhanced);
 
-  return enhanced;
+  return {
+    schema: enhanced,
+    hasFileUpload: context.hasFileUpload,
+  };
 }
 
 /**

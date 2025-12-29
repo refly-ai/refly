@@ -253,24 +253,30 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     return <CopilotWorkflowPlan data={structuredArgs} />;
   }
 
+  const isDriveFileId = (value: unknown): value is string => {
+    return typeof value === 'string' && value.startsWith('df-');
+  };
+
   const filePreviewDriveFile = useMemo<DriveFile[]>(() => {
     const result = safeParseJSON(resultContent);
     const resultData = result?.data as Record<string, unknown> | undefined;
     const files = result?.files ?? resultData?.files;
 
     if (Array.isArray(files) && files.length > 0) {
-      return files.map((file) => ({
-        fileId: String(file.fileId),
-        canvasId: String(file.canvasId ?? ''),
-        name: String(file.name ?? file.fileName ?? 'Drive file'),
-        type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
-      }));
+      return files
+        .filter((file) => isDriveFileId(file?.fileId))
+        .map((file) => ({
+          fileId: file.fileId,
+          canvasId: String(file.canvasId ?? ''),
+          name: String(file.name ?? file.fileName ?? 'Drive file'),
+          type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
+        }));
     }
 
-    if (resultData?.fileId) {
+    if (isDriveFileId(resultData?.fileId)) {
       return [
         {
-          fileId: String(resultData.fileId),
+          fileId: resultData.fileId,
           canvasId: String(resultData.canvasId ?? ''),
           name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
           type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),

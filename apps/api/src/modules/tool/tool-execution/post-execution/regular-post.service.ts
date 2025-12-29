@@ -21,6 +21,7 @@ import {
   safeParseJSON,
 } from '../../utils/token';
 import { ResourceHandler } from '../../resource.service';
+import { extractFileIdToTopLevel } from '../../dynamic-tooling/core/handler-post';
 
 // ============================================================================
 // Regular Tool Post-Handler Service
@@ -74,27 +75,33 @@ export class RegularToolPostHandlerService implements IToolPostHandler {
       }
 
       // If file was archived, include files array for frontend display
-      let content = compressed;
-      if (fileId && fileMeta) {
-        try {
-          const parsed = JSON.parse(compressed);
-          parsed.files = [
-            {
-              fileId: fileMeta.fileId,
-              canvasId: fileMeta.canvasId,
-              name: fileMeta.name,
-              type: fileMeta.type,
-              summary: 'Full content stored here. Use read_file tool to obtain detailed content.',
-            },
-          ];
-          content = JSON.stringify(parsed, null, 2);
-        } catch {
-          // If compressed is not valid JSON, keep as-is
-        }
+      let contentData: Record<string, unknown> = {};
+      try {
+        contentData = JSON.parse(compressed);
+      } catch {
+        contentData = { rawContent: compressed };
       }
 
+      if (fileId && fileMeta) {
+        contentData.files = [
+          {
+            fileId: fileMeta.fileId,
+            canvasId: fileMeta.canvasId,
+            name: fileMeta.name,
+            mimeType: fileMeta.type,
+            summary: 'Full content stored here. Use read_file tool to obtain detailed content.',
+          },
+        ];
+      }
+
+      // Extract fileId and files to top level for frontend accessibility
+      const extractedResponse = extractFileIdToTopLevel({
+        success: true,
+        data: contentData,
+      });
+
       return {
-        content,
+        content: JSON.stringify(extractedResponse.data ?? contentData, null, 2),
         fileId,
         fileMeta,
         success: true,
