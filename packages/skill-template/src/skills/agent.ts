@@ -242,16 +242,9 @@ export class Agent extends BaseSkill {
           (response as any).response_metadata?.model_provider === 'google-vertexai' &&
           typeof response === 'object'
         ) {
-          // Clean additional_kwargs.signatures
-          if (
-            response.additional_kwargs?.signatures &&
-            Array.isArray(response.additional_kwargs.signatures)
-          ) {
-            response.additional_kwargs.signatures = response.additional_kwargs.signatures.filter(
-              (signature: any) =>
-                signature && typeof signature === 'string' && signature.trim() !== '',
-            );
-          }
+          // Note that @langchain/google-vertexai v2.1.2 does NOT extract
+          // signatures automatically. We should NOT filter them here as
+          // Google API expects a 1:1 mapping between tool_calls and signatures.
         }
         return { messages: [response] };
       } catch (error) {
