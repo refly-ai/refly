@@ -43,7 +43,7 @@ import { SkillInvokerService } from '../skill/skill-invoker.service';
 const WORKFLOW_POLL_INTERVAL = 1500;
 const WORKFLOW_EXECUTION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const NODE_EXECUTION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
-const POLL_LOCK_TTL_MS = 5000; // 5 seconds
+const POLL_LOCK_TTL = 5; // 5 seconds
 
 @Injectable()
 export class WorkflowService {
@@ -545,7 +545,7 @@ export class WorkflowService {
 
     // Acquire distributed lock to prevent multiple pods from polling the same execution
     const lockKey = `workflow:poll:${executionId}`;
-    const releaseLock = await this.redis.acquireLock(lockKey, POLL_LOCK_TTL_MS);
+    const releaseLock = await this.redis.acquireLock(lockKey, POLL_LOCK_TTL);
     if (!releaseLock) {
       this.logger.debug(`[pollWorkflow] Lock not acquired for ${executionId}, skipping`);
       return;

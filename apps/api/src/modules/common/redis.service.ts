@@ -85,14 +85,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private initInMemoryCleanup() {
+  private initInMemoryCleanup(): void {
     // Clean up expired items every 30 seconds
     this.cleanupInterval = setInterval(() => {
       this.cleanupExpiredItems();
     }, 30000);
   }
 
-  private cleanupExpiredItems() {
+  private cleanupExpiredItems(): void {
     const now = Date.now();
     for (const [key, item] of this.inMemoryStore.entries()) {
       if (item.expiresAt <= now) {
@@ -105,7 +105,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return item.expiresAt <= Date.now();
   }
 
-  getClient() {
+  getClient(): Redis {
     if (!this.client) {
       throw new Error('Redis client is not initialized yet');
     }
@@ -131,7 +131,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  async setex(key: string, seconds: number, value: string) {
+  async setex(key: string, seconds: number, value: string): Promise<void> {
     if (this.client) {
       try {
         await this.client.setex(key, seconds, value);
@@ -147,7 +147,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     this.inMemoryStore.set(key, { value, expiresAt });
   }
 
-  async get(key: string) {
+  async get(key: string): Promise<string | null> {
     if (this.client) {
       try {
         return await this.client.get(key);
@@ -527,7 +527,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       ttlSeconds?: number;
       maxLifetimeSeconds?: number;
     },
-  ) {
+  ): Promise<LockReleaseFn | null> {
     const {
       maxRetries = 15,
       initialDelay = 100,
@@ -567,7 +567,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async releaseLock(key: string, token: string) {
+  async releaseLock(key: string, token: string): Promise<boolean> {
     if (!this.client) {
       return true;
     }
@@ -593,7 +593,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       return false;
     } catch (err) {
       this.logger.error(`Error releasing lock: key=${key}, error=${err}`);
-      throw false;
+      throw new Error(`Error releasing lock: key=${key} - ${err}`);
     }
   }
 
