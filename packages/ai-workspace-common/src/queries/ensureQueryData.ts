@@ -39,6 +39,7 @@ import {
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowPlanDetail,
   getWorkflowVariables,
   hasBeenInvited,
   hasFilledForm,
@@ -105,6 +106,7 @@ import {
   GetToolCallResultData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
+  GetWorkflowPlanDetailData,
   GetWorkflowVariablesData,
   ListAccountsData,
   ListCanvasesData,
@@ -452,6 +454,14 @@ export const ensureUseGetWorkflowDetailData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseGetWorkflowDetailKeyFn(clientOptions),
     queryFn: () => getWorkflowDetail({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetWorkflowPlanDetailData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowPlanDetailData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetWorkflowPlanDetailKeyFn(clientOptions),
+    queryFn: () => getWorkflowPlanDetail({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetWorkflowAppDetailData = (
   queryClient: QueryClient,

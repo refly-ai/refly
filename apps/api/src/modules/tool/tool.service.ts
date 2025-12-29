@@ -6,6 +6,7 @@ import {
   BuiltinToolset,
   BuiltinToolsetDefinition,
   GenerateWorkflow,
+  PatchWorkflow,
   builtinToolsetInventory,
   toolsetInventory,
 } from '@refly/agent-tools';
@@ -998,7 +999,7 @@ export class ToolService {
 
     let copilotTools: DynamicStructuredTool[] = [];
     if (toolsets.find((t) => t.type === ToolsetType.REGULAR && t.id === 'copilot')) {
-      copilotTools = this.instantiateCopilotToolsets();
+      copilotTools = this.instantiateCopilotToolsets(user, engine);
     }
 
     // Regular toolsets now include both regular and config_based (mapped to 'regular' type)
@@ -1052,17 +1053,34 @@ export class ToolService {
       );
   }
 
-  private instantiateCopilotToolsets(): DynamicStructuredTool[] {
-    const toolsetInstance = new GenerateWorkflow();
+  private instantiateCopilotToolsets(user: User, engine: SkillEngine): DynamicStructuredTool[] {
+    const params = {
+      user,
+      reflyService: engine.service,
+    };
+    const generateWorkflow = new GenerateWorkflow(params);
+    const patchWorkflow = new PatchWorkflow(params);
 
     return [
       new DynamicStructuredTool({
         name: 'copilot_generate_workflow',
-        description: toolsetInstance.description,
-        schema: toolsetInstance.schema,
-        func: toolsetInstance.invoke.bind(toolsetInstance),
+        description: generateWorkflow.description,
+        schema: generateWorkflow.schema,
+        func: generateWorkflow.invoke.bind(generateWorkflow),
         metadata: {
-          name: toolsetInstance.name,
+          name: generateWorkflow.name,
+          type: 'copilot',
+          toolsetKey: 'copilot',
+          toolsetName: 'Copilot',
+        },
+      }),
+      new DynamicStructuredTool({
+        name: 'copilot_patch_workflow',
+        description: patchWorkflow.description,
+        schema: patchWorkflow.schema,
+        func: patchWorkflow.invoke.bind(patchWorkflow),
+        metadata: {
+          name: patchWorkflow.name,
           type: 'copilot',
           toolsetKey: 'copilot',
           toolsetName: 'Copilot',

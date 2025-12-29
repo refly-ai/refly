@@ -28,6 +28,7 @@ import { SearchService } from '../search/search.service';
 import { ShareCreationService } from '../share/share-creation.service';
 import { ScaleboxService } from '../tool/sandbox/scalebox.service';
 import { ToolService } from '../tool/tool.service';
+import { WorkflowPlanService } from '../workflow/workflow-plan.service';
 
 @Injectable()
 export class SkillEngineService implements OnModuleInit {
@@ -49,6 +50,7 @@ export class SkillEngineService implements OnModuleInit {
   private toolService: ToolService;
   private scaleboxService: ScaleboxService;
   private shareCreationService: ShareCreationService;
+  private workflowPlanService: WorkflowPlanService;
   constructor(
     private moduleRef: ModuleRef,
     private config: ConfigService,
@@ -77,6 +79,7 @@ export class SkillEngineService implements OnModuleInit {
         this.toolService = this.moduleRef.get(ToolService, { strict: false });
         this.scaleboxService = this.moduleRef.get(ScaleboxService, { strict: false });
         this.shareCreationService = this.moduleRef.get(ShareCreationService, { strict: false });
+        this.workflowPlanService = this.moduleRef.get(WorkflowPlanService, { strict: false });
       },
       {
         logger: this.logger,
@@ -280,6 +283,22 @@ export class SkillEngineService implements OnModuleInit {
       },
       execute: async (user, req) => {
         return await this.scaleboxService.execute(user, req);
+      },
+      generateWorkflowPlan: async (_user, data, copilotSessionId, resultId, resultVersion) => {
+        return await this.workflowPlanService.generateWorkflowPlan(
+          data,
+          copilotSessionId,
+          resultId,
+          resultVersion,
+        );
+      },
+      patchWorkflowPlan: async (_user, planId, operations, resultId, resultVersion) => {
+        return await this.workflowPlanService.patchWorkflowPlan(
+          planId,
+          operations,
+          resultId,
+          resultVersion,
+        );
       },
     };
   };

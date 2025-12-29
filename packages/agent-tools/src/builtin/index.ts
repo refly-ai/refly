@@ -199,6 +199,30 @@ export const BuiltinListFilesDefinition: ToolsetDefinition = {
   },
 };
 
+export const BuiltinGenerateWorkflowPlanDefinition: ToolsetDefinition = {
+  key: 'generate_workflow_plan',
+  labelDict: {
+    en: 'Generate Workflow Plan',
+    'zh-CN': '生成工作流计划',
+  },
+  descriptionDict: {
+    en: 'Generate a new workflow plan based on tasks and variables.',
+    'zh-CN': '根据任务和变量生成新的工作流计划。',
+  },
+};
+
+export const BuiltinPatchWorkflowPlanDefinition: ToolsetDefinition = {
+  key: 'patch_workflow_plan',
+  labelDict: {
+    en: 'Patch Workflow Plan',
+    'zh-CN': '修补工作流计划',
+  },
+  descriptionDict: {
+    en: 'Patch an existing workflow plan with changes.',
+    'zh-CN': '通过更改修补现有工作流计划。',
+  },
+};
+
 export class BuiltinLibrarySearch extends AgentBaseTool<BuiltinToolParams> {
   name = 'library_search';
   toolsetKey = 'library_search';

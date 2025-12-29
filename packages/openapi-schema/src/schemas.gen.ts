@@ -10306,6 +10306,107 @@ export const WorkflowExecutionSchema = {
   },
 } as const;
 
+export const WorkflowTaskSchema = {
+  type: 'object',
+  required: ['id', 'title', 'prompt', 'toolsets'],
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Workflow task ID',
+    },
+    title: {
+      type: 'string',
+      description: 'Workflow task title',
+    },
+    prompt: {
+      type: 'string',
+      description: 'Workflow task prompt',
+    },
+    toolsets: {
+      type: 'array',
+      description: 'Workflow task toolsets',
+      items: {
+        type: 'string',
+        description: 'Workflow task toolset ID',
+      },
+    },
+  },
+} as const;
+
+export const WorkflowPlanDataSchema = {
+  type: 'object',
+  required: ['title', 'tasks'],
+  properties: {
+    title: {
+      type: 'string',
+      description: 'Workflow plan title',
+    },
+    tasks: {
+      type: 'array',
+      description: 'Workflow tasks',
+      items: {
+        $ref: '#/components/schemas/WorkflowTask',
+      },
+    },
+    variables: {
+      type: 'array',
+      description: 'Workflow variables',
+      items: {
+        $ref: '#/components/schemas/WorkflowVariable',
+      },
+    },
+  },
+} as const;
+
+export const WorkflowPlanSchema = {
+  type: 'object',
+  required: ['planId'],
+  properties: {
+    planId: {
+      type: 'string',
+      description: 'Workflow plan ID',
+    },
+    version: {
+      type: 'number',
+      description: 'Workflow plan version',
+    },
+    data: {
+      type: 'object',
+      description: 'Workflow plan data',
+    },
+    patch: {
+      type: 'object',
+      description: 'Workflow plan patch',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Workflow plan creation timestamp',
+    },
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Workflow plan update timestamp',
+    },
+  },
+} as const;
+
+export const GetWorkflowPlanDetailResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/WorkflowPlan',
+        },
+      },
+    },
+  ],
+} as const;
+
 export const GetWorkflowDetailResponseSchema = {
   allOf: [
     {

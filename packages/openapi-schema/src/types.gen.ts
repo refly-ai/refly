@@ -7371,6 +7371,75 @@ export type WorkflowExecution = {
   updatedAt?: string;
 };
 
+export type WorkflowTask = {
+  /**
+   * Workflow task ID
+   */
+  id: string;
+  /**
+   * Workflow task title
+   */
+  title: string;
+  /**
+   * Workflow task prompt
+   */
+  prompt: string;
+  /**
+   * Workflow task toolsets
+   */
+  toolsets: Array<string>;
+};
+
+export type WorkflowPlanData = {
+  /**
+   * Workflow plan title
+   */
+  title: string;
+  /**
+   * Workflow tasks
+   */
+  tasks: Array<WorkflowTask>;
+  /**
+   * Workflow variables
+   */
+  variables?: Array<WorkflowVariable>;
+};
+
+export type WorkflowPlan = {
+  /**
+   * Workflow plan ID
+   */
+  planId: string;
+  /**
+   * Workflow plan version
+   */
+  version?: number;
+  /**
+   * Workflow plan data
+   */
+  data?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Workflow plan patch
+   */
+  patch?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Workflow plan creation timestamp
+   */
+  createdAt?: string;
+  /**
+   * Workflow plan update timestamp
+   */
+  updatedAt?: string;
+};
+
+export type GetWorkflowPlanDetailResponse = BaseResponse & {
+  data?: WorkflowPlan;
+};
+
 export type GetWorkflowDetailResponse = BaseResponse & {
   data?: WorkflowExecution;
 };
@@ -10889,6 +10958,23 @@ export type GetWorkflowDetailData = {
 export type GetWorkflowDetailResponse2 = GetWorkflowDetailResponse;
 
 export type GetWorkflowDetailError = unknown;
+
+export type GetWorkflowPlanDetailData = {
+  query: {
+    /**
+     * Workflow plan ID
+     */
+    planId: string;
+    /**
+     * Workflow plan version
+     */
+    version?: number;
+  };
+};
+
+export type GetWorkflowPlanDetailResponse2 = GetWorkflowPlanDetailResponse;
+
+export type GetWorkflowPlanDetailError = unknown;
 
 export type CreateWorkflowAppData = {
   body: CreateWorkflowAppRequest;
