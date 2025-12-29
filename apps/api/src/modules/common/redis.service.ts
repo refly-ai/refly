@@ -12,14 +12,29 @@ interface InMemoryItem {
 
 export type LockReleaseFn = () => Promise<boolean>;
 
+/**
+ * Metadata for tracking active lock renewal timers
+ */
+interface LockTimerInfo {
+  timer: NodeJS.Timeout;
+  maxLifetimeTimer: NodeJS.Timeout | null;
+  key: string;
+  token: string;
+  createdAt: number;
+}
+
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private readonly INIT_TIMEOUT = 10000; // 10 seconds timeout
+  // Default maximum lifetime for lock renewal timers (5 minutes)
+  private readonly DEFAULT_MAX_LOCK_LIFETIME_SECONDS = 300;
 
   private client: Redis | null = null;
   private inMemoryStore: Map<string, InMemoryItem> = new Map();
   private cleanupInterval: NodeJS.Timeout | null = null;
+  // Track active lock renewal timers to prevent resource leaks
+  private activeLockTimers: Map<string, LockTimerInfo> = new Map();
 
   constructor(private configService: ConfigService) {
     if (!isDesktop()) {
@@ -368,7 +383,37 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async acquireLock(key: string, ttlSeconds = 10): Promise<LockReleaseFn | null> {
+  /**
+   * Acquire a distributed lock with automatic renewal.
+   *
+   * **IMPORTANT**: Callers MUST always invoke the returned release function when done,
+   * preferably in a try/finally block to ensure cleanup even on exceptions:
+   *
+   * ```typescript
+   * const release = await redisService.acquireLock('my-lock');
+   * if (!release) {
+   *   // Lock not acquired
+   *   return;
+   * }
+   * try {
+   *   // Do work while holding the lock
+   * } finally {
+   *   await release();
+   * }
+   * ```
+   *
+   * @param key - The lock key
+   * @param ttlSeconds - Lock TTL in seconds (default: 10). The lock auto-renews at half this interval.
+   * @param maxLifetimeSeconds - Maximum lifetime for the renewal timer in seconds (default: 300).
+   *                             After this time, the renewal timer stops automatically to prevent
+   *                             indefinite resource usage. Set to 0 for no limit (use with caution).
+   * @returns A release function if lock acquired, null otherwise
+   */
+  async acquireLock(
+    key: string,
+    ttlSeconds = 10,
+    maxLifetimeSeconds = this.DEFAULT_MAX_LOCK_LIFETIME_SECONDS,
+  ): Promise<LockReleaseFn | null> {
     if (!this.client) {
       return async () => true;
     }
@@ -380,22 +425,72 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       if (success) {
         this.logger.log(`Lock acquired: key=${key}, token=${token}, ttl=${ttlSeconds}s`);
 
+        const timerKey = `${key}:${token}`;
+        const createdAt = Date.now();
+
+        // Helper to clean up timers and tracking
+        const cleanupTimers = () => {
+          const timerInfo = this.activeLockTimers.get(timerKey);
+          if (timerInfo) {
+            clearInterval(timerInfo.timer);
+            if (timerInfo.maxLifetimeTimer) {
+              clearTimeout(timerInfo.maxLifetimeTimer);
+            }
+            this.activeLockTimers.delete(timerKey);
+          }
+        };
+
         // Start auto-renewal timer: renew at 1/2 of TTL interval
         const renewalInterval = (ttlSeconds * 1000) / 2;
-        const renewalTimer = setInterval(async () => {
-          const extended = await this.extendLock(key, token, ttlSeconds);
-          if (!extended) {
-            // If extension failed, clear the timer as we no longer hold the lock
-            clearInterval(renewalTimer);
-            this.logger.warn(
-              `Lock auto-renewal failed and timer cleared: key=${key}, token=${token}`,
-            );
-          }
+        const renewalTimer = setInterval(() => {
+          (async () => {
+            try {
+              const extended = await this.extendLock(key, token, ttlSeconds);
+              if (!extended) {
+                // If extension failed, clean up as we no longer hold the lock
+                cleanupTimers();
+                this.logger.warn(
+                  `Lock auto-renewal failed and timer cleared: key=${key}, token=${token}`,
+                );
+              }
+            } catch (err) {
+              // Catch any unexpected errors from extendLock to prevent unhandled promise rejection
+              this.logger.error(
+                `Unexpected error during lock auto-renewal: key=${key}, token=${token}, error=${err}`,
+              );
+              // Conservatively clear the timer on error to avoid leaving a running timer
+              // when we may no longer hold the lock
+              cleanupTimers();
+            }
+          })();
         }, renewalInterval);
 
-        // Return a release function that clears the timer and releases the lock
+        // Set up maximum lifetime timer to prevent indefinite execution
+        let maxLifetimeTimer: NodeJS.Timeout | null = null;
+        if (maxLifetimeSeconds > 0) {
+          maxLifetimeTimer = setTimeout(async () => {
+            this.logger.warn(
+              `Lock renewal timer reached maximum lifetime (${maxLifetimeSeconds}s), ` +
+                `stopping auto-renewal: key=${key}, token=${token}`,
+            );
+            cleanupTimers();
+            // Note: The lock itself will expire naturally in Redis after TTL
+            // The caller should have released the lock long before this point
+          }, maxLifetimeSeconds * 1000);
+        }
+
+        // Track this timer for cleanup in onModuleDestroy
+        this.activeLockTimers.set(timerKey, {
+          timer: renewalTimer,
+          maxLifetimeTimer,
+          key,
+          token,
+          createdAt,
+        });
+
+        // Return a release function that clears the timers and releases the lock
         return async () => {
-          clearInterval(renewalTimer);
+          cleanupTimers();
           return await this.releaseLock(key, token);
         };
       }
@@ -407,6 +502,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Wait and retry to acquire a distributed lock.
+   *
+   * **IMPORTANT**: Callers MUST always invoke the returned release function when done,
+   * preferably in a try/finally block to ensure cleanup even on exceptions.
+   *
+   * @param key - The lock key
+   * @param options - Lock acquisition options
+   * @param options.maxRetries - Maximum number of retry attempts (default: 15)
+   * @param options.initialDelay - Initial delay between retries in ms (default: 100)
+   * @param options.noThrow - If true, returns null instead of throwing on failure (default: false)
+   * @param options.ttlSeconds - Lock TTL in seconds (default: 10)
+   * @param options.maxLifetimeSeconds - Maximum lifetime for renewal timer in seconds (default: 300)
+   * @returns A release function if lock acquired, null if noThrow=true and failed
+   * @throws OperationTooFrequent if lock cannot be acquired and noThrow=false
+   */
   async waitLock(
     key: string,
     options?: {
@@ -414,15 +525,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       initialDelay?: number;
       noThrow?: boolean;
       ttlSeconds?: number;
+      maxLifetimeSeconds?: number;
     },
   ) {
-    const { maxRetries = 15, initialDelay = 100, noThrow = false, ttlSeconds = 10 } = options ?? {};
+    const {
+      maxRetries = 15,
+      initialDelay = 100,
+      noThrow = false,
+      ttlSeconds = 10,
+      maxLifetimeSeconds = this.DEFAULT_MAX_LOCK_LIFETIME_SECONDS,
+    } = options ?? {};
     let retries = 0;
     let delay = initialDelay;
     const startTime = Date.now();
 
     while (true) {
-      const releaseLock = await this.acquireLock(key, ttlSeconds);
+      const releaseLock = await this.acquireLock(key, ttlSeconds, maxLifetimeSeconds);
       if (releaseLock) {
         const waitTime = Date.now() - startTime;
         this.logger.debug(
@@ -480,9 +598,26 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
+    // Clear in-memory store cleanup interval
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
+    }
+
+    // Clear all active lock renewal timers to prevent resource leaks
+    if (this.activeLockTimers.size > 0) {
+      this.logger.log(`Clearing ${this.activeLockTimers.size} active lock renewal timer(s)`);
+      for (const timerInfo of this.activeLockTimers.values()) {
+        clearInterval(timerInfo.timer);
+        if (timerInfo.maxLifetimeTimer) {
+          clearTimeout(timerInfo.maxLifetimeTimer);
+        }
+        this.logger.debug(
+          `Cleared lock timer on shutdown: key=${timerInfo.key}, token=${timerInfo.token}, ` +
+            `age=${Date.now() - timerInfo.createdAt}ms`,
+        );
+      }
+      this.activeLockTimers.clear();
     }
 
     if (this.client) {
