@@ -88,6 +88,26 @@ services:
       - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS:-4}
     networks:
       - refly_network
+  refly-sandbox:
+    container_name: refly_sandbox
+    image: ghcr.io/refly-ai/refly-sandbox:latest
+    restart: always
+    environment:
+      - REDIS_HOST=refly_redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'test -f /tmp/worker-ready || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - refly_network
 
 networks:
   refly_network:
