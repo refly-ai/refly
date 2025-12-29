@@ -3,6 +3,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDebouncedCallback } from 'use-debounce';
 import { Play, StopCircle, Preview } from 'refly-icons';
+import { useReactFlow } from '@xyflow/react';
 import { ActionStatus } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -46,7 +47,7 @@ interface SkillResponseActionsProps {
   workflowIsRunning: boolean;
   variant?: 'node' | 'preview';
   onRerunFromHere?: () => void;
-  selectedToolsets?: GenericToolset[];
+  nodeId?: string;
   // For preview variant
   onRerun?: () => void;
   // Common
@@ -62,7 +63,7 @@ const SkillResponseActionsComponent = ({
   workflowIsRunning,
   variant = 'node',
   onRerunFromHere,
-  selectedToolsets,
+  nodeId,
   onRerun,
   onStop,
   extraActions,
@@ -72,8 +73,15 @@ const SkillResponseActionsComponent = ({
   const { t } = useTranslation();
   const { canvasId } = useCanvasContext();
   const { isLoggedRef, userProfile } = useIsLogin();
+  const { getNode } = useReactFlow();
+
+  const node = nodeId ? getNode(nodeId) : null;
+  const nodeMetadata = (node?.data as any)?.metadata;
+  const nodeSelectedToolsets = nodeMetadata?.selectedToolsets;
+  const prompt = nodeMetadata?.query;
+
   const isLogin = !!userProfile?.uid;
-  const nodeToolsets = Array.isArray(selectedToolsets) ? selectedToolsets : [];
+  const nodeToolsets = Array.isArray(nodeSelectedToolsets) ? nodeSelectedToolsets : [];
   const hasNodeToolsets = nodeToolsets.some((toolset) => toolset?.id && toolset.id !== 'empty');
   const shouldCheckUserTools = !!onRerunFromHere || (!!onRerun && hasNodeToolsets);
   const shouldCheckCanvasTools =
@@ -101,7 +109,10 @@ const SkillResponseActionsComponent = ({
   );
 
   // When workflow is running but current node is not executing, disable actions
+  const isPromptEmpty = !prompt || (typeof prompt === 'string' && prompt.trim() === '');
   const disabled = readonly || workflowIsRunning;
+  // If not executing and prompt is empty, disable run actions
+  const actionDisabled = disabled || (!nodeIsExecuting && isPromptEmpty);
 
   const isReRunning = status && status !== 'init';
   const singleButtonTitle = nodeIsExecuting
@@ -307,7 +318,7 @@ const SkillResponseActionsComponent = ({
           type="text"
           icon={icon}
           onClick={handleToggleWorkflowRun}
-          disabled={disabled}
+          disabled={actionDisabled}
           className={buttonClassName}
         />
         {extraActions}
@@ -323,7 +334,7 @@ const SkillResponseActionsComponent = ({
           size="small"
           icon={<Preview size={iconSize} className={iconClassName} />}
           onClick={handleRerunFromHereClick}
-          disabled={disabled || nodeIsExecuting}
+          disabled={actionDisabled || nodeIsExecuting}
           className={buttonClassName}
           title={t('canvas.skillResponse.rerunFromHere')}
         />
@@ -335,7 +346,7 @@ const SkillResponseActionsComponent = ({
           size="small"
           icon={icon}
           onClick={handleToggleWorkflowRun}
-          disabled={disabled}
+          disabled={actionDisabled}
           className={buttonClassName}
           title={singleButtonTitle}
         />

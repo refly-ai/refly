@@ -276,6 +276,7 @@ const SkillResponseNodePreviewComponent = ({
             variant="preview"
             onRerun={handleRetry}
             onStop={handleStop}
+            nodeId={node.id}
             extraActions={<Button type="text" icon={<Close size={24} />} onClick={handleClose} />}
           />
         }
