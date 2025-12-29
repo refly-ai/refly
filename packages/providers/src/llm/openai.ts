@@ -17,7 +17,10 @@ class EnhanceChatOpenAICompletions extends ChatOpenAICompletions {
       rawResponse,
       defaultRole,
     );
-    messageChunk.additional_kwargs.reasoning_content = delta.reasoning;
+    if (messageChunk) {
+      messageChunk.additional_kwargs = messageChunk.additional_kwargs ?? {};
+      messageChunk.additional_kwargs.reasoning_content = delta.reasoning;
+    }
     return messageChunk;
   }
 
@@ -26,7 +29,10 @@ class EnhanceChatOpenAICompletions extends ChatOpenAICompletions {
     rawResponse: OpenAIClient.ChatCompletion,
   ) {
     const langChainMessage = super._convertCompletionsMessageToBaseMessage(message, rawResponse);
-    langChainMessage.additional_kwargs.reasoning_content = (message as any).reasoning_content;
+    if (langChainMessage) {
+      langChainMessage.additional_kwargs = langChainMessage.additional_kwargs ?? {};
+      langChainMessage.additional_kwargs.reasoning_content = (message as any).reasoning_content;
+    }
     return langChainMessage;
   }
 }
