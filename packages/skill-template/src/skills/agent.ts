@@ -237,22 +237,6 @@ export class Agent extends BaseSkill {
 
         // Use llmForGraph, which is the (potentially tool-bound) LLM instance for the graph
         const response = await llmForGraph.invoke(currentMessages);
-        // Clean up empty signatures in the response
-        if (
-          (response as any).response_metadata?.model_provider === 'google-vertexai' &&
-          typeof response === 'object'
-        ) {
-          // Clean additional_kwargs.signatures
-          if (
-            response.additional_kwargs?.signatures &&
-            Array.isArray(response.additional_kwargs.signatures)
-          ) {
-            response.additional_kwargs.signatures = response.additional_kwargs.signatures.filter(
-              (signature: any) =>
-                signature && typeof signature === 'string' && signature.trim() !== '',
-            );
-          }
-        }
         return { messages: [response] };
       } catch (error) {
         this.engine.logger.error(`LLM node execution failed: ${error.stack}`);
@@ -351,6 +335,20 @@ export class Agent extends BaseSkill {
             }
           }
           if ((lastMessage as any).response_metadata?.model_provider === 'google-vertexai') {
+            const originalSignatures = (lastMessage as any).additional_kwargs?.signatures;
+            const toolCallsCount = lastMessage.tool_calls?.length ?? 0;
+
+            // CRITICAL: Vertex AI (Gemini) requires a 1:1 mapping between tool_calls and signatures.
+            // When the response contains both text content and tool calls, the signatures array
+            // includes parts for text segments (usually empty strings) followed by tool signatures.
+            // If we clear the text content (to avoid 400 INVALID_ARGUMENT from mixed content),
+            // we MUST also remove the corresponding text segment signatures, otherwise the
+            // mismatch in array lengths will cause another 400 error.
+            if (Array.isArray(originalSignatures) && originalSignatures.length > toolCallsCount) {
+              lastMessage.additional_kwargs.signatures = originalSignatures.slice(-toolCallsCount);
+            }
+
+            // Clear content to avoid 400 INVALID_ARGUMENT when AIMessage has both text and tool_calls
             lastMessage.content = '';
           }
           return { messages: [...priorMessages, ...toolResultMessages] };
