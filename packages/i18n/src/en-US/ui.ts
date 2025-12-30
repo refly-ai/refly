@@ -189,6 +189,15 @@ const translations = {
         'Clipboard read permission denied. Please allow clipboard access in your browser settings.',
       readFailed: 'Failed to read clipboard. Please try again.',
     },
+    loggedOut: {
+      title: 'Logged Out',
+      content: 'You have been logged out in another tab. Click OK to go to the login page.',
+    },
+    userChanged: {
+      title: 'Account Switched',
+      content:
+        'Your account has been switched in another tab. The page will refresh to load the new user data.',
+    },
   },
   mode: {
     ask: 'Ask',

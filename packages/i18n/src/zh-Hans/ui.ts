@@ -523,6 +523,14 @@ const translations = {
       permissionDenied: '剪贴板读取权限被拒绝。请允许剪贴板访问您的浏览器设置。',
       readFailed: '读取剪贴板失败。请重试。',
     },
+    loggedOut: {
+      title: '已退出登录',
+      content: '检测到您在其他标签页退出了登录，点击确定将跳转到登录页面。',
+    },
+    userChanged: {
+      title: '账户已切换',
+      content: '检测到您在其他标签页切换了账户，页面将刷新以加载新用户数据。',
+    },
   },
   mode: {
     ask: '提问',

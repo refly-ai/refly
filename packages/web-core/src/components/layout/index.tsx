@@ -141,11 +141,9 @@ export const AppLayout = (props: AppLayoutProps) => {
         case 'logout':
           // Another tab logged out, show prompt then redirect to login
           Modal.info({
-            title: t('common.loggedOut.title', { defaultValue: '已退出登录' }),
-            content: t('common.loggedOut.content', {
-              defaultValue: '检测到您在其他标签页退出了登录，点击确定将跳转到登录页面。',
-            }),
-            okText: t('common.confirm', { defaultValue: '确定' }),
+            title: t('common.loggedOut.title'),
+            content: t('common.loggedOut.content'),
+            okText: t('common.confirm'),
             centered: true,
             icon: null,
             okButtonProps: {
@@ -161,11 +159,9 @@ export const AppLayout = (props: AppLayoutProps) => {
         case 'user-changed':
           // Another tab switched user, show prompt then refresh
           Modal.info({
-            title: t('common.userChanged.title', { defaultValue: '账户已切换' }),
-            content: t('common.userChanged.content', {
-              defaultValue: '检测到您在其他标签页切换了账户，页面将刷新以加载新用户数据。',
-            }),
-            okText: t('common.confirm', { defaultValue: '确定' }),
+            title: t('common.userChanged.title'),
+            content: t('common.userChanged.content'),
+            okText: t('common.confirm'),
             centered: true,
             icon: null,
             okButtonProps: {
