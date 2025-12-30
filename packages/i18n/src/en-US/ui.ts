@@ -814,11 +814,6 @@ const translations = {
       Q6: 'Can I deploy Refly privately within enterprises?',
       A6: 'To deploy Refly privately within your enterprise, a commercial license is required. Please contact us at support@refly.ai for further discussion.',
     },
-    testimonials: {
-      tag: 'User Testimonials',
-      title: 'Thousands love their creation with Refly',
-      description: 'Join 10000+ Reflyers to unleash inspiration and accelerate creation 👩‍🎨🧑‍🎨',
-    },
   },
   priceContent: {
     freeCapabilities: [
