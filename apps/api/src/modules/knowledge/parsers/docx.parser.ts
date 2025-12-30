@@ -50,8 +50,9 @@ export class DocxParser extends BaseParser {
     const outputFile = path.join(tempDir, 'output.docx');
 
     try {
-      // 设置 pandoc 参数，从 markdown 转换为 docx
-      const pandocArgs = ['-f', 'markdown', '-o', outputFile, '--standalone'];
+      // Convert Markdown to DOCX using pandoc. Avoid parsing HTML fragments.
+      const inputFormat = 'markdown' + '-raw_html' + '-raw_tex' + '-tex_math_dollars';
+      const pandocArgs = ['-f', inputFormat, '-o', outputFile, '--standalone'];
 
       const pandoc = spawn('pandoc', pandocArgs);
 

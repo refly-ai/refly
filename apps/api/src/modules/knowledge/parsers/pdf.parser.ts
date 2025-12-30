@@ -50,9 +50,9 @@ export class PdfParser extends BaseParser {
     const outputFile = path.join(tempDir, 'output.pdf');
 
     try {
-      // 设置 pandoc 参数，从 markdown 转换为 pdf
-      const pandocArgs = ['-f', 'markdown', '-o', outputFile, '--pdf-engine=wkhtmltopdf'];
-
+      // Convert Markdown to PDF using pandoc. Avoid parsing HTML fragments.
+      const inputFormat = 'markdown' + '-raw_html' + '-raw_tex' + '-tex_math_dollars';
+      const pandocArgs = ['-f', inputFormat, '-o', outputFile, '--pdf-engine=wkhtmltopdf'];
       const pandoc = spawn('pandoc', pandocArgs);
 
       return new Promise((resolve, reject) => {
@@ -80,7 +80,7 @@ export class PdfParser extends BaseParser {
             resolve({
               content: '', // 可以为空或包含文本预览
               buffer: pdfBuffer, // 存储二进制数据
-              metadata: { format: 'docx' },
+              metadata: { format: 'pdf' },
             });
           } finally {
             await this.cleanupTempDir(tempDir);
