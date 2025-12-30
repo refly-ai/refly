@@ -102,6 +102,20 @@ function simplifyUnionTypesForGemini(schema: JsonSchema | SchemaProperty): void 
         // Remove union keywords
         schema.oneOf = undefined;
         schema.anyOf = undefined;
+
+        // IMPORTANT: Recursively process the selected option's nested structures
+        // The selected option may contain nested union types that need to be simplified
+        if (schema.properties && typeof schema.properties === 'object') {
+          for (const key in schema.properties) {
+            simplifyUnionTypesForGemini(schema.properties[key]);
+          }
+        }
+        if (schema.type === 'array' && schema.items) {
+          if (typeof schema.items === 'object' && !Array.isArray(schema.items)) {
+            simplifyUnionTypesForGemini(schema.items);
+          }
+        }
+
         return;
       }
     }
@@ -112,6 +126,19 @@ function simplifyUnionTypesForGemini(schema: JsonSchema | SchemaProperty): void 
       Object.assign(schema, objectOption);
       schema.oneOf = undefined;
       schema.anyOf = undefined;
+
+      // IMPORTANT: Recursively process the selected option's nested structures
+      if (schema.properties && typeof schema.properties === 'object') {
+        for (const key in schema.properties) {
+          simplifyUnionTypesForGemini(schema.properties[key]);
+        }
+      }
+      if (schema.type === 'array' && schema.items) {
+        if (typeof schema.items === 'object' && !Array.isArray(schema.items)) {
+          simplifyUnionTypesForGemini(schema.items);
+        }
+      }
+
       return;
     }
 
@@ -121,6 +148,18 @@ function simplifyUnionTypesForGemini(schema: JsonSchema | SchemaProperty): void 
       Object.assign(schema, nonNullOption);
       schema.oneOf = undefined;
       schema.anyOf = undefined;
+
+      // IMPORTANT: Recursively process the selected option's nested structures
+      if (schema.properties && typeof schema.properties === 'object') {
+        for (const key in schema.properties) {
+          simplifyUnionTypesForGemini(schema.properties[key]);
+        }
+      }
+      if (schema.type === 'array' && schema.items) {
+        if (typeof schema.items === 'object' && !Array.isArray(schema.items)) {
+          simplifyUnionTypesForGemini(schema.items);
+        }
+      }
     }
   }
 
