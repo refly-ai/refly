@@ -29,6 +29,7 @@ import type { BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { type StructuredToolInterface } from '@langchain/core/tools';
 import { countToken } from '../scheduler/utils/token';
+import { simplifyToolForGemini } from '../utils/schema-simplifier';
 
 // Constants for recursion control
 const MAX_TOOL_ITERATIONS = 25;
@@ -93,6 +94,15 @@ export class Agent extends BaseSkill {
   graphState: StateGraphArgs<BaseSkillState>['channels'] = {
     ...baseStateGraphArgs,
   };
+
+  /**
+   * Check if the given LLM is a Gemini model (Vertex AI)
+   * Gemini models do not support union types in function calling schemas
+   */
+  private isGeminiModel(llm: any): boolean {
+    // Check by constructor name (avoid importing ChatVertexAI to reduce dependencies)
+    return llm?.constructor?.name === 'ChatVertexAI';
+  }
 
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
@@ -162,14 +172,25 @@ export class Agent extends BaseSkill {
         const agentModelInfo = config?.configurable?.modelConfigMap?.agent;
         const supportsToolChoice = agentModelInfo?.capabilities?.supportToolChoice !== false;
 
+        // Check if current LLM is Gemini - if so, simplify tool schemas
+        const isGemini = this.isGeminiModel(baseLlm);
+        const toolsForBinding = isGemini
+          ? validTools.map((tool) => {
+              this.engine.logger.info(
+                `Simplifying schema for tool "${tool.name}" for Gemini compatibility`,
+              );
+              return simplifyToolForGemini(tool);
+            })
+          : validTools;
+
         // Use tool_choice="auto" to force LLM to decide when to use tools
         // This ensures proper tool_calls format generation
         // Some models (e.g., Claude Haiku) do not support tool_choice parameter
         const bindOptions = supportsToolChoice ? { tool_choice: 'auto' } : undefined;
         this.engine.logger.info(
-          `Binding ${validTools.length} valid tools to LLM with options: ${JSON.stringify(bindOptions)}: [${toolNames.join(', ')}]`,
+          `Binding ${toolsForBinding.length} valid tools to LLM with options: ${JSON.stringify(bindOptions)}: [${toolNames.join(', ')}]`,
         );
-        llmForGraph = baseLlm.bindTools(validTools, bindOptions);
+        llmForGraph = baseLlm.bindTools(toolsForBinding, bindOptions);
 
         actualToolNodeInstance = new ToolNode(validTools);
         availableToolsForNode = validTools;
