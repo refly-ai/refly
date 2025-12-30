@@ -10,66 +10,36 @@ on:
       - "!packages/skill-template/**"
       - "!packages/wxt/**"
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy (branch, tag, or commit SHA)"
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to deploy (branch, tag, or commit SHA)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
-    name: Deploy Web
-    runs-on: ubuntu-latest
-    if: github.repository == 'refly-ai/refly'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Build
-        run: pnpm build:web
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          VITE_API_URL: https://api.refly.ai
-          VITE_COLLAB_URL: https://collab.refly.ai
-          VITE_SUBSCRIPTION_ENABLED: true
-          VITE_SENTRY_ENABLED: true
-          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          VITE_STATSIG_CLIENT_KEY: ${{ secrets.STATSIG_CLIENT_KEY }}
-          VITE_GTAG_ID: ${{ secrets.GTAG_ID }}
-          VITE_RUNTIME: web
-          VITE_STATIC_PUBLIC_ENDPOINT: https://static.refly.ai
-          VITE_STATIC_PRIVATE_ENDPOINT: https://api.refly.ai/v1/misc
-          VITE_CANVAS_TEMPLATE_ENABLED: true
-          VITE_ENV_TAG: production
-
-      - name: Create Sentry release
-        uses: getsentry/action-release@v1.7.0
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: refly-ai
-          SENTRY_PROJECT: web
-        with:
-          environment: production
-
-      - name: Deploy web to Cloudflare Pages
-        uses: cloudflare/pages-action@v1.5.0
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: refly-app
-          branch: main
-          workingDirectory: apps/web
-          directory: dist
+    uses: ./.github/workflows/deploy-web.yml
+    with:
+      environment: production
+      cloudflare_project: refly-app
+      api_url: https://api.refly.ai
+      collab_url: https://collab.refly.ai
+      subscription_enabled: true
+      sentry_enabled: true
+      static_public_endpoint: https://static.refly.ai
+      static_private_endpoint: https://api.refly.ai/v1/misc
+      canvas_template_enabled: true
+      env_tag: production
+      create_sentry_release: true
+      sentry_project: web
+      ref: ${{ inputs.ref || github.ref }}
+    secrets: inherit

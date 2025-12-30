@@ -1,0 +1,132 @@
+name: Deploy Web
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Deployment environment (staging or prod)"
+        required: true
+        type: string
+      cloudflare_project:
+        description: "Cloudflare Pages project name"
+        required: true
+        type: string
+      api_url:
+        description: "API URL for the environment"
+        required: true
+        type: string
+      collab_url:
+        description: "Collaboration URL for the environment"
+        required: true
+        type: string
+      subscription_enabled:
+        description: "Enable subscription features"
+        required: false
+        type: boolean
+        default: true
+      sentry_enabled:
+        description: "Enable Sentry error tracking"
+        required: false
+        type: boolean
+        default: true
+      static_public_endpoint:
+        description: "Static public endpoint URL"
+        required: false
+        type: string
+        default: "https://static.refly.ai"
+      static_private_endpoint:
+        description: "Static private endpoint URL"
+        required: true
+        type: string
+      canvas_template_enabled:
+        description: "Enable canvas template feature"
+        required: false
+        type: boolean
+        default: true
+      env_tag:
+        description: "Environment tag for identification"
+        required: false
+        type: string
+        default: ""
+      create_sentry_release:
+        description: "Create Sentry release after build"
+        required: false
+        type: boolean
+        default: false
+      sentry_project:
+        description: "Sentry project name"
+        required: false
+        type: string
+        default: "web"
+      ref:
+        description: "Git ref to deploy (branch, tag, or commit SHA)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Web to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    if: github.repository == 'refly-ai/refly'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 2
+
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build:web
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          VITE_API_URL: ${{ inputs.api_url }}
+          VITE_COLLAB_URL: ${{ inputs.collab_url }}
+          VITE_SUBSCRIPTION_ENABLED: ${{ inputs.subscription_enabled }}
+          VITE_SENTRY_ENABLED: ${{ inputs.sentry_enabled }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          VITE_STATSIG_CLIENT_KEY: ${{ secrets.STATSIG_CLIENT_KEY }}
+          VITE_GTAG_ID: ${{ secrets.GTAG_ID }}
+          VITE_RUNTIME: web
+          VITE_STATIC_PUBLIC_ENDPOINT: ${{ inputs.static_public_endpoint }}
+          VITE_STATIC_PRIVATE_ENDPOINT: ${{ inputs.static_private_endpoint }}
+          VITE_CANVAS_TEMPLATE_ENABLED: ${{ inputs.canvas_template_enabled }}
+          VITE_ENV_TAG: ${{ inputs.env_tag }}
+
+      - name: Create Sentry release
+        if: inputs.create_sentry_release
+        uses: getsentry/action-release@v1.7.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: refly-ai
+          SENTRY_PROJECT: ${{ inputs.sentry_project }}
+        with:
+          environment: ${{ inputs.environment }}
+
+      - name: Deploy web to Cloudflare Pages
+        uses: cloudflare/pages-action@v1.5.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ inputs.cloudflare_project }}
+          branch: main
+          workingDirectory: apps/web
+          directory: dist

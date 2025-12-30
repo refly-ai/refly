@@ -29,6 +29,7 @@ import type { BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { type StructuredToolInterface } from '@langchain/core/tools';
 import { countToken } from '../scheduler/utils/token';
+import { simplifyToolForGemini } from '../utils/schema-simplifier';
 
 // Constants for recursion control
 const MAX_TOOL_ITERATIONS = 25;
@@ -94,6 +95,15 @@ export class Agent extends BaseSkill {
     ...baseStateGraphArgs,
   };
 
+  /**
+   * Check if the given LLM is a Gemini model (Vertex AI)
+   * Gemini models do not support union types in function calling schemas
+   */
+  private isGeminiModel(llm: any): boolean {
+    // Check by constructor name (avoid importing ChatVertexAI to reduce dependencies)
+    return llm?.constructor?.name === 'ChatVertexAI';
+  }
+
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
     const { preprocessResult, mode = 'node_agent' } = config.configurable;
@@ -158,12 +168,30 @@ export class Agent extends BaseSkill {
 
       if (validTools.length > 0) {
         const toolNames = validTools.map((tool) => tool.name);
-        this.engine.logger.info(
-          `Binding ${validTools.length} valid tools to LLM with tool_choice="auto": [${toolNames.join(', ')}]`,
-        );
+
+        const agentModelInfo = config?.configurable?.modelConfigMap?.agent;
+        const supportsToolChoice = agentModelInfo?.capabilities?.supportToolChoice !== false;
+
+        // Check if current LLM is Gemini - if so, simplify tool schemas
+        const isGemini = this.isGeminiModel(baseLlm);
+        const toolsForBinding = isGemini
+          ? validTools.map((tool) => {
+              this.engine.logger.info(
+                `Simplifying schema for tool "${tool.name}" for Gemini compatibility`,
+              );
+              return simplifyToolForGemini(tool);
+            })
+          : validTools;
+
         // Use tool_choice="auto" to force LLM to decide when to use tools
         // This ensures proper tool_calls format generation
-        llmForGraph = baseLlm.bindTools(validTools, { tool_choice: 'auto' });
+        // Some models (e.g., Claude Haiku) do not support tool_choice parameter
+        const bindOptions = supportsToolChoice ? { tool_choice: 'auto' } : undefined;
+        this.engine.logger.info(
+          `Binding ${toolsForBinding.length} valid tools to LLM with options: ${JSON.stringify(bindOptions)}: [${toolNames.join(', ')}]`,
+        );
+        llmForGraph = baseLlm.bindTools(toolsForBinding, bindOptions);
+
         actualToolNodeInstance = new ToolNode(validTools);
         availableToolsForNode = validTools;
       } else {
@@ -230,22 +258,6 @@ export class Agent extends BaseSkill {
 
         // Use llmForGraph, which is the (potentially tool-bound) LLM instance for the graph
         const response = await llmForGraph.invoke(currentMessages);
-        // Clean up empty signatures in the response
-        if (
-          (response as any).response_metadata?.model_provider === 'google-vertexai' &&
-          typeof response === 'object'
-        ) {
-          // Clean additional_kwargs.signatures
-          if (
-            response.additional_kwargs?.signatures &&
-            Array.isArray(response.additional_kwargs.signatures)
-          ) {
-            response.additional_kwargs.signatures = response.additional_kwargs.signatures.filter(
-              (signature: any) =>
-                signature && typeof signature === 'string' && signature.trim() !== '',
-            );
-          }
-        }
         return { messages: [response] };
       } catch (error) {
         this.engine.logger.error(`LLM node execution failed: ${error.stack}`);
@@ -344,6 +356,20 @@ export class Agent extends BaseSkill {
             }
           }
           if ((lastMessage as any).response_metadata?.model_provider === 'google-vertexai') {
+            const originalSignatures = (lastMessage as any).additional_kwargs?.signatures;
+            const toolCallsCount = lastMessage.tool_calls?.length ?? 0;
+
+            // CRITICAL: Vertex AI (Gemini) requires a 1:1 mapping between tool_calls and signatures.
+            // When the response contains both text content and tool calls, the signatures array
+            // includes parts for text segments (usually empty strings) followed by tool signatures.
+            // If we clear the text content (to avoid 400 INVALID_ARGUMENT from mixed content),
+            // we MUST also remove the corresponding text segment signatures, otherwise the
+            // mismatch in array lengths will cause another 400 error.
+            if (Array.isArray(originalSignatures) && originalSignatures.length > toolCallsCount) {
+              lastMessage.additional_kwargs.signatures = originalSignatures.slice(-toolCallsCount);
+            }
+
+            // Clear content to avoid 400 INVALID_ARGUMENT when AIMessage has both text and tool_calls
             lastMessage.content = '';
           }
           return { messages: [...priorMessages, ...toolResultMessages] };

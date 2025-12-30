@@ -9,6 +9,8 @@ import { BillingModule } from '../billing/billing.module';
 import { ResourceHandler } from '../resource.service';
 import { ToolInventoryService } from '../inventory/inventory.service';
 import { ComposioToolPostHandlerService } from '../tool-execution/post-execution/composio-post.service';
+import { ComposioToolPreHandlerService } from '../tool-execution/pre-execution/composio/composio-pre.service';
+import { PreHandlerRegistryService } from '../tool-execution/pre-execution/composio/pre-registry.service';
 
 @Module({
   imports: [ConfigModule, CommonModule, DriveModule, MiscModule, BillingModule],
@@ -16,6 +18,8 @@ import { ComposioToolPostHandlerService } from '../tool-execution/post-execution
   providers: [
     ComposioService,
     ComposioToolPostHandlerService,
+    ComposioToolPreHandlerService,
+    PreHandlerRegistryService,
     ResourceHandler,
     ToolInventoryService,
   ],

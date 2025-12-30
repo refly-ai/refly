@@ -8223,6 +8223,10 @@ export const ModelCapabilitiesSchema = {
       type: 'boolean',
       description: 'Whether this model supports context caching',
     },
+    supportToolChoice: {
+      type: 'boolean',
+      description: 'Whether this model supports tool_choice parameter',
+    },
     image: {
       type: 'boolean',
       description: 'Whether this model supports image generation',
@@ -11458,6 +11462,10 @@ export const SchemaPropertySchema = {
       description:
         'Format for the property value. For resources: base64, url, binary, text. For strings: date-time, uri, email, etc.',
       example: 'binary',
+    },
+    file_uploadable: {
+      type: 'boolean',
+      description: 'Whether this field accepts file uploads (Composio-specific marker)',
     },
     const: {
       description: 'Constant value for discriminator matching in oneOf/anyOf',

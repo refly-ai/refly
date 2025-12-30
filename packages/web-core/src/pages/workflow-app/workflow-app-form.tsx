@@ -27,6 +27,7 @@ import {
 } from '@refly-packages/ai-workspace-common/queries/queries';
 import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
 import { GenericToolset, UserTool } from '@refly/openapi-schema';
+import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/toolset';
 import { storeSignupEntryPoint } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 
 /**
@@ -148,18 +149,33 @@ export const WorkflowAPPForm = ({
   const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
 
   // Tool dependency checking
-  const { data: userToolsData } = useListUserTools({}, [], {
+  const { data: userToolsData, refetch: refetchUserTools } = useListUserTools({}, [], {
     enabled: isLogin,
     refetchOnWindowFocus: false,
   });
   const userTools = userToolsData?.data ?? [];
+
+  // Listen for toolset installation events and refetch user tools
+  useEffect(() => {
+    const handleToolsetInstalled = () => {
+      // Refetch user tools when a toolset is installed
+      refetchUserTools();
+    };
+
+    toolsetEmitter.on('toolsetInstalled', handleToolsetInstalled);
+
+    return () => {
+      toolsetEmitter.off('toolsetInstalled', handleToolsetInstalled);
+    };
+  }, [refetchUserTools]);
 
   const { data: canvasResponse } = useGetCanvasData({ query: { canvasId: canvasId ?? '' } }, [], {
     enabled: !!canvasId && isLogin,
     refetchOnWindowFocus: false,
   });
 
-  const canvasData = canvasResponse?.data;
+  // Use workflowApp canvasData as primary source, fallback to API data
+  const canvasData = workflowApp?.canvasData ?? canvasResponse?.data;
   const nodes = canvasData?.nodes || [];
 
   // Check if there are uninstalled tools
@@ -423,6 +439,13 @@ export const WorkflowAPPForm = ({
   // Handle file upload for resource type variables
   const handleFileUpload = useCallback(
     async (file: File, variableName: string) => {
+      // Check if user is logged in
+      if (!isLogin) {
+        storeSignupEntryPoint('template_detail');
+        setLoginModalOpen(true);
+        return false;
+      }
+
       const currentFileList = variableValues[variableName] || [];
       const result = await uploadFile(file, currentFileList);
 
@@ -481,6 +504,13 @@ export const WorkflowAPPForm = ({
   // Handle file removal for resource type variables
   const handleFileRemove = useCallback(
     (file: UploadFile, variableName: string) => {
+      // Check if user is logged in
+      if (!isLogin) {
+        storeSignupEntryPoint('template_detail');
+        setLoginModalOpen(true);
+        return;
+      }
+
       const currentFileList = variableValues[variableName] || [];
       const newFileList = currentFileList.filter((f: UploadFile) => f.uid !== file.uid);
       handleValueChange(variableName, newFileList);
@@ -488,12 +518,19 @@ export const WorkflowAPPForm = ({
         [variableName]: newFileList,
       });
     },
-    [variableValues, handleValueChange],
+    [variableValues, handleValueChange, isLogin, setLoginModalOpen],
   );
 
   // Handle file refresh for resource type variables
   const handleRefreshFile = useCallback(
     (variableName: string) => {
+      // Check if user is logged in
+      if (!isLogin) {
+        storeSignupEntryPoint('template_detail');
+        setLoginModalOpen(true);
+        return;
+      }
+
       const currentFileList = variableValues[variableName] || [];
       // Find the variable to get its resourceTypes
       const variable = workflowVariables.find((v) => v.name === variableName);
@@ -515,7 +552,16 @@ export const WorkflowAPPForm = ({
         variableId,
       );
     },
-    [refreshFile, variableValues, handleValueChange, form, workflowVariables, canvasId],
+    [
+      refreshFile,
+      variableValues,
+      handleValueChange,
+      form,
+      workflowVariables,
+      canvasId,
+      isLogin,
+      setLoginModalOpen,
+    ],
   );
 
   // Initialize template variables when effectiveTemplateContent changes
@@ -847,6 +893,17 @@ export const WorkflowAPPForm = ({
     setIsFileUploading(uploading);
   }, []);
 
+  // Handle before file upload check
+  const handleBeforeFileUpload = useCallback(() => {
+    // Check if user is logged in
+    if (!isLogin) {
+      storeSignupEntryPoint('template_detail');
+      setLoginModalOpen(true);
+      return false;
+    }
+    return true;
+  }, [isLogin, setLoginModalOpen]);
+
   // Separate executing state (for loading indicator) from disabled state
   const isExecuting = loading || isRunning;
   const isRunButtonDisabled = isExecuting || isFileUploading;
@@ -967,10 +1024,10 @@ export const WorkflowAPPForm = ({
                       'h-10 flex items-center justify-center',
                       'w-[120px] sm:w-[200px] min-w-[109px]',
                       'px-4 sm:px-[46px] gap-2',
-                      'text-white dark:text-[var(--text-icon-refly-text-flip,#1C1F23)] dark:hover:text-[var(--text-icon-refly-text-flip,#1C1F23)] font-roboto font-semibold text-[16px] leading-[1.25em]',
+                      'text-white dark:text-[var(--text-icon-refly-text-flip,#1C1F23)] font-roboto font-semibold text-[16px] leading-[1.25em]',
                       'border-none shadow-none rounded-[12px]',
                       'transition-colors duration-150 ease-in-out',
-                      'bg-refly-bg-control-z1 hover:!bg-refly-tertiary-hover dark:bg-[var(--bg---refly-bg-dark,#ECECEC)] dark:hover:!bg-[var(--bg---refly-bg-dark,#ECECEC)]',
+                      'bg-refly-bg-control-z1 dark:bg-[var(--bg---refly-bg-dark,#ECECEC)] ',
                     )}
                     type="primary"
                     disabled
@@ -1004,6 +1061,7 @@ export const WorkflowAPPForm = ({
                   disabled={isFormDisabled}
                   originalVariables={workflowVariables}
                   onUploadingChange={handleFileUploadingChange}
+                  onBeforeUpload={handleBeforeFileUpload}
                 />
                 {/* Tools Dependency Form */}
                 {workflowApp?.canvasData && (

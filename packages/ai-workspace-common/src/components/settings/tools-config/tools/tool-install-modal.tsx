@@ -18,6 +18,7 @@ import {
 } from '@refly-packages/ai-workspace-common/queries';
 import { useQueryClient } from '@tanstack/react-query';
 import { OAuthStatusChecker } from './oauth-status-checker';
+import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/toolset';
 import './index.scss';
 const { TextArea } = Input;
 
@@ -28,6 +29,7 @@ interface ToolInstallModalProps {
   visible: boolean;
   onCancel: () => void;
   onSuccess?: () => void;
+  onToolInstallSuccess?: (toolset: ToolsetInstance) => void;
 }
 
 const getDictValue = (dict: { [key: string]: string } | undefined, locale: string) => {
@@ -216,7 +218,15 @@ const ConfigItem = React.memo(
 ConfigItem.displayName = 'ConfigItem';
 
 export const ToolInstallModal = React.memo(
-  ({ mode, toolInstance, toolDefinition, visible, onCancel, onSuccess }: ToolInstallModalProps) => {
+  ({
+    mode,
+    toolInstance,
+    toolDefinition,
+    visible,
+    onCancel,
+    onSuccess,
+    onToolInstallSuccess,
+  }: ToolInstallModalProps) => {
     const { i18n, t } = useTranslation();
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
@@ -516,6 +526,11 @@ export const ToolInstallModal = React.memo(
 
         refetchToolsOnUpdate();
         onSuccess?.();
+        onToolInstallSuccess?.(response.data.data);
+
+        // Emit toolset installed event for canvas updates
+        toolsetEmitter.emit('toolsetInstalled', { toolset: response.data.data });
+
         onCancel();
       } catch (error) {
         console.error('Form validation failed:', error);

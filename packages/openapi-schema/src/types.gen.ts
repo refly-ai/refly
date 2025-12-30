@@ -5813,6 +5813,10 @@ export type ModelCapabilities = {
    */
   contextCaching?: boolean;
   /**
+   * Whether this model supports tool_choice parameter
+   */
+  supportToolChoice?: boolean;
+  /**
    * Whether this model supports image generation
    */
   image?: boolean;
@@ -8195,6 +8199,10 @@ export type SchemaProperty = {
    * Format for the property value. For resources: base64, url, binary, text. For strings: date-time, uri, email, etc.
    */
   format?: string;
+  /**
+   * Whether this field accepts file uploads (Composio-specific marker)
+   */
+  file_uploadable?: boolean;
   /**
    * Constant value for discriminator matching in oneOf/anyOf
    */

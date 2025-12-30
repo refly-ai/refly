@@ -35,6 +35,27 @@ export interface ResourceField {
   isOptionalResource?: boolean;
 }
 
+/**
+ * Result of enhancing a tool schema
+ */
+export interface EnhancedSchemaResult {
+  /** The enhanced JSON schema */
+  schema: JsonSchema;
+  /** Whether the schema contains any file_uploadable fields */
+  hasFileUpload: boolean;
+}
+
+/**
+ * Multi-file upload guidance - appended to tool description when file_uploadable exists
+ */
+export const FILE_UPLOAD_GUIDANCE = `
+
+**File Upload Pattern:**
+- This tool uploads ONE file at a time and returns a media_id
+- To upload multiple files, call this tool multiple times (once per file)
+- Collect all returned media_ids into an array
+- Use the array of media_ids when creating the post (e.g., media_media_ids: ["id1", "id2"])`;
+
 // ============================================================================
 // Schema Parsing & Validation
 // ============================================================================
@@ -94,6 +115,8 @@ export function validateJsonSchema(schema: JsonSchema): boolean {
 export function buildSchema(schemaJson: string): z.ZodTypeAny {
   const jsonSchema = parseJsonSchema(schemaJson);
   validateJsonSchema(jsonSchema);
+
+  // No longer apply simplification here - let caller decide
   return jsonSchemaToZod(jsonSchema);
 }
 
@@ -395,92 +418,44 @@ export function findMatchingObjectOption(
 
 /**
  * Check if a field name suggests it's a URL-related field
+ * Only matches fields ending with 'url' or 'urls' (case-insensitive)
  * @param fieldName - The name of the field
- * @returns true if the field appears to be URL-related
+ * @returns true if the field ends with 'url' or 'urls'
  */
 function isUrlRelatedField(fieldName: string): boolean {
   const fieldLower = fieldName.toLowerCase();
 
-  // Skip fields that are ID references (e.g., fileId, imageId, documentId, media_ids, media_ids[0])
-  // These are ID references, not actual URLs
-  if (
-    fieldLower.endsWith('id') ||
-    fieldLower.endsWith('_id') ||
-    fieldLower.endsWith('ids') ||
-    fieldLower.endsWith('_ids') ||
-    /ids?\[\d*\]$/.test(fieldLower) // handles media_ids[0], file_id[1], etc.
-  ) {
-    return false;
-  }
+  // Only match fields ending with 'url' or 'urls'
+  // e.g., image_url, video_url, thumbnail_url, media_urls
+  return fieldLower.endsWith('url') || fieldLower.endsWith('urls');
+}
 
-  // Skip fields that are metadata/classification fields, not actual resources
-  // e.g., media_category, file_type, image_format, image_width, document_status
-  const nonResourceSuffixes = [
-    '_category',
-    '_height',
-    '_length',
-    '_type',
-    '_format',
-    '_method',
-    '_mode',
-    '_status',
-    '_version',
-    '_width',
-    '_name',
-    '_title',
-    '_label',
-    '_kind',
-    '_class',
-    '_size',
-    '_count',
-    '_index',
-    '_order',
-    '_position',
-  ];
-  if (nonResourceSuffixes.some((suffix) => fieldLower.endsWith(suffix))) {
-    return false;
-  }
+/**
+ * Check if a field is marked as file_uploadable by Composio
+ * @param fieldSchema - The schema property to check
+ * @returns true if the field accepts file uploads
+ */
+function isFileUploadableField(fieldSchema: SchemaProperty): boolean {
+  return fieldSchema.file_uploadable === true;
+}
 
-  // URL/URI patterns - always match these with includes()
-  const urlUriPatterns = ['_url', 'url', '_uri', 'uri'];
-  if (urlUriPatterns.some((pattern) => fieldLower.includes(pattern))) {
-    return true;
-  }
-
-  // Resource-related words that need strict word boundary matching
-  // Matches: image, images, video, videos, etc.
-  // Does NOT match: media_category, image_type (already excluded above)
-  const resourceWords = [
-    'image',
-    'video',
-    'audio',
-    'file',
-    'media',
-    'photo',
-    'picture',
-    'attachment',
-    'document',
-  ];
-
-  // Build regex pattern for strict word matching (with optional 's' for plurals)
-  // Word boundaries: start of string, underscore, or end of string
-  // Pattern: (^|_)word(s)?(_|$) matches "image", "images", "my_image", "image_data", "images_data"
-  for (const word of resourceWords) {
-    const pattern = new RegExp(`(^|_)${word}s?(_|$)`);
-    if (pattern.test(fieldLower)) {
-      return true;
-    }
-  }
-
-  return false;
+/**
+ * Context for tracking state during schema enhancement
+ */
+interface EnhanceContext {
+  hasFileUpload: boolean;
 }
 
 /**
  * Recursively enhance schema properties to mark URL fields as resources
  * This follows the same pattern that ResourceHandler.collectResourceFields() expects
  * @param schema - Schema or schema property to enhance
+ * @param context - Context object for tracking file_uploadable fields
  */
-function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
+function enhanceSchemaProperties(
+  schema: JsonSchema | SchemaProperty,
+  context: EnhanceContext,
+): void {
   if (!schema.properties) {
     return;
   }
@@ -488,7 +463,22 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
   for (const [fieldName, fieldSchema] of Object.entries(schema.properties)) {
     // Only enhance string-type fields
     if (fieldSchema.type === 'string') {
-      if (isUrlRelatedField(fieldName)) {
+      // Handle file_uploadable fields (Composio-specific)
+      if (isFileUploadableField(fieldSchema)) {
+        // Track that we found a file_uploadable field
+        context.hasFileUpload = true;
+        // Mark as resource field (collectResourceFields will find this)
+        fieldSchema.isResource = true;
+        // Set format to 'file_path' to distinguish from URL resources
+        fieldSchema.format = 'file_path';
+        // Enhance description to guide LLM
+        const originalDesc = fieldSchema.description || '';
+        if (!originalDesc.includes('fileId')) {
+          const hint =
+            '\n\n**IMPORTANT:** For files from context, provide the fileId (format: df-xxxx). The system will automatically download the file to a temporary location and pass the local file path to the tool.';
+          fieldSchema.description = originalDesc + hint;
+        }
+      } else if (isUrlRelatedField(fieldName)) {
         // Mark as resource field (collectResourceFields will find this)
         fieldSchema.isResource = true;
         // Set format to 'url' (resolveFileIdToFormat will use this)
@@ -505,7 +495,7 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
 
     // Recursively process nested objects
     if (fieldSchema.type === 'object' && fieldSchema.properties) {
-      enhanceSchemaProperties(fieldSchema);
+      enhanceSchemaProperties(fieldSchema, context);
     }
 
     // Process array items
@@ -516,7 +506,7 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
         fieldSchema.items.format = 'url';
       } else if (fieldSchema.items.type === 'object') {
         // For arrays of objects containing URL fields
-        enhanceSchemaProperties(fieldSchema.items);
+        enhanceSchemaProperties(fieldSchema.items, context);
       }
     }
 
@@ -525,7 +515,7 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
       if (fieldSchema[key] && Array.isArray(fieldSchema[key])) {
         for (const option of fieldSchema[key] as SchemaProperty[]) {
           if (option.type === 'object') {
-            enhanceSchemaProperties(option);
+            enhanceSchemaProperties(option, context);
           }
         }
       }
@@ -542,13 +532,14 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
  * 2. Marks them with isResource: true and format: 'url'
  * 3. Enhances descriptions to guide LLM to use fileId format
  * 4. Adds file_name_title field for naming generated files
+ * 5. Detects file_uploadable fields and returns hasFileUpload flag
  *
  * The enhanced schema is used for:
  * - LLM guidance (via enhanced descriptions in Zod schema)
  * - Backend processing (via isResource markers for ResourceHandler)
  *
  * @param schema - Original JSON schema from Composio
- * @returns Enhanced schema with isResource markers for URL fields and file_name_title field
+ * @returns EnhancedSchemaResult with schema and hasFileUpload flag
  *
  * @example
  * ```typescript
@@ -559,37 +550,28 @@ function enhanceSchemaProperties(schema: JsonSchema | SchemaProperty): void {
  *   }
  * };
  *
- * const enhanced = enhanceToolSchema(original);
- * // Result:
- * // {
- * //   type: 'object',
- * //   properties: {
- * //     image_url: {
- * //       type: 'string',
- * //       description: 'URL to the image\n\n**For uploaded files:** Provide a fileId...',
- * //       isResource: true,
- * //       format: 'url'
- * //     },
- * //     file_name_title: {
- * //       type: 'string',
- * //       description: 'The title for the generated file...'
- * //     }
- * //   },
- * //   required: ['file_name_title']
- * // }
+ * const { schema, hasFileUpload } = enhanceToolSchema(original);
+ * // schema contains enhanced properties
+ * // hasFileUpload is true if any file_uploadable field was found
  * ```
  */
-export function enhanceToolSchema(schema: JsonSchema): JsonSchema {
+export function enhanceToolSchema(schema: JsonSchema): EnhancedSchemaResult {
   // Deep clone to avoid mutation
   const enhanced = JSON.parse(JSON.stringify(schema)) as JsonSchema;
 
+  // Create context to track file_uploadable fields
+  const context: EnhanceContext = { hasFileUpload: false };
+
   // Enhance URL fields with resource markers
-  enhanceSchemaProperties(enhanced);
+  enhanceSchemaProperties(enhanced, context);
 
   // Add file_name_title field for naming generated files
   addFileNameTitleField(enhanced);
 
-  return enhanced;
+  return {
+    schema: enhanced,
+    hasFileUpload: context.hasFileUpload,
+  };
 }
 
 /**

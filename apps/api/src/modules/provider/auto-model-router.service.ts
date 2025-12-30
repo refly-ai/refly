@@ -28,6 +28,13 @@ export interface RuleCondition {
    * Used for matching specific toolsets like "fal_image", "fal_video", etc.
    */
   toolsetInventoryKeys?: string[];
+
+  /**
+   * Whether the user is in the auto model trial period.
+   * If true, this rule matches only when the user is within their first N Auto model requests.
+   * Used for routing new users to powerful models during their trial period.
+   */
+  inAutoModelTrial?: boolean;
 }
 
 export enum RoutingStrategy {
@@ -94,6 +101,12 @@ export interface RoutingContext {
    * Used for tool-based routing to check for specific tools
    */
   toolsets?: GenericToolset[];
+
+  /**
+   * Whether the user is in the auto model trial period.
+   * Set by AutoModelTrialService based on user's Auto model usage count.
+   */
+  inAutoModelTrial?: boolean;
 }
 
 /**
@@ -151,6 +164,11 @@ class RuleRouter {
       if (!this.matchToolsetInventoryKeys(condition.toolsetInventoryKeys)) {
         return false;
       }
+    }
+
+    // Match auto model trial condition
+    if (condition.inAutoModelTrial) {
+      return this.context.inAutoModelTrial ?? false;
     }
 
     return true;

@@ -136,6 +136,22 @@ const hasCachePoint = (content: unknown): boolean => {
 };
 
 /**
+ * Check if the last item in content array is a reasoning_content block.
+ * Bedrock (Claude) restriction: Cache point cannot be inserted after reasoning block.
+ */
+const hasReasoningContentAtEnd = (content: unknown[]): boolean => {
+  if (content.length === 0) return false;
+
+  const lastItem = content[content.length - 1];
+  return (
+    lastItem &&
+    typeof lastItem === 'object' &&
+    'type' in lastItem &&
+    lastItem.type === 'reasoning_content'
+  );
+};
+
+/**
  * Remove cache point from message content array
  * Returns a new content array without cachePoint items
  */
@@ -238,6 +254,12 @@ const tryAddCachePoint = (message: BaseMessage): BaseMessage | null => {
         return null;
       }
 
+      // Bedrock (Claude) specific restriction:
+      // Cache point cannot be inserted after reasoning block.
+      if (hasReasoningContentAtEnd(message.content)) {
+        return null;
+      }
+
       // For array content (like images mixed with text),
       // add cachePoint marker at the end
       return new HumanMessage({
@@ -285,6 +307,12 @@ const tryAddCachePoint = (message: BaseMessage): BaseMessage | null => {
     if (Array.isArray(message.content)) {
       // Skip caching if content array is empty - cachePoint requires preceding content
       if (message.content.length === 0) {
+        return null;
+      }
+
+      // Bedrock (Claude) specific restriction:
+      // Cache point cannot be inserted after reasoning block.
+      if (hasReasoningContentAtEnd(message.content)) {
         return null;
       }
 

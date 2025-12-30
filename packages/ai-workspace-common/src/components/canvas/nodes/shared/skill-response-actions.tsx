@@ -3,6 +3,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDebouncedCallback } from 'use-debounce';
 import { Play, StopCircle, Preview } from 'refly-icons';
+import { useReactFlow } from '@xyflow/react';
 import { ActionStatus } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -24,7 +25,8 @@ import { extractToolsetsWithNodes } from '@refly/canvas-common';
  */
 const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): boolean => {
   if (toolset.type === 'mcp') {
-    return userTools.some((t) => t.toolset?.name === toolset.name);
+    const isAuthorized = userTools.some((t) => t.toolset?.name === toolset.name);
+    return isAuthorized;
   }
 
   if (toolset.builtin) {
@@ -36,7 +38,8 @@ const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): bo
     return false;
   }
 
-  return matchingUserTool.authorized ?? false;
+  const isAuthorized = matchingUserTool.authorized ?? false;
+  return isAuthorized;
 };
 
 interface SkillResponseActionsProps {
@@ -44,7 +47,7 @@ interface SkillResponseActionsProps {
   workflowIsRunning: boolean;
   variant?: 'node' | 'preview';
   onRerunFromHere?: () => void;
-  selectedToolsets?: GenericToolset[];
+  nodeId?: string;
   // For preview variant
   onRerun?: () => void;
   // Common
@@ -60,7 +63,7 @@ const SkillResponseActionsComponent = ({
   workflowIsRunning,
   variant = 'node',
   onRerunFromHere,
-  selectedToolsets,
+  nodeId,
   onRerun,
   onStop,
   extraActions,
@@ -70,12 +73,20 @@ const SkillResponseActionsComponent = ({
   const { t } = useTranslation();
   const { canvasId } = useCanvasContext();
   const { isLoggedRef, userProfile } = useIsLogin();
+  const { getNode } = useReactFlow();
+
+  const node = nodeId ? getNode(nodeId) : null;
+  const nodeMetadata = (node?.data as any)?.metadata;
+  const nodeSelectedToolsets = nodeMetadata?.selectedToolsets;
+  const prompt = nodeMetadata?.query;
+
   const isLogin = !!userProfile?.uid;
-  const nodeToolsets = Array.isArray(selectedToolsets) ? selectedToolsets : [];
+  const nodeToolsets = Array.isArray(nodeSelectedToolsets) ? nodeSelectedToolsets : [];
   const hasNodeToolsets = nodeToolsets.some((toolset) => toolset?.id && toolset.id !== 'empty');
-  const shouldCheckUserTools =
-    variant !== 'preview' && (!!onRerunFromHere || (!!onRerun && hasNodeToolsets));
-  const shouldCheckCanvasTools = variant !== 'preview' && !!onRerunFromHere;
+  const shouldCheckUserTools = !!onRerunFromHere || (!!onRerun && hasNodeToolsets);
+  const shouldCheckCanvasTools =
+    !!onRerunFromHere || (variant === 'preview' && !!onRerun && !hasNodeToolsets);
+
   const { setToolsDependencyOpen, setToolsDependencyHighlight } =
     useCanvasResourcesPanelStoreShallow((state) => ({
       setToolsDependencyOpen: state.setToolsDependencyOpen,
@@ -98,7 +109,10 @@ const SkillResponseActionsComponent = ({
   );
 
   // When workflow is running but current node is not executing, disable actions
+  const isPromptEmpty = !prompt || (typeof prompt === 'string' && prompt.trim() === '');
   const disabled = readonly || workflowIsRunning;
+  // If not executing and prompt is empty, disable run actions
+  const actionDisabled = disabled || (!nodeIsExecuting && isPromptEmpty);
 
   const isReRunning = status && status !== 'init';
   const singleButtonTitle = nodeIsExecuting
@@ -165,12 +179,15 @@ const SkillResponseActionsComponent = ({
       return false;
     }
 
-    const missingCount = nodeToolsets.filter((toolset) => {
+    const missingToolsets = nodeToolsets.filter((toolset) => {
       if (!toolset?.id || toolset.id === 'empty') {
         return false;
       }
-      return !isToolsetAuthorized(toolset, userTools);
-    }).length;
+      const isAuthorized = isToolsetAuthorized(toolset, userTools);
+      return !isAuthorized;
+    });
+
+    const missingCount = missingToolsets.length;
 
     if (missingCount <= 0) {
       return false;
@@ -271,7 +288,15 @@ const SkillResponseActionsComponent = ({
       if (nodeIsExecuting) {
         handleStopClick(e);
       } else {
-        const blocked = await checkAndOpenNodeToolsDependency();
+        let blocked = false;
+
+        // In preview mode, if we don't have node toolsets but have onRerun, check workflow-level tools
+        if (variant === 'preview' && !hasNodeToolsets && onRerun) {
+          blocked = await checkAndOpenToolsDependency();
+        } else {
+          blocked = await checkAndOpenNodeToolsDependency();
+        }
+
         if (blocked) {
           return;
         }
@@ -293,7 +318,7 @@ const SkillResponseActionsComponent = ({
           type="text"
           icon={icon}
           onClick={handleToggleWorkflowRun}
-          disabled={disabled}
+          disabled={actionDisabled}
           className={buttonClassName}
         />
         {extraActions}
@@ -309,7 +334,7 @@ const SkillResponseActionsComponent = ({
           size="small"
           icon={<Preview size={iconSize} className={iconClassName} />}
           onClick={handleRerunFromHereClick}
-          disabled={disabled || nodeIsExecuting}
+          disabled={actionDisabled || nodeIsExecuting}
           className={buttonClassName}
           title={t('canvas.skillResponse.rerunFromHere')}
         />
@@ -321,7 +346,7 @@ const SkillResponseActionsComponent = ({
           size="small"
           icon={icon}
           onClick={handleToggleWorkflowRun}
-          disabled={disabled}
+          disabled={actionDisabled}
           className={buttonClassName}
           title={singleButtonTitle}
         />

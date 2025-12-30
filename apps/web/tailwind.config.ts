@@ -42,7 +42,6 @@ export function defineConfig(): Config {
         fontFamily: {
           inter: ['Inter', 'sans-serif'],
           'architects-daughter': ['"Architects Daughter"', 'sans-serif'],
-          alibaba: ['Alibaba PuHuiTi', 'sans-serif'],
         },
         fontSize: {
           xs: ['12px', '20px'],

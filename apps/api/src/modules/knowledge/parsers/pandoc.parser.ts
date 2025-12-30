@@ -182,14 +182,8 @@ export class PandocParser extends BaseParser {
 
       if (this.options.format === 'docx') {
         // For DOCX, try markdown output with pipe tables first
-        pandocArgs = [
-          '-f',
-          this.options.format,
-          '-t',
-          'markdown+pipe_tables',
-          '--wrap=none',
-          '--columns=100000', // Very wide columns to prevent text wrapping
-        ];
+        // DO NOT use --columns=100000, as it will introduce thousands of hyphens and balloons the file size.
+        pandocArgs = ['-f', this.options.format, '-t', 'markdown+pipe_tables', '--wrap=none'];
       } else {
         // For other formats, use markdown
         pandocArgs = [
@@ -198,7 +192,6 @@ export class PandocParser extends BaseParser {
           '-t',
           'markdown-raw_html+pipe_tables',
           '--wrap=none',
-          '--columns=10000',
         ];
       }
 

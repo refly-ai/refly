@@ -37,6 +37,7 @@ import {
   ExecutorLimits,
 } from './scalebox.constants';
 import { ScaleboxLock } from './scalebox.lock';
+import { truncateContent } from '@refly/utils/token';
 
 /**
  * Scalebox Service
@@ -88,6 +89,9 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
   @Config.integer('sandbox.scalebox.maxQueueSize', SCALEBOX_DEFAULTS.MAX_QUEUE_SIZE)
   private maxQueueSize: number;
 
+  @Config.integer('sandbox.truncate.output', 200)
+  private truncateOutput: number;
+
   @Config.integer('sandbox.scalebox.codeSizeThreshold', CODE_SIZE_THRESHOLD)
   private codeSizeThreshold: number;
 
@@ -124,13 +128,27 @@ export class ScaleboxService implements OnModuleInit, OnModuleDestroy {
         parentResultId: request.context?.parentResultId,
       });
 
+      const processedResult = this.postProcessResult(executionResult);
       const executionTime = Date.now() - startTime;
 
-      return ScaleboxResponseFactory.success(executionResult, executionTime);
+      return ScaleboxResponseFactory.success(processedResult, executionTime);
     } catch (error) {
       this.logger.error({ error }, 'Sandbox execution failed');
       return ScaleboxResponseFactory.error(error, Date.now() - startTime);
     }
+  }
+
+  private postProcessResult(executionResult: ScaleboxExecutionResult) {
+    const output = executionResult.executorOutput;
+    const stdout = output.stdout ?? '';
+
+    if (stdout.length > this.truncateOutput) {
+      output.log += `\n[WARN] ⚠️ Origin stdout length ${stdout.length} is too long, truncate into ${this.truncateOutput}, please save to file instead.\n`;
+      output.stdout = truncateContent(stdout, this.truncateOutput);
+      this.logger.warn({ stdout: output.stdout }, 'Origin stdout truncated');
+    }
+
+    return executionResult;
   }
 
   async executeCode(

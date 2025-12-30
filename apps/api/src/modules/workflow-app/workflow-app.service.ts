@@ -719,12 +719,11 @@ export class WorkflowAppService {
 
     let replaceToolsetMap: Record<string, GenericToolset> = {};
 
-    // Only import toolsets for shared workflow apps that are not owned by the user
-    if (shareRecord.uid !== user.uid) {
-      const { replaceToolsetMap: newReplaceToolsetMap } =
-        await this.toolService.importToolsetsFromNodes(user, nodes);
-      replaceToolsetMap = newReplaceToolsetMap;
-    }
+    // Always check and update toolset references, not just for shared workflows
+    // This ensures that toolsets are up-to-date even for the owner's workflows
+    const { replaceToolsetMap: newReplaceToolsetMap } =
+      await this.toolService.importToolsetsFromNodes(user, nodes);
+    replaceToolsetMap = newReplaceToolsetMap;
 
     // variables with old resource entity ids (need to be replaced)
     const oldVariables = variables || canvasData.variables || [];

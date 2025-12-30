@@ -5,17 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useFileUpload } from '../../canvas/workflow-variables';
 import { getFileType } from '../../canvas/workflow-variables/utils';
 
-interface FileInputProps {
-  id: string;
-  value?: any;
-  placeholder?: string;
-  onChange: (value: any) => void;
-  disabled?: boolean;
-  accept?: string;
-  isDefaultValue?: boolean; // Whether this is a default value
-  isModified?: boolean; // Whether the value has been modified by user
-  onUploadingChange?: (uploading: boolean) => void; // Callback when uploading state changes
-}
+import { FileInputProps } from './types';
 
 // Loading dots animation component
 const LoadingDots: React.FC = () => {
@@ -73,6 +63,7 @@ const FileInput: React.FC<FileInputProps> = memo(
     isDefaultValue = false,
     isModified = false,
     onUploadingChange,
+    onBeforeUpload,
   }) => {
     const { t } = useTranslation();
     const [isHovered, setIsHovered] = useState(false);
@@ -83,6 +74,11 @@ const FileInput: React.FC<FileInputProps> = memo(
 
     const handleFileChange = useCallback(
       async (file: File) => {
+        // Check if upload should be prevented
+        if (onBeforeUpload && !onBeforeUpload()) {
+          return;
+        }
+
         try {
           setUploading(true);
           onUploadingChange?.(true);
@@ -115,6 +111,18 @@ const FileInput: React.FC<FileInputProps> = memo(
     const handleMouseLeave = useCallback(() => {
       setIsHovered(false);
     }, []);
+
+    const handleClick = useCallback(
+      (e: React.MouseEvent) => {
+        // Check if upload should be prevented on click
+        if (onBeforeUpload && !onBeforeUpload()) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+      },
+      [onBeforeUpload],
+    );
 
     return (
       <Upload
@@ -159,6 +167,7 @@ const FileInput: React.FC<FileInputProps> = memo(
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          onClick={handleClick}
           title={
             uploading
               ? t('common.upload.notification.uploading', { count: 1 })

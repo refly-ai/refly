@@ -18,6 +18,7 @@ export interface MixedTextEditorProps {
   disabled?: boolean;
   originalVariables?: WorkflowVariable[]; // Original variable values for state comparison
   onUploadingChange?: (uploading: boolean) => void; // Callback when any file is uploading
+  onBeforeUpload?: () => boolean; // Callback before file upload, return false to prevent upload
 }
 
 export interface VariableInputProps {
@@ -28,4 +29,17 @@ export interface VariableInputProps {
   disabled?: boolean;
   isDefaultValue?: boolean; // Whether this is a default value
   isModified?: boolean; // Whether the value has been modified by user
+}
+
+export interface FileInputProps {
+  id: string;
+  value?: any;
+  placeholder?: string;
+  onChange: (value: any) => void;
+  disabled?: boolean;
+  accept?: string;
+  isDefaultValue?: boolean; // Whether this is a default value
+  isModified?: boolean; // Whether the value has been modified by user
+  onUploadingChange?: (uploading: boolean) => void; // Callback when uploading state changes
+  onBeforeUpload?: () => boolean; // Callback before file upload, return false to prevent upload
 }

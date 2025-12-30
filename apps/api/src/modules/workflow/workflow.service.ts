@@ -43,7 +43,7 @@ import { SkillInvokerService } from '../skill/skill-invoker.service';
 const WORKFLOW_POLL_INTERVAL = 1500;
 const WORKFLOW_EXECUTION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const NODE_EXECUTION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
-const POLL_LOCK_TTL_MS = 5000; // 5 seconds
+const POLL_LOCK_TTL = 5; // 5 seconds
 
 @Injectable()
 export class WorkflowService {
@@ -266,19 +266,30 @@ export class WorkflowService {
    * @param nodeDiffs - The node diffs to sync
    */
   private async syncNodeDiffToCanvas(user: User, canvasId: string, nodeDiffs: NodeDiff[]) {
-    await this.canvasSyncService.syncState(user, {
-      canvasId,
-      transactions: [
-        {
-          txId: genTransactionId(),
-          createdAt: Date.now(),
-          syncedAt: Date.now(),
-          source: { type: 'system' },
-          nodeDiffs,
-          edgeDiffs: [],
-        },
-      ],
-    });
+    this.logger.debug(
+      `[syncNodeDiffToCanvas] Syncing ${nodeDiffs?.length ?? 0} node diffs to canvas ${canvasId}`,
+    );
+    try {
+      await this.canvasSyncService.syncState(user, {
+        canvasId,
+        transactions: [
+          {
+            txId: genTransactionId(),
+            createdAt: Date.now(),
+            syncedAt: Date.now(),
+            source: { type: 'system' },
+            nodeDiffs,
+            edgeDiffs: [],
+          },
+        ],
+      });
+      this.logger.debug(`[syncNodeDiffToCanvas] Successfully synced to canvas ${canvasId}`);
+    } catch (error) {
+      this.logger.error(
+        `[syncNodeDiffToCanvas] Failed to sync to canvas ${canvasId}: ${(error as any)?.message}`,
+      );
+      throw error;
+    }
   }
 
   /**
@@ -370,6 +381,9 @@ export class WorkflowService {
       return;
     }
 
+    this.logger.debug(
+      `[executeSkillResponseNode] Updating node ${nodeExecution.nodeId} status to executing`,
+    );
     await this.syncNodeDiffToCanvas(user, canvasId, [
       {
         type: 'update',
@@ -386,6 +400,9 @@ export class WorkflowService {
       },
     ]);
 
+    this.logger.log(
+      `[executeSkillResponseNode] Invoking skill task for node ${nodeExecution.nodeId}`,
+    );
     await this.invokeSkillTask(user, nodeExecution);
   }
 
@@ -528,7 +545,7 @@ export class WorkflowService {
 
     // Acquire distributed lock to prevent multiple pods from polling the same execution
     const lockKey = `workflow:poll:${executionId}`;
-    const releaseLock = await this.redis.acquireLock(lockKey, POLL_LOCK_TTL_MS);
+    const releaseLock = await this.redis.acquireLock(lockKey, POLL_LOCK_TTL);
     if (!releaseLock) {
       this.logger.debug(`[pollWorkflow] Lock not acquired for ${executionId}, skipping`);
       return;

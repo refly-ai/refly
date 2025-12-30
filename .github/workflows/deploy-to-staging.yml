@@ -5,7 +5,8 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
+  actions: write
 
 jobs:
   prepare-staging-deploy:
@@ -70,8 +71,8 @@ jobs:
           echo "start_date=$START_DATE" >> "$GITHUB_OUTPUT"
           echo "release_branch=$RELEASE_BRANCH" >> "$GITHUB_OUTPUT"
 
-  deploy-api-staging:
-    name: Deploy API to Staging
+  ensure-release-branch:
+    name: Ensure Release Branch Exists
     needs: prepare-staging-deploy
     if: needs.prepare-staging-deploy.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
@@ -80,6 +81,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Ensure release branch exists
         env:
@@ -89,8 +91,7 @@ jobs:
 
           # Check if branch exists remotely
           if git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q "$RELEASE_BRANCH"; then
-            echo "Branch $RELEASE_BRANCH exists, checking out..."
-            git checkout "$RELEASE_BRANCH"
+            echo "Branch $RELEASE_BRANCH exists"
           else
             echo "Branch $RELEASE_BRANCH does not exist, creating from main..."
             git checkout -b "$RELEASE_BRANCH"
@@ -98,56 +99,23 @@ jobs:
             echo "Branch $RELEASE_BRANCH created and pushed"
           fi
 
-      - name: Trigger API Staging Deployment
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_BRANCH: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
-        run: |
-          echo "Triggering deploy-api-staging workflow on branch $RELEASE_BRANCH..."
-
-          gh workflow run deploy-api-staging.yml \
-            --ref "$RELEASE_BRANCH"
-
-          echo "API staging deployment workflow triggered successfully"
+  deploy-api-staging:
+    name: Deploy API to Staging
+    needs: [prepare-staging-deploy, ensure-release-branch]
+    if: needs.prepare-staging-deploy.outputs.should_deploy == 'true'
+    uses: ./.github/workflows/deploy-api-staging.yml
+    with:
+      ref: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
+    secrets: inherit
 
   deploy-web-staging:
     name: Deploy Web to Staging
-    needs: [prepare-staging-deploy, deploy-api-staging]
+    needs: [prepare-staging-deploy, ensure-release-branch, deploy-api-staging]
     if: needs.prepare-staging-deploy.outputs.should_deploy == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Ensure release branch exists
-        env:
-          RELEASE_BRANCH: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
-        run: |
-          echo "Checking if branch $RELEASE_BRANCH exists..."
-
-          # Check if branch exists remotely
-          if git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q "$RELEASE_BRANCH"; then
-            echo "Branch $RELEASE_BRANCH exists, checking out..."
-            git checkout "$RELEASE_BRANCH"
-          else
-            echo "Branch $RELEASE_BRANCH does not exist, will be created by deploy-api-staging job"
-            echo "Error: Release branch should have been created by previous job"
-            exit 1
-          fi
-
-      - name: Trigger Web Staging Deployment
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_BRANCH: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
-        run: |
-          echo "Triggering deploy-web-staging workflow on branch $RELEASE_BRANCH..."
-
-          gh workflow run deploy-web-staging.yml \
-            --ref "$RELEASE_BRANCH"
-
-          echo "Web staging deployment workflow triggered successfully"
+    uses: ./.github/workflows/deploy-web-staging.yml
+    with:
+      ref: ${{ needs.prepare-staging-deploy.outputs.release_branch }}
+    secrets: inherit
 
   update-project-status:
     name: Update Project Status to Staging

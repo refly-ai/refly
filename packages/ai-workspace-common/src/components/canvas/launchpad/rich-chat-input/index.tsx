@@ -211,6 +211,10 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       }
     }, [allItems, addToSelectedToolsets]);
 
+    // Note: toolsetInstalled event is now handled globally at canvas level
+
+    // Note: Node toolset updates are now handled directly at the canvas level
+
     const addToUpstreamAgents = useCallback(
       (resultId: string) => {
         connectToUpstreamAgent(nodeId, resultId);

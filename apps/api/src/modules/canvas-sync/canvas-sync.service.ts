@@ -314,16 +314,31 @@ export class CanvasSyncService {
   }
 
   /**
-   * Acquire a lock for the canvas state, with optional exponential backoff retry.
+   * Acquire a lock for the canvas state, with exponential backoff retry.
    * @param canvasId - The canvas id
    * @param options - The options
-   * @param options.maxRetries - Maximum number of retries (default: 3)
-   * @param options.initialDelay - Initial delay in ms for backoff (default: 100)
+   * @param options.maxRetries - Maximum number of retries (default: 10)
+   * @param options.initialDelay - Initial delay in ms for backoff (default: 200)
+   * @param options.ttlSeconds - Lock TTL in seconds (default: 10)
    * @returns A function to release the lock
    * @throws OperationTooFrequent if lock cannot be acquired after retries
    */
-  async lockState(canvasId: string) {
-    return this.redis.waitLock(`canvas-sync:${canvasId}`);
+  async lockState(
+    canvasId: string,
+    options?: {
+      maxRetries?: number;
+      initialDelay?: number;
+      ttlSeconds?: number;
+    },
+  ) {
+    this.logger.debug(`Attempting to acquire lock for canvas: ${canvasId}`);
+    const lockKey = `canvas-sync:${canvasId}`;
+    const releaseLock = await this.redis.waitLock(lockKey, {
+      maxRetries: options?.maxRetries,
+      initialDelay: options?.initialDelay,
+      ttlSeconds: options?.ttlSeconds,
+    });
+    return releaseLock;
   }
 
   /**
