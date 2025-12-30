@@ -4,7 +4,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 
-import { guard } from '../../../utils/guard';
+import { guard } from '@refly/utils';
 import { QUEUE_SCALEBOX_PAUSE, QUEUE_SCALEBOX_KILL } from '../../../utils/const';
 import { Config } from '../../config/config.decorator';
 

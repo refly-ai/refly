@@ -257,3 +257,58 @@ guard.retry = <T>(fn: () => T | Promise<T>, config: RetryConfig): GuardWrapper<P
     }
   });
 };
+
+/**
+ * Execute AsyncGenerator with retry logic
+ * Supports both attempt-based and timeout-based retry strategies with exponential backoff
+ * Restarts from the beginning with a fresh generator instance on failure
+ */
+guard.retryGenerator = <T>(
+  fn: () => AsyncGenerator<T, void, unknown>,
+  config: RetryConfig,
+): AsyncGenerator<T, void, unknown> => {
+  const {
+    maxAttempts,
+    timeout,
+    initialDelay = 0,
+    maxDelay = 1000,
+    backoffFactor = 1,
+    retryIf,
+    onRetry,
+  } = config;
+
+  const startTime = Date.now();
+
+  async function* retryableGenerator(): AsyncGenerator<T, void, unknown> {
+    let delay = initialDelay;
+    let attempt = 0;
+
+    while (true) {
+      attempt++;
+
+      try {
+        const generator = fn();
+
+        for await (const chunk of generator) {
+          yield chunk;
+        }
+
+        return;
+      } catch (error) {
+        const shouldRetry = retryIf ? retryIf(error) : true;
+        const hasMoreAttempts = maxAttempts ? attempt < maxAttempts : true;
+        const hasMoreTime = timeout ? Date.now() - startTime < timeout : true;
+
+        if (!shouldRetry || !hasMoreAttempts || !hasMoreTime) {
+          throw error;
+        }
+
+        await onRetry?.(error, attempt);
+        await sleep(delay);
+        delay = Math.min(delay * backoffFactor, maxDelay);
+      }
+    }
+  }
+
+  return retryableGenerator();
+};

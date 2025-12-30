@@ -21,7 +21,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 
-import { guard } from '../../../utils/guard';
+import { guard } from '@refly/utils';
 import { RedisService } from '../../common/redis.service';
 import { Config } from '../../config/config.decorator';
 import { SandboxLockTimeoutException } from './scalebox.exception';

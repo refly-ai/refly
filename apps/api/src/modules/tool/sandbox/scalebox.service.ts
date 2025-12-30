@@ -12,7 +12,7 @@ import {
 } from '@refly/openapi-schema';
 import { runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 
-import { guard } from '../../../utils/guard';
+import { guard } from '@refly/utils';
 import { QUEUE_SCALEBOX_EXECUTE } from '../../../utils/const';
 import { Config } from '../../config/config.decorator';
 import { DriveService } from '../../drive/drive.service';
