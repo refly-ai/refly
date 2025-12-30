@@ -42,7 +42,7 @@ import {
   DriveFile,
   UpsertDriveFileRequest,
   WorkflowPlan,
-  WorkflowPlanData,
+  WorkflowPlanRecord,
 } from '@refly/openapi-schema';
 import type { WorkflowPatchOperation } from '@refly/canvas-common';
 import { Document as LangChainDocument } from '@langchain/core/documents';
@@ -173,17 +173,20 @@ export interface ReflyService {
   // Workflow plan management
   generateWorkflowPlan: (
     user: User,
-    data: WorkflowPlanData,
+    data: WorkflowPlan,
     copilotSessionId: string,
     resultId: string,
     resultVersion: number,
-  ) => Promise<WorkflowPlan>;
+  ) => Promise<WorkflowPlanRecord>;
   patchWorkflowPlan: (
     user: User,
     planId: string,
     operations: WorkflowPatchOperation[],
     resultId: string,
     resultVersion: number,
-  ) => Promise<WorkflowPlan>;
-  getLatestWorkflowPlan: (user: User, copilotSessionId: string) => Promise<WorkflowPlan | null>;
+  ) => Promise<WorkflowPlanRecord>;
+  getLatestWorkflowPlan: (
+    user: User,
+    copilotSessionId: string,
+  ) => Promise<WorkflowPlanRecord | null>;
 }

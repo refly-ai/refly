@@ -1,15 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService, LockReleaseFn } from '../common/redis.service';
-import { WorkflowPlan, WorkflowPlanData } from '@refly/openapi-schema';
+import { WorkflowPlan, WorkflowPlanRecord } from '@refly/openapi-schema';
 import { ParamsError } from '@refly/errors';
 import { genWorkflowPlanID, safeParseJSON } from '@refly/utils';
 import { WorkflowPlan as WorkflowPlanPO } from '@prisma/client';
-import {
-  WorkflowPatchOperation,
-  applyWorkflowPatchOperations,
-  WorkflowPlan as WorkflowPlanType,
-} from '@refly/canvas-common';
+import { WorkflowPatchOperation, applyWorkflowPatchOperations } from '@refly/canvas-common';
 
 @Injectable()
 export class WorkflowPlanService {
@@ -43,7 +39,7 @@ export class WorkflowPlanService {
    * Generate a new workflow plan
    */
   async generateWorkflowPlan(
-    data: WorkflowPlanData,
+    data: WorkflowPlan,
     copilotSessionId: string,
     resultId: string,
     resultVersion: number,
@@ -148,7 +144,7 @@ export class WorkflowPlanService {
       }
 
       // Parse current data
-      let currentData: WorkflowPlanType;
+      let currentData: WorkflowPlan;
       try {
         currentData = safeParseJSON(currentPlan.data);
       } catch (error) {
@@ -220,29 +216,24 @@ export class WorkflowPlanService {
    * The API schema only exposes: planId, version, data, patch, createdAt, updatedAt
    * Internal fields (resultId, resultVersion, copilotSessionId) are not exposed
    */
-  private workflowPlanPO2DTO(po: WorkflowPlanPO): WorkflowPlan {
-    let data: Record<string, unknown>;
-    let patch: Record<string, unknown>;
+  private workflowPlanPO2DTO(po: WorkflowPlanPO): WorkflowPlanRecord {
+    let data: WorkflowPlan = { title: '', tasks: [], variables: [] };
 
     try {
-      data = JSON.parse(po.data);
+      const parsed = safeParseJSON(po.data);
+      if (parsed) {
+        data = parsed;
+      }
     } catch (error) {
       this.logger.error(`Failed to parse workflow plan data: ${error?.message ?? error}`);
-      data = {};
-    }
-
-    try {
-      patch = safeParseJSON(po.patch);
-    } catch (error) {
-      this.logger.error(`Failed to parse workflow plan patch: ${error?.message ?? error}`);
-      patch = {};
     }
 
     return {
       planId: po.planId,
       version: po.version,
-      data,
-      patch,
+      title: data.title,
+      tasks: data.tasks,
+      variables: data.variables,
       createdAt: po.createdAt.toISOString(),
       updatedAt: po.updatedAt.toISOString(),
     };

@@ -143,7 +143,7 @@ Notes:
 
       const result = await reflyService.patchWorkflowPlan(
         user,
-        planId,
+        planId!,
         input.operations,
         config.configurable?.resultId,
         config.configurable?.version,

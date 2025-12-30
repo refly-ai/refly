@@ -7388,9 +7388,13 @@ export type WorkflowTask = {
    * Workflow task toolsets
    */
   toolsets: Array<string>;
+  /**
+   * Workflow task dependent task IDs
+   */
+  dependentTasks?: Array<string>;
 };
 
-export type WorkflowPlanData = {
+export type WorkflowPlan = {
   /**
    * Workflow plan title
    */
@@ -7405,27 +7409,15 @@ export type WorkflowPlanData = {
   variables?: Array<WorkflowVariable>;
 };
 
-export type WorkflowPlan = {
+export type WorkflowPlanRecord = WorkflowPlan & {
   /**
    * Workflow plan ID
    */
-  planId: string;
+  planId?: string;
   /**
    * Workflow plan version
    */
   version?: number;
-  /**
-   * Workflow plan data
-   */
-  data?: {
-    [key: string]: unknown;
-  };
-  /**
-   * Workflow plan patch
-   */
-  patch?: {
-    [key: string]: unknown;
-  };
   /**
    * Workflow plan creation timestamp
    */
@@ -7437,7 +7429,7 @@ export type WorkflowPlan = {
 };
 
 export type GetWorkflowPlanDetailResponse = BaseResponse & {
-  data?: WorkflowPlan;
+  data?: WorkflowPlanRecord;
 };
 
 export type GetWorkflowDetailResponse = BaseResponse & {

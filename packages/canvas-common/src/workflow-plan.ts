@@ -4,6 +4,8 @@ import {
   RawCanvasData,
   CanvasNode,
   WorkflowVariable,
+  WorkflowTask,
+  WorkflowPlan,
   ModelInfo,
 } from '@refly/openapi-schema';
 import { genNodeEntityId, genUniqueId } from '@refly/utils';
@@ -133,9 +135,9 @@ export const workflowPlanPatchSchema = z.object({
     .describe('Array of operations to apply to the workflow plan (in order)'),
 });
 
-export type WorkflowTask = z.infer<typeof workflowTaskSchema>;
+export type WorkflowTaskInput = z.infer<typeof workflowTaskSchema>;
 export type WorkflowVariableValue = z.infer<typeof workflowVariableValueSchema>;
-export type WorkflowVariableDefinition = z.infer<typeof workflowVariableSchema>;
+export type WorkflowVariableInput = z.infer<typeof workflowVariableSchema>;
 export type WorkflowPatchOperation = z.infer<typeof workflowPatchOperationSchema>;
 export type WorkflowPlanPatch = z.infer<typeof workflowPlanPatchSchema>;
 
@@ -174,15 +176,23 @@ export const applyWorkflowPatchOperations = (
 
       case 'createTask': {
         if (!task) break;
+        // Validate task has required fields
+        const validatedTask = workflowTaskSchema.safeParse(task);
+        if (!validatedTask.success) {
+          return {
+            success: false,
+            error: `Invalid task data: ${validatedTask.error.message}`,
+          };
+        }
         // Check if task ID already exists
-        const existingTask = plan.tasks?.find((t) => t.id === task.id);
+        const existingTask = plan.tasks?.find((t) => t.id === validatedTask.data.id);
         if (existingTask) {
           return {
             success: false,
-            error: `Task with ID "${task.id}" already exists. Use updateTask to modify existing tasks.`,
+            error: `Task with ID "${validatedTask.data.id}" already exists. Use updateTask to modify existing tasks.`,
           };
         }
-        plan.tasks = [...(plan.tasks ?? []), task];
+        plan.tasks!.push(validatedTask.data as WorkflowTask);
         break;
       }
 
@@ -230,15 +240,25 @@ export const applyWorkflowPatchOperations = (
 
       case 'createVariable': {
         if (!variable) break;
+        // Validate variable has required fields
+        const validatedVariable = workflowVariableSchema.safeParse(variable);
+        if (!validatedVariable.success) {
+          return {
+            success: false,
+            error: `Invalid variable data: ${validatedVariable.error.message}`,
+          };
+        }
         // Check if variable ID already exists
-        const existingVar = plan.variables?.find((v) => v.variableId === variable.variableId);
+        const existingVar = plan.variables?.find(
+          (v) => v.variableId === validatedVariable.data.variableId,
+        );
         if (existingVar) {
           return {
             success: false,
-            error: `Variable with ID "${variable.variableId}" already exists. Use updateVariable to modify existing variables.`,
+            error: `Variable with ID "${validatedVariable.data.variableId}" already exists. Use updateVariable to modify existing variables.`,
           };
         }
-        plan.variables = [...(plan.variables ?? []), variable];
+        plan.variables!.push(validatedVariable.data as WorkflowVariable);
         break;
       }
 
@@ -253,7 +273,7 @@ export const applyWorkflowPatchOperations = (
         }
         const existingVar = plan.variables![varIndex];
         if (data) {
-          plan.variables![varIndex] = {
+          const updatedVar = {
             ...existingVar,
             ...(data.variableType !== undefined && {
               variableType: data.variableType,
@@ -268,6 +288,15 @@ export const applyWorkflowPatchOperations = (
             }),
             ...(data.value !== undefined && { value: data.value }),
           };
+          // Validate the updated variable
+          const validatedVariable = workflowVariableSchema.safeParse(updatedVar);
+          if (!validatedVariable.success) {
+            return {
+              success: false,
+              error: `Invalid variable update: ${validatedVariable.error.message}`,
+            };
+          }
+          plan.variables![varIndex] = validatedVariable.data as WorkflowVariable;
         }
         break;
       }
@@ -323,8 +352,6 @@ export const parseWorkflowPlanPatch = (
   };
 };
 
-export type WorkflowPlan = z.infer<typeof workflowPlanSchema>;
-
 // Enhanced parsing function with detailed error reporting
 export type ParseWorkflowPlanResult = {
   success: boolean;
@@ -336,7 +363,7 @@ export const parseWorkflowPlan = (data: unknown): ParseWorkflowPlanResult => {
   const result = workflowPlanSchema.safeParse(data);
 
   if (result.success) {
-    return { success: true, data: result.data };
+    return { success: true, data: result.data as WorkflowPlan };
   }
 
   // Collect detailed error messages
@@ -370,7 +397,7 @@ export const normalizeWorkflowPlan = (plan: WorkflowPlan): WorkflowPlan => {
 };
 
 export const planVariableToWorkflowVariable = (
-  planVariable: WorkflowPlan['variables'][number],
+  planVariable: WorkflowVariable,
 ): WorkflowVariable => {
   return {
     variableId: planVariable.variableId,

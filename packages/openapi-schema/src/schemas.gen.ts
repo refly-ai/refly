@@ -10330,10 +10330,17 @@ export const WorkflowTaskSchema = {
         description: 'Workflow task toolset ID',
       },
     },
+    dependentTasks: {
+      type: 'array',
+      description: 'Workflow task dependent task IDs',
+      items: {
+        type: 'string',
+      },
+    },
   },
 } as const;
 
-export const WorkflowPlanDataSchema = {
+export const WorkflowPlanSchema = {
   type: 'object',
   required: ['title', 'tasks'],
   properties: {
@@ -10358,37 +10365,35 @@ export const WorkflowPlanDataSchema = {
   },
 } as const;
 
-export const WorkflowPlanSchema = {
-  type: 'object',
-  required: ['planId'],
-  properties: {
-    planId: {
-      type: 'string',
-      description: 'Workflow plan ID',
+export const WorkflowPlanRecordSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/WorkflowPlan',
     },
-    version: {
-      type: 'number',
-      description: 'Workflow plan version',
-    },
-    data: {
+    {
       type: 'object',
-      description: 'Workflow plan data',
+      properties: {
+        planId: {
+          type: 'string',
+          description: 'Workflow plan ID',
+        },
+        version: {
+          type: 'number',
+          description: 'Workflow plan version',
+        },
+        createdAt: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Workflow plan creation timestamp',
+        },
+        updatedAt: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Workflow plan update timestamp',
+        },
+      },
     },
-    patch: {
-      type: 'object',
-      description: 'Workflow plan patch',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Workflow plan creation timestamp',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Workflow plan update timestamp',
-    },
-  },
+  ],
 } as const;
 
 export const GetWorkflowPlanDetailResponseSchema = {
@@ -10400,7 +10405,7 @@ export const GetWorkflowPlanDetailResponseSchema = {
       type: 'object',
       properties: {
         data: {
-          $ref: '#/components/schemas/WorkflowPlan',
+          $ref: '#/components/schemas/WorkflowPlanRecord',
         },
       },
     },
