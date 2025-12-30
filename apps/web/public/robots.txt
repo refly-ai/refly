@@ -17,7 +17,6 @@ Disallow: /workspace
 # Disallow all share paths (user-generated content, not for SEO)
 Disallow: /share/
 # Disallow deprecated routes
-Disallow: /artifact-gallery
 Disallow: /preview/canvas/
 Disallow: /canvas/
 Disallow: /project/

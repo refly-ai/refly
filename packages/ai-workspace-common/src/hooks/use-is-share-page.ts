@@ -7,8 +7,6 @@ import { useLocation } from 'react-router-dom';
 export const isPublicAccessPageByPath = (pathname: string): boolean => {
   const isSharePage = pathname?.startsWith('/share/') ?? false;
   const isPreviewPage = pathname?.startsWith('/preview/') ?? false;
-  const isArtifactGalleryPage = pathname?.startsWith('/artifact-gallery') ?? false;
-  const isUseCasesGalleryPage = pathname?.startsWith('/use-cases-gallery') ?? false;
   const isAppPage = pathname?.startsWith('/app/') ?? false;
   const isWorkflowTemplatePage = pathname?.startsWith('/workflow-template/') ?? false;
   const isLoginPage = (pathname ?? '') === '/login';
@@ -17,8 +15,6 @@ export const isPublicAccessPageByPath = (pathname: string): boolean => {
   return (
     isPreviewPage ||
     isSharePage ||
-    isArtifactGalleryPage ||
-    isUseCasesGalleryPage ||
     isAppPage ||
     isWorkflowTemplatePage ||
     isLoginPage ||
