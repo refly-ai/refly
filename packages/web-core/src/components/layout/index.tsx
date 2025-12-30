@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Layout } from 'antd';
+import { Layout, Modal } from 'antd';
 import { useMatch, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from '@sentry/react';
@@ -7,6 +7,7 @@ import { SiderLayout } from '@refly-packages/ai-workspace-common/components/side
 import { useBindCommands } from '@refly-packages/ai-workspace-common/hooks/use-bind-commands';
 import { useUserStoreShallow } from '@refly/stores';
 import { LOCALE } from '@refly/common-types';
+import { authChannel } from '@refly-packages/ai-workspace-common/utils/auth-channel';
 
 import { LoginModal } from '../../components/login-modal';
 import { SubscribeModal } from '@refly-packages/ai-workspace-common/components/settings/subscribe-modal';
@@ -86,7 +87,7 @@ export const AppLayout = (props: AppLayoutProps) => {
   useGetMediaModel();
 
   // Change locale if not matched
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   useEffect(() => {
     if (locale && i18n.isInitialized && i18n.languages?.[0] !== locale) {
       i18n.changeLanguage(locale);
@@ -124,6 +125,81 @@ export const AppLayout = (props: AppLayoutProps) => {
 
   // Handle sidebar collapse based on route changes
   useRouteCollapse();
+
+  // Cross-tab auth state sync
+  useEffect(() => {
+    // Debounce to avoid multiple triggers in short time
+    let lastEventTime = 0;
+    const DEBOUNCE_MS = 500;
+
+    const unsubscribe = authChannel.subscribe((event) => {
+      const now = Date.now();
+      if (now - lastEventTime < DEBOUNCE_MS) return;
+      lastEventTime = now;
+
+      switch (event.type) {
+        case 'logout':
+          // Another tab logged out, show prompt then redirect to login
+          Modal.info({
+            title: t('common.loggedOut.title', { defaultValue: '已退出登录' }),
+            content: t('common.loggedOut.content', {
+              defaultValue: '检测到您在其他标签页退出了登录，点击确定将跳转到登录页面。',
+            }),
+            okText: t('common.confirm', { defaultValue: '确定' }),
+            centered: true,
+            icon: null,
+            okButtonProps: {
+              className:
+                '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66] rounded-lg',
+            },
+            onOk: () => {
+              window.location.href = '/login';
+            },
+          });
+          break;
+
+        case 'user-changed':
+          // Another tab switched user, show prompt then refresh
+          Modal.info({
+            title: t('common.userChanged.title', { defaultValue: '账户已切换' }),
+            content: t('common.userChanged.content', {
+              defaultValue: '检测到您在其他标签页切换了账户，页面将刷新以加载新用户数据。',
+            }),
+            okText: t('common.confirm', { defaultValue: '确定' }),
+            centered: true,
+            icon: null,
+            okButtonProps: {
+              className:
+                '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66] rounded-lg',
+            },
+            onOk: () => {
+              window.location.reload();
+            },
+          });
+          break;
+
+        case 'login':
+          // Another tab logged in, redirect if currently on login page
+          if (window.location.pathname === '/login') {
+            window.location.href = '/workspace';
+          }
+          break;
+      }
+    });
+
+    // Visibility check: validate user identity when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        authChannel.validateUserIdentity();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [t]);
 
   const routeLogin = useMatch('/');
   const isPricing = useMatch('/pricing');
