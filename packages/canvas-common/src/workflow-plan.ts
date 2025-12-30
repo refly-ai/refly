@@ -125,7 +125,6 @@ export const workflowPlanPatchSchema = z.object({
   planId: z.string().describe('The ID of the workflow plan to patch'),
   operations: z
     .array(workflowPatchOperationSchema)
-    .min(1)
     .describe('Array of operations to apply to the workflow plan (in order)'),
 });
 

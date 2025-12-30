@@ -56,7 +56,10 @@ export class GenerateWorkflow extends AgentBaseTool<CopilotToolParams> {
 
       return {
         status: 'success',
-        data: result,
+        data: {
+          planId: result.planId,
+          version: result.version,
+        },
         summary: `Successfully generated workflow plan with ID: ${result.planId} and version: ${result.version}`,
       };
     } catch (e) {
@@ -189,7 +192,10 @@ Use this tool to modify a workflow plan by providing an array of operations. Eac
 
       return {
         status: 'success',
-        data: result,
+        data: {
+          planId: result.planId,
+          version: result.version,
+        },
         summary: `Successfully patched workflow plan with ID: ${result.planId} and created new version: ${result.version}. Applied ${input.operations.length} operation(s).`,
       };
     } catch (e) {

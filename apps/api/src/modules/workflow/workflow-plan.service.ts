@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
+import { RedisService, LockReleaseFn } from '../common/redis.service';
 import { WorkflowPlan, WorkflowPlanData } from '@refly/openapi-schema';
 import { ParamsError } from '@refly/errors';
-import { genUniqueId, safeParseJSON } from '@refly/utils';
+import { genWorkflowPlanID, safeParseJSON } from '@refly/utils';
 import { WorkflowPlan as WorkflowPlanPO } from '@prisma/client';
 import {
   WorkflowPatchOperation,
@@ -14,7 +15,10 @@ import {
 export class WorkflowPlanService {
   private readonly logger = new Logger(WorkflowPlanService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+  ) {}
 
   /**
    * Get workflow plan detail by planId
@@ -59,7 +63,7 @@ export class WorkflowPlanService {
     });
 
     const newVersion = latestPlan ? latestPlan.version + 1 : 0;
-    const planId = `workflow-plan-${genUniqueId()}`;
+    const planId = genWorkflowPlanID();
 
     // For the first version, patch is the same as data
     // For subsequent versions, patch represents changes from previous version
@@ -83,6 +87,27 @@ export class WorkflowPlanService {
     );
 
     return this.workflowPlanPO2DTO(workflowPlanPO as WorkflowPlanPO);
+  }
+
+  /**
+   * Acquire a lock for the workflow plan to avoid concurrency updates.
+   */
+  async lockPlan(
+    planId: string,
+    options?: {
+      maxRetries?: number;
+      initialDelay?: number;
+      ttlSeconds?: number;
+    },
+  ): Promise<LockReleaseFn> {
+    this.logger.debug(`Attempting to acquire lock for workflow plan: ${planId}`);
+    const lockKey = `workflow-plan:${planId}`;
+    const releaseLock = await this.redis.waitLock(lockKey, {
+      maxRetries: options?.maxRetries,
+      initialDelay: options?.initialDelay,
+      ttlSeconds: options?.ttlSeconds,
+    });
+    return releaseLock;
   }
 
   /**
@@ -110,58 +135,64 @@ export class WorkflowPlanService {
       throw new ParamsError('At least one patch operation is required');
     }
 
-    // Get the current plan
-    const currentPlan = await this.prisma.workflowPlan.findUnique({
-      where: { planId },
-    });
+    const releaseLock = await this.lockPlan(planId);
 
-    if (!currentPlan) {
-      throw new ParamsError(`Workflow plan not found: ${planId}`);
-    }
-
-    // Parse current data
-    let currentData: WorkflowPlanType;
     try {
-      currentData = safeParseJSON(currentPlan.data);
-    } catch (error) {
-      this.logger.error(`Failed to parse workflow plan data: ${error?.message ?? error}`);
-      currentData = { title: '', tasks: [], variables: [] };
+      // Get the current plan
+      const currentPlan = await this.prisma.workflowPlan.findUnique({
+        where: { planId },
+      });
+
+      if (!currentPlan) {
+        throw new ParamsError(`Workflow plan not found: ${planId}`);
+      }
+
+      // Parse current data
+      let currentData: WorkflowPlanType;
+      try {
+        currentData = safeParseJSON(currentPlan.data);
+      } catch (error) {
+        this.logger.error(`Failed to parse workflow plan data: ${error?.message ?? error}`);
+        currentData = { title: '', tasks: [], variables: [] };
+      }
+
+      // Ensure required arrays exist
+      currentData.tasks = currentData.tasks ?? [];
+      currentData.variables = currentData.variables ?? [];
+
+      // Apply semantic patch operations
+      const patchResult = applyWorkflowPatchOperations(currentData, operations);
+
+      if (!patchResult.success || !patchResult.data) {
+        throw new ParamsError(`Failed to apply patch operations: ${patchResult.error}`);
+      }
+
+      const newData = patchResult.data;
+
+      // Create a new version
+      const newVersion = currentPlan.version + 1;
+
+      const newWorkflowPlanPO = await this.prisma.workflowPlan.create({
+        data: {
+          planId: currentPlan.planId,
+          title: newData.title ?? '',
+          version: newVersion,
+          data: JSON.stringify(newData),
+          patch: JSON.stringify({ operations }), // Store operations for traceability
+          copilotSessionId: currentPlan.copilotSessionId,
+          resultId,
+          resultVersion,
+        },
+      });
+
+      this.logger.log(
+        `Patched workflow plan: planId=${planId} oldVersion=${currentPlan.version} newVersion=${newVersion} operations=${operations.length}`,
+      );
+
+      return this.workflowPlanPO2DTO(newWorkflowPlanPO as WorkflowPlanPO);
+    } finally {
+      await releaseLock();
     }
-
-    // Ensure required arrays exist
-    currentData.tasks = currentData.tasks ?? [];
-    currentData.variables = currentData.variables ?? [];
-
-    // Apply semantic patch operations
-    const patchResult = applyWorkflowPatchOperations(currentData, operations);
-
-    if (!patchResult.success || !patchResult.data) {
-      throw new ParamsError(`Failed to apply patch operations: ${patchResult.error}`);
-    }
-
-    const newData = patchResult.data;
-
-    // Create a new version
-    const newVersion = currentPlan.version + 1;
-
-    const newWorkflowPlanPO = await this.prisma.workflowPlan.create({
-      data: {
-        planId: currentPlan.planId,
-        title: newData.title ?? '',
-        version: newVersion,
-        data: JSON.stringify(newData),
-        patch: JSON.stringify({ operations }), // Store operations for traceability
-        copilotSessionId: currentPlan.copilotSessionId,
-        resultId,
-        resultVersion,
-      },
-    });
-
-    this.logger.log(
-      `Patched workflow plan: planId=${planId} oldVersion=${currentPlan.version} newVersion=${newVersion} operations=${operations.length}`,
-    );
-
-    return this.workflowPlanPO2DTO(newWorkflowPlanPO as WorkflowPlanPO);
   }
 
   /**
