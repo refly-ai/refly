@@ -185,4 +185,5 @@ export interface ReflyService {
     resultId: string,
     resultVersion: number,
   ) => Promise<WorkflowPlan>;
+  getLatestWorkflowPlan: (user: User, copilotSessionId: string) => Promise<WorkflowPlan | null>;
 }

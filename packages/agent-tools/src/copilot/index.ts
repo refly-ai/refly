@@ -182,9 +182,31 @@ Use this tool to modify a workflow plan by providing an array of operations. Eac
         };
       }
 
+      let planId = input.planId;
+      if (!planId) {
+        const copilotSessionId = config.configurable?.copilotSessionId;
+        if (!copilotSessionId) {
+          return {
+            status: 'error',
+            data: { error: 'copilotSessionId is required when planId is not provided' },
+            summary: 'Missing copilotSessionId',
+          };
+        }
+
+        const latestPlan = await reflyService.getLatestWorkflowPlan(user, copilotSessionId);
+        if (!latestPlan) {
+          return {
+            status: 'error',
+            data: { error: 'No existing workflow plan found for this session' },
+            summary: 'Workflow plan not found',
+          };
+        }
+        planId = latestPlan.planId;
+      }
+
       const result = await reflyService.patchWorkflowPlan(
         user,
-        input.planId,
+        planId,
         input.operations,
         config.configurable?.resultId,
         config.configurable?.version,

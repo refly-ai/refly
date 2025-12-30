@@ -300,6 +300,9 @@ export class SkillEngineService implements OnModuleInit {
           resultVersion,
         );
       },
+      getLatestWorkflowPlan: async (_user, copilotSessionId) => {
+        return await this.workflowPlanService.getLatestWorkflowPlan(copilotSessionId);
+      },
     };
   };
 
