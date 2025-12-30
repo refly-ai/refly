@@ -247,6 +247,10 @@ export class SkillInvokerService {
       },
     };
 
+    if (data.copilotSessionId) {
+      config.configurable.copilotSessionId = data.copilotSessionId;
+    }
+
     // Add project info if projectId is provided
     if (projectId) {
       const project = await this.prisma.project.findUnique({
