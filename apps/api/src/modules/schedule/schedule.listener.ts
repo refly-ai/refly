@@ -5,6 +5,7 @@ import { WorkflowCompletedEvent, WorkflowFailedEvent } from '../workflow/workflo
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { NotificationService } from '../notification/notification.service';
+import { CreditService } from '../credit/credit.service';
 import {
   generateScheduleSuccessEmail,
   generateScheduleFailedEmail,
@@ -15,6 +16,7 @@ import {
   SCHEDULE_REDIS_KEYS,
 } from './schedule.constants';
 import { CronExpressionParser } from 'cron-parser';
+import type { User } from '@refly/openapi-schema';
 
 @Injectable()
 export class ScheduleEventListener {
@@ -24,6 +26,7 @@ export class ScheduleEventListener {
     private readonly prisma: PrismaService,
     private readonly redisService: RedisService,
     private readonly notificationService: NotificationService,
+    private readonly creditService: CreditService,
     private readonly config: ConfigService,
   ) {}
 
@@ -31,137 +34,141 @@ export class ScheduleEventListener {
   async handleWorkflowCompleted(event: WorkflowCompletedEvent) {
     if (!event.scheduleId) return;
 
-    let record: any = null;
-    let counterDecremented = false; // Track if counter was already decremented
-
-    try {
-      this.logger.log(
-        `Processing workflow.completed event for schedule record ${event.scheduleId}`,
-      );
-
-      // 1. First query record to get uid for Redis counter
-      record = await this.prisma.workflowScheduleRecord.findUnique({
-        where: { scheduleRecordId: event.scheduleId },
-        select: { uid: true },
-      });
-
-      if (!record) {
-        this.logger.warn(`Record ${event.scheduleId} not found for workflow.completed event`);
-        return;
-      }
-
-      // 2. Decrement Redis counter first (release slot immediately)
-      try {
-        const redisKey = `${SCHEDULE_REDIS_KEYS.USER_CONCURRENT_PREFIX}${record.uid}`;
-        await this.redisService.decr(redisKey);
-        counterDecremented = true;
-        this.logger.debug(`Decremented Redis counter for user ${record.uid}`);
-      } catch (redisError) {
-        // Redis failure is not critical, just log
-        this.logger.warn(`Failed to decrement Redis counter for user ${record.uid}`, redisError);
-      }
-
-      // 3. Update database status
-      await this.prisma.workflowScheduleRecord.update({
-        where: { scheduleRecordId: event.scheduleId },
-        data: {
-          status: 'success',
-          completedAt: new Date(),
-        },
-      });
-
-      // 4. Send notification email (non-critical, won't affect counter)
-      await this.sendEmail(event, 'success');
-    } catch (error: any) {
-      this.logger.error(`Failed to process workflow.completed event: ${error.message}`);
-
-      // Only decrement if not already done (avoid double decrement)
-      if (record?.uid && !counterDecremented) {
-        try {
-          const redisKey = `${SCHEDULE_REDIS_KEYS.USER_CONCURRENT_PREFIX}${record.uid}`;
-          await this.redisService.decr(redisKey);
-          this.logger.debug(`Decremented Redis counter for user ${record.uid} in error handler`);
-        } catch (redisError) {
-          this.logger.warn(
-            `Failed to decrement Redis counter in error handler for user ${record.uid}`,
-            redisError,
-          );
-        }
-      }
-    }
+    await this.handleWorkflowEvent(event, 'success');
   }
 
   @OnEvent('workflow.failed')
   async handleWorkflowFailed(event: WorkflowFailedEvent) {
     if (!event.scheduleId) return;
 
-    let record: any = null;
-    let counterDecremented = false; // Track if counter was already decremented
+    await this.handleWorkflowEvent(event, 'failed');
+  }
+
+  /**
+   * Common handler for both workflow.completed and workflow.failed events
+   */
+  private async handleWorkflowEvent(
+    event: WorkflowCompletedEvent | WorkflowFailedEvent,
+    status: 'success' | 'failed',
+  ) {
+    const eventType = status === 'success' ? 'workflow.completed' : 'workflow.failed';
+    let record: { uid: string } | null = null;
+    let counterDecremented = false;
 
     try {
-      this.logger.log(`Processing workflow.failed event for schedule record ${event.scheduleId}`);
+      this.logger.log(`Processing ${eventType} event for schedule record ${event.scheduleId}`);
 
-      // 1. First query record to get uid for Redis counter
-      record = await this.prisma.workflowScheduleRecord.findUnique({
-        where: { scheduleRecordId: event.scheduleId },
-        select: { uid: true },
-      });
-
+      // 1. Get schedule record
+      record = await this.getScheduleRecord(event.scheduleId!);
       if (!record) {
-        this.logger.warn(`Record ${event.scheduleId} not found for workflow.failed event`);
+        this.logger.warn(`Record ${event.scheduleId} not found for ${eventType} event`);
         return;
       }
 
-      // 2. Decrement Redis counter first (release slot immediately)
-      try {
-        const redisKey = `${SCHEDULE_REDIS_KEYS.USER_CONCURRENT_PREFIX}${record.uid}`;
-        await this.redisService.decr(redisKey);
-        counterDecremented = true;
-        this.logger.debug(`Decremented Redis counter for user ${record.uid}`);
-      } catch (redisError) {
-        // Redis failure is not critical, just log
-        this.logger.warn(`Failed to decrement Redis counter for user ${record.uid}`, redisError);
+      // 2. Decrement Redis counter
+      counterDecremented = await this.decrementRedisCounter(record.uid);
+
+      // 3. Calculate credit usage
+      const creditUsed = await this.calculateCreditUsage(record.uid, event.executionId);
+
+      // 4. Prepare update data based on status
+      const updateData: any = {
+        status: status === 'success' ? 'success' : 'failed',
+        completedAt: new Date(),
+        creditUsed,
+      };
+
+      if (status === 'failed' && 'error' in event) {
+        const errorDetails = event.error;
+        const failureReason = errorDetails?.errorMessage
+          ? classifyScheduleError(errorDetails.errorMessage)
+          : ScheduleFailureReason.WORKFLOW_EXECUTION_FAILED;
+        updateData.failureReason = failureReason;
+        updateData.errorDetails = JSON.stringify(errorDetails);
       }
 
-      // 3. Classify error and get failure reason
-      const errorDetails = event.error;
-      let failureReason: string = ScheduleFailureReason.WORKFLOW_EXECUTION_FAILED;
-      if (errorDetails?.errorMessage) {
-        failureReason = classifyScheduleError(errorDetails.errorMessage);
-      }
+      // 5. Update database
+      await this.updateScheduleRecord(event.scheduleId!, updateData);
 
-      // 4. Update database status
-      await this.prisma.workflowScheduleRecord.update({
-        where: { scheduleRecordId: event.scheduleId },
-        data: {
-          status: 'failed',
-          completedAt: new Date(),
-          failureReason,
-          errorDetails: JSON.stringify(errorDetails),
-        },
-      });
-
-      // 5. Send notification email (non-critical, won't affect counter)
-      await this.sendEmail(event, 'failed');
+      // 6. Send notification email
+      await this.sendEmail(event, status);
     } catch (error: any) {
-      this.logger.error(`Failed to process workflow.failed event: ${error.message}`);
+      this.logger.error(`Failed to process ${eventType} event: ${error.message}`);
 
-      // Only decrement if not already done (avoid double decrement)
+      // Ensure Redis counter is decremented in error case
       if (record?.uid && !counterDecremented) {
-        try {
-          const redisKey = `${SCHEDULE_REDIS_KEYS.USER_CONCURRENT_PREFIX}${record.uid}`;
-          await this.redisService.decr(redisKey);
-          this.logger.debug(`Decremented Redis counter for user ${record.uid} in error handler`);
-        } catch (redisError) {
-          this.logger.warn(
-            `Failed to decrement Redis counter in error handler for user ${record.uid}`,
-            redisError,
-          );
-        }
+        await this.decrementRedisCounter(record.uid, true);
       }
     }
   }
 
+  /**
+   * Get schedule record by scheduleRecordId
+   */
+  private async getScheduleRecord(scheduleRecordId: string): Promise<{ uid: string } | null> {
+    return await this.prisma.workflowScheduleRecord.findUnique({
+      where: { scheduleRecordId },
+      select: { uid: true },
+    });
+  }
+
+  /**
+   * Decrement Redis counter for user concurrency tracking
+   * @param uid User ID
+   * @param isErrorHandler Whether this is called from error handler
+   * @returns true if decrement succeeded, false otherwise
+   */
+  private async decrementRedisCounter(uid: string, isErrorHandler = false): Promise<boolean> {
+    try {
+      const redisKey = `${SCHEDULE_REDIS_KEYS.USER_CONCURRENT_PREFIX}${uid}`;
+      await this.redisService.decr(redisKey);
+      const context = isErrorHandler ? 'in error handler' : '';
+      this.logger.debug(`Decremented Redis counter for user ${uid} ${context}`);
+      return true;
+    } catch (redisError) {
+      const context = isErrorHandler ? 'in error handler' : '';
+      this.logger.warn(`Failed to decrement Redis counter for user ${uid} ${context}`, redisError);
+      return false;
+    }
+  }
+
+  /**
+   * Calculate credit usage for execution (actual usage without markup)
+   */
+  private async calculateCreditUsage(uid: string, executionId: string): Promise<number> {
+    try {
+      const user: User = { uid } as User;
+      return await this.creditService.countExecutionCreditUsageByExecutionId(user, executionId);
+    } catch (creditErr: any) {
+      this.logger.warn(
+        `Failed to calculate credit usage for execution ${executionId}: ${creditErr?.message}`,
+      );
+      return 0;
+    }
+  }
+
+  /**
+   * Update schedule record in database
+   */
+  private async updateScheduleRecord(
+    scheduleRecordId: string,
+    data: {
+      status: string;
+      completedAt: Date;
+      creditUsed: number;
+      failureReason?: string;
+      errorDetails?: string;
+    },
+  ): Promise<void> {
+    await this.prisma.workflowScheduleRecord.update({
+      where: { scheduleRecordId },
+      data,
+    });
+  }
+
+  /**
+   * Send notification email for schedule execution result
+   */
   private async sendEmail(
     event: WorkflowCompletedEvent | WorkflowFailedEvent,
     status: 'success' | 'failed',
@@ -184,77 +191,69 @@ export class ScheduleEventListener {
       const scheduleRecord = await this.prisma.workflowScheduleRecord.findUnique({
         where: { scheduleRecordId: event.scheduleId },
       });
-      // Fallback to schedule name or Generic
       const scheduleName = scheduleRecord?.workflowTitle || 'Scheduled Workflow';
+      const nextRunTime = await this.calculateNextRunTime(scheduleRecord?.scheduleId);
 
-      let nextRunTime = 'Check Dashboard';
-      if (scheduleRecord?.scheduleId) {
-        const schedule = await this.prisma.workflowSchedule.findUnique({
-          where: { scheduleId: scheduleRecord.scheduleId },
-        });
+      const scheduleRecordId = scheduleRecord?.scheduleRecordId || '';
+      const origin = this.config.get<string>('origin');
+      const runDetailsLink = `${origin}/run-history/${scheduleRecordId}`;
 
-        if (schedule?.cronExpression) {
-          try {
-            const interval = CronExpressionParser.parse(schedule.cronExpression, {
-              tz: schedule.timezone || 'Asia/Shanghai',
-            });
-            nextRunTime = interval.next().toDate().toLocaleString();
-          } catch (err) {
-            this.logger.warn(
-              `Failed to calculate next run time for schedule ${schedule.scheduleId}: ${err.message}`,
-            );
-          }
-        }
-      }
+      const emailData = {
+        userName: fullUser.nickname || 'User',
+        scheduleName,
+        runTime: new Date().toLocaleString(),
+        nextRunTime,
+        schedulesLink: runDetailsLink,
+        runDetailsLink,
+      };
 
-      if (status === 'success') {
-        // Get the execution canvas ID for the run-history link
-        const scheduleRecordId = scheduleRecord?.scheduleRecordId || '';
-        const origin = this.config.get<string>('origin');
+      const { subject, html } =
+        status === 'success'
+          ? generateScheduleSuccessEmail(emailData)
+          : generateScheduleFailedEmail(emailData);
 
-        const { subject, html } = generateScheduleSuccessEmail({
-          userName: fullUser.nickname || 'User',
-          scheduleName: scheduleName,
-          runTime: new Date().toLocaleString(),
-          nextRunTime: nextRunTime,
-          schedulesLink: `${origin}/run-history/${scheduleRecordId}`,
-          runDetailsLink: `${origin}/run-history/${scheduleRecordId}`,
-        });
-        await this.notificationService.sendEmail(
-          {
-            to: fullUser.email,
-            subject,
-            html,
-          },
-          fullUser,
-        );
-      } else {
-        // Get the execution canvas ID for the run-history link
-        const scheduleRecordId = scheduleRecord?.scheduleRecordId || '';
-        const origin = this.config.get<string>('origin');
-
-        const { subject, html } = generateScheduleFailedEmail({
-          userName: fullUser.nickname || 'User',
-          scheduleName: scheduleName,
-          runTime: new Date().toLocaleString(),
-          nextRunTime: nextRunTime,
-          schedulesLink: `${origin}/run-history/${scheduleRecordId}`,
-          runDetailsLink: `${origin}/run-history/${scheduleRecordId}`,
-        });
-        await this.notificationService.sendEmail(
-          {
-            to: fullUser.email,
-            subject,
-            html,
-          },
-          fullUser,
-        );
-      }
+      await this.notificationService.sendEmail(
+        {
+          to: fullUser.email,
+          subject,
+          html,
+        },
+        fullUser,
+      );
     } catch (error: any) {
       // Log email sending failure but don't throw - email is non-critical
       this.logger.error(
         `Failed to send ${status} email for schedule record ${event.scheduleId}: ${error?.message}`,
       );
+    }
+  }
+
+  /**
+   * Calculate next run time from schedule cron expression
+   */
+  private async calculateNextRunTime(scheduleId: string | undefined): Promise<string> {
+    if (!scheduleId) {
+      return 'Check Dashboard';
+    }
+
+    const schedule = await this.prisma.workflowSchedule.findUnique({
+      where: { scheduleId },
+    });
+
+    if (!schedule?.cronExpression) {
+      return 'Check Dashboard';
+    }
+
+    try {
+      const interval = CronExpressionParser.parse(schedule.cronExpression, {
+        tz: schedule.timezone || 'Asia/Shanghai',
+      });
+      return interval.next().toDate().toLocaleString();
+    } catch (err: any) {
+      this.logger.warn(
+        `Failed to calculate next run time for schedule ${scheduleId}: ${err?.message}`,
+      );
+      return 'Check Dashboard';
     }
   }
 }

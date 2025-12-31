@@ -854,7 +854,7 @@ export class WorkflowService {
             `[pollWorkflow] Updated workflow ${executionId}: status=${newStatus}, executed=${executedNodes}, failed=${failedNodes}`,
           );
 
-          // Sync WorkflowScheduleRecord status and send notifications via events
+          // Emit events for schedule records (listener will handle status and credit updates)
           if (
             workflowExecution.scheduleRecordId &&
             (newStatus === 'finish' || newStatus === 'failed')
@@ -901,60 +901,12 @@ export class WorkflowService {
                   ),
                 );
               }
-
-              // Calculate credit usage for this execution
-              let creditUsed = 0;
-              try {
-                const rawCreditUsage =
-                  await this.creditService.countExecutionCreditUsageByExecutionId(
-                    user,
-                    executionId,
-                  );
-                // Apply markup from config
-                creditUsed = ceil(
-                  rawCreditUsage * this.configService.get('credit.executionCreditMarkup'),
-                );
-              } catch (creditErr: any) {
-                this.logger.warn(
-                  `[pollWorkflow] Failed to calculate credit usage: ${creditErr?.message}`,
-                );
-              }
-
-              // Get failure details if failed
-              let failureReason: string | undefined;
-              let errorDetails: Record<string, any> | undefined;
-              if (newStatus === 'failed') {
-                const firstFailedNode = await this.prisma.workflowNodeExecution.findFirst({
-                  where: { executionId, status: 'failed' },
-                  select: { errorMessage: true, nodeId: true, title: true },
-                  orderBy: { endTime: 'asc' },
-                });
-                failureReason = 'workflow_execution_failed';
-                errorDetails = {
-                  nodeId: firstFailedNode?.nodeId,
-                  nodeTitle: firstFailedNode?.title,
-                  errorMessage: firstFailedNode?.errorMessage,
-                };
-              }
-
-              await this.prisma.workflowScheduleRecord.update({
-                where: { scheduleRecordId: workflowExecution.scheduleRecordId },
-                data: {
-                  status: newStatus === 'finish' ? 'success' : 'failed',
-                  completedAt: new Date(),
-                  creditUsed,
-                  ...(newStatus === 'failed' && {
-                    failureReason,
-                    errorDetails: JSON.stringify(errorDetails),
-                  }),
-                },
-              });
               this.logger.log(
-                `[pollWorkflow] Synced WorkflowScheduleRecord ${workflowExecution.scheduleRecordId}: status=${newStatus === 'finish' ? 'success' : 'failed'}${newStatus === 'failed' ? `, reason=${failureReason}` : ''}`,
+                `[pollWorkflow] Emitted workflow.${newStatus === 'finish' ? 'completed' : 'failed'} event for schedule record ${workflowExecution.scheduleRecordId}`,
               );
             } catch (syncErr: any) {
               this.logger.warn(
-                `[pollWorkflow] Failed to sync WorkflowScheduleRecord status or emit event: ${syncErr?.message}`,
+                `[pollWorkflow] Failed to emit event for schedule record: ${syncErr?.message}`,
               );
             }
           }
