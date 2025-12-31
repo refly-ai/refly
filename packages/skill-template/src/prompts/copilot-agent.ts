@@ -34,7 +34,7 @@ Default: **Conversational Workflow Design**
 3. Call appropriate tool to create or modify the plan
 4. Iterate based on user feedback
 
-### Tool Selection: generate_workflow vs patch_workflow
+### Tool Selection Guide
 
 | Scenario | Tool | Rationale |
 |----------|------|-----------|
@@ -47,8 +47,10 @@ Default: **Conversational Workflow Design**
 | Add/modify variables | \`patch_workflow\` | Non-destructive change |
 | User says "change X to Y" | \`patch_workflow\` | Specific modification request |
 | User says "add a step for..." | \`patch_workflow\` | Incremental addition |
+| Need to recall task/variable IDs | \`get_workflow_summary\` | Retrieve current plan structure |
+| Long conversation, uncertain of current state | \`get_workflow_summary\` | Refresh context before patching |
 
-**Default Preference**: Use \`patch_workflow\` when an existing workflow plan exists and user requests specific modifications. Use \`generate_workflow\` for new workflows or major restructuring.
+**Default Preference**: Use \`patch_workflow\` when an existing workflow plan exists and user requests specific modifications. Use \`generate_workflow\` for new workflows or major restructuring. Use \`get_workflow_summary\` when you need to verify task/variable IDs before making changes.
 
 ### Response Guidelines
 
@@ -317,6 +319,20 @@ User instructions take precedence for overridable rules.
 - Use exact IDs from the existing plan
 - For updates, only include fields that need to change
 - Dependencies are auto-cleaned when deleting tasks
+
+## get_workflow_summary Usage
+
+Call \`get_workflow_summary\` when:
+- After multiple conversation turns and you need to recall the current workflow structure
+- Before calling \`patch_workflow\` if you're unsure of task/variable IDs
+- User asks about the current state of their workflow
+
+The tool returns:
+- Plan ID and version
+- All tasks with IDs, titles, dependencies, and toolsets
+- All variables with IDs, names, types, and required status
+
+**Note**: You don't need to call this tool if you just created or patched the workflow in recent turns — use the returned data from those operations instead.
 
 ## Available Tools
 

@@ -7,6 +7,7 @@ import {
   BuiltinToolsetDefinition,
   GenerateWorkflow,
   PatchWorkflow,
+  GetWorkflowSummary,
   builtinToolsetInventory,
   toolsetInventory,
 } from '@refly/agent-tools';
@@ -1060,6 +1061,7 @@ export class ToolService {
     };
     const generateWorkflow = new GenerateWorkflow(params);
     const patchWorkflow = new PatchWorkflow(params);
+    const getWorkflowSummary = new GetWorkflowSummary(params);
 
     return [
       new DynamicStructuredTool({
@@ -1081,6 +1083,18 @@ export class ToolService {
         func: patchWorkflow.invoke.bind(patchWorkflow),
         metadata: {
           name: patchWorkflow.name,
+          type: 'copilot',
+          toolsetKey: 'copilot',
+          toolsetName: 'Copilot',
+        },
+      }),
+      new DynamicStructuredTool({
+        name: 'copilot_get_workflow_summary',
+        description: getWorkflowSummary.description,
+        schema: getWorkflowSummary.schema,
+        func: getWorkflowSummary.invoke.bind(getWorkflowSummary),
+        metadata: {
+          name: getWorkflowSummary.name,
           type: 'copilot',
           toolsetKey: 'copilot',
           toolsetName: 'Copilot',

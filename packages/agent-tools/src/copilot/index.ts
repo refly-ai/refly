@@ -10,6 +10,7 @@ import {
 import { ReflyService } from '../builtin/interface';
 import { User } from '@refly/openapi-schema';
 import { RunnableConfig } from '@langchain/core/runnables';
+import { truncateContent } from '@refly/utils/token';
 
 interface CopilotToolParams {
   user: User;
@@ -160,6 +161,97 @@ Notes:
         status: 'error',
         data: { error: (e as Error)?.message ?? String(e) },
         summary: 'Failed to patch workflow plan',
+      };
+    }
+  }
+}
+
+// Schema for get_workflow_summary tool (no input needed, uses session context)
+const getWorkflowSummarySchema = z.object({
+  planId: z
+    .string()
+    .optional()
+    .describe('Optional plan ID. If not provided, retrieves the latest plan in current session.'),
+});
+
+export class GetWorkflowSummary extends AgentBaseTool<CopilotToolParams> {
+  name = 'get_workflow_summary';
+  toolsetKey = 'copilot';
+
+  schema = getWorkflowSummarySchema;
+
+  description = `Retrieve the current workflow plan structure.
+
+Use this tool when you need to:
+- Recall current tasks and variables before making modifications
+- Verify task/variable IDs for accurate patch operations
+- Understand the workflow structure after multiple conversation turns`;
+
+  protected params: CopilotToolParams;
+
+  constructor(params: CopilotToolParams) {
+    super(params);
+    this.params = params;
+  }
+
+  async _call(
+    input: z.infer<typeof this.schema>,
+    _: unknown,
+    config: RunnableConfig,
+  ): Promise<ToolCallResult> {
+    try {
+      const { reflyService, user } = this.params;
+      const copilotSessionId = config.configurable?.copilotSessionId;
+
+      if (!copilotSessionId && !input.planId) {
+        return {
+          status: 'error',
+          data: { error: 'copilotSessionId is required when planId is not provided' },
+          summary: 'Missing session context',
+        };
+      }
+
+      const plan = await reflyService.getLatestWorkflowPlan(user, {
+        copilotSessionId: copilotSessionId!,
+      });
+
+      if (!plan) {
+        return {
+          status: 'success',
+          data: { exists: false },
+          summary: 'No workflow plan exists in the current session yet.',
+        };
+      }
+
+      return {
+        status: 'success',
+        data: {
+          planId: plan.planId,
+          version: plan.version,
+          title: plan.title,
+          taskCount: plan.tasks?.length ?? 0,
+          variableCount: plan.variables?.length ?? 0,
+          tasks: plan.tasks?.map((t) => ({
+            id: t.id,
+            title: t.title,
+            dependentTasks: t.dependentTasks,
+            toolsets: t.toolsets,
+            prompt: truncateContent(t.prompt, 100),
+          })),
+          variables: plan.variables?.map((v) => ({
+            variableId: v.variableId,
+            name: v.name,
+            variableType: v.variableType,
+            required: v.required,
+          })),
+        },
+        summary: `Successfully retrieved workflow plan summary for plan ID: ${plan.planId} and version: ${plan.version}`,
+      };
+    } catch (e) {
+      return {
+        status: 'error',
+        data: { error: (e as Error)?.message ?? String(e) },
+        summary: 'Failed to retrieve workflow plan summary',
       };
     }
   }
