@@ -22,6 +22,7 @@ export const QUEUE_CREATE_SHARE = 'createShare';
 export const QUEUE_SCALEBOX_EXECUTE = 'scaleboxExecute';
 export const QUEUE_SCALEBOX_PAUSE = 'scaleboxPause';
 export const QUEUE_SCALEBOX_KILL = 'scaleboxKill';
+export const QUEUE_SCHEDULE_EXECUTION = 'scheduleExecution';
 
 export const QUEUE_CHECK_CANCELED_SUBSCRIPTIONS = 'checkCanceledSubscriptions';
 export const QUEUE_EXPIRE_AND_RECHARGE_CREDITS = 'expireAndRechargeCredits';

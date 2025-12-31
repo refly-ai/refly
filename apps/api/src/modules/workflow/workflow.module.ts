@@ -13,6 +13,7 @@ import { QUEUE_RUN_WORKFLOW, QUEUE_POLL_WORKFLOW } from '../../utils/const';
 import { isDesktop } from '../../utils/runtime';
 import { CreditModule } from '../credit/credit.module';
 import { WorkflowPlanService } from './workflow-plan.service';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { WorkflowPlanService } from './workflow-plan.service';
     SkillModule,
     ActionModule,
     CreditModule,
+    NotificationModule,
     ...(isDesktop()
       ? []
       : [

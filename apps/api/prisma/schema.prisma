@@ -365,37 +365,47 @@ model WorkflowPlan {
 
 model WorkflowExecution {
   /// Primary key
-  pk             BigInt   @id @default(autoincrement())
+  pk             BigInt  @id @default(autoincrement())
   /// Workflow execution id
-  executionId    String   @unique @map("execution_id")
+  executionId    String  @unique @map("execution_id")
   /// UID
-  uid            String   @map("uid")
+  uid            String  @map("uid")
   /// Canvas id
-  canvasId       String   @map("canvas_id")
+  canvasId       String  @map("canvas_id")
   /// Source canvas id (from which canvas the workflow is initialized)
-  sourceCanvasId String   @default("") @map("source_canvas_id")
+  sourceCanvasId String  @default("") @map("source_canvas_id")
   /// Workflow title
-  title          String   @map("title")
+  title          String  @map("title")
   /// Workflow status: init, executing, finished, failed
-  status         String   @default("init") @map("status")
+  status         String  @default("init") @map("status")
   /// Whether the workflow was aborted by user
-  abortedByUser  Boolean  @default(false) @map("aborted_by_user")
+  abortedByUser  Boolean @default(false) @map("aborted_by_user")
   /// Workflow app id
-  appId          String?  @map("app_id")
+  appId          String? @map("app_id")
   /// Workflow variables (JSON)
-  variables      String?  @map("variables")
+  variables      String? @map("variables")
   /// Total nodes count
-  totalNodes     Int      @default(0) @map("total_nodes")
+  totalNodes     Int     @default(0) @map("total_nodes")
   /// Executed nodes count
-  executedNodes  Int      @default(0) @map("executed_nodes")
+  executedNodes  Int     @default(0) @map("executed_nodes")
   /// Failed nodes count
-  failedNodes    Int      @default(0) @map("failed_nodes")
+  failedNodes    Int     @default(0) @map("failed_nodes")
+
+  // ========== Scheduled Task Relation ==========
+  // If triggerType = 'scheduled', these fields link back to the schedule
+  scheduleId       String? @map("schedule_id")
+  scheduleRecordId String? @map("schedule_record_id")
+  // triggerType: 'manual', 'scheduled', 'api', etc.
+  triggerType      String  @default("manual") @map("trigger_type")
+
   /// Create timestamp
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@index([uid, canvasId])
+  @@index([scheduleId, createdAt])
+  @@index([triggerType, createdAt])
   @@map("workflow_executions")
 }
 
@@ -1263,39 +1273,40 @@ model ProviderItem {
 
 model SubscriptionPlan {
   /// Primary key
-  pk                   BigInt   @id @default(autoincrement())
+  pk                   BigInt  @id @default(autoincrement())
   /// Subscription plan type
-  planType             String   @map("plan_type")
+  planType             String  @map("plan_type")
   /// Billing interval (monthly, yearly, etc.)
-  interval             String?  @map("interval")
+  interval             String? @map("interval")
   /// Lookup key
-  lookupKey            String   @map("lookup_key")
+  lookupKey            String  @map("lookup_key")
   /// Credit quota
-  creditQuota          Int      @default(0) @map("credit_quota")
+  creditQuota          Int     @default(0) @map("credit_quota")
   /// Daily gift credit quota
-  dailyGiftCreditQuota Int      @default(0) @map("daily_gift_credit_quota")
+  dailyGiftCreditQuota Int     @default(0) @map("daily_gift_credit_quota")
   /// Request count quota (T1)
-  t1CountQuota         Int      @default(0) @map("t1_count_quota")
+  t1CountQuota         Int     @default(0) @map("t1_count_quota")
   /// Request count quota (T2)
-  t2CountQuota         Int      @default(0) @map("t2_count_quota")
+  t2CountQuota         Int     @default(0) @map("t2_count_quota")
   /// Token quota per month (T1) (Deprecated)
-  t1TokenQuota         Int      @default(0) @map("t1_token_quota")
+  t1TokenQuota         Int     @default(0) @map("t1_token_quota")
   /// Token quota per month (T2) (Deprecated)
-  t2TokenQuota         Int      @default(1000000) @map("t2_token_quota")
+  t2TokenQuota         Int     @default(1000000) @map("t2_token_quota")
   /// File count quota
-  fileCountQuota       Int      @default(10) @map("file_count_quota")
+  fileCountQuota       Int     @default(10) @map("file_count_quota")
   /// Object storage quota (in bytes), including resource, canvas and static files
-  objectStorageQuota   BigInt   @default(1000000000) @map("object_storage_quota")
+  objectStorageQuota   BigInt  @default(1000000000) @map("object_storage_quota")
   /// Vector storage quota (in bytes)
-  vectorStorageQuota   BigInt   @default(1000000000) @map("vector_storage_quota")
+  vectorStorageQuota   BigInt  @default(1000000000) @map("vector_storage_quota")
   /// File parse limit (in pages)
-  fileParsePageLimit   Int      @default(-1) @map("file_parse_page_limit")
+  fileParsePageLimit   Int     @default(-1) @map("file_parse_page_limit")
   /// File upload limit (in MB)
-  fileUploadLimit      Int      @default(-1) @map("file_upload_limit")
+  fileUploadLimit      Int     @default(-1) @map("file_upload_limit")
+
   /// Create timestamp
-  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@unique([planType, interval])
   @@map("subscription_plans")
@@ -2279,4 +2290,129 @@ model AutoModelRoutingResult {
   @@unique([actionResultId, actionResultVersion])
   @@index([userId, createdAt(sort: Desc)])
   @@map("auto_model_routing_results")
+}
+
+model WorkflowSchedule {
+  // ========== Primary Key ==========
+  pk         BigInt @id @default(autoincrement())
+  scheduleId String @unique @map("schedule_id")
+
+  // ========== Relation Fields (no foreign key constraints enforced in DB typically) ==========
+  uid      String @map("uid")
+  canvasId String @map("canvas_id")
+
+  // ========== Basic Info ==========
+  /// Scheduled task name
+  name String @map("name")
+
+  // ========== Scheduling Config ==========
+  /// Whether the schedule is enabled
+  isEnabled Boolean @default(false) @map("is_enabled")
+
+  /// Cron expression (e.g. "0 8 * * *")
+  cronExpression String @map("cron_expression")
+
+  /// Frontend schedule config JSON
+  /// { type: 'daily|weekly|monthly', time: '08:00', weekdays?: [1,2], monthDays?: [1,15] }
+  scheduleConfig String @map("schedule_config")
+
+  /// Timezone
+  timezone String @default("Asia/Shanghai") @map("timezone")
+
+  // ========== Runtime Status ==========
+  /// Next run time
+  nextRunAt DateTime? @map("next_run_at") @db.Timestamptz()
+
+  /// Last run time
+  lastRunAt DateTime? @map("last_run_at") @db.Timestamptz()
+
+  // ========== Audit Fields ==========
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  // ========== Unique Constraints ==========
+  /// Ensure one schedule per canvas per user (prevents concurrent creation race condition)
+  @@unique([canvasId, uid])
+  // ========== Indexes ==========
+  @@index([uid, isEnabled, deletedAt])
+  @@index([isEnabled, nextRunAt, deletedAt])
+  @@index([canvasId, deletedAt])
+  @@map("workflow_schedules")
+}
+
+model WorkflowScheduleRecord {
+  // ========== Primary Key ==========
+  pk               BigInt @id @default(autoincrement())
+  scheduleRecordId String @unique @map("schedule_record_id")
+
+  // ========== Relation Fields ==========
+  /// Schedule ID
+  scheduleId String @map("schedule_id")
+
+  /// Workflow Execution ID (if started)
+  workflowExecutionId String? @map("workflow_execution_id")
+
+  /// User ID (redundant for querying)
+  uid String @map("uid")
+
+  /// Canvas ID (actual execution canvas - newly created for each execution)
+  canvasId String @map("canvas_id")
+
+  /// Source canvas ID (template/original canvas from which workflow is initialized)
+  sourceCanvasId String @default("") @map("source_canvas_id")
+
+  // ========== Execution Info ==========
+
+  /// Workflow title at the time of execution
+  workflowTitle String @map("workflow_title")
+
+  /// Used tools list (JSON array) ["notion", "slack", "gmail"]
+  usedTools String? @map("used_tools")
+
+  /// Execution status: pending, running, success, failed, skipped
+  status String @default("pending") @map("status")
+
+  /// Credit used
+  creditUsed Int @default(0) @map("credit_used")
+
+  /// Execution priority
+  priority Int @default(5) @map("priority")
+
+  // ========== Scheduling Info ==========
+
+  /// Planned execution time
+  scheduledAt DateTime @map("scheduled_at") @db.Timestamptz()
+
+  /// Actual triggered time
+  triggeredAt DateTime @default(now()) @map("triggered_at") @db.Timestamptz()
+
+  /// Completion time
+  completedAt DateTime? @map("completed_at") @db.Timestamptz()
+
+  // ========== Error Info ==========
+
+  /// Failure reason
+  failureReason String? @map("failure_reason")
+
+  /// Error details (JSON)
+  errorDetails String? @map("error_details")
+
+  // ========== Snapshot Info ==========
+
+  /// Snapshot storage key in object storage
+  snapshotStorageKey String? @map("snapshot_storage_key")
+
+  // ========== Audit Fields ==========
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // ========== Indexes ==========
+  @@index([scheduleId, scheduledAt])
+  @@index([uid, status, createdAt])
+  @@index([status, createdAt])
+  @@index([workflowExecutionId])
+  @@index([priority, scheduledAt])
+  @@index([sourceCanvasId])
+  @@map("workflow_schedule_records")
 }

@@ -11,6 +11,7 @@ export interface CreateVariablesModalProps {
   mode: 'create' | 'edit';
   onViewCreatedVariable?: (variable: WorkflowVariable) => void;
   showFileUploadError?: boolean;
+  fromToolsDependency?: boolean;
 }
 
 export interface VariableFormData {

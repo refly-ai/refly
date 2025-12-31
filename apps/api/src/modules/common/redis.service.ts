@@ -7,7 +7,7 @@ import { OperationTooFrequent } from '@refly/errors';
 
 interface InMemoryItem {
   value: string;
-  expiresAt: number;
+  expiresAt: number | null;
 }
 
 export type LockReleaseFn = () => Promise<boolean>;
@@ -190,6 +190,31 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     const newValue = currentValue + 1;
+    const expiresAt = item?.expiresAt ?? Date.now() + 24 * 60 * 60 * 1000; // Default 24h expiry if not set
+    this.inMemoryStore.set(key, { value: newValue.toString(), expiresAt });
+
+    return newValue;
+  }
+
+  async decr(key: string): Promise<number> {
+    if (this.client) {
+      try {
+        return await this.client.decr(key);
+      } catch (error) {
+        this.logger.error(`Redis DECR failed: key=${key}, error=${error}`);
+        throw error;
+      }
+    }
+
+    // In-memory implementation
+    const item = this.inMemoryStore.get(key);
+    let currentValue = 0;
+
+    if (item && !this.isExpired(item)) {
+      currentValue = Number.parseInt(item.value, 10) || 0;
+    }
+
+    const newValue = Math.max(0, currentValue - 1);
     const expiresAt = item?.expiresAt ?? Date.now() + 24 * 60 * 60 * 1000; // Default 24h expiry if not set
     this.inMemoryStore.set(key, { value: newValue.toString(), expiresAt });
 

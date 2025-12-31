@@ -15,6 +15,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { CanvasNode } from '@refly/canvas-common';
 import { nodeTypes } from './nodes';
 import { TopToolbar } from './top-toolbar';
+import { RunDetailPanel, RunDetailInfo } from './run-detail-panel';
 import { useNodeOperations } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-operations';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
@@ -22,6 +23,7 @@ import { useCopyPasteSkillResponseNode } from '@refly-packages/ai-workspace-comm
 import {
   CanvasProvider,
   useCanvasContext,
+  SnapshotData,
 } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useEdgeStyles } from './constants';
 import {
@@ -122,191 +124,146 @@ interface FlowProps {
   copilotWidth: number;
   setCopilotWidth: (width: number | null) => void;
   maxPanelWidth: number;
+  runDetailPanelWidth?: number;
+  runDetailInfo?: RunDetailInfo;
+  onDuplicate?: () => void;
+  duplicateLoading?: boolean;
 }
 
-const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: FlowProps) => {
-  const { t } = useTranslation();
-  const { workflow: workflowRun } = useCanvasContext();
-  const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
+const Flow = memo(
+  ({
+    canvasId,
+    copilotWidth,
+    setCopilotWidth,
+    maxPanelWidth,
+    runDetailPanelWidth,
+    runDetailInfo,
+    onDuplicate,
+    duplicateLoading,
+  }: FlowProps) => {
+    const { t } = useTranslation();
+    const { workflow: workflowRun } = useCanvasContext();
+    const workflowIsRunning = !!(workflowRun.isInitializing || workflowRun.isPolling);
 
-  // Wrap setCopilotWidth to handle null values
-  const handleSetCopilotWidth = useCallback(
-    (width: number) => {
-      if (width !== null && width !== undefined) {
-        setCopilotWidth(width);
+    // Wrap setCopilotWidth to handle null values
+    const handleSetCopilotWidth = useCallback(
+      (width: number) => {
+        if (width !== null && width !== undefined) {
+          setCopilotWidth(width);
+        }
+      },
+      [setCopilotWidth],
+    );
+
+    useHandleOrphanNode();
+
+    const { addNode } = useAddNode();
+    const { nodes, edges } = useStore(
+      useShallow((state) => ({
+        nodes: state.nodes,
+        edges: state.edges,
+      })),
+    );
+
+    const {
+      onNodesChange,
+      truncateAllNodesContent,
+      onNodeDragStop,
+      helperLineHorizontal,
+      helperLineVertical,
+    } = useNodeOperations();
+    const { setSelectedNode } = useNodeSelection();
+
+    const { onEdgesChange, onConnect } = useEdgeOperations();
+    const edgeStyles = useEdgeStyles();
+
+    // Call truncateAllNodesContent when nodes are loaded
+    useEffect(() => {
+      if (nodes.length > 0) {
+        truncateAllNodesContent();
       }
-    },
-    [setCopilotWidth],
-  );
+    }, [canvasId, truncateAllNodesContent]);
 
-  useHandleOrphanNode();
+    const reactFlowInstance = useReactFlow();
 
-  const { addNode } = useAddNode();
-  const { nodes, edges } = useStore(
-    useShallow((state) => ({
-      nodes: state.nodes,
-      edges: state.edges,
-    })),
-  );
+    const { pendingNode, clearPendingNode, setHighlightedNodeIds, clearHighlightedNodeIds } =
+      useCanvasNodesStore();
+    const { loading, readonly, shareNotFound, shareLoading, undo, redo } = useCanvasContext();
+    const { onLayout } = useCanvasLayout();
+    const { getNodes } = useReactFlow<CanvasNode<any>>();
+    const { updateToolsetIdForAllNodes } = useCanvasToolsetUpdater();
 
-  const {
-    onNodesChange,
-    truncateAllNodesContent,
-    onNodeDragStop,
-    helperLineHorizontal,
-    helperLineVertical,
-  } = useNodeOperations();
-  const { setSelectedNode } = useNodeSelection();
+    // Listen for toolset installation events and trigger batch updates across the entire canvas
+    useEffect(() => {
+      const handleToolsetInstalled = ({ toolset }: { toolset: any }) => {
+        // Update toolsetId for all nodes that have this toolset key across the entire canvas
+        updateToolsetIdForAllNodes(toolset.key, toolset.toolsetId || toolset.id);
+      };
 
-  const { onEdgesChange, onConnect } = useEdgeOperations();
-  const edgeStyles = useEdgeStyles();
+      const handleUpdateNodeToolset = ({
+        toolsetKey,
+        newToolsetId,
+      }: {
+        toolsetKey: string;
+        newToolsetId: string;
+      }) => {
+        // Update toolsetId for all nodes that have this toolset key
+        updateToolsetIdForAllNodes(toolsetKey, newToolsetId);
+      };
 
-  // Call truncateAllNodesContent when nodes are loaded
-  useEffect(() => {
-    if (nodes.length > 0) {
-      truncateAllNodesContent();
-    }
-  }, [canvasId, truncateAllNodesContent]);
+      toolsetEmitter.on('toolsetInstalled', handleToolsetInstalled);
+      toolsetEmitter.on('updateNodeToolset', handleUpdateNodeToolset);
 
-  const reactFlowInstance = useReactFlow();
+      return () => {
+        toolsetEmitter.off('toolsetInstalled', handleToolsetInstalled);
+        toolsetEmitter.off('updateNodeToolset', handleUpdateNodeToolset);
+      };
+    }, [updateToolsetIdForAllNodes]);
 
-  const { pendingNode, clearPendingNode, setHighlightedNodeIds, clearHighlightedNodeIds } =
-    useCanvasNodesStore();
-  const { loading, readonly, shareNotFound, shareLoading, undo, redo } = useCanvasContext();
-  const { onLayout } = useCanvasLayout();
-  const { getNodes } = useReactFlow<CanvasNode<any>>();
-  const { updateToolsetIdForAllNodes } = useCanvasToolsetUpdater();
+    // Clean up highlightedNodeIds when nodes are deleted
+    // Use a ref to track previous node IDs to detect deletions accurately
+    const prevNodeIdsRef = useRef<Set<string>>(new Set(nodes.map((node) => node.id)));
+    useEffect(() => {
+      const currentNodes = getNodes();
+      const currentNodeIds = new Set(currentNodes.map((node) => node.id));
+      const prevNodeIds = prevNodeIdsRef.current;
 
-  // Listen for toolset installation events and trigger batch updates across the entire canvas
-  useEffect(() => {
-    const handleToolsetInstalled = ({ toolset }: { toolset: any }) => {
-      // Update toolsetId for all nodes that have this toolset key across the entire canvas
-      updateToolsetIdForAllNodes(toolset.key, toolset.toolsetId);
-    };
+      // Only check if nodes were actually deleted (not just added or moved)
+      const nodesDeleted = prevNodeIds.size > currentNodeIds.size;
+      const hasDeletedNodes = Array.from(prevNodeIds).some((id) => !currentNodeIds.has(id));
 
-    toolsetEmitter.on('toolsetInstalled', handleToolsetInstalled);
+      // Only proceed if nodes were actually deleted
+      if (nodesDeleted || hasDeletedNodes) {
+        // Check if any previously highlighted nodes were deleted
+        const { highlightedNodeIds: currentHighlighted } = useCanvasNodesStore.getState();
+        if (currentHighlighted && currentHighlighted.size > 0) {
+          // Find highlighted nodes that no longer exist
+          const validHighlightedIds = Array.from(currentHighlighted).filter((id) =>
+            currentNodeIds.has(id),
+          );
 
-    return () => {
-      toolsetEmitter.off('toolsetInstalled', handleToolsetInstalled);
-    };
-  }, [updateToolsetIdForAllNodes]);
-
-  // Clean up highlightedNodeIds when nodes are deleted
-  // Use a ref to track previous node IDs to detect deletions accurately
-  const prevNodeIdsRef = useRef<Set<string>>(new Set(nodes.map((node) => node.id)));
-  useEffect(() => {
-    const currentNodes = getNodes();
-    const currentNodeIds = new Set(currentNodes.map((node) => node.id));
-    const prevNodeIds = prevNodeIdsRef.current;
-
-    // Only check if nodes were actually deleted (not just added or moved)
-    const nodesDeleted = prevNodeIds.size > currentNodeIds.size;
-    const hasDeletedNodes = Array.from(prevNodeIds).some((id) => !currentNodeIds.has(id));
-
-    // Only proceed if nodes were actually deleted
-    if (nodesDeleted || hasDeletedNodes) {
-      // Check if any previously highlighted nodes were deleted
-      const { highlightedNodeIds: currentHighlighted } = useCanvasNodesStore.getState();
-      if (currentHighlighted && currentHighlighted.size > 0) {
-        // Find highlighted nodes that no longer exist
-        const validHighlightedIds = Array.from(currentHighlighted).filter((id) =>
-          currentNodeIds.has(id),
-        );
-
-        // If any highlighted nodes were deleted, clean them up
-        if (validHighlightedIds.length !== currentHighlighted.size) {
-          if (validHighlightedIds.length > 0) {
-            setHighlightedNodeIds(validHighlightedIds);
-          } else {
-            clearHighlightedNodeIds();
+          // If any highlighted nodes were deleted, clean them up
+          if (validHighlightedIds.length !== currentHighlighted.size) {
+            if (validHighlightedIds.length > 0) {
+              setHighlightedNodeIds(validHighlightedIds);
+            } else {
+              clearHighlightedNodeIds();
+            }
           }
         }
       }
-    }
 
-    // Update ref for next comparison
-    prevNodeIdsRef.current = currentNodeIds;
-  }, [nodes, getNodes, setHighlightedNodeIds, clearHighlightedNodeIds]);
+      // Update ref for next comparison
+      prevNodeIdsRef.current = currentNodeIds;
+    }, [nodes, getNodes, setHighlightedNodeIds, clearHighlightedNodeIds]);
 
-  // Listen for canvas fitView and highlight events from create-modal
-  useEffect(() => {
-    let highlightTimeoutId: NodeJS.Timeout | null = null;
+    // Listen for canvas fitView and highlight events from create-modal
+    useEffect(() => {
+      let highlightTimeoutId: NodeJS.Timeout | null = null;
 
-    const handleFitView = (event: CustomEvent<{ canvasId: string }>) => {
-      if (event.detail.canvasId === canvasId && reactFlowInstance) {
-        // Use requestAnimationFrame to avoid conflicts with other fitView calls
-        requestAnimationFrame(() => {
-          reactFlowInstance.fitView({
-            padding: 0.2,
-            duration: 200,
-            minZoom: 0.1,
-            maxZoom: 1,
-          });
-        });
-      }
-    };
-
-    const handleFitViewAndHighlight = (
-      event: CustomEvent<{ canvasId: string; nodeIds: string[] }>,
-    ) => {
-      if (event.detail.canvasId === canvasId && reactFlowInstance) {
-        const { nodeIds } = event.detail;
-
-        // Validate nodeIds array
-        if (!Array.isArray(nodeIds) || nodeIds.length === 0) {
-          return;
-        }
-
-        // Clear previous highlight timeout if exists
-        if (highlightTimeoutId) {
-          clearTimeout(highlightTimeoutId);
-          highlightTimeoutId = null;
-        }
-
-        // Get current nodes to validate node IDs exist in this canvas
-        const currentNodes = getNodes();
-        const validNodeIds = nodeIds.filter((nodeId) => {
-          if (!nodeId || typeof nodeId !== 'string') return false;
-          return currentNodes.some((node) => node.id === nodeId && node.type === 'skillResponse');
-        });
-
-        // Only set highlight if we have valid node IDs
-        if (validNodeIds.length > 0) {
-          // Use the node's built-in highlight mechanism (shouldHighlight)
-          // This will show the highlight effect with border-refly-node-run and background overlay
-          setHighlightedNodeIds(validNodeIds);
-
-          // Fit view to highlighted nodes
-          // Get nodes inside requestAnimationFrame to ensure we have the latest node list
-          requestAnimationFrame(() => {
-            const latestNodes = getNodes();
-            const nodesToFit = latestNodes.filter((node) => validNodeIds.includes(node.id));
-            if (nodesToFit.length > 0) {
-              reactFlowInstance.fitView({
-                padding: 0.2,
-                duration: 200,
-                minZoom: 0.1,
-                maxZoom: 1,
-                nodes: nodesToFit,
-              });
-            } else {
-              // Fallback: fit view to all nodes if target nodes not found
-              reactFlowInstance.fitView({
-                padding: 0.2,
-                duration: 200,
-                minZoom: 0.1,
-                maxZoom: 1,
-              });
-            }
-          });
-
-          // Auto-clear highlight after 5 seconds
-          highlightTimeoutId = setTimeout(() => {
-            clearHighlightedNodeIds();
-            highlightTimeoutId = null;
-          }, 5000);
-        } else {
-          // If no valid nodes, just fit view without highlighting
+      const handleFitView = (event: CustomEvent<{ canvasId: string }>) => {
+        if (event.detail.canvasId === canvasId && reactFlowInstance) {
+          // Use requestAnimationFrame to avoid conflicts with other fitView calls
           requestAnimationFrame(() => {
             reactFlowInstance.fitView({
               padding: 0.2,
@@ -316,235 +273,486 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
             });
           });
         }
-      }
-    };
+      };
 
-    window.addEventListener('refly:canvas:fitView', handleFitView as EventListener);
-    window.addEventListener(
-      'refly:canvas:fitViewAndHighlight',
-      handleFitViewAndHighlight as EventListener,
-    );
+      const handleFitViewAndHighlight = (
+        event: CustomEvent<{ canvasId: string; nodeIds: string[] }>,
+      ) => {
+        if (event.detail.canvasId === canvasId && reactFlowInstance) {
+          const { nodeIds } = event.detail;
 
-    return () => {
-      // Clear timeout on cleanup
-      if (highlightTimeoutId) {
-        clearTimeout(highlightTimeoutId);
-        highlightTimeoutId = null;
-      }
-      // Only clear the batch highlight (highlightedNodeIds) we set, not the single hover highlight
-      // This preserves user's hover interactions while cleaning up validation highlights
-      clearHighlightedNodeIds();
-      window.removeEventListener('refly:canvas:fitView', handleFitView as EventListener);
-      window.removeEventListener(
+          // Validate nodeIds array
+          if (!Array.isArray(nodeIds) || nodeIds.length === 0) {
+            return;
+          }
+
+          // Clear previous highlight timeout if exists
+          if (highlightTimeoutId) {
+            clearTimeout(highlightTimeoutId);
+            highlightTimeoutId = null;
+          }
+
+          // Get current nodes to validate node IDs exist in this canvas
+          const currentNodes = getNodes();
+          const validNodeIds = nodeIds.filter((nodeId) => {
+            if (!nodeId || typeof nodeId !== 'string') return false;
+            return currentNodes.some((node) => node.id === nodeId && node.type === 'skillResponse');
+          });
+
+          // Only set highlight if we have valid node IDs
+          if (validNodeIds.length > 0) {
+            // Use the node's built-in highlight mechanism (shouldHighlight)
+            // This will show the highlight effect with border-refly-node-run and background overlay
+            setHighlightedNodeIds(validNodeIds);
+
+            // Fit view to highlighted nodes
+            // Get nodes inside requestAnimationFrame to ensure we have the latest node list
+            requestAnimationFrame(() => {
+              const latestNodes = getNodes();
+              const nodesToFit = latestNodes.filter((node) => validNodeIds.includes(node.id));
+              if (nodesToFit.length > 0) {
+                reactFlowInstance.fitView({
+                  padding: 0.2,
+                  duration: 200,
+                  minZoom: 0.1,
+                  maxZoom: 1,
+                  nodes: nodesToFit,
+                });
+              } else {
+                // Fallback: fit view to all nodes if target nodes not found
+                reactFlowInstance.fitView({
+                  padding: 0.2,
+                  duration: 200,
+                  minZoom: 0.1,
+                  maxZoom: 1,
+                });
+              }
+            });
+
+            // Auto-clear highlight after 5 seconds
+            highlightTimeoutId = setTimeout(() => {
+              clearHighlightedNodeIds();
+              highlightTimeoutId = null;
+            }, 5000);
+          } else {
+            // If no valid nodes, just fit view without highlighting
+            requestAnimationFrame(() => {
+              reactFlowInstance.fitView({
+                padding: 0.2,
+                duration: 200,
+                minZoom: 0.1,
+                maxZoom: 1,
+              });
+            });
+          }
+        }
+      };
+
+      window.addEventListener('refly:canvas:fitView', handleFitView as EventListener);
+      window.addEventListener(
         'refly:canvas:fitViewAndHighlight',
         handleFitViewAndHighlight as EventListener,
       );
-    };
-    // Only depend on canvasId and reactFlowInstance to avoid unnecessary re-registrations
-    // getNodes is a stable reference from useReactFlow
-    // clearHighlightedNodeIds is a stable function from zustand store
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasId, reactFlowInstance]);
 
-  // Use copy paste hook for skillResponse nodes
-  useCopyPasteSkillResponseNode({ canvasId, readonly });
+      return () => {
+        // Clear timeout on cleanup
+        if (highlightTimeoutId) {
+          clearTimeout(highlightTimeoutId);
+          highlightTimeoutId = null;
+        }
+        // Only clear the batch highlight (highlightedNodeIds) we set, not the single hover highlight
+        // This preserves user's hover interactions while cleaning up validation highlights
+        clearHighlightedNodeIds();
+        window.removeEventListener('refly:canvas:fitView', handleFitView as EventListener);
+        window.removeEventListener(
+          'refly:canvas:fitViewAndHighlight',
+          handleFitViewAndHighlight as EventListener,
+        );
+      };
+      // Only depend on canvasId and reactFlowInstance to avoid unnecessary re-registrations
+      // getNodes is a stable reference from useReactFlow
+      // clearHighlightedNodeIds is a stable function from zustand store
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [canvasId, reactFlowInstance]);
 
-  const {
-    nodePreviewId,
-    canvasInitialized,
-    operatingNodeId,
-    setOperatingNodeId,
-    setInitialFitViewCompleted,
-    setContextMenuOpenedCanvasId,
-  } = useCanvasStoreShallow((state) => ({
-    nodePreviewId: state.config[canvasId]?.nodePreviewId,
-    canvasInitialized: state.canvasInitialized[canvasId],
-    operatingNodeId: state.operatingNodeId,
-    setOperatingNodeId: state.setOperatingNodeId,
-    setInitialFitViewCompleted: state.setInitialFitViewCompleted,
-    setContextMenuOpenedCanvasId: state.setContextMenuOpenedCanvasId,
-  }));
+    // Use copy paste hook for skillResponse nodes
+    useCopyPasteSkillResponseNode({ canvasId, readonly });
 
-  const { showWorkflowRun, setShowWorkflowRun, sidePanelVisible } =
-    useCanvasResourcesPanelStoreShallow((state) => ({
-      setShowWorkflowRun: state.setShowWorkflowRun,
-      showWorkflowRun: state.showWorkflowRun,
-      sidePanelVisible: state.sidePanelVisible,
+    const {
+      nodePreviewId,
+      canvasInitialized,
+      operatingNodeId,
+      setOperatingNodeId,
+      setInitialFitViewCompleted,
+      setContextMenuOpenedCanvasId,
+    } = useCanvasStoreShallow((state) => ({
+      nodePreviewId: state.config[canvasId]?.nodePreviewId,
+      canvasInitialized: state.canvasInitialized[canvasId],
+      operatingNodeId: state.operatingNodeId,
+      setOperatingNodeId: state.setOperatingNodeId,
+      setInitialFitViewCompleted: state.setInitialFitViewCompleted,
+      setContextMenuOpenedCanvasId: state.setContextMenuOpenedCanvasId,
     }));
 
-  const { previewNode } = useNodePreviewControl({ canvasId });
+    const { showWorkflowRun, setShowWorkflowRun, sidePanelVisible } =
+      useCanvasResourcesPanelStoreShallow((state) => ({
+        setShowWorkflowRun: state.setShowWorkflowRun,
+        showWorkflowRun: state.showWorkflowRun,
+        sidePanelVisible: state.sidePanelVisible,
+      }));
 
-  // Use the reset hook to handle canvas ID changes
-  useLinearThreadReset(canvasId);
+    const { previewNode } = useNodePreviewControl({ canvasId });
 
-  useEffect(() => {
-    return () => {
-      setInitialFitViewCompleted(false);
-    };
-  }, [canvasId, setInitialFitViewCompleted]);
+    // Use the reset hook to handle canvas ID changes
+    useLinearThreadReset(canvasId);
 
-  useEffect(() => {
-    // Only run fitView if we have nodes and this is the initial render
-    const timeoutId = setTimeout(() => {
-      const { initialFitViewCompleted } = useCanvasStore.getState();
-      if (nodes?.length > 0 && !initialFitViewCompleted) {
-        reactFlowInstance.fitView({
-          padding: 0.2,
-          duration: 200,
-          minZoom: 0.1,
-          maxZoom: 1,
-        });
-        setInitialFitViewCompleted(true);
-      }
-    }, 100);
+    useEffect(() => {
+      return () => {
+        setInitialFitViewCompleted(false);
+      };
+    }, [canvasId, setInitialFitViewCompleted]);
 
-    return () => clearTimeout(timeoutId);
-  }, [canvasId, nodes?.length, reactFlowInstance, setInitialFitViewCompleted]);
+    useEffect(() => {
+      // Only run fitView if we have nodes and this is the initial render
+      const timeoutId = setTimeout(() => {
+        const { initialFitViewCompleted } = useCanvasStore.getState();
+        if (nodes?.length > 0 && !initialFitViewCompleted) {
+          reactFlowInstance.fitView({
+            padding: 0.2,
+            duration: 200,
+            minZoom: 0.1,
+            maxZoom: 1,
+          });
+          setInitialFitViewCompleted(true);
+        }
+      }, 100);
 
-  const defaultEdgeOptions = useMemo(
-    () => ({
-      style: edgeStyles.default,
-    }),
-    [edgeStyles],
-  );
+      return () => clearTimeout(timeoutId);
+    }, [canvasId, nodes?.length, reactFlowInstance, setInitialFitViewCompleted]);
 
-  const flowConfig = useMemo(
-    () => ({
-      defaultViewport: {
-        x: 0,
-        y: 0,
-        zoom: 0.75,
-      },
-      minZoom: 0.1,
-      maxZoom: 2,
-      fitViewOptions: {
-        padding: 0.2,
+    const defaultEdgeOptions = useMemo(
+      () => ({
+        style: edgeStyles.default,
+      }),
+      [edgeStyles],
+    );
+
+    const flowConfig = useMemo(
+      () => ({
+        defaultViewport: {
+          x: 0,
+          y: 0,
+          zoom: 0.75,
+        },
         minZoom: 0.1,
         maxZoom: 2,
-        duration: 200,
-      },
-      defaultEdgeOptions,
-    }),
-    [defaultEdgeOptions],
-  );
+        fitViewOptions: {
+          padding: 0.2,
+          minZoom: 0.1,
+          maxZoom: 2,
+          duration: 200,
+        },
+        defaultEdgeOptions,
+      }),
+      [defaultEdgeOptions],
+    );
 
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-  const [lastClickTime, setLastClickTime] = useState(0);
-  const [previewWidth, setPreviewWidth] = useState(400);
+    const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+    const [lastClickTime, setLastClickTime] = useState(0);
+    const [previewWidth, setPreviewWidth] = useState(400);
 
-  const handlePreviewWidthChange = useCallback((width: number) => {
-    setPreviewWidth(width);
-  }, []);
+    const handlePreviewWidthChange = useCallback((width: number) => {
+      setPreviewWidth(width);
+    }, []);
 
-  // Handle selection state to prevent text selection outside canvas
-  useEffect(() => {
-    let isDragging = false;
-    let dragStartTime = 0;
-    let hasStartedDrag = false;
+    // Handle selection state to prevent text selection outside canvas
+    useEffect(() => {
+      let isDragging = false;
+      let dragStartTime = 0;
+      let hasStartedDrag = false;
 
-    const resetDragState = () => {
-      if (isDragging || hasStartedDrag) {
+      const resetDragState = () => {
+        if (isDragging || hasStartedDrag) {
+          isDragging = false;
+          hasStartedDrag = false;
+          // Re-enable text selection
+          document.body.style.userSelect = '';
+        }
+      };
+
+      const handleMouseDown = (event: MouseEvent) => {
+        // Only handle left mouse button
+        if (event.button !== 0) return;
+
+        // Check if clicking on interactive elements (don't start selection)
+        const target = event.target as HTMLElement;
+        const isInteractiveElement = target.closest(
+          'input, textarea, [contenteditable="true"], [role="textbox"], .chat-composer, .rich-input, [data-cy="chat-input"], [data-cy="rich-chat-input"], .ProseMirror',
+        );
+
+        if (isInteractiveElement) return;
+
         isDragging = false;
         hasStartedDrag = false;
-        // Re-enable text selection
-        document.body.style.userSelect = '';
-      }
-    };
+        dragStartTime = Date.now();
+      };
 
-    const handleMouseDown = (event: MouseEvent) => {
-      // Only handle left mouse button
-      if (event.button !== 0) return;
+      const handleMouseMove = (event: MouseEvent) => {
+        // Only handle left mouse button
+        if (event.buttons !== 1) return;
 
-      // Check if clicking on interactive elements (don't start selection)
-      const target = event.target as HTMLElement;
-      const isInteractiveElement = target.closest(
-        'input, textarea, [contenteditable="true"], [role="textbox"], .chat-composer, .rich-input, [data-cy="chat-input"], [data-cy="rich-chat-input"], .ProseMirror',
-      );
+        // Check if we've moved enough to consider it a drag
+        const timeSinceStart = Date.now() - dragStartTime;
+        const hasMovedEnough = timeSinceStart > 10;
 
-      if (isInteractiveElement) return;
+        if (!isDragging && hasMovedEnough && !hasStartedDrag) {
+          isDragging = true;
+          hasStartedDrag = true;
+          // Temporarily disable text selection on the document
+          document.body.style.userSelect = 'none';
+        }
+      };
 
-      isDragging = false;
-      hasStartedDrag = false;
-      dragStartTime = Date.now();
-    };
+      const handleMouseUp = () => {
+        resetDragState();
+      };
 
-    const handleMouseMove = (event: MouseEvent) => {
-      // Only handle left mouse button
-      if (event.buttons !== 1) return;
+      const handleMouseLeave = () => {
+        resetDragState();
+      };
 
-      // Check if we've moved enough to consider it a drag
-      const timeSinceStart = Date.now() - dragStartTime;
-      const hasMovedEnough = timeSinceStart > 10;
+      // Global mouse up handler to ensure state reset
+      const handleGlobalMouseUp = () => {
+        resetDragState();
+      };
 
-      if (!isDragging && hasMovedEnough && !hasStartedDrag) {
-        isDragging = true;
-        hasStartedDrag = true;
-        // Temporarily disable text selection on the document
-        document.body.style.userSelect = 'none';
-      }
-    };
-
-    const handleMouseUp = () => {
-      resetDragState();
-    };
-
-    const handleMouseLeave = () => {
-      resetDragState();
-    };
-
-    // Global mouse up handler to ensure state reset
-    const handleGlobalMouseUp = () => {
-      resetDragState();
-    };
-
-    // Listen for ReactFlow selection events
-    const canvasContainer = document.querySelector('.react-flow');
-    if (canvasContainer) {
-      canvasContainer.addEventListener('mousedown', handleMouseDown);
-      canvasContainer.addEventListener('mousemove', handleMouseMove);
-      canvasContainer.addEventListener('mouseup', handleMouseUp);
-      canvasContainer.addEventListener('mouseleave', handleMouseLeave);
-    }
-
-    // Add global event listeners for cleanup
-    document.addEventListener('mouseup', handleGlobalMouseUp);
-
-    return () => {
+      // Listen for ReactFlow selection events
+      const canvasContainer = document.querySelector('.react-flow');
       if (canvasContainer) {
-        canvasContainer.removeEventListener('mousedown', handleMouseDown);
-        canvasContainer.removeEventListener('mousemove', handleMouseMove);
-        canvasContainer.removeEventListener('mouseup', handleMouseUp);
-        canvasContainer.removeEventListener('mouseleave', handleMouseLeave);
+        canvasContainer.addEventListener('mousedown', handleMouseDown);
+        canvasContainer.addEventListener('mousemove', handleMouseMove);
+        canvasContainer.addEventListener('mouseup', handleMouseUp);
+        canvasContainer.addEventListener('mouseleave', handleMouseLeave);
       }
 
-      // Remove global event listeners
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      // Add global event listeners for cleanup
+      document.addEventListener('mouseup', handleGlobalMouseUp);
 
-      // Ensure text selection is re-enabled on cleanup
-      document.body.style.userSelect = '';
-    };
-  }, []);
+      return () => {
+        if (canvasContainer) {
+          canvasContainer.removeEventListener('mousedown', handleMouseDown);
+          canvasContainer.removeEventListener('mousemove', handleMouseMove);
+          canvasContainer.removeEventListener('mouseup', handleMouseUp);
+          canvasContainer.removeEventListener('mouseleave', handleMouseLeave);
+        }
 
-  const { onConnectEnd: temporaryEdgeOnConnectEnd, onConnectStart: temporaryEdgeOnConnectStart } =
-    useDragToCreateNode(onConnect);
+        // Remove global event listeners
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
 
-  const handlePanelClick = useCallback(
-    (event: React.MouseEvent) => {
-      setOperatingNodeId(null);
-      previewNode(null);
-      setContextMenu((prev) => ({ ...prev, open: false }));
+        // Ensure text selection is re-enabled on cleanup
+        document.body.style.userSelect = '';
+      };
+    }, []);
 
-      // Reset edge selection when clicking on canvas
-      if (selectedEdgeId) {
-        setSelectedEdgeId(null);
+    const { onConnectEnd: temporaryEdgeOnConnectEnd, onConnectStart: temporaryEdgeOnConnectStart } =
+      useDragToCreateNode(onConnect);
+
+    const handlePanelClick = useCallback(
+      (event: React.MouseEvent) => {
+        setOperatingNodeId(null);
+        previewNode(null);
+        setContextMenu((prev) => ({ ...prev, open: false }));
+
+        // Reset edge selection when clicking on canvas
+        if (selectedEdgeId) {
+          setSelectedEdgeId(null);
+        }
+        setShowWorkflowRun(false);
+
+        // Handle double click detection
+        const currentTime = new Date().getTime();
+        const timeDiff = currentTime - lastClickTime;
+
+        if (timeDiff < 300 && !readonly) {
+          const flowPosition = reactFlowInstance.screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+          });
+
+          setContextMenu({
+            open: true,
+            position: flowPosition,
+            type: 'doubleClick',
+          });
+        }
+
+        setLastClickTime(currentTime);
+      },
+      [
+        lastClickTime,
+        setOperatingNodeId,
+        reactFlowInstance,
+        selectedEdgeId,
+        readonly,
+        setShowWorkflowRun,
+        previewNode,
+      ],
+    );
+
+    // Add scroll position state and handler
+    const [showLeftIndicator, setShowLeftIndicator] = useState(false);
+    const [showRightIndicator, setShowRightIndicator] = useState(false);
+
+    const updateIndicators = useCallback(
+      (container: HTMLDivElement | null) => {
+        if (!container) return;
+
+        const shouldShowLeft = container.scrollLeft > 0;
+        const shouldShowRight =
+          container.scrollLeft < container.scrollWidth - container.clientWidth - 1;
+
+        if (shouldShowLeft !== showLeftIndicator) {
+          setShowLeftIndicator(shouldShowLeft);
+        }
+        if (shouldShowRight !== showRightIndicator) {
+          setShowRightIndicator(shouldShowRight);
+        }
+      },
+      [showLeftIndicator, showRightIndicator],
+    );
+
+    useEffect(() => {
+      const container = document.querySelector('.preview-container') as HTMLDivElement;
+      if (container) {
+        const observer = new ResizeObserver(() => {
+          updateIndicators(container);
+        });
+
+        observer.observe(container);
+        updateIndicators(container);
+
+        return () => {
+          observer.disconnect();
+        };
       }
-      setShowWorkflowRun(false);
+    }, [updateIndicators]);
 
-      // Handle double click detection
-      const currentTime = new Date().getTime();
-      const timeDiff = currentTime - lastClickTime;
+    // Handle pending node
+    useEffect(() => {
+      if (pendingNode) {
+        addNode(pendingNode);
+        clearPendingNode();
+      }
+    }, [pendingNode, addNode, clearPendingNode]);
 
-      if (timeDiff < 300 && !readonly) {
+    const [connectionTimeout, setConnectionTimeout] = useState(false);
+
+    // Track when provider first became unhealthy
+    const unhealthyStartTimeRef = useRef<number | null>(null);
+
+    useEffect(() => {
+      // Skip if no provider or in desktop mode
+      if (runtime === 'desktop') return;
+
+      // Clear timeout state if provider becomes connected
+      if (!loading) {
+        setConnectionTimeout(false);
+        unhealthyStartTimeRef.current = null;
+        return;
+      }
+
+      // If provider is unhealthy and we haven't started tracking, start now
+      if (unhealthyStartTimeRef.current === null) {
+        unhealthyStartTimeRef.current = Date.now();
+      }
+
+      // Check status every two seconds after provider becomes unhealthy
+      const intervalId = setInterval(() => {
+        if (unhealthyStartTimeRef.current) {
+          const unhealthyDuration = Date.now() - unhealthyStartTimeRef.current;
+
+          // If provider has been unhealthy for more than 10 seconds, set timeout
+          if (unhealthyDuration > 10000) {
+            setConnectionTimeout(true);
+            clearInterval(intervalId);
+          }
+        }
+
+        // Provider became healthy, reset everything
+        if (!loading) {
+          clearInterval(intervalId);
+          unhealthyStartTimeRef.current = null;
+          setConnectionTimeout(false);
+        }
+      }, 2000);
+
+      return () => {
+        clearInterval(intervalId);
+      };
+    }, [loading]);
+
+    useEffect(() => {
+      if (showWorkflowRun) {
+        setShowWorkflowRun(false);
+      }
+    }, [canvasId]);
+
+    const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+      open: false,
+      position: { x: 0, y: 0 },
+      type: 'canvas',
+    });
+
+    useEffect(() => {
+      if (contextMenu.type === 'node') {
+        setContextMenuOpenedCanvasId(contextMenu.open ? (contextMenu.nodeId ?? null) : null);
+      }
+    }, [contextMenu, setContextMenuOpenedCanvasId]);
+
+    // Global menu close logic
+    useEffect(() => {
+      const isInsideMenu = (target: HTMLElement) => {
+        return (
+          target.closest('[data-unified-menu]') ||
+          target.closest('.canvas-search-list') ||
+          target.closest('.menu-popper')
+        );
+      };
+
+      const handleGlobalClick = (event: MouseEvent) => {
+        if (contextMenu.open) {
+          // Check if click is inside any menu
+          const target = event.target as HTMLElement;
+          if (!isInsideMenu(target)) {
+            setContextMenu((prev) => ({ ...prev, open: false }));
+          }
+        }
+      };
+
+      const handleGlobalMouseDown = (event: MouseEvent) => {
+        if (contextMenu.open && event.button === 0) {
+          // Left mouse button - check if click is inside menu before closing
+          const target = event.target as HTMLElement;
+          if (!isInsideMenu(target)) {
+            setContextMenu((prev) => ({ ...prev, open: false }));
+          }
+        }
+      };
+
+      if (contextMenu.open) {
+        document.addEventListener('click', handleGlobalClick);
+        document.addEventListener('mousedown', handleGlobalMouseDown);
+      }
+
+      return () => {
+        document.removeEventListener('click', handleGlobalClick);
+        document.removeEventListener('mousedown', handleGlobalMouseDown);
+      };
+    }, [contextMenu.open]);
+
+    const onPaneContextMenu = useCallback(
+      (event: React.MouseEvent) => {
+        event.preventDefault();
         const flowPosition = reactFlowInstance.screenToFlowPosition({
           x: event.clientX,
           y: event.clientY,
@@ -553,724 +761,572 @@ const Flow = memo(({ canvasId, copilotWidth, setCopilotWidth, maxPanelWidth }: F
         setContextMenu({
           open: true,
           position: flowPosition,
-          type: 'doubleClick',
+          type: 'canvas',
         });
-      }
+      },
+      [reactFlowInstance],
+    );
 
-      setLastClickTime(currentTime);
-    },
-    [
-      lastClickTime,
-      setOperatingNodeId,
-      reactFlowInstance,
-      selectedEdgeId,
+    const onNodeContextMenu = useCallback(
+      (
+        event: React.MouseEvent,
+        node: CanvasNode<any>,
+        metaInfo?: {
+          source?: NodeContextMenuSource;
+          dragCreateInfo?: NodeDragCreateInfo;
+        },
+      ) => {
+        event.preventDefault();
+        const flowPosition = reactFlowInstance.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+
+        // Map node type to menu type
+        let menuNodeType: CanvasNodeType;
+        switch (node.type) {
+          case 'document':
+            menuNodeType = 'document';
+            break;
+          case 'resource':
+            menuNodeType = 'resource';
+            break;
+          case 'skillResponse':
+            menuNodeType = 'skillResponse';
+            break;
+          case 'skill':
+            menuNodeType = 'skill';
+            break;
+          case 'group':
+            menuNodeType = 'group';
+            break;
+          case 'codeArtifact':
+            menuNodeType = 'codeArtifact';
+            break;
+          case 'website':
+            menuNodeType = 'website';
+            break;
+          case 'image':
+            menuNodeType = 'image';
+            break;
+          case 'mediaSkill':
+            menuNodeType = 'mediaSkill';
+            break;
+          case 'mediaSkillResponse':
+            menuNodeType = 'mediaSkillResponse';
+            break;
+          case 'audio':
+            menuNodeType = 'audio';
+            break;
+          case 'video':
+            menuNodeType = 'video';
+            break;
+          case 'start':
+            menuNodeType = 'start';
+            break;
+          default:
+            return; // Don't show context menu for unknown node types
+        }
+
+        const { source, dragCreateInfo } = metaInfo || {};
+
+        setContextMenu({
+          open: true,
+          position: flowPosition,
+          type: 'node',
+          source: source || 'node',
+          dragCreateInfo,
+          nodeId: node.id,
+          nodeType: menuNodeType,
+        });
+      },
+      [reactFlowInstance],
+    );
+
+    const handleNodeClick = useCallback(
+      (event: React.MouseEvent, node: CanvasNode<any>) => {
+        if (!node) return;
+
+        if (node.id.startsWith('ghost-')) {
+          setContextMenu((prev) => ({ ...prev, open: false }));
+          return;
+        }
+
+        setContextMenu((prev) => ({ ...prev, open: false }));
+
+        if (event.metaKey || event.shiftKey) {
+          event.stopPropagation();
+          return;
+        }
+
+        if (!node?.id) {
+          console.warn('Invalid node clicked');
+          return;
+        }
+        setShowWorkflowRun(false);
+
+        if (node.selected && node.id === operatingNodeId) {
+          // Already in operating mode, do nothing
+          return;
+        }
+
+        if (node.selected && !operatingNodeId) {
+          setOperatingNodeId(node.id);
+          event.stopPropagation();
+        } else {
+          setSelectedNode(node);
+          setOperatingNodeId(null);
+        }
+
+        // Memo nodes are not previewable
+        if (!['start', 'skillResponse'].includes(node.type)) {
+          return;
+        }
+
+        previewNode(node);
+      },
+      [previewNode, setOperatingNodeId, setSelectedNode, setShowWorkflowRun],
+    );
+
+    // Memoize nodes and edges
+    const memoizedNodes = useMemo(() => nodes, [nodes]);
+    const memoizedEdges = useMemo(() => edges, [edges]);
+    const selectedNode = useMemo(
+      () => nodes.find((node) => node.id === nodePreviewId) as CanvasNode,
+      [nodes, nodePreviewId],
+    );
+
+    // Memoize the Background component
+    const memoizedBackground = useMemo(() => <MemoizedBackground />, []);
+
+    // Memoize the node types configuration
+    const memoizedNodeTypes = useMemo(() => nodeTypes, []);
+
+    const readonlyEdgesChange = useCallback(() => {
+      // No-op function for readonly mode
+      return edges;
+    }, [edges]);
+
+    const readonlyConnect = useCallback(() => {
+      // No-op function for readonly mode
+      return;
+    }, []);
+
+    // Optimize node dragging performance
+    const { setIsNodeDragging, setDraggingNodeId } = useEditorPerformance();
+
+    const handleNodeDragStart = useCallback(
+      (_: React.MouseEvent, node: Node) => {
+        setIsNodeDragging(true);
+        setDraggingNodeId(node.id);
+      },
+      [setIsNodeDragging, setDraggingNodeId],
+    );
+
+    const [readonlyDragWarningDebounce, setReadonlyDragWarningDebounce] =
+      useState<NodeJS.Timeout | null>(null);
+
+    const handleReadonlyDrag = useCallback(
+      (event: React.MouseEvent) => {
+        if (readonly) {
+          if (!readonlyDragWarningDebounce) {
+            message.warning(t('common.readonlyDragDescription'));
+
+            const debounceTimeout = setTimeout(() => {
+              setReadonlyDragWarningDebounce(null);
+            }, 3000);
+
+            setReadonlyDragWarningDebounce(debounceTimeout);
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      },
+      [readonly, readonlyDragWarningDebounce, t],
+    );
+
+    useEffect(() => {
+      return () => {
+        if (readonlyDragWarningDebounce) {
+          clearTimeout(readonlyDragWarningDebounce);
+        }
+      };
+    }, [readonlyDragWarningDebounce]);
+
+    // Handle node drag stop and apply snap positions
+    const handleNodeDragStop = useCallback(
+      (_event: React.MouseEvent, node: Node) => {
+        if (!node) return;
+
+        // Call the hook's onNodeDragStop method
+        onNodeDragStop(node.id);
+
+        // Reset performance tracking
+        setIsNodeDragging(false);
+        setDraggingNodeId(null);
+      },
+      [onNodeDragStop, setIsNodeDragging, setDraggingNodeId],
+    );
+
+    const onSelectionContextMenu = useCallback(
+      (event: React.MouseEvent) => {
+        event.preventDefault();
+        const flowPosition = reactFlowInstance.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+
+        setContextMenu({
+          open: true,
+          position: flowPosition,
+          type: 'selection',
+          nodeType: 'group',
+        });
+      },
+      [reactFlowInstance],
+    );
+
+    // Use the new drag, drop, paste hook
+    const { handlers } = useDragDropPaste({
+      canvasId,
       readonly,
-      setShowWorkflowRun,
-      previewNode,
-    ],
-  );
+    });
 
-  // Add scroll position state and handler
-  const [showLeftIndicator, setShowLeftIndicator] = useState(false);
-  const [showRightIndicator, setShowRightIndicator] = useState(false);
+    // Add edge types configuration
+    const edgeTypes = useMemo(
+      () => ({
+        default: CustomEdge,
+      }),
+      [],
+    );
 
-  const updateIndicators = useCallback(
-    (container: HTMLDivElement | null) => {
-      if (!container) return;
+    // Handle keyboard shortcuts for edge deletion and zoom
+    const handleKeyDown = useCallback(
+      (e: KeyboardEvent) => {
+        // Skip all keyboard handling in readonly mode
+        if (readonly) return;
 
-      const shouldShowLeft = container.scrollLeft > 0;
-      const shouldShowRight =
-        container.scrollLeft < container.scrollWidth - container.clientWidth - 1;
+        const target = e.target as HTMLElement;
 
-      if (shouldShowLeft !== showLeftIndicator) {
-        setShowLeftIndicator(shouldShowLeft);
-      }
-      if (shouldShowRight !== showRightIndicator) {
-        setShowRightIndicator(shouldShowRight);
-      }
-    },
-    [showLeftIndicator, showRightIndicator],
-  );
+        // Ignore input, textarea and contentEditable elements
+        if (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.contentEditable === 'true'
+        ) {
+          return;
+        }
 
-  useEffect(() => {
-    const container = document.querySelector('.preview-container') as HTMLDivElement;
-    if (container) {
-      const observer = new ResizeObserver(() => {
-        updateIndicators(container);
+        // Check for mod key (Command on Mac, Ctrl on Windows/Linux)
+        const isModKey = e.metaKey || e.ctrlKey;
+
+        if (isModKey && e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            // Mod+Shift+Z for Redo
+            redo();
+          } else {
+            // Mod+Z for Undo
+            undo();
+          }
+        }
+
+        // Handle zoom shortcuts (Cmd/Ctrl + +/-)
+        if (isModKey && (e.key === '+' || e.key === '=')) {
+          e.preventDefault();
+          reactFlowInstance.zoomIn();
+        }
+
+        if (isModKey && e.key === '-') {
+          e.preventDefault();
+          reactFlowInstance.zoomOut();
+        }
+
+        // Fit view (Cmd/Ctrl + 0)
+        if (isModKey && e.key === '0') {
+          e.preventDefault();
+          reactFlowInstance?.fitView?.();
+        }
+
+        // Auto layout (Cmd/Ctrl + Shift + L)
+        if (isModKey && e.shiftKey && e.key.toLowerCase() === 'l') {
+          e.preventDefault();
+          onLayout?.('LR');
+        }
+
+        // Handle edge deletion
+        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEdgeId) {
+          e.preventDefault();
+          const { setEdges } = reactFlowInstance;
+          setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId));
+          setSelectedEdgeId(null);
+        }
+      },
+      [selectedEdgeId, reactFlowInstance, undo, redo, readonly, onLayout],
+    );
+
+    // Handle edge click for delete button
+    const handleEdgeClick = useCallback(
+      (event: React.MouseEvent, edge: Edge) => {
+        // Check if click is on delete button
+        if ((event.target as HTMLElement).closest('.edge-delete-button')) {
+          const { setEdges } = reactFlowInstance;
+          setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+          setSelectedEdgeId(null);
+          return;
+        }
+
+        // Check if click is on edge label or edge label input
+        if ((event.target as HTMLElement).closest('.edge-label')) {
+          return;
+        }
+
+        setSelectedEdgeId(edge.id);
+      },
+      [reactFlowInstance],
+    );
+
+    // Handle node deletion event - ReactFlow's built-in delete handler
+    const handleNodesDelete = useCallback(
+      (deletedNodes: CanvasNode[]) => {
+        if (readonly) return;
+
+        // Log event for skillResponse nodes
+        const skillResponseNodes = deletedNodes.filter((node) => node.type === 'skillResponse');
+        if (skillResponseNodes.length > 0) {
+          for (const node of skillResponseNodes) {
+            logEvent('delete_agent_node', Date.now(), { canvasId, nodeId: node.id });
+          }
+        }
+      },
+      [readonly, canvasId, logEvent],
+    );
+
+    // Add keyboard event listener
+    useEffect(() => {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleKeyDown]);
+
+    useEffect(() => {
+      const { setEdges } = reactFlowInstance;
+      setEdges((eds) =>
+        eds.map((e) => {
+          return {
+            ...e,
+            selected: e.id === selectedEdgeId,
+            style: e.id === selectedEdgeId ? edgeStyles.selected : edgeStyles.default,
+          };
+        }),
+      );
+    }, [selectedEdgeId, reactFlowInstance, edgeStyles]);
+
+    useEffect(() => {
+      const { setNodes } = reactFlowInstance;
+      setNodes((nodes) => {
+        return nodes.map((node) => {
+          if (node.type !== 'memo') {
+            return {
+              ...node,
+              style: {
+                ...node.style,
+                zIndex: node.id === selectedNode?.id ? 1000 : 1,
+              },
+            };
+          }
+          return node;
+        });
       });
+    }, [selectedNode?.id, reactFlowInstance]);
 
-      observer.observe(container);
-      updateIndicators(container);
+    // Add event listener for node operations
+    useListenNodeOperationEvents();
+
+    // Add listener for opening node context menu
+    useEffect(() => {
+      const handleOpenContextMenu = (event: any) => {
+        // Extract nodeId from event name
+        const nodeId = event.nodeId;
+
+        // Check if event contains necessary information
+        if (event?.nodeType) {
+          // Create a synthetic React mouse event
+          const syntheticEvent = {
+            ...event.originalEvent,
+            clientX: event.x,
+            clientY: event.y,
+            preventDefault: () => {},
+            stopPropagation: () => {},
+          } as React.MouseEvent;
+
+          // Create a simplified node object with necessary properties
+          const node = {
+            id: nodeId,
+            type: event.nodeType as CanvasNodeType,
+            data: { type: event.nodeType },
+            position: { x: event.x, y: event.y },
+          } as unknown as CanvasNode<any>;
+
+          // Call onNodeContextMenu to handle context menu
+          onNodeContextMenu(syntheticEvent, node, {
+            source: event.source,
+            dragCreateInfo: event.dragCreateInfo,
+          });
+        }
+      };
+
+      // Listen for all events containing openContextMenu
+      nodeOperationsEmitter.on('openNodeContextMenu', handleOpenContextMenu);
 
       return () => {
-        observer.disconnect();
+        // Clean up event listeners
+        nodeOperationsEmitter.off('openNodeContextMenu', handleOpenContextMenu);
       };
-    }
-  }, [updateIndicators]);
+    }, [onNodeContextMenu]);
 
-  // Handle pending node
-  useEffect(() => {
-    if (pendingNode) {
-      addNode(pendingNode);
-      clearPendingNode();
-    }
-  }, [pendingNode, addNode, clearPendingNode]);
+    return (
+      <Spin
+        className="canvas-spin w-full h-full"
+        style={{ maxHeight: '100%' }}
+        spinning={(readonly && shareLoading) || loading}
+        tip={connectionTimeout ? t('common.connectionFailed') : t('common.loading')}
+      >
+        <Modal
+          centered
+          open={connectionTimeout}
+          onOk={() => window.location.reload()}
+          onCancel={() => setConnectionTimeout(false)}
+          okText={t('common.retry')}
+          cancelText={t('common.cancel')}
+        >
+          <Result
+            status="warning"
+            title={t('canvas.connectionTimeout.title')}
+            extra={t('canvas.connectionTimeout.extra')}
+          />
+        </Modal>
+        <div className="w-full h-full relative flex flex-col overflow-hidden shadow-sm rounded-xl border-solid border-[1px] border-refly-Card-Border">
+          <div className="flex-grow relative">
+            <style>{selectionStyles}</style>
+            <ReactFlow
+              {...flowConfig}
+              selectionMode={SelectionMode.Partial}
+              className="bg-refly-bg-canvas"
+              snapToGrid={true}
+              snapGrid={[GRID_SIZE, GRID_SIZE]}
+              edgeTypes={edgeTypes}
+              // Unified mouse and touchpad gesture configuration
+              panOnScroll={true} // Enable scroll panning
+              panOnScrollSpeed={0.5} // Adjust scroll speed
+              panOnDrag={true} // Enable mouse left-click and touchpad single-finger drag
+              zoomOnScroll={true} // Enable scroll zooming
+              zoomOnPinch={true} // Enable touchpad two-finger pinch zoom
+              zoomOnDoubleClick={false}
+              // Enable default selection behavior
+              selectNodesOnDrag={true}
+              selectionOnDrag={true}
+              nodeTypes={memoizedNodeTypes}
+              nodes={memoizedNodes}
+              edges={memoizedEdges}
+              onNodesChange={onNodesChange}
+              onNodesDelete={readonly ? undefined : handleNodesDelete}
+              onEdgesChange={readonly ? readonlyEdgesChange : onEdgesChange}
+              onConnect={readonly ? readonlyConnect : onConnect}
+              onConnectStart={readonly ? undefined : temporaryEdgeOnConnectStart}
+              onConnectEnd={readonly ? undefined : temporaryEdgeOnConnectEnd}
+              onNodeClick={handleNodeClick as any}
+              onPaneClick={handlePanelClick}
+              onPaneContextMenu={readonly ? undefined : (onPaneContextMenu as any)}
+              onNodeContextMenu={readonly ? undefined : (onNodeContextMenu as any)}
+              onNodeDragStart={readonly ? handleReadonlyDrag : handleNodeDragStart}
+              onNodeDragStop={readonly ? undefined : handleNodeDragStop}
+              nodeDragThreshold={10}
+              nodesDraggable={!readonly}
+              nodesConnectable={!readonly}
+              elementsSelectable={true}
+              onSelectionContextMenu={readonly ? undefined : onSelectionContextMenu}
+              deleteKeyCode={readonly || workflowIsRunning ? null : ['Backspace', 'Delete']}
+              multiSelectionKeyCode={readonly ? null : ['Shift', 'Meta']}
+              onDragOver={handlers.handleDragOver}
+              onDragLeave={handlers.handleDragLeave}
+              onDrop={handlers.handleDrop}
+              onPaste={handlers.handlePaste}
+              connectOnClick={false}
+              edgesFocusable={false}
+              nodesFocusable={!readonly}
+              onEdgeClick={readonly ? undefined : handleEdgeClick}
+            >
+              {nodes?.length === 0 && canvasInitialized && <EmptyGuide canvasId={canvasId} />}
 
-  const [connectionTimeout, setConnectionTimeout] = useState(false);
+              {memoizedBackground}
+              <HelperLines horizontal={helperLineHorizontal} vertical={helperLineVertical} />
+            </ReactFlow>
+          </div>
+          {/* Display the not found overlay when shareNotFound is true */}
+          {readonly && shareNotFound && <NotFoundOverlay />}
+          {!sidePanelVisible && <CanvasControlButtons leftOffset={runDetailPanelWidth} />}
+          <ToolbarButtons canvasId={canvasId} />
+          <PreviewBoxInCanvas
+            node={selectedNode}
+            previewWidth={previewWidth}
+            setPreviewWidth={handlePreviewWidthChange}
+            maxPanelWidth={maxPanelWidth}
+          />
 
-  // Track when provider first became unhealthy
-  const unhealthyStartTimeRef = useRef<number | null>(null);
+          <CopilotContainer
+            copilotWidth={copilotWidth}
+            setCopilotWidth={handleSetCopilotWidth}
+            maxPanelWidth={maxPanelWidth}
+          />
+          <ToggleCopilotPanel copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
 
-  useEffect(() => {
-    // Skip if no provider or in desktop mode
-    if (runtime === 'desktop') return;
+          {/* Run Detail Panel */}
+          {runDetailInfo && (
+            <RunDetailPanel
+              info={runDetailInfo}
+              onDuplicate={onDuplicate}
+              duplicateLoading={duplicateLoading}
+            />
+          )}
 
-    // Clear timeout state if provider becomes connected
-    if (!loading) {
-      setConnectionTimeout(false);
-      unhealthyStartTimeRef.current = null;
-      return;
-    }
+          <UnifiedContextMenu
+            open={contextMenu.open}
+            position={contextMenu.position}
+            menuType={contextMenu.type}
+            context={{
+              nodeId: contextMenu.nodeId,
+              nodeType: contextMenu.nodeType,
+              source: contextMenu.source,
+              dragCreateInfo: contextMenu.dragCreateInfo,
+              isSelection: contextMenu.isSelection,
+            }}
+            setOpen={(open) => setContextMenu((prev) => ({ ...prev, open }))}
+          />
+        </div>
+      </Spin>
+    );
+  },
+);
 
-    // If provider is unhealthy and we haven't started tracking, start now
-    if (unhealthyStartTimeRef.current === null) {
-      unhealthyStartTimeRef.current = Date.now();
-    }
-
-    // Check status every two seconds after provider becomes unhealthy
-    const intervalId = setInterval(() => {
-      if (unhealthyStartTimeRef.current) {
-        const unhealthyDuration = Date.now() - unhealthyStartTimeRef.current;
-
-        // If provider has been unhealthy for more than 10 seconds, set timeout
-        if (unhealthyDuration > 10000) {
-          setConnectionTimeout(true);
-          clearInterval(intervalId);
-        }
-      }
-
-      // Provider became healthy, reset everything
-      if (!loading) {
-        clearInterval(intervalId);
-        unhealthyStartTimeRef.current = null;
-        setConnectionTimeout(false);
-      }
-    }, 2000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [loading]);
-
-  useEffect(() => {
-    if (showWorkflowRun) {
-      setShowWorkflowRun(false);
-    }
-  }, [canvasId]);
-
-  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
-    open: false,
-    position: { x: 0, y: 0 },
-    type: 'canvas',
-  });
-
-  useEffect(() => {
-    if (contextMenu.type === 'node') {
-      setContextMenuOpenedCanvasId(contextMenu.open ? (contextMenu.nodeId ?? null) : null);
-    }
-  }, [contextMenu, setContextMenuOpenedCanvasId]);
-
-  // Global menu close logic
-  useEffect(() => {
-    const isInsideMenu = (target: HTMLElement) => {
-      return (
-        target.closest('[data-unified-menu]') ||
-        target.closest('.canvas-search-list') ||
-        target.closest('.menu-popper')
-      );
-    };
-
-    const handleGlobalClick = (event: MouseEvent) => {
-      if (contextMenu.open) {
-        // Check if click is inside any menu
-        const target = event.target as HTMLElement;
-        if (!isInsideMenu(target)) {
-          setContextMenu((prev) => ({ ...prev, open: false }));
-        }
-      }
-    };
-
-    const handleGlobalMouseDown = (event: MouseEvent) => {
-      if (contextMenu.open && event.button === 0) {
-        // Left mouse button - check if click is inside menu before closing
-        const target = event.target as HTMLElement;
-        if (!isInsideMenu(target)) {
-          setContextMenu((prev) => ({ ...prev, open: false }));
-        }
-      }
-    };
-
-    if (contextMenu.open) {
-      document.addEventListener('click', handleGlobalClick);
-      document.addEventListener('mousedown', handleGlobalMouseDown);
-    }
-
-    return () => {
-      document.removeEventListener('click', handleGlobalClick);
-      document.removeEventListener('mousedown', handleGlobalMouseDown);
-    };
-  }, [contextMenu.open]);
-
-  const onPaneContextMenu = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
-      const flowPosition = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      setContextMenu({
-        open: true,
-        position: flowPosition,
-        type: 'canvas',
-      });
-    },
-    [reactFlowInstance],
-  );
-
-  const onNodeContextMenu = useCallback(
-    (
-      event: React.MouseEvent,
-      node: CanvasNode<any>,
-      metaInfo?: {
-        source?: NodeContextMenuSource;
-        dragCreateInfo?: NodeDragCreateInfo;
-      },
-    ) => {
-      event.preventDefault();
-      const flowPosition = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      // Map node type to menu type
-      let menuNodeType: CanvasNodeType;
-      switch (node.type) {
-        case 'document':
-          menuNodeType = 'document';
-          break;
-        case 'resource':
-          menuNodeType = 'resource';
-          break;
-        case 'skillResponse':
-          menuNodeType = 'skillResponse';
-          break;
-        case 'skill':
-          menuNodeType = 'skill';
-          break;
-        case 'group':
-          menuNodeType = 'group';
-          break;
-        case 'codeArtifact':
-          menuNodeType = 'codeArtifact';
-          break;
-        case 'website':
-          menuNodeType = 'website';
-          break;
-        case 'image':
-          menuNodeType = 'image';
-          break;
-        case 'mediaSkill':
-          menuNodeType = 'mediaSkill';
-          break;
-        case 'mediaSkillResponse':
-          menuNodeType = 'mediaSkillResponse';
-          break;
-        case 'audio':
-          menuNodeType = 'audio';
-          break;
-        case 'video':
-          menuNodeType = 'video';
-          break;
-        case 'start':
-          menuNodeType = 'start';
-          break;
-        default:
-          return; // Don't show context menu for unknown node types
-      }
-
-      const { source, dragCreateInfo } = metaInfo || {};
-
-      setContextMenu({
-        open: true,
-        position: flowPosition,
-        type: 'node',
-        source: source || 'node',
-        dragCreateInfo,
-        nodeId: node.id,
-        nodeType: menuNodeType,
-      });
-    },
-    [reactFlowInstance],
-  );
-
-  const handleNodeClick = useCallback(
-    (event: React.MouseEvent, node: CanvasNode<any>) => {
-      if (!node) return;
-
-      if (node.id.startsWith('ghost-')) {
-        setContextMenu((prev) => ({ ...prev, open: false }));
-        return;
-      }
-
-      setContextMenu((prev) => ({ ...prev, open: false }));
-
-      if (event.metaKey || event.shiftKey) {
-        event.stopPropagation();
-        return;
-      }
-
-      if (!node?.id) {
-        console.warn('Invalid node clicked');
-        return;
-      }
-      setShowWorkflowRun(false);
-
-      if (node.selected && node.id === operatingNodeId) {
-        // Already in operating mode, do nothing
-        return;
-      }
-
-      if (node.selected && !operatingNodeId) {
-        setOperatingNodeId(node.id);
-        event.stopPropagation();
-      } else {
-        setSelectedNode(node);
-        setOperatingNodeId(null);
-      }
-
-      // Memo nodes are not previewable
-      if (!['start', 'skillResponse'].includes(node.type)) {
-        return;
-      }
-
-      previewNode(node);
-    },
-    [previewNode, setOperatingNodeId, setSelectedNode, setShowWorkflowRun],
-  );
-
-  // Memoize nodes and edges
-  const memoizedNodes = useMemo(() => nodes, [nodes]);
-  const memoizedEdges = useMemo(() => edges, [edges]);
-  const selectedNode = useMemo(
-    () => nodes.find((node) => node.id === nodePreviewId) as CanvasNode,
-    [nodes, nodePreviewId],
-  );
-
-  // Memoize the Background component
-  const memoizedBackground = useMemo(() => <MemoizedBackground />, []);
-
-  // Memoize the node types configuration
-  const memoizedNodeTypes = useMemo(() => nodeTypes, []);
-
-  const readonlyEdgesChange = useCallback(() => {
-    // No-op function for readonly mode
-    return edges;
-  }, [edges]);
-
-  const readonlyConnect = useCallback(() => {
-    // No-op function for readonly mode
-    return;
-  }, []);
-
-  // Optimize node dragging performance
-  const { setIsNodeDragging, setDraggingNodeId } = useEditorPerformance();
-
-  const handleNodeDragStart = useCallback(
-    (_: React.MouseEvent, node: Node) => {
-      setIsNodeDragging(true);
-      setDraggingNodeId(node.id);
-    },
-    [setIsNodeDragging, setDraggingNodeId],
-  );
-
-  const [readonlyDragWarningDebounce, setReadonlyDragWarningDebounce] =
-    useState<NodeJS.Timeout | null>(null);
-
-  const handleReadonlyDrag = useCallback(
-    (event: React.MouseEvent) => {
-      if (readonly) {
-        if (!readonlyDragWarningDebounce) {
-          message.warning(t('common.readonlyDragDescription'));
-
-          const debounceTimeout = setTimeout(() => {
-            setReadonlyDragWarningDebounce(null);
-          }, 3000);
-
-          setReadonlyDragWarningDebounce(debounceTimeout);
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    },
-    [readonly, readonlyDragWarningDebounce, t],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (readonlyDragWarningDebounce) {
-        clearTimeout(readonlyDragWarningDebounce);
-      }
-    };
-  }, [readonlyDragWarningDebounce]);
-
-  // Handle node drag stop and apply snap positions
-  const handleNodeDragStop = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
-      if (!node) return;
-
-      // Call the hook's onNodeDragStop method
-      onNodeDragStop(node.id);
-
-      // Reset performance tracking
-      setIsNodeDragging(false);
-      setDraggingNodeId(null);
-    },
-    [onNodeDragStop, setIsNodeDragging, setDraggingNodeId],
-  );
-
-  const onSelectionContextMenu = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
-      const flowPosition = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      setContextMenu({
-        open: true,
-        position: flowPosition,
-        type: 'selection',
-        nodeType: 'group',
-      });
-    },
-    [reactFlowInstance],
-  );
-
-  // Use the new drag, drop, paste hook
-  const { handlers } = useDragDropPaste({
+export const Canvas = (props: {
+  canvasId: string;
+  readonly?: boolean;
+  snapshotData?: SnapshotData;
+  hideLogoButton?: boolean;
+  runDetailInfo?: RunDetailInfo;
+  onDuplicate?: () => void;
+  duplicateLoading?: boolean;
+}) => {
+  const {
     canvasId,
     readonly,
-  });
-
-  // Add edge types configuration
-  const edgeTypes = useMemo(
-    () => ({
-      default: CustomEdge,
-    }),
-    [],
-  );
-
-  // Handle keyboard shortcuts for edge deletion and zoom
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      // Skip all keyboard handling in readonly mode
-      if (readonly) return;
-
-      const target = e.target as HTMLElement;
-
-      // Ignore input, textarea and contentEditable elements
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.contentEditable === 'true'
-      ) {
-        return;
-      }
-
-      // Check for mod key (Command on Mac, Ctrl on Windows/Linux)
-      const isModKey = e.metaKey || e.ctrlKey;
-
-      if (isModKey && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        if (e.shiftKey) {
-          // Mod+Shift+Z for Redo
-          redo();
-        } else {
-          // Mod+Z for Undo
-          undo();
-        }
-      }
-
-      // Handle zoom shortcuts (Cmd/Ctrl + +/-)
-      if (isModKey && (e.key === '+' || e.key === '=')) {
-        e.preventDefault();
-        reactFlowInstance.zoomIn();
-      }
-
-      if (isModKey && e.key === '-') {
-        e.preventDefault();
-        reactFlowInstance.zoomOut();
-      }
-
-      // Fit view (Cmd/Ctrl + 0)
-      if (isModKey && e.key === '0') {
-        e.preventDefault();
-        reactFlowInstance?.fitView?.();
-      }
-
-      // Auto layout (Cmd/Ctrl + Shift + L)
-      if (isModKey && e.shiftKey && e.key.toLowerCase() === 'l') {
-        e.preventDefault();
-        onLayout?.('LR');
-      }
-
-      // Handle edge deletion
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEdgeId) {
-        e.preventDefault();
-        const { setEdges } = reactFlowInstance;
-        setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId));
-        setSelectedEdgeId(null);
-      }
-    },
-    [selectedEdgeId, reactFlowInstance, undo, redo, readonly, onLayout],
-  );
-
-  // Handle edge click for delete button
-  const handleEdgeClick = useCallback(
-    (event: React.MouseEvent, edge: Edge) => {
-      // Check if click is on delete button
-      if ((event.target as HTMLElement).closest('.edge-delete-button')) {
-        const { setEdges } = reactFlowInstance;
-        setEdges((eds) => eds.filter((e) => e.id !== edge.id));
-        setSelectedEdgeId(null);
-        return;
-      }
-
-      // Check if click is on edge label or edge label input
-      if ((event.target as HTMLElement).closest('.edge-label')) {
-        return;
-      }
-
-      setSelectedEdgeId(edge.id);
-    },
-    [reactFlowInstance],
-  );
-
-  // Handle node deletion event - ReactFlow's built-in delete handler
-  const handleNodesDelete = useCallback(
-    (deletedNodes: CanvasNode[]) => {
-      if (readonly) return;
-
-      // Log event for skillResponse nodes
-      const skillResponseNodes = deletedNodes.filter((node) => node.type === 'skillResponse');
-      if (skillResponseNodes.length > 0) {
-        for (const node of skillResponseNodes) {
-          logEvent('delete_agent_node', Date.now(), { canvasId, nodeId: node.id });
-        }
-      }
-    },
-    [readonly, canvasId, logEvent],
-  );
-
-  // Add keyboard event listener
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-
-  useEffect(() => {
-    const { setEdges } = reactFlowInstance;
-    setEdges((eds) =>
-      eds.map((e) => {
-        return {
-          ...e,
-          selected: e.id === selectedEdgeId,
-          style: e.id === selectedEdgeId ? edgeStyles.selected : edgeStyles.default,
-        };
-      }),
-    );
-  }, [selectedEdgeId, reactFlowInstance, edgeStyles]);
-
-  useEffect(() => {
-    const { setNodes } = reactFlowInstance;
-    setNodes((nodes) => {
-      return nodes.map((node) => {
-        if (node.type !== 'memo') {
-          return {
-            ...node,
-            style: {
-              ...node.style,
-              zIndex: node.id === selectedNode?.id ? 1000 : 1,
-            },
-          };
-        }
-        return node;
-      });
-    });
-  }, [selectedNode?.id, reactFlowInstance]);
-
-  // Add event listener for node operations
-  useListenNodeOperationEvents();
-
-  // Add listener for opening node context menu
-  useEffect(() => {
-    const handleOpenContextMenu = (event: any) => {
-      // Extract nodeId from event name
-      const nodeId = event.nodeId;
-
-      // Check if event contains necessary information
-      if (event?.nodeType) {
-        // Create a synthetic React mouse event
-        const syntheticEvent = {
-          ...event.originalEvent,
-          clientX: event.x,
-          clientY: event.y,
-          preventDefault: () => {},
-          stopPropagation: () => {},
-        } as React.MouseEvent;
-
-        // Create a simplified node object with necessary properties
-        const node = {
-          id: nodeId,
-          type: event.nodeType as CanvasNodeType,
-          data: { type: event.nodeType },
-          position: { x: event.x, y: event.y },
-        } as unknown as CanvasNode<any>;
-
-        // Call onNodeContextMenu to handle context menu
-        onNodeContextMenu(syntheticEvent, node, {
-          source: event.source,
-          dragCreateInfo: event.dragCreateInfo,
-        });
-      }
-    };
-
-    // Listen for all events containing openContextMenu
-    nodeOperationsEmitter.on('openNodeContextMenu', handleOpenContextMenu);
-
-    return () => {
-      // Clean up event listeners
-      nodeOperationsEmitter.off('openNodeContextMenu', handleOpenContextMenu);
-    };
-  }, [onNodeContextMenu]);
-
-  return (
-    <Spin
-      className="canvas-spin w-full h-full"
-      style={{ maxHeight: '100%' }}
-      spinning={(readonly && shareLoading) || loading}
-      tip={connectionTimeout ? t('common.connectionFailed') : t('common.loading')}
-    >
-      <Modal
-        centered
-        open={connectionTimeout}
-        onOk={() => window.location.reload()}
-        onCancel={() => setConnectionTimeout(false)}
-        okText={t('common.retry')}
-        cancelText={t('common.cancel')}
-      >
-        <Result
-          status="warning"
-          title={t('canvas.connectionTimeout.title')}
-          extra={t('canvas.connectionTimeout.extra')}
-        />
-      </Modal>
-      <div className="w-full h-full relative flex flex-col overflow-hidden shadow-sm rounded-xl border-solid border-[1px] border-refly-Card-Border">
-        <div className="flex-grow relative">
-          <style>{selectionStyles}</style>
-          <ReactFlow
-            {...flowConfig}
-            selectionMode={SelectionMode.Partial}
-            className="bg-refly-bg-canvas"
-            snapToGrid={true}
-            snapGrid={[GRID_SIZE, GRID_SIZE]}
-            edgeTypes={edgeTypes}
-            // Unified mouse and touchpad gesture configuration
-            panOnScroll={true} // Enable scroll panning
-            panOnScrollSpeed={0.5} // Adjust scroll speed
-            panOnDrag={true} // Enable mouse left-click and touchpad single-finger drag
-            zoomOnScroll={true} // Enable scroll zooming
-            zoomOnPinch={true} // Enable touchpad two-finger pinch zoom
-            zoomOnDoubleClick={false}
-            // Enable default selection behavior
-            selectNodesOnDrag={true}
-            selectionOnDrag={true}
-            nodeTypes={memoizedNodeTypes}
-            nodes={memoizedNodes}
-            edges={memoizedEdges}
-            onNodesChange={onNodesChange}
-            onNodesDelete={readonly ? undefined : handleNodesDelete}
-            onEdgesChange={readonly ? readonlyEdgesChange : onEdgesChange}
-            onConnect={readonly ? readonlyConnect : onConnect}
-            onConnectStart={readonly ? undefined : temporaryEdgeOnConnectStart}
-            onConnectEnd={readonly ? undefined : temporaryEdgeOnConnectEnd}
-            onNodeClick={handleNodeClick as any}
-            onPaneClick={handlePanelClick}
-            onPaneContextMenu={readonly ? undefined : (onPaneContextMenu as any)}
-            onNodeContextMenu={readonly ? undefined : (onNodeContextMenu as any)}
-            onNodeDragStart={readonly ? handleReadonlyDrag : handleNodeDragStart}
-            onNodeDragStop={readonly ? undefined : handleNodeDragStop}
-            nodeDragThreshold={10}
-            nodesDraggable={!readonly}
-            nodesConnectable={!readonly}
-            elementsSelectable={true}
-            onSelectionContextMenu={readonly ? undefined : onSelectionContextMenu}
-            deleteKeyCode={readonly || workflowIsRunning ? null : ['Backspace', 'Delete']}
-            multiSelectionKeyCode={readonly ? null : ['Shift', 'Meta']}
-            onDragOver={handlers.handleDragOver}
-            onDragLeave={handlers.handleDragLeave}
-            onDrop={handlers.handleDrop}
-            onPaste={handlers.handlePaste}
-            connectOnClick={false}
-            edgesFocusable={false}
-            nodesFocusable={!readonly}
-            onEdgeClick={readonly ? undefined : handleEdgeClick}
-          >
-            {nodes?.length === 0 && canvasInitialized && <EmptyGuide canvasId={canvasId} />}
-
-            {memoizedBackground}
-            <HelperLines horizontal={helperLineHorizontal} vertical={helperLineVertical} />
-          </ReactFlow>
-        </div>
-        {/* Display the not found overlay when shareNotFound is true */}
-        {readonly && shareNotFound && <NotFoundOverlay />}
-        {!sidePanelVisible && <CanvasControlButtons />}
-        <ToolbarButtons canvasId={canvasId} />
-        <PreviewBoxInCanvas
-          node={selectedNode}
-          previewWidth={previewWidth}
-          setPreviewWidth={handlePreviewWidthChange}
-          maxPanelWidth={maxPanelWidth}
-        />
-
-        <CopilotContainer
-          copilotWidth={copilotWidth}
-          setCopilotWidth={handleSetCopilotWidth}
-          maxPanelWidth={maxPanelWidth}
-        />
-        <ToggleCopilotPanel copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
-        <UnifiedContextMenu
-          open={contextMenu.open}
-          position={contextMenu.position}
-          menuType={contextMenu.type}
-          context={{
-            nodeId: contextMenu.nodeId,
-            nodeType: contextMenu.nodeType,
-            source: contextMenu.source,
-            dragCreateInfo: contextMenu.dragCreateInfo,
-            isSelection: contextMenu.isSelection,
-          }}
-          setOpen={(open) => setContextMenu((prev) => ({ ...prev, open }))}
-        />
-      </div>
-    </Spin>
-  );
-});
-
-export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
-  const { canvasId, readonly } = props;
+    snapshotData,
+    hideLogoButton,
+    runDetailInfo,
+    onDuplicate,
+    duplicateLoading,
+  } = props;
   const { t } = useTranslation();
   const setCurrentCanvasId = useCanvasStoreShallow((state) => state.setCurrentCanvasId);
 
@@ -1365,9 +1421,13 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
   return (
     <EditorPerformanceProvider>
       <ReactFlowProvider>
-        <CanvasProvider readonly={readonly} canvasId={canvasId}>
+        <CanvasProvider readonly={readonly} canvasId={canvasId} snapshotData={snapshotData}>
           <UploadNotification />
-          <TopToolbar canvasId={canvasId} />
+          <TopToolbar
+            canvasId={canvasId}
+            hideLogoButton={hideLogoButton}
+            isRunDetail={!!runDetailInfo}
+          />
 
           <div
             ref={containerRef}
@@ -1381,9 +1441,14 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
               copilotWidth={copilotWidth}
               setCopilotWidth={handleSetCopilotWidth}
               maxPanelWidth={maxPanelWidth}
+              runDetailPanelWidth={runDetailInfo ? 320 : 0}
+              runDetailInfo={runDetailInfo}
+              onDuplicate={onDuplicate}
+              duplicateLoading={duplicateLoading}
             />
             <CanvasDrive className={!sidePanelVisible ? 'hidden' : ''} />
           </div>
+
           <CanvasResourcesWidescreenModal />
 
           {/* Tool Store Modal */}
@@ -1423,3 +1488,4 @@ export const Canvas = (props: { canvasId: string; readonly?: boolean }) => {
 
 // Re-export providers for external use
 export { ReactFlowProvider } from '@xyflow/react';
+export type { SnapshotData } from '@refly-packages/ai-workspace-common/context/canvas';

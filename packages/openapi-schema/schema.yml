@@ -50,6 +50,8 @@ tags:
     description: APP management endpoints
   - name: voucher
     description: Voucher and discount coupon management endpoints
+  - name: schedule
+    description: Workflow schedule management endpoints
 
 paths:
   /variable-extraction/extract:
@@ -3066,6 +3068,148 @@ paths:
           description: Workflow app not found
       security:
         - api_key: []
+
+  /schedule/create:
+    post:
+      tags:
+        - schedule
+      summary: Create workflow schedule
+      description: Create a new schedule for workflow execution
+      operationId: createSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+      responses:
+        '200':
+          description: Schedule created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateScheduleResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+      security:
+        - api_key: []
+
+  /schedule/update:
+    post:
+      tags:
+        - schedule
+      summary: Update workflow schedule
+      description: Update an existing workflow schedule
+      operationId: updateSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduleRequest'
+      responses:
+        '200':
+          description: Schedule updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateScheduleResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schedule not found
+      security:
+        - api_key: []
+
+  /schedule/delete:
+    post:
+      tags:
+        - schedule
+      summary: Delete workflow schedule
+      description: Delete an existing workflow schedule
+      operationId: deleteSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteScheduleRequest'
+      responses:
+        '200':
+          description: Schedule deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteScheduleResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schedule not found
+      security:
+        - api_key: []
+
+  /schedule/list:
+    post:
+      tags:
+        - schedule
+      summary: List workflow schedules
+      description: Get list of workflow schedules for a canvas
+      operationId: listSchedules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListSchedulesRequest'
+      responses:
+        '200':
+          description: Schedules retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSchedulesResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+      security:
+        - api_key: []
+
+  /schedule/detail:
+    post:
+      tags:
+        - schedule
+      summary: Get schedule detail
+      description: Get detailed information about a specific schedule
+      operationId: getScheduleDetail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetScheduleDetailRequest'
+      responses:
+        '200':
+          description: Schedule detail retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetScheduleDetailResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schedule not found
+      security:
+        - api_key: []
+
   /user/settings:
     get:
       tags:
@@ -4949,6 +5093,9 @@ components:
         minimapStorageKey:
           type: string
           description: Minimap storage key
+        schedule:
+          description: Workflow schedule configuration
+          $ref: '#/components/schemas/WorkflowSchedule'
         createdAt:
           type: string
           format: date-time
@@ -4957,6 +5104,189 @@ components:
           type: string
           format: date-time
           description: Canvas update time
+    WorkflowSchedule:
+      type: object
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID
+        name:
+          type: string
+          description: Schedule name
+        isEnabled:
+          type: boolean
+          description: Whether the schedule is enabled
+        cronExpression:
+          type: string
+          description: Cron expression
+        scheduleConfig:
+          type: string
+          description: Schedule config JSON (type, time, weekdays, monthDays)
+        timezone:
+          type: string
+          description: Timezone
+        nextRunAt:
+          type: string
+          format: date-time
+          description: Next run time
+        lastRunAt:
+          type: string
+          format: date-time
+          description: Last run time
+
+    # Schedule API Request/Response schemas
+    CreateScheduleRequest:
+      type: object
+      required:
+        - canvasId
+        - name
+        - cronExpression
+        - scheduleConfig
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID to schedule
+        name:
+          type: string
+          description: Schedule name
+        cronExpression:
+          type: string
+          description: Cron expression for scheduling
+        scheduleConfig:
+          type: string
+          description: Schedule configuration JSON
+        timezone:
+          type: string
+          description: Timezone for schedule execution
+        isEnabled:
+          type: boolean
+          description: Whether the schedule is enabled
+          default: true
+
+    CreateScheduleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          $ref: '#/components/schemas/WorkflowSchedule'
+        message:
+          type: string
+          description: Response message
+
+    UpdateScheduleRequest:
+      type: object
+      required:
+        - scheduleId
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID to update
+        name:
+          type: string
+          description: Schedule name
+        cronExpression:
+          type: string
+          description: Cron expression for scheduling
+        scheduleConfig:
+          type: string
+          description: Schedule configuration JSON
+        timezone:
+          type: string
+          description: Timezone for schedule execution
+        isEnabled:
+          type: boolean
+          description: Whether the schedule is enabled
+
+    UpdateScheduleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          $ref: '#/components/schemas/WorkflowSchedule'
+        message:
+          type: string
+          description: Response message
+
+    DeleteScheduleRequest:
+      type: object
+      required:
+        - scheduleId
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID to delete
+
+    DeleteScheduleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        message:
+          type: string
+          description: Response message
+
+    ListSchedulesRequest:
+      type: object
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID to filter schedules
+        page:
+          type: integer
+          description: Page number for pagination
+          default: 1
+        pageSize:
+          type: integer
+          description: Number of items per page
+          default: 10
+
+    ListSchedulesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowSchedule'
+          description: List of schedules
+        total:
+          type: integer
+          description: Total number of schedules
+        page:
+          type: integer
+          description: Current page number
+        pageSize:
+          type: integer
+          description: Number of items per page
+
+    GetScheduleDetailRequest:
+      type: object
+      required:
+        - scheduleId
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID to get details for
+
+    GetScheduleDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          $ref: '#/components/schemas/WorkflowSchedule'
+        message:
+          type: string
+          description: Response message
+
     CanvasTemplateCategory:
       type: object
       required:

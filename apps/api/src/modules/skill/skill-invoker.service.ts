@@ -312,9 +312,16 @@ export class SkillInvokerService {
     // Categorize errors more reliably
     const isTimeoutError =
       err instanceof Error && (err.name === 'TimeoutError' || /timeout/i.test(err.message));
+    // Only classify as abort error if:
+    // 1. The error name is 'AbortError' (standard abort signal error)
+    // 2. OR the message specifically indicates a user-initiated abort (not just containing "abort")
+    // This prevents model errors like ValidationException from being misclassified
     const isAbortError =
       err instanceof Error &&
-      (err.name === 'AbortError' || /abort/i.test(err.message)) &&
+      (err.name === 'AbortError' ||
+        /^aborted by user$/i.test(err.message) ||
+        /^action was aborted/i.test(err.message) ||
+        /^workflow aborted by user$/i.test(err.message)) &&
       !isCreditError;
     const isNetworkError =
       err instanceof Error && (err.name === 'NetworkError' || /network|fetch/i.test(err.message));

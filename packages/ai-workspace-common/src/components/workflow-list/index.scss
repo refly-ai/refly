@@ -1,10 +1,15 @@
 .workflow-list {
-   .ant-table-cell {
+    .ant-table {
+        background: transparent;
+        border: 1px solid var(--refly-Card-Border);
+    }
+
+    .ant-table-cell {
         padding: 12px 16px !important;
-    } 
+    }
 
     .ant-table-cell-row-hover {
         background: var(--refly-fill-hover) !important;
     }
-    
+
 }

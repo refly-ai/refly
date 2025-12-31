@@ -37,6 +37,7 @@ import {
   createProviderItem,
   createResource,
   createResourceWithFile,
+  createSchedule,
   createShare,
   createSkillInstance,
   createSkillTrigger,
@@ -57,6 +58,7 @@ import {
   deleteProvider,
   deleteProviderItem,
   deleteResource,
+  deleteSchedule,
   deleteShare,
   deleteSkillInstance,
   deleteSkillTrigger,
@@ -97,6 +99,7 @@ import {
   getPilotSessionDetail,
   getProjectDetail,
   getResourceDetail,
+  getScheduleDetail,
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
@@ -132,6 +135,7 @@ import {
   listProviderItems,
   listProviders,
   listResources,
+  listSchedules,
   listShares,
   listSkillInstances,
   listSkills,
@@ -176,6 +180,7 @@ import {
   updateProvider,
   updateProviderItem,
   updateResource,
+  updateSchedule,
   updateSettings,
   updateSkillInstance,
   updateSkillTrigger,
@@ -1456,6 +1461,36 @@ export type ExecuteWorkflowAppMutationResult = Awaited<ReturnType<typeof execute
 export const useExecuteWorkflowAppKey = 'ExecuteWorkflowApp';
 export const UseExecuteWorkflowAppKeyFn = (mutationKey?: Array<unknown>) => [
   useExecuteWorkflowAppKey,
+  ...(mutationKey ?? []),
+];
+export type CreateScheduleMutationResult = Awaited<ReturnType<typeof createSchedule>>;
+export const useCreateScheduleKey = 'CreateSchedule';
+export const UseCreateScheduleKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateScheduleKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateScheduleMutationResult = Awaited<ReturnType<typeof updateSchedule>>;
+export const useUpdateScheduleKey = 'UpdateSchedule';
+export const UseUpdateScheduleKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateScheduleKey,
+  ...(mutationKey ?? []),
+];
+export type DeleteScheduleMutationResult = Awaited<ReturnType<typeof deleteSchedule>>;
+export const useDeleteScheduleKey = 'DeleteSchedule';
+export const UseDeleteScheduleKeyFn = (mutationKey?: Array<unknown>) => [
+  useDeleteScheduleKey,
+  ...(mutationKey ?? []),
+];
+export type ListSchedulesMutationResult = Awaited<ReturnType<typeof listSchedules>>;
+export const useListSchedulesKey = 'ListSchedules';
+export const UseListSchedulesKeyFn = (mutationKey?: Array<unknown>) => [
+  useListSchedulesKey,
+  ...(mutationKey ?? []),
+];
+export type GetScheduleDetailMutationResult = Awaited<ReturnType<typeof getScheduleDetail>>;
+export const useGetScheduleDetailKey = 'GetScheduleDetail';
+export const UseGetScheduleDetailKeyFn = (mutationKey?: Array<unknown>) => [
+  useGetScheduleDetailKey,
   ...(mutationKey ?? []),
 ];
 export type SubmitFormMutationResult = Awaited<ReturnType<typeof submitForm>>;

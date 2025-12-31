@@ -28,6 +28,7 @@ import {
   SideLeft,
   Settings,
   MarketPlace,
+  History,
 } from 'refly-icons';
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
@@ -358,6 +359,9 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     if (path.startsWith('/workflow-list')) {
       return 'canvas';
     }
+    if (path.startsWith('/run-history')) {
+      return 'runHistory';
+    }
     if (path.startsWith('/app-manager')) {
       return 'appManager';
     }
@@ -403,6 +407,19 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
         title: t('loggedHomePage.siderMenu.marketplace'),
         onActionClick: () => navigate('/marketplace'),
         key: 'marketplace',
+      },
+    ],
+    [t, navigate],
+  );
+
+  // Secondary menu items (below divider)
+  const secondaryMenuItems = useMemo(
+    () => [
+      {
+        icon: <History key="runHistory" style={{ fontSize: 20 }} />,
+        title: t('loggedHomePage.siderMenu.runHistory'),
+        onActionClick: () => navigate('/run-history'),
+        key: 'runHistory',
       },
     ],
     [t, navigate],
@@ -521,6 +538,18 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
             ))}
 
             <Divider className="m-0 border-refly-Card-Border" />
+
+            {/* Secondary menu items (below divider) */}
+            {secondaryMenuItems.map((item, index) => (
+              <SiderSectionHeader
+                key={`secondary-${index}`}
+                icon={item.icon}
+                title={item.title}
+                onActionClick={item.onActionClick}
+                isActive={item.key === getActiveKey()}
+                collapsed={isCollapsed}
+              />
+            ))}
           </div>
 
           {/* Promotion entry - show above invitation */}

@@ -955,6 +955,10 @@ export const CanvasSchema = {
       type: 'string',
       description: 'Minimap storage key',
     },
+    schedule: {
+      description: 'Workflow schedule configuration',
+      $ref: '#/components/schemas/WorkflowSchedule',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -964,6 +968,245 @@ export const CanvasSchema = {
       type: 'string',
       format: 'date-time',
       description: 'Canvas update time',
+    },
+  },
+} as const;
+
+export const WorkflowScheduleSchema = {
+  type: 'object',
+  properties: {
+    scheduleId: {
+      type: 'string',
+      description: 'Schedule ID',
+    },
+    name: {
+      type: 'string',
+      description: 'Schedule name',
+    },
+    isEnabled: {
+      type: 'boolean',
+      description: 'Whether the schedule is enabled',
+    },
+    cronExpression: {
+      type: 'string',
+      description: 'Cron expression',
+    },
+    scheduleConfig: {
+      type: 'string',
+      description: 'Schedule config JSON (type, time, weekdays, monthDays)',
+    },
+    timezone: {
+      type: 'string',
+      description: 'Timezone',
+    },
+    nextRunAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Next run time',
+    },
+    lastRunAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Last run time',
+    },
+  },
+} as const;
+
+export const CreateScheduleRequestSchema = {
+  type: 'object',
+  required: ['canvasId', 'name', 'cronExpression', 'scheduleConfig'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID to schedule',
+    },
+    name: {
+      type: 'string',
+      description: 'Schedule name',
+    },
+    cronExpression: {
+      type: 'string',
+      description: 'Cron expression for scheduling',
+    },
+    scheduleConfig: {
+      type: 'string',
+      description: 'Schedule configuration JSON',
+    },
+    timezone: {
+      type: 'string',
+      description: 'Timezone for schedule execution',
+    },
+    isEnabled: {
+      type: 'boolean',
+      description: 'Whether the schedule is enabled',
+      default: true,
+    },
+  },
+} as const;
+
+export const CreateScheduleResponseSchema = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    data: {
+      $ref: '#/components/schemas/WorkflowSchedule',
+    },
+    message: {
+      type: 'string',
+      description: 'Response message',
+    },
+  },
+} as const;
+
+export const UpdateScheduleRequestSchema = {
+  type: 'object',
+  required: ['scheduleId'],
+  properties: {
+    scheduleId: {
+      type: 'string',
+      description: 'Schedule ID to update',
+    },
+    name: {
+      type: 'string',
+      description: 'Schedule name',
+    },
+    cronExpression: {
+      type: 'string',
+      description: 'Cron expression for scheduling',
+    },
+    scheduleConfig: {
+      type: 'string',
+      description: 'Schedule configuration JSON',
+    },
+    timezone: {
+      type: 'string',
+      description: 'Timezone for schedule execution',
+    },
+    isEnabled: {
+      type: 'boolean',
+      description: 'Whether the schedule is enabled',
+    },
+  },
+} as const;
+
+export const UpdateScheduleResponseSchema = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    data: {
+      $ref: '#/components/schemas/WorkflowSchedule',
+    },
+    message: {
+      type: 'string',
+      description: 'Response message',
+    },
+  },
+} as const;
+
+export const DeleteScheduleRequestSchema = {
+  type: 'object',
+  required: ['scheduleId'],
+  properties: {
+    scheduleId: {
+      type: 'string',
+      description: 'Schedule ID to delete',
+    },
+  },
+} as const;
+
+export const DeleteScheduleResponseSchema = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    message: {
+      type: 'string',
+      description: 'Response message',
+    },
+  },
+} as const;
+
+export const ListSchedulesRequestSchema = {
+  type: 'object',
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID to filter schedules',
+    },
+    page: {
+      type: 'integer',
+      description: 'Page number for pagination',
+      default: 1,
+    },
+    pageSize: {
+      type: 'integer',
+      description: 'Number of items per page',
+      default: 10,
+    },
+  },
+} as const;
+
+export const ListSchedulesResponseSchema = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    data: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/WorkflowSchedule',
+      },
+      description: 'List of schedules',
+    },
+    total: {
+      type: 'integer',
+      description: 'Total number of schedules',
+    },
+    page: {
+      type: 'integer',
+      description: 'Current page number',
+    },
+    pageSize: {
+      type: 'integer',
+      description: 'Number of items per page',
+    },
+  },
+} as const;
+
+export const GetScheduleDetailRequestSchema = {
+  type: 'object',
+  required: ['scheduleId'],
+  properties: {
+    scheduleId: {
+      type: 'string',
+      description: 'Schedule ID to get details for',
+    },
+  },
+} as const;
+
+export const GetScheduleDetailResponseSchema = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Whether the operation was successful',
+    },
+    data: {
+      $ref: '#/components/schemas/WorkflowSchedule',
+    },
+    message: {
+      type: 'string',
+      description: 'Response message',
     },
   },
 } as const;

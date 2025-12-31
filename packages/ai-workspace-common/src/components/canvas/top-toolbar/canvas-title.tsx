@@ -202,10 +202,12 @@ export const ReadonlyCanvasTitle = memo(
     canvasTitle,
     isLoading,
     owner,
+    hideLogoButton,
   }: {
     canvasTitle?: string;
     isLoading: boolean;
     owner?: ShareUser;
+    hideLogoButton?: boolean;
   }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -218,20 +220,27 @@ export const ReadonlyCanvasTitle = memo(
         className="ml-1 group flex items-center gap-2 text-sm font-bold text-gray-500"
         data-cy="canvas-title-readonly"
       >
-        <Tooltip
-          title={t(isLogin ? 'canvas.toolbar.backDashboard' : 'canvas.toolbar.backHome')}
-          arrow={false}
-          align={{ offset: [20, -8] }}
-        >
-          <div
-            className="flex-shrink-0 flex items-center justify-center h-8 w-8 hover:bg-refly-tertiary-hover rounded-lg cursor-pointer"
-            onClick={() => navigate('/')}
-          >
-            <Logo textProps={{ show: false }} logoProps={{ show: true, className: '!w-5 !h-5' }} />
-          </div>
-        </Tooltip>
+        {!hideLogoButton && (
+          <>
+            <Tooltip
+              title={t(isLogin ? 'canvas.toolbar.backDashboard' : 'canvas.toolbar.backHome')}
+              arrow={false}
+              align={{ offset: [20, -8] }}
+            >
+              <div
+                className="flex-shrink-0 flex items-center justify-center h-8 w-8 hover:bg-refly-tertiary-hover rounded-lg cursor-pointer"
+                onClick={() => navigate('/')}
+              >
+                <Logo
+                  textProps={{ show: false }}
+                  logoProps={{ show: true, className: '!w-5 !h-5' }}
+                />
+              </div>
+            </Tooltip>
 
-        <Divider type="vertical" className="m-0 h-5 bg-refly-Card-Border" />
+            <Divider type="vertical" className="m-0 h-5 bg-refly-Card-Border" />
+          </>
+        )}
         <IconCanvas />
         {isLoading ? (
           <Skeleton className="w-32" active paragraph={false} />

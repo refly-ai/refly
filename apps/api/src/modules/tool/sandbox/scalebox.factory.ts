@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
 
-import { guard } from '../../../utils/guard';
+import { guard } from '@refly/utils';
 import { Config } from '../../config/config.decorator';
 import { DEFAULT_WRAPPER_TYPE, WrapperType } from './scalebox.constants';
 import { SandboxRequestParamsException } from './scalebox.exception';

@@ -372,6 +372,21 @@ import type {
   GetTemplateGenerationStatusData,
   GetTemplateGenerationStatusError,
   GetTemplateGenerationStatusResponse2,
+  CreateScheduleData,
+  CreateScheduleError,
+  CreateScheduleResponse2,
+  UpdateScheduleData,
+  UpdateScheduleError,
+  UpdateScheduleResponse2,
+  DeleteScheduleData,
+  DeleteScheduleError,
+  DeleteScheduleResponse2,
+  ListSchedulesData,
+  ListSchedulesError,
+  ListSchedulesResponse2,
+  GetScheduleDetailData,
+  GetScheduleDetailError,
+  GetScheduleDetailResponse2,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -2525,6 +2540,89 @@ export const getTemplateGenerationStatus = <ThrowOnError extends boolean = false
   >({
     ...options,
     url: '/workflow-app/template-status',
+  });
+};
+
+/**
+ * Create workflow schedule
+ * Create a new schedule for workflow execution
+ */
+export const createSchedule = <ThrowOnError extends boolean = false>(
+  options: Options<CreateScheduleData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateScheduleResponse2,
+    CreateScheduleError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/create',
+  });
+};
+
+/**
+ * Update workflow schedule
+ * Update an existing workflow schedule
+ */
+export const updateSchedule = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateScheduleData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateScheduleResponse2,
+    UpdateScheduleError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/update',
+  });
+};
+
+/**
+ * Delete workflow schedule
+ * Delete an existing workflow schedule
+ */
+export const deleteSchedule = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteScheduleData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DeleteScheduleResponse2,
+    DeleteScheduleError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/delete',
+  });
+};
+
+/**
+ * List workflow schedules
+ * Get list of workflow schedules for a canvas
+ */
+export const listSchedules = <ThrowOnError extends boolean = false>(
+  options: Options<ListSchedulesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<ListSchedulesResponse2, ListSchedulesError, ThrowOnError>(
+    {
+      ...options,
+      url: '/schedule/list',
+    },
+  );
+};
+
+/**
+ * Get schedule detail
+ * Get detailed information about a specific schedule
+ */
+export const getScheduleDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetScheduleDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetScheduleDetailResponse2,
+    GetScheduleDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/detail',
   });
 };
 

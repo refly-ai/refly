@@ -5,7 +5,7 @@ import { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 import { storage, Store } from 'nestjs-pino/storage';
 
-import { guard } from '../../../utils/guard';
+import { guard } from '@refly/utils';
 import {
   QUEUE_SCALEBOX_EXECUTE,
   QUEUE_SCALEBOX_PAUSE,

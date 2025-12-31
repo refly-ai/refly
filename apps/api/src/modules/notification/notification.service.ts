@@ -5,7 +5,7 @@ import { SendEmailRequest, User } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
 import { ParamsError } from '@refly/errors';
 import { MiscService } from '../misc/misc.service';
-import { guard } from '../../utils/guard';
+import { guard } from '@refly/utils';
 
 @Injectable()
 export class NotificationService {

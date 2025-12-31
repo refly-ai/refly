@@ -35,6 +35,7 @@ import {
   genResourceID,
   genCodeArtifactID,
   batchReplaceRegex,
+  genCanvasVersionId,
 } from '@refly/utils';
 import { DeleteKnowledgeEntityJobData } from '../knowledge/knowledge.dto';
 import { QUEUE_DELETE_KNOWLEDGE_ENTITY, QUEUE_POST_DELETE_CANVAS } from '../../utils/const';
@@ -84,7 +85,14 @@ export class CanvasService {
   ) {}
 
   async listCanvases(user: User, param: ListCanvasesData['query']): Promise<CanvasDetailModel[]> {
-    const { page = 1, pageSize = 10, order = 'updationDesc', keyword } = param;
+    const {
+      page = 1,
+      pageSize = 10,
+      order = 'updationDesc',
+      keyword,
+      scheduleStatus,
+      hasSchedule,
+    } = param as any;
 
     // Build orderBy based on order parameter
     let orderBy: Prisma.CanvasOrderByWithRelationInput = { updatedAt: 'desc' as const };
@@ -121,12 +129,50 @@ export class CanvasService {
       };
     }
 
-    const canvases = await this.prisma.canvas.findMany({
+    // Get all canvases first (we'll filter by schedule status after)
+    let canvases = await this.prisma.canvas.findMany({
       where,
       orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
     });
+
+    // Get all schedules for these canvases
+    const canvasIds = canvases.map((canvas) => canvas.canvasId);
+    const schedules = await this.prisma.workflowSchedule.findMany({
+      where: {
+        canvasId: { in: canvasIds },
+        deletedAt: null,
+      },
+    });
+
+    // Create schedule map
+    const scheduleMap = new Map<string, (typeof schedules)[0]>();
+    for (const schedule of schedules) {
+      scheduleMap.set(schedule.canvasId, schedule);
+    }
+
+    // Filter by schedule status if provided
+    if (scheduleStatus === 'active') {
+      canvases = canvases.filter((canvas) => {
+        const schedule = scheduleMap.get(canvas.canvasId);
+        return schedule?.isEnabled;
+      });
+    } else if (scheduleStatus === 'inactive') {
+      canvases = canvases.filter((canvas) => {
+        const schedule = scheduleMap.get(canvas.canvasId);
+        return !schedule || !schedule.isEnabled;
+      });
+    }
+
+    // Filter by hasSchedule if provided (canvases that have any schedule)
+    if (hasSchedule) {
+      canvases = canvases.filter((canvas) => {
+        return scheduleMap.has(canvas.canvasId);
+      });
+    }
+
+    // Apply pagination after filtering
+    const paginatedCanvases = canvases.slice((page - 1) * pageSize, page * pageSize);
+    const paginatedCanvasIds = paginatedCanvases.map((canvas) => canvas.canvasId);
 
     // Get owner information (all canvases belong to the same user)
     const owner = await this.prisma.user.findUnique({
@@ -140,10 +186,9 @@ export class CanvasService {
     });
 
     // Get share records for all canvases in one query
-    const canvasIds = canvases.map((canvas) => canvas.canvasId);
     const shareRecords = await this.prisma.shareRecord.findMany({
       where: {
-        entityId: { in: canvasIds },
+        entityId: { in: paginatedCanvasIds },
         entityType: 'canvas',
         deletedAt: null,
       },
@@ -160,7 +205,7 @@ export class CanvasService {
 
     const workflowApps = await this.prisma.workflowApp.findMany({
       where: {
-        canvasId: { in: canvasIds },
+        canvasId: { in: paginatedCanvasIds },
         deletedAt: null,
       },
       orderBy: { createdAt: 'desc' },
@@ -173,15 +218,22 @@ export class CanvasService {
       }
     }
 
-    return canvases.map((canvas) => ({
-      ...canvas,
-      owner,
-      shareRecord: shareRecordMap.get(canvas.canvasId) || null,
-      workflowApp: workflowAppMap.get(canvas.canvasId) || null,
-      minimapUrl: canvas.minimapStorageKey
-        ? this.miscService.generateFileURL({ storageKey: canvas.minimapStorageKey })
-        : undefined,
-    }));
+    return paginatedCanvases.map((canvas) => {
+      const schedule = scheduleMap.get(canvas.canvasId);
+      // Remove pk field (BigInt) from schedule to avoid serialization issues
+      const scheduleWithoutPk = schedule ? (({ pk, ...rest }) => rest)(schedule) : undefined;
+
+      return {
+        ...canvas,
+        owner,
+        shareRecord: shareRecordMap.get(canvas.canvasId) || null,
+        workflowApp: workflowAppMap.get(canvas.canvasId) || null,
+        schedule: scheduleWithoutPk,
+        minimapUrl: canvas.minimapStorageKey
+          ? this.miscService.generateFileURL({ storageKey: canvas.minimapStorageKey })
+          : undefined,
+      };
+    });
   }
 
   async getCanvasDetail(user: User, canvasId: string) {
@@ -621,9 +673,27 @@ export class CanvasService {
     return updatedCanvas;
   }
 
-  async createCanvas(user: User, param: UpsertCanvasRequest) {
+  async createCanvas(
+    user: User,
+    param: UpsertCanvasRequest,
+    options?: { skipDefaultNodes?: boolean },
+  ) {
     // Use the canvasId from param if provided, otherwise generate a new one
     param.canvasId ||= genCanvasID();
+
+    // Skip default nodes for workflow execution canvases
+    if (options?.skipDefaultNodes) {
+      const state: CanvasState = {
+        version: genCanvasVersionId(),
+        nodes: [],
+        edges: [],
+        transactions: [],
+        history: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      return this.createCanvasWithState(user, param, state);
+    }
 
     // Get default agent model for the initial skillResponse node
     const defaultAgentItem = await this.providerService.findDefaultProviderItem(user, 'agent');
