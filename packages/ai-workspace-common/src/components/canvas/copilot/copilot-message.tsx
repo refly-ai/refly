@@ -1,12 +1,12 @@
-import { memo, useCallback, useEffect, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, Button, Divider } from 'antd';
 import { useListTools } from '@refly-packages/ai-workspace-common/queries';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
-import { ActionResult } from '@refly/openapi-schema';
+import { ActionResult, WorkflowPlanRecord } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { safeParseJSON } from '@refly/utils';
-import { generateCanvasDataFromWorkflowPlan, WorkflowPlan } from '@refly/canvas-common';
+import { generateCanvasDataFromWorkflowPlan } from '@refly/canvas-common';
 import { useReactFlow } from '@xyflow/react';
 import { MessageList } from '@refly-packages/ai-workspace-common/components/result-message';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
@@ -15,6 +15,7 @@ import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { CanvasNode } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 
 interface CopilotMessageProps {
@@ -27,9 +28,13 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
   const { resultId, input, steps, status } = result;
   const query = useMemo(() => input?.query ?? '', [input]);
 
-  const workflowPlan = useMemo(() => {
-    const toolCalls = steps?.[0]?.toolCalls ?? [];
-    const workflowPlanToolCall = toolCalls.find((call) => call.toolName === 'generate_workflow');
+  const [loading, setLoading] = useState(false);
+
+  const workflowPlan = useMemo<WorkflowPlanRecord>(() => {
+    const allToolCalls = steps?.flatMap((step) => step.toolCalls ?? []) ?? [];
+    const workflowPlanToolCall = [...allToolCalls]
+      .reverse()
+      .find((call) => call.toolName === 'generate_workflow' || call.toolName === 'patch_workflow');
     const output = workflowPlanToolCall?.output;
 
     if (!output) {
@@ -42,7 +47,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     }
 
     // If input is already the parsed object
-    return (output as { data: WorkflowPlan })?.data;
+    return (output as { data: WorkflowPlanRecord })?.data;
   }, [steps]);
 
   const { fetchActionResult } = useFetchActionResult();
@@ -112,8 +117,26 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       }
     }
 
+    let finalPlan = workflowPlan;
+    if (workflowPlan.tasks === undefined) {
+      setLoading(true);
+      try {
+        const { data } = await getClient().getWorkflowPlanDetail({
+          query: {
+            planId: workflowPlan.planId,
+            version: workflowPlan.version,
+          },
+        });
+        if (data?.data) {
+          finalPlan = data?.data;
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
     const { nodes, edges, variables } = generateCanvasDataFromWorkflowPlan(
-      workflowPlan,
+      finalPlan,
       tools?.data ?? [],
       {
         autoLayout: true,
@@ -191,7 +214,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       <MessageList result={result} stepStatus="finish" handleRetry={handleRetry} />
       {workflowPlan && (
         <div className="mt-1">
-          <Button type="primary" onClick={handleApprove}>
+          <Button type="primary" onClick={handleApprove} loading={loading}>
             {t('copilot.sessionDetail.approve')}
           </Button>
         </div>

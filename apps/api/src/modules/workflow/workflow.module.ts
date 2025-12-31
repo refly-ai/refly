@@ -12,6 +12,7 @@ import { RunWorkflowProcessor, PollWorkflowProcessor } from './workflow.processo
 import { QUEUE_RUN_WORKFLOW, QUEUE_POLL_WORKFLOW } from '../../utils/const';
 import { isDesktop } from '../../utils/runtime';
 import { CreditModule } from '../credit/credit.module';
+import { WorkflowPlanService } from './workflow-plan.service';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CreditModule } from '../credit/credit.module';
   controllers: [WorkflowController],
   providers: [
     WorkflowService,
+    WorkflowPlanService,
     ...(isDesktop() ? [] : [RunWorkflowProcessor, PollWorkflowProcessor]),
   ],
   exports: [WorkflowService],

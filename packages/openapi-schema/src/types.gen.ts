@@ -7373,38 +7373,38 @@ export type WorkflowExecution = {
 
 export type WorkflowTask = {
   /**
-   * Workflow task ID
+   * Unique ID for the task
    */
   id: string;
   /**
-   * Workflow task title
+   * Display title for the task
    */
   title: string;
   /**
-   * Workflow task prompt
+   * The prompt or instruction for this task
    */
   prompt: string;
   /**
-   * Workflow task toolsets
+   * Toolsets selected for this task
    */
   toolsets: Array<string>;
   /**
-   * Workflow task dependent task IDs
+   * Tasks that must be executed before this task
    */
   dependentTasks?: Array<string>;
 };
 
 export type WorkflowPlan = {
   /**
-   * Workflow plan title
+   * Title of the workflow plan
    */
   title: string;
   /**
-   * Workflow tasks
+   * Array of workflow tasks to be executed
    */
   tasks: Array<WorkflowTask>;
   /**
-   * Workflow variables
+   * Array of variables (aka User inputs) defined for the workflow plan
    */
   variables?: Array<WorkflowVariable>;
 };
@@ -7664,7 +7664,7 @@ export type WorkflowVariable = {
    */
   variableId: string;
   /**
-   * Variable name
+   * Variable name used in the workflow
    */
   name: string;
   /**
@@ -7688,7 +7688,7 @@ export type WorkflowVariable = {
    */
   variableType?: 'string' | 'option' | 'resource';
   /**
-   * Whether the variable is required
+   * Whether the variable is required. Defaults to false.
    */
   required?: boolean;
   /**
@@ -7696,7 +7696,7 @@ export type WorkflowVariable = {
    */
   isSingle?: boolean;
   /**
-   * Variable options (only valid when variable type is option)
+   * Array of options (only valid when variable type is `option`)
    */
   options?: Array<string>;
   /**

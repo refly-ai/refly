@@ -284,24 +284,14 @@ export class SkillEngineService implements OnModuleInit {
       execute: async (user, req) => {
         return await this.scaleboxService.execute(user, req);
       },
-      generateWorkflowPlan: async (_user, data, copilotSessionId, resultId, resultVersion) => {
-        return await this.workflowPlanService.generateWorkflowPlan(
-          data,
-          copilotSessionId,
-          resultId,
-          resultVersion,
-        );
+      generateWorkflowPlan: async (user, params) => {
+        return await this.workflowPlanService.generateWorkflowPlan(user, params);
       },
-      patchWorkflowPlan: async (_user, planId, operations, resultId, resultVersion) => {
-        return await this.workflowPlanService.patchWorkflowPlan(
-          planId,
-          operations,
-          resultId,
-          resultVersion,
-        );
+      patchWorkflowPlan: async (user, params) => {
+        return await this.workflowPlanService.patchWorkflowPlan(user, params);
       },
-      getLatestWorkflowPlan: async (_user, copilotSessionId) => {
-        return await this.workflowPlanService.getLatestWorkflowPlan(copilotSessionId);
+      getLatestWorkflowPlan: async (user, params) => {
+        return await this.workflowPlanService.getLatestWorkflowPlan(user, params);
       },
     };
   };

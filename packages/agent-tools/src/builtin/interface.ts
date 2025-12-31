@@ -173,20 +173,24 @@ export interface ReflyService {
   // Workflow plan management
   generateWorkflowPlan: (
     user: User,
-    data: WorkflowPlan,
-    copilotSessionId: string,
-    resultId: string,
-    resultVersion: number,
+    params: {
+      data: WorkflowPlan;
+      copilotSessionId: string;
+      resultId: string;
+      resultVersion: number;
+    },
   ) => Promise<WorkflowPlanRecord>;
   patchWorkflowPlan: (
     user: User,
-    planId: string,
-    operations: WorkflowPatchOperation[],
-    resultId: string,
-    resultVersion: number,
+    params: {
+      planId: string;
+      operations: WorkflowPatchOperation[];
+      resultId: string;
+      resultVersion: number;
+    },
   ) => Promise<WorkflowPlanRecord>;
   getLatestWorkflowPlan: (
     user: User,
-    copilotSessionId: string,
+    params: { copilotSessionId: string },
   ) => Promise<WorkflowPlanRecord | null>;
 }

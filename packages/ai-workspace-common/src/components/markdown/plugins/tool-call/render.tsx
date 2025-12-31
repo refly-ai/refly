@@ -1,11 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DriveFile } from '@refly/openapi-schema';
+import type { DriveFile, WorkflowPlan } from '@refly/openapi-schema';
 
 import { MarkdownMode } from '../../types';
 import { ToolCallStatus, parseToolCallStatus } from './types';
 import { CopilotWorkflowPlan } from './copilot-workflow-plan';
-import { WorkflowPlan } from '@refly/canvas-common';
 import { safeParseJSON } from '@refly/utils/parse';
 import { InternalToolRenderer } from './internal-tool-renderers';
 import { ProductCard } from './product-card';
@@ -232,8 +231,9 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     fetchedData?.data?.result?.updatedAt,
   ]);
 
-  const isCopilotGenerateWorkflow = toolsetKey === 'copilot' && toolName === 'generate_workflow';
-  if (isCopilotGenerateWorkflow) {
+  const isCopilotWorkflowOp =
+    toolsetKey === 'copilot' && (toolName === 'generate_workflow' || toolName === 'patch_workflow');
+  if (isCopilotWorkflowOp) {
     const resultStr = props['data-tool-result'] ?? '{}';
     const structuredArgs = safeParseJSON(resultStr)?.data as WorkflowPlan;
 

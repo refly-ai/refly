@@ -1,7 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService, LockReleaseFn } from '../common/redis.service';
-import { WorkflowPlan, WorkflowPlanRecord } from '@refly/openapi-schema';
+import {
+  GetWorkflowPlanDetailData,
+  WorkflowPlan,
+  WorkflowPlanRecord,
+  User,
+} from '@refly/openapi-schema';
 import { ParamsError } from '@refly/errors';
 import { genWorkflowPlanID, safeParseJSON } from '@refly/utils';
 import { WorkflowPlan as WorkflowPlanPO } from '@prisma/client';
@@ -19,31 +24,40 @@ export class WorkflowPlanService {
   /**
    * Get workflow plan detail by planId
    */
-  async getWorkflowPlanDetail(planId: string): Promise<WorkflowPlan> {
+  async getWorkflowPlanDetail(
+    user: User,
+    params: GetWorkflowPlanDetailData['query'],
+  ): Promise<WorkflowPlan | null> {
+    const { planId, version } = params;
     if (!planId) {
       throw new ParamsError('Plan ID is required');
     }
 
-    const workflowPlanPO = await this.prisma.workflowPlan.findUnique({
-      where: { planId },
+    const workflowPlanPO = await this.prisma.workflowPlan.findFirst({
+      where: { uid: user.uid, planId, version },
+      orderBy: { version: 'desc' },
     });
 
     if (!workflowPlanPO) {
-      throw new ParamsError(`Workflow plan not found: ${planId}`);
+      return null;
     }
 
-    return this.workflowPlanPO2DTO(workflowPlanPO as WorkflowPlanPO);
+    return this.workflowPlanPO2DTO(workflowPlanPO);
   }
 
   /**
    * Generate a new workflow plan
    */
   async generateWorkflowPlan(
-    data: WorkflowPlan,
-    copilotSessionId: string,
-    resultId: string,
-    resultVersion: number,
-  ): Promise<WorkflowPlan> {
+    user: User,
+    params: {
+      data: WorkflowPlan;
+      copilotSessionId: string;
+      resultId: string;
+      resultVersion: number;
+    },
+  ): Promise<WorkflowPlanRecord> {
+    const { data, copilotSessionId, resultId, resultVersion } = params;
     if (!copilotSessionId) {
       throw new ParamsError('Copilot session ID is required');
     }
@@ -61,17 +75,13 @@ export class WorkflowPlanService {
     const newVersion = latestPlan ? latestPlan.version + 1 : 0;
     const planId = genWorkflowPlanID();
 
-    // For the first version, patch is the same as data
-    // For subsequent versions, patch represents changes from previous version
-    const patchData = data;
-
     const workflowPlanPO = await this.prisma.workflowPlan.create({
       data: {
         planId,
+        uid: user.uid,
         title: data.title ?? '',
         version: newVersion,
         data: JSON.stringify(data),
-        patch: JSON.stringify(patchData),
         copilotSessionId,
         resultId,
         resultVersion,
@@ -82,7 +92,7 @@ export class WorkflowPlanService {
       `Generated workflow plan: planId=${planId} version=${newVersion} copilotSessionId=${copilotSessionId}`,
     );
 
-    return this.workflowPlanPO2DTO(workflowPlanPO as WorkflowPlanPO);
+    return this.workflowPlanPO2DTO(workflowPlanPO);
   }
 
   /**
@@ -114,11 +124,15 @@ export class WorkflowPlanService {
    * @param resultVersion - The result version for tracking
    */
   async patchWorkflowPlan(
-    planId: string,
-    operations: WorkflowPatchOperation[],
-    resultId: string,
-    resultVersion: number,
+    user: User,
+    params: {
+      planId: string;
+      operations: WorkflowPatchOperation[];
+      resultId: string;
+      resultVersion: number;
+    },
   ): Promise<WorkflowPlan> {
+    const { planId, operations, resultId, resultVersion } = params;
     if (!planId) {
       throw new ParamsError('Plan ID is required');
     }
@@ -135,8 +149,9 @@ export class WorkflowPlanService {
 
     try {
       // Get the current plan
-      const currentPlan = await this.prisma.workflowPlan.findUnique({
-        where: { planId },
+      const currentPlan = await this.prisma.workflowPlan.findFirst({
+        where: { uid: user.uid, planId },
+        orderBy: { version: 'desc' },
       });
 
       if (!currentPlan) {
@@ -171,6 +186,7 @@ export class WorkflowPlanService {
       const newWorkflowPlanPO = await this.prisma.workflowPlan.create({
         data: {
           planId: currentPlan.planId,
+          uid: currentPlan.uid,
           title: newData.title ?? '',
           version: newVersion,
           data: JSON.stringify(newData),
@@ -194,13 +210,17 @@ export class WorkflowPlanService {
   /**
    * Get the latest version of a workflow plan by copilot session ID
    */
-  async getLatestWorkflowPlan(copilotSessionId: string): Promise<WorkflowPlan | null> {
+  async getLatestWorkflowPlan(
+    user: User,
+    params: { copilotSessionId: string },
+  ): Promise<WorkflowPlan | null> {
+    const { copilotSessionId } = params;
     if (!copilotSessionId) {
       throw new ParamsError('Copilot session ID is required');
     }
 
     const latestPlan = await this.prisma.workflowPlan.findFirst({
-      where: { copilotSessionId },
+      where: { uid: user.uid, copilotSessionId },
       orderBy: { version: 'desc' },
     });
 

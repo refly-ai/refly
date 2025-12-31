@@ -10312,29 +10312,30 @@ export const WorkflowTaskSchema = {
   properties: {
     id: {
       type: 'string',
-      description: 'Workflow task ID',
+      description: 'Unique ID for the task',
     },
     title: {
       type: 'string',
-      description: 'Workflow task title',
+      description: 'Display title for the task',
     },
     prompt: {
       type: 'string',
-      description: 'Workflow task prompt',
+      description: 'The prompt or instruction for this task',
     },
     toolsets: {
       type: 'array',
-      description: 'Workflow task toolsets',
+      description: 'Toolsets selected for this task',
       items: {
         type: 'string',
-        description: 'Workflow task toolset ID',
+        description: 'Toolset ID',
       },
     },
     dependentTasks: {
       type: 'array',
-      description: 'Workflow task dependent task IDs',
+      description: 'Tasks that must be executed before this task',
       items: {
         type: 'string',
+        description: 'Task ID',
       },
     },
   },
@@ -10346,18 +10347,18 @@ export const WorkflowPlanSchema = {
   properties: {
     title: {
       type: 'string',
-      description: 'Workflow plan title',
+      description: 'Title of the workflow plan',
     },
     tasks: {
       type: 'array',
-      description: 'Workflow tasks',
+      description: 'Array of workflow tasks to be executed',
       items: {
         $ref: '#/components/schemas/WorkflowTask',
       },
     },
     variables: {
       type: 'array',
-      description: 'Workflow variables',
+      description: 'Array of variables (aka User inputs) defined for the workflow plan',
       items: {
         $ref: '#/components/schemas/WorkflowVariable',
       },
@@ -10782,8 +10783,7 @@ export const WorkflowVariableSchema = {
     },
     name: {
       type: 'string',
-      description: 'Variable name',
-      example: 'userName',
+      description: 'Variable name used in the workflow',
     },
     value: {
       type: 'array',
@@ -10814,21 +10814,18 @@ export const WorkflowVariableSchema = {
     },
     required: {
       type: 'boolean',
-      description: 'Whether the variable is required',
-      example: true,
+      description: 'Whether the variable is required. Defaults to false.',
     },
     isSingle: {
       type: 'boolean',
       description: 'Whether the variable value is single (not multiple)',
-      example: true,
     },
     options: {
       type: 'array',
       items: {
         type: 'string',
       },
-      description: 'Variable options (only valid when variable type is option)',
-      example: ['张三', '李四'],
+      description: 'Array of options (only valid when variable type is `option`)',
     },
     resourceTypes: {
       type: 'array',

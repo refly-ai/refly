@@ -46,13 +46,12 @@ export class GenerateWorkflow extends AgentBaseTool<CopilotToolParams> {
     }
     try {
       const { reflyService, user } = this.params;
-      const result = await reflyService.generateWorkflowPlan(
-        user,
-        normalizeWorkflowPlan(parsed.data!),
-        config.configurable?.copilotSessionId,
-        config.configurable?.resultId,
-        config.configurable?.version,
-      );
+      const result = await reflyService.generateWorkflowPlan(user, {
+        data: normalizeWorkflowPlan(parsed.data!),
+        copilotSessionId: config.configurable?.copilotSessionId!,
+        resultId: config.configurable?.resultId,
+        resultVersion: config.configurable?.version,
+      });
 
       return {
         status: 'success',
@@ -130,7 +129,7 @@ Notes:
           };
         }
 
-        const latestPlan = await reflyService.getLatestWorkflowPlan(user, copilotSessionId);
+        const latestPlan = await reflyService.getLatestWorkflowPlan(user, { copilotSessionId });
         if (!latestPlan) {
           return {
             status: 'error',
@@ -141,13 +140,12 @@ Notes:
         planId = latestPlan.planId;
       }
 
-      const result = await reflyService.patchWorkflowPlan(
-        user,
-        planId!,
-        input.operations,
-        config.configurable?.resultId,
-        config.configurable?.version,
-      );
+      const result = await reflyService.patchWorkflowPlan(user, {
+        planId: planId!,
+        operations: input.operations,
+        resultId: config.configurable?.resultId!,
+        resultVersion: config.configurable?.version!,
+      });
 
       return {
         status: 'success',
