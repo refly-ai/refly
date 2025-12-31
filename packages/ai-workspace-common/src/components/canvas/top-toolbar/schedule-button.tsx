@@ -477,22 +477,39 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
           }
           placement="top"
         >
-          <div
-            className={cn(
-              'flex items-center gap-2 p-1 rounded-lg transition-colors',
-              disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-refly-tertiary-hover',
-            )}
-            onClick={handleButtonClick}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-          >
-            <LuAlarmClock
-              className={cn(
-                'text-lg hover:text-teal-600 transition-colors',
-                disabled ? 'opacity-50' : '',
-                isScheduled ? 'text-teal-600' : 'text-gray-600 dark:text-gray-400',
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <div
+                className={cn(
+                  'rounded-lg p-1.5 transition-colors flex items-center justify-center',
+                  disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-refly-tertiary-hover',
+                )}
+                onClick={handleButtonClick}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+              >
+                <LuAlarmClock
+                  className={cn(
+                    'text-lg transition-colors',
+                    disabled ? 'opacity-50' : '',
+                    'text-gray-600 dark:text-gray-400',
+                  )}
+                />
+              </div>
+              {schedule && (
+                <div className="absolute -bottom-0 -right-1">
+                  <span
+                    className={`px-0.5 py-0.5 flex items-center text-[8px] font-bold leading-[8px] rounded-sm ${
+                      isScheduled
+                        ? 'bg-refly-primary-default text-refly-bg-body-z0'
+                        : 'bg-refly-fill-hover text-refly-text-3'
+                    }`}
+                  >
+                    {isScheduled ? t('schedule.status.on') : t('schedule.status.off')}
+                  </span>
+                </div>
               )}
-            />
+            </div>
             <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
               {!hasLoadedInitially && isLoadingScheduleCount ? (
                 <div className="flex items-center gap-1">
