@@ -546,7 +546,12 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
           <Button key="cancel" onClick={() => setScheduleLimitModalVisible(false)}>
             {t('common.cancel') || 'Cancel'}
           </Button>,
-          <Button key="view-schedules" type="primary" onClick={handleViewSchedulesClick}>
+          <Button
+            key="view-schedules"
+            type="primary"
+            className="view-schedules-btn"
+            onClick={handleViewSchedulesClick}
+          >
             {t('schedule.viewSchedules') || 'View Schedules'}
           </Button>,
         ]}

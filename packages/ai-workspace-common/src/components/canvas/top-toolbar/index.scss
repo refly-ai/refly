@@ -108,7 +108,7 @@
     }
 
     // Specific targeting for the view schedules button
-    button[key="view-schedules"],
+    .view-schedules-btn,
     .ant-btn:last-child.ant-btn-primary {
       background-color: var(--refly-text-0) !important;
       border-color: var(--refly-text-0) !important;
