@@ -9,7 +9,6 @@ import {
   useGetCreditUsageByCanvasId,
 } from '@refly-packages/ai-workspace-common/queries/queries';
 import { GenericToolset, RawCanvasData, ToolsetDefinition, UserTool } from '@refly/openapi-schema';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
 import IssueImage from '@refly-packages/ai-workspace-common/assets/issue.svg';
 import React from 'react';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
@@ -406,25 +405,6 @@ const RequiredInputBlock = React.memo(
 
 RequiredInputBlock.displayName = 'RequiredInputBlock';
 
-const EmptyContent = (props: { searchTerm: string }) => {
-  const { searchTerm } = props;
-  const { t } = useTranslation();
-  return (
-    <div className="flex flex-col items-center py-8">
-      <img
-        src={EmptyImage}
-        className="w-[120px] h-[120px] object-cover"
-        alt="no tools dependency"
-      />
-      <div className="text-center text-refly-text-2 text-sm">
-        {searchTerm
-          ? t('canvas.workflowDepencency.noSearchResults')
-          : t('canvas.workflowDepencency.noToolsDependency')}
-      </div>
-    </div>
-  );
-};
-
 const NoIssueContent = () => {
   const { t } = useTranslation();
   return (
@@ -740,13 +720,6 @@ const ToolsDependencyContent = React.memo(
             {currentTools.length === 0 &&
               !isCreditInsufficient &&
               requiredInputsCheck.count === 0 && <NoIssueContent />}
-
-            {/* Show empty content only if no tools and no other issues */}
-            {totalCount === 0 &&
-              currentTools.length === 0 &&
-              (isCreditInsufficient || requiredInputsCheck.count > 0) && (
-                <EmptyContent searchTerm="" />
-              )}
           </div>
         )}
 
