@@ -2306,6 +2306,7 @@ model WorkflowSchedule {
   @@index([uid, isEnabled, deletedAt])
   @@index([isEnabled, nextRunAt, deletedAt])
   @@index([canvasId, deletedAt])
+  @@index([uid, deletedAt, createdAt(sort: Desc)]) // List query optimization
   @@map("workflow_schedules")
 }
 
@@ -2377,10 +2378,11 @@ model WorkflowScheduleRecord {
 
   // ========== Indexes ==========
   @@index([scheduleId, scheduledAt])
-  @@index([uid, status, createdAt])
-  @@index([status, createdAt])
+  @@index([uid, status, completedAt(sort: Desc)]) // Priority calculation optimization (replaced createdAt)
+  @@index([uid, status, scheduledAt(sort: Desc)]) // List query optimization
+  @@index([status, createdAt]) // Keep for other queries
   @@index([workflowExecutionId])
   @@index([priority, scheduledAt])
-  @@index([sourceCanvasId])
+  @@index([sourceCanvasId, status, scheduledAt(sort: Desc)]) // Enhanced sourceCanvasId filter
   @@map("workflow_schedule_records")
 }
