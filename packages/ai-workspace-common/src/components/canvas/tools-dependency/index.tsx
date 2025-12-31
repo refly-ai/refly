@@ -10,6 +10,7 @@ import {
 } from '@refly-packages/ai-workspace-common/queries/queries';
 import { GenericToolset, RawCanvasData, ToolsetDefinition, UserTool } from '@refly/openapi-schema';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import IssueImage from '@refly-packages/ai-workspace-common/assets/issue.svg';
 import React from 'react';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import cn from 'classnames';
@@ -424,6 +425,23 @@ const EmptyContent = (props: { searchTerm: string }) => {
   );
 };
 
+const NoIssueContent = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center">
+      <img src={IssueImage} className="w-[207px] h-[207px] object-cover" alt="workflow issues" />
+      <div className="text-center space-y-1">
+        <div className="text-refly-text-0 text-sm font-medium">
+          {t('canvas.workflowDepencency.youAreAwesome')}
+        </div>
+        <div className="text-refly-text-2 text-sm">
+          {t('canvas.workflowDepencency.everythingIsSet')}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ToolsDependencyContent = React.memo(
   ({
     uninstalledCount,
@@ -718,11 +736,17 @@ const ToolsDependencyContent = React.memo(
               </div>
             )}
 
+            {/* Show success content when no issues exist */}
+            {currentTools.length === 0 &&
+              !isCreditInsufficient &&
+              requiredInputsCheck.count === 0 && <NoIssueContent />}
+
             {/* Show empty content only if no tools and no other issues */}
             {totalCount === 0 &&
-              !isCreditInsufficient &&
-              !canvasId &&
-              requiredInputsCheck.count === 0 && <EmptyContent searchTerm="" />}
+              currentTools.length === 0 &&
+              (isCreditInsufficient || requiredInputsCheck.count > 0) && (
+                <EmptyContent searchTerm="" />
+              )}
           </div>
         )}
 
@@ -1183,10 +1207,7 @@ export const ToolsDependency = ({
     handlePopoverOpenChange(false);
   }, [handlePopoverOpenChange]);
 
-  // Only show the tools dependency button if there are uninstalled tools, failed nodes, or insufficient credits
-  if (totalIssuesCount === 0) {
-    return null;
-  }
+  // Always show the tools dependency button, but only show badge count when there are issues
 
   return (
     <Popover
@@ -1223,7 +1244,7 @@ export const ToolsDependency = ({
       arrow={false}
     >
       <div className="flex items-center">
-        <Badge count={totalIssuesCount} size="small" offset={[-3, 3]}>
+        <Badge count={totalIssuesCount > 0 ? totalIssuesCount : 0} size="small" offset={[-3, 3]}>
           <Button
             type="text"
             icon={

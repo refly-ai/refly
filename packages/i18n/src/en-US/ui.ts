@@ -1984,6 +1984,8 @@ const translations = {
       mcpUnavailable: 'Tool is unavailable',
       notEnoughCredits: 'Not enough credits to run',
       requiredInputNotFilled: 'Required input not filled: {{input_name}}',
+      youAreAwesome: 'You are awesome!',
+      everythingIsSet: 'Everything is set for a smooth run',
     },
   },
   resource: {
@@ -3685,7 +3687,10 @@ const translations = {
         price: 'Free forever',
         buttonText: 'Continue for free',
         buttonTextDowngrade: 'Downgrade to Free',
-        features: ['Daily new credits\n100 credits'],
+        features: [
+          'Daily new credits\n100 credits',
+          'Schedule up to 1 workflow to run automatically',
+        ],
       },
       pro: {
         title: 'PRO',
@@ -3698,6 +3703,8 @@ const translations = {
           'Daily new credits: 100 points',
           'Monthly credits: 2,000 points',
           'New subscribers receive an extra 2,000 bonus credits',
+          'Schedule up to 20 workflow to run automatically',
+          'Priority scheduling for faster execution',
           'Access to a vast library of tools',
           {
             name: 'Credit-free tools',

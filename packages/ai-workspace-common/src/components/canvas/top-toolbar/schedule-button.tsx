@@ -248,8 +248,6 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
           timezone: userTimezone,
           isEnabled: enabled,
         };
-
-        const _newScheduleId = schedule?.scheduleId;
         if (schedule?.scheduleId) {
           await updateScheduleMutation.mutateAsync({
             body: {
@@ -258,7 +256,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
             },
           });
         } else {
-          const _result = await createScheduleMutation.mutateAsync({
+          await createScheduleMutation.mutateAsync({
             body: requestData,
           });
         }
