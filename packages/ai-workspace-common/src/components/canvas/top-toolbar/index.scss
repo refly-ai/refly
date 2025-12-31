@@ -86,25 +86,3 @@
   }
 }
 
-// Schedule popover dark mode fix for cost info text
-.schedule-popover {
-  .ant-popover-inner-content {
-    // Fix cost info text color in dark mode
-    .text-gray-500 {
-      @media (prefers-color-scheme: dark) {
-        color: #9ca3af !important; // gray-400 equivalent
-      }
-    }
-
-    // Fix upgrade button text color in dark mode
-    .ant-btn-text {
-      @media (prefers-color-scheme: dark) {
-        color: #d1d5db !important; // gray-300 equivalent
-
-        &:hover {
-          color: #f3f4f6 !important; // gray-100 equivalent
-        }
-      }
-    }
-  }
-}

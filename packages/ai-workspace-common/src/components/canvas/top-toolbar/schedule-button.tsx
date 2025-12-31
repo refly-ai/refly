@@ -61,6 +61,8 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
 
   // State for total enabled schedules count
   const [totalEnabledSchedules, setTotalEnabledSchedules] = useState(0);
+  const [isLoadingScheduleCount, setIsLoadingScheduleCount] = useState(false);
+  const [hasLoadedInitially, setHasLoadedInitially] = useState(false);
 
   // Calculate schedule quota based on plan type
   const scheduleQuota = useMemo(() => {
@@ -103,6 +105,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   // Fetch all enabled schedules count
   const fetchAllEnabledSchedulesCount = useCallback(async () => {
     try {
+      setIsLoadingScheduleCount(true);
       const result = await listSchedulesMutation.mutateAsync({
         body: {
           // Don't pass canvasId to get all schedules for the user
@@ -127,6 +130,9 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
     } catch (error) {
       console.error('Failed to fetch all schedules count:', error);
       setTotalEnabledSchedules(0);
+    } finally {
+      setIsLoadingScheduleCount(false);
+      setHasLoadedInitially(true);
     }
   }, []); // Remove listSchedulesMutation from dependencies to prevent infinite loop
 
@@ -243,7 +249,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
           isEnabled: enabled,
         };
 
-        let newScheduleId = schedule?.scheduleId;
+        const _newScheduleId = schedule?.scheduleId;
         if (schedule?.scheduleId) {
           await updateScheduleMutation.mutateAsync({
             body: {
@@ -252,28 +258,42 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
             },
           });
         } else {
-          const result = await createScheduleMutation.mutateAsync({
+          const _result = await createScheduleMutation.mutateAsync({
             body: requestData,
           });
-          // Extract new scheduleId from create response
-          const responseData = (result as { data?: { scheduleId?: string } })?.data;
-          newScheduleId = responseData?.scheduleId;
         }
 
-        // Update local schedule state to keep it in sync
-        // This ensures the popover shows correct data when reopened
-        if (newScheduleId) {
-          setSchedule((prev) => ({
-            ...prev,
-            scheduleId: newScheduleId,
-            scheduleConfig: scheduleConfigStr,
-            cronExpression,
-            timezone: userTimezone,
-            isEnabled: enabled,
-          }));
-        }
+        // Refresh the total count after saving
+        // Call it directly to avoid dependency loop issues
+        try {
+          setIsLoadingScheduleCount(true);
+          const countResult = await listSchedulesMutation.mutateAsync({
+            body: {
+              page: 1,
+              pageSize: 1000,
+            },
+          });
 
-        await fetchAllEnabledSchedulesCount();
+          const response = countResult as ListSchedulesResponse;
+          let schedules: any[] = [];
+
+          if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+            const nestedData = (response.data as any).data;
+            schedules = nestedData?.items || [];
+          } else if (Array.isArray(response.data)) {
+            schedules = response.data;
+          }
+
+          const enabledCount = schedules.filter(
+            (schedule: any) => schedule.isEnabled === true,
+          ).length;
+          setTotalEnabledSchedules(enabledCount);
+        } catch (countError) {
+          console.error('Failed to refresh schedule count:', countError);
+        } finally {
+          setIsLoadingScheduleCount(false);
+          setHasLoadedInitially(true);
+        }
       } catch (error) {
         console.error('Failed to auto save schedule:', error);
         message.error(t('schedule.saveFailed') || 'Failed to save schedule');
@@ -288,7 +308,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
       monthDays,
       createScheduleMutation,
       updateScheduleMutation,
-      fetchAllEnabledSchedulesCount,
+      fetchSchedule,
       t,
     ],
   );
@@ -476,7 +496,15 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
               )}
             />
             <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              {totalEnabledSchedules}/{scheduleQuota}
+              {!hasLoadedInitially && isLoadingScheduleCount ? (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                  <span>/</span>
+                  <div className="w-2 h-3 bg-gray-300 dark:bg-gray-600 rounded" />
+                </div>
+              ) : (
+                `${totalEnabledSchedules}/${scheduleQuota}`
+              )}
             </span>
           </div>
         </Tooltip>

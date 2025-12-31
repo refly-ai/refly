@@ -569,12 +569,24 @@ const ToolsDependencyContent = React.memo(
       <div className="flex flex-col gap-3 md:gap-4 w-[calc(100vw-32px)] max-w-[480px] p-4 md:p-6">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1 min-w-0 flex-1">
-              <div className="text-base md:text-lg font-semibold truncate">
-                {t('canvas.workflowDepencency.title')}
+            <div className="flex flex-col min-w-0 flex-1">
+              <div className="flex items-center">
+                <div className="text-base md:text-lg font-semibold truncate">
+                  {t('canvas.workflowDepencency.title')}
+                </div>
+                {uninstalledCount > 0 && isLogin && (
+                  <span className="text-refly-text-0 text-base font-bold">
+                    ({uninstalledCount})
+                  </span>
+                )}
               </div>
-              {uninstalledCount > 0 && isLogin && (
-                <span className="text-refly-text-0 text-base font-bold">({uninstalledCount})</span>
+              {/* Subtitle - only show when there are issues to fix */}
+              {(uninstalledCount > 0 ||
+                isCreditInsufficient ||
+                (canvasId && requiredInputsCheck.count > 0)) && (
+                <div className="text-refly-text-2 text-xs font-normal">
+                  {t('canvas.workflowDepencency.subtitle')}
+                </div>
               )}
             </div>
             <Button
@@ -584,15 +596,6 @@ const ToolsDependencyContent = React.memo(
               className="flex-shrink-0"
             />
           </div>
-
-          {/* Subtitle - only show when there are issues to fix */}
-          {(uninstalledCount > 0 ||
-            isCreditInsufficient ||
-            (canvasId && requiredInputsCheck.count > 0)) && (
-            <div className="text-refly-text-2 text-xs font-normal">
-              {t('canvas.workflowDepencency.subtitle')}
-            </div>
-          )}
         </div>
 
         {isLoading ? null : (
