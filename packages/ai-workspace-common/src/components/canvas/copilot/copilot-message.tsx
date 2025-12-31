@@ -13,10 +13,12 @@ import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
+import { useUpdateCanvasTitle } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { CanvasNode } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
+import { useCanvasStoreShallow } from '@refly/stores';
 
 interface CopilotMessageProps {
   result: ActionResult;
@@ -60,6 +62,12 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
 
   const { canvasId } = useCanvasContext();
   const { invokeAction } = useInvokeAction();
+
+  const { canvasTitle } = useCanvasStoreShallow((state) => ({
+    canvasTitle: state.canvasTitle[canvasId],
+  }));
+
+  const { updateTitle } = useUpdateCanvasTitle(canvasId, canvasTitle ?? '');
 
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
@@ -149,6 +157,10 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     setVariables(variables ?? [], { archiveOldFiles: true });
     setShowWorkflowRun(true);
 
+    if (!canvasTitle && finalPlan.title) {
+      updateTitle(finalPlan.title);
+    }
+
     for (const node of nodes) {
       if (node.type === 'skillResponse') {
         logEvent('create_agent_node', Date.now(), {
@@ -176,6 +188,9 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     defaultAgentModel,
     onLayout,
     logEvent,
+    canvasTitle,
+    query,
+    updateTitle,
   ]);
 
   const handleRetry = useCallback(() => {
