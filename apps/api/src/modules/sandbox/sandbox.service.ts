@@ -1,96 +1,138 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { RedisService } from '../common/redis.service';
-import { v4 as uuidv4 } from 'uuid';
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PinoLogger } from 'nestjs-pino';
+import {
+  User,
+  SandboxExecuteRequest,
+  SandboxExecuteResponse,
+  DriveFile,
+} from '@refly/openapi-schema';
+import { SandboxClient } from './sandbox.client';
+import { DriveService } from '../drive/drive.service';
+import { SandboxExecutionContext, S3Config } from './sandbox.schema';
+import { SandboxCanvasIdRequiredError } from './sandbox.exception';
+import { SandboxResponseFactory } from './sandbox.response';
+import { guard } from '../../utils/guard';
 
-interface ExecuteRequest {
-  requestId: string;
-  language: string;
-  code: string;
-  timeout?: number;
-}
-
-interface ExecuteResponse {
-  requestId: string;
-  success: boolean;
-  stdout?: string;
-  stderr?: string;
-  error?: string;
-  exitCode?: number;
-  executionTime?: number;
+interface ExecutionContext {
+  uid: string;
+  canvasId: string;
+  s3DrivePath: string;
+  parentResultId?: string;
+  version?: number;
 }
 
 @Injectable()
 export class SandboxService {
-  private readonly logger = new Logger(SandboxService.name);
-  private readonly REQUEST_CHANNEL = 'sandbox:execute:request';
-  private readonly RESPONSE_CHANNEL_PREFIX = 'sandbox:execute:response:';
-  private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
+  constructor(
+    private readonly config: ConfigService,
+    private readonly client: SandboxClient,
+    private readonly driveService: DriveService,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(SandboxService.name);
+    void this.config; // Suppress unused warning - used by @Config decorators
+  }
 
-  constructor(private redisService: RedisService) {}
-
-  async execute(language: string, code: string, timeout?: number): Promise<ExecuteResponse> {
-    const requestId = uuidv4();
-    const responseChannel = `${this.RESPONSE_CHANNEL_PREFIX}${requestId}`;
-    const timeoutMs = timeout || this.DEFAULT_TIMEOUT;
-
-    const request: ExecuteRequest = {
-      requestId,
-      language,
-      code,
-      timeout: Math.floor(timeoutMs / 1000), // Convert to seconds for worker
+  /** Uses internal minio config since worker runs in the same network */
+  private getS3Config(): S3Config {
+    const minioConfig = this.config.get('objectStorage.minio.internal');
+    return {
+      endPoint: minioConfig.endPoint,
+      port: minioConfig.port,
+      useSSL: minioConfig.useSSL,
+      accessKey: minioConfig.accessKey,
+      secretKey: minioConfig.secretKey,
+      bucket: minioConfig.bucket,
+      region: minioConfig.region,
     };
+  }
 
-    this.logger.log(`Executing code: requestId=${requestId}, language=${language}`);
+  async execute(user: User, request: SandboxExecuteRequest): Promise<SandboxExecuteResponse> {
+    const startTime = Date.now();
 
     try {
-      // Get Redis client and create subscriber
-      const client = this.redisService.getClient();
-      const subscriber = client.duplicate();
+      const canvasId = guard
+        .notEmpty(request.context?.canvasId)
+        .orThrow(() => SandboxCanvasIdRequiredError.create());
 
-      // Subscribe to response channel
-      await subscriber.subscribe(responseChannel);
+      const storagePath = this.driveService.buildS3DrivePath(user.uid, canvasId);
 
-      // Send request
-      const payload = JSON.stringify(request);
-      await client.publish(this.REQUEST_CHANNEL, payload);
-      this.logger.log(`Request published: requestId=${requestId}`);
+      const context: SandboxExecutionContext = {
+        uid: user.uid,
+        canvasId: canvasId,
+        s3Config: this.getS3Config(),
+        s3DrivePath: storagePath,
+        timeout: 60000, // 60 seconds default
+        parentResultId: request.context?.parentResultId,
+        version: request.context?.version,
+      };
 
-      // Wait for response with timeout
-      const response = await this.waitForResponse(subscriber, responseChannel, timeoutMs);
+      const workerResponse = await this.client.executeCode(request.params, context);
 
-      // Cleanup
-      await subscriber.unsubscribe(responseChannel);
-      await subscriber.quit();
+      let files: DriveFile[] = [];
+      if (workerResponse.status === 'success' && workerResponse.data?.files?.length) {
+        files = await this.registerFiles(
+          {
+            uid: user.uid,
+            canvasId: canvasId,
+            s3DrivePath: storagePath,
+            parentResultId: request.context?.parentResultId,
+            version: request.context?.version,
+          },
+          workerResponse.data.files.map((f) => f.name),
+        );
+      }
 
-      return response;
+      const executionTime = Date.now() - startTime;
+
+      return workerResponse.status === 'failed'
+        ? SandboxResponseFactory.failed(workerResponse)
+        : SandboxResponseFactory.success(workerResponse, files, executionTime);
     } catch (error) {
-      this.logger.error(`Execution failed: requestId=${requestId}`, error.stack);
-      throw error;
+      this.logger.error({
+        error: error.message,
+        stack: error.stack,
+        canvasId: request.context?.canvasId,
+        uid: user.uid,
+      });
+
+      return SandboxResponseFactory.error(error);
     }
   }
 
-  private waitForResponse(
-    subscriber: any,
-    channel: string,
-    timeoutMs: number,
-  ): Promise<ExecuteResponse> {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error(`Execution timeout after ${timeoutMs}ms`));
-      }, timeoutMs);
-
-      subscriber.on('message', (ch: string, message: string) => {
-        if (ch === channel) {
-          clearTimeout(timer);
-          try {
-            const response = JSON.parse(message) as ExecuteResponse;
-            this.logger.log(`Response received: requestId=${response.requestId}`);
-            resolve(response);
-          } catch (error) {
-            reject(new Error(`Failed to parse response: ${error.message}`));
-          }
-        }
-      });
+  private async registerFiles(
+    context: ExecutionContext,
+    fileNames: string[],
+  ): Promise<DriveFile[]> {
+    this.logger.info({
+      context,
+      fileNames,
+      filesCount: fileNames.length,
     });
+
+    if (fileNames.length === 0) return [];
+
+    const user = { uid: context.uid } as User;
+
+    const files = await this.driveService.batchCreateDriveFiles(user, {
+      canvasId: context.canvasId,
+      files: fileNames.map((name: string) => ({
+        canvasId: context.canvasId,
+        name,
+        source: 'agent' as const,
+        storageKey: `${context.s3DrivePath}/${name}`,
+        resultId: context.parentResultId,
+        resultVersion: context.version,
+      })),
+    });
+
+    this.logger.info({
+      context,
+      filesCount: files.length,
+      registered: true,
+    });
+
+    return files;
   }
 }

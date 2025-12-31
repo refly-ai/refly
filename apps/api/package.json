@@ -85,7 +85,7 @@
     "@scalebox/sdk": "3.7.0",
     "@sentry/cli": "^2.31.2",
     "@sentry/node": "^7.113.0",
-    "@sentry/profiling-node": "^7.113.0",
+    "@sentry/profiling-node": "^7.120.3",
     "@superfaceai/passport-twitter-oauth2": "^1.2.4",
     "apache-arrow": "^20.0.0",
     "argon2": "^0.41.1",
