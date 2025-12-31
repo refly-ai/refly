@@ -3230,6 +3230,7 @@ const translations = {
       internalTool: {
         readFile: 'Reading',
         listFiles: 'Browsing file list',
+        copilotSummary: 'Reading workflow summary',
       },
     },
   },

@@ -3329,6 +3329,7 @@ const translations = {
       internalTool: {
         readFile: '阅读',
         listFiles: '翻阅文件列表',
+        copilotSummary: '阅读工作流摘要',
       },
     },
     artifact: {

@@ -89,7 +89,7 @@ export const ToolMessageCard = memo(({ message }: ToolMessageCardProps) => {
 
   return (
     <div
-      className="my-2"
+      className="my-1"
       style={{
         contentVisibility: 'auto',
         containIntrinsicSize: '0 300px',
@@ -131,7 +131,7 @@ export const MessageList = memo(({ result, stepStatus, handleRetry }: MessageLis
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col my-2">
       {messages.map((message) => {
         if (message.type === 'ai') {
           return (
