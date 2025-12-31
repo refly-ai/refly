@@ -4332,6 +4332,7 @@ const translations = {
     deactivateSuccess: '定时任务停用成功',
     saveFailed: '保存定时任务失败',
     deleteFailed: '删除定时任务失败',
+    viewSchedules: '查看定时任务',
     limitReached: {
       title: '定时任务数量已达上限',
       message:

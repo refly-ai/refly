@@ -4301,6 +4301,7 @@ const translations = {
     deactivateSuccess: 'Schedule deactivated successfully',
     saveFailed: 'Failed to save schedule',
     deleteFailed: 'Failed to delete schedule',
+    viewSchedules: 'View Schedules',
     limitReached: {
       title: 'Schedule Limit Reached',
       message:
