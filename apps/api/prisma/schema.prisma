@@ -2303,9 +2303,7 @@ model WorkflowSchedule {
   /// Ensure one schedule per canvas per user (prevents concurrent creation race condition)
   @@unique([canvasId, uid])
   // ========== Indexes ==========
-  @@index([uid, isEnabled, deletedAt])
-  @@index([isEnabled, nextRunAt, deletedAt])
-  @@index([canvasId, deletedAt])
+  @@index([isEnabled, deletedAt, nextRunAt])
   @@index([uid, deletedAt, createdAt(sort: Desc)]) // List query optimization
   @@map("workflow_schedules")
 }
@@ -2380,9 +2378,5 @@ model WorkflowScheduleRecord {
   @@index([scheduleId, scheduledAt])
   @@index([uid, status, completedAt(sort: Desc)]) // Priority calculation optimization (replaced createdAt)
   @@index([uid, status, scheduledAt(sort: Desc)]) // List query optimization
-  @@index([status, createdAt]) // Keep for other queries
-  @@index([workflowExecutionId])
-  @@index([priority, scheduledAt])
-  @@index([sourceCanvasId, status, scheduledAt(sort: Desc)]) // Enhanced sourceCanvasId filter
   @@map("workflow_schedule_records")
 }
