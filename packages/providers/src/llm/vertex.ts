@@ -79,3 +79,14 @@ export class EnhancedChatVertexAI extends ChatVertexAI {
     );
   }
 }
+
+/**
+ * Check if the given LLM is a Gemini model (Vertex AI)
+ * This includes ChatVertexAI and all its subclasses (e.g., EnhancedChatVertexAI)
+ *
+ * @param llm - The language model to check
+ * @returns true if the model is a Gemini/Vertex AI model
+ */
+export function isGeminiModel(llm: any): boolean {
+  return llm instanceof ChatVertexAI;
+}

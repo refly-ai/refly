@@ -154,3 +154,4 @@ export const getChatModel = (
 };
 
 export { BaseChatModel };
+export { isGeminiModel } from './vertex';
