@@ -146,6 +146,8 @@ const translations = {
           '每日新增积分：100点',
           '每月积分：2,000点',
           '新订阅用户额外获得 2,000 积分',
+          '最多可设置 3 个工作流定时运行',
+          '优先定时调度，享受更快的执行速度',
           '访问丰富的工具库',
           {
             name: '免积分使用工具',
@@ -2113,6 +2115,8 @@ const translations = {
       mcpUnavailable: '工具当前不可用',
       notEnoughCredits: '积分不足，无法运行',
       requiredInputNotFilled: '必填输入项未填写: {{input_name}}',
+      youAreAwesome: 'You are awesome!',
+      everythingIsSet: 'Everything is set for a smooth run',
     },
   },
   resource: {

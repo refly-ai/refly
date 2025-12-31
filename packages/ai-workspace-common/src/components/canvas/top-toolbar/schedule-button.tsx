@@ -61,6 +61,8 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
 
   // State for total enabled schedules count
   const [totalEnabledSchedules, setTotalEnabledSchedules] = useState(0);
+  const [isLoadingScheduleCount, setIsLoadingScheduleCount] = useState(false);
+  const [hasLoadedInitially, setHasLoadedInitially] = useState(false);
 
   // Calculate schedule quota based on plan type
   const scheduleQuota = useMemo(() => {
@@ -103,6 +105,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   // Fetch all enabled schedules count
   const fetchAllEnabledSchedulesCount = useCallback(async () => {
     try {
+      setIsLoadingScheduleCount(true);
       const result = await listSchedulesMutation.mutateAsync({
         body: {
           // Don't pass canvasId to get all schedules for the user
@@ -127,6 +130,9 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
     } catch (error) {
       console.error('Failed to fetch all schedules count:', error);
       setTotalEnabledSchedules(0);
+    } finally {
+      setIsLoadingScheduleCount(false);
+      setHasLoadedInitially(true);
     }
   }, []); // Remove listSchedulesMutation from dependencies to prevent infinite loop
 
@@ -242,8 +248,6 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
           timezone: userTimezone,
           isEnabled: enabled,
         };
-
-        let newScheduleId = schedule?.scheduleId;
         if (schedule?.scheduleId) {
           await updateScheduleMutation.mutateAsync({
             body: {
@@ -252,28 +256,42 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
             },
           });
         } else {
-          const result = await createScheduleMutation.mutateAsync({
+          await createScheduleMutation.mutateAsync({
             body: requestData,
           });
-          // Extract new scheduleId from create response
-          const responseData = (result as { data?: { scheduleId?: string } })?.data;
-          newScheduleId = responseData?.scheduleId;
         }
 
-        // Update local schedule state to keep it in sync
-        // This ensures the popover shows correct data when reopened
-        if (newScheduleId) {
-          setSchedule((prev) => ({
-            ...prev,
-            scheduleId: newScheduleId,
-            scheduleConfig: scheduleConfigStr,
-            cronExpression,
-            timezone: userTimezone,
-            isEnabled: enabled,
-          }));
-        }
+        // Refresh the total count after saving
+        // Call it directly to avoid dependency loop issues
+        try {
+          setIsLoadingScheduleCount(true);
+          const countResult = await listSchedulesMutation.mutateAsync({
+            body: {
+              page: 1,
+              pageSize: 1000,
+            },
+          });
 
-        await fetchAllEnabledSchedulesCount();
+          const response = countResult as ListSchedulesResponse;
+          let schedules: any[] = [];
+
+          if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+            const nestedData = (response.data as any).data;
+            schedules = nestedData?.items || [];
+          } else if (Array.isArray(response.data)) {
+            schedules = response.data;
+          }
+
+          const enabledCount = schedules.filter(
+            (schedule: any) => schedule.isEnabled === true,
+          ).length;
+          setTotalEnabledSchedules(enabledCount);
+        } catch (countError) {
+          console.error('Failed to refresh schedule count:', countError);
+        } finally {
+          setIsLoadingScheduleCount(false);
+          setHasLoadedInitially(true);
+        }
       } catch (error) {
         console.error('Failed to auto save schedule:', error);
         message.error(t('schedule.saveFailed') || 'Failed to save schedule');
@@ -288,7 +306,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
       monthDays,
       createScheduleMutation,
       updateScheduleMutation,
-      fetchAllEnabledSchedulesCount,
+      fetchSchedule,
       t,
     ],
   );
@@ -459,24 +477,49 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
           }
           placement="top"
         >
-          <div
-            className={cn(
-              'flex items-center gap-2 p-1 rounded-lg transition-colors',
-              disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-refly-tertiary-hover',
-            )}
-            onClick={handleButtonClick}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-          >
-            <LuAlarmClock
-              className={cn(
-                'text-lg hover:text-teal-600 transition-colors',
-                disabled ? 'opacity-50' : '',
-                isScheduled ? 'text-teal-600' : 'text-gray-600 dark:text-gray-400',
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <div
+                className={cn(
+                  'rounded-lg p-1.5 transition-colors flex items-center justify-center',
+                  disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-refly-tertiary-hover',
+                )}
+                onClick={handleButtonClick}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+              >
+                <LuAlarmClock
+                  className={cn(
+                    'text-lg transition-colors',
+                    disabled ? 'opacity-50' : '',
+                    'text-gray-600 dark:text-gray-400',
+                  )}
+                />
+              </div>
+              {schedule && (
+                <div className="absolute -bottom-0 -right-1">
+                  <span
+                    className={`px-0.5 py-0.5 flex items-center text-[8px] font-bold leading-[8px] rounded-sm ${
+                      isScheduled
+                        ? 'bg-refly-primary-default text-refly-bg-body-z0'
+                        : 'bg-refly-fill-hover text-refly-text-3'
+                    }`}
+                  >
+                    {isScheduled ? t('schedule.status.on') : t('schedule.status.off')}
+                  </span>
+                </div>
               )}
-            />
+            </div>
             <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              {totalEnabledSchedules}/{scheduleQuota}
+              {!hasLoadedInitially && isLoadingScheduleCount ? (
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                  <span>/</span>
+                  <div className="w-2 h-3 bg-gray-300 dark:bg-gray-600 rounded" />
+                </div>
+              ) : (
+                `${totalEnabledSchedules}/${scheduleQuota}`
+              )}
             </span>
           </div>
         </Tooltip>

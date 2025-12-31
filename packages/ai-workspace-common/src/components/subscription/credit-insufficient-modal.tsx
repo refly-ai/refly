@@ -488,9 +488,11 @@ export const CreditInsufficientModal = memo(() => {
     fetchVouchers();
   }, [creditInsufficientModalVisible, isLogin, setAvailableVoucher, setVoucherLoading]);
 
-  // If triggered from canvas and user is free, don't show credit packs
+  // If triggered from canvas or schedule and user is free, don't show credit packs
   const isTriggeredFromCanvas = creditInsufficientTriggeredFrom === 'canvas';
-  const shouldShowCreditPacks = !isTriggeredFromCanvas || hasPaidSubscription;
+  const isTriggeredFromSchedule = creditInsufficientTriggeredFrom === 'schedule';
+  const shouldShowCreditPacks =
+    (!isTriggeredFromCanvas && !isTriggeredFromSchedule) || hasPaidSubscription;
 
   // Determine if showing both cards (free user not from canvas) or single card
   const showBothCards = !hasPaidSubscription && shouldShowCreditPacks;
