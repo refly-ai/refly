@@ -193,4 +193,8 @@ export interface ReflyService {
     user: User,
     params: { copilotSessionId: string },
   ) => Promise<WorkflowPlanRecord | null>;
+  getWorkflowPlanById: (
+    user: User,
+    params: { planId: string },
+  ) => Promise<WorkflowPlanRecord | null>;
 }

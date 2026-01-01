@@ -27,7 +27,7 @@ export class WorkflowPlanService {
   async getWorkflowPlanDetail(
     user: User,
     params: GetWorkflowPlanDetailData['query'],
-  ): Promise<WorkflowPlan | null> {
+  ): Promise<WorkflowPlanRecord | null> {
     const { planId, version } = params;
     if (!planId) {
       throw new ParamsError('Plan ID is required');

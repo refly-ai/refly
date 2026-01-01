@@ -8,7 +8,7 @@ import {
   parseWorkflowPlanPatch,
 } from '@refly/canvas-common';
 import { ReflyService } from '../builtin/interface';
-import { User } from '@refly/openapi-schema';
+import { User, WorkflowPlanRecord } from '@refly/openapi-schema';
 import { RunnableConfig } from '@langchain/core/runnables';
 import { truncateContent } from '@refly/utils/token';
 
@@ -219,25 +219,37 @@ Use this tool when you need to:
   }
 
   async _call(
-    _input: z.infer<typeof this.schema>,
+    input: z.infer<typeof this.schema>,
     _: unknown,
     config: RunnableConfig,
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
-      const copilotSessionId = config.configurable?.copilotSessionId;
+      const { planId } = input;
+      let plan: WorkflowPlanRecord | null = null;
 
-      if (!copilotSessionId) {
-        return {
-          status: 'error',
-          data: { error: 'copilotSessionId is required to retrieve the workflow plan' },
-          summary: 'Missing session context',
-        };
+      if (planId) {
+        plan = await reflyService.getWorkflowPlanById(user, { planId });
+        if (!plan) {
+          return {
+            status: 'error',
+            data: { error: `Workflow plan with ID ${planId} not found` },
+            summary: 'Workflow plan not found',
+          };
+        }
+      } else {
+        const copilotSessionId = config.configurable?.copilotSessionId;
+        if (!copilotSessionId) {
+          return {
+            status: 'error',
+            data: { error: 'copilotSessionId is required to retrieve the workflow plan' },
+            summary: 'Missing session context',
+          };
+        }
+        plan = await reflyService.getLatestWorkflowPlan(user, {
+          copilotSessionId,
+        });
       }
-
-      const plan = await reflyService.getLatestWorkflowPlan(user, {
-        copilotSessionId,
-      });
 
       if (!plan) {
         return {
