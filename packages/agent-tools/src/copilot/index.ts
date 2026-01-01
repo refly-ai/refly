@@ -47,11 +47,23 @@ export class GenerateWorkflow extends AgentBaseTool<CopilotToolParams> {
     }
     try {
       const { reflyService, user } = this.params;
+      const { copilotSessionId, resultId, version: resultVersion } = config.configurable ?? {};
+
+      if (!copilotSessionId || !resultId || typeof resultVersion !== 'number') {
+        return {
+          status: 'error',
+          data: {
+            error: `Missing required session context: copilotSessionId=${copilotSessionId}, resultId=${resultId}, resultVersion=${resultVersion}`,
+          },
+          summary: 'Missing session context for generating workflow plan',
+        };
+      }
+
       const result = await reflyService.generateWorkflowPlan(user, {
         data: normalizeWorkflowPlan(parsed.data!),
-        copilotSessionId: config.configurable?.copilotSessionId!,
-        resultId: config.configurable?.resultId,
-        resultVersion: config.configurable?.version,
+        copilotSessionId,
+        resultId,
+        resultVersion,
       });
 
       return {
@@ -141,11 +153,23 @@ Notes:
         planId = latestPlan.planId;
       }
 
+      const { resultId, version: resultVersion } = config.configurable ?? {};
+
+      if (!resultId || typeof resultVersion !== 'number') {
+        return {
+          status: 'error',
+          data: {
+            error: `Missing required session context: resultId=${resultId}, resultVersion=${resultVersion}`,
+          },
+          summary: 'Missing session context for patching workflow plan',
+        };
+      }
+
       const result = await reflyService.patchWorkflowPlan(user, {
         planId: planId!,
         operations: input.operations,
-        resultId: config.configurable?.resultId!,
-        resultVersion: config.configurable?.version!,
+        resultId,
+        resultVersion,
       });
 
       return {
@@ -195,7 +219,7 @@ Use this tool when you need to:
   }
 
   async _call(
-    input: z.infer<typeof this.schema>,
+    _input: z.infer<typeof this.schema>,
     _: unknown,
     config: RunnableConfig,
   ): Promise<ToolCallResult> {
@@ -203,16 +227,16 @@ Use this tool when you need to:
       const { reflyService, user } = this.params;
       const copilotSessionId = config.configurable?.copilotSessionId;
 
-      if (!copilotSessionId && !input.planId) {
+      if (!copilotSessionId) {
         return {
           status: 'error',
-          data: { error: 'copilotSessionId is required when planId is not provided' },
+          data: { error: 'copilotSessionId is required to retrieve the workflow plan' },
           summary: 'Missing session context',
         };
       }
 
       const plan = await reflyService.getLatestWorkflowPlan(user, {
-        copilotSessionId: copilotSessionId!,
+        copilotSessionId,
       });
 
       if (!plan) {
