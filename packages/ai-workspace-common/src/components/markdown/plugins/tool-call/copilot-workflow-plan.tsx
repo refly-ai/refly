@@ -185,7 +185,7 @@ export const CopilotWorkflowPlan = memo(({ data }: CopilotWorkflowPlanProps) => 
     return (
       <div className="flex items-center justify-center gap-2 py-8 h-32">
         <Spin />
-        Loading Workflow...
+        {t('copilot.loadingWorkflow')}
       </div>
     );
   }
