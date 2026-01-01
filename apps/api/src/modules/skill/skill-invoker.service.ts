@@ -2,8 +2,14 @@ import { Injectable, Optional } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
 import { DirectConnection } from '@hocuspocus/server';
-import { AIMessage, HumanMessage } from '@langchain/core/messages';
-import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/messages';
+import {
+  AIMessage,
+  AIMessageChunk,
+  BaseMessage,
+  HumanMessage,
+  MessageContentComplex,
+  ToolMessage,
+} from '@langchain/core/messages';
 import { FilteredLangfuseCallbackHandler, Trace, getTracer } from '@refly/observability';
 import { propagation, context, SpanStatusCode } from '@opentelemetry/api';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -178,13 +184,13 @@ export class SkillInvokerService {
 
     for (const msg of messages) {
       const messageType = msg.type;
-      const content = msg.content || '';
-      const reasoningContent = msg.reasoningContent || '';
+      const content = msg.content ?? '';
+      const reasoningContent = msg.reasoningContent ?? '';
 
       if (messageType === 'ai') {
         // Reconstruct AI message with pure content (no XML tool use formatting)
         const mergedContent = getWholeParsedContent(reasoningContent, content);
-        const metadata = msg.toolCallMeta || {};
+        const metadata = msg.toolCallMeta ?? {};
 
         langchainMessages.push(
           new AIMessage({
@@ -193,37 +199,50 @@ export class SkillInvokerService {
           }),
         );
       } else if (messageType === 'tool') {
-        // Reconstruct Tool message separately
-        const toolCallMeta = msg.toolCallMeta || ({} as ToolCallMeta);
-        const toolCallResult = msg.toolCallResult || {};
+        // Reconstruct tool use + tool result in the canonical LangChain format.
+        // Bedrock (Converse) requires toolResult blocks to match toolUse blocks from the previous assistant turn.
+        const toolCallMeta = (msg.toolCallMeta ?? {}) as ToolCallMeta;
+        const toolCallResult = msg.toolCallResult ?? {};
 
-        // Add ToolMessage to LangChain history
-        // Note: LangChain's ToolMessage expects specific format
+        const toolCallId = toolCallMeta?.toolCallId ?? msg.toolCallId ?? '';
+        const toolName = toolCallMeta?.toolName ?? (msg.toolCallResult as any)?.toolName ?? '';
+
+        // Ensure we never emit a ToolMessage (toolResult) without a matching tool call (toolUse).
+        if (!toolCallId || !toolName) {
+          langchainMessages.push(
+            new AIMessage({
+              content: JSON.stringify((toolCallResult as any)?.output ?? toolCallResult),
+            }),
+          );
+          continue;
+        }
+
+        const rawArgs = (toolCallResult as any)?.input;
+        const toolArgs =
+          rawArgs && typeof rawArgs === 'object' && !Array.isArray(rawArgs) ? rawArgs : {};
+
+        // 1) Tool use: assistant message with tool_calls
         langchainMessages.push(
           new AIMessage({
             content: '',
-            additional_kwargs: {
-              tool_calls: [
-                {
-                  id: toolCallMeta.toolCallId ?? '',
-                  type: 'function',
-                  function: {
-                    name: toolCallMeta.toolName ?? '',
-                    arguments: JSON.stringify((toolCallResult as any)?.input || {}),
-                  },
-                },
-              ],
-            },
+            tool_calls: [
+              {
+                id: toolCallId,
+                name: toolName,
+                args: toolArgs,
+              },
+            ],
           }),
         );
 
-        // Add the tool response as a separate message
-        // This is how LangChain expects tool results to be formatted
-        langchainMessages.push({
-          type: 'tool',
-          content: JSON.stringify((toolCallResult as any)?.output || toolCallResult),
-          tool_call_id: toolCallMeta.toolCallId ?? '',
-        } as any);
+        // 2) Tool result: ToolMessage that references the tool_call_id
+        langchainMessages.push(
+          new ToolMessage({
+            content: JSON.stringify((toolCallResult as any)?.output ?? toolCallResult),
+            tool_call_id: toolCallId,
+            name: toolName,
+          }),
+        );
       }
     }
 
