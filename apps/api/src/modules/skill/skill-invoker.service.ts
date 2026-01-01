@@ -14,8 +14,8 @@ import {
   WorkflowExecutionNotFoundError,
 } from '@refly/errors';
 import {
+  ActionMessage,
   ActionResult,
-  ActionStep,
   Artifact,
   DriveFile,
   LLMModelConfig,
@@ -116,7 +116,6 @@ export class SkillInvokerService {
     user: User,
     providerItem: ProviderItem,
     result: ActionResult,
-    steps: ActionStep[],
   ): Promise<BaseMessage[]> {
     const query = result.input?.query || result.title;
 
@@ -130,12 +129,22 @@ export class SkillInvokerService {
       ];
     }
 
-    // Build consolidated tool call history by step from DB to avoid duplicating start/stream/end fragments
+    // Check if result already has messages (from populateSkillResultHistory)
+    if (result.messages && result.messages.length > 0) {
+      // Build messages from pre-fetched action_messages (preferred approach)
+      return [
+        new HumanMessage({ content: messageContent } as any),
+        ...this.reconstructLangchainMessagesFromDB(result.messages),
+      ];
+    }
+
+    // Final fallback: Build from steps if no messages found (backward compatibility)
     const toolCallsByStep = await this.toolCallService.fetchConsolidatedToolUseOutputByStep(
       result.resultId,
       result.version,
     );
 
+    const steps = result.steps;
     const aiMessages =
       steps?.length > 0
         ? steps.map((step) => {
@@ -158,6 +167,67 @@ export class SkillInvokerService {
         : [];
 
     return [new HumanMessage({ content: messageContent } as any), ...aiMessages];
+  }
+
+  /**
+   * Reconstruct LangChain messages from action_messages table records
+   * This ensures AI messages and Tool messages are properly separated without XML formatting
+   */
+  private reconstructLangchainMessagesFromDB(messages: ActionMessage[]): BaseMessage[] {
+    const langchainMessages: BaseMessage[] = [];
+
+    for (const msg of messages) {
+      const messageType = msg.type;
+      const content = msg.content || '';
+      const reasoningContent = msg.reasoningContent || '';
+
+      if (messageType === 'ai') {
+        // Reconstruct AI message with pure content (no XML tool use formatting)
+        const mergedContent = getWholeParsedContent(reasoningContent, content);
+        const metadata = msg.toolCallMeta || {};
+
+        langchainMessages.push(
+          new AIMessage({
+            content: mergedContent,
+            additional_kwargs: metadata,
+          }),
+        );
+      } else if (messageType === 'tool') {
+        // Reconstruct Tool message separately
+        const toolCallMeta = msg.toolCallMeta || ({} as ToolCallMeta);
+        const toolCallResult = msg.toolCallResult || {};
+
+        // Add ToolMessage to LangChain history
+        // Note: LangChain's ToolMessage expects specific format
+        langchainMessages.push(
+          new AIMessage({
+            content: '',
+            additional_kwargs: {
+              tool_calls: [
+                {
+                  id: toolCallMeta.toolCallId ?? '',
+                  type: 'function',
+                  function: {
+                    name: toolCallMeta.toolName ?? '',
+                    arguments: JSON.stringify((toolCallResult as any)?.input || {}),
+                  },
+                },
+              ],
+            },
+          }),
+        );
+
+        // Add the tool response as a separate message
+        // This is how LangChain expects tool results to be formatted
+        langchainMessages.push({
+          type: 'tool',
+          content: JSON.stringify((toolCallResult as any)?.output || toolCallResult),
+          tool_call_id: toolCallMeta.toolCallId ?? '',
+        } as any);
+      }
+    }
+
+    return langchainMessages;
   }
 
   @Trace('skill.buildInvokeConfig')
@@ -264,7 +334,7 @@ export class SkillInvokerService {
 
     if (resultHistory?.length > 0) {
       config.configurable.chatHistory = await Promise.all(
-        resultHistory.map((r) => this.buildLangchainMessages(user, providerItem, r, r.steps)),
+        resultHistory.map((r) => this.buildLangchainMessages(user, providerItem, r)),
       ).then((messages) => messages.flat());
     }
 
