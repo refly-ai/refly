@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { RefreshCw, AlertCircle, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { envTag } from '@refly/ui-kit';
 
 interface ErrorFallbackProps {
   error: Error;
@@ -67,7 +68,9 @@ export const ErrorFallback = memo<ErrorFallbackProps>(
 
             {/* Error Details (only shown in development and test environments) */}
             {error &&
-              (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') && (
+              (process.env.NODE_ENV === 'development' ||
+                envTag === 'test' ||
+                envTag === 'staging') && (
                 <details
                   className="mb-6 p-3 rounded-lg border text-xs"
                   style={{
