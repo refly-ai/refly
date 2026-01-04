@@ -3,6 +3,7 @@ import { ScheduleEventListener } from './schedule.listener';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { NotificationService } from '../notification/notification.service';
+import { CreditService } from '../credit/credit.service';
 import { ConfigService } from '@nestjs/config';
 import { WorkflowCompletedEvent, WorkflowFailedEvent } from '../workflow/workflow.events';
 import {
@@ -26,6 +27,8 @@ describe('ScheduleEventListener', () => {
   let listener: ScheduleEventListener;
   let prismaService: PrismaService;
   let notificationService: NotificationService;
+  let creditService: CreditService;
+  let redisService: RedisService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -59,6 +62,12 @@ describe('ScheduleEventListener', () => {
           },
         },
         {
+          provide: CreditService,
+          useValue: {
+            countExecutionCreditUsageByExecutionId: jest.fn().mockResolvedValue(100),
+          },
+        },
+        {
           provide: ConfigService,
           useValue: {
             get: jest.fn().mockReturnValue('https://refly.ai'),
@@ -70,6 +79,8 @@ describe('ScheduleEventListener', () => {
     listener = module.get<ScheduleEventListener>(ScheduleEventListener);
     prismaService = module.get<PrismaService>(PrismaService);
     notificationService = module.get<NotificationService>(NotificationService);
+    creditService = module.get<CreditService>(CreditService);
+    redisService = module.get<RedisService>(RedisService);
   });
 
   afterEach(() => {
@@ -115,12 +126,18 @@ describe('ScheduleEventListener', () => {
       const mockScheduleRecord = {
         scheduleRecordId: 'schedule-record-1',
         workflowTitle: 'My Workflow',
+        scheduleId: 'schedule-1',
       };
 
+      // Mock getScheduleRecord (first call - returns uid only)
+      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
+        uid: 'user-1',
+      } as any);
+
+      // Mock sendEmail calls
       jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser as any);
-      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValue({
+      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
         ...mockScheduleRecord,
-        scheduleId: 'schedule-1',
       } as any);
       jest.spyOn(prismaService.workflowSchedule, 'findUnique').mockResolvedValue({
         scheduleId: 'schedule-1',
@@ -130,20 +147,27 @@ describe('ScheduleEventListener', () => {
 
       await listener.handleWorkflowCompleted(event);
 
-      // Verify DB update
+      // Verify Redis counter decrement
+      expect(redisService.decr).toHaveBeenCalled();
+
+      // Verify credit usage calculation
+      expect(creditService.countExecutionCreditUsageByExecutionId).toHaveBeenCalledWith(
+        { uid: 'user-1' },
+        'exec-1',
+      );
+
+      // Verify DB update with credit usage
       expect(prismaService.workflowScheduleRecord.update).toHaveBeenCalledWith({
         where: { scheduleRecordId: 'schedule-record-1' },
         data: expect.objectContaining({
           status: 'success',
           completedAt: expect.any(Date),
+          creditUsed: 100,
         }),
       });
 
       // Verify Email Sending
       expect(prismaService.user.findUnique).toHaveBeenCalledWith({ where: { uid: 'user-1' } });
-      expect(prismaService.workflowScheduleRecord.findUnique).toHaveBeenCalledWith({
-        where: { scheduleRecordId: 'schedule-record-1' },
-      });
       expect(generateScheduleSuccessEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           userName: 'Test User',
@@ -159,6 +183,72 @@ describe('ScheduleEventListener', () => {
         },
         mockUser,
       );
+    });
+
+    it('should handle missing schedule record gracefully', async () => {
+      const event = new WorkflowCompletedEvent(
+        'exec-1',
+        'canvas-1',
+        'user-1',
+        'scheduled',
+        {},
+        1000,
+        'schedule-record-1',
+      );
+
+      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce(null);
+
+      await listener.handleWorkflowCompleted(event);
+
+      expect(prismaService.workflowScheduleRecord.update).not.toHaveBeenCalled();
+      expect(creditService.countExecutionCreditUsageByExecutionId).not.toHaveBeenCalled();
+    });
+
+    it('should handle credit calculation failure gracefully', async () => {
+      const event = new WorkflowCompletedEvent(
+        'exec-1',
+        'canvas-1',
+        'user-1',
+        'scheduled',
+        {},
+        1000,
+        'schedule-record-1',
+      );
+
+      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
+        uid: 'user-1',
+      } as any);
+      jest
+        .spyOn(creditService, 'countExecutionCreditUsageByExecutionId')
+        .mockRejectedValueOnce(new Error('Credit calculation failed'));
+
+      // Mock sendEmail calls
+      const mockUser = {
+        uid: 'user-1',
+        email: 'test@example.com',
+        nickname: 'Test User',
+      };
+      jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser as any);
+      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
+        scheduleRecordId: 'schedule-record-1',
+        workflowTitle: 'My Workflow',
+      } as any);
+      jest.spyOn(prismaService.workflowSchedule, 'findUnique').mockResolvedValue({
+        scheduleId: 'schedule-1',
+        cronExpression: '0 8 * * *',
+        timezone: 'UTC',
+      } as any);
+
+      await listener.handleWorkflowCompleted(event);
+
+      // Should still update with creditUsed = 0 when calculation fails
+      expect(prismaService.workflowScheduleRecord.update).toHaveBeenCalledWith({
+        where: { scheduleRecordId: 'schedule-record-1' },
+        data: expect.objectContaining({
+          status: 'success',
+          creditUsed: 0,
+        }),
+      });
     });
   });
 
@@ -198,12 +288,18 @@ describe('ScheduleEventListener', () => {
       const mockScheduleRecord = {
         scheduleRecordId: 'schedule-record-1',
         workflowTitle: 'My Workflow',
+        scheduleId: 'schedule-1',
       };
 
+      // Mock getScheduleRecord (first call - returns uid only)
+      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
+        uid: 'user-1',
+      } as any);
+
+      // Mock sendEmail calls
       jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser as any);
-      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValue({
+      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
         ...mockScheduleRecord,
-        scheduleId: 'schedule-1',
       } as any);
       jest.spyOn(prismaService.workflowSchedule, 'findUnique').mockResolvedValue({
         scheduleId: 'schedule-1',
@@ -213,12 +309,22 @@ describe('ScheduleEventListener', () => {
 
       await listener.handleWorkflowFailed(event);
 
-      // Verify DB update
+      // Verify Redis counter decrement
+      expect(redisService.decr).toHaveBeenCalled();
+
+      // Verify credit usage calculation
+      expect(creditService.countExecutionCreditUsageByExecutionId).toHaveBeenCalledWith(
+        { uid: 'user-1' },
+        'exec-1',
+      );
+
+      // Verify DB update with credit usage and error details
       expect(prismaService.workflowScheduleRecord.update).toHaveBeenCalledWith({
         where: { scheduleRecordId: 'schedule-record-1' },
         data: expect.objectContaining({
           status: 'failed',
           completedAt: expect.any(Date),
+          creditUsed: 100,
           failureReason: expect.any(String),
           errorDetails: JSON.stringify(errorDetails),
         }),
@@ -240,6 +346,45 @@ describe('ScheduleEventListener', () => {
         },
         mockUser,
       );
+    });
+
+    it('should handle Redis counter decrement failure gracefully', async () => {
+      const event = new WorkflowFailedEvent(
+        'exec-1',
+        'canvas-1',
+        'user-1',
+        'scheduled',
+        { errorMessage: 'Some error' },
+        1000,
+        'schedule-record-1',
+      );
+
+      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
+        uid: 'user-1',
+      } as any);
+      jest.spyOn(redisService, 'decr').mockRejectedValueOnce(new Error('Redis error'));
+
+      // Mock sendEmail calls
+      const mockUser = {
+        uid: 'user-1',
+        email: 'test@example.com',
+        nickname: 'Test User',
+      };
+      jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser as any);
+      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
+        scheduleRecordId: 'schedule-record-1',
+        workflowTitle: 'My Workflow',
+      } as any);
+      jest.spyOn(prismaService.workflowSchedule, 'findUnique').mockResolvedValue({
+        scheduleId: 'schedule-1',
+        cronExpression: '0 8 * * *',
+        timezone: 'UTC',
+      } as any);
+
+      await listener.handleWorkflowFailed(event);
+
+      // Should still proceed with update despite Redis failure
+      expect(prismaService.workflowScheduleRecord.update).toHaveBeenCalled();
     });
   });
 });
