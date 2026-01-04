@@ -41,6 +41,26 @@ export enum ScheduleFailureReason {
 
 export type FailureActionType = 'upgrade' | 'viewSchedule' | 'buyCredits' | 'fixWorkflow';
 
+/**
+ * Pre-check failure reasons - these failures happen before actual workflow execution,
+ * so there's no detail page to view
+ */
+export const PRE_CHECK_FAILURE_REASONS = [
+  ScheduleFailureReason.SCHEDULE_LIMIT_EXCEEDED,
+  ScheduleFailureReason.USER_RATE_LIMITED,
+  ScheduleFailureReason.INSUFFICIENT_CREDITS,
+  ScheduleFailureReason.SCHEDULE_DELETED,
+  ScheduleFailureReason.SCHEDULE_DISABLED,
+];
+
+/**
+ * Check if the failure reason is a pre-check failure (no actual execution happened)
+ */
+export const isPreCheckFailure = (failureReason: string | undefined): boolean => {
+  if (!failureReason) return false;
+  return PRE_CHECK_FAILURE_REASONS.includes(failureReason as ScheduleFailureReason);
+};
+
 export interface FailureActionConfig {
   label: string;
   isDark: boolean;
@@ -145,8 +165,6 @@ export const useScheduleFailureAction = (canvasId: string) => {
           setCreditInsufficientModalVisible(true);
           break;
         case 'viewSchedule':
-          navigate('/workflow');
-          break;
         case 'fixWorkflow':
           navigate(`/canvas/${canvasId}`);
           break;

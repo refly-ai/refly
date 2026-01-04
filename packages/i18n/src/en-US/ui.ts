@@ -4393,7 +4393,7 @@ const translations = {
       fixWorkflow: 'Fix Original Workflow',
     },
     actions: {
-      duplicate: 'Create a Copy from This Run',
+      duplicate: 'Copy & Remix',
     },
     duplicateSuccess: 'Workflow duplicated successfully',
     duplicateFailed: 'Failed to duplicate workflow',

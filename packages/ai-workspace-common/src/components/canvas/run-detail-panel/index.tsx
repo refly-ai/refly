@@ -167,7 +167,7 @@ export const RunDetailPanel = memo(
                 <span className="text-sm font-normal leading-[21px]">
                   {t('runDetail.time')}：
                   {time(info.completedAt || info.triggeredAt, language as LOCALE).format(
-                    'YYYY-MM-DD HH:mm:ss',
+                    'MM/DD/YYYY, hh:mm A',
                   )}
                 </span>
               </div>

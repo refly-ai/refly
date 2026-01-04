@@ -944,6 +944,37 @@ export class WorkflowAppService {
       data: { deletedAt: new Date() },
     });
 
+    // Clean up associated schedules for the canvas
+    // This disables the schedule and removes pending scheduled records
+    const schedule = await this.prisma.workflowSchedule.findFirst({
+      where: { canvasId: workflowApp.canvasId, uid: user.uid, deletedAt: null },
+    });
+
+    if (schedule) {
+      // Soft delete the schedule and disable it
+      await this.prisma.workflowSchedule.update({
+        where: { scheduleId: schedule.scheduleId },
+        data: {
+          deletedAt: new Date(),
+          isEnabled: false,
+          nextRunAt: null,
+        },
+      });
+
+      // Delete pending scheduled records
+      await this.prisma.workflowScheduleRecord.deleteMany({
+        where: {
+          scheduleId: schedule.scheduleId,
+          status: 'scheduled',
+          workflowExecutionId: null,
+        },
+      });
+
+      this.logger.log(
+        `Cleaned up schedule ${schedule.scheduleId} for deleted workflow app: ${appId}`,
+      );
+    }
+
     this.logger.log(`Deleted workflow app: ${appId} for user: ${user.uid}`);
   }
 

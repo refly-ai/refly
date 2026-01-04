@@ -189,6 +189,12 @@ export class ScheduleService {
         },
       });
 
+      // Update canvas updatedAt to reflect schedule modification
+      await this.prisma.canvas.update({
+        where: { canvasId: dto.canvasId },
+        data: { updatedAt: new Date() },
+      });
+
       // Update or create scheduled record if enabled and has nextRunAt
       if (isEnabled && nextRunAt) {
         await this.createOrUpdateScheduledRecord(uid, scheduleId, dto.canvasId, nextRunAt);
@@ -213,6 +219,12 @@ export class ScheduleService {
             isEnabled,
             nextRunAt: isEnabled ? nextRunAt : null,
           },
+        });
+
+        // Update canvas updatedAt to reflect schedule creation
+        await this.prisma.canvas.update({
+          where: { canvasId: dto.canvasId },
+          data: { updatedAt: new Date() },
         });
 
         // Create scheduled record if enabled and has nextRunAt
@@ -676,7 +688,8 @@ export class ScheduleService {
           scheduleRecordId,
           scheduleId,
           uid,
-          canvasId,
+          sourceCanvasId: canvasId, // Source canvas (template)
+          canvasId: '', // Will be updated after execution with actual execution canvas
           workflowTitle: canvas?.title || 'Untitled',
           status: 'scheduled',
           scheduledAt,
