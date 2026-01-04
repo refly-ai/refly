@@ -6,10 +6,12 @@ import { NotificationService } from '../notification/notification.service';
 import { CreditService } from '../credit/credit.service';
 import { ConfigService } from '@nestjs/config';
 import { WorkflowCompletedEvent, WorkflowFailedEvent } from '../workflow/workflow.events';
+import { CanvasDeletedEvent } from '../canvas/canvas.events';
 import {
   generateScheduleSuccessEmail,
   generateScheduleFailedEmail,
 } from './schedule-email-templates';
+import { ScheduleFailureReason } from './schedule.constants';
 
 // Mock schedule-email-templates
 jest.mock('./schedule-email-templates', () => ({
@@ -39,13 +41,17 @@ describe('ScheduleEventListener', () => {
           useValue: {
             workflowScheduleRecord: {
               update: jest.fn(),
+              updateMany: jest.fn(),
               findUnique: jest.fn(),
+              count: jest.fn(),
             },
             user: {
               findUnique: jest.fn(),
             },
             workflowSchedule: {
               findUnique: jest.fn(),
+              findMany: jest.fn(),
+              updateMany: jest.fn(),
             },
           },
         },
@@ -385,6 +391,142 @@ describe('ScheduleEventListener', () => {
 
       // Should still proceed with update despite Redis failure
       expect(prismaService.workflowScheduleRecord.update).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleCanvasDeleted', () => {
+    it('should handle canvas with no associated schedules', async () => {
+      const event = new CanvasDeletedEvent('canvas-1', 'user-1');
+
+      jest.spyOn(prismaService.workflowSchedule, 'findMany').mockResolvedValue([]);
+
+      await listener.handleCanvasDeleted(event);
+
+      expect(prismaService.workflowSchedule.findMany).toHaveBeenCalledWith({
+        where: { canvasId: 'canvas-1', uid: 'user-1', deletedAt: null },
+        select: { scheduleId: true },
+      });
+      expect(prismaService.workflowSchedule.updateMany).not.toHaveBeenCalled();
+      expect(prismaService.workflowScheduleRecord.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('should disable schedules and skip pending records when canvas is deleted', async () => {
+      const event = new CanvasDeletedEvent('canvas-1', 'user-1');
+
+      const mockSchedules = [{ scheduleId: 'schedule-1' }, { scheduleId: 'schedule-2' }];
+
+      jest
+        .spyOn(prismaService.workflowSchedule, 'findMany')
+        .mockResolvedValue(mockSchedules as any);
+      jest
+        .spyOn(prismaService.workflowSchedule, 'updateMany')
+        .mockResolvedValue({ count: 2 } as any);
+      jest
+        .spyOn(prismaService.workflowScheduleRecord, 'updateMany')
+        .mockResolvedValue({ count: 3 } as any);
+      jest.spyOn(prismaService.workflowScheduleRecord, 'count').mockResolvedValue(0);
+
+      await listener.handleCanvasDeleted(event);
+
+      // Verify schedules are disabled and soft-deleted
+      expect(prismaService.workflowSchedule.updateMany).toHaveBeenCalledWith({
+        where: { canvasId: 'canvas-1', uid: 'user-1', deletedAt: null },
+        data: {
+          isEnabled: false,
+          deletedAt: expect.any(Date),
+          nextRunAt: null,
+        },
+      });
+
+      // Verify pending/scheduled records are skipped
+      expect(prismaService.workflowScheduleRecord.updateMany).toHaveBeenCalledWith({
+        where: {
+          scheduleId: { in: ['schedule-1', 'schedule-2'] },
+          status: { in: ['pending', 'scheduled'] },
+        },
+        data: {
+          status: 'skipped',
+          failureReason: ScheduleFailureReason.CANVAS_DELETED,
+          errorDetails: expect.stringContaining('Canvas was deleted'),
+          completedAt: expect.any(Date),
+        },
+      });
+
+      // Verify processing/running count check
+      expect(prismaService.workflowScheduleRecord.count).toHaveBeenCalledWith({
+        where: {
+          scheduleId: { in: ['schedule-1', 'schedule-2'] },
+          status: { in: ['processing', 'running'] },
+        },
+      });
+    });
+
+    it('should log processing/running tasks without interrupting them', async () => {
+      const event = new CanvasDeletedEvent('canvas-1', 'user-1');
+
+      const mockSchedules = [{ scheduleId: 'schedule-1' }];
+
+      jest
+        .spyOn(prismaService.workflowSchedule, 'findMany')
+        .mockResolvedValue(mockSchedules as any);
+      jest
+        .spyOn(prismaService.workflowSchedule, 'updateMany')
+        .mockResolvedValue({ count: 1 } as any);
+      jest
+        .spyOn(prismaService.workflowScheduleRecord, 'updateMany')
+        .mockResolvedValue({ count: 0 } as any);
+      jest.spyOn(prismaService.workflowScheduleRecord, 'count').mockResolvedValue(2); // 2 tasks processing/running
+
+      await listener.handleCanvasDeleted(event);
+
+      // Verify schedules are still disabled
+      expect(prismaService.workflowSchedule.updateMany).toHaveBeenCalled();
+
+      // Verify processing/running tasks are counted but not updated
+      expect(prismaService.workflowScheduleRecord.count).toHaveBeenCalledWith({
+        where: {
+          scheduleId: { in: ['schedule-1'] },
+          status: { in: ['processing', 'running'] },
+        },
+      });
+
+      // Only pending/scheduled records should be updated, not processing/running
+      expect(prismaService.workflowScheduleRecord.updateMany).toHaveBeenCalledWith({
+        where: {
+          scheduleId: { in: ['schedule-1'] },
+          status: { in: ['pending', 'scheduled'] },
+        },
+        data: expect.objectContaining({
+          status: 'skipped',
+        }),
+      });
+    });
+
+    it('should handle errors gracefully without throwing', async () => {
+      const event = new CanvasDeletedEvent('canvas-1', 'user-1');
+
+      jest
+        .spyOn(prismaService.workflowSchedule, 'findMany')
+        .mockRejectedValue(new Error('Database error'));
+
+      // Should not throw
+      await expect(listener.handleCanvasDeleted(event)).resolves.not.toThrow();
+    });
+
+    it('should handle schedule update failure gracefully', async () => {
+      const event = new CanvasDeletedEvent('canvas-1', 'user-1');
+
+      const mockSchedules = [{ scheduleId: 'schedule-1' }];
+
+      jest
+        .spyOn(prismaService.workflowSchedule, 'findMany')
+        .mockResolvedValue(mockSchedules as any);
+      jest
+        .spyOn(prismaService.workflowSchedule, 'updateMany')
+        .mockRejectedValue(new Error('Update failed'));
+
+      // Should not throw
+      await expect(listener.handleCanvasDeleted(event)).resolves.not.toThrow();
     });
   });
 });
