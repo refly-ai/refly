@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, Optional, forwardRef } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import pLimit from 'p-limit';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -55,6 +56,7 @@ import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { initEmptyCanvasState, mirrorCanvasData } from '@refly/canvas-common';
 import { ToolService } from '../tool/tool.service';
 import { DriveService } from '../drive/drive.service';
+import { CanvasDeletedEvent } from './canvas.events';
 
 @Injectable()
 export class CanvasService {
@@ -82,6 +84,7 @@ export class CanvasService {
     @Optional()
     @InjectQueue(QUEUE_POST_DELETE_CANVAS)
     private postDeleteCanvasQueue?: Queue<DeleteCanvasJobData>,
+    private readonly eventEmitter?: EventEmitter2,
   ) {}
 
   async listCanvases(user: User, param: ListCanvasesData['query']): Promise<CanvasDetailModel[]> {
@@ -827,6 +830,11 @@ export class CanvasService {
       this.logger.warn(`Canvas ${canvasId} not found or not deleted`);
       return;
     }
+
+    // ========== Emit canvas.deleted event for other modules to react ==========
+    // Schedule cleanup is handled by ScheduleEventListener.handleCanvasDeleted
+    this.eventEmitter.emit('canvas.deleted', new CanvasDeletedEvent(canvasId, uid));
+    this.logger.log(`Emitted canvas.deleted event for canvas ${canvasId}`);
 
     const cleanups: Promise<any>[] = [this.fts.deleteDocument({ uid }, 'canvas', canvas.canvasId)];
 

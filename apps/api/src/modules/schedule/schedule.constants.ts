@@ -179,6 +179,9 @@ export enum ScheduleFailureReason {
   /** Canvas data error (missing nodes/edges) */
   CANVAS_DATA_ERROR = 'canvas_data_error',
 
+  /** Canvas was deleted - schedule has been released */
+  CANVAS_DELETED = 'canvas_deleted',
+
   /** Snapshot creation or loading failed */
   SNAPSHOT_ERROR = 'snapshot_error',
 

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OnEvent } from '@nestjs/event-emitter';
 import { WorkflowCompletedEvent, WorkflowFailedEvent } from '../workflow/workflow.events';
+import { CanvasDeletedEvent } from '../canvas/canvas.events';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { NotificationService } from '../notification/notification.service';
@@ -254,6 +255,94 @@ export class ScheduleEventListener {
         `Failed to calculate next run time for schedule ${scheduleId}: ${err?.message}`,
       );
       return 'Check Dashboard';
+    }
+  }
+
+  /**
+   * Handle canvas.deleted event - release associated schedule resources
+   *
+   * When a canvas is deleted, we need to:
+   * 1. Soft-delete and disable all associated WorkflowSchedule records
+   * 2. Update pending/scheduled records to 'skipped' status
+   * 3. Leave processing/running records as-is (they will complete normally, but won't be rescheduled)
+   *
+   * Note: We don't interrupt processing/running tasks because:
+   * - The workflow is already executing and interrupting might cause data inconsistency
+   * - The executor (ScheduleProcessor) will detect the deleted schedule on next execution attempt
+   */
+  @OnEvent('canvas.deleted')
+  async handleCanvasDeleted(event: CanvasDeletedEvent) {
+    const { canvasId, uid } = event;
+    this.logger.log(`Processing canvas.deleted event for canvas ${canvasId}`);
+
+    try {
+      // 1. Find all schedules associated with this canvas
+      const associatedSchedules = await this.prisma.workflowSchedule.findMany({
+        where: { canvasId, uid, deletedAt: null },
+        select: { scheduleId: true },
+      });
+
+      if (associatedSchedules.length === 0) {
+        this.logger.debug(`No active schedules found for canvas ${canvasId}`);
+        return;
+      }
+
+      const scheduleIds = associatedSchedules.map((s) => s.scheduleId);
+      this.logger.log(
+        `Releasing ${scheduleIds.length} schedule(s) for deleted canvas ${canvasId}: ${scheduleIds.join(', ')}`,
+      );
+
+      // 2. Soft-delete and disable schedules
+      await this.prisma.workflowSchedule.updateMany({
+        where: { canvasId, uid, deletedAt: null },
+        data: {
+          isEnabled: false,
+          deletedAt: new Date(),
+          nextRunAt: null, // Clear next run time to prevent any race conditions
+        },
+      });
+
+      // 3. Update pending/scheduled records to 'skipped' status
+      // Note: We do NOT update 'processing' or 'running' records because:
+      // - They are currently executing and should complete their execution
+      // - The workflow.completed/workflow.failed events will handle their final status
+      // - When they try to reschedule, they will find the schedule is deleted
+      const updateResult = await this.prisma.workflowScheduleRecord.updateMany({
+        where: {
+          scheduleId: { in: scheduleIds },
+          status: { in: ['pending', 'scheduled'] },
+        },
+        data: {
+          status: 'skipped',
+          failureReason: ScheduleFailureReason.CANVAS_DELETED,
+          errorDetails: JSON.stringify({
+            reason: 'Canvas was deleted, schedule has been released',
+            deletedAt: new Date().toISOString(),
+          }),
+          completedAt: new Date(),
+        },
+      });
+
+      // 4. Log processing/running records for visibility
+      const processingCount = await this.prisma.workflowScheduleRecord.count({
+        where: {
+          scheduleId: { in: scheduleIds },
+          status: { in: ['processing', 'running'] },
+        },
+      });
+
+      if (processingCount > 0) {
+        this.logger.log(
+          `Canvas ${canvasId}: ${processingCount} task(s) are still processing/running, they will complete normally`,
+        );
+      }
+
+      this.logger.log(
+        `Successfully released schedules for canvas ${canvasId}: ${updateResult.count} pending records skipped`,
+      );
+    } catch (error: any) {
+      this.logger.error(`Failed to release schedules for canvas ${canvasId}: ${error?.message}`);
+      // Don't throw - this is a cleanup operation and shouldn't block canvas deletion
     }
   }
 }
