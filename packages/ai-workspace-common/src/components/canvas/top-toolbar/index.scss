@@ -86,3 +86,43 @@
   }
 }
 
+// Schedule limit modal button styles
+.schedule-limit-modal {
+  .ant-modal {
+    width: 480px !important;
+  }
+
+  .ant-modal-footer {
+    display: flex !important;
+    gap: 12px !important;
+    justify-content: flex-end !important;
+    align-items: flex-end !important;
+
+    .ant-btn {
+      // Full rounded pill shape for both buttons - smaller size
+      border-radius: 16px !important;
+      margin: 0 !important;
+      padding: 0 16px !important;
+      min-width: 100px !important;
+      font-size: 14px !important;
+    }
+
+    // Specific targeting for the view schedules button
+    .view-schedules-btn,
+    .ant-btn:last-child.ant-btn-primary {
+      background-color: var(--refly-text-0) !important;
+      border-color: var(--refly-text-0) !important;
+      color: var(--refly-bg-body-z0) !important;
+
+      &:hover,
+      &:focus,
+      &:active {
+        background-color: var(--refly-text-0) !important;
+        border-color: var(--refly-text-0) !important;
+        color: var(--refly-bg-body-z0) !important;
+        opacity: 0.8 !important;
+      }
+    }
+  }
+}
+

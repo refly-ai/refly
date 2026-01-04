@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { memo, useState, useCallback, useEffect, useMemo } from 'react';
 import { Button, Tooltip, Popover, message, Modal } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@refly/utils/cn';
 import {
   useListSchedules,
@@ -24,6 +25,7 @@ import {
   type ScheduleFrequency,
   type ScheduleConfig,
 } from '@refly-packages/ai-workspace-common/components/common/schedule-popover-content';
+import './index.scss';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -34,6 +36,7 @@ interface ScheduleButtonProps {
 
 const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [scheduleLimitModalVisible, setScheduleLimitModalVisible] = useState(false);
   const [deactivateModalVisible, setDeactivateModalVisible] = useState(false);
@@ -417,6 +420,12 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
     }, 100);
   }, [setCreditInsufficientModalVisible]);
 
+  // Handle view schedules click
+  const handleViewSchedulesClick = useCallback(() => {
+    setScheduleLimitModalVisible(false);
+    navigate('/workflow-list');
+  }, [navigate]);
+
   // Determine style based on schedule status
   const isScheduled = schedule?.isEnabled;
 
@@ -531,9 +540,19 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
         open={scheduleLimitModalVisible}
         onOk={() => setScheduleLimitModalVisible(false)}
         onCancel={() => setScheduleLimitModalVisible(false)}
+        centered
+        wrapClassName="schedule-limit-modal"
         footer={[
-          <Button key="ok" type="primary" onClick={() => setScheduleLimitModalVisible(false)}>
-            {t('common.confirm') || 'OK'}
+          <Button key="cancel" onClick={() => setScheduleLimitModalVisible(false)}>
+            {t('common.cancel') || 'Cancel'}
+          </Button>,
+          <Button
+            key="view-schedules"
+            type="primary"
+            className="view-schedules-btn"
+            onClick={handleViewSchedulesClick}
+          >
+            {t('schedule.viewSchedules') || 'View Schedules'}
           </Button>,
         ]}
       >
