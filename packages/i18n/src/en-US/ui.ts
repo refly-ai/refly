@@ -4271,6 +4271,7 @@ const translations = {
     updateSuccess: 'Schedule updated successfully',
     deleteSuccess: 'Schedule deleted successfully',
     deactivateSuccess: 'Schedule deactivated successfully',
+    deactivateError: 'Failed to deactivate schedule',
     saveFailed: 'Failed to save schedule',
     deleteFailed: 'Failed to delete schedule',
     viewSchedules: 'View Schedules',

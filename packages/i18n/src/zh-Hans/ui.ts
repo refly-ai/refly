@@ -4304,6 +4304,7 @@ const translations = {
     updateSuccess: '定时任务更新成功',
     deleteSuccess: '定时任务删除成功',
     deactivateSuccess: '定时任务停用成功',
+    deactivateError: '定时任务停用失败',
     saveFailed: '保存定时任务失败',
     deleteFailed: '删除定时任务失败',
     viewSchedules: '查看定时任务',

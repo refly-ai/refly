@@ -8,18 +8,15 @@
     }
   }
 
-  /* 关键：不让 overflow 换行 */
   .ant-select-selection-overflow {
     flex-wrap: nowrap;
   }
 
-  /* 关键：suffix（搜索 input 容器）不要占宽度，更不要换行 */
   .ant-select-selection-overflow-item-suffix {
     flex: 0 0 auto;
     width: 0;
   }
 
-  /* 让内部 input 不撑开布局 */
   .ant-select-selection-search {
     width: 0 !important;
     margin-inline-start: 0 !important;
@@ -39,18 +36,15 @@
     }
   }
 
-  /* 关键：不让 overflow 换行 */
   .ant-select-selection-overflow {
     flex-wrap: nowrap;
   }
 
-  /* 关键：suffix（搜索 input 容器）不要占宽度，更不要换行 */
   .ant-select-selection-overflow-item-suffix {
     flex: 0 0 auto;
     width: 0;
   }
 
-  /* 让内部 input 不撑开布局 */
   .ant-select-selection-search {
     width: 0 !important;
     margin-inline-start: 0 !important;
