@@ -85,6 +85,7 @@
     "colord": "^2.9.3",
     "copy-to-clipboard": "~3.3.3",
     "dayjs": "~1.11.7",
+    "cron-parser": "^5.4.0",
     "dedent": "^1.5.3",
     "dompurify": "^3.3.0",
     "handlebars": "^4.7.8",

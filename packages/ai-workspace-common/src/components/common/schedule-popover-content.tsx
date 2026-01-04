@@ -2,7 +2,10 @@ import { memo, useCallback, useMemo } from 'react';
 import { Button, Switch, TimePicker, Select, Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
+import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import type { WorkflowSchedule } from '@refly/openapi-schema';
+import { CronExpressionParser } from 'cron-parser';
+import { LOCALE } from '@refly/common-types';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -71,11 +74,11 @@ export function generateCronExpression(config: ScheduleConfig): string {
     case 'daily':
       return `${minute} ${hour} * * *`;
     case 'weekly': {
-      const weekdays = config.weekdays?.join(',') || '1';
+      const weekdays = config.weekdays?.join(',') || dayjs().day().toString();
       return `${minute} ${hour} * * ${weekdays}`;
     }
     case 'monthly': {
-      const monthDays = config.monthDays?.join(',') || '1';
+      const monthDays = config.monthDays?.join(',') || dayjs().date().toString();
       return `${minute} ${hour} ${monthDays} * *`;
     }
     default:
@@ -102,25 +105,38 @@ export const SchedulePopoverContent = memo(
     showUpgrade,
     onUpgradeClick,
   }: SchedulePopoverContentProps) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
+    const language = i18n.languages?.[0];
 
     // Calculate next run time
     const nextRunTime = useMemo(() => {
       if (!isEnabled || !timeValue) return null;
 
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const hour = timeValue.hour();
-      const minute = timeValue.minute();
+      try {
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-      let nextRun = dayjs().tz(userTimezone).hour(hour).minute(minute).second(0);
+        // Generate cron expression based on current settings
+        const config: ScheduleConfig = {
+          type: frequency,
+          time: timeValue.format('HH:mm'),
+          weekdays: frequency === 'weekly' ? weekdays : undefined,
+          monthDays: frequency === 'monthly' ? monthDays : undefined,
+        };
 
-      if (nextRun.isBefore(dayjs())) {
-        nextRun = nextRun.add(1, 'day');
+        const cronExpression = generateCronExpression(config);
+
+        // Use CronExpressionParser to calculate next run time (same as backend)
+        const interval = CronExpressionParser.parse(cronExpression, { tz: userTimezone });
+        const nextRun = interval.next().toDate();
+
+        // Use time utility function for i18n support (same as run-history)
+        return time(nextRun, language as LOCALE).format('YYYY/MM/DD, hh:mm A');
+      } catch (error) {
+        console.error('[Schedule Debug] Error calculating next run time:', error);
+        return null;
       }
-
-      return nextRun.format('YYYY/MM/DD hh:mm A');
-    }, [isEnabled, timeValue]);
+    }, [isEnabled, timeValue, frequency, weekdays, monthDays]);
 
     // Handle view history navigation
     const handleViewHistory = useCallback(() => {
@@ -131,11 +147,24 @@ export const SchedulePopoverContent = memo(
     const handleFrequencyClick = useCallback(
       (freq: ScheduleFrequency) => {
         onFrequencyChange(freq);
-        if (freq === 'weekly' && weekdays.length === 0) {
-          onWeekdaysChange([1]); // Default to Monday
+
+        // Check if weekdays contains only the default Monday (value 1)
+        if (
+          freq === 'weekly' &&
+          (weekdays.length === 0 || (weekdays.length === 1 && weekdays[0] === 1))
+        ) {
+          // Default to current weekday (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+          const currentWeekday = dayjs().day();
+          onWeekdaysChange([currentWeekday]);
         }
-        if (freq === 'monthly' && monthDays.length === 0) {
-          onMonthDaysChange([1]); // Default to 1st
+        // Check if monthDays contains only the default 1st day (value 1)
+        if (
+          freq === 'monthly' &&
+          (monthDays.length === 0 || (monthDays.length === 1 && monthDays[0] === 1))
+        ) {
+          // Default to current day of month
+          const currentDay = dayjs().date();
+          onMonthDaysChange([currentDay]);
         }
       },
       [weekdays, monthDays, onFrequencyChange, onWeekdaysChange, onMonthDaysChange],
@@ -186,7 +215,14 @@ export const SchedulePopoverContent = memo(
               <Select
                 mode="multiple"
                 value={weekdays}
-                onChange={onWeekdaysChange}
+                onChange={(values) => {
+                  // Prevent removing all selections - must keep at least one
+                  if (values.length === 0) {
+                    console.log('[Schedule Debug] Preventing removal of all weekly selections');
+                    return;
+                  }
+                  onWeekdaysChange(values);
+                }}
                 options={WEEKDAYS.map((d) => ({
                   ...d,
                   label: t(`schedule.weekday.${d.label.toLowerCase()}`) || d.label,
@@ -211,7 +247,14 @@ export const SchedulePopoverContent = memo(
               <Select
                 mode="multiple"
                 value={monthDays}
-                onChange={onMonthDaysChange}
+                onChange={(values) => {
+                  // Prevent removing all selections - must keep at least one
+                  if (values.length === 0) {
+                    console.log('[Schedule Debug] Preventing removal of all monthly selections');
+                    return;
+                  }
+                  onMonthDaysChange(values);
+                }}
                 options={MONTH_DAYS}
                 placeholder="Select Date"
                 className="w-full h-full schedule-monthly-select"

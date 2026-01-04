@@ -2066,7 +2066,7 @@ const translations = {
       oauthTimeout: '授权超时，请重试',
       authorizing: '授权中...',
     },
-    workflowDepencency: {
+    workflowDependency: {
       title: '工作流就绪检查',
       subtitle: '运行前请先解决以下问题',
       description: '工具依赖将显示在此处',
@@ -2084,7 +2084,8 @@ const translations = {
       notAuthorized: '工具未授权',
       mcpUnavailable: '工具当前不可用',
       notEnoughCredits: '积分不足，无法运行',
-      requiredInputNotFilled: '必填输入项未填写: {{input_name}}',
+      requiredInputNotFilled: '必填输入项未填写',
+      inputName: '{{input_name}}',
       youAreAwesome: 'You are awesome!',
       everythingIsSet: 'Everything is set for a smooth run',
     },
@@ -4282,6 +4283,7 @@ const translations = {
     status: {
       on: '开',
       off: '关',
+      error: '异常',
     },
     weekdays: '星期',
     selectWeekdays: '选择星期',

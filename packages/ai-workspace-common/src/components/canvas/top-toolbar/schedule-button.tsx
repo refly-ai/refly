@@ -9,15 +9,29 @@ import {
   useCreateSchedule,
   useUpdateSchedule,
   useGetCreditUsageByCanvasId,
+  useListUserTools,
+  useGetCanvasData,
 } from '@refly-packages/ai-workspace-common/queries';
 import { useSkillResponseLoadingStatus } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-loading-status';
-import { useCanvasStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
+import {
+  useCanvasStoreShallow,
+  useSubscriptionStoreShallow,
+  useUserStoreShallow,
+} from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
-import type { WorkflowSchedule, ListSchedulesResponse } from '@refly/openapi-schema';
+import type {
+  WorkflowSchedule,
+  ListSchedulesResponse,
+  GenericToolset,
+  UserTool,
+} from '@refly/openapi-schema';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { LuAlarmClock } from 'react-icons/lu';
+import { extractToolsetsWithNodes } from '@refly/canvas-common';
+import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
+import { useRequiredInputsCheck } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';
 import {
   SchedulePopoverContent,
   parseScheduleConfig,
@@ -30,6 +44,34 @@ import './index.scss';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+/**
+ * Check if a toolset is authorized/installed
+ * - External OAuth tools: need authorization (check userTools.authorized)
+ * - Other tools (builtin, non-OAuth): always available, no installation needed
+ */
+const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): boolean => {
+  // MCP servers need to be checked separately
+  if (toolset.type === 'mcp') {
+    return userTools.some((t) => t.toolset?.name === toolset.name);
+  }
+
+  // Builtin tools are always available
+  if (toolset.builtin) {
+    return true;
+  }
+
+  // Find matching user tool by key
+  const matchingUserTool = userTools.find((t) => t.key === toolset.toolset?.key);
+
+  // If not in userTools list, user hasn't installed/authorized this tool
+  if (!matchingUserTool) {
+    return false;
+  }
+
+  // For external OAuth tools, check authorized status
+  return matchingUserTool.authorized ?? false;
+};
+
 interface ScheduleButtonProps {
   canvasId: string;
 }
@@ -38,6 +80,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+
   const [scheduleLimitModalVisible, setScheduleLimitModalVisible] = useState(false);
   const [deactivateModalVisible, setDeactivateModalVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -45,6 +88,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   // Local state for popover form
   const [schedule, setSchedule] = useState<WorkflowSchedule | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
+
   const [frequency, setFrequency] = useState<ScheduleFrequency>('daily');
   const [timeValue, setTimeValue] = useState<dayjs.Dayjs>(dayjs('08:00', 'HH:mm'));
 
@@ -57,6 +101,26 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
     setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
   }));
 
+  // Get user login status for dependency checks
+  const { isLogin } = useUserStoreShallow((state) => ({
+    isLogin: state.isLogin,
+  }));
+
+  // Get canvas data for dependency checks
+  const { data: canvasResponse } = useGetCanvasData({ query: { canvasId } }, [], {
+    enabled: !!canvasId && isLogin,
+    refetchOnWindowFocus: false,
+  });
+
+  // Get user tools for dependency checks
+  const { data: userToolsData } = useListUserTools({}, [], {
+    enabled: isLogin,
+    refetchOnWindowFocus: false,
+  });
+
+  // Get credit balance for dependency checks
+  const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
+
   // API mutations
   const listSchedulesMutation = useListSchedules();
   const createScheduleMutation = useCreateSchedule();
@@ -66,6 +130,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   const [totalEnabledSchedules, setTotalEnabledSchedules] = useState(0);
   const [isLoadingScheduleCount, setIsLoadingScheduleCount] = useState(false);
   const [hasLoadedInitially, setHasLoadedInitially] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
 
   // Calculate schedule quota based on plan type
   const scheduleQuota = useMemo(() => {
@@ -104,6 +169,55 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   const disabled = useMemo(() => {
     return toolbarLoading || !skillResponseNodes?.length;
   }, [toolbarLoading, skillResponseNodes]);
+
+  // Check for required inputs that are not filled
+  const { count: requiredInputsCount } = useRequiredInputsCheck(canvasId);
+
+  // Check for tool dependencies and errors
+  const hasToolDependencyError = useMemo(() => {
+    if (!isLogin || !schedule?.isEnabled) {
+      return false;
+    }
+
+    const nodes = canvasResponse?.data?.nodes || [];
+    const userTools = userToolsData?.data ?? [];
+
+    // Extract toolsets from canvas nodes
+    const toolsetsWithNodes = extractToolsetsWithNodes(nodes);
+
+    // Check for uninstalled tools
+    const uninstalledTools = toolsetsWithNodes.filter((tool) => {
+      const isAuthorized = isToolsetAuthorized(tool.toolset, userTools);
+      return !isAuthorized;
+    });
+
+    const hasUninstalledTools = uninstalledTools.length > 0;
+
+    // Check for credit insufficiency
+    const estimatedCreditUsage = creditUsageData?.data?.total ?? 0;
+    const isCreditInsufficient =
+      isBalanceSuccess &&
+      Number.isFinite(estimatedCreditUsage) &&
+      estimatedCreditUsage > 0 &&
+      creditBalance < estimatedCreditUsage;
+
+    // Check for unfilled required inputs
+    const hasUnfilledRequiredInputs = requiredInputsCount > 0;
+
+    const hasError = hasUninstalledTools || isCreditInsufficient || hasUnfilledRequiredInputs;
+
+    return hasError;
+  }, [
+    isLogin,
+    schedule?.isEnabled,
+    schedule?.scheduleId,
+    canvasResponse?.data?.nodes,
+    userToolsData?.data,
+    creditUsageData?.data?.total,
+    isBalanceSuccess,
+    creditBalance,
+    requiredInputsCount,
+  ]);
 
   // Fetch all enabled schedules count
   const fetchAllEnabledSchedulesCount = useCallback(async () => {
@@ -335,13 +449,25 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
 
   // Handle confirmed deactivation
   const handleConfirmDeactivate = useCallback(async () => {
-    setIsEnabled(false);
-    await autoSave(false);
-    // Refresh schedule data after deactivating
-    await fetchSchedule();
-    setDeactivateModalVisible(false);
-    message.success(t('schedule.deactivateSuccess') || 'Schedule deactivated');
-  }, [autoSave, fetchSchedule, t]);
+    if (isDeactivating) return; // Prevent multiple clicks
+
+    try {
+      setIsDeactivating(true);
+      setIsEnabled(false);
+      await autoSave(false);
+      // Refresh schedule data after deactivating
+      await fetchSchedule();
+      setDeactivateModalVisible(false);
+      message.success(t('schedule.deactivateSuccess') || 'Schedule deactivated');
+    } catch (error) {
+      console.error('Error deactivating schedule:', error);
+      message.error(t('schedule.deactivateError') || 'Failed to deactivate schedule');
+      // Reset enabled state if error occurs
+      setIsEnabled(true);
+    } finally {
+      setIsDeactivating(false);
+    }
+  }, [autoSave, fetchSchedule, t, isDeactivating]);
 
   // Handle auto save when other settings change (if enabled)
   // Use ref to track if we're currently saving to prevent infinite loops
@@ -426,8 +552,18 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
     navigate('/workflow-list');
   }, [navigate]);
 
-  // Determine style based on schedule status
+  // Determine schedule status
   const isScheduled = schedule?.isEnabled;
+  const scheduleStatus = useMemo(() => {
+    if (!isScheduled) {
+      return 'off';
+    }
+    if (hasToolDependencyError) {
+      console.log('[ScheduleButton] Status: ERROR - has tool dependency error');
+      return 'error';
+    }
+    return 'on';
+  }, [isScheduled, hasToolDependencyError, schedule?.scheduleId]);
 
   return (
     <>
@@ -509,12 +645,14 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
                 <div className="absolute -bottom-0 -right-1">
                   <span
                     className={`px-0.5 py-0.5 flex items-center text-[8px] font-bold leading-[8px] rounded-sm ${
-                      isScheduled
+                      scheduleStatus === 'on'
                         ? 'bg-refly-primary-default text-refly-bg-body-z0'
-                        : 'bg-refly-fill-hover text-refly-text-3'
+                        : scheduleStatus === 'error'
+                          ? 'bg-refly-func-danger-default text-refly-bg-body-z0'
+                          : 'bg-refly-fill-hover text-refly-text-3'
                     }`}
                   >
-                    {isScheduled ? t('schedule.status.on') : t('schedule.status.off')}
+                    {t(`schedule.status.${scheduleStatus}`)}
                   </span>
                 </div>
               )}
@@ -566,15 +704,22 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
       <Modal
         title={t('schedule.deactivate.title') || 'Deactivate Schedule'}
         open={deactivateModalVisible}
-        onCancel={() => setDeactivateModalVisible(false)}
+        onCancel={isDeactivating ? undefined : () => setDeactivateModalVisible(false)}
+        closable={!isDeactivating}
+        maskClosable={!isDeactivating}
         centered
         footer={[
-          <Button key="cancel" onClick={() => setDeactivateModalVisible(false)}>
+          <Button
+            key="cancel"
+            disabled={isDeactivating}
+            onClick={() => setDeactivateModalVisible(false)}
+          >
             {t('common.cancel') || 'Cancel'}
           </Button>,
           <Button
             key="deactivate"
             type="primary"
+            loading={isDeactivating}
             onClick={handleConfirmDeactivate}
             className="!bg-gray-600 hover:!bg-gray-700 !border-gray-600"
           >
