@@ -255,6 +255,7 @@ export default () => ({
   },
 
   sandbox: {
+    timeout: process.env.SANDBOX_TIMEOUT,
     truncate: {
       output: process.env.SANDBOX_TRUNCATE_OUTPUT,
     },

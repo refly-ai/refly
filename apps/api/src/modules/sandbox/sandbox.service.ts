@@ -13,6 +13,8 @@ import { SandboxExecutionContext, S3Config } from './sandbox.schema';
 import { SandboxCanvasIdRequiredError } from './sandbox.exception';
 import { SandboxResponseFactory } from './sandbox.response';
 import { guard } from '../../utils/guard';
+import { Config } from '../config/config.decorator';
+import { SANDBOX_TIMEOUTS } from './sandbox.constants';
 
 interface ExecutionContext {
   uid: string;
@@ -24,6 +26,12 @@ interface ExecutionContext {
 
 @Injectable()
 export class SandboxService {
+  @Config.integer('sandbox.timeout', SANDBOX_TIMEOUTS.DEFAULT)
+  private readonly timeoutMs: number;
+
+  @Config.object<S3Config>('objectStorage.minio.internal', (raw) => raw as S3Config)
+  private readonly s3Config: S3Config;
+
   constructor(
     private readonly config: ConfigService,
     private readonly client: SandboxClient,
@@ -32,20 +40,6 @@ export class SandboxService {
   ) {
     this.logger.setContext(SandboxService.name);
     void this.config; // Suppress unused warning - used by @Config decorators
-  }
-
-  /** Uses internal minio config since worker runs in the same network */
-  private getS3Config(): S3Config {
-    const minioConfig = this.config.get('objectStorage.minio.internal');
-    return {
-      endPoint: minioConfig.endPoint,
-      port: minioConfig.port,
-      useSSL: minioConfig.useSSL,
-      accessKey: minioConfig.accessKey,
-      secretKey: minioConfig.secretKey,
-      bucket: minioConfig.bucket,
-      region: minioConfig.region,
-    };
   }
 
   async execute(user: User, request: SandboxExecuteRequest): Promise<SandboxExecuteResponse> {
@@ -61,9 +55,9 @@ export class SandboxService {
       const context: SandboxExecutionContext = {
         uid: user.uid,
         canvasId: canvasId,
-        s3Config: this.getS3Config(),
+        s3Config: this.s3Config,
         s3DrivePath: storagePath,
-        timeout: 60000, // 60 seconds default
+        timeout: this.timeoutMs,
         parentResultId: request.context?.parentResultId,
         version: request.context?.version,
       };

@@ -82,6 +82,8 @@ services:
       - 38080:8080
     volumes:
       - ./searxng:/etc/searxng
+    env_file:
+      - .env
     environment:
       - SEARXNG_BASE_URL=https://${SEARXNG_HOSTNAME:-localhost}/
       - UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS:-4}
@@ -92,6 +94,8 @@ services:
     container_name: refly_sandbox
     image: refly-sandbox:local  # Local image for debugging, use ghcr.io/refly-ai/refly-sandbox:latest for production
     restart: always
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - PORT=7651
