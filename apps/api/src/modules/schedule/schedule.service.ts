@@ -114,22 +114,87 @@ export class ScheduleService {
     // 2. Validate Canvas exists and belongs to user
     await this.validateCanvas(uid, dto.canvasId);
 
-    // 3. Check if schedule already exists for this canvas
+    // 3. Check if schedule already exists for this canvas (including soft-deleted records)
     const existingSchedule = await this.prisma.workflowSchedule.findFirst({
-      where: { canvasId: dto.canvasId, uid, deletedAt: null },
+      where: { canvasId: dto.canvasId, uid }, // Don't filter deletedAt to handle soft-deleted records
     });
 
-    // 4. Determine if schedule should be enabled
+    // 4. If soft-deleted record exists, restore it
+    if (existingSchedule?.deletedAt) {
+      this.logger.log(
+        `Restoring soft-deleted schedule ${existingSchedule.scheduleId} for canvas ${dto.canvasId}`,
+      );
+
+      // Determine if schedule should be enabled
+      const isEnabled = dto.isEnabled ?? false;
+
+      // Check quota if enabling
+      if (isEnabled) {
+        await this.checkScheduleQuota(uid, existingSchedule.scheduleId);
+      }
+
+      // Calculate next run time
+      let nextRunAt: Date | null = null;
+      if (isEnabled) {
+        try {
+          const interval = CronExpressionParser.parse(dto.cronExpression, {
+            tz: dto.timezone || 'Asia/Shanghai',
+          });
+          nextRunAt = interval.next().toDate();
+        } catch {
+          throw new BadRequestException(ScheduleFailureReason.INVALID_CRON_EXPRESSION);
+        }
+      }
+
+      // Get canvas title for default name if name not provided
+      let scheduleName = dto.name;
+      if (!scheduleName) {
+        const canvas = await this.prisma.canvas.findUnique({
+          where: { canvasId: dto.canvasId },
+          select: { title: true },
+        });
+        scheduleName = canvas?.title || 'Scheduled Task';
+      }
+
+      // Restore and update the soft-deleted record
+      const restored = await this.prisma.workflowSchedule.update({
+        where: { scheduleId: existingSchedule.scheduleId },
+        data: {
+          name: scheduleName,
+          cronExpression: dto.cronExpression,
+          scheduleConfig: dto.scheduleConfig,
+          timezone: dto.timezone || existingSchedule.timezone,
+          isEnabled,
+          nextRunAt,
+          deletedAt: null, // Clear soft-delete flag
+          updatedAt: new Date(),
+        },
+      });
+
+      // Create scheduled record if enabled
+      if (isEnabled && nextRunAt) {
+        await this.createOrUpdateScheduledRecord(
+          uid,
+          existingSchedule.scheduleId,
+          dto.canvasId,
+          nextRunAt,
+        );
+      }
+
+      return this.excludePk(restored);
+    }
+
+    // 5. Determine if schedule should be enabled
     const isEnabled = dto.isEnabled ?? existingSchedule?.isEnabled ?? false;
 
-    // 5. Check Plan Quota (only if enabling the schedule from disabled state)
+    // 6. Check Plan Quota (only if enabling the schedule from disabled state)
     if (existingSchedule?.isEnabled === false && isEnabled === true) {
       await this.checkScheduleQuota(uid, existingSchedule.scheduleId);
     } else if (!existingSchedule && isEnabled) {
       await this.checkScheduleQuota(uid);
     }
 
-    // 6. Calculate next run time
+    // 7. Calculate next run time
     const cron = dto.cronExpression;
     const timezone = dto.timezone || existingSchedule?.timezone || 'Asia/Shanghai';
     let nextRunAt: Date | null = null;
@@ -158,7 +223,7 @@ export class ScheduleService {
       nextRunAt = existingSchedule?.nextRunAt ?? null;
     }
 
-    // 7. Get canvas title for default name if name not provided
+    // 8. Get canvas title for default name if name not provided
     let scheduleName = dto.name;
     if (!scheduleName) {
       if (existingSchedule?.name) {
@@ -172,7 +237,7 @@ export class ScheduleService {
       }
     }
 
-    // 8. Create or update Schedule
+    // 9. Create or update Schedule
     const scheduleId = existingSchedule?.scheduleId ?? genScheduleId();
 
     if (existingSchedule) {

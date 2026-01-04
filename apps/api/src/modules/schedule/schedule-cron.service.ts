@@ -21,6 +21,7 @@ import {
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { CronExpressionParser } from 'cron-parser';
 import { genScheduleRecordId } from '@refly/utils';
+import { logEvent } from '@refly/telemetry-node';
 
 /**
  * Extract schedule type from scheduleConfig JSON
@@ -326,23 +327,58 @@ export class ScheduleCronService implements OnModuleInit {
 
     this.logger.log(`Triggered schedule ${schedule.scheduleId} with priority ${priority}`);
 
-    // Track analytics event for schedule trigger
-    this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_RUN_TRIGGERED, {
-      uid: schedule.uid,
-      scheduleId: schedule.scheduleId,
-      scheduleRecordId: currentRecordId,
-      type: getScheduleType(schedule.scheduleConfig),
-      priority,
+    // Get user information once for telemetry (avoid duplicate query)
+    const user = await this.prisma.user.findUnique({
+      where: { uid: schedule.uid },
+      select: { uid: true, email: true },
     });
+
+    // Track analytics event for schedule trigger
+    await this.trackScheduleEvent(
+      ScheduleAnalyticsEvents.SCHEDULE_RUN_TRIGGERED,
+      schedule.uid,
+      {
+        scheduleId: schedule.scheduleId,
+        scheduleRecordId: currentRecordId,
+        type: getScheduleType(schedule.scheduleConfig),
+        priority,
+      },
+      user,
+    );
   }
 
   /**
-   * Track analytics event (placeholder - integrate with actual analytics service)
+   * Track analytics event using telemetry service
    * @param eventName - Event name from ScheduleAnalyticsEvents
-   * @param properties - Event properties
+   * @param uid - User ID
+   * @param metadata - Event metadata
+   * @param user - Optional user object to avoid duplicate query
    */
-  private trackScheduleEvent(eventName: string, properties: Record<string, any>): void {
-    this.logger.debug(`Analytics event: ${eventName}`, properties);
-    // TODO: Integrate with actual analytics service (e.g., Mixpanel, Amplitude)
+  private async trackScheduleEvent(
+    eventName: string,
+    uid: string,
+    metadata?: Record<string, any>,
+    user?: { uid: string; email?: string | null },
+  ): Promise<void> {
+    try {
+      // Use provided user or query if not provided
+      let userForEvent = user;
+      if (!userForEvent) {
+        userForEvent = await this.prisma.user.findUnique({
+          where: { uid },
+          select: { uid: true, email: true },
+        });
+      }
+
+      if (userForEvent) {
+        logEvent(userForEvent, eventName, null, metadata);
+        this.logger.debug(`Analytics event: ${eventName}`, { uid, ...metadata });
+      } else {
+        this.logger.warn(`User not found for analytics event ${eventName}, uid: ${uid}`);
+      }
+    } catch (error) {
+      // Don't fail the schedule trigger if analytics fails
+      this.logger.error(`Failed to track analytics event ${eventName}:`, error);
+    }
   }
 }

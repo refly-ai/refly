@@ -56,3 +56,8 @@ docs/.vitepress/cache/*
 .claude/settings.local.json
 
 .codex/*
+
+apps/api/load-tests/results/*.json
+apps/api/load-tests/results/*.txt
+
+apps/api/load-tests/.env
