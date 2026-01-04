@@ -4288,6 +4288,7 @@ const translations = {
       sat: 'Sat',
       sun: 'Sun',
     },
+    selectDate: 'Select Date',
     runNow: 'Run Now',
     triggerSuccess: 'Schedule triggered successfully',
     triggerFailed: 'Failed to trigger schedule',

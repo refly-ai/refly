@@ -4321,6 +4321,7 @@ const translations = {
       sat: '周六',
       sun: '周日',
     },
+    selectDate: '选择日期',
     runNow: '立即运行',
     triggerSuccess: '定时任务已触发',
     triggerFailed: '触发定时任务失败',

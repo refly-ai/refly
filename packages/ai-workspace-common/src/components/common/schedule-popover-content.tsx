@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { ArrowRight } from 'lucide-react';
+import './schedule-popover-content.scss';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -108,6 +109,91 @@ export const SchedulePopoverContent = memo(
     const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const language = i18n.languages?.[0];
+
+    // Helper function to format selected weekdays for display
+    const formatSelectedWeekdays = useCallback(
+      (selectedWeekdays: number[]) => {
+        if (selectedWeekdays.length === 0) return t('schedule.selectDate') || 'Select Date';
+
+        const sortedWeekdays = [...selectedWeekdays].sort((a, b) => {
+          // Convert Sunday (0) to 7 for proper sorting
+          const aVal = a === 0 ? 7 : a;
+          const bVal = b === 0 ? 7 : b;
+          return aVal - bVal;
+        });
+
+        const weekdayLabels = sortedWeekdays
+          .map((value) => {
+            const weekday = WEEKDAYS.find((w) => w.value === value);
+            return weekday
+              ? t(`schedule.weekday.${weekday.label.toLowerCase()}`) || weekday.label
+              : '';
+          })
+          .filter(Boolean);
+
+        const isZh = language === 'zh-CN';
+
+        let result: string;
+        if (isZh) {
+          // For Chinese, show detailed format if ≤ 2 days, otherwise show first 2 with ellipsis
+          if (weekdayLabels.length <= 2) {
+            result = `每${weekdayLabels.join('、')}`;
+          } else {
+            result = `每${weekdayLabels.slice(0, 2).join('、')}...`;
+          }
+        } else {
+          // For English, show detailed format if ≤ 2 days, otherwise show first 2 with ellipsis
+          if (weekdayLabels.length <= 2) {
+            result = `${weekdayLabels.join(', ')}`;
+          } else {
+            result = `${weekdayLabels.slice(0, 2).join(', ')}...`;
+          }
+        }
+
+        return result;
+      },
+      [t, language],
+    );
+
+    // Helper function to format selected month days for display
+    const formatSelectedMonthDays = useCallback(
+      (selectedDays: number[]) => {
+        if (selectedDays.length === 0) return t('schedule.selectDate') || 'Select Date';
+
+        const sortedDays = [...selectedDays].sort((a, b) => a - b);
+        const isZh = language === 'zh-CN';
+
+        let result: string;
+        if (isZh) {
+          // For Chinese, show detailed format if ≤ 2 days, otherwise show first 2 with ellipsis
+          if (sortedDays.length <= 2) {
+            const dayLabels = sortedDays.map((day) => `${day}号`);
+            result = `每月${dayLabels.join('、')}`;
+          } else {
+            const dayLabels = sortedDays.slice(0, 2).map((day) => `${day}号`);
+            result = `每月${dayLabels.join('、')}...`;
+          }
+        } else {
+          // For English, show detailed format if ≤ 2 days, otherwise show first 2 with ellipsis
+          if (sortedDays.length <= 3) {
+            const dayLabels = sortedDays.map((day) => {
+              const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th';
+              return `${day}${suffix}`;
+            });
+            result = `${dayLabels.join(', ')}`;
+          } else {
+            const dayLabels = sortedDays.slice(0, 3).map((day) => {
+              const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th';
+              return `${day}${suffix}`;
+            });
+            result = `${dayLabels.join(', ')}...`;
+          }
+        }
+
+        return result;
+      },
+      [t, language],
+    );
 
     // Calculate next run time
     const nextRunTime = useMemo(() => {
@@ -231,11 +317,7 @@ export const SchedulePopoverContent = memo(
                 className="w-full h-full schedule-select"
                 size="large"
                 maxTagCount={0}
-                maxTagPlaceholder={() =>
-                  weekdays.length === 0
-                    ? 'Select Date'
-                    : `Select ${weekdays.length} day${weekdays.length !== 1 ? 's' : ''}`
-                }
+                maxTagPlaceholder={() => formatSelectedWeekdays(weekdays)}
                 dropdownClassName="schedule-dropdown"
               />
             </div>
@@ -260,11 +342,7 @@ export const SchedulePopoverContent = memo(
                 className="w-full h-full schedule-monthly-select"
                 size="large"
                 maxTagCount={0}
-                maxTagPlaceholder={() =>
-                  monthDays.length === 0
-                    ? 'Select Date'
-                    : `Select ${monthDays.length} day${monthDays.length !== 1 ? 's' : ''}`
-                }
+                maxTagPlaceholder={() => formatSelectedMonthDays(monthDays)}
               />
             </div>
           )}

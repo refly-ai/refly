@@ -17,6 +17,7 @@ import {
   useCanvasStoreShallow,
   useSubscriptionStoreShallow,
   useUserStoreShallow,
+  useCanvasResourcesPanelStoreShallow,
 } from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
 import type {
@@ -105,6 +106,13 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   const { isLogin } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
   }));
+
+  // Get tools dependency store for triggering popover
+  const { setToolsDependencyOpen, setToolsDependencyHighlight } =
+    useCanvasResourcesPanelStoreShallow((state) => ({
+      setToolsDependencyOpen: state.setToolsDependencyOpen,
+      setToolsDependencyHighlight: state.setToolsDependencyHighlight,
+    }));
 
   // Get canvas data for dependency checks
   const { data: canvasResponse } = useGetCanvasData({ query: { canvasId } }, [], {
@@ -428,11 +436,65 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
     ],
   );
 
+  // Immediate dependency check function (without waiting for schedule to be enabled)
+  const checkDependenciesImmediately = useCallback(() => {
+    if (!isLogin) {
+      return false;
+    }
+
+    const nodes = canvasResponse?.data?.nodes || [];
+    const userTools = userToolsData?.data ?? [];
+
+    // Extract toolsets from canvas nodes
+    const toolsetsWithNodes = extractToolsetsWithNodes(nodes);
+
+    // Check for uninstalled tools
+    const uninstalledTools = toolsetsWithNodes.filter((tool) => {
+      const isAuthorized = isToolsetAuthorized(tool.toolset, userTools);
+      return !isAuthorized;
+    });
+
+    const hasUninstalledTools = uninstalledTools.length > 0;
+
+    // Check for credit insufficiency
+    const estimatedCreditUsage = creditUsageData?.data?.total ?? 0;
+    const isCreditInsufficient =
+      isBalanceSuccess &&
+      Number.isFinite(estimatedCreditUsage) &&
+      estimatedCreditUsage > 0 &&
+      creditBalance < estimatedCreditUsage;
+
+    // Check for unfilled required inputs
+    const hasUnfilledRequiredInputs = requiredInputsCount > 0;
+
+    const hasError = hasUninstalledTools || isCreditInsufficient || hasUnfilledRequiredInputs;
+
+    return hasError;
+  }, [
+    isLogin,
+    canvasResponse?.data?.nodes,
+    userToolsData?.data,
+    creditUsageData?.data?.total,
+    isBalanceSuccess,
+    creditBalance,
+    requiredInputsCount,
+  ]);
+
   // Handle switch change with auto save and deactivate confirmation
   const handleSwitchChange = useCallback(
     async (checked: boolean) => {
       if (checked) {
-        // Enabling: auto save immediately
+        // Check for dependency errors BEFORE enabling (immediate check)
+        const hasDependencyError = checkDependenciesImmediately();
+
+        // Show dependency popover if there are issues (but don't block enabling)
+        if (hasDependencyError) {
+          setOpen(false); // Close schedule popover first
+          setToolsDependencyOpen(canvasId, true); // Open tools dependency popover
+          setToolsDependencyHighlight(canvasId, true); // Highlight install buttons
+        }
+
+        // Enabling: auto save immediately (continue regardless of dependency errors)
         setIsEnabled(true);
         await autoSave(true);
         // Refresh schedule data after enabling
@@ -444,7 +506,15 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
         setDeactivateModalVisible(true);
       }
     },
-    [autoSave, fetchSchedule, t],
+    [
+      checkDependenciesImmediately,
+      autoSave,
+      fetchSchedule,
+      t,
+      canvasId,
+      setToolsDependencyOpen,
+      setToolsDependencyHighlight,
+    ],
   );
 
   // Handle confirmed deactivation
@@ -559,7 +629,6 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
       return 'off';
     }
     if (hasToolDependencyError) {
-      console.log('[ScheduleButton] Status: ERROR - has tool dependency error');
       return 'error';
     }
     return 'on';
