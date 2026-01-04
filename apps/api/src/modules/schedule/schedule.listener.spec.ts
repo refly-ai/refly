@@ -400,7 +400,14 @@ describe('ScheduleEventListener', () => {
 
       jest.spyOn(prismaService.workflowSchedule, 'findMany').mockResolvedValue([]);
 
+      // Spy on the actual method to verify it's called
+      const handleCanvasDeletedSpy = jest.spyOn(listener, 'handleCanvasDeleted');
+
       await listener.handleCanvasDeleted(event);
+
+      // Verify the real method was called
+      expect(handleCanvasDeletedSpy).toHaveBeenCalledWith(event);
+      expect(handleCanvasDeletedSpy).toHaveBeenCalledTimes(1);
 
       expect(prismaService.workflowSchedule.findMany).toHaveBeenCalledWith({
         where: { canvasId: 'canvas-1', uid: 'user-1', deletedAt: null },
