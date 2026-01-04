@@ -107,6 +107,7 @@ import {
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowPlanDetail,
   getWorkflowVariables,
   hasBeenInvited,
   hasFilledForm,
@@ -390,6 +391,8 @@ import {
   GetWorkflowAppDetailError,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
+  GetWorkflowPlanDetailData,
+  GetWorkflowPlanDetailError,
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
   HasBeenInvitedError,
@@ -1155,6 +1158,23 @@ export const useGetWorkflowDetail = <
     queryKey: Common.UseGetWorkflowDetailKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getWorkflowDetail({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetWorkflowPlanDetail = <
+  TData = Common.GetWorkflowPlanDetailDefaultResponse,
+  TError = GetWorkflowPlanDetailError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowPlanDetailData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowPlanDetailKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowPlanDetail({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetWorkflowAppDetail = <

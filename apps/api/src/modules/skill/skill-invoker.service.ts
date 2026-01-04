@@ -2,8 +2,14 @@ import { Injectable, Optional } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
 import { DirectConnection } from '@hocuspocus/server';
-import { AIMessage, HumanMessage } from '@langchain/core/messages';
-import { AIMessageChunk, BaseMessage, MessageContentComplex } from '@langchain/core/messages';
+import {
+  AIMessage,
+  AIMessageChunk,
+  BaseMessage,
+  HumanMessage,
+  MessageContentComplex,
+  ToolMessage,
+} from '@langchain/core/messages';
 import { FilteredLangfuseCallbackHandler, Trace, getTracer } from '@refly/observability';
 import { propagation, context, SpanStatusCode } from '@opentelemetry/api';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -14,8 +20,8 @@ import {
   WorkflowExecutionNotFoundError,
 } from '@refly/errors';
 import {
+  ActionMessage,
   ActionResult,
-  ActionStep,
   Artifact,
   DriveFile,
   LLMModelConfig,
@@ -116,7 +122,6 @@ export class SkillInvokerService {
     user: User,
     providerItem: ProviderItem,
     result: ActionResult,
-    steps: ActionStep[],
   ): Promise<BaseMessage[]> {
     const query = result.input?.query || result.title;
 
@@ -130,12 +135,22 @@ export class SkillInvokerService {
       ];
     }
 
-    // Build consolidated tool call history by step from DB to avoid duplicating start/stream/end fragments
+    // Check if result already has messages (from populateSkillResultHistory)
+    if (result.messages && result.messages.length > 0) {
+      // Build messages from pre-fetched action_messages (preferred approach)
+      return [
+        new HumanMessage({ content: messageContent } as any),
+        ...this.reconstructLangchainMessagesFromDB(result.messages),
+      ];
+    }
+
+    // Final fallback: Build from steps if no messages found (backward compatibility)
     const toolCallsByStep = await this.toolCallService.fetchConsolidatedToolUseOutputByStep(
       result.resultId,
       result.version,
     );
 
+    const steps = result.steps;
     const aiMessages =
       steps?.length > 0
         ? steps.map((step) => {
@@ -158,6 +173,80 @@ export class SkillInvokerService {
         : [];
 
     return [new HumanMessage({ content: messageContent } as any), ...aiMessages];
+  }
+
+  /**
+   * Reconstruct LangChain messages from action_messages table records
+   * This ensures AI messages and Tool messages are properly separated without XML formatting
+   */
+  private reconstructLangchainMessagesFromDB(messages: ActionMessage[]): BaseMessage[] {
+    const langchainMessages: BaseMessage[] = [];
+
+    for (const msg of messages) {
+      const messageType = msg.type;
+      const content = msg.content ?? '';
+      const reasoningContent = msg.reasoningContent ?? '';
+
+      if (messageType === 'ai') {
+        // Reconstruct AI message with pure content (no XML tool use formatting)
+        const mergedContent = getWholeParsedContent(reasoningContent, content);
+        const metadata = msg.toolCallMeta ?? {};
+
+        langchainMessages.push(
+          new AIMessage({
+            content: mergedContent,
+            additional_kwargs: metadata,
+          }),
+        );
+      } else if (messageType === 'tool') {
+        // Reconstruct tool use + tool result in the canonical LangChain format.
+        // Bedrock (Converse) requires toolResult blocks to match toolUse blocks from the previous assistant turn.
+        const toolCallMeta = (msg.toolCallMeta ?? {}) as ToolCallMeta;
+        const toolCallResult = msg.toolCallResult ?? {};
+
+        const toolCallId = toolCallMeta?.toolCallId ?? msg.toolCallId ?? '';
+        const toolName = toolCallMeta?.toolName ?? (msg.toolCallResult as any)?.toolName ?? '';
+
+        // Ensure we never emit a ToolMessage (toolResult) without a matching tool call (toolUse).
+        if (!toolCallId || !toolName) {
+          langchainMessages.push(
+            new AIMessage({
+              content: JSON.stringify((toolCallResult as any)?.output ?? toolCallResult),
+            }),
+          );
+          continue;
+        }
+
+        const rawArgs = (toolCallResult as any)?.input;
+        const toolArgs =
+          rawArgs && typeof rawArgs === 'object' && !Array.isArray(rawArgs) ? rawArgs : {};
+
+        // 1) Tool use: assistant message with tool_calls
+        langchainMessages.push(
+          new AIMessage({
+            content: '',
+            tool_calls: [
+              {
+                id: toolCallId,
+                name: toolName,
+                args: toolArgs,
+              },
+            ],
+          }),
+        );
+
+        // 2) Tool result: ToolMessage that references the tool_call_id
+        langchainMessages.push(
+          new ToolMessage({
+            content: JSON.stringify((toolCallResult as any)?.output ?? toolCallResult),
+            tool_call_id: toolCallId,
+            name: toolName,
+          }),
+        );
+      }
+    }
+
+    return langchainMessages;
   }
 
   @Trace('skill.buildInvokeConfig')
@@ -247,6 +336,10 @@ export class SkillInvokerService {
       },
     };
 
+    if (data.copilotSessionId) {
+      config.configurable.copilotSessionId = data.copilotSessionId;
+    }
+
     // Add project info if projectId is provided
     if (projectId) {
       const project = await this.prisma.project.findUnique({
@@ -260,7 +353,7 @@ export class SkillInvokerService {
 
     if (resultHistory?.length > 0) {
       config.configurable.chatHistory = await Promise.all(
-        resultHistory.map((r) => this.buildLangchainMessages(user, providerItem, r, r.steps)),
+        resultHistory.map((r) => this.buildLangchainMessages(user, providerItem, r)),
       ).then((messages) => messages.flat());
     }
 

@@ -1215,22 +1215,6 @@ const translations = {
       documentBeforeCursorSelection: 'Document Before Cursor Selection',
       documentAfterCursorSelection: 'Document After Cursor Selection',
     },
-    presetScenarios: {
-      title: 'Preset Scenarios',
-      generatePPT: 'Generate PPT',
-      generatePPTDesc: 'Create professional presentation slides',
-      generatePPTQuery: 'Please use HTML format to create a professional PPT about [topic]',
-      generateLanding: 'Generate Landing Page',
-      generateLandingDesc: 'Create a marketing landing page',
-      generateLandingQuery:
-        'Please use HTML format to create a marketing landing page for [product/service]',
-      generateXHS: 'Generate Twitter Card',
-      generateXHSDesc: 'Create Twitter content card',
-      generateXHSQuery: 'Please use HTML format to create a Twitter content card about [topic]',
-      generateMediaContent: 'Generate Media Content',
-      generateMediaContentDesc: 'Create compelling media content',
-      generateMediaContentQuery: 'Please create media content about [topic]',
-    },
     export: {
       success: 'Image exported successfully',
       error: 'Failed to export image',
@@ -1242,31 +1226,6 @@ const translations = {
       commonChatInputPlaceholder:
         'Enter task, press @ to select user input, tools, files, and agents.',
       actionIsRunning: 'Current action is running, please wait for it to complete',
-    },
-    contextMenu: {
-      createGroup: 'Create Group',
-      enableClickPreview: 'Enable Click Preview',
-      disableClickPreview: 'Disable Click Preview',
-      toggleClickPreviewDescription:
-        'Whether to display the preview card when clicking on a node in the canvas.',
-      hideLaunchpad: 'Hide Ask AI',
-      showLaunchpad: 'Show Ask AI',
-      toggleLaunchpadDescription: 'Whether to display the AI input box.',
-      hideEdges: 'Hide Edges',
-      showEdges: 'Show Edges',
-      toggleEdgeDescription: 'Whether to display the edges when clicking on a node in the canvas.',
-      toggleNodeSizeMode: 'Toggle Node Size Mode',
-      toggleNodeSizeModeDescription:
-        'Toggle node size mode, compact mode has smaller node spacing, adaptive mode has node spacing that adjusts automatically according to the canvas size.',
-      compactMode: 'Compact Mode',
-      adaptiveMode: 'Adaptive Mode',
-      enableAutoLayout: 'Enable Auto Layout',
-      disableAutoLayout: 'Disable Auto Layout',
-      toggleAutoLayoutDescription: 'Whether to enable auto layout when creating a new node.',
-      enableHoverCard: 'Enable Hover Guide',
-      disableHoverCard: 'Disable Hover Guide',
-      toggleHoverCardDescription:
-        'Toggle hover guide feature that shows additional information and tutorials when hovering over items',
     },
     toolbar: {
       searchNode: 'Search Node',
@@ -3254,6 +3213,7 @@ const translations = {
       internalTool: {
         readFile: 'Reading',
         listFiles: 'Browsing file list',
+        copilotSummary: 'Reading workflow summary',
       },
     },
   },
@@ -3261,6 +3221,7 @@ const translations = {
     title: 'Workflow Assistant',
     assistant: 'Copilot',
     placeholder: 'Describe the workflow you want to generate...',
+    loadingWorkflow: 'Loading workflow...',
     header: {
       history: 'Chat History',
       newConversation: 'New Chat',

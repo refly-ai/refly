@@ -1105,6 +1105,7 @@ export class SkillService implements OnModuleInit {
 
   /**
    * Populate skill result history with actual result detail and steps.
+   * Now includes messages from action_messages table for proper history reconstruction.
    */
   async populateSkillResultHistory(user: User, resultHistory: { resultId: string }[] = []) {
     if (!Array.isArray(resultHistory) || resultHistory.length === 0) {
@@ -1126,12 +1127,9 @@ export class SkillService implements OnModuleInit {
     }
 
     const finalResults: ActionResult[] = await Promise.all(
-      Array.from(latestResultsMap.entries()).map(async ([resultId, result]) => {
-        const steps = await this.prisma.actionStep.findMany({
-          where: { resultId, version: result.version },
-          orderBy: { order: 'asc' },
-        });
-        return actionResultPO2DTO({ ...result, steps });
+      Array.from(latestResultsMap.keys()).map(async (resultId) => {
+        const resultDetail = await this.actionService.getActionResult(user, { resultId });
+        return actionResultPO2DTO(resultDetail);
       }),
     );
 

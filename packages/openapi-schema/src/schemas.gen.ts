@@ -10549,6 +10549,113 @@ export const WorkflowExecutionSchema = {
   },
 } as const;
 
+export const WorkflowTaskSchema = {
+  type: 'object',
+  required: ['id', 'title', 'prompt', 'toolsets'],
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Unique ID for the task',
+    },
+    title: {
+      type: 'string',
+      description: 'Display title for the task',
+    },
+    prompt: {
+      type: 'string',
+      description: 'The prompt or instruction for this task',
+    },
+    toolsets: {
+      type: 'array',
+      description: 'Toolsets selected for this task',
+      items: {
+        type: 'string',
+        description: 'Toolset ID',
+      },
+    },
+    dependentTasks: {
+      type: 'array',
+      description: 'Tasks that must be executed before this task',
+      items: {
+        type: 'string',
+        description: 'Task ID',
+      },
+    },
+  },
+} as const;
+
+export const WorkflowPlanSchema = {
+  type: 'object',
+  required: ['title', 'tasks'],
+  properties: {
+    title: {
+      type: 'string',
+      description: 'Title of the workflow plan',
+    },
+    tasks: {
+      type: 'array',
+      description: 'Array of workflow tasks to be executed',
+      items: {
+        $ref: '#/components/schemas/WorkflowTask',
+      },
+    },
+    variables: {
+      type: 'array',
+      description: 'Array of variables (aka User inputs) defined for the workflow plan',
+      items: {
+        $ref: '#/components/schemas/WorkflowVariable',
+      },
+    },
+  },
+} as const;
+
+export const WorkflowPlanRecordSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/WorkflowPlan',
+    },
+    {
+      type: 'object',
+      properties: {
+        planId: {
+          type: 'string',
+          description: 'Workflow plan ID',
+        },
+        version: {
+          type: 'number',
+          description: 'Workflow plan version',
+        },
+        createdAt: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Workflow plan creation timestamp',
+        },
+        updatedAt: {
+          type: 'string',
+          format: 'date-time',
+          description: 'Workflow plan update timestamp',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetWorkflowPlanDetailResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/WorkflowPlanRecord',
+        },
+      },
+    },
+  ],
+} as const;
+
 export const GetWorkflowDetailResponseSchema = {
   allOf: [
     {
@@ -10919,8 +11026,7 @@ export const WorkflowVariableSchema = {
     },
     name: {
       type: 'string',
-      description: 'Variable name',
-      example: 'userName',
+      description: 'Variable name used in the workflow',
     },
     value: {
       type: 'array',
@@ -10951,21 +11057,18 @@ export const WorkflowVariableSchema = {
     },
     required: {
       type: 'boolean',
-      description: 'Whether the variable is required',
-      example: true,
+      description: 'Whether the variable is required. Defaults to false.',
     },
     isSingle: {
       type: 'boolean',
       description: 'Whether the variable value is single (not multiple)',
-      example: true,
     },
     options: {
       type: 'array',
       items: {
         type: 'string',
       },
-      description: 'Variable options (only valid when variable type is option)',
-      example: ['张三', '李四'],
+      description: 'Array of options (only valid when variable type is `option`)',
     },
     resourceTypes: {
       type: 'array',

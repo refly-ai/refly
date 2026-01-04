@@ -1,14 +1,17 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
-import { type WorkflowPlan } from '@refly/canvas-common';
 import { NewConversation, Mcp } from 'refly-icons';
 import { InputParameterRow } from '@refly-packages/ai-workspace-common/components/canvas/nodes/start';
 import { LabelWrapper } from './label-wrapper';
 import { useTranslation } from 'react-i18next';
 import { Typography, Dropdown, Divider } from 'antd';
-import { useListTools } from '@refly-packages/ai-workspace-common/queries';
-import { GenericToolset } from '@refly/openapi-schema';
+import {
+  useListTools,
+  useGetWorkflowPlanDetail,
+} from '@refly-packages/ai-workspace-common/queries';
+import type { GenericToolset, WorkflowPlanRecord } from '@refly/openapi-schema';
 import { processQueryWithMentions } from '@refly/utils/query-processor';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
 const { Paragraph } = Typography;
 
@@ -146,7 +149,7 @@ const LabelsDisplay = memo(({ toolsets }: { toolsets: GenericToolset[] }) => {
 LabelsDisplay.displayName = 'LabelsDisplay';
 
 interface CopilotWorkflowPlanProps {
-  data: WorkflowPlan;
+  data: WorkflowPlanRecord;
 }
 
 const findToolsetById = (toolsets: GenericToolset[], id: string) => {
@@ -156,10 +159,38 @@ const findToolsetById = (toolsets: GenericToolset[], id: string) => {
   );
 };
 
+const isPlanDataEmpty = (data: WorkflowPlanRecord) => {
+  return data.tasks === undefined;
+};
+
 export const CopilotWorkflowPlan = memo(({ data }: CopilotWorkflowPlanProps) => {
   const { t } = useTranslation();
-  const { tasks = [], variables = [] } = data ?? {};
   const { data: toolsData } = useListTools({ query: { enabled: true } });
+
+  const isEmpty = isPlanDataEmpty(data);
+
+  const { data: workflowPlanData, isLoading } = useGetWorkflowPlanDetail(
+    {
+      query: { planId: data.planId, version: data.version },
+    },
+    undefined,
+    {
+      enabled: isEmpty,
+    },
+  );
+
+  const displayData = isEmpty ? workflowPlanData?.data : data;
+
+  if (isEmpty && isLoading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-8 h-32">
+        <Spin />
+        {t('copilot.loadingWorkflow')}
+      </div>
+    );
+  }
+
+  const { tasks = [], variables = [] } = displayData ?? {};
 
   return (
     <div className="flex flex-col gap-3 pt-2">

@@ -107,6 +107,7 @@ import {
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowPlanDetail,
   getWorkflowVariables,
   hasBeenInvited,
   hasFilledForm,
@@ -626,6 +627,18 @@ export const UseGetWorkflowDetailKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetWorkflowDetailKey, ...(queryKey ?? [clientOptions])];
+export type GetWorkflowPlanDetailDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowPlanDetail>
+>['data'];
+export type GetWorkflowPlanDetailQueryResult<
+  TData = GetWorkflowPlanDetailDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWorkflowPlanDetailKey = 'GetWorkflowPlanDetail';
+export const UseGetWorkflowPlanDetailKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWorkflowPlanDetailKey, ...(queryKey ?? [clientOptions])];
 export type GetWorkflowAppDetailDefaultResponse = Awaited<
   ReturnType<typeof getWorkflowAppDetail>
 >['data'];

@@ -15,6 +15,11 @@ import { BaseMessage, MessageContent } from '@langchain/core/messages';
 import { MAX_MESSAGES, MAX_MESSAGE_TOKENS, MAX_MESSAGES_TOTAL_TOKENS } from './constants';
 
 export const isEmptyMessage = (message: BaseMessage) => {
+  // If the message has tool calls, it is not empty
+  if ((message as any).tool_calls && (message as any).tool_calls.length > 0) {
+    return false;
+  }
+
   if (typeof message.content === 'string') {
     return message.content.trim() === '';
   }
@@ -46,7 +51,7 @@ export const truncateMessages = (
   for (let i = messages.length - 1; i >= Math.max(0, messages.length - maxMessages); i--) {
     const message = messages[i];
     let content = message.content;
-    let tokens = countToken(content);
+    let tokens = countToken(content, (message as any).tool_calls);
 
     if (tokens > maxMessageTokens) {
       content = truncateTextWithToken(content, maxMessageTokens);

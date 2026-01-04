@@ -7563,6 +7563,67 @@ export type WorkflowExecution = {
   updatedAt?: string;
 };
 
+export type WorkflowTask = {
+  /**
+   * Unique ID for the task
+   */
+  id: string;
+  /**
+   * Display title for the task
+   */
+  title: string;
+  /**
+   * The prompt or instruction for this task
+   */
+  prompt: string;
+  /**
+   * Toolsets selected for this task
+   */
+  toolsets: Array<string>;
+  /**
+   * Tasks that must be executed before this task
+   */
+  dependentTasks?: Array<string>;
+};
+
+export type WorkflowPlan = {
+  /**
+   * Title of the workflow plan
+   */
+  title: string;
+  /**
+   * Array of workflow tasks to be executed
+   */
+  tasks: Array<WorkflowTask>;
+  /**
+   * Array of variables (aka User inputs) defined for the workflow plan
+   */
+  variables?: Array<WorkflowVariable>;
+};
+
+export type WorkflowPlanRecord = WorkflowPlan & {
+  /**
+   * Workflow plan ID
+   */
+  planId?: string;
+  /**
+   * Workflow plan version
+   */
+  version?: number;
+  /**
+   * Workflow plan creation timestamp
+   */
+  createdAt?: string;
+  /**
+   * Workflow plan update timestamp
+   */
+  updatedAt?: string;
+};
+
+export type GetWorkflowPlanDetailResponse = BaseResponse & {
+  data?: WorkflowPlanRecord;
+};
+
 export type GetWorkflowDetailResponse = BaseResponse & {
   data?: WorkflowExecution;
 };
@@ -7795,7 +7856,7 @@ export type WorkflowVariable = {
    */
   variableId: string;
   /**
-   * Variable name
+   * Variable name used in the workflow
    */
   name: string;
   /**
@@ -7819,7 +7880,7 @@ export type WorkflowVariable = {
    */
   variableType?: 'string' | 'option' | 'resource';
   /**
-   * Whether the variable is required
+   * Whether the variable is required. Defaults to false.
    */
   required?: boolean;
   /**
@@ -7827,7 +7888,7 @@ export type WorkflowVariable = {
    */
   isSingle?: boolean;
   /**
-   * Variable options (only valid when variable type is option)
+   * Array of options (only valid when variable type is `option`)
    */
   options?: Array<string>;
   /**
@@ -8391,6 +8452,10 @@ export type SchemaProperty = {
    * Format for the property value. For resources: base64, url, binary, text. For strings: date-time, uri, email, etc.
    */
   format?: string;
+  /**
+   * Whether this field accepts file uploads (Composio-specific marker)
+   */
+  file_uploadable?: boolean;
   /**
    * Constant value for discriminator matching in oneOf/anyOf
    */
@@ -11077,6 +11142,23 @@ export type GetWorkflowDetailData = {
 export type GetWorkflowDetailResponse2 = GetWorkflowDetailResponse;
 
 export type GetWorkflowDetailError = unknown;
+
+export type GetWorkflowPlanDetailData = {
+  query: {
+    /**
+     * Workflow plan ID
+     */
+    planId: string;
+    /**
+     * Workflow plan version
+     */
+    version?: number;
+  };
+};
+
+export type GetWorkflowPlanDetailResponse2 = GetWorkflowPlanDetailResponse;
+
+export type GetWorkflowPlanDetailError = unknown;
 
 export type CreateWorkflowAppData = {
   body: CreateWorkflowAppRequest;

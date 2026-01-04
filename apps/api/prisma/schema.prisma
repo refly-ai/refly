@@ -331,6 +331,38 @@ model CopilotSession {
   @@map("copilot_sessions")
 }
 
+model WorkflowPlan {
+  /// Primary key
+  pk               BigInt   @id @default(autoincrement())
+  /// Workflow plan id
+  planId           String   @map("plan_id")
+  /// Workflow plan version
+  version          Int      @default(0) @map("version")
+  /// UID
+  uid              String   @map("uid")
+  /// Workflow plan title
+  title            String   @map("title")
+  /// Workflow plan data (JSON)
+  data             String   @map("data")
+  /// Workflow plan patch over the previous version (JSON)
+  patch            String?  @map("patch")
+  /// Action result id
+  resultId         String   @map("result_id")
+  /// Action result version
+  resultVersion    Int      @map("result_version")
+  /// Copilot session id
+  copilotSessionId String   @map("copilot_session_id")
+  /// Create timestamp
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([planId, version])
+  @@index([resultId, resultVersion])
+  @@index([copilotSessionId, version])
+  @@map("workflow_plans")
+}
+
 model WorkflowExecution {
   /// Primary key
   pk             BigInt  @id @default(autoincrement())

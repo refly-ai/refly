@@ -1,11 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DriveFile } from '@refly/openapi-schema';
+import type { DriveFile, WorkflowPlan } from '@refly/openapi-schema';
 
 import { MarkdownMode } from '../../types';
 import { ToolCallStatus, parseToolCallStatus } from './types';
 import { CopilotWorkflowPlan } from './copilot-workflow-plan';
-import { WorkflowPlan } from '@refly/canvas-common';
 import { safeParseJSON } from '@refly/utils/parse';
 import { InternalToolRenderer } from './internal-tool-renderers';
 import { ProductCard } from './product-card';
@@ -19,6 +18,7 @@ import {
   useGetToolCallResult,
 } from '@refly-packages/ai-workspace-common/queries';
 import cn from 'classnames';
+import { CopilotSummaryRenderer } from './internal-tool-renderers/copilot-summary-renderer';
 
 const { Paragraph } = Typography;
 
@@ -232,25 +232,37 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     fetchedData?.data?.result?.updatedAt,
   ]);
 
-  const isCopilotGenerateWorkflow = toolsetKey === 'copilot' && toolName === 'generate_workflow';
-  if (isCopilotGenerateWorkflow) {
-    const resultStr = props['data-tool-result'] ?? '{}';
-    const structuredArgs = safeParseJSON(resultStr)?.data as WorkflowPlan;
+  if (toolsetKey === 'copilot') {
+    if (toolName === 'generate_workflow' || toolName === 'patch_workflow') {
+      const resultStr = props['data-tool-result'] ?? '{}';
+      const structuredArgs = safeParseJSON(resultStr)?.data as WorkflowPlan;
 
-    // Handle case when structuredArgs is undefined
-    if (!structuredArgs) {
-      return (
-        <div className="border-t border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2">
-          <div className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 text-xs font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
-            {toolCallStatus === ToolCallStatus.EXECUTING
-              ? t('components.markdown.workflow.generating')
-              : t('components.markdown.workflow.invalidData')}
+      // Handle case when structuredArgs is undefined
+      if (!structuredArgs) {
+        return (
+          <div className="border-t border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2">
+            <div className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 text-xs font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
+              {toolCallStatus === ToolCallStatus.EXECUTING
+                ? t('components.markdown.workflow.generating')
+                : t('components.markdown.workflow.invalidData')}
+            </div>
           </div>
-        </div>
-      );
+        );
+      }
+
+      return <CopilotWorkflowPlan data={structuredArgs} />;
     }
 
-    return <CopilotWorkflowPlan data={structuredArgs} />;
+    if (toolName === 'get_workflow_summary') {
+      return (
+        <CopilotSummaryRenderer
+          toolsetKey="copilot"
+          toolCallStatus={toolCallStatus}
+          durationText={durationText}
+          parametersContent={parametersContent}
+        />
+      );
+    }
   }
 
   const isDriveFileId = (value: unknown): value is string => {
@@ -305,6 +317,7 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
         toolsetKey={toolsetKey}
         toolsetName={toolsetName}
         toolCallStatus={toolCallStatus}
+        durationText={durationText}
         parametersContent={parametersContent as Record<string, unknown>}
         resultContent={resultContentParsed}
       />

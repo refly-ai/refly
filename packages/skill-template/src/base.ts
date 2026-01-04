@@ -288,6 +288,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     resultId?: string;
     version?: number;
     canvasId?: string;
+    copilotSessionId?: string;
     locale?: string;
     uiLocale?: string;
     modelConfigMap?: {

@@ -351,6 +351,9 @@ import type {
   GetWorkflowDetailData,
   GetWorkflowDetailError,
   GetWorkflowDetailResponse2,
+  GetWorkflowPlanDetailData,
+  GetWorkflowPlanDetailError,
+  GetWorkflowPlanDetailResponse2,
   CreateWorkflowAppData,
   CreateWorkflowAppError,
   CreateWorkflowAppResponse2,
@@ -2418,6 +2421,23 @@ export const getWorkflowDetail = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/workflow/detail',
+  });
+};
+
+/**
+ * Get workflow plan detail
+ * Get detail for a workflow plan
+ */
+export const getWorkflowPlanDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowPlanDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowPlanDetailResponse2,
+    GetWorkflowPlanDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow/plan/detail',
   });
 };
 

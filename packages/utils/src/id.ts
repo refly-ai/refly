@@ -24,6 +24,7 @@ export enum IDPrefix {
   PILOT_SESSION = 'ps-',
   PILOT_STEP = 'pst-',
   COPILOT_SESSION = 'cps-',
+  WORKFLOW_PLAN = 'wp-',
   WORKFLOW_EXECUTION = 'we-',
   WORKFLOW_NODE_EXECUTION = 'wne-',
   PROVIDER = 'pr-',
@@ -91,6 +92,10 @@ export function genCopilotSessionID(): string {
 
 export function genVariableExtractionSessionID(): string {
   return IDPrefix.VARIABLE_EXTRACTION_SESSION + createId();
+}
+
+export function genWorkflowPlanID(): string {
+  return IDPrefix.WORKFLOW_PLAN + createId();
 }
 
 export function genWorkflowExecutionID(): string {

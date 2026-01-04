@@ -32,6 +32,7 @@ export * from './use-canvas-id';
 export * from './use-canvas-layout';
 export * from './use-create-canvas';
 export * from './use-delete-canvas';
+export * from './use-update-canvas-title';
 
 // Selection and edge operations
 export * from './use-node-selection';
