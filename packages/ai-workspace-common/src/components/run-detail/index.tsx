@@ -141,6 +141,7 @@ const RunDetail = memo(({ recordId, type = 'schedule' }: RunDetailProps) => {
         creditUsed: record.creditUsed,
         failureReason: record.failureReason,
         canvasId: record.sourceCanvasId || record.canvasId,
+        sourceCanvasId: record.sourceCanvasId,
         workflowTitle: record.workflowTitle,
       }
     : undefined;

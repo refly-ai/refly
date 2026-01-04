@@ -39,6 +39,18 @@ import { SelectedResultsGrid } from '@refly-packages/ai-workspace-common/compone
 import { WorkflowAPPForm } from './workflow-app-form';
 import Lottie from 'lottie-react';
 import loadingAnimation from './loading.json';
+import loadingAnimationSafari from './loading-safari.json';
+
+// Detect Safari browser (including iOS Safari)
+const isSafari = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const ua = window.navigator.userAgent;
+  const iOS = !!ua.match(/iPad/i) || !!ua.match(/iPhone/i);
+  const webkit = !!ua.match(/WebKit/i);
+  const iOSSafari = iOS && webkit && !ua.match(/CriOS/i) && !ua.match(/FxiOS/i);
+  const macSafari = ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Chromium');
+  return iOSSafari || macSafari;
+};
 
 // User Avatar component for header
 const UserAvatar = () => {
@@ -875,13 +887,15 @@ const WorkflowAppPage: React.FC = () => {
                               className="absolute left-1/2 -translate-x-1/2 sm:left-[268px] sm:translate-x-0"
                               style={{ top: '61px', width: '324px', height: '122px' }}
                             >
-                              {/* Loading Animation - Lottie - Position: x:0, y:0 relative to group */}
+                              {/* Loading Animation - Lottie (Safari-compatible version for Safari/iOS) */}
                               <div
                                 className="absolute"
                                 style={{ left: '0px', top: '0px', width: '122px', height: '122px' }}
                               >
                                 <Lottie
-                                  animationData={loadingAnimation}
+                                  animationData={
+                                    isSafari() ? loadingAnimationSafari : loadingAnimation
+                                  }
                                   loop
                                   autoplay
                                   style={{ width: '122px', height: '122px' }}

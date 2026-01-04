@@ -4427,6 +4427,7 @@ const translations = {
       viewSchedule: '查看定时',
       buyCredits: '购买积分',
       fixWorkflow: '修复原工作流',
+      workflowDeleted: '原工作流已删除，无法查看',
     },
     actions: {
       duplicate: '基于此次运行再创作',

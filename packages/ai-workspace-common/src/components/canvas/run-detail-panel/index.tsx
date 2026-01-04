@@ -1,6 +1,6 @@
 import { memo, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from 'antd';
+import { Button, message } from 'antd';
 import { ArrowLeft, Copy, CheckCircle, ChevronRight, Clock } from 'lucide-react';
 import { Subscription } from 'refly-icons';
 import { IoCloseCircle } from 'react-icons/io5';
@@ -23,6 +23,7 @@ export interface RunDetailInfo {
   creditUsed: number;
   failureReason?: string;
   canvasId: string;
+  sourceCanvasId?: string;
   workflowTitle?: string;
 }
 
@@ -38,7 +39,8 @@ const StatusDisplay = memo(
     status,
     failureReason,
     canvasId,
-  }: { status: string; failureReason?: string; canvasId: string }) => {
+    sourceCanvasId,
+  }: { status: string; failureReason?: string; canvasId: string; sourceCanvasId?: string }) => {
     const { t } = useTranslation();
     const { getActionConfig, getReasonText, handleAction } = useScheduleFailureAction(canvasId);
 
@@ -57,9 +59,18 @@ const StatusDisplay = memo(
 
     const handleActionClick = useCallback(() => {
       if (actionConfig) {
+        // For fixWorkflow and viewSchedule, check if source canvas exists
+        if (
+          (actionConfig.actionType === 'fixWorkflow' ||
+            actionConfig.actionType === 'viewSchedule') &&
+          !sourceCanvasId
+        ) {
+          message.warning(t('runDetail.failureActions.workflowDeleted'));
+          return;
+        }
         handleAction(actionConfig.actionType);
       }
-    }, [actionConfig, handleAction]);
+    }, [actionConfig, handleAction, sourceCanvasId, t]);
 
     return (
       <div className="bg-refly-bg-canvas rounded-lg px-2 py-2 flex flex-col justify-center">
@@ -159,6 +170,7 @@ export const RunDetailPanel = memo(
                 status={info.status}
                 failureReason={info.failureReason}
                 canvasId={info.canvasId}
+                sourceCanvasId={info.sourceCanvasId}
               />
 
               {/* Time */}

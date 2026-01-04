@@ -4395,6 +4395,7 @@ const translations = {
       viewSchedule: 'View Schedule',
       buyCredits: 'Buy Credits',
       fixWorkflow: 'Fix Original Workflow',
+      workflowDeleted: 'Original workflow has been deleted and cannot be viewed',
     },
     actions: {
       duplicate: 'Copy & Remix',

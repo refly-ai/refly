@@ -3,7 +3,7 @@ import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from '@refly-packages/ai-workspace-common/utils/router';
 
-import { Empty, Typography, Table, Tooltip } from 'antd';
+import { Empty, Typography, Table, Tooltip, message } from 'antd';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 import { LOCALE } from '@refly/common-types';
@@ -78,11 +78,13 @@ const ActionCell = memo(
           case 'fixWorkflow':
             if (record.sourceCanvasId) {
               navigate(`/canvas/${record.sourceCanvasId}`);
+            } else {
+              message.warning(t('runDetail.failureActions.workflowDeleted'));
             }
             break;
         }
       },
-      [actionConfig, setCreditInsufficientModalVisible, navigate, record.sourceCanvasId],
+      [actionConfig, setCreditInsufficientModalVisible, navigate, record.sourceCanvasId, t],
     );
 
     if (record.status === 'success') {
@@ -108,7 +110,15 @@ const ActionCell = memo(
           className="w-full h-full flex items-center justify-center cursor-pointer"
           onClick={handleActionClick}
         >
-          <span className="text-teal-600 hover:text-teal-700 text-sm">{actionConfig.label}</span>
+          <span
+            className={`text-sm ${
+              actionConfig.isDark
+                ? 'text-refly-text-0 hover:text-refly-text-1'
+                : 'text-teal-600 hover:text-teal-700'
+            }`}
+          >
+            {actionConfig.label}
+          </span>
         </div>
       );
     }
@@ -468,7 +478,11 @@ const RunHistoryList = memo(() => {
               dataSource={dataList}
               rowKey="scheduleRecordId"
               pagination={false}
-              scroll={{ y: 'calc(var(--screen-height) - 270px)' }}
+              scroll={{
+                y: hasActiveFilters
+                  ? 'calc(var(--screen-height) - 310px)'
+                  : 'calc(var(--screen-height) - 270px)',
+              }}
               className="run-history-table flex-1"
               size="middle"
               loading={isRequesting}
