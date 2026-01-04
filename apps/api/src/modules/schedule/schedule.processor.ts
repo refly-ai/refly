@@ -20,6 +20,7 @@ import {
 import {
   generateInsufficientCreditsEmail,
   generateScheduleFailedEmail,
+  formatDateTime,
 } from './schedule-email-templates';
 import { NotificationService } from '../notification/notification.service';
 import { ScheduleMetrics } from './schedule.metrics';
@@ -399,7 +400,7 @@ export class ScheduleProcessor extends WorkerHost {
                 const interval = CronExpressionParser.parse(schedule.cronExpression, {
                   tz: schedule.timezone || 'Asia/Shanghai',
                 });
-                nextRunTime = interval.next().toDate().toLocaleString();
+                nextRunTime = formatDateTime(interval.next().toDate());
               } catch (err) {
                 this.logger.warn(`Failed to calculate next run time for email: ${err}`);
               }
@@ -409,7 +410,7 @@ export class ScheduleProcessor extends WorkerHost {
               userName: fullUser.nickname || 'User',
               scheduleName: schedule.name || 'Scheduled Workflow',
               currentBalance: creditBalance.creditBalance,
-              schedulesLink: `${this.config.get<string>('origin')}/workflow/${canvasId}`,
+              schedulesLink: `${this.config.get<string>('origin')}/run-history/${scheduleRecordId}`,
               nextRunTime,
             });
             await this.notificationService.sendEmail(
@@ -547,7 +548,7 @@ export class ScheduleProcessor extends WorkerHost {
                 const interval = CronExpressionParser.parse(schedule.cronExpression, {
                   tz: schedule.timezone || 'Asia/Shanghai',
                 });
-                nextRunTime = interval.next().toDate().toLocaleString();
+                nextRunTime = formatDateTime(interval.next().toDate());
               } catch (_) {
                 // Ignore cron parse error
               }
@@ -557,7 +558,7 @@ export class ScheduleProcessor extends WorkerHost {
             const { subject, html } = generateScheduleFailedEmail({
               userName: fullUser.nickname || 'User',
               scheduleName: schedule?.name || 'Scheduled Workflow',
-              runTime: new Date().toLocaleString(),
+              runTime: formatDateTime(new Date()),
               nextRunTime,
               schedulesLink: `${this.config.get<string>('origin')}/run-history/${scheduleRecordId}`,
               runDetailsLink: `${this.config.get<string>('origin')}/run-history/${scheduleRecordId}`,

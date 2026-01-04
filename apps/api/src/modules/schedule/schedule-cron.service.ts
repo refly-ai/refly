@@ -256,7 +256,7 @@ export class ScheduleCronService implements OnModuleInit {
           scheduleName: schedulesToDisable.map((s) => s.name).join(', ') || 'Untitled Schedule',
           limit,
           currentCount: activeSchedulesCount,
-          schedulesLink: `${this.config.get<string>('origin')}/workflow/${schedule.canvasId}`,
+          schedulesLink: `${this.config.get<string>('origin')}/workflow-list`,
         });
 
         await this.notificationService.sendEmail(

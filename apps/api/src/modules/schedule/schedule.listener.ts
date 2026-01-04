@@ -10,6 +10,7 @@ import { CreditService } from '../credit/credit.service';
 import {
   generateScheduleSuccessEmail,
   generateScheduleFailedEmail,
+  formatDateTime,
 } from './schedule-email-templates';
 import {
   classifyScheduleError,
@@ -202,7 +203,7 @@ export class ScheduleEventListener {
       const emailData = {
         userName: fullUser.nickname || 'User',
         scheduleName,
-        runTime: new Date().toLocaleString(),
+        runTime: formatDateTime(new Date()),
         nextRunTime,
         schedulesLink: runDetailsLink,
         runDetailsLink,
@@ -249,7 +250,7 @@ export class ScheduleEventListener {
       const interval = CronExpressionParser.parse(schedule.cronExpression, {
         tz: schedule.timezone || 'Asia/Shanghai',
       });
-      return interval.next().toDate().toLocaleString();
+      return formatDateTime(interval.next().toDate());
     } catch (err: any) {
       this.logger.warn(
         `Failed to calculate next run time for schedule ${scheduleId}: ${err?.message}`,
