@@ -25,6 +25,7 @@ import {
   Artifact,
   DriveFile,
   LLMModelConfig,
+  NodeDiff,
   ProviderItem,
   SkillEvent,
   TokenUsageItem,
@@ -39,7 +40,7 @@ import {
   SkillRunnableMeta,
   createSkillInventory,
 } from '@refly/skill-template';
-import { genImageID, getWholeParsedContent, safeParseJSON } from '@refly/utils';
+import { genImageID, getWholeParsedContent, safeParseJSON, genTransactionId } from '@refly/utils';
 import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
@@ -1507,6 +1508,53 @@ export class SkillInvokerService {
           },
         }),
       ]);
+
+      // Sync workflow node status to canvas after execution completes
+      if (result.workflowNodeExecutionId) {
+        try {
+          const nodeExecution = await this.prisma.workflowNodeExecution.findUnique({
+            where: { nodeExecutionId: result.workflowNodeExecutionId },
+            select: { canvasId: true, nodeId: true },
+          });
+
+          if (nodeExecution?.canvasId && nodeExecution?.nodeId) {
+            const nodeDiff: NodeDiff = {
+              type: 'update',
+              id: nodeExecution.nodeId,
+              to: {
+                data: {
+                  metadata: {
+                    status,
+                  },
+                },
+              },
+            };
+
+            await this.canvasSyncService.syncState(user, {
+              canvasId: nodeExecution.canvasId,
+              transactions: [
+                {
+                  txId: genTransactionId(),
+                  createdAt: Date.now(),
+                  syncedAt: Date.now(),
+                  source: { type: 'system' },
+                  nodeDiffs: [nodeDiff],
+                  edgeDiffs: [],
+                },
+              ],
+            });
+
+            this.logger.debug(
+              `Synced workflow node ${nodeExecution.nodeId} status to canvas ${nodeExecution.canvasId}`,
+            );
+          }
+        } catch (syncError) {
+          // Log but don't fail the skill invocation if canvas sync fails
+          this.logger.error(
+            `Failed to sync workflow node status to canvas: ${(syncError as Error).message}`,
+          );
+        }
+      }
 
       writeSSEResponse(res, { event: 'end', resultId, version });
 

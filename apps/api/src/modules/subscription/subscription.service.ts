@@ -266,7 +266,30 @@ export class SubscriptionService implements OnModuleInit {
       sessionParams.allow_promotion_codes = true;
     }
 
-    const session = await this.stripeClient.checkout.sessions.create(sessionParams);
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await this.stripeClient.checkout.sessions.create(sessionParams);
+    } catch (error) {
+      // Handle promotion code restriction error - fallback to session without discount
+      if (
+        error instanceof Stripe.errors.StripeInvalidRequestError &&
+        error.code === 'promotion_code_customer_not_first_time' &&
+        stripePromoCodeId
+      ) {
+        this.logger.warn(
+          `User ${uid} has prior transactions, creating checkout session without promotion code`,
+        );
+
+        // Remove discount and allow manual promotion code entry instead
+        sessionParams.discounts = undefined;
+        sessionParams.metadata = undefined;
+        sessionParams.allow_promotion_codes = true;
+
+        session = await this.stripeClient.checkout.sessions.create(sessionParams);
+      } else {
+        throw error;
+      }
+    }
 
     await this.prisma.$transaction([
       this.prisma.checkoutSession.create({

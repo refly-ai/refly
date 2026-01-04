@@ -346,7 +346,7 @@ const WorkflowList = memo(() => {
               dataSource={dataList}
               rowKey="canvasId"
               pagination={false}
-              scroll={{ y: 'calc(var(--screen-height) - 190px)' }}
+              scroll={{ y: 'calc(var(--screen-height) - 220px)' }}
               className="workflow-table flex-1"
               size="middle"
               onRow={(record: Canvas) => ({

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from '@refly-packages/ai-workspace-common/utils/router';
 
 import { Empty, Typography, Table, Tooltip } from 'antd';
-import { EndMessage } from '@refly-packages/ai-workspace-common/components/workspace/scroll-loading';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 import { LOCALE } from '@refly/common-types';
@@ -19,6 +18,7 @@ import {
   getFailureActionConfig,
   getFailureReasonText,
   FailureActionType,
+  isPreCheckFailure,
 } from '@refly-packages/ai-workspace-common/hooks/use-schedule-failure-action';
 import { useSubscriptionStoreShallow } from '@refly/stores';
 import './index.scss';
@@ -38,6 +38,7 @@ interface ScheduleRecordItem {
   failureReason?: string;
   usedTools?: string;
   canvasId?: string;
+  sourceCanvasId?: string;
 }
 
 interface AvailableTool {
@@ -74,16 +75,14 @@ const ActionCell = memo(
             setCreditInsufficientModalVisible(true);
             break;
           case 'viewSchedule':
-            navigate('/workflow');
-            break;
           case 'fixWorkflow':
-            if (record.canvasId) {
-              navigate(`/canvas/${record.canvasId}`);
+            if (record.sourceCanvasId) {
+              navigate(`/canvas/${record.sourceCanvasId}`);
             }
             break;
         }
       },
-      [actionConfig, setCreditInsufficientModalVisible, navigate, record.canvasId],
+      [actionConfig, setCreditInsufficientModalVisible, navigate, record.sourceCanvasId],
     );
 
     if (record.status === 'success') {
@@ -240,16 +239,35 @@ const RunHistoryList = memo(() => {
     [statusFilter, titleFilter, canvasIdFilter, selectedTools],
   );
 
-  const { dataList, isRequesting, reload } = useFetchDataList<ScheduleRecordItem>({
-    fetchData: fetchScheduleRecords,
-    pageSize: 20,
-    dependencies: [statusFilter, titleFilter, canvasIdFilter, selectedTools],
-  });
+  const { dataList, isRequesting, reload, loadMore, hasMore } =
+    useFetchDataList<ScheduleRecordItem>({
+      fetchData: fetchScheduleRecords,
+      pageSize: 20,
+      dependencies: [statusFilter, titleFilter, canvasIdFilter, selectedTools],
+    });
 
   // Initial load
   useEffect(() => {
     reload();
   }, []);
+
+  // Auto scroll loading effect
+  useEffect(() => {
+    const scrollContainer = document.querySelector('.run-history-table .ant-table-body');
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100; // 100px threshold
+
+      if (isNearBottom && !isRequesting && hasMore) {
+        loadMore();
+      }
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [isRequesting, hasMore, loadMore]);
 
   const handleViewDetail = useCallback(
     (record: ScheduleRecordItem) => {
@@ -312,7 +330,7 @@ const RunHistoryList = memo(() => {
         align: 'center' as const,
         render: (scheduledAt: string) => (
           <span className="text-sm text-gray-500">
-            {time(scheduledAt, language as LOCALE).format('YYYY/MM/DD, hh:mm:ss A')}
+            {time(scheduledAt, language as LOCALE).format('MM/DD/YYYY, hh:mm A')}
           </span>
         ),
       },
@@ -450,16 +468,21 @@ const RunHistoryList = memo(() => {
               dataSource={dataList}
               rowKey="scheduleRecordId"
               pagination={false}
-              scroll={{ y: 'calc(var(--screen-height) - 240px)' }}
+              scroll={{ y: 'calc(var(--screen-height) - 270px)' }}
               className="run-history-table flex-1"
               size="middle"
               loading={isRequesting}
-              onRow={(record: ScheduleRecordItem) => ({
-                onClick: () => handleViewDetail(record),
-                className: 'cursor-pointer hover:!bg-refly-tertiary-hover transition-colors',
-              })}
+              onRow={(record: ScheduleRecordItem) => {
+                // Pre-check failures have no detail page to view
+                const isPreCheck = isPreCheckFailure(record.failureReason);
+                return {
+                  onClick: isPreCheck ? undefined : () => handleViewDetail(record),
+                  className: isPreCheck
+                    ? 'cursor-default hover:!bg-refly-tertiary-hover transition-colors'
+                    : 'cursor-pointer hover:!bg-refly-tertiary-hover transition-colors',
+                };
+              }}
             />
-            <EndMessage />
           </div>
         ) : (
           emptyState

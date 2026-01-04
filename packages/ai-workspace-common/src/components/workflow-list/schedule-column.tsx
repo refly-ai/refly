@@ -135,7 +135,7 @@ export const ScheduleColumn = memo(
 
           const cronExpression = generateCronExpression(scheduleConfig);
 
-          await updateScheduleMutation.mutateAsync({
+          const result = await updateScheduleMutation.mutateAsync({
             body: {
               scheduleId: schedule.scheduleId,
               cronExpression,
@@ -144,6 +144,11 @@ export const ScheduleColumn = memo(
               isEnabled: enabled,
             },
           });
+
+          // Check if the API returned an error
+          if ((result as any)?.error || !(result?.data as any)?.success) {
+            throw new Error((result as any)?.error?.message || 'Failed to update schedule');
+          }
 
           message.success(
             enabled
@@ -202,7 +207,7 @@ export const ScheduleColumn = memo(
 
           const cronExpression = generateCronExpression(scheduleConfig);
 
-          await updateScheduleMutation.mutateAsync({
+          const result = await updateScheduleMutation.mutateAsync({
             body: {
               scheduleId: schedule.scheduleId,
               cronExpression,
@@ -211,6 +216,11 @@ export const ScheduleColumn = memo(
               isEnabled,
             },
           });
+
+          // Check if the API returned an error
+          if ((result as any)?.error || !(result?.data as any)?.success) {
+            throw new Error((result as any)?.error?.message || 'Failed to update schedule');
+          }
 
           onScheduleChange?.();
         } catch (error) {
