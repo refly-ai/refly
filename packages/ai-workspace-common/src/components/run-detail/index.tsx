@@ -128,9 +128,6 @@ const RunDetail = memo(({ recordId, type = 'schedule' }: RunDetailProps) => {
       canvasId: record.canvasId,
       title: record.workflowTitle || t('common.untitled'),
       isCopy: true,
-      onSuccess: () => {
-        message.success(t('runDetail.duplicateSuccess'));
-      },
     });
   }, [record, duplicateCanvas, t, type, recordId]);
 

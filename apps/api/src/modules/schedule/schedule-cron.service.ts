@@ -183,6 +183,12 @@ export class ScheduleCronService implements OnModuleInit {
           `Schedule ${schedule.scheduleId} excluded from execution due to limit exceeded (${activeSchedulesCount}/${limit})`,
         );
 
+        // Get canvas title for workflowTitle
+        const canvas = await this.prisma.canvas.findUnique({
+          where: { canvasId: schedule.canvasId },
+          select: { title: true },
+        });
+
         // Update record to failed if exists (or create one for history)
         const recordId = genScheduleRecordId();
         await this.prisma.workflowScheduleRecord.create({
@@ -192,7 +198,7 @@ export class ScheduleCronService implements OnModuleInit {
             uid: schedule.uid,
             sourceCanvasId: schedule.canvasId,
             canvasId: '',
-            workflowTitle: 'Schedule Limit Exceeded',
+            workflowTitle: canvas?.title || 'Untitled',
             status: 'failed',
             failureReason: ScheduleFailureReason.SCHEDULE_LIMIT_EXCEEDED,
             errorDetails: JSON.stringify({
