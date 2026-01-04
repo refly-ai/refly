@@ -24,12 +24,14 @@ describe('ScheduleCronService', () => {
     scheduleId: 'schedule-123',
     canvasId: 'canvas-456',
     uid: 'user-789',
+    name: 'Test Schedule',
     cronExpression: '0 * * * *',
     timezone: 'Asia/Shanghai',
     isEnabled: true,
     nextRunAt: new Date(),
     deletedAt: null,
     scheduleConfig: null,
+    createdAt: new Date('2024-01-01'),
   };
 
   beforeEach(async () => {
@@ -56,7 +58,11 @@ describe('ScheduleCronService', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: jest.fn().mockReturnValue('https://refly.ai'),
+            get: jest.fn().mockImplementation((key: string) => {
+              if (key === 'origin') return 'https://refly.ai';
+              // Return undefined for schedule configs to trigger defaults
+              return undefined;
+            }),
           },
         },
       ],
@@ -182,7 +188,10 @@ describe('ScheduleCronService', () => {
       };
       prismaService.workflowSchedule.findMany = jest.fn().mockResolvedValue([mockSchedule]);
       prismaService.workflowSchedule.update = jest.fn().mockResolvedValue(mockSchedule);
-      prismaService.workflowScheduleRecord.findFirst = jest.fn().mockResolvedValue(existingRecord);
+      prismaService.workflowScheduleRecord.findFirst = jest
+        .fn()
+        .mockResolvedValueOnce(null) // First call: check for running records
+        .mockResolvedValueOnce(existingRecord); // Second call: find scheduled record
       prismaService.workflowScheduleRecord.update = jest.fn().mockResolvedValue({});
       prismaService.subscription.findFirst = jest.fn().mockResolvedValue({ uid: 'user-789' });
       prismaService.workflowSchedule.count = jest.fn().mockResolvedValue(1);
@@ -291,6 +300,88 @@ describe('ScheduleCronService', () => {
           }),
         }),
       );
+    });
+
+    it('should skip execution if same schedule has running task', async () => {
+      const runningRecord = {
+        scheduleRecordId: 'running-record',
+        status: 'processing',
+      };
+      prismaService.workflowSchedule.findMany = jest.fn().mockResolvedValue([mockSchedule]);
+      prismaService.workflowScheduleRecord.findFirst = jest.fn().mockResolvedValue(runningRecord);
+      prismaService.workflowScheduleRecord.create = jest.fn().mockResolvedValue({});
+      prismaService.subscription.findFirst = jest.fn().mockResolvedValue({ uid: 'user-789' });
+      prismaService.workflowSchedule.count = jest.fn().mockResolvedValue(1);
+      prismaService.canvas.findUnique = jest.fn().mockResolvedValue({ title: 'Test Canvas' });
+
+      await service.scanAndTriggerSchedules();
+
+      expect(prismaService.workflowScheduleRecord.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: 'failed',
+            workflowTitle: 'Test Canvas',
+          }),
+        }),
+      );
+      expect(mockQueue.add).not.toHaveBeenCalled();
+    });
+
+    it('should auto-disable excess schedules when quota exceeded', async () => {
+      const otherSchedules = [
+        { scheduleId: 'schedule-2', name: 'Schedule 2', createdAt: new Date('2024-01-02') },
+        { scheduleId: 'schedule-3', name: 'Schedule 3', createdAt: new Date('2024-01-03') },
+      ];
+
+      // Mock findMany to return different results based on the where clause
+      prismaService.workflowSchedule.findMany = jest.fn().mockImplementation((args: any) => {
+        // First call: find due schedules
+        if (args.where?.nextRunAt) {
+          return Promise.resolve([mockSchedule]);
+        }
+        // Second call: find other schedules (with scheduleId: { not: ... })
+        if (args.where?.scheduleId?.not) {
+          return Promise.resolve(otherSchedules);
+        }
+        return Promise.resolve([]);
+      });
+
+      prismaService.workflowSchedule.update = jest.fn().mockResolvedValue(mockSchedule);
+      prismaService.workflowSchedule.updateMany = jest.fn().mockResolvedValue({ count: 2 });
+      prismaService.workflowScheduleRecord.findFirst = jest.fn().mockResolvedValue(null);
+      prismaService.workflowScheduleRecord.create = jest.fn().mockResolvedValue({});
+      prismaService.canvas.findUnique = jest.fn().mockResolvedValue({ title: 'Test' });
+      prismaService.subscription.findFirst = jest.fn().mockResolvedValue(null); // Free tier
+      prismaService.workflowSchedule.count = jest.fn().mockResolvedValue(3); // 3 active schedules
+      prismaService.user.findUnique = jest.fn().mockResolvedValue({
+        uid: 'user-789',
+        email: 'test@example.com',
+        nickname: 'Test User',
+      });
+      priorityService.calculateExecutionPriority = jest.fn().mockResolvedValue(5);
+      scheduleService.createOrUpdateScheduledRecord = jest.fn().mockResolvedValue(undefined);
+
+      await service.scanAndTriggerSchedules();
+
+      // Debugging why updateMany is not called
+      // console.log('Count mock calls:', prismaService.workflowSchedule.count.mock.calls.length);
+      // console.log('UpdateMany mock calls:', prismaService.workflowSchedule.updateMany.mock.calls.length);
+
+      // Should disable 2 schedules (3 active - 1 limit = 2 to disable)
+      expect(prismaService.workflowSchedule.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            scheduleId: { in: ['schedule-2', 'schedule-3'] },
+          },
+          data: {
+            isEnabled: false,
+            nextRunAt: null,
+          },
+        }),
+      );
+
+      // Should still execute the current schedule
+      expect(mockQueue.add).toHaveBeenCalled();
     });
   });
 

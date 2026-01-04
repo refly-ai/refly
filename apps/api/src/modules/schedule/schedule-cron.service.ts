@@ -155,78 +155,118 @@ export class ScheduleCronService implements OnModuleInit {
       return;
     }
 
-    // 3.1.5 Check Schedule Limit
-    //  Fetch actual limit from subscription plan. Currently mocking Free=1, Plus=20.
+    // 3.1.5 Check Schedule Limit and Concurrency
     const userSubscription = await this.prisma.subscription.findFirst({
       where: { uid: schedule.uid, status: 'active' },
     });
-    // Simple logic: if has active subscription -> 20, else 1
     const limit = getScheduleQuota(userSubscription?.lookupKey, this.scheduleConfig);
 
     const activeSchedulesCount = await this.prisma.workflowSchedule.count({
       where: { uid: schedule.uid, isEnabled: true, deletedAt: null },
     });
 
-    if (activeSchedulesCount > limit) {
-      // Check if this schedule is among the allowed set (earliest created)
-      const allowedSchedules = await this.prisma.workflowSchedule.findMany({
-        where: { uid: schedule.uid, isEnabled: true, deletedAt: null },
-        orderBy: { createdAt: 'asc' },
-        take: limit,
-        select: { scheduleId: true },
+    // Check if there's already a running/processing task for this schedule
+    const runningRecords = await this.prisma.workflowScheduleRecord.findFirst({
+      where: {
+        scheduleId: schedule.scheduleId,
+        status: { in: ['processing', 'running'] },
+      },
+    });
+
+    if (runningRecords) {
+      this.logger.warn(
+        `Schedule ${schedule.scheduleId} has a running task, skipping execution to prevent concurrency`,
+      );
+
+      const canvas = await this.prisma.canvas.findUnique({
+        where: { canvasId: schedule.canvasId },
+        select: { title: true },
       });
 
-      const isAllowed = allowedSchedules.some((s) => s.scheduleId === schedule.scheduleId);
+      // Create a skipped record for tracking
+      const recordId = genScheduleRecordId();
+      await this.prisma.workflowScheduleRecord.create({
+        data: {
+          scheduleRecordId: recordId,
+          scheduleId: schedule.scheduleId,
+          uid: schedule.uid,
+          sourceCanvasId: schedule.canvasId,
+          canvasId: '',
+          workflowTitle: canvas?.title || 'Untitled',
+          status: 'failed',
+          failureReason: ScheduleFailureReason.SCHEDULE_LIMIT_EXCEEDED,
+          errorDetails: JSON.stringify({
+            message:
+              'Another task from this schedule is currently running. Concurrent execution is not allowed.',
+          }),
+          scheduledAt: schedule.nextRunAt ?? new Date(),
+          triggeredAt: new Date(),
+          completedAt: new Date(),
+          priority: 0,
+        },
+      });
 
-      if (!isAllowed) {
-        this.logger.warn(
-          `Schedule ${schedule.scheduleId} excluded from execution due to limit exceeded (${activeSchedulesCount}/${limit})`,
-        );
+      return; // Skip execution
+    }
 
-        // Update record to failed if exists (or create one for history)
-        const recordId = genScheduleRecordId();
-        await this.prisma.workflowScheduleRecord.create({
+    // If user exceeds quota, disable other schedules and send email
+    if (activeSchedulesCount > limit) {
+      this.logger.warn(
+        `User ${schedule.uid} has ${activeSchedulesCount} active schedules, exceeding limit of ${limit}`,
+      );
+
+      // Get all active schedules except the current one, ordered by creation time (oldest first)
+      const otherSchedules = await this.prisma.workflowSchedule.findMany({
+        where: {
+          uid: schedule.uid,
+          isEnabled: true,
+          deletedAt: null,
+          scheduleId: { not: schedule.scheduleId },
+        },
+        orderBy: { createdAt: 'desc' }, // Disable newest schedules first
+        select: { scheduleId: true, name: true },
+      });
+
+      // Calculate how many schedules need to be disabled
+      const schedulesToDisableCount = activeSchedulesCount - limit;
+      const schedulesToDisable = otherSchedules.slice(0, schedulesToDisableCount);
+
+      // Disable excess schedules
+      if (schedulesToDisable.length > 0) {
+        await this.prisma.workflowSchedule.updateMany({
+          where: {
+            scheduleId: { in: schedulesToDisable.map((s) => s.scheduleId) },
+          },
           data: {
-            scheduleRecordId: recordId,
-            scheduleId: schedule.scheduleId,
-            uid: schedule.uid,
-            sourceCanvasId: schedule.canvasId,
-            canvasId: '',
-            workflowTitle: 'Schedule Limit Exceeded',
-            status: 'failed',
-            failureReason: ScheduleFailureReason.SCHEDULE_LIMIT_EXCEEDED,
-            errorDetails: JSON.stringify({
-              message: `Active schedule limit exceeded (${activeSchedulesCount}/${limit}). This schedule is not among the earliest ${limit}.`,
-            }),
-            scheduledAt: schedule.nextRunAt ?? new Date(),
-            triggeredAt: new Date(),
-            completedAt: new Date(),
-            priority: 0,
+            isEnabled: false,
+            nextRunAt: null,
           },
         });
 
-        // Send Email
-        const user = await this.prisma.user.findUnique({ where: { uid: schedule.uid } });
-        if (user?.email) {
-          const { subject, html } = generateLimitExceededEmail({
-            userName: user.nickname || 'User',
-            scheduleName: schedule.name || 'Untitled Schedule',
-            limit,
-            currentCount: activeSchedulesCount,
-            schedulesLink: `${this.config.get<string>('origin')}/workflow/${schedule.canvasId}`,
-          });
+        this.logger.log(
+          `Auto-disabled ${schedulesToDisable.length} schedules for user ${schedule.uid} due to quota exceeded`,
+        );
+      }
 
-          await this.notificationService.sendEmail(
-            {
-              to: user.email,
-              subject,
-              html,
-            },
-            user,
-          );
-        }
+      // Send email notification
+      const user = await this.prisma.user.findUnique({ where: { uid: schedule.uid } });
+      if (user?.email) {
+        const { subject, html } = generateLimitExceededEmail({
+          userName: user.nickname || 'User',
+          scheduleName: schedulesToDisable.map((s) => s.name).join(', ') || 'Untitled Schedule',
+          limit,
+          currentCount: activeSchedulesCount,
+          schedulesLink: `${this.config.get<string>('origin')}/workflow/${schedule.canvasId}`,
+        });
 
-        return; // Skip execution
+        await this.notificationService.sendEmail(
+          {
+            to: user.email,
+            subject,
+            html,
+          },
+          user,
+        );
       }
     }
 
