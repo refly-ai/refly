@@ -1484,17 +1484,32 @@ export class CreditService {
     if (!execution) {
       return 0;
     }
+
+    // Use workflowExecutionId to find all ActionResult records for this execution
+    // This is more accurate than using targetId, and ensures data consistency
     const results = await this.prisma.actionResult.findMany({
       where: {
-        targetId: execution.canvasId,
+        workflowExecutionId: executionId,
+        uid: user.uid,
+      },
+      select: {
+        resultId: true,
+        version: true,
       },
     });
-    const total = await Promise.all(
-      results.map((result) => this.countResultCreditUsage(user, result.resultId)),
+
+    if (results.length === 0) {
+      return 0;
+    }
+
+    // Calculate credit usage for each (resultId, version) combination
+    // This ensures consistency with frontend node display (which shows per-version credits)
+    // and accounts for all versions (including retries) of each node
+    const totals = await Promise.all(
+      results.map((result) => this.countResultCreditUsage(user, result.resultId, result.version)),
     );
-    return total.reduce((sum, total) => {
-      return sum + total;
-    }, 0);
+
+    return totals.reduce((sum, total) => sum + total, 0);
   }
 
   async countCanvasCreditUsageByCanvasId(user: User, canvasId: string): Promise<number> {
