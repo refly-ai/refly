@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useMemo, memo, useState } from 'react';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
+import { useNavigate, useLocation } from '@refly-packages/ai-workspace-common/utils/router';
 
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
@@ -28,14 +28,17 @@ import { SettingItem } from '@refly-packages/ai-workspace-common/components/canv
 const WorkflowList = memo(() => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const language = i18n.languages?.[0];
   const [searchValue, setSearchValue] = useState('');
   const [debouncedSearchValue, setDebouncedSearchValue] = useState('');
 
   const [orderType, setOrderType] = useState<ListOrder>('updationDesc');
 
-  // Filter state
-  const [hasScheduleFilter, setHasScheduleFilter] = useState(false);
+  // Filter state - initialize from navigation state if coming from schedule button
+  const [hasScheduleFilter, setHasScheduleFilter] = useState(() => {
+    return location.state?.autoEnableScheduleFilter === true;
+  });
 
   const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas({});
 

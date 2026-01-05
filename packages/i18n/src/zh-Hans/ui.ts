@@ -2086,6 +2086,8 @@ const translations = {
       notEnoughCredits: '积分不足，无法运行',
       requiredInputNotFilled: '必填输入项未填写',
       inputName: '{{input_name}}',
+      configure: '配置',
+      upgrade: '升级',
       youAreAwesome: 'You are awesome!',
       everythingIsSet: 'Everything is set for a smooth run',
     },

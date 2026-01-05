@@ -1955,6 +1955,8 @@ const translations = {
       inputName: '{{input_name}}',
       youAreAwesome: 'You are awesome!',
       everythingIsSet: 'Everything is set for a smooth run',
+      configure: 'Configure',
+      upgrade: 'Upgrade',
     },
   },
   resource: {

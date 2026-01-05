@@ -70,6 +70,7 @@ import { ToggleCopilotPanel } from './top-toolbar/toggle-copilot-panel';
 import { useHandleOrphanNode } from '@refly-packages/ai-workspace-common/hooks/use-handle-orphan-node';
 import { UploadNotification } from '@refly-packages/ai-workspace-common/components/common/upload-notification';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
+import { useScheduleDependencyCheck } from '@refly-packages/ai-workspace-common/hooks/canvas/use-schedule-dependency-check';
 import { PreviewBoxInCanvas } from './preview-box-in-canvas';
 import { CopilotContainer } from './copilot-container';
 import { cn } from '@refly/utils/cn';
@@ -189,6 +190,12 @@ const Flow = memo(
     const { pendingNode, clearPendingNode, setHighlightedNodeIds, clearHighlightedNodeIds } =
       useCanvasNodesStore();
     const { loading, readonly, shareNotFound, shareLoading, undo, redo } = useCanvasContext();
+
+    // Check schedule dependencies when entering canvas
+    useScheduleDependencyCheck({
+      canvasId,
+      enabled: !readonly && !workflowIsRunning,
+    });
     const { onLayout } = useCanvasLayout();
     const { getNodes } = useReactFlow<CanvasNode<any>>();
     const { updateToolsetIdForAllNodes } = useCanvasToolsetUpdater();

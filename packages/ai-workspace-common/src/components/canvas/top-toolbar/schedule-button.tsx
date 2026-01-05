@@ -619,7 +619,9 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   // Handle view schedules click
   const handleViewSchedulesClick = useCallback(() => {
     setScheduleLimitModalVisible(false);
-    navigate('/workflow-list');
+    navigate('/workflow-list', {
+      state: { autoEnableScheduleFilter: true },
+    });
   }, [navigate]);
 
   // Determine schedule status
