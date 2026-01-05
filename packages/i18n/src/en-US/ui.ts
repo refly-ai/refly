@@ -3212,6 +3212,8 @@ const translations = {
       workflow: {
         generating: 'Generating workflow...',
         invalidData: 'Invalid workflow data',
+        generateFailed: 'Workflow generation failed',
+        patchFailed: 'Workflow update failed',
       },
       internalTool: {
         readFile: 'Reading',

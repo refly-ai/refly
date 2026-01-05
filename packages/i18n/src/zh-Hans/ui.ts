@@ -3315,6 +3315,8 @@ const translations = {
       workflow: {
         generating: '生成工作流中...',
         invalidData: '无效的工作流数据',
+        generateFailed: '生成工作流失败',
+        patchFailed: '修改当前工作流失败',
       },
       internalTool: {
         readFile: '阅读',

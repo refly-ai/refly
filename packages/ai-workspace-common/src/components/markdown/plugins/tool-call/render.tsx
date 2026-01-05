@@ -237,20 +237,26 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
       const resultStr = props['data-tool-result'] ?? '{}';
       const structuredArgs = safeParseJSON(resultStr)?.data as WorkflowPlan;
 
-      // Handle case when structuredArgs is undefined
-      if (!structuredArgs) {
+      // Handle case when structuredArgs is undefined or status is failed
+      if (!structuredArgs || toolCallStatus === ToolCallStatus.FAILED) {
         return (
-          <div className="border-t border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2">
-            <div className="rounded-md bg-gray-100 dark:bg-gray-700 px-4 py-3 text-xs font-normal whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-[22px]">
-              {toolCallStatus === ToolCallStatus.EXECUTING
-                ? t('components.markdown.workflow.generating')
-                : t('components.markdown.workflow.invalidData')}
-            </div>
-          </div>
+          <CopilotWorkflowPlan
+            data={structuredArgs ?? { title: '', tasks: [] }}
+            status={toolCallStatus}
+            error={errorMessage ?? undefined}
+            toolName={toolName}
+          />
         );
       }
 
-      return <CopilotWorkflowPlan data={structuredArgs} />;
+      return (
+        <CopilotWorkflowPlan
+          data={structuredArgs}
+          status={toolCallStatus}
+          error={errorMessage ?? undefined}
+          toolName={toolName}
+        />
+      );
     }
 
     if (toolName === 'get_workflow_summary') {
