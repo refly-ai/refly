@@ -11,7 +11,6 @@ import { Queue } from 'bullmq';
 import {
   QUEUE_SCHEDULE_EXECUTION,
   SCHEDULE_JOB_OPTIONS,
-  ScheduleFailureReason,
   ScheduleAnalyticsEvents,
   SchedulePeriodType,
   getScheduleQuota,
@@ -164,50 +163,6 @@ export class ScheduleCronService implements OnModuleInit {
     const activeSchedulesCount = await this.prisma.workflowSchedule.count({
       where: { uid: schedule.uid, isEnabled: true, deletedAt: null },
     });
-
-    // Check if there's already a running/processing task for this schedule
-    const runningRecords = await this.prisma.workflowScheduleRecord.findFirst({
-      where: {
-        scheduleId: schedule.scheduleId,
-        status: { in: ['processing', 'running'] },
-      },
-    });
-
-    if (runningRecords) {
-      this.logger.warn(
-        `Schedule ${schedule.scheduleId} has a running task, skipping execution to prevent concurrency`,
-      );
-
-      const canvas = await this.prisma.canvas.findUnique({
-        where: { canvasId: schedule.canvasId },
-        select: { title: true },
-      });
-
-      // Create a skipped record for tracking
-      const recordId = genScheduleRecordId();
-      await this.prisma.workflowScheduleRecord.create({
-        data: {
-          scheduleRecordId: recordId,
-          scheduleId: schedule.scheduleId,
-          uid: schedule.uid,
-          sourceCanvasId: schedule.canvasId,
-          canvasId: '',
-          workflowTitle: canvas?.title || 'Untitled',
-          status: 'failed',
-          failureReason: ScheduleFailureReason.SCHEDULE_LIMIT_EXCEEDED,
-          errorDetails: JSON.stringify({
-            message:
-              'Another task from this schedule is currently running. Concurrent execution is not allowed.',
-          }),
-          scheduledAt: schedule.nextRunAt ?? new Date(),
-          triggeredAt: new Date(),
-          completedAt: new Date(),
-          priority: 0,
-        },
-      });
-
-      return; // Skip execution
-    }
 
     // If user exceeds quota, disable other schedules and send email
     if (activeSchedulesCount > limit) {
