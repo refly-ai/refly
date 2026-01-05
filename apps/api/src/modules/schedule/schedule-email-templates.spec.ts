@@ -14,33 +14,61 @@ describe('Schedule Email Templates', () => {
   const mockOrigin = 'https://refly.ai';
 
   describe('formatDateTime', () => {
-    it('should format date to 12-hour format with AM', () => {
-      const date = new Date('2026-01-04T09:35:00');
-      const result = formatDateTime(date);
-      expect(result).toMatch(/01\/04\/2026, 09:35 AM/);
+    it('should format date to 12-hour format with AM using UTC timezone', () => {
+      const date = new Date('2026-01-04T09:35:00Z');
+      const result = formatDateTime(date, 'UTC');
+      expect(result).toBe('01/04/2026, 09:35 AM');
     });
 
-    it('should format date to 12-hour format with PM', () => {
-      const date = new Date('2026-01-04T18:35:00');
-      const result = formatDateTime(date);
-      expect(result).toMatch(/01\/04\/2026, 06:35 PM/);
+    it('should format date to 12-hour format with PM using UTC timezone', () => {
+      const date = new Date('2026-01-04T18:35:00Z');
+      const result = formatDateTime(date, 'UTC');
+      expect(result).toBe('01/04/2026, 06:35 PM');
     });
 
-    it('should handle midnight (12:00 AM)', () => {
-      const date = new Date('2026-01-04T00:00:00');
-      const result = formatDateTime(date);
-      expect(result).toMatch(/01\/04\/2026, 12:00 AM/);
+    it('should handle midnight (12:00 AM) using UTC timezone', () => {
+      const date = new Date('2026-01-04T00:00:00Z');
+      const result = formatDateTime(date, 'UTC');
+      expect(result).toBe('01/04/2026, 12:00 AM');
     });
 
-    it('should handle noon (12:00 PM)', () => {
-      const date = new Date('2026-01-04T12:00:00');
-      const result = formatDateTime(date);
-      expect(result).toMatch(/01\/04\/2026, 12:00 PM/);
+    it('should handle noon (12:00 PM) using UTC timezone', () => {
+      const date = new Date('2026-01-04T12:00:00Z');
+      const result = formatDateTime(date, 'UTC');
+      expect(result).toBe('01/04/2026, 12:00 PM');
     });
 
     it('should accept string date input', () => {
-      const result = formatDateTime('2026-01-04T18:35:00');
-      expect(result).toMatch(/01\/04\/2026, 06:35 PM/);
+      const result = formatDateTime('2026-01-04T18:35:00Z', 'UTC');
+      expect(result).toBe('01/04/2026, 06:35 PM');
+    });
+
+    it('should convert UTC time to Asia/Shanghai timezone', () => {
+      // 18:35 UTC = 02:35 next day in Asia/Shanghai (UTC+8)
+      const date = new Date('2026-01-04T18:35:00Z');
+      const result = formatDateTime(date, 'Asia/Shanghai');
+      expect(result).toBe('01/05/2026, 02:35 AM');
+    });
+
+    it('should convert UTC time to America/New_York timezone', () => {
+      // 18:35 UTC = 13:35 in New York (UTC-5)
+      const date = new Date('2026-01-04T18:35:00Z');
+      const result = formatDateTime(date, 'America/New_York');
+      expect(result).toBe('01/04/2026, 01:35 PM');
+    });
+
+    it('should use Asia/Shanghai as default timezone', () => {
+      const date = new Date('2026-01-04T18:35:00Z');
+      const result = formatDateTime(date);
+      expect(result).toBe('01/05/2026, 02:35 AM');
+    });
+
+    it('should handle invalid timezone gracefully with fallback', () => {
+      const date = new Date('2026-01-04T18:35:00Z');
+      // Invalid timezone should fall back to local time formatting
+      const result = formatDateTime(date, 'Invalid/Timezone');
+      // Result should still be a valid date format
+      expect(result).toMatch(/\d{2}\/\d{2}\/\d{4}, \d{2}:\d{2} (AM|PM)/);
     });
   });
 

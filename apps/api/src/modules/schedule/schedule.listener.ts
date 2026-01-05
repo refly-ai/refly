@@ -194,7 +194,7 @@ export class ScheduleEventListener {
         where: { scheduleRecordId: event.scheduleId },
       });
       const scheduleName = scheduleRecord?.workflowTitle || 'Scheduled Workflow';
-      const nextRunTime = await this.calculateNextRunTime(scheduleRecord?.scheduleId);
+      const { nextRunTime, timezone } = await this.calculateNextRunTime(scheduleRecord?.scheduleId);
 
       const scheduleRecordId = scheduleRecord?.scheduleRecordId || '';
       const origin = this.config.get<string>('origin');
@@ -203,7 +203,7 @@ export class ScheduleEventListener {
       const emailData = {
         userName: fullUser.nickname || 'User',
         scheduleName,
-        runTime: formatDateTime(new Date()),
+        runTime: formatDateTime(new Date(), timezone),
         nextRunTime,
         schedulesLink: runDetailsLink,
         runDetailsLink,
@@ -232,30 +232,37 @@ export class ScheduleEventListener {
 
   /**
    * Calculate next run time from schedule cron expression
+   * Returns both the formatted time string and the timezone for consistent formatting
    */
-  private async calculateNextRunTime(scheduleId: string | undefined): Promise<string> {
+  private async calculateNextRunTime(
+    scheduleId: string | undefined,
+  ): Promise<{ nextRunTime: string; timezone: string }> {
+    const defaultTimezone = 'Asia/Shanghai';
+
     if (!scheduleId) {
-      return 'Check Dashboard';
+      return { nextRunTime: 'Check Dashboard', timezone: defaultTimezone };
     }
 
     const schedule = await this.prisma.workflowSchedule.findUnique({
       where: { scheduleId },
     });
 
+    const timezone = schedule?.timezone || defaultTimezone;
+
     if (!schedule?.cronExpression) {
-      return 'Check Dashboard';
+      return { nextRunTime: 'Check Dashboard', timezone };
     }
 
     try {
       const interval = CronExpressionParser.parse(schedule.cronExpression, {
-        tz: schedule.timezone || 'Asia/Shanghai',
+        tz: timezone,
       });
-      return formatDateTime(interval.next().toDate());
+      return { nextRunTime: formatDateTime(interval.next().toDate(), timezone), timezone };
     } catch (err: any) {
       this.logger.warn(
         `Failed to calculate next run time for schedule ${scheduleId}: ${err?.message}`,
       );
-      return 'Check Dashboard';
+      return { nextRunTime: 'Check Dashboard', timezone };
     }
   }
 

@@ -397,13 +397,14 @@ export class ScheduleProcessor extends WorkerHost {
           // Send Email
           if (fullUser.email) {
             // Calculate next run time from cron expression
+            const timezone = schedule.timezone || 'Asia/Shanghai';
             let nextRunTime: string | undefined;
             if (schedule.cronExpression) {
               try {
                 const interval = CronExpressionParser.parse(schedule.cronExpression, {
-                  tz: schedule.timezone || 'Asia/Shanghai',
+                  tz: timezone,
                 });
-                nextRunTime = formatDateTime(interval.next().toDate());
+                nextRunTime = formatDateTime(interval.next().toDate(), timezone);
               } catch (err) {
                 this.logger.warn(`Failed to calculate next run time for email: ${err}`);
               }
@@ -544,14 +545,15 @@ export class ScheduleProcessor extends WorkerHost {
               where: { scheduleId },
             });
 
-            // 3. Calculate next run
+            // 3. Calculate next run with timezone
+            const timezone = schedule?.timezone || 'Asia/Shanghai';
             let nextRunTime = 'Check Dashboard';
             if (schedule?.cronExpression) {
               try {
                 const interval = CronExpressionParser.parse(schedule.cronExpression, {
-                  tz: schedule.timezone || 'Asia/Shanghai',
+                  tz: timezone,
                 });
-                nextRunTime = formatDateTime(interval.next().toDate());
+                nextRunTime = formatDateTime(interval.next().toDate(), timezone);
               } catch (_) {
                 // Ignore cron parse error
               }
@@ -561,7 +563,7 @@ export class ScheduleProcessor extends WorkerHost {
             const { subject, html } = generateScheduleFailedEmail({
               userName: fullUser.nickname || 'User',
               scheduleName: schedule?.name || 'Scheduled Workflow',
-              runTime: formatDateTime(new Date()),
+              runTime: formatDateTime(new Date(), timezone),
               nextRunTime,
               schedulesLink: `${this.config.get<string>('origin')}/run-history/${scheduleRecordId}`,
               runDetailsLink: `${this.config.get<string>('origin')}/run-history/${scheduleRecordId}`,

@@ -6,23 +6,53 @@
 /**
  * Format date/time to 12-hour format: MM/DD/YYYY, HH:MM AM/PM
  * Example: "01/04/2026, 06:35 PM"
+ *
+ * @param dateTime - Date object or ISO date string to format
+ * @param timezone - IANA timezone string (e.g., 'Asia/Shanghai', 'America/New_York')
+ *                   Defaults to 'Asia/Shanghai' if not provided
  */
-export function formatDateTime(dateTime: string | Date): string {
+export function formatDateTime(dateTime: string | Date, timezone = 'Asia/Shanghai'): string {
   const date = typeof dateTime === 'string' ? new Date(dateTime) : dateTime;
 
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const year = date.getFullYear();
+  try {
+    // Use Intl.DateTimeFormat for timezone-aware formatting
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
 
-  let hours = date.getHours();
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
+    const parts = formatter.formatToParts(date);
+    const getPart = (type: string) => parts.find((p) => p.type === type)?.value || '';
 
-  hours = hours % 12;
-  hours = hours ? hours : 12; // Convert 0 to 12
-  const hoursStr = String(hours).padStart(2, '0');
+    const month = getPart('month');
+    const day = getPart('day');
+    const year = getPart('year');
+    const hour = getPart('hour');
+    const minute = getPart('minute');
+    const dayPeriod = getPart('dayPeriod').toUpperCase();
 
-  return `${month}/${day}/${year}, ${hoursStr}:${minutes} ${ampm}`;
+    return `${month}/${day}/${year}, ${hour}:${minute} ${dayPeriod}`;
+  } catch {
+    // Fallback to local time if timezone is invalid
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, '0');
+
+    return `${month}/${day}/${year}, ${hoursStr}:${minutes} ${ampm}`;
+  }
 }
 
 // Common styles for consistency and premium look
