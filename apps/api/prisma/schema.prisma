@@ -2370,7 +2370,7 @@ model WorkflowScheduleRecord {
   /// Used tools list (JSON array) ["notion", "slack", "gmail"]
   usedTools String? @map("used_tools")
 
-  /// Execution status: pending, running, success, failed, skipped
+  /// Execution status: scheduled, pending, processing, running, success, failed
   status String @default("pending") @map("status")
 
   /// Credit used

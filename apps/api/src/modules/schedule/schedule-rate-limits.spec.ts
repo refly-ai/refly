@@ -132,7 +132,7 @@ describe('Schedule Rate Limits Configuration', () => {
     describe('Status-based Concurrency Tracking', () => {
       const activeStatuses = ['processing', 'running'];
       const completedStatuses = ['success', 'failed'];
-      const otherStatuses = ['pending', 'scheduled', 'skipped'];
+      const otherStatuses = ['pending', 'scheduled'];
 
       it('should consider processing and running as active statuses', () => {
         expect(activeStatuses).toContain('processing');

@@ -190,25 +190,28 @@ export class ScheduleProcessor extends WorkerHost {
           try {
             const redisKey = `${SCHEDULE_REDIS_KEYS.USER_CONCURRENT_PREFIX}${uid}`;
             await this.redisService.decr(redisKey);
-            this.logger.debug(`Rolled back Redis counter for user ${uid} (schedule skipped)`);
+            this.logger.debug(
+              `Rolled back Redis counter for user ${uid} (schedule deleted/disabled)`,
+            );
           } catch (redisError) {
             this.logger.warn(`Failed to rollback Redis counter for user ${uid}`, redisError);
           }
         }
 
-        // Record skipped metric
+        // Record failed metric (schedule deleted/disabled)
         const failureReason = schedule?.deletedAt
           ? ScheduleFailureReason.SCHEDULE_DELETED
           : ScheduleFailureReason.SCHEDULE_DISABLED;
-        this.metrics.execution.skipped(
+        this.metrics.execution.fail(
+          'cron',
           schedule?.deletedAt ? 'schedule_deleted' : 'schedule_disabled',
         );
-        // Update WorkflowScheduleRecord to 'skipped' if exists
+        // Update WorkflowScheduleRecord to 'failed' if exists
         if (existingRecordId) {
           await this.prisma.workflowScheduleRecord.update({
             where: { scheduleRecordId: existingRecordId },
             data: {
-              status: 'skipped',
+              status: 'failed',
               failureReason,
               errorDetails: JSON.stringify({
                 reason: schedule?.deletedAt

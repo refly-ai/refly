@@ -264,7 +264,7 @@ export class ScheduleEventListener {
    *
    * When a canvas is deleted, we need to:
    * 1. Soft-delete and disable all associated WorkflowSchedule records
-   * 2. Update pending/scheduled records to 'skipped' status
+   * 2. Update pending/scheduled records to 'failed' status
    * 3. Leave processing/running records as-is (they will complete normally, but won't be rescheduled)
    *
    * Note: We don't interrupt processing/running tasks because:
@@ -303,7 +303,7 @@ export class ScheduleEventListener {
         },
       });
 
-      // 3. Update pending/scheduled records to 'skipped' status
+      // 3. Update pending/scheduled records to 'failed' status
       // Note: We do NOT update 'processing' or 'running' records because:
       // - They are currently executing and should complete their execution
       // - The workflow.completed/workflow.failed events will handle their final status
@@ -314,7 +314,7 @@ export class ScheduleEventListener {
           status: { in: ['pending', 'scheduled'] },
         },
         data: {
-          status: 'skipped',
+          status: 'failed',
           failureReason: ScheduleFailureReason.CANVAS_DELETED,
           errorDetails: JSON.stringify({
             reason: 'Canvas was deleted, schedule has been released',
@@ -339,7 +339,7 @@ export class ScheduleEventListener {
       }
 
       this.logger.log(
-        `Successfully released schedules for canvas ${canvasId}: ${updateResult.count} pending records skipped`,
+        `Successfully released schedules for canvas ${canvasId}: ${updateResult.count} pending records failed`,
       );
     } catch (error: any) {
       this.logger.error(`Failed to release schedules for canvas ${canvasId}: ${error?.message}`);

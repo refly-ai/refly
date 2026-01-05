@@ -16,7 +16,6 @@ import type { Counter } from '@opentelemetry/api';
  * Usage:
  *   this.metrics.execution.success('cron')
  *   this.metrics.execution.fail('cron', 'workflow_error')
- *   this.metrics.execution.skipped('schedule_deleted')
  *   this.metrics.queue.delayed()
  */
 @Injectable()
@@ -63,7 +62,7 @@ export class ScheduleMetrics implements OnModuleInit {
     /**
      * Record failed execution
      * @param triggerType - 'cron' | 'manual' | 'retry'
-     * @param errorType - Error classification
+     * @param errorType - Error classification (e.g., 'workflow_error', 'schedule_deleted', 'schedule_disabled')
      */
     fail: (triggerType: 'cron' | 'manual' | 'retry', errorType: string): void => {
       this.executionCounter.add(1, {
@@ -71,14 +70,6 @@ export class ScheduleMetrics implements OnModuleInit {
         trigger_type: triggerType,
         error_type: errorType,
       });
-    },
-
-    /**
-     * Record skipped execution
-     * @param reason - 'schedule_deleted' | 'schedule_disabled'
-     */
-    skipped: (reason: string): void => {
-      this.executionCounter.add(1, { status: 'skipped', reason });
     },
   };
 

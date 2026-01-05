@@ -47,7 +47,6 @@ describe('ScheduleProcessor Logic Tests', () => {
       execution: {
         success: jest.fn(),
         fail: jest.fn(),
-        skipped: jest.fn(),
       },
       queue: {
         delayed: jest.fn(),
@@ -137,15 +136,7 @@ describe('ScheduleProcessor Logic Tests', () => {
   });
 
   describe('Status Transition Logic', () => {
-    const validStatuses = [
-      'scheduled',
-      'pending',
-      'processing',
-      'running',
-      'success',
-      'failed',
-      'skipped',
-    ];
+    const validStatuses = ['scheduled', 'pending', 'processing', 'running', 'success', 'failed'];
 
     it('should have valid status values', () => {
       expect(validStatuses).toContain('pending');
@@ -244,9 +235,9 @@ describe('ScheduleProcessor Logic Tests', () => {
       expect(metrics.execution.fail).toHaveBeenCalledWith('cron', 'Error');
     });
 
-    it('should have execution skipped method', () => {
-      metrics.execution.skipped('schedule_deleted');
-      expect(metrics.execution.skipped).toHaveBeenCalledWith('schedule_deleted');
+    it('should have execution fail method for deleted/disabled schedules', () => {
+      metrics.execution.fail('cron', 'schedule_deleted');
+      expect(metrics.execution.fail).toHaveBeenCalledWith('cron', 'schedule_deleted');
     });
 
     it('should have queue delayed method', () => {

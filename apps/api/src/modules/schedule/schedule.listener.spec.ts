@@ -23,6 +23,7 @@ jest.mock('./schedule-email-templates', () => ({
     subject: 'Failed Subject',
     html: 'Failed HTML',
   }),
+  formatDateTime: jest.fn().mockReturnValue('2026-01-05 12:00:00'),
 }));
 
 describe('ScheduleEventListener', () => {
@@ -447,14 +448,14 @@ describe('ScheduleEventListener', () => {
         },
       });
 
-      // Verify pending/scheduled records are skipped
+      // Verify pending/scheduled records are failed
       expect(prismaService.workflowScheduleRecord.updateMany).toHaveBeenCalledWith({
         where: {
           scheduleId: { in: ['schedule-1', 'schedule-2'] },
           status: { in: ['pending', 'scheduled'] },
         },
         data: {
-          status: 'skipped',
+          status: 'failed',
           failureReason: ScheduleFailureReason.CANVAS_DELETED,
           errorDetails: expect.stringContaining('Canvas was deleted'),
           completedAt: expect.any(Date),
@@ -506,7 +507,7 @@ describe('ScheduleEventListener', () => {
           status: { in: ['pending', 'scheduled'] },
         },
         data: expect.objectContaining({
-          status: 'skipped',
+          status: 'failed',
         }),
       });
     });
