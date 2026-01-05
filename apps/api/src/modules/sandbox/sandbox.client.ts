@@ -1,8 +1,10 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 import { RedisService } from '../common/redis.service';
 import { v4 as uuidv4 } from 'uuid';
 import Redis from 'ioredis';
+import type { Queue } from 'bullmq';
 import {
   WorkerExecuteRequest,
   WorkerExecuteResponse,
@@ -16,18 +18,19 @@ import { guard } from '../../utils/guard';
 /**
  * Sandbox Worker Redis Queue Client
  *
- * Handles communication with refly-sandbox worker via Redis Queue (List)
+ * Handles communication with refly-sandbox worker via BullMQ
  * Protocol:
- * - Request: LPUSH to queue → Ensures single consumption by workers
+ * - Request: BullMQ queue → Ensures single consumption by workers
  * - Response: Pub/Sub on unique channel → One-to-one response delivery
  */
 @Injectable()
 export class SandboxClient implements OnModuleInit, OnModuleDestroy {
-  private publisher: Redis;
   private subscriber: Redis;
 
   constructor(
     private readonly redisService: RedisService,
+    @InjectQueue(SANDBOX_QUEUES.REQUEST)
+    private readonly queue: Queue<WorkerExecuteRequest>,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(SandboxClient.name);
@@ -35,21 +38,14 @@ export class SandboxClient implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     // Duplicate connections to avoid interfering with original client
-    this.publisher = this.redisService.getClient().duplicate();
     this.subscriber = this.redisService.getClient().duplicate();
-    this.logger.info('SandboxClient initialized with duplicated publisher and subscriber');
+    this.logger.info('SandboxClient initialized with duplicated subscriber');
   }
 
   async onModuleDestroy() {
-    // Clean up duplicated connections
-    await Promise.all([
-      this.publisher?.quit().catch((err) => {
-        this.logger.warn({ error: err.message }, 'Failed to quit publisher connection');
-      }),
-      this.subscriber?.quit().catch((err) => {
-        this.logger.warn({ error: err.message }, 'Failed to quit subscriber connection');
-      }),
-    ]);
+    await this.subscriber?.quit().catch((err) => {
+      this.logger.warn({ error: err.message }, 'Failed to quit subscriber connection');
+    });
     this.logger.info('SandboxClient connections closed');
   }
 
@@ -106,6 +102,8 @@ export class SandboxClient implements OnModuleInit, OnModuleDestroy {
     context: SandboxExecutionContext,
     timeoutMs: number,
   ): Promise<WorkerExecuteResponse> {
+    const startTime = performance.now();
+
     // Build request with flattened structure matching worker's expectation
     const request: WorkerExecuteRequest = {
       requestId,
@@ -130,12 +128,33 @@ export class SandboxClient implements OnModuleInit, OnModuleDestroy {
       },
     };
 
-    // Publish request to queue (LPUSH ensures single consumption)
-    await this.publisher.lpush(SANDBOX_QUEUES.REQUEST, JSON.stringify(request));
+    // Enqueue request via BullMQ
+    const queuePushStart = performance.now();
+    await this.queue.add('execute', request, {
+      jobId: requestId,
+      removeOnComplete: true,
+      removeOnFail: true,
+    });
+    const queuePushTime = performance.now() - queuePushStart;
     this.logger.debug(`Request enqueued: requestId=${requestId}`);
 
     // Wait for response
+    const waitStart = performance.now();
     const response = await this.waitForResponse(responseChannel, requestId, timeoutMs);
+    const waitResponseTime = performance.now() - waitStart;
+    const totalTime = performance.now() - startTime;
+
+    this.logger.info(
+      {
+        requestId,
+        timing: {
+          queuePushMs: Math.round(queuePushTime * 100) / 100,
+          waitResponseMs: Math.round(waitResponseTime * 100) / 100,
+          totalMs: Math.round(totalTime * 100) / 100,
+        },
+      },
+      'Execution timing (API)',
+    );
 
     this.logger.info({
       requestId,

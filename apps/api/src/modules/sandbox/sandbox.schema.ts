@@ -63,7 +63,7 @@ export const LanguageSchema = z.enum(['python', 'javascript', 'shell']);
 export type Language = z.infer<typeof LanguageSchema>;
 
 /**
- * Worker execution request - sent to sandbox:execute:request channel
+ * Worker execution request - sent to sandbox-execute-request queue
  * Matches worker/lib/types.ts:WorkerExecuteRequest
  */
 export const WorkerExecuteRequestSchema = z.object({
