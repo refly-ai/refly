@@ -367,7 +367,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
 
         const requestData = {
           canvasId,
-          name: `Schedule for ${canvasResponse?.data?.title}`,
+          name: canvasResponse?.data?.title ?? '',
           cronExpression,
           scheduleConfig: scheduleConfigStr,
           timezone: userTimezone,
