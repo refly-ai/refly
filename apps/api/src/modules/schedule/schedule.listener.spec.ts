@@ -136,15 +136,22 @@ describe('ScheduleEventListener', () => {
       };
 
       // Mock getScheduleRecord (first call - returns uid only)
-      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
-        uid: 'user-1',
-      } as any);
+      jest
+        .spyOn(prismaService.workflowScheduleRecord, 'findUnique')
+        .mockImplementation((args: any) => {
+          // First call: getScheduleRecord - returns uid only (has select field)
+          if (args.where.scheduleRecordId === 'schedule-record-1' && args.select?.uid) {
+            return Promise.resolve({ uid: 'user-1' } as any);
+          }
+          // Second call: sendEmail - returns full schedule record (no select)
+          if (args.where.scheduleRecordId === 'schedule-record-1' && !args.select) {
+            return Promise.resolve(mockScheduleRecord as any);
+          }
+          return Promise.resolve(null);
+        });
 
       // Mock sendEmail calls
       jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser as any);
-      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
-        ...mockScheduleRecord,
-      } as any);
       jest.spyOn(prismaService.workflowSchedule, 'findUnique').mockResolvedValue({
         scheduleId: 'schedule-1',
         cronExpression: '0 8 * * *',
@@ -298,15 +305,22 @@ describe('ScheduleEventListener', () => {
       };
 
       // Mock getScheduleRecord (first call - returns uid only)
-      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
-        uid: 'user-1',
-      } as any);
+      jest
+        .spyOn(prismaService.workflowScheduleRecord, 'findUnique')
+        .mockImplementation((args: any) => {
+          // First call: getScheduleRecord - returns uid only (has select field)
+          if (args.where.scheduleRecordId === 'schedule-record-1' && args.select?.uid) {
+            return Promise.resolve({ uid: 'user-1' } as any);
+          }
+          // Second call: sendEmail - returns full schedule record (no select)
+          if (args.where.scheduleRecordId === 'schedule-record-1' && !args.select) {
+            return Promise.resolve(mockScheduleRecord as any);
+          }
+          return Promise.resolve(null);
+        });
 
       // Mock sendEmail calls
       jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser as any);
-      jest.spyOn(prismaService.workflowScheduleRecord, 'findUnique').mockResolvedValueOnce({
-        ...mockScheduleRecord,
-      } as any);
       jest.spyOn(prismaService.workflowSchedule, 'findUnique').mockResolvedValue({
         scheduleId: 'schedule-1',
         cronExpression: '0 8 * * *',
