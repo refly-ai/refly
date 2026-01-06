@@ -150,6 +150,20 @@ export class ScheduleCronService implements OnModuleInit {
   }
 
   private async triggerSchedule(schedule: any) {
+    // Re-check schedule status from database in case it was disabled by another schedule's
+    // quota check in the same batch (the in-memory schedule object may be stale)
+    const freshSchedule = await this.prisma.workflowSchedule.findUnique({
+      where: { scheduleId: schedule.scheduleId },
+      select: { isEnabled: true, deletedAt: true },
+    });
+
+    if (!freshSchedule || !freshSchedule.isEnabled || freshSchedule.deletedAt) {
+      this.logger.debug(
+        `Schedule ${schedule.scheduleId} was disabled/deleted during batch processing, skipping`,
+      );
+      return;
+    }
+
     // 3.1 Calculate next run time
     let nextRunAt: Date | null = null;
     try {
@@ -253,6 +267,28 @@ export class ScheduleCronService implements OnModuleInit {
             completedAt: now,
           },
         });
+
+        // Remove pending jobs from BullMQ queue to prevent duplicate failures
+        // This ensures jobs don't run and overwrite the SCHEDULE_LIMIT_EXCEEDED status with SCHEDULE_DISABLED
+        try {
+          const waitingJobs = await this.scheduleQueue.getJobs(['waiting', 'delayed']);
+          let removedJobsCount = 0;
+          for (const job of waitingJobs) {
+            if (job.data?.scheduleId && scheduleIdsToDisable.includes(job.data.scheduleId)) {
+              await job.remove();
+              removedJobsCount++;
+              this.logger.debug(
+                `Removed job ${job.id} for disabled schedule ${job.data.scheduleId}`,
+              );
+            }
+          }
+          if (removedJobsCount > 0) {
+            this.logger.log(`Removed ${removedJobsCount} pending jobs for disabled schedules`);
+          }
+        } catch (queueError) {
+          // Queue operation failure is not critical, jobs will be skipped by processor anyway
+          this.logger.warn('Failed to remove pending jobs for disabled schedules', queueError);
+        }
 
         this.logger.log(
           `Auto-disabled ${schedulesToDisable.length} schedules for user ${schedule.uid} due to quota exceeded, updated ${count} schedule records to failed`,
