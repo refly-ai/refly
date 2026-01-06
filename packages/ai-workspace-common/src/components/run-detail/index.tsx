@@ -138,6 +138,7 @@ const RunDetail = memo(({ recordId, type = 'schedule' }: RunDetailProps) => {
         status: record.status,
         triggeredAt: record.triggeredAt,
         completedAt: record.completedAt,
+        scheduledAt: record.scheduledAt,
         creditUsed: record.creditUsed,
         failureReason: record.failureReason,
         canvasId: record.sourceCanvasId || record.canvasId,

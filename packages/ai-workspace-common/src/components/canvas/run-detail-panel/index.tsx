@@ -20,6 +20,7 @@ export interface RunDetailInfo {
   status: string;
   triggeredAt: string;
   completedAt?: string;
+  scheduledAt?: string;
   creditUsed: number;
   failureReason?: string;
   canvasId: string;
@@ -178,7 +179,7 @@ export const RunDetailPanel = memo(
                 <Clock size={16} />
                 <span className="text-sm font-normal leading-[21px]">
                   {t('runDetail.time')}：
-                  {time(info.completedAt || info.triggeredAt, language as LOCALE).format(
+                  {time(info.scheduledAt || info.triggeredAt, language as LOCALE).format(
                     'MM/DD/YYYY, hh:mm A',
                   )}
                 </span>

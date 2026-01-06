@@ -345,10 +345,10 @@ export const ScheduleColumn = memo(
               }}
             />
           }
-          trigger="click"
+          trigger="hover"
           open={open}
           onOpenChange={handleOpenChange}
-          placement="bottomLeft"
+          placement="bottom"
           overlayClassName="schedule-popover"
         >
           <div
