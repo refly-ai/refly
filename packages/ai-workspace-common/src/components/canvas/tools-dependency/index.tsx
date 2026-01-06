@@ -347,9 +347,11 @@ const CreditInsufficientBlock = React.memo(
           <span className="text-refly-text-0 text-sm leading-5 whitespace-nowrap font-medium">
             {t('canvas.workflowDependency.notEnoughCredits', 'Not enough credits to run')}
           </span>
-          <span className="text-refly-text-2 text-sm leading-5 whitespace-nowrap">
-            {t('canvas.workflowDependency.runCost', 'Run cost: {{cost}}', { cost: creditUsage })}
-          </span>
+          {creditUsage > 0 && (
+            <span className="text-refly-text-2 text-sm leading-5 whitespace-nowrap">
+              {t('canvas.workflowDependency.runCost', 'Run cost: {{cost}}', { cost: creditUsage })}
+            </span>
+          )}
         </div>
         <Button
           className="custom-upgrade-button text-xs leading-5 font-semibold cursor-pointer whitespace-nowrap px-3 py-1 rounded-md h-auto"
@@ -488,10 +490,12 @@ const ToolsDependencyContent = React.memo(
 
     // Check if credits are insufficient
     const isCreditInsufficient = useMemo(() => {
-      if (!isLogin || !isBalanceSuccess || !creditUsage) return false;
-      const requiredCredits = Number(creditUsage);
-      const isRequiredCreditsValid = Number.isFinite(requiredCredits) && requiredCredits > 0;
-      return isRequiredCreditsValid && creditBalance < requiredCredits;
+      if (!isLogin || !isBalanceSuccess) return false;
+      const requiredCredits = Number(creditUsage || 0);
+      // Show insufficient credits warning if:
+      // 1. User has no credits (creditBalance === 0), OR
+      // 2. Required credits > 0 AND user's balance < required credits
+      return creditBalance === 0 || (requiredCredits > 0 && creditBalance < requiredCredits);
     }, [isLogin, isBalanceSuccess, creditUsage, creditBalance]);
 
     // Helper function to get complete toolset definition
@@ -605,9 +609,9 @@ const ToolsDependencyContent = React.memo(
         {isLoading ? null : (
           <div className="max-h-[400px] overflow-y-auto space-y-3">
             {/* Credit Insufficient Check */}
-            {isCreditInsufficient && creditUsage && (
+            {isCreditInsufficient && (
               <CreditInsufficientBlock
-                creditUsage={creditUsage}
+                creditUsage={creditUsage || 0}
                 onUpgradeClick={handleCreditUpgrade}
               />
             )}
@@ -1154,9 +1158,11 @@ export const ToolsDependency = ({
   // Check if credits are insufficient
   const isCreditInsufficient = useMemo(() => {
     if (!isLogin || !isBalanceSuccess) return false;
-    const requiredCredits = Number(estimatedCreditUsage);
-    const isRequiredCreditsValid = Number.isFinite(requiredCredits) && requiredCredits > 0;
-    return isRequiredCreditsValid && creditBalance < requiredCredits;
+    const requiredCredits = Number(estimatedCreditUsage || 0);
+    // Show insufficient credits warning if:
+    // 1. User has no credits (creditBalance === 0), OR
+    // 2. Required credits > 0 AND user's balance < required credits
+    return creditBalance === 0 || (requiredCredits > 0 && creditBalance < requiredCredits);
   }, [isLogin, isBalanceSuccess, estimatedCreditUsage, creditBalance]);
 
   const totalIssuesCount = useMemo(() => {
