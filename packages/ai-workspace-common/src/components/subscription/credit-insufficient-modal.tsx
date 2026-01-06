@@ -488,9 +488,11 @@ export const CreditInsufficientModal = memo(() => {
     fetchVouchers();
   }, [creditInsufficientModalVisible, isLogin, setAvailableVoucher, setVoucherLoading]);
 
-  // If triggered from canvas and user is free, don't show credit packs
+  // If triggered from canvas or schedule and user is free, don't show credit packs
   const isTriggeredFromCanvas = creditInsufficientTriggeredFrom === 'canvas';
-  const shouldShowCreditPacks = !isTriggeredFromCanvas || hasPaidSubscription;
+  const isTriggeredFromSchedule = creditInsufficientTriggeredFrom === 'schedule';
+  const shouldShowCreditPacks =
+    (!isTriggeredFromCanvas && !isTriggeredFromSchedule) || hasPaidSubscription;
 
   // Determine if showing both cards (free user not from canvas) or single card
   const showBothCards = !hasPaidSubscription && shouldShowCreditPacks;
@@ -676,7 +678,12 @@ export const CreditInsufficientModal = memo(() => {
       onCancel={handleClose}
       title={
         <span className="text-xl font-semibold text-gray-900">
-          {t('canvas.skillResponse.creditInsufficient.title', 'Insufficient Credits')}
+          {creditInsufficientTriggeredFrom === 'schedule'
+            ? t(
+                'canvas.skillResponse.creditInsufficient.scheduleTitle',
+                'Upgrade to Create More Schedules',
+              )
+            : t('canvas.skillResponse.creditInsufficient.title', 'Insufficient Credits')}
         </span>
       }
       className="credit-insufficient-modal"

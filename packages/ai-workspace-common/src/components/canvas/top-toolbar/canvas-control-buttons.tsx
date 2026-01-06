@@ -3,7 +3,11 @@ import { Button } from 'antd';
 import { ZoomIn, ZoomOut, Location } from 'refly-icons';
 import { ReactFlowState, useReactFlow, useStore } from '@xyflow/react';
 
-export const CanvasControlButtons = memo(() => {
+interface CanvasControlButtonsProps {
+  leftOffset?: number;
+}
+
+export const CanvasControlButtons = memo(({ leftOffset = 0 }: CanvasControlButtonsProps) => {
   const currentZoom = useStore((state: ReactFlowState) => state.transform?.[2] ?? 1);
   const reactFlowInstance = useReactFlow();
 
@@ -62,7 +66,10 @@ export const CanvasControlButtons = memo(() => {
   );
 
   return (
-    <div className="absolute px-1 py-4 bottom-[30px] left-[30px] flex flex-col gap-3 bg-refly-bg-content-z2 z-20 shadow-refly-m rounded-[18px] pointer-events-auto">
+    <div
+      className="absolute px-1 py-4 bottom-[30px] flex flex-col gap-3 bg-refly-bg-content-z2 z-20 shadow-refly-m rounded-[18px] pointer-events-auto"
+      style={{ left: `${30 + leftOffset}px` }}
+    >
       {buttons.map((button) => (
         <Button
           key={button.key}

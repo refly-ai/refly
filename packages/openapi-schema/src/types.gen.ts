@@ -620,6 +620,10 @@ export type Canvas = {
    */
   minimapStorageKey?: string;
   /**
+   * Workflow schedule configuration
+   */
+  schedule?: WorkflowSchedule;
+  /**
    * Canvas creation time
    */
   createdAt: string;
@@ -627,6 +631,194 @@ export type Canvas = {
    * Canvas update time
    */
   updatedAt: string;
+};
+
+export type WorkflowSchedule = {
+  /**
+   * Schedule ID
+   */
+  scheduleId?: string;
+  /**
+   * Schedule name
+   */
+  name?: string;
+  /**
+   * Whether the schedule is enabled
+   */
+  isEnabled?: boolean;
+  /**
+   * Cron expression
+   */
+  cronExpression?: string;
+  /**
+   * Schedule config JSON (type, time, weekdays, monthDays)
+   */
+  scheduleConfig?: string;
+  /**
+   * Timezone
+   */
+  timezone?: string;
+  /**
+   * Next run time
+   */
+  nextRunAt?: string;
+  /**
+   * Last run time
+   */
+  lastRunAt?: string;
+};
+
+export type CreateScheduleRequest = {
+  /**
+   * Canvas ID to schedule
+   */
+  canvasId: string;
+  /**
+   * Schedule name
+   */
+  name: string;
+  /**
+   * Cron expression for scheduling
+   */
+  cronExpression: string;
+  /**
+   * Schedule configuration JSON
+   */
+  scheduleConfig: string;
+  /**
+   * Timezone for schedule execution
+   */
+  timezone?: string;
+  /**
+   * Whether the schedule is enabled
+   */
+  isEnabled?: boolean;
+};
+
+export type CreateScheduleResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: WorkflowSchedule;
+  /**
+   * Response message
+   */
+  message?: string;
+};
+
+export type UpdateScheduleRequest = {
+  /**
+   * Schedule ID to update
+   */
+  scheduleId: string;
+  /**
+   * Schedule name
+   */
+  name?: string;
+  /**
+   * Cron expression for scheduling
+   */
+  cronExpression?: string;
+  /**
+   * Schedule configuration JSON
+   */
+  scheduleConfig?: string;
+  /**
+   * Timezone for schedule execution
+   */
+  timezone?: string;
+  /**
+   * Whether the schedule is enabled
+   */
+  isEnabled?: boolean;
+};
+
+export type UpdateScheduleResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: WorkflowSchedule;
+  /**
+   * Response message
+   */
+  message?: string;
+};
+
+export type DeleteScheduleRequest = {
+  /**
+   * Schedule ID to delete
+   */
+  scheduleId: string;
+};
+
+export type DeleteScheduleResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  /**
+   * Response message
+   */
+  message?: string;
+};
+
+export type ListSchedulesRequest = {
+  /**
+   * Canvas ID to filter schedules
+   */
+  canvasId?: string;
+  /**
+   * Page number for pagination
+   */
+  page?: number;
+  /**
+   * Number of items per page
+   */
+  pageSize?: number;
+};
+
+export type ListSchedulesResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  /**
+   * List of schedules
+   */
+  data?: Array<WorkflowSchedule>;
+  /**
+   * Total number of schedules
+   */
+  total?: number;
+  /**
+   * Current page number
+   */
+  page?: number;
+  /**
+   * Number of items per page
+   */
+  pageSize?: number;
+};
+
+export type GetScheduleDetailRequest = {
+  /**
+   * Schedule ID to get details for
+   */
+  scheduleId: string;
+};
+
+export type GetScheduleDetailResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: WorkflowSchedule;
+  /**
+   * Response message
+   */
+  message?: string;
 };
 
 export type CanvasTemplateCategory = {
@@ -7371,6 +7563,67 @@ export type WorkflowExecution = {
   updatedAt?: string;
 };
 
+export type WorkflowTask = {
+  /**
+   * Unique ID for the task
+   */
+  id: string;
+  /**
+   * Display title for the task
+   */
+  title: string;
+  /**
+   * The prompt or instruction for this task
+   */
+  prompt: string;
+  /**
+   * Toolsets selected for this task
+   */
+  toolsets: Array<string>;
+  /**
+   * Tasks that must be executed before this task
+   */
+  dependentTasks?: Array<string>;
+};
+
+export type WorkflowPlan = {
+  /**
+   * Title of the workflow plan
+   */
+  title: string;
+  /**
+   * Array of workflow tasks to be executed
+   */
+  tasks: Array<WorkflowTask>;
+  /**
+   * Array of variables (aka User inputs) defined for the workflow plan
+   */
+  variables?: Array<WorkflowVariable>;
+};
+
+export type WorkflowPlanRecord = WorkflowPlan & {
+  /**
+   * Workflow plan ID
+   */
+  planId?: string;
+  /**
+   * Workflow plan version
+   */
+  version?: number;
+  /**
+   * Workflow plan creation timestamp
+   */
+  createdAt?: string;
+  /**
+   * Workflow plan update timestamp
+   */
+  updatedAt?: string;
+};
+
+export type GetWorkflowPlanDetailResponse = BaseResponse & {
+  data?: WorkflowPlanRecord;
+};
+
 export type GetWorkflowDetailResponse = BaseResponse & {
   data?: WorkflowExecution;
 };
@@ -7603,7 +7856,7 @@ export type WorkflowVariable = {
    */
   variableId: string;
   /**
-   * Variable name
+   * Variable name used in the workflow
    */
   name: string;
   /**
@@ -7627,7 +7880,7 @@ export type WorkflowVariable = {
    */
   variableType?: 'string' | 'option' | 'resource';
   /**
-   * Whether the variable is required
+   * Whether the variable is required. Defaults to false.
    */
   required?: boolean;
   /**
@@ -7635,7 +7888,7 @@ export type WorkflowVariable = {
    */
   isSingle?: boolean;
   /**
-   * Variable options (only valid when variable type is option)
+   * Array of options (only valid when variable type is `option`)
    */
   options?: Array<string>;
   /**
@@ -10890,6 +11143,23 @@ export type GetWorkflowDetailResponse2 = GetWorkflowDetailResponse;
 
 export type GetWorkflowDetailError = unknown;
 
+export type GetWorkflowPlanDetailData = {
+  query: {
+    /**
+     * Workflow plan ID
+     */
+    planId: string;
+    /**
+     * Workflow plan version
+     */
+    version?: number;
+  };
+};
+
+export type GetWorkflowPlanDetailResponse2 = GetWorkflowPlanDetailResponse;
+
+export type GetWorkflowPlanDetailError = unknown;
+
 export type CreateWorkflowAppData = {
   body: CreateWorkflowAppRequest;
 };
@@ -10968,6 +11238,46 @@ export type GetTemplateGenerationStatusData = {
 export type GetTemplateGenerationStatusResponse2 = GetTemplateGenerationStatusResponse;
 
 export type GetTemplateGenerationStatusError = unknown;
+
+export type CreateScheduleData = {
+  body: CreateScheduleRequest;
+};
+
+export type CreateScheduleResponse2 = CreateScheduleResponse;
+
+export type CreateScheduleError = unknown;
+
+export type UpdateScheduleData = {
+  body: UpdateScheduleRequest;
+};
+
+export type UpdateScheduleResponse2 = UpdateScheduleResponse;
+
+export type UpdateScheduleError = unknown;
+
+export type DeleteScheduleData = {
+  body: DeleteScheduleRequest;
+};
+
+export type DeleteScheduleResponse2 = DeleteScheduleResponse;
+
+export type DeleteScheduleError = unknown;
+
+export type ListSchedulesData = {
+  body: ListSchedulesRequest;
+};
+
+export type ListSchedulesResponse2 = ListSchedulesResponse;
+
+export type ListSchedulesError = unknown;
+
+export type GetScheduleDetailData = {
+  body: GetScheduleDetailRequest;
+};
+
+export type GetScheduleDetailResponse2 = GetScheduleDetailResponse;
+
+export type GetScheduleDetailError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 

@@ -204,7 +204,7 @@ export const prepareNodeExecutions = (params: {
       : (params.startNodes?.map((sid) => nodeMap.get(sid)?.id ?? sid) ?? []);
   if (startNodes.length === 0) {
     for (const [nodeId, parents] of parentMap) {
-      if (parents.length === 0) {
+      if (parents.length === 0 || parents.indexOf(nodeId) >= 0) {
         startNodes.push(nodeId);
       }
     }

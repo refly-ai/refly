@@ -131,6 +131,9 @@ importers:
       '@nestjs/core':
         specifier: ~10.3.9
         version: 10.3.10(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/platform-express@10.4.19)(@nestjs/websockets@10.3.10)(encoding@0.1.13)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.0.1
+        version: 3.0.1(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.3.10)
       '@nestjs/jwt':
         specifier: ~10.2.0
         version: 10.2.0(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))
@@ -143,6 +146,9 @@ importers:
       '@nestjs/platform-ws':
         specifier: ~10.3.9
         version: 10.3.10(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/websockets@10.3.10)(rxjs@7.8.2)
+      '@nestjs/schedule':
+        specifier: ^6.1.0
+        version: 6.1.0(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.3.10)
       '@nestjs/swagger':
         specifier: ^8.1.1
         version: 8.1.1(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.3.10)(reflect-metadata@0.1.14)
@@ -263,6 +269,9 @@ importers:
       cookie-parser:
         specifier: ~1.4.6
         version: 1.4.7
+      cron-parser:
+        specifier: ^5.4.0
+        version: 5.4.0
       express:
         specifier: ~4.19.2
         version: 4.19.2
@@ -423,6 +432,9 @@ importers:
       '@types/cookie-parser':
         specifier: ~1.4.3
         version: 1.4.9(@types/express@4.17.23)
+      '@types/cron':
+        specifier: ^2.4.3
+        version: 2.4.3
       '@types/express':
         specifier: ^4.17.13
         version: 4.17.23
@@ -944,6 +956,9 @@ importers:
       copy-to-clipboard:
         specifier: ~3.3.3
         version: 3.3.3
+      cron-parser:
+        specifier: ^5.4.0
+        version: 5.4.0
       dayjs:
         specifier: ~1.11.7
         version: 1.11.13
@@ -4361,6 +4376,12 @@ packages:
       '@nestjs/websockets':
         optional: true
 
+  '@nestjs/event-emitter@3.0.1':
+    resolution: {integrity: sha512-0Ln/x+7xkU6AJFOcQI9tIhUMXVF7D5itiaQGOyJbXtlAfAIt8gzDdJm+Im7cFzKoWkiW5nCXCPh6GSvdQd/3Dw==}
+    peerDependencies:
+      '@nestjs/common': ^10.0.0 || ^11.0.0
+      '@nestjs/core': ^10.0.0 || ^11.0.0
+
   '@nestjs/jwt@10.2.0':
     resolution: {integrity: sha512-x8cG90SURkEiLOehNaN2aRlotxT0KZESUliOPKKnjWiyJOcWurkF3w345WOX0P4MgFzUjGoZ1Sy0aZnxeihT0g==}
     peerDependencies:
@@ -4397,6 +4418,12 @@ packages:
       '@nestjs/common': ^10.0.0
       '@nestjs/websockets': ^10.0.0
       rxjs: ^7.1.0
+
+  '@nestjs/schedule@6.1.0':
+    resolution: {integrity: sha512-W25Ydc933Gzb1/oo7+bWzzDiOissE+h/dhIAPugA39b9MuIzBbLybuXpc1AjoQLczO3v0ldmxaffVl87W0uqoQ==}
+    peerDependencies:
+      '@nestjs/common': ^10.0.0 || ^11.0.0
+      '@nestjs/core': ^10.0.0 || ^11.0.0
 
   '@nestjs/swagger@8.1.1':
     resolution: {integrity: sha512-5Mda7H1DKnhKtlsb0C7PYshcvILv8UFyUotHzxmWh0G65Z21R3LZH/J8wmpnlzL4bmXIfr42YwbEwRxgzpJ5sQ==}
@@ -6836,6 +6863,10 @@ packages:
   '@types/cookies@0.9.1':
     resolution: {integrity: sha512-E/DPgzifH4sM1UMadJMWd6mO2jOd4g1Ejwzx8/uRCDpJis1IrlyQEcGAYEomtAqRYmD5ORbNXMeI9U0RiVGZbg==}
 
+  '@types/cron@2.4.3':
+    resolution: {integrity: sha512-ViRBkoZD9Rk0hGeMdd2GHGaOaZuH9mDmwsE5/Zo53Ftwcvh7h9VJc8lIt2wdgEwS4EW5lbtTX6vlE0idCLPOyA==}
+    deprecated: This is a stub types definition. cron provides its own type definitions, so you do not need this installed.
+
   '@types/css-font-loading-module@0.0.7':
     resolution: {integrity: sha512-nl09VhutdjINdWyXxHWN/w9zlNCfr60JUqJbd24YXUuCwgeL0TpFSdElCwb6cxfB6ybE19Gjj4g0jsgkXxKv1Q==}
 
@@ -7079,6 +7110,9 @@ packages:
 
   '@types/lodash@4.17.20':
     resolution: {integrity: sha512-H3MHACvFUEiujabxhaI/ImO6gUrd8oOurg7LQtS7mbwIXA/cUqWrvBsaeJ23aZEPk1TAYkurjfMbSELfoCXlGA==}
+
+  '@types/luxon@3.7.1':
+    resolution: {integrity: sha512-H3iskjFIAn5SlJU7OuxUmTEpebK6TKB8rxZShDslBMZJ5u9S//KM1sbdAisiSrqwLQncVjnpi2OK2J51h+4lsg==}
 
   '@types/markdown-it@13.0.9':
     resolution: {integrity: sha512-1XPwR0+MgXLWfTn9gCsZ55AHOKW1WN+P9vr0PaQh5aerR9LLQXUbjfEAFhjmEmyoYFWAyuN2Mqkn40MZ4ukjBw==}
@@ -8527,6 +8561,14 @@ packages:
     resolution: {integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==}
     engines: {node: '>=12.0.0'}
 
+  cron-parser@5.4.0:
+    resolution: {integrity: sha512-HxYB8vTvnQFx4dLsZpGRa0uHp6X3qIzS3ZJgJ9v6l/5TJMgeWQbLkR5yiJ5hOxGbc9+jCADDnydIe15ReLZnJA==}
+    engines: {node: '>=18'}
+
+  cron@4.3.5:
+    resolution: {integrity: sha512-hKPP7fq1+OfyCqoePkKfVq7tNAdFwiQORr4lZUHwrf0tebC65fYEeWgOrXOL6prn1/fegGOdTfrM6e34PJfksg==}
+    engines: {node: '>=18.x'}
+
   cross-fetch@3.2.0:
     resolution: {integrity: sha512-Q+xVJLoGOeIMXZmbUK4HYk+69cQH6LudR0Vu/pRm2YlU/hDV9CiS0gKUMaWY5f2NeUH9C1nV3bsTlCo0FsTV1Q==}
 
@@ -9293,6 +9335,9 @@ packages:
 
   eventemitter2@6.4.7:
     resolution: {integrity: sha512-tYUSVOGeQPKt/eC1ABfhHy5Xd96N3oIijJvN3O9+TsC28T5V9yX9oEfEK5faP0EFSNVOG97qtAS68GBrQB2hDg==}
+
+  eventemitter2@6.4.9:
+    resolution: {integrity: sha512-JEPTiaOt9f04oa6NOkc4aH+nVp5I3wEjpHbIPqfgCdD5v5bUzy7xQqwcVO2aDQgOWhI28da57HksMrzK9HlRxg==}
 
   eventemitter3@4.0.7:
     resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
@@ -18221,6 +18266,12 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
+  '@nestjs/event-emitter@3.0.1(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.3.10)':
+    dependencies:
+      '@nestjs/common': 10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/core': 10.3.10(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/platform-express@10.4.19)(@nestjs/websockets@10.3.10)(encoding@0.1.13)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      eventemitter2: 6.4.9
+
   '@nestjs/jwt@10.2.0(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))':
     dependencies:
       '@nestjs/common': 10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2)
@@ -18259,6 +18310,12 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+
+  '@nestjs/schedule@6.1.0(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.3.10)':
+    dependencies:
+      '@nestjs/common': 10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/core': 10.3.10(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/platform-express@10.4.19)(@nestjs/websockets@10.3.10)(encoding@0.1.13)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      cron: 4.3.5
 
   '@nestjs/swagger@8.1.1(@nestjs/common@10.3.10(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@10.3.10)(reflect-metadata@0.1.14)':
     dependencies:
@@ -21082,6 +21139,10 @@ snapshots:
       '@types/keygrip': 1.0.6
       '@types/node': 20.19.0
 
+  '@types/cron@2.4.3':
+    dependencies:
+      cron: 4.3.5
+
   '@types/css-font-loading-module@0.0.7': {}
 
   '@types/d3-array@3.2.1': {}
@@ -21379,6 +21440,8 @@ snapshots:
       '@types/lodash': 4.17.20
 
   '@types/lodash@4.17.20': {}
+
+  '@types/luxon@3.7.1': {}
 
   '@types/markdown-it@13.0.9':
     dependencies:
@@ -23174,6 +23237,15 @@ snapshots:
     dependencies:
       luxon: 3.7.1
 
+  cron-parser@5.4.0:
+    dependencies:
+      luxon: 3.7.1
+
+  cron@4.3.5:
+    dependencies:
+      '@types/luxon': 3.7.1
+      luxon: 3.7.1
+
   cross-fetch@3.2.0(encoding@0.1.13):
     dependencies:
       node-fetch: 2.7.0(encoding@0.1.13)
@@ -24108,6 +24180,8 @@ snapshots:
   event-target-shim@5.0.1: {}
 
   eventemitter2@6.4.7: {}
+
+  eventemitter2@6.4.9: {}
 
   eventemitter3@4.0.7: {}
 

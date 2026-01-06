@@ -154,13 +154,21 @@ const getInternalState = ({
   };
 };
 
+export interface SnapshotData {
+  title?: string;
+  nodes: CanvasNode[];
+  edges: CanvasEdge[];
+}
+
 export const CanvasProvider = ({
   canvasId,
   readonly = false,
+  snapshotData,
   children,
 }: {
   canvasId: string;
   readonly?: boolean;
+  snapshotData?: SnapshotData;
   children: React.ReactNode;
 }) => {
   const { t } = useTranslation();
@@ -207,29 +215,31 @@ export const CanvasProvider = ({
     enabled: !readonly && !!canvasId,
   });
 
-  // Use the hook to fetch canvas data when in readonly mode
+  // Use the hook to fetch canvas data when in readonly mode (only when snapshotData is not provided)
   const {
     data: canvasData,
     error: canvasError,
     loading: shareLoading,
-  } = useFetchShareData<SharedCanvasData>(readonly ? canvasId : undefined);
+  } = useFetchShareData<SharedCanvasData>(readonly && !snapshotData ? canvasId : undefined);
 
-  // Check if it's a 404 error
+  // Check if it's a 404 error (only relevant when fetching share data)
   const shareNotFound = useMemo(() => {
-    if (!readonly || shareLoading || !canvasError) return false;
+    if (!readonly || snapshotData || shareLoading || !canvasError) return false;
     return (
       !canvasData ||
       canvasError.message.includes('404') ||
       canvasError.message.includes('Failed to fetch share data: 404')
     );
-  }, [canvasError, canvasData, shareLoading, readonly]);
+  }, [canvasError, canvasData, shareLoading, readonly, snapshotData]);
 
   // Set canvas data from API response when in readonly mode
   useEffect(() => {
     if (readonly) {
-      if (!canvasData) return;
+      // Use snapshotData if provided, otherwise use canvasData from share endpoint
+      const dataSource = snapshotData || canvasData;
+      if (!dataSource) return;
       const { nodeLookup, parentLookup, connectionLookup, edgeLookup } = getState();
-      const { nodes, edges } = canvasData;
+      const { nodes, edges } = dataSource;
       const internalState = getInternalState({
         nodes: nodes && Array.isArray(nodes) ? (nodes as unknown as Node[]) : [],
         edges: edges && Array.isArray(edges) ? (edges as unknown as Edge[]) : [],
@@ -243,7 +253,7 @@ export const CanvasProvider = ({
       if (!canvasDetail?.data?.title) return;
       setCanvasTitle(canvasId, canvasDetail.data.title);
     }
-  }, [readonly, canvasData, canvasDetail, canvasId]);
+  }, [readonly, canvasData, canvasDetail, canvasId, snapshotData]);
 
   const handleConflictResolution = useCallback(
     (canvasId: string, conflict: VersionConflict): Promise<'local' | 'remote'> => {
@@ -822,10 +832,10 @@ export const CanvasProvider = ({
         loading,
         canvasId,
         readonly,
-        shareLoading,
+        shareLoading: snapshotData ? false : shareLoading,
         shareNotFound,
         syncFailureCount,
-        shareData: canvasData ?? undefined,
+        shareData: (snapshotData as SharedCanvasData) ?? canvasData ?? undefined,
         lastUpdated,
         forceSyncState,
         undo,

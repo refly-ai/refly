@@ -242,6 +242,27 @@ export default () => ({
     // For testing, use smaller values like 7 (7 minutes)
     expirationMinutes: Number(process.env.VOUCHER_EXPIRATION_MINUTES) || 10080,
   },
+  schedule: {
+    // Rate limiting - controls global and per-user concurrency
+    globalMaxConcurrent: Number.parseInt(process.env.SCHEDULE_GLOBAL_MAX_CONCURRENT) || 50,
+    rateLimitMax: Number.parseInt(process.env.SCHEDULE_RATE_LIMIT_MAX) || 100,
+    rateLimitDurationMs: Number.parseInt(process.env.SCHEDULE_RATE_LIMIT_DURATION_MS) || 60 * 1000,
+    userMaxConcurrent: Number.parseInt(process.env.SCHEDULE_USER_MAX_CONCURRENT) || 20,
+    userRateLimitDelayMs:
+      Number.parseInt(process.env.SCHEDULE_USER_RATE_LIMIT_DELAY_MS) || 10 * 1000,
+
+    // Redis TTL for concurrency counter (prevents counter leakage)
+    userConcurrentTtl: Number.parseInt(process.env.SCHEDULE_USER_CONCURRENT_TTL) || 2 * 60 * 60,
+
+    // Quota - max active schedules per user
+    freeMaxActiveSchedules: Number.parseInt(process.env.SCHEDULE_FREE_MAX_ACTIVE) || 1,
+    paidMaxActiveSchedules: Number.parseInt(process.env.SCHEDULE_PAID_MAX_ACTIVE) || 20,
+
+    // Priority settings
+    defaultPriority: Number.parseInt(process.env.SCHEDULE_DEFAULT_PRIORITY) || 10,
+    highLoadThreshold: Number.parseInt(process.env.SCHEDULE_HIGH_LOAD_THRESHOLD) || 5,
+    maxPriority: Number.parseInt(process.env.SCHEDULE_MAX_PRIORITY) || 10,
+  },
   audio: {
     fish: {
       apiKey: process.env.FISH_AUDIO_API_KEY,

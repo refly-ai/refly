@@ -50,6 +50,8 @@ tags:
     description: APP management endpoints
   - name: voucher
     description: Voucher and discount coupon management endpoints
+  - name: schedule
+    description: Workflow schedule management endpoints
 
 paths:
   /variable-extraction/extract:
@@ -2888,6 +2890,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetWorkflowDetailResponse'
+  /workflow/plan/detail:
+    get:
+      tags:
+        - workflow
+      summary: Get workflow plan detail
+      description: Get detail for a workflow plan
+      operationId: getWorkflowPlanDetail
+      parameters:
+        - name: planId
+          in: query
+          description: Workflow plan ID
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: query
+          description: Workflow plan version
+          required: false
+          schema:
+            type: number
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowPlanDetailResponse'
   /workflow-app/new:
     post:
       tags:
@@ -3039,6 +3068,337 @@ paths:
           description: Workflow app not found
       security:
         - api_key: []
+
+  /schedule/create:
+    post:
+      tags:
+        - schedule
+      summary: Create workflow schedule
+      description: Create a new schedule for workflow execution
+      operationId: createSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+      responses:
+        '200':
+          description: Schedule created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateScheduleResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+      security:
+        - api_key: []
+
+  /schedule/update:
+    post:
+      tags:
+        - schedule
+      summary: Update workflow schedule
+      description: Update an existing workflow schedule
+      operationId: updateSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduleRequest'
+      responses:
+        '200':
+          description: Schedule updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateScheduleResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schedule not found
+      security:
+        - api_key: []
+
+  /schedule/delete:
+    post:
+      tags:
+        - schedule
+      summary: Delete workflow schedule
+      description: Delete an existing workflow schedule
+      operationId: deleteSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteScheduleRequest'
+      responses:
+        '200':
+          description: Schedule deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteScheduleResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schedule not found
+      security:
+        - api_key: []
+
+  /schedule/list:
+    post:
+      tags:
+        - schedule
+      summary: List workflow schedules
+      description: Get list of workflow schedules for a canvas
+      operationId: listSchedules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListSchedulesRequest'
+      responses:
+        '200':
+          description: Schedules retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSchedulesResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+      security:
+        - api_key: []
+
+  /schedule/detail:
+    post:
+      tags:
+        - schedule
+      summary: Get schedule detail
+      description: Get detailed information about a specific schedule
+      operationId: getScheduleDetail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetScheduleDetailRequest'
+      responses:
+        '200':
+          description: Schedule detail retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetScheduleDetailResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schedule not found
+      security:
+        - api_key: []
+
+  /schedule/records:
+    post:
+      tags:
+        - schedule
+      summary: Get schedule records
+      description: Get execution records for a specific schedule
+      operationId: getScheduleRecords
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetScheduleRecordsRequest'
+      responses:
+        '200':
+          description: Schedule records retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetScheduleRecordsResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+      security:
+        - api_key: []
+
+  /schedule/records/list:
+    post:
+      tags:
+        - schedule
+      summary: List all schedule records
+      description: List all schedule execution records with filtering options
+      operationId: listAllScheduleRecords
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListAllScheduleRecordsRequest'
+      responses:
+        '200':
+          description: Schedule records retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListAllScheduleRecordsResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+      security:
+        - api_key: []
+
+  /schedule/records/tools:
+    post:
+      tags:
+        - schedule
+      summary: Get available tools
+      description: Get list of tools used in schedule executions
+      operationId: getAvailableTools
+      responses:
+        '200':
+          description: Available tools retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAvailableToolsResponse'
+        '401':
+          description: Unauthorized
+      security:
+        - api_key: []
+
+  /schedule/record/detail:
+    post:
+      tags:
+        - schedule
+      summary: Get schedule record detail
+      description: Get detailed information about a specific schedule execution record
+      operationId: getScheduleRecordDetail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetScheduleRecordDetailRequest'
+      responses:
+        '200':
+          description: Schedule record detail retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetScheduleRecordDetailResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schedule record not found
+      security:
+        - api_key: []
+
+  /schedule/record/snapshot:
+    post:
+      tags:
+        - schedule
+      summary: Get record snapshot
+      description: Get the canvas snapshot for a schedule execution record
+      operationId: getRecordSnapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetRecordSnapshotRequest'
+      responses:
+        '200':
+          description: Record snapshot retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetRecordSnapshotResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+        '404':
+          description: Snapshot not found
+      security:
+        - api_key: []
+
+  /schedule/trigger:
+    post:
+      tags:
+        - schedule
+      summary: Trigger schedule manually
+      description: Manually trigger a schedule execution
+      operationId: triggerScheduleManually
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerScheduleManuallyRequest'
+      responses:
+        '200':
+          description: Schedule triggered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TriggerScheduleManuallyResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schedule not found
+      security:
+        - api_key: []
+
+  /schedule/record/retry:
+    post:
+      tags:
+        - schedule
+      summary: Retry schedule record
+      description: Retry a failed schedule execution record
+      operationId: retryScheduleRecord
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetryScheduleRecordRequest'
+      responses:
+        '200':
+          description: Schedule record retry initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetryScheduleRecordResponse'
+        '400':
+          description: Invalid request parameters or record cannot be retried
+        '401':
+          description: Unauthorized
+        '404':
+          description: Schedule record not found
+      security:
+        - api_key: []
+
   /user/settings:
     get:
       tags:
@@ -4922,6 +5282,9 @@ components:
         minimapStorageKey:
           type: string
           description: Minimap storage key
+        schedule:
+          description: Workflow schedule configuration
+          $ref: '#/components/schemas/WorkflowSchedule'
         createdAt:
           type: string
           format: date-time
@@ -4930,6 +5293,512 @@ components:
           type: string
           format: date-time
           description: Canvas update time
+    WorkflowSchedule:
+      type: object
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID
+        uid:
+          type: string
+          description: User ID
+        canvasId:
+          type: string
+          description: Canvas ID
+        name:
+          type: string
+          description: Schedule name
+        isEnabled:
+          type: boolean
+          description: Whether the schedule is enabled
+        cronExpression:
+          type: string
+          description: Cron expression
+        scheduleConfig:
+          type: string
+          description: Schedule config JSON (type, time, weekdays, monthDays)
+        timezone:
+          type: string
+          description: Timezone
+        nextRunAt:
+          type: string
+          format: date-time
+          description: Next run time
+          nullable: true
+        lastRunAt:
+          type: string
+          format: date-time
+          description: Last run time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation time
+        updatedAt:
+          type: string
+          format: date-time
+          description: Update time
+        deletedAt:
+          type: string
+          format: date-time
+          description: Deletion time
+          nullable: true
+
+    # Schedule API Request/Response schemas
+    CreateScheduleRequest:
+      type: object
+      required:
+        - canvasId
+        - name
+        - cronExpression
+        - scheduleConfig
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID to schedule
+        name:
+          type: string
+          description: Schedule name
+        cronExpression:
+          type: string
+          description: Cron expression for scheduling
+        scheduleConfig:
+          type: string
+          description: Schedule configuration JSON
+        timezone:
+          type: string
+          description: Timezone for schedule execution
+        isEnabled:
+          type: boolean
+          description: Whether the schedule is enabled
+          default: true
+
+    CreateScheduleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          $ref: '#/components/schemas/WorkflowSchedule'
+        message:
+          type: string
+          description: Response message
+
+    UpdateScheduleRequest:
+      type: object
+      required:
+        - scheduleId
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID to update
+        name:
+          type: string
+          description: Schedule name
+        cronExpression:
+          type: string
+          description: Cron expression for scheduling
+        scheduleConfig:
+          type: string
+          description: Schedule configuration JSON
+        timezone:
+          type: string
+          description: Timezone for schedule execution
+        isEnabled:
+          type: boolean
+          description: Whether the schedule is enabled
+
+    UpdateScheduleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          $ref: '#/components/schemas/WorkflowSchedule'
+        message:
+          type: string
+          description: Response message
+
+    DeleteScheduleRequest:
+      type: object
+      required:
+        - scheduleId
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID to delete
+
+    DeleteScheduleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          $ref: '#/components/schemas/WorkflowSchedule'
+        message:
+          type: string
+          description: Response message
+
+    ListSchedulesRequest:
+      type: object
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID to filter schedules
+        page:
+          type: integer
+          description: Page number for pagination
+          default: 1
+        pageSize:
+          type: integer
+          description: Number of items per page
+          default: 10
+
+    ListSchedulesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          type: object
+          properties:
+            total:
+              type: integer
+              description: Total number of schedules
+            page:
+              type: integer
+              description: Current page number
+            pageSize:
+              type: integer
+              description: Number of items per page
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkflowSchedule'
+              description: List of schedules
+
+
+    GetScheduleDetailRequest:
+      type: object
+      required:
+        - scheduleId
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID to get details for
+
+    GetScheduleDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          $ref: '#/components/schemas/WorkflowSchedule'
+        message:
+          type: string
+          description: Response message
+
+    # Schedule Records schemas
+    WorkflowScheduleRecord:
+      type: object
+      properties:
+        scheduleRecordId:
+          type: string
+          description: Schedule record ID
+        scheduleId:
+          type: string
+          description: Schedule ID
+        uid:
+          type: string
+          description: User ID
+        sourceCanvasId:
+          type: string
+          description: Source canvas ID (template)
+        canvasId:
+          type: string
+          description: Execution canvas ID
+        workflowExecutionId:
+          type: string
+          description: Workflow execution ID
+        workflowTitle:
+          type: string
+          description: Workflow title
+        status:
+          type: string
+          enum: [scheduled, pending, processing, running, success, failed, skipped]
+          description: Execution status
+        scheduledAt:
+          type: string
+          format: date-time
+          description: Scheduled execution time
+        triggeredAt:
+          type: string
+          format: date-time
+          description: Actual trigger time
+        completedAt:
+          type: string
+          format: date-time
+          description: Execution completion time
+          nullable: true
+        priority:
+          type: integer
+          description: Execution priority
+        creditUsed:
+          type: integer
+          description: Credit used for execution
+        failureReason:
+          type: string
+          description: Failure reason if failed
+          nullable: true
+        errorDetails:
+          type: string
+          description: Detailed error information
+          nullable: true
+        usedTools:
+          type: string
+          description: JSON string of tools used
+          nullable: true
+        snapshotStorageKey:
+          type: string
+          description: Canvas snapshot storage key
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Record creation time
+        updatedAt:
+          type: string
+          format: date-time
+          description: Record update time
+
+    GetScheduleRecordsRequest:
+      type: object
+      required:
+        - scheduleId
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID
+        page:
+          type: integer
+          description: Page number for pagination
+          default: 1
+        pageSize:
+          type: integer
+          description: Number of items per page
+          default: 10
+
+    GetScheduleRecordsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          type: object
+          properties:
+            total:
+              type: integer
+              description: Total number of records
+            page:
+              type: integer
+              description: Current page number
+            pageSize:
+              type: integer
+              description: Number of items per page
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkflowScheduleRecord'
+              description: List of schedule records
+
+    ListAllScheduleRecordsRequest:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Page number for pagination
+          default: 1
+        pageSize:
+          type: integer
+          description: Number of items per page
+          default: 10
+        status:
+          type: string
+          enum: [scheduled, pending, processing, running, success, failed]
+          description: Filter by execution status
+        keyword:
+          type: string
+          description: Search keyword for workflow title
+        tools:
+          type: array
+          items:
+            type: string
+          description: Filter by tools used
+        canvasId:
+          type: string
+          description: Filter by canvas ID
+
+    ListAllScheduleRecordsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          type: object
+          properties:
+            total:
+              type: integer
+              description: Total number of records
+            page:
+              type: integer
+              description: Current page number
+            pageSize:
+              type: integer
+              description: Number of items per page
+            items:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/WorkflowScheduleRecord'
+                  - type: object
+                    properties:
+                      scheduleName:
+                        type: string
+                        description: Schedule name
+              description: List of schedule records with schedule names
+
+    GetAvailableToolsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Tool ID
+              name:
+                type: string
+                description: Tool name
+          description: List of available tools
+
+    GetScheduleRecordDetailRequest:
+      type: object
+      required:
+        - scheduleRecordId
+      properties:
+        scheduleRecordId:
+          type: string
+          description: Schedule record ID
+
+    GetScheduleRecordDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          allOf:
+            - $ref: '#/components/schemas/WorkflowScheduleRecord'
+            - type: object
+              properties:
+                scheduleName:
+                  type: string
+                  description: Schedule name
+
+    GetRecordSnapshotRequest:
+      type: object
+      required:
+        - scheduleRecordId
+      properties:
+        scheduleRecordId:
+          type: string
+          description: Schedule record ID
+
+    GetRecordSnapshotResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          type: object
+          description: Canvas snapshot data (JSON object)
+
+    TriggerScheduleManuallyRequest:
+      type: object
+      required:
+        - scheduleId
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID to trigger
+
+    TriggerScheduleManuallyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          type: object
+          properties:
+            scheduleId:
+              type: string
+              description: Schedule ID
+            scheduleRecordId:
+              type: string
+              description: Created schedule record ID
+            triggeredAt:
+              type: string
+              format: date-time
+              description: Trigger time
+            priority:
+              type: integer
+              description: Execution priority
+
+    RetryScheduleRecordRequest:
+      type: object
+      required:
+        - scheduleRecordId
+      properties:
+        scheduleRecordId:
+          type: string
+          description: Schedule record ID to retry
+
+    RetryScheduleRecordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          type: object
+          properties:
+            scheduleRecordId:
+              type: string
+              description: Schedule record ID
+            scheduleId:
+              type: string
+              description: Schedule ID
+            status:
+              type: string
+              description: New status (pending)
+            priority:
+              type: integer
+              description: Execution priority
+
     CanvasTemplateCategory:
       type: object
       required:
@@ -11635,6 +12504,80 @@ components:
           type: string
           format: date-time
           description: Workflow update timestamp
+    WorkflowTask:
+      type: object
+      required:
+        - id
+        - title
+        - prompt
+        - toolsets
+      properties:
+        id:
+          type: string
+          description: Unique ID for the task
+        title:
+          type: string
+          description: Display title for the task
+        prompt:
+          type: string
+          description: The prompt or instruction for this task
+        toolsets:
+          type: array
+          description: Toolsets selected for this task
+          items:
+            type: string
+            description: Toolset ID
+        dependentTasks:
+          type: array
+          description: Tasks that must be executed before this task
+          items:
+            type: string
+            description: Task ID
+    WorkflowPlan:
+      type: object
+      required:
+        - title
+        - tasks
+      properties:
+        title:
+          type: string
+          description: Title of the workflow plan
+        tasks:
+          type: array
+          description: Array of workflow tasks to be executed
+          items:
+            $ref: '#/components/schemas/WorkflowTask'
+        variables:
+          type: array
+          description: Array of variables (aka User inputs) defined for the workflow plan
+          items:
+            $ref: '#/components/schemas/WorkflowVariable'
+    WorkflowPlanRecord:
+      allOf:
+        - $ref: '#/components/schemas/WorkflowPlan'
+        - type: object
+          properties:
+            planId:
+              type: string
+              description: Workflow plan ID
+            version:
+              type: number
+              description: Workflow plan version
+            createdAt:
+              type: string
+              format: date-time
+              description: Workflow plan creation timestamp
+            updatedAt:
+              type: string
+              format: date-time
+              description: Workflow plan update timestamp
+    GetWorkflowPlanDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/WorkflowPlanRecord'
     GetWorkflowDetailResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -11909,8 +12852,7 @@ components:
           description: Variable ID, unique and readonly
         name:
           type: string
-          description: Variable name
-          example: "userName"
+          description: Variable name used in the workflow
         value:
           type: array
           items:
@@ -11937,18 +12879,15 @@ components:
             - resource
         required:
           type: boolean
-          description: Whether the variable is required
-          example: true
+          description: Whether the variable is required. Defaults to false.
         isSingle:
           type: boolean
           description: Whether the variable value is single (not multiple)
-          example: true
         options:
           type: array
           items:
             type: string
-          description: Variable options (only valid when variable type is option)
-          example: ["张三", "李四"]
+          description: Array of options (only valid when variable type is `option`)
         resourceTypes:
           type: array
           items:

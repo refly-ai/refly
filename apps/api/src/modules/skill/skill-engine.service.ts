@@ -28,6 +28,7 @@ import { SearchService } from '../search/search.service';
 import { ShareCreationService } from '../share/share-creation.service';
 import { SandboxService } from '../sandbox/sandbox.service';
 import { ToolService } from '../tool/tool.service';
+import { WorkflowPlanService } from '../workflow/workflow-plan.service';
 
 @Injectable()
 export class SkillEngineService implements OnModuleInit {
@@ -49,6 +50,7 @@ export class SkillEngineService implements OnModuleInit {
   private toolService: ToolService;
   private sandboxService: SandboxService;
   private shareCreationService: ShareCreationService;
+  private workflowPlanService: WorkflowPlanService;
   constructor(
     private moduleRef: ModuleRef,
     private config: ConfigService,
@@ -77,6 +79,7 @@ export class SkillEngineService implements OnModuleInit {
         this.toolService = this.moduleRef.get(ToolService, { strict: false });
         this.sandboxService = this.moduleRef.get(SandboxService, { strict: false });
         this.shareCreationService = this.moduleRef.get(ShareCreationService, { strict: false });
+        this.workflowPlanService = this.moduleRef.get(WorkflowPlanService, { strict: false });
       },
       {
         logger: this.logger,
@@ -280,6 +283,18 @@ export class SkillEngineService implements OnModuleInit {
       },
       execute: async (user, req) => {
         return await this.sandboxService.execute(user, req);
+      },
+      generateWorkflowPlan: async (user, params) => {
+        return await this.workflowPlanService.generateWorkflowPlan(user, params);
+      },
+      patchWorkflowPlan: async (user, params) => {
+        return await this.workflowPlanService.patchWorkflowPlan(user, params);
+      },
+      getLatestWorkflowPlan: async (user, params) => {
+        return await this.workflowPlanService.getLatestWorkflowPlan(user, params);
+      },
+      getWorkflowPlanById: async (user, params) => {
+        return await this.workflowPlanService.getWorkflowPlanDetail(user, params);
       },
     };
   };

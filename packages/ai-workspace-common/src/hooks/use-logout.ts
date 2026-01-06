@@ -4,6 +4,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { ensureIndexedDbSupport } from '@refly-packages/ai-workspace-common/utils/indexeddb';
 import { isPublicAccessPageByPath } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 import { useUserStoreShallow } from '@refly/stores';
+import { authChannel } from '@refly-packages/ai-workspace-common/utils/auth-channel';
 
 // Clear IndexedDB
 const deleteIndexedDB = async () => {
@@ -52,6 +53,10 @@ export const logout = async ({
 
   try {
     isLoggingOut = true;
+
+    // Broadcast logout event to other tabs
+    authChannel.broadcast({ type: 'logout' });
+    authChannel.updateCurrentUid(null);
 
     // Call logout api to clear cookies and revoke refresh token
     if (callRemoteLogout) {

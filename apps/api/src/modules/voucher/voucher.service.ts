@@ -424,6 +424,29 @@ export class VoucherService implements OnModuleInit {
   async getAvailableVouchers(uid: string): Promise<VoucherAvailableResult> {
     const now = new Date();
 
+    // 0. Check if user has prior Stripe transactions (for first_time_transaction vouchers)
+    let userHasPriorTransactions = false;
+    if (this.stripeClient) {
+      const userPo = await this.prisma.user.findUnique({
+        where: { uid },
+        select: { customerId: true },
+      });
+
+      if (userPo?.customerId) {
+        try {
+          const payments = await this.stripeClient.paymentIntents.list({
+            customer: userPo.customerId,
+            limit: 1,
+          });
+          userHasPriorTransactions = payments.data.some((p) => p.status === 'succeeded');
+        } catch (error) {
+          this.logger.warn(
+            `Failed to check Stripe payment history for user ${uid}: ${error.message}`,
+          );
+        }
+      }
+    }
+
     // 1. Get vouchers owned by the user
     const ownedVouchers = await this.prisma.voucher.findMany({
       where: {
@@ -473,8 +496,13 @@ export class VoucherService implements OnModuleInit {
     const voucherDTOs = allVouchers.map((v) => this.toVoucherDTO(v));
 
     // Separate vouchers with and without stripePromoCodeId
+    // If user has prior transactions, vouchers with stripePromoCodeId are not usable
+    // (they have first_time_transaction restriction)
     const vouchersWithPromo = voucherDTOs.filter((v) => v.stripePromoCodeId);
     const vouchersWithoutPromo = voucherDTOs.filter((v) => !v.stripePromoCodeId);
+
+    // If user has prior transactions, mark promo vouchers as not usable for bestVoucher selection
+    const usableVouchersWithPromo = userHasPriorTransactions ? [] : vouchersWithPromo;
 
     // Sort each group by discountPercent desc, then createdAt desc
     const sortByDiscount = (a: VoucherDTO, b: VoucherDTO) => {
@@ -486,13 +514,20 @@ export class VoucherService implements OnModuleInit {
 
     vouchersWithPromo.sort(sortByDiscount);
     vouchersWithoutPromo.sort(sortByDiscount);
+    usableVouchersWithPromo.sort(sortByDiscount);
 
     // Combine: vouchers with promo code first, then without
     const sortedVouchers = [...vouchersWithPromo, ...vouchersWithoutPromo];
 
-    // bestVoucher: prefer voucher with stripePromoCodeId (actually usable)
-    // Fallback to highest discount without promo if none have promo
-    const bestVoucher = vouchersWithPromo[0] || vouchersWithoutPromo[0] || undefined;
+    // bestVoucher: prefer usable voucher with stripePromoCodeId
+    // If user has prior transactions, only vouchers without promo code are usable
+    const bestVoucher = usableVouchersWithPromo[0] || vouchersWithoutPromo[0] || undefined;
+
+    if (userHasPriorTransactions && vouchersWithPromo.length > 0) {
+      this.logger.log(
+        `User ${uid} has prior transactions, ${vouchersWithPromo.length} vouchers with promo code are not usable`,
+      );
+    }
 
     return {
       hasAvailableVoucher: sortedVouchers.length > 0,
@@ -560,6 +595,41 @@ export class VoucherService implements OnModuleInit {
         voucher: this.toVoucherDTO({ ...voucher, status: VoucherStatus.EXPIRED }),
         reason: 'Voucher has expired',
       };
+    }
+
+    // Check if voucher has Stripe promotion code with first_time_transaction restriction
+    // If so, verify user has no prior Stripe transactions
+    if (voucher.stripePromoCodeId && this.stripeClient) {
+      const userPo = await this.prisma.user.findUnique({
+        where: { uid },
+        select: { customerId: true },
+      });
+
+      if (userPo?.customerId) {
+        try {
+          // Check if customer has any prior successful payments
+          const payments = await this.stripeClient.paymentIntents.list({
+            customer: userPo.customerId,
+            limit: 1,
+          });
+
+          if (payments.data.some((p) => p.status === 'succeeded')) {
+            this.logger.log(
+              `User ${uid} has prior Stripe transactions, voucher ${voucherId} not applicable`,
+            );
+            return {
+              valid: false,
+              voucher: this.toVoucherDTO(voucher),
+              reason: 'This coupon is only available for first-time purchases',
+            };
+          }
+        } catch (error) {
+          this.logger.warn(
+            `Failed to check Stripe payment history for user ${uid}: ${error.message}`,
+          );
+          // Continue without blocking - let Stripe handle the restriction
+        }
+      }
     }
 
     return {

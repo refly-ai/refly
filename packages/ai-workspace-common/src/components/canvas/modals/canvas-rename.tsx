@@ -1,31 +1,13 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import { Button, Input, Tooltip, Modal } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { LuSparkles } from 'react-icons/lu';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useCanvasStoreShallow } from '@refly/stores';
-import { useSiderStoreShallow } from '@refly/stores';
-import type { InputRef } from 'antd';
 import { useCanvasOperationStoreShallow } from '@refly/stores';
-
-async function updateRemoteCanvasTitle(canvasId: string, newTitle: string) {
-  const { data, error } = await getClient().updateCanvas({
-    body: {
-      canvasId,
-      title: newTitle,
-    },
-  });
-  if (error || !data?.success) {
-    return;
-  }
-  return data.data?.title;
-}
+import { useUpdateCanvasTitle } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import type { InputRef } from 'antd';
 
 export const CanvasRenameModal = memo(() => {
   const { t } = useTranslation();
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [saveLoading, setSaveLoading] = useState(false);
 
   const {
     canvasId,
@@ -42,63 +24,31 @@ export const CanvasRenameModal = memo(() => {
     reset: state.reset,
     triggerRenameSuccess: state.triggerRenameSuccess,
   }));
-  const setCanvasTitle = useCanvasStoreShallow((state) => state.setCanvasTitle);
-  const [editedTitle, setEditedTitle] = useState(canvasTitle);
 
-  const updateCanvasTitleInStore = useSiderStoreShallow((state) => state.updateCanvasTitle);
+  const {
+    editedTitle,
+    setEditedTitle,
+    isAutoNaming: isLoading,
+    isSaving: saveLoading,
+    handleAutoName,
+    updateTitle,
+  } = useUpdateCanvasTitle(canvasId, canvasTitle);
+
   const inputRef = useRef<InputRef | null>(null);
-
-  useEffect(() => {
-    setEditedTitle(canvasTitle);
-  }, [canvasTitle]);
-
-  const handleAutoName = useCallback(async () => {
-    if (!canvasId) return;
-    setIsLoading(true);
-    const { data, error } = await getClient().autoNameCanvas({
-      body: {
-        canvasId,
-        directUpdate: false,
-      },
-    });
-    setIsLoading(false);
-    if (error || !data?.success) {
-      return;
-    }
-    if (data?.data?.title) {
-      setEditedTitle(data.data.title);
-    }
-  }, [canvasId]);
 
   const handleSubmit = useCallback(async () => {
     if (saveLoading) return;
-    if (editedTitle?.trim()) {
-      setSaveLoading(true);
-      const newTitle = await updateRemoteCanvasTitle(canvasId, editedTitle);
-      if (newTitle) {
-        setCanvasTitle(canvasId, newTitle);
-        updateCanvasTitleInStore(canvasId, newTitle);
+    const newTitle = await updateTitle();
+    if (newTitle !== undefined) {
+      // Trigger rename success event with updated canvas data
+      triggerRenameSuccess({
+        canvasId,
+        title: newTitle,
+      } as any);
 
-        // Trigger rename success event with updated canvas data
-        triggerRenameSuccess({
-          canvasId,
-          title: newTitle,
-        } as any);
-
-        resetCanvasOperationState();
-      }
-      setSaveLoading(false);
+      resetCanvasOperationState();
     }
-  }, [
-    canvasId,
-    editedTitle,
-    setCanvasTitle,
-    updateCanvasTitleInStore,
-    resetCanvasOperationState,
-    triggerRenameSuccess,
-    saveLoading,
-    setSaveLoading,
-  ]);
+  }, [canvasId, resetCanvasOperationState, triggerRenameSuccess, saveLoading, updateTitle]);
 
   const handleCancel = useCallback(() => {
     resetCanvasOperationState();
@@ -108,12 +58,10 @@ export const CanvasRenameModal = memo(() => {
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.keyCode === 13 && !e.nativeEvent.isComposing) {
         e.preventDefault();
-        if (editedTitle?.trim()) {
-          handleSubmit();
-        }
+        handleSubmit();
       }
     },
-    [editedTitle, handleSubmit],
+    [handleSubmit],
   );
 
   return (
@@ -125,7 +73,7 @@ export const CanvasRenameModal = memo(() => {
       cancelText={t('common.cancel')}
       onOk={handleSubmit}
       onCancel={handleCancel}
-      okButtonProps={{ disabled: !editedTitle?.trim() || saveLoading, loading: saveLoading }}
+      okButtonProps={{ disabled: saveLoading, loading: saveLoading }}
       afterOpenChange={(open) => {
         if (open) {
           inputRef.current?.focus();

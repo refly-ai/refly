@@ -41,7 +41,10 @@ import {
   SandboxExecuteResponse,
   DriveFile,
   UpsertDriveFileRequest,
+  WorkflowPlan,
+  WorkflowPlanRecord,
 } from '@refly/openapi-schema';
+import type { WorkflowPatchOperation } from '@refly/canvas-common';
 import { Document as LangChainDocument } from '@langchain/core/documents';
 
 export interface ReflyService {
@@ -166,4 +169,32 @@ export interface ReflyService {
 
   // Sandbox code execution
   execute: (user: User, request: SandboxExecuteRequest) => Promise<SandboxExecuteResponse>;
+
+  // Workflow plan management
+  generateWorkflowPlan: (
+    user: User,
+    params: {
+      data: WorkflowPlan;
+      copilotSessionId: string;
+      resultId: string;
+      resultVersion: number;
+    },
+  ) => Promise<WorkflowPlanRecord>;
+  patchWorkflowPlan: (
+    user: User,
+    params: {
+      planId: string;
+      operations: WorkflowPatchOperation[];
+      resultId: string;
+      resultVersion: number;
+    },
+  ) => Promise<WorkflowPlanRecord>;
+  getLatestWorkflowPlan: (
+    user: User,
+    params: { copilotSessionId: string },
+  ) => Promise<WorkflowPlanRecord | null>;
+  getWorkflowPlanById: (
+    user: User,
+    params: { planId: string },
+  ) => Promise<WorkflowPlanRecord | null>;
 }

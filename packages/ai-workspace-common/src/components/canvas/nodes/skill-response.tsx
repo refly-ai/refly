@@ -370,6 +370,9 @@ export const SkillResponseNode = memo(
     });
 
     useEffect(() => {
+      // Don't start polling in readonly mode (e.g., run-detail page)
+      if (readonly) return;
+
       if (!isStreaming) {
         if (['executing', 'waiting'].includes(status) && !shareId) {
           // Reset failed state and start polling for new execution
@@ -402,6 +405,7 @@ export const SkillResponseNode = memo(
       shareId,
       version,
       removeStreamResult,
+      readonly,
     ]);
 
     // Listen to pilot step status changes and sync with node status

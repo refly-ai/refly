@@ -15,6 +15,8 @@ import {
   WorkflowPage,
   WorkspacePage,
   LoginPage,
+  RunHistoryPage,
+  RunDetailPage,
 } from '@refly/web-core';
 
 import type { RouteObject } from 'react-router-dom';
@@ -93,6 +95,22 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/workflow-list',
     element: <WorkflowListPage />,
+  },
+  {
+    path: '/run-history',
+    element: (
+      <ProtectedRoute>
+        <RunHistoryPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/run-history/:recordId',
+    element: (
+      <ProtectedRoute>
+        <RunDetailPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/app-manager',

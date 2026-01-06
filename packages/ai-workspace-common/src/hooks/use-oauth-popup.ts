@@ -13,6 +13,8 @@ import {
   composioOAuthStatusKeyFn,
 } from './use-composio-oauth';
 import { useListUserToolsKey } from '@refly-packages/ai-workspace-common/queries/common';
+import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/toolset';
+import { useListUserTools } from '@refly-packages/ai-workspace-common/queries/queries';
 
 // Cache key for storing pending OAuth toolset
 const OAUTH_CACHE_KEY = 'refly_pending_oauth_toolset';
@@ -109,6 +111,11 @@ export const useOAuthPopup = (options: UseOAuthPopupOptions = {}) => {
   const queryClient = useQueryClient();
   const { onSuccess, onError, pollingInterval = 2000, maxPollingAttempts = 60 } = options;
 
+  // Query for user tools to get updated toolset data after OAuth success
+  const { refetch: refetchUserTools } = useListUserTools({}, [], {
+    enabled: false,
+  });
+
   const [status, setStatus] = useState<OAuthPopupStatus>('idle');
   const [currentToolsetKey, setCurrentToolsetKey] = useState<string | null>(null);
 
@@ -117,6 +124,47 @@ export const useOAuthPopup = (options: UseOAuthPopupOptions = {}) => {
   const pollingAttemptsRef = useRef<number>(0);
 
   const { mutateAsync: authorizeOAuth } = useComposioOAuthAuthorize();
+
+  /**
+   * Emit toolset installed event after successful OAuth
+   */
+  const emitToolsetInstalledEvent = useCallback(
+    async (toolsetKey: string) => {
+      try {
+        // Refetch user tools to get the latest data including the newly authorized toolset
+        const updatedUserTools = await refetchUserTools();
+        const userToolsList = updatedUserTools.data?.data || [];
+
+        // Find the toolset that was just authorized
+        const authorizedTool = userToolsList.find((tool) => tool.key === toolsetKey);
+
+        if (authorizedTool?.toolset) {
+          // Use the toolset data from the UserTool which contains the full GenericToolset
+          const toolsetInstance = {
+            ...authorizedTool.toolset,
+            uninstalled: false, // OAuth success means it's now installed/authorized
+          };
+
+          // Emit the toolset installed event for canvas updates
+          toolsetEmitter.emit('toolsetInstalled', { toolset: toolsetInstance });
+
+          // Also emit updateNodeToolset event to update ts-id in canvas nodes
+          if (toolsetInstance.id && toolsetInstance.toolset?.key) {
+            toolsetEmitter.emit('updateNodeToolset', {
+              nodeId: '', // Not used in current implementation
+              toolsetKey: toolsetInstance.toolset.key,
+              newToolsetId: toolsetInstance.id,
+            });
+          }
+        } else {
+        }
+      } catch (error) {
+        console.warn('Failed to emit toolset installed event:', error);
+        // Don't throw - OAuth success shouldn't fail because of event emission
+      }
+    },
+    [refetchUserTools],
+  );
 
   /**
    * Clean up polling and popup
@@ -176,6 +224,8 @@ export const useOAuthPopup = (options: UseOAuthPopupOptions = {}) => {
               predicate: (query) =>
                 Array.isArray(query.queryKey) && query.queryKey[0] === useListUserToolsKey,
             });
+            // Emit toolset installed event for canvas updates
+            await emitToolsetInstalledEvent(toolsetKey);
             onSuccess?.(toolsetKey);
           } else {
             cleanup();
@@ -215,6 +265,8 @@ export const useOAuthPopup = (options: UseOAuthPopupOptions = {}) => {
             predicate: (query) =>
               Array.isArray(query.queryKey) && query.queryKey[0] === useListUserToolsKey,
           });
+          // Emit toolset installed event for canvas updates
+          await emitToolsetInstalledEvent(toolsetKey);
           onSuccess?.(toolsetKey);
         }
       }, pollingInterval);
@@ -229,6 +281,7 @@ export const useOAuthPopup = (options: UseOAuthPopupOptions = {}) => {
       pollingInterval,
       queryClient,
       t,
+      emitToolsetInstalledEvent,
     ],
   );
 

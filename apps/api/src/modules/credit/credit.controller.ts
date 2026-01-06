@@ -96,7 +96,7 @@ export class CreditController {
     const { canvasId } = query;
     const total = await this.creditService.countCanvasCreditUsageByCanvasId(user, canvasId);
     return buildSuccessResponse({
-      total: Math.ceil(total * (1 + this.configService.get('credit.canvasCreditCommissionRate'))),
+      total,
     });
   }
 

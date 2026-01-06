@@ -42,7 +42,7 @@ export const useCanvasToolsetUpdater = () => {
             const nextToolsets = prevToolsets.map((toolset) => {
               // Update toolsetId if the toolset key matches
               if (toolset.toolset?.key === toolsetKey) {
-                return {
+                const updatedToolset = {
                   ...toolset,
                   id: newToolsetId,
                   toolset: toolset.toolset
@@ -52,6 +52,7 @@ export const useCanvasToolsetUpdater = () => {
                       }
                     : toolset.toolset,
                 };
+                return updatedToolset;
               }
               return toolset;
             });

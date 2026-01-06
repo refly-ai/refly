@@ -1,0 +1,62 @@
+// Remove caret from schedule select components
+.schedule-select {
+  .ant-select-selector {
+    caret-color: transparent !important;
+
+    input {
+      caret-color: transparent !important;
+    }
+  }
+
+  .ant-select-selection-overflow {
+    flex-wrap: nowrap;
+  }
+
+  .ant-select-selection-overflow-item-suffix {
+    flex: 0 0 auto;
+    width: 0;
+  }
+
+  .ant-select-selection-search {
+    width: 0 !important;
+    margin-inline-start: 0 !important;
+  }
+
+  .ant-select-selection-search-input {
+    width: 0 !important;
+  }
+}
+
+.schedule-monthly-select {
+  .ant-select-selector {
+    caret-color: transparent !important;
+
+    input {
+      caret-color: transparent !important;
+    }
+  }
+
+  .ant-select-selection-overflow {
+    flex-wrap: nowrap;
+  }
+
+  .ant-select-selection-overflow-item-suffix {
+    flex: 0 0 auto;
+    width: 0;
+  }
+
+  .ant-select-selection-search {
+    width: 0 !important;
+    margin-inline-start: 0 !important;
+  }
+
+  .ant-select-selection-search-input {
+    width: 0 !important;
+  }
+}
+
+.schedule-dropdown {
+  .ant-select-item {
+    caret-color: transparent !important;
+  }
+}

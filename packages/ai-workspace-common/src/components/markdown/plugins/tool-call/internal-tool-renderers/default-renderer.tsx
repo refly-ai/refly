@@ -14,7 +14,7 @@ export const DefaultInternalRenderer = memo<DefaultInternalRendererProps>(
     const isExecuting = toolCallStatus === ToolCallStatus.EXECUTING;
 
     return (
-      <div className="flex items-center gap-1 py-1 px-3 text-sm">
+      <div className="flex items-center gap-1 px-3 text-sm">
         <span className={isExecuting ? 'text-shimmer' : 'text-refly-text-0'}>{toolsetName}</span>
       </div>
     );

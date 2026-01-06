@@ -351,6 +351,9 @@ import type {
   GetWorkflowDetailData,
   GetWorkflowDetailError,
   GetWorkflowDetailResponse2,
+  GetWorkflowPlanDetailData,
+  GetWorkflowPlanDetailError,
+  GetWorkflowPlanDetailResponse2,
   CreateWorkflowAppData,
   CreateWorkflowAppError,
   CreateWorkflowAppResponse2,
@@ -369,6 +372,21 @@ import type {
   GetTemplateGenerationStatusData,
   GetTemplateGenerationStatusError,
   GetTemplateGenerationStatusResponse2,
+  CreateScheduleData,
+  CreateScheduleError,
+  CreateScheduleResponse2,
+  UpdateScheduleData,
+  UpdateScheduleError,
+  UpdateScheduleResponse2,
+  DeleteScheduleData,
+  DeleteScheduleError,
+  DeleteScheduleResponse2,
+  ListSchedulesData,
+  ListSchedulesError,
+  ListSchedulesResponse2,
+  GetScheduleDetailData,
+  GetScheduleDetailError,
+  GetScheduleDetailResponse2,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -509,6 +527,25 @@ import type {
   ConvertData,
   ConvertError,
   ConvertResponse2,
+  GetAvailableVouchersError,
+  GetAvailableVouchersResponse2,
+  ListUserVouchersError,
+  ListUserVouchersResponse2,
+  ValidateVoucherData,
+  ValidateVoucherError,
+  ValidateVoucherResponse2,
+  CreateVoucherInvitationData,
+  CreateVoucherInvitationError,
+  CreateVoucherInvitationResponse2,
+  VerifyVoucherInvitationData,
+  VerifyVoucherInvitationError,
+  VerifyVoucherInvitationResponse2,
+  ClaimVoucherInvitationData,
+  ClaimVoucherInvitationError,
+  ClaimVoucherInvitationResponse2,
+  TriggerVoucherData,
+  TriggerVoucherError,
+  TriggerVoucherResponse2,
 } from './types.gen';
 
 export const client = createClient(createConfig());
@@ -2388,6 +2425,23 @@ export const getWorkflowDetail = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Get workflow plan detail
+ * Get detail for a workflow plan
+ */
+export const getWorkflowPlanDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowPlanDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowPlanDetailResponse2,
+    GetWorkflowPlanDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow/plan/detail',
+  });
+};
+
+/**
  * Create new workflow app
  * Create a new workflow app
  */
@@ -2486,6 +2540,89 @@ export const getTemplateGenerationStatus = <ThrowOnError extends boolean = false
   >({
     ...options,
     url: '/workflow-app/template-status',
+  });
+};
+
+/**
+ * Create workflow schedule
+ * Create a new schedule for workflow execution
+ */
+export const createSchedule = <ThrowOnError extends boolean = false>(
+  options: Options<CreateScheduleData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateScheduleResponse2,
+    CreateScheduleError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/create',
+  });
+};
+
+/**
+ * Update workflow schedule
+ * Update an existing workflow schedule
+ */
+export const updateSchedule = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateScheduleData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateScheduleResponse2,
+    UpdateScheduleError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/update',
+  });
+};
+
+/**
+ * Delete workflow schedule
+ * Delete an existing workflow schedule
+ */
+export const deleteSchedule = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteScheduleData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DeleteScheduleResponse2,
+    DeleteScheduleError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/delete',
+  });
+};
+
+/**
+ * List workflow schedules
+ * Get list of workflow schedules for a canvas
+ */
+export const listSchedules = <ThrowOnError extends boolean = false>(
+  options: Options<ListSchedulesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<ListSchedulesResponse2, ListSchedulesError, ThrowOnError>(
+    {
+      ...options,
+      url: '/schedule/list',
+    },
+  );
+};
+
+/**
+ * Get schedule detail
+ * Get detailed information about a specific schedule
+ */
+export const getScheduleDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetScheduleDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetScheduleDetailResponse2,
+    GetScheduleDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/detail',
   });
 };
 
@@ -3297,5 +3434,124 @@ export const convert = <ThrowOnError extends boolean = false>(
       ...options?.headers,
     },
     url: '/misc/convert',
+  });
+};
+
+/**
+ * Get available vouchers
+ * Get user's available (unused, not expired) vouchers
+ */
+export const getAvailableVouchers = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetAvailableVouchersResponse2,
+    GetAvailableVouchersError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/available',
+  });
+};
+
+/**
+ * List user vouchers
+ * List all vouchers for the current user
+ */
+export const listUserVouchers = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListUserVouchersResponse2,
+    ListUserVouchersError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/list',
+  });
+};
+
+/**
+ * Validate voucher
+ * Validate a voucher before use
+ */
+export const validateVoucher = <ThrowOnError extends boolean = false>(
+  options: Options<ValidateVoucherData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    ValidateVoucherResponse2,
+    ValidateVoucherError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/validate',
+  });
+};
+
+/**
+ * Create voucher invitation
+ * Create a sharing invitation for a voucher
+ */
+export const createVoucherInvitation = <ThrowOnError extends boolean = false>(
+  options: Options<CreateVoucherInvitationData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateVoucherInvitationResponse2,
+    CreateVoucherInvitationError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/invitation/create',
+  });
+};
+
+/**
+ * Verify invitation code
+ * Verify an invitation code (public endpoint)
+ */
+export const verifyVoucherInvitation = <ThrowOnError extends boolean = false>(
+  options: Options<VerifyVoucherInvitationData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    VerifyVoucherInvitationResponse2,
+    VerifyVoucherInvitationError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/invitation/verify',
+  });
+};
+
+/**
+ * Claim invitation
+ * Claim an invitation and receive a voucher
+ */
+export const claimVoucherInvitation = <ThrowOnError extends boolean = false>(
+  options: Options<ClaimVoucherInvitationData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    ClaimVoucherInvitationResponse2,
+    ClaimVoucherInvitationError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/invitation/claim',
+  });
+};
+
+/**
+ * Trigger voucher generation
+ * Trigger voucher generation on template publish. Scores the template and generates a discount voucher.
+ */
+export const triggerVoucher = <ThrowOnError extends boolean = false>(
+  options: Options<TriggerVoucherData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    TriggerVoucherResponse2,
+    TriggerVoucherError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/voucher/trigger',
   });
 };

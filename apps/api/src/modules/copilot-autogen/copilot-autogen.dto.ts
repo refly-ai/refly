@@ -1,5 +1,4 @@
-import { WorkflowPlan } from '@refly/canvas-common';
-import { WorkflowVariable } from '@refly/openapi-schema';
+import type { WorkflowVariable, WorkflowPlan } from '@refly/openapi-schema';
 
 export interface GenerateWorkflowRequest {
   query: string; // User requirement description

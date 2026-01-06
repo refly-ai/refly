@@ -1,7 +1,15 @@
-import { SkillContext } from '@refly/openapi-schema';
+import { ActionResult, SkillContext } from '@refly/openapi-schema';
 import { countToken } from '@refly/utils/token';
 import { SkillEngine } from '../../engine';
 import { truncateContent } from './token';
+
+// Regex to match and remove tool_use code blocks from content
+// This prevents the model from seeing and copying these internal XML patterns
+// Matches both markdown code block format and standalone XML tags:
+// 1. ```tool_use\n<tool_use>...</tool_use>\n```
+// 2. <tool_use>...</tool_use> (standalone)
+const TOOL_USE_BLOCK_REGEX = /\n*```tool_use(?:_result)?[^\n]*\n[\s\S]*?```\n*/g;
+const TOOL_USE_TAG_REGEX = /<tool_use[\s\S]*?<\/tool_use>/g;
 
 export interface ContextFile {
   name: string;
@@ -74,6 +82,55 @@ export interface ContextBlock {
 const MAX_SINGLE_RESULT_TOKENS = Number(process.env.MAX_SINGLE_RESULT_TOKENS) || 30000;
 
 /**
+ * Strip tool_use code blocks from content.
+ *
+ * When previous result content is included in the context, it may contain
+ * ```tool_use ... ``` blocks that were used for frontend rendering.
+ * If the model sees these XML patterns, it may copy them as text output
+ * instead of actually invoking tools. This function removes such blocks.
+ */
+function stripToolUseBlocks(content: string): string {
+  if (!content) return content;
+  // First remove markdown code blocks, then any remaining standalone XML tags
+  return content.replace(TOOL_USE_BLOCK_REGEX, '\n').replace(TOOL_USE_TAG_REGEX, '').trim();
+}
+
+/**
+ * Extract content from ActionResult, preferring messages over steps.
+ *
+ * Priority order:
+ * 1. Messages (action_messages table) - cleanly separated AI and tool messages
+ * 2. Steps (action_steps table) - fallback for backward compatibility
+ *
+ * Using messages avoids XML-formatted tool calls in the context, which prevents
+ * the model from learning incorrect patterns.
+ */
+function extractResultContent(result: ActionResult): string {
+  if (!result) return '';
+
+  // Priority 1: Use messages if available (preferred)
+  if (result.messages && Array.isArray(result.messages) && result.messages.length > 0) {
+    return result.messages
+      .filter((msg: any) => msg?.type === 'ai') // Only include AI messages
+      .map((msg: any) => {
+        // Combine reasoning content and regular content
+        const reasoning = msg?.reasoningContent || '';
+        const content = msg?.content || '';
+        return reasoning ? `${reasoning}\n\n${content}` : content;
+      })
+      .filter(Boolean)
+      .join('\n\n');
+  }
+
+  // Priority 2: Fallback to steps for backward compatibility
+  if (result.steps && Array.isArray(result.steps)) {
+    return result.steps.map((step: any) => step?.content || '').join('\n\n');
+  }
+
+  return '';
+}
+
+/**
  * Prepare context from SkillContext into a structured ContextBlock format
  * Filters files and results based on token limits estimated from their content
  */
@@ -124,8 +181,9 @@ export async function prepareContext(
     // Sort results by content length (shortest first) to prioritize smaller results
     // This ensures shorter results are less likely to be truncated later
     const sortedResults = [...context.results].sort((a, b) => {
-      const aContent = a?.result?.steps?.map((step) => step.content).join('\n\n') ?? '';
-      const bContent = b?.result?.steps?.map((step) => step.content).join('\n\n') ?? '';
+      // Prefer using messages for content estimation if available
+      const aContent = extractResultContent(a?.result);
+      const bContent = extractResultContent(b?.result);
       return aContent.length - bContent.length;
     });
 
@@ -133,7 +191,10 @@ export async function prepareContext(
       const result = item?.result;
       if (!result) continue;
 
-      let resultContent = result?.steps?.map((step) => step.content).join('\n\n') ?? '';
+      // Extract content from result, preferring messages over steps
+      // Messages provide cleaner separation between AI responses and tool calls
+      let resultContent = extractResultContent(result);
+      resultContent = stripToolUseBlocks(resultContent);
       let contentTokens = estimateTokens(resultContent);
 
       // Truncate single result if it exceeds the limit
@@ -150,7 +211,7 @@ export async function prepareContext(
 
       const agentResult: AgentResult = {
         resultId: result?.resultId ?? 'unknown',
-        title: result?.title ?? 'Untitled Result',
+        title: result?.title ?? 'Untitled Agent',
         content: resultContent,
         // outputFiles only contain metadata (no content) to save tokens
         // LLM should use read_file tool to get full content when needed

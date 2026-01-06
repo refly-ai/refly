@@ -620,6 +620,10 @@ export type Canvas = {
    */
   minimapStorageKey?: string;
   /**
+   * Workflow schedule configuration
+   */
+  schedule?: WorkflowSchedule;
+  /**
    * Canvas creation time
    */
   createdAt: string;
@@ -627,6 +631,194 @@ export type Canvas = {
    * Canvas update time
    */
   updatedAt: string;
+};
+
+export type WorkflowSchedule = {
+  /**
+   * Schedule ID
+   */
+  scheduleId?: string;
+  /**
+   * Schedule name
+   */
+  name?: string;
+  /**
+   * Whether the schedule is enabled
+   */
+  isEnabled?: boolean;
+  /**
+   * Cron expression
+   */
+  cronExpression?: string;
+  /**
+   * Schedule config JSON (type, time, weekdays, monthDays)
+   */
+  scheduleConfig?: string;
+  /**
+   * Timezone
+   */
+  timezone?: string;
+  /**
+   * Next run time
+   */
+  nextRunAt?: string;
+  /**
+   * Last run time
+   */
+  lastRunAt?: string;
+};
+
+export type CreateScheduleRequest = {
+  /**
+   * Canvas ID to schedule
+   */
+  canvasId: string;
+  /**
+   * Schedule name
+   */
+  name: string;
+  /**
+   * Cron expression for scheduling
+   */
+  cronExpression: string;
+  /**
+   * Schedule configuration JSON
+   */
+  scheduleConfig: string;
+  /**
+   * Timezone for schedule execution
+   */
+  timezone?: string;
+  /**
+   * Whether the schedule is enabled
+   */
+  isEnabled?: boolean;
+};
+
+export type CreateScheduleResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: WorkflowSchedule;
+  /**
+   * Response message
+   */
+  message?: string;
+};
+
+export type UpdateScheduleRequest = {
+  /**
+   * Schedule ID to update
+   */
+  scheduleId: string;
+  /**
+   * Schedule name
+   */
+  name?: string;
+  /**
+   * Cron expression for scheduling
+   */
+  cronExpression?: string;
+  /**
+   * Schedule configuration JSON
+   */
+  scheduleConfig?: string;
+  /**
+   * Timezone for schedule execution
+   */
+  timezone?: string;
+  /**
+   * Whether the schedule is enabled
+   */
+  isEnabled?: boolean;
+};
+
+export type UpdateScheduleResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: WorkflowSchedule;
+  /**
+   * Response message
+   */
+  message?: string;
+};
+
+export type DeleteScheduleRequest = {
+  /**
+   * Schedule ID to delete
+   */
+  scheduleId: string;
+};
+
+export type DeleteScheduleResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  /**
+   * Response message
+   */
+  message?: string;
+};
+
+export type ListSchedulesRequest = {
+  /**
+   * Canvas ID to filter schedules
+   */
+  canvasId?: string;
+  /**
+   * Page number for pagination
+   */
+  page?: number;
+  /**
+   * Number of items per page
+   */
+  pageSize?: number;
+};
+
+export type ListSchedulesResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  /**
+   * List of schedules
+   */
+  data?: Array<WorkflowSchedule>;
+  /**
+   * Total number of schedules
+   */
+  total?: number;
+  /**
+   * Current page number
+   */
+  page?: number;
+  /**
+   * Number of items per page
+   */
+  pageSize?: number;
+};
+
+export type GetScheduleDetailRequest = {
+  /**
+   * Schedule ID to get details for
+   */
+  scheduleId: string;
+};
+
+export type GetScheduleDetailResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: WorkflowSchedule;
+  /**
+   * Response message
+   */
+  message?: string;
 };
 
 export type CanvasTemplateCategory = {
@@ -1560,6 +1752,10 @@ export type TokenUsageItem = {
    */
   cacheReadTokens?: number;
   /**
+   * Cache write tokens
+   */
+  cacheWriteTokens?: number;
+  /**
    * Provider item ID
    */
   providerItemId?: string;
@@ -1568,6 +1764,43 @@ export type TokenUsageItem = {
    * @deprecated
    */
   tier?: string;
+  /**
+   * Original model ID before routing (e.g., 'auto')
+   */
+  originalModelId?: string;
+  /**
+   * Complete model routing metadata (JSON)
+   */
+  modelRoutedData?: {
+    /**
+     * Whether this request was routed
+     */
+    isRouted?: boolean;
+    /**
+     * Original provider item ID before routing
+     */
+    originalItemId?: string;
+    /**
+     * Original model ID (e.g., 'auto')
+     */
+    originalModelId?: string;
+    /**
+     * Original model provider name
+     */
+    originalProvider?: string;
+    /**
+     * Original model name/label for display
+     */
+    originalModelName?: string;
+    /**
+     * Routing timestamp
+     */
+    routedAt?: string;
+    /**
+     * Routing strategy used (e.g., 'auto', 'load_balance', 'region')
+     */
+    routingStrategy?: string;
+  };
 };
 
 /**
@@ -1845,6 +2078,14 @@ export type ActionResult = {
    * Selected model
    */
   modelInfo?: ModelInfo;
+  /**
+   * Actual provider item ID used for execution after routing (e.g. routed from Auto)
+   */
+  actualProviderItemId?: string;
+  /**
+   * Whether the action execution was routed from the Auto model
+   */
+  isAutoModelRouted?: boolean;
   /**
    * Action target type
    */
@@ -4801,6 +5042,10 @@ export type SandboxExecuteResponse = BaseResponseV2 & {
      * List of files generated by the code execution (available even when exitCode!=0)
      */
     files?: Array<DriveFile>;
+    /**
+     * System warnings from sandbox (e.g., file rename due to conflict, temporary directory creation)
+     */
+    warnings?: Array<string>;
   };
 };
 
@@ -5079,6 +5324,18 @@ export type CreateCheckoutSessionRequest = {
    * Subscription billing interval
    */
   interval?: SubscriptionInterval;
+  /**
+   * Optional voucher ID to apply discount
+   */
+  voucherId?: string;
+  /**
+   * Entry point where voucher was applied (e.g., claimed_popup, discount_popup, credit_insufficient_modal, pricing_page)
+   */
+  voucherEntryPoint?: string;
+  /**
+   * User type when voucher was applied (e.g., new, returning)
+   */
+  voucherUserType?: string;
   /**
    * Current plan
    */
@@ -5748,6 +6005,10 @@ export type ModelCapabilities = {
    */
   contextCaching?: boolean;
   /**
+   * Whether this model supports tool_choice parameter
+   */
+  supportToolChoice?: boolean;
+  /**
    * Whether this model supports image generation
    */
   image?: boolean;
@@ -6052,6 +6313,14 @@ export type CreditBilling = {
    * Credit consumption per unit for output tokens
    */
   outputCost: number;
+  /**
+   * Credit consumption per unit for cache read tokens (typically 10% of input cost)
+   */
+  cacheReadCost?: number;
+  /**
+   * Credit consumption per unit for cache write tokens (typically higher than input cost)
+   */
+  cacheWriteCost?: number;
   /**
    * Minimum credit charge per request
    */
@@ -7294,6 +7563,67 @@ export type WorkflowExecution = {
   updatedAt?: string;
 };
 
+export type WorkflowTask = {
+  /**
+   * Unique ID for the task
+   */
+  id: string;
+  /**
+   * Display title for the task
+   */
+  title: string;
+  /**
+   * The prompt or instruction for this task
+   */
+  prompt: string;
+  /**
+   * Toolsets selected for this task
+   */
+  toolsets: Array<string>;
+  /**
+   * Tasks that must be executed before this task
+   */
+  dependentTasks?: Array<string>;
+};
+
+export type WorkflowPlan = {
+  /**
+   * Title of the workflow plan
+   */
+  title: string;
+  /**
+   * Array of workflow tasks to be executed
+   */
+  tasks: Array<WorkflowTask>;
+  /**
+   * Array of variables (aka User inputs) defined for the workflow plan
+   */
+  variables?: Array<WorkflowVariable>;
+};
+
+export type WorkflowPlanRecord = WorkflowPlan & {
+  /**
+   * Workflow plan ID
+   */
+  planId?: string;
+  /**
+   * Workflow plan version
+   */
+  version?: number;
+  /**
+   * Workflow plan creation timestamp
+   */
+  createdAt?: string;
+  /**
+   * Workflow plan update timestamp
+   */
+  updatedAt?: string;
+};
+
+export type GetWorkflowPlanDetailResponse = BaseResponse & {
+  data?: WorkflowPlanRecord;
+};
+
 export type GetWorkflowDetailResponse = BaseResponse & {
   data?: WorkflowExecution;
 };
@@ -7405,6 +7735,10 @@ export type WorkflowApp = {
    * Workflow app update timestamp
    */
   updatedAt?: string;
+  /**
+   * Voucher trigger result when publishing to community
+   */
+  voucherTriggerResult?: VoucherTriggerResult;
 };
 
 export type CreateWorkflowAppResponse = BaseResponse & {
@@ -7522,7 +7856,7 @@ export type WorkflowVariable = {
    */
   variableId: string;
   /**
-   * Variable name
+   * Variable name used in the workflow
    */
   name: string;
   /**
@@ -7546,7 +7880,7 @@ export type WorkflowVariable = {
    */
   variableType?: 'string' | 'option' | 'resource';
   /**
-   * Whether the variable is required
+   * Whether the variable is required. Defaults to false.
    */
   required?: boolean;
   /**
@@ -7554,7 +7888,7 @@ export type WorkflowVariable = {
    */
   isSingle?: boolean;
   /**
-   * Variable options (only valid when variable type is option)
+   * Array of options (only valid when variable type is `option`)
    */
   options?: Array<string>;
   /**
@@ -8119,6 +8453,10 @@ export type SchemaProperty = {
    */
   format?: string;
   /**
+   * Whether this field accepts file uploads (Composio-specific marker)
+   */
+  file_uploadable?: boolean;
+  /**
    * Constant value for discriminator matching in oneOf/anyOf
    */
   const?: unknown;
@@ -8531,6 +8869,36 @@ export type PollingConfig = {
    */
   statusUrl: string;
   /**
+   * HTTP method for status check (GET or POST)
+   */
+  statusMethod?: 'GET' | 'POST';
+  /**
+   * Request body template for POST status check. Supports placeholders like {task_id}, {req_key}
+   */
+  statusBody?: {
+    [key: string]: unknown;
+  };
+  /**
+   * JSON path to extract task ID from initial response (e.g., "data.task_id")
+   */
+  taskIdPath?: string;
+  /**
+   * JSON path to extract status from polling response (e.g., "data.status")
+   */
+  statusPath?: string;
+  /**
+   * JSON path to extract result data from completed response (e.g., "data.resp_data")
+   */
+  resultPath?: string;
+  /**
+   * List of status values indicating completion (e.g., ["done", "completed"])
+   */
+  completedStatuses?: Array<string>;
+  /**
+   * List of status values indicating failure (e.g., ["failed", "error"])
+   */
+  failedStatuses?: Array<string>;
+  /**
    * Maximum wait time in seconds
    */
   maxWaitSeconds?: number;
@@ -8539,6 +8907,11 @@ export type PollingConfig = {
    */
   intervalSeconds?: number;
 };
+
+/**
+ * HTTP method for status check (GET or POST)
+ */
+export type statusMethod = 'GET' | 'POST';
 
 export type SdkAdapterConfig = {
   /**
@@ -9088,6 +9461,275 @@ export type ToolRegistryEntry = {
    * Last update timestamp
    */
   updatedAt: string;
+};
+
+/**
+ * Voucher status
+ */
+export type VoucherStatus = 'unused' | 'used' | 'expired' | 'invalid';
+
+/**
+ * Voucher source
+ */
+export type VoucherSource = 'template_publish' | 'invitation_claim';
+
+/**
+ * Invitation status
+ */
+export type InvitationStatus = 'unclaimed' | 'claimed' | 'expired';
+
+export type Voucher = {
+  /**
+   * Unique voucher ID
+   */
+  voucherId: string;
+  /**
+   * User ID who owns the voucher
+   */
+  uid: string;
+  /**
+   * Discount percentage (10-90)
+   */
+  discountPercent: number;
+  status: VoucherStatus;
+  source: VoucherSource;
+  /**
+   * Source entity ID (template ID or invitation ID)
+   */
+  sourceId?: string;
+  /**
+   * LLM scoring result (0-100)
+   */
+  llmScore?: number;
+  /**
+   * Voucher expiration time
+   */
+  expiresAt: string;
+  /**
+   * Voucher usage time
+   */
+  usedAt?: string;
+  /**
+   * Subscription ID if voucher was used
+   */
+  subscriptionId?: string;
+  /**
+   * Creation timestamp
+   */
+  createdAt: string;
+  /**
+   * Update timestamp
+   */
+  updatedAt: string;
+};
+
+export type VoucherInvitation = {
+  /**
+   * Unique invitation ID
+   */
+  invitationId: string;
+  /**
+   * Inviter user ID
+   */
+  inviterUid: string;
+  /**
+   * Invitee user ID
+   */
+  inviteeUid?: string;
+  /**
+   * Short invitation code for sharing
+   */
+  inviteCode: string;
+  /**
+   * Source voucher ID
+   */
+  voucherId: string;
+  /**
+   * Discount percentage
+   */
+  discountPercent: number;
+  status: InvitationStatus;
+  /**
+   * Claim timestamp
+   */
+  claimedAt?: string;
+  /**
+   * Whether inviter reward has been granted
+   */
+  rewardGranted: boolean;
+  /**
+   * Creation timestamp
+   */
+  createdAt: string;
+  /**
+   * Update timestamp
+   */
+  updatedAt: string;
+};
+
+export type VoucherTriggerResult = {
+  voucher: Voucher;
+  /**
+   * LLM score (0-100)
+   */
+  score: number;
+  /**
+   * LLM feedback for improvement
+   */
+  feedback?: string;
+  /**
+   * Whether daily trigger limit was reached
+   */
+  triggerLimitReached?: boolean;
+};
+
+export type VoucherAvailableResult = {
+  /**
+   * Whether user has available vouchers
+   */
+  hasAvailableVoucher: boolean;
+  /**
+   * List of available vouchers
+   */
+  vouchers: Array<Voucher>;
+  /**
+   * Best available voucher (highest discount)
+   */
+  bestVoucher?: Voucher;
+};
+
+export type VoucherValidateResult = {
+  /**
+   * Whether voucher is valid
+   */
+  valid: boolean;
+  /**
+   * Voucher details
+   */
+  voucher?: Voucher;
+  /**
+   * Reason if not valid
+   */
+  reason?: string;
+};
+
+export type CreateInvitationResult = {
+  /**
+   * Created invitation
+   */
+  invitation: VoucherInvitation;
+};
+
+export type ClaimInvitationResult = {
+  /**
+   * Whether claim was successful
+   */
+  success: boolean;
+  /**
+   * Created voucher for invitee
+   */
+  voucher?: Voucher;
+  /**
+   * Name of the user who sent the invitation
+   */
+  inviterName?: string;
+  /**
+   * Error message if failed
+   */
+  message?: string;
+};
+
+export type ValidateVoucherRequest = {
+  /**
+   * Voucher ID to validate
+   */
+  voucherId: string;
+};
+
+export type CreateVoucherInvitationRequest = {
+  /**
+   * Voucher ID to create invitation for
+   */
+  voucherId: string;
+};
+
+export type ClaimVoucherInvitationRequest = {
+  /**
+   * Invitation code to claim
+   */
+  inviteCode: string;
+};
+
+export type GetAvailableVouchersResponse = BaseResponse & {
+  data?: VoucherAvailableResult;
+};
+
+export type ListUserVouchersResponse = BaseResponse & {
+  data?: Array<Voucher>;
+};
+
+export type ValidateVoucherResponse = BaseResponse & {
+  data?: VoucherValidateResult;
+};
+
+export type CreateVoucherInvitationResponse = BaseResponse & {
+  data?: CreateInvitationResult;
+};
+
+export type VerifyInvitationResult = {
+  /**
+   * Whether the invitation is valid and can be claimed
+   */
+  valid: boolean;
+  invitation?: VoucherInvitation;
+  /**
+   * The original voucher being shared (for unclaimed invitations)
+   */
+  voucher?: Voucher;
+  /**
+   * If already claimed, the UID of the user who claimed it
+   */
+  claimedByUid?: string;
+  /**
+   * Inviter's name (for display)
+   */
+  inviterName?: string;
+  /**
+   * Error or status message
+   */
+  message?: string;
+};
+
+export type VerifyVoucherInvitationResponse = BaseResponse & {
+  data?: VerifyInvitationResult;
+};
+
+export type ClaimVoucherInvitationResponse = BaseResponse & {
+  data?: ClaimInvitationResult;
+};
+
+export type TriggerVoucherRequest = {
+  /**
+   * Canvas ID of the template being published
+   */
+  canvasId: string;
+  /**
+   * Optional template ID (defaults to canvasId if not provided)
+   */
+  templateId?: string;
+  /**
+   * Type of trigger event
+   */
+  triggerType: 'template_publish';
+};
+
+/**
+ * Type of trigger event
+ */
+export type triggerType = 'template_publish';
+
+export type TriggerVoucherResponse = BaseResponse & {
+  data?: VoucherTriggerResult;
 };
 
 export type ExtractVariablesData = {
@@ -10501,6 +11143,23 @@ export type GetWorkflowDetailResponse2 = GetWorkflowDetailResponse;
 
 export type GetWorkflowDetailError = unknown;
 
+export type GetWorkflowPlanDetailData = {
+  query: {
+    /**
+     * Workflow plan ID
+     */
+    planId: string;
+    /**
+     * Workflow plan version
+     */
+    version?: number;
+  };
+};
+
+export type GetWorkflowPlanDetailResponse2 = GetWorkflowPlanDetailResponse;
+
+export type GetWorkflowPlanDetailError = unknown;
+
 export type CreateWorkflowAppData = {
   body: CreateWorkflowAppRequest;
 };
@@ -10579,6 +11238,46 @@ export type GetTemplateGenerationStatusData = {
 export type GetTemplateGenerationStatusResponse2 = GetTemplateGenerationStatusResponse;
 
 export type GetTemplateGenerationStatusError = unknown;
+
+export type CreateScheduleData = {
+  body: CreateScheduleRequest;
+};
+
+export type CreateScheduleResponse2 = CreateScheduleResponse;
+
+export type CreateScheduleError = unknown;
+
+export type UpdateScheduleData = {
+  body: UpdateScheduleRequest;
+};
+
+export type UpdateScheduleResponse2 = UpdateScheduleResponse;
+
+export type UpdateScheduleError = unknown;
+
+export type DeleteScheduleData = {
+  body: DeleteScheduleRequest;
+};
+
+export type DeleteScheduleResponse2 = DeleteScheduleResponse;
+
+export type DeleteScheduleError = unknown;
+
+export type ListSchedulesData = {
+  body: ListSchedulesRequest;
+};
+
+export type ListSchedulesResponse2 = ListSchedulesResponse;
+
+export type ListSchedulesError = unknown;
+
+export type GetScheduleDetailData = {
+  body: GetScheduleDetailRequest;
+};
+
+export type GetScheduleDetailResponse2 = GetScheduleDetailResponse;
+
+export type GetScheduleDetailError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 
@@ -11063,3 +11762,56 @@ export type ConvertData = {
 export type ConvertResponse2 = ConvertResponse;
 
 export type ConvertError = unknown;
+
+export type GetAvailableVouchersResponse2 = GetAvailableVouchersResponse;
+
+export type GetAvailableVouchersError = unknown;
+
+export type ListUserVouchersResponse2 = ListUserVouchersResponse;
+
+export type ListUserVouchersError = unknown;
+
+export type ValidateVoucherData = {
+  body: ValidateVoucherRequest;
+};
+
+export type ValidateVoucherResponse2 = ValidateVoucherResponse;
+
+export type ValidateVoucherError = unknown;
+
+export type CreateVoucherInvitationData = {
+  body: CreateVoucherInvitationRequest;
+};
+
+export type CreateVoucherInvitationResponse2 = CreateVoucherInvitationResponse;
+
+export type CreateVoucherInvitationError = unknown;
+
+export type VerifyVoucherInvitationData = {
+  query: {
+    /**
+     * Invitation code
+     */
+    code: string;
+  };
+};
+
+export type VerifyVoucherInvitationResponse2 = VerifyVoucherInvitationResponse;
+
+export type VerifyVoucherInvitationError = unknown;
+
+export type ClaimVoucherInvitationData = {
+  body: ClaimVoucherInvitationRequest;
+};
+
+export type ClaimVoucherInvitationResponse2 = ClaimVoucherInvitationResponse;
+
+export type ClaimVoucherInvitationError = unknown;
+
+export type TriggerVoucherData = {
+  body: TriggerVoucherRequest;
+};
+
+export type TriggerVoucherResponse2 = TriggerVoucherResponse;
+
+export type TriggerVoucherError = unknown;

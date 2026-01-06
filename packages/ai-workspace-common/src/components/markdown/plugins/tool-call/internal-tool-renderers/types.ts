@@ -7,6 +7,7 @@ export interface InternalToolRendererProps {
   toolsetKey: string;
   toolCallStatus: ToolCallStatus;
   parametersContent: Record<string, unknown>;
+  durationText: string;
   resultContent?: Record<string, unknown>;
 }
 
