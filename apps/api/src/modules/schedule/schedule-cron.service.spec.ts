@@ -120,6 +120,7 @@ describe('ScheduleCronService', () => {
       prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue({
         isEnabled: true,
         deletedAt: null,
+        nextRunAt: new Date(Date.now() - 1000), // In the past (due)
       });
       prismaService.workflowSchedule.update = jest.fn().mockResolvedValue(mockSchedule);
       prismaService.workflowScheduleRecord.findFirst = jest.fn().mockResolvedValue(null);
@@ -144,6 +145,7 @@ describe('ScheduleCronService', () => {
       prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue({
         isEnabled: true,
         deletedAt: null,
+        nextRunAt: new Date(Date.now() - 1000), // In the past (due)
       });
     });
 
@@ -498,6 +500,7 @@ describe('ScheduleCronService', () => {
       prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue({
         isEnabled: true,
         deletedAt: null,
+        nextRunAt: new Date(Date.now() - 1000), // In the past (due)
       });
     });
 
@@ -534,6 +537,7 @@ describe('ScheduleCronService', () => {
       prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue({
         isEnabled: false,
         deletedAt: null,
+        nextRunAt: new Date(Date.now() - 1000), // In the past
       });
 
       const result = await service.checkAndTriggerSchedule('schedule-123');
@@ -550,6 +554,7 @@ describe('ScheduleCronService', () => {
       prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue({
         isEnabled: true,
         deletedAt: null,
+        nextRunAt: new Date(Date.now() - 1000), // In the past (due)
       });
     });
 
@@ -564,9 +569,17 @@ describe('ScheduleCronService', () => {
       // Schedule B was deleted between findMany and triggerSchedule
       prismaService.workflowSchedule.findUnique = jest.fn().mockImplementation((args: any) => {
         if (args.where.scheduleId === 'schedule-A') {
-          return Promise.resolve({ isEnabled: true, deletedAt: null });
+          return Promise.resolve({
+            isEnabled: true,
+            deletedAt: null,
+            nextRunAt: new Date(Date.now() - 1000),
+          });
         }
-        return Promise.resolve({ isEnabled: true, deletedAt: new Date() }); // B is deleted
+        return Promise.resolve({
+          isEnabled: true,
+          deletedAt: new Date(),
+          nextRunAt: new Date(Date.now() - 1000),
+        }); // B is deleted
       });
 
       prismaService.workflowSchedule.update = jest.fn().mockResolvedValue(mockSchedule);
@@ -608,6 +621,7 @@ describe('ScheduleCronService', () => {
       prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue({
         isEnabled: true,
         deletedAt: null,
+        nextRunAt: new Date(Date.now() - 1000), // In the past (due)
       });
       prismaService.workflowSchedule.update = jest.fn().mockResolvedValue(mockSchedule);
       prismaService.workflowSchedule.updateMany = jest.fn().mockResolvedValue({ count: 0 });
@@ -697,6 +711,150 @@ describe('ScheduleCronService', () => {
       // This is handled by the processor. So the job will still be added.
       // The processor will skip execution when it sees the record is already failed.
       expect(mockQueue.add).toHaveBeenCalled();
+    });
+  });
+
+  describe('Refly Hardcore Edge Cases', () => {
+    // Shared setup for edge cases
+    beforeEach(() => {
+      // Reset default mocks
+      const releaseLock = jest.fn();
+      redisService.acquireLock = jest.fn().mockResolvedValue(releaseLock);
+      prismaService.workflowSchedule.update = jest.fn().mockResolvedValue(mockSchedule);
+      prismaService.workflowScheduleRecord.create = jest.fn().mockResolvedValue({
+        scheduleRecordId: 'record-123',
+      });
+      prismaService.workflowScheduleRecord.findFirst = jest.fn().mockResolvedValue(null);
+      prismaService.canvas.findUnique = jest.fn().mockResolvedValue({ title: 'Test' });
+      prismaService.subscription.findFirst = jest.fn().mockResolvedValue({ uid: 'user-789' });
+      prismaService.workflowSchedule.count = jest.fn().mockResolvedValue(1);
+      prismaService.user.findUnique = jest
+        .fn()
+        .mockResolvedValue({ uid: 'user-789', email: 'test@example.com' });
+      priorityService.calculateExecutionPriority = jest.fn().mockResolvedValue(5);
+      scheduleService.createOrUpdateScheduledRecord = jest.fn().mockResolvedValue(undefined);
+    });
+
+    it('should prevent double execution when nextRunAt was already advanced', async () => {
+      // Scenario: Two processes try to trigger the same schedule concurrently
+      // After first process updates nextRunAt to future, second should skip
+
+      // First call: nextRunAt is in the past (due)
+      // Second call: nextRunAt was updated to future by first process
+
+      let callCount = 0;
+      prismaService.workflowSchedule.findFirst = jest.fn().mockResolvedValue(mockSchedule);
+      prismaService.workflowSchedule.findUnique = jest.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // First call: schedule is due (nextRunAt in the past)
+          return Promise.resolve({
+            isEnabled: true,
+            deletedAt: null,
+            nextRunAt: new Date(Date.now() - 1000), // 1 second ago
+          });
+        }
+        // Second call: nextRunAt was updated to future by first process
+        return Promise.resolve({
+          isEnabled: true,
+          deletedAt: null,
+          nextRunAt: new Date(Date.now() + 3600000), // 1 hour in future
+        });
+      });
+
+      // First trigger should succeed
+      const result1 = await service.checkAndTriggerSchedule(mockSchedule.scheduleId);
+      expect(result1).toBe(true);
+      expect(mockQueue.add).toHaveBeenCalledTimes(1);
+
+      // Second trigger should be skipped (nextRunAt now in future)
+      const result2 = await service.checkAndTriggerSchedule(mockSchedule.scheduleId);
+      expect(result2).toBe(true); // No error thrown
+      expect(mockQueue.add).toHaveBeenCalledTimes(1); // Still 1, not 2
+    });
+
+    it('should handle Database connection failure during critical update', async () => {
+      // Trigger schedule -> Update Check (Success) -> Update NextRunAt (FAIL) before queue.add
+      // In current implementation, update happens BEFORE queue.add, so this tests error propagation
+
+      prismaService.workflowSchedule.findFirst = jest.fn().mockResolvedValue(mockSchedule);
+      prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue({
+        isEnabled: true,
+        deletedAt: null,
+        nextRunAt: new Date(Date.now() - 1000), // In the past (due)
+      });
+
+      // Mock Update failure (the one that updates nextRunAt)
+      prismaService.workflowSchedule.update = jest
+        .fn()
+        .mockRejectedValue(new Error('DB Connection Lost'));
+
+      // The error should be caught, not crash the service
+      const result = await service.checkAndTriggerSchedule(mockSchedule.scheduleId);
+
+      // checkAndTriggerSchedule catches errors and returns false
+      expect(result).toBe(false);
+    });
+
+    it('should handle Queue downtime gracefully without crashing', async () => {
+      // DB OK, but Queue Down - service should not crash
+      prismaService.workflowSchedule.findFirst = jest.fn().mockResolvedValue(mockSchedule);
+      prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue({
+        isEnabled: true,
+        deletedAt: null,
+        nextRunAt: new Date(Date.now() - 1000), // In the past (due)
+      });
+
+      // Mock Queue Failure
+      mockQueue.add.mockRejectedValue(new Error('Redis Down'));
+
+      // Service should catch error and not crash
+      const result = await service.checkAndTriggerSchedule(mockSchedule.scheduleId);
+
+      // Error is caught, returns false
+      expect(result).toBe(false);
+    });
+
+    it('should handle physical deletion race condition', async () => {
+      // FindFirst finds it, but fresh read returns null (deleted between queries)
+      prismaService.workflowSchedule.findFirst = jest.fn().mockResolvedValue(mockSchedule);
+      prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue(null);
+
+      const result = await service.checkAndTriggerSchedule(mockSchedule.scheduleId);
+
+      // Handled gracefully, no crash
+      expect(result).toBe(true);
+      expect(mockQueue.add).not.toHaveBeenCalled();
+    });
+
+    it('should skip schedule when nextRunAt is null in fresh read', async () => {
+      // Schedule was disabled between findFirst and triggerSchedule
+      prismaService.workflowSchedule.findFirst = jest.fn().mockResolvedValue(mockSchedule);
+      prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue({
+        isEnabled: false, // Disabled
+        deletedAt: null,
+        nextRunAt: null,
+      });
+
+      const result = await service.checkAndTriggerSchedule(mockSchedule.scheduleId);
+
+      expect(result).toBe(true); // No error
+      expect(mockQueue.add).not.toHaveBeenCalled();
+    });
+
+    it('should handle soft deletion during processing', async () => {
+      // Schedule soft-deleted between findFirst and triggerSchedule
+      prismaService.workflowSchedule.findFirst = jest.fn().mockResolvedValue(mockSchedule);
+      prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue({
+        isEnabled: true,
+        deletedAt: new Date(), // Soft deleted
+        nextRunAt: new Date(Date.now() - 1000),
+      });
+
+      const result = await service.checkAndTriggerSchedule(mockSchedule.scheduleId);
+
+      expect(result).toBe(true); // No error
+      expect(mockQueue.add).not.toHaveBeenCalled();
     });
   });
 

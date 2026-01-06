@@ -154,12 +154,21 @@ export class ScheduleCronService implements OnModuleInit {
     // quota check in the same batch (the in-memory schedule object may be stale)
     const freshSchedule = await this.prisma.workflowSchedule.findUnique({
       where: { scheduleId: schedule.scheduleId },
-      select: { isEnabled: true, deletedAt: true },
+      select: { isEnabled: true, deletedAt: true, nextRunAt: true },
     });
 
     if (!freshSchedule || !freshSchedule.isEnabled || freshSchedule.deletedAt) {
       this.logger.debug(
         `Schedule ${schedule.scheduleId} was disabled/deleted during batch processing, skipping`,
+      );
+      return;
+    }
+
+    // Race condition guard: Check if schedule was already processed by another instance/request
+    // If nextRunAt is in the future, it means another process already triggered it and updated the time
+    if (freshSchedule.nextRunAt && freshSchedule.nextRunAt > new Date()) {
+      this.logger.debug(
+        `Schedule ${schedule.scheduleId} was passed to trigger but nextRunAt is in future (${freshSchedule.nextRunAt.toISOString()}). Skipping to prevent double execution.`,
       );
       return;
     }

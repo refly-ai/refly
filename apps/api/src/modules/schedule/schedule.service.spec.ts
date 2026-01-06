@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import { getQueueToken } from '@nestjs/bullmq';
 import { ScheduleService } from './schedule.service';
+import { ScheduleCronService } from './schedule-cron.service';
 import { PrismaService } from '../common/prisma.service';
 import { ObjectStorageService } from '../common/object-storage';
 import { OSS_INTERNAL } from '../common/object-storage/tokens';
@@ -28,6 +29,9 @@ describe('ScheduleService', () => {
     const mockPrisma = createMock<PrismaService>();
     const mockOss = createMock<ObjectStorageService>();
     const mockPriority = createMock<SchedulePriorityService>();
+    const mockCronService = createMock<ScheduleCronService>();
+    // Ensure checkAndTriggerSchedule returns a proper Promise
+    mockCronService.checkAndTriggerSchedule = jest.fn().mockResolvedValue(true);
     const mockConfigService = createMock<ConfigService>();
     // Return undefined for all config.get calls to use defaults
     mockConfigService.get.mockReturnValue(undefined);
@@ -42,6 +46,7 @@ describe('ScheduleService', () => {
         { provide: OSS_INTERNAL, useValue: mockOss },
         { provide: getQueueToken(QUEUE_SCHEDULE_EXECUTION), useValue: mockQueue },
         { provide: SchedulePriorityService, useValue: mockPriority },
+        { provide: ScheduleCronService, useValue: mockCronService },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
@@ -251,6 +256,7 @@ describe('ScheduleService', () => {
 
     it('should update schedule successfully', async () => {
       prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue(existingSchedule);
+      prismaService.workflowSchedule.findFirst = jest.fn().mockResolvedValue(existingSchedule);
       prismaService.canvas.findUnique = jest
         .fn()
         .mockResolvedValue({ title: 'Test Canvas', uid: mockUser.uid });
@@ -259,8 +265,10 @@ describe('ScheduleService', () => {
         ...existingSchedule,
         cronExpression: '0 0 * * *',
       });
+      prismaService.canvas.update = jest.fn().mockResolvedValue({});
       prismaService.workflowScheduleRecord.findFirst = jest.fn().mockResolvedValue(null);
       prismaService.workflowScheduleRecord.create = jest.fn().mockResolvedValue({});
+      prismaService.workflowScheduleRecord.upsert = jest.fn().mockResolvedValue({});
 
       const _result = await service.updateSchedule(mockUser.uid, mockScheduleId, {
         cronExpression: '0 0 * * *',
@@ -309,6 +317,7 @@ describe('ScheduleService', () => {
 
     it('should set nextRunAt to null when disabling', async () => {
       prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue(existingSchedule);
+      prismaService.workflowSchedule.findFirst = jest.fn().mockResolvedValue(existingSchedule);
       prismaService.canvas.findUnique = jest
         .fn()
         .mockResolvedValue({ title: 'Test Canvas', uid: mockUser.uid });
@@ -316,6 +325,7 @@ describe('ScheduleService', () => {
       prismaService.workflowSchedule.update = jest.fn().mockImplementation((args) => {
         return Promise.resolve({ ...existingSchedule, ...args.data });
       });
+      prismaService.canvas.update = jest.fn().mockResolvedValue({});
       prismaService.workflowScheduleRecord.deleteMany = jest.fn().mockResolvedValue({ count: 0 });
 
       await service.updateSchedule(mockUser.uid, mockScheduleId, { isEnabled: false });
@@ -331,6 +341,7 @@ describe('ScheduleService', () => {
 
     it('should recalculate nextRunAt when changing cron expression', async () => {
       prismaService.workflowSchedule.findUnique = jest.fn().mockResolvedValue(existingSchedule);
+      prismaService.workflowSchedule.findFirst = jest.fn().mockResolvedValue(existingSchedule);
       prismaService.canvas.findUnique = jest
         .fn()
         .mockResolvedValue({ title: 'Test Canvas', uid: mockUser.uid });
@@ -338,8 +349,10 @@ describe('ScheduleService', () => {
       prismaService.workflowSchedule.update = jest.fn().mockImplementation((args) => {
         return Promise.resolve({ ...existingSchedule, ...args.data });
       });
+      prismaService.canvas.update = jest.fn().mockResolvedValue({});
       prismaService.workflowScheduleRecord.findFirst = jest.fn().mockResolvedValue(null);
       prismaService.workflowScheduleRecord.create = jest.fn().mockResolvedValue({});
+      prismaService.workflowScheduleRecord.upsert = jest.fn().mockResolvedValue({});
 
       await service.updateSchedule(mockUser.uid, mockScheduleId, { cronExpression: '0 0 * * *' });
 
