@@ -115,6 +115,40 @@ export class ScheduleCronService implements OnModuleInit {
     }
   }
 
+  /**
+   * Check and trigger a specific schedule if it's due
+   * This is used to immediately check schedules that were just created/updated
+   * with a near-future nextRunAt to avoid missing the first execution
+   * @param scheduleId - Schedule ID to check
+   * @returns true if schedule was triggered, false otherwise
+   */
+  async checkAndTriggerSchedule(scheduleId: string): Promise<boolean> {
+    const now = new Date();
+
+    // Find the specific schedule
+    const schedule = await this.prisma.workflowSchedule.findFirst({
+      where: {
+        scheduleId,
+        isEnabled: true,
+        deletedAt: null,
+        nextRunAt: { lte: now },
+      },
+    });
+
+    if (!schedule) {
+      return false;
+    }
+
+    try {
+      await this.triggerSchedule(schedule);
+      this.logger.log(`Immediately triggered schedule ${scheduleId} after creation/update`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to immediately trigger schedule ${scheduleId}`, error);
+      return false;
+    }
+  }
+
   private async triggerSchedule(schedule: any) {
     // 3.1 Calculate next run time
     let nextRunAt: Date | null = null;

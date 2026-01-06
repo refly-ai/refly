@@ -1,4 +1,11 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma.service';
 import { Prisma } from '@prisma/client';
@@ -18,6 +25,7 @@ import {
   ScheduleFailureReason,
 } from './schedule.constants';
 import { SchedulePriorityService } from './schedule-priority.service';
+import { ScheduleCronService } from './schedule-cron.service';
 
 @Injectable()
 export class ScheduleService {
@@ -29,6 +37,8 @@ export class ScheduleService {
     @Inject(OSS_INTERNAL) private readonly oss: ObjectStorageService,
     @InjectQueue(QUEUE_SCHEDULE_EXECUTION) private readonly scheduleQueue: Queue,
     private readonly priorityService: SchedulePriorityService,
+    @Inject(forwardRef(() => ScheduleCronService))
+    private readonly cronService: ScheduleCronService,
     configService: ConfigService,
   ) {
     this.scheduleConfig = getScheduleConfig(configService);
@@ -107,6 +117,40 @@ export class ScheduleService {
     }
   }
 
+  /**
+   * Check if schedule should be immediately triggered after creation/update
+   * If nextRunAt is in the past or within the next minute, trigger immediately
+   * to avoid missing the first execution due to cron scan delay
+   * @param scheduleId Schedule ID to check
+   * @param nextRunAt Next run time to check
+   */
+  private async checkAndTriggerIfNeeded(scheduleId: string, nextRunAt: Date | null): Promise<void> {
+    if (!nextRunAt) {
+      return;
+    }
+
+    const now = new Date();
+    const timeUntilNextRun = nextRunAt.getTime() - now.getTime();
+    // If nextRunAt is in the past or within the next 60 seconds, check immediately
+    // This ensures schedules with near-future execution times don't miss the first run
+    // The cron job runs every minute, so anything within 60 seconds might be missed
+    const IMMEDIATE_TRIGGER_THRESHOLD_MS = 60 * 1000; // 60 seconds
+
+    if (timeUntilNextRun <= IMMEDIATE_TRIGGER_THRESHOLD_MS) {
+      // Trigger asynchronously to avoid blocking the API response
+      // Use setImmediate to ensure it runs after the current operation completes
+      // checkAndTriggerSchedule will only trigger if nextRunAt <= now, so it's safe
+      setImmediate(async () => {
+        try {
+          await this.cronService.checkAndTriggerSchedule(scheduleId);
+        } catch (error) {
+          // Log error but don't fail the create/update operation
+          this.logger.error(`Failed to immediately trigger schedule ${scheduleId}`, error);
+        }
+      });
+    }
+  }
+
   async createSchedule(uid: string, dto: CreateScheduleDto) {
     // 1. Validate Cron Expression
     this.validateCronExpression(dto.cronExpression, dto.timezone);
@@ -179,6 +223,11 @@ export class ScheduleService {
           dto.canvasId,
           nextRunAt,
         );
+      }
+
+      // Check if schedule should be immediately triggered (if nextRunAt is very soon)
+      if (isEnabled && nextRunAt) {
+        await this.checkAndTriggerIfNeeded(existingSchedule.scheduleId, nextRunAt);
       }
 
       return this.excludePk(restored);
@@ -268,6 +317,11 @@ export class ScheduleService {
         await this.deleteScheduledRecord(scheduleId);
       }
 
+      // Check if schedule should be immediately triggered (if nextRunAt is very soon)
+      if (isEnabled && nextRunAt) {
+        await this.checkAndTriggerIfNeeded(scheduleId, nextRunAt);
+      }
+
       return this.excludePk(updated);
     } else {
       // Create new schedule
@@ -295,6 +349,11 @@ export class ScheduleService {
         // Create scheduled record if enabled and has nextRunAt
         if (isEnabled && nextRunAt) {
           await this.createOrUpdateScheduledRecord(uid, scheduleId, dto.canvasId, nextRunAt);
+        }
+
+        // Check if schedule should be immediately triggered (if nextRunAt is very soon)
+        if (isEnabled && nextRunAt) {
+          await this.checkAndTriggerIfNeeded(scheduleId, nextRunAt);
         }
 
         return this.excludePk(schedule);
