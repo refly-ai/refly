@@ -377,26 +377,27 @@ export const SchedulePopoverContent = memo(
           )}
         </div>
 
-        {/* Cost info */}
-        <div className="flex items-center justify-between text-sm text-gray-500">
-          <span>
-            {t('schedule.cost') || 'Cost'}: {isCreditLoading ? '...' : (creditCost ?? 0)} /{' '}
-            {t('schedule.perRun') || 'run'}
-          </span>
-          {showUpgrade && (
-            <Button
-              type="text"
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onUpgradeClick?.();
-              }}
-              className="flex-shrink-0 text-xs md:text-sm !p-1 !h-auto text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100"
-            >
-              {t('common.upgrade') || 'Upgrade'} &gt;
-            </Button>
-          )}
-        </div>
+        {/* Cost info - only show if cost is not 0 */}
+        {!isCreditLoading && (creditCost ?? 0) !== 0 && (
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <span>
+              {t('schedule.cost') || 'Cost'}: {creditCost} / {t('schedule.perRun') || 'run'}
+            </span>
+            {showUpgrade && (
+              <Button
+                type="text"
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpgradeClick?.();
+                }}
+                className="flex-shrink-0 text-xs md:text-sm !p-1 !h-auto text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100"
+              >
+                {t('common.upgrade') || 'Upgrade'} &gt;
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* View History link */}
         <Button

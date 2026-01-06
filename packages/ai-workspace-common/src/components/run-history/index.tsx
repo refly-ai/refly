@@ -72,7 +72,7 @@ const ActionCell = memo(
         switch (actionConfig.actionType as FailureActionType) {
           case 'upgrade':
           case 'buyCredits':
-            setCreditInsufficientModalVisible(true);
+            setCreditInsufficientModalVisible(true, undefined, 'schedule');
             break;
           case 'viewSchedule':
           case 'fixWorkflow':
