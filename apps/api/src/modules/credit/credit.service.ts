@@ -14,6 +14,7 @@ import {
   SyncBatchTokenCreditUsageJobData,
   ModelUsageDetail,
   SyncToolCreditUsageJobData,
+  SyncMultimodalCreditUsageJobData,
 } from './credit.dto';
 import {
   genCreditUsageId,
@@ -963,6 +964,96 @@ export class CreditService {
         createdAt: timestamp,
       },
       creditCost,
+    );
+  }
+
+  /**
+   * Sync multimodal credit usage for vision, audio, video, document, and speech processing
+   * Uses token-based billing for most modalities, character-based for TTS
+   */
+  async syncMultimodalCreditUsage(data: SyncMultimodalCreditUsageJobData) {
+    const { uid, creditBilling, timestamp, resultId, version, tokenUsage } = data;
+
+    // Find user
+    const user = await this.prisma.user.findUnique({ where: { uid } });
+    if (!user) {
+      throw new Error(`No user found for uid ${uid}`);
+    }
+
+    // Calculate credit cost based on billing unit
+    let creditCost = 0;
+    if (creditBilling) {
+      if (creditBilling.unit === '1k_tokens') {
+        // Token-based billing (image, video, audio, document)
+        const inputCost = (tokenUsage.promptTokens / 1000) * creditBilling.inputCost;
+        const outputCost = (tokenUsage.outputTokens / 1000) * creditBilling.outputCost;
+
+        // Apply cache discount if applicable
+        let cacheCost = 0;
+        if (tokenUsage.cachedContentTokens && creditBilling.cacheReadCost) {
+          cacheCost = (tokenUsage.cachedContentTokens / 1000) * creditBilling.cacheReadCost;
+        }
+
+        creditCost = Math.ceil(inputCost + outputCost + cacheCost);
+      } else if (creditBilling.unit === '1k_chars') {
+        // Character-based billing (TTS)
+        // For TTS, promptTokens represents chars / 4, so multiply back
+        const charCount = tokenUsage.promptTokens * 4;
+        creditCost = Math.ceil((charCount / 1000) * creditBilling.inputCost);
+      }
+
+      // Ensure minimum charge
+      creditCost = Math.max(creditCost, creditBilling.minCharge);
+    }
+
+    // Create description based on modality type
+    const modalityDescriptions: Record<string, string> = {
+      image: 'Image analysis',
+      video: 'Video analysis',
+      audio: 'Audio analysis',
+      document: 'Document analysis',
+      speech: 'Speech generation (TTS)',
+    };
+    const description =
+      modalityDescriptions[tokenUsage.modalityType] || `Multimodal ${tokenUsage.modalityType}`;
+
+    // If no credit cost, just create usage record
+    if (creditCost <= 0) {
+      await this.prisma.creditUsage.create({
+        data: {
+          uid,
+          usageId: genCreditUsageId(),
+          actionResultId: resultId,
+          version,
+          usageType: 'multimodal',
+          modelName: tokenUsage.modelId,
+          amount: 0,
+          createdAt: timestamp,
+          description,
+        },
+      });
+      return;
+    }
+
+    // Use the extracted method to handle credit deduction
+    await this.deductCreditsAndCreateUsage(
+      uid,
+      creditCost,
+      {
+        usageId: genCreditUsageId(),
+        actionResultId: resultId,
+        version,
+        usageType: 'multimodal',
+        modelName: tokenUsage.modelId,
+        createdAt: timestamp,
+        description,
+      },
+      creditCost,
+    );
+
+    this.logger.log(
+      `Synced multimodal credit usage for user ${uid}: ${tokenUsage.modalityType} ` +
+        `(${tokenUsage.promptTokens} prompt + ${tokenUsage.outputTokens} output tokens) = ${creditCost} credits`,
     );
   }
 

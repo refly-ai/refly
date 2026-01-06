@@ -24,6 +24,8 @@ import { PrismaService } from '../common/prisma.service';
 import { OSS_EXTERNAL, OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
 import { ConfigService } from '@nestjs/config';
 import {
   omit,
@@ -342,6 +344,25 @@ export class MiscService implements OnModuleInit {
     const { storageKey, visibility = 'private' } = file;
     const stream = await this.minioClient(visibility).getObject(storageKey);
     return streamToBuffer(stream);
+  }
+
+  /**
+   * Download file to a local temp path
+   * Useful for Gemini File API which requires local file path for upload
+   * @param file - File object with storage key and visibility
+   * @param extension - File extension to use for temp file (e.g., '.png')
+   * @returns Local temp file path
+   */
+  async downloadFileToPath(file: FileObject, extension?: string): Promise<string> {
+    const { storageKey, visibility = 'private' } = file;
+    const stream = await this.minioClient(visibility).getObject(storageKey);
+    const buffer = await streamToBuffer(stream);
+
+    const ext = extension || path.extname(storageKey) || '.bin';
+    const tempPath = path.join(os.tmpdir(), `refly-vision-${createId()}${ext}`);
+    fs.writeFileSync(tempPath, buffer);
+
+    return tempPath;
   }
 
   /**

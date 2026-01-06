@@ -62,3 +62,27 @@ export interface SyncBatchTokenCreditUsageJobData {
   creditUsageSteps: CreditUsageStep[];
   timestamp: Date;
 }
+
+/**
+ * Multimodal token usage interface for credit tracking
+ */
+export interface MultimodalTokenUsageData {
+  promptTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cachedContentTokens?: number;
+  modalityType: 'image' | 'video' | 'audio' | 'document' | 'speech';
+  modelId?: string;
+}
+
+/**
+ * Job data for syncing multimodal credit usage
+ */
+export interface SyncMultimodalCreditUsageJobData {
+  uid: string;
+  resultId?: string;
+  version?: number;
+  tokenUsage: MultimodalTokenUsageData;
+  creditBilling: CreditBilling;
+  timestamp: Date;
+}

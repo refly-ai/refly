@@ -99,7 +99,8 @@ export class Agent extends BaseSkill {
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
     const { preprocessResult, mode = 'node_agent' } = config.configurable;
-    const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
+    const { optimizedQuery, context, sources, usedChatHistory, multimodalInterpretations } =
+      preprocessResult;
 
     const systemPrompt =
       mode === 'copilot_agent'
@@ -120,6 +121,7 @@ export class Agent extends BaseSkill {
       chatHistory: usedChatHistory,
       messages,
       images,
+      multimodalInterpretations, // Pass unified multimodal interpretations from preprocessing
       modelInfo,
     });
 

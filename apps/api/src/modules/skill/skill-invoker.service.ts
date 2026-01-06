@@ -546,7 +546,8 @@ export class SkillInvokerService {
     const forceBase64ForImages = providerKey === 'bedrock' || providerKey === 'vertex';
 
     if (imageFiles.length > 0 && hasVisionCapability) {
-      // Bedrock and Vertex providers must receive embedded base64 payloads regardless of URL configuration.
+      // Use base64/URL approach for image handling
+      // Bedrock and Vertex providers must receive embedded base64 payloads
       const modeOverride = forceBase64ForImages ? 'base64' : undefined;
       input.images = await this.driveService.generateDriveFileUrls(user, imageFiles, modeOverride);
     } else {

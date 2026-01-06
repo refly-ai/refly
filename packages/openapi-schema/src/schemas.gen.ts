@@ -5752,8 +5752,16 @@ export const SkillInputSchema = {
     },
     images: {
       type: 'array',
-      description: 'Image list (storage keys)',
+      description: 'Image list (storage keys or base64 URLs)',
       deprecated: true,
+      items: {
+        type: 'string',
+      },
+    },
+    imageInterpretations: {
+      type: 'array',
+      description:
+        'Image interpretations from Gemini multimodal processing (text descriptions of images)',
       items: {
         type: 'string',
       },

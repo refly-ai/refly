@@ -39,7 +39,12 @@ interface ImageUrlContent {
   // Images are cached as part of the prefix but don't have their own cache_control
 }
 
-type ContentItem = TextContent | ImageUrlContent;
+// ContentItem type used internally for building multimodal messages
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _ContentItem = TextContent | ImageUrlContent;
+
+// Import type for multimodal interpretations
+import type { MultimodalInterpretation } from './preprocess';
 
 // Note about minimum token thresholds:
 // Different Claude models have minimum requirements for caching:
@@ -57,6 +62,7 @@ export const buildFinalRequestMessages = ({
   chatHistory,
   messages,
   images,
+  multimodalInterpretations,
   modelInfo,
 }: {
   systemPrompt: string;
@@ -64,24 +70,50 @@ export const buildFinalRequestMessages = ({
   chatHistory: BaseMessage[];
   messages: BaseMessage[];
   images: string[];
+  multimodalInterpretations?: MultimodalInterpretation[];
   modelInfo?: LLMModelConfig;
 }) => {
-  // Prepare the final user message (with or without images)
-  const finalUserMessage = images?.length
-    ? createHumanMessageWithContent([
-        {
-          type: 'text',
-          text: userPrompt,
-        } as TextContent,
-        ...images.map(
-          (image) =>
-            ({
-              type: 'image_url',
-              image_url: { url: image },
-            }) as ImageUrlContent,
-        ),
-      ])
-    : new HumanMessage(userPrompt);
+  // If we have multimodal interpretations from Gemini preprocessing, inject them as text context
+  // This avoids passing large base64 payloads and keeps LangChain chain as pure text
+  let enrichedUserPrompt = userPrompt;
+
+  if (multimodalInterpretations?.length) {
+    const sections = multimodalInterpretations.map((interp) => {
+      // Capitalize type for display (e.g., 'image' -> 'Image')
+      const typeLabel = interp.type.charAt(0).toUpperCase() + interp.type.slice(1);
+      const fileLabel = interp.fileName || interp.fileId;
+      return `## ${typeLabel} Analysis: ${fileLabel}\n${interp.analysis}`;
+    });
+
+    enrichedUserPrompt = `${sections.join('\n\n---\n\n')}\n\n---\n\n${userPrompt}`;
+  }
+
+  // Fallback: If no multimodal interpretations but images are provided,
+  // use image_url format for models that support vision
+  const useImageUrlFallback = !multimodalInterpretations?.length && images?.length;
+
+  // Prepare the final user message
+  let finalUserMessage: HumanMessage;
+
+  if (useImageUrlFallback) {
+    // Build content array with images and text for vision-capable models
+    const content = [
+      // Add images first
+      ...images.map((imageUrl) => ({
+        type: 'image_url' as const,
+        image_url: { url: imageUrl },
+      })),
+      // Then add the text prompt
+      {
+        type: 'text' as const,
+        text: enrichedUserPrompt,
+      },
+    ];
+    finalUserMessage = new HumanMessage({ content });
+  } else {
+    // No images or already have multimodal interpretations - use text only
+    finalUserMessage = new HumanMessage(enrichedUserPrompt);
+  }
 
   // Assemble all messages - following Anthropic's caching order: tools -> system -> messages
   let requestMessages = [
@@ -389,13 +421,6 @@ export const applyAgentLoopCaching = (
   }
 
   return applyContextCaching(messages);
-};
-
-/**
- * Creates a HumanMessage with array content
- */
-const createHumanMessageWithContent = (contentItems: ContentItem[]): HumanMessage => {
-  return new HumanMessage({ content: contentItems } as BaseMessageFields);
 };
 
 // ============ Message List Truncation ============

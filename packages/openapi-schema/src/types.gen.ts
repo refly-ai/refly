@@ -4138,10 +4138,14 @@ export type SkillInput = {
    */
   originalQuery?: string;
   /**
-   * Image list (storage keys)
+   * Image list (storage keys or base64 URLs)
    * @deprecated
    */
   images?: Array<string>;
+  /**
+   * Image interpretations from Gemini multimodal processing (text descriptions of images)
+   */
+  imageInterpretations?: Array<string>;
 };
 
 /**

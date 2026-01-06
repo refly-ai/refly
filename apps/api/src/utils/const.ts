@@ -6,6 +6,7 @@ export const QUEUE_SYNC_TOKEN_USAGE = 'syncTokenUsage';
 export const QUEUE_SYNC_TOKEN_CREDIT_USAGE = 'syncTokenCreditUsage';
 export const QUEUE_SYNC_MEDIA_CREDIT_USAGE = 'syncMediaCreditUsage';
 export const QUEUE_SYNC_TOOL_CREDIT_USAGE = 'syncToolCreditUsage';
+export const QUEUE_SYNC_MULTIMODAL_CREDIT_USAGE = 'syncMultimodalCreditUsage';
 export const QUEUE_SYNC_STORAGE_USAGE = 'syncStorageUsage';
 export const QUEUE_SYNC_CANVAS_ENTITY = 'syncCanvasEntity';
 export const QUEUE_CLEAR_CANVAS_ENTITY = 'clearCanvasEntity';

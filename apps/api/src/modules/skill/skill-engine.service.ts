@@ -1,10 +1,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { PinoLogger } from 'nestjs-pino';
 import { ConfigService } from '@nestjs/config';
 import { ModuleRef } from '@nestjs/core';
 import { ReflyService } from '@refly/agent-tools';
 import { SkillEngine, SkillEngineOptions } from '@refly/skill-template';
 import { genImageID, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
+import { PinoLogger } from 'nestjs-pino';
 import { buildSuccessResponse } from '../../utils';
 import { genBaseRespDataFromError } from '../../utils/exception';
 import { ActionService } from '../action/action.service';
@@ -26,6 +26,7 @@ import { ProviderService } from '../provider/provider.service';
 import { RAGService } from '../rag/rag.service';
 import { SearchService } from '../search/search.service';
 import { ShareCreationService } from '../share/share-creation.service';
+import { MultimodalBridgeService } from '../tool/multimodal/multimodal-bridge.service';
 import { ScaleboxService } from '../tool/sandbox/scalebox.service';
 import { ToolService } from '../tool/tool.service';
 import { WorkflowPlanService } from '../workflow/workflow-plan.service';
@@ -51,6 +52,7 @@ export class SkillEngineService implements OnModuleInit {
   private scaleboxService: ScaleboxService;
   private shareCreationService: ShareCreationService;
   private workflowPlanService: WorkflowPlanService;
+  private multimodalBridgeService: MultimodalBridgeService;
   constructor(
     private moduleRef: ModuleRef,
     private config: ConfigService,
@@ -80,6 +82,9 @@ export class SkillEngineService implements OnModuleInit {
         this.scaleboxService = this.moduleRef.get(ScaleboxService, { strict: false });
         this.shareCreationService = this.moduleRef.get(ShareCreationService, { strict: false });
         this.workflowPlanService = this.moduleRef.get(WorkflowPlanService, { strict: false });
+        this.multimodalBridgeService = this.moduleRef.get(MultimodalBridgeService, {
+          strict: false,
+        });
       },
       {
         logger: this.logger,
@@ -235,6 +240,13 @@ export class SkillEngineService implements OnModuleInit {
         const result = await this.miscService.downloadFile(params);
         return result;
       },
+      downloadFileToPath: async (params) => {
+        const result = await this.miscService.downloadFileToPath(
+          { storageKey: params.storageKey, visibility: params.visibility },
+          params.extension,
+        );
+        return result;
+      },
       downloadFileFromUrl: async (url) => {
         const result = await this.miscService.downloadFileFromUrl(url);
         return result;
@@ -295,6 +307,65 @@ export class SkillEngineService implements OnModuleInit {
       },
       getWorkflowPlanById: async (user, params) => {
         return await this.workflowPlanService.getWorkflowPlanDetail(user, params);
+      },
+
+      // Vision AI methods - delegated to MultimodalBridgeService
+      visionRead: async (user, params) => {
+        return this.multimodalBridgeService.visionRead(user, params);
+      },
+
+      batchVisionRead: async (user, params) => {
+        return this.multimodalBridgeService.batchVisionRead(user, params);
+      },
+
+      getImageData: async (user, fileId) => {
+        return this.multimodalBridgeService.getImageData(user, fileId);
+      },
+
+      getMultimodalClient: () => {
+        // This returns null - actual client creation requires user context for API keys
+        // The vision_read tool should use visionRead method instead
+        return null;
+      },
+
+      // Video Understanding - delegated to MultimodalBridgeService
+      videoUnderstanding: async (user, params) => {
+        return this.multimodalBridgeService.videoUnderstanding(user, params);
+      },
+
+      // Document Processing - delegated to MultimodalBridgeService
+      documentProcessing: async (user, params) => {
+        return this.multimodalBridgeService.documentProcessing(user, params);
+      },
+
+      // Audio Understanding - delegated to MultimodalBridgeService
+      audioUnderstanding: async (user, params) => {
+        return this.multimodalBridgeService.audioUnderstanding(user, params);
+      },
+
+      // Speech Generation (TTS) - delegated to MultimodalBridgeService
+      speechGeneration: async (user, params) => {
+        return this.multimodalBridgeService.speechGeneration(user, params);
+      },
+
+      // Get available TTS voices
+      getAvailableTTSVoices: () => {
+        return this.multimodalBridgeService.getAvailableTTSVoices();
+      },
+
+      // Get video data helper
+      getVideoData: async (user, fileId) => {
+        return this.multimodalBridgeService.getVideoData(user, fileId);
+      },
+
+      // Get document data helper
+      getDocumentData: async (user, fileId) => {
+        return this.multimodalBridgeService.getDocumentData(user, fileId);
+      },
+
+      // Get audio data helper
+      getAudioData: async (user, fileId) => {
+        return this.multimodalBridgeService.getAudioData(user, fileId);
       },
     };
   };
