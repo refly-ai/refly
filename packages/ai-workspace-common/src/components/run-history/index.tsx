@@ -75,6 +75,8 @@ const ActionCell = memo(
             setCreditInsufficientModalVisible(true);
             break;
           case 'viewSchedule':
+            navigate('/workflow-list');
+            break;
           case 'fixWorkflow':
             if (record.sourceCanvasId) {
               navigate(`/canvas/${record.sourceCanvasId}`);
