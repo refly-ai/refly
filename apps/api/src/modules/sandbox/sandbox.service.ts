@@ -12,7 +12,7 @@ import { DriveService } from '../drive/drive.service';
 import { SandboxExecutionContext, S3Config } from './sandbox.schema';
 import { SandboxCanvasIdRequiredError } from './sandbox.exception';
 import { SandboxResponseFactory } from './sandbox.response';
-import { guard } from '../../utils/guard';
+import { guard } from '@refly/utils';
 import { Config } from '../config/config.decorator';
 import { SANDBOX_TIMEOUTS } from './sandbox.constants';
 

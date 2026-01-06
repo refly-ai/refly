@@ -1,6 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
+import { guard } from '@refly/utils';
 import { RedisService } from '../common/redis.service';
 import { v4 as uuidv4 } from 'uuid';
 import Redis from 'ioredis';
@@ -13,7 +14,6 @@ import {
 } from './sandbox.schema';
 import { SANDBOX_QUEUES, SANDBOX_TIMEOUTS } from './sandbox.constants';
 import { SandboxExecutionTimeoutError, SandboxResponseParseError } from './sandbox.exception';
-import { guard } from '../../utils/guard';
 
 /**
  * Sandbox Worker Redis Queue Client
