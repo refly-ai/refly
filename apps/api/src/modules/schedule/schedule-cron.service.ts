@@ -13,6 +13,7 @@ import {
   SCHEDULE_JOB_OPTIONS,
   ScheduleAnalyticsEvents,
   SchedulePeriodType,
+  ScheduleFailureReason,
   getScheduleQuota,
   getScheduleConfig,
   type ScheduleConfig,
@@ -189,9 +190,11 @@ export class ScheduleCronService implements OnModuleInit {
 
       // Disable excess schedules
       if (schedulesToDisable.length > 0) {
+        const scheduleIdsToDisable = schedulesToDisable.map((s) => s.scheduleId);
+
         await this.prisma.workflowSchedule.updateMany({
           where: {
-            scheduleId: { in: schedulesToDisable.map((s) => s.scheduleId) },
+            scheduleId: { in: scheduleIdsToDisable },
           },
           data: {
             isEnabled: false,
@@ -199,8 +202,26 @@ export class ScheduleCronService implements OnModuleInit {
           },
         });
 
+        // Update all WorkflowScheduleRecord for disabled schedules to failed status
+        const now = new Date();
+        const { count } = await this.prisma.workflowScheduleRecord.updateMany({
+          where: {
+            scheduleId: { in: scheduleIdsToDisable },
+            status: { in: ['pending', 'scheduled', 'processing'] }, // Only update records that haven't completed
+          },
+          data: {
+            status: 'failed',
+            failureReason: ScheduleFailureReason.SCHEDULE_LIMIT_EXCEEDED,
+            errorDetails: JSON.stringify({
+              reason: 'Schedule was disabled due to quota exceeded',
+              disabledAt: now.toISOString(),
+            }),
+            completedAt: now,
+          },
+        });
+
         this.logger.log(
-          `Auto-disabled ${schedulesToDisable.length} schedules for user ${schedule.uid} due to quota exceeded`,
+          `Auto-disabled ${schedulesToDisable.length} schedules for user ${schedule.uid} due to quota exceeded, updated ${count} schedule records to failed`,
         );
       }
 

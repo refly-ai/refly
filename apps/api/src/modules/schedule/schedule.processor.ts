@@ -261,6 +261,30 @@ export class ScheduleProcessor extends WorkerHost {
         }
       }
 
+      // 3.1 Check if the current record has already failed
+      // This prevents re-execution of already failed records
+      if (existingRecord && existingRecord.status === 'failed') {
+        this.logger.warn(
+          `Schedule record ${scheduleRecordId} has already failed with reason ${existingRecord.failureReason}, skipping execution for job ${job.id}`,
+        );
+
+        // Rollback Redis counter since we're not proceeding with execution
+        if (redisCounterActive) {
+          try {
+            const redisKey = `${SCHEDULE_REDIS_KEYS.USER_CONCURRENT_PREFIX}${uid}`;
+            await this.redisService.decr(redisKey);
+            this.logger.debug(`Rolled back Redis counter for user ${uid} (record already failed)`);
+          } catch (redisError) {
+            this.logger.warn(`Failed to rollback Redis counter for user ${uid}`, redisError);
+          }
+        }
+
+        // Record metric based on failure reason
+        const failureReason = existingRecord.failureReason || 'unknown_error';
+        this.metrics.execution.fail('cron', failureReason);
+        return null; // Exit gracefully without error
+      }
+
       // 4. Create new WorkflowScheduleRecord only if no existing record was found
       // This is a fallback for edge cases (e.g., manual trigger without scheduled record)
       if (!scheduleRecordId) {
