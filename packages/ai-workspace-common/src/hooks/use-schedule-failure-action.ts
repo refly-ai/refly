@@ -162,7 +162,7 @@ export const useScheduleFailureAction = (canvasId: string) => {
       switch (actionType) {
         case 'upgrade':
         case 'buyCredits':
-          setCreditInsufficientModalVisible(true);
+          setCreditInsufficientModalVisible(true, undefined, 'canvas');
           break;
         case 'viewSchedule':
         case 'fixWorkflow':
