@@ -119,8 +119,8 @@ export class ScheduleService {
 
   /**
    * Check if schedule should be immediately triggered after creation/update
-   * If nextRunAt is in the past or within the next minute, trigger immediately
-   * to avoid missing the first execution due to cron scan delay
+   * If nextRunAt is in the past (already due), trigger immediately
+   * to avoid waiting for the next cron scan
    * @param scheduleId Schedule ID to check
    * @param nextRunAt Next run time to check
    */
@@ -131,22 +131,18 @@ export class ScheduleService {
 
     const now = new Date();
     const timeUntilNextRun = nextRunAt.getTime() - now.getTime();
-    // If nextRunAt is in the past or within the next 60 seconds, check immediately
-    // This ensures schedules with near-future execution times don't miss the first run
-    // The cron job runs every minute, so anything within 60 seconds might be missed
-    const IMMEDIATE_TRIGGER_THRESHOLD_MS = 60 * 1000; // 60 seconds
 
-    if (timeUntilNextRun <= IMMEDIATE_TRIGGER_THRESHOLD_MS) {
+    // Only trigger immediately if nextRunAt is already in the past (already due)
+    // Future schedules will be handled by the regular cron scan (runs every minute)
+    // This avoids unnecessary DB queries for schedules that haven't reached their execution time
+    if (timeUntilNextRun <= 0) {
       // Trigger asynchronously to avoid blocking the API response
       // Use setImmediate to ensure it runs after the current operation completes
-      // checkAndTriggerSchedule will only trigger if nextRunAt <= now, so it's safe
-      setImmediate(async () => {
-        try {
-          await this.cronService.checkAndTriggerSchedule(scheduleId);
-        } catch (error) {
+      setImmediate(() => {
+        this.cronService.checkAndTriggerSchedule(scheduleId).catch((error) => {
           // Log error but don't fail the create/update operation
           this.logger.error(`Failed to immediately trigger schedule ${scheduleId}`, error);
-        }
+        });
       });
     }
   }
