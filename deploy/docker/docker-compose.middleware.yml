@@ -92,7 +92,7 @@ services:
       - refly_network
   refly-sandbox:
     container_name: refly_sandbox
-    image: refly-sandbox-worker:latest  # Local: refly-sandbox-worker:latest, Production: ghcr.io/refly-ai/refly-sandbox-worker:latest
+    image: ghcr.io/refly-ai/refly-sandbox:latest  # Local: refly-sandbox-worker:latest, GHCR: ghcr.io/refly-ai/refly-sandbox:latest
     restart: always
     env_file:
       - .env
