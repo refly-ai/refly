@@ -336,13 +336,17 @@ const RunHistoryList = memo(() => {
       },
       {
         title: t('runHistory.tableTitle.time'),
-        dataIndex: 'scheduledAt',
-        key: 'scheduledAt',
+        dataIndex: 'triggeredAt',
+        key: 'triggeredAt',
         width: 180,
         align: 'center' as const,
-        render: (scheduledAt: string) => (
+        render: (triggeredAt: string | undefined, record: ScheduleRecordItem) => (
           <span className="text-sm text-gray-500">
-            {time(scheduledAt, language as LOCALE).format('MM/DD/YYYY, hh:mm A')}
+            {triggeredAt
+              ? time(triggeredAt, language as LOCALE).format('MM/DD/YYYY, hh:mm A')
+              : record.scheduledAt
+                ? time(record.scheduledAt, language as LOCALE).format('MM/DD/YYYY, hh:mm A')
+                : '-'}
           </span>
         ),
       },

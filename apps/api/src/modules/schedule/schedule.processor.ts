@@ -602,6 +602,11 @@ export class ScheduleProcessor extends WorkerHost {
               where: { scheduleId },
             });
 
+            // 2.1 Get schedule record to retrieve triggeredAt
+            const scheduleRecord = await this.prisma.workflowScheduleRecord.findUnique({
+              where: { scheduleRecordId },
+            });
+
             // 3. Calculate next run with timezone
             const timezone = schedule?.timezone || 'Asia/Shanghai';
             let nextRunTime = 'Check Dashboard';
@@ -616,11 +621,15 @@ export class ScheduleProcessor extends WorkerHost {
               }
             }
 
-            // 4. Send email
+            // 4. Use triggeredAt as runTime (when the workflow was triggered), fallback to scheduledAt or current time
+            const runTimeDate =
+              scheduleRecord?.triggeredAt || scheduleRecord?.scheduledAt || new Date();
+
+            // 5. Send email
             const { subject, html } = generateScheduleFailedEmail({
               userName: fullUser.nickname || 'User',
               scheduleName: schedule?.name || 'Scheduled Workflow',
-              runTime: formatDateTime(new Date(), timezone),
+              runTime: formatDateTime(runTimeDate, timezone),
               nextRunTime,
               schedulesLink: `${this.config.get<string>('origin')}/run-history/${scheduleRecordId}`,
               runDetailsLink: `${this.config.get<string>('origin')}/run-history/${scheduleRecordId}`,

@@ -200,10 +200,13 @@ export class ScheduleEventListener {
       const origin = this.config.get<string>('origin');
       const runDetailsLink = `${origin}/run-history/${scheduleRecordId}`;
 
+      // Use triggeredAt as runTime (when the workflow was triggered), fallback to scheduledAt or current time
+      const runTimeDate = scheduleRecord?.triggeredAt || scheduleRecord?.scheduledAt || new Date();
+
       const emailData = {
         userName: fullUser.nickname || 'User',
         scheduleName,
-        runTime: formatDateTime(new Date(), timezone),
+        runTime: formatDateTime(runTimeDate, timezone),
         nextRunTime,
         schedulesLink: runDetailsLink,
         runDetailsLink,
