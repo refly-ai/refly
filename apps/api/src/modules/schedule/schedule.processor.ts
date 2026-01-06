@@ -435,7 +435,7 @@ export class ScheduleProcessor extends WorkerHost {
       // This indicates the workflow is actually being executed
       // Extract used tools from canvas nodes
       const toolsetsWithNodes = extractToolsetsWithNodes(canvasData?.nodes ?? []);
-      const usedToolIds = toolsetsWithNodes.map((t) => t.toolset?.id).filter(Boolean);
+      const usedToolIds = toolsetsWithNodes.map((t) => t.toolset?.toolset?.key).filter(Boolean);
 
       await this.prisma.workflowScheduleRecord.update({
         where: { scheduleRecordId },
