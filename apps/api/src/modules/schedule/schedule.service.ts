@@ -120,36 +120,6 @@ export class ScheduleService {
   }
 
   /**
-   * Check if schedule should be immediately triggered after creation/update
-   * If nextRunAt is in the past (already due), trigger immediately
-   * to avoid waiting for the next cron scan
-   * @param scheduleId Schedule ID to check
-   * @param nextRunAt Next run time to check
-   */
-  private async checkAndTriggerIfNeeded(scheduleId: string, nextRunAt: Date | null): Promise<void> {
-    if (!nextRunAt) {
-      return;
-    }
-
-    const now = new Date();
-    const timeUntilNextRun = nextRunAt.getTime() - now.getTime();
-
-    // Only trigger immediately if nextRunAt is already in the past (already due)
-    // Future schedules will be handled by the regular cron scan (runs every minute)
-    // This avoids unnecessary DB queries for schedules that haven't reached their execution time
-    if (timeUntilNextRun <= 0) {
-      // Trigger asynchronously to avoid blocking the API response
-      // Use setImmediate to ensure it runs after the current operation completes
-      setImmediate(() => {
-        this.cronService.checkAndTriggerSchedule(scheduleId).catch((error) => {
-          // Log error but don't fail the create/update operation
-          this.logger.error(`Failed to immediately trigger schedule ${scheduleId}`, error);
-        });
-      });
-    }
-  }
-
-  /**
    * Track analytics event using telemetry service
    * @param eventName - Event name from ScheduleAnalyticsEvents
    * @param uid - User ID
@@ -254,11 +224,6 @@ export class ScheduleService {
         );
       }
 
-      // Check if schedule should be immediately triggered (if nextRunAt is very soon)
-      if (isEnabled && nextRunAt) {
-        await this.checkAndTriggerIfNeeded(existingSchedule.scheduleId, nextRunAt);
-      }
-
       return this.excludePk(restored);
     }
 
@@ -344,11 +309,6 @@ export class ScheduleService {
         await this.deleteScheduledRecord(scheduleId);
       }
 
-      // Check if schedule should be immediately triggered (if nextRunAt is very soon)
-      if (isEnabled && nextRunAt) {
-        await this.checkAndTriggerIfNeeded(scheduleId, nextRunAt);
-      }
-
       return this.excludePk(updated);
     } else {
       // Create new schedule
@@ -370,11 +330,6 @@ export class ScheduleService {
         // Create scheduled record if enabled and has nextRunAt
         if (isEnabled && nextRunAt) {
           await this.createOrUpdateScheduledRecord(uid, scheduleId, dto.canvasId, nextRunAt);
-        }
-
-        // Check if schedule should be immediately triggered (if nextRunAt is very soon)
-        if (isEnabled && nextRunAt) {
-          await this.checkAndTriggerIfNeeded(scheduleId, nextRunAt);
         }
 
         return this.excludePk(schedule);
