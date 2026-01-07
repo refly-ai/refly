@@ -290,7 +290,9 @@ export const ScheduleColumn = memo(
             ? t('schedule.weekly')
             : config?.type === 'monthly'
               ? t('schedule.monthly')
-              : t('schedule.title');
+              : config?.type === 'hourly'
+                ? t('schedule.hourly')
+                : t('schedule.title');
       const enabled = schedule.isEnabled ?? false;
 
       return {
@@ -359,7 +361,7 @@ export const ScheduleColumn = memo(
               }}
             />
           }
-          trigger="hover"
+          trigger="click"
           open={open}
           onOpenChange={handleOpenChange}
           placement="bottom"
