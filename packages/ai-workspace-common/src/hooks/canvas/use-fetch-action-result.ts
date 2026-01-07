@@ -45,6 +45,7 @@ export const useFetchActionResult = () => {
           contentPreview: processContentPreview(remoteResult.steps?.map((s) => s?.content || '')),
           metadata: {
             status: remoteResult?.status,
+            version: remoteResult?.version,
             reasoningContent: processContentPreview(
               remoteResult.steps?.map((s) => s?.reasoningContent || ''),
             ),

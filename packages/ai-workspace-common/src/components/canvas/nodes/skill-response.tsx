@@ -30,6 +30,7 @@ import {
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
+import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import {
   useGetCreditBalance,
   useGetCreditUsageByResultId,
@@ -79,12 +80,20 @@ const NodeStatusBar = memo(
     error?: string;
     version?: number;
   }) => {
+    // Get result version from store as fallback to ensure we use the latest version
+    const { result } = useActionResultStoreShallow((state) => ({
+      result: state.resultMap[resultId],
+    }));
+
+    // Prefer result.version over prop version to ensure we use the latest version
+    const effectiveVersion = result?.version ?? version;
+
     // Query credit usage when skill is completed
     const { data: creditUsage } = useGetCreditUsageByResultId(
       {
         query: {
           resultId: resultId ?? '',
-          version: version?.toString(),
+          version: effectiveVersion?.toString(),
         },
       },
       undefined,
@@ -305,6 +314,7 @@ export const SkillResponseNode = memo(
     const currentSkill = actionMeta || selectedSkill;
 
     const { startPolling, resetFailedState } = useActionPolling();
+    const { fetchActionResult } = useFetchActionResult();
     const { result, isStreaming, removeStreamResult, removeActionResult } =
       useActionResultStoreShallow((state) => ({
         result: state.resultMap[entityId],
@@ -407,6 +417,17 @@ export const SkillResponseNode = memo(
       removeStreamResult,
       readonly,
     ]);
+
+    // In readonly mode, fetch latest result once on mount to ensure node state is up-to-date
+    useEffect(() => {
+      if (readonly && entityId && !shareId) {
+        // Fetch once when component mounts in readonly mode
+        fetchActionResult(entityId, {
+          silent: true,
+          nodeToUpdate: { id, data } as any,
+        });
+      }
+    }, [readonly, entityId, shareId, fetchActionResult, id, data]);
 
     // Listen to pilot step status changes and sync with node status
     useEffect(() => {
