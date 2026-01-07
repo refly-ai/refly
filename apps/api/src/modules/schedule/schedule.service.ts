@@ -229,12 +229,15 @@ export class ScheduleService {
 
     // 5. Determine if schedule should be enabled
     const isEnabled = dto.isEnabled ?? existingSchedule?.isEnabled ?? false;
+    const wasEnabled = existingSchedule?.isEnabled ?? false;
 
-    // 6. Check Plan Quota (only if enabling the schedule from disabled state)
+    // 6. Check Plan Quota (always check when enabling, regardless of previous state)
     if (isEnabled === true) {
       await this.checkScheduleQuota(uid, existingSchedule?.scheduleId);
-      // Track schedule enable event
-      await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid);
+      // Track schedule enable event only when transitioning from disabled to enabled
+      if (!wasEnabled) {
+        await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid);
+      }
     }
 
     // 7. Calculate next run time
