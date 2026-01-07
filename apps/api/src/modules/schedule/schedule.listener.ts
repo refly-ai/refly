@@ -308,7 +308,7 @@ export class ScheduleEventListener {
         where: { canvasId, uid, deletedAt: null },
         data: {
           isEnabled: false,
-          deletedAt: new Date(),
+          updatedAt: new Date(),
           nextRunAt: null, // Clear next run time to prevent any race conditions
         },
       });
