@@ -56,3 +56,4 @@ docs/.vitepress/cache/*
 .claude/settings.local.json
 
 .codex/*
+.ai/*
