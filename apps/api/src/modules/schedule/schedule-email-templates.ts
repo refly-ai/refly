@@ -265,7 +265,7 @@ export function generateInsufficientCreditsEmail(data: InsufficientCreditsData):
 
 // 3. Success
 export interface ScheduleSuccessData extends ScheduleEmailCommonData {
-  runTime: string;
+  scheduledAt: string;
   nextRunTime: string;
   runDetailsLink: string;
 }
@@ -286,7 +286,7 @@ export function generateScheduleSuccessEmail(data: ScheduleSuccessData): {
     <div style="${STYLES.sectionTitle}">Run details</div>
     <ul style="${STYLES.list}">
       <li style="${STYLES.listItem}">Status: <span style="color: #12B76A;">Succeeded</span></li>
-      <li style="${STYLES.listItem}">Run time: ${data.runTime}</li>
+      <li style="${STYLES.listItem}">Run time: ${data.scheduledAt}</li>
       <li style="${STYLES.listItem}">Next scheduled run: ${data.nextRunTime}</li>
     </ul>
 
@@ -308,7 +308,7 @@ export function generateScheduleSuccessEmail(data: ScheduleSuccessData): {
 
 // 4. Failure
 export interface ScheduleFailedData extends ScheduleEmailCommonData {
-  runTime: string;
+  scheduledAt: string;
   nextRunTime: string;
   runDetailsLink: string;
 }
@@ -329,7 +329,7 @@ export function generateScheduleFailedEmail(data: ScheduleFailedData): {
     <div style="${STYLES.sectionTitle}">Run details</div>
     <ul style="${STYLES.list}">
       <li style="${STYLES.listItem}">Status: <span style="color: #F04438;">Failed</span></li>
-      <li style="${STYLES.listItem}">Run time: ${data.runTime}</li>
+      <li style="${STYLES.listItem}">Run time: ${data.scheduledAt}</li>
       <li style="${STYLES.listItem}">Next scheduled run: ${data.nextRunTime}</li>
     </ul>
 

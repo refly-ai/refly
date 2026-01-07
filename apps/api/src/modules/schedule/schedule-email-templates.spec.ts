@@ -217,7 +217,7 @@ describe('Schedule Email Templates', () => {
     const mockData: ScheduleSuccessData = {
       userName: 'Bob Johnson',
       scheduleName: 'Data Sync',
-      runTime: '01/15/2024, 09:30 AM',
+      scheduledAt: '01/15/2024, 09:30 AM',
       nextRunTime: '01/16/2024, 09:30 AM',
       schedulesLink: `${mockOrigin}/run-history/record-456`,
       runDetailsLink: `${mockOrigin}/run-history/record-456`,
@@ -275,7 +275,7 @@ describe('Schedule Email Templates', () => {
     const mockData: ScheduleFailedData = {
       userName: 'Alice Williams',
       scheduleName: 'Backup Task',
-      runTime: '01/15/2024, 11:00 AM',
+      scheduledAt: '01/15/2024, 11:00 AM',
       nextRunTime: '01/16/2024, 11:00 AM',
       schedulesLink: `${mockOrigin}/run-history/record-789`,
       runDetailsLink: `${mockOrigin}/run-history/record-789`,
@@ -366,7 +366,7 @@ describe('Schedule Email Templates', () => {
       const mockData: ScheduleSuccessData = {
         userName: 'Test User',
         scheduleName: 'Test Schedule',
-        runTime: '01/15/2024, 10:00 AM',
+        scheduledAt: '01/15/2024, 10:00 AM',
         nextRunTime: '01/16/2024, 10:00 AM',
         schedulesLink: `${mockOrigin}/run-history/${scheduleRecordId}`,
         runDetailsLink: `${mockOrigin}/run-history/${scheduleRecordId}`,
@@ -380,7 +380,7 @@ describe('Schedule Email Templates', () => {
       const mockData: ScheduleFailedData = {
         userName: 'Test User',
         scheduleName: 'Test Schedule',
-        runTime: '01/15/2024, 11:00 AM',
+        scheduledAt: '01/15/2024, 11:00 AM',
         nextRunTime: '01/16/2024, 11:00 AM',
         schedulesLink: `${mockOrigin}/run-history/${scheduleRecordId}`,
         runDetailsLink: `${mockOrigin}/run-history/${scheduleRecordId}`,
@@ -418,7 +418,7 @@ describe('Schedule Email Templates', () => {
       const mockData: ScheduleSuccessData = {
         userName: 'Test',
         scheduleName: 'Test',
-        runTime: '01/15/2024, 10:00 AM',
+        scheduledAt: '01/15/2024, 10:00 AM',
         nextRunTime: '01/16/2024, 10:00 AM',
         schedulesLink: `${mockOrigin}/run-history/test`,
         runDetailsLink: `${mockOrigin}/run-history/test`,
@@ -431,7 +431,7 @@ describe('Schedule Email Templates', () => {
       const mockData: ScheduleFailedData = {
         userName: 'Test',
         scheduleName: 'Test',
-        runTime: '01/15/2024, 11:00 AM',
+        scheduledAt: '01/15/2024, 11:00 AM',
         nextRunTime: '01/16/2024, 11:00 AM',
         schedulesLink: `${mockOrigin}/run-history/test`,
         runDetailsLink: `${mockOrigin}/run-history/test`,
@@ -519,7 +519,7 @@ describe('Schedule Email Templates', () => {
       const mockData: ScheduleSuccessData = {
         userName: 'Test',
         scheduleName: 'Test',
-        runTime: '2024-01-15 10:00:00',
+        scheduledAt: '2024-01-15 10:00:00',
         nextRunTime: '2024-01-16 10:00:00',
         schedulesLink: `${mockOrigin}/run-history/test`,
         runDetailsLink: `${mockOrigin}/run-history/test`,
@@ -546,7 +546,7 @@ describe('Schedule Email Templates', () => {
       const mockData: ScheduleFailedData = {
         userName: 'Test',
         scheduleName: 'Test',
-        runTime: '2024-01-15 11:00:00',
+        scheduledAt: '2024-01-15 11:00:00',
         nextRunTime: '2024-01-16 11:00:00',
         schedulesLink: `${mockOrigin}/run-history/test`,
         runDetailsLink: `${mockOrigin}/run-history/test`,
@@ -666,7 +666,7 @@ describe('Schedule Email Templates', () => {
       const mockData: ScheduleSuccessData = {
         userName: 'Test User',
         scheduleName: 'Test Schedule',
-        runTime: '01/15/2024, 10:00 AM',
+        scheduledAt: '01/15/2024, 10:00 AM',
         nextRunTime: '01/16/2024, 10:00 AM',
         schedulesLink: `${mockOrigin}/run-history/test`,
         runDetailsLink: `${mockOrigin}/run-history/test`,
@@ -690,7 +690,7 @@ describe('Schedule Email Templates', () => {
       const mockData: ScheduleFailedData = {
         userName: 'Test User',
         scheduleName: 'Test Schedule',
-        runTime: '01/15/2024, 11:00 AM',
+        scheduledAt: '01/15/2024, 11:00 AM',
         nextRunTime: '01/16/2024, 11:00 AM',
         schedulesLink: `${mockOrigin}/run-history/test`,
         runDetailsLink: `${mockOrigin}/run-history/test`,
@@ -755,7 +755,7 @@ describe('Schedule Email Templates', () => {
       const mockData: ScheduleSuccessData = {
         userName: 'Test',
         scheduleName: 'Test',
-        runTime: '01/15/2024, 10:00 AM',
+        scheduledAt: '01/15/2024, 10:00 AM',
         nextRunTime: '01/16/2024, 10:00 AM',
         schedulesLink: `${mockOrigin}/run-history/${scheduleRecordId}`,
         runDetailsLink: `${mockOrigin}/run-history/${scheduleRecordId}`,
@@ -773,7 +773,7 @@ describe('Schedule Email Templates', () => {
       const mockData: ScheduleFailedData = {
         userName: 'Test',
         scheduleName: 'Test',
-        runTime: '01/15/2024, 11:00 AM',
+        scheduledAt: '01/15/2024, 11:00 AM',
         nextRunTime: '01/16/2024, 11:00 AM',
         schedulesLink: `${mockOrigin}/run-history/${scheduleRecordId}`,
         runDetailsLink: `${mockOrigin}/run-history/${scheduleRecordId}`,

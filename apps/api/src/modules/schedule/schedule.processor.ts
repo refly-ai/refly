@@ -621,15 +621,14 @@ export class ScheduleProcessor extends WorkerHost {
               }
             }
 
-            // 4. Use triggeredAt as runTime (when the workflow was triggered), fallback to scheduledAt or current time
-            const runTimeDate =
-              scheduleRecord?.triggeredAt || scheduleRecord?.scheduledAt || new Date();
+            // 4. Use scheduledAt as the run time
+            const scheduledAtDate = scheduleRecord?.scheduledAt || new Date();
 
             // 5. Send email
             const { subject, html } = generateScheduleFailedEmail({
               userName: fullUser.nickname || 'User',
               scheduleName: schedule?.name || 'Scheduled Workflow',
-              runTime: formatDateTime(runTimeDate, timezone),
+              scheduledAt: formatDateTime(scheduledAtDate, timezone),
               nextRunTime,
               schedulesLink: `${this.config.get<string>('origin')}/run-history/${scheduleRecordId}`,
               runDetailsLink: `${this.config.get<string>('origin')}/run-history/${scheduleRecordId}`,
