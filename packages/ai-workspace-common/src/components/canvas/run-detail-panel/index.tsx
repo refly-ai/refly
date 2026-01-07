@@ -179,9 +179,7 @@ export const RunDetailPanel = memo(
                 <Clock size={16} />
                 <span className="text-sm font-normal leading-[21px]">
                   {t('runDetail.time')}：
-                  {time(info.triggeredAt || info.scheduledAt, language as LOCALE).format(
-                    'MM/DD/YYYY, hh:mm A',
-                  )}
+                  {time(info.scheduledAt, language as LOCALE).format('MM/DD/YYYY, hh:mm A')}
                 </span>
               </div>
 
