@@ -23,9 +23,11 @@ import {
   getScheduleConfig,
   type ScheduleConfig,
   ScheduleFailureReason,
+  ScheduleAnalyticsEvents,
 } from './schedule.constants';
 import { SchedulePriorityService } from './schedule-priority.service';
 import { ScheduleCronService } from './schedule-cron.service';
+import { logEvent } from '@refly/telemetry-node';
 
 @Injectable()
 export class ScheduleService {
@@ -147,6 +149,35 @@ export class ScheduleService {
     }
   }
 
+  /**
+   * Track analytics event using telemetry service
+   * @param eventName - Event name from ScheduleAnalyticsEvents
+   * @param uid - User ID
+   * @param metadata - Event metadata
+   */
+  private async trackScheduleEvent(
+    eventName: string,
+    uid: string,
+    metadata?: Record<string, any>,
+  ): Promise<void> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { uid },
+        select: { uid: true, email: true },
+      });
+
+      if (user) {
+        logEvent(user, eventName, null, metadata);
+        this.logger.debug(`Analytics event: ${eventName}`, { uid, ...metadata });
+      } else {
+        this.logger.warn(`User not found for analytics event ${eventName}, uid: ${uid}`);
+      }
+    } catch (error) {
+      // Don't fail the operation if analytics fails
+      this.logger.error(`Failed to track analytics event ${eventName}:`, error);
+    }
+  }
+
   async createSchedule(uid: string, dto: CreateScheduleDto) {
     // 1. Validate Cron Expression
     this.validateCronExpression(dto.cronExpression, dto.timezone);
@@ -171,6 +202,8 @@ export class ScheduleService {
       // Check quota if enabling
       if (isEnabled) {
         await this.checkScheduleQuota(uid, existingSchedule.scheduleId);
+        // Track schedule enable event
+        await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid);
       }
 
       // Calculate next run time
@@ -235,8 +268,12 @@ export class ScheduleService {
     // 6. Check Plan Quota (only if enabling the schedule from disabled state)
     if (existingSchedule?.isEnabled === false && isEnabled === true) {
       await this.checkScheduleQuota(uid, existingSchedule.scheduleId);
+      // Track schedule enable event
+      await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid);
     } else if (!existingSchedule && isEnabled) {
       await this.checkScheduleQuota(uid);
+      // Track schedule enable event
+      await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid);
     }
 
     // 7. Calculate next run time

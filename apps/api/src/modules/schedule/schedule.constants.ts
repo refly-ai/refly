@@ -288,4 +288,6 @@ export type SchedulePeriodTypeValue = (typeof SchedulePeriodType)[keyof typeof S
 export const ScheduleAnalyticsEvents = {
   /** Schedule execution triggered at Next Run Time */
   SCHEDULE_RUN_TRIGGERED: 'schedule_run_triggered',
+  /** Schedule enabled */
+  SCHEDULE_ENABLE: 'schedule_enable',
 } as const;
