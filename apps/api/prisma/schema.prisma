@@ -2418,47 +2418,43 @@ model WorkflowScheduleRecord {
 /// Lambda job execution record for tracking async file processing tasks
 model LambdaJob {
   /// Primary key
-  pk          BigInt   @id @default(autoincrement())
+  pk            BigInt   @id @default(autoincrement())
   /// Unique job identifier
-  jobId       String   @unique @map("job_id")
+  jobId         String   @unique @map("job_id")
   /// Job type: document-ingest, image-transform, document-render, video-analyze, file-upload
-  type        String   @map("type")
+  type          String   @map("type")
   /// User ID
-  uid         String   @map("uid")
+  uid           String   @map("uid")
   /// Job status: pending, processing, success, failed
-  status      String   @default("pending") @map("status")
+  status        String   @default("pending") @map("status")
   /// Original file name
-  name        String?  @map("name")
+  name          String?  @map("name")
   /// MIME type
-  mimeType    String?  @map("mime_type")
+  mimeType      String?  @map("mime_type")
   /// S3 storage key for result
-  storageKey  String?  @map("storage_key")
+  storageKey    String?  @map("storage_key")
   /// Storage type: temporary (lambda-output/) or permanent (drive/)
-  storageType String   @default("temporary") @map("storage_type")
-  /// Related resource ID
-  resourceId  String?  @map("resource_id")
+  storageType   String   @default("temporary") @map("storage_type")
   /// Related drive file ID
-  fileId      String?  @map("file_id")
-  /// Canvas ID for context
-  canvasId    String?  @map("canvas_id")
-  /// Tool name (e.g., GMAIL_FETCH_ATTACHMENT)
-  toolName    String?  @map("tool_name")
+  fileId        String?  @map("file_id")
+  /// Action result ID for linking back
+  resultId      String?  @map("result_id")
+  /// Action result version for linking back
+  resultVersion Int?     @map("result_version")
   /// Error message if failed
-  error       String?  @map("error")
+  error         String?  @map("error")
   /// Processing duration in milliseconds
-  durationMs  Int?     @map("duration_ms")
+  durationMs    Int?     @map("duration_ms")
   /// Metadata (JSON)
-  metadata    String?  @map("metadata")
+  metadata      String?  @map("metadata")
   /// Create timestamp
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   @@index([uid, createdAt])
   @@index([status, createdAt])
-  @@index([resourceId])
   @@index([fileId])
-  @@index([toolName, createdAt])
-  @@index([type, status])
+  @@index([resultId, resultVersion])
   @@map("lambda_jobs")
 }

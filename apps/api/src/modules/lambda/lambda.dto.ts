@@ -80,7 +80,7 @@ export interface DocumentIngestTaskPayload {
     bucket: string;
     prefix: string;
   };
-  resourceId?: string;
+  fileId?: string;
   contentType: string;
   name?: string;
   // todo: ocr and extractImages are not available yet
@@ -181,7 +181,7 @@ export interface VideoAnalyzeTaskPayload {
     bucket: string;
     prefix: string;
   };
-  resourceId?: string;
+  fileId?: string;
   name?: string;
   options?: {
     frameCount?: number;
@@ -211,7 +211,12 @@ export interface VideoAnalyzeResultPayload {
 
 export interface DispatchDocumentIngestParams {
   uid: string;
-  resourceId: string;
+  /** Related drive file ID */
+  fileId: string;
+  /** Action result ID for linking back */
+  resultId?: string;
+  /** Action result version for linking back */
+  resultVersion?: number;
   /** S3 input location */
   s3Input: {
     bucket: string;
@@ -227,7 +232,10 @@ export interface DispatchDocumentIngestParams {
 export interface DispatchImageTransformParams {
   uid: string;
   fileId: string;
-  canvasId: string;
+  /** Action result ID for linking back */
+  resultId?: string;
+  /** Action result version for linking back */
+  resultVersion?: number;
   /** S3 input location */
   s3Input: {
     bucket: string;
@@ -242,7 +250,10 @@ export interface DispatchImageTransformParams {
 export interface DispatchDocumentRenderParams {
   uid: string;
   fileId: string;
-  canvasId: string;
+  /** Action result ID for linking back */
+  resultId?: string;
+  /** Action result version for linking back */
+  resultVersion?: number;
   /** S3 input location */
   s3Input: {
     bucket: string;
@@ -257,7 +268,11 @@ export interface DispatchDocumentRenderParams {
 
 export interface DispatchVideoAnalyzeParams {
   uid: string;
-  resourceId: string;
+  fileId: string;
+  /** Action result ID for linking back */
+  resultId?: string;
+  /** Action result version for linking back */
+  resultVersion?: number;
   /** S3 input location */
   s3Input: {
     bucket: string;
@@ -282,10 +297,9 @@ export interface LambdaJobRecord {
   mimeType?: string;
   storageKey?: string;
   storageType: LambdaStorageType;
-  resourceId?: string;
   fileId?: string;
-  canvasId?: string;
-  toolName?: string;
+  resultId?: string;
+  resultVersion?: number;
   error?: string;
   durationMs?: number;
   metadata?: string;
@@ -301,9 +315,9 @@ export interface ResultHandlerContext {
   jobId: string;
   type: LambdaTaskType;
   uid: string;
-  resourceId?: string;
   fileId?: string;
-  canvasId?: string;
+  resultId?: string;
+  resultVersion?: number;
 }
 
 export type ResultPayload =

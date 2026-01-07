@@ -1,9 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
-import { S3Client, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  CopyObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
+import { readingTime } from 'reading-time-estimator';
 
 import { PrismaService } from '../common/prisma.service';
+import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
+import { truncateContent } from '@refly/utils/token';
 import {
   LAMBDA_JOB_STATUS_SUCCESS,
   LAMBDA_JOB_STATUS_FAILED,
@@ -23,7 +31,6 @@ import {
 @Injectable()
 export class LambdaResultHandlerService {
   private s3Client: S3Client | null = null;
-  private readonly lambdaEnabled: boolean;
   private readonly s3Bucket: string;
 
   constructor(
@@ -31,14 +38,11 @@ export class LambdaResultHandlerService {
     private readonly logger: PinoLogger,
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    @Inject(OSS_INTERNAL) private readonly internalOss: ObjectStorageService,
   ) {
-    this.lambdaEnabled = this.config.get<boolean>('lambda.enabled') || false;
     this.s3Bucket = this.config.get<string>('lambda.s3.bucket') || 'refly-weblink';
-
-    if (this.lambdaEnabled) {
-      const region = this.config.get<string>('lambda.region') || 'us-east-1';
-      this.s3Client = new S3Client({ region });
-    }
+    const region = this.config.get<string>('lambda.region') || 'us-east-1';
+    this.s3Client = new S3Client({ region });
   }
 
   /**
@@ -67,9 +71,9 @@ export class LambdaResultHandlerService {
       jobId,
       type,
       uid: job.uid,
-      resourceId: job.resourceId ?? undefined,
       fileId: job.fileId ?? undefined,
-      canvasId: job.canvasId ?? undefined,
+      resultId: job.resultId ?? undefined,
+      resultVersion: job.resultVersion ?? undefined,
     };
 
     if (status === 'failed') {
@@ -124,9 +128,11 @@ export class LambdaResultHandlerService {
     context: ResultHandlerContext,
     payload: DocumentIngestResultPayload,
   ): Promise<void> {
+    const { jobId, uid, fileId } = context;
+
     // Update job with result
     await this.prisma.lambdaJob.update({
-      where: { jobId: context.jobId },
+      where: { jobId },
       data: {
         status: LAMBDA_JOB_STATUS_SUCCESS,
         storageKey: payload.document.key,
@@ -138,11 +144,112 @@ export class LambdaResultHandlerService {
           documentMetadata: payload.document.metadata,
           images: payload.images,
         }),
-        durationMs: 0, // Will be updated from envelope meta if available
+        durationMs: 0,
       },
     });
 
-    // TODO: If there's a resourceId, emit event or enqueue finalization job for RAG indexing
+    // Persist content to MinIO cache if fileId exists
+    if (fileId) {
+      await this.persistContentToCache(uid, fileId, payload);
+    }
+  }
+
+  /**
+   * Persist parsed content to MinIO and update DriveFileParseCache
+   */
+  private async persistContentToCache(
+    uid: string,
+    fileId: string,
+    payload: DocumentIngestResultPayload,
+  ): Promise<void> {
+    try {
+      // 1. Read content from AWS S3
+      const content = await this.getS3Content(payload.document.key);
+      if (!content) {
+        this.logger.error({ fileId, key: payload.document.key }, 'Failed to read Lambda output');
+        return;
+      }
+
+      // 2. Process content
+      const cleanContent = content.replace(/\0/g, '').replace(/\s+/g, ' ').trim();
+      // Storage limit is higher than read limit to preserve more content
+      const maxStorageTokens = this.config.get<number>('drive.maxStorageTokens') || 100000;
+      const truncated = truncateContent(cleanContent, maxStorageTokens);
+
+      // 3. Save to MinIO
+      const cacheKey = `drive-parsed/${uid}/${fileId}.txt`;
+      await this.internalOss.putObject(cacheKey, truncated);
+
+      // 4. Update DriveFileParseCache
+      const wordCount = payload.metadata?.wordCount || readingTime(truncated).words;
+      await this.prisma.driveFileParseCache.upsert({
+        where: { fileId },
+        create: {
+          fileId,
+          uid,
+          contentStorageKey: cacheKey,
+          contentType: payload.document.mimeType,
+          parser: 'lambda',
+          numPages: payload.metadata?.pageCount || null,
+          wordCount,
+          parseStatus: 'success',
+        },
+        update: {
+          contentStorageKey: cacheKey,
+          parser: 'lambda',
+          numPages: payload.metadata?.pageCount || null,
+          wordCount,
+          parseStatus: 'success',
+          parseError: null,
+          updatedAt: new Date(),
+        },
+      });
+
+      this.logger.info({ fileId, cacheKey, wordCount }, 'Content persisted to cache');
+    } catch (error) {
+      this.logger.error({ fileId, error }, 'Failed to persist content to cache');
+      // Update cache with error status
+      await this.prisma.driveFileParseCache.upsert({
+        where: { fileId },
+        create: {
+          fileId,
+          uid,
+          contentStorageKey: '',
+          contentType: '',
+          parser: 'lambda',
+          parseStatus: 'failed',
+          parseError: JSON.stringify({ message: (error as Error).message }),
+        },
+        update: {
+          parseStatus: 'failed',
+          parseError: JSON.stringify({ message: (error as Error).message }),
+          updatedAt: new Date(),
+        },
+      });
+    }
+  }
+
+  /**
+   * Read content from AWS S3
+   */
+  private async getS3Content(key: string): Promise<string | null> {
+    if (!this.s3Client) return null;
+
+    try {
+      const response = await this.s3Client.send(
+        new GetObjectCommand({ Bucket: this.s3Bucket, Key: key }),
+      );
+      if (!response.Body) return null;
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+        chunks.push(Buffer.from(chunk));
+      }
+      return Buffer.concat(chunks).toString('utf-8');
+    } catch (error) {
+      this.logger.error({ key, error }, 'Failed to read from S3');
+      return null;
+    }
   }
 
   /**
@@ -226,7 +333,7 @@ export class LambdaResultHandlerService {
       },
     });
 
-    // TODO: If there's a resourceId, trigger further processing
+    // TODO: If there's a fileId, trigger further processing
   }
 
   /**
