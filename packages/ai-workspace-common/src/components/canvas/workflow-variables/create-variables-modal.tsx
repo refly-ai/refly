@@ -32,6 +32,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
     disableChangeVariableType,
     isFromResource,
     showFileUploadError,
+    fromToolsDependency,
   }) => {
     const { t } = useTranslation();
     const [form] = Form.useForm<VariableFormData>();
@@ -190,6 +191,26 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
         form.setFieldsValue(stringFormData);
       }
     }, [form, variableType, optionFormData, resourceFormData, stringFormData]);
+
+    // Auto show value required error when from tools dependency and value is empty
+    useEffect(() => {
+      if (fromToolsDependency && visible && defaultValue) {
+        // Check if the variable is required and has empty value
+        const isRequired = defaultValue.required ?? true;
+        const hasEmptyValue = !defaultValue.value || defaultValue.value.length === 0;
+
+        if (isRequired && hasEmptyValue) {
+          // Trigger form validation to show errors after a short delay to ensure form is rendered
+          const timer = setTimeout(() => {
+            form.validateFields().catch(() => {
+              // Ignore validation errors, we just want to trigger the display
+            });
+          }, 300);
+
+          return () => clearTimeout(timer);
+        }
+      }
+    }, [fromToolsDependency, visible, defaultValue, form]);
 
     // Handle form values change and store in corresponding form data
     const handleFormValuesChange = useCallback(

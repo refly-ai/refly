@@ -15,6 +15,7 @@ import { safeStringifyJSON } from '@refly/utils/parse';
 import { responseInterceptorWithTokenRefresh } from '@refly-packages/ai-workspace-common/utils/auth';
 import { getLocale } from '@refly-packages/ai-workspace-common/utils/locale';
 import { showErrorNotification } from '@refly-packages/ai-workspace-common/utils/notification';
+import { authChannel } from '@refly-packages/ai-workspace-common/utils/auth-channel';
 
 // Create a WeakMap to store cloned requests
 const requestCache = new WeakMap<Request, Request>();
@@ -73,7 +74,27 @@ export const extractBaseResp = async (response: Response, data: any): Promise<Ba
   return { success: true };
 };
 
-client.interceptors.request.use(async (request) => {
+// Flag to indicate if user identity change is being handled
+let isHandlingUserChange = false;
+
+client.interceptors.request.use(async (request: Request) => {
+  // Skip auth-related requests (logout, refreshToken, etc.)
+  const isAuthRequest =
+    request.url.includes('/auth/') || request.url.includes('/logout') || isHandlingUserChange;
+
+  // Validate user identity before making request (only for non-auth requests)
+  if (!isAuthRequest && !authChannel.validateUserIdentity()) {
+    // User identity mismatch, trigger page refresh
+    isHandlingUserChange = true;
+    // Return a never-resolving promise to block the request
+    return new Promise(() => {
+      // Delay refresh to allow event propagation
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    });
+  }
+
   // Clone and cache the request before processing
   // Since we may resend the request after refreshing access tokens
   const clonedRequest = request.clone();

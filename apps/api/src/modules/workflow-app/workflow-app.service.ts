@@ -1,4 +1,4 @@
-import { Prisma, User } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   CreateWorkflowAppRequest,
   WorkflowVariable,
@@ -7,6 +7,7 @@ import {
   CanvasEdge,
   RawCanvasData,
   ListWorkflowAppsData,
+  User,
 } from '@refly/openapi-schema';
 import { Logger, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -591,6 +592,170 @@ export class WorkflowAppService {
     };
   }
 
+  /**
+   * Execute workflow from canvas data (snapshot)
+   * Shared logic used by both executeWorkflowApp and ScheduleProcessor
+   * @param user The user executing the workflow
+   * @param canvasData The canvas data snapshot containing nodes, edges, files, resources, variables
+   * @param variables Optional variables to override the ones in canvasData
+   * @param options Additional options for execution
+   * @returns The execution ID
+   */
+  async executeFromCanvasData(
+    user: User,
+    canvasData: RawCanvasData,
+    variables?: WorkflowVariable[],
+    options?: {
+      appId?: string;
+      scheduleId?: string;
+      scheduleRecordId?: string;
+      triggerType?: string;
+    },
+  ): Promise<{ executionId: string; canvasId: string }> {
+    // Validate canvasData completeness
+    if (!canvasData.nodes || canvasData.nodes.length === 0) {
+      this.logger.warn('Canvas data has no nodes, workflow execution may fail');
+    }
+
+    if (!canvasData.edges || canvasData.edges.length === 0) {
+      this.logger.warn('Canvas data has no edges, workflow execution may fail');
+    }
+
+    const { nodes = [], edges = [] } = canvasData;
+
+    let replaceToolsetMap: Record<string, GenericToolset> = {};
+
+    // Always check and update toolset references
+    // This ensures that toolsets are up-to-date even for the owner's workflows
+    const { replaceToolsetMap: newReplaceToolsetMap } =
+      await this.toolService.importToolsetsFromNodes(user, nodes);
+    replaceToolsetMap = newReplaceToolsetMap;
+
+    // Variables with old resource entity ids (need to be replaced)
+    const oldVariables = variables || canvasData.variables || [];
+
+    const newCanvasId = genCanvasID();
+
+    const finalVariables = await this.canvasService.processResourceVariables(
+      user,
+      newCanvasId,
+      oldVariables,
+      true,
+    );
+
+    // Resource entity id map from old resource entity ids to new resource entity ids
+    const entityIdMap = this.buildEntityIdMap(oldVariables, finalVariables);
+
+    // Duplicate files from canvasData.files to the new canvas
+    // Only duplicate manual uploads (source: 'manual') that are not variable files
+    const fileIdMap: Record<string, string> = {};
+    const files = (canvasData as any).files || [];
+    if (files.length > 0) {
+      for (const file of files) {
+        try {
+          // Only duplicate manual uploads without variableId
+          if (file.source !== 'manual' || file.variableId) {
+            continue;
+          }
+          const duplicatedFile = await this.driveService.duplicateDriveFile(
+            user,
+            file,
+            newCanvasId,
+          );
+          fileIdMap[file.fileId] = duplicatedFile.fileId;
+          this.logger.log(
+            `Duplicated file ${file.fileId} to ${duplicatedFile.fileId} for canvas ${newCanvasId}`,
+          );
+        } catch (error) {
+          this.logger.error(`Failed to duplicate file ${file.fileId}: ${error.message}`);
+        }
+      }
+    }
+
+    // Merge fileIdMap into entityIdMap for unified reference replacement
+    const combinedEntityIdMap = { ...entityIdMap, ...fileIdMap };
+
+    const updatedNodes: CanvasNode[] = nodes.map((node) => {
+      if (node.type !== 'skillResponse') {
+        return node;
+      }
+
+      const metadata = node.data.metadata as ResponseNodeMeta;
+
+      // Replace the resource variable with the new entity id
+      if (metadata.query) {
+        metadata.query = replaceResourceMentionsInQuery(
+          metadata.query,
+          oldVariables,
+          combinedEntityIdMap,
+        );
+      }
+
+      if (metadata.structuredData?.query) {
+        (node.data.metadata as ResponseNodeMeta).structuredData.query =
+          replaceResourceMentionsInQuery(
+            metadata.structuredData.query as string,
+            oldVariables,
+            combinedEntityIdMap,
+          );
+      }
+
+      // Replace the selected toolsets with the new toolsets
+      if (metadata.selectedToolsets) {
+        const selectedToolsets = node.data.metadata.selectedToolsets as GenericToolset[];
+        node.data.metadata.selectedToolsets = selectedToolsets.map((toolset) => {
+          return replaceToolsetMap[toolset.id] || toolset;
+        });
+      }
+
+      // Replace the context items with the new context items
+      if (metadata.contextItems) {
+        metadata.contextItems = metadata.contextItems.map((item) => {
+          if (item.type !== 'resource' && item.type !== 'file') {
+            return item;
+          }
+          const newEntityId = combinedEntityIdMap[item.entityId];
+          if (newEntityId) {
+            return {
+              ...item,
+              entityId: newEntityId,
+            };
+          }
+          return item;
+        });
+      }
+
+      return node;
+    });
+
+    const sourceCanvasData: RawCanvasData = {
+      title: canvasData.title,
+      variables: finalVariables,
+      nodes: updatedNodes,
+      edges,
+    };
+
+    const executionId = await this.workflowService.initializeWorkflowExecution(
+      user,
+      newCanvasId,
+      finalVariables,
+      {
+        appId: options?.appId,
+        sourceCanvasData,
+        createNewCanvas: true,
+        nodeBehavior: 'create',
+        scheduleId: options?.scheduleId,
+        scheduleRecordId: options?.scheduleRecordId,
+        triggerType: options?.triggerType,
+      },
+    );
+
+    this.logger.log(
+      `Started workflow execution: ${executionId}${options?.appId ? ` for appId: ${options.appId}` : ''}${options?.scheduleRecordId ? ` for scheduleRecordId: ${options.scheduleRecordId}` : ''}`,
+    );
+    return { executionId, canvasId: newCanvasId };
+  }
+
   async executeWorkflowApp(user: User, shareId: string, variables: WorkflowVariable[]) {
     const shareRecord = await this.prisma.shareRecord.findFirst({
       where: { shareId, deletedAt: null },
@@ -702,144 +867,10 @@ export class WorkflowAppService {
       }
     }
 
-    // ✅ Validate canvasData completeness
-    if (!canvasData.nodes || canvasData.nodes.length === 0) {
-      this.logger.warn(
-        `Canvas data has no nodes for shareId=${shareId}, workflow execution may fail`,
-      );
-    }
-
-    if (!canvasData.edges || canvasData.edges.length === 0) {
-      this.logger.warn(
-        `Canvas data has no edges for shareId=${shareId}, workflow execution may fail`,
-      );
-    }
-
-    const { nodes = [], edges = [] } = canvasData;
-
-    let replaceToolsetMap: Record<string, GenericToolset> = {};
-
-    // Always check and update toolset references, not just for shared workflows
-    // This ensures that toolsets are up-to-date even for the owner's workflows
-    const { replaceToolsetMap: newReplaceToolsetMap } =
-      await this.toolService.importToolsetsFromNodes(user, nodes);
-    replaceToolsetMap = newReplaceToolsetMap;
-
-    // variables with old resource entity ids (need to be replaced)
-    const oldVariables = variables || canvasData.variables || [];
-
-    const newCanvasId = genCanvasID();
-
-    const finalVariables = await this.canvasService.processResourceVariables(
-      user,
-      newCanvasId,
-      oldVariables,
-      true,
-    );
-
-    // Resource entity id map from old resource entity ids to new resource entity ids
-    const entityIdMap = this.buildEntityIdMap(oldVariables, finalVariables);
-
-    // Duplicate files from canvasData.files to the new canvas
-    // Only duplicate manual uploads (source: 'manual') that are not variable files
-    const fileIdMap: Record<string, string> = {};
-    const files = (canvasData as any).files || [];
-    if (files.length > 0) {
-      for (const file of files) {
-        try {
-          // Only duplicate manual uploads without variableId
-          if (file.source !== 'manual' || file.variableId) {
-            continue;
-          }
-          const duplicatedFile = await this.driveService.duplicateDriveFile(
-            user,
-            file,
-            newCanvasId,
-          );
-          fileIdMap[file.fileId] = duplicatedFile.fileId;
-          this.logger.log(
-            `Duplicated file ${file.fileId} to ${duplicatedFile.fileId} for canvas ${newCanvasId}`,
-          );
-        } catch (error) {
-          this.logger.error(`Failed to duplicate file ${file.fileId}: ${error.message}`);
-        }
-      }
-    }
-
-    // Merge fileIdMap into entityIdMap for unified reference replacement
-    const combinedEntityIdMap = { ...entityIdMap, ...fileIdMap };
-
-    const updatedNodes: CanvasNode[] = nodes.map((node) => {
-      if (node.type !== 'skillResponse') {
-        return node;
-      }
-
-      const metadata = node.data.metadata as ResponseNodeMeta;
-
-      // Replace the resource variable with the new entity id
-      if (metadata.query) {
-        metadata.query = replaceResourceMentionsInQuery(
-          metadata.query,
-          variables,
-          combinedEntityIdMap,
-        );
-      }
-
-      if (metadata.structuredData?.query) {
-        (node.data.metadata as ResponseNodeMeta).structuredData.query =
-          replaceResourceMentionsInQuery(
-            metadata.structuredData.query as string,
-            variables,
-            combinedEntityIdMap,
-          );
-      }
-
-      // Replace the selected toolsets with the new toolsets
-      if (metadata.selectedToolsets) {
-        const selectedToolsets = node.data.metadata.selectedToolsets as GenericToolset[];
-        node.data.metadata.selectedToolsets = selectedToolsets.map((toolset) => {
-          return replaceToolsetMap[toolset.id] || toolset;
-        });
-      }
-
-      // Replace the context items with the new context items
-      if (metadata.contextItems) {
-        metadata.contextItems = metadata.contextItems.map((item) => {
-          if (item.type !== 'resource' && item.type !== 'file') {
-            return item;
-          }
-          const newEntityId = combinedEntityIdMap[item.entityId];
-          if (newEntityId) {
-            return {
-              ...item,
-              entityId: newEntityId,
-            };
-          }
-          return item;
-        });
-      }
-
-      return node;
+    // Use the shared execution logic
+    const { executionId } = await this.executeFromCanvasData(user, canvasData, variables, {
+      appId: workflowApp.appId,
     });
-
-    const sourceCanvasData: RawCanvasData = {
-      title: canvasData.title,
-      variables: finalVariables,
-      nodes: updatedNodes,
-      edges,
-    };
-
-    const executionId = await this.workflowService.initializeWorkflowExecution(
-      user,
-      newCanvasId,
-      finalVariables,
-      {
-        appId: workflowApp.appId,
-        sourceCanvasData,
-        createNewCanvas: true,
-        nodeBehavior: 'create',
-      },
-    );
 
     this.logger.log(`Started workflow execution: ${executionId} for shareId: ${shareId}`);
     return executionId;
@@ -912,6 +943,37 @@ export class WorkflowAppService {
       where: { appId },
       data: { deletedAt: new Date() },
     });
+
+    // Clean up associated schedules for the canvas
+    // This disables the schedule and removes pending scheduled records
+    const schedule = await this.prisma.workflowSchedule.findFirst({
+      where: { canvasId: workflowApp.canvasId, uid: user.uid, deletedAt: null },
+    });
+
+    if (schedule) {
+      // Soft delete the schedule and disable it
+      await this.prisma.workflowSchedule.update({
+        where: { scheduleId: schedule.scheduleId },
+        data: {
+          deletedAt: new Date(),
+          isEnabled: false,
+          nextRunAt: null,
+        },
+      });
+
+      // Delete pending scheduled records
+      await this.prisma.workflowScheduleRecord.deleteMany({
+        where: {
+          scheduleId: schedule.scheduleId,
+          status: 'scheduled',
+          workflowExecutionId: null,
+        },
+      });
+
+      this.logger.log(
+        `Cleaned up schedule ${schedule.scheduleId} for deleted workflow app: ${appId}`,
+      );
+    }
 
     this.logger.log(`Deleted workflow app: ${appId} for user: ${user.uid}`);
   }

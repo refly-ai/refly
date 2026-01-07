@@ -28,6 +28,7 @@ import { AIMessage, ToolMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import type { Runnable } from '@langchain/core/runnables';
 import { type StructuredToolInterface } from '@langchain/core/tools';
+import { isGeminiModel } from '@refly/providers';
 import { countToken } from '../scheduler/utils/token';
 import { simplifyToolForGemini } from '../utils/schema-simplifier';
 
@@ -94,15 +95,6 @@ export class Agent extends BaseSkill {
   graphState: StateGraphArgs<BaseSkillState>['channels'] = {
     ...baseStateGraphArgs,
   };
-
-  /**
-   * Check if the given LLM is a Gemini model (Vertex AI)
-   * Gemini models do not support union types in function calling schemas
-   */
-  private isGeminiModel(llm: any): boolean {
-    // Check by constructor name (avoid importing ChatVertexAI to reduce dependencies)
-    return llm?.constructor?.name === 'ChatVertexAI';
-  }
 
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
@@ -173,7 +165,7 @@ export class Agent extends BaseSkill {
         const supportsToolChoice = agentModelInfo?.capabilities?.supportToolChoice !== false;
 
         // Check if current LLM is Gemini - if so, simplify tool schemas
-        const isGemini = this.isGeminiModel(baseLlm);
+        const isGemini = isGeminiModel(baseLlm);
         const toolsForBinding = isGemini
           ? validTools.map((tool) => {
               this.engine.logger.info(

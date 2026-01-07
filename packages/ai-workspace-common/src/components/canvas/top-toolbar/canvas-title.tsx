@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { Tooltip, Skeleton, Typography, Avatar, Divider, Input, Button } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { LOCALE } from '@refly/common-types';
@@ -11,25 +11,10 @@ import { useNavigate } from 'react-router-dom';
 import { useUserStoreShallow } from '@refly/stores';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 import { LuSparkles } from 'react-icons/lu';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useCanvasStoreShallow } from '@refly/stores';
-import { useSiderStoreShallow } from '@refly/stores';
+import { useUpdateCanvasTitle } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import type { InputRef } from 'antd';
 
 export type CanvasTitleMode = 'edit' | 'view';
-
-async function updateRemoteCanvasTitle(canvasId: string, newTitle: string) {
-  const { data, error } = await getClient().updateCanvas({
-    body: {
-      canvasId,
-      title: newTitle,
-    },
-  });
-  if (error || !data?.success) {
-    return;
-  }
-  return data.data?.title;
-}
 
 const CanvasTitleSyncStatus = memo(
   ({
@@ -85,16 +70,14 @@ export const CanvasTitle = memo(
     canvasId: string;
   }) => {
     const { t } = useTranslation();
-    const [editedTitle, setEditedTitle] = useState(canvasTitle);
-    const [isLoading, setIsLoading] = useState(false);
+    const {
+      editedTitle,
+      setEditedTitle,
+      isAutoNaming: isLoading,
+      updateTitle,
+      handleAutoName,
+    } = useUpdateCanvasTitle(canvasId, canvasTitle);
     const inputRef = useRef<InputRef | null>(null);
-
-    const setCanvasTitle = useCanvasStoreShallow((state) => state.setCanvasTitle);
-    const updateCanvasTitleInStore = useSiderStoreShallow((state) => state.updateCanvasTitle);
-
-    useEffect(() => {
-      setEditedTitle(canvasTitle);
-    }, [canvasTitle]);
 
     const focusInput = useCallback(() => {
       if (inputRef.current) {
@@ -106,39 +89,19 @@ export const CanvasTitle = memo(
       if (mode === 'edit') {
         focusInput();
       }
-    }, [mode]);
+    }, [mode, focusInput]);
 
-    const handleAutoName = useCallback(async () => {
+    const handleAutoNameWithFocus = useCallback(async () => {
       focusInput();
-      if (!canvasId) return;
-      setIsLoading(true);
-      const { data, error } = await getClient().autoNameCanvas({
-        body: {
-          canvasId,
-          directUpdate: false,
-        },
-      });
-      setIsLoading(false);
-      if (error || !data?.success) {
-        return;
-      }
-      if (data?.data?.title) {
-        setEditedTitle(data.data.title);
-      }
-    }, [canvasId]);
+      await handleAutoName();
+    }, [focusInput, handleAutoName]);
 
     const handleSubmit = useCallback(async () => {
-      if (editedTitle?.trim()) {
-        const newTitle = await updateRemoteCanvasTitle(canvasId, editedTitle);
-        if (newTitle) {
-          setCanvasTitle(canvasId, newTitle);
-          updateCanvasTitleInStore(canvasId, newTitle);
-          setMode('view');
-        }
-      } else {
+      const newTitle = await updateTitle();
+      if (newTitle !== undefined) {
         setMode('view');
       }
-    }, [canvasId, editedTitle, setCanvasTitle, updateCanvasTitleInStore, setMode]);
+    }, [updateTitle, setMode]);
 
     const handleClick = useCallback(() => {
       setMode('edit');
@@ -194,7 +157,7 @@ export const CanvasTitle = memo(
                     type="text"
                     size="small"
                     className="auto-name-button absolute right-0.5 top-1/2 -translate-y-1/2 text-refly-text-2"
-                    onClick={handleAutoName}
+                    onClick={handleAutoNameWithFocus}
                     loading={isLoading}
                     icon={<LuSparkles className="h-3.5 w-3.5 flex items-center" />}
                   />
@@ -239,10 +202,12 @@ export const ReadonlyCanvasTitle = memo(
     canvasTitle,
     isLoading,
     owner,
+    hideLogoButton,
   }: {
     canvasTitle?: string;
     isLoading: boolean;
     owner?: ShareUser;
+    hideLogoButton?: boolean;
   }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -255,20 +220,27 @@ export const ReadonlyCanvasTitle = memo(
         className="ml-1 group flex items-center gap-2 text-sm font-bold text-gray-500"
         data-cy="canvas-title-readonly"
       >
-        <Tooltip
-          title={t(isLogin ? 'canvas.toolbar.backDashboard' : 'canvas.toolbar.backHome')}
-          arrow={false}
-          align={{ offset: [20, -8] }}
-        >
-          <div
-            className="flex-shrink-0 flex items-center justify-center h-8 w-8 hover:bg-refly-tertiary-hover rounded-lg cursor-pointer"
-            onClick={() => navigate('/')}
-          >
-            <Logo textProps={{ show: false }} logoProps={{ show: true, className: '!w-5 !h-5' }} />
-          </div>
-        </Tooltip>
+        {!hideLogoButton && (
+          <>
+            <Tooltip
+              title={t(isLogin ? 'canvas.toolbar.backDashboard' : 'canvas.toolbar.backHome')}
+              arrow={false}
+              align={{ offset: [20, -8] }}
+            >
+              <div
+                className="flex-shrink-0 flex items-center justify-center h-8 w-8 hover:bg-refly-tertiary-hover rounded-lg cursor-pointer"
+                onClick={() => navigate('/')}
+              >
+                <Logo
+                  textProps={{ show: false }}
+                  logoProps={{ show: true, className: '!w-5 !h-5' }}
+                />
+              </div>
+            </Tooltip>
 
-        <Divider type="vertical" className="m-0 h-5 bg-refly-Card-Border" />
+            <Divider type="vertical" className="m-0 h-5 bg-refly-Card-Border" />
+          </>
+        )}
         <IconCanvas />
         {isLoading ? (
           <Skeleton className="w-32" active paragraph={false} />

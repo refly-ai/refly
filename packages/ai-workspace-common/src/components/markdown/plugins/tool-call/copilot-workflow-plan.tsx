@@ -1,14 +1,18 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
-import { type WorkflowPlan } from '@refly/canvas-common';
-import { NewConversation, Mcp } from 'refly-icons';
+import { NewConversation, Mcp, ArrowRight, ArrowDown } from 'refly-icons';
 import { InputParameterRow } from '@refly-packages/ai-workspace-common/components/canvas/nodes/start';
 import { LabelWrapper } from './label-wrapper';
 import { useTranslation } from 'react-i18next';
 import { Typography, Dropdown, Divider } from 'antd';
-import { useListTools } from '@refly-packages/ai-workspace-common/queries';
-import { GenericToolset } from '@refly/openapi-schema';
+import {
+  useListTools,
+  useGetWorkflowPlanDetail,
+} from '@refly-packages/ai-workspace-common/queries';
+import type { GenericToolset, WorkflowPlanRecord } from '@refly/openapi-schema';
 import { processQueryWithMentions } from '@refly/utils/query-processor';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
+import { ToolCallStatus } from './types';
 
 const { Paragraph } = Typography;
 
@@ -146,7 +150,10 @@ const LabelsDisplay = memo(({ toolsets }: { toolsets: GenericToolset[] }) => {
 LabelsDisplay.displayName = 'LabelsDisplay';
 
 interface CopilotWorkflowPlanProps {
-  data: WorkflowPlan;
+  data: WorkflowPlanRecord;
+  status?: ToolCallStatus;
+  error?: string;
+  toolName?: string;
 }
 
 const findToolsetById = (toolsets: GenericToolset[], id: string) => {
@@ -156,76 +163,144 @@ const findToolsetById = (toolsets: GenericToolset[], id: string) => {
   );
 };
 
-export const CopilotWorkflowPlan = memo(({ data }: CopilotWorkflowPlanProps) => {
-  const { t } = useTranslation();
-  const { tasks = [], variables = [] } = data ?? {};
-  const { data: toolsData } = useListTools({ query: { enabled: true } });
+const isPlanDataEmpty = (data: WorkflowPlanRecord) => {
+  return data.tasks === undefined;
+};
 
-  return (
-    <div className="flex flex-col gap-3 pt-2">
-      <div className="flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas">
-        <div className="flex items-center gap-1.5">
-          <NodeIcon type="start" small />
-          <div className="text-refly-text-caption font-medium leading-5 flex-1 truncate text-sm">
-            {t('canvas.nodeTypes.start')}
-          </div>
-        </div>
+export const CopilotWorkflowPlan = memo(
+  ({ data, status, error, toolName }: CopilotWorkflowPlanProps) => {
+    const { t } = useTranslation();
+    const { data: toolsData } = useListTools({ query: { enabled: true } });
+    const [isErrorExpanded, setIsErrorExpanded] = useState(false);
 
-        {variables?.length > 0 && (
-          <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto">
-            {variables?.map((variable) => (
-              <InputParameterRow
-                key={variable.name}
-                variableType={variable.variableType as 'string' | 'option' | 'resource'}
-                label={variable.name}
-                isRequired={true}
-                isSingle={true}
+    const isEmpty = isPlanDataEmpty(data);
+
+    const { data: workflowPlanData, isLoading } = useGetWorkflowPlanDetail(
+      {
+        query: { planId: data.planId, version: data.version },
+      },
+      undefined,
+      {
+        enabled: isEmpty,
+      },
+    );
+
+    if (status === ToolCallStatus.FAILED) {
+      const failedMessage =
+        toolName === 'patch_workflow'
+          ? t('components.markdown.workflow.patchFailed')
+          : t('components.markdown.workflow.generateFailed');
+      return (
+        <div className="flex flex-col gap-2 px-3 py-2">
+          <div
+            className="flex items-center gap-1 cursor-pointer select-none w-fit group"
+            onClick={() => setIsErrorExpanded(!isErrorExpanded)}
+          >
+            <span className="text-refly-func-warning-default text-sm font-normal">
+              {failedMessage}
+            </span>
+            {isErrorExpanded ? (
+              <ArrowDown
+                size={12}
+                color="var(--refly-text-3)"
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
               />
-            ))}
+            ) : (
+              <ArrowRight
+                size={12}
+                color="var(--refly-text-3)"
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+              />
+            )}
           </div>
-        )}
-      </div>
+          {isErrorExpanded && error && (
+            <div className="flex items-start gap-2 text-refly-text-3 text-xs leading-4">
+              <div className="whitespace-pre-wrap break-all">{error}</div>
+            </div>
+          )}
+        </div>
+      );
+    }
 
-      {tasks.map((task) => (
-        <div
-          className="flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas"
-          key={task.id}
-        >
+    const displayData = isEmpty ? workflowPlanData?.data : data;
+
+    if (isEmpty && isLoading) {
+      return (
+        <div className="flex items-center justify-center gap-2 py-8 h-32">
+          <Spin />
+          {t('copilot.loadingWorkflow')}
+        </div>
+      );
+    }
+
+    const { tasks = [], variables = [] } = displayData ?? {};
+
+    return (
+      <div className="flex flex-col gap-3 pt-2">
+        <div className="flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas">
           <div className="flex items-center gap-1.5">
-            <NodeIcon type="skillResponse" small />
+            <NodeIcon type="start" small />
             <div className="text-refly-text-caption font-medium leading-5 flex-1 truncate text-sm">
-              {task.title}
+              {t('canvas.nodeTypes.start')}
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <NewConversation size={14} color="var(--refly-text-3)" />
-            <Paragraph
-              className="text-refly-text-2 flex-1 truncate text-xs leading-4 !m-0"
-              ellipsis={{
-                rows: 1,
-                tooltip: (
-                  <div className="max-w-[300px] max-h-[200px] overflow-y-auto text-xs">
-                    {processQueryWithMentions(task.prompt).processedQuery || task.prompt}
-                  </div>
-                ),
-              }}
-            >
-              {processQueryWithMentions(task.prompt).processedQuery || task.prompt}
-            </Paragraph>
-          </div>
-          <LabelsDisplay
-            toolsets={
-              task.toolsets
-                ?.map((toolsetId) => findToolsetById(toolsData?.data ?? [], toolsetId))
-                .filter(Boolean) ?? []
-            }
-          />
-        </div>
-      ))}
 
-      <Divider className="m-0 mt-1" />
-    </div>
-  );
-});
+          {variables?.length > 0 && (
+            <div className="flex flex-col gap-1 max-h-[200px] overflow-y-auto">
+              {variables?.map((variable) => (
+                <InputParameterRow
+                  key={variable.name}
+                  variableType={variable.variableType as 'string' | 'option' | 'resource'}
+                  label={variable.name}
+                  isRequired={true}
+                  isSingle={true}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {tasks.map((task) => (
+          <div
+            className="flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas"
+            key={task.id}
+          >
+            <div className="flex items-center gap-1.5">
+              <NodeIcon type="skillResponse" small />
+              <div className="text-refly-text-caption font-medium leading-5 flex-1 truncate text-sm">
+                {task.title}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <NewConversation size={14} color="var(--refly-text-3)" />
+              <Paragraph
+                className="text-refly-text-2 flex-1 truncate text-xs leading-4 !m-0"
+                ellipsis={{
+                  rows: 1,
+                  tooltip: (
+                    <div className="max-w-[300px] max-h-[200px] overflow-y-auto text-xs">
+                      {processQueryWithMentions(task.prompt).processedQuery || task.prompt}
+                    </div>
+                  ),
+                }}
+              >
+                {processQueryWithMentions(task.prompt).processedQuery || task.prompt}
+              </Paragraph>
+            </div>
+            <LabelsDisplay
+              toolsets={
+                task.toolsets
+                  ?.map((toolsetId) => findToolsetById(toolsData?.data ?? [], toolsetId))
+                  .filter(Boolean) ?? []
+              }
+            />
+          </div>
+        ))}
+
+        <Divider className="m-0 mt-1" />
+      </div>
+    );
+  },
+);
 
 CopilotWorkflowPlan.displayName = 'CopilotWorkflowPlan';

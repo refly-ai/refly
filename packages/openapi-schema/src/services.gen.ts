@@ -351,6 +351,9 @@ import type {
   GetWorkflowDetailData,
   GetWorkflowDetailError,
   GetWorkflowDetailResponse2,
+  GetWorkflowPlanDetailData,
+  GetWorkflowPlanDetailError,
+  GetWorkflowPlanDetailResponse2,
   CreateWorkflowAppData,
   CreateWorkflowAppError,
   CreateWorkflowAppResponse2,
@@ -369,6 +372,41 @@ import type {
   GetTemplateGenerationStatusData,
   GetTemplateGenerationStatusError,
   GetTemplateGenerationStatusResponse2,
+  CreateScheduleData,
+  CreateScheduleError,
+  CreateScheduleResponse2,
+  UpdateScheduleData,
+  UpdateScheduleError,
+  UpdateScheduleResponse2,
+  DeleteScheduleData,
+  DeleteScheduleError,
+  DeleteScheduleResponse2,
+  ListSchedulesData,
+  ListSchedulesError,
+  ListSchedulesResponse2,
+  GetScheduleDetailData,
+  GetScheduleDetailError,
+  GetScheduleDetailResponse2,
+  GetScheduleRecordsData,
+  GetScheduleRecordsError,
+  GetScheduleRecordsResponse2,
+  ListAllScheduleRecordsData,
+  ListAllScheduleRecordsError,
+  ListAllScheduleRecordsResponse2,
+  GetAvailableToolsError,
+  GetAvailableToolsResponse2,
+  GetScheduleRecordDetailData,
+  GetScheduleRecordDetailError,
+  GetScheduleRecordDetailResponse2,
+  GetRecordSnapshotData,
+  GetRecordSnapshotError,
+  GetRecordSnapshotResponse2,
+  TriggerScheduleManuallyData,
+  TriggerScheduleManuallyError,
+  TriggerScheduleManuallyResponse2,
+  RetryScheduleRecordData,
+  RetryScheduleRecordError,
+  RetryScheduleRecordResponse2,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -2407,6 +2445,23 @@ export const getWorkflowDetail = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Get workflow plan detail
+ * Get detail for a workflow plan
+ */
+export const getWorkflowPlanDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowPlanDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowPlanDetailResponse2,
+    GetWorkflowPlanDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow/plan/detail',
+  });
+};
+
+/**
  * Create new workflow app
  * Create a new workflow app
  */
@@ -2505,6 +2560,208 @@ export const getTemplateGenerationStatus = <ThrowOnError extends boolean = false
   >({
     ...options,
     url: '/workflow-app/template-status',
+  });
+};
+
+/**
+ * Create workflow schedule
+ * Create a new schedule for workflow execution
+ */
+export const createSchedule = <ThrowOnError extends boolean = false>(
+  options: Options<CreateScheduleData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateScheduleResponse2,
+    CreateScheduleError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/create',
+  });
+};
+
+/**
+ * Update workflow schedule
+ * Update an existing workflow schedule
+ */
+export const updateSchedule = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateScheduleData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateScheduleResponse2,
+    UpdateScheduleError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/update',
+  });
+};
+
+/**
+ * Delete workflow schedule
+ * Delete an existing workflow schedule
+ */
+export const deleteSchedule = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteScheduleData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DeleteScheduleResponse2,
+    DeleteScheduleError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/delete',
+  });
+};
+
+/**
+ * List workflow schedules
+ * Get list of workflow schedules for a canvas
+ */
+export const listSchedules = <ThrowOnError extends boolean = false>(
+  options: Options<ListSchedulesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<ListSchedulesResponse2, ListSchedulesError, ThrowOnError>(
+    {
+      ...options,
+      url: '/schedule/list',
+    },
+  );
+};
+
+/**
+ * Get schedule detail
+ * Get detailed information about a specific schedule
+ */
+export const getScheduleDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetScheduleDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetScheduleDetailResponse2,
+    GetScheduleDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/detail',
+  });
+};
+
+/**
+ * Get schedule records
+ * Get execution records for a specific schedule
+ */
+export const getScheduleRecords = <ThrowOnError extends boolean = false>(
+  options: Options<GetScheduleRecordsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetScheduleRecordsResponse2,
+    GetScheduleRecordsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/records',
+  });
+};
+
+/**
+ * List all schedule records
+ * List all schedule execution records with filtering options
+ */
+export const listAllScheduleRecords = <ThrowOnError extends boolean = false>(
+  options: Options<ListAllScheduleRecordsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    ListAllScheduleRecordsResponse2,
+    ListAllScheduleRecordsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/records/list',
+  });
+};
+
+/**
+ * Get available tools
+ * Get list of tools used in schedule executions
+ */
+export const getAvailableTools = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetAvailableToolsResponse2,
+    GetAvailableToolsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/records/tools',
+  });
+};
+
+/**
+ * Get schedule record detail
+ * Get detailed information about a specific schedule execution record
+ */
+export const getScheduleRecordDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetScheduleRecordDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetScheduleRecordDetailResponse2,
+    GetScheduleRecordDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/record/detail',
+  });
+};
+
+/**
+ * Get record snapshot
+ * Get the canvas snapshot for a schedule execution record
+ */
+export const getRecordSnapshot = <ThrowOnError extends boolean = false>(
+  options: Options<GetRecordSnapshotData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetRecordSnapshotResponse2,
+    GetRecordSnapshotError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/record/snapshot',
+  });
+};
+
+/**
+ * Trigger schedule manually
+ * Manually trigger a schedule execution
+ */
+export const triggerScheduleManually = <ThrowOnError extends boolean = false>(
+  options: Options<TriggerScheduleManuallyData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    TriggerScheduleManuallyResponse2,
+    TriggerScheduleManuallyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/trigger',
+  });
+};
+
+/**
+ * Retry schedule record
+ * Retry a failed schedule execution record
+ */
+export const retryScheduleRecord = <ThrowOnError extends boolean = false>(
+  options: Options<RetryScheduleRecordData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    RetryScheduleRecordResponse2,
+    RetryScheduleRecordError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/record/retry',
   });
 };
 

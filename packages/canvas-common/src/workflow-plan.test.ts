@@ -23,6 +23,7 @@ const createWorkflowPlan = (
   products: Array<{ id: string; type: any; title: string }> = [],
   variables: any[] = [],
 ) => ({
+  title: 'Test Workflow Plan',
   tasks,
   products,
   variables,

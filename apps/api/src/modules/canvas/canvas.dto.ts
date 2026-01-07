@@ -3,8 +3,9 @@ import {
   ShareRecord as ShareRecordModel,
   User as UserModel,
   WorkflowApp as WorkflowAppModel,
+  WorkflowSchedule as WorkflowScheduleModel,
 } from '@prisma/client';
-import { Canvas, Entity, EntityType } from '@refly/openapi-schema';
+import { Canvas, Entity, EntityType, WorkflowSchedule } from '@refly/openapi-schema';
 import { pick } from '../../utils';
 import { shareRecordPO2DTO } from '../share/share.dto';
 import { safeParseJSON } from '@refly/utils';
@@ -51,6 +52,20 @@ export interface CanvasDetailModel extends CanvasModel {
   workflowApp?: WorkflowAppModel & {
     owner: Pick<UserModel, 'name' | 'nickname' | 'avatar'> | null;
   };
+  schedule?: Omit<WorkflowScheduleModel, 'pk'>;
+}
+
+export function schedulePO2DTO(schedule: Omit<WorkflowScheduleModel, 'pk'>): WorkflowSchedule {
+  return {
+    scheduleId: schedule.scheduleId,
+    name: schedule.name,
+    cronExpression: schedule.cronExpression,
+    scheduleConfig: schedule.scheduleConfig ?? undefined,
+    timezone: schedule.timezone ?? undefined,
+    isEnabled: schedule.isEnabled,
+    nextRunAt: schedule.nextRunAt?.toISOString(),
+    lastRunAt: schedule.lastRunAt?.toISOString(),
+  };
 }
 
 export function canvasPO2DTO(canvas: CanvasDetailModel): Canvas {
@@ -62,5 +77,6 @@ export function canvasPO2DTO(canvas: CanvasDetailModel): Canvas {
     owner: canvas.owner ? pick(canvas.owner, ['uid', 'name', 'nickname', 'avatar']) : undefined,
     shareRecord: canvas.shareRecord ? shareRecordPO2DTO(canvas.shareRecord) : undefined,
     workflowApp: canvas.workflowApp ? workflowAppPO2DTO(canvas.workflowApp) : undefined,
+    schedule: canvas.schedule ? schedulePO2DTO(canvas.schedule) : undefined,
   };
 }

@@ -24,6 +24,8 @@ export const AppManager = lazy(() => import('./pages/app-manager'));
 export const MarketplacePage = lazy(() => import('./pages/marketplace'));
 export const WorkflowPage = lazy(() => import('./pages/workflow'));
 export const WorkspacePage = lazy(() => import('./pages/workspace'));
+export const RunHistoryPage = lazy(() => import('./pages/run-history'));
+export const RunDetailPage = lazy(() => import('./pages/run-detail'));
 
 export { AppLayout } from './components/layout';
 

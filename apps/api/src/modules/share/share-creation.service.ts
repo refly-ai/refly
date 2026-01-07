@@ -58,9 +58,10 @@ export class ShareCreationService {
 
   /**
    * Process canvas data for sharing - handles media nodes, node processing, and minimap
-   * This is a common method used by both createShareForCanvas and createShareForWorkflowApp
+   * This is a common method used by both createShareForCanvas, createShareForWorkflowApp,
+   * and ScheduleProcessor for creating execution snapshots.
    */
-  private async processCanvasForShare(
+  public async processCanvasForShare(
     user: User,
     canvasId: string,
     shareId: string,

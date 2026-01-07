@@ -1,6 +1,7 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { LLMModelConfig } from '@refly/openapi-schema';
 import { EnhancedChatOpenAI } from './openai';
+import { EnhancedChatVertexAI } from './vertex';
 import { ChatOllama } from '@langchain/ollama';
 import { ChatFireworks } from '@langchain/community/chat_models/fireworks';
 import { BaseProvider } from '../types';
@@ -8,7 +9,6 @@ import { AzureChatOpenAI, AzureOpenAIInput, OpenAIBaseInput } from '@langchain/o
 import { ChatBedrockConverse } from '@langchain/aws';
 import { wrapChatModelWithMonitoring } from '../monitoring/langfuse-wrapper';
 import { ProviderMisconfigurationError } from '@refly/errors';
-import { ChatVertexAI } from '@langchain/google-vertexai';
 
 interface BedrockApiKeyConfig {
   accessKeyId: string;
@@ -132,7 +132,7 @@ export const getChatModel = (
       break;
     }
     case 'vertex': {
-      model = new ChatVertexAI({
+      model = new EnhancedChatVertexAI({
         model: config.modelId,
         location: 'global',
         maxOutputTokens: config?.maxOutput,
@@ -154,3 +154,4 @@ export const getChatModel = (
 };
 
 export { BaseChatModel };
+export { isGeminiModel } from './vertex';

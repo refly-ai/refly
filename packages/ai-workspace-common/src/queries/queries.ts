@@ -38,6 +38,7 @@ import {
   createProviderItem,
   createResource,
   createResourceWithFile,
+  createSchedule,
   createShare,
   createSkillInstance,
   createSkillTrigger,
@@ -58,6 +59,7 @@ import {
   deleteProvider,
   deleteProviderItem,
   deleteResource,
+  deleteSchedule,
   deleteShare,
   deleteSkillInstance,
   deleteSkillTrigger,
@@ -98,6 +100,7 @@ import {
   getPilotSessionDetail,
   getProjectDetail,
   getResourceDetail,
+  getScheduleDetail,
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
@@ -105,6 +108,7 @@ import {
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowPlanDetail,
   getWorkflowVariables,
   hasBeenInvited,
   hasFilledForm,
@@ -132,6 +136,7 @@ import {
   listProviderItems,
   listProviders,
   listResources,
+  listSchedules,
   listShares,
   listSkillInstances,
   listSkills,
@@ -176,6 +181,7 @@ import {
   updateProvider,
   updateProviderItem,
   updateResource,
+  updateSchedule,
   updateSettings,
   updateSkillInstance,
   updateSkillTrigger,
@@ -254,6 +260,8 @@ import {
   CreateResourceError,
   CreateResourceWithFileData,
   CreateResourceWithFileError,
+  CreateScheduleData,
+  CreateScheduleError,
   CreateShareData,
   CreateShareError,
   CreateSkillInstanceData,
@@ -294,6 +302,8 @@ import {
   DeleteProviderItemError,
   DeleteResourceData,
   DeleteResourceError,
+  DeleteScheduleData,
+  DeleteScheduleError,
   DeleteShareData,
   DeleteShareError,
   DeleteSkillInstanceData,
@@ -369,6 +379,8 @@ import {
   GetProjectDetailError,
   GetResourceDetailData,
   GetResourceDetailError,
+  GetScheduleDetailData,
+  GetScheduleDetailError,
   GetSettingsError,
   GetSubscriptionPlansError,
   GetSubscriptionUsageError,
@@ -380,6 +392,8 @@ import {
   GetWorkflowAppDetailError,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
+  GetWorkflowPlanDetailData,
+  GetWorkflowPlanDetailError,
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
   HasBeenInvitedError,
@@ -428,6 +442,8 @@ import {
   ListProvidersError,
   ListResourcesData,
   ListResourcesError,
+  ListSchedulesData,
+  ListSchedulesError,
   ListSharesData,
   ListSharesError,
   ListSkillInstancesData,
@@ -509,6 +525,8 @@ import {
   UpdateProviderItemError,
   UpdateResourceData,
   UpdateResourceError,
+  UpdateScheduleData,
+  UpdateScheduleError,
   UpdateSettingsData,
   UpdateSettingsError,
   UpdateSkillInstanceData,
@@ -1141,6 +1159,23 @@ export const useGetWorkflowDetail = <
     queryKey: Common.UseGetWorkflowDetailKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getWorkflowDetail({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetWorkflowPlanDetail = <
+  TData = Common.GetWorkflowPlanDetailDefaultResponse,
+  TError = GetWorkflowPlanDetailError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowPlanDetailData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowPlanDetailKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowPlanDetail({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetWorkflowAppDetail = <
@@ -2959,6 +2994,91 @@ export const useExecuteWorkflowApp = <
   useMutation<TData, TError, Options<ExecuteWorkflowAppData, true>, TContext>({
     mutationKey: Common.UseExecuteWorkflowAppKeyFn(mutationKey),
     mutationFn: (clientOptions) => executeWorkflowApp(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useCreateSchedule = <
+  TData = Common.CreateScheduleMutationResult,
+  TError = CreateScheduleError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<CreateScheduleData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<CreateScheduleData, true>, TContext>({
+    mutationKey: Common.UseCreateScheduleKeyFn(mutationKey),
+    mutationFn: (clientOptions) => createSchedule(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useUpdateSchedule = <
+  TData = Common.UpdateScheduleMutationResult,
+  TError = UpdateScheduleError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UpdateScheduleData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UpdateScheduleData, true>, TContext>({
+    mutationKey: Common.UseUpdateScheduleKeyFn(mutationKey),
+    mutationFn: (clientOptions) => updateSchedule(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useDeleteSchedule = <
+  TData = Common.DeleteScheduleMutationResult,
+  TError = DeleteScheduleError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<DeleteScheduleData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<DeleteScheduleData, true>, TContext>({
+    mutationKey: Common.UseDeleteScheduleKeyFn(mutationKey),
+    mutationFn: (clientOptions) => deleteSchedule(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useListSchedules = <
+  TData = Common.ListSchedulesMutationResult,
+  TError = ListSchedulesError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<ListSchedulesData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<ListSchedulesData, true>, TContext>({
+    mutationKey: Common.UseListSchedulesKeyFn(mutationKey),
+    mutationFn: (clientOptions) => listSchedules(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useGetScheduleDetail = <
+  TData = Common.GetScheduleDetailMutationResult,
+  TError = GetScheduleDetailError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<GetScheduleDetailData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<GetScheduleDetailData, true>, TContext>({
+    mutationKey: Common.UseGetScheduleDetailKeyFn(mutationKey),
+    mutationFn: (clientOptions) => getScheduleDetail(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useSubmitForm = <

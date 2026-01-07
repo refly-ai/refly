@@ -19,7 +19,6 @@
     "@refly/common-types": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
     "@refly/canvas-common": "workspace:*",
-    "@refly/sandbox-agent": "workspace:*",
     "@refly/utils": "workspace:*",
     "@scalebox/sdk": "3.4.0",
     "apify-client": "^2.19.0",

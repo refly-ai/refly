@@ -10,7 +10,7 @@ import helmet from 'helmet';
 setMaxListeners(50);
 
 import * as Sentry from '@sentry/node';
-import { nodeProfilingIntegration } from '@sentry/profiling-node';
+// import { nodeProfilingIntegration } from '@sentry/profiling-node'; // Disabled: Node.js v24 ABI 137 not supported
 import { Logger } from 'nestjs-pino';
 
 import { AppModule } from './modules/app.module';
@@ -26,7 +26,7 @@ import { initTokenizer } from '@refly/utils/token';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
-  integrations: [nodeProfilingIntegration()],
+  integrations: [], // nodeProfilingIntegration() disabled for Node.js v24
   environment: process.env.NODE_ENV,
   tracesSampleRate: 1.0, //  Capture 100% of the transactions
   profilesSampleRate: 1.0,

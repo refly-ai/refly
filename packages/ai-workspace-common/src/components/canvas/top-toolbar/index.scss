@@ -15,3 +15,114 @@
     }
   }
 }
+
+// cover schedule select multi-select label style
+.schedule-select {
+  .ant-select-selector {
+    // remove text cursor
+    cursor: pointer !important;
+
+    // remove gray background when maxTagCount=0
+    .ant-select-selection-item,
+    .ant-select-selection-overflow-item {
+      background-color: transparent !important;
+      border: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      // move text position to the right
+      margin-left: 4px !important;
+      // make text bold
+      font-weight: 600 !important;
+    }
+
+    // ensure placeholder text style is normal
+    .ant-select-selection-placeholder {
+      color: inherit;
+      font-weight: 600 !important;
+    }
+
+    // remove text cursor from search input
+    .ant-select-selection-search-input {
+      cursor: pointer !important;
+    }
+  }
+}
+
+// same apply to monthly selector (add common class name)
+.schedule-select,
+.ant-select.schedule-monthly-select {
+  .ant-select-selector {
+    // remove text cursor
+    cursor: pointer !important;
+
+    .ant-select-selection-item,
+    .ant-select-selection-overflow-item {
+      background-color: transparent !important;
+      border: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      // move text position to the right
+      margin-left: 4px !important;
+      // make text bold
+      font-weight: 600 !important;
+    }
+
+    .ant-select-selection-placeholder {
+      color: inherit;
+      font-weight: 600 !important;
+    }
+
+    // remove text cursor from search input
+    .ant-select-selection-search-input {
+      cursor: pointer !important;
+    }
+  }
+}
+
+// make time picker text bold
+.ant-picker {
+  .ant-picker-input > input {
+    font-weight: 600 !important;
+  }
+}
+
+// Schedule limit modal button styles
+.schedule-limit-modal {
+  .ant-modal {
+    width: 480px !important;
+  }
+
+  .ant-modal-footer {
+    display: flex !important;
+    gap: 12px !important;
+    justify-content: flex-end !important;
+    align-items: flex-end !important;
+
+    .ant-btn {
+      // Full rounded pill shape for both buttons - smaller size
+      border-radius: 16px !important;
+      margin: 0 !important;
+      padding: 0 16px !important;
+      min-width: 100px !important;
+      font-size: 14px !important;
+    }
+
+    // Specific targeting for the view schedules button
+    .view-schedules-btn,
+    .ant-btn:last-child.ant-btn-primary {
+      background-color: var(--refly-text-0) !important;
+      border-color: var(--refly-text-0) !important;
+      color: var(--refly-bg-body-z0) !important;
+
+      &:hover,
+      &:focus,
+      &:active {
+        background-color: var(--refly-text-0) !important;
+        border-color: var(--refly-text-0) !important;
+        color: var(--refly-bg-body-z0) !important;
+        opacity: 0.8 !important;
+      }
+    }
+  }
+}
+

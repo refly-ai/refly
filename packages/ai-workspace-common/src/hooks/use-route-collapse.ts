@@ -32,23 +32,27 @@ export const useRouteCollapse = () => {
       '/marketplace',
     ];
 
-    // Check if current route matches any of the expanded routes
-    const shouldExpand = expandedRoutes.some((route) => {
-      if (route === '/home') {
-        return currentPath === '/';
-      }
-      if (route === '/canvas/empty') {
-        // Exact match for /canvas/empty
-        return currentPath === '/canvas/empty';
-      }
-      if (route === '/workspace') {
-        // Exact match for /workspace
-        return currentPath === '/workspace';
-      }
+    // Routes that require exact match to expand sidebar
+    const exactExpandedRoutes = ['/run-history'];
 
-      // For other routes, check if path starts with the route
-      return currentPath.startsWith(route);
-    });
+    // Check if current route matches any of the expanded routes
+    const shouldExpand =
+      expandedRoutes.some((route) => {
+        if (route === '/home') {
+          return currentPath === '/';
+        }
+        if (route === '/canvas/empty') {
+          // Exact match for /canvas/empty
+          return currentPath === '/canvas/empty';
+        }
+        if (route === '/workspace') {
+          // Exact match for /workspace
+          return currentPath === '/workspace';
+        }
+
+        // For other routes, check if path starts with the route
+        return currentPath.startsWith(route);
+      }) || exactExpandedRoutes.includes(currentPath);
 
     // Set collapse state based on route
     // If shouldExpand is true, set collapseState to 'expanded'

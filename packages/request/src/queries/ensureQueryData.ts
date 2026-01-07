@@ -9,6 +9,7 @@ import {
   exportDocument,
   getActionResult,
   getAuthConfig,
+  getAvailableVouchers,
   getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
@@ -38,6 +39,7 @@ import {
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowPlanDetail,
   getWorkflowVariables,
   hasBeenInvited,
   hasFilledForm,
@@ -70,8 +72,10 @@ import {
   listToolsetInventory,
   listToolsets,
   listUserTools,
+  listUserVouchers,
   listWorkflowApps,
   serveStatic,
+  verifyVoucherInvitation,
 } from '../requests/services.gen';
 import {
   CheckSettingsFieldData,
@@ -102,6 +106,7 @@ import {
   GetToolCallResultData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
+  GetWorkflowPlanDetailData,
   GetWorkflowVariablesData,
   ListAccountsData,
   ListCanvasesData,
@@ -126,6 +131,7 @@ import {
   ListToolsData,
   ListToolsetsData,
   ListWorkflowAppsData,
+  VerifyVoucherInvitationData,
 } from '../requests/types.gen';
 import * as Common from './common';
 export const ensureUseListMcpServersData = (
@@ -449,6 +455,14 @@ export const ensureUseGetWorkflowDetailData = (
     queryKey: Common.UseGetWorkflowDetailKeyFn(clientOptions),
     queryFn: () => getWorkflowDetail({ ...clientOptions }).then((response) => response.data),
   });
+export const ensureUseGetWorkflowPlanDetailData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowPlanDetailData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetWorkflowPlanDetailKeyFn(clientOptions),
+    queryFn: () => getWorkflowPlanDetail({ ...clientOptions }).then((response) => response.data),
+  });
 export const ensureUseGetWorkflowAppDetailData = (
   queryClient: QueryClient,
   clientOptions: Options<GetWorkflowAppDetailData, true>,
@@ -684,4 +698,28 @@ export const ensureUseServeStaticData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseServeStaticKeyFn(clientOptions),
     queryFn: () => serveStatic({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetAvailableVouchersData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetAvailableVouchersKeyFn(clientOptions),
+    queryFn: () => getAvailableVouchers({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseListUserVouchersData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListUserVouchersKeyFn(clientOptions),
+    queryFn: () => listUserVouchers({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseVerifyVoucherInvitationData = (
+  queryClient: QueryClient,
+  clientOptions: Options<VerifyVoucherInvitationData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseVerifyVoucherInvitationKeyFn(clientOptions),
+    queryFn: () => verifyVoucherInvitation({ ...clientOptions }).then((response) => response.data),
   });

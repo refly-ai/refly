@@ -17,6 +17,7 @@ import {
   checkSettingsField,
   checkToolOauthStatus,
   checkVerification,
+  claimVoucherInvitation,
   convert,
   createCanvas,
   createCanvasTemplate,
@@ -36,11 +37,13 @@ import {
   createProviderItem,
   createResource,
   createResourceWithFile,
+  createSchedule,
   createShare,
   createSkillInstance,
   createSkillTrigger,
   createToolset,
   createVerification,
+  createVoucherInvitation,
   createWorkflowApp,
   deleteCanvas,
   deleteDocument,
@@ -55,6 +58,7 @@ import {
   deleteProvider,
   deleteProviderItem,
   deleteResource,
+  deleteSchedule,
   deleteShare,
   deleteSkillInstance,
   deleteSkillTrigger,
@@ -72,6 +76,7 @@ import {
   generateMedia,
   getActionResult,
   getAuthConfig,
+  getAvailableVouchers,
   getCanvasCommissionByCanvasId,
   getCanvasData,
   getCanvasDetail,
@@ -94,6 +99,7 @@ import {
   getPilotSessionDetail,
   getProjectDetail,
   getResourceDetail,
+  getScheduleDetail,
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
@@ -101,6 +107,7 @@ import {
   getToolCallResult,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowPlanDetail,
   getWorkflowVariables,
   hasBeenInvited,
   hasFilledForm,
@@ -128,6 +135,7 @@ import {
   listProviderItems,
   listProviders,
   listResources,
+  listSchedules,
   listShares,
   listSkillInstances,
   listSkills,
@@ -136,6 +144,7 @@ import {
   listToolsetInventory,
   listToolsets,
   listUserTools,
+  listUserVouchers,
   listWorkflowApps,
   logout,
   multiLingualWebSearch,
@@ -154,6 +163,7 @@ import {
   submitForm,
   syncCanvasState,
   testProviderConnection,
+  triggerVoucher,
   unpinSkillInstance,
   updateCanvas,
   updateCanvasTemplate,
@@ -170,6 +180,7 @@ import {
   updateProvider,
   updateProviderItem,
   updateResource,
+  updateSchedule,
   updateSettings,
   updateSkillInstance,
   updateSkillTrigger,
@@ -177,6 +188,8 @@ import {
   updateWorkflowVariables,
   upload,
   validateMcpServer,
+  validateVoucher,
+  verifyVoucherInvitation,
 } from '../requests/services.gen';
 export type ListMcpServersDefaultResponse = Awaited<ReturnType<typeof listMcpServers>>['data'];
 export type ListMcpServersQueryResult<
@@ -614,6 +627,18 @@ export const UseGetWorkflowDetailKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetWorkflowDetailKey, ...(queryKey ?? [clientOptions])];
+export type GetWorkflowPlanDetailDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowPlanDetail>
+>['data'];
+export type GetWorkflowPlanDetailQueryResult<
+  TData = GetWorkflowPlanDetailDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWorkflowPlanDetailKey = 'GetWorkflowPlanDetail';
+export const UseGetWorkflowPlanDetailKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWorkflowPlanDetailKey, ...(queryKey ?? [clientOptions])];
 export type GetWorkflowAppDetailDefaultResponse = Awaited<
   ReturnType<typeof getWorkflowAppDetail>
 >['data'];
@@ -938,6 +963,40 @@ export const UseServeStaticKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useServeStaticKey, ...(queryKey ?? [clientOptions])];
+export type GetAvailableVouchersDefaultResponse = Awaited<
+  ReturnType<typeof getAvailableVouchers>
+>['data'];
+export type GetAvailableVouchersQueryResult<
+  TData = GetAvailableVouchersDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetAvailableVouchersKey = 'GetAvailableVouchers';
+export const UseGetAvailableVouchersKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useGetAvailableVouchersKey, ...(queryKey ?? [clientOptions])];
+export type ListUserVouchersDefaultResponse = Awaited<ReturnType<typeof listUserVouchers>>['data'];
+export type ListUserVouchersQueryResult<
+  TData = ListUserVouchersDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListUserVouchersKey = 'ListUserVouchers';
+export const UseListUserVouchersKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListUserVouchersKey, ...(queryKey ?? [clientOptions])];
+export type VerifyVoucherInvitationDefaultResponse = Awaited<
+  ReturnType<typeof verifyVoucherInvitation>
+>['data'];
+export type VerifyVoucherInvitationQueryResult<
+  TData = VerifyVoucherInvitationDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useVerifyVoucherInvitationKey = 'VerifyVoucherInvitation';
+export const UseVerifyVoucherInvitationKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useVerifyVoucherInvitationKey, ...(queryKey ?? [clientOptions])];
 export type ExtractVariablesMutationResult = Awaited<ReturnType<typeof extractVariables>>;
 export const useExtractVariablesKey = 'ExtractVariables';
 export const UseExtractVariablesKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1404,6 +1463,36 @@ export const UseExecuteWorkflowAppKeyFn = (mutationKey?: Array<unknown>) => [
   useExecuteWorkflowAppKey,
   ...(mutationKey ?? []),
 ];
+export type CreateScheduleMutationResult = Awaited<ReturnType<typeof createSchedule>>;
+export const useCreateScheduleKey = 'CreateSchedule';
+export const UseCreateScheduleKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateScheduleKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateScheduleMutationResult = Awaited<ReturnType<typeof updateSchedule>>;
+export const useUpdateScheduleKey = 'UpdateSchedule';
+export const UseUpdateScheduleKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateScheduleKey,
+  ...(mutationKey ?? []),
+];
+export type DeleteScheduleMutationResult = Awaited<ReturnType<typeof deleteSchedule>>;
+export const useDeleteScheduleKey = 'DeleteSchedule';
+export const UseDeleteScheduleKeyFn = (mutationKey?: Array<unknown>) => [
+  useDeleteScheduleKey,
+  ...(mutationKey ?? []),
+];
+export type ListSchedulesMutationResult = Awaited<ReturnType<typeof listSchedules>>;
+export const useListSchedulesKey = 'ListSchedules';
+export const UseListSchedulesKeyFn = (mutationKey?: Array<unknown>) => [
+  useListSchedulesKey,
+  ...(mutationKey ?? []),
+];
+export type GetScheduleDetailMutationResult = Awaited<ReturnType<typeof getScheduleDetail>>;
+export const useGetScheduleDetailKey = 'GetScheduleDetail';
+export const UseGetScheduleDetailKeyFn = (mutationKey?: Array<unknown>) => [
+  useGetScheduleDetailKey,
+  ...(mutationKey ?? []),
+];
 export type SubmitFormMutationResult = Awaited<ReturnType<typeof submitForm>>;
 export const useSubmitFormKey = 'SubmitForm';
 export const UseSubmitFormKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1560,6 +1649,34 @@ export type ConvertMutationResult = Awaited<ReturnType<typeof convert>>;
 export const useConvertKey = 'Convert';
 export const UseConvertKeyFn = (mutationKey?: Array<unknown>) => [
   useConvertKey,
+  ...(mutationKey ?? []),
+];
+export type ValidateVoucherMutationResult = Awaited<ReturnType<typeof validateVoucher>>;
+export const useValidateVoucherKey = 'ValidateVoucher';
+export const UseValidateVoucherKeyFn = (mutationKey?: Array<unknown>) => [
+  useValidateVoucherKey,
+  ...(mutationKey ?? []),
+];
+export type CreateVoucherInvitationMutationResult = Awaited<
+  ReturnType<typeof createVoucherInvitation>
+>;
+export const useCreateVoucherInvitationKey = 'CreateVoucherInvitation';
+export const UseCreateVoucherInvitationKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateVoucherInvitationKey,
+  ...(mutationKey ?? []),
+];
+export type ClaimVoucherInvitationMutationResult = Awaited<
+  ReturnType<typeof claimVoucherInvitation>
+>;
+export const useClaimVoucherInvitationKey = 'ClaimVoucherInvitation';
+export const UseClaimVoucherInvitationKeyFn = (mutationKey?: Array<unknown>) => [
+  useClaimVoucherInvitationKey,
+  ...(mutationKey ?? []),
+];
+export type TriggerVoucherMutationResult = Awaited<ReturnType<typeof triggerVoucher>>;
+export const useTriggerVoucherKey = 'TriggerVoucher';
+export const UseTriggerVoucherKeyFn = (mutationKey?: Array<unknown>) => [
+  useTriggerVoucherKey,
   ...(mutationKey ?? []),
 ];
 export type UpdatePageMutationResult = Awaited<ReturnType<typeof updatePage>>;

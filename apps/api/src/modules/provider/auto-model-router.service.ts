@@ -47,9 +47,23 @@ export enum RoutingStrategy {
 
 /**
  * Routing target definition
+ * Supports three routing strategies with priority order:
+ * 1. Fixed routing (model field) - highest priority
+ * 2. Random routing (models field) - used when model is empty
+ * 3. Weighted routing (weights field) - used when both model and models are empty
  */
 export interface RoutingTarget {
-  model: string;
+  // Priority 1: Fixed routing to a single model
+  model?: string;
+
+  // Priority 2: Random routing (randomly select from array)
+  models?: string[];
+
+  // Priority 3: Weighted routing (select based on weights)
+  weights?: Array<{
+    model: string;
+    weight: number; // Weight value, can be any positive number
+  }>;
 }
 
 /**
@@ -197,13 +211,90 @@ class RuleRouter {
   }
 
   /**
+   * Select a model from random routing (models array)
+   * Randomly selects one model from the available models in the array
+   */
+  private selectRandomModel(
+    models: string[],
+    modelMap: Map<string, ProviderItemModel>,
+  ): ProviderItemModel | null {
+    // Filter out models that don't exist in modelMap
+    const availableModels = models.filter((modelId) => modelMap.has(modelId));
+
+    if (availableModels.length === 0) {
+      return null;
+    }
+
+    // Randomly select one model from available models
+    const randomIndex = Math.floor(Math.random() * availableModels.length);
+    const selectedModelId = availableModels[randomIndex];
+
+    return modelMap.get(selectedModelId) ?? null;
+  }
+
+  /**
+   * Select a model from weighted routing (weights array)
+   * Selects a model based on weight proportions using weighted random algorithm
+   */
+  private selectWeightedModel(
+    weights: Array<{ model: string; weight: number }>,
+    modelMap: Map<string, ProviderItemModel>,
+  ): ProviderItemModel | null {
+    // Filter out invalid weights (weight <= 0 or model doesn't exist)
+    const validWeights = weights.filter((item) => item.weight > 0 && modelMap.has(item.model));
+
+    if (validWeights.length === 0) {
+      return null;
+    }
+
+    // Calculate total weight
+    const totalWeight = validWeights.reduce((sum, item) => sum + item.weight, 0);
+
+    // Generate random number between 0 and totalWeight
+    const randomValue = Math.random() * totalWeight;
+
+    // Find the model based on the weight interval
+    let accumulatedWeight = 0;
+    for (const item of validWeights) {
+      accumulatedWeight += item.weight;
+      if (randomValue <= accumulatedWeight) {
+        return modelMap.get(item.model) ?? null;
+      }
+    }
+
+    // Fallback to the last model (should not reach here in normal cases)
+    const lastModelId = validWeights[validWeights.length - 1].model;
+    return modelMap.get(lastModelId) ?? null;
+  }
+
+  /**
    * Select a model based on target configuration
+   * Implements priority-based selection logic:
+   * 1. Priority 1: Fixed routing (model field)
+   * 2. Priority 2: Random routing (models field)
+   * 3. Priority 3: Weighted routing (weights field)
    */
   private selectModelFromTarget(
     target: RoutingTarget,
     modelMap: Map<string, ProviderItemModel>,
   ): ProviderItemModel | null {
-    return modelMap.get(target.model) ?? null;
+    // Priority 1: Fixed routing - if model field exists and is non-empty
+    if (target.model) {
+      return modelMap.get(target.model) ?? null;
+    }
+
+    // Priority 2: Random routing - if models array exists and is non-empty
+    if (target.models && target.models.length > 0) {
+      return this.selectRandomModel(target.models, modelMap);
+    }
+
+    // Priority 3: Weighted routing - if weights array exists and is non-empty
+    if (target.weights && target.weights.length > 0) {
+      return this.selectWeightedModel(target.weights, modelMap);
+    }
+
+    // All fields are empty or invalid
+    return null;
   }
 }
 
@@ -230,31 +321,62 @@ class RuleCache implements OnModuleDestroy {
   private readonly cache = new Map<string, RuleCacheEntry>();
 
   /**
-   * Cache TTL in milliseconds (3 minutes)
+   * Cache TTL in milliseconds (5 minutes)
+   * Longer than refresh interval to ensure cache is always valid during periodic refresh
    */
-  private readonly CACHE_TTL_MS = 3 * 60 * 1000;
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000;
+
+  /**
+   * Timer for periodic cache refresh (3 minutes)
+   */
+  private readonly REFRESH_INTERVAL_MS = 3 * 60 * 1000;
 
   /**
    * Timer for periodic cache refresh
    */
   private refreshTimer?: NodeJS.Timeout;
 
+  /**
+   * Whether to disable cache (for development mode)
+   */
+  private readonly disableCache: boolean;
+
   constructor(private readonly prisma: PrismaService) {
+    // Disable cache in development mode
+    this.disableCache = process.env.NODE_ENV === 'development';
     this.startRefreshTimer();
+    this.warmupCache();
   }
 
   /**
    * Get rules for a scene from cache or database
-   * Returns cached rules if valid, otherwise fetches from database
+   * Returns cached rules immediately if available (even if expired), and refreshes in background
+   * In development mode, always fetches from database directly
    */
   async get(scene: string): Promise<AutoModelRoutingRuleModel[]> {
+    // In development mode, always fetch from database directly
+    if (this.disableCache) {
+      return this.fetchAndCache(scene, Date.now());
+    }
+
     const now = Date.now();
     const cached = this.cache.get(scene);
 
+    // Cache hit and still valid - return immediately
     if (cached && now - cached.cachedAt < this.CACHE_TTL_MS) {
       return cached.rules;
     }
 
+    // Cache exists but expired - return stale cache and refresh in background
+    if (cached) {
+      // Async refresh (non-blocking)
+      this.fetchAndCache(scene, now).catch((err) => {
+        this.logger.warn(`Background refresh failed for scene '${scene}'`, err);
+      });
+      return cached.rules;
+    }
+
+    // First access (no cache) - block and fetch
     return this.fetchAndCache(scene, now);
   }
 
@@ -274,11 +396,15 @@ class RuleCache implements OnModuleDestroy {
         orderBy: [{ priority: 'desc' }, { ruleId: 'asc' }],
       });
 
-      // Log if rules have changed
       const cached = this.cache.get(scene);
-      const hasChanged = !cached || this.hasRulesChanged(cached.rules, rules);
-      if (hasChanged) {
-        this.logger.log(`Rule cache updated for scene '${scene}': ${rules.length} rule(s) loaded`);
+
+      // Determine cache operation type and log accordingly
+      if (!cached) {
+        // Load: cache from empty to filled
+        this.logger.log(`Rule cache loaded for scene '${scene}': ${rules.length} rule(s)`);
+      } else if (this.hasRulesChanged(cached.rules, rules)) {
+        // Update: rules have changed
+        this.logger.log(`Rule cache updated for scene '${scene}': ${rules.length} rule(s)`);
       }
 
       // Update cache
@@ -289,7 +415,7 @@ class RuleCache implements OnModuleDestroy {
 
       return rules;
     } catch (error) {
-      this.logger.warn(`Failed to fetch rules for scene ${scene}`, error);
+      this.logger.warn(`Failed to fetch rules for scene '${scene}'`, error);
       // Return cached rules even if expired
       const cached = this.cache.get(scene);
       return cached?.rules ?? [];
@@ -347,13 +473,27 @@ class RuleCache implements OnModuleDestroy {
   }
 
   /**
+   * Preload cache for common scenes on service startup
+   * This reduces latency for first access to these scenes
+   */
+  private async warmupCache() {
+    const commonScenes = ['agent', 'copilot'];
+
+    for (const scene of commonScenes) {
+      this.fetchAndCache(scene).catch((err) => {
+        this.logger.warn(`Cache warmup failed for scene '${scene}'`, err);
+      });
+    }
+  }
+
+  /**
    * Start periodic cache refresh timer
-   * Refreshes all cached rules every CACHE_TTL_MS milliseconds
+   * Refreshes all cached rules every REFRESH_INTERVAL_MS milliseconds
    */
   private startRefreshTimer() {
     this.refreshTimer = setInterval(() => {
       this.refresh();
-    }, this.CACHE_TTL_MS);
+    }, this.REFRESH_INTERVAL_MS);
 
     // Ensure timer doesn't prevent process from exiting
     this.refreshTimer.unref();

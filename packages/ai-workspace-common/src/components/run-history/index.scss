@@ -1,0 +1,38 @@
+.run-history-list {
+  .run-history-table {
+    .ant-table {
+      background: transparent;
+      border: 1px solid var(--refly-Card-Border);
+    }
+
+    .ant-table-tbody>tr>td {
+      border-bottom: 1px solid var(--refly-Card-Border);
+    }
+
+    .ant-table-tbody>tr:last-child>td {
+      border-bottom: none;
+    }
+
+    // Make action column cell clickable area larger
+    .ant-table-tbody>tr>td:last-child {
+      padding: 0;
+    }
+
+    .ant-table-cell:last-child>div {
+      padding: 12px 16px;
+    }
+  }
+}
+
+// Failure reason tooltip styles
+.failure-reason-tooltip {
+  .ant-tooltip-inner {
+    background-color: var(--refly-text-0);
+    color: var(--refly-bg-body-z0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+}

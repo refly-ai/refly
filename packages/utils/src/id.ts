@@ -24,6 +24,7 @@ export enum IDPrefix {
   PILOT_SESSION = 'ps-',
   PILOT_STEP = 'pst-',
   COPILOT_SESSION = 'cps-',
+  WORKFLOW_PLAN = 'wp-',
   WORKFLOW_EXECUTION = 'we-',
   WORKFLOW_NODE_EXECUTION = 'wne-',
   PROVIDER = 'pr-',
@@ -53,6 +54,8 @@ export enum IDPrefix {
   VOUCHER_INVITATION = 'vi-',
   ROUTING_RESULT = 'rrt-',
   ROUTING_RULE = 'rrl-',
+  WORKFLOW_SCHEDULE = 'wh-',
+  SCHEDULE_RECORD = 'sr-',
 }
 
 export function genUID(): string {
@@ -89,6 +92,10 @@ export function genCopilotSessionID(): string {
 
 export function genVariableExtractionSessionID(): string {
   return IDPrefix.VARIABLE_EXTRACTION_SESSION + createId();
+}
+
+export function genWorkflowPlanID(): string {
+  return IDPrefix.WORKFLOW_PLAN + createId();
 }
 
 export function genWorkflowExecutionID(): string {
@@ -288,6 +295,14 @@ export const genCreditUsageId = () => {
   const timestamp = Date.now();
   return `${IDPrefix.CREDIT_USAGE}${timestamp}-${createId()}`;
 };
+
+export function genScheduleId(): string {
+  return IDPrefix.WORKFLOW_SCHEDULE + createId();
+}
+
+export function genScheduleRecordId(): string {
+  return IDPrefix.SCHEDULE_RECORD + createId();
+}
 
 export function genCreditDebtId() {
   const timestamp = Date.now();
