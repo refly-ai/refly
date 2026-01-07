@@ -4304,6 +4304,7 @@ const translations = {
     perRun: '每次运行',
     viewHistory: '查看历史',
     saveSuccess: '定时任务保存成功',
+    dependencyError: '定时任务设置成功，但工作流存在问题待修复',
     createSuccess: '定时任务创建成功',
     updateSuccess: '定时任务更新成功',
     deleteSuccess: '定时任务删除成功',

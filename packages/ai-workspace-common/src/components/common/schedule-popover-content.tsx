@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo } from 'react';
-import { Button, Switch, TimePicker, Select, Divider } from 'antd';
+import { Button, Switch, TimePicker, Select, Divider, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
@@ -28,6 +28,7 @@ export interface SchedulePopoverContentProps {
   canvasId: string;
   schedule?: WorkflowSchedule | null;
   isEnabled: boolean;
+  isEnabledLoading?: boolean;
   frequency: ScheduleFrequency;
   timeValue: dayjs.Dayjs;
   weekdays: number[];
@@ -91,6 +92,7 @@ export const SchedulePopoverContent = memo(
   ({
     canvasId,
     isEnabled,
+    isEnabledLoading = false,
     frequency,
     timeValue,
     weekdays,
@@ -268,7 +270,15 @@ export const SchedulePopoverContent = memo(
               </div>
             )}
           </div>
-          <Switch checked={isEnabled} onChange={onEnabledChange} />
+          <div className="flex items-center gap-2">
+            {isEnabledLoading && <Spin size="small" />}
+            <Switch
+              checked={isEnabled}
+              loading={isEnabledLoading}
+              disabled={isEnabledLoading}
+              onChange={onEnabledChange}
+            />
+          </div>
         </div>
 
         {/* Frequency buttons */}
@@ -277,12 +287,13 @@ export const SchedulePopoverContent = memo(
             <Button
               key={freq}
               type="default"
+              disabled={isEnabled || isEnabledLoading}
               className={`flex-1 h-11 ${
                 frequency === freq
                   ? '!bg-transparent !border-teal-500 !text-teal-600 hover:!border-teal-600 hover:!text-teal-700 hover:!bg-transparent'
                   : '!bg-transparent hover:!bg-transparent hover:border-gray-300 hover:text-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-300'
-              }`}
-              onClick={() => handleFrequencyClick(freq)}
+              } ${isEnabled || isEnabledLoading ? 'disabled:!bg-gray-100 disabled:!border-gray-300 disabled:!text-gray-400 dark:disabled:!bg-gray-800 dark:disabled:!border-gray-600 dark:disabled:!text-gray-500' : ''}`}
+              onClick={() => !(isEnabled || isEnabledLoading) && handleFrequencyClick(freq)}
             >
               {freq === 'daily'
                 ? t('schedule.daily') || 'Daily'
@@ -294,14 +305,18 @@ export const SchedulePopoverContent = memo(
         </div>
 
         {/* Time picker and selection container */}
-        <div className="flex items-center gap-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <div
+          className={`flex items-center gap-3 border rounded-lg ${isEnabled || isEnabledLoading ? 'border-refly-Card-Border' : 'border-refly-semi-color-border'}`}
+        >
           {/* Weekly selection */}
           {frequency === 'weekly' && (
             <div className="flex-1">
               <Select
                 mode="multiple"
                 value={weekdays}
+                disabled={isEnabled || isEnabledLoading}
                 onChange={(values) => {
+                  if (isEnabled || isEnabledLoading) return;
                   // Prevent removing all selections - must keep at least one
                   if (values.length === 0) {
                     console.log('[Schedule Debug] Preventing removal of all weekly selections');
@@ -329,7 +344,9 @@ export const SchedulePopoverContent = memo(
               <Select
                 mode="multiple"
                 value={monthDays}
+                disabled={isEnabled || isEnabledLoading}
                 onChange={(values) => {
+                  if (isEnabled || isEnabledLoading) return;
                   // Prevent removing all selections - must keep at least one
                   if (values.length === 0) {
                     console.log('[Schedule Debug] Preventing removal of all monthly selections');
@@ -351,7 +368,8 @@ export const SchedulePopoverContent = memo(
           {frequency === 'daily' && (
             <TimePicker
               value={timeValue}
-              onChange={(val) => val && onTimeChange(val)}
+              disabled={isEnabled || isEnabledLoading}
+              onChange={(val) => !(isEnabled || isEnabledLoading) && val && onTimeChange(val)}
               format="HH:mm"
               className="h-10 w-[180px]"
               size="large"
@@ -366,7 +384,8 @@ export const SchedulePopoverContent = memo(
               <Divider type="vertical" className="m-0 h-5 bg-refly-Card-Border" />
               <TimePicker
                 value={timeValue}
-                onChange={(val) => val && onTimeChange(val)}
+                disabled={isEnabled || isEnabledLoading}
+                onChange={(val) => !(isEnabled || isEnabledLoading) && val && onTimeChange(val)}
                 format="HH:mm"
                 className="flex-1 h-10 w-[188px]"
                 size="large"

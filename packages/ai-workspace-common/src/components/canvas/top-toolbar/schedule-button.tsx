@@ -89,6 +89,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   // Local state for popover form
   const [schedule, setSchedule] = useState<WorkflowSchedule | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
+  const [isEnabledLoading, setIsEnabledLoading] = useState(false);
 
   const [frequency, setFrequency] = useState<ScheduleFrequency>('daily');
   const [timeValue, setTimeValue] = useState<dayjs.Dayjs>(dayjs('08:00', 'HH:mm'));
@@ -484,22 +485,41 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   const handleSwitchChange = useCallback(
     async (checked: boolean) => {
       if (checked) {
-        // Check for dependency errors BEFORE enabling (immediate check)
-        const hasDependencyError = checkDependenciesImmediately();
+        try {
+          // Start loading immediately
+          setIsEnabledLoading(true);
 
-        // Show dependency popover if there are issues (but don't block enabling)
-        if (hasDependencyError) {
-          setOpen(false); // Close schedule popover first
-          setToolsDependencyOpen(canvasId, true); // Open tools dependency popover
-          setToolsDependencyHighlight(canvasId, true); // Highlight install buttons
+          // Check for dependency errors BEFORE enabling (immediate check)
+          const hasDependencyError = checkDependenciesImmediately();
+
+          // Show dependency popover if there are issues (but don't block enabling)
+          if (hasDependencyError) {
+            setOpen(false); // Close schedule popover first
+            setToolsDependencyOpen(canvasId, true); // Open tools dependency popover
+            setToolsDependencyHighlight(canvasId, true); // Highlight install buttons
+          }
+
+          // Enabling: auto save immediately (continue regardless of dependency errors)
+          setIsEnabled(true);
+          await autoSave(true);
+          // Refresh schedule data after enabling
+          await fetchSchedule();
+
+          // Show message after all async operations complete
+          if (hasDependencyError) {
+            message.warning(t('schedule.dependencyError') || 'Schedule has dependency errors');
+          } else {
+            message.success(t('schedule.saveSuccess') || 'Schedule saved');
+          }
+        } catch (error) {
+          console.error('Error enabling schedule:', error);
+          message.error(t('schedule.saveFailed') || 'Failed to save schedule');
+          // Reset enabled state if error occurs
+          setIsEnabled(false);
+        } finally {
+          // End loading after all operations and message display
+          setIsEnabledLoading(false);
         }
-
-        // Enabling: auto save immediately (continue regardless of dependency errors)
-        setIsEnabled(true);
-        await autoSave(true);
-        // Refresh schedule data after enabling
-        await fetchSchedule();
-        message.success(t('schedule.saveSuccess') || 'Schedule saved');
       } else {
         // Disabling: show confirmation modal and close popover
         setOpen(false);
@@ -656,6 +676,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
             canvasId={canvasId}
             schedule={schedule}
             isEnabled={isEnabled}
+            isEnabledLoading={isEnabledLoading}
             frequency={frequency}
             timeValue={timeValue}
             weekdays={weekdays}
