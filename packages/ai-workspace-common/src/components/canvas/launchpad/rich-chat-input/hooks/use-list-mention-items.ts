@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { Edge } from '@xyflow/react';
 import type { MentionItem } from '../mentionList';
 import type { ResourceType, ResourceMeta } from '@refly/openapi-schema';
 import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas';
@@ -9,11 +10,30 @@ import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/us
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useToolsetDefinition } from '@refly-packages/ai-workspace-common/hooks/use-toolset-definition';
 
-export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
+const getDownstreamNodeIds = (startNodeId: string, edges: Edge[]): Set<string> => {
+  const downstreamIds = new Set<string>();
+  const stack = [startNodeId];
+
+  while (stack.length > 0) {
+    const currentId = stack.pop()!;
+    const outputEdges = edges.filter((edge) => edge.source === currentId);
+
+    for (const edge of outputEdges) {
+      if (!downstreamIds.has(edge.target)) {
+        downstreamIds.add(edge.target);
+        stack.push(edge.target);
+      }
+    }
+  }
+
+  return downstreamIds;
+};
+
+export const useListMentionItems = (currentNodeId?: string): MentionItem[] => {
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.languages?.[0] || 'en';
 
-  const { nodes } = useCanvasData();
+  const { nodes, edges } = useCanvasData();
   const { canvasId } = useCanvasContext();
   const { data: files } = useFetchDriveFiles();
 
@@ -31,6 +51,10 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
   const { data: workflowVariables } = useVariablesManagement(canvasId);
 
   const allItems: MentionItem[] = useMemo(() => {
+    const downstreamNodeIds = currentNodeId
+      ? getDownstreamNodeIds(currentNodeId, edges)
+      : new Set<string>();
+
     const variableItems: MentionItem[] = workflowVariables.map((variable) => ({
       name: variable.name,
       description: variable.description || '',
@@ -47,7 +71,10 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
     const agentItems: MentionItem[] =
       nodes
         ?.filter(
-          (node) => node.type === 'skillResponse' && (!filterNodeId || node.id !== filterNodeId),
+          (node) =>
+            node.type === 'skillResponse' &&
+            node.id !== currentNodeId &&
+            !downstreamNodeIds.has(node.id),
         )
         ?.map((node) => ({
           name: node.data?.title || t('canvas.richChatInput.untitledAgent'),
@@ -166,12 +193,13 @@ export const useListMentionItems = (filterNodeId?: string): MentionItem[] => {
   }, [
     workflowVariables,
     nodes,
+    edges,
     files,
     userTools,
     lookupToolsetDefinitionByKey,
     t,
     currentLanguage,
-    filterNodeId,
+    currentNodeId,
   ]);
 
   return allItems;
