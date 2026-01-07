@@ -37,6 +37,7 @@ export default () => ({
     publicEndpoint:
       process.env.DRIVE_PUBLIC_ENDPOINT || 'http://localhost:5800/v1/drive/file/public',
     maxContentTokens: Number.parseInt(process.env.DRIVE_MAX_CONTENT_TOKENS) || 25000, // Maximum tokens in returned content (aligned with Claude Code's limit)
+    maxStorageTokens: Number.parseInt(process.env.DRIVE_MAX_STORAGE_TOKENS) || 100000, // Maximum tokens when storing parsed content (higher to preserve more)
     maxParseFileSizeKB: Number.parseInt(process.env.DRIVE_MAX_PARSE_FILE_SIZE_KB) || 512, // Maximum file size (KB) for direct parsing, larger files should use execute_code
   },
   session: {
@@ -276,8 +277,6 @@ export default () => ({
   },
 
   lambda: {
-    enabled: process.env.LAMBDA_ENABLED === 'true',
-    fallbackOnError: process.env.LAMBDA_FALLBACK_ON_ERROR !== 'false', // default true
     region: process.env.AWS_REGION || 'us-east-1',
     functions: {
       documentIngest: process.env.LAMBDA_DOC_PARSER_ARN,
@@ -299,7 +298,6 @@ export default () => ({
       },
     },
     videoAnalyze: {
-      enabled: process.env.LAMBDA_VIDEO_ANALYZE_ENABLED === 'true',
       defaultFrameCount: Number.parseInt(process.env.VIDEO_DEFAULT_FRAME_COUNT) || 10,
       maxDuration: Number.parseInt(process.env.VIDEO_MAX_DURATION) || 600, // 10 minutes
     },
@@ -311,6 +309,7 @@ export default () => ({
       intervalMs: Number.parseInt(process.env.LAMBDA_RESULT_POLL_INTERVAL_MS) || 1000,
       maxRetries: Number.parseInt(process.env.LAMBDA_RESULT_MAX_RETRIES) || 300, // 5 min with 1s interval
     },
+    parseTimeoutMs: Number.parseInt(process.env.LAMBDA_PARSE_TIMEOUT_MS) || 3 * 60 * 1000, // 3 minutes
   },
 
   sandbox: {

@@ -32,7 +32,6 @@ import { LambdaResultEnvelope, ResultPayload } from './lambda.dto';
 @Injectable()
 export class SqsBridgeService implements OnModuleInit, OnModuleDestroy {
   private sqsClient: SQSClient | null = null;
-  private readonly enabled: boolean;
   private readonly resultQueueUrl: string;
   private readonly pollIntervalMs: number;
   private readonly maxMessages: number;
@@ -52,25 +51,19 @@ export class SqsBridgeService implements OnModuleInit, OnModuleDestroy {
     @InjectQueue(QUEUE_LAMBDA_RESULT)
     private readonly resultQueue?: Queue,
   ) {
-    this.enabled = this.config.get<boolean>('lambda.enabled') ?? false;
     this.resultQueueUrl = this.config.get<string>('lambda.sqs.resultQueueUrl') ?? '';
     this.pollIntervalMs = this.config.get<number>('lambda.sqs.bridge.pollIntervalMs') ?? 1000;
     this.maxMessages = this.config.get<number>('lambda.sqs.bridge.maxMessages') ?? 10;
     this.waitTimeSeconds = this.config.get<number>('lambda.sqs.bridge.waitTimeSeconds') ?? 20;
     this.visibilityTimeout = this.config.get<number>('lambda.sqs.bridge.visibilityTimeout') ?? 60;
 
-    if (this.enabled && this.resultQueueUrl) {
+    if (this.resultQueueUrl) {
       const region = this.config.get<string>('lambda.region') || 'us-east-1';
       this.sqsClient = new SQSClient({ region });
     }
   }
 
   async onModuleInit() {
-    if (!this.enabled) {
-      this.logger.info('SQS Bridge disabled (Lambda not enabled)');
-      return;
-    }
-
     if (!this.resultQueueUrl) {
       this.logger.warn('SQS Bridge disabled: resultQueueUrl not configured');
       return;
@@ -305,7 +298,7 @@ export class SqsBridgeService implements OnModuleInit, OnModuleDestroy {
     queueUrl: string;
   } {
     return {
-      enabled: this.enabled && !!this.resultQueueUrl,
+      enabled: !!this.resultQueueUrl,
       isPolling: this.isPolling,
       inFlightMessages: this.inFlightMessages,
       queueUrl: this.resultQueueUrl,

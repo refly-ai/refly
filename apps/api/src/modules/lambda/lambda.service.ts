@@ -36,8 +36,6 @@ import {
 export class LambdaService {
   private sqsClient: SQSClient | null = null;
   private s3Client: S3Client | null = null;
-  private readonly lambdaEnabled: boolean;
-  private readonly fallbackOnError: boolean;
   private readonly s3Bucket: string;
   private readonly outputPrefix: string;
 
@@ -59,48 +57,13 @@ export class LambdaService {
     @InjectQueue(QUEUE_LAMBDA_VIDEO_ANALYZE)
     private readonly videoAnalyzeQueue?: Queue,
   ) {
-    this.lambdaEnabled = this.config.get<boolean>('lambda.enabled') || false;
-    this.fallbackOnError = this.config.get<boolean>('lambda.fallbackOnError') ?? true;
     this.s3Bucket = this.config.get<string>('lambda.s3.bucket') || 'refly-weblink';
     this.outputPrefix = this.config.get<string>('lambda.s3.outputPrefix') || 'lambda-output';
 
-    // Initialize SQS and S3 clients only if Lambda is enabled
-    if (this.lambdaEnabled) {
-      const region = this.config.get<string>('lambda.region') || 'us-east-1';
-      this.sqsClient = new SQSClient({ region });
-      this.s3Client = new S3Client({ region });
-      this.logger.info(`Lambda service initialized with region: ${region}`);
-    } else {
-      this.logger.info('Lambda service disabled, using local processing');
-    }
-  }
-
-  /**
-   * Check if Lambda processing is enabled
-   */
-  isEnabled(): boolean {
-    return this.lambdaEnabled;
-  }
-
-  /**
-   * Check if fallback to local processing is enabled
-   */
-  shouldFallbackOnError(): boolean {
-    return this.fallbackOnError;
-  }
-
-  /**
-   * Check if a specific Lambda function is enabled
-   */
-  isTypeEnabled(type: LambdaTaskType): boolean {
-    if (!this.lambdaEnabled) return false;
-
-    switch (type) {
-      case 'video-analyze':
-        return this.config.get<boolean>('lambda.videoAnalyze.enabled') || false;
-      default:
-        return true;
-    }
+    const region = this.config.get<string>('lambda.region') || 'us-east-1';
+    this.sqsClient = new SQSClient({ region });
+    this.s3Client = new S3Client({ region });
+    this.logger.info(`Lambda service initialized with region: ${region}`);
   }
 
   /**
@@ -126,10 +89,9 @@ export class LambdaService {
     uid: string;
     name?: string;
     mimeType?: string;
-    resourceId?: string;
     fileId?: string;
-    canvasId?: string;
-    toolName?: string;
+    resultId?: string;
+    resultVersion?: number;
   }): Promise<LambdaJobRecord> {
     const job = await this.prisma.lambdaJob.create({
       data: {
@@ -140,10 +102,9 @@ export class LambdaService {
         name: params.name,
         mimeType: params.mimeType,
         storageType: LAMBDA_STORAGE_TYPE_TEMPORARY,
-        resourceId: params.resourceId,
         fileId: params.fileId,
-        canvasId: params.canvasId,
-        toolName: params.toolName,
+        resultId: params.resultId,
+        resultVersion: params.resultVersion,
       },
     });
 
@@ -224,7 +185,9 @@ export class LambdaService {
       uid: params.uid,
       name: params.name,
       mimeType: params.contentType,
-      resourceId: params.resourceId,
+      fileId: params.fileId,
+      resultId: params.resultId,
+      resultVersion: params.resultVersion,
     });
 
     try {
@@ -235,7 +198,7 @@ export class LambdaService {
           bucket: params.outputBucket,
           prefix: this.buildOutputPrefix(type, jobId),
         },
-        resourceId: params.resourceId,
+        fileId: params.fileId,
         contentType: params.contentType,
         name: params.name,
         options: params.options,
@@ -277,7 +240,8 @@ export class LambdaService {
       uid: params.uid,
       name: params.name,
       fileId: params.fileId,
-      canvasId: params.canvasId,
+      resultId: params.resultId,
+      resultVersion: params.resultVersion,
     });
 
     try {
@@ -331,7 +295,8 @@ export class LambdaService {
       uid: params.uid,
       name: params.name,
       fileId: params.fileId,
-      canvasId: params.canvasId,
+      resultId: params.resultId,
+      resultVersion: params.resultVersion,
     });
 
     try {
@@ -377,16 +342,14 @@ export class LambdaService {
     const jobId = this.generateJobId();
     const type: LambdaTaskType = 'video-analyze';
 
-    if (!this.isTypeEnabled(type)) {
-      throw new Error('Video analysis is disabled');
-    }
-
     const job = await this.createJobRecord({
       jobId,
       type,
       uid: params.uid,
       name: params.name,
-      resourceId: params.resourceId,
+      fileId: params.fileId,
+      resultId: params.resultId,
+      resultVersion: params.resultVersion,
     });
 
     try {
@@ -400,7 +363,7 @@ export class LambdaService {
           bucket: params.outputBucket,
           prefix: this.buildOutputPrefix(type, jobId),
         },
-        resourceId: params.resourceId,
+        fileId: params.fileId,
         name: params.name,
         options: {
           frameCount: params.options?.frameCount ?? defaultFrameCount,

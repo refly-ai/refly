@@ -674,7 +674,7 @@ export class DriveService implements OnModuleInit {
     // Dispatch to Lambda
     const lambdaJob = await this.lambdaService!.dispatchDocumentIngest({
       uid: user.uid,
-      resourceId: fileId,
+      fileId,
       s3Input: {
         bucket: inputBucket,
         key: storageKey,
@@ -733,12 +733,8 @@ export class DriveService implements OnModuleInit {
           },
         });
 
-        // Fallback to local parsing if enabled
-        if (this.lambdaService!.shouldFallbackOnError()) {
-          return this.parseLocally(user, driveFile, storageKey);
-        }
-
-        return { ...this.toDTO(driveFile), content: driveFile.summary };
+        // Fallback to local parsing
+        return this.parseLocally(user, driveFile, storageKey);
       }
 
       if (effectiveStatus === 'COMPLETED' || effectiveStatus === 'PENDING_PERSIST') {
@@ -813,12 +809,8 @@ export class DriveService implements OnModuleInit {
       },
     });
 
-    // Fallback to local parsing if enabled
-    if (this.lambdaService!.shouldFallbackOnError()) {
-      return this.parseLocally(user, driveFile, storageKey);
-    }
-
-    return { ...this.toDTO(driveFile), content: driveFile.summary };
+    // Fallback to local parsing
+    return this.parseLocally(user, driveFile, storageKey);
   }
 
   /**
@@ -1043,13 +1035,22 @@ export class DriveService implements OnModuleInit {
 
     // Check if cache is still processing (Lambda job in progress)
     if (cache?.parseStatus === 'processing') {
-      const metadata = cache.metadata ? JSON.parse(cache.metadata) : {};
-      if (metadata.lambdaJobId && this.lambdaService) {
-        const { effectiveStatus } = await this.lambdaService.getJobStatus(metadata.lambdaJobId);
-        if (effectiveStatus === 'PROCESSING' || effectiveStatus === 'PENDING') {
-          // Return summary while processing
-          return { ...this.toDTO(driveFile), content: driveFile.summary || 'Processing...' };
+      // Check for timeout (default: 5 minutes)
+      const timeoutMs = this.config.get<number>('lambda.parseTimeoutMs') || 5 * 60 * 1000;
+      const elapsed = Date.now() - new Date(cache.updatedAt).getTime();
+
+      if (elapsed < timeoutMs) {
+        const metadata = cache.metadata ? JSON.parse(cache.metadata) : {};
+        if (metadata.lambdaJobId && this.lambdaService) {
+          const { effectiveStatus } = await this.lambdaService.getJobStatus(metadata.lambdaJobId);
+          if (effectiveStatus === 'PROCESSING' || effectiveStatus === 'PENDING') {
+            // Return summary while processing
+            return { ...this.toDTO(driveFile), content: driveFile.summary || 'Processing...' };
+          }
         }
+      } else {
+        // Timeout exceeded, mark as stale and allow re-parsing
+        this.logger.warn({ fileId, elapsed, timeoutMs }, 'Lambda parsing timeout, will retry');
       }
     }
 
@@ -1057,9 +1058,8 @@ export class DriveService implements OnModuleInit {
     const storageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
     // Step 2: No cache found, perform parsing
     getCurrentSpan()?.setAttribute('cache.hit', false);
-    // Use Lambda parsing if enabled and content type is supported
-    const useLambda =
-      this.lambdaService?.isEnabled() && this.isLambdaParsableContentType(contentType);
+    // Use Lambda parsing if content type is supported
+    const useLambda = this.isLambdaParsableContentType(contentType);
 
     if (useLambda) {
       getCurrentSpan()?.setAttribute('parse.method', 'lambda');
@@ -1219,6 +1219,19 @@ export class DriveService implements OnModuleInit {
     const createdFiles = await this.prisma.driveFile.createManyAndReturn({
       data: driveFilesData,
     });
+
+    // Trigger async parsing for each file (fire-and-forget)
+    for (let i = 0; i < createdFiles.length; i++) {
+      const file = createdFiles[i];
+      const req = processedRequests[i];
+      this.triggerAsyncParse(user, {
+        fileId: file.fileId,
+        type: file.type,
+        storageKey: req.driveStorageKey,
+        name: file.name,
+      }).catch(() => {});
+    }
+
     return createdFiles.map((file) => this.toDTO(file));
   }
 
@@ -1263,7 +1276,83 @@ export class DriveService implements OnModuleInit {
     const createdFile = await this.prisma.driveFile.create({
       data: createData,
     });
+
+    // Trigger async parsing if supported (fire-and-forget)
+    this.triggerAsyncParse(user, {
+      fileId: createdFile.fileId,
+      type: createdFile.type,
+      storageKey: processedReq.driveStorageKey,
+      name: createdFile.name,
+    }).catch(() => {});
+
     return this.toDTO(createdFile);
+  }
+
+  /**
+   * Trigger async Lambda parsing for supported file types
+   * Silently returns if type not supported or on error
+   */
+  private async triggerAsyncParse(
+    user: User,
+    driveFile: { fileId: string; type: string; storageKey: string; name: string },
+  ): Promise<void> {
+    // Check if Lambda service is available
+    if (!this.lambdaService) {
+      return;
+    }
+
+    // Check if content type is supported for Lambda parsing
+    if (!this.isLambdaParsableContentType(driveFile.type)) {
+      return;
+    }
+
+    try {
+      const inputBucket =
+        this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
+      const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+
+      const lambdaJob = await this.lambdaService.dispatchDocumentIngest({
+        uid: user.uid,
+        fileId: driveFile.fileId,
+        s3Input: {
+          bucket: inputBucket,
+          key: driveFile.storageKey,
+        },
+        outputBucket,
+        contentType: driveFile.type,
+        name: driveFile.name,
+      });
+
+      // Create processing cache record to prevent duplicate parsing
+      await this.prisma.driveFileParseCache.upsert({
+        where: { fileId: driveFile.fileId },
+        create: {
+          fileId: driveFile.fileId,
+          uid: user.uid,
+          contentStorageKey: '',
+          contentType: driveFile.type,
+          parser: 'lambda',
+          parseStatus: 'processing',
+          metadata: JSON.stringify({ lambdaJobId: lambdaJob.jobId }),
+        },
+        update: {
+          parseStatus: 'processing',
+          metadata: JSON.stringify({ lambdaJobId: lambdaJob.jobId }),
+          updatedAt: new Date(),
+        },
+      });
+
+      this.logger.info(
+        { fileId: driveFile.fileId, type: driveFile.type, jobId: lambdaJob.jobId },
+        'Triggered async parse for uploaded file',
+      );
+    } catch (error) {
+      // Silently ignore errors - async parsing is best-effort
+      this.logger.warn(
+        { fileId: driveFile.fileId, error: (error as Error).message },
+        'Failed to trigger async parse',
+      );
+    }
   }
 
   /**
@@ -2052,13 +2141,6 @@ export class DriveService implements OnModuleInit {
   // ============================================================================
 
   /**
-   * Check if Lambda file processing is enabled
-   */
-  isLambdaEnabled(): boolean {
-    return this.lambdaService?.isEnabled() ?? false;
-  }
-
-  /**
    * Pre-create a DriveFile record for async Lambda processing
    * This creates a placeholder file record that will be updated when Lambda completes
    *
@@ -2133,10 +2215,6 @@ export class DriveService implements OnModuleInit {
       };
     },
   ): Promise<{ driveFile: DriveFile; lambdaJob: LambdaJobRecord }> {
-    if (!this.lambdaService?.isEnabled()) {
-      throw new Error('Lambda file processing is not enabled');
-    }
-
     // Determine output content type based on format
     const format = params.options?.format ?? 'webp';
     const contentType = `image/${format}`;
@@ -2156,7 +2234,6 @@ export class DriveService implements OnModuleInit {
     const lambdaJob = await this.lambdaService.dispatchImageTransform({
       uid: user.uid,
       fileId: driveFile.fileId,
-      canvasId: params.canvasId,
       s3Input: {
         bucket: inputBucket,
         key: params.sourceKey,
@@ -2193,10 +2270,6 @@ export class DriveService implements OnModuleInit {
       };
     },
   ): Promise<{ driveFile: DriveFile; lambdaJob: LambdaJobRecord }> {
-    if (!this.lambdaService?.isEnabled()) {
-      throw new Error('Lambda file processing is not enabled');
-    }
-
     // Determine content type based on format
     const contentType =
       params.format === 'pdf'
@@ -2218,7 +2291,6 @@ export class DriveService implements OnModuleInit {
     const lambdaJob = await this.lambdaService.dispatchDocumentRender({
       uid: user.uid,
       fileId: driveFile.fileId,
-      canvasId: params.canvasId,
       s3Input: {
         bucket: inputBucket,
         key: params.sourceKey,
