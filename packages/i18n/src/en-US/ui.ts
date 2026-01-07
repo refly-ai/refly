@@ -4250,6 +4250,7 @@ const translations = {
     nameRequired: 'Name is required',
     enabled: 'Enabled',
     frequency: 'Frequency',
+    hourly: 'Hourly',
     daily: 'Daily',
     weekly: 'Weekly',
     monthly: 'Monthly',
@@ -4264,6 +4265,10 @@ const translations = {
     monthDays: 'Days of Month',
     selectMonthDays: 'Select days',
     monthDaysRequired: 'Select at least one day',
+    selectHours: 'Select Hours',
+    hourlyOptions: {
+      interval: 'Every {{hours}} hour',
+    },
     time: 'Time',
     timeRequired: 'Time is required',
     timezone: 'Timezone',

@@ -96,6 +96,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
 
   const [weekdays, setWeekdays] = useState<number[]>([1]);
   const [monthDays, setMonthDays] = useState<number[]>([1]);
+  const [hours, setHours] = useState<number>(1);
 
   // Get subscription plan type and credit insufficient modal setter
   const { planType, setCreditInsufficientModalVisible } = useSubscriptionStoreShallow((state) => ({
@@ -309,9 +310,10 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
           setTimeValue(serverTime);
         }
 
-        // Only update weekdays/monthDays if they're actually different
+        // Only update weekdays/monthDays/hours if they're actually different
         const serverWeekdays = config?.weekdays || [1];
         const serverMonthDays = config?.monthDays || [1];
+        const serverHours = config?.hours || 1;
         const currentWeekdaysStr = JSON.stringify(weekdays.sort());
         const currentMonthDaysStr = JSON.stringify(monthDays.sort());
         const serverWeekdaysStr = JSON.stringify(serverWeekdays.sort());
@@ -322,6 +324,9 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
         }
         if (currentMonthDaysStr !== serverMonthDaysStr) {
           setMonthDays(serverMonthDays);
+        }
+        if (hours !== serverHours) {
+          setHours(serverHours);
         }
       }
     } catch (error) {
@@ -361,6 +366,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
           time: timeStr,
           ...(frequency === 'weekly' && { weekdays }),
           ...(frequency === 'monthly' && { monthDays }),
+          ...(frequency === 'hourly' && { hours }),
         };
 
         const cronExpression = generateCronExpression(scheduleConfig);
@@ -430,6 +436,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
       timeValue,
       weekdays,
       monthDays,
+      hours,
       createScheduleMutation,
       updateScheduleMutation,
       fetchSchedule,
@@ -579,7 +586,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
       }, 500); // Debounce auto save
       return () => clearTimeout(timer);
     }
-  }, [frequency, timeValue, weekdays, monthDays, isEnabled, schedule?.scheduleId, autoSave]);
+  }, [frequency, timeValue, weekdays, monthDays, hours, isEnabled, schedule?.scheduleId, autoSave]);
 
   const handleButtonClick = useCallback(() => {
     if (disabled) return;
@@ -608,6 +615,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
     setTimeValue(config?.time ? dayjs(config.time, 'HH:mm') : dayjs('08:00', 'HH:mm'));
     setWeekdays(config?.weekdays || [1]);
     setMonthDays(config?.monthDays || [1]);
+    setHours(config?.hours || 1);
 
     setOpen(true);
   }, [
@@ -679,11 +687,13 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
             timeValue={timeValue}
             weekdays={weekdays}
             monthDays={monthDays}
+            hours={hours}
             onEnabledChange={handleSwitchChange}
             onFrequencyChange={setFrequency}
             onTimeChange={setTimeValue}
             onWeekdaysChange={setWeekdays}
             onMonthDaysChange={setMonthDays}
+            onHoursChange={setHours}
             onClose={handleClose}
             creditCost={creditUsageData?.data?.total}
             isCreditLoading={isCreditUsageLoading}

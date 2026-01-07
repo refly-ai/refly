@@ -4282,6 +4282,7 @@ const translations = {
     nameRequired: '请输入名称',
     enabled: '启用',
     frequency: '频率',
+    hourly: '每小时',
     daily: '每日',
     weekly: '每周',
     monthly: '每月',
@@ -4296,6 +4297,10 @@ const translations = {
     monthDays: '日期',
     selectMonthDays: '选择日期',
     monthDaysRequired: '请至少选择一天',
+    selectHours: '选择小时间隔',
+    hourlyOptions: {
+      interval: '每{{hours}}小时',
+    },
     time: '时间',
     timeRequired: '请选择时间',
     timezone: '时区',

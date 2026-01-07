@@ -59,6 +59,7 @@ export const ScheduleColumn = memo(
     );
     const [weekdays, setWeekdays] = useState<number[]>(existingConfig?.weekdays || [1]);
     const [monthDays, setMonthDays] = useState<number[]>(existingConfig?.monthDays || [1]);
+    const [hours, setHours] = useState<number>(existingConfig?.hours || 1);
 
     // API mutation
     const updateScheduleMutation = useUpdateSchedule();
@@ -131,6 +132,7 @@ export const ScheduleColumn = memo(
             time: timeStr,
             ...(frequency === 'weekly' && { weekdays }),
             ...(frequency === 'monthly' && { monthDays }),
+            ...(frequency === 'hourly' && { hours }),
           };
 
           const cronExpression = generateCronExpression(scheduleConfig);
@@ -192,6 +194,7 @@ export const ScheduleColumn = memo(
         currentTimeValue: dayjs.Dayjs,
         currentWeekdays: number[],
         currentMonthDays: number[],
+        currentHours: number,
       ) => {
         if (!schedule?.scheduleId || !currentTimeValue) return;
 
@@ -203,6 +206,7 @@ export const ScheduleColumn = memo(
             time: timeStr,
             ...(currentFrequency === 'weekly' && { weekdays: currentWeekdays }),
             ...(currentFrequency === 'monthly' && { monthDays: currentMonthDays }),
+            ...(currentFrequency === 'hourly' && { hours: currentHours }),
           };
 
           const cronExpression = generateCronExpression(scheduleConfig);
@@ -235,33 +239,41 @@ export const ScheduleColumn = memo(
     const handleFrequencyChange = useCallback(
       (newFrequency: ScheduleFrequency) => {
         setFrequency(newFrequency);
-        debouncedSaveConfig(newFrequency, timeValue, weekdays, monthDays);
+        debouncedSaveConfig(newFrequency, timeValue, weekdays, monthDays, hours);
       },
-      [weekdays, monthDays, timeValue, debouncedSaveConfig],
+      [weekdays, monthDays, hours, timeValue, debouncedSaveConfig],
     );
 
     const handleTimeChange = useCallback(
       (newTime: dayjs.Dayjs) => {
         setTimeValue(newTime);
-        debouncedSaveConfig(frequency, newTime, weekdays, monthDays);
+        debouncedSaveConfig(frequency, newTime, weekdays, monthDays, hours);
       },
-      [frequency, weekdays, monthDays, debouncedSaveConfig],
+      [frequency, weekdays, monthDays, hours, debouncedSaveConfig],
     );
 
     const handleWeekdaysChange = useCallback(
       (newWeekdays: number[]) => {
         setWeekdays(newWeekdays);
-        debouncedSaveConfig(frequency, timeValue, newWeekdays, monthDays);
+        debouncedSaveConfig(frequency, timeValue, newWeekdays, monthDays, hours);
       },
-      [frequency, timeValue, monthDays, debouncedSaveConfig],
+      [frequency, timeValue, monthDays, hours, debouncedSaveConfig],
     );
 
     const handleMonthDaysChange = useCallback(
       (newMonthDays: number[]) => {
         setMonthDays(newMonthDays);
-        debouncedSaveConfig(frequency, timeValue, weekdays, newMonthDays);
+        debouncedSaveConfig(frequency, timeValue, weekdays, newMonthDays, hours);
       },
-      [frequency, timeValue, weekdays, debouncedSaveConfig],
+      [frequency, timeValue, weekdays, hours, debouncedSaveConfig],
+    );
+
+    const handleHoursChange = useCallback(
+      (newHours: number) => {
+        setHours(newHours);
+        debouncedSaveConfig(frequency, timeValue, weekdays, monthDays, newHours);
+      },
+      [frequency, timeValue, weekdays, monthDays, debouncedSaveConfig],
     );
 
     // Schedule display for badge
@@ -328,11 +340,13 @@ export const ScheduleColumn = memo(
               timeValue={timeValue}
               weekdays={weekdays}
               monthDays={monthDays}
+              hours={hours}
               onEnabledChange={handleEnabledChange}
               onFrequencyChange={handleFrequencyChange}
               onTimeChange={handleTimeChange}
               onWeekdaysChange={handleWeekdaysChange}
               onMonthDaysChange={handleMonthDaysChange}
+              onHoursChange={handleHoursChange}
               onClose={handleClose}
               creditCost={creditUsageData?.data?.total}
               isCreditLoading={isCreditUsageLoading}

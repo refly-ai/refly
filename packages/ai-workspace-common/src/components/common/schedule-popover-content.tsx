@@ -15,13 +15,14 @@ import './schedule-popover-content.scss';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export type ScheduleFrequency = 'daily' | 'weekly' | 'monthly';
+export type ScheduleFrequency = 'hourly' | 'daily' | 'weekly' | 'monthly';
 
 export interface ScheduleConfig {
   type: ScheduleFrequency;
   time: string;
   weekdays?: number[];
   monthDays?: number[];
+  hours?: number; // For hourly schedule - specifies which hour to run (1-12)
 }
 
 export interface SchedulePopoverContentProps {
@@ -33,11 +34,13 @@ export interface SchedulePopoverContentProps {
   timeValue: dayjs.Dayjs;
   weekdays: number[];
   monthDays: number[];
+  hours: number; // For hourly schedule (1-12)
   onEnabledChange: (enabled: boolean) => void;
   onFrequencyChange: (frequency: ScheduleFrequency) => void;
   onTimeChange: (time: dayjs.Dayjs) => void;
   onWeekdaysChange: (weekdays: number[]) => void;
   onMonthDaysChange: (monthDays: number[]) => void;
+  onHoursChange: (hours: number) => void;
   onClose?: () => void;
   creditCost?: number | string;
   isCreditLoading?: boolean;
@@ -60,6 +63,16 @@ export const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => ({
   label: `${i + 1}`,
 }));
 
+export const HOURLY_OPTIONS = [
+  { value: 1, label: '1' },
+  { value: 2, label: '2' },
+  { value: 3, label: '3' },
+  { value: 4, label: '4' },
+  { value: 6, label: '6' },
+  { value: 8, label: '8' },
+  { value: 12, label: '12' },
+];
+
 export function parseScheduleConfig(configStr?: string): ScheduleConfig | null {
   if (!configStr) return null;
   try {
@@ -73,6 +86,11 @@ export function generateCronExpression(config: ScheduleConfig): string {
   const [hour, minute] = config.time.split(':').map(Number);
 
   switch (config.type) {
+    case 'hourly': {
+      // Run at the top of the hour for every N hours (1-12)
+      const hourInterval = config.hours || 1;
+      return `0 */${hourInterval} * * *`;
+    }
     case 'daily':
       return `${minute} ${hour} * * *`;
     case 'weekly': {
@@ -97,11 +115,13 @@ export const SchedulePopoverContent = memo(
     timeValue,
     weekdays,
     monthDays,
+    hours,
     onEnabledChange,
     onFrequencyChange,
     onTimeChange,
     onWeekdaysChange,
     onMonthDaysChange,
+    onHoursChange,
     onClose,
     creditCost,
     isCreditLoading,
@@ -210,6 +230,7 @@ export const SchedulePopoverContent = memo(
           time: timeValue.format('HH:mm'),
           weekdays: frequency === 'weekly' ? weekdays : undefined,
           monthDays: frequency === 'monthly' ? monthDays : undefined,
+          hours: frequency === 'hourly' ? hours : undefined,
         };
 
         const cronExpression = generateCronExpression(config);
@@ -236,6 +257,11 @@ export const SchedulePopoverContent = memo(
       (freq: ScheduleFrequency) => {
         onFrequencyChange(freq);
 
+        // Set default hours for hourly frequency
+        if (freq === 'hourly' && hours === 1) {
+          // Keep default as 1 hour interval
+          onHoursChange(1);
+        }
         // Check if weekdays contains only the default Monday (value 1)
         if (
           freq === 'weekly' &&
@@ -255,7 +281,15 @@ export const SchedulePopoverContent = memo(
           onMonthDaysChange([currentDay]);
         }
       },
-      [weekdays, monthDays, onFrequencyChange, onWeekdaysChange, onMonthDaysChange],
+      [
+        weekdays,
+        monthDays,
+        hours,
+        onFrequencyChange,
+        onWeekdaysChange,
+        onMonthDaysChange,
+        onHoursChange,
+      ],
     );
 
     return (
@@ -283,7 +317,7 @@ export const SchedulePopoverContent = memo(
 
         {/* Frequency buttons */}
         <div className="flex gap-2">
-          {(['daily', 'weekly', 'monthly'] as ScheduleFrequency[]).map((freq) => (
+          {(['hourly', 'daily', 'weekly', 'monthly'] as ScheduleFrequency[]).map((freq) => (
             <Button
               key={freq}
               type="default"
@@ -295,11 +329,13 @@ export const SchedulePopoverContent = memo(
               } ${isEnabled || isEnabledLoading ? 'disabled:!bg-gray-100 disabled:!border-gray-300 disabled:!text-gray-400 dark:disabled:!bg-gray-800 dark:disabled:!border-gray-600 dark:disabled:!text-gray-500' : ''}`}
               onClick={() => !(isEnabled || isEnabledLoading) && handleFrequencyClick(freq)}
             >
-              {freq === 'daily'
-                ? t('schedule.daily') || 'Daily'
-                : freq === 'weekly'
-                  ? t('schedule.weekly') || 'Weekly'
-                  : t('schedule.monthly') || 'Monthly'}
+              {freq === 'hourly'
+                ? t('schedule.hourly') || 'Hourly'
+                : freq === 'daily'
+                  ? t('schedule.daily') || 'Daily'
+                  : freq === 'weekly'
+                    ? t('schedule.weekly') || 'Weekly'
+                    : t('schedule.monthly') || 'Monthly'}
             </Button>
           ))}
         </div>
@@ -308,6 +344,27 @@ export const SchedulePopoverContent = memo(
         <div
           className={`flex items-center gap-3 border rounded-lg ${isEnabled || isEnabledLoading ? 'border-refly-Card-Border' : 'border-refly-semi-color-border'}`}
         >
+          {/* Hourly selection */}
+          {frequency === 'hourly' && (
+            <div className="flex-1">
+              <Select
+                value={hours}
+                disabled={isEnabled || isEnabledLoading}
+                onChange={(value) => {
+                  if (isEnabled || isEnabledLoading) return;
+                  onHoursChange(value);
+                }}
+                options={HOURLY_OPTIONS.map((h) => ({
+                  ...h,
+                  label: t('schedule.hourlyOptions.interval', { hours: h.label }),
+                }))}
+                placeholder={t('schedule.selectHours') || 'Select Hours'}
+                className="w-[180px] h-full schedule-select"
+                size="large"
+              />
+            </div>
+          )}
+
           {/* Weekly selection */}
           {frequency === 'weekly' && (
             <div className="flex-1">
@@ -394,13 +451,15 @@ export const SchedulePopoverContent = memo(
               />
             </>
           )}
+
+          {/* Hourly selection - no time picker needed since it runs on the hour */}
         </div>
 
         {/* Cost info - only show if cost is not 0 */}
         {!isCreditLoading && (creditCost ?? 0) !== 0 && (
           <div className="flex items-center justify-between text-sm text-gray-500">
             <span>
-              {t('schedule.cost') || 'Cost'}: {creditCost} / {t('schedule.perRun') || 'run'}
+              {t('schedule.cost') || 'Cost'}: {creditCost}~ / {t('schedule.perRun') || 'run'}
             </span>
             {showUpgrade && (
               <Button
