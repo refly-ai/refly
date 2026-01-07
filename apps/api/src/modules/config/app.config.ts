@@ -254,6 +254,43 @@ export default () => ({
     },
   },
 
+  lambda: {
+    enabled: process.env.LAMBDA_ENABLED === 'true',
+    fallbackOnError: process.env.LAMBDA_FALLBACK_ON_ERROR !== 'false', // default true
+    region: process.env.AWS_REGION || 'us-east-1',
+    functions: {
+      documentIngest: process.env.LAMBDA_DOC_PARSER_ARN,
+      imageTransform: process.env.LAMBDA_IMAGE_PROCESSOR_ARN,
+      documentRender: process.env.LAMBDA_DOC_EXPORTER_ARN,
+      videoAnalyze: process.env.LAMBDA_VIDEO_ANALYZER_ARN,
+    },
+    sqs: {
+      docIngestQueueUrl: process.env.SQS_DOC_PARSE_QUEUE_URL,
+      imageTransformQueueUrl: process.env.SQS_IMAGE_PROCESS_QUEUE_URL,
+      documentRenderQueueUrl: process.env.SQS_DOC_EXPORT_QUEUE_URL,
+      videoAnalyzeQueueUrl: process.env.SQS_VIDEO_ANALYZE_QUEUE_URL,
+      resultQueueUrl: process.env.SQS_RESULT_QUEUE_URL,
+      bridge: {
+        pollIntervalMs: Number.parseInt(process.env.SQS_BRIDGE_POLL_INTERVAL_MS || '1000'),
+        maxMessages: Number.parseInt(process.env.SQS_BRIDGE_MAX_MESSAGES || '10'),
+        waitTimeSeconds: Number.parseInt(process.env.SQS_BRIDGE_WAIT_TIME_SECONDS || '20'),
+        visibilityTimeout: Number.parseInt(process.env.SQS_BRIDGE_VISIBILITY_TIMEOUT || '60'),
+      },
+    },
+    videoAnalyze: {
+      enabled: process.env.LAMBDA_VIDEO_ANALYZE_ENABLED === 'true',
+      defaultFrameCount: Number.parseInt(process.env.VIDEO_DEFAULT_FRAME_COUNT) || 10,
+      maxDuration: Number.parseInt(process.env.VIDEO_MAX_DURATION) || 600, // 10 minutes
+    },
+    s3: {
+      bucket: process.env.LAMBDA_S3_BUCKET || process.env.MINIO_INTERNAL_BUCKET || 'refly-weblink',
+      outputPrefix: process.env.LAMBDA_OUTPUT_PREFIX || 'lambda-output',
+    },
+    resultPolling: {
+      intervalMs: Number.parseInt(process.env.LAMBDA_RESULT_POLL_INTERVAL_MS) || 1000,
+      maxRetries: Number.parseInt(process.env.LAMBDA_RESULT_MAX_RETRIES) || 300, // 5 min with 1s interval
+    },
+  },
   sandbox: {
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,

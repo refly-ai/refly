@@ -4,9 +4,10 @@ import { DriveService } from './drive.service';
 import { CommonModule } from '../common/common.module';
 import { MiscModule } from '../misc/misc.module';
 import { ProviderModule } from '../provider/provider.module';
+import { LambdaModule } from '../lambda/lambda.module';
 
 @Module({
-  imports: [CommonModule, MiscModule, ProviderModule],
+  imports: [CommonModule, MiscModule, ProviderModule, LambdaModule],
   controllers: [DriveController],
   providers: [DriveService],
   exports: [DriveService],

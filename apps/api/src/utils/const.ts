@@ -33,3 +33,26 @@ export const QUEUE_CLEANUP_EXPIRED_VOUCHERS = 'cleanupExpiredVouchers';
 export const SUCCESS_STATUS = 'success';
 export const FAILED_STATUS = 'failed';
 export const QUEUE_WORKFLOW_APP_TEMPLATE = 'workflowAppTemplate';
+
+// Lambda processing queues
+export const QUEUE_LAMBDA_DOC_INGEST = 'lambdaDocIngest';
+export const QUEUE_LAMBDA_IMAGE_TRANSFORM = 'lambdaImageTransform';
+export const QUEUE_LAMBDA_DOC_RENDER = 'lambdaDocRender';
+export const QUEUE_LAMBDA_VIDEO_ANALYZE = 'lambdaVideoAnalyze';
+export const QUEUE_LAMBDA_RESULT = 'lambdaResult';
+
+// Lambda job types
+export const LAMBDA_JOB_TYPE_DOC_INGEST = 'document-ingest';
+export const LAMBDA_JOB_TYPE_IMAGE_TRANSFORM = 'image-transform';
+export const LAMBDA_JOB_TYPE_DOC_RENDER = 'document-render';
+export const LAMBDA_JOB_TYPE_VIDEO_ANALYZE = 'video-analyze';
+
+// Lambda job statuses
+export const LAMBDA_JOB_STATUS_PENDING = 'pending';
+export const LAMBDA_JOB_STATUS_PROCESSING = 'processing';
+export const LAMBDA_JOB_STATUS_SUCCESS = 'success';
+export const LAMBDA_JOB_STATUS_FAILED = 'failed';
+
+// Lambda storage types
+export const LAMBDA_STORAGE_TYPE_TEMPORARY = 'temporary';
+export const LAMBDA_STORAGE_TYPE_PERMANENT = 'permanent';
