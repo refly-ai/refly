@@ -564,9 +564,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
   const handleButtonClick = useCallback(() => {
     if (disabled) return;
 
-    logEvent('canvas::schedule_button_click', Date.now(), {
-      canvas_id: canvasId,
-    });
+    logEvent('schedule_entry_click');
 
     // Check if this canvas already has an ENABLED schedule (only enabled schedules count toward quota)
     const hasEnabledSchedule = !!schedule?.isEnabled;
