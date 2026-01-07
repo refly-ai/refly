@@ -5,13 +5,33 @@ import { useEdgeStyles, getEdgeStyles } from '../../components/canvas/constants'
 import { CanvasNode } from '@refly/canvas-common';
 import { edgeEventsEmitter } from '@refly-packages/ai-workspace-common/events/edge';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-data';
+import { useTranslation } from 'react-i18next';
+import { message } from 'antd';
+
+const checkIsCycle = (source: string, target: string, edges: Edge[]) => {
+  const visited = new Set<string>();
+  const stack = [target];
+
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    if (current === source) return true;
+    if (visited.has(current)) continue;
+    visited.add(current);
+
+    const targetEdges = edges.filter((edge) => edge.source === current);
+    for (const edge of targetEdges) {
+      stack.push(edge.target);
+    }
+  }
+
+  return false;
+};
 
 export const useEdgeOperations = () => {
   const { getState, setState } = useStoreApi<CanvasNode<any>>();
   const edgeStyles = useEdgeStyles();
   const { forceSyncState } = useCanvasContext();
-  const { setNodeData } = useNodeData();
+  const { t } = useTranslation();
 
   const updateEdgesWithSync = useCallback(
     (edges: Edge[]) => {
@@ -29,7 +49,7 @@ export const useEdgeOperations = () => {
 
       updateEdgesWithSync(updatedEdges);
     },
-    [getState, setNodeData, updateEdgesWithSync],
+    [getState, updateEdgesWithSync],
   );
 
   const onConnect = useCallback(
@@ -52,6 +72,12 @@ export const useEdgeOperations = () => {
         return;
       }
 
+      // check for cycles
+      if (checkIsCycle(params.source, params.target, safeEdges)) {
+        message.warning(t('canvas.cycleDetectionError'));
+        return;
+      }
+
       const newEdge = {
         ...params,
         id: `edge-${genUniqueId()}`,
@@ -68,7 +94,7 @@ export const useEdgeOperations = () => {
         newEdges: updatedEdges,
       });
     },
-    [getState, setNodeData, updateEdgesWithSync],
+    [getState, updateEdgesWithSync, edgeStyles.default, t],
   );
 
   const updateAllEdgesStyle = useCallback(

@@ -1375,6 +1375,7 @@ const translations = {
       error: '导出图片失败',
       noNodes: '画布为空，无法导出图片',
     },
+    cycleDetectionError: '工作流暂不支持闭环连线，请检查连线方向',
     launchpad: {
       placeholder: '描述你的需求...',
       chatInputPlaceholder: '输入任务描述，Agent 将生成可复用的工作流',

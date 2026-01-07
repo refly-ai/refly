@@ -1220,6 +1220,8 @@ const translations = {
       error: 'Failed to export image',
       noNodes: 'Canvas is empty, cannot export image',
     },
+    cycleDetectionError:
+      'Closed loops are not supported in the workflow. Please check the connection direction',
     launchpad: {
       placeholder: 'Describe needs...',
       chatInputPlaceholder: 'Enter task description, Agent will generate reusable workflows',
