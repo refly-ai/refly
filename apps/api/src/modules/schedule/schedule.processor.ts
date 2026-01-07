@@ -207,57 +207,6 @@ export class ScheduleProcessor extends WorkerHost {
         }
       }
 
-      // 2. Check if schedule still exists and is enabled
-      // This prevents execution of tasks for deleted/disabled schedules
-      const schedule = await this.prisma.workflowSchedule.findUnique({
-        where: { scheduleId },
-      });
-
-      if (!schedule || schedule.deletedAt || !schedule.isEnabled) {
-        this.logger.warn(
-          `Schedule ${scheduleId} is deleted/disabled, skipping execution for job ${job.id}`,
-        );
-
-        // Rollback Redis counter since we're not proceeding with execution
-        if (redisCounterActive) {
-          try {
-            const redisKey = `${SCHEDULE_REDIS_KEYS.USER_CONCURRENT_PREFIX}${uid}`;
-            await this.redisService.decr(redisKey);
-            this.logger.debug(
-              `Rolled back Redis counter for user ${uid} (schedule deleted/disabled)`,
-            );
-          } catch (redisError) {
-            this.logger.warn(`Failed to rollback Redis counter for user ${uid}`, redisError);
-          }
-        }
-
-        // Record failed metric (schedule deleted/disabled)
-        const failureReason = schedule?.deletedAt
-          ? ScheduleFailureReason.SCHEDULE_DELETED
-          : ScheduleFailureReason.SCHEDULE_DISABLED;
-        this.metrics.execution.fail(
-          'cron',
-          schedule?.deletedAt ? 'schedule_deleted' : 'schedule_disabled',
-        );
-        // Update WorkflowScheduleRecord to 'failed' if exists
-        if (existingRecordId) {
-          await this.prisma.workflowScheduleRecord.update({
-            where: { scheduleRecordId: existingRecordId },
-            data: {
-              status: 'failed',
-              failureReason,
-              errorDetails: JSON.stringify({
-                reason: schedule?.deletedAt
-                  ? 'Schedule was deleted before execution'
-                  : 'Schedule was disabled before execution',
-              }),
-              completedAt: new Date(),
-            },
-          });
-        }
-        return null; // Exit gracefully without error
-      }
-
       // 3. Create simple user object (only uid needed, avoid BigInt serialization issues)
       // Note: We don't query the full user object to avoid passing BigInt fields to queues
       const user = { uid };
@@ -317,6 +266,10 @@ export class ScheduleProcessor extends WorkerHost {
         this.metrics.execution.fail('cron', failureReason);
         return null; // Exit gracefully without error
       }
+
+      const schedule = await this.prisma.workflowSchedule.findUnique({
+        where: { scheduleId },
+      });
 
       // 4. Create new WorkflowScheduleRecord only if no existing record was found
       // This is a fallback for edge cases (e.g., manual trigger without scheduled record)
