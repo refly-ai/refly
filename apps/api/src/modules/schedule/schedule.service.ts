@@ -137,7 +137,7 @@ export class ScheduleService {
       });
 
       if (user) {
-        logEvent(user, eventName, null, metadata);
+        logEvent(user, eventName, undefined, metadata);
         this.logger.debug(`Analytics event: ${eventName}`, { uid, ...metadata });
       } else {
         this.logger.warn(`User not found for analytics event ${eventName}, uid: ${uid}`);
@@ -173,7 +173,12 @@ export class ScheduleService {
       if (isEnabled) {
         await this.checkScheduleQuota(uid, existingSchedule.scheduleId);
         // Track schedule enable event
-        await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid);
+        await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid, {
+          scheduleId: existingSchedule.scheduleId,
+          canvasId: dto.canvasId,
+          cronExpression: dto.cronExpression,
+          timezone: dto.timezone || existingSchedule.timezone || 'Asia/Shanghai',
+        });
       }
 
       // Calculate next run time
@@ -233,10 +238,18 @@ export class ScheduleService {
 
     // 6. Check Plan Quota (always check when enabling, regardless of previous state)
     if (isEnabled === true) {
-      await this.checkScheduleQuota(uid, existingSchedule?.scheduleId);
+      // Only pass scheduleId if existingSchedule exists
+      const scheduleIdToExclude = existingSchedule?.scheduleId;
+      await this.checkScheduleQuota(uid, scheduleIdToExclude);
       // Track schedule enable event only when transitioning from disabled to enabled
       if (!wasEnabled) {
-        await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid);
+        const timezone = dto.timezone || existingSchedule?.timezone || 'Asia/Shanghai';
+        await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid, {
+          scheduleId: existingSchedule?.scheduleId,
+          canvasId: dto.canvasId,
+          cronExpression: dto.cronExpression,
+          timezone,
+        });
       }
     }
 

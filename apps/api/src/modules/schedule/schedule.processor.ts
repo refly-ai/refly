@@ -271,6 +271,28 @@ export class ScheduleProcessor extends WorkerHost {
         where: { scheduleId },
       });
 
+      // Check if schedule exists (may have been deleted while job was queued)
+      if (!schedule) {
+        this.logger.warn(
+          `Schedule ${scheduleId} not found, likely deleted while job was queued. Skipping execution for job ${job.id}`,
+        );
+
+        // Rollback Redis counter since we're not proceeding with execution
+        if (redisCounterActive) {
+          try {
+            const redisKey = `${SCHEDULE_REDIS_KEYS.USER_CONCURRENT_PREFIX}${uid}`;
+            await this.redisService.decr(redisKey);
+            this.logger.debug(`Rolled back Redis counter for user ${uid} (schedule not found)`);
+          } catch (redisError) {
+            this.logger.warn(`Failed to rollback Redis counter for user ${uid}`, redisError);
+          }
+        }
+
+        // Record metric
+        this.metrics.execution.fail('cron', 'schedule_not_found');
+        return null; // Exit gracefully without error
+      }
+
       // 4. Create new WorkflowScheduleRecord only if no existing record was found
       // This is a fallback for edge cases (e.g., manual trigger without scheduled record)
       if (!scheduleRecordId) {
