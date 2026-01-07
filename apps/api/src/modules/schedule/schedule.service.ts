@@ -232,11 +232,7 @@ export class ScheduleService {
 
     // 6. Check Plan Quota (only if enabling the schedule from disabled state)
     if (isEnabled === true) {
-      await this.checkScheduleQuota(uid, existingSchedule.scheduleId);
-      // Track schedule enable event
-      await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid);
-    } else if (!existingSchedule && isEnabled) {
-      await this.checkScheduleQuota(uid);
+      await this.checkScheduleQuota(uid, existingSchedule?.scheduleId);
       // Track schedule enable event
       await this.trackScheduleEvent(ScheduleAnalyticsEvents.SCHEDULE_ENABLE, uid);
     }
