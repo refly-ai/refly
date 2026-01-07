@@ -6,6 +6,8 @@ import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/
 import { X } from 'refly-icons';
 import type { CanvasNodeType } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
+import { useFindLatestVariableMetions } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import type { MentionCommonData } from '@refly/utils/query-processor';
 import { MentionItemSource } from './const';
 import { AGENT_CONFIG_KEY_CLASSNAMES } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 
@@ -61,9 +63,26 @@ const getMentionClassName = (source: MentionItemSource) => {
 
 function MentionNodeViewBase(props: NodeViewProps) {
   const { node } = props;
-  const labelText = (node?.attrs?.label as string) ?? (node?.attrs?.id as string) ?? '';
+  const initialLabel = (node?.attrs?.label as string) ?? (node?.attrs?.id as string) ?? '';
   const source = node?.attrs?.source as MentionItemSource;
+  const variableId = node?.attrs?.id as string;
   const variableType = node?.attrs?.variableType as string;
+
+  const variableMentions = React.useMemo(() => {
+    if (source === 'variables' && variableId) {
+      return [
+        {
+          id: variableId,
+          type: 'var',
+          name: initialLabel,
+        },
+      ] as MentionCommonData[];
+    }
+    return [];
+  }, [source, variableId, initialLabel]);
+
+  const latestVariables = useFindLatestVariableMetions(variableMentions);
+  const labelText = (source === 'variables' && latestVariables?.[0]?.name) || initialLabel;
 
   return (
     <NodeViewWrapper

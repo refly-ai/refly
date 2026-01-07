@@ -15,6 +15,7 @@ export * from './use-find-website';
 export * from './use-find-images';
 export * from './use-find-code-artifact';
 export * from './use-find-thread-history';
+export * from './use-find-latest-variable-mentions';
 
 // Actions
 export * from './use-invoke-action';

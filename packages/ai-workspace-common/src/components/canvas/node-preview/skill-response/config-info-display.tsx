@@ -13,6 +13,7 @@ import { useCanvasNodesStoreShallow } from '@refly/stores';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { AGENT_CONFIG_KEY_CLASSNAMES } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 import { useToolsetDefinition } from '@refly-packages/ai-workspace-common/hooks/use-toolset-definition';
+import { useFindLatestVariableMetions } from '@refly-packages/ai-workspace-common/hooks/canvas';
 
 interface ConfigInfoDisplayProps {
   readonly?: boolean;
@@ -80,6 +81,9 @@ export const ConfigInfoDisplay = memo(
       const mentions = parseMentionsFromQuery(prompt);
       return mentions.filter((item) => item.type === 'var');
     }, [prompt]);
+
+    const latestVariables = useFindLatestVariableMetions(variables);
+
     const escapeRegExp = useCallback(
       (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
       [],
@@ -172,7 +176,7 @@ export const ConfigInfoDisplay = memo(
             {t('agent.config.inputs')}
           </SectionTitle>
           <div className="flex flex-wrap gap-2">
-            {variables.map((variable: MentionCommonData, index) => (
+            {latestVariables.map((variable: MentionCommonData, index) => (
               <LabelItem
                 readonly={readonly}
                 key={`${variable.id}-${index}`}
