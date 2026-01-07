@@ -18,6 +18,7 @@ import {
   ResponseNodeMeta,
   sortNodeExecutionsByExecutionOrder,
   CanvasNodeFilter,
+  purgeHistoryForActionResult,
 } from '@refly/canvas-common';
 import { SkillService } from '../skill/skill.service';
 import { ActionService } from '../action/action.service';
@@ -232,7 +233,7 @@ export class WorkflowService {
           connectTo: JSON.stringify(nodeExecution.connectTo),
           parentNodeIds: JSON.stringify(nodeExecution.parentNodeIds),
           childNodeIds: JSON.stringify(nodeExecution.childNodeIds),
-          resultHistory: JSON.stringify(nodeExecution.resultHistory),
+          resultHistory: JSON.stringify(purgeHistoryForActionResult(nodeExecution.resultHistory)),
         })),
       }),
     ]);

@@ -11,6 +11,8 @@ import {
 import {
   convertContextItemsToNodeFilters,
   convertResultContextToItems,
+  purgeContextForActionResult,
+  purgeHistoryForActionResult,
 } from '@refly/canvas-common';
 import { PilotSession } from '@prisma/client';
 import { SkillService } from '../skill/skill.service';
@@ -692,8 +694,8 @@ export class PilotService {
             status: 'waiting',
             targetId,
             targetType,
-            context: JSON.stringify(context),
-            history: JSON.stringify(history),
+            context: JSON.stringify(purgeContextForActionResult(context)),
+            history: JSON.stringify(purgeHistoryForActionResult(history)),
             modelName: chatModelId,
             tier: chatPi.tier,
             errors: '[]',
@@ -956,8 +958,8 @@ export class PilotService {
             status: 'waiting',
             targetId,
             targetType,
-            context: JSON.stringify(context),
-            history: JSON.stringify(history),
+            context: JSON.stringify(purgeContextForActionResult(context)),
+            history: JSON.stringify(purgeHistoryForActionResult(history)),
             modelName: chatModelId,
             tier: chatPi.tier,
             errors: '[]',

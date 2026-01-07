@@ -45,7 +45,11 @@ import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { ShareCommonService } from './share-common.service';
 import { ShareExtraData, SharePageData } from './share.dto';
 import { SHARE_CODE_PREFIX } from './const';
-import { initEmptyCanvasState } from '@refly/canvas-common';
+import {
+  initEmptyCanvasState,
+  purgeContextForActionResult,
+  purgeHistoryForActionResult,
+} from '@refly/canvas-common';
 import { CanvasService } from '../canvas/canvas.service';
 import { ToolService } from '../tool/tool.service';
 import { ToolCallService } from '../tool-call/tool-call.service';
@@ -511,8 +515,16 @@ export class ShareDuplicationService {
           targetId: target?.entityId,
           targetType: target?.entityType,
           actionMeta: JSON.stringify(result.actionMeta),
-          context: batchReplaceRegex(JSON.stringify(result.context), replaceEntityMap),
-          history: batchReplaceRegex(JSON.stringify(result.history), replaceEntityMap),
+          context: JSON.stringify(
+            purgeContextForActionResult(
+              safeParseJSON(batchReplaceRegex(JSON.stringify(result.context), replaceEntityMap)),
+            ),
+          ),
+          history: JSON.stringify(
+            purgeHistoryForActionResult(
+              batchReplaceRegex(JSON.stringify(result.history), replaceEntityMap),
+            ),
+          ),
           tplConfig: JSON.stringify(result.tplConfig),
           runtimeConfig: JSON.stringify(result.runtimeConfig),
           errors: JSON.stringify(result.errors),

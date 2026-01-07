@@ -22,6 +22,7 @@ import {
   ActionMessage as ActionMessageModel,
   ToolCallResult as ToolCallResultModel,
 } from '@prisma/client';
+import { purgeContextForActionResult, purgeHistoryForActionResult } from '@refly/canvas-common';
 import { ActionDetail, actionMessagePO2DTO, sanitizeToolOutput } from '../action/action.dto';
 import { PrismaService } from '../common/prisma.service';
 import { providerItem2ModelInfo } from '../provider/provider.dto';
@@ -322,8 +323,14 @@ export class ActionService {
               'errors',
               'errorType',
             ]),
-            context: batchReplaceRegex(context ?? '{}', combinedReplaceMap),
-            history: batchReplaceRegex(history ?? '[]', combinedReplaceMap),
+            context: JSON.stringify(
+              purgeContextForActionResult(
+                safeParseJSON(batchReplaceRegex(context ?? '{}', combinedReplaceMap)),
+              ),
+            ),
+            history: JSON.stringify(
+              purgeHistoryForActionResult(batchReplaceRegex(history ?? '[]', combinedReplaceMap)),
+            ),
             resultId: newResultId,
             uid: user.uid,
             targetId,

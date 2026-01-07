@@ -360,3 +360,26 @@ export const purgeContextForActionResult = (context: SkillContext) => {
 
   return contextCopy;
 };
+
+/**
+ * Purge history items to save storage.
+ * Only keeps resultId and title for each history item.
+ * @param history Array of ActionResult objects
+ * @returns Purged history items
+ */
+export const purgeHistoryForActionResult = (history: ActionResult[] | string = []) => {
+  if (!Array.isArray(history)) {
+    if (typeof history === 'string') {
+      try {
+        const parsed = JSON.parse(history);
+        return Array.isArray(parsed)
+          ? parsed.map((r) => ({ resultId: r.resultId, title: r.title }))
+          : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+  return history.map((r) => ({ resultId: r.resultId, title: r.title }));
+};

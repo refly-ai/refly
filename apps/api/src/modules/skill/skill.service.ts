@@ -34,7 +34,11 @@ import {
   GenericToolset,
 } from '@refly/openapi-schema';
 import { BaseSkill } from '@refly/skill-template';
-import { purgeContextForActionResult, purgeToolsets } from '@refly/canvas-common';
+import {
+  purgeContextForActionResult,
+  purgeToolsets,
+  purgeHistoryForActionResult,
+} from '@refly/canvas-common';
 import {
   genActionResultID,
   genSkillID,
@@ -856,23 +860,6 @@ export class SkillService implements OnModuleInit {
     const isAutoModelRouted =
       !!actualProviderItemId && !!param.modelItemId && actualProviderItemId !== param.modelItemId;
 
-    const purgeResultHistory = (resultHistory: ActionResult[] = []) => {
-      // remove extra unnecessary fields from result history to save storage
-      if (!Array.isArray(resultHistory)) {
-        // Handle case where resultHistory might be a stringified array due to double stringify bug
-        if (typeof resultHistory === 'string') {
-          try {
-            const parsed = JSON.parse(resultHistory);
-            return Array.isArray(parsed) ? parsed.map((r) => pick(r, ['resultId', 'title'])) : [];
-          } catch {
-            return [];
-          }
-        }
-        return [];
-      }
-      return resultHistory?.map((r) => pick(r, ['resultId', 'title']));
-    };
-
     // Acquire distributed lock to prevent concurrent actionResult creation with same resultId+version
     // This prevents unique constraint violation on (result_id, version)
     const lockKey = `skill:precheck:${resultId}`;
@@ -936,7 +923,7 @@ export class SkillService implements OnModuleInit {
                 context: JSON.stringify(purgeContextForActionResult(data.context)),
                 tplConfig: JSON.stringify(data.tplConfig),
                 runtimeConfig: JSON.stringify(data.runtimeConfig),
-                history: JSON.stringify(purgeResultHistory(data.resultHistory)),
+                history: JSON.stringify(purgeHistoryForActionResult(data.resultHistory)),
                 toolsets: JSON.stringify(purgeToolsets(data.toolsets)),
                 providerItemId: param.modelItemId,
                 copilotSessionId: data.copilotSessionId,
@@ -972,7 +959,7 @@ export class SkillService implements OnModuleInit {
             context: JSON.stringify(purgeContextForActionResult(data.context)),
             tplConfig: JSON.stringify(data.tplConfig),
             runtimeConfig: JSON.stringify(data.runtimeConfig),
-            history: JSON.stringify(purgeResultHistory(data.resultHistory)),
+            history: JSON.stringify(purgeHistoryForActionResult(data.resultHistory)),
             toolsets: JSON.stringify(purgeToolsets(data.toolsets)),
             providerItemId: param.modelItemId,
             copilotSessionId: data.copilotSessionId,
@@ -1063,11 +1050,11 @@ export class SkillService implements OnModuleInit {
           projectId: param.projectId,
           errors: JSON.stringify([errorMessage]),
           input: JSON.stringify(param.input ?? {}),
-          context: JSON.stringify(param.context ?? {}),
+          context: JSON.stringify(purgeContextForActionResult(param.context as SkillContext)),
           tplConfig: JSON.stringify(param.tplConfig ?? {}),
-          toolsets: JSON.stringify(param.toolsets ?? {}),
+          toolsets: JSON.stringify(purgeToolsets(param.toolsets ?? [])),
           runtimeConfig: JSON.stringify(param.runtimeConfig ?? {}),
-          history: JSON.stringify(Array.isArray(param.resultHistory) ? param.resultHistory : []),
+          history: JSON.stringify(purgeHistoryForActionResult(param.resultHistory ?? [])),
           providerItemId: param.modelItemId,
         },
       });
