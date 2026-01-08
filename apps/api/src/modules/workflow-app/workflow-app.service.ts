@@ -610,6 +610,7 @@ export class WorkflowAppService {
       scheduleId?: string;
       scheduleRecordId?: string;
       triggerType?: string;
+      sourceCanvasId?: string;
     },
   ): Promise<{ executionId: string; canvasId: string }> {
     // Validate canvasData completeness
@@ -735,12 +736,18 @@ export class WorkflowAppService {
       edges,
     };
 
+    // Get source canvas ID from canvasData (original canvas ID)
+    // This is the template/source canvas, not the execution canvas
+    // Prefer options.sourceCanvasId if provided, otherwise use canvasData.canvasId
+    const sourceCanvasId = options?.sourceCanvasId ?? canvasData.canvasId;
+
     const executionId = await this.workflowService.initializeWorkflowExecution(
       user,
       newCanvasId,
       finalVariables,
       {
         appId: options?.appId,
+        sourceCanvasId,
         sourceCanvasData,
         createNewCanvas: true,
         nodeBehavior: 'create',
@@ -868,9 +875,11 @@ export class WorkflowAppService {
     }
 
     // Use the shared execution logic
+    // Pass sourceCanvasId (original template canvas) to ensure correct source canvas tracking
     const { executionId } = await this.executeFromCanvasData(user, canvasData, variables, {
       appId: workflowApp.appId,
       triggerType: 'template',
+      sourceCanvasId: workflowApp.canvasId, // Original template canvas ID
     });
 
     this.logger.log(`Started workflow execution: ${executionId} for shareId: ${shareId}`);
