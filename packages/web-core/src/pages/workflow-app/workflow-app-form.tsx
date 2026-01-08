@@ -611,12 +611,19 @@ export const WorkflowAPPForm = ({
       let newVariables: WorkflowVariable[] = [];
 
       if (effectiveTemplateContent) {
-        // Validate templateVariables values
+        // Validate templateVariables values - only check required fields
         const hasInvalidValues = templateVariables.some((variable) => {
+          // Skip validation if variable is not required
+          if (!variable.required) {
+            return false;
+          }
+
+          // Check if value is missing or empty
           if (!variable.value || variable.value.length === 0) {
             return true;
           }
 
+          // Check if all values are invalid (empty)
           return variable.value.every((val) => {
             if (variable.variableType === 'string') {
               return !val.text || val.text.trim() === '';
