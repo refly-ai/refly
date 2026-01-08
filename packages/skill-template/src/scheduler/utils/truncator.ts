@@ -39,6 +39,16 @@ export const isEmptyMessage = (message: BaseMessage) => {
   return textContent.trim() === '';
 };
 
+/**
+ * @deprecated This function is NOT tool-aware and can break tool_use/tool_result pairs.
+ * DO NOT use this for messages that will be sent to LLMs.
+ * Use compressAgentLoopMessages from context-manager.ts instead, which:
+ * - Preserves tool_use/tool_result pairing
+ * - Uses cache-friendly compression strategy
+ * - Intelligently archives message groups
+ *
+ * This function is only kept for summarization purposes (e.g., summarizeChatHistory).
+ */
 export const truncateMessages = (
   messages: BaseMessage[] = [],
   maxMessages = MAX_MESSAGES,

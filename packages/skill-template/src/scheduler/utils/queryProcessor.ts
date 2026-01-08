@@ -1,6 +1,6 @@
 import { SkillRunnableConfig } from '../../base';
 import { checkHasContext, countToken, countMessagesTokens } from './token';
-import { isEmptyMessage, truncateMessages } from './truncator';
+import { isEmptyMessage } from './truncator';
 import { QueryProcessorResult } from '../types';
 import { DEFAULT_MODEL_CONTEXT_LIMIT } from './constants';
 
@@ -11,9 +11,10 @@ export async function processQuery(
   const { modelConfigMap, chatHistory: rawChatHistory = [], context } = config.configurable;
   const modelInfo = modelConfigMap.queryAnalysis;
 
-  // Process chat history
+  // Process chat history - only filter empty messages
+  // Note: Message truncation is handled by compressAgentLoopMessages which preserves tool_use/tool_result pairs
   const chatHistory = rawChatHistory.filter((message) => !isEmptyMessage(message));
-  const usedChatHistory = truncateMessages(chatHistory, 20, 4000, 30000);
+  const usedChatHistory = chatHistory;
 
   // Check context
   const hasContext = checkHasContext(context);
