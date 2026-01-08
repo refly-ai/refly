@@ -507,7 +507,7 @@ export class ScheduleService {
       this.prisma.workflowScheduleRecord.count({ where }),
       this.prisma.workflowScheduleRecord.findMany({
         where,
-        orderBy: { scheduledAt: 'desc' },
+        orderBy: [{ scheduledAt: 'desc' }, { pk: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
