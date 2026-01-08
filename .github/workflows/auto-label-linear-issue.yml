@@ -1,0 +1,70 @@
+name: Auto label Linear issue by repo
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  label-linear:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Extract Linear issue ID from PR body
+        id: linear
+        run: |
+          BODY="${{ github.event.pull_request.body }}"
+          ISSUE_ID=$(echo "$BODY" | grep -oE 'LIN-[0-9]+' | head -n 1)
+
+          if [ -z "$ISSUE_ID" ]; then
+            echo "No Linear issue found"
+            exit 0
+          fi
+
+          echo "issue_id=$ISSUE_ID" >> $GITHUB_OUTPUT
+
+      - name: Decide repo label
+        id: repo
+        run: |
+          LABEL="${{ vars.LINEAR_REPO_LABEL }}"
+
+          if [ -z "$LABEL" ]; then
+            echo "Error: LINEAR_REPO_LABEL variable is not set in GitHub Actions variables."
+            exit 1
+          fi
+
+          echo "label=$LABEL" >> $GITHUB_OUTPUT
+
+      - name: Add label to Linear issue
+        env:
+          ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
+          ORBIT_API_KEY: ${{ secrets.ORBIT_API_KEY }}
+        run: |
+          ISSUE_ID="${{ steps.linear.outputs.issue_id }}"
+          LABEL="${{ steps.repo.outputs.label }}"
+
+          echo "Updating Linear issue $ISSUE_ID with label $LABEL via Orbit..."
+
+          RESPONSE=$(curl -s -X POST "$ORBIT_API_URL/api/linear/graphql" \
+            -H "Content-Type: application/json" \
+            -H "X-Orbit-API-Key: $ORBIT_API_KEY" \
+            -d '{
+              "query": "mutation AddLabel($issueId: String!, $label: String!) { issueAddLabel(issueId: $issueId, labelName: $label) { success } }",
+              "variables": {
+                "issueId": "$ISSUE_ID",
+                "label": "$LABEL"
+              }
+            }')
+
+          echo "Orbit API Response:"
+          echo "$RESPONSE" | jq .
+
+          # Check if the update was successful
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.success // false')
+
+          if [ "$SUCCESS" = "true" ]; then
+            echo "✓ Successfully updated issue label"
+          else
+            ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // "Unknown error"')
+            echo "✗ Failed to update issue: $ERROR_MSG"
+            exit 1
+          fi
