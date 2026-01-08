@@ -75,7 +75,7 @@ const ActionCell = memo(
             setCreditInsufficientModalVisible(true, undefined, 'schedule');
             break;
           case 'viewSchedule':
-            navigate('/workflow-list');
+            navigate('/workflow-list', { state: { autoEnableScheduleFilter: true } });
             break;
           case 'fixWorkflow':
             if (record.sourceCanvasId) {

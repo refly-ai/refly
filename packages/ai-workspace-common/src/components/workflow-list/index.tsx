@@ -71,6 +71,13 @@ const WorkflowList = memo(() => {
     setDebouncedSearchValue(value);
   }, 300);
 
+  // Update schedule filter when location state changes (e.g., from View Schedule button)
+  useEffect(() => {
+    if (location.state?.autoEnableScheduleFilter === true) {
+      setHasScheduleFilter(true);
+    }
+  }, [location.state]);
+
   // Debounce search value changes
   useEffect(() => {
     debouncedSetSearchValue(searchValue);
