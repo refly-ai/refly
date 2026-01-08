@@ -60,7 +60,7 @@ const WaitingList = memo(() => {
             <div className="w-5 h-5 flex items-center justify-center">
               <img
                 src={item.file.url}
-                alt={item.file.url}
+                alt={item.file?.title}
                 className="w-4 h-4 rounded-md object-cover"
               />
             </div>
