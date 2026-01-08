@@ -64,8 +64,8 @@ export const logEvent = (
 
   statsig.logEvent(
     new StatsigUser({ userID: user.uid, email: user.email }),
-    eventName,
-    value,
+    String(eventName ?? ''),
+    String(value ?? ''),
     stringMetadata,
   );
 };
