@@ -223,6 +223,14 @@ const RunHistoryList = memo(() => {
   const fetchScheduleRecords = useCallback(
     async ({ page, pageSize }: { page: number; pageSize: number }) => {
       try {
+        // Map frontend type filter to backend triggerType
+        // 'schedule' in frontend means all schedule-related types
+        const getTriggerType = () => {
+          if (typeFilter === 'all') return undefined;
+          if (typeFilter === 'schedule') return 'scheduled'; // scheduled + manual_schedule + retry are all "schedule" related
+          return typeFilter; // 'workflow' or 'template' map directly
+        };
+
         const response = await client.post({
           url: '/schedule/records/list',
           body: {
@@ -232,6 +240,7 @@ const RunHistoryList = memo(() => {
             keyword: titleFilter || undefined,
             canvasId: canvasIdFilter || undefined,
             tools: selectedTools.length > 0 ? selectedTools : undefined,
+            triggerType: getTriggerType(),
           },
         });
 
@@ -248,14 +257,14 @@ const RunHistoryList = memo(() => {
         return { success: false, data: [] };
       }
     },
-    [statusFilter, titleFilter, canvasIdFilter, selectedTools],
+    [statusFilter, titleFilter, canvasIdFilter, selectedTools, typeFilter],
   );
 
   const { dataList, isRequesting, reload, loadMore, hasMore } =
     useFetchDataList<ScheduleRecordItem>({
       fetchData: fetchScheduleRecords,
       pageSize: 20,
-      dependencies: [statusFilter, titleFilter, canvasIdFilter, selectedTools],
+      dependencies: [statusFilter, titleFilter, canvasIdFilter, selectedTools, typeFilter],
     });
 
   // Initial load
