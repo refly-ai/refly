@@ -433,10 +433,7 @@ export class ScheduleCronService implements OnModuleInit {
       ScheduleAnalyticsEvents.SCHEDULE_RUN_TRIGGERED,
       schedule.uid,
       {
-        scheduleId: schedule.scheduleId,
-        scheduleRecordId: currentRecordId,
         type: getScheduleType(schedule.scheduleConfig),
-        priority,
       },
       user,
     );
