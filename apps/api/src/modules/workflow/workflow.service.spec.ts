@@ -15,6 +15,7 @@ import { CreditService } from '../credit/credit.service';
 import { SkillInvokerService } from '../skill/skill-invoker.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { WorkflowCompletedEvent, WorkflowFailedEvent } from './workflow.events';
+import { MiscService } from '../misc/misc.service';
 
 jest.mock('@refly/skill-template', () => ({}));
 jest.mock('../skill/skill-invoker.service');
@@ -58,6 +59,10 @@ describe('WorkflowService', () => {
               // Mock workflowApp
               findUnique: jest.fn(),
             },
+            workflowScheduleRecord: {
+              // Mock workflowScheduleRecord for snapshot feature
+              create: jest.fn(),
+            },
             $transaction: jest.fn((cb) => cb),
           },
         },
@@ -76,6 +81,7 @@ describe('WorkflowService', () => {
         { provide: ToolService, useValue: {} },
         { provide: CreditService, useValue: { countExecutionCreditUsageByExecutionId: jest.fn() } },
         { provide: SkillInvokerService, useValue: {} },
+        { provide: MiscService, useValue: { uploadBuffer: jest.fn() } },
         {
           provide: EventEmitter2,
           useValue: {
@@ -211,7 +217,7 @@ describe('WorkflowService', () => {
         uid: 'test-user',
         workflowId: 'wf-id',
         // scheduleRecordId: undefined,
-        triggerType: 'manual',
+        triggerType: 'workflow',
         canvasId: 'canvas-id',
       } as any);
 

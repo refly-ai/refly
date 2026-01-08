@@ -2348,8 +2348,8 @@ model WorkflowScheduleRecord {
   scheduleRecordId String @unique @map("schedule_record_id")
 
   // ========== Relation Fields ==========
-  /// Schedule ID
-  scheduleId String @map("schedule_id")
+  /// Schedule ID (nullable for manual/app executions)
+  scheduleId String? @map("schedule_id")
 
   /// Workflow Execution ID (if started)
   workflowExecutionId String? @map("workflow_execution_id")
@@ -2362,6 +2362,14 @@ model WorkflowScheduleRecord {
 
   /// Source canvas ID (template/original canvas from which workflow is initialized)
   sourceCanvasId String @default("") @map("source_canvas_id")
+
+  // ========== Trigger Info ==========
+
+  /// Trigger type: workflow (from canvas), template (from WorkflowApp), scheduled (cron), manual_schedule (manually trigger schedule), retry
+  triggerType String @default("scheduled") @map("trigger_type")
+
+  /// App ID (for template trigger type)
+  appId String? @map("app_id")
 
   // ========== Execution Info ==========
 
@@ -2412,6 +2420,8 @@ model WorkflowScheduleRecord {
   @@index([scheduleId, scheduledAt])
   @@index([uid, status, completedAt(sort: Desc)]) // Priority calculation optimization (replaced createdAt)
   @@index([uid, status, scheduledAt(sort: Desc)]) // List query optimization
+  @@index([uid, triggerType, scheduledAt(sort: Desc)]) // Filter by trigger type
+  @@index([appId]) // App execution lookup
   @@map("workflow_schedule_records")
 }
 

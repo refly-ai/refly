@@ -870,6 +870,7 @@ export class WorkflowAppService {
     // Use the shared execution logic
     const { executionId } = await this.executeFromCanvasData(user, canvasData, variables, {
       appId: workflowApp.appId,
+      triggerType: 'template',
     });
 
     this.logger.log(`Started workflow execution: ${executionId} for shareId: ${shareId}`);

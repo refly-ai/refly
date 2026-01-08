@@ -34,6 +34,7 @@ export interface ListAllScheduleRecordsDto {
   keyword?: string;
   tools?: string[];
   canvasId?: string;
+  triggerType?: 'workflow' | 'template' | 'scheduled' | 'manual_schedule' | 'retry';
 }
 
 export interface GetScheduleRecordDetailDto {

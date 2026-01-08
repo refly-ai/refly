@@ -29,8 +29,10 @@ import {
   genTransactionId,
   safeParseJSON,
   genWorkflowNodeExecutionID,
+  genScheduleRecordId,
   pick,
 } from '@refly/utils';
+import { MiscService } from '../misc/misc.service';
 import { ToolInventoryService } from '../tool/inventory/inventory.service';
 import { ToolService } from '../tool/tool.service';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -61,6 +63,7 @@ export class WorkflowService {
     private readonly toolService: ToolService,
     private readonly creditService: CreditService,
     private readonly skillInvokerService: SkillInvokerService,
+    private readonly miscService: MiscService,
     private readonly eventEmitter: EventEmitter2,
     @InjectQueue(QUEUE_RUN_WORKFLOW) private readonly runWorkflowQueue?: Queue<RunWorkflowJobData>,
     @InjectQueue(QUEUE_POLL_WORKFLOW)
@@ -209,7 +212,7 @@ export class WorkflowService {
           appId: options?.appId,
           scheduleId: options?.scheduleId,
           scheduleRecordId: options?.scheduleRecordId,
-          triggerType: options?.triggerType ?? 'manual',
+          triggerType: options?.triggerType ?? 'workflow',
         },
       }),
       this.prisma.workflowNodeExecution.createMany({
@@ -266,6 +269,54 @@ export class WorkflowService {
         { user, executionId, nodeBehavior },
         { delay: WORKFLOW_EXECUTION_CONSTANTS.POLL_INTERVAL_MS, removeOnComplete: true },
       );
+    }
+
+    // Create execution record for non-scheduled executions (manual, app)
+    // This enables unified execution history and snapshot viewing
+    const shouldCreateRecord = !options?.scheduleRecordId && !options?.scheduleId;
+    if (shouldCreateRecord) {
+      const scheduleRecordId = genScheduleRecordId();
+      const snapshotStorageKey = `executions/${user.uid}/${scheduleRecordId}/snapshot.json`;
+      const triggerType = options?.triggerType || 'workflow';
+
+      try {
+        await this.prisma.workflowScheduleRecord.create({
+          data: {
+            scheduleRecordId,
+            scheduleId: null, // No schedule for manual/app executions
+            uid: user.uid,
+            sourceCanvasId,
+            canvasId,
+            workflowTitle: canvasData.title || 'Untitled',
+            workflowExecutionId: executionId,
+            status: 'running', // Already started execution
+            triggerType,
+            appId: options?.appId || null,
+            scheduledAt: new Date(),
+            triggeredAt: new Date(),
+            priority: 0, // Highest priority for manual/app executions
+            snapshotStorageKey,
+          },
+        });
+
+        // Update WorkflowExecution with scheduleRecordId so pollWorkflow can emit events
+        await this.prisma.workflowExecution.update({
+          where: { executionId },
+          data: { scheduleRecordId },
+        });
+
+        this.logger.log(
+          `Created execution record ${scheduleRecordId} for ${executionId} (triggerType: ${triggerType})`,
+        );
+
+        // Upload snapshot asynchronously (non-blocking)
+        this.uploadExecutionSnapshot(user, canvasData, snapshotStorageKey).catch((err) => {
+          this.logger.warn(`Failed to upload snapshot for ${scheduleRecordId}: ${err?.message}`);
+        });
+      } catch (err) {
+        // Record creation failure should not affect workflow execution
+        this.logger.warn(`Failed to create execution record: ${err?.message}`);
+      }
     }
 
     return executionId;
@@ -1055,5 +1106,25 @@ export class WorkflowService {
       const sortedNodeExecutions = sortNodeExecutionsByExecutionOrder(nodeExecutions);
       return { ...workflowExecution, nodeExecutions: sortedNodeExecutions };
     });
+  }
+
+  /**
+   * Upload canvas data snapshot to object storage
+   * @param user - The user who owns the snapshot
+   * @param canvasData - The raw canvas data to snapshot
+   * @param storageKey - The storage key to upload to
+   */
+  private async uploadExecutionSnapshot(
+    user: { uid: string },
+    canvasData: RawCanvasData,
+    storageKey: string,
+  ): Promise<void> {
+    await this.miscService.uploadBuffer(user as any, {
+      fpath: 'snapshot.json',
+      buf: Buffer.from(JSON.stringify(canvasData)),
+      visibility: 'private',
+      storageKey,
+    });
+    this.logger.log(`Uploaded execution snapshot to: ${storageKey}`);
   }
 }

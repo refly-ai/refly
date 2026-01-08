@@ -470,12 +470,18 @@ export class ScheduleService {
     keyword?: string,
     tools?: string[],
     canvasId?: string,
+    triggerType?: 'workflow' | 'template' | 'scheduled' | 'manual_schedule' | 'retry',
   ) {
     const where: any = { uid };
 
     // Filter by sourceCanvasId (the original canvas, not the cloned execution canvas)
     if (canvasId) {
       where.sourceCanvasId = canvasId;
+    }
+
+    // Filter by triggerType
+    if (triggerType) {
+      where.triggerType = triggerType;
     }
 
     // Filter by status - only show completed records (success/failed) by default
@@ -513,21 +519,29 @@ export class ScheduleService {
       }),
     ]);
 
-    // Get unique scheduleIds and fetch schedule names
-    const scheduleIds = [...new Set(items.map((item) => item.scheduleId))];
-    const schedules = await this.prisma.workflowSchedule.findMany({
-      where: { scheduleId: { in: scheduleIds } },
-      select: { scheduleId: true, name: true },
-    });
+    // Get unique scheduleIds (filter out null) and fetch schedule names
+    const scheduleIds = [
+      ...new Set(items.map((item) => item.scheduleId).filter((id): id is string => id !== null)),
+    ];
+    const schedules =
+      scheduleIds.length > 0
+        ? await this.prisma.workflowSchedule.findMany({
+            where: { scheduleId: { in: scheduleIds } },
+            select: { scheduleId: true, name: true },
+          })
+        : [];
     const scheduleNameMap = new Map(schedules.map((s) => [s.scheduleId, s.name]));
 
-    // Map items to include scheduleName and exclude pk
+    // Map items to include scheduleName, triggerType and exclude pk
     const mappedItems = items.map((item) => {
       const { pk, ...rest } = item;
       return {
         ...rest,
-        scheduleName: scheduleNameMap.get(item.scheduleId) || item.workflowTitle || 'Untitled',
-        scheduleId: item.scheduleId, // Ensure scheduleId is included
+        scheduleName: item.scheduleId
+          ? scheduleNameMap.get(item.scheduleId) || item.workflowTitle || 'Untitled'
+          : item.workflowTitle || 'Untitled',
+        scheduleId: item.scheduleId, // May be null for manual/app executions
+        triggerType: item.triggerType || 'scheduled', // Provide default for backward compatibility
       };
     });
 
@@ -570,16 +584,21 @@ export class ScheduleService {
       throw new NotFoundException('Schedule record not found');
     }
 
-    // Get schedule name
-    const schedule = await this.prisma.workflowSchedule.findUnique({
-      where: { scheduleId: record.scheduleId },
-      select: { name: true },
-    });
+    // Get schedule name if scheduleId exists
+    let scheduleName = record.workflowTitle || 'Untitled';
+    if (record.scheduleId) {
+      const schedule = await this.prisma.workflowSchedule.findUnique({
+        where: { scheduleId: record.scheduleId },
+        select: { name: true },
+      });
+      scheduleName = schedule?.name || scheduleName;
+    }
 
     const { pk, ...rest } = record;
     return {
       ...rest,
-      scheduleName: schedule?.name || record.workflowTitle || 'Untitled',
+      scheduleName,
+      triggerType: record.triggerType || 'scheduled', // Provide default for backward compatibility
     };
   }
 
@@ -649,6 +668,7 @@ export class ScheduleService {
         canvasId: '', // Will be updated after execution with actual execution canvas
         workflowTitle: canvas?.title || 'Untitled',
         status: 'pending', // Job is queued, waiting to be processed
+        triggerType: 'manual_schedule', // User manually triggered this schedule
         scheduledAt,
         triggeredAt: scheduledAt,
         priority,
@@ -707,13 +727,15 @@ export class ScheduleService {
       throw new BadRequestException('No snapshot available for retry. Cannot retry this record.');
     }
 
-    // 3. Verify the schedule still exists
-    const schedule = await this.prisma.workflowSchedule.findUnique({
-      where: { scheduleId: record.scheduleId },
-    });
+    // 3. Verify the schedule still exists (only for schedule-triggered executions)
+    if (record.scheduleId) {
+      const schedule = await this.prisma.workflowSchedule.findUnique({
+        where: { scheduleId: record.scheduleId },
+      });
 
-    if (!schedule || schedule.deletedAt) {
-      throw new NotFoundException('Associated schedule not found or has been deleted');
+      if (!schedule || schedule.deletedAt) {
+        throw new NotFoundException('Associated schedule not found or has been deleted');
+      }
     }
 
     // 4. Calculate user execution priority
@@ -724,6 +746,7 @@ export class ScheduleService {
       where: { scheduleRecordId },
       data: {
         status: 'pending',
+        triggerType: 'retry', // Update to retry type
         failureReason: null,
         errorDetails: null,
         triggeredAt: new Date(),
