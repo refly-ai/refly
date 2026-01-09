@@ -2,7 +2,7 @@ import { memo, useMemo, useCallback, useState } from 'react';
 import { type NodeRelation } from './ArtifactRenderer';
 import { NodeBlockHeader } from './NodeBlockHeader';
 import { useTranslation } from 'react-i18next';
-import { Tooltip, Button, Dropdown, message } from 'antd';
+import { Tooltip, Button, Dropdown, message, notification } from 'antd';
 import type { MenuProps } from 'antd';
 import { DownloadIcon } from 'lucide-react';
 import {
@@ -15,7 +15,10 @@ import { Share, Pdf, Doc1, Markdown } from 'refly-icons';
 import { logEvent } from '@refly/telemetry-web';
 import { CanvasNode, DriveFile } from '@refly/openapi-schema';
 import { ResultItemPreview } from '@refly-packages/ai-workspace-common/components/workflow-app/ResultItemPreview';
-import { useExportDocument } from '@refly-packages/ai-workspace-common/hooks/use-export-document';
+import {
+  useExportDocument,
+  ExportCancelledError,
+} from '@refly-packages/ai-workspace-common/hooks/use-export-document';
 import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/canvas/use-download-file';
 
 // Content renderer component
@@ -90,14 +93,13 @@ const NodeRenderer = memo(
           return;
         }
 
+        const notificationKey = `export-${fileId}-${Date.now()}`;
+        const abortController = new AbortController();
+
         try {
           setIsExporting(true);
           let mimeType = '';
           let extension = '';
-
-          const hide = message.loading({ content: t('workspace.exporting'), duration: 0 });
-          const content = await exportDocument(fileId, type);
-          hide();
 
           switch (type) {
             case 'markdown':
@@ -114,6 +116,17 @@ const NodeRenderer = memo(
               break;
           }
 
+          notification.info({
+            key: notificationKey,
+            message: t('workspace.exporting'),
+            duration: 0,
+            onClose: () => {
+              abortController.abort();
+            },
+          });
+
+          const content = await exportDocument(fileId, type, undefined, abortController.signal);
+
           const blob = new Blob([content ?? ''], { type: mimeType || 'text/plain' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -123,8 +136,14 @@ const NodeRenderer = memo(
           a.click();
           URL.revokeObjectURL(url);
           document.body.removeChild(a);
+          notification.destroy(notificationKey);
           message.success(t('workspace.exportSuccess'));
         } catch (error) {
+          notification.destroy(notificationKey);
+          // Don't show error message if cancelled
+          if (error instanceof ExportCancelledError) {
+            return;
+          }
           // eslint-disable-next-line no-console
           console.error('Export error:', error);
           message.error(t('workspace.exportFailed'));

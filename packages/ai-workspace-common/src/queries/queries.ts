@@ -65,6 +65,7 @@ import {
   deleteSkillTrigger,
   deleteToolset,
   deleteWorkflowApp,
+  downloadExportJobResult,
   duplicateCanvas,
   duplicateShare,
   emailLogin,
@@ -77,6 +78,7 @@ import {
   generateMedia,
   getActionResult,
   getAuthConfig,
+  getAvailableTools,
   getAvailableVouchers,
   getCanvasCommissionByCanvasId,
   getCanvasData,
@@ -94,13 +96,17 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getExportJobStatus,
   getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getRecordSnapshot,
   getResourceDetail,
   getScheduleDetail,
+  getScheduleRecordDetail,
+  getScheduleRecords,
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
@@ -117,6 +123,7 @@ import {
   invokeSkill,
   listAccounts,
   listActions,
+  listAllScheduleRecords,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
@@ -154,16 +161,19 @@ import {
   refreshToken,
   reindexResource,
   resendVerification,
+  retryScheduleRecord,
   revokeComposioConnection,
   scrape,
   search,
   serveStatic,
   setCanvasState,
   sharePage,
+  startExportJob,
   streamInvokeSkill,
   submitForm,
   syncCanvasState,
   testProviderConnection,
+  triggerScheduleManually,
   triggerVoucher,
   unpinSkillInstance,
   updateCanvas,
@@ -314,6 +324,8 @@ import {
   DeleteToolsetError,
   DeleteWorkflowAppData,
   DeleteWorkflowAppError,
+  DownloadExportJobResultData,
+  DownloadExportJobResultError,
   DuplicateCanvasData,
   DuplicateCanvasError,
   DuplicateShareData,
@@ -337,6 +349,7 @@ import {
   GetActionResultData,
   GetActionResultError,
   GetAuthConfigError,
+  GetAvailableToolsError,
   GetAvailableVouchersError,
   GetCanvasCommissionByCanvasIdData,
   GetCanvasCommissionByCanvasIdError,
@@ -368,6 +381,8 @@ import {
   GetCreditUsageError,
   GetDocumentDetailData,
   GetDocumentDetailError,
+  GetExportJobStatusData,
+  GetExportJobStatusError,
   GetFormDefinitionError,
   GetPageByCanvasIdData,
   GetPageByCanvasIdError,
@@ -377,10 +392,16 @@ import {
   GetPilotSessionDetailError,
   GetProjectDetailData,
   GetProjectDetailError,
+  GetRecordSnapshotData,
+  GetRecordSnapshotError,
   GetResourceDetailData,
   GetResourceDetailError,
   GetScheduleDetailData,
   GetScheduleDetailError,
+  GetScheduleRecordDetailData,
+  GetScheduleRecordDetailError,
+  GetScheduleRecordsData,
+  GetScheduleRecordsError,
   GetSettingsError,
   GetSubscriptionPlansError,
   GetSubscriptionUsageError,
@@ -407,6 +428,8 @@ import {
   ListAccountsData,
   ListAccountsError,
   ListActionsError,
+  ListAllScheduleRecordsData,
+  ListAllScheduleRecordsError,
   ListCanvasesData,
   ListCanvasesError,
   ListCanvasTemplateCategoriesError,
@@ -472,6 +495,8 @@ import {
   ReindexResourceError,
   ResendVerificationData,
   ResendVerificationError,
+  RetryScheduleRecordData,
+  RetryScheduleRecordError,
   RevokeComposioConnectionData,
   RevokeComposioConnectionError,
   ScrapeData,
@@ -483,6 +508,8 @@ import {
   SetCanvasStateError,
   SharePageData,
   SharePageError,
+  StartExportJobData,
+  StartExportJobError,
   StreamInvokeSkillData,
   StreamInvokeSkillError,
   SubmitFormData,
@@ -491,6 +518,8 @@ import {
   SyncCanvasStateError,
   TestProviderConnectionData,
   TestProviderConnectionError,
+  TriggerScheduleManuallyData,
+  TriggerScheduleManuallyError,
   TriggerVoucherData,
   TriggerVoucherError,
   UnpinSkillInstanceData,
@@ -898,6 +927,38 @@ export const useExportDocument = <
     queryKey: Common.UseExportDocumentKeyFn(clientOptions, queryKey),
     queryFn: () =>
       exportDocument({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetExportJobStatus = <
+  TData = Common.GetExportJobStatusDefaultResponse,
+  TError = GetExportJobStatusError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetExportJobStatusData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetExportJobStatusKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getExportJobStatus({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useDownloadExportJobResult = <
+  TData = Common.DownloadExportJobResultDefaultResponse,
+  TError = DownloadExportJobResultError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<DownloadExportJobResultData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseDownloadExportJobResultKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      downloadExportJobResult({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useListProjects = <
@@ -2316,6 +2377,23 @@ export const useDeleteResource = <
     mutationFn: (clientOptions) => deleteResource(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
+export const useStartExportJob = <
+  TData = Common.StartExportJobMutationResult,
+  TError = StartExportJobError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<StartExportJobData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<StartExportJobData, true>, TContext>({
+    mutationKey: Common.UseStartExportJobKeyFn(mutationKey),
+    mutationFn: (clientOptions) => startExportJob(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
 export const useUpdateDocument = <
   TData = Common.UpdateDocumentMutationResult,
   TError = UpdateDocumentError,
@@ -3079,6 +3157,128 @@ export const useGetScheduleDetail = <
   useMutation<TData, TError, Options<GetScheduleDetailData, true>, TContext>({
     mutationKey: Common.UseGetScheduleDetailKeyFn(mutationKey),
     mutationFn: (clientOptions) => getScheduleDetail(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useGetScheduleRecords = <
+  TData = Common.GetScheduleRecordsMutationResult,
+  TError = GetScheduleRecordsError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<GetScheduleRecordsData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<GetScheduleRecordsData, true>, TContext>({
+    mutationKey: Common.UseGetScheduleRecordsKeyFn(mutationKey),
+    mutationFn: (clientOptions) => getScheduleRecords(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useListAllScheduleRecords = <
+  TData = Common.ListAllScheduleRecordsMutationResult,
+  TError = ListAllScheduleRecordsError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<ListAllScheduleRecordsData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<ListAllScheduleRecordsData, true>, TContext>({
+    mutationKey: Common.UseListAllScheduleRecordsKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      listAllScheduleRecords(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useGetAvailableTools = <
+  TData = Common.GetAvailableToolsMutationResult,
+  TError = GetAvailableToolsError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<unknown, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<unknown, true>, TContext>({
+    mutationKey: Common.UseGetAvailableToolsKeyFn(mutationKey),
+    mutationFn: (clientOptions) => getAvailableTools(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useGetScheduleRecordDetail = <
+  TData = Common.GetScheduleRecordDetailMutationResult,
+  TError = GetScheduleRecordDetailError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<GetScheduleRecordDetailData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<GetScheduleRecordDetailData, true>, TContext>({
+    mutationKey: Common.UseGetScheduleRecordDetailKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      getScheduleRecordDetail(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useGetRecordSnapshot = <
+  TData = Common.GetRecordSnapshotMutationResult,
+  TError = GetRecordSnapshotError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<GetRecordSnapshotData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<GetRecordSnapshotData, true>, TContext>({
+    mutationKey: Common.UseGetRecordSnapshotKeyFn(mutationKey),
+    mutationFn: (clientOptions) => getRecordSnapshot(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useTriggerScheduleManually = <
+  TData = Common.TriggerScheduleManuallyMutationResult,
+  TError = TriggerScheduleManuallyError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<TriggerScheduleManuallyData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<TriggerScheduleManuallyData, true>, TContext>({
+    mutationKey: Common.UseTriggerScheduleManuallyKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      triggerScheduleManually(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useRetryScheduleRecord = <
+  TData = Common.RetryScheduleRecordMutationResult,
+  TError = RetryScheduleRecordError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<RetryScheduleRecordData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<RetryScheduleRecordData, true>, TContext>({
+    mutationKey: Common.UseRetryScheduleRecordKeyFn(mutationKey),
+    mutationFn: (clientOptions) => retryScheduleRecord(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useSubmitForm = <
