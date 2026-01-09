@@ -53,7 +53,7 @@ docs/.vitepress/cache/*
 # code opt
 *.opt
 
-.claude/settings.local.json
+.claude/*
 
 .codex/*
 .ai/*

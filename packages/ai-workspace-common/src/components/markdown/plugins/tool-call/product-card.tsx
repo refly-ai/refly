@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { Typography, Button, Dropdown, message } from 'antd';
+import { Typography, Button, Dropdown, message, notification } from 'antd';
 import type { MenuProps } from 'antd';
 import { Share, Download, Markdown, Doc1, Pdf } from 'refly-icons';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
@@ -14,7 +14,10 @@ import { getShareLink } from '@refly-packages/ai-workspace-common/utils/share';
 import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { usePublicFileUrlContext } from '@refly-packages/ai-workspace-common/context/public-file-url';
-import { useExportDocument } from '@refly-packages/ai-workspace-common/hooks/use-export-document';
+import {
+  useExportDocument,
+  ExportCancelledError,
+} from '@refly-packages/ai-workspace-common/hooks/use-export-document';
 const { Paragraph } = Typography;
 
 // Convert DriveFile type to ResourceType
@@ -116,14 +119,13 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
         return;
       }
 
+      const notificationKey = `export-${file.fileId}-${Date.now()}`;
+      const abortController = new AbortController();
+
       try {
         setIsExporting(true);
         let mimeType = '';
         let extension = '';
-
-        const hide = message.loading({ content: t('workspace.exporting'), duration: 0 });
-        const content = await exportDocument(file.fileId, type);
-        hide();
 
         switch (type) {
           case 'markdown':
@@ -140,17 +142,40 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
             break;
         }
 
-        const blob = new Blob([content ?? ''], { type: mimeType || 'text/plain' });
+        notification.info({
+          key: notificationKey,
+          message: t('workspace.exporting'),
+          duration: 0,
+          onClose: () => {
+            abortController.abort();
+          },
+        });
+
+        const content = await exportDocument(file.fileId, type, undefined, abortController.signal);
+
+        const blob =
+          content instanceof Blob
+            ? content
+            : new Blob([content ?? ''], { type: mimeType || 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${title || t('common.untitled')}.${extension || 'md'}`;
+
+        // Remove existing extension from title to avoid double extensions like "file.txt.docx"
+        const baseName = (title || t('common.untitled')).replace(/\.(txt|md|docx|pdf|doc)$/i, '');
+        a.download = `${baseName}.${extension || 'md'}`;
         document.body.appendChild(a);
         a.click();
         URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        notification.destroy(notificationKey);
         message.success(t('workspace.exportSuccess'));
       } catch (error) {
+        notification.destroy(notificationKey);
+        // Don't show error message if cancelled
+        if (error instanceof ExportCancelledError) {
+          return;
+        }
         // eslint-disable-next-line no-console
         console.error('Export error:', error);
         message.error(t('workspace.exportFailed'));

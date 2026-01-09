@@ -5,6 +5,7 @@ import { type QueryClient } from '@tanstack/react-query';
 import {
   checkSettingsField,
   checkToolOauthStatus,
+  downloadExportJobResult,
   exportCanvas,
   exportDocument,
   getActionResult,
@@ -26,6 +27,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getExportJobStatus,
   getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
@@ -80,6 +82,7 @@ import {
 import {
   CheckSettingsFieldData,
   CheckToolOauthStatusData,
+  DownloadExportJobResultData,
   ExportCanvasData,
   ExportDocumentData,
   GetActionResultData,
@@ -97,6 +100,7 @@ import {
   GetCreditUsageByResultIdData,
   GetCreditUsageData,
   GetDocumentDetailData,
+  GetExportJobStatusData,
   GetPageByCanvasIdData,
   GetPageDetailData,
   GetPilotSessionDetailData,
@@ -318,6 +322,22 @@ export const prefetchUseExportDocument = (
   queryClient.prefetchQuery({
     queryKey: Common.UseExportDocumentKeyFn(clientOptions),
     queryFn: () => exportDocument({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetExportJobStatus = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetExportJobStatusData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetExportJobStatusKeyFn(clientOptions),
+    queryFn: () => getExportJobStatus({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseDownloadExportJobResult = (
+  queryClient: QueryClient,
+  clientOptions: Options<DownloadExportJobResultData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseDownloadExportJobResultKeyFn(clientOptions),
+    queryFn: () => downloadExportJobResult({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListProjects = (
   queryClient: QueryClient,

@@ -28,6 +28,9 @@ import {
   BatchCreateDriveFilesResponse,
   DriveFileSource,
   DriveFileScope,
+  StartExportJobRequest,
+  StartExportJobResponse,
+  GetExportJobStatusResponse,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils/response';
 import { Response, Request } from 'express';
@@ -230,6 +233,53 @@ export class DriveController {
 
     res.set({
       'Content-Type': contentType,
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Credentials': 'true',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+    });
+
+    res.end(data);
+  }
+
+  @Post('document/export/async')
+  @UseGuards(JwtAuthGuard)
+  async startExportJob(
+    @LoginedUser() user: User,
+    @Body() request: StartExportJobRequest,
+  ): Promise<StartExportJobResponse> {
+    const exportJob = await this.driveService.startExportJob(user, request);
+    return buildSuccessResponse(exportJob);
+  }
+
+  @Get('document/export/job/:jobId')
+  @UseGuards(JwtAuthGuard)
+  async getExportJobStatus(
+    @LoginedUser() user: User,
+    @Param('jobId') jobId: string,
+  ): Promise<GetExportJobStatusResponse> {
+    const exportJob = await this.driveService.getExportJobStatus(user, jobId);
+    return buildSuccessResponse(exportJob);
+  }
+
+  @Get('document/export/job/:jobId/download')
+  @UseGuards(JwtAuthGuard)
+  async downloadExportJobResult(
+    @LoginedUser() user: User,
+    @Param('jobId') jobId: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<void> {
+    const { data, contentType, filename } = await this.driveService.downloadExportJobResult(
+      user,
+      jobId,
+    );
+
+    const origin = req.headers.origin;
+
+    res.set({
+      'Content-Type': contentType,
+      'Content-Length': String(data.length),
+      'Content-Disposition': buildContentDisposition(filename),
       'Access-Control-Allow-Origin': origin || '*',
       'Access-Control-Allow-Credentials': 'true',
       'Cross-Origin-Resource-Policy': 'cross-origin',

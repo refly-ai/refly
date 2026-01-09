@@ -1,30 +1,30 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import {
-  S3Client,
   CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  S3Client,
 } from '@aws-sdk/client-s3';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { readingTime } from 'reading-time-estimator';
 
-import { PrismaService } from '../common/prisma.service';
-import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
 import { truncateContent } from '@refly/utils/token';
 import {
-  LAMBDA_JOB_STATUS_SUCCESS,
   LAMBDA_JOB_STATUS_FAILED,
   LAMBDA_JOB_STATUS_PROCESSING,
+  LAMBDA_JOB_STATUS_SUCCESS,
   LAMBDA_STORAGE_TYPE_PERMANENT,
 } from '../../utils/const';
+import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
+import { PrismaService } from '../common/prisma.service';
 import {
-  LambdaResultEnvelope,
-  ResultPayload,
-  ResultHandlerContext,
   DocumentIngestResultPayload,
-  ImageTransformResultPayload,
   DocumentRenderResultPayload,
+  ImageTransformResultPayload,
+  LambdaResultEnvelope,
+  ResultHandlerContext,
+  ResultPayload,
   VideoAnalyzeResultPayload,
 } from './lambda.dto';
 
@@ -174,14 +174,19 @@ export class LambdaResultHandlerService {
       const cleanContent = content.replace(/\0/g, '').replace(/\s+/g, ' ').trim();
       // Storage limit is higher than read limit to preserve more content
       const maxStorageTokens = this.config.get<number>('drive.maxStorageTokens') || 100000;
-      const truncated = truncateContent(cleanContent, maxStorageTokens);
+      const truncatedContent = truncateContent(cleanContent, maxStorageTokens);
 
-      // 3. Save to MinIO
+      // 3. Check if content was truncated
+      const isTruncated = truncatedContent.includes('[... truncated ...]');
+
+      // 4. Save to MinIO
       const cacheKey = `drive-parsed/${uid}/${fileId}.txt`;
-      await this.internalOss.putObject(cacheKey, truncated);
+      await this.internalOss.putObject(cacheKey, truncatedContent);
 
-      // 4. Update DriveFileParseCache
-      const wordCount = payload.metadata?.wordCount || readingTime(truncated).words;
+      // 5. Update DriveFileParseCache with truncation status in metadata
+      const wordCount = payload.metadata?.wordCount || readingTime(truncatedContent).words;
+      const cacheMetadata = JSON.stringify({ truncated: isTruncated });
+
       await this.prisma.driveFileParseCache.upsert({
         where: { fileId },
         create: {
@@ -193,6 +198,7 @@ export class LambdaResultHandlerService {
           numPages: payload.metadata?.pageCount || null,
           wordCount,
           parseStatus: 'success',
+          metadata: cacheMetadata,
         },
         update: {
           contentStorageKey: cacheKey,
@@ -201,11 +207,12 @@ export class LambdaResultHandlerService {
           wordCount,
           parseStatus: 'success',
           parseError: null,
+          metadata: cacheMetadata,
           updatedAt: new Date(),
         },
       });
 
-      this.logger.info({ fileId, cacheKey, wordCount }, 'Content persisted to cache');
+      this.logger.info({ fileId, cacheKey, wordCount, isTruncated }, 'Content persisted to cache');
     } catch (error) {
       this.logger.error({ fileId, error }, 'Failed to persist content to cache');
       // Update cache with error status
@@ -302,11 +309,6 @@ export class LambdaResultHandlerService {
         }),
       },
     });
-
-    // Update the file record if fileId is available
-    if (context.fileId) {
-      await this.updateDriveFile(context.fileId, payload.document.key, payload.document.size);
-    }
   }
 
   /**
