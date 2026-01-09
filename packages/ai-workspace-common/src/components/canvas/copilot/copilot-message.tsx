@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, Button, Divider } from 'antd';
+import { useSearchParams } from 'react-router-dom';
 import { useListTools } from '@refly-packages/ai-workspace-common/queries';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { ActionResult, WorkflowPlanRecord } from '@refly/openapi-schema';
@@ -27,6 +28,9 @@ interface CopilotMessageProps {
 }
 
 export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessageProps) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const source = useMemo(() => searchParams.get('source'), [searchParams]);
+
   const { resultId, input, steps, status } = result;
   const query = useMemo(() => input?.query ?? '', [input]);
 
@@ -174,6 +178,12 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     setTimeout(() => {
       onLayout('LR');
     }, 200);
+
+    if (source === 'onboarding') {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('source');
+      setSearchParams(newParams);
+    }
   }, [
     canvasId,
     workflowPlan,
@@ -191,6 +201,9 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     canvasTitle,
     query,
     updateTitle,
+    source,
+    searchParams,
+    setSearchParams,
   ]);
 
   const handleRetry = useCallback(() => {
