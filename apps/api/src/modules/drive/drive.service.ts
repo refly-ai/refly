@@ -42,7 +42,7 @@ import {
 } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
 import type { ObjectInfo } from '../common/object-storage/backend/interface';
-import { streamToBuffer, streamToString } from '../../utils';
+import { streamToBuffer } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
 import { isEmbeddableLinkFile } from './drive.utils';
 import path from 'node:path';
@@ -51,8 +51,6 @@ import { ParserFactory } from '../knowledge/parsers/factory';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { readingTime } from 'reading-time-estimator';
 import { MiscService } from '../misc/misc.service';
-import { DocxParser } from '../knowledge/parsers/docx.parser';
-import { PdfParser } from '../knowledge/parsers/pdf.parser';
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -1360,12 +1358,13 @@ export class DriveService implements OnModuleInit {
     });
 
     // Trigger async parsing if supported (fire-and-forget)
-    this.triggerAsyncParse(user, {
-      fileId: createdFile.fileId,
-      type: createdFile.type,
-      storageKey: processedReq.driveStorageKey,
-      name: createdFile.name,
-    }).catch(() => {});
+    // Temporarily disabled - Lambda parsing not needed for file creation
+    // this.triggerAsyncParse(user, {
+    //   fileId: createdFile.fileId,
+    //   type: createdFile.type,
+    //   storageKey: processedReq.driveStorageKey,
+    //   name: createdFile.name,
+    // }).catch(() => {});
 
     return this.toDTO(createdFile);
   }
@@ -2172,6 +2171,51 @@ export class DriveService implements OnModuleInit {
       throw new ParamsError('Document ID is required');
     }
 
+    // For markdown format, handle locally (just return raw content with title)
+    // Lambda document-render only supports 'pdf' and 'docx'
+    if (format === 'markdown') {
+      return this.exportDocumentAsMarkdown(user, fileId);
+    }
+
+    // For pdf/docx, use Lambda
+    if (!this.lambdaService) {
+      throw new ParamsError('Lambda service is not available for document export');
+    }
+
+    // Start export job via Lambda
+    const exportJob = await this.startExportJob(user, { fileId, format });
+
+    // Poll for completion
+    const pollIntervalMs = this.config.get<number>('lambda.resultPolling.intervalMs') || 1000;
+    const maxRetries = this.config.get<number>('lambda.resultPolling.maxRetries') || 300;
+
+    let retries = 0;
+    while (retries < maxRetries) {
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+      retries++;
+
+      const { job, effectiveStatus } = await this.lambdaService.getJobStatus(exportJob.jobId);
+
+      if (effectiveStatus === 'FAILED') {
+        const errorMsg = job?.error || 'Export job failed';
+        this.logger.error(`Export job ${exportJob.jobId} failed: ${errorMsg}`);
+        throw new ParamsError(`Document export failed: ${errorMsg}`);
+      }
+
+      if (effectiveStatus === 'COMPLETED' || effectiveStatus === 'PENDING_PERSIST') {
+        const { data } = await this.downloadExportJobResult(user, exportJob.jobId);
+        return data;
+      }
+    }
+
+    throw new ParamsError('Export job timed out');
+  }
+
+  /**
+   * Export document as markdown (local processing)
+   * Simply returns the file content with title prefix
+   */
+  private async exportDocumentAsMarkdown(user: User, fileId: string): Promise<Buffer> {
     const doc = await this.prisma.driveFile.findFirst({
       where: {
         fileId,
@@ -2184,38 +2228,20 @@ export class DriveService implements OnModuleInit {
       throw new DocumentNotFoundError('Document not found');
     }
 
-    let content: string;
-    if (doc.storageKey) {
-      const contentStream = await this.internalOss.getObject(doc.storageKey);
-      content = await streamToString(contentStream);
+    if (!doc.storageKey) {
+      throw new ParamsError('Document has no content to export');
     }
 
-    // Process images in the document content
-    if (content) {
-      content = await this.miscService.processContentImages(content);
-    }
+    // Get file content from storage
+    const stream = await this.internalOss.getObject(doc.storageKey);
+    const buffer = await streamToBuffer(stream);
+    const content = buffer.toString('utf-8');
 
-    // add title as H1 title
-    const title = doc.name ?? 'Untitled';
-    const markdownContent = `# ${title}\n\n${content ?? ''}`;
+    // Add title as markdown header
+    const title = doc.name?.replace(/\.[^/.]+$/, '') || 'Untitled';
+    const markdownContent = `# ${title}\n\n${content}`;
 
-    // convert content to the format
-    switch (format) {
-      case 'markdown':
-        return Buffer.from(markdownContent);
-      case 'docx': {
-        const docxParser = new DocxParser();
-        const docxData = await docxParser.parse(markdownContent);
-        return docxData.buffer;
-      }
-      case 'pdf': {
-        const pdfParser = new PdfParser();
-        const pdfData = await pdfParser.parse(markdownContent);
-        return pdfData.buffer;
-      }
-      default:
-        throw new ParamsError('Unsupported format');
-    }
+    return Buffer.from(markdownContent, 'utf-8');
   }
 
   // ============================================================================
