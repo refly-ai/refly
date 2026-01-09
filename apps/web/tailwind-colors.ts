@@ -3,6 +3,7 @@
 
 export const reflyColors = {
   'refly-Card-Border': 'var(--refly-Card-Border)',
+  'refly-Control-Border': 'var(--refly-Control-Border)',
   'refly-semi-color-border': 'var(--refly-semi-color-border)',
   'refly-semi-color-bg-0': 'var(--refly-semi-color-bg-0)',
   'refly-bg-body-z0': 'var(--refly-bg-body-z0)',

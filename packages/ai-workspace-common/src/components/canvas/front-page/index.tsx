@@ -6,10 +6,8 @@ import { TemplateCardSkeleton } from '@refly-packages/ai-workspace-common/compon
 import { canvasTemplateEnabled } from '@refly/ui-kit';
 import { useSiderStoreShallow } from '@refly/stores';
 import cn from 'classnames';
-import { DocAdd, ArrowRight, Knowledge } from 'refly-icons';
 import { RecentWorkflow } from './recent-workflow';
 import { useListCanvasTemplateCategories } from '@refly-packages/ai-workspace-common/queries/queries';
-import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
@@ -21,7 +19,7 @@ import { SiderMenuSettingList } from '../../sider-menu-setting-list';
 import { Subscription, Account } from 'refly-icons';
 import { Avatar, Divider } from 'antd';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
-import { logEvent } from '@refly/telemetry-web';
+import { PureCopilot } from '@refly-packages/ai-workspace-common/components/pure-copilot';
 
 // User avatar component for displaying user profile
 const UserAvatar = React.memo(
@@ -217,13 +215,19 @@ const ModuleContainer = ({
   className?: string;
   handleTitleClick?: () => void;
 }) => {
+  const { t } = useTranslation();
   return (
     <div className={cn('flex flex-col gap-4 mb-10', className)}>
-      <div className="text-[18px] leading-7 font-semibold text-refly-text-1 flex items-center gap-2 justify-between">
+      <div className="text-[18px] leading-7 font-semibold text-refly-text-1 flex items-center gap-2 justify-center">
         {title}
         {handleTitleClick && (
-          <Button className="!h-8 !w-8 p-0" type="text" size="small" onClick={handleTitleClick}>
-            <ArrowRight size={20} />
+          <Button
+            className="!h-8 !w-8 p-0 absolute right-5 text-refly-text-2"
+            type="text"
+            size="small"
+            onClick={handleTitleClick}
+          >
+            {t('common.more')}
           </Button>
         )}
       </div>
@@ -237,13 +241,10 @@ export const FrontPage = memo(() => {
   const navigate = useNavigate();
   const { getCanvasList } = useHandleSiderData();
 
-  const { canvasList, setIsManualCollapse } = useSiderStoreShallow((state) => ({
+  const { canvasList } = useSiderStoreShallow((state) => ({
     canvasList: state.canvasList,
-    setIsManualCollapse: state.setIsManualCollapse,
   }));
-  const canvases = canvasList?.slice(0, 4);
-
-  const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas({});
+  const canvases = canvasList?.slice(0, 3);
 
   const { data, isLoading: isLoadingCategories } = useListCanvasTemplateCategories({}, undefined, {
     enabled: true,
@@ -344,12 +345,6 @@ export const FrontPage = memo(() => {
     }
   }, [templateCategories, templateCategoryId, isLoadingCategories]);
 
-  const handleNewWorkflow = useCallback(() => {
-    logEvent('new_workflow', Date.now(), {});
-    setIsManualCollapse(false);
-    debouncedCreateCanvas();
-  }, [debouncedCreateCanvas, setIsManualCollapse, logEvent]);
-
   const handleTemplateCategoryClick = useCallback(
     (categoryId: string) => {
       if (categoryId === templateCategoryId) return;
@@ -365,14 +360,6 @@ export const FrontPage = memo(() => {
   const handleViewMarketplace = useCallback(() => {
     window.open('/workflow-marketplace', '_blank');
   }, []);
-
-  const handleViewKnowledgeBase = useCallback(() => {
-    const isChinese = i18n.language?.startsWith('zh');
-    const url = isChinese
-      ? 'https://powerformer.feishu.cn/wiki/KrI1wxCKiisumTkOLJbcLeY7nec?fromScene=spaceOverview'
-      : 'https://reflydoc.notion.site/how-to-use-refly';
-    window.open(url, '_blank');
-  }, [i18n.language]);
 
   useEffect(() => {
     getCanvasList();
@@ -393,56 +380,24 @@ export const FrontPage = memo(() => {
         <SettingItem showName={false} avatarAlign={'right'} />
       </div>
 
-      <ModuleContainer title={t('frontPage.newWorkflow.title')} className="mt-[120px]">
-        <div className="flex gap-4">
-          <Button
-            className="w-fit h-fit flex items-center gap-2  border-[1px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover transition-colors"
-            onClick={handleNewWorkflow}
-            loading={createCanvasLoading}
-          >
-            <DocAdd size={42} color="var(--refly-primary-default)" />
-            <div className="flex flex-col gap-1 w-[184px]">
-              <div className="text-left text-base leading-[26px] font-semibold text-refly-text-0">
-                {t('frontPage.newWorkflow.buttonText')}
-              </div>
-              <div className="text-left text-xs text-refly-text-3 leading-4 font-normal">
-                {t('frontPage.newWorkflow.buttonDescription')}
-              </div>
-            </div>
-          </Button>
-          <Button
-            className="w-fit h-fit flex items-center gap-2  border-[1px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover transition-colors"
-            onClick={handleViewKnowledgeBase}
-          >
-            <Knowledge size={42} color="var(--refly-primary-default)" />
-            <div className="flex flex-col gap-1 w-[184px]">
-              <div className="text-left text-base leading-[26px] font-semibold text-refly-text-0">
-                {t('frontPage.tutorial.buttonText')}
-              </div>
-              <div className="text-left text-xs text-refly-text-3 leading-4 font-normal">
-                {t('frontPage.tutorial.buttonDescription')}
-              </div>
-            </div>
-          </Button>
-        </div>
-      </ModuleContainer>
+      <PureCopilot source="frontPage" classnames="mt-[120px]" />
 
-      {canvases?.length > 0 && (
-        <ModuleContainer
-          title={t('frontPage.recentWorkflows.title')}
-          handleTitleClick={handleViewAllWorkflows}
-        >
-          <RecentWorkflow canvases={canvases} />
-        </ModuleContainer>
-      )}
+      <ModuleContainer
+        className="mt-[50px]"
+        title={t('frontPage.recentWorkflows.title')}
+        handleTitleClick={handleViewAllWorkflows}
+      >
+        <RecentWorkflow canvases={canvases} />
+      </ModuleContainer>
 
       {canvasTemplateEnabled && (
         <ModuleContainer
+          className="mt-[50px]"
           title={t('frontPage.template.title')}
           handleTitleClick={handleViewMarketplace}
         >
           {templateCategories.length > 1 && (
-            <div className="flex items-center gap-2 flex-wrap mb-3">
+            <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
               {templateCategories.map((category) => (
                 <div
                   key={category.categoryId}

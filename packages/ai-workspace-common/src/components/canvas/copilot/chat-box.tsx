@@ -1,4 +1,4 @@
-import { memo, useMemo, useEffect, useCallback } from 'react';
+import { memo, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Modal, message } from 'antd';
 
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
@@ -19,6 +19,8 @@ interface ChatBoxProps {
 
 export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatBoxProps) => {
   const { t } = useTranslation();
+  const initialPromptProcessed = useRef(false);
+
   const { refetch: refetchHistorySessions } = useListCopilotSessions(
     {
       query: {
@@ -36,6 +38,8 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
     setCreatedCopilotSessionId,
     sessionResultIds,
     addHistoryTemplateSession,
+    pendingPrompt,
+    setPendingPrompt,
   } = useCopilotStoreShallow((state) => ({
     currentSessionId: state.currentSessionId[canvasId],
     setCurrentSessionId: state.setCurrentSessionId,
@@ -43,6 +47,8 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
     setCreatedCopilotSessionId: state.setCreatedCopilotSessionId,
     sessionResultIds: state.sessionResultIds[state.currentSessionId?.[canvasId]],
     addHistoryTemplateSession: state.addHistoryTemplateSession,
+    pendingPrompt: state.pendingPrompt[canvasId],
+    setPendingPrompt: state.setPendingPrompt,
   }));
 
   const { resultMap } = useActionResultStoreShallow((state) => ({
@@ -74,8 +80,9 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
   const { invokeAction, abortAction } = useInvokeAction();
 
   const handleSendMessage = useCallback(
-    async (type: 'input_enter_send' | 'button_click_send') => {
-      if (isExecuting) {
+    async (type: 'input_enter_send' | 'button_click_send', customQuery?: string) => {
+      const messageQuery = customQuery ?? query;
+      if (isExecuting || !messageQuery?.trim()) {
         return;
       }
 
@@ -92,7 +99,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
 
       invokeAction(
         {
-          query,
+          query: messageQuery,
           resultId,
           modelInfo: null,
           agentMode: 'copilot_agent',
@@ -103,14 +110,16 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
           entityType: 'canvas',
         },
       );
-      setQuery('');
+      if (!customQuery) {
+        setQuery('');
+      }
 
       setCurrentSessionId(canvasId, sessionId);
       appendSessionResultId(sessionId, resultId);
       setCreatedCopilotSessionId(sessionId);
       addHistoryTemplateSession(canvasId, {
         sessionId,
-        title: query,
+        title: messageQuery,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
@@ -129,6 +138,16 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
       logEvent,
     ],
   );
+
+  useEffect(() => {
+    if (pendingPrompt && !initialPromptProcessed.current) {
+      initialPromptProcessed.current = true;
+      handleSendMessage('button_click_send', pendingPrompt);
+
+      // Clean up store
+      setPendingPrompt(canvasId, null);
+    }
+  }, [pendingPrompt, handleSendMessage, setPendingPrompt, canvasId]);
 
   const handleAbort = useCallback(() => {
     if (!currentExecutingResult) {

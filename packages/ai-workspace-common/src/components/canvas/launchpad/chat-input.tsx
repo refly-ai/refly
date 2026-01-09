@@ -20,6 +20,7 @@ interface ChatInputProps {
   onUploadImage?: (file: File) => Promise<void>;
   onUploadMultipleImages?: (files: File[]) => Promise<void>;
   onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
@@ -36,6 +37,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       onUploadImage,
       onUploadMultipleImages,
       onFocus,
+      onBlur,
     },
     ref,
   ) => {
@@ -218,6 +220,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           onFocus={handleFocus}
           onBlur={() => {
             setIsFocused(false);
+            onBlur?.();
           }}
           value={query ?? ''}
           onChange={handleInputChange}

@@ -3369,6 +3369,8 @@ const translations = {
     assistant: '助手',
     placeholder: '描述你想生成的工作流...',
     loadingWorkflow: '加载工作流中...',
+    pureCopilotPlaceholder: '嗨，今天你想创建什么工作流？',
+    samplePrompt: '示例提示词',
     header: {
       history: '历史会话',
       newConversation: '新建会话',

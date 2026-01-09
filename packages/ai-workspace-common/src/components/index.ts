@@ -10,6 +10,7 @@ export * from './resource-view';
 export * from './search-quick-open-btn';
 export * from './request-access';
 export * from './project';
+export * from './pure-copilot';
 export * from './output-locale-list';
 export * from './markdown';
 export * from './import-resource';
