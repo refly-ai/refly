@@ -11678,6 +11678,96 @@ export const DriveFileSchema = {
   },
 } as const;
 
+export const ExportJobStatusSchema = {
+  type: 'string',
+  enum: ['pending', 'processing', 'completed', 'failed'],
+  description: 'Status of an export job',
+} as const;
+
+export const ExportJobSchema = {
+  type: 'object',
+  required: ['jobId', 'status'],
+  properties: {
+    jobId: {
+      type: 'string',
+      description: 'Export job ID',
+    },
+    fileId: {
+      type: 'string',
+      description: 'Source file ID being exported',
+    },
+    status: {
+      $ref: '#/components/schemas/ExportJobStatus',
+    },
+    format: {
+      type: 'string',
+      enum: ['pdf', 'docx'],
+      description: 'Export format',
+    },
+    name: {
+      type: 'string',
+      description: 'Output file name',
+    },
+    error: {
+      type: 'string',
+      description: 'Error message if job failed',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Job creation timestamp',
+    },
+  },
+} as const;
+
+export const StartExportJobRequestSchema = {
+  type: 'object',
+  required: ['fileId', 'format'],
+  properties: {
+    fileId: {
+      type: 'string',
+      description: 'File ID to export',
+    },
+    format: {
+      type: 'string',
+      enum: ['pdf', 'docx'],
+      description: 'Target export format',
+    },
+  },
+} as const;
+
+export const StartExportJobResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/ExportJob',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetExportJobStatusResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/ExportJob',
+        },
+      },
+    },
+  ],
+} as const;
+
 export const ListDriveFilesResponseSchema = {
   allOf: [
     {

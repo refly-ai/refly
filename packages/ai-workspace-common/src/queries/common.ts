@@ -64,6 +64,7 @@ import {
   deleteSkillTrigger,
   deleteToolset,
   deleteWorkflowApp,
+  downloadExportJobResult,
   duplicateCanvas,
   duplicateShare,
   emailLogin,
@@ -94,6 +95,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getExportJobStatus,
   getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
@@ -165,6 +167,7 @@ import {
   serveStatic,
   setCanvasState,
   sharePage,
+  startExportJob,
   streamInvokeSkill,
   submitForm,
   syncCanvasState,
@@ -444,6 +447,30 @@ export const UseExportDocumentKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useExportDocumentKey, ...(queryKey ?? [clientOptions])];
+export type GetExportJobStatusDefaultResponse = Awaited<
+  ReturnType<typeof getExportJobStatus>
+>['data'];
+export type GetExportJobStatusQueryResult<
+  TData = GetExportJobStatusDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetExportJobStatusKey = 'GetExportJobStatus';
+export const UseGetExportJobStatusKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetExportJobStatusKey, ...(queryKey ?? [clientOptions])];
+export type DownloadExportJobResultDefaultResponse = Awaited<
+  ReturnType<typeof downloadExportJobResult>
+>['data'];
+export type DownloadExportJobResultQueryResult<
+  TData = DownloadExportJobResultDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useDownloadExportJobResultKey = 'DownloadExportJobResult';
+export const UseDownloadExportJobResultKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useDownloadExportJobResultKey, ...(queryKey ?? [clientOptions])];
 export type ListProjectsDefaultResponse = Awaited<ReturnType<typeof listProjects>>['data'];
 export type ListProjectsQueryResult<
   TData = ListProjectsDefaultResponse,
@@ -1228,6 +1255,12 @@ export type DeleteResourceMutationResult = Awaited<ReturnType<typeof deleteResou
 export const useDeleteResourceKey = 'DeleteResource';
 export const UseDeleteResourceKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteResourceKey,
+  ...(mutationKey ?? []),
+];
+export type StartExportJobMutationResult = Awaited<ReturnType<typeof startExportJob>>;
+export const useStartExportJobKey = 'StartExportJob';
+export const UseStartExportJobKeyFn = (mutationKey?: Array<unknown>) => [
+  useStartExportJobKey,
   ...(mutationKey ?? []),
 ];
 export type UpdateDocumentMutationResult = Awaited<ReturnType<typeof updateDocument>>;

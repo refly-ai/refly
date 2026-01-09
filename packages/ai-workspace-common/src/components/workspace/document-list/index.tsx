@@ -1,5 +1,14 @@
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
-import { Dropdown, Button, Popconfirm, message, Empty, Divider, Typography } from 'antd';
+import {
+  Dropdown,
+  Button,
+  Popconfirm,
+  message,
+  Empty,
+  Divider,
+  Typography,
+  notification,
+} from 'antd';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import {
   Spinner,
@@ -30,7 +39,10 @@ import { Markdown } from '@refly-packages/ai-workspace-common/components/markdow
 import { NODE_COLORS } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/colors';
 import { LuPlus } from 'react-icons/lu';
 import { useMatch } from 'react-router-dom';
-import { useExportDocument } from '@refly-packages/ai-workspace-common/hooks/use-export-document';
+import {
+  useExportDocument,
+  ExportCancelledError,
+} from '@refly-packages/ai-workspace-common/hooks/use-export-document';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import { useCreateDocumentPurely } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-document-purely';
 import { useGetProjectCanvasId } from '@refly-packages/ai-workspace-common/hooks/use-get-project-canvasId';
@@ -58,19 +70,13 @@ const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () =
   const handleExportDocument = useDebouncedCallback(async (type: 'markdown' | 'docx' | 'pdf') => {
     if (isExporting) return;
 
+    const notificationKey = `export-${doc.docId}-${Date.now()}`;
+    const abortController = new AbortController();
+
     try {
       setIsExporting(true);
       let mimeType = '';
       let extension = '';
-
-      // 添加加载提示
-      const loadingMessage = message.loading({
-        content: t('workspace.exporting'),
-        duration: 0,
-      });
-      const content = await exportDocument(doc.docId, type);
-      // 关闭加载提示
-      loadingMessage();
 
       switch (type) {
         case 'markdown':
@@ -87,21 +93,45 @@ const ActionDropdown = ({ doc, afterDelete }: { doc: Document; afterDelete: () =
           break;
       }
 
-      // 创建Blob对象
-      const blob = new Blob([content], { type: mimeType });
-      // 创建下载链接
+      notification.info({
+        key: notificationKey,
+        message: t('workspace.exporting'),
+        duration: 0,
+        onClose: () => {
+          abortController.abort();
+        },
+      });
+
+      // exportDocument returns string for markdown, Blob for pdf/docx
+      const result = await exportDocument(doc.docId, type, undefined, abortController.signal);
+
+      if (!result) {
+        throw new Error('Export returned empty result');
+      }
+
+      // Create blob - result is already a Blob for pdf/docx, string for markdown
+      const blob = result instanceof Blob ? result : new Blob([result], { type: mimeType });
+
+      // Remove existing extension from title to avoid double extensions like "file.txt.pdf"
+      const baseName = (doc.title || t('common.untitled')).replace(/\.(txt|md|docx|pdf|doc)$/i, '');
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${doc.title || t('common.untitled')}.${extension}`;
+      a.download = `${baseName}.${extension}`;
       document.body.appendChild(a);
       a.click();
 
-      // 清理
       URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      notification.destroy(notificationKey);
       message.success(t('workspace.exportSuccess'));
     } catch (error) {
+      notification.destroy(notificationKey);
+      // Don't show error message if cancelled
+      if (error instanceof ExportCancelledError) {
+        return;
+      }
       console.error('Export error:', error);
       message.error(t('workspace.exportFailed'));
     } finally {

@@ -351,14 +351,15 @@ export class Agent extends BaseSkill {
             const originalSignatures = (lastMessage as any).additional_kwargs?.signatures;
             const toolCallsCount = lastMessage.tool_calls?.length ?? 0;
 
-            // CRITICAL: Vertex AI (Gemini) requires a 1:1 mapping between tool_calls and signatures.
-            // When the response contains both text content and tool calls, the signatures array
-            // includes parts for text segments (usually empty strings) followed by tool signatures.
-            // If we clear the text content (to avoid 400 INVALID_ARGUMENT from mixed content),
-            // we MUST also remove the corresponding text segment signatures, otherwise the
-            // mismatch in array lengths will cause another 400 error.
+            // CRITICAL: Vertex AI (Gemini) requires the original non-empty signatures passed back
+            // LangChain extracts the first functionCall's signature and promotes it to signatures[0]
+            // When we clear text content (to avoid 400 INVALID_ARGUMENT from mixed content),
+            // we MUST trim the signatures array to remove redundant empty signatures.
             if (Array.isArray(originalSignatures) && originalSignatures.length > toolCallsCount) {
-              lastMessage.additional_kwargs.signatures = originalSignatures.slice(-toolCallsCount);
+              lastMessage.additional_kwargs.signatures = originalSignatures.slice(
+                0,
+                toolCallsCount,
+              );
             }
 
             // Clear content to avoid 400 INVALID_ARGUMENT when AIMessage has both text and tool_calls

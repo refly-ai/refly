@@ -36,7 +36,7 @@ export default () => ({
     archiveConcurrencyLimit: Number.parseInt(process.env.DRIVE_ARCHIVE_CONCURRENCY_LIMIT) || 10, // Maximum concurrent file archive operations
     publicEndpoint:
       process.env.DRIVE_PUBLIC_ENDPOINT || 'http://localhost:5800/v1/drive/file/public',
-    maxContentTokens: Number.parseInt(process.env.DRIVE_MAX_CONTENT_TOKENS) || 25000, // Maximum tokens in returned content (aligned with Claude Code's limit)
+    maxContentTokens: Number.parseInt(process.env.DRIVE_MAX_CONTENT_TOKENS) || 50000, // Maximum tokens in returned content
     maxStorageTokens: Number.parseInt(process.env.DRIVE_MAX_STORAGE_TOKENS) || 100000, // Maximum tokens when storing parsed content (higher to preserve more)
     maxParseFileSizeKB: Number.parseInt(process.env.DRIVE_MAX_PARSE_FILE_SIZE_KB) || 512, // Maximum file size (KB) for direct parsing, larger files should use execute_code
   },
@@ -277,6 +277,7 @@ export default () => ({
   },
 
   lambda: {
+    enabled: process.env.LAMBDA_ENABLED !== 'false', // Lambda enabled by default, set LAMBDA_ENABLED=false to disable
     region: process.env.AWS_REGION || 'us-east-1',
     functions: {
       documentIngest: process.env.LAMBDA_DOC_PARSER_ARN,
@@ -287,7 +288,7 @@ export default () => ({
     sqs: {
       docIngestQueueUrl: process.env.SQS_DOC_PARSE_QUEUE_URL,
       imageTransformQueueUrl: process.env.SQS_IMAGE_PROCESS_QUEUE_URL,
-      documentRenderQueueUrl: process.env.SQS_DOC_EXPORT_QUEUE_URL,
+      documentRenderQueueUrl: process.env.SQS_DOC_RENDER_QUEUE_URL,
       videoAnalyzeQueueUrl: process.env.SQS_VIDEO_ANALYZE_QUEUE_URL,
       resultQueueUrl: process.env.SQS_RESULT_QUEUE_URL,
       bridge: {

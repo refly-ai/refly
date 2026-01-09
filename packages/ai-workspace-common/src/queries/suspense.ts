@@ -5,6 +5,7 @@ import { UseQueryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import {
   checkSettingsField,
   checkToolOauthStatus,
+  downloadExportJobResult,
   exportCanvas,
   exportDocument,
   getActionResult,
@@ -26,6 +27,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getExportJobStatus,
   getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
@@ -82,6 +84,8 @@ import {
   CheckSettingsFieldError,
   CheckToolOauthStatusData,
   CheckToolOauthStatusError,
+  DownloadExportJobResultData,
+  DownloadExportJobResultError,
   ExportCanvasData,
   ExportCanvasError,
   ExportDocumentData,
@@ -120,6 +124,8 @@ import {
   GetCreditUsageError,
   GetDocumentDetailData,
   GetDocumentDetailError,
+  GetExportJobStatusData,
+  GetExportJobStatusError,
   GetFormDefinitionError,
   GetPageByCanvasIdData,
   GetPageByCanvasIdError,
@@ -558,6 +564,38 @@ export const useExportDocumentSuspense = <
     queryKey: Common.UseExportDocumentKeyFn(clientOptions, queryKey),
     queryFn: () =>
       exportDocument({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetExportJobStatusSuspense = <
+  TData = Common.GetExportJobStatusDefaultResponse,
+  TError = GetExportJobStatusError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetExportJobStatusData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetExportJobStatusKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getExportJobStatus({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useDownloadExportJobResultSuspense = <
+  TData = Common.DownloadExportJobResultDefaultResponse,
+  TError = DownloadExportJobResultError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<DownloadExportJobResultData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseDownloadExportJobResultKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      downloadExportJobResult({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useListProjectsSuspense = <

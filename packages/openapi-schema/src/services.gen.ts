@@ -191,6 +191,15 @@ import type {
   ExportDocumentData,
   ExportDocumentError,
   ExportDocumentResponse,
+  StartExportJobData,
+  StartExportJobError,
+  StartExportJobResponse2,
+  GetExportJobStatusData,
+  GetExportJobStatusError,
+  GetExportJobStatusResponse2,
+  DownloadExportJobResultData,
+  DownloadExportJobResultError,
+  DownloadExportJobResultResponse,
   UpdateDocumentData,
   UpdateDocumentError,
   UpdateDocumentResponse,
@@ -1576,6 +1585,57 @@ export const exportDocument = <ThrowOnError extends boolean = false>(
       url: '/drive/document/export',
     },
   );
+};
+
+/**
+ * Start async document export
+ * Start an asynchronous document export job using Lambda. Use this for binary files (docx, pdf) that need format conversion.
+ */
+export const startExportJob = <ThrowOnError extends boolean = false>(
+  options: Options<StartExportJobData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    StartExportJobResponse2,
+    StartExportJobError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/document/export/async',
+  });
+};
+
+/**
+ * Get export job status
+ * Get the status of an async export job
+ */
+export const getExportJobStatus = <ThrowOnError extends boolean = false>(
+  options: Options<GetExportJobStatusData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetExportJobStatusResponse2,
+    GetExportJobStatusError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/document/export/job/{jobId}',
+  });
+};
+
+/**
+ * Download export job result
+ * Download the result of a completed export job
+ */
+export const downloadExportJobResult = <ThrowOnError extends boolean = false>(
+  options: Options<DownloadExportJobResultData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    DownloadExportJobResultResponse,
+    DownloadExportJobResultError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/drive/document/export/job/{jobId}/download',
+  });
 };
 
 /**

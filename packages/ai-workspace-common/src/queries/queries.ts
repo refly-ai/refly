@@ -65,6 +65,7 @@ import {
   deleteSkillTrigger,
   deleteToolset,
   deleteWorkflowApp,
+  downloadExportJobResult,
   duplicateCanvas,
   duplicateShare,
   emailLogin,
@@ -95,6 +96,7 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getExportJobStatus,
   getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
@@ -166,6 +168,7 @@ import {
   serveStatic,
   setCanvasState,
   sharePage,
+  startExportJob,
   streamInvokeSkill,
   submitForm,
   syncCanvasState,
@@ -321,6 +324,8 @@ import {
   DeleteToolsetError,
   DeleteWorkflowAppData,
   DeleteWorkflowAppError,
+  DownloadExportJobResultData,
+  DownloadExportJobResultError,
   DuplicateCanvasData,
   DuplicateCanvasError,
   DuplicateShareData,
@@ -376,6 +381,8 @@ import {
   GetCreditUsageError,
   GetDocumentDetailData,
   GetDocumentDetailError,
+  GetExportJobStatusData,
+  GetExportJobStatusError,
   GetFormDefinitionError,
   GetPageByCanvasIdData,
   GetPageByCanvasIdError,
@@ -501,6 +508,8 @@ import {
   SetCanvasStateError,
   SharePageData,
   SharePageError,
+  StartExportJobData,
+  StartExportJobError,
   StreamInvokeSkillData,
   StreamInvokeSkillError,
   SubmitFormData,
@@ -918,6 +927,38 @@ export const useExportDocument = <
     queryKey: Common.UseExportDocumentKeyFn(clientOptions, queryKey),
     queryFn: () =>
       exportDocument({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetExportJobStatus = <
+  TData = Common.GetExportJobStatusDefaultResponse,
+  TError = GetExportJobStatusError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetExportJobStatusData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetExportJobStatusKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getExportJobStatus({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useDownloadExportJobResult = <
+  TData = Common.DownloadExportJobResultDefaultResponse,
+  TError = DownloadExportJobResultError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<DownloadExportJobResultData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseDownloadExportJobResultKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      downloadExportJobResult({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useListProjects = <
@@ -2334,6 +2375,23 @@ export const useDeleteResource = <
   useMutation<TData, TError, Options<DeleteResourceData, true>, TContext>({
     mutationKey: Common.UseDeleteResourceKeyFn(mutationKey),
     mutationFn: (clientOptions) => deleteResource(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useStartExportJob = <
+  TData = Common.StartExportJobMutationResult,
+  TError = StartExportJobError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<StartExportJobData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<StartExportJobData, true>, TContext>({
+    mutationKey: Common.UseStartExportJobKeyFn(mutationKey),
+    mutationFn: (clientOptions) => startExportJob(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useUpdateDocument = <

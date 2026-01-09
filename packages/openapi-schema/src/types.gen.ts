@@ -8354,6 +8354,63 @@ export type DriveFile = {
   url?: string;
 };
 
+/**
+ * Status of an export job
+ */
+export type ExportJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export type ExportJob = {
+  /**
+   * Export job ID
+   */
+  jobId: string;
+  /**
+   * Source file ID being exported
+   */
+  fileId?: string;
+  status: ExportJobStatus;
+  /**
+   * Export format
+   */
+  format?: 'pdf' | 'docx';
+  /**
+   * Output file name
+   */
+  name?: string;
+  /**
+   * Error message if job failed
+   */
+  error?: string;
+  /**
+   * Job creation timestamp
+   */
+  createdAt?: string;
+};
+
+/**
+ * Export format
+ */
+export type format2 = 'pdf' | 'docx';
+
+export type StartExportJobRequest = {
+  /**
+   * File ID to export
+   */
+  fileId: string;
+  /**
+   * Target export format
+   */
+  format: 'pdf' | 'docx';
+};
+
+export type StartExportJobResponse = BaseResponse & {
+  data?: ExportJob;
+};
+
+export type GetExportJobStatusResponse = BaseResponse & {
+  data?: ExportJob;
+};
+
 export type ListDriveFilesResponse = BaseResponse & {
   /**
    * List of drive files
@@ -10854,6 +10911,43 @@ export type ExportDocumentData = {
 export type ExportDocumentResponse = Blob | File;
 
 export type ExportDocumentError = unknown;
+
+export type StartExportJobData = {
+  /**
+   * Export job request
+   */
+  body: StartExportJobRequest;
+};
+
+export type StartExportJobResponse2 = StartExportJobResponse;
+
+export type StartExportJobError = unknown;
+
+export type GetExportJobStatusData = {
+  path: {
+    /**
+     * Export job ID
+     */
+    jobId: string;
+  };
+};
+
+export type GetExportJobStatusResponse2 = GetExportJobStatusResponse;
+
+export type GetExportJobStatusError = unknown;
+
+export type DownloadExportJobResultData = {
+  path: {
+    /**
+     * Export job ID
+     */
+    jobId: string;
+  };
+};
+
+export type DownloadExportJobResultResponse = Blob | File;
+
+export type DownloadExportJobResultError = unknown;
 
 export type UpdateDocumentData = {
   /**

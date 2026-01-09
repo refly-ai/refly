@@ -21,6 +21,9 @@ import {
   DriveFile,
   DriveFileCategory,
   DriveFileSource,
+  StartExportJobRequest,
+  ExportJob,
+  ExportJobStatus,
 } from '@refly/openapi-schema';
 import { Prisma, DriveFile as DriveFileModel } from '@prisma/client';
 import {
@@ -31,9 +34,15 @@ import {
   pick,
 } from '@refly/utils';
 import { truncateContent } from '@refly/utils/token';
-import { ParamsError, DriveFileNotFoundError, DocumentNotFoundError } from '@refly/errors';
+import {
+  ParamsError,
+  DriveFileNotFoundError,
+  DocumentNotFoundError,
+  FileTooLargeError,
+} from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
-import { streamToBuffer, streamToString } from '../../utils';
+import type { ObjectInfo } from '../common/object-storage/backend/interface';
+import { streamToBuffer } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
 import { isEmbeddableLinkFile } from './drive.utils';
 import path from 'node:path';
@@ -42,8 +51,6 @@ import { ParserFactory } from '../knowledge/parsers/factory';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { readingTime } from 'reading-time-estimator';
 import { MiscService } from '../misc/misc.service';
-import { DocxParser } from '../knowledge/parsers/docx.parser';
-import { PdfParser } from '../knowledge/parsers/pdf.parser';
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -595,7 +602,7 @@ export class DriveService implements OnModuleInit {
       }
 
       // Apply token-based truncation (head/tail preservation)
-      const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+      const maxTokens = this.config.get<number>('drive.maxContentTokens') || 50000;
       const truncateStart = performance.now();
       const truncatedContent = truncateContent(content, maxTokens);
       this.logger.info(
@@ -733,8 +740,10 @@ export class DriveService implements OnModuleInit {
           },
         });
 
-        // Fallback to local parsing
-        return this.parseLocally(user, driveFile, storageKey);
+        // Lambda failed - guide to use sandbox
+        throw new FileTooLargeError(
+          'File parsing failed. Use execute_code tool to process this file.',
+        );
       }
 
       if (effectiveStatus === 'COMPLETED' || effectiveStatus === 'PENDING_PERSIST') {
@@ -753,25 +762,35 @@ export class DriveService implements OnModuleInit {
               content = content.replace(/\0/g, '');
               content = this.normalizeWhitespace(content);
 
-              const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+              const maxTokens = this.config.get<number>('drive.maxContentTokens') || 50000;
               const truncatedContent = truncateContent(content, maxTokens);
+
+              // Check if content was truncated
+              const isTruncated = truncatedContent.includes('[... truncated ...]');
 
               // Save to cache
               const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
               await this.internalOss.putObject(contentStorageKey, truncatedContent);
 
-              const metadata = job.metadata ? JSON.parse(job.metadata) : {};
-              const wordCount = metadata.wordCount || readingTime(truncatedContent).words;
+              const jobMetadata = job.metadata ? JSON.parse(job.metadata) : {};
+              const wordCount = jobMetadata.wordCount || readingTime(truncatedContent).words;
+
+              // Store truncation status in metadata
+              const cacheMetadata = {
+                lambdaJobId: lambdaJob.jobId,
+                truncated: isTruncated,
+              };
 
               await this.prisma.driveFileParseCache.update({
                 where: { fileId },
                 data: {
                   contentStorageKey,
                   parser: 'lambda',
-                  numPages: metadata.pageCount || null,
+                  numPages: jobMetadata.pageCount || null,
                   wordCount,
                   parseStatus: 'success',
                   parseError: null,
+                  metadata: JSON.stringify(cacheMetadata),
                   updatedAt: new Date(),
                 },
               });
@@ -809,8 +828,10 @@ export class DriveService implements OnModuleInit {
       },
     });
 
-    // Fallback to local parsing
-    return this.parseLocally(user, driveFile, storageKey);
+    // Lambda timeout - guide to use sandbox
+    throw new FileTooLargeError(
+      'File parsing timeout. Use execute_code tool to process this file.',
+    );
   }
 
   /**
@@ -899,16 +920,28 @@ export class DriveService implements OnModuleInit {
         return r;
       });
 
-      // Process and store content - remove null characters
       let processedContent = result.content?.replace(/\0/g, '') || '';
+
+      // Normalize whitespace
       processedContent = this.normalizeWhitespace(processedContent);
 
-      const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+      const maxTokens = this.config.get<number>('drive.maxContentTokens') || 50000;
       const truncateStart = performance.now();
       const truncatedContent = truncateContent(processedContent, maxTokens);
       this.logger.info(
         `[parseLocally] truncateContent after parse: fileId=${fileId}, len=${processedContent.length}, time=${(performance.now() - truncateStart).toFixed(2)}ms`,
       );
+
+      // Check if content was truncated - throw error to guide sandbox usage
+      const isTruncated = truncatedContent.includes('[... truncated ...]');
+      if (isTruncated) {
+        this.logger.info(
+          `Drive file ${fileId} content was truncated (${processedContent.length} chars), guiding to use sandbox`,
+        );
+        throw new FileTooLargeError(
+          'File content is too large for direct reading. Use execute_code tool to process this file.',
+        );
+      }
 
       const contentStorageKey = `drive-parsed/${user.uid}/${fileId}.txt`;
       await tracer.startActiveSpan('drive.saveToCache', async (span) => {
@@ -931,6 +964,7 @@ export class DriveService implements OnModuleInit {
           numPages: numPages ?? null,
           wordCount,
           parseStatus: 'success',
+          metadata: JSON.stringify({ truncated: false }),
         },
         update: {
           contentStorageKey,
@@ -939,6 +973,7 @@ export class DriveService implements OnModuleInit {
           wordCount,
           parseStatus: 'success',
           parseError: null,
+          metadata: JSON.stringify({ truncated: false }),
           updatedAt: new Date(),
         },
       });
@@ -1006,13 +1041,24 @@ export class DriveService implements OnModuleInit {
     });
 
     if (cache?.parseStatus === 'success') {
+      // Check if content was truncated during parsing - guide to use sandbox
+      const cacheMetadata = cache.metadata ? JSON.parse(cache.metadata) : {};
+      if (cacheMetadata.truncated === true) {
+        this.logger.info(
+          `Drive file ${fileId} was truncated during parsing, guiding to use sandbox`,
+        );
+        throw new FileTooLargeError(
+          'File content was truncated due to size. Use execute_code tool to process this file for complete content.',
+        );
+      }
+
       return tracer
         .startActiveSpan('drive.loadFromCache', async (span) => {
           try {
             const stream = await this.internalOss.getObject(cache.contentStorageKey);
             let content = await streamToBuffer(stream).then((b) => b.toString('utf8'));
 
-            const maxTokens = this.config.get<number>('drive.maxContentTokens') || 25000;
+            const maxTokens = this.config.get<number>('drive.maxContentTokens') || 50000;
             const originalLen = content.length;
             const truncateStart = performance.now();
             content = truncateContent(content, maxTokens);
@@ -1056,17 +1102,53 @@ export class DriveService implements OnModuleInit {
 
     // Get file storage key and stat
     const storageKey = driveFile.storageKey ?? this.generateStorageKey(user, driveFile);
+
+    // Check file size limit before downloading - large files should use execute_code tool
+    const maxFileSizeKB = this.config.get<number>('drive.maxParseFileSizeKB') || 512;
+    const maxFileSizeBytes = maxFileSizeKB * 1024;
+
+    let fileStat: ObjectInfo | undefined;
+    try {
+      fileStat = await this.internalOss.statObject(storageKey);
+    } catch (error) {
+      this.logger.error(`Failed to stat drive file ${fileId}: ${(error as Error)?.message}`);
+      throw new DriveFileNotFoundError(`Drive file not found: ${fileId}`);
+    }
+
+    if (fileStat && fileStat.size > maxFileSizeBytes) {
+      const fileSizeKB = Math.round(fileStat.size / 1024);
+      this.logger.info(
+        `Drive file ${fileId} exceeds size limit: ${fileSizeKB}KB > ${maxFileSizeKB}KB`,
+      );
+      throw new FileTooLargeError(
+        'File exceeds size limit. Use execute_code tool to process this file.',
+        fileSizeKB,
+      );
+    }
+
     // Step 2: No cache found, perform parsing
     getCurrentSpan()?.setAttribute('cache.hit', false);
-    // Use Lambda parsing if content type is supported
-    const useLambda = this.isLambdaParsableContentType(contentType);
+
+    // Small files (≤5KB) can be parsed locally for faster response
+    const smallFileSizeKB = this.config.get<number>('drive.smallFileSizeKB') || 5;
+    const smallFileSizeBytes = smallFileSizeKB * 1024;
+
+    if (fileStat && fileStat.size <= smallFileSizeBytes) {
+      getCurrentSpan()?.setAttribute('parse.method', 'local-small');
+      return this.parseLocally(user, driveFile, storageKey);
+    }
+
+    // Check if Lambda is enabled and service is available
+    const lambdaEnabled = this.config.get<boolean>('lambda.enabled') !== false;
+    const useLambda =
+      lambdaEnabled && this.lambdaService && this.isLambdaParsableContentType(contentType);
 
     if (useLambda) {
       getCurrentSpan()?.setAttribute('parse.method', 'lambda');
       return this.parseViaLambda(user, driveFile, storageKey);
     }
 
-    // Fallback to local parsing
+    // Fallback to local parsing for unsupported Lambda content types
     getCurrentSpan()?.setAttribute('parse.method', 'local');
     return this.parseLocally(user, driveFile, storageKey);
   }
@@ -1278,12 +1360,13 @@ export class DriveService implements OnModuleInit {
     });
 
     // Trigger async parsing if supported (fire-and-forget)
-    this.triggerAsyncParse(user, {
-      fileId: createdFile.fileId,
-      type: createdFile.type,
-      storageKey: processedReq.driveStorageKey,
-      name: createdFile.name,
-    }).catch(() => {});
+    // Temporarily disabled - Lambda parsing not needed for file creation
+    // this.triggerAsyncParse(user, {
+    //   fileId: createdFile.fileId,
+    //   type: createdFile.type,
+    //   storageKey: processedReq.driveStorageKey,
+    //   name: createdFile.name,
+    // }).catch(() => {});
 
     return this.toDTO(createdFile);
   }
@@ -1296,8 +1379,9 @@ export class DriveService implements OnModuleInit {
     user: User,
     driveFile: { fileId: string; type: string; storageKey: string; name: string },
   ): Promise<void> {
-    // Check if Lambda service is available
-    if (!this.lambdaService) {
+    // Check if Lambda is enabled and service is available
+    const lambdaEnabled = this.config.get<boolean>('lambda.enabled') !== false;
+    if (!lambdaEnabled || !this.lambdaService) {
       return;
     }
 
@@ -2090,6 +2174,52 @@ export class DriveService implements OnModuleInit {
       throw new ParamsError('Document ID is required');
     }
 
+    // For markdown format, handle locally (just return raw content with title)
+    // Lambda document-render only supports 'pdf' and 'docx'
+    if (format === 'markdown') {
+      return this.exportDocumentAsMarkdown(user, fileId);
+    }
+
+    // For pdf/docx, use Lambda
+    const lambdaEnabled = this.config.get<boolean>('lambda.enabled') !== false;
+    if (!lambdaEnabled || !this.lambdaService) {
+      throw new ParamsError('Lambda service is not available for document export');
+    }
+
+    // Start export job via Lambda
+    const exportJob = await this.startExportJob(user, { fileId, format });
+
+    // Poll for completion
+    const pollIntervalMs = this.config.get<number>('lambda.resultPolling.intervalMs') || 1000;
+    const maxRetries = this.config.get<number>('lambda.resultPolling.maxRetries') || 300;
+
+    let retries = 0;
+    while (retries < maxRetries) {
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+      retries++;
+
+      const { job, effectiveStatus } = await this.lambdaService.getJobStatus(exportJob.jobId);
+
+      if (effectiveStatus === 'FAILED') {
+        const errorMsg = job?.error || 'Export job failed';
+        this.logger.error(`Export job ${exportJob.jobId} failed: ${errorMsg}`);
+        throw new ParamsError(`Document export failed: ${errorMsg}`);
+      }
+
+      if (effectiveStatus === 'COMPLETED' || effectiveStatus === 'PENDING_PERSIST') {
+        const { data } = await this.downloadExportJobResult(user, exportJob.jobId);
+        return data;
+      }
+    }
+
+    throw new ParamsError('Export job timed out');
+  }
+
+  /**
+   * Export document as markdown (local processing)
+   * Simply returns the file content with title prefix
+   */
+  private async exportDocumentAsMarkdown(user: User, fileId: string): Promise<Buffer> {
     const doc = await this.prisma.driveFile.findFirst({
       where: {
         fileId,
@@ -2102,38 +2232,20 @@ export class DriveService implements OnModuleInit {
       throw new DocumentNotFoundError('Document not found');
     }
 
-    let content: string;
-    if (doc.storageKey) {
-      const contentStream = await this.internalOss.getObject(doc.storageKey);
-      content = await streamToString(contentStream);
+    if (!doc.storageKey) {
+      throw new ParamsError('Document has no content to export');
     }
 
-    // Process images in the document content
-    if (content) {
-      content = await this.miscService.processContentImages(content);
-    }
+    // Get file content from storage
+    const stream = await this.internalOss.getObject(doc.storageKey);
+    const buffer = await streamToBuffer(stream);
+    const content = buffer.toString('utf-8');
 
-    // add title as H1 title
-    const title = doc.name ?? 'Untitled';
-    const markdownContent = `# ${title}\n\n${content ?? ''}`;
+    // Add title as markdown header
+    const title = doc.name?.replace(/\.[^/.]+$/, '') || 'Untitled';
+    const markdownContent = `# ${title}\n\n${content}`;
 
-    // convert content to the format
-    switch (format) {
-      case 'markdown':
-        return Buffer.from(markdownContent);
-      case 'docx': {
-        const docxParser = new DocxParser();
-        const docxData = await docxParser.parse(markdownContent);
-        return docxData.buffer;
-      }
-      case 'pdf': {
-        const pdfParser = new PdfParser();
-        const pdfData = await pdfParser.parse(markdownContent);
-        return pdfData.buffer;
-      }
-      default:
-        throw new ParamsError('Unsupported format');
-    }
+    return Buffer.from(markdownContent, 'utf-8');
   }
 
   // ============================================================================
@@ -2314,13 +2426,183 @@ export class DriveService implements OnModuleInit {
    * @param jobId - The Lambda job ID
    * @returns Job status information
    */
-  async getLambdaJobStatus(jobId: string): Promise<{
+  async getLambdaJobStatusInternal(jobId: string): Promise<{
     job: LambdaJobRecord | null;
     effectiveStatus: string | null;
   }> {
-    if (!this.lambdaService) {
+    const lambdaEnabled = this.config.get<boolean>('lambda.enabled') !== false;
+    if (!lambdaEnabled || !this.lambdaService) {
       return { job: null, effectiveStatus: null };
     }
     return this.lambdaService.getJobStatus(jobId);
+  }
+
+  // ============================================================================
+  // Async Export Methods (Lambda-based)
+  // ============================================================================
+
+  /**
+   * Convert Lambda job status to ExportJobStatus
+   */
+  private mapLambdaStatusToExportStatus(
+    status: string,
+    effectiveStatus: string | null,
+  ): ExportJobStatus {
+    if (effectiveStatus === 'FAILED') return 'failed';
+    if (effectiveStatus === 'COMPLETED' || effectiveStatus === 'PENDING_PERSIST')
+      return 'completed';
+    if (effectiveStatus === 'PROCESSING' || status === 'processing') return 'processing';
+    return 'pending';
+  }
+
+  /**
+   * Convert LambdaJobRecord to ExportJob
+   */
+  private lambdaJobToExportJob(job: LambdaJobRecord, effectiveStatus: string | null): ExportJob {
+    return {
+      jobId: job.jobId,
+      fileId: job.fileId ?? undefined,
+      status: this.mapLambdaStatusToExportStatus(job.status, effectiveStatus),
+      format: job.mimeType?.includes('pdf') ? 'pdf' : 'docx',
+      name: job.name ?? undefined,
+      error: job.error ?? undefined,
+      createdAt: job.createdAt.toISOString(),
+    };
+  }
+
+  /**
+   * Start an async export job using Lambda
+   *
+   * @param user - The user requesting the export
+   * @param request - Export job request
+   * @returns ExportJob with job status
+   */
+  async startExportJob(user: User, request: StartExportJobRequest): Promise<ExportJob> {
+    const { fileId, format } = request;
+
+    const lambdaEnabled = this.config.get<boolean>('lambda.enabled') !== false;
+    if (!lambdaEnabled || !this.lambdaService) {
+      throw new ParamsError('Lambda service is not available for async export');
+    }
+
+    // Get the file to export
+    const doc = await this.prisma.driveFile.findFirst({
+      where: {
+        fileId,
+        uid: user.uid,
+        deletedAt: null,
+      },
+    });
+
+    if (!doc) {
+      throw new DocumentNotFoundError('Document not found');
+    }
+
+    if (!doc.storageKey) {
+      throw new ParamsError('Document has no content to export');
+    }
+
+    // Always use the original file's storageKey for export
+    // (parseCache is for reading parsed content, not for export source)
+    const sourceKey = doc.storageKey;
+
+    // Dispatch Lambda document render job
+    const inputBucket =
+      this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
+    const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+
+    const outputName = `${doc.name?.replace(/\.[^/.]+$/, '') || 'export'}.${format}`;
+
+    const lambdaJob = await this.lambdaService.dispatchDocumentRender({
+      uid: user.uid,
+      fileId,
+      s3Input: {
+        bucket: inputBucket,
+        key: sourceKey,
+      },
+      outputBucket,
+      name: outputName,
+      format,
+    });
+
+    this.logger.info(
+      `Started export job: fileId=${fileId}, jobId=${lambdaJob.jobId}, format=${format}`,
+    );
+
+    return this.lambdaJobToExportJob(lambdaJob, 'PENDING');
+  }
+
+  /**
+   * Get export job status
+   *
+   * @param user - The user requesting the status
+   * @param jobId - Export job ID
+   * @returns ExportJob with current status
+   */
+  async getExportJobStatus(user: User, jobId: string): Promise<ExportJob> {
+    if (!this.lambdaService) {
+      throw new ParamsError('Lambda service is not available');
+    }
+
+    const { job, effectiveStatus } = await this.lambdaService.getJobStatus(jobId);
+
+    if (!job) {
+      throw new NotFoundException('Export job not found');
+    }
+
+    // Verify the job belongs to this user
+    if (job.uid !== user.uid) {
+      throw new NotFoundException('Export job not found');
+    }
+
+    return this.lambdaJobToExportJob(job, effectiveStatus);
+  }
+
+  /**
+   * Download export job result
+   *
+   * @param user - The user downloading the result
+   * @param jobId - Export job ID
+   * @returns Buffer with file content, content type, and filename
+   */
+  async downloadExportJobResult(
+    user: User,
+    jobId: string,
+  ): Promise<{ data: Buffer; contentType: string; filename: string }> {
+    if (!this.lambdaService) {
+      throw new ParamsError('Lambda service is not available');
+    }
+
+    const { job, effectiveStatus } = await this.lambdaService.getJobStatus(jobId);
+
+    if (!job) {
+      throw new NotFoundException('Export job not found');
+    }
+
+    // Verify the job belongs to this user
+    if (job.uid !== user.uid) {
+      throw new NotFoundException('Export job not found');
+    }
+
+    // Check if job is completed
+    if (effectiveStatus !== 'COMPLETED' && effectiveStatus !== 'PENDING_PERSIST') {
+      throw new ParamsError(`Export job is not ready. Current status: ${effectiveStatus}`);
+    }
+
+    if (!job.storageKey) {
+      throw new ParamsError('Export job has no output file');
+    }
+
+    // Get the file from Lambda S3 bucket
+    const stream = await this.lambdaService.getJobOutput(job.storageKey);
+    if (!stream) {
+      throw new NotFoundException('Export result not found');
+    }
+
+    const data = await streamToBuffer(stream);
+    const contentType = job.mimeType || 'application/octet-stream';
+    const filename = job.name || `export.${contentType.includes('pdf') ? 'pdf' : 'docx'}`;
+
+    return { data, contentType, filename };
   }
 }

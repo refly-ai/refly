@@ -135,6 +135,11 @@ export class LambdaService {
       throw new Error('SQS client not initialized');
     }
 
+    this.logger.info(
+      { queueUrl, jobId: envelope.jobId, type: envelope.type },
+      'Sending message to SQS',
+    );
+
     const command = new SendMessageCommand({
       QueueUrl: queueUrl,
       MessageBody: JSON.stringify(envelope),
@@ -150,7 +155,11 @@ export class LambdaService {
       },
     });
 
-    await this.sqsClient.send(command);
+    const result = await this.sqsClient.send(command);
+    this.logger.info(
+      { jobId: envelope.jobId, messageId: result.MessageId },
+      'SQS message sent successfully',
+    );
   }
 
   /**
