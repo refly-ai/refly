@@ -35,7 +35,7 @@ export class FormController {
   @UseGuards(JwtAuthGuard)
   @Get('/hasFilledForm')
   async hasFilledForm(@LoginedUser() user: User): Promise<HasFilledFormResponse> {
-    const hasFilledForm = await this.formService.hasFilledForm(user.uid);
-    return buildSuccessResponse({ hasFilledForm });
+    const result = await this.formService.hasFilledForm(user.uid);
+    return buildSuccessResponse({ hasFilledForm: result.hasFilledForm, identity: result.identity });
   }
 }

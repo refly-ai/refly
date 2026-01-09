@@ -10453,6 +10453,9 @@ components:
                   type: boolean
                   description: Whether the user has filled the form
                   default: false
+                identity:
+                  type: string
+                  description: User identity
     GetCreditRechargeResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
