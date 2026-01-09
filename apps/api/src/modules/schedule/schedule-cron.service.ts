@@ -328,13 +328,25 @@ export class ScheduleCronService implements OnModuleInit {
 
     // 3.2 Update schedule with next run time (Optimistic locking via updateMany not strictly needed if we process sequentially or have row lock, but safe enough here)
     // We update first to avoid double triggering if this takes long
-    await this.prisma.workflowSchedule.update({
-      where: { scheduleId: schedule.scheduleId },
+    // 3.2 Update schedule with next run time using Optimistic Locking
+    // preventing double execution if multiple pods race here
+    const updateResult = await this.prisma.workflowSchedule.updateMany({
+      where: {
+        scheduleId: schedule.scheduleId,
+        nextRunAt: freshSchedule.nextRunAt, // Optimistic lock version check
+      },
       data: {
         lastRunAt: new Date(),
         nextRunAt,
       },
     });
+
+    if (updateResult.count === 0) {
+      this.logger.debug(
+        `Schedule ${schedule.scheduleId} was updated by another process during execution preparation. Skipping to prevent double trigger.`,
+      );
+      return;
+    }
 
     // 3.3 Find or create the WorkflowScheduleRecord for this execution
     // First, check if there's a 'scheduled' record that should be converted
