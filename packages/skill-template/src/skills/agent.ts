@@ -270,11 +270,9 @@ export class Agent extends BaseSkill {
     workflow = workflow.addEdge(START, 'llm');
 
     if (actualToolNodeInstance) {
-      // Enhanced tool node with strict sequential execution of tool calls
+      // Enhanced tool node with parallel execution of tool calls
       const enhancedToolNode = async (toolState: typeof MessagesAnnotation.State) => {
         try {
-          this.engine.logger.info('Executing tool node with strict sequential tool calls');
-
           const priorMessages = toolState.messages ?? [];
           const lastMessage = priorMessages[priorMessages.length - 1] as AIMessage | undefined;
           const toolCalls = lastMessage?.tool_calls ?? [];
@@ -284,69 +282,82 @@ export class Agent extends BaseSkill {
             return { messages: priorMessages };
           }
 
-          const toolResultMessages: BaseMessage[] = [];
+          this.engine.logger.info(
+            `Executing ${toolCalls.length} tool calls in parallel: [${toolCalls.map((tc) => tc?.name).join(', ')}]`,
+          );
 
-          // Execute each tool call strictly in sequence
-          for (const call of toolCalls) {
+          // Execute all tool calls in parallel
+          const toolPromises = toolCalls.map(async (call, index) => {
             const toolName = call?.name ?? '';
             const toolArgs = (call?.args as Record<string, unknown>) ?? {};
+            const toolCallId = call?.id ?? '';
 
             if (!toolName) {
-              this.engine.logger.warn('Encountered a tool call with empty name, skipping');
-              toolResultMessages.push(
-                new ToolMessage({
+              this.engine.logger.warn(`Tool call at index ${index} has empty name`);
+              return {
+                index,
+                message: new ToolMessage({
                   content: 'Error: Tool name is missing',
-                  tool_call_id: call?.id ?? '',
-                  name: toolName || 'unknown_tool',
+                  tool_call_id: toolCallId,
+                  name: 'unknown_tool',
                 }),
-              );
-              continue;
+              };
             }
 
             const matchedTool = (availableToolsForNode || []).find((t) => t?.name === toolName);
 
             if (!matchedTool) {
-              this.engine.logger.warn(`Requested tool not found: ${toolName}`);
-              toolResultMessages.push(
-                new ToolMessage({
+              this.engine.logger.warn(`Tool not found: ${toolName}`);
+              return {
+                index,
+                message: new ToolMessage({
                   content: `Error: Tool '${toolName}' not available`,
-                  tool_call_id: call?.id ?? '',
+                  tool_call_id: toolCallId,
                   name: toolName,
                 }),
-              );
-              continue;
+              };
             }
 
             try {
-              // Each invocation awaited to ensure strict serial execution
               const rawResult = await matchedTool.invoke(toolArgs);
               const stringified =
                 typeof rawResult === 'string'
                   ? rawResult
                   : JSON.stringify(rawResult ?? {}, null, 2);
 
-              toolResultMessages.push(
-                new ToolMessage({
+              this.engine.logger.info(`Tool '${toolName}' completed successfully`);
+              return {
+                index,
+                message: new ToolMessage({
                   content: stringified,
-                  tool_call_id: call?.id ?? '',
+                  tool_call_id: toolCallId,
                   name: matchedTool.name,
                 }),
-              );
-
-              this.engine.logger.info(`Tool '${toolName}' executed successfully`);
+              };
             } catch (toolError) {
               const errMsg =
                 (toolError as Error)?.message ?? String(toolError ?? 'Unknown tool error');
-              this.engine.logger.error(`Tool '${toolName}' execution failed: ${errMsg}`);
-              toolResultMessages.push(
-                new ToolMessage({
+              this.engine.logger.error(`Tool '${toolName}' failed: ${errMsg}`);
+              return {
+                index,
+                message: new ToolMessage({
                   content: `Error executing tool '${toolName}': ${errMsg}`,
-                  tool_call_id: call?.id ?? '',
+                  tool_call_id: toolCallId,
                   name: matchedTool.name,
                 }),
-              );
+              };
             }
-          }
+          });
+
+          // Wait for all tools to complete in parallel
+          const results = await Promise.all(toolPromises);
+
+          // Sort by original index to maintain order for LLM context
+          const toolResultMessages = results
+            .sort((a, b) => a.index - b.index)
+            .map((r) => r.message);
+
+          this.engine.logger.info(`All ${toolCalls.length} tool calls completed`);
           if ((lastMessage as any).response_metadata?.model_provider === 'google-vertexai') {
             const originalSignatures = (lastMessage as any).additional_kwargs?.signatures;
             const toolCallsCount = lastMessage.tool_calls?.length ?? 0;
