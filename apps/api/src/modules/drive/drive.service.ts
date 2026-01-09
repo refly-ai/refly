@@ -673,12 +673,11 @@ export class DriveService implements OnModuleInit {
     const { fileId, type: contentType } = driveFile;
     const tracer = getTracer();
 
-    // S3 input location
-    const inputBucket =
-      this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
+    // S3 input bucket (where source files are stored)
+    const inputBucket = this.config.get<string>('lambda.s3.inputBucket');
 
     // Output bucket for Lambda results
-    const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+    const outputBucket = this.config.get<string>('lambda.s3.bucket');
 
     // Dispatch to Lambda
     const lambdaJob = await this.lambdaService!.dispatchDocumentIngest({
@@ -1392,9 +1391,8 @@ export class DriveService implements OnModuleInit {
     }
 
     try {
-      const inputBucket =
-        this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
-      const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+      const inputBucket = this.config.get<string>('lambda.s3.inputBucket');
+      const outputBucket = this.config.get<string>('lambda.s3.bucket');
 
       const lambdaJob = await this.lambdaService.dispatchDocumentIngest({
         uid: user.uid,
@@ -2312,9 +2310,8 @@ export class DriveService implements OnModuleInit {
     });
 
     // 2. Dispatch to Lambda
-    const inputBucket =
-      this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
-    const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+    const inputBucket = this.config.get<string>('lambda.s3.inputBucket');
+    const outputBucket = this.config.get<string>('lambda.s3.bucket');
 
     const lambdaJob = await this.lambdaService.dispatchImageTransform({
       uid: user.uid,
@@ -2369,9 +2366,8 @@ export class DriveService implements OnModuleInit {
     });
 
     // 2. Dispatch to Lambda
-    const inputBucket =
-      this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
-    const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+    const inputBucket = this.config.get<string>('lambda.s3.inputBucket');
+    const outputBucket = this.config.get<string>('lambda.s3.bucket');
 
     const lambdaJob = await this.lambdaService.dispatchDocumentRender({
       uid: user.uid,
@@ -2478,9 +2474,8 @@ export class DriveService implements OnModuleInit {
     const sourceKey = doc.storageKey;
 
     // Dispatch Lambda document render job
-    const inputBucket =
-      this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
-    const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+    const inputBucket = this.config.get<string>('lambda.s3.inputBucket');
+    const outputBucket = this.config.get<string>('lambda.s3.bucket');
 
     const outputName = `${doc.name?.replace(/\.[^/.]+$/, '') || 'export'}.${format}`;
 
