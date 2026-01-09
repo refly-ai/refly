@@ -1,5 +1,5 @@
-import { memo, useCallback, useEffect, useState, useRef } from 'react';
-
+import { memo, useCallback, useEffect, useState, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Copilot } from '../copilot';
 
 interface CopilotContainerProps {
@@ -10,6 +10,10 @@ interface CopilotContainerProps {
 
 export const CopilotContainer = memo(
   ({ copilotWidth, setCopilotWidth, maxPanelWidth }: CopilotContainerProps) => {
+    const [searchParams] = useSearchParams();
+    const source = useMemo(() => searchParams.get('source'), [searchParams]);
+    const isOnboarding = source === 'onboarding';
+
     // Handle drag resize for Copilot panel
     const [isResizing, setIsResizing] = useState(false);
     const resizeStartXRef = useRef<number>(0);
@@ -61,7 +65,7 @@ export const CopilotContainer = memo(
       };
     }, [isResizing, handleResizeMove, handleResizeEnd]);
 
-    if (copilotWidth <= 0) {
+    if (copilotWidth <= 0 && !isOnboarding) {
       return null;
     }
 
@@ -69,17 +73,25 @@ export const CopilotContainer = memo(
       <>
         <div
           className="absolute -top-[1px] left-[-1px] bottom-[-1px] bg-refly-bg-content-z2 border-solid border-[1px] border-refly-Card-Border shadow-refly-m z-[30] rounded-xl overflow-hidden"
-          style={{ width: `${copilotWidth}px` }}
+          style={{ width: isOnboarding ? '100%' : `${copilotWidth}px` }}
         >
-          <Copilot copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
+          {isOnboarding ? (
+            <div className="max-w-[1000px] h-full mx-auto">
+              <Copilot copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
+            </div>
+          ) : (
+            <Copilot copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
+          )}
         </div>
-        <div
-          className="absolute top-2 bottom-2 w-2 cursor-col-resize z-[30] group"
-          style={{ left: `${copilotWidth - 4}px` }}
-          onMouseDown={handleResizeStart}
-        >
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1px] h-full" />
-        </div>
+        {!isOnboarding && (
+          <div
+            className="absolute top-2 bottom-2 w-2 cursor-col-resize z-[30] group"
+            style={{ left: `${copilotWidth - 4}px` }}
+            onMouseDown={handleResizeStart}
+          >
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1px] h-full" />
+          </div>
+        )}
       </>
     );
   },
