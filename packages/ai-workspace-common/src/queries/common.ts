@@ -76,6 +76,7 @@ import {
   generateMedia,
   getActionResult,
   getAuthConfig,
+  getAvailableTools,
   getAvailableVouchers,
   getCanvasCommissionByCanvasId,
   getCanvasData,
@@ -98,8 +99,11 @@ import {
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getRecordSnapshot,
   getResourceDetail,
   getScheduleDetail,
+  getScheduleRecordDetail,
+  getScheduleRecords,
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
@@ -116,6 +120,7 @@ import {
   invokeSkill,
   listAccounts,
   listActions,
+  listAllScheduleRecords,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
@@ -153,6 +158,7 @@ import {
   refreshToken,
   reindexResource,
   resendVerification,
+  retryScheduleRecord,
   revokeComposioConnection,
   scrape,
   search,
@@ -163,6 +169,7 @@ import {
   submitForm,
   syncCanvasState,
   testProviderConnection,
+  triggerScheduleManually,
   triggerVoucher,
   unpinSkillInstance,
   updateCanvas,
@@ -1491,6 +1498,54 @@ export type GetScheduleDetailMutationResult = Awaited<ReturnType<typeof getSched
 export const useGetScheduleDetailKey = 'GetScheduleDetail';
 export const UseGetScheduleDetailKeyFn = (mutationKey?: Array<unknown>) => [
   useGetScheduleDetailKey,
+  ...(mutationKey ?? []),
+];
+export type GetScheduleRecordsMutationResult = Awaited<ReturnType<typeof getScheduleRecords>>;
+export const useGetScheduleRecordsKey = 'GetScheduleRecords';
+export const UseGetScheduleRecordsKeyFn = (mutationKey?: Array<unknown>) => [
+  useGetScheduleRecordsKey,
+  ...(mutationKey ?? []),
+];
+export type ListAllScheduleRecordsMutationResult = Awaited<
+  ReturnType<typeof listAllScheduleRecords>
+>;
+export const useListAllScheduleRecordsKey = 'ListAllScheduleRecords';
+export const UseListAllScheduleRecordsKeyFn = (mutationKey?: Array<unknown>) => [
+  useListAllScheduleRecordsKey,
+  ...(mutationKey ?? []),
+];
+export type GetAvailableToolsMutationResult = Awaited<ReturnType<typeof getAvailableTools>>;
+export const useGetAvailableToolsKey = 'GetAvailableTools';
+export const UseGetAvailableToolsKeyFn = (mutationKey?: Array<unknown>) => [
+  useGetAvailableToolsKey,
+  ...(mutationKey ?? []),
+];
+export type GetScheduleRecordDetailMutationResult = Awaited<
+  ReturnType<typeof getScheduleRecordDetail>
+>;
+export const useGetScheduleRecordDetailKey = 'GetScheduleRecordDetail';
+export const UseGetScheduleRecordDetailKeyFn = (mutationKey?: Array<unknown>) => [
+  useGetScheduleRecordDetailKey,
+  ...(mutationKey ?? []),
+];
+export type GetRecordSnapshotMutationResult = Awaited<ReturnType<typeof getRecordSnapshot>>;
+export const useGetRecordSnapshotKey = 'GetRecordSnapshot';
+export const UseGetRecordSnapshotKeyFn = (mutationKey?: Array<unknown>) => [
+  useGetRecordSnapshotKey,
+  ...(mutationKey ?? []),
+];
+export type TriggerScheduleManuallyMutationResult = Awaited<
+  ReturnType<typeof triggerScheduleManually>
+>;
+export const useTriggerScheduleManuallyKey = 'TriggerScheduleManually';
+export const UseTriggerScheduleManuallyKeyFn = (mutationKey?: Array<unknown>) => [
+  useTriggerScheduleManuallyKey,
+  ...(mutationKey ?? []),
+];
+export type RetryScheduleRecordMutationResult = Awaited<ReturnType<typeof retryScheduleRecord>>;
+export const useRetryScheduleRecordKey = 'RetryScheduleRecord';
+export const UseRetryScheduleRecordKeyFn = (mutationKey?: Array<unknown>) => [
+  useRetryScheduleRecordKey,
   ...(mutationKey ?? []),
 ];
 export type SubmitFormMutationResult = Awaited<ReturnType<typeof submitForm>>;

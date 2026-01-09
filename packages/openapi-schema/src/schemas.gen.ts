@@ -7977,6 +7977,10 @@ export const HasFilledFormResponseSchema = {
               description: 'Whether the user has filled the form',
               default: false,
             },
+            identity: {
+              type: 'string',
+              description: 'User identity',
+            },
           },
         },
       },
