@@ -19,6 +19,7 @@ import { AdapterFactory } from './dynamic-tooling/adapters/factory';
 import { ToolFactory } from './dynamic-tooling/factory.service';
 import { ToolInventoryService } from './inventory/inventory.service';
 import { ResourceHandler } from './resource.service';
+import { ScaleboxModule } from './sandbox/scalebox.module';
 import {
   ComposioToolPostHandlerService,
   RegularToolPostHandlerService,
@@ -41,6 +42,7 @@ import { ToolService } from './tool.service';
     ProviderModule,
     CreditModule,
     BillingModule,
+    ScaleboxModule,
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_SYNC_TOOL_CREDIT_USAGE })]),
   ],
   controllers: [ToolController],

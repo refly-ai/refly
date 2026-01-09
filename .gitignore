@@ -60,5 +60,3 @@ docs/.vitepress/cache/*
 
 apps/api/load-tests/results/*.json
 apps/api/load-tests/results/*.txt
-
-apps/api/load-tests/.env

@@ -314,7 +314,33 @@ export default () => ({
   },
 
   sandbox: {
-    timeout: process.env.SANDBOX_TIMEOUT,
+    scalebox: {
+      apiKey: process.env.SCALEBOX_API_KEY,
+      // Wrapper
+      wrapperType: process.env.SCALEBOX_WRAPPER_TYPE, // 'executor' | 'interpreter'
+      templateName: process.env.SCALEBOX_TEMPLATE_NAME,
+      codeSizeThreshold: process.env.SCALEBOX_CODE_SIZE_THRESHOLD,
+      // Sandbox
+      sandboxTimeoutMs: process.env.SCALEBOX_SANDBOX_TIMEOUT_MS,
+      // Pool
+      maxSandboxes: process.env.SCALEBOX_MAX_SANDBOXES,
+      maxQueueSize: process.env.SCALEBOX_MAX_QUEUE_SIZE,
+      autoPauseDelayMs: process.env.SCALEBOX_AUTO_PAUSE_DELAY_MS,
+      // Lock
+      runCodeTimeoutSec: process.env.SCALEBOX_RUN_CODE_TIMEOUT_SEC,
+      lockWaitTimeoutSec: process.env.SCALEBOX_LOCK_WAIT_TIMEOUT_SEC,
+      lockPollIntervalMs: process.env.SCALEBOX_LOCK_POLL_INTERVAL_MS,
+      lockInitialTtlSec: process.env.SCALEBOX_LOCK_INITIAL_TTL_SEC,
+      lockRenewalIntervalMs: process.env.SCALEBOX_LOCK_RENEWAL_INTERVAL_MS,
+      // Executor limits
+      limits: {
+        maxFileSize: process.env.SCALEBOX_LIMITS_MAX_FILE_SIZE,
+        maxTotalWrite: process.env.SCALEBOX_LIMITS_MAX_TOTAL_WRITE,
+        maxFiles: process.env.SCALEBOX_LIMITS_MAX_FILES,
+        maxProcesses: process.env.SCALEBOX_LIMITS_MAX_PROCESSES,
+      },
+    },
+
     truncate: {
       output: process.env.SANDBOX_TRUNCATE_OUTPUT,
     },

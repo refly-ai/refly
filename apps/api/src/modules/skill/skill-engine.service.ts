@@ -26,7 +26,7 @@ import { ProviderService } from '../provider/provider.service';
 import { RAGService } from '../rag/rag.service';
 import { SearchService } from '../search/search.service';
 import { ShareCreationService } from '../share/share-creation.service';
-import { SandboxService } from '../sandbox/sandbox.service';
+import { ScaleboxService } from '../tool/sandbox/scalebox.service';
 import { ToolService } from '../tool/tool.service';
 import { WorkflowPlanService } from '../workflow/workflow-plan.service';
 
@@ -48,7 +48,7 @@ export class SkillEngineService implements OnModuleInit {
   private engine: SkillEngine;
   private canvasSyncService: CanvasSyncService;
   private toolService: ToolService;
-  private sandboxService: SandboxService;
+  private scaleboxService: ScaleboxService;
   private shareCreationService: ShareCreationService;
   private workflowPlanService: WorkflowPlanService;
   constructor(
@@ -77,7 +77,7 @@ export class SkillEngineService implements OnModuleInit {
         this.miscService = this.moduleRef.get(MiscService, { strict: false });
         this.canvasSyncService = this.moduleRef.get(CanvasSyncService, { strict: false });
         this.toolService = this.moduleRef.get(ToolService, { strict: false });
-        this.sandboxService = this.moduleRef.get(SandboxService, { strict: false });
+        this.scaleboxService = this.moduleRef.get(ScaleboxService, { strict: false });
         this.shareCreationService = this.moduleRef.get(ShareCreationService, { strict: false });
         this.workflowPlanService = this.moduleRef.get(WorkflowPlanService, { strict: false });
       },
@@ -282,7 +282,7 @@ export class SkillEngineService implements OnModuleInit {
         return genImageID();
       },
       execute: async (user, req) => {
-        return await this.sandboxService.execute(user, req);
+        return await this.scaleboxService.execute(user, req);
       },
       generateWorkflowPlan: async (user, params) => {
         return await this.workflowPlanService.generateWorkflowPlan(user, params);
