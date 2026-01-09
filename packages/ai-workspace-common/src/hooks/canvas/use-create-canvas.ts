@@ -4,12 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { logEvent } from '@refly/telemetry-web';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
-import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import { useCanvasResourcesPanelStoreShallow, useCopilotStore } from '@refly/stores';
 
 interface CreateCanvasOptions {
   isPilotActivated?: boolean;
   isMediaGeneration?: boolean;
   isAsk?: boolean;
+  initialPrompt?: string;
 }
 
 export const useCreateCanvas = ({
@@ -25,6 +26,7 @@ export const useCreateCanvas = ({
       setWideScreenVisible: state.setWideScreenVisible,
     }),
   );
+  const setPendingPrompt = useCopilotStore((state) => state.setPendingPrompt);
 
   const createCanvas = async (canvasTitle: string) => {
     setIsCreating(true);
@@ -88,6 +90,10 @@ export const useCreateCanvas = ({
           entry_type: 'ask',
           canvas_id: canvasId,
         });
+      }
+
+      if (options?.initialPrompt) {
+        setPendingPrompt(canvasId, options.initialPrompt);
       }
 
       if (!options?.isPilotActivated && !options?.isMediaGeneration && !options?.isAsk) {

@@ -3229,6 +3229,8 @@ const translations = {
     assistant: 'Copilot',
     placeholder: 'Describe the workflow you want to generate...',
     loadingWorkflow: 'Loading workflow...',
+    pureCopilotPlaceholder: 'Hi, what workflow do you want to create today?',
+    samplePrompt: 'Sample Prompt',
     header: {
       history: 'Chat History',
       newConversation: 'New Chat',
