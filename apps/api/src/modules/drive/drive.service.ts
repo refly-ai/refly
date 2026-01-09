@@ -2181,7 +2181,8 @@ export class DriveService implements OnModuleInit {
     }
 
     // For pdf/docx, use Lambda
-    if (!this.lambdaService) {
+    const lambdaEnabled = this.config.get<boolean>('lambda.enabled') !== false;
+    if (!lambdaEnabled || !this.lambdaService) {
       throw new ParamsError('Lambda service is not available for document export');
     }
 
@@ -2429,7 +2430,8 @@ export class DriveService implements OnModuleInit {
     job: LambdaJobRecord | null;
     effectiveStatus: string | null;
   }> {
-    if (!this.lambdaService) {
+    const lambdaEnabled = this.config.get<boolean>('lambda.enabled') !== false;
+    if (!lambdaEnabled || !this.lambdaService) {
       return { job: null, effectiveStatus: null };
     }
     return this.lambdaService.getJobStatus(jobId);
@@ -2478,7 +2480,8 @@ export class DriveService implements OnModuleInit {
   async startExportJob(user: User, request: StartExportJobRequest): Promise<ExportJob> {
     const { fileId, format } = request;
 
-    if (!this.lambdaService) {
+    const lambdaEnabled = this.config.get<boolean>('lambda.enabled') !== false;
+    if (!lambdaEnabled || !this.lambdaService) {
       throw new ParamsError('Lambda service is not available for async export');
     }
 

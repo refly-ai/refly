@@ -277,7 +277,7 @@ export default () => ({
   },
 
   lambda: {
-    enabled: process.env.LAMBDA_ENABLED === 'true', // Set LAMBDA_ENABLED=true to enable Lambda
+    enabled: process.env.LAMBDA_ENABLED !== 'false', // Lambda enabled by default, set LAMBDA_ENABLED=false to disable
     region: process.env.AWS_REGION || 'us-east-1',
     functions: {
       documentIngest: process.env.LAMBDA_DOC_PARSER_ARN,
