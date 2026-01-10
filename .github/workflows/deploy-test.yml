@@ -177,12 +177,12 @@ jobs:
           cache-to: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache,mode=max
 
       - name: Update kubeconfig for EKS cluster
-        if: github.ref_name == 'main' || github.ref_name == 'stable'
+        if: github.ref_name == 'main'
         run: |
           aws eks update-kubeconfig --name ${{ vars.AWS_EKS_CLUSTER_TEST }} --region ${{ vars.AWS_REGION }}
 
       - name: Wait for Deployment update on EKS
-        if: github.ref_name == 'main' || github.ref_name == 'stable'
+        if: github.ref_name == 'main'
         env:
           EXPECTED_IMAGE: ${{ steps.docker_tags.outputs.deploy_image }}
           DEPLOYMENT_NAME: refly-${{ matrix.app }}
