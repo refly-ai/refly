@@ -84,9 +84,14 @@ jobs:
 
           if [ "$MANIFEST" != "None" ] && [ -n "$MANIFEST" ]; then
             echo "Nightly image found. Copying to $TARGET_TAG..."
-            aws ecr put-image --repository-name "$REPO" --image-tag "$TARGET_TAG" --image-manifest "$MANIFEST" --region "$AWS_REGION"
-            echo "✓ Image copied successfully"
-            echo "image_exists=true" >> "$GITHUB_OUTPUT"
+            if aws ecr put-image --repository-name "$REPO" --image-tag "$TARGET_TAG" --image-manifest "$MANIFEST" --region "$AWS_REGION" > put_image_output.txt 2>&1; then
+              echo "✓ Image copied successfully"
+              echo "image_exists=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "✗ Failed to copy image from nightly tag"
+              cat put_image_output.txt
+              echo "image_exists=false" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "Nightly image not found, will need to build"
             echo "image_exists=false" >> "$GITHUB_OUTPUT"
