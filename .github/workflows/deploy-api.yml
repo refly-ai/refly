@@ -118,34 +118,7 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ inputs.eks_cluster_name }} --region ${{ inputs.aws_region }}
 
-      - name: Wait for Deployment update on EKS
-        env:
-          EXPECTED_IMAGE: ${{ steps.docker_tags.outputs.deploy_image }}
-          DEPLOYMENT_NAME: ${{ inputs.deployment_name }}
-          CONTAINER_NAME: refly-api
-          NAMESPACE: refly-app
+      - name: Update API deployment image on EKS
         run: |
-          echo "Waiting for $DEPLOYMENT_NAME to be updated to $EXPECTED_IMAGE..."
-          # Poll until the deployment's image matches the expected image
-          # Timeout after 10 minutes (60 * 10s)
-          MAX_RETRIES=60
-          RETRY_COUNT=0
-          while true; do
-            CURRENT_IMAGE=$(kubectl get deployment/$DEPLOYMENT_NAME -n $NAMESPACE -o jsonpath="{.spec.template.spec.containers[?(@.name=='$CONTAINER_NAME')].image}")
-            if [[ "$CURRENT_IMAGE" == "$EXPECTED_IMAGE" ]]; then
-              echo "✓ Deployment $DEPLOYMENT_NAME has been updated to $EXPECTED_IMAGE"
-              break
-            fi
-            
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-              echo "✗ Timeout waiting for deployment update. Current image: $CURRENT_IMAGE"
-              exit 1
-            fi
-            
-            echo "Current image: $CURRENT_IMAGE. Waiting for ArgoCD Image Updater... ($RETRY_COUNT/$MAX_RETRIES)"
-            sleep 10
-          done
-
-          echo "Waiting for rollout to complete..."
-          kubectl rollout status deployment/$DEPLOYMENT_NAME -n $NAMESPACE --timeout=600s
+          kubectl set image deployment/${{ inputs.deployment_name }} refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
+          kubectl rollout status deployment/${{ inputs.deployment_name }} -n refly-app --timeout=600s
