@@ -54,33 +54,41 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
           REPOSITORY="${REGISTRY}/refly-api"
-          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_TAG="${{ inputs.environment }}-${{ github.sha }}"
           TAGS="${REPOSITORY}:${IMAGE_TAG}"
-          if [[ "${{ github.ref_name }}" == "main" ]]; then
-            TAGS="${TAGS},${REPOSITORY}:nightly"
-          elif [[ "${{ github.ref_name }}" == "stable" ]]; then
-            TAGS="${TAGS},${REPOSITORY}:stable"
-          fi
           echo "registry=$REGISTRY" >> "$GITHUB_OUTPUT"
           echo "repository=$REPOSITORY" >> "$GITHUB_OUTPUT"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
           echo "deploy_image=${REPOSITORY}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+          echo "nightly_tag=nightly-${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
-      - name: Check if image exists in ECR
+      - name: Check for existing images
         id: check_image
         env:
           AWS_REGION: ${{ inputs.aws_region }}
+          REPO: refly-api
+          TARGET_TAG: ${{ steps.docker_tags.outputs.image_tag }}
+          NIGHTLY_TAG: ${{ steps.docker_tags.outputs.nightly_tag }}
         run: |
-          if aws ecr describe-images \
-            --repository-name refly-api \
-            --image-ids imageTag=${{ steps.docker_tags.outputs.image_tag }} \
-            --region "$AWS_REGION" \
-            --output json > /dev/null 2>&1; then
-            echo "Image exists in ECR, skipping build"
+          # 1. Check if target image already exists
+          if aws ecr describe-images --repository-name "$REPO" --image-ids imageTag="$TARGET_TAG" --region "$AWS_REGION" > /dev/null 2>&1; then
+            echo "Target image $TARGET_TAG already exists, skipping build and copy"
+            echo "image_exists=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 2. Check if nightly image exists to copy from
+          echo "Checking for nightly image: $NIGHTLY_TAG"
+          MANIFEST=$(aws ecr batch-get-image --repository-name "$REPO" --image-ids imageTag="$NIGHTLY_TAG" --region "$AWS_REGION" --query 'images[0].imageManifest' --output text)
+
+          if [ "$MANIFEST" != "None" ] && [ -n "$MANIFEST" ]; then
+            echo "Nightly image found. Copying to $TARGET_TAG..."
+            aws ecr put-image --repository-name "$REPO" --image-tag "$TARGET_TAG" --image-manifest "$MANIFEST" --region "$AWS_REGION"
+            echo "✓ Image copied successfully"
             echo "image_exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Image does not exist in ECR, will build"
+            echo "Nightly image not found, will need to build"
             echo "image_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -110,7 +118,34 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ inputs.eks_cluster_name }} --region ${{ inputs.aws_region }}
 
-      - name: Update API deployment image on EKS
+      - name: Wait for Deployment update on EKS
+        env:
+          EXPECTED_IMAGE: ${{ steps.docker_tags.outputs.deploy_image }}
+          DEPLOYMENT_NAME: ${{ inputs.deployment_name }}
+          CONTAINER_NAME: refly-api
+          NAMESPACE: refly-app
         run: |
-          kubectl set image deployment/${{ inputs.deployment_name }} refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
-          kubectl rollout status deployment/${{ inputs.deployment_name }} -n refly-app --timeout=600s
+          echo "Waiting for $DEPLOYMENT_NAME to be updated to $EXPECTED_IMAGE..."
+          # Poll until the deployment's image matches the expected image
+          # Timeout after 10 minutes (60 * 10s)
+          MAX_RETRIES=60
+          RETRY_COUNT=0
+          while true; do
+            CURRENT_IMAGE=$(kubectl get deployment/$DEPLOYMENT_NAME -n $NAMESPACE -o jsonpath="{.spec.template.spec.containers[?(@.name=='$CONTAINER_NAME')].image}")
+            if [[ "$CURRENT_IMAGE" == "$EXPECTED_IMAGE" ]]; then
+              echo "✓ Deployment $DEPLOYMENT_NAME has been updated to $EXPECTED_IMAGE"
+              break
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+              echo "✗ Timeout waiting for deployment update. Current image: $CURRENT_IMAGE"
+              exit 1
+            fi
+            
+            echo "Current image: $CURRENT_IMAGE. Waiting for ArgoCD Image Updater... ($RETRY_COUNT/$MAX_RETRIES)"
+            sleep 10
+          done
+
+          echo "Waiting for rollout to complete..."
+          kubectl rollout status deployment/$DEPLOYMENT_NAME -n $NAMESPACE --timeout=600s
