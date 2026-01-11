@@ -9,6 +9,7 @@ import { NotificationService } from '../notification/notification.service';
 import { CreditService } from '../credit/credit.service';
 import { CanvasService } from '../canvas/canvas.service';
 import { MiscService } from '../misc/misc.service';
+import { genCreditUsageId } from '@refly/utils';
 import {
   generateScheduleSuccessEmail,
   generateScheduleFailedEmail,
@@ -187,13 +188,20 @@ export class ScheduleEventListener {
         user,
         {
           canvasId: sourceCanvasId,
-          title: `${record.workflowTitle} - Snapshot (${scheduleRecordId.slice(-8)})`,
+          title: `${record.workflowTitle}`,
           duplicateEntities: true, // Duplicate files and resources to ensure snapshot is complete
         },
         { checkOwnership: true },
       );
 
       const snapshotCanvasId = snapshotCanvas.canvasId;
+
+      // Hide the snapshot canvas from canvas list
+      // Set visibility to false so it won't appear in workflow list
+      await this.prisma.canvas.update({
+        where: { canvasId: snapshotCanvasId },
+        data: { visibility: false },
+      });
 
       // Get the current version of the snapshot canvas
       const snapshotCanvasWithVersion = await this.prisma.canvas.findUnique({
@@ -205,9 +213,9 @@ export class ScheduleEventListener {
         throw new Error(`Failed to get snapshot canvas version for ${snapshotCanvasId}`);
       }
 
-      // Update action results to point to the snapshot canvas
-      // This ensures result records can be matched to the snapshot canvas
-      await this.updateActionResultTargets(sourceCanvasId, snapshotCanvasId, record.uid);
+      // Update action results and duplicate credit records
+      // This ensures result records and credit records can be matched to the snapshot canvas
+      await this.updateActionResultsAndCredits(sourceCanvasId, snapshotCanvasId, record.uid);
 
       // Store snapshot canvas ID in snapshotStorageKey
       // Format: canvasId:version for easy retrieval
@@ -229,17 +237,17 @@ export class ScheduleEventListener {
   }
 
   /**
-   * Update action result targets from source canvas to snapshot canvas
-   * This ensures result records can be matched to the snapshot canvas
+   * Update action results and duplicate credit records for snapshot canvas
+   * This ensures both result records and credit records can be matched to the snapshot canvas
    */
-  private async updateActionResultTargets(
+  private async updateActionResultsAndCredits(
     sourceCanvasId: string,
     snapshotCanvasId: string,
     uid: string,
   ): Promise<void> {
     try {
-      // Get all action results associated with the source canvas
-      const actionResults = await this.prisma.actionResult.findMany({
+      // Step 1: Get original action results from source canvas (before duplication)
+      const originalResults = await this.prisma.actionResult.findMany({
         where: {
           targetId: sourceCanvasId,
           targetType: 'canvas',
@@ -251,35 +259,114 @@ export class ScheduleEventListener {
         },
       });
 
-      if (actionResults.length === 0) {
+      if (originalResults.length === 0) {
         this.logger.log(
-          `No action results to update for canvas ${sourceCanvasId} -> ${snapshotCanvasId}`,
+          `No action results found for canvas ${sourceCanvasId}, skipping credit duplication`,
         );
         return;
       }
 
-      // Update action results to point to snapshot canvas
-      // Use updateMany for better performance
-      const resultIds = [...new Set(actionResults.map((r) => r.resultId))];
-      await this.prisma.actionResult.updateMany({
+      // Step 2: Get duplicated action results from snapshot canvas (after duplication)
+      // These have new resultIds generated during canvas duplication
+      const duplicatedResults = await this.prisma.actionResult.findMany({
         where: {
-          resultId: { in: resultIds },
-          targetId: sourceCanvasId,
+          targetId: snapshotCanvasId,
           targetType: 'canvas',
           uid,
         },
-        data: {
-          targetId: snapshotCanvasId,
+        select: {
+          resultId: true,
+          version: true,
+          duplicateFrom: true, // This field contains the original resultId
         },
       });
 
+      // Step 3: Build mapping from old resultId to new resultId
+      const resultIdMap = new Map<string, { newResultId: string; newVersion: number }>();
+      for (const duplicatedResult of duplicatedResults) {
+        if (duplicatedResult.duplicateFrom) {
+          resultIdMap.set(duplicatedResult.duplicateFrom, {
+            newResultId: duplicatedResult.resultId,
+            newVersion: duplicatedResult.version, // Usually 0 for duplicated results
+          });
+        }
+      }
+
+      if (resultIdMap.size === 0) {
+        this.logger.log(
+          `No resultId mapping found for snapshot canvas ${snapshotCanvasId}. Credit duplication skipped.`,
+        );
+        return;
+      }
+
+      // Step 4: Duplicate credit usage records for the new resultIds
+      let totalDuplicatedCredits = 0;
+      const creditDuplicatePromises: Promise<any>[] = [];
+
+      for (const [oldResultId, mapping] of resultIdMap.entries()) {
+        // Find the original result's latest version to get credit records
+        const originalResult = originalResults.find((r) => r.resultId === oldResultId);
+        if (!originalResult) {
+          continue;
+        }
+
+        // Get credit usage records for the original resultId and version
+        const creditUsages = await this.prisma.creditUsage.findMany({
+          where: {
+            uid,
+            actionResultId: oldResultId,
+            version: originalResult.version,
+          },
+        });
+
+        // Duplicate each credit record with the new resultId and version
+        for (const creditUsage of creditUsages) {
+          creditDuplicatePromises.push(
+            this.prisma.creditUsage.create({
+              data: {
+                usageId: genCreditUsageId(),
+                uid: creditUsage.uid,
+                amount: creditUsage.amount,
+                dueAmount: creditUsage.dueAmount,
+                providerItemId: creditUsage.providerItemId,
+                modelName: creditUsage.modelName,
+                usageType: creditUsage.usageType,
+                actionResultId: mapping.newResultId, // Point to new resultId
+                version: mapping.newVersion, // Use new version (usually 0)
+                pilotSessionId: creditUsage.pilotSessionId,
+                description: creditUsage.description,
+                toolCallId: creditUsage.toolCallId,
+                toolCallMeta: creditUsage.toolCallMeta,
+                appId: creditUsage.appId,
+                extraData: creditUsage.extraData,
+                modelUsageDetails: creditUsage.modelUsageDetails,
+                createdAt: creditUsage.createdAt,
+              },
+            }),
+          );
+          totalDuplicatedCredits++;
+        }
+      }
+
+      // Execute all credit duplication in parallel
+      if (creditDuplicatePromises.length > 0) {
+        await Promise.all(creditDuplicatePromises);
+        this.logger.log(
+          `Duplicated ${totalDuplicatedCredits} credit records for snapshot canvas ${snapshotCanvasId}`,
+        );
+      } else {
+        this.logger.log(
+          `No credit records found to duplicate for snapshot canvas ${snapshotCanvasId}`,
+        );
+      }
+
       this.logger.log(
-        `Updated ${actionResults.length} action results from canvas ${sourceCanvasId} to ${snapshotCanvasId}`,
+        `Successfully updated action results and credits for snapshot canvas ${snapshotCanvasId}`,
       );
     } catch (error: any) {
       // Log error but don't fail the snapshot creation
       this.logger.warn(
-        `Failed to update action result targets: ${error?.message}. Snapshot creation will continue.`,
+        `Failed to update action results and credits: ${error?.message}. Snapshot creation will continue.`,
       );
     }
   }
@@ -396,7 +483,60 @@ export class ScheduleEventListener {
   private async calculateCreditUsage(uid: string, executionId: string): Promise<number> {
     try {
       const user: User = { uid } as User;
-      return await this.creditService.countExecutionCreditUsageByExecutionId(user, executionId);
+
+      // Debug: Check if execution exists
+      const execution = await this.prisma.workflowExecution.findUnique({
+        where: { executionId, uid },
+      });
+      if (!execution) {
+        this.logger.warn(
+          `Execution ${executionId} not found for user ${uid}, cannot calculate credit usage`,
+        );
+        return 0;
+      }
+
+      // Debug: Check action results
+      const actionResults = await this.prisma.actionResult.findMany({
+        where: {
+          workflowExecutionId: executionId,
+          uid,
+        },
+        select: {
+          resultId: true,
+          version: true,
+          status: true,
+        },
+      });
+
+      this.logger.log(
+        `Found ${actionResults.length} action results for execution ${executionId}: ${actionResults.map((r) => `${r.resultId}:${r.version} (${r.status})`).join(', ')}`,
+      );
+
+      // Debug: Check credit usages
+      if (actionResults.length > 0) {
+        const creditCounts = await Promise.all(
+          actionResults.map(async (result) => {
+            const count = await this.prisma.creditUsage.count({
+              where: {
+                uid,
+                actionResultId: result.resultId,
+                version: result.version,
+              },
+            });
+            return { resultId: result.resultId, version: result.version, count };
+          }),
+        );
+        this.logger.log(
+          `Credit usage counts: ${creditCounts.map((c) => `${c.resultId}:${c.version} = ${c.count} records`).join(', ')}`,
+        );
+      }
+
+      const totalCredits = await this.creditService.countExecutionCreditUsageByExecutionId(
+        user,
+        executionId,
+      );
+      this.logger.log(`Total credit usage for execution ${executionId}: ${totalCredits} credits`);
+      return totalCredits;
     } catch (creditErr: any) {
       this.logger.warn(
         `Failed to calculate credit usage for execution ${executionId}: ${creditErr?.message}`,
