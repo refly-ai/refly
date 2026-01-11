@@ -1,9 +1,10 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { SadFace } from 'refly-icons';
+import { useCanvasNodesStore } from '@refly/stores';
 
 /**
  * Hook to check if there are any nodes with empty prompts in the workflow.
@@ -12,9 +13,17 @@ import { SadFace } from 'refly-icons';
 export const useCheckEmptyPrompts = () => {
   const { getNodes, getEdges, fitView } = useReactFlow();
   const { t } = useTranslation();
+  const { setHighlightedNodeIds, clearHighlightedNodeIds } = useCanvasNodesStore();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const checkEmptyPrompts = useCallback(
     (startNodeId?: string): string[] => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+
+      clearHighlightedNodeIds();
       const nodes = getNodes() as CanvasNode<ResponseNodeMeta>[];
       const edges = getEdges();
       let nodesToCheck: CanvasNode<ResponseNodeMeta>[] = [];
@@ -66,15 +75,31 @@ export const useCheckEmptyPrompts = () => {
           t('canvas.workflow.run.emptyPromptsError') ||
           'Some agents are missing prompts and cannot be run';
         message.warning({
+          key: 'empty-prompts-warning',
           content: warningMsg,
           icon: <SadFace size={18} className="mr-1" />,
         });
+
+        setHighlightedNodeIds(emptyPromptNodeIds);
+
+        timerRef.current = setTimeout(() => {
+          clearHighlightedNodeIds();
+          timerRef.current = null;
+        }, 3000);
       }
 
       return emptyPromptNodeIds;
     },
-    [getNodes, getEdges, t],
+    [getNodes, getEdges, t, setHighlightedNodeIds, clearHighlightedNodeIds, fitView],
   );
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   return { checkEmptyPrompts };
 };
