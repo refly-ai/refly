@@ -1441,6 +1441,7 @@ const translations = {
         error: 'Error monitoring workflow execution',
         validationError: 'Please fill in all required fields before running the workflow',
         installToolsBeforeRunning: 'Please install the required tools before running.',
+        emptyPromptsError: 'Some agents are missing prompts and cannot be run',
         requiredFileInputsMissing:
           'This agent has required file inputs. Please upload the missing files before running.',
         requiredFileInputsMissingForChain:
@@ -1505,7 +1506,9 @@ const translations = {
       rerunSingle: 'Rerun This Node',
       runSingle: 'Run This Node',
       stopSingle: 'Stop',
+      promptRequired: 'Please add a prompt first',
       rerunFromHere: 'Run From Here',
+      downstreamAgentsMissingPrompts: 'Some downstream agents are missing prompts',
       stopConfirmModal: {
         title: 'Stop Agent Task?',
         main: 'Are you sure you want to stop this agent task?',

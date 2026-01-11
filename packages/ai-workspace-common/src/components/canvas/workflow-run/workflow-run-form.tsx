@@ -14,6 +14,7 @@ import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.sv
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { useNavigate } from 'react-router-dom';
 import { ToolsDependencyChecker } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';
+import { useCheckEmptyPrompts } from '@refly-packages/ai-workspace-common/hooks/canvas/use-check-empty-prompts';
 import { MixedTextEditor } from '@refly-packages/ai-workspace-common/components/workflow-app/mixed-text-editor';
 import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/resource-upload';
 import { useFileUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables';
@@ -133,6 +134,7 @@ export const WorkflowRunForm = ({
     setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
   }));
   const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
+  const { checkEmptyPrompts } = useCheckEmptyPrompts();
 
   const { setToolsDependencyOpen, setToolsDependencyHighlight } =
     useCanvasResourcesPanelStoreShallow((state) => ({
@@ -512,6 +514,12 @@ export const WorkflowRunForm = ({
       // Redirect to login with return URL
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
       navigate(`/?autoLogin=true&returnUrl=${returnUrl}`);
+      return;
+    }
+
+    // Check for empty prompts in the workflow
+    const emptyPromptNodeIds = checkEmptyPrompts();
+    if (emptyPromptNodeIds.length > 0) {
       return;
     }
 
