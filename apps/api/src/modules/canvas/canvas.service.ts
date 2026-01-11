@@ -704,7 +704,13 @@ export class CanvasService {
       ? providerItem2ModelInfo(defaultAgentItem as any)
       : undefined;
 
-    const state = initEmptyCanvasState({ defaultModelInfo });
+    // Get user locale
+    const dbUser = await this.prisma.user.findUnique({
+      where: { uid: user.uid },
+      select: { uiLocale: true },
+    });
+
+    const state = initEmptyCanvasState({ defaultModelInfo, locale: dbUser?.uiLocale ?? undefined });
     return this.createCanvasWithState(user, param, state);
   }
 

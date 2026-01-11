@@ -71,10 +71,13 @@ describe('initEmptyCanvasState', () => {
         id: expect.any(String),
         position: { x: 400, y: 0 },
         data: {
-          title: 'skillResponse',
+          title: '',
           entityId: expect.any(String),
           metadata: {
             status: 'init',
+            query:
+              'Generate a product introduction for Refly.ai and send it to me via email using the send email tool',
+            selectedToolsets: expect.any(Array),
           },
         },
         selected: false,
@@ -85,6 +88,14 @@ describe('initEmptyCanvasState', () => {
     expect(state.transactions).toEqual([]);
     expect(state.history).toEqual([]);
     expect(typeof state.version).toBe('string');
+  });
+
+  it('should return a valid empty canvas state with Chinese query', () => {
+    const state = initEmptyCanvasState({ locale: 'zh-CN' });
+    expect(state.nodes[1].data?.metadata?.query).toBe(
+      '生成一份 Refly.ai 的产品介绍，并使用发送邮件工具通过邮件发送给我',
+    );
+    expect((state.nodes[1].data?.metadata?.selectedToolsets as any)?.[0]?.name).toBe('发送邮件');
   });
 });
 
