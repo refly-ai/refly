@@ -21,9 +21,10 @@ import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use
 import { genNodeEntityId } from '@refly/utils/id';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
 import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
-import { CanvasNode } from '@refly/openapi-schema';
+import { CanvasNode, VariableValue } from '@refly/openapi-schema';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useCanvasStoreShallow } from '@refly/stores';
+import { RESOURCE_TYPE_ICON_MAP } from '../node-preview/start';
 
 const NODE_SIDE_CONFIG = { width: 250, height: 'auto' };
 
@@ -38,37 +39,56 @@ export const InputParameterRow = memo(
   ({
     variableType,
     label,
+    options,
+    value,
     isRequired = false,
-    isSingle = false,
   }: {
     variableType: 'string' | 'option' | 'resource';
     label: string;
+    options?: string[];
+    value?: VariableValue[];
     isRequired?: boolean;
-    isSingle?: boolean;
   }) => {
-    const { t } = useTranslation();
-    const Icon = useMemo(() => {
-      // Fallback to BiText if the mapped icon is missing
-      return VARIABLE_TYPE_ICON_MAP[variableType] ?? BiText;
-    }, [variableType]);
+    const displayValue = useMemo(() => {
+      if (variableType === 'option') {
+        return options?.join(', ') ?? '';
+      }
+      if (variableType === 'resource') {
+        return value?.[0]?.resource?.name ?? '';
+      }
+      return value?.[0]?.text ?? '';
+    }, [variableType, options, value]);
+
+    const VariableIcon = useMemo(() => {
+      if (variableType === 'option') {
+        return <List size={14} color="var(--refly-text-3)" className="flex-shrink-0" />;
+      }
+      if (variableType === 'resource') {
+        const resourceType = value?.[0]?.resource?.fileType;
+        const Icon =
+          RESOURCE_TYPE_ICON_MAP[resourceType as keyof typeof RESOURCE_TYPE_ICON_MAP] ?? Attachment;
+        return <Icon size={14} color="var(--refly-text-3)" className="flex-shrink-0" />;
+      }
+      return <BiText size={14} color="var(--refly-text-3)" className="flex-shrink-0" />;
+    }, [variableType, value]);
 
     return (
       <div className="flex gap-2 items-center justify-between py-1.5 px-3 bg-refly-bg-control-z0 rounded-lg">
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <div className="text-xs font-medium text-refly-text-1 truncate max-w-full">{label}</div>
-          {isRequired && (
-            <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
-              {t('canvas.workflow.variables.required')}
+        <div className="flex items-center flex-1 min-w-0">
+          {isRequired && <div className="text-refly-text-3 flex-shrink-0 mr-0.5">*</div>}
+          <div className="flex items-center flex-1 min-w-0 overflow-hidden">
+            <div className="text-xs text-refly-func-warning-hover truncate min-w-0 flex-1 shrink basis-[80px] max-w-fit">
+              {label}
             </div>
-          )}
-          {['option', 'resource'].includes(variableType) && (
-            <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
-              {t(`canvas.workflow.variables.${isSingle ? 'singleSelect' : 'multipleSelect'}`)}
-            </div>
-          )}
+            {displayValue && (
+              <div className="text-xs text-refly-text-3 truncate ml-1 min-w-0 flex-grow-0 shrink-[100] basis-auto">
+                {displayValue}
+              </div>
+            )}
+          </div>
         </div>
 
-        <Icon size={14} color="var(--refly-text-3)" className="flex-shrink-0" />
+        {VariableIcon}
       </div>
     );
   },
@@ -104,6 +124,8 @@ export const StartNode = memo(({ id, onNodeClick, data }: StartNodeProps) => {
   const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
 
   const workflowVariables = shareData?.variables ?? variables;
+
+  console.log('workflowVariables', workflowVariables);
 
   // Check if node has any connections
   const isSourceConnected = edges?.some((edge) => edge.source === id);
@@ -209,7 +231,8 @@ export const StartNode = memo(({ id, onNodeClick, data }: StartNodeProps) => {
                   label={variable.name}
                   isRequired={variable.required}
                   variableType={variable.variableType}
-                  isSingle={variable.isSingle}
+                  options={variable.options ?? []}
+                  value={variable.value ?? []}
                 />
               ))}
             </div>

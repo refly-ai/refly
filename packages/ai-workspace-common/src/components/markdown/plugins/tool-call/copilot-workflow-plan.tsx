@@ -253,7 +253,6 @@ export const CopilotWorkflowPlan = memo(
                   variableType={variable.variableType as 'string' | 'option' | 'resource'}
                   label={variable.name}
                   isRequired={true}
-                  isSingle={true}
                 />
               ))}
             </div>
