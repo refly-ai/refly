@@ -26,6 +26,7 @@ export const WorkflowPage = lazy(() => import('./pages/workflow'));
 export const WorkspacePage = lazy(() => import('./pages/workspace'));
 export const RunHistoryPage = lazy(() => import('./pages/run-history'));
 export const RunDetailPage = lazy(() => import('./pages/run-detail'));
+export const CliAuthPage = lazy(() => import('./pages/cli-auth'));
 
 export { AppLayout } from './components/layout';
 

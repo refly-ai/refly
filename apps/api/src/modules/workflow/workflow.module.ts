@@ -8,6 +8,8 @@ import { ActionModule } from '../action/action.module';
 import { ToolModule } from '../tool/tool.module';
 import { WorkflowService } from './workflow.service';
 import { WorkflowController } from './workflow.controller';
+import { WorkflowCliController, NodeCliController } from './workflow-cli.controller';
+import { WorkflowPlanCliController } from './workflow-plan-cli.controller';
 import { RunWorkflowProcessor, PollWorkflowProcessor } from './workflow.processor';
 import { QUEUE_RUN_WORKFLOW, QUEUE_POLL_WORKFLOW } from '../../utils/const';
 import { isDesktop } from '../../utils/runtime';
@@ -32,7 +34,12 @@ import { NotificationModule } from '../notification/notification.module';
           BullModule.registerQueue({ name: QUEUE_POLL_WORKFLOW }),
         ]),
   ],
-  controllers: [WorkflowController],
+  controllers: [
+    WorkflowController,
+    WorkflowCliController,
+    NodeCliController,
+    WorkflowPlanCliController,
+  ],
   providers: [
     WorkflowService,
     WorkflowPlanService,

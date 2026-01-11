@@ -4500,6 +4500,36 @@ const translations = {
   filePreview: {
     contentTruncated: '仅显示前 {{maxLines}} 行。\n下载文件以查看完整内容。',
   },
+  cliAuth: {
+    title: 'CLI 授权',
+    loadingDevice: '正在加载设备信息...',
+    checkingSession: '正在检查登录状态...',
+    deviceId: '设备 ID',
+    cliVersion: 'CLI 版本',
+    host: '主机',
+    permissionSummary: '此操作将允许该设备以你的身份调用 Refly API（完全访问权限）。',
+    loginRequired: '请先登录以授权此设备。',
+    loginButton: '登录以继续',
+    loggedInAs: '当前登录账户',
+    authorizeButton: '授权',
+    cancelButton: '取消',
+    cancelHint: '如果你没有发起此 CLI 登录请求，请点击取消。',
+    authorizing: '正在授权...',
+    successTitle: '授权成功',
+    successMessage: '你已成功授权此设备。',
+    autoCloseCountdown: '{{seconds}} 秒后自动关闭页面',
+    cancelledTitle: '授权已取消',
+    cancelledMessage: '设备授权请求已被取消。',
+    errorTitle: '授权错误',
+    errorHint: '请重新运行 `refly init` 以发起新的授权请求。',
+    securityNote: '仅授权你信任的设备。该设备将能够访问你的 Refly 账户。',
+    errors: {
+      missingDeviceId: '缺少设备 ID。请使用 CLI 提供的链接。',
+      invalidDevice: '无效或已过期的设备请求。',
+      expiredDevice: '此授权请求已过期。请重新运行 `refly init`。',
+      authorizeFailed: '设备授权失败，请重试。',
+    },
+  },
 };
 
 export default translations;

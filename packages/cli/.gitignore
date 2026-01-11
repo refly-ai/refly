@@ -1,0 +1,12 @@
+dist/
+node_modules/
+*.tsbuildinfo
+.DS_Store
+*.log
+
+# Don't commit local config
+.refly/
+
+# Test coverage
+coverage/
+.nyc_output/

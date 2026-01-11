@@ -4473,6 +4473,38 @@ const translations = {
     contentTruncated:
       'Only the first {{maxLines}} lines are displayed. \nDownload the file to see the complete content.',
   },
+  cliAuth: {
+    title: 'CLI Authorization',
+    loadingDevice: 'Loading device information...',
+    checkingSession: 'Checking login status...',
+    deviceId: 'Device ID',
+    cliVersion: 'CLI Version',
+    host: 'Host',
+    permissionSummary:
+      'This action will allow this device to access Refly API on your behalf with full access.',
+    loginRequired: 'Please sign in to authorize this device.',
+    loginButton: 'Sign In to Continue',
+    loggedInAs: 'Logged in as',
+    authorizeButton: 'Authorize',
+    cancelButton: 'Cancel',
+    cancelHint: 'Click Cancel if you did not initiate this CLI login.',
+    authorizing: 'Authorizing...',
+    successTitle: 'Authorization Successful',
+    successMessage: 'You have successfully authorized this device.',
+    autoCloseCountdown: 'This page will close automatically in {{seconds}}s',
+    cancelledTitle: 'Authorization Cancelled',
+    cancelledMessage: 'The device authorization request has been cancelled.',
+    errorTitle: 'Authorization Error',
+    errorHint: 'Please run `refly init` again to start a new authorization request.',
+    securityNote:
+      'Only authorize devices you trust. The device will have access to your Refly account.',
+    errors: {
+      missingDeviceId: 'Missing device ID. Please use the URL provided by CLI.',
+      invalidDevice: 'Invalid or expired device request.',
+      expiredDevice: 'This authorization request has expired. Please run `refly init` again.',
+      authorizeFailed: 'Failed to authorize device. Please try again.',
+    },
+  },
 };
 
 export default translations;

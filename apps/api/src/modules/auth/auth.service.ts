@@ -1,5 +1,5 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createCipheriv, createDecipheriv, scryptSync } from 'node:crypto';
 import argon2 from 'argon2';
 import ms from 'ms';
 import { Profile } from 'passport';
@@ -171,6 +171,83 @@ export class AuthService {
       where: { uid },
       data: { revoked: true },
     });
+  }
+
+  /**
+   * Generate encrypted OAuth state token for CLI flow
+   * Contains port, timestamp, and nonce for CSRF protection
+   * @param port Local callback server port
+   * @returns Encrypted state token
+   */
+  async generateOAuthStateToken(port: string): Promise<string> {
+    const nonce = randomBytes(16).toString('hex');
+    const timestamp = Date.now();
+
+    const stateData = JSON.stringify({
+      port,
+      timestamp,
+      nonce,
+    });
+
+    // Use JWT secret as encryption key (derive a 32-byte key using scrypt)
+    const secret = this.configService.get<string>('auth.jwt.secret');
+    const key = scryptSync(secret, 'salt', 32);
+    const iv = randomBytes(16);
+
+    const cipher = createCipheriv('aes-256-cbc', key, iv);
+    let encrypted = cipher.update(stateData, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    // Return iv + encrypted data as single string
+    return `${iv.toString('hex')}:${encrypted}`;
+  }
+
+  /**
+   * Validate and decrypt OAuth state token
+   * Verifies timestamp to prevent replay attacks (max 10 minutes old)
+   * @param state Encrypted state token
+   * @returns Decrypted state data
+   * @throws UnauthorizedException if state is invalid or expired
+   */
+  async validateOAuthStateToken(state: string): Promise<{
+    port: string;
+    timestamp: number;
+    nonce: string;
+  }> {
+    try {
+      const [ivHex, encrypted] = state.split(':');
+      if (!ivHex || !encrypted) {
+        throw new Error('Invalid state format');
+      }
+
+      const iv = Buffer.from(ivHex, 'hex');
+
+      // Use same key derivation as encryption
+      const secret = this.configService.get<string>('auth.jwt.secret');
+      const key = scryptSync(secret, 'salt', 32);
+
+      const decipher = createDecipheriv('aes-256-cbc', key, iv);
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+
+      const stateData = JSON.parse(decrypted);
+      const { port, timestamp, nonce } = stateData;
+
+      if (!port || !timestamp || !nonce) {
+        throw new Error('Missing required state fields');
+      }
+
+      // Verify timestamp (max 10 minutes old)
+      const maxAge = 10 * 60 * 1000; // 10 minutes in milliseconds
+      if (Date.now() - timestamp > maxAge) {
+        throw new Error('State token expired');
+      }
+
+      return { port, timestamp, nonce };
+    } catch (error) {
+      this.logger.error(`[validateOAuthStateToken] Failed: ${error.message}`);
+      throw new UnauthorizedException('Invalid or expired state token');
+    }
   }
 
   async logout(user: User, res: Response) {

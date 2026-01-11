@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommonModule } from '../common/common.module';
 import { MiscModule } from '../misc/misc.module';
@@ -7,6 +7,9 @@ import { PassportModule } from '@nestjs/passport';
 
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { AuthCliController } from './auth-cli.controller';
+import { ApiKeyService } from './api-key.service';
+import { DeviceAuthService } from './device-auth.service';
 import { GithubOauthStrategy } from './strategy/github-oauth.strategy';
 import { GoogleOauthStrategy } from './strategy/google-oauth.strategy';
 import { TwitterOauthStrategy } from './strategy/twitter-oauth.strategy';
@@ -14,6 +17,8 @@ import { NotionOauthStrategy } from './strategy/notion-oauth.strategy';
 import { NotificationModule } from '../notification/notification.module';
 import { GoogleToolOauthStrategy } from './strategy/google-tool-oauth.strategy';
 import { CreditModule } from '../credit/credit.module';
+
+@Global()
 @Module({
   imports: [
     CommonModule,
@@ -38,13 +43,15 @@ import { CreditModule } from '../credit/credit.module';
   ],
   providers: [
     AuthService,
+    ApiKeyService,
+    DeviceAuthService,
     GithubOauthStrategy,
     GoogleOauthStrategy,
     GoogleToolOauthStrategy,
     TwitterOauthStrategy,
     NotionOauthStrategy,
   ],
-  exports: [AuthService],
-  controllers: [AuthController],
+  exports: [AuthService, ApiKeyService, DeviceAuthService],
+  controllers: [AuthController, AuthCliController],
 })
 export class AuthModule {}

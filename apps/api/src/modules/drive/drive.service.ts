@@ -1238,7 +1238,7 @@ export class DriveService implements OnModuleInit {
           const driveStorageKey = this.generateStorageKey(user, file);
 
           try {
-            const expiry = Number(this.config.get<number>('drive.presignExpiry') ?? 300);
+            const expiry = Number(this.config.get<number>('drive.presignExpiry') ?? 3600);
             const signedUrl = await this.internalOss.presignedGetObject(driveStorageKey, expiry);
             return signedUrl;
           } catch (error) {
