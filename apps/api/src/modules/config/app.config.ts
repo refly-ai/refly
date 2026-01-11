@@ -313,6 +313,19 @@ export default () => ({
     parseTimeoutMs: Number.parseInt(process.env.LAMBDA_PARSE_TIMEOUT_MS) || 3 * 60 * 1000, // 3 minutes
   },
 
+  workflow: {
+    // Interval between polling checks for workflow status (default: 1.5 seconds)
+    pollIntervalMs: Number.parseInt(process.env.WORKFLOW_POLL_INTERVAL_MS) || 1500,
+    // Maximum time allowed for entire workflow execution (default: 30 minutes)
+    executionTimeoutMs:
+      Number.parseInt(process.env.WORKFLOW_EXECUTION_TIMEOUT_MS) || 30 * 60 * 1000,
+    // Maximum time allowed for a single node execution (default: 30 minutes)
+    nodeExecutionTimeoutMs:
+      Number.parseInt(process.env.WORKFLOW_NODE_EXECUTION_TIMEOUT_MS) || 30 * 60 * 1000,
+    // TTL for distributed lock during polling (default: 5 seconds)
+    pollLockTtlMs: Number.parseInt(process.env.WORKFLOW_POLL_LOCK_TTL_MS) || 5000,
+  },
+
   sandbox: {
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
