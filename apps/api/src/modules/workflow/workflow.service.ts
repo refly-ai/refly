@@ -49,6 +49,46 @@ import { WORKFLOW_EXECUTION_CONSTANTS } from './workflow.constants';
 export class WorkflowService {
   private readonly logger = new Logger(WorkflowService.name);
 
+  /**
+   * Get poll interval from config, falling back to constants default
+   */
+  private get pollIntervalMs(): number {
+    return (
+      this.configService.get<number>('workflow.pollIntervalMs') ??
+      WORKFLOW_EXECUTION_CONSTANTS.POLL_INTERVAL_MS
+    );
+  }
+
+  /**
+   * Get execution timeout from config, falling back to constants default
+   */
+  private get executionTimeoutMs(): number {
+    return (
+      this.configService.get<number>('workflow.executionTimeoutMs') ??
+      WORKFLOW_EXECUTION_CONSTANTS.EXECUTION_TIMEOUT_MS
+    );
+  }
+
+  /**
+   * Get node execution timeout from config, falling back to constants default
+   */
+  private get nodeExecutionTimeoutMs(): number {
+    return (
+      this.configService.get<number>('workflow.nodeExecutionTimeoutMs') ??
+      WORKFLOW_EXECUTION_CONSTANTS.NODE_EXECUTION_TIMEOUT_MS
+    );
+  }
+
+  /**
+   * Get poll lock TTL from config, falling back to constants default
+   */
+  private get pollLockTtlMs(): number {
+    return (
+      this.configService.get<number>('workflow.pollLockTtlMs') ??
+      WORKFLOW_EXECUTION_CONSTANTS.POLL_LOCK_TTL_MS
+    );
+  }
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
@@ -264,7 +304,7 @@ export class WorkflowService {
       await this.pollWorkflowQueue.add(
         'pollWorkflow',
         { user, executionId, nodeBehavior },
-        { delay: WORKFLOW_EXECUTION_CONSTANTS.POLL_INTERVAL_MS, removeOnComplete: true },
+        { delay: this.pollIntervalMs, removeOnComplete: true },
       );
     }
 
@@ -562,10 +602,7 @@ export class WorkflowService {
 
     // Acquire distributed lock to prevent multiple pods from polling the same execution
     const lockKey = `workflow:poll:${executionId}`;
-    const releaseLock = await this.redis.acquireLock(
-      lockKey,
-      WORKFLOW_EXECUTION_CONSTANTS.POLL_LOCK_TTL_MS,
-    );
+    const releaseLock = await this.redis.acquireLock(lockKey, this.pollLockTtlMs);
     if (!releaseLock) {
       this.logger.debug(`[pollWorkflow] Lock not acquired for ${executionId}, skipping`);
       return;
@@ -603,9 +640,9 @@ export class WorkflowService {
 
       // Check if workflow execution has exceeded timeout
       const executionAge = Date.now() - workflowExecution.createdAt.getTime();
-      if (executionAge > WORKFLOW_EXECUTION_CONSTANTS.EXECUTION_TIMEOUT_MS) {
+      if (executionAge > this.executionTimeoutMs) {
         this.logger.warn(
-          `[pollWorkflow] Workflow ${executionId} timed out after ${executionAge}ms (limit: ${WORKFLOW_EXECUTION_CONSTANTS.EXECUTION_TIMEOUT_MS}ms)`,
+          `[pollWorkflow] Workflow ${executionId} timed out after ${executionAge}ms (limit: ${this.executionTimeoutMs}ms)`,
         );
 
         // Mark all non-terminal nodes as failed
@@ -673,7 +710,7 @@ export class WorkflowService {
       const stuckExecutingNodes = allNodes.filter((n) => {
         if (n.status !== 'executing' || !n.startTime) return false;
         const nodeAge = now.getTime() - n.startTime.getTime();
-        return nodeAge > WORKFLOW_EXECUTION_CONSTANTS.NODE_EXECUTION_TIMEOUT_MS;
+        return nodeAge > this.nodeExecutionTimeoutMs;
       });
 
       if (stuckExecutingNodes.length > 0) {
@@ -682,7 +719,7 @@ export class WorkflowService {
           where: { nodeExecutionId: { in: timedOutNodeIds } },
           data: {
             status: 'failed',
-            errorMessage: `Node execution timeout exceeded (${Math.floor(WORKFLOW_EXECUTION_CONSTANTS.NODE_EXECUTION_TIMEOUT_MS / 1000)}s)`,
+            errorMessage: `Node execution timeout exceeded (${Math.floor(this.nodeExecutionTimeoutMs / 1000)}s)`,
             endTime: now,
           },
         });
@@ -929,7 +966,7 @@ export class WorkflowService {
         await this.pollWorkflowQueue.add(
           'pollWorkflow',
           { user, executionId, nodeBehavior },
-          { delay: WORKFLOW_EXECUTION_CONSTANTS.POLL_INTERVAL_MS, removeOnComplete: true },
+          { delay: this.pollIntervalMs, removeOnComplete: true },
         );
       } else {
         this.logger.log(
