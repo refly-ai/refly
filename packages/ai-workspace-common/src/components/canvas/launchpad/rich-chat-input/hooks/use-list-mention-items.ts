@@ -29,7 +29,12 @@ const getDownstreamNodeIds = (startNodeId: string, edges: Edge[]): Set<string> =
   return downstreamIds;
 };
 
-export const useListMentionItems = (currentNodeId?: string): MentionItem[] => {
+export interface UseListMentionItemsResult {
+  allItems: MentionItem[];
+  suggestableItems: MentionItem[];
+}
+
+export const useListMentionItems = (currentNodeId?: string): UseListMentionItemsResult => {
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.languages?.[0] || 'en';
 
@@ -50,11 +55,7 @@ export const useListMentionItems = (currentNodeId?: string): MentionItem[] => {
   const { lookupToolsetDefinitionByKey } = useToolsetDefinition();
   const { data: workflowVariables } = useVariablesManagement(canvasId);
 
-  const allItems: MentionItem[] = useMemo(() => {
-    const downstreamNodeIds = currentNodeId
-      ? getDownstreamNodeIds(currentNodeId, edges)
-      : new Set<string>();
-
+  const allItems = useMemo(() => {
     const variableItems: MentionItem[] = workflowVariables.map((variable) => ({
       name: variable.name,
       description: variable.description || '',
@@ -70,12 +71,7 @@ export const useListMentionItems = (currentNodeId?: string): MentionItem[] => {
     // Get skillResponse nodes for step records
     const agentItems: MentionItem[] =
       nodes
-        ?.filter(
-          (node) =>
-            node.type === 'skillResponse' &&
-            node.id !== currentNodeId &&
-            !downstreamNodeIds.has(node.id),
-        )
+        ?.filter((node) => node.type === 'skillResponse' && node.id !== currentNodeId)
         ?.map((node) => ({
           name: node.data?.title || t('canvas.richChatInput.untitledAgent'),
           description: t('canvas.richChatInput.agents'),
@@ -193,7 +189,6 @@ export const useListMentionItems = (currentNodeId?: string): MentionItem[] => {
   }, [
     workflowVariables,
     nodes,
-    edges,
     files,
     userTools,
     lookupToolsetDefinitionByKey,
@@ -202,5 +197,18 @@ export const useListMentionItems = (currentNodeId?: string): MentionItem[] => {
     currentNodeId,
   ]);
 
-  return allItems;
+  const suggestableItems = useMemo(() => {
+    const downstreamNodeIds = currentNodeId
+      ? getDownstreamNodeIds(currentNodeId, edges)
+      : new Set<string>();
+
+    return allItems.filter((item) => {
+      if (item.source === 'agents' && item.nodeId && downstreamNodeIds.has(item.nodeId)) {
+        return false;
+      }
+      return true;
+    });
+  }, [allItems, currentNodeId, edges]);
+
+  return { allItems, suggestableItems };
 };

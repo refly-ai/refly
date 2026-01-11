@@ -105,14 +105,14 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const popupInstanceRef = useRef<any>(null);
 
     // Get all available items including canvas nodes with fallback data
-    const allItems = useListMentionItems(nodeId);
+    const { allItems, suggestableItems } = useListMentionItems(nodeId);
 
     // Keep latest items in a ref so Mention suggestion always sees fresh data
-    const allItemsRef = useRef<MentionItem[]>(allItems);
+    const allItemsRef = useRef<MentionItem[]>(suggestableItems);
 
     useEffect(() => {
-      allItemsRef.current = allItems;
-    }, [allItems]);
+      allItemsRef.current = suggestableItems;
+    }, [suggestableItems]);
 
     // Use ref to track previous canvas data to avoid infinite loops
     const prevCanvasDataRef = useRef({ canvasId: '', allItemsLength: 0 });
@@ -202,14 +202,14 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         if (mentionComponentRef.current) {
           try {
             mentionComponentRef.current.updateProps({
-              items: allItems,
+              items: suggestableItems,
             });
           } catch {
             // Ignore errors if component is not available
           }
         }
       }
-    }, [allItems, addToSelectedToolsets]);
+    }, [suggestableItems, addToSelectedToolsets]);
 
     // Note: toolsetInstalled event is now handled globally at canvas level
 
@@ -726,7 +726,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       const prevCanvasData = prevCanvasDataRef.current;
       const hasCanvasDataChanged =
         currentCanvasData.canvasId !== prevCanvasData.canvasId ||
-        currentCanvasData.allItemsLength !== prevCanvasData.allItemsLength;
+        (prevCanvasData.allItemsLength === 0 && currentCanvasData.allItemsLength > 0);
 
       if (!hasCanvasDataChanged) return;
 
