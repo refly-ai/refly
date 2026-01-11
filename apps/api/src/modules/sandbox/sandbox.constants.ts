@@ -3,18 +3,11 @@
  */
 
 /**
- * Redis Queue Keys (BullMQ)
- *
- * Architecture: BullMQ ensures each message is consumed by exactly ONE worker
- * - API uses BullMQ to enqueue requests
- * - Worker uses BullMQ processor to dequeue and process
- * - Response still uses Pub/Sub (one-to-one with requestId)
+ * Sandbox HTTP Configuration
  */
-export const SANDBOX_QUEUES = {
-  /** Request queue for code execution (BullMQ) */
-  REQUEST: 'sandbox-execute-request',
-  /** Response channel prefix (Redis Pub/Sub) */
-  RESPONSE_PREFIX: 'sandbox:execute:response:',
+export const SANDBOX_HTTP = {
+  /** Default sandbox service URL */
+  DEFAULT_URL: 'http://localhost:3002',
 } as const;
 
 /**
