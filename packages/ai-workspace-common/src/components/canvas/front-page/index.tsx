@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useEffect, useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
 import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
@@ -240,6 +241,7 @@ export const FrontPage = memo(() => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { getCanvasList } = useHandleSiderData();
+  const [isCopilotFloating, setIsCopilotFloating] = useState(false);
 
   const { canvasList } = useSiderStoreShallow((state) => ({
     canvasList: state.canvasList,
@@ -365,11 +367,22 @@ export const FrontPage = memo(() => {
     getCanvasList();
   }, []);
 
+  useEffect(() => {
+    if (isCopilotFloating) {
+      const scrollableDiv = document.getElementById('front-page-scrollable-div');
+      if (scrollableDiv) {
+        scrollableDiv.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }, [isCopilotFloating]);
+
   return (
     <div
       className={cn(
-        'w-full h-full bg-refly-bg-content-z2 overflow-y-auto p-5 rounded-xl border border-solid border-refly-Card-Border relative',
+        'w-full h-full bg-refly-bg-content-z2 p-5 rounded-xl border border-solid border-refly-Card-Border relative',
+        isCopilotFloating ? 'overflow-hidden' : 'overflow-y-auto',
       )}
+      style={{ scrollbarGutter: 'stable' }}
       id="front-page-scrollable-div"
     >
       <Helmet>
@@ -380,7 +393,23 @@ export const FrontPage = memo(() => {
         <SettingItem showName={false} avatarAlign={'right'} />
       </div>
 
-      <PureCopilot source="frontPage" classnames="mt-[120px]" />
+      <PureCopilot
+        source="frontPage"
+        classnames={cn('mt-[120px] relative z-10', isCopilotFloating && 'z-20')}
+        onFloatingChange={setIsCopilotFloating}
+      />
+
+      <AnimatePresence>
+        {isCopilotFloating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 z-[5] bg-white/60 dark:bg-black/60 backdrop-blur-[15px] rounded-xl transition-colors"
+          />
+        )}
+      </AnimatePresence>
 
       <ModuleContainer
         className="mt-[50px]"

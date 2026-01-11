@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useMemo } from 'react';
+import { memo, useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
 import { Send, ArrowRight } from 'refly-icons';
@@ -46,13 +46,23 @@ SamplePrompt.displayName = 'SamplePrompt';
 interface PureCopilotProps {
   source?: 'frontPage' | 'onboarding';
   classnames?: string;
+  onFloatingChange?: (visible: boolean) => void;
 }
 
-export const PureCopilot = memo(({ source, classnames }: PureCopilotProps) => {
+export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureCopilotProps) => {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const { debouncedCreateCanvas, isCreating } = useCreateCanvas();
+
+  const isFloatingVisible = useMemo(
+    () => source === 'frontPage' && isFocused && !query.trim(),
+    [source, isFocused, query],
+  );
+
+  useEffect(() => {
+    onFloatingChange?.(isFloatingVisible);
+  }, [isFloatingVisible, onFloatingChange]);
 
   const handleSendMessage = useCallback(() => {
     if (!query.trim() || isCreating) return;
@@ -166,10 +176,10 @@ export const PureCopilot = memo(({ source, classnames }: PureCopilotProps) => {
               type="primary"
               shape="circle"
               disabled={!query.trim() || isCreating}
-              icon={<Send size={20} color="white" />}
+              icon={<Send size={20} color="var(--refly-bg-canvas)" />}
               className={cn(
                 '!w-9 !h-9 flex items-center justify-center border-none transition-all',
-                query.trim() ? '!bg-refly-primary-default' : '!bg-refly-primary-disabled',
+                query.trim() ? '!bg-refly-text-0' : '!bg-refly-primary-disabled',
               )}
               onClick={handleSendMessage}
               loading={isCreating}
