@@ -124,15 +124,22 @@ export const VoucherPopup = ({
 
       console.log('[voucher-popup] validateRes:', validateRes.data);
 
+      // Determine if user has a paid subscription
+      const currentPlan = planType || 'free';
+
       const body: {
         planType: 'plus';
         interval: 'monthly';
         voucherId?: string;
         voucherEntryPoint?: string;
         voucherUserType?: string;
+        source?: string;
+        currentPlan?: string;
       } = {
         planType: 'plus',
         interval: 'monthly',
+        currentPlan,
+        source: 'voucher',
       };
 
       if (validateRes.data?.data?.valid) {

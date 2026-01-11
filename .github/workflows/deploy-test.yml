@@ -6,11 +6,11 @@ on:
     branches:
       - main
     paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
+      - "apps/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
 
 permissions:
   id-token: write
@@ -129,11 +129,8 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
           REPOSITORY="${REGISTRY}/refly-${{ matrix.app }}"
-          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_TAG="nightly-${{ github.sha }}"
           TAGS="${REPOSITORY}:${IMAGE_TAG}"
-          if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "stable" ]]; then
-            TAGS="${TAGS},${REPOSITORY}:nightly"
-          fi
           echo "registry=$REGISTRY" >> "$GITHUB_OUTPUT"
           echo "repository=$REPOSITORY" >> "$GITHUB_OUTPUT"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
@@ -180,21 +177,42 @@ jobs:
           cache-to: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache,mode=max
 
       - name: Update kubeconfig for EKS cluster
-        if: github.ref_name == 'main' || github.ref_name == 'stable'
+        if: github.ref_name == 'main'
         run: |
           aws eks update-kubeconfig --name ${{ vars.AWS_EKS_CLUSTER_TEST }} --region ${{ vars.AWS_REGION }}
 
-      - name: Update API deployment image on EKS
-        if: matrix.app == 'api' && (github.ref_name == 'main' || github.ref_name == 'stable')
+      - name: Wait for Deployment update on EKS
+        if: github.ref_name == 'main'
+        env:
+          EXPECTED_IMAGE: ${{ steps.docker_tags.outputs.deploy_image }}
+          DEPLOYMENT_NAME: refly-${{ matrix.app }}
+          CONTAINER_NAME: refly-${{ matrix.app }}
+          NAMESPACE: refly-app
         run: |
-          kubectl set image deployment/refly-api refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
-          kubectl rollout status deployment/refly-api -n refly-app --timeout=300s
+          echo "Waiting for $DEPLOYMENT_NAME to be updated to $EXPECTED_IMAGE..."
+          # Poll until the deployment's image matches the expected image
+          # Timeout after 10 minutes (60 * 10s)
+          MAX_RETRIES=60
+          RETRY_COUNT=0
+          while true; do
+            CURRENT_IMAGE=$(kubectl get deployment/$DEPLOYMENT_NAME -n $NAMESPACE -o jsonpath="{.spec.template.spec.containers[?(@.name=='$CONTAINER_NAME')].image}")
+            if [[ "$CURRENT_IMAGE" == "$EXPECTED_IMAGE" ]]; then
+              echo "✓ Deployment $DEPLOYMENT_NAME has been updated to $EXPECTED_IMAGE"
+              break
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+              echo "✗ Timeout waiting for deployment update. Current image: $CURRENT_IMAGE"
+              exit 1
+            fi
+            
+            echo "Current image: $CURRENT_IMAGE. Waiting for ArgoCD Image Updater... ($RETRY_COUNT/$MAX_RETRIES)"
+            sleep 10
+          done
 
-      - name: Update Web deployment image on EKS
-        if: matrix.app == 'web' && (github.ref_name == 'main' || github.ref_name == 'stable')
-        run: |
-          kubectl set image deployment/refly-web refly-web=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
-          kubectl rollout status deployment/refly-web -n refly-app --timeout=300s
+          echo "Waiting for rollout to complete..."
+          kubectl rollout status deployment/$DEPLOYMENT_NAME -n $NAMESPACE --timeout=300s
 
   update-linear-status:
     name: Update Linear Issues to In Review
