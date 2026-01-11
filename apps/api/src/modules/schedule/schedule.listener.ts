@@ -7,6 +7,8 @@ import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { NotificationService } from '../notification/notification.service';
 import { CreditService } from '../credit/credit.service';
+import { CanvasService } from '../canvas/canvas.service';
+import { MiscService } from '../misc/misc.service';
 import {
   generateScheduleSuccessEmail,
   generateScheduleFailedEmail,
@@ -18,7 +20,7 @@ import {
   SCHEDULE_REDIS_KEYS,
 } from './schedule.constants';
 import { CronExpressionParser } from 'cron-parser';
-import type { User } from '@refly/openapi-schema';
+import type { User, RawCanvasData } from '@refly/openapi-schema';
 
 @Injectable()
 export class ScheduleEventListener {
@@ -30,6 +32,8 @@ export class ScheduleEventListener {
     private readonly notificationService: NotificationService,
     private readonly creditService: CreditService,
     private readonly config: ConfigService,
+    private readonly canvasService: CanvasService,
+    private readonly miscService: MiscService,
   ) {}
 
   @OnEvent('workflow.completed')
@@ -92,7 +96,12 @@ export class ScheduleEventListener {
       // 5. Update database
       await this.updateScheduleRecord(event.scheduleId!, updateData);
 
-      // 6. Send notification email
+      // 6. Create snapshot for workflow executions (runs on original canvas)
+      // For 'workflow' triggerType, snapshot should be created after execution completes
+      // to capture the final state of the canvas
+      await this.createSnapshotIfNeeded(event.scheduleId!, event.canvasId, event.userId);
+
+      // 7. Send notification email
       await this.sendEmail(event, status);
     } catch (error: any) {
       this.logger.error(`Failed to process ${eventType} event: ${error.message}`);
@@ -112,6 +121,253 @@ export class ScheduleEventListener {
       where: { scheduleRecordId },
       select: { uid: true },
     });
+  }
+
+  /**
+   * Create snapshot for workflow executions if needed
+   * For 'workflow' triggerType (runs on original canvas), create snapshot after execution completes
+   * Strategy: Duplicate the original canvas to a new canvas to preserve execution state
+   */
+  private async createSnapshotIfNeeded(
+    scheduleRecordId: string,
+    _canvasId: string,
+    _userId: string,
+  ): Promise<void> {
+    try {
+      // Get full record to check triggerType, snapshotStorageKey, and sourceCanvasId
+      const record = await this.prisma.workflowScheduleRecord.findUnique({
+        where: { scheduleRecordId },
+        select: {
+          triggerType: true,
+          snapshotStorageKey: true,
+          uid: true,
+          sourceCanvasId: true,
+          workflowTitle: true,
+        },
+      });
+
+      if (!record) {
+        this.logger.warn(`Record ${scheduleRecordId} not found for snapshot creation`);
+        return;
+      }
+
+      // Only create snapshot for 'workflow' triggerType (runs on original canvas)
+      if (record.triggerType !== 'workflow') {
+        return;
+      }
+
+      // Check if snapshot canvas already exists
+      // We use snapshotStorageKey to store the snapshot canvas ID
+      if (record.snapshotStorageKey) {
+        // Check if the canvas exists (snapshotStorageKey contains canvasId)
+        const snapshotCanvasId = record.snapshotStorageKey;
+        const snapshotCanvas = await this.prisma.canvas.findUnique({
+          where: { canvasId: snapshotCanvasId },
+          select: { canvasId: true },
+        });
+        if (snapshotCanvas) {
+          this.logger.log(
+            `Snapshot canvas already exists for ${scheduleRecordId}: ${snapshotCanvasId}`,
+          );
+          return;
+        }
+      }
+
+      this.logger.log(
+        `Creating snapshot canvas for workflow execution ${scheduleRecordId} after completion`,
+      );
+
+      // For 'workflow' triggerType, use sourceCanvasId (the original canvas where workflow runs)
+      const sourceCanvasId = record.sourceCanvasId || _canvasId;
+
+      // Duplicate the original canvas to create a snapshot canvas
+      // This preserves the execution state without affecting the original canvas
+      const user = { uid: record.uid } as User;
+      const snapshotCanvas = await this.canvasService.duplicateCanvas(
+        user,
+        {
+          canvasId: sourceCanvasId,
+          title: `${record.workflowTitle} - Snapshot (${scheduleRecordId.slice(-8)})`,
+          duplicateEntities: true, // Duplicate files and resources to ensure snapshot is complete
+        },
+        { checkOwnership: true },
+      );
+
+      const snapshotCanvasId = snapshotCanvas.canvasId;
+
+      // Get the current version of the snapshot canvas
+      const snapshotCanvasWithVersion = await this.prisma.canvas.findUnique({
+        where: { canvasId: snapshotCanvasId },
+        select: { version: true },
+      });
+
+      if (!snapshotCanvasWithVersion) {
+        throw new Error(`Failed to get snapshot canvas version for ${snapshotCanvasId}`);
+      }
+
+      // Update action results to point to the snapshot canvas
+      // This ensures result records can be matched to the snapshot canvas
+      await this.updateActionResultTargets(sourceCanvasId, snapshotCanvasId, record.uid);
+
+      // Store snapshot canvas ID in snapshotStorageKey
+      // Format: canvasId:version for easy retrieval
+      const snapshotStorageKey = `${snapshotCanvasId}:${snapshotCanvasWithVersion.version}`;
+
+      // Update record with snapshot storage key (contains canvasId:version)
+      await this.prisma.workflowScheduleRecord.update({
+        where: { scheduleRecordId },
+        data: { snapshotStorageKey },
+      });
+
+      this.logger.log(
+        `Successfully created snapshot canvas ${snapshotCanvasId} (version: ${snapshotCanvasWithVersion.version}) for ${scheduleRecordId}`,
+      );
+    } catch (error: any) {
+      // Snapshot creation failure should not affect the main flow
+      this.logger.warn(`Failed to create snapshot for ${scheduleRecordId}: ${error?.message}`);
+    }
+  }
+
+  /**
+   * Update action result targets from source canvas to snapshot canvas
+   * This ensures result records can be matched to the snapshot canvas
+   */
+  private async updateActionResultTargets(
+    sourceCanvasId: string,
+    snapshotCanvasId: string,
+    uid: string,
+  ): Promise<void> {
+    try {
+      // Get all action results associated with the source canvas
+      const actionResults = await this.prisma.actionResult.findMany({
+        where: {
+          targetId: sourceCanvasId,
+          targetType: 'canvas',
+          uid,
+        },
+        select: {
+          resultId: true,
+          version: true,
+        },
+      });
+
+      if (actionResults.length === 0) {
+        this.logger.log(
+          `No action results to update for canvas ${sourceCanvasId} -> ${snapshotCanvasId}`,
+        );
+        return;
+      }
+
+      // Update action results to point to snapshot canvas
+      // Use updateMany for better performance
+      const resultIds = [...new Set(actionResults.map((r) => r.resultId))];
+      await this.prisma.actionResult.updateMany({
+        where: {
+          resultId: { in: resultIds },
+          targetId: sourceCanvasId,
+          targetType: 'canvas',
+          uid,
+        },
+        data: {
+          targetId: snapshotCanvasId,
+        },
+      });
+
+      this.logger.log(
+        `Updated ${actionResults.length} action results from canvas ${sourceCanvasId} to ${snapshotCanvasId}`,
+      );
+    } catch (error: any) {
+      // Log error but don't fail the snapshot creation
+      this.logger.warn(
+        `Failed to update action result targets: ${error?.message}. Snapshot creation will continue.`,
+      );
+    }
+  }
+
+  /**
+   * Create snapshot from canvas data with files and resources
+   */
+  private async createSnapshotFromCanvas(
+    user: { uid: string },
+    canvasId: string,
+  ): Promise<RawCanvasData> {
+    // 1. Get raw canvas data (nodes, edges, variables)
+    const rawData = await this.canvasService.getCanvasRawData(user as any, canvasId);
+
+    // 2. Get drive files associated with this canvas
+    const driveFiles = await this.prisma.driveFile.findMany({
+      where: {
+        uid: user.uid,
+        canvasId,
+        scope: 'present',
+        deletedAt: null,
+      },
+    });
+
+    const files = driveFiles.map((file) => ({
+      fileId: file.fileId,
+      canvasId: file.canvasId,
+      name: file.name,
+      type: file.type,
+      category: file.category,
+      size: Number(file.size),
+      source: file.source,
+      scope: file.scope,
+      summary: file.summary ?? undefined,
+      variableId: file.variableId ?? undefined,
+      resultId: file.resultId ?? undefined,
+      resultVersion: file.resultVersion ?? undefined,
+      storageKey: file.storageKey ?? undefined,
+      createdAt: file.createdAt.toJSON(),
+      updatedAt: file.updatedAt.toJSON(),
+    }));
+
+    // 3. Get resources associated with this canvas
+    const resources = await this.prisma.resource.findMany({
+      where: {
+        uid: user.uid,
+        canvasId,
+        deletedAt: null,
+      },
+      select: {
+        resourceId: true,
+        title: true,
+        resourceType: true,
+        storageKey: true,
+        storageSize: true,
+        contentPreview: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // 4. Combine into snapshot format
+    return {
+      title: rawData.title,
+      canvasId: rawData.canvasId,
+      variables: rawData.variables || [],
+      nodes: rawData.nodes || [],
+      edges: rawData.edges || [],
+      files: files as any,
+      resources: resources as any,
+    } as RawCanvasData;
+  }
+
+  /**
+   * Upload snapshot to object storage
+   */
+  private async uploadSnapshot(
+    user: { uid: string },
+    canvasData: RawCanvasData,
+    storageKey: string,
+  ): Promise<void> {
+    await this.miscService.uploadBuffer(user as any, {
+      fpath: 'snapshot.json',
+      buf: Buffer.from(JSON.stringify(canvasData)),
+      visibility: 'private',
+      storageKey,
+    });
+    this.logger.log(`Uploaded snapshot to: ${storageKey}`);
   }
 
   /**

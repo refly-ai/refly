@@ -310,9 +310,18 @@ export class WorkflowService {
         );
 
         // Upload snapshot asynchronously (non-blocking)
-        this.uploadExecutionSnapshot(user, canvasData, snapshotStorageKey).catch((err) => {
-          this.logger.warn(`Failed to upload snapshot for ${scheduleRecordId}: ${err?.message}`);
-        });
+        // Note: For 'workflow' triggerType (runs on original canvas), snapshot will be created
+        // after execution completes in ScheduleEventListener to capture final state.
+        // For 'template' triggerType (runs on new canvas), snapshot is created here (before execution).
+        if (triggerType !== 'workflow') {
+          this.uploadExecutionSnapshot(user, canvasData, snapshotStorageKey).catch((err) => {
+            this.logger.warn(`Failed to upload snapshot for ${scheduleRecordId}: ${err?.message}`);
+          });
+        } else {
+          this.logger.log(
+            `Skipping snapshot upload for workflow execution ${executionId}, will create after completion`,
+          );
+        }
       } catch (err) {
         // Record creation failure should not affect workflow execution
         this.logger.warn(`Failed to create execution record: ${err?.message}`);

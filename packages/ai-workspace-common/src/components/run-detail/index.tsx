@@ -79,36 +79,74 @@ const RunDetail = memo(({ recordId, type = 'schedule' }: RunDetailProps) => {
     fetchRecordDetail();
   }, [recordId, t]);
 
-  // Fetch canvas data directly using canvasId from record
+  // Fetch snapshot data using scheduleRecordId
   useEffect(() => {
-    const fetchCanvasData = async () => {
-      if (!record?.canvasId) return;
+    const fetchSnapshot = async () => {
+      if (!record?.scheduleRecordId) return;
 
       setCanvasDataLoading(true);
 
       try {
-        const response = await getClient().getCanvasData({
-          query: { canvasId: record.canvasId },
+        // Try to fetch snapshot first (preferred method)
+        const snapshotResponse = await client.post({
+          url: '/schedule/record/snapshot',
+          body: { scheduleRecordId: record.scheduleRecordId },
         });
 
-        const responseData = response.data?.data;
-        if (responseData) {
+        const snapshotData = (snapshotResponse.data as any)?.data;
+        if (snapshotData) {
+          // Snapshot data is RawCanvasData format, convert to SnapshotData
+          console.log('Snapshot data received:', {
+            hasNodes: !!snapshotData.nodes,
+            nodesCount: snapshotData.nodes?.length || 0,
+            hasEdges: !!snapshotData.edges,
+            edgesCount: snapshotData.edges?.length || 0,
+          });
           setCanvasData({
-            title: responseData.title || record.workflowTitle,
-            nodes: responseData.nodes || [],
-            edges: responseData.edges || [],
+            title: snapshotData.title || record.workflowTitle,
+            nodes: snapshotData.nodes || [],
+            edges: snapshotData.edges || [],
+            variables: snapshotData.variables || [],
+            files: snapshotData.files || [],
+            resources: snapshotData.resources || [],
           } as SnapshotData);
+          setCanvasDataLoading(false);
+          return;
+        } else {
+          console.warn('Snapshot data is empty or invalid:', snapshotResponse);
         }
-      } catch (err) {
-        console.error('Failed to fetch canvas data:', err);
-        // Canvas data error is not critical, we can still show the record info
-      } finally {
-        setCanvasDataLoading(false);
+      } catch (snapshotErr) {
+        // If snapshot fetch fails, fallback to canvas data
+        console.warn('Failed to fetch snapshot, falling back to canvas data:', snapshotErr);
       }
+
+      // Fallback: Fetch canvas data directly using canvasId (for backward compatibility)
+      if (record?.canvasId) {
+        try {
+          const response = await getClient().getCanvasData({
+            query: { canvasId: record.canvasId },
+          });
+
+          const responseData = response.data?.data;
+          if (responseData) {
+            setCanvasData({
+              title: responseData.title || record.workflowTitle,
+              nodes: responseData.nodes || [],
+              edges: responseData.edges || [],
+            } as SnapshotData);
+          }
+        } catch (err) {
+          console.error('Failed to fetch canvas data:', err);
+          // Canvas data error is not critical, we can still show the record info
+        }
+      }
+
+      // Always set loading to false after all attempts
+      setCanvasDataLoading(false);
     };
 
-    fetchCanvasData();
-  }, [record?.canvasId]);
+    fetchSnapshot();
+  }, [record?.scheduleRecordId, record?.canvasId, record?.workflowTitle]);
 
   const handleDuplicate = useCallback(() => {
     if (!record?.canvasId) {

@@ -27,6 +27,7 @@ import {
 } from './schedule.constants';
 import { SchedulePriorityService } from './schedule-priority.service';
 import { ScheduleCronService } from './schedule-cron.service';
+import { CanvasService } from '../canvas/canvas.service';
 import { logEvent } from '@refly/telemetry-node';
 
 @Injectable()
@@ -41,6 +42,7 @@ export class ScheduleService {
     private readonly priorityService: SchedulePriorityService,
     @Inject(forwardRef(() => ScheduleCronService))
     private readonly cronService: ScheduleCronService,
+    private readonly canvasService: CanvasService,
     configService: ConfigService,
   ) {
     this.scheduleConfig = getScheduleConfig(configService);
@@ -612,25 +614,109 @@ export class ScheduleService {
     }
 
     if (!record.snapshotStorageKey) {
+      // For workflow executions, snapshot is created after completion
+      // If status is still running, snapshot hasn't been created yet
+      if (record.status === 'running' || record.status === 'processing') {
+        throw new NotFoundException(
+          'Snapshot not available yet. The workflow execution is still in progress.',
+        );
+      }
       throw new NotFoundException('Snapshot not found for this record');
     }
 
-    const stream = await this.oss.getObject(record.snapshotStorageKey);
-    if (!stream) {
-      throw new NotFoundException('Snapshot data not found in storage');
-    }
+    // Check if snapshotStorageKey is in format "canvasId:version" (new format for workflow snapshots)
+    // or a storage key path (old format for schedule/template snapshots)
+    const snapshotKeyParts = record.snapshotStorageKey.split(':');
+    if (snapshotKeyParts.length === 2 && snapshotKeyParts[1].match(/^[a-zA-Z0-9_-]+$/)) {
+      // New format: canvasId:version - get snapshot from canvas
+      const [snapshotCanvasId] = snapshotKeyParts;
 
-    // Read stream to string
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.from(chunk));
-    }
-    const content = Buffer.concat(chunks).toString('utf-8');
+      try {
+        // Get canvas data from the snapshot canvas
+        const canvasData = await this.canvasService.getCanvasRawData(
+          { uid } as any,
+          snapshotCanvasId,
+          { checkOwnership: true },
+        );
 
-    try {
-      return JSON.parse(content);
-    } catch {
-      throw new BadRequestException('Invalid snapshot data format');
+        // Get files and resources for the snapshot canvas
+        const driveFiles = await this.prisma.driveFile.findMany({
+          where: {
+            uid,
+            canvasId: snapshotCanvasId,
+            scope: 'present',
+            deletedAt: null,
+          },
+        });
+
+        const resources = await this.prisma.resource.findMany({
+          where: {
+            uid,
+            canvasId: snapshotCanvasId,
+            deletedAt: null,
+          },
+        });
+
+        // Return snapshot data in RawCanvasData format
+        return {
+          ...canvasData,
+          files: driveFiles.map((file) => ({
+            fileId: file.fileId,
+            canvasId: file.canvasId,
+            name: file.name,
+            type: file.type,
+            category: file.category,
+            size: Number(file.size),
+            source: file.source,
+            scope: file.scope,
+            summary: file.summary ?? undefined,
+            variableId: file.variableId ?? undefined,
+            resultId: file.resultId ?? undefined,
+            resultVersion: file.resultVersion ?? undefined,
+          })),
+          resources: resources.map((resource) => ({
+            resourceId: resource.resourceId,
+            canvasId: resource.canvasId,
+            title: resource.title,
+            type: resource.resourceType,
+            content: resource.contentPreview ?? undefined,
+          })),
+        };
+      } catch (error: any) {
+        throw new NotFoundException(
+          `Failed to get snapshot from canvas ${snapshotCanvasId}: ${error?.message}`,
+        );
+      }
+    } else {
+      // Old format: storage key path - get snapshot from object storage
+      const stream = await this.oss.getObject(record.snapshotStorageKey);
+      if (!stream) {
+        // Snapshot storage key exists but file not found in storage
+        // This might happen if snapshot creation failed or file was deleted
+        // For workflow executions, try to provide more context
+        if (
+          record.triggerType === 'workflow' &&
+          (record.status === 'running' || record.status === 'processing')
+        ) {
+          throw new NotFoundException(
+            'Snapshot not available yet. The workflow execution is still in progress.',
+          );
+        }
+        throw new NotFoundException('Snapshot data not found in storage');
+      }
+
+      // Read stream to string
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(Buffer.from(chunk));
+      }
+      const content = Buffer.concat(chunks).toString('utf-8');
+
+      try {
+        return JSON.parse(content);
+      } catch {
+        throw new BadRequestException('Invalid snapshot data format');
+      }
     }
   }
 
