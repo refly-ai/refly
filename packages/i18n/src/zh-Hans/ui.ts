@@ -2089,8 +2089,8 @@ const translations = {
       inputName: '{{input_name}}',
       configure: '配置',
       upgrade: '升级',
-      youAreAwesome: 'You are awesome!',
-      everythingIsSet: 'Everything is set for a smooth run',
+      youAreAwesome: '已就绪',
+      everythingIsSet: '工作流可正常运行',
     },
   },
   resource: {

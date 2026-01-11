@@ -1644,6 +1644,82 @@ paths:
               schema:
                 type: string
                 format: binary
+  /drive/document/export/async:
+    post:
+      tags:
+        - drive
+      summary: Start async document export
+      description: Start an asynchronous document export job using Lambda. Use this for binary files (docx, pdf) that need format conversion.
+      operationId: startExportJob
+      requestBody:
+        description: Export job request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartExportJobRequest'
+      responses:
+        '200':
+          description: Export job started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartExportJobResponse'
+      security:
+        - api_key: []
+  /drive/document/export/job/{jobId}:
+    get:
+      tags:
+        - drive
+      summary: Get export job status
+      description: Get the status of an async export job
+      operationId: getExportJobStatus
+      parameters:
+        - name: jobId
+          in: path
+          description: Export job ID
+          required: true
+          schema:
+            type: string
+            example: lj-g30e1b80b5g1itbemc0g5jj3
+      responses:
+        '200':
+          description: Job status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetExportJobStatusResponse'
+      security:
+        - api_key: []
+  /drive/document/export/job/{jobId}/download:
+    get:
+      tags:
+        - drive
+      summary: Download export job result
+      description: Download the result of a completed export job
+      operationId: downloadExportJobResult
+      parameters:
+        - name: jobId
+          in: path
+          description: Export job ID
+          required: true
+          schema:
+            type: string
+            example: lj-g30e1b80b5g1itbemc0g5jj3
+      responses:
+        '200':
+          description: Export result file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+      security:
+        - api_key: []
   /knowledge/document/update:
     post:
       tags:
@@ -10377,6 +10453,9 @@ components:
                   type: boolean
                   description: Whether the user has filled the form
                   default: false
+                identity:
+                  type: string
+                  description: User identity
     GetCreditRechargeResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -13010,6 +13089,73 @@ components:
         url:
           type: string
           description: Private access URL for the file (requires authentication)
+    ExportJobStatus:
+      type: string
+      enum:
+        - pending
+        - processing
+        - completed
+        - failed
+      description: Status of an export job
+    ExportJob:
+      type: object
+      required:
+        - jobId
+        - status
+      properties:
+        jobId:
+          type: string
+          description: Export job ID
+        fileId:
+          type: string
+          description: Source file ID being exported
+        status:
+          $ref: '#/components/schemas/ExportJobStatus'
+        format:
+          type: string
+          enum:
+            - pdf
+            - docx
+          description: Export format
+        name:
+          type: string
+          description: Output file name
+        error:
+          type: string
+          description: Error message if job failed
+        createdAt:
+          type: string
+          format: date-time
+          description: Job creation timestamp
+    StartExportJobRequest:
+      type: object
+      required:
+        - fileId
+        - format
+      properties:
+        fileId:
+          type: string
+          description: File ID to export
+        format:
+          type: string
+          enum:
+            - pdf
+            - docx
+          description: Target export format
+    StartExportJobResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ExportJob'
+    GetExportJobStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ExportJob'
     ListDriveFilesResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

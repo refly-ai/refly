@@ -36,7 +36,7 @@ export default () => ({
     archiveConcurrencyLimit: Number.parseInt(process.env.DRIVE_ARCHIVE_CONCURRENCY_LIMIT) || 10, // Maximum concurrent file archive operations
     publicEndpoint:
       process.env.DRIVE_PUBLIC_ENDPOINT || 'http://localhost:5800/v1/drive/file/public',
-    maxContentTokens: Number.parseInt(process.env.DRIVE_MAX_CONTENT_TOKENS) || 25000, // Maximum tokens in returned content (aligned with Claude Code's limit)
+    maxContentTokens: Number.parseInt(process.env.DRIVE_MAX_CONTENT_TOKENS) || 50000, // Maximum tokens in returned content
     maxStorageTokens: Number.parseInt(process.env.DRIVE_MAX_STORAGE_TOKENS) || 100000, // Maximum tokens when storing parsed content (higher to preserve more)
     maxParseFileSizeKB: Number.parseInt(process.env.DRIVE_MAX_PARSE_FILE_SIZE_KB) || 512, // Maximum file size (KB) for direct parsing, larger files should use execute_code
   },
@@ -277,6 +277,7 @@ export default () => ({
   },
 
   lambda: {
+    enabled: process.env.LAMBDA_ENABLED !== 'false', // Lambda enabled by default, set LAMBDA_ENABLED=false to disable
     region: process.env.AWS_REGION || 'us-east-1',
     functions: {
       documentIngest: process.env.LAMBDA_DOC_PARSER_ARN,
@@ -287,7 +288,7 @@ export default () => ({
     sqs: {
       docIngestQueueUrl: process.env.SQS_DOC_PARSE_QUEUE_URL,
       imageTransformQueueUrl: process.env.SQS_IMAGE_PROCESS_QUEUE_URL,
-      documentRenderQueueUrl: process.env.SQS_DOC_EXPORT_QUEUE_URL,
+      documentRenderQueueUrl: process.env.SQS_DOC_RENDER_QUEUE_URL,
       videoAnalyzeQueueUrl: process.env.SQS_VIDEO_ANALYZE_QUEUE_URL,
       resultQueueUrl: process.env.SQS_RESULT_QUEUE_URL,
       bridge: {
@@ -313,7 +314,33 @@ export default () => ({
   },
 
   sandbox: {
-    timeout: process.env.SANDBOX_TIMEOUT,
+    scalebox: {
+      apiKey: process.env.SCALEBOX_API_KEY,
+      // Wrapper
+      wrapperType: process.env.SCALEBOX_WRAPPER_TYPE, // 'executor' | 'interpreter'
+      templateName: process.env.SCALEBOX_TEMPLATE_NAME,
+      codeSizeThreshold: process.env.SCALEBOX_CODE_SIZE_THRESHOLD,
+      // Sandbox
+      sandboxTimeoutMs: process.env.SCALEBOX_SANDBOX_TIMEOUT_MS,
+      // Pool
+      maxSandboxes: process.env.SCALEBOX_MAX_SANDBOXES,
+      maxQueueSize: process.env.SCALEBOX_MAX_QUEUE_SIZE,
+      autoPauseDelayMs: process.env.SCALEBOX_AUTO_PAUSE_DELAY_MS,
+      // Lock
+      runCodeTimeoutSec: process.env.SCALEBOX_RUN_CODE_TIMEOUT_SEC,
+      lockWaitTimeoutSec: process.env.SCALEBOX_LOCK_WAIT_TIMEOUT_SEC,
+      lockPollIntervalMs: process.env.SCALEBOX_LOCK_POLL_INTERVAL_MS,
+      lockInitialTtlSec: process.env.SCALEBOX_LOCK_INITIAL_TTL_SEC,
+      lockRenewalIntervalMs: process.env.SCALEBOX_LOCK_RENEWAL_INTERVAL_MS,
+      // Executor limits
+      limits: {
+        maxFileSize: process.env.SCALEBOX_LIMITS_MAX_FILE_SIZE,
+        maxTotalWrite: process.env.SCALEBOX_LIMITS_MAX_TOTAL_WRITE,
+        maxFiles: process.env.SCALEBOX_LIMITS_MAX_FILES,
+        maxProcesses: process.env.SCALEBOX_LIMITS_MAX_PROCESSES,
+      },
+    },
+
     truncate: {
       output: process.env.SANDBOX_TRUNCATE_OUTPUT,
     },

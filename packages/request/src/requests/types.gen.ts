@@ -5408,6 +5408,10 @@ export type HasFilledFormResponse = BaseResponse & {
      * Whether the user has filled the form
      */
     hasFilledForm?: boolean;
+    /**
+     * User identity
+     */
+    identity?: string;
   };
 };
 

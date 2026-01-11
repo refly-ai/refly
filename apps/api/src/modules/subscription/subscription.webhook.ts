@@ -144,7 +144,7 @@ export class SubscriptionWebhooks {
           : undefined;
 
         logEvent(user, 'voucher_applied', null, {
-          voucher_value: voucherValue,
+          voucher_value: String(voucherValue),
           entry_point: voucherEntryPoint,
           user_type: voucherUserType,
         });

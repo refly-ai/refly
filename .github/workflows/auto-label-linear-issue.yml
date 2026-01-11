@@ -1,0 +1,71 @@
+name: Auto label Linear issue by repo
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  label-linear:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Auto label Linear issue
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          LABEL: ${{ vars.LINEAR_REPO_LABEL }}
+          ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
+          ORBIT_API_KEY: ${{ secrets.ORBIT_API_KEY }}
+        run: |
+          # 1. Extract Linear issue ID from PR body
+          ISSUE_ID=$(printf '%s\n' "$BODY" | grep -oE 'LIN-[0-9]+' | head -n 1)
+
+          if [ -z "$ISSUE_ID" ]; then
+            printf 'No Linear issue ID found in PR body. Skipping.\n'
+            exit 0
+          fi
+
+          # 2. Validate configuration
+          if [ -z "$LABEL" ]; then
+            printf 'Error: LINEAR_REPO_LABEL variable is not set.\n'
+            exit 1
+          fi
+
+          if [ -z "$ORBIT_API_URL" ] || [ -z "$ORBIT_API_KEY" ]; then
+            printf 'Error: ORBIT_API_URL or ORBIT_API_KEY is not set.\n'
+            exit 1
+          fi
+
+          # 3. Update Linear issue via Orbit
+          printf 'Updating Linear issue %s with label %s via Orbit...\n' "$ISSUE_ID" "$LABEL"
+
+          # Use jq to build the JSON payload to safely handle shell variable expansion and escaping
+          JSON_PAYLOAD=$(jq -n \
+            --arg issueId "$ISSUE_ID" \
+            --arg label "$LABEL" \
+            '{
+              query: "mutation AddLabel($issueId: String!, $label: String!) { issueAddLabel(issueId: $issueId, labelName: $label) { success } }",
+              variables: {
+                issueId: $issueId,
+                label: $label
+              }
+            }')
+
+          RESPONSE=$(curl -s -X POST "$ORBIT_API_URL/api/linear/graphql" \
+            -H "Content-Type: application/json" \
+            -H "X-Orbit-API-Key: $ORBIT_API_KEY" \
+            --data-binary "$JSON_PAYLOAD")
+
+          printf 'Orbit API Response:\n'
+          printf '%s\n' "$RESPONSE" | jq .
+
+          # 4. Check if the update was successful
+          # We use // false to provide a default value if the path doesn't exist
+          SUCCESS=$(printf '%s\n' "$RESPONSE" | jq -r '.success // .data.issueAddLabel.success // false')
+
+          if [ "$SUCCESS" = "true" ]; then
+            printf '✓ Successfully updated issue label\n'
+          else
+            ERROR_MSG=$(printf '%s\n' "$RESPONSE" | jq -r '.error // .errors[0].message // "Unknown error"')
+            printf '✗ Failed to update issue: %s\n' "$ERROR_MSG"
+            exit 1
+          fi

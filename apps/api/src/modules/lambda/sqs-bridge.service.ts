@@ -121,7 +121,13 @@ export class SqsBridgeService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.isPolling = true;
-    this.pollLoop();
+    this.pollLoop().catch((error) => {
+      this.logger.error(
+        { error: error?.message, stack: error?.stack },
+        '[SQS Bridge] Poll loop crashed',
+      );
+      this.isPolling = false;
+    });
   }
 
   /**
@@ -132,7 +138,10 @@ export class SqsBridgeService implements OnModuleInit, OnModuleDestroy {
       try {
         await this.pollMessages();
       } catch (error) {
-        this.logger.error({ error }, 'Error in poll loop');
+        this.logger.error(
+          { error: error instanceof Error ? error.message : error, stack: (error as Error)?.stack },
+          '[SQS Bridge] Error in poll loop',
+        );
         // Exponential backoff on error
         await this.sleep(Math.min(this.pollIntervalMs * 2, 30000));
       }
@@ -168,7 +177,10 @@ export class SqsBridgeService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.logger.debug({ messageCount: response.Messages.length }, 'Received messages from SQS');
+    this.logger.info(
+      { messageCount: response.Messages.length },
+      '[SQS Bridge] Received messages from SQS',
+    );
 
     // Process messages concurrently
     await Promise.all(response.Messages.map((msg) => this.processMessage(msg)));
@@ -210,7 +222,7 @@ export class SqsBridgeService implements OnModuleInit, OnModuleDestroy {
         'process-result',
         { envelope },
         {
-          jobId: `result-${jobId}`, // Use jobId for deduplication
+          jobId: `${jobId}`, // Use jobId for deduplication
           removeOnComplete: true,
           removeOnFail: 100, // Keep last 100 failed jobs for debugging
           attempts: 3,

@@ -9,7 +9,7 @@ import {
   useGetCreditUsageByCanvasId,
 } from '@refly-packages/ai-workspace-common/queries/queries';
 import { GenericToolset, RawCanvasData, ToolsetDefinition, UserTool } from '@refly/openapi-schema';
-import IssueImage from '@refly-packages/ai-workspace-common/assets/issue.svg';
+import IssueImage from '@refly-packages/ai-workspace-common/assets/issue.png';
 import React from 'react';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import cn from 'classnames';

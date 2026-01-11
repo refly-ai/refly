@@ -157,7 +157,7 @@ const deduplicate = <T>(array: T[] | null | undefined, keyFn: (item: T) => strin
 export const convertContextItemsToInvokeParams = (
   items: IContextItem[],
   resultIds: string[],
-  workflowVariables?: WorkflowVariable[], // WorkflowVariable[] - accepting workflow variables for resolving resource variables
+  referencedVariables?: WorkflowVariable[], // Only process explicitly referenced resource variables
 ): SkillContext => {
   const purgedItems = purgeContextItems(items);
 
@@ -167,11 +167,11 @@ export const convertContextItemsToInvokeParams = (
     { fileId: string; variableId: string; variableName: string }
   >();
 
-  // Collect all files from resource variables
+  // Collect files only from explicitly referenced resource variables (referencedVariables)
   const filesFromVariables: SkillContextFileItem[] = [];
 
-  if (workflowVariables) {
-    for (const variable of workflowVariables) {
+  if (referencedVariables) {
+    for (const variable of referencedVariables) {
       if (variable.variableType === 'resource' && variable.value?.length > 0) {
         const fileId = variable.value[0]?.resource?.fileId;
         if (fileId) {

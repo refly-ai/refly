@@ -79,17 +79,27 @@ export class FormService {
     }
   }
 
-  async hasFilledForm(uid: string): Promise<boolean> {
+  async hasFilledForm(uid: string): Promise<{ hasFilledForm: boolean; identity: string | null }> {
     const user = await this.prisma.user.findUnique({
       where: { uid },
       select: { preferences: true },
     });
 
+    const answers = await this.prisma.formSubmission.findFirst({
+      where: { uid },
+      select: { answers: true },
+    });
+
+    const identity = this.extractRoleFromAnswers(answers?.answers);
+
     if (!user?.preferences) {
-      return false;
+      return { hasFilledForm: false, identity: identity ?? null };
     }
 
     const preferences = JSON.parse(user.preferences);
-    return preferences.hasFilledForm ?? true;
+    return {
+      hasFilledForm: preferences.hasFilledForm ?? true,
+      identity: identity ?? null,
+    };
   }
 }

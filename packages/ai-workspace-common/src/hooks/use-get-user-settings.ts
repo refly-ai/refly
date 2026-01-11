@@ -108,10 +108,6 @@ export const useGetUserSettings = () => {
       userTypeForUserProperties = userType;
     }
 
-    if (userTypeForUserProperties) {
-      updateUserProperties({ user_plan: userTypeForUserProperties });
-    }
-
     localStorage.setItem('refly-user-profile', safeStringifyJSON(settings));
     userStore.setIsLogin(true);
 
@@ -123,6 +119,7 @@ export const useGetUserSettings = () => {
     }
 
     // Check if user has been invited to show invitation code modal
+    let identity: string | null = null;
     try {
       const invitationResp = await getClient().hasBeenInvited();
       const hasBeenInvited = invitationResp.data?.data ?? false;
@@ -133,6 +130,7 @@ export const useGetUserSettings = () => {
         try {
           const formResp = await getClient().hasFilledForm();
           const hasFilledForm = formResp.data?.data?.hasFilledForm ?? false;
+          identity = formResp.data?.data?.identity ?? null;
           userStore.setShowOnboardingFormModal(!hasFilledForm);
         } catch (_formError) {
           // If form check fails, don't block user login, default to not showing modal
@@ -146,6 +144,10 @@ export const useGetUserSettings = () => {
       // If invitation check fails, don't block user login, default to not showing modals
       userStore.setShowInvitationCodeModal(false);
       userStore.setShowOnboardingFormModal(false);
+    }
+
+    if (userTypeForUserProperties) {
+      updateUserProperties({ user_plan: userTypeForUserProperties, user_identity: identity });
     }
 
     // set tour guide

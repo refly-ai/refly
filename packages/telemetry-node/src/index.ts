@@ -33,6 +33,23 @@ export const updateUserProperties = (
   statsig.identify(new StatsigUser({ userID: user.uid, email: user.email, custom }));
 };
 
+/**
+ * Convert all values in an object to strings recursively
+ */
+const convertMetadataToStrings = (obj: Record<string, any>): Record<string, string> => {
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null || value === undefined) {
+      result[key] = String(value ?? '');
+    } else if (typeof value === 'object') {
+      result[key] = JSON.stringify(value);
+    } else {
+      result[key] = String(value);
+    }
+  }
+  return result;
+};
+
 export const logEvent = (
   user: { uid: string; email?: string },
   eventName: string,
@@ -43,10 +60,12 @@ export const logEvent = (
     return;
   }
 
+  const stringMetadata = metadata ? convertMetadataToStrings(metadata) : undefined;
+
   statsig.logEvent(
     new StatsigUser({ userID: user.uid, email: user.email }),
     eventName,
     value,
-    metadata,
+    stringMetadata,
   );
 };

@@ -393,17 +393,22 @@ export class WorkflowService {
       return;
     }
 
-    const { modelInfo, selectedToolsets, contextItems = [] } = metadata;
+    const { modelInfo, selectedToolsets, contextItems = [], referencedVariables = [] } = metadata;
 
     // Get workflow variables from canvas to resolve resource variable fileIds
     const workflowVariables = await this.canvasService.getWorkflowVariables(user, { canvasId });
+
+    // Filter workflow variables to only include explicitly referenced resource variables
+    const referencedResourceVars = workflowVariables.filter((variable) =>
+      referencedVariables.some((rv: any) => rv.variableId === variable.variableId),
+    );
 
     const context = convertContextItemsToInvokeParams(
       contextItems,
       connectToFilters
         .filter((filter) => filter.type === 'skillResponse')
         .map((filter) => filter.entityId),
-      workflowVariables,
+      referencedResourceVars,
     );
 
     // Prepare the invoke skill request

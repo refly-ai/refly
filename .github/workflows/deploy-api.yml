@@ -54,33 +54,46 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
           REPOSITORY="${REGISTRY}/refly-api"
-          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_TAG="${{ inputs.environment }}-${{ github.sha }}"
           TAGS="${REPOSITORY}:${IMAGE_TAG}"
-          if [[ "${{ github.ref_name }}" == "main" ]]; then
-            TAGS="${TAGS},${REPOSITORY}:nightly"
-          elif [[ "${{ github.ref_name }}" == "stable" ]]; then
-            TAGS="${TAGS},${REPOSITORY}:stable"
-          fi
           echo "registry=$REGISTRY" >> "$GITHUB_OUTPUT"
           echo "repository=$REPOSITORY" >> "$GITHUB_OUTPUT"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
           echo "deploy_image=${REPOSITORY}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+          echo "nightly_tag=nightly-${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
-      - name: Check if image exists in ECR
+      - name: Check for existing images
         id: check_image
         env:
           AWS_REGION: ${{ inputs.aws_region }}
+          REPO: refly-api
+          TARGET_TAG: ${{ steps.docker_tags.outputs.image_tag }}
+          NIGHTLY_TAG: ${{ steps.docker_tags.outputs.nightly_tag }}
         run: |
-          if aws ecr describe-images \
-            --repository-name refly-api \
-            --image-ids imageTag=${{ steps.docker_tags.outputs.image_tag }} \
-            --region "$AWS_REGION" \
-            --output json > /dev/null 2>&1; then
-            echo "Image exists in ECR, skipping build"
+          # 1. Check if target image already exists
+          if aws ecr describe-images --repository-name "$REPO" --image-ids imageTag="$TARGET_TAG" --region "$AWS_REGION" > /dev/null 2>&1; then
+            echo "Target image $TARGET_TAG already exists, skipping build and copy"
             echo "image_exists=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 2. Check if nightly image exists to copy from
+          echo "Checking for nightly image: $NIGHTLY_TAG"
+          MANIFEST=$(aws ecr batch-get-image --repository-name "$REPO" --image-ids imageTag="$NIGHTLY_TAG" --region "$AWS_REGION" --query 'images[0].imageManifest' --output text)
+
+          if [ "$MANIFEST" != "None" ] && [ -n "$MANIFEST" ]; then
+            echo "Nightly image found. Copying to $TARGET_TAG..."
+            if aws ecr put-image --repository-name "$REPO" --image-tag "$TARGET_TAG" --image-manifest "$MANIFEST" --region "$AWS_REGION" > put_image_output.txt 2>&1; then
+              echo "✓ Image copied successfully"
+              echo "image_exists=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "✗ Failed to copy image from nightly tag"
+              cat put_image_output.txt
+              echo "image_exists=false" >> "$GITHUB_OUTPUT"
+            fi
           else
-            echo "Image does not exist in ECR, will build"
+            echo "Nightly image not found, will need to build"
             echo "image_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
