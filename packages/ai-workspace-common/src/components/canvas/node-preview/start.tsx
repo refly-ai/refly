@@ -22,7 +22,7 @@ export const MAX_VARIABLE_LENGTH = {
   resource: 50,
 };
 
-const RESOURCE_TYPE_ICON_MAP = {
+export const RESOURCE_TYPE_ICON_MAP = {
   image: Image,
   document: Doc2,
   video: Video,
