@@ -1,9 +1,9 @@
 import { Button, Modal, Tooltip, message } from 'antd';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDebouncedCallback } from 'use-debounce';
 import { Play, StopCircle, Preview } from 'refly-icons';
-import { useReactFlow } from '@xyflow/react';
+import { useReactFlow, useNodes, useEdges } from '@xyflow/react';
 import { ActionStatus } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -74,6 +74,37 @@ const SkillResponseActionsComponent = ({
   const { canvasId } = useCanvasContext();
   const { isLoggedRef, userProfile } = useIsLogin();
   const { getNode } = useReactFlow();
+  const nodes = useNodes();
+  const edges = useEdges();
+
+  // Check if any downstream node (including the current one) has an empty prompt
+  const hasDownstreamEmptyPrompt = useMemo(() => {
+    if (!nodeId) return false;
+
+    const downstreamIds = new Set<string>([nodeId]);
+    const queue = [nodeId];
+
+    while (queue.length > 0) {
+      const currentId = queue.shift();
+      if (!currentId) continue;
+
+      const children = edges.filter((edge) => edge.source === currentId).map((edge) => edge.target);
+
+      for (const childId of children) {
+        if (!downstreamIds.has(childId)) {
+          downstreamIds.add(childId);
+          queue.push(childId);
+        }
+      }
+    }
+
+    return nodes.some((n) => {
+      if (!downstreamIds.has(n.id)) return false;
+      if (n.type !== 'skillResponse') return false;
+      const query = (n.data as any)?.metadata?.query;
+      return !query || (typeof query === 'string' && query.trim() === '');
+    });
+  }, [nodeId, nodes, edges]);
 
   const node = nodeId ? getNode(nodeId) : null;
   const nodeMetadata = (node?.data as any)?.metadata;
@@ -117,9 +148,16 @@ const SkillResponseActionsComponent = ({
   const isReRunning = status && status !== 'init';
   const singleButtonTitle = nodeIsExecuting
     ? t('canvas.skillResponse.stopSingle')
-    : isReRunning
-      ? t('canvas.skillResponse.rerunSingle')
-      : t('canvas.skillResponse.runSingle');
+    : variant === 'preview'
+      ? null
+      : isReRunning
+        ? t('canvas.skillResponse.rerunSingle')
+        : t('canvas.skillResponse.runSingle');
+
+  const singleButtonTooltip =
+    !nodeIsExecuting && isPromptEmpty
+      ? t('canvas.skillResponse.promptRequired')
+      : singleButtonTitle;
 
   const checkAndOpenToolsDependency = useCallback(async (): Promise<boolean> => {
     // Tool dependency checking requires login and a valid canvasId.
@@ -314,13 +352,15 @@ const SkillResponseActionsComponent = ({
   if (variant === 'preview') {
     return (
       <>
-        <Button
-          type="text"
-          icon={icon}
-          onClick={handleToggleWorkflowRun}
-          disabled={actionDisabled}
-          className={buttonClassName}
-        />
+        <Tooltip title={singleButtonTooltip} arrow={false}>
+          <Button
+            type="text"
+            icon={icon}
+            onClick={handleToggleWorkflowRun}
+            disabled={actionDisabled}
+            className={buttonClassName}
+          />
+        </Tooltip>
         {extraActions}
       </>
     );
@@ -328,19 +368,29 @@ const SkillResponseActionsComponent = ({
 
   return (
     <>
-      <Tooltip title={t('canvas.skillResponse.rerunFromHere')}>
+      <Tooltip
+        arrow={false}
+        title={
+          <div className="text-[13px]">
+            {hasDownstreamEmptyPrompt
+              ? isPromptEmpty && !edges.some((e) => e.source === nodeId)
+                ? t('canvas.skillResponse.promptRequired')
+                : t('canvas.skillResponse.downstreamAgentsMissingPrompts')
+              : t('canvas.skillResponse.rerunFromHere')}
+          </div>
+        }
+      >
         <Button
           type="text"
           size="small"
           icon={<Preview size={iconSize} className={iconClassName} />}
           onClick={handleRerunFromHereClick}
-          disabled={actionDisabled || nodeIsExecuting}
+          disabled={actionDisabled || nodeIsExecuting || hasDownstreamEmptyPrompt}
           className={buttonClassName}
-          title={t('canvas.skillResponse.rerunFromHere')}
         />
       </Tooltip>
 
-      <Tooltip title={singleButtonTitle}>
+      <Tooltip title={<div className="text-[13px]">{singleButtonTooltip}</div>} arrow={false}>
         <Button
           type="text"
           size="small"
@@ -348,7 +398,7 @@ const SkillResponseActionsComponent = ({
           onClick={handleToggleWorkflowRun}
           disabled={actionDisabled}
           className={buttonClassName}
-          title={singleButtonTitle}
+          title={singleButtonTooltip}
         />
       </Tooltip>
     </>
