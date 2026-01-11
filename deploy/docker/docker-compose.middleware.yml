@@ -88,6 +88,16 @@ services:
       - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS:-4}
     networks:
       - refly_network
+  sandbox:
+    container_name: refly_sandbox
+    image: refly-sandbox:local
+    restart: unless-stopped
+    ports:
+      - 7651:7651
+    env_file:
+      - .env
+    networks:
+      - refly_network
 
 networks:
   refly_network:

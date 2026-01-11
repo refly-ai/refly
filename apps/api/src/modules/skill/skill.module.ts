@@ -35,6 +35,7 @@ import { ToolCallModule } from '../tool-call/tool-call.module';
 import { DriveModule } from '../drive/drive.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { WorkflowPlanModule } from '../workflow/workflow-plan.module';
+import { SandboxModule } from '../sandbox/sandbox.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { WorkflowPlanModule } from '../workflow/workflow-plan.module';
     MediaGeneratorModule,
     CanvasSyncModule,
     WorkflowPlanModule,
+    SandboxModule,
     ...(isDesktop()
       ? []
       : [

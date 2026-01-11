@@ -26,6 +26,7 @@ import { ProviderService } from '../provider/provider.service';
 import { RAGService } from '../rag/rag.service';
 import { SearchService } from '../search/search.service';
 import { ShareCreationService } from '../share/share-creation.service';
+import { SandboxService } from '../sandbox/sandbox.service';
 import { ScaleboxService } from '../tool/sandbox/scalebox.service';
 import { ToolService } from '../tool/tool.service';
 import { WorkflowPlanService } from '../workflow/workflow-plan.service';
@@ -48,6 +49,7 @@ export class SkillEngineService implements OnModuleInit {
   private engine: SkillEngine;
   private canvasSyncService: CanvasSyncService;
   private toolService: ToolService;
+  private sandboxService: SandboxService;
   private scaleboxService: ScaleboxService;
   private shareCreationService: ShareCreationService;
   private workflowPlanService: WorkflowPlanService;
@@ -77,6 +79,7 @@ export class SkillEngineService implements OnModuleInit {
         this.miscService = this.moduleRef.get(MiscService, { strict: false });
         this.canvasSyncService = this.moduleRef.get(CanvasSyncService, { strict: false });
         this.toolService = this.moduleRef.get(ToolService, { strict: false });
+        this.sandboxService = this.moduleRef.get(SandboxService, { strict: false });
         this.scaleboxService = this.moduleRef.get(ScaleboxService, { strict: false });
         this.shareCreationService = this.moduleRef.get(ShareCreationService, { strict: false });
         this.workflowPlanService = this.moduleRef.get(WorkflowPlanService, { strict: false });
@@ -282,6 +285,48 @@ export class SkillEngineService implements OnModuleInit {
         return genImageID();
       },
       execute: async (user, req) => {
+        const whiteList =
+          this.config
+            .get<string>('sandbox.whiteList')
+            ?.split(',')
+            ?.map((s) => s.trim()) || [];
+        const blackList =
+          this.config
+            .get<string>('sandbox.blackList')
+            ?.split(',')
+            ?.map((s) => s.trim()) || [];
+        const randomRateStr = this.config.get<string>('sandbox.randomRate') || '0';
+        const randomRate = Number.parseInt(randomRateStr, 10);
+
+        const useHttpSandbox = (() => {
+          if (blackList.includes(user.uid)) return false;
+          if (whiteList.includes(user.uid)) return true;
+
+          // Hash uid to 0-99 range for consistent random distribution
+          let hash = 0;
+          for (let i = 0; i < user.uid.length; i++) {
+            hash = (hash << 5) - hash + user.uid.charCodeAt(i);
+            hash = hash & hash; // Convert to 32bit integer
+          }
+          const bucket = Math.abs(hash) % 100;
+          return bucket < randomRate;
+        })();
+
+        this.logger.info(
+          {
+            uid: user.uid,
+            useHttpSandbox,
+            randomRate,
+            inWhiteList: whiteList.includes(user.uid),
+            inBlackList: blackList.includes(user.uid),
+          },
+          'Sandbox routing decision',
+        );
+
+        if (useHttpSandbox) {
+          return await this.sandboxService.execute(user, req);
+        }
+
         return await this.scaleboxService.execute(user, req);
       },
       generateWorkflowPlan: async (user, params) => {
