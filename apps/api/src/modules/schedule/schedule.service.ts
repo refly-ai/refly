@@ -27,6 +27,7 @@ import {
 } from './schedule.constants';
 import { SchedulePriorityService } from './schedule-priority.service';
 import { ScheduleCronService } from './schedule-cron.service';
+import { CanvasService } from '../canvas/canvas.service';
 import { logEvent } from '@refly/telemetry-node';
 
 @Injectable()
@@ -41,6 +42,7 @@ export class ScheduleService {
     private readonly priorityService: SchedulePriorityService,
     @Inject(forwardRef(() => ScheduleCronService))
     private readonly cronService: ScheduleCronService,
+    private readonly canvasService: CanvasService,
     configService: ConfigService,
   ) {
     this.scheduleConfig = getScheduleConfig(configService);
@@ -470,12 +472,18 @@ export class ScheduleService {
     keyword?: string,
     tools?: string[],
     canvasId?: string,
+    triggerType?: 'workflow' | 'template' | 'scheduled' | 'manual_schedule' | 'retry',
   ) {
     const where: any = { uid };
 
     // Filter by sourceCanvasId (the original canvas, not the cloned execution canvas)
     if (canvasId) {
       where.sourceCanvasId = canvasId;
+    }
+
+    // Filter by triggerType
+    if (triggerType) {
+      where.triggerType = triggerType;
     }
 
     // Filter by status - only show completed records (success/failed) by default
@@ -513,21 +521,29 @@ export class ScheduleService {
       }),
     ]);
 
-    // Get unique scheduleIds and fetch schedule names
-    const scheduleIds = [...new Set(items.map((item) => item.scheduleId))];
-    const schedules = await this.prisma.workflowSchedule.findMany({
-      where: { scheduleId: { in: scheduleIds } },
-      select: { scheduleId: true, name: true },
-    });
+    // Get unique scheduleIds (filter out null) and fetch schedule names
+    const scheduleIds = [
+      ...new Set(items.map((item) => item.scheduleId).filter((id): id is string => id !== null)),
+    ];
+    const schedules =
+      scheduleIds.length > 0
+        ? await this.prisma.workflowSchedule.findMany({
+            where: { scheduleId: { in: scheduleIds } },
+            select: { scheduleId: true, name: true },
+          })
+        : [];
     const scheduleNameMap = new Map(schedules.map((s) => [s.scheduleId, s.name]));
 
-    // Map items to include scheduleName and exclude pk
+    // Map items to include scheduleName, triggerType and exclude pk
     const mappedItems = items.map((item) => {
       const { pk, ...rest } = item;
       return {
         ...rest,
-        scheduleName: scheduleNameMap.get(item.scheduleId) || item.workflowTitle || 'Untitled',
-        scheduleId: item.scheduleId, // Ensure scheduleId is included
+        scheduleName: item.scheduleId
+          ? scheduleNameMap.get(item.scheduleId) || item.workflowTitle || 'Untitled'
+          : item.workflowTitle || 'Untitled',
+        scheduleId: item.scheduleId, // May be null for manual/app executions
+        triggerType: item.triggerType || 'scheduled', // Provide default for backward compatibility
       };
     });
 
@@ -570,16 +586,21 @@ export class ScheduleService {
       throw new NotFoundException('Schedule record not found');
     }
 
-    // Get schedule name
-    const schedule = await this.prisma.workflowSchedule.findUnique({
-      where: { scheduleId: record.scheduleId },
-      select: { name: true },
-    });
+    // Get schedule name if scheduleId exists
+    let scheduleName = record.workflowTitle || 'Untitled';
+    if (record.scheduleId) {
+      const schedule = await this.prisma.workflowSchedule.findUnique({
+        where: { scheduleId: record.scheduleId },
+        select: { name: true },
+      });
+      scheduleName = schedule?.name || scheduleName;
+    }
 
     const { pk, ...rest } = record;
     return {
       ...rest,
-      scheduleName: schedule?.name || record.workflowTitle || 'Untitled',
+      scheduleName,
+      triggerType: record.triggerType || 'scheduled', // Provide default for backward compatibility
     };
   }
 
@@ -593,25 +614,109 @@ export class ScheduleService {
     }
 
     if (!record.snapshotStorageKey) {
+      // For workflow executions, snapshot is created after completion
+      // If status is still running, snapshot hasn't been created yet
+      if (record.status === 'running' || record.status === 'processing') {
+        throw new NotFoundException(
+          'Snapshot not available yet. The workflow execution is still in progress.',
+        );
+      }
       throw new NotFoundException('Snapshot not found for this record');
     }
 
-    const stream = await this.oss.getObject(record.snapshotStorageKey);
-    if (!stream) {
-      throw new NotFoundException('Snapshot data not found in storage');
-    }
+    // Check if snapshotStorageKey is in format "canvasId:version" (new format for workflow snapshots)
+    // or a storage key path (old format for schedule/template snapshots)
+    const snapshotKeyParts = record.snapshotStorageKey.split(':');
+    if (snapshotKeyParts.length === 2 && snapshotKeyParts[1].match(/^[a-zA-Z0-9_-]+$/)) {
+      // New format: canvasId:version - get snapshot from canvas
+      const [snapshotCanvasId] = snapshotKeyParts;
 
-    // Read stream to string
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(Buffer.from(chunk));
-    }
-    const content = Buffer.concat(chunks).toString('utf-8');
+      try {
+        // Get canvas data from the snapshot canvas
+        const canvasData = await this.canvasService.getCanvasRawData(
+          { uid } as any,
+          snapshotCanvasId,
+          { checkOwnership: true },
+        );
 
-    try {
-      return JSON.parse(content);
-    } catch {
-      throw new BadRequestException('Invalid snapshot data format');
+        // Get files and resources for the snapshot canvas
+        const driveFiles = await this.prisma.driveFile.findMany({
+          where: {
+            uid,
+            canvasId: snapshotCanvasId,
+            scope: 'present',
+            deletedAt: null,
+          },
+        });
+
+        const resources = await this.prisma.resource.findMany({
+          where: {
+            uid,
+            canvasId: snapshotCanvasId,
+            deletedAt: null,
+          },
+        });
+
+        // Return snapshot data in RawCanvasData format
+        return {
+          ...canvasData,
+          files: driveFiles.map((file) => ({
+            fileId: file.fileId,
+            canvasId: file.canvasId,
+            name: file.name,
+            type: file.type,
+            category: file.category,
+            size: Number(file.size),
+            source: file.source,
+            scope: file.scope,
+            summary: file.summary ?? undefined,
+            variableId: file.variableId ?? undefined,
+            resultId: file.resultId ?? undefined,
+            resultVersion: file.resultVersion ?? undefined,
+          })),
+          resources: resources.map((resource) => ({
+            resourceId: resource.resourceId,
+            canvasId: resource.canvasId,
+            title: resource.title,
+            type: resource.resourceType,
+            content: resource.contentPreview ?? undefined,
+          })),
+        };
+      } catch (error: any) {
+        throw new NotFoundException(
+          `Failed to get snapshot from canvas ${snapshotCanvasId}: ${error?.message}`,
+        );
+      }
+    } else {
+      // Old format: storage key path - get snapshot from object storage
+      const stream = await this.oss.getObject(record.snapshotStorageKey);
+      if (!stream) {
+        // Snapshot storage key exists but file not found in storage
+        // This might happen if snapshot creation failed or file was deleted
+        // For workflow executions, try to provide more context
+        if (
+          record.triggerType === 'workflow' &&
+          (record.status === 'running' || record.status === 'processing')
+        ) {
+          throw new NotFoundException(
+            'Snapshot not available yet. The workflow execution is still in progress.',
+          );
+        }
+        throw new NotFoundException('Snapshot data not found in storage');
+      }
+
+      // Read stream to string
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(Buffer.from(chunk));
+      }
+      const content = Buffer.concat(chunks).toString('utf-8');
+
+      try {
+        return JSON.parse(content);
+      } catch {
+        throw new BadRequestException('Invalid snapshot data format');
+      }
     }
   }
 
@@ -649,6 +754,7 @@ export class ScheduleService {
         canvasId: '', // Will be updated after execution with actual execution canvas
         workflowTitle: canvas?.title || 'Untitled',
         status: 'pending', // Job is queued, waiting to be processed
+        triggerType: 'manual_schedule', // User manually triggered this schedule
         scheduledAt,
         triggeredAt: scheduledAt,
         priority,
@@ -707,13 +813,15 @@ export class ScheduleService {
       throw new BadRequestException('No snapshot available for retry. Cannot retry this record.');
     }
 
-    // 3. Verify the schedule still exists
-    const schedule = await this.prisma.workflowSchedule.findUnique({
-      where: { scheduleId: record.scheduleId },
-    });
+    // 3. Verify the schedule still exists (only for schedule-triggered executions)
+    if (record.scheduleId) {
+      const schedule = await this.prisma.workflowSchedule.findUnique({
+        where: { scheduleId: record.scheduleId },
+      });
 
-    if (!schedule || schedule.deletedAt) {
-      throw new NotFoundException('Associated schedule not found or has been deleted');
+      if (!schedule || schedule.deletedAt) {
+        throw new NotFoundException('Associated schedule not found or has been deleted');
+      }
     }
 
     // 4. Calculate user execution priority
@@ -724,6 +832,7 @@ export class ScheduleService {
       where: { scheduleRecordId },
       data: {
         status: 'pending',
+        triggerType: 'retry', // Update to retry type
         failureReason: null,
         errorDetails: null,
         triggeredAt: new Date(),

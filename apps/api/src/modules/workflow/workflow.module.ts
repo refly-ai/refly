@@ -6,6 +6,7 @@ import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { SkillModule } from '../skill/skill.module';
 import { ActionModule } from '../action/action.module';
 import { ToolModule } from '../tool/tool.module';
+import { MiscModule } from '../misc/misc.module';
 import { WorkflowService } from './workflow.service';
 import { WorkflowController } from './workflow.controller';
 import { RunWorkflowProcessor, PollWorkflowProcessor } from './workflow.processor';
@@ -24,6 +25,7 @@ import { NotificationModule } from '../notification/notification.module';
     SkillModule,
     ActionModule,
     CreditModule,
+    MiscModule,
     NotificationModule,
     ...(isDesktop()
       ? []

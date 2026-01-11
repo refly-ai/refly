@@ -74,8 +74,8 @@ export const RunHistoryFilters = memo(
     // Type options
     const typeOptions: { value: RunTypeFilter; label: string }[] = [
       { value: 'all', label: t('runHistory.filters.typeAll') },
-      // { value: 'workflow', label: t('runHistory.filters.typeWorkflow') },
-      // { value: 'template', label: t('runHistory.filters.typeTemplate') },
+      { value: 'workflow', label: t('runHistory.filters.typeWorkflow') },
+      { value: 'template', label: t('runHistory.filters.typeTemplate') },
       { value: 'schedule', label: t('runHistory.filters.typeSchedule') },
     ];
 

@@ -80,6 +80,7 @@ export class ScheduleController {
       dto.keyword,
       dto.tools,
       dto.canvasId,
+      dto.triggerType,
     );
     return buildSuccessResponse(result);
   }

@@ -482,6 +482,7 @@ export class ScheduleProcessor extends WorkerHost {
       // 7. Execute workflow using WorkflowAppService
       // Note: user is a simple object { uid } to avoid BigInt serialization issues
       // The methods called inside executeFromCanvasData only need user.uid
+      // Pass sourceCanvasId (original template canvas) to ensure correct source canvas tracking
       const { executionId, canvasId: newCanvasId } =
         await this.workflowAppService.executeFromCanvasData(
           user,
@@ -491,6 +492,7 @@ export class ScheduleProcessor extends WorkerHost {
             scheduleId,
             scheduleRecordId,
             triggerType: 'scheduled',
+            sourceCanvasId: canvasId, // Original template canvas ID
           },
         );
 
