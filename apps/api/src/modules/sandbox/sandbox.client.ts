@@ -71,7 +71,10 @@ export class SandboxClient {
 
       const response = await fetch(`${this.sandboxUrl}/execute`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-request-id': requestId,
+        },
         body: JSON.stringify(request),
         signal: controller.signal,
       });
