@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { Copilot } from '../copilot';
 
 interface CopilotContainerProps {
@@ -72,26 +73,26 @@ export const CopilotContainer = memo(
     return (
       <>
         <div
-          className="absolute -top-[1px] left-[-1px] bottom-[-1px] bg-refly-bg-content-z2 border-solid border-[1px] border-refly-Card-Border shadow-refly-m z-[30] rounded-xl overflow-hidden"
+          className={cn(
+            'absolute -top-[1px] left-[-1px] bottom-[-1px] bg-refly-bg-content-z2 border-solid border-[1px] border-refly-Card-Border shadow-refly-m z-[30] rounded-xl overflow-hidden',
+            !isResizing && 'transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          )}
           style={{ width: isOnboarding ? '100%' : `${copilotWidth}px` }}
         >
-          {isOnboarding ? (
-            <div className="max-w-[1000px] h-full mx-auto">
-              <Copilot copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
-            </div>
-          ) : (
+          <div className="max-w-[1000px] h-full mx-auto">
             <Copilot copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
-          )}
-        </div>
-        {!isOnboarding && (
-          <div
-            className="absolute top-2 bottom-2 w-2 cursor-col-resize z-[30] group"
-            style={{ left: `${copilotWidth - 4}px` }}
-            onMouseDown={handleResizeStart}
-          >
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1px] h-full" />
           </div>
-        )}
+        </div>
+        <div
+          className={cn(
+            'absolute top-2 bottom-2 w-2 cursor-col-resize z-[30] group transition-opacity duration-500',
+            isOnboarding ? 'opacity-0 pointer-events-none' : 'opacity-100 delay-500',
+          )}
+          style={{ left: `${copilotWidth - 4}px` }}
+          onMouseDown={handleResizeStart}
+        >
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1px] h-full" />
+        </div>
       </>
     );
   },
