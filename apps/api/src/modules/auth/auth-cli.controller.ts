@@ -101,9 +101,7 @@ export class AuthCliController {
    * @returns JWT access token, refresh token, and user info
    */
   @Post('oauth/callback')
-  async handleCallback(
-    @Body() body: { code: string; state: string; provider: string },
-  ): Promise<{
+  async handleCallback(@Body() body: { code: string; state: string; provider: string }): Promise<{
     success: boolean;
     data: { accessToken: string; refreshToken: string; user: User };
   }> {

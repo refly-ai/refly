@@ -3,7 +3,7 @@
  * Supports: pretty, json, compact, plain
  */
 
-import { Style, Symbols, AsciiSymbols, UI, shouldUseColor, isTTY, styled } from './ui.js';
+import { Style, Symbols, AsciiSymbol, UI, shouldUseColor, isTTY, styled } from './ui.js';
 
 export type OutputFormat = 'pretty' | 'json' | 'compact' | 'plain';
 
@@ -132,7 +132,7 @@ export class OutputFormatter {
       return;
     }
 
-    const icon = this.useColor ? styled(Symbols.RUNNING, Style.TEXT_INFO) : AsciiSymbols.RUNNING;
+    const icon = this.useColor ? styled(Symbols.RUNNING, Style.TEXT_INFO) : AsciiSymbol.RUNNING;
     process.stdout.write(`\r${icon} ${message}`);
   }
 
@@ -326,7 +326,7 @@ export class OutputFormatter {
       changedNodes,
     } = payload as Record<string, unknown>;
 
-    const sym = this.useUnicode ? Symbol : AsciiSymbol;
+    const sym = this.useUnicode ? Symbols : AsciiSymbol;
 
     // Header with status
     const statusStr = (status as string) || 'unknown';
@@ -478,7 +478,7 @@ export class OutputFormatter {
 
   private outputCompact(type: string, payload: SuccessPayload): void {
     const { message, ...rest } = payload;
-    const icon = this.useColor ? styled(Symbols.SUCCESS, Style.TEXT_SUCCESS) : AsciiSymbols.SUCCESS;
+    const icon = this.useColor ? styled(Symbols.SUCCESS, Style.TEXT_SUCCESS) : AsciiSymbol.SUCCESS;
 
     const mainMsg = message || this.humanizeType(type);
     const extras = this.extractDisplayFields(rest)
@@ -490,7 +490,7 @@ export class OutputFormatter {
   }
 
   private outputErrorCompact(error: ErrorPayload): void {
-    const icon = this.useColor ? styled(Symbols.FAILURE, Style.TEXT_DANGER) : AsciiSymbols.FAILURE;
+    const icon = this.useColor ? styled(Symbols.FAILURE, Style.TEXT_DANGER) : AsciiSymbol.FAILURE;
 
     console.log(`${icon} ${error.message} ${UI.dim(`[${error.code}]`)}`);
     if (error.hint) {
@@ -594,7 +594,7 @@ export class OutputFormatter {
 
     // For larger objects, show as tree structure
     const lines: string[] = [];
-    const sym = this.useUnicode ? Symbol : AsciiSymbol;
+    const sym = this.useUnicode ? Symbols : AsciiSymbol;
     const padding = ' '.repeat(indent);
 
     entries.forEach(([key, val], idx) => {
