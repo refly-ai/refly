@@ -541,12 +541,9 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         insertAtSymbol: () => {
           if (editor && !readonly) {
             hasUserInteractedRef.current = true;
-            // If editor wasn't focused, move cursor to the end
-            const wasFocused = editor.isFocused;
-            if (!wasFocused) {
+            // If editor wasn't focused, focus it while maintaining current selection/position
+            if (!editor.isFocused) {
               editor.commands.focus('end');
-            } else {
-              editor.commands.focus();
             }
             editor.commands.insertContent('@');
             // Try to show mention popup after a short delay
