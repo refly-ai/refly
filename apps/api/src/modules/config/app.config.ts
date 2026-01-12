@@ -314,6 +314,11 @@ export default () => ({
   },
 
   sandbox: {
+    url: process.env.SANDBOX_URL,
+    timeout: process.env.SANDBOX_TIMEOUT_MS,
+    whiteList: process.env.SANDBOX_WHITELIST, // 'uid,uid'
+    blackList: process.env.SANDBOX_BLACKLIST, // 'uid,uid'
+    randomRate: process.env.SANDBOX_RANDOM_RATE, // '20'
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
       // Wrapper
