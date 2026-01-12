@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
+import { useGetUserSettings } from '@refly-packages/ai-workspace-common/hooks/use-get-user-settings';
 import { useUserStoreShallow } from '@refly/stores';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { serverOrigin } from '@refly/ui-kit';
@@ -216,6 +217,9 @@ const CliAuthPage = () => {
     userProfile: state.userProfile,
   }));
 
+  // Initialize user settings (fetches profile and updates login status)
+  useGetUserSettings();
+
   // State
   const [pageState, setPageState] = useState<PageState>('checking_session');
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
@@ -230,7 +234,8 @@ const CliAuthPage = () => {
 
   // Check if user is logged in
   const isLoggedIn = useMemo(() => {
-    return getLoginStatus() || isLogin;
+    const status = getLoginStatus();
+    return status || isLogin;
   }, [getLoginStatus, isLogin]);
 
   // Initialize device info
@@ -279,7 +284,8 @@ const CliAuthPage = () => {
 
   // Check login status and update page state
   useEffect(() => {
-    if (isCheckingLoginStatus === true || isCheckingLoginStatus === undefined) {
+    // Only block if explicitly true (meaning a check is actually in progress)
+    if (isCheckingLoginStatus === true) {
       return; // Still checking
     }
 
@@ -300,7 +306,7 @@ const CliAuthPage = () => {
     } else {
       setPageState('login_or_register');
     }
-  }, [isCheckingLoginStatus, isLoggedIn, deviceLoading, pageState]);
+  }, [isCheckingLoginStatus, isLoggedIn, deviceLoading, pageState, userProfile]);
 
   // Countdown for success page
   useEffect(() => {
