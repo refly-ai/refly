@@ -135,6 +135,7 @@ export const AppLayout = (props: AppLayoutProps) => {
       needOnboarding &&
       location.pathname !== '/onboarding' &&
       location.pathname !== '/' &&
+      !location.pathname.startsWith('/workflow') &&
       !isPublicAccessPage &&
       !matchPricing
     ) {

@@ -1,8 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, Button, Divider } from 'antd';
 import { useSearchParams } from 'react-router-dom';
-import { useListTools } from '@refly-packages/ai-workspace-common/queries';
-import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import { useListTools, useUpdateSettings } from '@refly-packages/ai-workspace-common/queries';
+import { useCanvasResourcesPanelStoreShallow, useUserStoreShallow } from '@refly/stores';
 import { ActionResult, WorkflowPlanRecord } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -73,6 +73,12 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
 
   const { updateTitle } = useUpdateCanvasTitle(canvasId, canvasTitle ?? '');
 
+  const { userProfile, setUserProfile } = useUserStoreShallow((state) => ({
+    userProfile: state.userProfile,
+    setUserProfile: state.setUserProfile,
+  }));
+  const { mutate: updateUserSettings } = useUpdateSettings();
+
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
 
@@ -102,8 +108,13 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     const startNodes = currentNodes.filter((node) => node.type === 'start');
     const skillNodes = currentNodes.filter((node) => node.type === 'skillResponse');
 
+    console.log('currentNodes', currentNodes);
+
+    const isOnboarding = Boolean(userProfile?.preferences?.needOnboarding);
+
     // Check if canvas only contains one start node or one start node + one skill node with empty contentPreview
     const shouldSkipConfirmation =
+      isOnboarding ||
       (currentNodes.length === 1 && startNodes.length === 1) ||
       (currentNodes.length === 2 &&
         startNodes.length === 1 &&
@@ -175,6 +186,24 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       }
     }
 
+    if (isOnboarding) {
+      setUserProfile({
+        ...userProfile,
+        preferences: {
+          ...userProfile?.preferences,
+          needOnboarding: false,
+        },
+      });
+      updateUserSettings({
+        body: {
+          preferences: {
+            ...userProfile?.preferences,
+            needOnboarding: false,
+          },
+        },
+      });
+    }
+
     setTimeout(() => {
       onLayout('LR');
     }, 200);
@@ -204,6 +233,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     source,
     searchParams,
     setSearchParams,
+    userProfile,
   ]);
 
   const handleRetry = useCallback(() => {

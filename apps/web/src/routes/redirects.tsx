@@ -108,7 +108,11 @@ export const ProtectedRoute = ({ children }: { children: ReactElement }) => {
     return <Navigate to={`/login?returnUrl=${returnUrl}`} replace />;
   }
 
-  if (needOnboarding && location.pathname !== '/onboarding') {
+  if (
+    needOnboarding &&
+    location.pathname !== '/onboarding' &&
+    !location.pathname.startsWith('/workflow')
+  ) {
     return <Navigate to="/onboarding" replace />;
   }
 

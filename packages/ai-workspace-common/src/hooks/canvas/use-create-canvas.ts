@@ -106,7 +106,7 @@ export const useCreateCanvas = ({
         navigate(`/project/${projectId}?${queryParams.toString()}`);
       } else {
         navigate(
-          `/canvas/${canvasId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`,
+          `/workflow/${canvasId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`,
         );
       }
 
