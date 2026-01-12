@@ -545,7 +545,7 @@ export const SkillResponseNode = memo(
       });
 
       const query = data?.metadata?.query ?? '';
-      const { llmInputQuery } = processQuery(query, {
+      const { llmInputQuery, referencedVariables } = processQuery(query, {
         replaceVars: true,
         variables,
       });
@@ -560,7 +560,7 @@ export const SkillResponseNode = memo(
           selectedToolsets: purgeToolsets(data?.metadata?.selectedToolsets),
           version: nextVersion,
           modelInfo: data?.metadata?.modelInfo,
-          workflowVariables: variables,
+          workflowVariables: referencedVariables,
         },
         {
           entityType: 'canvas',
