@@ -139,7 +139,7 @@ export const RoutesList: RouteObject[] = [
     element: <WorkflowAppPage />,
   },
   {
-    path: '/pure-copilot',
+    path: '/onboarding',
     element: <PureCopilotPage />,
   },
 ];

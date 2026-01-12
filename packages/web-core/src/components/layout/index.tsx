@@ -94,6 +94,8 @@ export const AppLayout = (props: AppLayoutProps) => {
     }
   }, [i18n, locale]);
 
+  const needOnboarding = userStore.userProfile?.preferences?.needOnboarding;
+
   // Handle root path redirection based on login status
   useEffect(() => {
     if (
@@ -103,7 +105,11 @@ export const AppLayout = (props: AppLayoutProps) => {
     ) {
       hasRedirectedRef.current = true;
       if (userStore.isLogin && userStore.userProfile) {
-        navigate('/workspace', { replace: true });
+        if (needOnboarding) {
+          navigate('/onboarding', { replace: true });
+        } else {
+          navigate('/workspace', { replace: true });
+        }
       } else {
         // Preserve query parameters (e.g., invite code) when redirecting to login
         const searchParams = new URLSearchParams(location.search);
@@ -117,6 +123,30 @@ export const AppLayout = (props: AppLayoutProps) => {
     userStore.isLogin,
     userStore.userProfile,
     userStore.isCheckingLoginStatus,
+    needOnboarding,
+    navigate,
+  ]);
+
+  // Handle onboarding redirection for other pages
+  useEffect(() => {
+    if (
+      !userStore.isCheckingLoginStatus &&
+      userStore.isLogin &&
+      needOnboarding &&
+      location.pathname !== '/onboarding' &&
+      location.pathname !== '/' &&
+      !isPublicAccessPage &&
+      !matchPricing
+    ) {
+      navigate('/onboarding', { replace: true });
+    }
+  }, [
+    userStore.isCheckingLoginStatus,
+    userStore.isLogin,
+    needOnboarding,
+    location.pathname,
+    isPublicAccessPage,
+    matchPricing,
     navigate,
   ]);
 

@@ -2809,6 +2809,10 @@ export type UserPreferences = {
    */
   requireInvitationCode?: boolean;
   /**
+   * Whether this user needs onboarding
+   */
+  needOnboarding?: boolean;
+  /**
    * Web search config
    */
   webSearch?: ProviderConfig;

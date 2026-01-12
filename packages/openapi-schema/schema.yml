@@ -7426,6 +7426,9 @@ components:
         requireInvitationCode:
           type: boolean
           description: Whether to require invitation code
+        needOnboarding:
+          type: boolean
+          description: Whether this user needs onboarding
         webSearch:
           description: Web search config
           $ref: '#/components/schemas/ProviderConfig'
