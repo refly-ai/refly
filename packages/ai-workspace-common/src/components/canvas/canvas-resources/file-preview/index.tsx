@@ -109,40 +109,59 @@ export const FilePreview = memo(
         return;
       }
 
-      try {
-        setLoading(true);
-        setError(null);
+      const maxRetries = 2;
+      let attempt = 0;
 
-        // Use credentials for all requests (publicURL doesn't need it, but it won't hurt)
-        const fetchOptions: RequestInit = { credentials: 'include' };
-        const response = await fetch(fileUrl, fetchOptions);
+      setLoading(true);
+      setError(null);
 
-        if (!response.ok) {
+      while (attempt <= maxRetries) {
+        try {
+          // Use credentials for all requests (publicURL doesn't need it, but it won't hurt)
+          const fetchOptions: RequestInit = { credentials: 'include' };
+          const response = await fetch(fileUrl, fetchOptions);
+
+          if (response.ok) {
+            // Use file.type (MIME type) instead of response header for publicURL
+            // because publicURL headers might return application/octet-stream
+            let contentType = file.type;
+            if (file.type === 'application/octet-stream') {
+              contentType = response.headers.get('content-type') || 'application/octet-stream';
+            }
+            const arrayBuffer = await response.arrayBuffer();
+
+            // Create object URL for the blob with correct MIME type
+            const blob = new Blob([arrayBuffer], { type: contentType });
+            const url = URL.createObjectURL(blob);
+
+            setFileContent({
+              data: arrayBuffer,
+              contentType,
+              url,
+            });
+            setLoading(false);
+            return;
+          }
+
+          // If we are here, response.ok is false
+          if (response.status === 404 && attempt < maxRetries) {
+            attempt++;
+            // Wait for 1 second before retrying
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            continue;
+          }
+
+          // Non-retryable error or max retries reached
           throw new Error(`Failed to fetch file: ${response.status}`);
+        } catch (err) {
+          // If we haven't reached max retries and it's a 404 (handled above) or if it's a network error,
+          // we might want to retry. However, the requirement specifically said 404.
+          // For non-404 errors or if we've reached max retries, we stop.
+          console.error('Error fetching file content:', err);
+          setError(err instanceof Error ? err.message : 'Failed to load file');
+          setLoading(false);
+          return;
         }
-
-        // Use file.type (MIME type) instead of response header for publicURL
-        // because publicURL headers might return application/octet-stream
-        let contentType = file.type;
-        if (file.type === 'application/octet-stream') {
-          contentType = response.headers.get('content-type') || 'application/octet-stream';
-        }
-        const arrayBuffer = await response.arrayBuffer();
-
-        // Create object URL for the blob with correct MIME type
-        const blob = new Blob([arrayBuffer], { type: contentType });
-        const url = URL.createObjectURL(blob);
-
-        setFileContent({
-          data: arrayBuffer,
-          contentType,
-          url,
-        });
-      } catch (err) {
-        console.error('Error fetching file content:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load file');
-      } finally {
-        setLoading(false);
       }
     }, [fileUrl, file.type, isLoadingUrl]);
 
