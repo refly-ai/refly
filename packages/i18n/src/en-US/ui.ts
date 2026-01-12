@@ -1155,6 +1155,7 @@ const translations = {
     sharing: 'Sharing file...',
     shareSuccess: 'File shared successfully! Link copied to clipboard.',
     shareLoading: 'Loading shared file...',
+    fileNoContent: 'File has no content.',
     notFound: 'File Not Found',
     notFoundDesc: 'The file you are looking for does not exist or has been removed.',
   },

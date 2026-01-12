@@ -1309,6 +1309,7 @@ const translations = {
     sharing: '正在分享文件...',
     shareSuccess: '文件分享成功！链接已复制到剪贴板。',
     shareLoading: '正在加载共享文件...',
+    fileNoContent: '文件没有内容。',
     notFound: '文件未找到',
     notFoundDesc: '您查找的文件不存在或已被删除。',
   },
