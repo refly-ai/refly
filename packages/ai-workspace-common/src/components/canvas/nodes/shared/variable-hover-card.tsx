@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import mime from 'mime';
 import { DriveFile, VariableValue } from '@refly/openapi-schema';
-import { RESOURCE_TYPE_ICON_MAP } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/start';
+import { RESOURCE_TYPE_ICON_MAP } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/input-parameter-row';
 import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
 import { Attachment, List } from 'refly-icons';
 import { BiText } from 'react-icons/bi';
@@ -113,7 +113,7 @@ export const VariableHoverCard = memo(
     };
 
     return (
-      <div className="w-[300px] max-h-[300px] flex flex-col bg-refly-bg-content-z2 p-3 shadow-xl rounded-xl border border-refly-border-1 select-text">
+      <div className="w-[300px] max-h-[270px] flex flex-col bg-refly-bg-content-z2 p-3 shadow-xl rounded-xl border border-refly-border-1 select-text">
         {renderContent()}
       </div>
     );
