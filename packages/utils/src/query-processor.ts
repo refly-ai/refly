@@ -62,6 +62,7 @@ export interface ProcessQueryResult {
   processedQuery: string;
   llmInputQuery: string;
   updatedQuery: string;
+  referencedVariables: WorkflowVariable[];
   resourceVars: WorkflowVariable[];
   optionalVarsNotProvided: WorkflowVariable[];
 }
@@ -103,12 +104,21 @@ function processMention(
     files: DriveFile[];
     mode: MentionFormatMode;
     resourceVars: WorkflowVariable[];
+    referencedVariables: WorkflowVariable[];
     optionalVarsNotProvided: WorkflowVariable[];
     updatedQuery: string;
     lookupToolsetDefinitionById?: (id: string) => ToolsetDefinition;
   },
 ): { replacement: string; updatedQuery: string } {
-  const { replaceVars, variables, files, mode, resourceVars, optionalVarsNotProvided } = options;
+  const {
+    replaceVars,
+    variables,
+    files,
+    mode,
+    resourceVars,
+    referencedVariables,
+    optionalVarsNotProvided,
+  } = options;
   let updatedQuery = options.updatedQuery;
 
   const params: Record<string, string> = {};
@@ -126,10 +136,16 @@ function processMention(
   const finalToolsetKey = toolsetDefinition?.key ?? toolsetKey;
 
   if (type === 'var') {
-    if (replaceVars && variables.length > 0) {
-      // Find variable by id
-      const variable = variables.find((v) => 'variableId' in v && v.variableId === id);
+    const variable = variables.find((v) => 'variableId' in v && v.variableId === id);
 
+    if (variable && mode === 'display') {
+      const alreadyAdded = referencedVariables.some((v) => v.variableId === variable.variableId);
+      if (!alreadyAdded) {
+        referencedVariables.push(variable);
+      }
+    }
+
+    if (replaceVars && variables.length > 0) {
       if (variable && 'value' in variable) {
         if (variable.variableType === 'resource') {
           // Check if the resource variable has a value
@@ -220,11 +236,18 @@ function processMention(
       // Mark for resource injection and use variable's name
       // Only add to resourceVars once (when processing display mode)
       if (mode === 'display') {
-        const alreadyAdded = resourceVars.some(
+        const alreadyAddedToResource = resourceVars.some(
           (rv) => rv.variableId === matchingVariable.variableId,
         );
-        if (!alreadyAdded) {
+        if (!alreadyAddedToResource) {
           resourceVars.push({ ...matchingVariable, value: matchingVariable.value });
+        }
+
+        const alreadyAddedToReferenced = referencedVariables.some(
+          (rv) => rv.variableId === matchingVariable.variableId,
+        );
+        if (!alreadyAddedToReferenced) {
+          referencedVariables.push(matchingVariable);
         }
 
         // Update the updatedQuery with the correct resource name
@@ -291,12 +314,14 @@ export function processQueryWithMentions(
       processedQuery: query,
       llmInputQuery: query,
       updatedQuery: query,
+      referencedVariables: [],
       resourceVars: [],
       optionalVarsNotProvided: [],
     };
   }
 
   const resourceVars: WorkflowVariable[] = [];
+  const referencedVariables: WorkflowVariable[] = [];
   const optionalVarsNotProvided: WorkflowVariable[] = [];
   let updatedQuery = query;
 
@@ -311,6 +336,7 @@ export function processQueryWithMentions(
       files,
       mode: 'display',
       resourceVars,
+      referencedVariables,
       optionalVarsNotProvided,
       updatedQuery,
       lookupToolsetDefinitionById,
@@ -327,6 +353,7 @@ export function processQueryWithMentions(
       files,
       mode: 'llm_input',
       resourceVars: [], // Don't modify resourceVars in llm_input mode
+      referencedVariables: [], // Don't modify referencedVariables in llm_input mode
       optionalVarsNotProvided: [], // Don't modify optionalVarsNotProvided in llm_input mode
       updatedQuery: '', // Don't modify updatedQuery in llm_input mode
       lookupToolsetDefinitionById,
@@ -334,7 +361,14 @@ export function processQueryWithMentions(
     return result.replacement;
   });
 
-  return { processedQuery, llmInputQuery, updatedQuery, resourceVars, optionalVarsNotProvided };
+  return {
+    processedQuery,
+    llmInputQuery,
+    updatedQuery,
+    referencedVariables,
+    resourceVars,
+    optionalVarsNotProvided,
+  };
 }
 
 /**
