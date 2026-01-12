@@ -11,16 +11,16 @@ import { getCacheDir } from '../../config/paths.js';
 import { CLIError } from '../../utils/errors.js';
 
 interface NodeType {
+  type: string;
   name: string;
   description: string;
   category: string;
-  inputSchema?: Record<string, unknown>;
-  outputSchema?: Record<string, unknown>;
+  authorized?: boolean;
 }
 
 interface NodeTypesResponse {
-  types: NodeType[];
-  version: string;
+  nodeTypes: NodeType[];
+  total: number;
 }
 
 const CACHE_FILE = 'node-types.json';
@@ -47,16 +47,17 @@ export const nodeTypesCommand = new Command('types')
       }
 
       // Filter by category if specified
-      let types = data.types;
+      let nodeTypes = data.nodeTypes || [];
       if (options.category) {
-        types = types.filter((t) => t.category.toLowerCase() === options.category.toLowerCase());
+        nodeTypes = nodeTypes.filter(
+          (t: NodeType) => t.category.toLowerCase() === options.category.toLowerCase(),
+        );
       }
 
       ok('node.types', {
-        types,
-        total: types.length,
-        version: data.version,
-        categories: [...new Set(data.types.map((t) => t.category))],
+        nodeTypes,
+        total: nodeTypes.length,
+        categories: [...new Set(data.nodeTypes?.map((t: NodeType) => t.category) || [])],
       });
     } catch (error) {
       if (error instanceof CLIError) {

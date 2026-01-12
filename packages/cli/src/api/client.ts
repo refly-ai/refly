@@ -229,6 +229,137 @@ function mapAPIError(status: number, response: APIResponse): CLIError {
 }
 
 /**
+ * Stream response interface for file downloads
+ */
+export interface StreamResponse {
+  data: Buffer;
+  filename: string;
+  contentType: string;
+  size: number;
+}
+
+/**
+ * Make an authenticated streaming API request for file downloads.
+ * Reuses the same auth logic as apiRequest() for OAuth/API Key support.
+ */
+export async function apiRequestStream(
+  path: string,
+  options: { timeout?: number } = {},
+): Promise<StreamResponse> {
+  const { timeout = 300000 } = options; // 5 min default for downloads
+
+  const endpoint = getApiEndpoint();
+  const url = `${endpoint}${path}`;
+
+  // Build headers with authentication (same logic as apiRequest)
+  const headers: Record<string, string> = {
+    'User-Agent': 'refly-cli/0.1.0',
+  };
+
+  const authMethod = getAuthMethod();
+
+  if (authMethod === 'apikey') {
+    // Use API Key authentication
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      throw new AuthError('Not authenticated');
+    }
+    headers['X-API-Key'] = apiKey;
+  } else {
+    // Use OAuth authentication (default)
+    let accessToken = getAccessToken();
+
+    if (!accessToken) {
+      throw new AuthError('Not authenticated');
+    }
+
+    // Check if OAuth token is expired and refresh if needed
+    const expiresAt = getTokenExpiresAt();
+    if (expiresAt && new Date(expiresAt) < new Date()) {
+      logger.debug('Access token expired, refreshing...');
+      try {
+        accessToken = await refreshAccessToken();
+      } catch (error) {
+        logger.error('Failed to refresh token:', error);
+        throw new AuthError('Session expired, please login again');
+      }
+    }
+
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  // Create abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    logger.debug(`API Stream Request: GET ${path}`);
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      // Try to parse error response
+      try {
+        const errorData = (await response.json()) as APIResponse;
+        throw mapAPIError(response.status, errorData);
+      } catch (e) {
+        if (e instanceof CLIError) throw e;
+        throw new CLIError(ErrorCodes.API_ERROR, `HTTP ${response.status}: ${response.statusText}`);
+      }
+    }
+
+    // Parse filename from Content-Disposition header
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = 'download';
+    if (contentDisposition) {
+      // Handle both: filename="name.ext" and filename*=UTF-8''name.ext
+      const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';\n]+)["']?/i);
+      if (match) {
+        filename = decodeURIComponent(match[1]);
+      }
+    }
+
+    // Get the response as ArrayBuffer and convert to Buffer
+    const arrayBuffer = await response.arrayBuffer();
+    const data = Buffer.from(arrayBuffer);
+
+    return {
+      data,
+      filename,
+      contentType: response.headers.get('content-type') || 'application/octet-stream',
+      size: data.length,
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+
+    if (error instanceof CLIError) {
+      throw error;
+    }
+
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new CLIError(ErrorCodes.TIMEOUT, 'Download timed out', undefined, 'Try again later');
+      }
+
+      if (error.message.includes('fetch')) {
+        throw new NetworkError('Cannot connect to API');
+      }
+    }
+
+    throw new CLIError(
+      ErrorCodes.INTERNAL_ERROR,
+      error instanceof Error ? error.message : 'Unknown error',
+    );
+  }
+}
+
+/**
  * Verify API connection and authentication
  */
 export async function verifyConnection(): Promise<{

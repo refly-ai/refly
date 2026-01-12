@@ -26,7 +26,7 @@ import { CanvasService } from '../canvas/canvas.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { WorkflowService } from './workflow.service';
 import { ToolService } from '../tool/tool.service';
-import { genCanvasID } from '@refly/utils';
+import { genCanvasID, genNodeID, genNodeEntityId } from '@refly/utils';
 import {
   CreateWorkflowRequest,
   CreateWorkflowResponse,
@@ -43,8 +43,11 @@ import {
   ListNodeTypesResponse,
   NodeTypeInfo,
   NodeExecutionStatus,
+  GenerateWorkflowCliRequest,
+  GenerateWorkflowCliResponse,
   CLI_ERROR_CODES,
 } from './workflow-cli.dto';
+import { CopilotAutogenService } from '../copilot-autogen/copilot-autogen.service';
 
 // ============================================================================
 // Helper Functions
@@ -78,6 +81,130 @@ function buildConnectToFilters(
 }
 
 /**
+ * CLI node input structure (from CLI builder schema)
+ */
+interface CliNodeInput {
+  id: string;
+  type: string;
+  input?: Record<string, unknown>;
+  dependsOn?: string[];
+  // Also support proper CanvasNode fields if passed
+  data?: {
+    title?: string;
+    entityId?: string;
+    metadata?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+  position?: { x: number; y: number };
+}
+
+/**
+ * Transform CLI nodes to proper canvas node format.
+ * CLI nodes use a simplified schema with `input` field, but canvas expects
+ * proper `data` structure with `entityId`, `metadata`, etc.
+ *
+ * This function ensures nodes have:
+ * - Unique node ID (generated if missing)
+ * - Valid canvas node type
+ * - Proper data structure with entityId and metadata
+ * - Default position (prepareAddNode will calculate actual position)
+ */
+function transformCliNodesToCanvasNodes(
+  cliNodes: CliNodeInput[],
+): Array<Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>> {
+  return cliNodes.map((cliNode) => {
+    const nodeType = cliNode.type as CanvasNodeType;
+
+    // Generate entityId based on node type
+    const entityId = cliNode.data?.entityId || genNodeEntityId(nodeType);
+
+    // Build metadata based on node type
+    const defaultMetadata = getDefaultMetadataForNodeType(nodeType);
+    const inputMetadata = cliNode.input || {};
+
+    // Merge CLI input into metadata (for configuration like query, modelInfo, etc.)
+    const metadata = {
+      ...defaultMetadata,
+      ...cliNode.data?.metadata,
+      ...inputMetadata,
+      sizeMode: 'compact' as const,
+    };
+
+    // Build the canvas node
+    return {
+      id: cliNode.id || genNodeID(),
+      type: nodeType,
+      data: {
+        title: cliNode.data?.title || getDefaultTitleForNodeType(nodeType),
+        entityId,
+        contentPreview: (cliNode.data?.contentPreview as string) || '',
+        metadata,
+      },
+    };
+  });
+}
+
+/**
+ * Get default metadata for a node type
+ */
+function getDefaultMetadataForNodeType(nodeType: CanvasNodeType): Record<string, unknown> {
+  switch (nodeType) {
+    case 'skillResponse':
+      return {
+        status: 'init',
+        version: 0,
+      };
+    case 'document':
+      return {
+        contentPreview: '',
+        lastModified: new Date().toISOString(),
+        status: 'finish',
+      };
+    case 'resource':
+      return {
+        resourceType: 'weblink',
+        lastAccessed: new Date().toISOString(),
+      };
+    case 'tool':
+      return {
+        toolType: 'TextToSpeech',
+        configuration: {},
+        status: 'ready',
+      };
+    case 'toolResponse':
+      return {
+        status: 'waiting',
+      };
+    case 'memo':
+      return {};
+    default:
+      return {};
+  }
+}
+
+/**
+ * Get default title for a node type
+ */
+function getDefaultTitleForNodeType(nodeType: CanvasNodeType): string {
+  switch (nodeType) {
+    case 'skillResponse':
+      return 'Agent';
+    case 'document':
+      return 'Document';
+    case 'resource':
+      return 'Resource';
+    case 'tool':
+      return 'Tool';
+    case 'toolResponse':
+      return 'Tool Response';
+    case 'memo':
+      return 'Memo';
+    default:
+      return 'Untitled';
+  }
+}
+
+/**
  * Merge workflow variables with runtime variables.
  * Runtime variables override existing ones by name.
  */
@@ -107,6 +234,7 @@ function mergeWorkflowVariables(
 /**
  * Apply workflow operations to nodes and edges.
  * Returns the modified nodes and edges.
+ * Note: When adding nodes, CLI nodes are transformed to proper canvas format.
  */
 function applyWorkflowOperations(
   nodes: CanvasNode[],
@@ -118,9 +246,24 @@ function applyWorkflowOperations(
 
   for (const op of operations) {
     switch (op.type) {
-      case 'add_node':
-        resultNodes.push(op.node);
+      case 'add_node': {
+        // Transform CLI node to proper canvas format if needed
+        const [transformedNode] = transformCliNodesToCanvasNodes([
+          op.node as unknown as CliNodeInput,
+        ]);
+        // Merge with original node to preserve any canvas-specific fields
+        const canvasNode: CanvasNode = {
+          ...op.node,
+          type: transformedNode.type,
+          data: {
+            ...transformedNode.data,
+            ...op.node.data, // Preserve any existing data fields
+          },
+          position: op.node.position || { x: 0, y: 0 },
+        };
+        resultNodes.push(canvasNode);
         break;
+      }
       case 'remove_node': {
         const nodeIdx = resultNodes.findIndex((n) => n.id === op.nodeId);
         if (nodeIdx !== -1) {
@@ -201,11 +344,16 @@ export class WorkflowCliController {
     private readonly canvasService: CanvasService,
     private readonly canvasSyncService: CanvasSyncService,
     private readonly workflowService: WorkflowService,
+    private readonly copilotAutogenService: CopilotAutogenService,
   ) {}
 
   /**
    * Create a new workflow
    * POST /v1/cli/workflow
+   *
+   * Note: Canvas is created with default nodes (start node + skillResponse node)
+   * to ensure proper canvas initialization. The start node is displayed as "User Input"
+   * in the UI and is required for the canvas to function correctly.
    */
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -217,26 +365,37 @@ export class WorkflowCliController {
 
     try {
       // Create canvas with workflow data
+      // Do NOT skip default nodes - the start node (User Input) is required for canvas to work properly
       const canvasId = genCanvasID();
-      const canvas = await this.canvasService.createCanvas(
-        user,
-        {
-          canvasId,
-          title: body.name,
-          variables: body.variables,
-        },
-        { skipDefaultNodes: true },
-      );
+      const canvas = await this.canvasService.createCanvas(user, {
+        canvasId,
+        title: body.name,
+        variables: body.variables,
+      });
 
-      // If spec contains nodes/edges, add them to the canvas
+      // If spec contains nodes/edges, add them to the canvas (in addition to default nodes)
       if (body.spec?.nodes?.length) {
+        // Transform CLI nodes to proper canvas node format
+        // CLI nodes may use simplified schema with `input` field instead of proper `data` structure
+        const transformedNodes = transformCliNodesToCanvasNodes(
+          body.spec.nodes as unknown as CliNodeInput[],
+        );
+
+        // Build connection map using original node IDs (before transformation)
         const connectToMap = body.spec.edges
-          ? buildConnectToFilters(body.spec.nodes, body.spec.edges)
+          ? buildConnectToFilters(
+              transformedNodes.map((n) => ({
+                ...n,
+                id: n.id!,
+                position: { x: 0, y: 0 },
+              })) as CanvasNode[],
+              body.spec.edges,
+            )
           : new Map();
 
-        const nodesToAdd = body.spec.nodes.map((node) => ({
+        const nodesToAdd = transformedNodes.map((node) => ({
           node,
-          connectTo: connectToMap.get(node.id) || [],
+          connectTo: connectToMap.get(node.id!) || [],
         }));
 
         await this.canvasSyncService.addNodesToCanvas(user, canvasId, nodesToAdd, {
@@ -255,6 +414,59 @@ export class WorkflowCliController {
         CLI_ERROR_CODES.VALIDATION_ERROR,
         `Failed to create workflow: ${(error as Error).message}`,
         'Check your workflow specification and try again',
+      );
+    }
+  }
+
+  /**
+   * Generate a workflow using AI from natural language
+   * POST /v1/cli/workflow/generate
+   *
+   * This endpoint uses the Copilot Agent to generate a complete workflow
+   * from a natural language description. It delegates to CopilotAutogenService.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('generate')
+  async generate(
+    @LoginedUser() user: User,
+    @Body() body: GenerateWorkflowCliRequest,
+  ): Promise<{ success: boolean; data: GenerateWorkflowCliResponse }> {
+    this.logger.log(`Generating workflow for user ${user.uid}: ${body.query.slice(0, 50)}...`);
+
+    try {
+      // Delegate to CopilotAutogenService which handles:
+      // 1. Canvas creation (or use existing)
+      // 2. Copilot Agent invocation
+      // 3. WorkflowPlan extraction (via planId reference)
+      // 4. Canvas nodes/edges generation
+      // 5. Canvas state update
+      const result = await this.copilotAutogenService.generateWorkflow(user, {
+        query: body.query,
+        canvasId: body.canvasId,
+        projectId: body.projectId,
+        modelItemId: body.modelItemId,
+        locale: body.locale,
+        variables: body.variables,
+        skipDefaultNodes: body.skipDefaultNodes,
+        timeout: body.timeout,
+      });
+
+      return buildCliSuccessResponse({
+        workflowId: result.canvasId,
+        canvasId: result.canvasId,
+        sessionId: result.sessionId,
+        resultId: result.resultId,
+        planId: result.planId,
+        workflowPlan: result.workflowPlan,
+        nodesCount: result.nodesCount,
+        edgesCount: result.edgesCount,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to generate workflow: ${(error as Error).message}`);
+      throwCliError(
+        CLI_ERROR_CODES.EXECUTION_FAILED,
+        `Failed to generate workflow: ${(error as Error).message}`,
+        'Try refining your query to be more specific about the workflow you want to create',
       );
     }
   }
@@ -630,6 +842,13 @@ export class NodeCliController {
     const nodeTypes: NodeTypeInfo[] = [];
 
     // Core node types (always available)
+    nodeTypes.push({
+      type: 'start',
+      name: 'Start / User Input',
+      description: 'Workflow entry point that captures user input and initiates execution',
+      category: 'core',
+    });
+
     nodeTypes.push({
       type: 'skillResponse',
       name: 'AI Agent',

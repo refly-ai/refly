@@ -8,6 +8,7 @@ import { ToolModule } from '../tool/tool.module';
 import { ProviderModule } from '../provider/provider.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { CommonModule } from '../common/common.module';
+import { WorkflowPlanModule } from '../workflow/workflow-plan.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CommonModule } from '../common/common.module';
     ToolModule,
     ProviderModule,
     CanvasSyncModule,
+    WorkflowPlanModule,
   ],
   controllers: [CopilotAutogenController],
   providers: [CopilotAutogenService],

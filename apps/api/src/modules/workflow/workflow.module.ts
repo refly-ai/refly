@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { CommonModule } from '../common/common.module';
 import { CanvasModule } from '../canvas/canvas.module';
@@ -6,6 +6,8 @@ import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { SkillModule } from '../skill/skill.module';
 import { ActionModule } from '../action/action.module';
 import { ToolModule } from '../tool/tool.module';
+import { ProviderModule } from '../provider/provider.module';
+import { CopilotAutogenModule } from '../copilot-autogen/copilot-autogen.module';
 import { WorkflowService } from './workflow.service';
 import { WorkflowController } from './workflow.controller';
 import { WorkflowCliController, NodeCliController } from './workflow-cli.controller';
@@ -27,6 +29,8 @@ import { NotificationModule } from '../notification/notification.module';
     ActionModule,
     CreditModule,
     NotificationModule,
+    ProviderModule,
+    forwardRef(() => CopilotAutogenModule),
     ...(isDesktop()
       ? []
       : [

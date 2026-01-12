@@ -4,12 +4,14 @@
 
 import { Command } from 'commander';
 import { workflowCreateCommand } from './create.js';
+import { workflowGenerateCommand } from './generate.js';
 import { workflowListCommand } from './list.js';
 import { workflowGetCommand } from './get.js';
 import { workflowEditCommand } from './edit.js';
 import { workflowDeleteCommand } from './delete.js';
 import { workflowRunCommand } from './run.js';
 import { workflowAbortCommand } from './abort.js';
+import { workflowStatusCommand } from './status.js';
 
 // The main run command handles `workflow run <workflowId>`
 // We need to handle this specially since `run` is both a command and a subcommand group
@@ -17,12 +19,14 @@ import { workflowAbortCommand } from './abort.js';
 export const workflowCommand = new Command('workflow')
   .description('Manage and run workflows')
   .addCommand(workflowCreateCommand)
+  .addCommand(workflowGenerateCommand)
   .addCommand(workflowListCommand)
   .addCommand(workflowGetCommand)
   .addCommand(workflowEditCommand)
   .addCommand(workflowDeleteCommand)
   .addCommand(workflowRunCommand)
-  .addCommand(workflowAbortCommand);
+  .addCommand(workflowAbortCommand)
+  .addCommand(workflowStatusCommand);
 
 // Add the run get subcommand under a different path
 // Users will use: refly workflow run get <runId>

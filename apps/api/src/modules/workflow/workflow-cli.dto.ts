@@ -172,6 +172,86 @@ export interface GetWorkflowPlanRequest {
 }
 
 // ============================================================================
+// AI Workflow Generation DTOs (CLI)
+// ============================================================================
+
+/**
+ * Request to generate a workflow using AI from natural language
+ */
+export interface GenerateWorkflowCliRequest {
+  /** Natural language description of the workflow */
+  query: string;
+  /** Optional project ID */
+  projectId?: string;
+  /** Optional canvas ID (if updating existing workflow) */
+  canvasId?: string;
+  /** Optional model to use for generation */
+  modelItemId?: string;
+  /** Output language locale */
+  locale?: string;
+  /** Predefined workflow variables */
+  variables?: WorkflowVariable[];
+  /** Skip default nodes (start + skillResponse) when creating canvas */
+  skipDefaultNodes?: boolean;
+  /** Timeout in milliseconds for waiting Copilot completion */
+  timeout?: number;
+}
+
+/**
+ * Response from AI workflow generation
+ */
+export interface GenerateWorkflowCliResponse {
+  /** Workflow/Canvas ID */
+  workflowId: string;
+  /** Canvas ID (same as workflowId) */
+  canvasId: string;
+  /** Copilot session ID */
+  sessionId: string;
+  /** Action result ID */
+  resultId: string;
+  /** Workflow plan ID (for refine operations) */
+  planId: string;
+  /** The generated workflow plan */
+  workflowPlan: WorkflowPlan;
+  /** Number of nodes generated */
+  nodesCount: number;
+  /** Number of edges generated */
+  edgesCount: number;
+}
+
+/**
+ * Request to refine an existing workflow using AI
+ */
+export interface RefineWorkflowCliRequest {
+  /** Refinement instruction */
+  instruction: string;
+  /** Optional model to use for refinement */
+  modelItemId?: string;
+  /** Output language locale */
+  locale?: string;
+}
+
+/**
+ * Response from workflow refinement
+ */
+export interface RefineWorkflowCliResponse {
+  /** Workflow/Canvas ID */
+  workflowId: string;
+  /** Copilot session ID */
+  sessionId: string;
+  /** Action result ID */
+  resultId: string;
+  /** Updated workflow plan ID */
+  planId: string;
+  /** Number of operations applied */
+  operationsCount: number;
+  /** Number of nodes after refinement */
+  nodesCount: number;
+  /** Number of edges after refinement */
+  edgesCount: number;
+}
+
+// ============================================================================
 // Error Response DTOs
 // ============================================================================
 

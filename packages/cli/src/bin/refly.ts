@@ -1,12 +1,12 @@
 /**
  * Refly CLI - Main entry point
  *
- * All commands output JSON only.
+ * Supports multiple output formats: json, pretty, compact, plain.
  * Exit codes: 0=success, 1=error, 2=auth, 3=validation, 4=network, 5=not found
  */
 
 import { Command } from 'commander';
-import { fail, ErrorCodes } from '../utils/output.js';
+import { fail, ErrorCodes, configureOutput, type OutputFormat } from '../utils/output.js';
 
 // Import commands
 import { initCommand } from '../commands/init.js';
@@ -19,6 +19,8 @@ import { configCommand } from '../commands/config.js';
 import { builderCommand } from '../commands/builder/index.js';
 import { workflowCommand } from '../commands/workflow/index.js';
 import { nodeCommand } from '../commands/node/index.js';
+import { toolCommand } from '../commands/tool/index.js';
+import { fileCommand } from '../commands/file/index.js';
 
 const VERSION = '0.1.0';
 
@@ -29,11 +31,25 @@ program
   .description('Refly CLI - Workflow orchestration for Claude Code')
   .version(VERSION, '-v, --version', 'Output CLI version')
   .option('--host <url>', 'API endpoint override')
-  .option('--debug', 'Enable debug logging');
+  .option('--debug', 'Enable debug logging')
+  .option(
+    '-f, --format <format>',
+    'Output format: json, pretty, compact, plain (default: auto-detect)',
+  )
+  .option('--no-color', 'Disable colored output')
+  .option('--verbose', 'Enable verbose output');
 
 // Global options handling
 program.hook('preAction', (thisCommand) => {
   const opts = thisCommand.opts();
+
+  // Configure output format (must be done before any output)
+  configureOutput({
+    format: opts.format as OutputFormat | undefined,
+    noColor: opts.color === false,
+    verbose: opts.verbose ?? false,
+    autoDetect: !opts.format, // Auto-detect only if format not explicitly set
+  });
 
   // Set API endpoint override
   if (opts.host) {
@@ -59,6 +75,8 @@ program.addCommand(configCommand);
 program.addCommand(builderCommand);
 program.addCommand(workflowCommand);
 program.addCommand(nodeCommand);
+program.addCommand(toolCommand);
+program.addCommand(fileCommand);
 
 // Error handling
 program.exitOverride((err) => {

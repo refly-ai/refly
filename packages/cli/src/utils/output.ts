@@ -1,7 +1,21 @@
 /**
- * Unified JSON output helpers for CLI commands.
+ * Unified output helpers for CLI commands.
+ * Supports multiple output formats: json, pretty, compact, plain.
  * All CLI output MUST go through these functions.
  */
+
+import {
+  OutputFormatter,
+  OutputFormat,
+  resolveFormat,
+  initFormatter,
+  getFormatter,
+  type FormatterOptions,
+  type SuccessPayload,
+} from './formatter.js';
+
+export type { OutputFormat, FormatterOptions, SuccessPayload };
+export { OutputFormatter, resolveFormat, initFormatter, getFormatter };
 
 export interface SuccessResponse<T = unknown> {
   ok: true;
@@ -29,9 +43,115 @@ export type CLIResponse<T = unknown> = SuccessResponse<T> | ErrorResponse;
 const VERSION = '1.0';
 
 /**
+ * Global output configuration
+ */
+let outputConfig: {
+  format: OutputFormat;
+  noColor: boolean;
+  verbose: boolean;
+} = {
+  format: 'pretty', // Default to pretty for better human readability
+  noColor: false,
+  verbose: false,
+};
+
+/**
+ * Configure global output settings.
+ * Call this early in CLI initialization.
+ */
+export function configureOutput(options: {
+  format?: OutputFormat;
+  noColor?: boolean;
+  verbose?: boolean;
+  autoDetect?: boolean;
+}): void {
+  outputConfig = {
+    format: options.format || resolveFormat(undefined, options.autoDetect ?? true),
+    noColor: options.noColor ?? false,
+    verbose: options.verbose ?? false,
+  };
+
+  // Initialize the global formatter
+  initFormatter(outputConfig);
+}
+
+/**
+ * Get current output format
+ */
+export function getOutputFormat(): OutputFormat {
+  return outputConfig.format;
+}
+
+/**
+ * Check if using pretty output (non-JSON)
+ */
+export function isPrettyOutput(): boolean {
+  return outputConfig.format !== 'json';
+}
+
+/**
  * Output a success response and exit with code 0
  */
 export function ok<T>(type: string, payload: T): never {
+  const formatter = getFormatter();
+  formatter.success(type, payload as unknown as SuccessPayload);
+  process.exit(0);
+}
+
+/**
+ * Output a success response without exiting (for streaming/multiple outputs)
+ */
+export function print<T>(type: string, payload: T): void {
+  const formatter = getFormatter();
+  formatter.success(type, payload as unknown as SuccessPayload);
+}
+
+/**
+ * Output an error response and exit with appropriate code
+ */
+export function fail(
+  code: string,
+  message: string,
+  options?: {
+    details?: Record<string, unknown>;
+    hint?: string;
+    exitCode?: number;
+  },
+): never {
+  const formatter = getFormatter();
+  formatter.error({
+    code,
+    message,
+    details: options?.details,
+    hint: options?.hint,
+  });
+  process.exit(options?.exitCode ?? getExitCode(code));
+}
+
+/**
+ * Output an error without exiting
+ */
+export function printError(
+  code: string,
+  message: string,
+  options?: {
+    details?: Record<string, unknown>;
+    hint?: string;
+  },
+): void {
+  const formatter = getFormatter();
+  formatter.error({
+    code,
+    message,
+    details: options?.details,
+    hint: options?.hint,
+  });
+}
+
+/**
+ * Legacy JSON output (for backward compatibility in scripts)
+ */
+export function okJson<T>(type: string, payload: T): never {
   const response: SuccessResponse<T> = {
     ok: true,
     type,
@@ -43,9 +163,9 @@ export function ok<T>(type: string, payload: T): never {
 }
 
 /**
- * Output an error response and exit with appropriate code
+ * Legacy JSON error output (for backward compatibility in scripts)
  */
-export function fail(
+export function failJson(
   code: string,
   message: string,
   options?: {

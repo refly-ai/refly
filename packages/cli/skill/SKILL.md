@@ -22,7 +22,6 @@ When this skill is triggered:
 
 2. MUST rely only on CLI JSON output for state.
    - Never assume a workflow exists unless CLI returned it.
-   - Never assume builder state unless `refly builder status` confirms it.
 
 3. MUST keep token private.
    - Never print, request, or infer tokens.
@@ -76,78 +75,82 @@ refly status                  # Check CLI and auth status
 refly whoami                  # Show current user
 ```
 
-### Builder Mode (Local State Machine)
-
-Use Builder for multi-step workflow construction:
-
-```bash
-refly builder start --name "<workflowName>"
-refly builder add-node --node '<json>'
-refly builder update-node --id "<nodeId>" --patch '<json>'
-refly builder remove-node --id "<nodeId>"
-refly builder connect --from "<nodeId>" --to "<nodeId>"
-refly builder disconnect --from "<nodeId>" --to "<nodeId>"
-refly builder status
-refly builder graph
-refly builder validate
-refly builder commit
-refly builder abort
-```
-
 ### Workflow CRUD
 ```bash
 refly workflow create --name "<name>" --spec '<json>'
+refly workflow generate --query "<natural language description>"  # AI-powered workflow generation
 refly workflow edit <workflowId> --ops '<json>'
 refly workflow get <workflowId>
 refly workflow list
 refly workflow delete <workflowId>
 ```
 
-### Workflow Run
+### Workflow Run & Monitoring
 ```bash
 refly workflow run <workflowId> --input '<json>'
-refly workflow run get <runId>
+refly workflow status <runId>                    # Get detailed execution status
+refly workflow status <runId> --watch            # Watch until completion (polls every 2s)
 refly workflow abort <runId>
 ```
 
-### Node Debug
+### Node Operations
 ```bash
-refly node types
-refly node run --type "<nodeType>" --input '<json>'
+refly node types                                 # List available node types
+refly node run --type "<nodeType>" --input '<json>'  # Run a node for debugging
+refly node result <resultId>                     # Get node execution result
+refly node result <resultId> --include-tool-calls    # Include tool call details
+```
+
+### Tool Inspection
+```bash
+refly tool calls --result-id <resultId>          # Get tool execution results for a node
+```
+
+### File Operations
+```bash
+refly file list                                  # List files
+refly file list --canvas-id <id>                 # Filter by canvas
+refly file get <fileId>                          # Get file metadata and content
+refly file download <fileId> -o ./output.txt     # Download file to local filesystem
 ```
 
 ---
 
-## 4) DAG Rules (STRICT)
+## 4) AI Workflow Generation
+
+Use `workflow generate` to create workflows from natural language:
+
+```bash
+# Basic generation
+refly workflow generate --query "Parse PDF, summarize content, translate to Chinese"
+
+# With options
+refly workflow generate \
+  --query "Research topic, write article, export to markdown" \
+  --model-id <modelId> \
+  --locale zh \
+  --timeout 300000
+
+# With predefined variables
+refly workflow generate \
+  --query "Process documents from input folder" \
+  --variables '[{"variableId":"v1","name":"inputFolder","variableType":"string"}]'
+```
+
+The generate command:
+- Invokes AI to parse the natural language query
+- Creates a workflow plan with tasks
+- Builds the DAG with appropriate nodes and edges
+- Returns workflowId, planId, and task details
+
+---
+
+## 5) DAG Rules (STRICT)
 
 - Unique node ids.
 - No cycles.
 - Dependencies reference existing nodes only.
 - Insert X between A→B by rewiring dependencies.
-
----
-
-## 5) Builder State Machine
-
-Builder state is owned by CLI and persisted locally.
-
-### States
-- `IDLE` - No active draft
-- `DRAFT` - Editing in progress
-- `VALIDATED` - DAG validation passed
-- `COMMITTED` - Workflow created
-
-### Transitions
-- `IDLE` → `DRAFT`: `builder start`
-- `DRAFT` → `VALIDATED`: `builder validate` (success)
-- `VALIDATED` → `DRAFT`: Any edit operation
-- `VALIDATED` → `COMMITTED`: `builder commit`
-- Any → `IDLE`: `builder abort`
-
-### Rules
-- Cannot commit unless VALIDATED
-- Any edit invalidates validation
-- COMMITTED sessions are read-only
 
 ---
 
@@ -181,13 +184,10 @@ Builder state is owned by CLI and persisted locally.
 |------|-------------|------|
 | AUTH_REQUIRED | Not authenticated | refly login |
 | CLI_NOT_FOUND | CLI not installed | npm i -g @refly/cli |
-| BUILDER_NOT_STARTED | No active builder session | refly builder start |
-| VALIDATION_REQUIRED | Must validate before commit | refly builder validate |
-| VALIDATION_ERROR | DAG validation failed | Check error details |
-| DUPLICATE_NODE_ID | Node ID already exists | Use unique ID |
 | NETWORK_ERROR | API unreachable | Check connection |
 | NOT_FOUND | Resource not found | Verify ID |
 | CONFLICT | State conflict | Check status |
+| INTERNAL_ERROR | Unexpected error | Report issue |
 
 ---
 
