@@ -21,6 +21,8 @@ import {
   BaseResponse,
   GetWorkflowPlanDetailResponse,
   ListWorkflowExecutionsResponse,
+  ListOrder,
+  WorkflowExecutionStatus,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils';
 import { ParamsError } from '@refly/errors';
@@ -93,13 +95,19 @@ export class WorkflowController {
   async listWorkflowExecutions(
     @LoginedUser() user: UserModel,
     @Query('canvasId') canvasId?: string,
+    @Query('status') status?: WorkflowExecutionStatus,
+    @Query('after', new ParseIntPipe({ optional: true })) after?: number,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize = 10,
+    @Query('order', new DefaultValuePipe('creationDesc')) order: ListOrder = 'creationDesc',
   ): Promise<ListWorkflowExecutionsResponse> {
     const workflowDetails = await this.workflowService.listWorkflowExecutions(user, {
       canvasId,
+      status,
+      after,
       page,
       pageSize,
+      order,
     });
     return buildSuccessResponse(workflowDetails.map(workflowExecutionPO2DTO));
   }

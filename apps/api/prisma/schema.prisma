@@ -2100,7 +2100,7 @@ model Voucher {
   discountPercent   Int       @map("discount_percent")
   /// Voucher status: unused, used, expired, invalid
   status            String    @default("unused") @map("status")
-  /// Voucher source: template_publish, invitation_claim
+  /// Voucher source: template_publish, invitation_claim, run_workflow
   source            String    @map("source")
   /// Source entity ID (template_id for publish, invitation_id for claim)
   sourceId          String?   @map("source_id")

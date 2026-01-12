@@ -1,7 +1,6 @@
 import { WorkflowApp } from '@refly/openapi-schema';
 import { WorkflowApp as WorkflowAppPO, User } from '@prisma/client';
 import { safeParseJSON } from '@refly/utils';
-import { VoucherTriggerResult } from '../voucher/voucher.dto';
 
 /**
  * Job data for generating workflow app template content asynchronously.
@@ -15,7 +14,6 @@ export interface GenerateWorkflowAppTemplateJobData {
 export function workflowAppPO2DTO(
   app: WorkflowAppPO & {
     owner: Pick<User, 'name' | 'nickname' | 'avatar'> | null;
-    voucherTriggerResult?: VoucherTriggerResult | null;
   },
 ): WorkflowApp | null {
   if (!app) {
@@ -50,7 +48,6 @@ export function workflowAppPO2DTO(
     templateContent: app.templateContent ?? undefined,
     createdAt: app.createdAt?.toISOString(),
     updatedAt: app.updatedAt?.toISOString(),
-    voucherTriggerResult: app.voucherTriggerResult ?? undefined,
   } as any;
 }
 

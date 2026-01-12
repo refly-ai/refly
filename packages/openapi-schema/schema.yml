@@ -2958,6 +2958,16 @@ paths:
           description: Canvas ID
           schema:
             type: string
+        - name: status
+          in: query
+          description: Execution status
+          schema:
+            $ref: '#/components/schemas/WorkflowExecutionStatus'
+        - name: after
+          in: query
+          description: Creation time after filter (unix timestamp in milliseconds)
+          schema:
+            type: number
         - name: page
           in: query
           description: Page number
@@ -2970,6 +2980,11 @@ paths:
           schema:
             type: number
             default: 10
+        - name: order
+          in: query
+          description: List order
+          schema:
+            $ref: '#/components/schemas/ListOrder'
       responses:
         '200':
           description: successful operation
@@ -14664,6 +14679,7 @@ components:
       enum:
         - template_publish
         - invitation_claim
+        - run_workflow
       description: Voucher source
 
     InvitationStatus:

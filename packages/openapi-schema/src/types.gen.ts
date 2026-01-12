@@ -9885,7 +9885,7 @@ export type VoucherStatus = 'unused' | 'used' | 'expired' | 'invalid';
 /**
  * Voucher source
  */
-export type VoucherSource = 'template_publish' | 'invitation_claim';
+export type VoucherSource = 'template_publish' | 'invitation_claim' | 'run_workflow';
 
 /**
  * Invitation status
@@ -11584,9 +11584,17 @@ export type AbortWorkflowError = unknown;
 export type ListWorkflowExecutionsData = {
   query?: {
     /**
+     * Creation time after filter (unix timestamp in milliseconds)
+     */
+    after?: number;
+    /**
      * Canvas ID
      */
     canvasId?: string;
+    /**
+     * List order
+     */
+    order?: ListOrder;
     /**
      * Page number
      */
@@ -11595,6 +11603,10 @@ export type ListWorkflowExecutionsData = {
      * Page size
      */
     pageSize?: number;
+    /**
+     * Execution status
+     */
+    status?: WorkflowExecutionStatus;
   };
 };
 

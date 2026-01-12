@@ -13610,7 +13610,7 @@ export const VoucherStatusSchema = {
 
 export const VoucherSourceSchema = {
   type: 'string',
-  enum: ['template_publish', 'invitation_claim'],
+  enum: ['template_publish', 'invitation_claim', 'run_workflow'],
   description: 'Voucher source',
 } as const;
 
