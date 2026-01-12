@@ -151,10 +151,9 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     deleteElements({ edges: edgesToDelete });
 
     // Process query with workflow variables
-    const variables = workflowVariables;
-    const { llmInputQuery } = processQuery(query, {
+    const { llmInputQuery, referencedVariables } = processQuery(query, {
       replaceVars: true,
-      variables,
+      variables: workflowVariables,
     });
 
     invokeAction(
@@ -167,7 +166,7 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
         contextItems,
         modelInfo,
         selectedToolsets,
-        workflowVariables: variables,
+        workflowVariables: referencedVariables,
       },
       {
         entityId: canvasId,

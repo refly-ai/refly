@@ -19,12 +19,7 @@ import {
 } from '@refly/openapi-schema';
 import { useActionResultStore } from '@refly/stores';
 import { logEvent } from '@refly/telemetry-web';
-import {
-  aggregateTokenUsage,
-  detectActualTypeFromType,
-  genActionResultID,
-  processQueryWithMentions,
-} from '@refly/utils';
+import { aggregateTokenUsage, detectActualTypeFromType, genActionResultID } from '@refly/utils';
 import { ARTIFACT_TAG_CLOSED_REGEX, getArtifactContentAndAttributes } from '@refly/utils/artifact';
 import { useCallback, useEffect, useRef } from 'react';
 import {
@@ -805,23 +800,11 @@ export const useInvokeAction = (params?: { source?: string }) => {
       globalAbortControllersRef.current.set(resultId, controller);
       globalAbortedResultsRef.current.delete(resultId);
 
-      // Extract explicitly referenced resource variables from query
-      let referencedResourceVars = workflowVariables;
-      if (query && workflowVariables?.length > 0) {
-        const { resourceVars: referencedVariables } = processQueryWithMentions(query, {
-          variables: workflowVariables,
-        });
-        // Filter workflow variables to only include explicitly referenced resource variables
-        referencedResourceVars = workflowVariables.filter((variable) =>
-          referencedVariables.some((rv) => rv.variableId === variable.variableId),
-        );
-      }
-
       const upstreamAgentNodes = nodeId ? getUpstreamAgentNodes(nodeId) : [];
       const context = convertContextItemsToInvokeParams(
         contextItems ?? [],
         upstreamAgentNodes.map((node) => node.data?.entityId) ?? [],
-        referencedResourceVars, // Pass only explicitly referenced resource variables
+        workflowVariables,
       );
 
       const param: InvokeSkillRequest = {
