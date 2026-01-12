@@ -2945,6 +2945,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /workflow/list:
+    get:
+      tags:
+        - workflow
+      summary: List workflow executions
+      description: List all workflow executions
+      operationId: listWorkflowExecutions
+      parameters:
+        - name: canvasId
+          in: query
+          description: Canvas ID
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: number
+            default: 1
+        - name: pageSize
+          in: query
+          description: Page size
+          schema:
+            type: number
+            default: 10
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWorkflowExecutionsResponse'
   /workflow/detail:
     get:
       tags:
@@ -12586,6 +12618,16 @@ components:
           type: string
           format: date-time
           description: Workflow update timestamp
+    ListWorkflowExecutionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of workflow executions
+              items:
+                $ref: '#/components/schemas/WorkflowExecution'
     WorkflowTask:
       type: object
       required:

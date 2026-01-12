@@ -35,7 +35,7 @@ import { ToolInventoryService } from '../tool/inventory/inventory.service';
 import { ToolService } from '../tool/tool.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { WorkflowNodeExecution as WorkflowNodeExecutionPO } from '@prisma/client';
+import { Prisma, WorkflowNodeExecution as WorkflowNodeExecutionPO } from '@prisma/client';
 import { QUEUE_POLL_WORKFLOW, QUEUE_RUN_WORKFLOW } from '../../utils/const';
 import { WorkflowExecutionNotFoundError } from '@refly/errors';
 import { RedisService } from '../common/redis.service';
@@ -1011,6 +1011,38 @@ export class WorkflowService {
 
     // Return workflow execution detail
     return { ...workflowExecution, nodeExecutions: sortedNodeExecutions };
+  }
+
+  /**
+   * List workflow executions with pagination
+   * @param user - The user requesting the workflow details
+   * @param params - Pagination and filter parameters
+   * @returns Promise<WorkflowExecution[]> - Paginated workflow execution details
+   */
+  async listWorkflowExecutions(
+    user: User,
+    params: {
+      canvasId?: string;
+      page?: number;
+      pageSize?: number;
+    },
+  ) {
+    const { canvasId, page = 1, pageSize = 10 } = params;
+    const skip = (page - 1) * pageSize;
+
+    // Build where clause
+    const whereClause: Prisma.WorkflowExecutionWhereInput = { uid: user.uid };
+    if (canvasId) {
+      whereClause.canvasId = canvasId;
+    }
+
+    // Get workflow executions with pagination
+    return this.prisma.workflowExecution.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: pageSize,
+    });
   }
 
   /**

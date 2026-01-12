@@ -7913,6 +7913,13 @@ export type WorkflowExecution = {
   updatedAt?: string;
 };
 
+export type ListWorkflowExecutionsResponse = BaseResponse & {
+  /**
+   * List of workflow executions
+   */
+  data?: Array<WorkflowExecution>;
+};
+
 export type WorkflowTask = {
   /**
    * Unique ID for the task
@@ -11573,6 +11580,27 @@ export type AbortWorkflowData = {
 export type AbortWorkflowResponse = BaseResponse;
 
 export type AbortWorkflowError = unknown;
+
+export type ListWorkflowExecutionsData = {
+  query?: {
+    /**
+     * Canvas ID
+     */
+    canvasId?: string;
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+  };
+};
+
+export type ListWorkflowExecutionsResponse2 = ListWorkflowExecutionsResponse;
+
+export type ListWorkflowExecutionsError = unknown;
 
 export type GetWorkflowDetailData = {
   query: {

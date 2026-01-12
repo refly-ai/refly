@@ -10996,6 +10996,26 @@ export const WorkflowExecutionSchema = {
   },
 } as const;
 
+export const ListWorkflowExecutionsResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'List of workflow executions',
+          items: {
+            $ref: '#/components/schemas/WorkflowExecution',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const WorkflowTaskSchema = {
   type: 'object',
   required: ['id', 'title', 'prompt', 'toolsets'],

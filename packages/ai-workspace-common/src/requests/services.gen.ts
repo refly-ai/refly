@@ -357,6 +357,9 @@ import type {
   AbortWorkflowData,
   AbortWorkflowError,
   AbortWorkflowResponse,
+  ListWorkflowExecutionsData,
+  ListWorkflowExecutionsError,
+  ListWorkflowExecutionsResponse2,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
   GetWorkflowDetailResponse2,
@@ -2484,6 +2487,23 @@ export const abortWorkflow = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<AbortWorkflowResponse, AbortWorkflowError, ThrowOnError>({
     ...options,
     url: '/workflow/abort',
+  });
+};
+
+/**
+ * List workflow executions
+ * List all workflow executions
+ */
+export const listWorkflowExecutions = <ThrowOnError extends boolean = false>(
+  options?: Options<ListWorkflowExecutionsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListWorkflowExecutionsResponse2,
+    ListWorkflowExecutionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow/list',
   });
 };
 

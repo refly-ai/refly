@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { SubscriptionPlanType, Voucher } from '@refly/openapi-schema';
+import { SubscriptionPlanType, Voucher, VoucherTriggerResult } from '@refly/openapi-schema';
 
 interface SubscriptionState {
   // state
@@ -18,6 +18,10 @@ interface SubscriptionState {
   // Voucher state
   availableVoucher: Voucher | null; // Best available voucher for the user
   voucherLoading: boolean;
+
+  // Earned voucher popup state (for showing popup after earning via workflow run or publish)
+  earnedVoucherPopupVisible: boolean;
+  earnedVoucherResult: VoucherTriggerResult | null;
 
   // Claimed voucher popup state (for showing popup after claiming via invite)
   claimedVoucherPopupVisible: boolean;
@@ -37,6 +41,8 @@ interface SubscriptionState {
   setOpenedFromSettings: (val: boolean) => void; // Method to set the openedFromSettings state
   setAvailableVoucher: (voucher: Voucher | null) => void;
   setVoucherLoading: (loading: boolean) => void;
+  showEarnedVoucherPopup: (voucherResult: VoucherTriggerResult) => void;
+  hideEarnedVoucherPopup: () => void;
   showClaimedVoucherPopup: (voucher: Voucher, inviterName?: string) => void;
   hideClaimedVoucherPopup: () => void;
 }
@@ -54,6 +60,8 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     openedFromSettings: false,
     availableVoucher: null,
     voucherLoading: false,
+    earnedVoucherPopupVisible: false,
+    earnedVoucherResult: null,
     claimedVoucherPopupVisible: false,
     claimedVoucher: null,
     claimedVoucherInviterName: null,
@@ -92,6 +100,16 @@ export const useSubscriptionStore = create<SubscriptionState>()(
     setOpenedFromSettings: (val: boolean) => set({ openedFromSettings: val }),
     setAvailableVoucher: (voucher: Voucher | null) => set({ availableVoucher: voucher }),
     setVoucherLoading: (loading: boolean) => set({ voucherLoading: loading }),
+    showEarnedVoucherPopup: (voucherResult: VoucherTriggerResult) =>
+      set({
+        earnedVoucherPopupVisible: true,
+        earnedVoucherResult: voucherResult,
+      }),
+    hideEarnedVoucherPopup: () =>
+      set({
+        earnedVoucherPopupVisible: false,
+        earnedVoucherResult: null,
+      }),
     showClaimedVoucherPopup: (voucher: Voucher, inviterName?: string) =>
       set({
         claimedVoucherPopupVisible: true,

@@ -153,6 +153,7 @@ import {
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
@@ -482,6 +483,8 @@ import {
   ListUserVouchersError,
   ListWorkflowAppsData,
   ListWorkflowAppsError,
+  ListWorkflowExecutionsData,
+  ListWorkflowExecutionsError,
   LogoutError,
   MultiLingualWebSearchData,
   MultiLingualWebSearchError,
@@ -1202,6 +1205,23 @@ export const useGetCopilotSessionDetail = <
     queryKey: Common.UseGetCopilotSessionDetailKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getCopilotSessionDetail({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useListWorkflowExecutions = <
+  TData = Common.ListWorkflowExecutionsDefaultResponse,
+  TError = ListWorkflowExecutionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListWorkflowExecutionsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseListWorkflowExecutionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listWorkflowExecutions({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
     ...options,

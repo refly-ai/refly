@@ -67,10 +67,10 @@ const EmptyContent = () => {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
       <img src={EmptyImage} alt="no variables" className="w-[120px] h-[120px] -mb-4" />
-      <div className="text-sm text-refly-text-2 leading-5">
+      <div className="text-sm text-refly-text-2 leading-5 text-center">
         {t('canvas.workflow.run.emptyTitle', 'No variables defined')}
       </div>
-      <div className="text-sm text-refly-text-2 leading-5">
+      <div className="text-sm text-refly-text-2 leading-5 text-center mt-5">
         {t(
           'canvas.workflow.run.emptyDescription',
           ' the workflow will be executed once if continued.',

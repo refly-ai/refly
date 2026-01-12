@@ -7,6 +7,7 @@ import {
   Query,
   Logger,
   ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
@@ -19,6 +20,7 @@ import {
   AbortWorkflowRequest,
   BaseResponse,
   GetWorkflowPlanDetailResponse,
+  ListWorkflowExecutionsResponse,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils';
 import { ParamsError } from '@refly/errors';
@@ -84,6 +86,22 @@ export class WorkflowController {
       );
       throw error;
     }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('list')
+  async listWorkflowExecutions(
+    @LoginedUser() user: UserModel,
+    @Query('canvasId') canvasId?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
+    @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize = 10,
+  ): Promise<ListWorkflowExecutionsResponse> {
+    const workflowDetails = await this.workflowService.listWorkflowExecutions(user, {
+      canvasId,
+      page,
+      pageSize,
+    });
+    return buildSuccessResponse(workflowDetails.map(workflowExecutionPO2DTO));
   }
 
   @UseGuards(JwtAuthGuard)

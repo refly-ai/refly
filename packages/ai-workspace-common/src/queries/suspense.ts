@@ -76,6 +76,7 @@ import {
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   serveStatic,
   verifyVoucherInvitation,
 } from '../requests/services.gen';
@@ -208,6 +209,8 @@ import {
   ListUserVouchersError,
   ListWorkflowAppsData,
   ListWorkflowAppsError,
+  ListWorkflowExecutionsData,
+  ListWorkflowExecutionsError,
   ServeStaticError,
   VerifyVoucherInvitationData,
   VerifyVoucherInvitationError,
@@ -840,6 +843,23 @@ export const useGetCopilotSessionDetailSuspense = <
     queryKey: Common.UseGetCopilotSessionDetailKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getCopilotSessionDetail({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useListWorkflowExecutionsSuspense = <
+  TData = Common.ListWorkflowExecutionsDefaultResponse,
+  TError = ListWorkflowExecutionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListWorkflowExecutionsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseListWorkflowExecutionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listWorkflowExecutions({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
     ...options,
