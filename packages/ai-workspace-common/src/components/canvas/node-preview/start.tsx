@@ -1,12 +1,11 @@
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { memo, useMemo, useState, useCallback, useEffect } from 'react';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
-import { Divider, Button, Popconfirm, message, Typography } from 'antd';
+import { Button, Popconfirm, message, Typography } from 'antd';
 import { Add, Edit, Delete, Image, Doc2, Video, Audio } from 'refly-icons';
 import type { WorkflowVariable } from '@refly/openapi-schema';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { useTranslation } from 'react-i18next';
-import SVGX from '../../../assets/x.svg';
 import { CreateVariablesModal } from '../workflow-variables';
 import { locateToVariableEmitter } from '@refly-packages/ai-workspace-common/events/locateToVariable';
 import { StartNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/start-node-header';
@@ -70,8 +69,6 @@ const VariableItem = memo(
         } ${isPopconfirmOpen ? 'bg-refly-tertiary-hover' : 'hover:bg-refly-tertiary-hover'}`}
       >
         <div className="flex items-center gap-1 flex-1 min-w-0">
-          <img src={SVGX} alt="x" className="w-[10px] h-[10px] flex-shrink-0" />
-          <Divider type="vertical" className="bg-refly-Card-Border mx-2 my-0 flex-shrink-0" />
           <div className="text-sm font-medium text-refly-text-1 truncate max-w-full">{name}</div>
           {required && (
             <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">

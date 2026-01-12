@@ -3,6 +3,7 @@ import { NodeProps, Position } from '@xyflow/react';
 import { StartNodeHeader } from './shared/start-node-header';
 import cn from 'classnames';
 import { BiText } from 'react-icons/bi';
+import { Popover } from 'antd';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { getNodeCommonStyles } from './shared/styles';
 import { CustomHandle } from './shared/custom-handle';
@@ -12,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { CreateVariablesModal } from '../workflow-variables';
 import { Attachment, List } from 'refly-icons';
+import { VariableHoverCard } from './shared/variable-hover-card';
 import {
   nodeActionEmitter,
   createNodeEventName,
@@ -73,23 +75,39 @@ export const InputParameterRow = memo(
     }, [variableType, value]);
 
     return (
-      <div className="flex gap-2 items-center justify-between py-1.5 px-3 bg-refly-bg-control-z0 rounded-lg">
-        <div className="flex items-center flex-1 min-w-0">
-          {isRequired && <div className="text-refly-text-3 flex-shrink-0 mr-0.5">*</div>}
-          <div className="flex items-center flex-1 min-w-0 overflow-hidden">
-            <div className="text-xs text-refly-func-warning-hover truncate min-w-0 flex-1 shrink basis-[80px] max-w-fit">
-              {label}
-            </div>
-            {displayValue && (
-              <div className="text-xs text-refly-text-3 truncate ml-1 min-w-0 flex-grow-0 shrink-[100] basis-auto">
-                {displayValue}
+      <Popover
+        content={
+          <VariableHoverCard
+            variableType={variableType}
+            label={label}
+            options={options}
+            value={value}
+          />
+        }
+        placement="right"
+        overlayClassName="variable-hover-card-popover"
+        trigger="hover"
+        mouseEnterDelay={0.3}
+        overlayInnerStyle={{ padding: 0, backgroundColor: 'transparent', boxShadow: 'none' }}
+      >
+        <div className="flex gap-2 items-center justify-between py-1.5 px-3 bg-refly-bg-control-z0 rounded-lg cursor-default hover:bg-refly-bg-control-z1 transition-colors cursor-pointer">
+          <div className="flex items-center flex-1 min-w-0">
+            {isRequired && <div className="text-refly-text-3 flex-shrink-0 mr-0.5">*</div>}
+            <div className="flex items-center flex-1 min-w-0 overflow-hidden">
+              <div className="text-xs text-refly-func-warning-hover truncate min-w-0 flex-1 shrink basis-[80px] max-w-fit">
+                {label}
               </div>
-            )}
+              {displayValue && (
+                <div className="text-xs text-refly-text-3 truncate ml-1 min-w-0 flex-grow-0 shrink-[100] basis-auto">
+                  {displayValue}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        {VariableIcon}
-      </div>
+          {VariableIcon}
+        </div>
+      </Popover>
     );
   },
 );
@@ -124,8 +142,6 @@ export const StartNode = memo(({ id, onNodeClick, data }: StartNodeProps) => {
   const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
 
   const workflowVariables = shareData?.variables ?? variables;
-
-  console.log('workflowVariables', workflowVariables);
 
   // Check if node has any connections
   const isSourceConnected = edges?.some((edge) => edge.source === id);
