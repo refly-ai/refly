@@ -95,10 +95,6 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
     );
   }, [file.type]);
 
-  const canPreview = useMemo(() => {
-    return getResourceType(file.type) !== 'video' && getResourceType(file.type) !== 'audio';
-  }, [file.type]);
-
   const handlePreview = useCallback(() => {
     setCurrentFile(file, { usePublicFileUrl: inheritedUsePublicFileUrl });
   }, [file, inheritedUsePublicFileUrl, setCurrentFile]);
@@ -370,17 +366,12 @@ export const ProductCard = memo(({ file, classNames, source = 'card' }: ProductC
           !isMediaFile && source === 'card' ? 'max-h-[240px] !overflow-hidden relative' : 'h-full',
         )}
       >
-        {canPreview && source === 'card' && (
-          <div className="absolute z-10 bottom-3 left-3 right-3 top-0 rounded-[10px] bg-refly-modal-mask flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
-            <div
-              className="p-3 rounded-[80px] bg-refly-text-2 text-sm leading-5 font-semibold text-refly-text-flip cursor-pointer select-none"
-              onClick={handlePreview}
-            >
-              {t('common.view')}
-            </div>
-          </div>
-        )}
-        <FilePreview file={file} markdownClassName="text-sm min-h-[50px]" source={source} />
+        <FilePreview
+          file={file}
+          markdownClassName="text-sm min-h-[50px]"
+          source={source}
+          onPreview={handlePreview}
+        />
       </div>
     </div>
   );
