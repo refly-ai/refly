@@ -22,7 +22,6 @@ export const VariableHoverCard = memo(
     const { t } = useTranslation();
     const { canvasId } = useCanvasContext();
     const resource = value?.[0]?.resource;
-    console.log('resource', resource);
 
     const renderContent = () => {
       switch (variableType) {
