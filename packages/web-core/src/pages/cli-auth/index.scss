@@ -35,8 +35,38 @@
   padding: 13px 32px !important;
 }
 
-.cli-auth-btn-authorize:hover {
+.cli-auth-btn-authorize:not(:disabled):hover {
   background: var(--text-icon-refly-text-0, #1c1f23) !important;
   color: white !important;
   opacity: 0.9 !important;
+}
+
+.cli-auth-btn-authorized,
+.cli-auth-btn-authorized:hover,
+.cli-auth-btn-authorized:disabled,
+.cli-auth-btn-authorized:disabled:hover {
+  background: var(--refly-secondary-hover) !important;
+  color: var(--refly-text-0) !important;
+  opacity: 1 !important;
+  cursor: default !important;
+  border: none !important;
+}
+
+.cli-auth-btn-authorize:disabled {
+  cursor: not-allowed !important;
+}
+
+@keyframes slideInBottom {
+  0% {
+    transform: translate(-50%, 10px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-bottom {
+  animation: slideInBottom 0.2s ease-out forwards;
 }

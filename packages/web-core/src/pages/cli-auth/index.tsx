@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Divider, Spin, Avatar } from 'antd';
 import {
-  CheckCircleFilled,
-  CloseCircleFilled,
+  WarningFilled,
   DesktopOutlined,
   ExclamationCircleFilled,
+  CheckCircleFilled,
 } from '@ant-design/icons';
-import { Account, Flow } from 'refly-icons';
+import { FaBan } from 'react-icons/fa6';
+import { Account, Flow, CheckCircleBroken } from 'refly-icons';
 import { BsDatabase } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
@@ -29,7 +30,6 @@ type PageState =
   | 'login_or_register'
   | 'authorize_confirm'
   | 'authorizing'
-  | 'authorized_success'
   | 'authorized_cancel'
   | 'error';
 
@@ -214,6 +214,8 @@ const CliAuthPage = () => {
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [deviceLoading, setDeviceLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
   const [countdown, setCountdown] = useState(10);
 
   // URL params
@@ -255,7 +257,9 @@ const CliAuthPage = () => {
 
         if (result.data.status === 'authorized') {
           setDeviceInfo(result.data);
-          setPageState('authorized_success');
+          setIsAuthorized(true);
+          setCountdown(10);
+          setPageState('authorize_confirm');
           return;
         }
 
@@ -292,11 +296,7 @@ const CliAuthPage = () => {
       return; // Still loading device info
     }
 
-    if (
-      pageState === 'error' ||
-      pageState === 'authorized_success' ||
-      pageState === 'authorized_cancel'
-    ) {
+    if (pageState === 'error' || pageState === 'authorized_cancel') {
       console.log('[CLI Auth] Terminal state:', pageState);
       return; // Terminal states
     }
@@ -310,14 +310,13 @@ const CliAuthPage = () => {
     }
   }, [isCheckingLoginStatus, isLoggedIn, deviceLoading, pageState, userProfile]);
 
-  // Countdown for success page
+  // Countdown to close window after authorization
   useEffect(() => {
-    if (pageState !== 'authorized_success') {
+    if (!isAuthorized) {
       return;
     }
 
     if (countdown <= 0) {
-      // Try to close the window, show message if blocked
       try {
         window.close();
       } catch {
@@ -331,7 +330,7 @@ const CliAuthPage = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [pageState, countdown]);
+  }, [isAuthorized, countdown]);
 
   // Handlers
   const handleAuthorize = useCallback(async () => {
@@ -342,8 +341,9 @@ const CliAuthPage = () => {
       const result = await authorizeDevice(deviceId);
 
       if (result.success) {
-        setPageState('authorized_success');
+        setIsAuthorized(true);
         setCountdown(10);
+        setPageState('authorize_confirm');
       } else {
         setPageState('error');
         setErrorMessage(t('cliAuth.errors.authorizeFailed'));
@@ -360,7 +360,7 @@ const CliAuthPage = () => {
     try {
       const result = await cancelDevice(deviceId);
       if (result.success) {
-        setPageState('authorized_cancel');
+        setIsCancelled(true);
       }
     } catch {
       // Silently fail on cancel - user can close the page
@@ -402,12 +402,50 @@ const CliAuthPage = () => {
                 {t('cliAuth.permissionItem3')}
               </p>
             </div>
-            <div className="cli-auth-actions flex justify-between gap-4">
-              <Button onClick={handleCancel} className="cli-auth-btn cli-auth-btn-cancel">
+            <div className="cli-auth-actions flex justify-between gap-4 relative">
+              {isAuthorized && (
+                <div className="absolute left-1/2 -top-16 -translate-x-1/2 z-10 animate-slide-in-bottom">
+                  <div className="flex items-center justify-center gap-2 w-[336px] h-[52px] bg-refly-toast-fill border border-solid border-refly-Card-Border shadow-refly-m rounded-xl">
+                    <CheckCircleFilled
+                      className="text-refly-func-success-default"
+                      style={{ fontSize: 18 }}
+                    />
+                    <span className="text-lg font-regular text-refly-text-0">
+                      {t('cliAuth.authorizedMessage')}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {isCancelled && (
+                <div className="absolute left-1/2 -top-16 -translate-x-1/2 z-10 animate-slide-in-bottom">
+                  <div className="flex items-center justify-center gap-2 w-[336px] h-[52px] bg-refly-toast-fill border border-solid border-refly-Card-Border shadow-refly-m rounded-xl">
+                    <FaBan className="text-refly-func-error-default" style={{ fontSize: 18 }} />
+                    <span className="text-lg font-regular text-refly-text-0">
+                      {t('cliAuth.cancelledMessage')}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <Button
+                onClick={handleCancel}
+                className="cli-auth-btn cli-auth-btn-cancel"
+                disabled={isAuthorized}
+              >
                 {t('cliAuth.cancelButton')}
               </Button>
-              <Button onClick={handleAuthorize} className="cli-auth-btn cli-auth-btn-authorize">
-                {t('cliAuth.authorizeButton')}
+              <Button
+                onClick={handleAuthorize}
+                className={`cli-auth-btn cli-auth-btn-authorize flex items-center justify-center gap-2 ${
+                  isAuthorized ? 'cli-auth-btn-authorized' : ''
+                }`}
+                disabled={isAuthorized}
+              >
+                {isAuthorized && (
+                  <CheckCircleBroken size={20} color="var(--refly-primary-default)" />
+                )}
+                {isAuthorized
+                  ? `${t('cliAuth.authorizedButton', 'Authorized')} (${countdown}s)`
+                  : t('cliAuth.authorizeButton')}
               </Button>
             </div>
           </div>
@@ -421,24 +459,10 @@ const CliAuthPage = () => {
           </div>
         );
 
-      case 'authorized_success':
-        return (
-          <div className="flex flex-col gap-6 items-center text-center py-6">
-            <CheckCircleFilled className="text-6xl mb-4 text-[#52c41a]" />
-            <h2 className="text-lg font-semibold text-[#1c1f23] m-0 mb-2">
-              {t('cliAuth.successTitle')}
-            </h2>
-            <p className="m-0 text-sm text-[#666] leading-[1.6]">{t('cliAuth.successMessage')}</p>
-            <p className="mt-2 mb-0 text-xs text-[rgba(28,31,35,0.6)]">
-              {t('cliAuth.autoCloseCountdown', { seconds: countdown })}
-            </p>
-          </div>
-        );
-
       case 'authorized_cancel':
         return (
           <div className="flex flex-col gap-6 items-center text-center py-6">
-            <CloseCircleFilled className="text-6xl mb-4 text-[rgba(28,31,35,0.6)]" />
+            <WarningFilled className="text-6xl mb-4 text-[rgba(28,31,35,0.6)]" />
             <h2 className="text-lg font-semibold text-[#1c1f23] m-0 mb-2">
               {t('cliAuth.cancelledTitle')}
             </h2>
