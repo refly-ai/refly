@@ -18,9 +18,26 @@
   border: 1px solid var(--border---refly-line, #b9c1c1) !important;
   color: var(--refly-text-1, #333) !important;
   padding: 13px 42px !important;
+  font-weight: 600 !important;
 }
 
 .cli-auth-btn-cancel:hover {
+  border-color: var(--refly-text-2, #666) !important;
+  color: var(--refly-text-0, #1c1f23) !important;
+}
+
+.cli-auth-btn-close {
+  width: 186px !important;
+  height: 50px !important;
+  border-radius: 12px !important;
+  background-color: transparent !important;
+  border: 1px solid var(--border---refly-line, #b9c1c1) !important;
+  color: var(--refly-text-1, #333) !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+.cli-auth-btn-close:hover {
   border-color: var(--refly-text-2, #666) !important;
   color: var(--refly-text-0, #1c1f23) !important;
 }

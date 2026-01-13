@@ -4498,8 +4498,10 @@ const translations = {
     successTitle: 'Authorization Successful',
     successMessage: 'You have successfully authorized this device.',
     autoCloseCountdown: 'This page will close automatically in {{seconds}}s',
-    cancelledTitle: 'Authorization Cancelled',
-    cancelledMessage: 'Cancelled. No access granted',
+    cancelledTitle: 'Link Expired',
+    cancelledMessage:
+      'This authorization session has timed out. To generate a new link, please run the following command in your terminal:',
+    closeWindow: 'Close Window',
     errorTitle: 'Authorization Error',
     errorHint: 'Please run `refly init` again to start a new authorization request.',
     securityNote:

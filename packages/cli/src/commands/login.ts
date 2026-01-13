@@ -323,6 +323,28 @@ async function loginWithDeviceFlow(): Promise<void> {
 
   const { deviceId, expiresAt } = initResponse;
 
+  // Setup signal handler for graceful cancellation
+  let cancelled = false;
+  const cleanup = async () => {
+    if (!cancelled) {
+      cancelled = true;
+      logger.debug('Cancelling device session due to interruption...');
+      try {
+        await apiRequest('/v1/auth/cli/device/cancel', {
+          method: 'POST',
+          body: { device_id: deviceId },
+          requireAuth: false,
+        });
+        logger.debug('Device session cancelled successfully');
+      } catch (error) {
+        logger.debug('Failed to cancel device session:', error);
+      }
+    }
+  };
+
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
+
   // 2. Build authorization URL
   // Use web URL for browser authorization page (may differ from API endpoint in some environments)
   const webUrl = getWebUrl();
@@ -351,63 +373,90 @@ async function loginWithDeviceFlow(): Promise<void> {
   const pollInterval = 2000; // 2 seconds
   const maxAttempts = 150; // 5 minutes (150 * 2s)
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await sleep(pollInterval);
-
-    const statusResponse = await apiRequest<DeviceSessionWithTokens>('/v1/auth/cli/device/status', {
-      method: 'GET',
-      query: { device_id: deviceId },
-      requireAuth: false,
-    });
-
-    switch (statusResponse.status) {
-      case 'authorized':
-        if (statusResponse.accessToken && statusResponse.refreshToken) {
-          // Get user info from the token
-          // For now, we'll make an additional call to get user info
-          const userInfo = await getUserInfoFromToken(statusResponse.accessToken);
-
-          // Store tokens
-          setOAuthTokens({
-            accessToken: statusResponse.accessToken,
-            refreshToken: statusResponse.refreshToken,
-            expiresAt: new Date(Date.now() + 3600000).toISOString(), // 1 hour
-            provider: 'google', // Device flow doesn't specify provider, default to google
-            user: userInfo,
-          });
-
-          ok('login', {
-            message: 'Successfully authenticated via device authorization',
-            user: userInfo,
-            method: 'device',
-          });
-          return;
-        }
-        break;
-
-      case 'cancelled':
+  try {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // Check if cancelled by signal
+      if (cancelled) {
         return fail(ErrorCodes.AUTH_REQUIRED, 'Authorization was cancelled', {
-          hint: 'The authorization request was cancelled in the browser',
+          hint: 'The login process was interrupted',
         });
+      }
 
-      case 'expired':
-        return fail(ErrorCodes.AUTH_REQUIRED, 'Authorization request expired', {
-          hint: 'Run `refly login --device` again to start a new session',
-        });
+      await sleep(pollInterval);
 
-      case 'pending':
-        // Continue polling
-        if (attempt % 5 === 0) {
-          process.stderr.write('.');
-        }
-        break;
+      const statusResponse = await apiRequest<DeviceSessionWithTokens>(
+        '/v1/auth/cli/device/status',
+        {
+          method: 'GET',
+          query: { device_id: deviceId },
+          requireAuth: false,
+        },
+      );
+
+      switch (statusResponse.status) {
+        case 'authorized':
+          if (statusResponse.accessToken && statusResponse.refreshToken) {
+            // Get user info from the token
+            // For now, we'll make an additional call to get user info
+            const userInfo = await getUserInfoFromToken(statusResponse.accessToken);
+
+            // Store tokens
+            setOAuthTokens({
+              accessToken: statusResponse.accessToken,
+              refreshToken: statusResponse.refreshToken,
+              expiresAt: new Date(Date.now() + 3600000).toISOString(), // 1 hour
+              provider: 'google', // Device flow doesn't specify provider, default to google
+              user: userInfo,
+            });
+
+            ok('login', {
+              message: 'Successfully authenticated via device authorization',
+              user: userInfo,
+              method: 'device',
+            });
+            return;
+          }
+          break;
+
+        case 'cancelled':
+          return fail(ErrorCodes.AUTH_REQUIRED, 'Authorization was cancelled', {
+            hint: 'The authorization request was cancelled in the browser',
+          });
+
+        case 'expired':
+          return fail(ErrorCodes.AUTH_REQUIRED, 'Authorization request expired', {
+            hint: 'Run `refly login --device` again to start a new session',
+          });
+
+        case 'pending':
+          // Continue polling
+          if (attempt % 5 === 0) {
+            process.stderr.write('.');
+          }
+          break;
+      }
     }
-  }
 
-  // Timeout
-  fail(ErrorCodes.TIMEOUT, 'Authorization timeout', {
-    hint: 'Complete authorization in the browser within 5 minutes',
-  });
+    // Timeout - also cancel the device session
+    try {
+      await apiRequest('/v1/auth/cli/device/cancel', {
+        method: 'POST',
+        body: { device_id: deviceId },
+        requireAuth: false,
+      });
+      logger.debug('Device session cancelled due to timeout');
+    } catch (error) {
+      logger.debug('Failed to cancel device session on timeout:', error);
+    }
+
+    fail(ErrorCodes.TIMEOUT, 'Authorization timeout', {
+      hint: 'Complete authorization in the browser within 5 minutes',
+    });
+  } finally {
+    // Clean up signal handlers
+    process.removeListener('SIGINT', cleanup);
+    process.removeListener('SIGTERM', cleanup);
+  }
 }
 
 /**

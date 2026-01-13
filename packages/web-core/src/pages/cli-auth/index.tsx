@@ -1,14 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Divider, Spin, Avatar } from 'antd';
-import {
-  WarningFilled,
-  DesktopOutlined,
-  ExclamationCircleFilled,
-  CheckCircleFilled,
-} from '@ant-design/icons';
+import { DesktopOutlined, ExclamationCircleFilled, CheckCircleFilled } from '@ant-design/icons';
 import { FaBan } from 'react-icons/fa6';
-import { Account, Flow, CheckCircleBroken } from 'refly-icons';
+import { Account, Flow, CheckCircleBroken, Copy } from 'refly-icons';
 import { BsDatabase } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
@@ -19,6 +14,7 @@ import { LoginCard } from '../../components/login-modal/login-card';
 import { VerificationModal } from '../../components/verification-modal';
 import { ResetPasswordModal } from '../../components/reset-password-modal';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import ClockIcon from '@refly-packages/ai-workspace-common/assets/clock.svg';
 import './index.scss';
 import { HiOutlineLightningBolt } from 'react-icons/hi';
 // ============================================================================
@@ -250,8 +246,7 @@ const CliAuthPage = () => {
         }
 
         if (result.data.status === 'expired') {
-          setPageState('error');
-          setErrorMessage(t('cliAuth.errors.expiredDevice'));
+          setPageState('authorized_cancel');
           return;
         }
 
@@ -331,6 +326,41 @@ const CliAuthPage = () => {
 
     return () => clearTimeout(timer);
   }, [isAuthorized, countdown]);
+
+  // Poll device status to detect cancellation or other state changes
+  useEffect(() => {
+    if (!deviceId || pageState === 'error' || pageState === 'authorized_cancel') {
+      return;
+    }
+
+    const pollDeviceStatus = async () => {
+      try {
+        const result = await fetchDeviceInit(deviceId, cliVersion, host);
+        if (result.success && result.data) {
+          // Check if status changed
+          if (result.data.status === 'cancelled') {
+            setIsCancelled(true);
+            setPageState('authorized_cancel');
+          } else if (result.data.status === 'expired') {
+            setPageState('authorized_cancel');
+          } else if (result.data.status === 'authorized' && !isAuthorized) {
+            setDeviceInfo(result.data);
+            setIsAuthorized(true);
+            setCountdown(10);
+            setPageState('authorize_confirm');
+          }
+        }
+      } catch (error) {
+        // Silently fail polling - don't interrupt user experience
+        console.debug('[CLI Auth] Polling failed:', error);
+      }
+    };
+
+    // Poll every 3 seconds
+    const pollInterval = setInterval(pollDeviceStatus, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [deviceId, cliVersion, host, pageState, isAuthorized, t]);
 
   // Handlers
   const handleAuthorize = useCallback(async () => {
@@ -461,12 +491,46 @@ const CliAuthPage = () => {
 
       case 'authorized_cancel':
         return (
-          <div className="flex flex-col gap-6 items-center text-center py-6">
-            <WarningFilled className="text-6xl mb-4 text-[rgba(28,31,35,0.6)]" />
-            <h2 className="text-lg font-semibold text-[#1c1f23] m-0 mb-2">
+          <div className="flex flex-col items-center text-center w-full">
+            <div className="w-[56px] h-[56px] rounded-full bg-[#FFF4EB] flex items-center justify-center mb-4">
+              <img src={ClockIcon} alt="Clock" className="w-[20px] h-[20px]" />
+            </div>
+
+            <h2 className="text-xl font-bold text-[#1c1f23] m-0 mb-2 leading-tight">
               {t('cliAuth.cancelledTitle')}
             </h2>
-            <p className="m-0 text-sm text-[#666] leading-[1.6]">{t('cliAuth.cancelledMessage')}</p>
+
+            <p className="m-0 text-sm text-[rgba(28,31,35,0.6)] leading-relaxed mb-6">
+              {t('cliAuth.cancelledMessage')}
+            </p>
+
+            <div className="bg-[#F3F4F6] rounded-[4px] px-4 py-1 flex items-center justify-between mb-6 relative overflow-hidden group w-[111px] h-6 gap-2">
+              <span className="text-[14px] font-medium text-[#1c1f23] font-inter leading-[21px] whitespace-nowrap">
+                refly init
+              </span>
+              <Button
+                type="text"
+                icon={<Copy size={14} />}
+                className="hover:bg-transparent p-0 w-[24px] h-[18px] flex items-center border-none shadow-none"
+                onClick={() => {
+                  navigator.clipboard.writeText('refly init');
+                }}
+              />
+            </div>
+
+            <Button
+              size="large"
+              className="cli-auth-btn-close"
+              onClick={() => {
+                try {
+                  window.close();
+                } catch {
+                  // Fallback
+                }
+              }}
+            >
+              {t('cliAuth.closeWindow')}
+            </Button>
           </div>
         );
 
