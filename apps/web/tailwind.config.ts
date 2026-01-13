@@ -53,6 +53,7 @@ export function defineConfig(): Config {
         },
         animation: {
           'slide-in-left': 'slideInLeft 0.3s ease-out',
+          shake: 'shake 0.5s ease-in-out infinite',
         },
         boxShadow: {
           'refly-s': '0 1px 6px 0 #0000003d',
@@ -62,6 +63,12 @@ export function defineConfig(): Config {
           'refly-xl': '0 8px 32px 0 #00000014',
         },
         keyframes: {
+          shake: {
+            '0%, 100%': { transform: 'rotate(0deg)' },
+            '25%': { transform: 'rotate(-10deg)' },
+            '50%': { transform: 'rotate(10deg)' },
+            '75%': { transform: 'rotate(-10deg)' },
+          },
           slideInLeft: {
             '0%': {
               transform: 'translateX(-100%)',

@@ -7,7 +7,11 @@ import { delay } from '@refly-packages/ai-workspace-common/utils/delay';
 import { genCanvasID } from '@refly/utils';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { useWorkflowExecutionPolling } from './use-workflow-execution-polling';
-import { useCanvasStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
+import {
+  useCanvasResourcesPanelStoreShallow,
+  useCanvasStoreShallow,
+  useSubscriptionStoreShallow,
+} from '@refly/stores';
 import { GetWorkflowDetailResponse, InitializeWorkflowRequest } from '@refly/openapi-schema';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { guessModelProviderError, ModelUsageQuotaExceeded } from '@refly/errors';
@@ -24,6 +28,9 @@ export const useInitializeWorkflow = (
   const { showEarnedVoucherPopup } = useSubscriptionStoreShallow((state) => ({
     showEarnedVoucherPopup: state.showEarnedVoucherPopup,
   }));
+  const { setHasFirstSuccessExecutionToday } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setHasFirstSuccessExecutionToday: state.setHasFirstSuccessExecutionToday,
+  }));
 
   const { executionId, setCanvasExecutionId } = useCanvasStoreShallow((state) => ({
     executionId: state.canvasExecutionId[canvasId],
@@ -38,6 +45,7 @@ export const useInitializeWorkflow = (
         message.success(
           t('canvas.workflow.run.completed') || 'Workflow execution completed successfully',
         );
+        setHasFirstSuccessExecutionToday(true);
 
         // If current workflow execution is the first successful execution today, trigger voucher popup
         const startOfToday = new Date();
