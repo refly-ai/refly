@@ -94,6 +94,7 @@ export const InputParameterRow = memo(
           />
         }
         placement="right"
+        arrow={false}
         overlayClassName="variable-hover-card-popover"
         trigger="hover"
         mouseEnterDelay={0.3}

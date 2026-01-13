@@ -37,6 +37,7 @@ export const UserInputItem = memo(
         placement="top"
         overlayClassName="variable-hover-card-popover"
         trigger="hover"
+        arrow={false}
         mouseEnterDelay={0.3}
         overlayInnerStyle={{ padding: 0, backgroundColor: 'transparent', boxShadow: 'none' }}
       >
