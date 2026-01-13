@@ -1104,8 +1104,6 @@ Use this when you need detailed content beyond the summary provided in context.`
 
       const formattedContent = this.formatResultWithToolPlaceholders(result);
 
-      console.log('formattedContent', formattedContent);
-
       return {
         status: 'success',
         data: formattedContent,
