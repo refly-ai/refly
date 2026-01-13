@@ -365,9 +365,16 @@ export class SkillInvokerService {
       config.configurable.selectedTools = tools as any;
     }
 
-    config.configurable.installedToolsets = await this.toolService.listTools(user, {
-      enabled: true,
-    });
+    // For copilot_agent mode, include all tools (authorized and unauthorized)
+    // This allows Copilot to generate workflows with tools that require authorization
+    if (data.mode === 'copilot_agent') {
+      config.configurable.installedToolsets = await this.toolService.listAllToolsForCopilot(user);
+    } else {
+      // For other modes, only include authorized/installed tools
+      config.configurable.installedToolsets = await this.toolService.listTools(user, {
+        enabled: true,
+      });
+    }
 
     if (eventListener) {
       const emitter = new EventEmitter<SkillEventMap>();

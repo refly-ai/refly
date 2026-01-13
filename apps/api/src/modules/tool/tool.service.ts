@@ -295,6 +295,45 @@ export class ToolService {
   }
 
   /**
+   * List all tools for Copilot agent, including unauthorized tools.
+   * This allows Copilot to generate workflows with tools that require authorization,
+   * even if the user hasn't authorized them yet.
+   */
+  async listAllToolsForCopilot(user: User): Promise<GenericToolset[]> {
+    // Get all authorized/installed tools
+    const authorizedTools = await this.listTools(user, { enabled: true });
+
+    // Get all tool definitions from inventory
+    const allDefinitions = await this.inventoryService.getInventoryDefinitions();
+
+    // Get installed toolset keys for filtering
+    const installedKeys = new Set(
+      authorizedTools.map((t) => t.toolset?.key).filter((key): key is string => !!key),
+    );
+
+    // Find unauthorized OAuth tools that should be exposed
+    const unauthorizedDefinitions = allDefinitions.filter(
+      (def) => this.shouldExposeToolset(def.key) && def.requiresAuth && !installedKeys.has(def.key),
+    );
+
+    // Convert unauthorized definitions to GenericToolset format
+    const unauthorizedTools: GenericToolset[] = unauthorizedDefinitions.map((def) => ({
+      type: 'external_oauth' as const,
+      id: def.key,
+      name: (def.labelDict?.en as string) || def.key,
+      toolset: {
+        toolsetId: def.key,
+        key: def.key,
+        name: (def.labelDict?.en as string) || def.key,
+        definition: def,
+      },
+    }));
+
+    // Return all tools: authorized first, then unauthorized
+    return [...authorizedTools, ...unauthorizedTools];
+  }
+
+  /**
    * Populate toolsets with definitions from inventory (for canvas and other use cases)
    * This is a simpler version that only uses inventory data, no user-specific data
    */
