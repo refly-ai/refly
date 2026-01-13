@@ -1103,8 +1103,12 @@ export class BuiltinReadAgentResult extends AgentBaseTool<BuiltinToolParams> {
   });
 
   description = `Read the full execution result of a previous agent/skill node.
-Returns the AI's reasoning and responses with tool call placeholders.
-Use this when you need detailed content beyond the summary provided in context.`;
+The summary in resultsMeta is just a naive tail truncation and is UNRELIABLE.
+ALWAYS use this tool when:
+- The task relates to or builds upon previous results
+- contentTokens > 300 (contains substantial content worth reading)
+- You need specific details, reasoning, or data from the result
+Returns AI's reasoning/responses with tool call placeholders.`;
 
   protected params: BuiltinToolParams;
 
@@ -1216,7 +1220,8 @@ export class BuiltinReadToolResult extends AgentBaseTool<BuiltinToolParams> {
   });
 
   description = `Read the detailed input and output of a specific tool call.
-Use this when you need the full tool execution details (input parameters and output).`;
+Use this when you need the full tool execution details (input parameters and output).
+Check toolCallsMeta.status first - only read if status is 'success' and you need the data.`;
 
   protected params: BuiltinToolParams;
 

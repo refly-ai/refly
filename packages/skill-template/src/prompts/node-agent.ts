@@ -110,9 +110,20 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
   - **Important**: File content is NOT included to save context tokens
   - Use \`read_file\` tool with \`fileId\` to retrieve full content when needed
   - Use \`name\` with \`execute_code\` for file processing
-- \`results\`: outputs from upstream nodes; access via \`@agent:Title\` mention
-  - \`outputFiles\`: metadata only, use \`read_file\` to get content
-- \`summary\` fields: quick preview without reading full content
+- \`resultsMeta\`: outputs from upstream nodes (**metadata only**)
+  - Contains: resultId, title, status, summary, contentTokens, toolCallsMeta, outputFiles
+  - Use \`read_agent_result(resultId)\` to get full AI output
+  - Use \`read_tool_result(resultId, callId)\` to get specific tool input/output
+
+### Critical: Summary is NOT Reliable
+- The \`summary\` field is just **naive tail truncation** (~100 tokens from the end)
+- It is NOT a real summary — may miss important context, reasoning, or key details
+- **Do NOT make decisions based solely on summary**
+- **ALWAYS call \`read_agent_result\`** when:
+  - contentTokens > 300 (substantial content worth reading)
+  - The task relates to or builds upon previous results
+  - You need specific details, data, or reasoning
+  - outputFiles is empty but contentTokens is high (text-only analysis)
 
 ### File Access Strategy
 1. **Check summary first** — often sufficient for understanding file purpose
