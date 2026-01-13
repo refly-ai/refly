@@ -1,0 +1,42 @@
+/* CLI Auth Page Styles - Only antd button related styles remain */
+
+.cli-auth-copy-btn {
+  padding: 0 4px !important;
+  height: auto !important;
+  color: var(--refly-text-3, rgba(28, 31, 35, 0.6)) !important;
+}
+
+.cli-auth-copy-btn:hover {
+  color: var(--refly-primary-default, #1890ff) !important;
+}
+
+.cli-auth-btn-cancel {
+  width: 138px !important;
+  height: 50px !important;
+  border-radius: 12px !important;
+  background-color: transparent !important;
+  border: 1px solid var(--border---refly-line, #b9c1c1) !important;
+  color: var(--refly-text-1, #333) !important;
+  padding: 13px 42px !important;
+}
+
+.cli-auth-btn-cancel:hover {
+  border-color: var(--refly-text-2, #666) !important;
+  color: var(--refly-text-0, #1c1f23) !important;
+}
+
+.cli-auth-btn-authorize {
+  width: 290px !important;
+  height: 50px !important;
+  border-radius: 12px !important;
+  background: var(--text-icon-refly-text-0, #1c1f23) !important;
+  border: none !important;
+  color: white !important;
+  padding: 13px 32px !important;
+}
+
+.cli-auth-btn-authorize:hover {
+  background: var(--text-icon-refly-text-0, #1c1f23) !important;
+  color: white !important;
+  opacity: 0.9 !important;
+}

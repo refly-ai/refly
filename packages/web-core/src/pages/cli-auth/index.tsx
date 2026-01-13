@@ -1,20 +1,25 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Button, Spin, message } from 'antd';
+import { useSearchParams } from 'react-router-dom';
+import { Button, Divider, Spin, Avatar } from 'antd';
 import {
   CheckCircleFilled,
   CloseCircleFilled,
-  CopyOutlined,
   DesktopOutlined,
   ExclamationCircleFilled,
 } from '@ant-design/icons';
+import { Account, Flow } from 'refly-icons';
+import { BsDatabase } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { useGetUserSettings } from '@refly-packages/ai-workspace-common/hooks/use-get-user-settings';
 import { useUserStoreShallow } from '@refly/stores';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
-import './index.css';
-
+import { LoginCard } from '../../components/login-modal/login-card';
+import { VerificationModal } from '../../components/verification-modal';
+import { ResetPasswordModal } from '../../components/reset-password-modal';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import './index.scss';
+import { HiOutlineLightningBolt } from 'react-icons/hi';
 // ============================================================================
 // Types
 // ============================================================================
@@ -155,21 +160,9 @@ interface DeviceCardProps {
 const DeviceCard: React.FC<DeviceCardProps> = React.memo(({ deviceInfo, loading }) => {
   const { t } = useTranslation();
 
-  const handleCopyDeviceId = useCallback(() => {
-    if (deviceInfo?.deviceId) {
-      navigator.clipboard.writeText(deviceInfo.deviceId);
-      message.success(t('common.copy.success'));
-    }
-  }, [deviceInfo?.deviceId, t]);
-
-  const truncateDeviceId = (id: string) => {
-    if (id.length <= 16) return id;
-    return `${id.slice(0, 8)}...${id.slice(-8)}`;
-  };
-
   if (loading) {
     return (
-      <div className="cli-auth-device-card cli-auth-device-card-loading">
+      <div className="flex items-start gap-4 p-4 rounded-xl justify-center items-center gap-3 text-[#666]">
         <Spin size="small" />
         <span>{t('cliAuth.loadingDevice')}</span>
       </div>
@@ -181,31 +174,18 @@ const DeviceCard: React.FC<DeviceCardProps> = React.memo(({ deviceInfo, loading 
   }
 
   return (
-    <div className="cli-auth-device-card">
-      <div className="cli-auth-device-icon">
-        <DesktopOutlined style={{ fontSize: 24 }} />
+    <div className="flex items-center gap-3 px-6 py-2 rounded-xl bg-white border border-solid border-refly-tertiary-hover">
+      <div className="flex items-center justify-center flex-shrink-0">
+        <DesktopOutlined size={20} />
       </div>
-      <div className="cli-auth-device-info">
-        <div className="cli-auth-device-row">
-          <span className="cli-auth-device-label">{t('cliAuth.deviceId')}:</span>
-          <span className="cli-auth-device-value" title={deviceInfo.deviceId}>
-            {truncateDeviceId(deviceInfo.deviceId)}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-inter text-[rgba(28,31,35,0.6)] flex-shrink-0">
+            {t('cliAuth.host')}
           </span>
-          <Button
-            type="text"
-            size="small"
-            icon={<CopyOutlined />}
-            onClick={handleCopyDeviceId}
-            className="cli-auth-copy-btn"
-          />
-        </div>
-        <div className="cli-auth-device-row">
-          <span className="cli-auth-device-label">{t('cliAuth.cliVersion')}:</span>
-          <span className="cli-auth-device-value">{deviceInfo.cliVersion}</span>
-        </div>
-        <div className="cli-auth-device-row">
-          <span className="cli-auth-device-label">{t('cliAuth.host')}:</span>
-          <span className="cli-auth-device-value">{deviceInfo.host}</span>
+          <span className="text-sm font-inter font-medium text-[#1c1f23] leading-[21px] overflow-hidden text-ellipsis whitespace-nowrap">
+            {deviceInfo.host}
+          </span>
         </div>
       </div>
     </div>
@@ -218,7 +198,6 @@ const DeviceCard: React.FC<DeviceCardProps> = React.memo(({ deviceInfo, loading 
 
 const CliAuthPage = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { getLoginStatus } = useIsLogin();
 
@@ -355,17 +334,6 @@ const CliAuthPage = () => {
   }, [pageState, countdown]);
 
   // Handlers
-  const handleLogin = useCallback(() => {
-    // Build returnUrl with all device params using URLSearchParams for proper encoding
-    const params = new URLSearchParams({
-      device_id: deviceId,
-      cli_version: cliVersion,
-      host: host,
-    });
-    const returnUrl = encodeURIComponent(`/cli/auth?${params.toString()}`);
-    navigate(`/login?returnUrl=${returnUrl}`);
-  }, [navigate, deviceId, cliVersion, host]);
-
   const handleAuthorize = useCallback(async () => {
     if (!deviceId) return;
 
@@ -405,75 +373,63 @@ const CliAuthPage = () => {
     switch (pageState) {
       case 'checking_session':
         return (
-          <div className="cli-auth-content cli-auth-content-center">
+          <div className="flex flex-col gap-6 items-center text-center py-6">
             <Spin size="large" />
-            <p className="cli-auth-message">{t('cliAuth.checkingSession')}</p>
+            <p className="m-0 text-sm text-[#666] leading-[1.6]">{t('cliAuth.checkingSession')}</p>
           </div>
         );
 
       case 'login_or_register':
-        return (
-          <div className="cli-auth-content">
-            <div className="cli-auth-permission">
-              <p>{t('cliAuth.permissionSummary')}</p>
-            </div>
-            <div className="cli-auth-login-prompt">
-              <p>{t('cliAuth.loginRequired')}</p>
-              <Button type="primary" size="large" onClick={handleLogin} className="cli-auth-btn">
-                {t('cliAuth.loginButton')}
-              </Button>
-            </div>
-          </div>
-        );
+        return null;
 
       case 'authorize_confirm':
         return (
-          <div className="cli-auth-content">
-            <div className="cli-auth-user-info">
-              <p>
-                {t('cliAuth.loggedInAs')}:{' '}
-                <strong>{userProfile?.email || userProfile?.name}</strong>
+          <div className="flex flex-col gap-6">
+            <div className="w-full h-full p-6 rounded-[12px] bg-[#FBFBFB] border-solid border-refly-tertiary-hover flex flex-col gap-4">
+              <p className="m-0 text-base text-refly-text-0 font-semibold">
+                {t('cliAuth.permissionSummary')}
+              </p>
+              <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
+                <Flow size={20} />
+                {t('cliAuth.permissionItem1')}
+              </p>
+              <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
+                <HiOutlineLightningBolt size={20} />
+                {t('cliAuth.permissionItem2')}
+              </p>
+              <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
+                <BsDatabase size={20} style={{ transform: 'scaleX(1.1)', strokeWidth: '0.3px' }} />
+                {t('cliAuth.permissionItem3')}
               </p>
             </div>
-            <div className="cli-auth-permission">
-              <p>{t('cliAuth.permissionSummary')}</p>
-            </div>
-            <div className="cli-auth-actions">
-              <Button
-                type="primary"
-                size="large"
-                onClick={handleAuthorize}
-                className="cli-auth-btn cli-auth-btn-authorize"
-              >
-                {t('cliAuth.authorizeButton')}
-              </Button>
-              <Button
-                size="large"
-                onClick={handleCancel}
-                className="cli-auth-btn cli-auth-btn-cancel"
-              >
+            <div className="cli-auth-actions flex justify-between gap-4">
+              <Button onClick={handleCancel} className="cli-auth-btn cli-auth-btn-cancel">
                 {t('cliAuth.cancelButton')}
               </Button>
+              <Button onClick={handleAuthorize} className="cli-auth-btn cli-auth-btn-authorize">
+                {t('cliAuth.authorizeButton')}
+              </Button>
             </div>
-            <p className="cli-auth-hint">{t('cliAuth.cancelHint')}</p>
           </div>
         );
 
       case 'authorizing':
         return (
-          <div className="cli-auth-content cli-auth-content-center">
+          <div className="flex flex-col gap-6 items-center text-center py-6">
             <Spin size="large" />
-            <p className="cli-auth-message">{t('cliAuth.authorizing')}</p>
+            <p className="m-0 text-sm text-[#666] leading-[1.6]">{t('cliAuth.authorizing')}</p>
           </div>
         );
 
       case 'authorized_success':
         return (
-          <div className="cli-auth-content cli-auth-content-center">
-            <CheckCircleFilled className="cli-auth-icon cli-auth-icon-success" />
-            <h2 className="cli-auth-result-title">{t('cliAuth.successTitle')}</h2>
-            <p className="cli-auth-message">{t('cliAuth.successMessage')}</p>
-            <p className="cli-auth-countdown">
+          <div className="flex flex-col gap-6 items-center text-center py-6">
+            <CheckCircleFilled className="text-6xl mb-4 text-[#52c41a]" />
+            <h2 className="text-lg font-semibold text-[#1c1f23] m-0 mb-2">
+              {t('cliAuth.successTitle')}
+            </h2>
+            <p className="m-0 text-sm text-[#666] leading-[1.6]">{t('cliAuth.successMessage')}</p>
+            <p className="mt-2 mb-0 text-xs text-[rgba(28,31,35,0.6)]">
               {t('cliAuth.autoCloseCountdown', { seconds: countdown })}
             </p>
           </div>
@@ -481,20 +437,24 @@ const CliAuthPage = () => {
 
       case 'authorized_cancel':
         return (
-          <div className="cli-auth-content cli-auth-content-center">
-            <CloseCircleFilled className="cli-auth-icon cli-auth-icon-cancel" />
-            <h2 className="cli-auth-result-title">{t('cliAuth.cancelledTitle')}</h2>
-            <p className="cli-auth-message">{t('cliAuth.cancelledMessage')}</p>
+          <div className="flex flex-col gap-6 items-center text-center py-6">
+            <CloseCircleFilled className="text-6xl mb-4 text-[rgba(28,31,35,0.6)]" />
+            <h2 className="text-lg font-semibold text-[#1c1f23] m-0 mb-2">
+              {t('cliAuth.cancelledTitle')}
+            </h2>
+            <p className="m-0 text-sm text-[#666] leading-[1.6]">{t('cliAuth.cancelledMessage')}</p>
           </div>
         );
 
       case 'error':
         return (
-          <div className="cli-auth-content cli-auth-content-center">
-            <ExclamationCircleFilled className="cli-auth-icon cli-auth-icon-error" />
-            <h2 className="cli-auth-result-title">{t('cliAuth.errorTitle')}</h2>
-            <p className="cli-auth-message">{errorMessage}</p>
-            <p className="cli-auth-hint">{t('cliAuth.errorHint')}</p>
+          <div className="flex flex-col gap-6 items-center text-center py-6">
+            <ExclamationCircleFilled className="text-6xl mb-4 text-[#ff4d4f]" />
+            <h2 className="text-lg font-semibold text-[#1c1f23] m-0 mb-2">
+              {t('cliAuth.errorTitle')}
+            </h2>
+            <p className="m-0 text-sm text-[#666] leading-[1.6]">{errorMessage}</p>
+            <p className="m-0 text-xs text-[rgba(28,31,35,0.6)]">{t('cliAuth.errorHint')}</p>
           </div>
         );
 
@@ -504,25 +464,48 @@ const CliAuthPage = () => {
   };
 
   return (
-    <div className="cli-auth-page">
-      <div className="cli-auth-container">
-        {/* Header */}
-        <div className="cli-auth-header">
-          <Logo className="cli-auth-logo" />
-          <h1 className="cli-auth-title">{t('cliAuth.title')}</h1>
+    <div className="min-h-screen w-full flex items-center justify-center p-6 bg-refly-bg-body-z0">
+      {pageState === 'login_or_register' ? (
+        <LoginCard from="cli_auth" />
+      ) : (
+        <div className="w-[504px] h-[612px] bg-refly-bg-body-z0 rounded-[20px] p-6 flex flex-col shadow-lg">
+          <div className="p-1 px-2 rounded-lg">
+            <div className="flex items-start gap-2">
+              <Avatar icon={<Account />} src={userProfile?.avatar || defaultAvatar} size={46} />
+
+              <div className="flex flex-col justify-between h-[44px] gap-[2px] opacity-100">
+                <div className="max-w-40 text-base font-semibold text-refly-text-0 leading-5 truncate">
+                  {userProfile?.nickname || 'No nickname'}
+                </div>
+                <div className="max-w-40 text-xs text-refly-text-2 leading-4 truncate">
+                  {userProfile?.email ?? 'No email provided'}
+                </div>
+              </div>
+            </div>
+          </div>
+          <Divider className="my-4 -mx-6 !w-[calc(100%+48px)]" />
+          {/* Header */}
+          <div className="flex flex-col items-center mb-6 gap-1">
+            <Logo className="w-[120px] h-[32px] mb-2" />
+            <h1 className="text-2xl font-semibold text-[#1c1f23] m-0 text-center leading-8">
+              {t('cliAuth.title')}
+            </h1>
+            <p className="text-sm text-refly-text-2 m-0 text-center leading-5">
+              {t('cliAuth.subtitle')}
+            </p>
+          </div>
+
+          {/* Device Card */}
+          <div className="mb-6">
+            <DeviceCard deviceInfo={deviceInfo} loading={deviceLoading} />
+          </div>
+
+          {/* Main Content */}
+          {renderContent()}
         </div>
-
-        {/* Device Card */}
-        <DeviceCard deviceInfo={deviceInfo} loading={deviceLoading} />
-
-        {/* Main Content */}
-        {renderContent()}
-
-        {/* Footer */}
-        <div className="cli-auth-footer">
-          <p className="cli-auth-footer-text">{t('cliAuth.securityNote')}</p>
-        </div>
-      </div>
+      )}
+      <VerificationModal />
+      <ResetPasswordModal />
     </div>
   );
 };
