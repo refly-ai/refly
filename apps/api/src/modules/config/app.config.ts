@@ -160,6 +160,9 @@ export default () => ({
       bonusCreditExpiresInMonths:
         Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_EXPIRES_IN_MONTHS) || 3,
     },
+    onboarding: {
+      enabled: process.env.ONBOARDING_ENABLED === 'true' || false,
+    },
   },
   tools: {
     supportedToolsets: process.env.SUPPORTED_TOOLSETS || '', // comma separated list of toolset keys
