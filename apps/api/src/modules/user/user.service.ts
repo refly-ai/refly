@@ -77,6 +77,14 @@ export class UserService implements OnModuleInit {
       user,
       userPo?.preferences,
     );
+
+    // Check if user is new user
+    // Default to false (old user) if field doesn't exist
+    // All registered users are considered old users by default
+    if (userPreferences.isNewUser === undefined) {
+      userPreferences.isNewUser = false;
+    }
+
     userPo.preferences = JSON.stringify(userPreferences);
 
     return {
