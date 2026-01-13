@@ -4,7 +4,7 @@ import type {
   WorkflowExecutionStatus,
 } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Select, Form, Typography, message } from 'antd';
+import { Button, Input, Select, Form, Typography, message, Tooltip } from 'antd';
 import { StopCircle } from 'refly-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
@@ -878,33 +878,44 @@ export const WorkflowRunForm = ({
                 {t('canvas.workflow.run.creditUsage', { count: creditUsage })}
               </div>
             )}
-            <Button
-              className={cn(
-                'w-full h-8 text-sm group',
-                !workflowIsRunning
-                  ? 'bg-refly-text-0 text-refly-bg-body-z0 hover:!bg-refly-text-0 hover:!text-refly-bg-body-z0 hover:opacity-80'
-                  : '',
-              )}
-              {...(workflowIsRunning ? { color: 'primary' } : { type: 'default' })}
-              icon={
-                workflowIsRunning ? <StopCircle size={16} className="translate-y-[1px]" /> : null
+            <Tooltip
+              title={
+                !workflowIsRunning && !hasFirstSuccessExecutionToday
+                  ? t('canvas.workflow.run.runTooltip')
+                  : undefined
               }
-              onClick={workflowIsRunning ? handleAbort : handleRun}
-              loading={loading}
-              disabled={loading || (workflowIsRunning && !executionId)}
+              placement="top"
+              arrow={false}
+              overlayStyle={{ maxWidth: 300 }}
             >
-              {workflowIsRunning
-                ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
-                : t('canvas.workflow.run.run') || 'Run'}
+              <Button
+                className={cn(
+                  'w-full h-8 text-sm group',
+                  !workflowIsRunning
+                    ? 'bg-refly-text-0 text-refly-bg-body-z0 hover:!bg-refly-text-0 hover:!text-refly-bg-body-z0 hover:opacity-80'
+                    : '',
+                )}
+                {...(workflowIsRunning ? { color: 'primary' } : { type: 'default' })}
+                icon={
+                  workflowIsRunning ? <StopCircle size={16} className="translate-y-[1px]" /> : null
+                }
+                onClick={workflowIsRunning ? handleAbort : handleRun}
+                loading={loading}
+                disabled={loading || (workflowIsRunning && !executionId)}
+              >
+                {workflowIsRunning
+                  ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
+                  : t('canvas.workflow.run.run') || 'Run'}
 
-              {!workflowIsRunning && !hasFirstSuccessExecutionToday && (
-                <img
-                  src={GiftIcon}
-                  alt="gift"
-                  className="w-[18px] h-[18px] group-hover:animate-shake"
-                />
-              )}
-            </Button>
+                {!workflowIsRunning && !hasFirstSuccessExecutionToday && (
+                  <img
+                    src={GiftIcon}
+                    alt="gift"
+                    className="w-[18px] h-[18px] group-hover:animate-shake"
+                  />
+                )}
+              </Button>
+            </Tooltip>
           </div>
         </>
       }

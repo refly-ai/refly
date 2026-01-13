@@ -8,6 +8,7 @@ import { BiText } from 'react-icons/bi';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 
 interface VariableHoverCardProps {
   variableType: 'string' | 'option' | 'resource';
@@ -27,37 +28,41 @@ export const VariableHoverCard = memo(
       switch (variableType) {
         case 'string':
           return (
-            <div className="flex flex-col gap-2 h-full">
+            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 p-3 w-[256px] h-[160px] overflow-hidden">
               <div className="flex items-center">
-                <BiText size={14} className="mr-2" />
-                <div className="text-xs font-bold">
+                <BiText size={18} className="mr-2" />
+                <div className="text-sm font-bold">
                   {t('canvas.workflow.variables.variableTypeOptions.string')}
                 </div>
                 <Divider type="vertical" className="bg-refly-Card-Border mx-1.5" />
-                <div className="text-xs font-bold flex-1 truncate">{label}</div>
+                <div className="text-sm font-bold flex-1 truncate text-refly-func-warning-hover">
+                  {label}
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto text-xs break-all bg-refly-bg-control-z0 rounded-lg p-2">
+              <div className="flex-1 overflow-y-auto text-sm break-all">
                 {value?.[0]?.text || 'Empty value'}
               </div>
             </div>
           );
         case 'option':
           return (
-            <div className="flex flex-col gap-2 h-full">
-              <div className="flex items-center">
-                <List size={14} className="mr-2" />
-                <div className="text-xs font-bold">
+            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 py-3 w-[256px] h-[160px] overflow-hidden">
+              <div className="flex items-center px-3">
+                <List size={18} className="mr-2" />
+                <div className="text-sm font-bold">
                   {t('canvas.workflow.variables.variableTypeOptions.option')}
                 </div>
                 <Divider type="vertical" className="bg-refly-Card-Border mx-1.5" />
-                <div className="text-xs font-bold flex-1 truncate">{label}</div>
+                <div className="text-sm font-bold flex-1 text-refly-func-warning-hover truncate">
+                  {label}
+                </div>
               </div>
               <div className="flex-1 overflow-y-auto rounded-lg">
-                <div className="flex flex-col gap-1.5 bg-refly-bg-control-z0 p-2">
+                <div className="flex flex-col gap-1.5">
                   {options?.map((opt, i) => (
                     <div
                       key={i}
-                      className="px-2 text-xs border-solid border-[1px] border-refly-Card-Border rounded-md"
+                      className="mx-3 px-2 py-1.5 text-xs bg-refly-bg-canvas rounded-[4px]"
                     >
                       {opt}
                     </div>
@@ -71,17 +76,44 @@ export const VariableHoverCard = memo(
             RESOURCE_TYPE_ICON_MAP[resource?.fileType as keyof typeof RESOURCE_TYPE_ICON_MAP] ??
             Attachment;
           return (
-            <div className="flex flex-col gap-2 h-full overflow-hidden">
-              <div className="flex items-center">
-                <Icon size={14} className="mr-2" />
-                <div className="text-xs font-bold">
+            <div
+              className={cn(
+                'flex flex-col gap-2 w-[256px] overflow-hidden p-3',
+                resource?.fileType === 'document' ? 'bg-refly-bg-content-z2 h-[160px]' : '',
+                resource?.fileType === 'audio' ? 'bg-refly-bg-content-z2 h-auto' : '',
+                ['image', 'video'].includes(resource?.fileType as string) ? '!p-0' : '',
+              )}
+            >
+              <div
+                className={cn(
+                  'flex items-center',
+                  ['image', 'video'].includes(resource?.fileType as string)
+                    ? 'absolute top-0 left-0 w-full px-3 h-[45px] rounded-t-xl z-10 text-refly-bg-body-z0 bg-gradient-to-b from-black/50 to-transparent'
+                    : '',
+                )}
+              >
+                <Icon size={18} className="mr-2" />
+                <div className="text-sm font-bold">
                   {t('canvas.workflow.variables.variableTypeOptions.resource')}
                 </div>
-                <Divider type="vertical" className="bg-refly-Card-Border mx-1.5" />
-                <div className="text-xs font-bold flex-1 truncate">{label}</div>
+                <Divider
+                  type="vertical"
+                  className={cn(
+                    'mx-1.5',
+                    ['image', 'video'].includes(resource?.fileType as string)
+                      ? 'bg-refly-bg-body-z0'
+                      : 'bg-refly-Card-Border ',
+                  )}
+                />
+                <div className="text-sm font-bold flex-1 truncate">{resource.name}</div>
               </div>
 
-              <div className="flex-1 overflow-hidden min-h-0 bg-refly-bg-control-z0 rounded-lg">
+              <div
+                className={cn(
+                  'relative flex-1 overflow-hidden min-h-0',
+                  resource?.fileType === 'document' ? 'rounded-lg' : '',
+                )}
+              >
                 {resource ? (
                   <FilePreview
                     file={
@@ -97,11 +129,12 @@ export const VariableHoverCard = memo(
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full gap-2 text-refly-text-3 opacity-60 py-4">
-                    <BiText size={24} strokeWidth={1.5} />
-                    <span className="text-[11px] text-center px-4">
-                      {t('canvas.workflow.variables.noContent')}
-                    </span>
+                    <span className="text-[11px] text-center px-4">{t('common.noData')}</span>
                   </div>
+                )}
+
+                {resource?.fileType === 'document' && (
+                  <div className="absolute bottom-0 left-0 w-full h-[45px] rounded-b-lg z-10 text-refly-bg-body-z0 bg-gradient-to-t from-[#F6F6F6]/50 to-transparent" />
                 )}
               </div>
             </div>
@@ -112,11 +145,7 @@ export const VariableHoverCard = memo(
       }
     };
 
-    return (
-      <div className="w-[300px] max-h-[270px] flex flex-col bg-refly-bg-content-z2 p-3 shadow-xl rounded-xl border border-refly-border-1 select-text">
-        {renderContent()}
-      </div>
-    );
+    return <div className="shadow-xl rounded-xl overflow-hidden">{renderContent()}</div>;
   },
 );
 

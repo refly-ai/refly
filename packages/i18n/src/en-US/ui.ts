@@ -1430,6 +1430,7 @@ const translations = {
         startRunning: 'Your workflow starts running',
         executing: 'Running',
         remix: 'Remix',
+        runTooltip: 'Unlock a Pro Plan discount after first run',
         copyWorkflow: 'Remix Workflow',
         copyShareLink: 'Copy Share Link',
         shareLinkCopied: 'Share link copied to clipboard',
