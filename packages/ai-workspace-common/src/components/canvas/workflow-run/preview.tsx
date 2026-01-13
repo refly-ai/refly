@@ -1,9 +1,7 @@
-import { Segmented, Button, Collapse } from 'antd';
+import { Segmented, Collapse } from 'antd';
 import { memo, useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
-import { Close, ArrowDown, CheckCircleBroken, AiChat } from 'refly-icons';
-import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
+import { ArrowDown, CheckCircleBroken, AiChat } from 'refly-icons';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
 import type { ResultActiveTab } from '@refly/stores';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
@@ -13,6 +11,7 @@ import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { LastRunTab } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/last-run-tab';
 import { ConfigureTab } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/configure-tab';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { WorkflowRunPreviewHeader } from './workflow-run-preview-header';
 
 const OUTPUT_STEP_NAMES = ['answerQuestion', 'generateDocument', 'generateCodeArtifact'];
 
@@ -70,32 +69,14 @@ const WorkflowRunPreviewComponent = () => {
     // Placeholder: retry handler
   };
 
-  const handleStop = async () => {
-    // Placeholder: stop handler
-  };
+  const [outputsOnly, setOutputsOnly] = useState(false);
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
-      <SkillResponseNodeHeader
-        iconSize={20}
-        nodeId={PLACEHOLDER_DATA.nodeId}
-        entityId={PLACEHOLDER_DATA.entityId}
-        title={PLACEHOLDER_DATA.title}
-        source="preview"
-        className="!h-14"
-        canEdit={!PLACEHOLDER_DATA.readonly}
-        actions={
-          <SkillResponseActions
-            readonly={PLACEHOLDER_DATA.readonly}
-            nodeIsExecuting={PLACEHOLDER_DATA.isExecuting}
-            workflowIsRunning={PLACEHOLDER_DATA.workflowIsRunning}
-            variant="preview"
-            onRerun={handleRetry}
-            onStop={handleStop}
-            nodeId={PLACEHOLDER_DATA.nodeId}
-            extraActions={<Button type="text" icon={<Close size={24} />} onClick={handleClose} />}
-          />
-        }
+      <WorkflowRunPreviewHeader
+        onClose={handleClose}
+        onToggleOutputsOnly={() => setOutputsOnly(!outputsOnly)}
+        outputsOnly={outputsOnly}
       />
 
       <div className="flex-1 flex flex-col min-h-0 relative">
