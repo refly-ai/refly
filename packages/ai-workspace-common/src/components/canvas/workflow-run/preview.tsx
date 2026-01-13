@@ -1,11 +1,11 @@
 import { Segmented, Collapse } from 'antd';
-import { memo, useState, useMemo, useEffect } from 'react';
+import { memo, useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, CheckCircleBroken, AiChat } from 'refly-icons';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
 import type { ResultActiveTab } from '@refly/stores';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
-import { useActionResultStoreShallow } from '@refly/stores';
+import { useActionResultStoreShallow, useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { LastRunTab } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/last-run-tab';
@@ -36,6 +36,9 @@ const WorkflowRunPreviewComponent = () => {
     streamResults: state.streamResults,
   }));
   const { fetchActionResult } = useFetchActionResult();
+  const { setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setShowWorkflowRun: state.setShowWorkflowRun,
+  }));
 
   // Filter and sort skillResponse nodes
   const skillResponseNodes = useMemo(() => {
@@ -61,9 +64,9 @@ const WorkflowRunPreviewComponent = () => {
     }
   }, [skillResponseNodes, resultMap, fetchActionResult]);
 
-  const handleClose = () => {
-    // Placeholder: close handler
-  };
+  const handleClose = useCallback(() => {
+    setShowWorkflowRun(false);
+  }, [setShowWorkflowRun]);
 
   const handleRetry = () => {
     // Placeholder: retry handler
