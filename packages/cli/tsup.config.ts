@@ -13,19 +13,19 @@ const customWebUrl = process.env.REFLY_BUILD_WEB_URL;
 // Environment configuration mapping
 const ENV_CONFIG: Record<string, { apiEndpoint: string; webUrl: string }> = {
   production: {
-    apiEndpoint: 'https://refly.ai',
+    apiEndpoint: 'https://api.refly.ai',
     webUrl: 'https://refly.ai',
   },
   staging: {
-    apiEndpoint: 'https://refly.powerformer.net',
-    webUrl: 'https://refly.powerformer.net',
+    apiEndpoint: 'https://staging-api.refly.ai',
+    webUrl: 'https://refly.ai', // staging 使用同一个前端
   },
   test: {
-    apiEndpoint: 'http://localhost:5173',
-    webUrl: 'http://localhost:5173',
+    apiEndpoint: 'https://refly-api.powerformer.net',
+    webUrl: 'https://refly.powerformer.net',
   },
   dev: {
-    apiEndpoint: 'http://localhost:5173',
+    apiEndpoint: 'http://localhost:5800',
     webUrl: 'http://localhost:5173',
   },
   development: {

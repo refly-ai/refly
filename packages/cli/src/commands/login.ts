@@ -8,7 +8,7 @@ import * as os from 'node:os';
 import type { AddressInfo } from 'node:net';
 import open from 'open';
 import { ok, fail, ErrorCodes } from '../utils/output.js';
-import { setOAuthTokens, setApiKey, getApiEndpoint } from '../config/config.js';
+import { setOAuthTokens, setApiKey, getApiEndpoint, getWebUrl } from '../config/config.js';
 import { apiRequest } from '../api/client.js';
 import { logger } from '../utils/logger.js';
 
@@ -324,9 +324,9 @@ async function loginWithDeviceFlow(): Promise<void> {
   const { deviceId, expiresAt } = initResponse;
 
   // 2. Build authorization URL
-  // endpoint is unified (same domain for frontend and API, e.g., localhost:5173 or refly.ai)
-  const endpoint = getApiEndpoint();
-  const authUrl = `${endpoint}/cli/auth?device_id=${encodeURIComponent(deviceId)}&cli_version=${encodeURIComponent(CLI_VERSION)}&host=${encodeURIComponent(hostname)}`;
+  // Use web URL for browser authorization page (may differ from API endpoint in some environments)
+  const webUrl = getWebUrl();
+  const authUrl = `${webUrl}/cli/auth?device_id=${encodeURIComponent(deviceId)}&cli_version=${encodeURIComponent(CLI_VERSION)}&host=${encodeURIComponent(hostname)}`;
 
   // 3. Print instructions and open browser
   process.stderr.write('\n');

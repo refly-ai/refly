@@ -39,8 +39,18 @@ interface DeviceInfo {
 // API Functions
 // ============================================================================
 
-// Use relative path to leverage the dev server proxy (avoids cross-origin cookie issues)
-const API_BASE = '/v1/auth/cli';
+// Get API base URL from window.ENV or use relative path as fallback
+// This allows the page to work both in development (with proxy) and production (with separate API domain)
+const getApiBase = () => {
+  const apiUrl = window.ENV?.API_URL;
+  if (apiUrl) {
+    return `${apiUrl}/v1/auth/cli`;
+  }
+  // Fallback to relative path for development with proxy
+  return '/v1/auth/cli';
+};
+
+const API_BASE = getApiBase();
 
 async function fetchDeviceInit(
   deviceId: string,
