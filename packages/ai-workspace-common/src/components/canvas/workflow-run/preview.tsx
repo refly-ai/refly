@@ -190,6 +190,7 @@ const WorkflowRunPreviewComponent = () => {
                                       fontWeight: 500,
                                       fontSize: '14px',
                                       lineHeight: '1.5em',
+                                      width: '180px',
                                     }}
                                   >
                                     {agentTitle}
@@ -241,7 +242,7 @@ const WorkflowRunPreviewComponent = () => {
                                       margin-bottom: 0 !important;
                                     }
                                     .workflow-run-collapse .ant-collapse-item + .ant-collapse-item {
-                                      margin-top: 1px !important;
+                                      margin-top: 2px !important;
                                     }
                                     .workflow-run-collapse .ant-collapse-item:first-child .ant-collapse-header {
                                       border-radius: 6px 6px 0px 0px !important;
@@ -285,6 +286,9 @@ const WorkflowRunPreviewComponent = () => {
                                     borderStyle: 'solid',
                                     borderRadius: '8px',
                                     marginTop: '10px',
+                                    width: 'calc(100% - 8px)',
+                                    marginLeft: 'auto',
+                                    marginRight: 'auto',
                                   }}
                                 >
                                   <Collapse
