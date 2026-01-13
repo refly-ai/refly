@@ -6,6 +6,7 @@ import { Command } from 'commander';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import { apiRequest } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
+import { getWebUrl } from '../../config/config.js';
 
 interface GenerateWorkflowResponse {
   workflowId: string;
@@ -81,13 +82,11 @@ export const workflowGenerateCommand = new Command('generate')
       // Format output
       ok('workflow.generate', {
         message: 'Workflow generated successfully',
-        workflowId: result.workflowId,
-        planId: result.planId,
-        sessionId: result.sessionId,
+        url: `${getWebUrl()}/workflow/${result.workflowId}`,
+        title: result.workflowPlan?.title,
         nodesCount: result.nodesCount,
-        edgesCount: result.edgesCount,
+        workflowId: result.workflowId,
         plan: {
-          title: result.workflowPlan?.title,
           tasksCount: result.workflowPlan?.tasks?.length ?? 0,
           variablesCount: result.workflowPlan?.variables?.length ?? 0,
           tasks: result.workflowPlan?.tasks?.map((t) => ({

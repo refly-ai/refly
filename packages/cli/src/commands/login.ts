@@ -324,10 +324,9 @@ async function loginWithDeviceFlow(): Promise<void> {
   const { deviceId, expiresAt } = initResponse;
 
   // 2. Build authorization URL
-  const apiEndpoint = getApiEndpoint();
-  // Extract base URL (remove /v1 if present)
-  const baseUrl = apiEndpoint.replace(/\/v1$/, '').replace(/\/api\./, '/');
-  const authUrl = `${baseUrl}/cli/auth?device_id=${encodeURIComponent(deviceId)}&cli_version=${encodeURIComponent(CLI_VERSION)}&host=${encodeURIComponent(hostname)}`;
+  // endpoint is unified (same domain for frontend and API, e.g., localhost:5173 or refly.ai)
+  const endpoint = getApiEndpoint();
+  const authUrl = `${endpoint}/cli/auth?device_id=${encodeURIComponent(deviceId)}&cli_version=${encodeURIComponent(CLI_VERSION)}&host=${encodeURIComponent(hostname)}`;
 
   // 3. Print instructions and open browser
   process.stderr.write('\n');

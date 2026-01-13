@@ -30,12 +30,26 @@ interface ActionResult {
 export const actionResultCommand = new Command('result')
   .description('Get action/node execution result')
   .argument('<resultId>', 'Action result ID')
+  .option('--version <version>', 'Specific version number')
   .option('--include-steps', 'Include detailed step information')
   .option('--include-messages', 'Include chat messages')
   .option('--include-tool-calls', 'Include tool call details')
+  .option('--include-files', 'Include associated files')
+  .option('--raw', 'Disable output sanitization (show full tool outputs)')
   .action(async (resultId, options) => {
     try {
-      const result = await apiRequest<ActionResult>(`/v1/cli/action/result?resultId=${resultId}`);
+      const params = new URLSearchParams({ resultId });
+      if (options.version) {
+        params.set('version', options.version);
+      }
+      if (options.raw) {
+        params.set('sanitizeForDisplay', 'false');
+      }
+      if (options.includeFiles) {
+        params.set('includeFiles', 'true');
+      }
+
+      const result = await apiRequest<ActionResult>(`/v1/cli/action/result?${params}`);
 
       // Format output based on options
       const output: Record<string, unknown> = {

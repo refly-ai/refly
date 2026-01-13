@@ -12,6 +12,9 @@ import { workflowDeleteCommand } from './delete.js';
 import { workflowRunCommand } from './run.js';
 import { workflowAbortCommand } from './abort.js';
 import { workflowStatusCommand } from './status.js';
+import { workflowRunDetailCommand } from './run-detail.js';
+import { workflowRunNodeCommand } from './run-node.js';
+import { workflowRunToolcallsCommand } from './run-toolcalls.js';
 
 // The main run command handles `workflow run <workflowId>`
 // We need to handle this specially since `run` is both a command and a subcommand group
@@ -54,3 +57,13 @@ workflowCommand.addCommand(
       }
     }),
 );
+
+// Add new execution result commands
+// refly workflow run-detail <runId> - Get detailed workflow run info
+workflowCommand.addCommand(workflowRunDetailCommand);
+
+// refly workflow run-node <runId> <nodeId> - Get node execution result
+workflowCommand.addCommand(workflowRunNodeCommand);
+
+// refly workflow run-toolcalls <runId> - Get all tool calls for a run
+workflowCommand.addCommand(workflowRunToolcallsCommand);

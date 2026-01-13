@@ -45,8 +45,11 @@ import {
   NodeExecutionStatus,
   GenerateWorkflowCliRequest,
   GenerateWorkflowCliResponse,
+  GenerateWorkflowAsyncResponse,
+  GenerateStatusResponse,
   CLI_ERROR_CODES,
 } from './workflow-cli.dto';
+import { genCopilotSessionID } from '@refly/utils';
 import { CopilotAutogenService } from '../copilot-autogen/copilot-autogen.service';
 
 // ============================================================================
@@ -424,23 +427,45 @@ export class WorkflowCliController {
    *
    * This endpoint uses the Copilot Agent to generate a complete workflow
    * from a natural language description. It delegates to CopilotAutogenService.
+   *
+   * Supports two modes:
+   * - Sync mode (default): Waits for completion and returns full result
+   * - Async mode (async=true): Returns immediately with sessionId for polling
    */
   @UseGuards(JwtAuthGuard)
   @Post('generate')
   async generate(
     @LoginedUser() user: User,
     @Body() body: GenerateWorkflowCliRequest,
-  ): Promise<{ success: boolean; data: GenerateWorkflowCliResponse }> {
+  ): Promise<{
+    success: boolean;
+    data: GenerateWorkflowCliResponse | GenerateWorkflowAsyncResponse;
+  }> {
     this.logger.log(`Generating workflow for user ${user.uid}: ${body.query.slice(0, 50)}...`);
 
     try {
-      // Delegate to CopilotAutogenService which handles:
+      // Async mode: Start generation and return immediately
+      if (body.async) {
+        const sessionId = body.sessionId || genCopilotSessionID();
+        this.logger.log(`[Async] Starting async generation with sessionId: ${sessionId}`);
+
+        const asyncResult = await this.copilotAutogenService.startGenerateWorkflowAsync(user, {
+          ...body,
+          sessionId,
+        });
+
+        return buildCliSuccessResponse(asyncResult);
+      }
+
+      // Sync mode: Wait for completion (original behavior)
+      // Delegate to CopilotAutogenService.generateWorkflowForCli which handles:
       // 1. Canvas creation (or use existing)
       // 2. Copilot Agent invocation
-      // 3. WorkflowPlan extraction (via planId reference)
-      // 4. Canvas nodes/edges generation
-      // 5. Canvas state update
-      const result = await this.copilotAutogenService.generateWorkflow(user, {
+      // 3. WorkflowPlan reference extraction (planId + version)
+      // 4. Full plan fetching from database for display
+      // 5. Canvas nodes/edges generation
+      // 6. Canvas state update
+      const result = await this.copilotAutogenService.generateWorkflowForCli(user, {
         query: body.query,
         canvasId: body.canvasId,
         projectId: body.projectId,
@@ -467,6 +492,43 @@ export class WorkflowCliController {
         CLI_ERROR_CODES.EXECUTION_FAILED,
         `Failed to generate workflow: ${(error as Error).message}`,
         'Try refining your query to be more specific about the workflow you want to create',
+      );
+    }
+  }
+
+  /**
+   * Get workflow generation status (for polling in async mode)
+   * GET /v1/cli/workflow/generate-status
+   *
+   * Use this endpoint to poll for progress when using async generation mode.
+   * Returns progress information during execution and full result when completed.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('generate-status')
+  async getGenerateStatus(
+    @LoginedUser() user: User,
+    @Query('sessionId') sessionId: string,
+    @Query('canvasId') canvasId?: string,
+  ): Promise<{ success: boolean; data: GenerateStatusResponse }> {
+    if (!sessionId) {
+      throwCliError(
+        CLI_ERROR_CODES.VALIDATION_ERROR,
+        'sessionId is required',
+        'Provide the sessionId returned from the async generate request',
+      );
+    }
+
+    this.logger.debug(`Checking generate status for session: ${sessionId}`);
+
+    try {
+      const status = await this.copilotAutogenService.getGenerateStatus(user, sessionId, canvasId);
+      return buildCliSuccessResponse(status);
+    } catch (error) {
+      this.logger.error(`Failed to get generate status: ${(error as Error).message}`);
+      throwCliError(
+        CLI_ERROR_CODES.EXECUTION_FAILED,
+        `Failed to get status: ${(error as Error).message}`,
+        'Check if the sessionId is correct',
       );
     }
   }

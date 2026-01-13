@@ -9,9 +9,6 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup",
-    "build:test": "REFLY_BUILD_ENV=test tsup",
-    "build:staging": "REFLY_BUILD_ENV=staging tsup",
-    "build:prod": "REFLY_BUILD_ENV=production tsup",
     "dev": "tsup --watch",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",

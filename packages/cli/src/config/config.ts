@@ -37,7 +37,7 @@ const ConfigSchema = z.object({
     .optional(),
   api: z
     .object({
-      endpoint: z.string().default('https://api.refly.ai'),
+      endpoint: z.string().default('https://refly.ai'),
     })
     .optional(),
   skill: z
@@ -50,10 +50,20 @@ const ConfigSchema = z.object({
 
 export type Config = z.infer<typeof ConfigSchema>;
 
+// Default API endpoint and Web URL - injected at build time by tsup
+// Build with different environments:
+//   - Production: pnpm build (or REFLY_BUILD_ENV=production pnpm build)
+//   - Test/Dev:   REFLY_BUILD_ENV=test pnpm build
+//   - Staging:    REFLY_BUILD_ENV=staging pnpm build
+//   - Custom:     REFLY_BUILD_ENDPOINT=https://custom.api.com REFLY_BUILD_WEB_URL=https://custom.web.com pnpm build
+// Can be overridden at runtime by REFLY_API_ENDPOINT / REFLY_WEB_URL env vars
+const DEFAULT_API_ENDPOINT = process.env.REFLY_BUILD_DEFAULT_ENDPOINT || 'https://refly.ai';
+const DEFAULT_WEB_URL = process.env.REFLY_BUILD_DEFAULT_WEB_URL || 'https://refly.ai';
+
 const DEFAULT_CONFIG: Config = {
   version: 1,
   api: {
-    endpoint: 'https://api.refly.ai',
+    endpoint: DEFAULT_API_ENDPOINT,
   },
 };
 
@@ -114,6 +124,21 @@ export function getApiEndpoint(override?: string): string {
   // Load from config
   const config = loadConfig();
   return config.api?.endpoint ?? DEFAULT_CONFIG.api!.endpoint;
+}
+
+/**
+ * Get the Web URL for browser links (with override support)
+ * Used to generate workflow URLs, canvas links, etc.
+ */
+export function getWebUrl(override?: string): string {
+  if (override) return override;
+
+  // Check environment variable
+  const envWebUrl = process.env.REFLY_WEB_URL;
+  if (envWebUrl) return envWebUrl;
+
+  // Default to build-time injected value
+  return DEFAULT_WEB_URL;
 }
 
 /**

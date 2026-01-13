@@ -13,7 +13,6 @@ import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-log
 import { useGetUserSettings } from '@refly-packages/ai-workspace-common/hooks/use-get-user-settings';
 import { useUserStoreShallow } from '@refly/stores';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
-import { serverOrigin } from '@refly/ui-kit';
 import './index.css';
 
 // ============================================================================
@@ -40,7 +39,8 @@ interface DeviceInfo {
 // API Functions
 // ============================================================================
 
-const API_BASE = `${serverOrigin}/v1/auth/cli`;
+// Use relative path to leverage the dev server proxy (avoids cross-origin cookie issues)
+const API_BASE = '/v1/auth/cli';
 
 async function fetchDeviceInit(
   deviceId: string,
@@ -211,14 +211,14 @@ const CliAuthPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { getLoginStatus } = useIsLogin();
-  const { isLogin, isCheckingLoginStatus, userProfile } = useUserStoreShallow((state) => ({
-    isLogin: state.isLogin,
-    isCheckingLoginStatus: state.isCheckingLoginStatus,
-    userProfile: state.userProfile,
-  }));
 
-  // Initialize user settings (fetches profile and updates login status)
+  // Fetch user settings on mount (sets userProfile and isCheckingLoginStatus in store)
   useGetUserSettings();
+
+  const { userProfile, isCheckingLoginStatus } = useUserStoreShallow((state) => ({
+    userProfile: state.userProfile,
+    isCheckingLoginStatus: state.isCheckingLoginStatus,
+  }));
 
   // State
   const [pageState, setPageState] = useState<PageState>('checking_session');
@@ -234,9 +234,8 @@ const CliAuthPage = () => {
 
   // Check if user is logged in
   const isLoggedIn = useMemo(() => {
-    const status = getLoginStatus();
-    return status || isLogin;
-  }, [getLoginStatus, isLogin]);
+    return getLoginStatus();
+  }, [getLoginStatus]);
 
   // Initialize device info
   useEffect(() => {
@@ -284,12 +283,23 @@ const CliAuthPage = () => {
 
   // Check login status and update page state
   useEffect(() => {
-    // Only block if explicitly true (meaning a check is actually in progress)
-    if (isCheckingLoginStatus === true) {
+    // Debug logging
+    console.log('[CLI Auth] State check:', {
+      isCheckingLoginStatus,
+      isLoggedIn,
+      deviceLoading,
+      pageState,
+      userProfile: userProfile?.email,
+    });
+
+    // Wait for login check to complete
+    if (isCheckingLoginStatus) {
+      console.log('[CLI Auth] Still checking login status...');
       return; // Still checking
     }
 
     if (deviceLoading) {
+      console.log('[CLI Auth] Still loading device info...');
       return; // Still loading device info
     }
 
@@ -298,12 +308,15 @@ const CliAuthPage = () => {
       pageState === 'authorized_success' ||
       pageState === 'authorized_cancel'
     ) {
+      console.log('[CLI Auth] Terminal state:', pageState);
       return; // Terminal states
     }
 
     if (isLoggedIn) {
+      console.log('[CLI Auth] User is logged in, showing authorize_confirm');
       setPageState('authorize_confirm');
     } else {
+      console.log('[CLI Auth] User not logged in, showing login_or_register');
       setPageState('login_or_register');
     }
   }, [isCheckingLoginStatus, isLoggedIn, deviceLoading, pageState, userProfile]);

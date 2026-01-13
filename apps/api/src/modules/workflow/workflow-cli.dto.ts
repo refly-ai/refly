@@ -195,6 +195,10 @@ export interface GenerateWorkflowCliRequest {
   skipDefaultNodes?: boolean;
   /** Timeout in milliseconds for waiting Copilot completion */
   timeout?: number;
+  /** Client-provided session ID for recovery/polling */
+  sessionId?: string;
+  /** If true, start generation asynchronously and return immediately */
+  async?: boolean;
 }
 
 /**
@@ -249,6 +253,47 @@ export interface RefineWorkflowCliResponse {
   nodesCount: number;
   /** Number of edges after refinement */
   edgesCount: number;
+}
+
+// ============================================================================
+// Async Generation DTOs (Polling-based streaming simulation)
+// ============================================================================
+
+/**
+ * Response when starting async workflow generation
+ */
+export interface GenerateWorkflowAsyncResponse {
+  /** Session ID for polling status */
+  sessionId: string;
+  /** Canvas ID (created or existing) */
+  canvasId: string;
+  /** Action result ID for tracking */
+  resultId: string;
+  /** Initial status */
+  status: GenerateWorkflowStatus;
+}
+
+/**
+ * Status of workflow generation
+ */
+export type GenerateWorkflowStatus = 'pending' | 'executing' | 'completed' | 'failed';
+
+/**
+ * Response from generate-status polling endpoint
+ */
+export interface GenerateStatusResponse {
+  /** Current status */
+  status: GenerateWorkflowStatus;
+  /** Progress message for display */
+  progress?: string;
+  /** Current step index (1-based) */
+  stepIndex?: number;
+  /** Total estimated steps */
+  totalSteps?: number;
+  /** Error message if failed */
+  error?: string;
+  /** Completed result (only when status === 'completed') */
+  result?: GenerateWorkflowCliResponse;
 }
 
 // ============================================================================
