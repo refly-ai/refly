@@ -4537,6 +4537,7 @@ const translations = {
       expiredDevice: '此授权请求已过期。请重新运行 `refly init`。',
       authorizeFailed: '设备授权失败，请重试。',
     },
+    copied: '已复制!',
   },
 };
 

@@ -4512,6 +4512,7 @@ const translations = {
       expiredDevice: 'This authorization request has expired. Please run `refly init` again.',
       authorizeFailed: 'Failed to authorize device. Please try again.',
     },
+    copied: 'Copied!',
   },
 };
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Divider, Spin, Avatar } from 'antd';
+import { Button, Divider, Spin, Avatar, message } from 'antd';
 import { DesktopOutlined, ExclamationCircleFilled, CheckCircleFilled } from '@ant-design/icons';
 import { FaBan } from 'react-icons/fa6';
 import { Account, Flow, CheckCircleBroken, Copy } from 'refly-icons';
@@ -356,7 +356,10 @@ const CliAuthPage = () => {
       }
     };
 
-    // Poll every 3 seconds
+    // Poll immediately when entering the page
+    pollDeviceStatus();
+
+    // Then poll every 3 seconds
     const pollInterval = setInterval(pollDeviceStatus, 3000);
 
     return () => clearInterval(pollInterval);
@@ -491,7 +494,7 @@ const CliAuthPage = () => {
 
       case 'authorized_cancel':
         return (
-          <div className="flex flex-col items-center text-center w-full">
+          <div className="flex flex-col items-center text-center w-full mt-8">
             <div className="w-[56px] h-[56px] rounded-full bg-[#FFF4EB] flex items-center justify-center mb-4">
               <img src={ClockIcon} alt="Clock" className="w-[20px] h-[20px]" />
             </div>
@@ -514,6 +517,7 @@ const CliAuthPage = () => {
                 className="hover:bg-transparent p-0 w-[24px] h-[18px] flex items-center border-none shadow-none"
                 onClick={() => {
                   navigator.clipboard.writeText('refly init');
+                  message.success(t('cliAuth.copied', 'Copied!'));
                 }}
               />
             </div>
@@ -583,10 +587,12 @@ const CliAuthPage = () => {
             </p>
           </div>
 
-          {/* Device Card */}
-          <div className="mb-6">
-            <DeviceCard deviceInfo={deviceInfo} loading={deviceLoading} />
-          </div>
+          {/* Device Card - Hide when cancelled */}
+          {pageState !== 'authorized_cancel' && (
+            <div className="mb-6">
+              <DeviceCard deviceInfo={deviceInfo} loading={deviceLoading} />
+            </div>
+          )}
 
           {/* Main Content */}
           {renderContent()}
