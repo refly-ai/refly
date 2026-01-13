@@ -6,6 +6,7 @@ import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { SkillModule } from '../skill/skill.module';
 import { ActionModule } from '../action/action.module';
 import { ToolModule } from '../tool/tool.module';
+import { ToolCallModule } from '../tool-call/tool-call.module';
 import { ProviderModule } from '../provider/provider.module';
 import { CopilotAutogenModule } from '../copilot-autogen/copilot-autogen.module';
 import { WorkflowService } from './workflow.service';
@@ -25,6 +26,7 @@ import { NotificationModule } from '../notification/notification.module';
     CanvasModule,
     CanvasSyncModule,
     ToolModule,
+    ToolCallModule,
     SkillModule,
     ActionModule,
     CreditModule,

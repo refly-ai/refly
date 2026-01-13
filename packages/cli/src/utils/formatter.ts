@@ -159,6 +159,19 @@ export class OutputFormatter {
       this.outputWorkflowStatus(payload);
       return;
     }
+
+    // Special handling for CLI status (Phase 1: Charm-style cards)
+    if (type === 'status') {
+      this.outputStatusPretty(payload);
+      return;
+    }
+
+    // Phase 2: Workflow list with Docker-style table
+    if (type === 'workflow.list') {
+      this.outputWorkflowListPretty(payload);
+      return;
+    }
+
     const { message, ...rest } = payload;
 
     // Success icon and message
@@ -302,6 +315,135 @@ export class OutputFormatter {
       console.log(UI.dim(`  💡 Hint: ${error.hint}`));
     }
 
+    console.log();
+  }
+
+  // === Workflow List Format (Phase 2: Docker-style table) ===
+
+  private outputWorkflowListPretty(payload: SuccessPayload): void {
+    const { workflows, total } = payload as { workflows: unknown[]; total: number };
+    const workflowList = workflows as Array<Record<string, unknown>>;
+
+    if (!workflowList || workflowList.length === 0) {
+      console.log(UI.dim('  No workflows found'));
+      console.log();
+      return;
+    }
+
+    // Format status for each workflow
+    const rows = workflowList.map((w) => ({
+      name: String(w.name || '—').slice(0, 40),
+      nodes: w.nodeCount ?? 0,
+      updated: w.updatedAt ? UI.relativeTime(w.updatedAt as string) : '—',
+    }));
+
+    console.log(
+      UI.table({
+        title: 'WORKFLOWS',
+        columns: [
+          { key: 'name', label: 'Name', width: 45 },
+          { key: 'nodes', label: 'Nodes', width: 6, align: 'right' },
+          { key: 'updated', label: 'Updated', width: 12 },
+        ],
+        rows,
+      }),
+    );
+
+    if (total > workflowList.length) {
+      console.log();
+      console.log(UI.dim(`  Showing ${workflowList.length} of ${total} workflows`));
+    }
+    console.log();
+  }
+
+  // === CLI Status Format (Phase 1: Charm-style cards) ===
+
+  private outputStatusPretty(payload: SuccessPayload): void {
+    const { cli_version, api_endpoint, auth_status, auth_method, auth_details, user, skill } =
+      payload as Record<string, unknown>;
+
+    const sym = this.useUnicode ? Symbols : AsciiSymbol;
+
+    // Header
+    console.log(`${sym.DIAMOND} ${UI.bold('Refly CLI')} v${cli_version || '?'}`);
+    console.log();
+
+    // Auth Card
+    const authOk = auth_status === 'valid';
+    const userObj = user as Record<string, unknown> | null;
+    const authDetailsObj = auth_details as Record<string, unknown> | null;
+
+    const authLines: Array<{ text: string; indent?: boolean; muted?: boolean }> = [];
+
+    if (authOk && userObj?.email) {
+      authLines.push({ text: String(userObj.email) });
+      // Provider info
+      const provider = authDetailsObj?.provider || auth_method;
+      if (provider) {
+        const providerDisplay =
+          String(provider).charAt(0).toUpperCase() + String(provider).slice(1);
+        // Token expiry
+        const exp = userObj?.exp as number | undefined;
+        let expiryText = '';
+        if (exp) {
+          expiryText = ` · ${UI.timeRemaining(exp)}`;
+        }
+        authLines.push({
+          text: `via ${providerDisplay}${expiryText}`,
+          indent: true,
+          muted: true,
+        });
+      }
+    } else if (auth_status === 'expired') {
+      authLines.push({ text: 'Token expired', muted: true });
+    } else {
+      authLines.push({ text: 'Not authenticated', muted: true });
+    }
+
+    console.log(
+      UI.card({
+        title: 'Auth',
+        status: authOk ? 'success' : 'error',
+        lines: authLines,
+        width: 45,
+      }),
+    );
+    console.log();
+
+    // Connection Card
+    const endpoint = String(api_endpoint || '—');
+    console.log(
+      UI.card({
+        title: 'Connection',
+        status: authOk ? 'success' : 'pending',
+        lines: [{ text: endpoint }],
+        width: 45,
+      }),
+    );
+    console.log();
+
+    // Skill Card
+    const skillObj = skill as Record<string, unknown> | null;
+    const skillInstalled = skillObj?.installed === true;
+    const skillVersion = skillObj?.version ? `v${skillObj.version}` : '';
+    const skillUpToDate = skillObj?.up_to_date === true;
+
+    const skillLines: Array<{ text: string; indent?: boolean; muted?: boolean }> = [];
+    if (skillInstalled) {
+      const versionText = skillVersion + (skillUpToDate ? ' (up to date)' : ' (update available)');
+      skillLines.push({ text: versionText });
+    } else {
+      skillLines.push({ text: 'Not installed', muted: true });
+    }
+
+    console.log(
+      UI.card({
+        title: 'Skill',
+        status: skillInstalled ? 'success' : 'pending',
+        lines: skillLines,
+        width: 45,
+      }),
+    );
     console.log();
   }
 

@@ -7,6 +7,19 @@
 
 import { Command } from 'commander';
 import { fail, ErrorCodes, configureOutput, type OutputFormat } from '../utils/output.js';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+// Read version from package.json
+function getVersion(): string {
+  try {
+    const pkgPath = path.join(__dirname, '..', '..', 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    return pkg.version || '0.1.0';
+  } catch {
+    return '0.1.0';
+  }
+}
 
 // Import commands
 import { initCommand } from '../commands/init.js';
@@ -22,7 +35,7 @@ import { nodeCommand } from '../commands/node/index.js';
 import { toolCommand } from '../commands/tool/index.js';
 import { fileCommand } from '../commands/file/index.js';
 
-const VERSION = '0.1.0';
+const VERSION = getVersion();
 
 const program = new Command();
 

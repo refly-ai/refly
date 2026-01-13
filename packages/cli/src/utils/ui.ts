@@ -462,6 +462,278 @@ export const UI = {
 
     return `${sym.BOX_VERTICAL} ${styledLabel} ${message}${durationStr}`;
   },
+
+  // ============================================================
+  // Phase 1: Charm-style Card Component
+  // ============================================================
+
+  /**
+   * Charm-style card with box border
+   * @param options Card configuration
+   * @returns Formatted card string
+   */
+  card: (options: {
+    icon?: string;
+    title: string;
+    status?: 'success' | 'error' | 'warning' | 'info' | 'pending';
+    lines: Array<{ text: string; indent?: boolean; muted?: boolean }>;
+    width?: number;
+  }): string => {
+    const useColor = shouldUseColor();
+    const sym = useColor ? Symbols : AsciiSymbol;
+    const maxWidth = Math.min(options.width ?? 50, 100);
+    const innerWidth = maxWidth - 4; // Account for borders and padding
+
+    // Determine status icon
+    let statusIcon = options.icon ?? '';
+    if (!statusIcon && options.status) {
+      const iconMap: Record<string, string> = {
+        success: sym.SUCCESS,
+        error: sym.FAILURE,
+        warning: sym.PENDING,
+        info: sym.RUNNING,
+        pending: sym.PENDING,
+      };
+      statusIcon = iconMap[options.status] || '';
+      if (useColor && options.status) {
+        const styleMap: Record<string, string> = {
+          success: Style.TEXT_SUCCESS,
+          error: Style.TEXT_DANGER,
+          warning: Style.TEXT_WARNING,
+          info: Style.TEXT_INFO,
+          pending: Style.TEXT_DIM,
+        };
+        statusIcon = styled(statusIcon, styleMap[options.status]);
+      }
+    }
+
+    // Build title line
+    const titleText = statusIcon ? `${statusIcon} ${options.title}` : options.title;
+
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes need control characters
+    const ansiRegex = /\x1b\[[0-9;]*m/g;
+
+    // Truncate or wrap text to fit within card
+    const truncate = (text: string, maxLen: number): string => {
+      // Strip ANSI codes for length calculation
+      const stripped = text.replace(ansiRegex, '');
+      if (stripped.length <= maxLen) return text;
+      // Find where to cut (accounting for ANSI codes)
+      let visibleLen = 0;
+      let cutIndex = 0;
+      for (let i = 0; i < text.length; i++) {
+        if (text[i] === '\x1b') {
+          // Skip ANSI sequence
+          const end = text.indexOf('m', i);
+          if (end !== -1) {
+            i = end;
+            continue;
+          }
+        }
+        visibleLen++;
+        if (visibleLen >= maxLen - 1) {
+          cutIndex = i + 1;
+          break;
+        }
+      }
+      return `${text.slice(0, cutIndex)}…`;
+    };
+
+    const padRight = (text: string, width: number): string => {
+      const stripped = text.replace(ansiRegex, '');
+      const padding = Math.max(0, width - stripped.length);
+      return text + ' '.repeat(padding);
+    };
+
+    const lines: string[] = [];
+
+    // Top border
+    lines.push(`${sym.BOX_TOP_LEFT}${sym.BOX_HORIZONTAL.repeat(maxWidth - 2)}${sym.BOX_TOP_RIGHT}`);
+
+    // Title line
+    const titleDisplay = truncate(titleText, innerWidth);
+    lines.push(`${sym.BOX_VERTICAL} ${padRight(titleDisplay, innerWidth)} ${sym.BOX_VERTICAL}`);
+
+    // Content lines
+    for (const line of options.lines) {
+      const prefix = line.indent ? '  ' : '';
+      let content = prefix + line.text;
+      if (line.muted && useColor) {
+        content = prefix + UI.dim(line.text);
+      }
+      const displayContent = truncate(content, innerWidth);
+      lines.push(`${sym.BOX_VERTICAL} ${padRight(displayContent, innerWidth)} ${sym.BOX_VERTICAL}`);
+    }
+
+    // Bottom border
+    lines.push(
+      `${sym.BOX_BOTTOM_LEFT}${sym.BOX_HORIZONTAL.repeat(maxWidth - 2)}${sym.BOX_BOTTOM_RIGHT}`,
+    );
+
+    return lines.join('\n');
+  },
+
+  // ============================================================
+  // Phase 1: Docker-style Table Component
+  // ============================================================
+
+  /**
+   * Docker-style table with header and rows
+   * @param options Table configuration
+   * @returns Formatted table string
+   */
+  table: (options: {
+    title?: string;
+    columns: Array<{
+      key: string;
+      label: string;
+      width?: number;
+      align?: 'left' | 'right';
+    }>;
+    rows: Array<Record<string, unknown>>;
+    maxWidth?: number;
+  }): string => {
+    const useColor = shouldUseColor();
+    const sym = useColor ? Symbols : AsciiSymbol;
+    const maxTotalWidth = options.maxWidth ?? 100;
+
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes need control characters
+    const ansiStripRegex = /\x1b\[[0-9;]*m/g;
+
+    // Calculate column widths
+    const columns = options.columns.map((col) => {
+      // Find max content width for this column
+      let maxContentWidth = col.label.length;
+      for (const row of options.rows) {
+        const value = String(row[col.key] ?? '');
+        // Strip ANSI codes and status icons for width calculation
+        const stripped = value.replace(ansiStripRegex, '').replace(/^[✓✗◐○] /, '');
+        maxContentWidth = Math.max(maxContentWidth, stripped.length);
+      }
+      return {
+        ...col,
+        calculatedWidth: col.width ?? Math.min(maxContentWidth, 40),
+      };
+    });
+
+    // Adjust widths if total exceeds maxWidth
+    const totalWidth = columns.reduce((sum, col) => sum + col.calculatedWidth + 2, 0);
+    if (totalWidth > maxTotalWidth) {
+      const scale = maxTotalWidth / totalWidth;
+      for (const col of columns) {
+        col.calculatedWidth = Math.max(5, Math.floor(col.calculatedWidth * scale));
+      }
+    }
+
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape codes need control characters
+    const ansiRegex = /\x1b\[[0-9;]*m/g;
+
+    const truncate = (text: string, maxLen: number): string => {
+      const stripped = text.replace(ansiRegex, '');
+      if (stripped.length <= maxLen) return text;
+      let visibleLen = 0;
+      let cutIndex = 0;
+      for (let i = 0; i < text.length; i++) {
+        if (text[i] === '\x1b') {
+          const end = text.indexOf('m', i);
+          if (end !== -1) {
+            i = end;
+            continue;
+          }
+        }
+        visibleLen++;
+        if (visibleLen >= maxLen - 1) {
+          cutIndex = i + 1;
+          break;
+        }
+      }
+      return `${text.slice(0, cutIndex)}…`;
+    };
+
+    const pad = (text: string, width: number, align: 'left' | 'right' = 'left'): string => {
+      const stripped = text.replace(ansiRegex, '');
+      const padding = Math.max(0, width - stripped.length);
+      return align === 'right' ? ' '.repeat(padding) + text : text + ' '.repeat(padding);
+    };
+
+    const lines: string[] = [];
+
+    // Title (if provided)
+    if (options.title) {
+      lines.push(`${sym.DIAMOND} ${useColor ? UI.bold(options.title) : options.title}`);
+    }
+
+    // Header row
+    const headerCells = columns.map((col) => {
+      const label = useColor ? col.label.toUpperCase() : col.label.toUpperCase();
+      return pad(label, col.calculatedWidth, col.align);
+    });
+    lines.push(headerCells.join('  '));
+
+    // Divider
+    const dividerCells = columns.map((col) => '─'.repeat(col.calculatedWidth));
+    lines.push(useColor ? UI.dim(dividerCells.join('  ')) : dividerCells.join('  '));
+
+    // Data rows
+    for (const row of options.rows) {
+      const cells = columns.map((col) => {
+        let value = String(row[col.key] ?? '—');
+        value = truncate(value, col.calculatedWidth);
+        return pad(value, col.calculatedWidth, col.align);
+      });
+      lines.push(cells.join('  '));
+    }
+
+    return lines.join('\n');
+  },
+
+  // ============================================================
+  // Phase 2/3 Extension Points (interfaces only)
+  // ============================================================
+
+  /**
+   * Wizard step indicator (Phase 3)
+   * Placeholder for future wizard-style login flow
+   */
+  wizardStep: (current: number, total: number, label: string): string => {
+    const useColor = shouldUseColor();
+    const stepText = `(${current}/${total})`;
+    return useColor ? `${UI.dim(stepText)} ${label}` : `${stepText} ${label}`;
+  },
+
+  /**
+   * Format relative time (e.g., "2h ago", "5m ago")
+   */
+  relativeTime: (date: Date | string): string => {
+    const now = Date.now();
+    const then = typeof date === 'string' ? new Date(date).getTime() : date.getTime();
+    const diffMs = now - then;
+
+    if (diffMs < 60000) return 'just now';
+    if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)}m ago`;
+    if (diffMs < 86400000) return `${Math.floor(diffMs / 3600000)}h ago`;
+    return `${Math.floor(diffMs / 86400000)}d ago`;
+  },
+
+  /**
+   * Format time remaining (e.g., "23h left", "5m left")
+   */
+  timeRemaining: (expiresAt: Date | string | number): string => {
+    const now = Date.now();
+    const expiry =
+      typeof expiresAt === 'number'
+        ? expiresAt * 1000 // Assume Unix timestamp in seconds
+        : typeof expiresAt === 'string'
+          ? new Date(expiresAt).getTime()
+          : expiresAt.getTime();
+    const diffMs = expiry - now;
+
+    if (diffMs <= 0) return 'expired';
+    if (diffMs < 60000) return `${Math.floor(diffMs / 1000)}s left`;
+    if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)}m left`;
+    if (diffMs < 86400000) return `${Math.floor(diffMs / 3600000)}h left`;
+    return `${Math.floor(diffMs / 86400000)}d left`;
+  },
 };
 
 export default UI;

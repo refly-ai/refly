@@ -1,11 +1,19 @@
 /**
- * refly workflow run - Run a workflow
+ * refly workflow run - Run command group
+ * Supports:
+ *   refly workflow run <workflowId> - Start a workflow
+ *   refly workflow run detail <runId> - Get detailed run info
+ *   refly workflow run node <runId> <nodeId> - Get node result
+ *   refly workflow run toolcalls <runId> - Get tool calls
  */
 
 import { Command } from 'commander';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import { apiRequest } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
+import { workflowRunDetailCommand } from './run-detail.js';
+import { workflowRunNodeCommand } from './run-node.js';
+import { workflowRunToolcallsCommand } from './run-toolcalls.js';
 
 interface RunResult {
   runId: string;
@@ -14,11 +22,18 @@ interface RunResult {
   createdAt: string;
 }
 
+// Create the run command group
 export const workflowRunCommand = new Command('run')
-  .description('Run a workflow')
-  .argument('<workflowId>', 'Workflow ID')
+  .description('Run workflows and get execution results')
+  .argument('[workflowId]', 'Workflow ID to run')
   .option('--input <json>', 'Input variables as JSON', '{}')
   .action(async (workflowId, options) => {
+    // If no workflowId provided, show help
+    if (!workflowId) {
+      workflowRunCommand.help();
+      return;
+    }
+
     try {
       // Parse input JSON
       let input: unknown;
@@ -53,3 +68,8 @@ export const workflowRunCommand = new Command('run')
       );
     }
   });
+
+// Add subcommands to run command group
+workflowRunCommand.addCommand(workflowRunDetailCommand);
+workflowRunCommand.addCommand(workflowRunNodeCommand);
+workflowRunCommand.addCommand(workflowRunToolcallsCommand);

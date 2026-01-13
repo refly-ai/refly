@@ -107,6 +107,34 @@ export interface NodeExecutionStatus {
   errorMessage?: string;
 }
 
+// Extended node execution detail for run detail endpoint
+export interface NodeExecutionDetail extends NodeExecutionStatus {
+  nodeExecutionId?: string;
+  query?: string;
+  toolCallsCount?: number;
+}
+
+export interface WorkflowRunDetail {
+  runId: string;
+  workflowId: string;
+  title: string;
+  status: WorkflowExecutionStatus;
+  totalNodes: number;
+  executedNodes: number;
+  failedNodes: number;
+  startedAt: string;
+  finishedAt?: string;
+  durationMs?: number;
+  nodes: NodeExecutionDetail[];
+  errors?: Array<{
+    nodeId: string;
+    nodeTitle: string;
+    errorType: string;
+    errorMessage: string;
+    timestamp: string;
+  }>;
+}
+
 // ============================================================================
 // Node Types & Debug DTOs
 // ============================================================================

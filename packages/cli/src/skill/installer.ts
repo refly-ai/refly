@@ -4,12 +4,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import {
-  getClaudeSkillDir,
-  getClaudeCommandsDir,
-  ensureDir,
-  claudeDirectoriesExist,
-} from '../config/paths.js';
+import { getClaudeSkillDir, getClaudeCommandsDir, ensureDir } from '../config/paths.js';
 import { updateSkillInfo } from '../config/config.js';
 
 // Get the skill files from the package
@@ -50,7 +45,6 @@ export function installSkill(): InstallResult {
     version: getSkillVersion(),
   };
 
-  const dirs = claudeDirectoriesExist();
   const sourceDir = getPackageSkillDir();
 
   // Install SKILL.md and references
@@ -78,13 +72,13 @@ export function installSkill(): InstallResult {
     }
   }
 
-  // Install slash commands (optional)
-  if (dirs.commands) {
-    const commandsDir = getClaudeCommandsDir();
-    result.commandsInstalled = installSlashCommands(sourceDir, commandsDir);
-    if (result.commandsInstalled) {
-      result.commandsPath = commandsDir;
-    }
+  // Install slash commands
+  // Always try to create commands directory (same as skills directory)
+  const commandsDir = getClaudeCommandsDir();
+  ensureDir(commandsDir);
+  result.commandsInstalled = installSlashCommands(sourceDir, commandsDir);
+  if (result.commandsInstalled) {
+    result.commandsPath = commandsDir;
   }
 
   // Update config with installation info

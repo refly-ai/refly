@@ -1384,4 +1384,191 @@ export class ToolService {
       deletedAt: toolCallResult.deletedAt?.getTime(),
     };
   }
+
+  /**
+   * Resolve inventory keys to GenericToolset objects for CLI usage.
+   * Accepts inventory keys (e.g., 'tavily', 'fal_audio') and resolves them to
+   * proper toolset IDs and GenericToolset objects.
+   *
+   * Resolution order:
+   * 1. Check if it's already a toolset ID (starts with 'ts-')
+   * 2. Check user's installed toolsets by inventory key
+   * 3. Check global toolsets by key pattern (ts-global-{key})
+   * 4. Return null if not found
+   *
+   * @param user - Current user
+   * @param keys - Array of inventory keys or toolset IDs
+   * @returns Array of resolved GenericToolset objects
+   */
+  async resolveToolsetsByKeys(
+    user: User,
+    keys: string[],
+  ): Promise<{ resolved: GenericToolset[]; errors: Array<{ key: string; reason: string }> }> {
+    const resolved: GenericToolset[] = [];
+    const errors: Array<{ key: string; reason: string }> = [];
+
+    for (const key of keys) {
+      try {
+        const toolset = await this.resolveToolsetByKey(user, key);
+        if (toolset) {
+          resolved.push(toolset);
+        } else {
+          errors.push({ key, reason: 'Toolset not found' });
+        }
+      } catch (error) {
+        errors.push({ key, reason: (error as Error).message });
+      }
+    }
+
+    return { resolved, errors };
+  }
+
+  /**
+   * Resolve a single inventory key to GenericToolset
+   */
+  async resolveToolsetByKey(user: User, key: string): Promise<GenericToolset | null> {
+    // If it's already a toolset ID, try to fetch it directly
+    if (key.startsWith('ts-')) {
+      const toolset = await this.prisma.toolset.findFirst({
+        where: {
+          toolsetId: key,
+          uid: user.uid,
+          enabled: true,
+          deletedAt: null,
+        },
+      });
+      if (toolset) {
+        return toolsetPo2GenericToolset(toolset);
+      }
+      // Also check global toolsets
+      const globalToolset = await this.prisma.toolset.findFirst({
+        where: {
+          toolsetId: key,
+          enabled: true,
+          deletedAt: null,
+        },
+      });
+      if (globalToolset) {
+        return toolsetPo2GenericToolset(globalToolset);
+      }
+      return null;
+    }
+
+    // Normalize key: replace hyphens with underscores for inventory lookup
+    const normalizedKey = key.replace(/-/g, '_');
+
+    // Check inventory to get toolset definition
+    const inventoryItem = await this.inventoryService.getInventoryItem(normalizedKey);
+    if (!inventoryItem) {
+      return null;
+    }
+
+    const definition = inventoryItem.definition;
+    const inventoryType = definition.type;
+
+    // Build inventory map for this item to include definition (with domain for icon)
+    const inventoryMap = { [normalizedKey]: inventoryItem };
+
+    // For external_oauth type, check if user has authorized
+    if (inventoryType === 'external_oauth') {
+      // Check composio_connections for OAuth authorization
+      const connection = await this.prisma.composioConnection.findFirst({
+        where: {
+          uid: user.uid,
+          integrationId: normalizedKey,
+          status: 'active',
+          deletedAt: null,
+        },
+      });
+
+      if (connection) {
+        // User has authorized, find their toolset
+        const userToolset = await this.prisma.toolset.findFirst({
+          where: {
+            uid: user.uid,
+            key: normalizedKey,
+            enabled: true,
+            deletedAt: null,
+          },
+        });
+        if (userToolset) {
+          return toolsetPo2GenericOAuthToolset(userToolset, inventoryMap);
+        }
+      }
+
+      // Return null for unauthorized OAuth toolset - user needs to authorize first
+      return null;
+    }
+
+    // For regular toolsets, check global toolsets first
+    const globalToolsetId = `ts-global-${normalizedKey.replace(/_/g, '-')}`;
+    const globalToolset = await this.prisma.toolset.findFirst({
+      where: {
+        toolsetId: globalToolsetId,
+        enabled: true,
+        deletedAt: null,
+      },
+    });
+
+    if (globalToolset) {
+      return toolsetPo2GenericToolset(globalToolset, inventoryMap);
+    }
+
+    // Check user's installed toolsets by key
+    const userToolset = await this.prisma.toolset.findFirst({
+      where: {
+        uid: user.uid,
+        key: normalizedKey,
+        enabled: true,
+        deletedAt: null,
+      },
+    });
+
+    if (userToolset) {
+      return toolsetPo2GenericToolset(userToolset, inventoryMap);
+    }
+
+    // If inventory exists but no toolset found, return a basic GenericToolset
+    // This allows the CLI to reference the toolset by key even if not installed
+    return {
+      type: ToolsetType.REGULAR,
+      id: globalToolsetId,
+      name: (definition.labelDict?.en as string) || normalizedKey,
+      toolset: {
+        toolsetId: globalToolsetId,
+        name: (definition.labelDict?.en as string) || normalizedKey,
+        key: normalizedKey,
+        isGlobal: true,
+        enabled: true,
+        authType: 'config_based' as const,
+        config: null,
+        definition: definition,
+        createdAt: new Date().toJSON(),
+        updatedAt: new Date().toJSON(),
+      },
+    };
+  }
+
+  /**
+   * List all available inventory keys for CLI reference
+   */
+  async listInventoryKeys(): Promise<
+    Array<{
+      key: string;
+      name: string;
+      type: string;
+      requiresAuth: boolean;
+    }>
+  > {
+    const inventoryMap = await this.inventoryService.getInventoryMap();
+    return Object.entries(inventoryMap)
+      .filter(([, item]) => this.shouldExposeToolset(item.definition.key))
+      .map(([key, item]) => ({
+        key,
+        name: (item.definition.labelDict?.en as string) || key,
+        type: item.definition.type || 'regular',
+        requiresAuth: item.definition.requiresAuth || false,
+      }))
+      .sort((a, b) => a.key.localeCompare(b.key));
+  }
 }

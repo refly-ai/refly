@@ -6,6 +6,7 @@ import { Command } from 'commander';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import { apiRequest } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
+import { getWebUrl } from '../../config/config.js';
 
 interface WorkflowSummary {
   workflowId: string;
@@ -14,6 +15,15 @@ interface WorkflowSummary {
   nodeCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+interface WorkflowListItem {
+  name: string;
+  description?: string;
+  nodeCount: number;
+  createdAt: string;
+  updatedAt: string;
+  link: string;
 }
 
 export const workflowListCommand = new Command('list')
@@ -30,8 +40,18 @@ export const workflowListCommand = new Command('list')
         total: number;
       }>(`/v1/cli/workflow?limit=${limit}&offset=${offset}`);
 
+      const webUrl = getWebUrl();
+      const workflows: WorkflowListItem[] = result.workflows.map((w) => ({
+        name: w.name,
+        description: w.description,
+        nodeCount: w.nodeCount,
+        createdAt: w.createdAt,
+        updatedAt: w.updatedAt,
+        link: `${webUrl}/workflow/${w.workflowId}`,
+      }));
+
       ok('workflow.list', {
-        workflows: result.workflows,
+        workflows,
         total: result.total,
         limit,
         offset,
