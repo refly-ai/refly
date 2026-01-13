@@ -43,6 +43,22 @@ export const BuiltinToolsetDefinition: ToolsetDefinition = {
       modelOnly: true,
     },
     {
+      name: 'read_agent_result',
+      descriptionDict: {
+        en: 'Read full content of a previous agent result.',
+        'zh-CN': '读取前置节点的完整执行结果。',
+      },
+      modelOnly: true,
+    },
+    {
+      name: 'read_tool_result',
+      descriptionDict: {
+        en: 'Read detailed input/output of a specific tool call.',
+        'zh-CN': '读取特定工具调用的详细输入输出。',
+      },
+      modelOnly: true,
+    },
+    {
       name: 'generate_doc',
       descriptionDict: {
         en: 'Generate a new document based on a title and content.',
@@ -1035,6 +1051,203 @@ Optional filter by source:
   }
 }
 
+// ============================================================================
+// Read Agent Result Tool - Read full content of a previous agent result
+// ============================================================================
+
+export const BuiltinReadAgentResultDefinition: ToolsetDefinition = {
+  key: 'read_agent_result',
+  internal: true,
+  labelDict: {
+    en: 'Read Agent Result',
+    'zh-CN': '读取执行结果',
+  },
+  descriptionDict: {
+    en: 'Read full content of a previous agent result.',
+    'zh-CN': '读取前置节点的完整执行结果。',
+  },
+};
+
+export class BuiltinReadAgentResult extends AgentBaseTool<BuiltinToolParams> {
+  name = 'read_agent_result';
+  toolsetKey = 'read_agent_result';
+
+  schema = z.object({
+    resultId: z.string().describe('The result ID to read (from context resultsMeta)'),
+  });
+
+  description = `Read the full execution result of a previous agent/skill node.
+Returns the AI's reasoning and responses with tool call placeholders.
+Use this when you need detailed content beyond the summary provided in context.`;
+
+  protected params: BuiltinToolParams;
+
+  constructor(params: BuiltinToolParams) {
+    super(params);
+    this.params = params;
+  }
+
+  async _call(input: z.infer<typeof this.schema>): Promise<ToolCallResult> {
+    try {
+      const { reflyService, user } = this.params;
+      const result = await reflyService.getActionResult(user, {
+        resultId: input.resultId,
+      });
+
+      if (!result) {
+        return {
+          status: 'error',
+          error: 'Result not found',
+          summary: `No result found for resultId: ${input.resultId}`,
+        };
+      }
+
+      const formattedContent = this.formatResultWithToolPlaceholders(result);
+
+      console.log('formattedContent', formattedContent);
+
+      return {
+        status: 'success',
+        data: formattedContent,
+        summary: `Successfully read agent result: ${input.resultId}`,
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        error: 'Error reading agent result',
+        summary:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred while reading agent result',
+      };
+    }
+  }
+
+  /**
+   * Format ActionResult with AI content and tool call placeholders.
+   */
+  private formatResultWithToolPlaceholders(result: any): string {
+    const messages = result.messages;
+
+    // If no messages, fallback to steps
+    if (!messages || messages.length === 0) {
+      if (result.steps && result.steps.length > 0) {
+        return result.steps.map((step: any) => step?.content || '').join('\n\n');
+      }
+      return 'No content available for this result.';
+    }
+
+    const parts: string[] = [];
+
+    for (const msg of messages) {
+      if (msg.type === 'ai') {
+        const reasoning = msg.reasoningContent || '';
+        const content = msg.content || '';
+        const fullContent = reasoning ? `${reasoning}\n\n${content}` : content;
+        if (fullContent.trim()) {
+          parts.push(fullContent);
+        }
+      } else if (msg.type === 'tool') {
+        const tc = msg.toolCallResult;
+        if (tc) {
+          const status = tc.status || 'unknown';
+          const toolName = tc.toolName || 'unknown';
+          const callId = tc.callId || 'unknown';
+          parts.push(`[Tool Call: ${callId} | ${toolName} | ${status}]`);
+        }
+      }
+    }
+
+    return parts.join('\n\n');
+  }
+}
+
+// ============================================================================
+// Read Tool Result Tool - Read detailed input/output of a specific tool call
+// ============================================================================
+
+export const BuiltinReadToolResultDefinition: ToolsetDefinition = {
+  key: 'read_tool_result',
+  internal: true,
+  labelDict: {
+    en: 'Read Tool Result',
+    'zh-CN': '读取工具结果',
+  },
+  descriptionDict: {
+    en: 'Read detailed input/output of a specific tool call.',
+    'zh-CN': '读取特定工具调用的详细输入输出。',
+  },
+};
+
+export class BuiltinReadToolResult extends AgentBaseTool<BuiltinToolParams> {
+  name = 'read_tool_result';
+  toolsetKey = 'read_tool_result';
+
+  schema = z.object({
+    resultId: z.string().describe('The result ID containing the tool call'),
+    callId: z.string().describe('The tool call ID to read'),
+  });
+
+  description = `Read the detailed input and output of a specific tool call.
+Use this when you need the full tool execution details (input parameters and output).`;
+
+  protected params: BuiltinToolParams;
+
+  constructor(params: BuiltinToolParams) {
+    super(params);
+    this.params = params;
+  }
+
+  async _call(input: z.infer<typeof this.schema>): Promise<ToolCallResult> {
+    try {
+      const { reflyService, user } = this.params;
+      const result = await reflyService.getActionResult(user, {
+        resultId: input.resultId,
+      });
+
+      if (!result) {
+        return {
+          status: 'error',
+          error: 'Result not found',
+          summary: `No result found for resultId: ${input.resultId}`,
+        };
+      }
+
+      // Find the specific tool call
+      const toolCall = result.toolCalls?.find((tc: any) => tc.callId === input.callId);
+      if (!toolCall) {
+        return {
+          status: 'error',
+          error: 'Tool call not found',
+          summary: `No tool call found with callId: ${input.callId} in result: ${input.resultId}`,
+        };
+      }
+
+      return {
+        status: 'success',
+        data: {
+          callId: toolCall.callId,
+          toolName: toolCall.toolName,
+          status: toolCall.status,
+          input: toolCall.input,
+          output: toolCall.output,
+          error: toolCall.error,
+        },
+        summary: `Successfully read tool result: ${toolCall.toolName} (${input.callId})`,
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        error: 'Error reading tool result',
+        summary:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred while reading tool result',
+      };
+    }
+  }
+}
+
 export class BuiltinLibrarySearchToolset extends AgentBaseToolset<BuiltinToolParams> {
   toolsetKey = BuiltinLibrarySearchDefinition.key;
   tools = [BuiltinLibrarySearch] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
@@ -1093,5 +1306,7 @@ export class BuiltinToolset extends AgentBaseToolset<BuiltinToolParams> {
     BuiltinReadFile,
     BuiltinListFiles,
     BuiltinExecuteCode,
+    BuiltinReadAgentResult,
+    BuiltinReadToolResult,
   ] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
 }

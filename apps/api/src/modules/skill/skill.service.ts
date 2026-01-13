@@ -1126,12 +1126,14 @@ export class SkillService implements OnModuleInit {
         await Promise.all(
           resultIds.map((id) =>
             limit(() =>
-              this.actionService.getActionResult(user, { resultId: id }).catch((error) => {
-                this.logger.error(
-                  `Failed to get action result detail for resultId ${id}: ${error?.message}`,
-                );
-                return null;
-              }),
+              this.actionService
+                .getActionResult(user, { resultId: id, includeFiles: true })
+                .catch((error) => {
+                  this.logger.error(
+                    `Failed to get action result detail for resultId ${id}: ${error?.message}`,
+                  );
+                  return null;
+                }),
             ),
           ),
         )

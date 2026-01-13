@@ -3324,6 +3324,8 @@ const translations = {
         readFile: '阅读',
         listFiles: '翻阅文件列表',
         copilotSummary: '阅读工作流摘要',
+        readAgentResult: '阅读执行结果:',
+        readToolResult: '阅读工具输出:',
       },
     },
     artifact: {
