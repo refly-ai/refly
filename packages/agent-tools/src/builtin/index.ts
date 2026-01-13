@@ -1068,6 +1068,32 @@ export const BuiltinReadAgentResultDefinition: ToolsetDefinition = {
   },
 };
 
+// Maximum tokens for read_agent_result output (to prevent context explosion)
+const MAX_AGENT_RESULT_TOKENS = 8000;
+
+/**
+ * Truncate content from the end (keep tail), trying to start from sentence boundary
+ */
+function truncateFromEnd(content: string, maxTokens: number): string {
+  if (!content) return '';
+
+  // Rough estimate: 1 token ≈ 3.5 chars for mixed content
+  const estimatedChars = maxTokens * 3.5;
+  if (content.length <= estimatedChars) {
+    return content;
+  }
+
+  const tail = content.slice(-estimatedChars);
+
+  // Try to start from a sentence boundary (within first 30% of tail)
+  const sentenceStart = tail.search(/[.。!！?？\n]\s*/);
+  if (sentenceStart !== -1 && sentenceStart < tail.length * 0.3) {
+    return `[...truncated...]\n\n${tail.slice(sentenceStart + 1).trim()}`;
+  }
+
+  return `[...truncated...]\n\n${tail.trim()}`;
+}
+
 export class BuiltinReadAgentResult extends AgentBaseTool<BuiltinToolParams> {
   name = 'read_agent_result';
   toolsetKey = 'read_agent_result';
@@ -1104,9 +1130,12 @@ Use this when you need detailed content beyond the summary provided in context.`
 
       const formattedContent = this.formatResultWithToolPlaceholders(result);
 
+      // Truncate from end if content is too long (keep tail which usually has conclusions)
+      const truncatedContent = truncateFromEnd(formattedContent, MAX_AGENT_RESULT_TOKENS);
+
       return {
         status: 'success',
-        data: formattedContent,
+        data: truncatedContent,
         summary: `Successfully read agent result: ${input.resultId}`,
       };
     } catch (error) {
