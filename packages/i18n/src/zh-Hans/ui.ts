@@ -2297,6 +2297,7 @@ const translations = {
   agent: {
     configure: '输入',
     lastRun: '输出',
+    runlog: 'Runlog',
     noResult: '运行后才有记录哦',
     editTitlePlaceholder: '输入智能体的标题',
     config: {

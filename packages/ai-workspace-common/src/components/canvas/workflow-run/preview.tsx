@@ -1,4 +1,4 @@
-import { Segmented, Collapse } from 'antd';
+import { Segmented, Collapse, Skeleton } from 'antd';
 import { memo, useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, CheckCircleBroken, AiChat } from 'refly-icons';
@@ -12,6 +12,13 @@ import { LastRunTab } from '@refly-packages/ai-workspace-common/components/canva
 import { ConfigureTab } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/configure-tab';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { WorkflowRunPreviewHeader } from './workflow-run-preview-header';
+import { WorkflowRunForm } from './workflow-run-form';
+import { WorkflowVariable } from '@refly/openapi-schema';
+import { logEvent } from '@refly/telemetry-web';
+import { useGetCreditUsageByCanvasId } from '@refly-packages/ai-workspace-common/queries/queries';
+import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useWorkflowIncompleteNodes } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { useQueryClient } from '@tanstack/react-query';
 
 const OUTPUT_STEP_NAMES = ['answerQuestion', 'generateDocument', 'generateCodeArtifact'];
 
@@ -29,16 +36,108 @@ const PLACEHOLDER_DATA = {
 const WorkflowRunPreviewComponent = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<ResultActiveTab>('configure');
-  const { canvasId, readonly } = useCanvasContext();
+  const { canvasId, readonly, workflow } = useCanvasContext();
   const { nodes } = useRealtimeCanvasData();
   const { resultMap, streamResults } = useActionResultStoreShallow((state) => ({
     resultMap: state.resultMap,
     streamResults: state.streamResults,
   }));
   const { fetchActionResult } = useFetchActionResult();
-  const { setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
+  const { setShowWorkflowRun, showWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
     setShowWorkflowRun: state.setShowWorkflowRun,
+    showWorkflowRun: state.showWorkflowRun,
   }));
+
+  const {
+    initializeWorkflow,
+    isInitializing: loading,
+    executionId,
+    workflowStatus,
+    isPolling,
+    pollingError,
+  } = workflow ?? {};
+
+  const {
+    data: workflowVariables,
+    setVariables,
+    isLoading: workflowVariablesLoading,
+  } = useVariablesManagement(canvasId ?? '');
+
+  const queryClient = useQueryClient();
+
+  // Check if there are any incomplete nodes (status is 'init' or 'failed')
+  const { hasIncompleteNodes } = useWorkflowIncompleteNodes();
+
+  // Credit usage query with dynamic polling
+  const { data: creditUsageData, isLoading: isCreditUsageLoading } = useGetCreditUsageByCanvasId(
+    {
+      query: { canvasId: canvasId ?? '' },
+    },
+    undefined,
+    {
+      enabled: showWorkflowRun && !!canvasId,
+    },
+  );
+
+  // Refresh credit usage when workflow status changes to non-executing state
+  useEffect(() => {
+    if (
+      showWorkflowRun &&
+      canvasId &&
+      queryClient &&
+      executionId &&
+      workflowStatus !== 'executing'
+    ) {
+      // Trigger refresh when workflowStatus is not executing
+      queryClient.invalidateQueries({
+        queryKey: ['getCreditUsageByCanvasId', { query: { canvasId } }],
+      });
+    }
+  }, [workflowStatus, canvasId, showWorkflowRun, queryClient, executionId]);
+
+  const [isRunning, setIsRunning] = useState(false);
+
+  const onSubmitVariables = useCallback(
+    async (variables: WorkflowVariable[]) => {
+      // Guard against missing canvasId
+      if (!canvasId) {
+        console.warn('Canvas ID is missing, cannot initialize workflow');
+        return;
+      }
+
+      // Guard against missing initializeWorkflow
+      if (!initializeWorkflow) {
+        console.warn('Initialize workflow function is missing');
+        return;
+      }
+
+      logEvent('run_workflow', null, {
+        canvasId,
+      });
+
+      setVariables(variables);
+
+      try {
+        const success = await initializeWorkflow({
+          canvasId,
+          variables,
+        });
+
+        if (!success) {
+          console.warn('Workflow initialization failed');
+          // Reset running state on failure
+          setIsRunning(false);
+        } else {
+          setShowWorkflowRun(false);
+        }
+      } catch (error) {
+        console.error('Error initializing workflow:', error);
+        // Reset running state on error
+        setIsRunning(false);
+      }
+    },
+    [canvasId, initializeWorkflow, setVariables, setShowWorkflowRun],
+  );
 
   // Filter and sort skillResponse nodes
   const skillResponseNodes = useMemo(() => {
@@ -87,7 +186,7 @@ const WorkflowRunPreviewComponent = () => {
           <Segmented
             options={[
               { label: t('agent.configure'), value: 'configure' },
-              { label: t('agent.lastRun'), value: 'lastRun' },
+              { label: t('agent.runlog'), value: 'lastRun' },
             ]}
             value={activeTab}
             onChange={(value) => setActiveTab(value as ResultActiveTab)}
@@ -102,7 +201,29 @@ const WorkflowRunPreviewComponent = () => {
             className={activeTab === 'configure' ? 'h-full' : 'hidden'}
             style={{ display: activeTab === 'configure' ? 'block' : 'none' }}
           >
-            {/* Configure tab content placeholder */}
+            {workflowVariablesLoading ? (
+              <div className="p-4">
+                <Skeleton paragraph={{ rows: 10 }} active title={false} />
+              </div>
+            ) : (
+              <WorkflowRunForm
+                workflowVariables={workflowVariables ?? []}
+                onSubmitVariables={onSubmitVariables}
+                loading={loading ?? false}
+                executionId={executionId}
+                workflowStatus={workflowStatus}
+                isPolling={isPolling}
+                pollingError={pollingError}
+                isRunning={isRunning}
+                onRunningChange={setIsRunning}
+                canvasId={canvasId}
+                creditUsage={
+                  isCreditUsageLoading || hasIncompleteNodes
+                    ? null
+                    : (creditUsageData?.data?.total ?? 0)
+                }
+              />
+            )}
           </div>
 
           <div

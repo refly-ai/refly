@@ -2166,6 +2166,7 @@ const translations = {
   agent: {
     configure: 'Input',
     lastRun: 'Output',
+    runlog: 'Runlog',
     noResult: 'Run to get results',
     editTitlePlaceholder: 'Enter title for the agent',
     config: {
