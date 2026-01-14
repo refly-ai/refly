@@ -89,10 +89,6 @@ export const LabelDisplay = memo(
       return items;
     }, [variables, labels]);
 
-    if (totalItems.length === 0) {
-      return null;
-    }
-
     const labelsContainerRef = useRef<HTMLDivElement>(null);
     const measureContainerRef = useRef<HTMLDivElement>(null);
     const [visibleCount, setVisibleCount] = useState(totalItems.length);
@@ -178,6 +174,10 @@ export const LabelDisplay = memo(
         resizeObserver.disconnect();
       };
     }, [calculateVisibleCount]);
+
+    if (totalItems.length === 0) {
+      return null;
+    }
 
     const visibleItems = totalItems.slice(0, visibleCount);
     const hiddenItems = totalItems.slice(visibleCount);
