@@ -559,7 +559,6 @@ import type {
   ConvertData,
   ConvertError,
   ConvertResponse2,
-  GetPromptSuggestionsData,
   GetPromptSuggestionsError,
   GetPromptSuggestionsResponse2,
   GetAvailableVouchersError,
@@ -3664,7 +3663,7 @@ export const convert = <ThrowOnError extends boolean = false>(
  * Get prompt suggestions for a given user
  */
 export const getPromptSuggestions = <ThrowOnError extends boolean = false>(
-  options: Options<GetPromptSuggestionsData, ThrowOnError>,
+  options?: Options<unknown, ThrowOnError>,
 ) => {
   return (options?.client ?? client).get<
     GetPromptSuggestionsResponse2,

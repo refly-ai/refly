@@ -1,6 +1,6 @@
 import { memo, useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from 'antd';
+import { Button, Skeleton } from 'antd';
 import { Send, ArrowRight } from 'refly-icons';
 import { ChatInput } from '../canvas/launchpad/chat-input';
 import { useCreateCanvas } from '../../hooks/canvas/use-create-canvas';
@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { LuCornerRightUp } from 'react-icons/lu';
 import './index.scss';
 import { useUserStoreShallow } from '@refly/stores';
+import { PromptSuggestion } from '@refly/openapi-schema';
+import { useGetPromptSuggestions } from '@refly-packages/ai-workspace-common/queries';
 
 interface SamplePromptProps {
   icon: React.ReactNode;
@@ -16,6 +18,21 @@ interface SamplePromptProps {
   onClick: (text: string) => void;
   iconBgColor: string;
 }
+
+const fallbackPrompts: PromptSuggestion[] = [
+  {
+    prompt: {
+      zh: '搭建一个播客生成工作流，抓取昨日 Product Hunt Top 5 产品并分析其价值，生成完整播客脚本、男女声对话音频、封面与节目笔记，并通过邮件通知我。',
+      en: "Build a podcast generation workflow that fetches yesterday's Product Hunt Top 5 products, analyzes their value, produces a full podcast script, male-female dialogue audio, cover art, show notes, and notifies me by email.",
+    },
+  },
+  {
+    prompt: {
+      zh: '搭建一个设计素材自动化工作流，根据设计需求和风格批量生成 5 张图片，并自动适配不同平台尺寸后打包发送到邮箱。',
+      en: 'Build a design asset automation workflow that generates five images based on my design requirements and style, adapts them to multiple platform sizes, and packages them for email delivery.',
+    },
+  },
+];
 
 const SamplePrompt = memo(({ icon, text, onClick, iconBgColor }: SamplePromptProps) => {
   return (
@@ -51,7 +68,7 @@ interface PureCopilotProps {
 }
 
 export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureCopilotProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const { debouncedCreateCanvas, isCreating } = useCreateCanvas({
@@ -89,22 +106,26 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     setQuery(prompt);
   }, []);
 
-  const samplePrompts = useMemo(
-    () => [
-      {
-        icon: '📚',
-        text: "Help me track and analyze the changes in Buffett's U.S. stock holdings this quarter",
-      },
-      {
-        icon: '📮',
-        text: "Scrape today's Product Hunt Top 10, generate a summary document, and deliver to my email",
-      },
-      {
-        icon: '🖼️',
-        text: 'Generate a sequence of Makoto Shinkai-style animated scenes for a story about growing up',
-      },
-    ],
-    [],
+  const { data, isLoading } = useGetPromptSuggestions();
+
+  const samplePrompts = useMemo(() => {
+    if (data?.data && data.data.length > 0) {
+      return data.data;
+    }
+    return fallbackPrompts;
+  }, [data?.data]);
+
+  const getPromptText = useCallback(
+    (prompt: PromptSuggestion) => {
+      const texts = prompt.prompt ?? {};
+      const currentLang = i18n.language;
+      if (texts[currentLang]) return texts[currentLang];
+      if (currentLang.startsWith('zh')) {
+        return texts['zh-CN'] ?? texts.zh ?? texts.en ?? Object.values(texts)[0] ?? '';
+      }
+      return texts.en ?? Object.values(texts)[0] ?? '';
+    },
+    [i18n.language],
   );
 
   const renderSamplePrompts = (isFloating = false) => (
@@ -116,23 +137,34 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     >
       {!isFloating && <div className="text-xs text-refly-text-2">{t('copilot.samplePrompt')}</div>}
 
-      {samplePrompts.map((prompt, index) => (
-        <div
-          key={index}
-          className={cn(
-            'flex items-start justify-between gap-4 px-4 py-3 bg-refly-bg-body-z0 rounded-xl cursor-pointer hover:bg-refly-secondary-hover transition-colors',
-            isFloating ? '' : 'border-[0.5px] border-solid border-refly-text-4',
-          )}
-          onMouseDown={(e) => {
-            // Use onMouseDown to trigger before blur
-            e.preventDefault();
-            handlePromptClick(prompt.text);
-          }}
-        >
-          <div className="text-refly-text-0 text-sm">{prompt.text}</div>
-          <LuCornerRightUp size={18} className="flex-shrink-0 text-refly-text-0" />
+      {isLoading ? (
+        <div className="flex flex-col gap-3">
+          <Skeleton.Button active block className="!h-[46px] !rounded-xl" />
+          <Skeleton.Button active block className="!h-[46px] !rounded-xl" />
+          <Skeleton.Button active block className="!h-[46px] !rounded-xl" />
         </div>
-      ))}
+      ) : (
+        samplePrompts.map((prompt, index) => {
+          const text = getPromptText(prompt);
+          return (
+            <div
+              key={index}
+              className={cn(
+                'flex items-start justify-between gap-4 px-4 py-3 bg-refly-bg-body-z0 rounded-xl cursor-pointer hover:bg-refly-secondary-hover transition-colors',
+                isFloating ? '' : 'border-[0.5px] border-solid border-refly-text-4',
+              )}
+              onMouseDown={(e) => {
+                // Use onMouseDown to trigger before blur
+                e.preventDefault();
+                handlePromptClick(text);
+              }}
+            >
+              <div className="text-refly-text-0 text-sm">{text}</div>
+              <LuCornerRightUp size={18} className="flex-shrink-0 text-refly-text-0" />
+            </div>
+          );
+        })
+      )}
     </div>
   );
 

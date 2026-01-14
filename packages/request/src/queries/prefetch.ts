@@ -107,7 +107,6 @@ import {
   GetPageDetailData,
   GetPilotSessionDetailData,
   GetProjectDetailData,
-  GetPromptSuggestionsData,
   GetResourceDetailData,
   GetTemplateGenerationStatusData,
   GetToolCallResultData,
@@ -733,7 +732,7 @@ export const prefetchUseServeStatic = (
   });
 export const prefetchUseGetPromptSuggestions = (
   queryClient: QueryClient,
-  clientOptions: Options<GetPromptSuggestionsData, true>,
+  clientOptions: Options<unknown, true> = {},
 ) =>
   queryClient.prefetchQuery({
     queryKey: Common.UseGetPromptSuggestionsKeyFn(clientOptions),

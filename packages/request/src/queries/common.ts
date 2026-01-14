@@ -1020,7 +1020,7 @@ export type GetPromptSuggestionsQueryResult<
 > = UseQueryResult<TData, TError>;
 export const useGetPromptSuggestionsKey = 'GetPromptSuggestions';
 export const UseGetPromptSuggestionsKeyFn = (
-  clientOptions: Options<unknown, true>,
+  clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useGetPromptSuggestionsKey, ...(queryKey ?? [clientOptions])];
 export type GetAvailableVouchersDefaultResponse = Awaited<

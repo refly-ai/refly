@@ -107,7 +107,6 @@ import {
   GetPageDetailData,
   GetPilotSessionDetailData,
   GetProjectDetailData,
-  GetPromptSuggestionsData,
   GetResourceDetailData,
   GetTemplateGenerationStatusData,
   GetToolCallResultData,
@@ -733,7 +732,7 @@ export const ensureUseServeStaticData = (
   });
 export const ensureUseGetPromptSuggestionsData = (
   queryClient: QueryClient,
-  clientOptions: Options<GetPromptSuggestionsData, true>,
+  clientOptions: Options<unknown, true> = {},
 ) =>
   queryClient.ensureQueryData({
     queryKey: Common.UseGetPromptSuggestionsKeyFn(clientOptions),

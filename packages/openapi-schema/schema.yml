@@ -4562,13 +4562,6 @@ paths:
       summary: Get prompt suggestions
       description: Get prompt suggestions for a given user
       operationId: getPromptSuggestions
-      parameters:
-        - name: prompt
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Prompt to get suggestions for
       responses:
         '200':
           description: Successful operation

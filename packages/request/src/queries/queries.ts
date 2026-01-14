@@ -393,7 +393,6 @@ import {
   GetPilotSessionDetailError,
   GetProjectDetailData,
   GetProjectDetailError,
-  GetPromptSuggestionsData,
   GetPromptSuggestionsError,
   GetRecordSnapshotData,
   GetRecordSnapshotError,
@@ -1723,7 +1722,7 @@ export const useGetPromptSuggestions = <
   TError = GetPromptSuggestionsError,
   TQueryKey extends Array<unknown> = unknown[],
 >(
-  clientOptions: Options<GetPromptSuggestionsData, true>,
+  clientOptions: Options<unknown, true> = {},
   queryKey?: TQueryKey,
   options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
 ) =>

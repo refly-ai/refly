@@ -12318,15 +12318,6 @@ export type ConvertResponse2 = ConvertResponse;
 
 export type ConvertError = unknown;
 
-export type GetPromptSuggestionsData = {
-  query: {
-    /**
-     * Prompt to get suggestions for
-     */
-    prompt: string;
-  };
-};
-
 export type GetPromptSuggestionsResponse2 = GetPromptSuggestionsResponse;
 
 export type GetPromptSuggestionsError = unknown;
