@@ -3,7 +3,7 @@
  * Provides action result queries for CLI tooling
  */
 
-import { Controller, Get, Query, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Query, Body, UseGuards, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
 import { User } from '@refly/openapi-schema';
@@ -28,5 +28,21 @@ export class ActionCliController {
     const result = await this.actionService.getActionResult(user, { resultId });
     // Convert to DTO to avoid BigInt serialization issues (pk field is BigInt)
     return buildSuccessResponse(actionResultPO2DTO(result));
+  }
+
+  /**
+   * Abort a running action/node execution
+   * POST /v1/cli/action/abort
+   */
+  @Post('abort')
+  async abort(@LoginedUser() user: User, @Body() body: { resultId: string; version?: number }) {
+    if (!body.resultId) {
+      throw new BadRequestException('resultId is required');
+    }
+    await this.actionService.abortActionFromReq(user, body, 'User requested abort via CLI');
+    return buildSuccessResponse({
+      message: 'Action aborted successfully',
+      resultId: body.resultId,
+    });
   }
 }

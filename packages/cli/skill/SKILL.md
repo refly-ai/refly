@@ -1,5 +1,5 @@
 ---
-name: refly-skill-manager
+name: refly
 description: |
   Base skill for Refly ecosystem: creates, discovers, and runs domain-specific skills bound to workflows.
   Routes user intent to matching domain skills via local registry, delegates execution to Refly backend.
@@ -8,7 +8,7 @@ description: |
   Requires: @refly/cli installed and authenticated.
 ---
 
-# Refly Skill Manager
+# Refly
 
 ## Rules
 

@@ -14,6 +14,8 @@ import { workflowAbortCommand } from './abort.js';
 import { workflowStatusCommand } from './status.js';
 import { workflowToolsetKeysCommand } from './toolset-keys.js';
 import { workflowLayoutCommand } from './layout.js';
+import { workflowNodesCommand } from './nodes.js';
+import { workflowNodeGetCommand } from './node-get.js';
 
 // The run command is now a command group with subcommands:
 //   refly workflow run <workflowId> - Start a workflow
@@ -33,4 +35,6 @@ export const workflowCommand = new Command('workflow')
   .addCommand(workflowAbortCommand)
   .addCommand(workflowStatusCommand)
   .addCommand(workflowToolsetKeysCommand)
-  .addCommand(workflowLayoutCommand);
+  .addCommand(workflowLayoutCommand)
+  .addCommand(workflowNodesCommand)
+  .addCommand(workflowNodeGetCommand);

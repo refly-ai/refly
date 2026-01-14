@@ -9,6 +9,22 @@ refly node result <resultId>
 refly node result <resultId> --include-tool-calls
 refly node result <resultId> --include-steps
 refly node result <resultId> --include-messages
+refly node abort <resultId>
+```
+
+## List Nodes in Workflow
+
+```bash
+refly workflow nodes <workflowId>
+refly workflow nodes <workflowId> --include-edges
+refly workflow nodes <workflowId> --include-metadata
+```
+
+## Get Single Node Information
+
+```bash
+refly workflow node <workflowId> <nodeId>
+refly workflow node <workflowId> <nodeId> --include-connections
 ```
 
 ## Interaction
@@ -38,7 +54,8 @@ refly tool get <callId>
 
 - GET /v1/cli/node/types list node types
 - POST /v1/cli/node/run run a single node (not implemented yet)
-- GET /v1/cli/node/result?resultId=<id> get node execution result
+- GET /v1/cli/action/result?resultId=<id> get node execution result
+- POST /v1/cli/action/abort abort node execution
 
 ## Backend API (Tool)
 

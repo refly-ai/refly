@@ -1133,6 +1133,7 @@ export class WorkflowCliController {
         const nodeDetail: NodeExecutionDetail = {
           nodeId: nodeExec.nodeId,
           nodeExecutionId: nodeExec.nodeExecutionId,
+          resultId: nodeExec.entityId ?? undefined, // entityId is used as resultId for action results
           nodeType: nodeExec.nodeType,
           status: nodeExec.status,
           title: nodeExec.title ?? '',

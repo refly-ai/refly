@@ -7,6 +7,9 @@ refly workflow create --name "<name>" --spec '<json>'
 refly workflow generate --query "<natural language description>"
 refly workflow edit <workflowId> --ops '<json>'
 refly workflow get <workflowId>
+woshrefly workflow nodes <workflowId>
+refly workflow nodes <workflowId> --include-edges
+refly workflow nodes <workflowId> --include-metadata
 refly workflow list
 refly workflow delete <workflowId>
 refly workflow run <workflowId> --input '<json>'
