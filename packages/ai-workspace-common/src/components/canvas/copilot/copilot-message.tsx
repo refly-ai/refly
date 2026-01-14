@@ -20,6 +20,7 @@ import { logEvent } from '@refly/telemetry-web';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasStoreShallow } from '@refly/stores';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
 interface CopilotMessageProps {
   result: ActionResult;
@@ -269,8 +270,17 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       {/* AI response - left aligned */}
       <MessageList result={result} stepStatus="finish" handleRetry={handleRetry} />
       {workflowPlan && (
-        <div className="mt-1">
-          <Button type="primary" onClick={handleApprove} loading={loading}>
+        <div className="w-full mt-1 flex justify-end">
+          <Button
+            type="primary"
+            className="!bg-refly-text-0 hover:!bg-refly-text-0 hover:opacity-80 text-refly-bg-canvas hover:!text-refly-bg-canvas font-bold"
+            onClick={handleApprove}
+            loading={
+              loading
+                ? { icon: <Spin size="small" className="!text-refly-bg-canvas" /> }
+                : undefined
+            }
+          >
             {t('copilot.sessionDetail.approve')}
           </Button>
         </div>
