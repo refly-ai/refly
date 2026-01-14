@@ -13,6 +13,7 @@ export interface DeviceSessionInfo {
   status: DeviceSessionStatus;
   createdAt: Date;
   expiresAt: Date;
+  userCode?: string;
 }
 
 export interface DeviceSessionWithTokens extends DeviceSessionInfo {
@@ -47,11 +48,13 @@ export class DeviceAuthService {
     clientIp?: string,
   ): Promise<DeviceSessionInfo> {
     const deviceId = genDeviceSessionId();
+    const userCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + this.SESSION_TTL_MS);
 
     const session = await this.prisma.cliDeviceSession.create({
       data: {
         deviceId,
+        userCode,
         cliVersion,
         host,
         clientIp,
@@ -61,11 +64,12 @@ export class DeviceAuthService {
     });
 
     this.logger.log(
-      `[DEVICE_SESSION_INIT] deviceId=${deviceId} cliVersion=${cliVersion} host=${host}`,
+      `[DEVICE_SESSION_INIT] deviceId=${deviceId} userCode=${userCode} cliVersion=${cliVersion} host=${host}`,
     );
 
     return {
       deviceId: session.deviceId,
+      userCode: session.userCode || undefined,
       cliVersion: session.cliVersion,
       host: session.host,
       status: session.status as DeviceSessionStatus,
@@ -142,16 +146,23 @@ export class DeviceAuthService {
    * Called by web frontend when user clicks "Authorize"
    *
    * @param deviceId Device session ID
+   * @param userCode 6-digit verification code
    * @param user Authenticated user
-   * @returns true if authorized, false if session not found or already processed
+   * @returns true if authorized, false if session not found, code mismatch, or already processed
    */
-  async authorizeDevice(deviceId: string, user: User): Promise<boolean> {
+  async authorizeDevice(deviceId: string, userCode: string, user: User): Promise<boolean> {
     const session = await this.prisma.cliDeviceSession.findUnique({
       where: { deviceId },
     });
 
     if (!session) {
       this.logger.log(`[DEVICE_AUTHORIZE] deviceId=${deviceId} not found`);
+      return false;
+    }
+
+    // Verify user code
+    if (session.userCode !== userCode) {
+      this.logger.warn(`[DEVICE_AUTHORIZE] deviceId=${deviceId} userCode mismatch`);
       return false;
     }
 

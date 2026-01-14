@@ -2498,6 +2498,8 @@ model CliDeviceSession {
   cliVersion   String   @map("cli_version")
   /// Hostname where CLI is running
   host         String   @map("host")
+  /// 6-digit verification code (set when initialized)
+  userCode     String?  @map("user_code")
   /// Client IP address for additional security
   clientIp     String?  @map("client_ip")
   /// Session status: pending, authorized, cancelled, expired

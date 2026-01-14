@@ -9,6 +9,7 @@ import { ok, fail, printError, ErrorCodes } from '../utils/output.js';
 import { setOAuthTokens, setApiKey, getApiEndpoint, getWebUrl } from '../config/config.js';
 import { apiRequest } from '../api/client.js';
 import { logger } from '../utils/logger.js';
+import { styled, Style } from '../utils/ui.js';
 
 // CLI version for device registration
 const CLI_VERSION = '0.1.0';
@@ -25,12 +26,7 @@ export const loginCommand = new Command('login')
       }
 
       // Default: use device flow (opens browser login page)
-      // emitOutput: true means it will call ok()/printError() and exit
-      const result = await loginWithDeviceFlow({ emitOutput: true });
-      if (!result.ok) {
-        // Error already printed by loginWithDeviceFlow
-        process.exit(1);
-      }
+      await loginWithDeviceFlow();
     } catch (error) {
       logger.error('Login failed:', error);
       fail(ErrorCodes.AUTH_REQUIRED, error instanceof Error ? error.message : 'Login failed', {
@@ -98,6 +94,7 @@ interface DeviceSessionInfo {
   status: 'pending' | 'authorized' | 'cancelled' | 'expired';
   createdAt: string;
   expiresAt: string;
+  userCode?: string;
 }
 
 interface DeviceSessionWithTokens extends DeviceSessionInfo {
@@ -106,32 +103,11 @@ interface DeviceSessionWithTokens extends DeviceSessionInfo {
 }
 
 /**
- * Options for device flow login
- */
-export interface DeviceFlowOptions {
-  /** If false, don't call ok()/fail() - just return result. Default: true */
-  emitOutput?: boolean;
-}
-
-/**
- * Result of device flow login
- */
-export interface DeviceFlowResult {
-  ok: boolean;
-  user?: { uid: string; email: string; name?: string };
-  error?: { code: string; message: string; hint?: string };
-}
-
-/**
  * Login using device authorization flow
  * Opens browser to login page, polls for authorization
  * Exported for use by init command
- *
- * @param options - Control output behavior
- * @returns DeviceFlowResult with success/failure info
  */
-export async function loginWithDeviceFlow(options?: DeviceFlowOptions): Promise<DeviceFlowResult> {
-  const emitOutput = options?.emitOutput !== false;
+export async function loginWithDeviceFlow(): Promise<boolean> {
   logger.info('Starting device authorization flow...');
 
   // 1. Initialize device session
@@ -145,7 +121,48 @@ export async function loginWithDeviceFlow(options?: DeviceFlowOptions): Promise<
     requireAuth: false,
   });
 
-  const { deviceId, expiresAt } = initResponse;
+  const { deviceId, expiresAt, userCode } = initResponse;
+
+  // Set up cleanup handler for when process is interrupted or exits
+  const cleanup = async (deviceIdToCancel: string = deviceId) => {
+    try {
+      logger.debug('Cleaning up device session...');
+      await apiRequest('/v1/auth/cli/device/cancel', {
+        method: 'POST',
+        body: { device_id: deviceIdToCancel },
+        requireAuth: false,
+      });
+      logger.debug('Device session cancelled');
+    } catch (error) {
+      logger.debug('Failed to cancel device session during cleanup:', error);
+    }
+  };
+
+  // Handle process termination signals
+  process.on('SIGINT', async () => {
+    logger.debug('Received SIGINT, cleaning up...');
+    await cleanup();
+    process.exit(130); // 128 + SIGINT(2)
+  });
+
+  process.on('SIGTERM', async () => {
+    logger.debug('Received SIGTERM, cleaning up...');
+    await cleanup();
+    process.exit(143); // 128 + SIGTERM(15)
+  });
+
+  // Handle uncaught exceptions and unhandled rejections
+  process.on('uncaughtException', async (error) => {
+    logger.debug('Uncaught exception, cleaning up:', error);
+    await cleanup();
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', async (reason) => {
+    logger.debug('Unhandled rejection, cleaning up:', reason);
+    await cleanup();
+    process.exit(1);
+  });
 
   // 2. Build authorization URL
   // Use web URL for browser authorization page (may differ from API endpoint in some environments)
@@ -158,6 +175,9 @@ export async function loginWithDeviceFlow(options?: DeviceFlowOptions): Promise<
   process.stderr.write('\n');
   process.stderr.write(`  ${authUrl}\n`);
   process.stderr.write('\n');
+  if (userCode) {
+    process.stderr.write(`Verification Code: ${styled(userCode, Style.TEXT_HIGHLIGHT_BOLD)}\n`);
+  }
   process.stderr.write(`Device ID: ${deviceId}\n`);
   process.stderr.write(`Expires: ${new Date(expiresAt).toLocaleTimeString()}\n`);
   process.stderr.write('\n');
@@ -175,95 +195,79 @@ export async function loginWithDeviceFlow(options?: DeviceFlowOptions): Promise<
   const pollInterval = 2000; // 2 seconds
   const maxAttempts = 150; // 5 minutes (150 * 2s)
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await sleep(pollInterval);
+  try {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await sleep(pollInterval);
 
-    const statusResponse = await apiRequest<DeviceSessionWithTokens>('/v1/auth/cli/device/status', {
-      method: 'GET',
-      query: { device_id: deviceId },
-      requireAuth: false,
-    });
+      const statusResponse = await apiRequest<DeviceSessionWithTokens>(
+        '/v1/auth/cli/device/status',
+        {
+          method: 'GET',
+          query: { device_id: deviceId },
+          requireAuth: false,
+        },
+      );
 
-    switch (statusResponse.status) {
-      case 'authorized':
-        if (statusResponse.accessToken && statusResponse.refreshToken) {
-          // Get user info from the token
-          // For now, we'll make an additional call to get user info
-          const userInfo = await getUserInfoFromToken(statusResponse.accessToken);
+      switch (statusResponse.status) {
+        case 'authorized':
+          if (statusResponse.accessToken && statusResponse.refreshToken) {
+            // Get user info from the token
+            // For now, we'll make an additional call to get user info
+            const userInfo = await getUserInfoFromToken(statusResponse.accessToken);
 
-          // Store tokens
-          setOAuthTokens({
-            accessToken: statusResponse.accessToken,
-            refreshToken: statusResponse.refreshToken,
-            expiresAt: new Date(Date.now() + 3600000).toISOString(), // 1 hour
-            provider: 'google', // Device flow doesn't specify provider, default to google
-            user: userInfo,
-          });
+            // Store tokens
+            setOAuthTokens({
+              accessToken: statusResponse.accessToken,
+              refreshToken: statusResponse.refreshToken,
+              expiresAt: new Date(Date.now() + 3600000).toISOString(), // 1 hour
+              provider: 'google', // Device flow doesn't specify provider, default to google
+              user: userInfo,
+            });
 
-          if (emitOutput) {
             ok('login', {
               message: 'Successfully authenticated via device authorization',
               user: userInfo,
               method: 'device',
             });
+            return true;
           }
-          return { ok: true, user: userInfo };
-        }
-        break;
+          break;
 
-      case 'cancelled':
-        if (emitOutput) {
+        case 'cancelled':
           printError(ErrorCodes.AUTH_REQUIRED, 'Authorization was cancelled', {
             hint: 'The authorization request was cancelled in the browser',
           });
-        }
-        return {
-          ok: false,
-          error: {
-            code: ErrorCodes.AUTH_REQUIRED,
-            message: 'Authorization was cancelled',
-            hint: 'The authorization request was cancelled in the browser',
-          },
-        };
+          return false;
 
-      case 'expired':
-        if (emitOutput) {
+        case 'expired':
           printError(ErrorCodes.AUTH_REQUIRED, 'Authorization request expired', {
             hint: 'Run `refly login` again to start a new session',
           });
-        }
-        return {
-          ok: false,
-          error: {
-            code: ErrorCodes.AUTH_REQUIRED,
-            message: 'Authorization request expired',
-            hint: 'Run `refly login` again to start a new session',
-          },
-        };
+          return false;
 
-      case 'pending':
-        // Continue polling
-        if (attempt % 5 === 0) {
-          process.stderr.write('.');
-        }
-        break;
+        case 'pending':
+          // Continue polling
+          if (attempt % 5 === 0) {
+            process.stderr.write('.');
+          }
+          break;
+      }
     }
-  }
 
-  // Timeout
-  if (emitOutput) {
+    // Timeout - update device status before showing error
+    logger.debug('Authorization timeout, updating device status...');
+    await cleanup(deviceId);
     printError(ErrorCodes.TIMEOUT, 'Authorization timeout', {
       hint: 'Complete authorization in the browser within 5 minutes',
     });
+    return false;
+  } finally {
+    // Remove signal handlers when done
+    process.removeAllListeners('SIGINT');
+    process.removeAllListeners('SIGTERM');
+    process.removeAllListeners('uncaughtException');
+    process.removeAllListeners('unhandledRejection');
   }
-  return {
-    ok: false,
-    error: {
-      code: ErrorCodes.TIMEOUT,
-      message: 'Authorization timeout',
-      hint: 'Complete authorization in the browser within 5 minutes',
-    },
-  };
 }
 
 /**
