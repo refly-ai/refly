@@ -4528,7 +4528,7 @@ const translations = {
     successMessage: '你已成功授权此设备。',
     autoCloseCountdown: '{{seconds}} 秒后自动关闭页面',
     cancelledTitle: '链接已过期',
-    cancelledMessage: '此授权会话已超时。要生成新链接，请在终端中运行以下命令：',
+    cancelledMessage: '授权已取消，未授予访问权限',
     closeWindow: '关闭窗口',
     errorTitle: '授权错误',
     errorHint: '请重新运行 `refly init` 以发起新的授权请求。',
