@@ -17,6 +17,7 @@ import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_defa
 import ClockIcon from '@refly-packages/ai-workspace-common/assets/clock.svg';
 import './index.scss';
 import { HiOutlineLightningBolt } from 'react-icons/hi';
+import { GoShieldCheck } from 'react-icons/go';
 // ============================================================================
 // Types
 // ============================================================================
@@ -153,42 +154,81 @@ async function cancelDevice(deviceId: string): Promise<{ success: boolean; error
 interface DeviceCardProps {
   deviceInfo: DeviceInfo | null;
   loading: boolean;
+  showVerificationCode?: boolean;
+  verificationCode?: string;
+  onVerificationCodeChange?: (code: string) => void;
+  isAuthorized?: boolean;
+  isSubmitting?: boolean;
 }
 
-const DeviceCard: React.FC<DeviceCardProps> = React.memo(({ deviceInfo, loading }) => {
-  const { t } = useTranslation();
+const DeviceCard: React.FC<DeviceCardProps> = React.memo(
+  ({
+    deviceInfo,
+    loading,
+    showVerificationCode = false,
+    verificationCode = '',
+    onVerificationCodeChange,
+    isAuthorized = false,
+    isSubmitting = false,
+  }) => {
+    const { t } = useTranslation();
 
-  if (loading) {
+    if (loading) {
+      return (
+        <div className="flex items-start gap-4 p-4 rounded-xl justify-center items-center gap-3 text-[#666]">
+          <Spin size="small" />
+          <span>{t('cliAuth.loadingDevice')}</span>
+        </div>
+      );
+    }
+
+    if (!deviceInfo) {
+      return null;
+    }
+
     return (
-      <div className="flex items-start gap-4 p-4 rounded-xl justify-center items-center gap-3 text-[#666]">
-        <Spin size="small" />
-        <span>{t('cliAuth.loadingDevice')}</span>
+      <div className="flex flex-col gap-2 px-4 py-3 rounded-xl bg-white border border-solid border-refly-tertiary-hover">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center flex-shrink-0">
+            <DesktopOutlined size={16} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-inter text-[rgba(28,31,35,0.6)] flex-shrink-0">
+                {t('cliAuth.host')}
+              </span>
+              <span className="text-xs font-inter font-medium text-[#1c1f23] leading-[18px] overflow-hidden text-ellipsis whitespace-nowrap">
+                {deviceInfo.host}
+              </span>
+            </div>
+          </div>
+        </div>
+        {showVerificationCode && (
+          <div className="flex flex-col gap-2 pt-2 border-t border-refly-tertiary-hover">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center flex-shrink-0">
+                <GoShieldCheck size={18} />
+              </div>
+              <span className="text-xs font-medium text-refly-text-0">
+                {t('cliAuth.verificationCodeLabel')}
+              </span>
+            </div>
+            <div className="flex justify-center">
+              <Input.OTP
+                length={6}
+                value={verificationCode}
+                onChange={onVerificationCodeChange}
+                disabled={isAuthorized || isSubmitting}
+                size="small"
+                className="cli-auth-otp-small"
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
-  }
-
-  if (!deviceInfo) {
-    return null;
-  }
-
-  return (
-    <div className="flex items-center gap-3 px-6 py-2 rounded-xl bg-white border border-solid border-refly-tertiary-hover">
-      <div className="flex items-center justify-center flex-shrink-0">
-        <DesktopOutlined size={20} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-inter text-[rgba(28,31,35,0.6)] flex-shrink-0">
-            {t('cliAuth.host')}
-          </span>
-          <span className="text-sm font-inter font-medium text-[#1c1f23] leading-[21px] overflow-hidden text-ellipsis whitespace-nowrap">
-            {deviceInfo.host}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-});
+  },
+);
 
 // ============================================================================
 // Main Page Component
@@ -444,29 +484,6 @@ const CliAuthPage = () => {
                   {t('cliAuth.permissionItem3')}
                 </p>
               </div>
-
-              <Divider className="my-2" />
-
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-refly-text-0">
-                    {t('cliAuth.verificationCodeLabel')}
-                  </span>
-                </div>
-                <div className="flex justify-center">
-                  <Input.OTP
-                    length={6}
-                    value={verificationCode}
-                    onChange={setVerificationCode}
-                    disabled={isAuthorized || isSubmitting}
-                    size="large"
-                    className="cli-auth-otp"
-                  />
-                </div>
-                <p className="m-0 text-xs text-refly-text-2 text-center">
-                  {t('cliAuth.verificationCodeHint')}
-                </p>
-              </div>
             </div>
             <div className="cli-auth-actions flex justify-between gap-4 relative">
               {isAuthorized && (
@@ -586,7 +603,7 @@ const CliAuthPage = () => {
       {pageState === 'login_or_register' ? (
         <LoginCard from="cli_auth" />
       ) : (
-        <div className="w-[504px] h-[612px] bg-refly-bg-body-z0 rounded-[20px] p-6 flex flex-col shadow-lg">
+        <div className="w-[504px] h-[697px] bg-refly-bg-body-z0 rounded-[20px] p-6 flex flex-col shadow-lg">
           <div className="p-1 px-2 rounded-lg">
             <div className="flex items-start gap-2">
               <Avatar icon={<Account />} src={userProfile?.avatar || defaultAvatar} size={46} />
@@ -616,7 +633,15 @@ const CliAuthPage = () => {
           {/* Device Card - Hide when cancelled */}
           {pageState !== 'authorized_cancel' && (
             <div className="mb-6">
-              <DeviceCard deviceInfo={deviceInfo} loading={deviceLoading} />
+              <DeviceCard
+                deviceInfo={deviceInfo}
+                loading={deviceLoading}
+                showVerificationCode={pageState === 'authorize_confirm'}
+                verificationCode={verificationCode}
+                onVerificationCodeChange={setVerificationCode}
+                isAuthorized={isAuthorized}
+                isSubmitting={isSubmitting}
+              />
             </div>
           )}
 
