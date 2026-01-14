@@ -1139,8 +1139,12 @@ Returns AI's reasoning/responses with tool call placeholders.`;
 
       return {
         status: 'success',
-        data: truncatedContent,
-        summary: `Successfully read agent result: ${input.resultId}`,
+        data: {
+          content: truncatedContent,
+          title: result.title || 'Untitled',
+          resultId: input.resultId,
+        },
+        summary: `Successfully read agent result: ${result.title || input.resultId}`,
       };
     } catch (error) {
       return {
