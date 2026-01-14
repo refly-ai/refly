@@ -1,8 +1,10 @@
-import { Segmented, Collapse, Skeleton } from 'antd';
+import { Segmented, Collapse, Skeleton, message } from 'antd';
 import { memo, useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, CheckCircleBroken, AiChat, Cancelled, Subscription } from 'refly-icons';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import type { DriveFile } from '@refly/openapi-schema';
 import type { ResultActiveTab } from '@refly/stores';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
 import { useActionResultStoreShallow, useCanvasResourcesPanelStoreShallow } from '@refly/stores';
@@ -352,6 +354,63 @@ const WorkflowRunPreviewComponent = () => {
     },
   );
 
+  // Handle adding file to file library
+  const handleAddToFileLibrary = useCallback(
+    async (file: DriveFile) => {
+      if (!canvasId || !file?.storageKey) {
+        message.error(t('common.saveFailed') || 'Failed to add file to library');
+        return;
+      }
+
+      try {
+        const { data, error } = await getClient().createDriveFile({
+          body: {
+            canvasId,
+            name: file.name ?? 'Untitled file',
+            type: file.type ?? 'text/plain',
+            storageKey: file.storageKey,
+            source: 'manual',
+            summary: file.summary,
+          },
+        });
+
+        if (error || !data?.success) {
+          throw new Error(error ? String(error) : 'Failed to create drive file');
+        }
+
+        // Refetch only file library queries (source: 'manual') to refresh the file list
+        // Using refetchQueries instead of invalidateQueries to avoid clearing cache
+        // This will trigger a refetch in FileOverview component without affecting other queries
+        queryClient.refetchQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            // Check if this is a ListDriveFiles query
+            if (queryKey[0] !== 'ListDriveFiles') {
+              return false;
+            }
+            // Check if the query has source: 'manual'
+            // Query key structure: ['ListDriveFiles', { query: { canvasId, source, ... } }]
+            const queryOptions = queryKey[1] as
+              | { query?: { source?: string; canvasId?: string } }
+              | undefined;
+            return (
+              queryOptions?.query?.source === 'manual' && queryOptions?.query?.canvasId === canvasId
+            );
+          },
+        });
+
+        message.success(
+          t('canvas.workflow.run.addToFileLibrarySuccess') || 'Successfully added to file',
+        );
+      } catch (err) {
+        console.error('Failed to add file to library:', err);
+        message.error(t('common.saveFailed') || 'Failed to add file to library');
+        throw err;
+      }
+    },
+    [canvasId, t, queryClient],
+  );
+
   // Collect and sort product files by node execution order when outputsOnly is enabled
   const allProductFiles = useMemo(() => {
     if (!outputsOnly) {
@@ -475,7 +534,12 @@ const WorkflowRunPreviewComponent = () => {
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
                     {allProductFiles.map((file) => (
-                      <ProductCard key={file.fileId} file={file} source="card" />
+                      <ProductCard
+                        key={file.fileId}
+                        file={file}
+                        source="card"
+                        onAddToFileLibrary={handleAddToFileLibrary}
+                      />
                     ))}
                   </div>
                 )}
