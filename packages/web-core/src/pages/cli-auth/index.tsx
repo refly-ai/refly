@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Divider, Spin, Avatar, message } from 'antd';
+import { Button, Divider, Spin, Avatar, message, Input } from 'antd';
 import { DesktopOutlined, ExclamationCircleFilled, CheckCircleFilled } from '@ant-design/icons';
 import { FaBan } from 'react-icons/fa6';
 import { Account, Flow, CheckCircleBroken, Copy } from 'refly-icons';
@@ -25,7 +25,6 @@ type PageState =
   | 'checking_session'
   | 'login_or_register'
   | 'authorize_confirm'
-  | 'authorizing'
   | 'authorized_cancel'
   | 'error';
 
@@ -100,7 +99,10 @@ async function fetchDeviceInit(
   }
 }
 
-async function authorizeDevice(deviceId: string): Promise<{ success: boolean; error?: string }> {
+async function authorizeDevice(
+  deviceId: string,
+  userCode: string,
+): Promise<{ success: boolean; error?: string }> {
   try {
     const response = await fetch(`${API_BASE}/device/authorize`, {
       method: 'POST',
@@ -108,7 +110,7 @@ async function authorizeDevice(deviceId: string): Promise<{ success: boolean; er
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ device_id: deviceId }),
+      body: JSON.stringify({ device_id: deviceId, user_code: userCode }),
     });
 
     if (!response.ok) {
@@ -210,6 +212,8 @@ const CliAuthPage = () => {
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [deviceLoading, setDeviceLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [verificationCode, setVerificationCode] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const [countdown, setCountdown] = useState(10);
@@ -359,24 +363,34 @@ const CliAuthPage = () => {
   // Handlers
   const handleAuthorize = useCallback(async () => {
     if (!deviceId) return;
+    if (!verificationCode || verificationCode.length !== 6) {
+      message.error(t('cliAuth.verificationCodePlaceholder'));
+      return;
+    }
 
-    setPageState('authorizing');
+    setIsSubmitting(true);
     try {
-      const result = await authorizeDevice(deviceId);
+      const result = await authorizeDevice(deviceId, verificationCode);
 
       if (result.success) {
         setIsAuthorized(true);
         setCountdown(10);
         setPageState('authorize_confirm');
       } else {
-        setPageState('error');
-        setErrorMessage(t('cliAuth.errors.authorizeFailed'));
+        if (result.error === 'invalid_verification_code') {
+          message.error(t('cliAuth.errors.invalidVerificationCode'));
+        } else {
+          setPageState('error');
+          setErrorMessage(t('cliAuth.errors.authorizeFailed'));
+        }
       }
     } catch {
       setPageState('error');
       setErrorMessage(t('cliAuth.errors.authorizeFailed'));
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [deviceId, t]);
+  }, [deviceId, verificationCode, t]);
 
   const handleCancel = useCallback(async () => {
     if (!deviceId) return;
@@ -413,18 +427,46 @@ const CliAuthPage = () => {
               <p className="m-0 text-base text-refly-text-0 font-semibold">
                 {t('cliAuth.permissionSummary')}
               </p>
-              <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
-                <Flow size={20} />
-                {t('cliAuth.permissionItem1')}
-              </p>
-              <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
-                <HiOutlineLightningBolt size={20} />
-                {t('cliAuth.permissionItem2')}
-              </p>
-              <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
-                <BsDatabase size={20} style={{ transform: 'scaleX(1.1)', strokeWidth: '0.3px' }} />
-                {t('cliAuth.permissionItem3')}
-              </p>
+              <div className="flex flex-col gap-3">
+                <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
+                  <Flow size={20} />
+                  {t('cliAuth.permissionItem1')}
+                </p>
+                <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
+                  <HiOutlineLightningBolt size={20} />
+                  {t('cliAuth.permissionItem2')}
+                </p>
+                <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
+                  <BsDatabase
+                    size={20}
+                    style={{ transform: 'scaleX(1.1)', strokeWidth: '0.3px' }}
+                  />
+                  {t('cliAuth.permissionItem3')}
+                </p>
+              </div>
+
+              <Divider className="my-2" />
+
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-refly-text-0">
+                    {t('cliAuth.verificationCodeLabel')}
+                  </span>
+                </div>
+                <div className="flex justify-center">
+                  <Input.OTP
+                    length={6}
+                    value={verificationCode}
+                    onChange={setVerificationCode}
+                    disabled={isAuthorized || isSubmitting}
+                    size="large"
+                    className="cli-auth-otp"
+                  />
+                </div>
+                <p className="m-0 text-xs text-refly-text-2 text-center">
+                  {t('cliAuth.verificationCodeHint')}
+                </p>
+              </div>
             </div>
             <div className="cli-auth-actions flex justify-between gap-4 relative">
               {isAuthorized && (
@@ -453,12 +495,13 @@ const CliAuthPage = () => {
               <Button
                 onClick={handleCancel}
                 className="cli-auth-btn cli-auth-btn-cancel"
-                disabled={isAuthorized}
+                disabled={isAuthorized || isSubmitting}
               >
                 {t('cliAuth.cancelButton')}
               </Button>
               <Button
                 onClick={handleAuthorize}
+                loading={isSubmitting}
                 className={`cli-auth-btn cli-auth-btn-authorize flex items-center justify-center gap-2 ${
                   isAuthorized ? 'cli-auth-btn-authorized' : ''
                 }`}
@@ -472,14 +515,6 @@ const CliAuthPage = () => {
                   : t('cliAuth.authorizeButton')}
               </Button>
             </div>
-          </div>
-        );
-
-      case 'authorizing':
-        return (
-          <div className="flex flex-col gap-6 items-center text-center py-6">
-            <Spin size="large" />
-            <p className="m-0 text-sm text-[#666] leading-[1.6]">{t('cliAuth.authorizing')}</p>
           </div>
         );
 

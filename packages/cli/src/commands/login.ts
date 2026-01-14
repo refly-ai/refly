@@ -93,6 +93,7 @@ interface DeviceSessionInfo {
   status: 'pending' | 'authorized' | 'cancelled' | 'expired';
   createdAt: string;
   expiresAt: string;
+  userCode?: string;
 }
 
 interface DeviceSessionWithTokens extends DeviceSessionInfo {
@@ -119,7 +120,7 @@ export async function loginWithDeviceFlow(): Promise<boolean> {
     requireAuth: false,
   });
 
-  const { deviceId, expiresAt } = initResponse;
+  const { deviceId, expiresAt, userCode } = initResponse;
 
   // 2. Build authorization URL
   // Use web URL for browser authorization page (may differ from API endpoint in some environments)
@@ -132,6 +133,9 @@ export async function loginWithDeviceFlow(): Promise<boolean> {
   process.stderr.write('\n');
   process.stderr.write(`  ${authUrl}\n`);
   process.stderr.write('\n');
+  if (userCode) {
+    process.stderr.write(`Verification Code: ${userCode}\n`);
+  }
   process.stderr.write(`Device ID: ${deviceId}\n`);
   process.stderr.write(`Expires: ${new Date(expiresAt).toLocaleTimeString()}\n`);
   process.stderr.write('\n');

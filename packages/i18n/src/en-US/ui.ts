@@ -4512,7 +4512,11 @@ const translations = {
       invalidDevice: 'Invalid or expired device request.',
       expiredDevice: 'This authorization request has expired. Please run `refly init` again.',
       authorizeFailed: 'Failed to authorize device. Please try again.',
+      invalidVerificationCode: 'Invalid verification code. Please try again.',
     },
+    verificationCodeLabel: 'Verification Code',
+    verificationCodePlaceholder: 'Enter 6-digit code',
+    verificationCodeHint: 'Enter the 6-digit code shown in your terminal',
     copied: 'Copied!',
   },
 };
