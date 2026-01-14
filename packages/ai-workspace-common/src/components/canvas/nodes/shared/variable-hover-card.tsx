@@ -39,7 +39,7 @@ export const VariableHoverCard = memo(
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto text-sm break-all">
-                {value?.[0]?.text || 'Empty value'}
+                {value?.[0]?.text || t('common.noData')}
               </div>
             </div>
           );

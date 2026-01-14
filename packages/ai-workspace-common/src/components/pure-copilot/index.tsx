@@ -179,7 +179,12 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
   );
 
   return (
-    <div className={cn('flex flex-col items-center w-full max-w-[650px] mx-auto px-4', classnames)}>
+    <div
+      className={cn(
+        'flex flex-col items-center w-[90%] max-w-[800px] min-w-[320px] mx-auto px-4',
+        classnames,
+      )}
+    >
       <div className="flex items-center gap-3 mb-6">
         <svg
           xmlns="http://www.w3.org/2000/svg"
