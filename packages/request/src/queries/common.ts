@@ -101,6 +101,7 @@ import {
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
   getScheduleDetail,
@@ -1010,6 +1011,18 @@ export const UseServeStaticKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useServeStaticKey, ...(queryKey ?? [clientOptions])];
+export type GetPromptSuggestionsDefaultResponse = Awaited<
+  ReturnType<typeof getPromptSuggestions>
+>['data'];
+export type GetPromptSuggestionsQueryResult<
+  TData = GetPromptSuggestionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetPromptSuggestionsKey = 'GetPromptSuggestions';
+export const UseGetPromptSuggestionsKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetPromptSuggestionsKey, ...(queryKey ?? [clientOptions])];
 export type GetAvailableVouchersDefaultResponse = Awaited<
   ReturnType<typeof getAvailableVouchers>
 >['data'];

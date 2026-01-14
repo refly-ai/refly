@@ -2088,6 +2088,23 @@ model FormSubmission {
   @@map("form_submissions")
 }
 
+model PromptSuggestion {
+  /// Primary key
+  pk        BigInt    @id @default(autoincrement())
+  /// Prompt (JSON map, key is language code, value is prompt)
+  prompt    String    @map("prompt")
+  /// Metadata (JSON)
+  metadata  String    @map("metadata")
+  /// Create timestamp
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@map("prompt_suggestions")
+}
+
 /// Voucher/discount code for template publishing rewards
 model Voucher {
   /// Primary key

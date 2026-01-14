@@ -559,6 +559,9 @@ import type {
   ConvertData,
   ConvertError,
   ConvertResponse2,
+  GetPromptSuggestionsData,
+  GetPromptSuggestionsError,
+  GetPromptSuggestionsResponse2,
   GetAvailableVouchersError,
   GetAvailableVouchersResponse2,
   ListUserVouchersError,
@@ -3653,6 +3656,23 @@ export const convert = <ThrowOnError extends boolean = false>(
       ...options?.headers,
     },
     url: '/misc/convert',
+  });
+};
+
+/**
+ * Get prompt suggestions
+ * Get prompt suggestions for a given user
+ */
+export const getPromptSuggestions = <ThrowOnError extends boolean = false>(
+  options: Options<GetPromptSuggestionsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetPromptSuggestionsResponse2,
+    GetPromptSuggestionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/misc/promptSuggestions',
   });
 };
 

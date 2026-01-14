@@ -102,6 +102,7 @@ import {
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
   getScheduleDetail,
@@ -393,6 +394,8 @@ import {
   GetPilotSessionDetailError,
   GetProjectDetailData,
   GetProjectDetailError,
+  GetPromptSuggestionsData,
+  GetPromptSuggestionsError,
   GetRecordSnapshotData,
   GetRecordSnapshotError,
   GetResourceDetailData,
@@ -1714,6 +1717,23 @@ export const useServeStatic = <
     queryKey: Common.UseServeStaticKeyFn(clientOptions, queryKey),
     queryFn: () =>
       serveStatic({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetPromptSuggestions = <
+  TData = Common.GetPromptSuggestionsDefaultResponse,
+  TError = GetPromptSuggestionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetPromptSuggestionsData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetPromptSuggestionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getPromptSuggestions({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetAvailableVouchers = <

@@ -6322,6 +6322,25 @@ export type ConvertResponse = BaseResponse & {
   };
 };
 
+/**
+ * Prompt suggestion
+ */
+export type PromptSuggestion = {
+  /**
+   * Prompt (JSON map, key is language code, value is prompt)
+   */
+  prompt: {
+    [key: string]: string;
+  };
+};
+
+export type GetPromptSuggestionsResponse = BaseResponse & {
+  /**
+   * Prompt suggestions
+   */
+  data?: Array<PromptSuggestion>;
+};
+
 export type MediaGenerationModelCapabilities = {
   /**
    * Whether this model supports image generation
@@ -12298,6 +12317,19 @@ export type ConvertData = {
 export type ConvertResponse2 = ConvertResponse;
 
 export type ConvertError = unknown;
+
+export type GetPromptSuggestionsData = {
+  query: {
+    /**
+     * Prompt to get suggestions for
+     */
+    prompt: string;
+  };
+};
+
+export type GetPromptSuggestionsResponse2 = GetPromptSuggestionsResponse;
+
+export type GetPromptSuggestionsError = unknown;
 
 export type GetAvailableVouchersResponse2 = GetAvailableVouchersResponse;
 

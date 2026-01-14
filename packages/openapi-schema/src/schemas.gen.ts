@@ -8876,6 +8876,41 @@ export const ConvertResponseSchema = {
   ],
 } as const;
 
+export const PromptSuggestionSchema = {
+  type: 'object',
+  description: 'Prompt suggestion',
+  required: ['prompt'],
+  properties: {
+    prompt: {
+      type: 'object',
+      description: 'Prompt (JSON map, key is language code, value is prompt)',
+      additionalProperties: {
+        type: 'string',
+      },
+    },
+  },
+} as const;
+
+export const GetPromptSuggestionsResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Prompt suggestions',
+          items: {
+            $ref: '#/components/schemas/PromptSuggestion',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const MediaGenerationModelCapabilitiesSchema = {
   type: 'object',
   properties: {

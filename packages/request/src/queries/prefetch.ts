@@ -33,6 +33,7 @@ import {
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
   getResourceDetail,
   getSettings,
   getSubscriptionPlans,
@@ -106,6 +107,7 @@ import {
   GetPageDetailData,
   GetPilotSessionDetailData,
   GetProjectDetailData,
+  GetPromptSuggestionsData,
   GetResourceDetailData,
   GetTemplateGenerationStatusData,
   GetToolCallResultData,
@@ -728,6 +730,14 @@ export const prefetchUseServeStatic = (
   queryClient.prefetchQuery({
     queryKey: Common.UseServeStaticKeyFn(clientOptions),
     queryFn: () => serveStatic({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetPromptSuggestions = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetPromptSuggestionsData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetPromptSuggestionsKeyFn(clientOptions),
+    queryFn: () => getPromptSuggestions({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetAvailableVouchers = (
   queryClient: QueryClient,

@@ -4555,7 +4555,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConvertResponse'
-
+  /misc/promptSuggestions:
+    get:
+      tags:
+        - misc
+      summary: Get prompt suggestions
+      description: Get prompt suggestions for a given user
+      operationId: getPromptSuggestions
+      parameters:
+        - name: prompt
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Prompt to get suggestions for
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPromptSuggestionsResponse'
   # Voucher endpoints
   /voucher/available:
     get:
@@ -11075,6 +11095,27 @@ components:
                 content:
                   type: string
                   description: Converted markdown content
+    PromptSuggestion:
+      type: object
+      description: Prompt suggestion
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: object
+          description: Prompt (JSON map, key is language code, value is prompt)
+          additionalProperties:
+            type: string
+    GetPromptSuggestionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Prompt suggestions
+              items:
+                $ref: '#/components/schemas/PromptSuggestion'
     MediaGenerationModelCapabilities:
       type: object
       properties:

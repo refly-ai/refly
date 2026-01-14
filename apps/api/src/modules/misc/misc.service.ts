@@ -19,6 +19,7 @@ import {
   User,
   FileVisibility,
   Entity,
+  PromptSuggestion,
 } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
 import { OSS_EXTERNAL, OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
@@ -30,6 +31,7 @@ import {
   scrapeWeblink,
   getSafeMimeType,
   runModuleInitWithTimeoutAndRetry,
+  safeParseJSON,
 } from '@refly/utils';
 import { QUEUE_IMAGE_PROCESSING, QUEUE_CLEAN_STATIC_FILES, streamToBuffer } from '../../utils';
 import {
@@ -135,6 +137,31 @@ export class MiscService implements OnModuleInit {
       description: result.description,
       image: result.image,
     };
+  }
+
+  async getPromptSuggestions(user: User): Promise<PromptSuggestion[]> {
+    const onboardingFormSubmission = await this.prisma.formSubmission.findFirst({
+      where: { uid: user.uid, formId: 'onboarding-form-refly' },
+      orderBy: { pk: 'desc' },
+    });
+    const role = safeParseJSON(onboardingFormSubmission?.answers)?.role;
+    const suggestions = await this.prisma.promptSuggestion.findMany({
+      where: { deletedAt: null },
+    });
+
+    const filterByRole = (s: any) => safeParseJSON(s.metadata)?.role === role;
+    const filterByFallback = (s: any) => safeParseJSON(s.metadata)?.fallback === true;
+
+    let result = role ? suggestions.filter(filterByRole) : [];
+
+    if (result.length === 0) {
+      result = suggestions.filter(filterByFallback);
+    }
+
+    return result.map((s) => ({
+      prompt: safeParseJSON(s.prompt),
+      metadata: safeParseJSON(s.metadata),
+    }));
   }
 
   async dumpFileFromURL(
