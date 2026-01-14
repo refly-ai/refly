@@ -12,8 +12,25 @@ interface WorkflowRunPreviewHeaderProps {
 const WorkflowRunPreviewHeaderComponent = ({
   onClose,
   onToggleOutputsOnly,
-  outputsOnly: _outputsOnly = false,
+  outputsOnly = false,
 }: WorkflowRunPreviewHeaderProps) => {
+  // Button styles based on selected state
+  const buttonStyles = outputsOnly
+    ? {
+        // Selected state: green
+        backgroundColor: '#0E9F77',
+        border: '1px solid #0E9F77',
+        iconColor: '#FFFFFF',
+        textColor: '#FFFFFF',
+      }
+    : {
+        // Unselected state: gray
+        backgroundColor: '#E6E8EA',
+        border: '1px solid #E6E8EA',
+        iconColor: '#1C1F23',
+        textColor: '#1C1F23',
+      };
+
   return (
     <div className="flex flex-col bg-white">
       <div
@@ -60,8 +77,8 @@ const WorkflowRunPreviewHeaderComponent = ({
             style={{
               width: '114px',
               height: '24px',
-              backgroundColor: '#0E9F77',
-              border: '1px solid #0E9F77',
+              backgroundColor: buttonStyles.backgroundColor,
+              border: buttonStyles.border,
               borderRadius: '20px',
               gap: '6px',
               padding: 0,
@@ -70,7 +87,7 @@ const WorkflowRunPreviewHeaderComponent = ({
             <FiEye
               size={16}
               style={{
-                color: '#FFFFFF',
+                color: buttonStyles.iconColor,
                 strokeWidth: '1.5px',
                 flexShrink: 0,
               }}
@@ -81,7 +98,7 @@ const WorkflowRunPreviewHeaderComponent = ({
                 fontWeight: 400,
                 fontSize: '12px',
                 lineHeight: '1.5em',
-                color: '#FFFFFF',
+                color: buttonStyles.textColor,
                 whiteSpace: 'nowrap',
               }}
             >
