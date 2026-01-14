@@ -205,7 +205,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
 
     setTimeout(() => {
       onLayout('LR');
-    }, 200);
+    }, 1000);
 
     if (source === 'onboarding') {
       const newParams = new URLSearchParams(searchParams);

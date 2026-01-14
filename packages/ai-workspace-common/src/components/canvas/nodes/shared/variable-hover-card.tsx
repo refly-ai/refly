@@ -78,7 +78,9 @@ export const VariableHoverCard = memo(
             <div
               className={cn(
                 'flex flex-col gap-2 w-[256px] overflow-hidden p-3',
-                resource?.fileType === 'document' ? 'bg-refly-bg-content-z2 h-[160px]' : '',
+                !resource || resource?.fileType === 'document'
+                  ? 'bg-refly-bg-content-z2 h-[160px]'
+                  : '',
                 resource?.fileType === 'audio' ? 'bg-refly-bg-content-z2 h-auto' : '',
                 ['image', 'video'].includes(resource?.fileType as string) ? '!p-0' : '',
               )}
@@ -104,7 +106,7 @@ export const VariableHoverCard = memo(
                       : 'bg-refly-Card-Border ',
                   )}
                 />
-                <div className="text-sm font-bold flex-1 truncate">{resource.name}</div>
+                <div className="text-sm font-bold flex-1 truncate">{resource?.name}</div>
               </div>
 
               <div

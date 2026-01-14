@@ -71,6 +71,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
   const { t, i18n } = useTranslation();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+
   const { debouncedCreateCanvas, isCreating } = useCreateCanvas({
     afterCreateSuccess: () => {
       setTimeout(() => {
@@ -78,8 +79,10 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
       }, 1000);
     },
   });
-  const { setHidePureCopilotModal } = useUserStoreShallow((state) => ({
+
+  const { setHidePureCopilotModal, showOnboardingFormModal } = useUserStoreShallow((state) => ({
     setHidePureCopilotModal: state.setHidePureCopilotModal,
+    showOnboardingFormModal: state.showOnboardingFormModal,
   }));
 
   const isFloatingVisible = useMemo(
@@ -106,7 +109,14 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     setQuery(prompt);
   }, []);
 
-  const { data, isLoading } = useGetPromptSuggestions();
+  const { data, isLoading, refetch } = useGetPromptSuggestions();
+  console.log('data', data);
+
+  useEffect(() => {
+    if (!showOnboardingFormModal) {
+      refetch();
+    }
+  }, [showOnboardingFormModal]);
 
   const samplePrompts = useMemo(() => {
     if (data?.data && data.data.length > 0) {
