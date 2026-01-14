@@ -9,6 +9,7 @@ import { ok, fail, printError, ErrorCodes } from '../utils/output.js';
 import { setOAuthTokens, setApiKey, getApiEndpoint, getWebUrl } from '../config/config.js';
 import { apiRequest } from '../api/client.js';
 import { logger } from '../utils/logger.js';
+import { styled, Style } from '../utils/ui.js';
 
 // CLI version for device registration
 const CLI_VERSION = '0.1.0';
@@ -175,7 +176,7 @@ export async function loginWithDeviceFlow(): Promise<boolean> {
   process.stderr.write(`  ${authUrl}\n`);
   process.stderr.write('\n');
   if (userCode) {
-    process.stderr.write(`Verification Code: ${userCode}\n`);
+    process.stderr.write(`Verification Code: ${styled(userCode, Style.TEXT_HIGHLIGHT_BOLD)}\n`);
   }
   process.stderr.write(`Device ID: ${deviceId}\n`);
   process.stderr.write(`Expires: ${new Date(expiresAt).toLocaleTimeString()}\n`);
