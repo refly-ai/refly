@@ -1327,6 +1327,16 @@ export class BuiltinExecuteCodeToolset extends AgentBaseToolset<BuiltinToolParam
   tools = [BuiltinExecuteCode] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
 }
 
+export class BuiltinReadAgentResultToolset extends AgentBaseToolset<BuiltinToolParams> {
+  toolsetKey = BuiltinReadAgentResultDefinition.key;
+  tools = [BuiltinReadAgentResult] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
+}
+
+export class BuiltinReadToolResultToolset extends AgentBaseToolset<BuiltinToolParams> {
+  toolsetKey = BuiltinReadToolResultDefinition.key;
+  tools = [BuiltinReadToolResult] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
+}
+
 export class BuiltinToolset extends AgentBaseToolset<BuiltinToolParams> {
   toolsetKey = BuiltinToolsetDefinition.key;
   tools = [

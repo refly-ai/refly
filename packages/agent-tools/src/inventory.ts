@@ -16,6 +16,10 @@ import {
   BuiltinListFilesDefinition,
   BuiltinExecuteCodeToolset,
   BuiltinExecuteCodeDefinition,
+  BuiltinReadAgentResultToolset,
+  BuiltinReadAgentResultDefinition,
+  BuiltinReadToolResultToolset,
+  BuiltinReadToolResultDefinition,
 } from './builtin';
 import { AgentBaseToolset } from './base';
 // import { BrowserUseToolset, BrowserUseToolsetDefinition } from './browser-use';
@@ -74,6 +78,14 @@ export const builtinToolsetInventory: Record<
   [BuiltinExecuteCodeDefinition.key]: {
     class: BuiltinExecuteCodeToolset,
     definition: BuiltinExecuteCodeDefinition,
+  },
+  [BuiltinReadAgentResultDefinition.key]: {
+    class: BuiltinReadAgentResultToolset,
+    definition: BuiltinReadAgentResultDefinition,
+  },
+  [BuiltinReadToolResultDefinition.key]: {
+    class: BuiltinReadToolResultToolset,
+    definition: BuiltinReadToolResultDefinition,
   },
 };
 

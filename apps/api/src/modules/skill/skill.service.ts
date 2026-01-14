@@ -87,6 +87,8 @@ const FIXED_BUILTIN_TOOLSETS: GenericToolset[] = [
   { type: 'regular', id: 'read_file', name: 'read_file', builtin: true },
   { type: 'regular', id: 'list_files', name: 'list_files', builtin: true },
   { type: 'regular', id: 'get_time', name: 'get_time', builtin: true },
+  { type: 'regular', id: 'read_agent_result', name: 'read_agent_result', builtin: true },
+  { type: 'regular', id: 'read_tool_result', name: 'read_tool_result', builtin: true },
 ];
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
