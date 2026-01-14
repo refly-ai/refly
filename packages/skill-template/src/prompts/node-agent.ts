@@ -112,18 +112,12 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
   - Use \`name\` with \`execute_code\` for file processing
 - \`resultsMeta\`: outputs from upstream nodes (**metadata only**)
   - Contains: resultId, title, status, summary, contentTokens, toolCallsMeta, outputFiles
-  - Use \`read_agent_result(resultId)\` to get full AI output
-  - Use \`read_tool_result(resultId, callId)\` to get specific tool input/output
-
-### Critical: Summary is NOT Reliable
-- The \`summary\` field is just **naive tail truncation** (~100 tokens from the end)
-- It is NOT a real summary — may miss important context, reasoning, or key details
-- **Do NOT make decisions based solely on summary**
-- **ALWAYS call \`read_agent_result\`** when:
-  - contentTokens > 300 (substantial content worth reading)
-  - The task relates to or builds upon previous results
-  - You need specific details, data, or reasoning
-  - outputFiles is empty but contentTokens is high (text-only analysis)
+  - **Summary format**: If prefixed with \`... [TRUNCATED DUE TO LENGTH LIMIT]\`, it's a tail excerpt
+  - **When to read full content**: Use \`read_agent_result(resultId)\` when:
+    - contentTokens > 300 (substantial content)
+    - You need specific details, reasoning, or complete data
+    - The task relates to or builds upon previous results
+  - Use \`read_tool_result(resultId, callId)\` for specific tool input/output
 
 ### File Access Strategy
 1. **Check summary first** — often sufficient for understanding file purpose

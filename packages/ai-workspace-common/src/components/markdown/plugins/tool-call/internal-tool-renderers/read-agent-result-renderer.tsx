@@ -14,7 +14,9 @@ export const ReadAgentResultRenderer = memo<InternalToolRendererProps>(
     const isExecuting = toolCallStatus === ToolCallStatus.EXECUTING;
 
     // Try to get title from result first, then from parameters
-    const title = (resultContent?.title || parametersContent?.resultId || '') as string;
+    const rawTitle = (resultContent?.title || parametersContent?.resultId || '') as string;
+    // Truncate title to max 20 characters for display
+    const title = rawTitle.length > 20 ? `${rawTitle.slice(0, 20)}...` : rawTitle;
 
     const label = t('components.markdown.internalTool.readAgentResult');
 

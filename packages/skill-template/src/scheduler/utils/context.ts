@@ -221,15 +221,22 @@ function truncateFromEnd(content: string, maxTokens: number): string {
   if (!content) return '';
 
   const estimatedChars = maxTokens * 3.5;
+
+  // If content is shorter than limit, return as-is
+  if (content.length <= estimatedChars) {
+    return content.trim();
+  }
+
   const tail = content.slice(-estimatedChars);
+  const truncationMarker = '... [TRUNCATED DUE TO LENGTH LIMIT] ';
 
   // Try to start from a sentence boundary (within first 30% of tail)
   const sentenceStart = tail.search(/[.。!！?？\n]\s*/);
   if (sentenceStart !== -1 && sentenceStart < tail.length * 0.3) {
-    return tail.slice(sentenceStart + 1).trim();
+    return truncationMarker + tail.slice(sentenceStart + 1).trim();
   }
 
-  return tail.trim();
+  return truncationMarker + tail.trim();
 }
 
 /**

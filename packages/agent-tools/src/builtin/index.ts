@@ -1139,8 +1139,12 @@ Returns AI's reasoning/responses with tool call placeholders.`;
 
       return {
         status: 'success',
-        data: truncatedContent,
-        summary: `Successfully read agent result: ${input.resultId}`,
+        data: {
+          content: truncatedContent,
+          title: result.title || 'Untitled',
+          resultId: input.resultId,
+        },
+        summary: `Successfully read agent result: ${result.title || input.resultId}`,
       };
     } catch (error) {
       return {
@@ -1325,6 +1329,16 @@ export class BuiltinListFilesToolset extends AgentBaseToolset<BuiltinToolParams>
 export class BuiltinExecuteCodeToolset extends AgentBaseToolset<BuiltinToolParams> {
   toolsetKey = BuiltinExecuteCodeDefinition.key;
   tools = [BuiltinExecuteCode] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
+}
+
+export class BuiltinReadAgentResultToolset extends AgentBaseToolset<BuiltinToolParams> {
+  toolsetKey = BuiltinReadAgentResultDefinition.key;
+  tools = [BuiltinReadAgentResult] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
+}
+
+export class BuiltinReadToolResultToolset extends AgentBaseToolset<BuiltinToolParams> {
+  toolsetKey = BuiltinReadToolResultDefinition.key;
+  tools = [BuiltinReadToolResult] satisfies readonly AgentToolConstructor<BuiltinToolParams>[];
 }
 
 export class BuiltinToolset extends AgentBaseToolset<BuiltinToolParams> {
