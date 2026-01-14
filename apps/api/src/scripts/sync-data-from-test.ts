@@ -26,7 +26,7 @@ import path from 'node:path';
 interface SyncConfig {
   table: string; // Database table name (e.g., 'toolsets')
   where: any;
-  encryptedFields: string[];
+  encryptedFields?: string[]; // Optional: list of fields that need decryption and re-encryption
 }
 
 const SYNC_CONFIGS: SyncConfig[] = [
@@ -34,6 +34,19 @@ const SYNC_CONFIGS: SyncConfig[] = [
     table: 'toolsets', // Database table name
     where: { key: 'perplexity' },
     encryptedFields: ['authData'],
+  },
+  {
+    table: 'providers', // Global providers
+    where: { isGlobal: true },
+    encryptedFields: ['apiKey'],
+  },
+  {
+    table: 'provider_items', // Provider items for global providers
+    where: {
+      provider: {
+        isGlobal: true,
+      },
+    },
   },
 ];
 
@@ -48,6 +61,7 @@ function getModelNameFromTable(tableName: string): string {
     users: 'user',
     toolsets: 'toolset',
     providers: 'provider',
+    provider_items: 'providerItem',
     // Add more special cases as needed
   };
 
@@ -223,24 +237,46 @@ function valueToSqlLiteral(value: any): string {
 }
 
 /**
- * Generates an INSERT SQL statement for a record
- * @param tableName The name of the table
- * @param record The record to insert
- * @returns SQL INSERT statement
+ * Generates column names for a record
+ * @param record The record to process
+ * @returns Array of column names in snake_case
  */
-function generateInsertSql(tableName: string, record: Record<string, any>): string {
-  // Filter out undefined values and the pk field
-  const fields = Object.keys(record).filter((key) => key !== 'pk' && record[key] !== undefined);
+function getRecordColumns(record: Record<string, any>): string[] {
+  return Object.keys(record).filter((key) => key !== 'pk' && record[key] !== undefined);
+}
 
-  // Generate column names (with double quotes for PostgreSQL)
-  // Convert camelCase Prisma field names to snake_case database column names
-  const columns = fields.map((field) => `"${camelToSnakeCase(field)}"`).join(', ');
+/**
+ * Generates values clause for a record
+ * @param record The record to insert
+ * @param columns The column names to include
+ * @returns Values string for SQL
+ */
+function generateValuesClause(record: Record<string, any>, columns: string[]): string {
+  const values = columns.map((field) => valueToSqlLiteral(record[field])).join(', ');
+  return `  (${values})`;
+}
 
-  // Generate values
-  const values = fields.map((field) => valueToSqlLiteral(record[field])).join(', ');
+/**
+ * Generates a batch INSERT SQL statement for multiple records
+ * @param tableName The name of the table
+ * @param records Array of records to insert
+ * @returns SQL INSERT statement with multiple VALUES
+ */
+function generateBatchInsertSql(tableName: string, records: Record<string, any>[]): string {
+  if (records.length === 0) {
+    return '';
+  }
 
-  // Generate INSERT statement
-  return `INSERT INTO "refly"."${tableName}" (\n  ${columns}\n) VALUES (\n  ${values}\n);`;
+  // Use the first record to determine columns
+  // Assuming all records have the same structure
+  const columns = getRecordColumns(records[0]);
+  const columnNames = columns.map((field) => `"${camelToSnakeCase(field)}"`).join(', ');
+
+  // Generate values for all records
+  const valuesArray = records.map((record) => generateValuesClause(record, columns));
+
+  // Generate batch INSERT statement
+  return `INSERT INTO "refly"."${tableName}" (\n  ${columnNames}\n) VALUES\n${valuesArray.join(',\n')};`;
 }
 
 // ========== Main Sync Function ==========
@@ -266,7 +302,16 @@ async function syncData() {
   }
 
   // ========== Setup Output File ==========
-  const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
+  // Format timestamp using local timezone
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+
   const outputDir = path.join(process.cwd(), 'scripts', 'output');
   const outputFile = path.join(outputDir, `sync-data-${timestamp}.sql`);
 
@@ -295,7 +340,9 @@ async function syncData() {
   // ========== Initialize SQL Output ==========
   const sqlStatements: string[] = [];
   sqlStatements.push('-- Data Synchronization SQL Script');
-  sqlStatements.push(`-- Generated at: ${new Date().toISOString()}`);
+  sqlStatements.push(
+    `-- Generated at: ${now.toLocaleString()} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`,
+  );
 
   // Format source URL in comment, ensure it stays on one line
   const maskedSourceUrl = finalSourceDbUrl.replace(/:[^:@]+@/, ':****@');
@@ -317,55 +364,41 @@ async function syncData() {
     for (const config of SYNC_CONFIGS) {
       const modelName = getModelNameFromTable(config.table);
 
-      logger.log(`\n📦 Processing table: ${config.table} (model: ${modelName})`);
-      logger.log(`   Filter: ${JSON.stringify(config.where)}`);
-
       sqlStatements.push(`-- Sync data for table: ${config.table}`);
       sqlStatements.push(`-- Filter: ${JSON.stringify(config.where)}`);
       sqlStatements.push('');
 
       try {
         // Get data from source database using Prisma model name
-        logger.log(
-          `   Querying: sourcePrisma.${modelName}.findMany({ where: ${JSON.stringify(config.where)} })`,
-        );
         const sourceData = await (sourcePrisma[modelName] as any).findMany({
           where: config.where,
         });
 
-        logger.log(`   Query result: ${sourceData?.length || 0} records found`);
+        logger.log(
+          `table: ${config.table}, filter: ${JSON.stringify(config.where)}, found ${sourceData?.length || 0} records`,
+        );
 
         if (!sourceData || sourceData.length === 0) {
           logger.warn(`⚠️  No data found in source database for table: ${config.table}`);
-          logger.log('   Trying to query all records without filter...');
-          const allData = await (sourcePrisma[modelName] as any).findMany();
-          logger.log(`   Total records in table: ${allData?.length || 0}`);
-          if (allData?.length > 0) {
-            logger.log(
-              `   Sample record keys: ${allData
-                .slice(0, 3)
-                .map((r) => r.key || r.pk)
-                .join(', ')}`,
-            );
-          }
           continue;
         }
 
-        logger.log(`   Found ${sourceData.length} record(s) in source database`);
+        // Collect all transformed records for batch INSERT
+        const transformedRecords: Record<string, any>[] = [];
 
         // Process each record
         for (const record of sourceData) {
           try {
             // Get a unique identifier for logging (try common fields)
-            const recordId =
+            const _recordId =
               record.toolsetId || record.id || record.uuid || record.key || record.pk;
-            logger.log(`\n   Processing record with id=${recordId}`);
 
             // Create a copy of the record for transformation
             const transformedRecord = { ...record };
 
-            // Decrypt and re-encrypt sensitive fields
-            for (const field of config.encryptedFields) {
+            // Decrypt and re-encrypt sensitive fields if any are configured
+            const encryptedFields = config.encryptedFields ?? [];
+            for (const field of encryptedFields) {
               if (transformedRecord[field]) {
                 // Decrypt using source key
                 const decrypted = sourceEncryption.decrypt(transformedRecord[field]);
@@ -375,29 +408,30 @@ async function syncData() {
                   continue;
                 }
 
-                logger.log(`     🔓 Decrypted field: ${field}`);
-
                 // Re-encrypt using target key
                 const reencrypted = targetEncryption.encrypt(decrypted);
                 transformedRecord[field] = reencrypted;
-
-                logger.log(`     🔐 Re-encrypted field: ${field}`);
               }
             }
 
-            // Generate INSERT SQL statement
-            const insertSql = generateInsertSql(config.table, transformedRecord);
-            sqlStatements.push(insertSql);
-            sqlStatements.push('');
-
-            logger.log('     ✅ Generated SQL for record');
+            // Add to batch
+            transformedRecords.push(transformedRecord);
           } catch (error) {
             logger.error(`     ❌ Error processing record: ${error.message}`);
             logger.error(error.stack);
           }
         }
 
-        logger.log(`\n✅ Completed processing table: ${config.table}`);
+        // Generate batch INSERT SQL statement for all records
+        if (transformedRecords.length > 0) {
+          const batchInsertSql = generateBatchInsertSql(config.table, transformedRecords);
+          sqlStatements.push(batchInsertSql);
+          sqlStatements.push('');
+        }
+
+        logger.log(
+          `✅ Completed processing table: ${config.table}, generated ${transformedRecords.length} records`,
+        );
       } catch (error) {
         logger.error(`❌ Error processing table ${config.table}: ${error.message}`);
         logger.error(error.stack);
