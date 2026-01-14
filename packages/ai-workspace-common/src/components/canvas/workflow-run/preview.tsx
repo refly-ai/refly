@@ -1,7 +1,7 @@
 import { Segmented, Collapse, Skeleton } from 'antd';
 import { memo, useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowDown, CheckCircleBroken, AiChat } from 'refly-icons';
+import { ArrowDown, CheckCircleBroken, AiChat, Cancelled, Subscription } from 'refly-icons';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
 import type { ResultActiveTab } from '@refly/stores';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
@@ -15,10 +15,17 @@ import { WorkflowRunPreviewHeader } from './workflow-run-preview-header';
 import { WorkflowRunForm } from './workflow-run-form';
 import { WorkflowVariable } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
-import { useGetCreditUsageByCanvasId } from '@refly-packages/ai-workspace-common/queries/queries';
+import {
+  useGetCreditUsageByCanvasId,
+  useGetWorkflowDetail,
+  useGetCreditUsageByResultId,
+} from '@refly-packages/ai-workspace-common/queries/queries';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useWorkflowIncompleteNodes } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useQueryClient } from '@tanstack/react-query';
+import { IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { ActionStatus } from '@refly/openapi-schema';
+import type { WorkflowNodeExecution } from '@refly-packages/ai-workspace-common/requests/types.gen';
 
 const OUTPUT_STEP_NAMES = ['answerQuestion', 'generateDocument', 'generateCodeArtifact'];
 
@@ -33,11 +40,48 @@ const PLACEHOLDER_DATA = {
   currentFile: null,
 };
 
+// Component to display credit usage for a node
+const NodeCreditUsage = memo(
+  ({
+    resultId,
+    version,
+    enabled,
+  }: {
+    resultId: string;
+    version: number;
+    enabled: boolean;
+  }) => {
+    const { data: creditData } = useGetCreditUsageByResultId(
+      {
+        query: {
+          resultId,
+          version: version.toString(),
+        },
+      },
+      undefined,
+      {
+        enabled: enabled,
+      },
+    );
+    const creditUsage = creditData?.data?.total ?? 0;
+    if (creditUsage === 0) {
+      return null;
+    }
+    return (
+      <div className="flex items-center gap-1">
+        <Subscription size={12} className="text-refly-text-2" />
+        <span>{creditUsage}</span>
+      </div>
+    );
+  },
+);
+NodeCreditUsage.displayName = 'NodeCreditUsage';
+
 const WorkflowRunPreviewComponent = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<ResultActiveTab>('configure');
   const { canvasId, readonly, workflow } = useCanvasContext();
-  const { nodes } = useRealtimeCanvasData();
+  const { nodes, edges } = useRealtimeCanvasData();
   const { resultMap, streamResults } = useActionResultStoreShallow((state) => ({
     resultMap: state.resultMap,
     streamResults: state.streamResults,
@@ -64,6 +108,31 @@ const WorkflowRunPreviewComponent = () => {
   } = useVariablesManagement(canvasId ?? '');
 
   const queryClient = useQueryClient();
+
+  // Get workflow detail to sync node execution status
+  const { data: workflowDetail } = useGetWorkflowDetail(
+    {
+      query: { executionId: executionId ?? '' },
+    },
+    undefined,
+    {
+      enabled: !!executionId && showWorkflowRun,
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  // Create a map of nodeId -> nodeExecution for quick lookup
+  const nodeExecutionMap = useMemo(() => {
+    const map = new Map<string, WorkflowNodeExecution>();
+    if (workflowDetail?.data?.nodeExecutions) {
+      for (const nodeExecution of workflowDetail.data.nodeExecutions) {
+        if (nodeExecution.nodeId) {
+          map.set(nodeExecution.nodeId, nodeExecution);
+        }
+      }
+    }
+    return map;
+  }, [workflowDetail?.data?.nodeExecutions]);
 
   // Check if there are any incomplete nodes (status is 'init' or 'failed')
   const { hasIncompleteNodes } = useWorkflowIncompleteNodes();
@@ -139,18 +208,110 @@ const WorkflowRunPreviewComponent = () => {
     [canvasId, initializeWorkflow, setVariables, setShowWorkflowRun],
   );
 
-  // Filter and sort skillResponse nodes
+  // Helper function to format execution time duration
+  const formatExecutionTime = useCallback((startTime?: string, endTime?: string): string => {
+    if (!startTime) {
+      return '';
+    }
+    const start = new Date(startTime).getTime();
+    const end = endTime ? new Date(endTime).getTime() : Date.now();
+    const ms = Math.max(0, end - start);
+    if (ms < 1000) {
+      return `${ms}ms`;
+    }
+    const seconds = ms / 1000;
+    if (seconds < 60) {
+      return `${seconds.toFixed(1)}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainSec = Math.floor(seconds % 60);
+    return `${minutes}m ${remainSec}s`;
+  }, []);
+
+  // Filter and sort skillResponse nodes by execution order (topological sort)
+  // Show all nodes (including not executed ones)
   const skillResponseNodes = useMemo(() => {
-    return (nodes ?? [])
+    const filteredNodes = (nodes ?? [])
       .filter((node): node is CanvasNode<ResponseNodeMeta> => node?.type === 'skillResponse')
-      .filter((node) => node?.data?.entityId) // Only include nodes with entityId
-      .sort((a, b) => {
-        // Sort by position (y coordinate) from top to bottom
-        const aY = a.position?.y ?? 0;
-        const bY = b.position?.y ?? 0;
-        return aY - bY;
-      });
-  }, [nodes]);
+      .filter((node) => node?.data?.entityId); // Only include nodes with entityId
+
+    if (filteredNodes.length === 0) {
+      return [];
+    }
+
+    // Build parent-child relationships from edges
+    const nodeMap = new Map(filteredNodes.map((n) => [n.id, n]));
+    const parentMap = new Map<string, string[]>();
+    const childMap = new Map<string, string[]>();
+
+    // Initialize maps
+    for (const node of filteredNodes) {
+      parentMap.set(node.id, []);
+      childMap.set(node.id, []);
+    }
+
+    // Build relationships from edges
+    for (const edge of edges ?? []) {
+      const sourceId = edge.source;
+      const targetId = edge.target;
+
+      if (nodeMap.has(sourceId) && nodeMap.has(targetId)) {
+        // Add target as child of source
+        const sourceChildren = childMap.get(sourceId) || [];
+        sourceChildren.push(targetId);
+        childMap.set(sourceId, sourceChildren);
+
+        // Add source as parent of target
+        const targetParents = parentMap.get(targetId) || [];
+        targetParents.push(sourceId);
+        parentMap.set(targetId, targetParents);
+      }
+    }
+
+    // Topological sort: parents come before children
+    const visited = new Set<string>();
+    const result: CanvasNode<ResponseNodeMeta>[] = [];
+
+    const visit = (node: CanvasNode<ResponseNodeMeta>) => {
+      if (visited.has(node.id)) {
+        return;
+      }
+      visited.add(node.id);
+
+      // Visit parents first
+      const parentIds = parentMap.get(node.id) || [];
+      const parentNodes = parentIds
+        .map((id) => nodeMap.get(id))
+        .filter((n): n is CanvasNode<ResponseNodeMeta> => n !== undefined)
+        .sort((a, b) => {
+          // Sort by position y coordinate for consistent ordering when multiple parents
+          const aY = a.position?.y ?? 0;
+          const bY = b.position?.y ?? 0;
+          return aY - bY;
+        });
+
+      for (const parentNode of parentNodes) {
+        visit(parentNode);
+      }
+
+      result.push(node);
+    };
+
+    // Sort nodes by position y coordinate before processing
+    // This ensures that when multiple nodes have no dependencies, they maintain their original order
+    const sortedNodes = [...filteredNodes].sort((a, b) => {
+      const aY = a.position?.y ?? 0;
+      const bY = b.position?.y ?? 0;
+      return aY - bY;
+    });
+
+    // Visit all nodes in sorted order
+    for (const node of sortedNodes) {
+      visit(node);
+    }
+
+    return result;
+  }, [nodes, edges]);
 
   // Fetch action results for all nodes
   useEffect(() => {
@@ -242,32 +403,198 @@ const WorkflowRunPreviewComponent = () => {
                     return null;
                   }
 
+                  // Get node execution from workflow detail (prioritize this over canvas node metadata)
+                  const nodeExecution = nodeExecutionMap.get(node.id);
                   const result = resultMap[resultId];
                   const isStreaming = !!streamResults[resultId];
                   const loading = !result && !isStreaming;
 
                   // Extract parameters for LastRunTab and ConfigureTab
-                  const title = node.data?.title ?? result?.title;
+                  const title = node.data?.title ?? result?.title ?? nodeExecution?.title;
                   const query = node.data?.metadata?.query ?? result?.input?.query ?? null;
                   const selectedToolsets =
                     node.data?.metadata?.selectedToolsets ?? result?.toolsets ?? [];
                   const steps = result?.steps ?? [];
                   const outputStep = steps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));
                   const version = result?.version ?? node.data?.metadata?.version ?? 0;
-                  const isExecuting =
-                    node.data?.metadata?.status === 'executing' ||
-                    node.data?.metadata?.status === 'waiting';
 
-                  // Placeholder data for agent header
+                  // Get node execution status - prioritize nodeExecution status, then result status, then node metadata status
+                  const nodeStatus = (nodeExecution?.status ??
+                    result?.status ??
+                    node.data?.metadata?.status) as ActionStatus | 'init' | undefined;
+                  const isNotExecuted = nodeStatus === 'init' || !nodeStatus;
+                  const isExecuting = nodeStatus === 'executing' || nodeStatus === 'waiting';
+                  const isFinished = nodeStatus === 'finish';
+                  const isFailed = nodeStatus === 'failed';
+
+                  // Get error message from nodeExecution, result, or node metadata
+                  const errorMessage =
+                    nodeExecution?.errorMessage ??
+                    result?.errors?.[0] ??
+                    node.data?.metadata?.errors?.[0];
+
+                  // Get execution time from nodeExecution
+                  const executionTime = formatExecutionTime(
+                    nodeExecution?.createdAt,
+                    nodeExecution?.updatedAt,
+                  );
+
+                  // Agent title
                   const agentTitle = title || 'Retrieve information and...';
-                  const agentSubscribers = '743'; // Placeholder
-                  const agentTime = '02:22'; // Placeholder
+
+                  // Get status icon based on node status (only for executed nodes)
+                  const getStatusIcon = () => {
+                    if (isNotExecuted) {
+                      return null; // No icon for not executed nodes
+                    }
+                    if (isFinished) {
+                      return <CheckCircleBroken size={16} color="#0E9F77" />;
+                    }
+                    if (isFailed) {
+                      return <Cancelled size={16} color="#F04438" />;
+                    }
+                    if (isExecuting) {
+                      return (
+                        <IconLoading className="w-4 h-4 text-refly-primary-default animate-spin" />
+                      );
+                    }
+                    return null;
+                  };
+
+                  // Build collapse items array for Input/Output sections
+                  // - Not executed: Only input item (no output item)
+                  // - Executed (running/finished/failed): Both input and output items
+                  const collapseItems = useMemo(() => {
+                    const items = [
+                      {
+                        key: 'input',
+                        label: (
+                          <div
+                            className="flex items-center justify-between w-full"
+                            style={{
+                              padding: '10px 10px 10px 16px',
+                              fontFamily: 'PingFang SC',
+                              fontWeight: 500,
+                              fontSize: '14px',
+                              lineHeight: '1.7142857142857142em',
+                              height: '34px',
+                              borderRadius: '6px 6px 0px 0px',
+                              backgroundColor: '#E6E8EA',
+                              width: '100%',
+                            }}
+                          >
+                            <span>Input</span>
+                          </div>
+                        ),
+                        children: (
+                          <div
+                            className="bg-white"
+                            style={{
+                              padding: '8px 1px 12px',
+                            }}
+                          >
+                            <ConfigureTab
+                              readonly={readonly}
+                              query={query}
+                              version={version}
+                              resultId={resultId}
+                              nodeId={node.id}
+                              canvasId={canvasId}
+                              disabled={readonly || isExecuting}
+                            />
+                          </div>
+                        ),
+                      },
+                    ];
+
+                    // Only add output item for executed nodes (running, finished, or failed)
+                    // Not executed nodes will only have input item
+                    if (!isNotExecuted) {
+                      items.push({
+                        key: 'output',
+                        label: (
+                          <div
+                            className="flex items-center justify-between w-full"
+                            style={{
+                              padding: '10px 16px',
+                              fontFamily: 'PingFang SC',
+                              fontWeight: 500,
+                              fontSize: '14px',
+                              lineHeight: '1.7142857142857142em',
+                              height: '34px',
+                              backgroundColor: '#E6E8EA',
+                              width: '100%',
+                            }}
+                          >
+                            <span>Output</span>
+                          </div>
+                        ),
+                        children: (
+                          <div
+                            className="bg-white"
+                            style={{
+                              padding: '8px 1px 12px',
+                            }}
+                          >
+                            {/* Show error message if execution failed */}
+                            {isFailed && errorMessage && (
+                              <div className="flex flex-col py-3 px-4 mb-2">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Cancelled size={16} color="#F04438" />
+                                  <span className="text-sm font-semibold text-refly-func-danger-default">
+                                    {t('canvas.workflow.run.executionFailed') || 'Execution Failed'}
+                                  </span>
+                                </div>
+                                <div className="text-sm text-refly-text-1 bg-refly-Colorful-red-light rounded-lg p-3">
+                                  {errorMessage}
+                                </div>
+                              </div>
+                            )}
+                            {/* Show result content for executed states (running, finished, failed) */}
+                            <LastRunTab
+                              loading={loading}
+                              isStreaming={isStreaming}
+                              resultId={resultId}
+                              result={result}
+                              outputStep={outputStep}
+                              query={query}
+                              title={title}
+                              nodeId={node.id}
+                              selectedToolsets={selectedToolsets}
+                              handleRetry={handleRetry}
+                            />
+                          </div>
+                        ),
+                      });
+                    }
+
+                    return items;
+                  }, [
+                    isNotExecuted,
+                    readonly,
+                    query,
+                    version,
+                    resultId,
+                    node.id,
+                    canvasId,
+                    isExecuting,
+                    isFailed,
+                    errorMessage,
+                    t,
+                    loading,
+                    isStreaming,
+                    result,
+                    outputStep,
+                    title,
+                    selectedToolsets,
+                    handleRetry,
+                  ]);
 
                   return (
                     <div key={node.id} className="flex flex-col" style={{ gap: '8px' }}>
                       {/* Agent Node Collapse */}
                       <Collapse
-                        defaultActiveKey={['agent']}
+                        defaultActiveKey={[]}
                         ghost
                         expandIcon={({ isActive }) => (
                           <ArrowDown
@@ -305,36 +632,42 @@ const WorkflowRunPreviewComponent = () => {
                                   className="flex items-center flex-shrink-0"
                                   style={{ gap: '12px' }}
                                 >
-                                  <div
-                                    className="flex items-center"
-                                    style={{
-                                      gap: '2px',
-                                      fontFamily: 'Inter',
-                                      fontWeight: 400,
-                                      fontSize: '10px',
-                                      lineHeight: '1.4em',
-                                      color: 'rgba(28, 31, 35, 0.35)',
-                                    }}
-                                  >
-                                    {/* Subscribe icon placeholder - using a simple SVG */}
-                                    <svg
-                                      width="12"
-                                      height="12"
-                                      viewBox="0 0 12 12"
-                                      fill="none"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      style={{ flexShrink: 0 }}
+                                  {/* Collapsed state: show different info based on status */}
+                                  {/* 
+                                    - Not executed: Only show node name (no time, no credit)
+                                    - Running: Show node name + execution time
+                                    - Finished/Failed: Show node name + execution time + credit usage
+                                  */}
+                                  {isNotExecuted ? // Not executed: Only show node name (nothing else)
+                                  null : (
+                                    <div
+                                      className="flex items-center"
+                                      style={{
+                                        gap: '6px',
+                                        fontFamily: 'Inter',
+                                        fontWeight: 400,
+                                        fontSize: '10px',
+                                        lineHeight: '1.4em',
+                                        color: 'rgba(28, 31, 35, 0.35)',
+                                      }}
                                     >
-                                      <path
-                                        d="M6 1L7.5 4.5L11 6L7.5 7.5L6 11L4.5 7.5L1 6L4.5 4.5L6 1Z"
-                                        fill="currentColor"
-                                      />
-                                    </svg>
-                                    <span>{agentSubscribers}</span>
-                                    <span>·</span>
-                                    <span>{agentTime}</span>
-                                  </div>
-                                  <CheckCircleBroken size={16} color="#0E9F77" />
+                                      {/* Running state: Show execution time */}
+                                      {isExecuting && executionTime && <span>{executionTime}</span>}
+                                      {/* Finished/Failed state: Show execution time + credit usage */}
+                                      {(isFinished || isFailed) && (
+                                        <>
+                                          {executionTime && <span>{executionTime}</span>}
+                                          {executionTime && <span>·</span>}
+                                          <NodeCreditUsage
+                                            resultId={resultId}
+                                            version={version}
+                                            enabled={!!resultId && (isFinished || isFailed)}
+                                          />
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                  {getStatusIcon()}
                                 </div>
                               </div>
                             ),
@@ -397,7 +730,13 @@ const WorkflowRunPreviewComponent = () => {
                                   }}
                                 >
                                   <Collapse
-                                    defaultActiveKey={['input', 'output']}
+                                    defaultActiveKey={
+                                      isNotExecuted
+                                        ? ['input'] // Not executed: Only show input area (expanded)
+                                        : isExecuting
+                                          ? ['output'] // Running: Input area (collapsed) + Output area (expanded with streaming)
+                                          : [] // Finished/Failed: Input area (collapsed) + Output area (collapsed)
+                                    }
                                     ghost
                                     expandIcon={({ isActive }) => (
                                       <ArrowDown
@@ -407,88 +746,7 @@ const WorkflowRunPreviewComponent = () => {
                                     )}
                                     expandIconPosition="end"
                                     className="workflow-run-collapse"
-                                    items={[
-                                      {
-                                        key: 'input',
-                                        label: (
-                                          <div
-                                            className="flex items-center justify-between w-full"
-                                            style={{
-                                              padding: '10px 10px 10px 16px',
-                                              fontFamily: 'PingFang SC',
-                                              fontWeight: 500,
-                                              fontSize: '14px',
-                                              lineHeight: '1.7142857142857142em',
-                                              height: '34px',
-                                              borderRadius: '6px 6px 0px 0px',
-                                              backgroundColor: '#E6E8EA',
-                                              width: '100%',
-                                            }}
-                                          >
-                                            <span>Input</span>
-                                          </div>
-                                        ),
-                                        children: (
-                                          <div
-                                            className="bg-white"
-                                            style={{
-                                              padding: '8px 1px 12px',
-                                            }}
-                                          >
-                                            <ConfigureTab
-                                              readonly={readonly}
-                                              query={query}
-                                              version={version}
-                                              resultId={resultId}
-                                              nodeId={node.id}
-                                              canvasId={canvasId}
-                                              disabled={readonly || isExecuting}
-                                            />
-                                          </div>
-                                        ),
-                                      },
-                                      {
-                                        key: 'output',
-                                        label: (
-                                          <div
-                                            className="flex items-center justify-between w-full"
-                                            style={{
-                                              padding: '10px 16px',
-                                              fontFamily: 'PingFang SC',
-                                              fontWeight: 500,
-                                              fontSize: '14px',
-                                              lineHeight: '1.7142857142857142em',
-                                              height: '34px',
-                                              backgroundColor: '#E6E8EA',
-                                              width: '100%',
-                                            }}
-                                          >
-                                            <span>Output</span>
-                                          </div>
-                                        ),
-                                        children: (
-                                          <div
-                                            className="bg-white"
-                                            style={{
-                                              padding: '8px 1px 12px',
-                                            }}
-                                          >
-                                            <LastRunTab
-                                              loading={loading}
-                                              isStreaming={isStreaming}
-                                              resultId={resultId}
-                                              result={result}
-                                              outputStep={outputStep}
-                                              query={query}
-                                              title={title}
-                                              nodeId={node.id}
-                                              selectedToolsets={selectedToolsets}
-                                              handleRetry={handleRetry}
-                                            />
-                                          </div>
-                                        ),
-                                      },
-                                    ]}
+                                    items={collapseItems}
                                   />
                                 </div>
                               </>
