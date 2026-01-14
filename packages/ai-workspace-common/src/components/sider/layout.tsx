@@ -32,7 +32,6 @@ import {
 } from 'refly-icons';
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
-import GiftPromotionIcon from '@refly-packages/ai-workspace-common/assets/community.svg';
 import {
   useKnowledgeBaseStoreShallow,
   useUserStoreShallow,
@@ -192,7 +191,7 @@ export const PromotionItem = React.memo(
         {/* Header with gift icon and title */}
         <div className="flex items-center gap-1">
           <div className="flex-shrink-0">
-            <img src={GiftPromotionIcon} className="w-12 h-15" />
+            <img src={'https://static.refly.ai/static/community.webp'} className="w-12 h-15" />
           </div>
           <div className="flex flex-col pl-1">
             <div className="flex items-baseline flex-wrap">

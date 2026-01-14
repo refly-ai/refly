@@ -13,7 +13,7 @@ import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo
 import { LoginCard } from '../../components/login-modal/login-card';
 import { VerificationModal } from '../../components/verification-modal';
 import { ResetPasswordModal } from '../../components/reset-password-modal';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
 import ClockIcon from '@refly-packages/ai-workspace-common/assets/clock.svg';
 import './index.scss';
 import { HiOutlineLightningBolt } from 'react-icons/hi';

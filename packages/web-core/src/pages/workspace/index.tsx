@@ -6,6 +6,7 @@ import {
   usePendingVoucherClaim,
   storePendingVoucherCode,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
+import { usePrefetchWorkflow } from '../../hooks/use-prefetch-workflow';
 
 const WorkspacePage = () => {
   const [searchParams] = useSearchParams();
@@ -25,9 +26,11 @@ const WorkspacePage = () => {
     logEvent('enter_workspace');
   }, []);
 
+  const onPrefetch = usePrefetchWorkflow();
+
   return (
     <div className="w-full h-full flex flex-col">
-      <FrontPage />
+      <FrontPage onPrefetch={onPrefetch} />
     </div>
   );
 };

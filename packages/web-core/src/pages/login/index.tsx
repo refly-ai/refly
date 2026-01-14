@@ -18,8 +18,6 @@ import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo
 import { logEvent } from '@refly/telemetry-web';
 import { useCookie } from 'react-use';
 import { UID_COOKIE } from '@refly/utils';
-import loginImage from '../../assets/login.png';
-import loginDarkImage from '../../assets/login-dark.png';
 import './index.css';
 import { useUserStoreShallow } from '@refly/stores';
 import {
@@ -248,7 +246,11 @@ const LoginPage = () => {
             }}
           >
             <img
-              src={isDarkMode ? loginDarkImage : loginImage}
+              src={
+                isDarkMode
+                  ? 'https://static.refly.ai/static/login-dark.webp'
+                  : 'https://static.refly.ai/static/login.webp'
+              }
               alt="Welcome to Refly"
               className="w-full h-full object-cover"
             />

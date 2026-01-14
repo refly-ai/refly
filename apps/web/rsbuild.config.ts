@@ -6,6 +6,7 @@ import { sentryWebpackPlugin } from '@sentry/webpack-plugin';
 import NodePolyfill from 'node-polyfill-webpack-plugin';
 import { codeInspectorPlugin } from 'code-inspector-plugin';
 import { pluginTypeCheck } from '@rsbuild/plugin-type-check';
+import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin';
 
 const { publicVars } = loadEnv({ prefixes: ['VITE_'] });
 
@@ -14,6 +15,7 @@ import path from 'node:path';
 const gtagId = process.env.VITE_GTAG_ID;
 
 const isProduction = process.env.NODE_ENV === 'production';
+const enableBundleAnalyze = process.env.ANALYZE === 'true';
 
 export default defineConfig({
   plugins: [
@@ -31,6 +33,63 @@ export default defineConfig({
   },
   tools: {
     rspack: (config, { prependPlugins, appendPlugins }) => {
+      // ... existing plugins ...
+      // SERVICE WORKER CONFIGURATION
+      // TODO: Uncomment this block after successfully installing 'workbox-webpack-plugin'
+      // Run: pnpm add -D workbox-webpack-plugin --filter=@refly/web
+
+      const { GenerateSW } = require('workbox-webpack-plugin');
+
+      appendPlugins(
+        new GenerateSW({
+          // PWA basics
+          clientsClaim: true,
+          skipWaiting: true,
+
+          // Code Caching Strategy
+          // Precache the workflow chunk during SW install
+          include: [
+            /\.js$/, // All JS files (critical for code caching)
+            /\.css$/,
+            /\.html$/,
+            /workflow.*\.js$/, // Explicitly ensure workflow chunks are caught
+          ],
+
+          // Don't precache too much - exclude big media or maps
+          exclude: [/\.map$/, /asset-manifest\.json$/, /\.LICENSE\.txt$/],
+
+          // Runtime caching for other assets
+          runtimeCaching: [
+            {
+              urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'images',
+                expiration: {
+                  maxEntries: 60,
+                  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com/,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'google-fonts-stylesheets',
+              },
+            },
+          ],
+
+          // Navigation fallback
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/v1/], // Exclude API calls
+
+          // Increase limit to cache larger chunks (e.g. index.js ~6MB)
+          // Note: 40MB+ chunks will still be excluded as they are too large for reasonable precaching
+          maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+        }),
+      );
+
       process.env.SENTRY_AUTH_TOKEN &&
         appendPlugins(
           sentryWebpackPlugin({
@@ -51,6 +110,21 @@ export default defineConfig({
         }),
       );
       prependPlugins(new NodePolyfill({ additionalAliases: ['process'] }));
+
+      // Bundle analyzer - enabled via ANALYZE=true
+      if (enableBundleAnalyze) {
+        appendPlugins(
+          new RsdoctorRspackPlugin({
+            // Enable bundle analysis features
+            features: ['bundle', 'plugins', 'loader', 'resolver'],
+            // Support for analyzing specific routes/chunks
+            supports: {
+              generateTileGraph: true,
+            },
+          }),
+        );
+      }
+
       return config;
     },
   },
@@ -72,6 +146,7 @@ export default defineConfig({
     removeConsole: isProduction,
   },
   output: {
+    dataUriLimit: 0,
     sourceMap: {
       js: isProduction ? 'source-map' : 'cheap-module-source-map',
       css: true,

@@ -24,8 +24,13 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
     initTheme();
 
     // support multiple initialization
-    await Promise.all([setupI18n(), setupSentry(), setupStatsig()]);
+    await setupI18n();
     setIsInitialized(true);
+
+    // non-blocking initialization
+    Promise.all([setupSentry(), setupStatsig()]).catch((e) => {
+      console.error('Failed to initialize metrics:', e);
+    });
   };
 
   useEffect(() => {

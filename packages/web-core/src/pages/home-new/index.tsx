@@ -16,6 +16,7 @@ import {
 
 import cn from 'classnames';
 import { Title } from '@refly-packages/ai-workspace-common/components/canvas/front-page/title';
+import { usePrefetchWorkflow } from '../../hooks/use-prefetch-workflow';
 
 const UnsignedFrontPage = memo(() => {
   const { t, i18n } = useTranslation();
@@ -106,6 +107,7 @@ const UnsignedFrontPage = memo(() => {
                     ? t('canvas.launchpad.chatInputPlaceholder')
                     : t('canvas.launchpad.commonChatInputPlaceholder')
                 }
+                onFocus={usePrefetchWorkflow()}
               />
 
               <Actions

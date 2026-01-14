@@ -6,12 +6,12 @@ import { VoucherInvitation } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import cn from 'classnames';
 import { useUserStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
-import html2canvas from 'html2canvas';
 import couponGradientBg from '../../assets/images/coupon-gradient-bg.webp';
 import reflyIcon from '../../assets/logo.svg';
-import defaultAvatar from '../../assets/refly_default_avatar.png';
+import defaultAvatar from '../../assets/refly_default_avatar_v2.webp';
 import { Account } from 'refly-icons';
 import { getBaseMonthlyPrice } from '../../constants/pricing';
+import { getHtml2Canvas } from '@refly-packages/ai-workspace-common/utils/lazy-loader';
 
 interface SharePosterProps {
   visible: boolean;
@@ -150,6 +150,9 @@ export const SharePoster = ({ visible, onClose, shareUrl, discountPercent }: Sha
 
     setDownloading(true);
     try {
+      // Get html2canvas from lazy loader
+      const html2canvas = await getHtml2Canvas();
+
       // Use html2canvas to capture the poster element
       const canvas = await html2canvas(posterRef.current, {
         backgroundColor: '#ffffff',

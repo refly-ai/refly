@@ -24,7 +24,7 @@ import React from 'react';
 import { TFunction } from 'i18next';
 import { useSubscriptionStoreShallow } from '@refly/stores';
 import { UserSettings } from '@refly/openapi-schema';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
 
 // Reusable dropdown item component
 const DropdownItem = React.memo(

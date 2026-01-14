@@ -7,7 +7,7 @@ import type { UploadFile } from 'antd/es/upload/interface';
 
 import cn from 'classnames';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
 import { useUserStoreShallow } from '@refly/stores';
 import { useAuthStoreShallow } from '@refly/stores';
 import { useSubscriptionStoreShallow } from '@refly/stores';

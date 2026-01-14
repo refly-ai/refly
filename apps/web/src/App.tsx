@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { LightLoading } from '@refly/ui-kit';
 import { ErrorBoundary } from '@sentry/react';
@@ -45,6 +45,39 @@ const AppContent = () => {
 };
 
 export const App = () => {
+  // Register Service Worker for Code Caching
+  // Register Service Worker for Code Caching
+  useEffect(() => {
+    // Debug log to verify environment
+    console.log('[SW] Checking eligibility...', {
+      hasSW: 'serviceWorker' in navigator,
+      env: process.env.NODE_ENV,
+    });
+
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      const registerSW = () => {
+        console.log('[SW] Attempting registration...');
+        navigator.serviceWorker
+          .register('/service-worker.js')
+          .then((registration) => {
+            console.log(
+              '[SW] ServiceWorker registration successful with scope: ',
+              registration.scope,
+            );
+          })
+          .catch((registrationError) => {
+            console.error('[SW] ServiceWorker registration failed: ', registrationError);
+          });
+      };
+
+      if (document.readyState === 'complete') {
+        registerSW();
+      } else {
+        window.addEventListener('load', registerSW);
+      }
+    }
+  }, []);
+
   return (
     <>
       <GlobalSEO />

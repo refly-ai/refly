@@ -20,7 +20,7 @@ import { ListOrder, ShareUser, WorkflowSchedule } from '@refly/openapi-schema';
 import { UsedToolsets } from '@refly-packages/ai-workspace-common/components/workflow-list/used-toolsets';
 import { ScheduleColumn } from '@refly-packages/ai-workspace-common/components/workflow-list/schedule-column';
 import { WorkflowFilters } from '@refly-packages/ai-workspace-common/components/workflow-list/workflow-filters';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '../../assets/refly_default_avatar_v2.webp';
 import { useDebouncedCallback } from 'use-debounce';
 import { useSiderStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';

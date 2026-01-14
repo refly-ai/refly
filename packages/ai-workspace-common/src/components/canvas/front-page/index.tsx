@@ -20,7 +20,7 @@ import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/
 import { SiderMenuSettingList } from '../../sider-menu-setting-list';
 import { Subscription, Account } from 'refly-icons';
 import { Avatar, Divider } from 'antd';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '../../../assets/refly_default_avatar_v2.webp';
 import { logEvent } from '@refly/telemetry-web';
 
 // User avatar component for displaying user profile
@@ -232,7 +232,11 @@ const ModuleContainer = ({
   );
 };
 
-export const FrontPage = memo(() => {
+interface FrontPageProps {
+  onPrefetch?: () => void;
+}
+
+export const FrontPage = memo(({ onPrefetch }: FrontPageProps) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { getCanvasList } = useHandleSiderData();
@@ -376,7 +380,22 @@ export const FrontPage = memo(() => {
 
   useEffect(() => {
     getCanvasList();
-  }, []);
+  }, [getCanvasList]);
+
+  useEffect(() => {
+    // Prefetch workflow resources when browser is idle
+    const handlePrefetch = () => {
+      onPrefetch?.();
+    };
+
+    if ('requestIdleCallback' in window) {
+      const idleCallback = (window as any).requestIdleCallback(handlePrefetch, { timeout: 2000 });
+      return () => (window as any).cancelIdleCallback(idleCallback);
+    } else {
+      const timeoutId = setTimeout(handlePrefetch, 2000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [onPrefetch]);
 
   return (
     <div
@@ -399,6 +418,7 @@ export const FrontPage = memo(() => {
             className="w-fit h-fit flex items-center gap-2  border-[1px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover transition-colors"
             onClick={handleNewWorkflow}
             loading={createCanvasLoading}
+            onMouseEnter={onPrefetch}
           >
             <DocAdd size={42} color="var(--refly-primary-default)" />
             <div className="flex flex-col gap-1 w-[184px]">
@@ -432,7 +452,7 @@ export const FrontPage = memo(() => {
           title={t('frontPage.recentWorkflows.title')}
           handleTitleClick={handleViewAllWorkflows}
         >
-          <RecentWorkflow canvases={canvases} />
+          <RecentWorkflow canvases={canvases} onPrefetch={onPrefetch} />
         </ModuleContainer>
       )}
 
