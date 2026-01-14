@@ -108,8 +108,6 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     const startNodes = currentNodes.filter((node) => node.type === 'start');
     const skillNodes = currentNodes.filter((node) => node.type === 'skillResponse');
 
-    console.log('currentNodes', currentNodes);
-
     const isOnboarding = Boolean(userProfile?.preferences?.needOnboarding);
 
     // Check if canvas only contains one start node or one start node + one skill node with empty contentPreview

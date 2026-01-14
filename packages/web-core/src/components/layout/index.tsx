@@ -38,7 +38,7 @@ import { useRouteCollapse } from '@refly-packages/ai-workspace-common/hooks/use-
 import cn from 'classnames';
 import { FormOnboardingModal } from '../form-onboarding-modal';
 import { OnboardingSuccessModal } from '../onboarding-success-modal';
-
+import { PureCopilotModal } from '../pure-copilot-modal';
 const Content = Layout.Content;
 
 interface AppLayoutProps {
@@ -95,8 +95,6 @@ export const AppLayout = (props: AppLayoutProps) => {
     }
   }, [i18n, locale]);
 
-  const needOnboarding = userStore.userProfile?.preferences?.needOnboarding;
-
   // Handle root path redirection based on login status
   useEffect(() => {
     if (
@@ -106,11 +104,7 @@ export const AppLayout = (props: AppLayoutProps) => {
     ) {
       hasRedirectedRef.current = true;
       if (userStore.isLogin && userStore.userProfile) {
-        if (needOnboarding) {
-          navigate('/onboarding', { replace: true });
-        } else {
-          navigate('/workspace', { replace: true });
-        }
+        navigate('/workspace', { replace: true });
       } else {
         // Preserve query parameters (e.g., invite code) when redirecting to login
         const searchParams = new URLSearchParams(location.search);
@@ -124,7 +118,6 @@ export const AppLayout = (props: AppLayoutProps) => {
     userStore.isLogin,
     userStore.userProfile,
     userStore.isCheckingLoginStatus,
-    needOnboarding,
     navigate,
   ]);
 
@@ -251,6 +244,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         <FormOnboardingModal />
         <OnboardingSuccessModal />
         <InvitationCodeModal />
+        <PureCopilotModal />
         <ResetPasswordModal />
         <SubscribeModal />
         <ClaimedVoucherPopup />

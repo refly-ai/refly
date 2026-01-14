@@ -17,7 +17,6 @@ import {
   LoginPage,
   RunHistoryPage,
   RunDetailPage,
-  PureCopilotPage,
 } from '@refly/web-core';
 
 import type { RouteObject } from 'react-router-dom';
@@ -137,9 +136,5 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/workflow-template/:shareId',
     element: <WorkflowAppPage />,
-  },
-  {
-    path: '/onboarding',
-    element: <PureCopilotPage />,
   },
 ];

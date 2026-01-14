@@ -39,13 +39,10 @@ const LoginPage = () => {
   const [isEmailFormExpanded, setIsEmailFormExpanded] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { getLoginStatus } = useIsLogin();
-  const { isLogin, isCheckingLoginStatus, userProfile } = useUserStoreShallow((state) => ({
+  const { isLogin, isCheckingLoginStatus } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
-    userProfile: state.userProfile,
   }));
-
-  const needOnboarding = userProfile?.preferences?.needOnboarding;
 
   // Store invite code from URL parameter for claiming after login
   // This must run synchronously before any redirect checks
@@ -108,9 +105,6 @@ const LoginPage = () => {
   // Avoid redirect loop: only use cookie-based fast path when there is no returnUrl
   const hasReturnUrl = !!searchParams.get('returnUrl');
   if (isLoggedIn || (hasLoginCredentials && !hasReturnUrl)) {
-    if (needOnboarding) {
-      return <Navigate to="/onboarding" replace />;
-    }
     return <Navigate to="/workspace" replace />;
   }
 
@@ -185,12 +179,11 @@ const LoginPage = () => {
           });
           authStore.reset();
           const returnUrl = searchParams.get('returnUrl');
-          const defaultRedirectUrl = needOnboarding ? '/onboarding' : '/workspace';
           const redirectUrl = returnUrl
             ? decodeURIComponent(returnUrl)
             : isPublicAccessPage
               ? window.location.href
-              : defaultRedirectUrl;
+              : '/workspace';
           window.location.replace(redirectUrl);
         } else {
           authStore.setEmail(values.email);
@@ -214,8 +207,7 @@ const LoginPage = () => {
         // Note: No need to close modal as this is a standalone login page
         authStore.reset();
         const returnUrl = searchParams.get('returnUrl');
-        const defaultRedirectUrl = needOnboarding ? '/onboarding' : '/workspace';
-        const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : defaultRedirectUrl;
+        const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/workspace';
         window.location.replace(redirectUrl);
       }
     }

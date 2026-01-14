@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { logEvent } from '@refly/telemetry-web';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
-import { useCanvasResourcesPanelStoreShallow, useCopilotStore } from '@refly/stores';
+import { useCanvasResourcesPanelStoreShallow, useCopilotStoreShallow } from '@refly/stores';
 
 interface CreateCanvasOptions {
   isPilotActivated?: boolean;
@@ -26,7 +26,9 @@ export const useCreateCanvas = ({
       setWideScreenVisible: state.setWideScreenVisible,
     }),
   );
-  const setPendingPrompt = useCopilotStore((state) => state.setPendingPrompt);
+  const { setPendingPrompt } = useCopilotStoreShallow((state) => ({
+    setPendingPrompt: state.setPendingPrompt,
+  }));
 
   const createCanvas = async (canvasTitle: string) => {
     setIsCreating(true);

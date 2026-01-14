@@ -8,6 +8,7 @@ import { cn } from '@refly/utils/cn';
 import { motion, AnimatePresence } from 'motion/react';
 import { LuCornerRightUp } from 'react-icons/lu';
 import './index.scss';
+import { useUserStoreShallow } from '@refly/stores';
 
 interface SamplePromptProps {
   icon: React.ReactNode;
@@ -53,7 +54,16 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-  const { debouncedCreateCanvas, isCreating } = useCreateCanvas();
+  const { debouncedCreateCanvas, isCreating } = useCreateCanvas({
+    afterCreateSuccess: () => {
+      setTimeout(() => {
+        setHidePureCopilotModal(true);
+      }, 1000);
+    },
+  });
+  const { setHidePureCopilotModal } = useUserStoreShallow((state) => ({
+    setHidePureCopilotModal: state.setHidePureCopilotModal,
+  }));
 
   const isFloatingVisible = useMemo(
     () => source === 'frontPage' && isFocused && !query.trim(),
