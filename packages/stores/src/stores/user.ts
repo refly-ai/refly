@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
+import { devtools } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { LOCALE } from '@refly/common-types';
 import { UserSettings } from '@refly/openapi-schema';
@@ -91,41 +91,29 @@ export const defaultState = {
 };
 
 export const useUserStore = create<UserState>()(
-  devtools(
-    persist(
-      (set) => ({
-        ...defaultState,
+  devtools((set) => ({
+    ...defaultState,
 
-        setIsCheckingLoginStatus: (val: boolean) =>
-          set((state) => ({ ...state, isCheckingLoginStatus: val })),
-        setIsLogin: (val: boolean) => set((state) => ({ ...state, isLogin: val })),
-        setUserProfile: (val?: UserSettings) => set((state) => ({ ...state, userProfile: val })),
-        setLocalSettings: (val: LocalSettings) =>
-          set((state) => ({ ...state, localSettings: val })),
-        setRuntime: (val: IRuntime) => set((state) => ({ ...state, runtime: val })),
-        resetState: () => set((state) => ({ ...state, ...defaultExtraState })),
-        setShowTourModal: (val: boolean) => set((state) => ({ ...state, showTourModal: val })),
-        setShowSettingsGuideModal: (val: boolean) =>
-          set((state) => ({ ...state, showSettingsGuideModal: val })),
-        setHelpModalVisible: (val: boolean) =>
-          set((state) => ({ ...state, helpModalVisible: val })),
-        setShowInvitationCodeModal: (val: boolean) =>
-          set((state) => ({ ...state, showInvitationCodeModal: val })),
-        setShowOnboardingFormModal: (val: boolean) =>
-          set((state) => ({ ...state, showOnboardingFormModal: val })),
-        setShowOnboardingSuccessAnimation: (val: boolean) =>
-          set((state) => ({ ...state, showOnboardingSuccessAnimation: val })),
-        setHidePureCopilotModal: (val: boolean) =>
-          set((state) => ({ ...state, hidePureCopilotModal: val })),
-      }),
-      {
-        name: 'user-storage',
-        partialize: (state) => ({
-          hidePureCopilotModal: state.hidePureCopilotModal,
-        }),
-      },
-    ),
-  ),
+    setIsCheckingLoginStatus: (val: boolean) =>
+      set((state) => ({ ...state, isCheckingLoginStatus: val })),
+    setIsLogin: (val: boolean) => set((state) => ({ ...state, isLogin: val })),
+    setUserProfile: (val?: UserSettings) => set((state) => ({ ...state, userProfile: val })),
+    setLocalSettings: (val: LocalSettings) => set((state) => ({ ...state, localSettings: val })),
+    setRuntime: (val: IRuntime) => set((state) => ({ ...state, runtime: val })),
+    resetState: () => set((state) => ({ ...state, ...defaultExtraState })),
+    setShowTourModal: (val: boolean) => set((state) => ({ ...state, showTourModal: val })),
+    setShowSettingsGuideModal: (val: boolean) =>
+      set((state) => ({ ...state, showSettingsGuideModal: val })),
+    setHelpModalVisible: (val: boolean) => set((state) => ({ ...state, helpModalVisible: val })),
+    setShowInvitationCodeModal: (val: boolean) =>
+      set((state) => ({ ...state, showInvitationCodeModal: val })),
+    setShowOnboardingFormModal: (val: boolean) =>
+      set((state) => ({ ...state, showOnboardingFormModal: val })),
+    setShowOnboardingSuccessAnimation: (val: boolean) =>
+      set((state) => ({ ...state, showOnboardingSuccessAnimation: val })),
+    setHidePureCopilotModal: (val: boolean) =>
+      set((state) => ({ ...state, hidePureCopilotModal: val })),
+  })),
 );
 
 export const useUserStoreShallow = <T>(selector: (state: UserState) => T) => {

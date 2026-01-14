@@ -223,7 +223,7 @@ const ModuleContainer = ({
         {title}
         {handleTitleClick && (
           <Button
-            className="!h-8 !w-8 p-0 absolute right-5 text-refly-text-2"
+            className="!h-8 !min-w-8 py-0 px-1 absolute right-5 text-refly-text-2"
             type="text"
             size="small"
             onClick={handleTitleClick}

@@ -27,7 +27,7 @@ export const VariableHoverCard = memo(
       switch (variableType) {
         case 'string':
           return (
-            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 p-3 w-[256px] h-[160px] overflow-hidden">
+            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 p-3 w-[256px] max-h-[160px] overflow-hidden">
               <div className="flex items-center">
                 <BiText size={18} className="mr-2" />
                 <div className="text-sm font-bold">
