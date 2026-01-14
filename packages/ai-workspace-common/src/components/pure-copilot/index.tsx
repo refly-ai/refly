@@ -127,7 +127,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
   );
 
   return (
-    <div className={cn('flex flex-col items-center w-full max-w-[650px] mx-auto', classnames)}>
+    <div className={cn('flex flex-col items-center w-full max-w-[650px] mx-auto px-4', classnames)}>
       <div className="flex items-center gap-3 mb-6">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -158,6 +158,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
           <div className="min-h-[120px] mb-4">
             <ChatInput
               readonly={false}
+              autoFocus={false}
               query={query}
               setQuery={setQuery}
               handleSendMessage={handleSendMessage}

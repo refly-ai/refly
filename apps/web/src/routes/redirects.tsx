@@ -73,15 +73,12 @@ export const WorkflowTemplateRedirect = () => {
  */
 export const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   const { getLoginStatus } = useIsLogin();
-  const { isLogin, isCheckingLoginStatus, userProfile } = useUserStoreShallow((state) => ({
+  const { isLogin, isCheckingLoginStatus } = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
-    userProfile: state.userProfile,
   }));
   const [searchParams] = useSearchParams();
   const location = useLocation();
-
-  const needOnboarding = userProfile?.preferences?.needOnboarding;
 
   const isLoggedIn = useMemo(() => {
     return getLoginStatus() || isLogin;
@@ -106,14 +103,6 @@ export const ProtectedRoute = ({ children }: { children: ReactElement }) => {
     const fullPath = queryString ? `${location.pathname}?${queryString}` : location.pathname;
     const returnUrl = encodeURIComponent(fullPath);
     return <Navigate to={`/login?returnUrl=${returnUrl}`} replace />;
-  }
-
-  if (
-    needOnboarding &&
-    location.pathname !== '/onboarding' &&
-    !location.pathname.startsWith('/workflow')
-  ) {
-    return <Navigate to="/onboarding" replace />;
   }
 
   return children;

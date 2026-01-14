@@ -128,30 +128,6 @@ export const AppLayout = (props: AppLayoutProps) => {
     navigate,
   ]);
 
-  // Handle onboarding redirection for other pages
-  useEffect(() => {
-    if (
-      !userStore.isCheckingLoginStatus &&
-      userStore.isLogin &&
-      needOnboarding &&
-      location.pathname !== '/onboarding' &&
-      location.pathname !== '/' &&
-      !location.pathname.startsWith('/workflow') &&
-      !isPublicAccessPage &&
-      !matchPricing
-    ) {
-      navigate('/onboarding', { replace: true });
-    }
-  }, [
-    userStore.isCheckingLoginStatus,
-    userStore.isLogin,
-    needOnboarding,
-    location.pathname,
-    isPublicAccessPage,
-    matchPricing,
-    navigate,
-  ]);
-
   // Handle payment callback
   useHandleUrlParamsCallback();
 
