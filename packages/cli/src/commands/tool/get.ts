@@ -37,7 +37,7 @@ export const toolGetCommand = new Command('get')
       }
 
       const queryString = params.toString();
-      const url = `/v1/cli/toolcall/${callId}${queryString ? `?${queryString}` : ''}`;
+      const url = `/v1/cli/tool-call/${callId}${queryString ? `?${queryString}` : ''}`;
       const result = await apiRequest<ToolCallFullDetail>(url);
 
       ok('tool.detail', {

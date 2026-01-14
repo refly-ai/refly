@@ -25,7 +25,12 @@ export const loginCommand = new Command('login')
       }
 
       // Default: use device flow (opens browser login page)
-      await loginWithDeviceFlow();
+      // emitOutput: true means it will call ok()/printError() and exit
+      const result = await loginWithDeviceFlow({ emitOutput: true });
+      if (!result.ok) {
+        // Error already printed by loginWithDeviceFlow
+        process.exit(1);
+      }
     } catch (error) {
       logger.error('Login failed:', error);
       fail(ErrorCodes.AUTH_REQUIRED, error instanceof Error ? error.message : 'Login failed', {
@@ -101,11 +106,32 @@ interface DeviceSessionWithTokens extends DeviceSessionInfo {
 }
 
 /**
+ * Options for device flow login
+ */
+export interface DeviceFlowOptions {
+  /** If false, don't call ok()/fail() - just return result. Default: true */
+  emitOutput?: boolean;
+}
+
+/**
+ * Result of device flow login
+ */
+export interface DeviceFlowResult {
+  ok: boolean;
+  user?: { uid: string; email: string; name?: string };
+  error?: { code: string; message: string; hint?: string };
+}
+
+/**
  * Login using device authorization flow
  * Opens browser to login page, polls for authorization
  * Exported for use by init command
+ *
+ * @param options - Control output behavior
+ * @returns DeviceFlowResult with success/failure info
  */
-export async function loginWithDeviceFlow(): Promise<boolean> {
+export async function loginWithDeviceFlow(options?: DeviceFlowOptions): Promise<DeviceFlowResult> {
+  const emitOutput = options?.emitOutput !== false;
   logger.info('Starting device authorization flow...');
 
   // 1. Initialize device session
@@ -174,26 +200,46 @@ export async function loginWithDeviceFlow(): Promise<boolean> {
             user: userInfo,
           });
 
-          ok('login', {
-            message: 'Successfully authenticated via device authorization',
-            user: userInfo,
-            method: 'device',
-          });
-          return true;
+          if (emitOutput) {
+            ok('login', {
+              message: 'Successfully authenticated via device authorization',
+              user: userInfo,
+              method: 'device',
+            });
+          }
+          return { ok: true, user: userInfo };
         }
         break;
 
       case 'cancelled':
-        printError(ErrorCodes.AUTH_REQUIRED, 'Authorization was cancelled', {
-          hint: 'The authorization request was cancelled in the browser',
-        });
-        return false;
+        if (emitOutput) {
+          printError(ErrorCodes.AUTH_REQUIRED, 'Authorization was cancelled', {
+            hint: 'The authorization request was cancelled in the browser',
+          });
+        }
+        return {
+          ok: false,
+          error: {
+            code: ErrorCodes.AUTH_REQUIRED,
+            message: 'Authorization was cancelled',
+            hint: 'The authorization request was cancelled in the browser',
+          },
+        };
 
       case 'expired':
-        printError(ErrorCodes.AUTH_REQUIRED, 'Authorization request expired', {
-          hint: 'Run `refly login` again to start a new session',
-        });
-        return false;
+        if (emitOutput) {
+          printError(ErrorCodes.AUTH_REQUIRED, 'Authorization request expired', {
+            hint: 'Run `refly login` again to start a new session',
+          });
+        }
+        return {
+          ok: false,
+          error: {
+            code: ErrorCodes.AUTH_REQUIRED,
+            message: 'Authorization request expired',
+            hint: 'Run `refly login` again to start a new session',
+          },
+        };
 
       case 'pending':
         // Continue polling
@@ -205,10 +251,19 @@ export async function loginWithDeviceFlow(): Promise<boolean> {
   }
 
   // Timeout
-  printError(ErrorCodes.TIMEOUT, 'Authorization timeout', {
-    hint: 'Complete authorization in the browser within 5 minutes',
-  });
-  return false;
+  if (emitOutput) {
+    printError(ErrorCodes.TIMEOUT, 'Authorization timeout', {
+      hint: 'Complete authorization in the browser within 5 minutes',
+    });
+  }
+  return {
+    ok: false,
+    error: {
+      code: ErrorCodes.TIMEOUT,
+      message: 'Authorization timeout',
+      hint: 'Complete authorization in the browser within 5 minutes',
+    },
+  };
 }
 
 /**

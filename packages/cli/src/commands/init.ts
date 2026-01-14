@@ -3,7 +3,7 @@
  */
 
 import { Command } from 'commander';
-import { ok, print, fail, ErrorCodes } from '../utils/output.js';
+import { ok, print, fail, ErrorCodes, isPrettyOutput } from '../utils/output.js';
 import { installSkill, isSkillInstalled } from '../skill/installer.js';
 import {
   loadConfig,
@@ -11,9 +11,12 @@ import {
   getApiEndpoint,
   getAccessToken,
   getApiKey,
+  getAuthUser,
 } from '../config/config.js';
 import { getReflyDir } from '../config/paths.js';
 import { loginWithDeviceFlow } from './login.js';
+import { isTTY, shouldUseColor } from '../utils/ui.js';
+import { printLogo, printSuccess, printError, printDim, println } from '../utils/logo.js';
 
 // Default API endpoint - injected at build time by tsup
 // Build with different environments:
@@ -30,13 +33,32 @@ export const initCommand = new Command('init')
   .action(async (options) => {
     try {
       const { force, host, skipLogin } = options;
+      // Use build-time injected endpoint, or --host if explicitly provided
       const apiEndpoint = host || DEFAULT_API_ENDPOINT;
+
+      // Determine output mode
+      const pretty = isPrettyOutput();
+      const tty = isTTY();
+      const useColor = shouldUseColor();
 
       // Check current state
       const skillStatus = isSkillInstalled();
       const isAuthenticated = !!(getAccessToken() || getApiKey());
 
+      // Already initialized case
       if (skillStatus.installed && skillStatus.upToDate && !force && isAuthenticated) {
+        if (pretty && tty) {
+          printLogo({ color: useColor });
+          println('');
+          printSuccess('Already initialized and authenticated');
+          const user = getAuthUser();
+          if (user?.email) {
+            printDim(`  Logged in as ${user.email}`);
+          }
+          println('');
+          printDim('Run `refly status` for details.');
+          return;
+        }
         return ok('init', {
           message: 'Refly CLI already initialized and authenticated',
           configDir: getReflyDir(),
@@ -47,6 +69,14 @@ export const initCommand = new Command('init')
         });
       }
 
+      // Pretty mode: Show logo and progress
+      if (pretty && tty) {
+        printLogo({ color: useColor });
+        println('');
+        println('Initializing Refly CLI...');
+        println('');
+      }
+
       // Initialize config with API endpoint
       const config = loadConfig();
       config.api = {
@@ -55,34 +85,95 @@ export const initCommand = new Command('init')
       saveConfig(config);
 
       // Install skill files
-      const result = installSkill();
+      const installResult = installSkill();
 
-      // Output initialization success (use print instead of ok to continue execution)
-      print('init', {
-        message: 'Refly CLI initialized successfully',
-        configDir: getReflyDir(),
-        apiEndpoint: apiEndpoint,
-        skillInstalled: result.skillInstalled,
-        skillPath: result.skillPath,
-        commandsInstalled: result.commandsInstalled,
-        commandsPath: result.commandsPath,
-        version: result.version,
-      });
+      // Pretty mode: Show installation results
+      if (pretty && tty) {
+        if (installResult.skillInstalled) {
+          printSuccess('Skill files installed');
+        } else {
+          printError('Skill files installation failed');
+        }
+
+        if (installResult.commandsInstalled) {
+          printSuccess('Slash commands installed');
+        } else {
+          printError('Slash commands installation failed');
+        }
+        println('');
+      } else if (!pretty) {
+        // JSON mode: print install result
+        print('init', {
+          message: 'Refly CLI initialized successfully',
+          configDir: getReflyDir(),
+          apiEndpoint: apiEndpoint,
+          skillInstalled: installResult.skillInstalled,
+          skillPath: installResult.skillPath,
+          commandsInstalled: installResult.commandsInstalled,
+          commandsPath: installResult.commandsPath,
+          version: installResult.version,
+        });
+      }
 
       // Auto-login unless skipped or already authenticated
       if (!skipLogin && !isAuthenticated) {
-        process.stderr.write('\nStarting authentication...\n');
-        const loginSuccess = await loginWithDeviceFlow();
-
-        if (!loginSuccess) {
-          process.stderr.write(
-            '\nAuthentication was not completed. You can login later with `refly login`.\n',
-          );
+        if (pretty && tty) {
+          println('Starting authentication...');
+          printDim('A browser window will open for login.');
+          println('');
         }
-      } else if (isAuthenticated) {
-        process.stderr.write('\nAlready authenticated.\n');
-      } else {
-        process.stderr.write('\nSkipped login. Run `refly login` to authenticate later.\n');
+
+        // Call loginWithDeviceFlow without emitOutput so we can handle result ourselves
+        const loginResult = await loginWithDeviceFlow({ emitOutput: false });
+
+        if (pretty && tty) {
+          if (loginResult.ok) {
+            printSuccess('Authentication successful');
+            if (loginResult.user?.email) {
+              printDim(`  Welcome, ${loginResult.user.email}!`);
+            }
+          } else {
+            printError('Authentication was not completed');
+            printDim('  Run `refly login` to authenticate later.');
+          }
+          println('');
+        } else if (!pretty && loginResult.ok) {
+          // JSON mode: output login success
+          print('login', {
+            message: 'Successfully authenticated',
+            user: loginResult.user,
+          });
+        }
+      } else if (pretty && tty) {
+        if (isAuthenticated) {
+          printSuccess('Already authenticated');
+          const user = getAuthUser();
+          if (user?.email) {
+            printDim(`  Logged in as ${user.email}`);
+          }
+        } else {
+          printDim('Skipped login. Run `refly login` to authenticate later.');
+        }
+        println('');
+      }
+
+      // Final message
+      if (pretty && tty) {
+        println('Ready to use! Try `refly status` to verify.');
+        return;
+      }
+
+      // JSON mode final output (if not already printed)
+      if (!pretty) {
+        return ok('init', {
+          message: 'Refly CLI initialized successfully',
+          configDir: getReflyDir(),
+          apiEndpoint: apiEndpoint,
+          skillInstalled: installResult.skillInstalled,
+          commandsInstalled: installResult.commandsInstalled,
+          version: installResult.version,
+          authenticated: !!(getAccessToken() || getApiKey()),
+        });
       }
     } catch (error) {
       fail(

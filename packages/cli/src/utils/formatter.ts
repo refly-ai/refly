@@ -359,8 +359,10 @@ export class OutputFormatter {
   // === CLI Status Format (Phase 1: Charm-style cards) ===
 
   private outputStatusPretty(payload: SuccessPayload): void {
-    const { cli_version, api_endpoint, auth_status, auth_method, auth_details, user, skill } =
-      payload as Record<string, unknown>;
+    const { cli_version, api_endpoint, auth_status, user, skill } = payload as Record<
+      string,
+      unknown
+    >;
 
     const sym = this.useUnicode ? Symbols : AsciiSymbol;
 
@@ -371,29 +373,11 @@ export class OutputFormatter {
     // Auth Card
     const authOk = auth_status === 'valid';
     const userObj = user as Record<string, unknown> | null;
-    const authDetailsObj = auth_details as Record<string, unknown> | null;
 
     const authLines: Array<{ text: string; indent?: boolean; muted?: boolean }> = [];
 
     if (authOk && userObj?.email) {
       authLines.push({ text: String(userObj.email) });
-      // Provider info
-      const provider = authDetailsObj?.provider || auth_method;
-      if (provider) {
-        const providerDisplay =
-          String(provider).charAt(0).toUpperCase() + String(provider).slice(1);
-        // Token expiry
-        const exp = userObj?.exp as number | undefined;
-        let expiryText = '';
-        if (exp) {
-          expiryText = ` · ${UI.timeRemaining(exp)}`;
-        }
-        authLines.push({
-          text: `via ${providerDisplay}${expiryText}`,
-          indent: true,
-          muted: true,
-        });
-      }
     } else if (auth_status === 'expired') {
       authLines.push({ text: 'Token expired', muted: true });
     } else {

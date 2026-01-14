@@ -9,6 +9,7 @@ import { LoginedUser } from '../../utils/decorators/user.decorator';
 import { User } from '@refly/openapi-schema';
 import { ActionService } from './action.service';
 import { buildSuccessResponse } from '../../utils/response';
+import { actionResultPO2DTO } from './action.dto';
 
 @Controller('v1/cli/action')
 @UseGuards(JwtAuthGuard)
@@ -25,6 +26,7 @@ export class ActionCliController {
       throw new BadRequestException('resultId is required');
     }
     const result = await this.actionService.getActionResult(user, { resultId });
-    return buildSuccessResponse(result);
+    // Convert to DTO to avoid BigInt serialization issues (pk field is BigInt)
+    return buildSuccessResponse(actionResultPO2DTO(result));
   }
 }
