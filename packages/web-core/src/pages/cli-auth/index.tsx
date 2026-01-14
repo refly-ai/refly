@@ -537,7 +537,7 @@ const CliAuthPage = () => {
 
       case 'authorized_cancel':
         return (
-          <div className="flex flex-col items-center text-center w-full mt-8">
+          <div className="flex flex-col items-center text-center w-full mt-16">
             <div className="w-[56px] h-[56px] rounded-full bg-[#FFF4EB] flex items-center justify-center mb-4">
               <img src={ClockIcon} alt="Clock" className="w-[20px] h-[20px]" />
             </div>
