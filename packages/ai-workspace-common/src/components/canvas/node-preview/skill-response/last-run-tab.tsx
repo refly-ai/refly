@@ -3,7 +3,7 @@ import { Skeleton } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { ActionResult, GenericToolset } from '@refly/openapi-schema';
 import { ActionStepCard } from './action-step';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { actionEmitter } from '@refly-packages/ai-workspace-common/events/action';
 import { MessageList } from '@refly-packages/ai-workspace-common/components/result-message';
 

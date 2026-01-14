@@ -7,7 +7,7 @@ import { Empty, Typography, Table, Tooltip, message } from 'antd';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 import { LOCALE } from '@refly/common-types';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { RunHistoryFilters, RunStatusFilter, RunTypeFilter } from './run-history-filters';
 import { UsedTools } from './used-tools';
 import { client } from '@refly/openapi-schema';

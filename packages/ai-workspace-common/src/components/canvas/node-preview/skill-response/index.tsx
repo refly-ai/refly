@@ -13,7 +13,7 @@ import {
 import { Segmented, Button, message } from 'antd';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 import { ConfigureTab } from './configure-tab';
 import { LastRunTab } from './last-run-tab';

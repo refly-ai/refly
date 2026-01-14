@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useAbortWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-abort-workflow';
 import cn from 'classnames';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { useNavigate } from 'react-router-dom';
 import { ToolsDependencyChecker } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';

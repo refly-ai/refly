@@ -12,7 +12,7 @@ import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
 import { LOCALE } from '@refly/common-types';
 import { Search, Sort, SortAsc } from 'refly-icons';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import './index.scss';
 import { WorkflowActionDropdown } from '@refly-packages/ai-workspace-common/components/workflow-list/workflowActionDropdown';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';

@@ -8,7 +8,7 @@ import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { logEvent } from '@refly/telemetry-web';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import './index.scss';
 
 export type RunDetailType = 'workflow' | 'template' | 'schedule';

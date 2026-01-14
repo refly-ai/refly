@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 
 import cn from 'classnames';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
 import { useUserStoreShallow } from '@refly/stores';
 import { useAuthStoreShallow } from '@refly/stores';
