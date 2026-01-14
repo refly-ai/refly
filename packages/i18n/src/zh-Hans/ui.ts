@@ -1620,6 +1620,7 @@ const translations = {
           failed: '终止工作流失败',
         },
         forbiddenToAddNodeWhenWorkflowIsRunning: '工作流正在运行中，无法添加节点，请稍后再试',
+        noArtifacts: '未找到产物',
       },
       template: {
         updating: '模板正在发布中...',
