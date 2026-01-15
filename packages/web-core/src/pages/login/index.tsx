@@ -25,6 +25,7 @@ import {
   getAndClearSignupEntryPoint,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
+import { Helmet } from 'react-helmet';
 
 interface FormValues {
   email: string;
@@ -232,6 +233,19 @@ const LoginPage = () => {
       className="h-screen w-full flex flex-col lg:flex-row overflow-hidden"
       style={{ backgroundColor: 'var(--refly-bg-login-page)' }}
     >
+      <Helmet>
+        <script type="speculationrules">
+          {JSON.stringify({
+            prerender: [
+              {
+                source: 'list',
+                urls: ['/workspace'],
+              },
+            ],
+          })}
+        </script>
+      </Helmet>
+
       {/* Desktop: Left side - Introduction section */}
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center px-16 py-12 overflow-y-auto">
         <div className="flex items-center justify-center">

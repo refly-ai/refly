@@ -104,7 +104,7 @@ export const AppLayout = (props: AppLayoutProps) => {
   const locale = storageLocalSettings?.uiLocale || userStore?.localSettings?.uiLocale || LOCALE.EN;
 
   // Check user login status
-  useGetUserSettings();
+  const { getLoginStatus } = useGetUserSettings();
 
   useGetMediaModel();
 
@@ -118,6 +118,12 @@ export const AppLayout = (props: AppLayoutProps) => {
 
   // Handle root path redirection based on login status
   useEffect(() => {
+    // Skip redirect during prerendering to avoid prerender failure
+    // @ts-ignore - document.prerendering is not yet in TypeScript DOM types
+    if (typeof document.prerendering !== 'undefined' && document.prerendering) {
+      return;
+    }
+
     if (
       location.pathname === '/' &&
       !userStore.isCheckingLoginStatus &&
@@ -197,9 +203,32 @@ export const AppLayout = (props: AppLayoutProps) => {
           break;
 
         case 'login':
-          // Another tab logged in, redirect if currently on login page
-          if (window.location.pathname === '/login') {
+          // Another tab logged in
+          // biome-ignore lint/correctness/noSwitchDeclarations: <explanation>
+          const isPrerendering =
+            // @ts-ignore - document.prerendering is not yet in TypeScript DOM types
+            typeof document.prerendering !== 'undefined' && document.prerendering;
+
+          console.log('[Login Event] Received login event', {
+            isPrerendering,
+            pathname: window.location.pathname,
+            uid: event.uid,
+          });
+
+          if (isPrerendering) {
+            // If we're prerendering, do nothing
+            // Wait for prerenderingchange event to handle auth sync
+            console.log(
+              '[Login Event] Prerendering: ignoring login event, will handle on activation',
+            );
+          } else if (window.location.pathname === '/login') {
+            // If on login page and not prerendering, navigate to workspace
+            console.log('[Login Event] On login page, redirecting to workspace');
             window.location.href = '/workspace';
+          } else {
+            // On workspace or other protected page, sync auth state
+            console.log('[Login Event] On workspace, syncing auth state');
+            getLoginStatus();
           }
           break;
       }
@@ -213,11 +242,43 @@ export const AppLayout = (props: AppLayoutProps) => {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Prerender activation check: handle prerendered pages that were rendered without auth
+    // When a prerendered page is activated, check if user is now logged in
+    const handlePrerenderingChange = async () => {
+      console.log('[Prerender] Page activated from prerender state');
+
+      // Check if user is logged in now (has uid cookie)
+      const hasAuth = authChannel.getUidFromCookie();
+      const isProtectedPage =
+        window.location.pathname === '/workspace' ||
+        window.location.pathname.startsWith('/canvas') ||
+        window.location.pathname.startsWith('/workflow');
+
+      // If user is logged in and we're on a protected page,
+      // only sync if we don't have userProfile yet
+      if (hasAuth && isProtectedPage && !userStore.userProfile) {
+        console.log('[Prerender] User logged in but no profile, syncing auth state');
+        await getLoginStatus();
+      } else if (hasAuth && isProtectedPage && userStore.userProfile) {
+        console.log('[Prerender] User already has profile, no need to sync');
+      }
+    };
+
+    // Listen for prerendering activation (Chrome 108+)
+    // @ts-ignore - document.prerendering is not yet in TypeScript DOM types
+    if (typeof document.prerendering !== 'undefined') {
+      document.addEventListener('prerenderingchange', handlePrerenderingChange);
+    }
+
     return () => {
       unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // @ts-ignore - document.prerendering is not yet in TypeScript DOM types
+      if (typeof document.prerendering !== 'undefined') {
+        document.removeEventListener('prerenderingchange', handlePrerenderingChange);
+      }
     };
-  }, [t]);
+  }, [t, getLoginStatus, userStore.userProfile]);
 
   const routeLogin = useMatch('/');
   const isPricing = useMatch('/pricing');
