@@ -13,7 +13,6 @@ overrides:
   zod-validation-error: 3.4.1
   layout-base: 2.0.1
   cose-base: 2.2.0
-  entities: 6.0.1
 
 importers:
 
@@ -10421,6 +10420,16 @@ packages:
   ent@2.2.2:
     resolution: {integrity: sha512-kKvD1tO6BM+oK9HzCPpUdRb4vKFQY/FPTFmurMvh6LlN68VMrdj77w8yp51/kDbpkFOS9J8w5W6zIzgM2H8/hw==}
     engines: {node: '>= 0.4'}
+
+  entities@1.1.2:
+    resolution: {integrity: sha512-f2LZMYl1Fzu7YSBKg+RoROelpOaNrcGmE9AZubeDfrCEia483oW4MI4VyFd5VNHIgQ/7qm1I0wUHK1eJnn2y2w==}
+
+  entities@2.2.0:
+    resolution: {integrity: sha512-p92if5Nz619I0w+akJrLZH0MX0Pb5DX39XOwQTtXSdQQOaYH03S1uIQp4mhOZtAXrxq4ViO67YTiLBo2638o9A==}
+
+  entities@4.5.0:
+    resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
+    engines: {node: '>=0.12'}
 
   entities@6.0.1:
     resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
@@ -24158,7 +24167,7 @@ snapshots:
   '@svgr/hast-util-to-babel-ast@8.0.0':
     dependencies:
       '@babel/types': 7.28.1
-      entities: 6.0.1
+      entities: 4.5.0
 
   '@svgr/plugin-jsx@8.1.0(@svgr/core@8.1.0(typescript@5.8.3))':
     dependencies:
@@ -25342,7 +25351,7 @@ snapshots:
     dependencies:
       '@babel/parser': 7.28.0
       '@vue/shared': 3.5.17
-      entities: 6.0.1
+      entities: 4.5.0
       estree-walker: 2.0.2
       source-map-js: 1.2.1
 
@@ -27389,13 +27398,13 @@ snapshots:
   dom-serializer@0.2.2:
     dependencies:
       domelementtype: 2.3.0
-      entities: 6.0.1
+      entities: 2.2.0
 
   dom-serializer@2.0.0:
     dependencies:
       domelementtype: 2.3.0
       domhandler: 5.0.3
-      entities: 6.0.1
+      entities: 4.5.0
 
   dom-walk@0.1.2: {}
 
@@ -27570,6 +27579,12 @@ snapshots:
       es-errors: 1.3.0
       punycode: 1.4.1
       safe-regex-test: 1.1.0
+
+  entities@1.1.2: {}
+
+  entities@2.2.0: {}
+
+  entities@4.5.0: {}
 
   entities@6.0.1: {}
 
@@ -28818,7 +28833,7 @@ snapshots:
 
   happy-dom@15.11.7:
     dependencies:
-      entities: 6.0.1
+      entities: 4.5.0
       webidl-conversions: 7.0.0
       whatwg-mimetype: 3.0.0
     optional: true
@@ -29042,7 +29057,7 @@ snapshots:
       domelementtype: 1.3.1
       domhandler: 2.4.2
       domutils: 1.7.0
-      entities: 6.0.1
+      entities: 1.1.2
       inherits: 2.0.4
       readable-stream: 3.6.2
 
@@ -29051,14 +29066,14 @@ snapshots:
       domelementtype: 2.3.0
       domhandler: 5.0.3
       domutils: 3.2.2
-      entities: 6.0.1
+      entities: 4.5.0
 
   htmlparser2@9.1.0:
     dependencies:
       domelementtype: 2.3.0
       domhandler: 5.0.3
       domutils: 3.2.2
-      entities: 6.0.1
+      entities: 4.5.0
 
   http-cache-semantics@4.2.0: {}
 
@@ -30526,8 +30541,8 @@ snapshots:
 
   magicast@0.3.5:
     dependencies:
-      '@babel/parser': 7.28.0
-      '@babel/types': 7.28.1
+      '@babel/parser': 7.28.6
+      '@babel/types': 7.28.6
       source-map-js: 1.2.1
     optional: true
 
@@ -30552,7 +30567,7 @@ snapshots:
   markdown-it@14.1.0:
     dependencies:
       argparse: 2.0.1
-      entities: 6.0.1
+      entities: 4.5.0
       linkify-it: 5.0.0
       mdurl: 2.0.0
       punycode.js: 2.3.1
