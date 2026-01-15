@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback, useState, useEffect, lazy, Suspense } from 'react';
 import { Button, Layout, Divider } from 'antd';
 import {
   useLocation,
@@ -8,12 +8,28 @@ import {
 
 import cn from 'classnames';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
-// components
+// components - 懒加载 Modal 组件以减少初始包大小
 import { useTranslation } from 'react-i18next';
-import { SettingModal } from '@refly-packages/ai-workspace-common/components/settings';
-import { InvitationModal } from '@refly-packages/ai-workspace-common/components/settings/invitation-modal';
-import { StorageExceededModal } from '@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal';
-import { CreditInsufficientModal } from '@refly-packages/ai-workspace-common/components/subscription/credit-insufficient-modal';
+const SettingModal = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/settings').then((m) => ({
+    default: m.SettingModal,
+  })),
+);
+const InvitationModal = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/settings/invitation-modal').then((m) => ({
+    default: m.InvitationModal,
+  })),
+);
+const StorageExceededModal = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal').then(
+    (m) => ({ default: m.StorageExceededModal }),
+  ),
+);
+const CreditInsufficientModal = lazy(() =>
+  import(
+    '@refly-packages/ai-workspace-common/components/subscription/credit-insufficient-modal'
+  ).then((m) => ({ default: m.CreditInsufficientModal })),
+);
 // hooks
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
@@ -37,7 +53,11 @@ import {
   useUserStoreShallow,
   useSubscriptionStoreShallow,
 } from '@refly/stores';
-import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
+const CanvasTemplateModal = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/canvas-template').then((m) => ({
+    default: m.CanvasTemplateModal,
+  })),
+);
 import { SiderLoggedOut } from './sider-logged-out';
 
 import './layout.scss';
@@ -641,11 +661,14 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
 
   return (
     <>
-      <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
-      <InvitationModal visible={showInvitationModal} setVisible={setShowInvitationModal} />
-      <StorageExceededModal />
-      <CreditInsufficientModal />
-      <CanvasTemplateModal />
+      {/* 懒加载 Modal 组件，只在需要时加载 */}
+      <Suspense fallback={null}>
+        <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
+        <InvitationModal visible={showInvitationModal} setVisible={setShowInvitationModal} />
+        <StorageExceededModal />
+        <CreditInsufficientModal />
+        <CanvasTemplateModal />
+      </Suspense>
 
       {isLogin ? <SiderLoggedIn source={source} /> : <SiderLoggedOut source={source} />}
     </>

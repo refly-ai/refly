@@ -1,31 +1,22 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, lazy } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { LightLoading } from '@refly/ui-kit';
-import { ErrorBoundary } from '@sentry/react';
-import { AppLayout } from '@refly/web-core';
+
+// 懒加载 AppLayout - 只在需要时加载（跳过 login 等页面）
+const AppLayout = lazy(() => import('@refly/web-core').then((m) => ({ default: m.AppLayout })));
 
 import { RoutesList } from './routes';
 import { InitializationSuspense } from './prepare/InitializationSuspense';
 import { shouldSkipLayout } from './config/layout';
-import { ErrorFallback } from './components/ErrorFallback';
 import { GlobalSEO } from './components/GlobalSEO';
+import { LazyErrorBoundary } from '@refly/web-core';
 
 const AppContent = () => {
   const location = useLocation();
   const skipLayout = shouldSkipLayout(location.pathname);
 
   const routes = (
-    <ErrorBoundary
-      fallback={({ error, componentStack, eventId, resetError }) => (
-        <ErrorFallback
-          error={error}
-          componentStack={componentStack}
-          eventId={eventId}
-          resetError={resetError}
-          isGlobal={false}
-        />
-      )}
-    >
+    <LazyErrorBoundary>
       <Suspense fallback={<LightLoading />}>
         <Routes>
           {RoutesList.map((route) => (
@@ -33,7 +24,7 @@ const AppContent = () => {
           ))}
         </Routes>
       </Suspense>
-    </ErrorBoundary>
+    </LazyErrorBoundary>
   );
 
   // Pages that should not be wrapped in AppLayout
@@ -81,21 +72,11 @@ export const App = () => {
   return (
     <>
       <GlobalSEO />
-      <ErrorBoundary
-        fallback={({ error, componentStack, eventId, resetError }) => (
-          <ErrorFallback
-            error={error}
-            componentStack={componentStack}
-            eventId={eventId}
-            resetError={resetError}
-            isGlobal={true}
-          />
-        )}
-      >
+      <LazyErrorBoundary>
         <InitializationSuspense>
           <AppContent />
         </InitializationSuspense>
-      </ErrorBoundary>
+      </LazyErrorBoundary>
     </>
   );
 };

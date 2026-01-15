@@ -216,7 +216,8 @@ export const AppLayout = (props: AppLayoutProps) => {
                 '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66] rounded-lg',
             },
             onOk: () => {
-              window.location.href = '/login';
+              // Use SPA navigation instead of hard redirect
+              navigate('/login', { replace: true });
             },
           });
           break;
@@ -459,3 +460,6 @@ export const AppLayout = (props: AppLayoutProps) => {
     </LazyErrorBoundary>
   );
 };
+
+// Export LazyErrorBoundary for use in other parts of the app
+export { LazyErrorBoundary } from './LazyErrorBoundary';

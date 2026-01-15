@@ -25,6 +25,7 @@ import {
   getAndClearSignupEntryPoint,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
+import { usePrefetchLoginRedirect } from '../../hooks/use-prefetch-login-redirect';
 
 interface FormValues {
   email: string;
@@ -69,47 +70,11 @@ const LoginPage = () => {
     return () => observer.disconnect();
   }, []);
 
-  // Preload returnUrl page resources when idle
-  useEffect(() => {
-    const returnUrl = searchParams.get('returnUrl');
-    if (!returnUrl) return;
-
-    const decodedUrl = decodeURIComponent(returnUrl);
-    // Extract just the pathname for preloading (remove query params)
-    const urlPath = decodedUrl.split('?')[0];
-
-    // Use requestIdleCallback to prefetch during idle time
-    const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 1));
-
-    const idleId = idleCallback(() => {
-      // Add prefetch link for the return URL
-      const prefetchLink = document.createElement('link');
-      prefetchLink.rel = 'prefetch';
-      prefetchLink.href = urlPath;
-      document.head.appendChild(prefetchLink);
-
-      // Also try to prerender using Speculation Rules API (modern browsers)
-      const speculationScript = document.createElement('script');
-      speculationScript.type = 'speculationrules';
-      speculationScript.textContent = JSON.stringify({
-        prefetch: [
-          {
-            source: 'list',
-            urls: [urlPath],
-          },
-        ],
-      });
-      document.head.appendChild(speculationScript);
-
-      console.log(`[Login] Preloading resources for: ${urlPath}`);
-    });
-
-    return () => {
-      if (window.cancelIdleCallback) {
-        window.cancelIdleCallback(idleId);
-      }
-    };
-  }, [searchParams]);
+  // 智能预加载登录后可能跳转的页面
+  // - 如果有 returnUrl，预加载对应的页面 chunk
+  // - 如果没有 returnUrl，默认预加载 workspace（登录后默认跳转页面）
+  const returnUrl = searchParams.get('returnUrl');
+  usePrefetchLoginRedirect(returnUrl);
 
   const authStore = useAuthStoreShallow((state) => ({
     loginInProgress: state.loginInProgress,
