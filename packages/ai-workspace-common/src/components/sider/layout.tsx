@@ -8,7 +8,7 @@ import {
 
 import cn from 'classnames';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
-// components - 懒加载 Modal 组件以减少初始包大小
+// components - Lazy load Modal components to reduce initial bundle size
 import { useTranslation } from 'react-i18next';
 const SettingModal = lazy(() =>
   import('@refly-packages/ai-workspace-common/components/settings').then((m) => ({
@@ -661,7 +661,7 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
 
   return (
     <>
-      {/* 懒加载 Modal 组件，只在需要时加载 */}
+      {/* Lazy load Modal components, only load when needed */}
       <Suspense fallback={null}>
         <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
         <InvitationModal visible={showInvitationModal} setVisible={setShowInvitationModal} />

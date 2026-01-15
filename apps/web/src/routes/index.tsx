@@ -27,7 +27,7 @@ const ProtectedRoute = lazy(() =>
   import('./redirects').then((m) => ({ default: m.ProtectedRoute })),
 );
 
-// 从 web-core 导入的已经是 lazy 组件
+// Components imported from web-core are already lazy-loaded
 import {
   Pricing,
   ShareCanvasPage,

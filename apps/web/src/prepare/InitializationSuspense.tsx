@@ -11,8 +11,8 @@ export interface InitializationSuspenseProps {
 }
 
 export function InitializationSuspense({ children }: InitializationSuspenseProps) {
-  // 检测页面是否正在被预渲染
-  // 正在预渲染时跳过初始化，激活时快速初始化
+  // Detect if page is being prerendered
+  // Skip initialization during prerender, quickly initialize on activation
   const [isInitialized, setIsInitialized] = useState(false);
   const isPrerendering = useRef(
     typeof document !== 'undefined' && 'prerendering' in document && document.prerendering === true,
@@ -25,7 +25,7 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
   }));
 
   const init = async () => {
-    // 如果正在预渲染，暂停初始化
+    // If prerendering, defer initialization
     if (isPrerendering.current) {
       console.log('[Init] Page is being prerendered, deferring initialization');
       return;
@@ -34,14 +34,14 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
     setRuntime('web');
     initTheme();
 
-    // 正常加载或预渲染激活后的初始化
+    // Initialization for normal load or after prerender activation
     try {
       await setupI18n();
       setIsInitialized(true);
       console.log('[Init] Initialization complete');
     } catch (error) {
       console.error('Failed to initialize i18n:', error);
-      // 即使失败也允许继续，避免永久 loading
+      // Allow continuation even on failure to avoid permanent loading state
       setIsInitialized(true);
     }
 
@@ -54,7 +54,7 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
   useEffect(() => {
     init();
 
-    // 监听预渲染激活事件
+    // Listen for prerender activation event
     if ('prerendering' in document) {
       const handleActivation = () => {
         console.log('[Init] Page activated from prerender');

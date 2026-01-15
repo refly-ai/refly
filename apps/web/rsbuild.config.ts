@@ -35,7 +35,7 @@ export default defineConfig({
     rspack: (config, { prependPlugins, appendPlugins }) => {
       // ... existing plugins ...
       // SERVICE WORKER CONFIGURATION
-      // 只在生产环境启用 Service Worker，避免开发时缓存问题
+      // Only enable Service Worker in production to avoid caching issues during development
       if (isProduction) {
         const { GenerateSW } = require('workbox-webpack-plugin');
 
@@ -48,27 +48,27 @@ export default defineConfig({
             skipWaiting: true,
 
             // Code Caching Strategy
-            // 预缓存核心资源和主要页面 chunks，提升首次加载体验
+            // Precache core resources and main page chunks to improve first load experience
             include: [
               /\.html$/,
-              // 核心库（所有页面都需要）
+              // Core libraries (required by all pages)
               /lib-react\.[a-f0-9]+\.js$/, // React library (~136KB)
               /lib-router\.[a-f0-9]+\.js$/, // Router library (~22KB)
 
-              // 主入口文件
-              /index\.[a-f0-9]+\.js$/, // 主 bundle (~690KB)
-              /index\.[a-f0-9]+\.css$/, // 主样式文件
+              // Main entry files
+              /index\.[a-f0-9]+\.js$/, // Main bundle (~690KB)
+              /index\.[a-f0-9]+\.css$/, // Main stylesheet
 
-              // 非 async 目录的所有 JS chunks（核心功能代码）
+              // All JS chunks outside async directory (core functionality code)
               /static\/js\/(?!async)[^/]+\.[a-f0-9]+\.js$/,
 
-              // 重要页面的 chunks（workspace 和 workflow）
+              // Important page chunks (workspace and workflow)
               /group-workspace\.[a-f0-9]+\.js$/,
               /group-workflow\.[a-f0-9]+\.js$/,
               /group-workflow\.[a-f0-9]+\.css$/,
             ],
 
-            // 排除不需要缓存的文件
+            // Exclude files that don't need caching
             exclude: [
               /\.map$/, // Source maps
               /asset-manifest\.json$/,
@@ -79,8 +79,8 @@ export default defineConfig({
             // Runtime caching strategies
             runtimeCaching: [
               // === Strategy 1: JavaScript chunks - CacheFirst for instant load ===
-              // 使用 CacheFirst 策略，从缓存直接读取，极快（~0ms）
-              // 因为 JS 文件有 hash，内容变化时文件名会变，所以缓存安全
+              // Use CacheFirst strategy to read directly from cache, extremely fast (~0ms)
+              // Safe to cache because JS files have hash, filename changes when content changes
               {
                 urlPattern: /\.js$/,
                 handler: 'CacheFirst',
@@ -91,13 +91,13 @@ export default defineConfig({
                     maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
                   },
                   cacheableResponse: {
-                    statuses: [200], // 只缓存成功的响应（避免缓存 HTML 错误页）
+                    statuses: [200], // Only cache successful responses (avoid caching HTML error pages)
                   },
                 },
               },
 
               // === Strategy 2: CSS - CacheFirst for instant load ===
-              // CSS 文件也有 hash，使用 CacheFirst 安全且快速
+              // CSS files also have hash, using CacheFirst is safe and fast
               {
                 urlPattern: /\.css$/,
                 handler: 'CacheFirst',
@@ -160,13 +160,13 @@ export default defineConfig({
               },
             ],
 
-            // 完全禁用 navigateFallback 以避免 JS 文件被错误缓存为 HTML
-            // SPA 路由由前端处理，不需要 fallback
+            // Completely disable navigateFallback to avoid JS files being incorrectly cached as HTML
+            // SPA routing is handled by frontend, no fallback needed
             // navigateFallback: '/index.html',
 
-            // 提高文件大小限制以支持预缓存更多资源
-            // 预计总大小：~3-4MB（核心库 + 主 bundle + 非 async chunks + workflow/workspace）
-            maximumFileSizeToCacheInBytes: 30 * 1024 * 1024, // 30MB 上限
+            // Increase file size limit to support precaching more resources
+            // Estimated total size: ~3-4MB (core libraries + main bundle + non-async chunks + workflow/workspace)
+            maximumFileSizeToCacheInBytes: 30 * 1024 * 1024, // 30MB limit
           }),
         );
       }
@@ -226,16 +226,16 @@ export default defineConfig({
   performance: {
     removeConsole: isProduction,
 
-    // 使用 Rsbuild 推荐的策略 + 强制分离大型库
+    // Use Rsbuild recommended strategy + force split large libraries
     chunkSplit: {
-      strategy: 'split-by-experience', // 官方推荐的默认策略
+      strategy: 'split-by-experience', // Official recommended default strategy
 
       override: {
         cacheGroups: {
-          // 禁用默认的 cache groups
+          // Disable default cache groups
           default: false,
 
-          // 只提取 React 核心库（所有页面都需要）
+          // Only extract React core libraries (required by all pages)
           react: {
             test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
             name: 'lib-react',
@@ -243,7 +243,7 @@ export default defineConfig({
             priority: 100,
           },
 
-          // 只提取 React Router（所有页面都需要）
+          // Only extract React Router (required by all pages)
           router: {
             test: /[\\/]node_modules[\\/](react-router|react-router-dom|@remix-run)[\\/]/,
             name: 'lib-router',
@@ -251,18 +251,18 @@ export default defineConfig({
             priority: 90,
           },
 
-          // 不提取其他 vendor，让它们留在页面 chunk 中
+          // Don't extract other vendors, keep them in page chunks
         },
 
-        // 关键：调整大小限制，减少拆分数量
-        minSize: 100000, // 100KB - 增大最小 chunk 大小
-        maxSize: 3000000, // 3MB - 允许更大的 chunk，减少拆分
+        // Critical: Adjust size limits to reduce splitting
+        minSize: 100000, // 100KB - Increase minimum chunk size
+        maxSize: 3000000, // 3MB - Allow larger chunks, reduce splitting
       },
 
-      // 目标：
-      // - 减少 chunk 数量（不要 54 个，目标 5-10 个）
-      // - 每个页面的依赖留在自己的 chunk 中
-      // - Ant Design 不被提取到共享 chunk
+      // Goals:
+      // - Reduce chunk count (not 54, target 5-10)
+      // - Keep each page's dependencies in its own chunk
+      // - Don't extract Ant Design to shared chunk
     },
   },
   output: {

@@ -1,29 +1,29 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * 在 workspace 页面智能预加载 workflow 页面资源
+ * Intelligently prefetch workflow page resources on workspace page
  *
- * 策略：
- * 1. 使用 requestIdleCallback 在浏览器空闲时预加载，不阻塞主线程
- * 2. 预加载 workflow 页面 chunk（包含 Canvas 组件等）
- * 3. 预加载 workflow 依赖的关键库（@xyflow/react）
- * 4. 只预加载一次，避免重复加载
+ * Strategy:
+ * 1. Use requestIdleCallback to prefetch during browser idle time, doesn't block main thread
+ * 2. Prefetch workflow page chunk (includes Canvas components, etc.)
+ * 3. Prefetch key libraries required by workflow (@xyflow/react)
+ * 4. Only prefetch once, avoid repeated loading
  *
- * 使用场景：
- * - 在 workspace 页面（/workspace）调用
- * - 用户可能会点击某个 workflow 进入编辑页面
- * - 提前加载可以让页面切换更流畅
+ * Use case:
+ * - Called on workspace page (/workspace)
+ * - User may click a workflow to enter edit page
+ * - Preloading makes page transitions smoother
  */
 export const usePrefetchWorkflow = () => {
   const hasPreloadedRef = useRef(false);
 
   useEffect(() => {
-    // 如果已经预加载过，不重复执行
+    // If already preloaded, don't repeat
     if (hasPreloadedRef.current) {
       return;
     }
 
-    // 使用 requestIdleCallback 在浏览器空闲时预加载
+    // Use requestIdleCallback to prefetch during browser idle time
     const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 1));
 
     const idleId = idleCallback(
@@ -31,11 +31,11 @@ export const usePrefetchWorkflow = () => {
         console.log('[Workspace] Starting workflow resources prefetch...');
         hasPreloadedRef.current = true;
 
-        // 预加载 workflow 页面（包含 Canvas 组件及其依赖）
-        // workflow 页面会自动引入所需的依赖：
-        // - @xyflow/react (Canvas 核心)
-        // - Tiptap (富文本编辑)
-        // - 各种 workflow 相关组件
+        // Prefetch workflow page (includes Canvas component and dependencies)
+        // Workflow page automatically imports required dependencies:
+        // - @xyflow/react (Canvas core)
+        // - Tiptap (rich text editor)
+        // - Various workflow-related components
         import('../pages/workflow')
           .then(() => {
             console.log('[Workspace] Workflow page and dependencies loaded');
@@ -44,10 +44,10 @@ export const usePrefetchWorkflow = () => {
             console.warn('[Workspace] Failed to prefetch workflow page:', err);
           });
 
-        // 注意：不预加载 Monaco Editor，因为它很大（~2MB）且不是所有用户都会用到
-        // Monaco 会在用户实际打开代码编辑器时按需加载
+        // Note: Don't prefetch Monaco Editor because it's large (~2MB) and not all users will use it
+        // Monaco loads on-demand when user actually opens code editor
       },
-      { timeout: 3000 }, // 最多等待 3 秒，超时后强制执行
+      { timeout: 3000 }, // Wait max 3 seconds, force execute on timeout
     );
 
     return () => {

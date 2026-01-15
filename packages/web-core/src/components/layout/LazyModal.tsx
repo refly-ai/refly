@@ -7,20 +7,20 @@ interface LazyModalProps {
 }
 
 /**
- * LazyModal - 懒加载模态框组件
+ * LazyModal - Lazy load modal component
  *
- * 只有当 visible=true 时才加载模态框组件代码
- * 这样可以减少初始加载的 bundle 大小
+ * Only load modal component code when visible=true
+ * This reduces initial bundle size
  *
- * @param visible - 模态框是否显示
- * @param loader - 动态导入函数
- * @param props - 传递给模态框的其他 props
+ * @param visible - Whether the modal is visible
+ * @param loader - Dynamic import function
+ * @param props - Other props to pass to the modal
  */
 export const LazyModal = ({ visible, loader, ...props }: LazyModalProps) => {
-  // 不显示时直接返回 null，不加载组件
+  // Return null directly when not visible, don't load component
   if (!visible) return null;
 
-  // 当 visible=true 时，动态加载组件
+  // Dynamically load component when visible=true
   const Component = lazy(loader);
 
   return (

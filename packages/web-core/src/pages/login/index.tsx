@@ -70,9 +70,9 @@ const LoginPage = () => {
     return () => observer.disconnect();
   }, []);
 
-  // 智能预加载登录后可能跳转的页面
-  // - 如果有 returnUrl，预加载对应的页面 chunk
-  // - 如果没有 returnUrl，默认预加载 workspace（登录后默认跳转页面）
+  // Intelligently prefetch page that may be redirected to after login
+  // - If returnUrl exists, prefetch corresponding page chunk
+  // - If no returnUrl, default prefetch workspace (default post-login destination)
   const returnUrl = searchParams.get('returnUrl');
   usePrefetchLoginRedirect(returnUrl);
 

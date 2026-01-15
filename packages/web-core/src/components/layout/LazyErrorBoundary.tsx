@@ -11,8 +11,8 @@ interface FallbackErrorBoundaryState {
 }
 
 /**
- * 轻量级 Fallback ErrorBoundary
- * 在 Sentry ErrorBoundary 加载之前使用
+ * Lightweight Fallback ErrorBoundary
+ * Used before Sentry ErrorBoundary loads
  */
 class FallbackErrorBoundary extends Component<
   FallbackErrorBoundaryProps,
@@ -28,7 +28,7 @@ class FallbackErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
-    // 简单的错误日志，不依赖 Sentry
+    // Simple error logging without Sentry dependency
     console.error('Error caught by fallback boundary:', error, errorInfo);
   }
 
@@ -77,15 +77,15 @@ interface LazyErrorBoundaryProps {
 }
 
 /**
- * 懒加载的 ErrorBoundary 组件
+ * Lazy-loaded ErrorBoundary component
  *
- * 特点：
- * 1. 不阻塞初始渲染 - 先用轻量级 Fallback ErrorBoundary
- * 2. 异步加载 Sentry ErrorBoundary - 在后台加载完整的错误追踪
- * 3. 加载失败时降级 - 如果 Sentry 加载失败，继续使用 Fallback
+ * Features:
+ * 1. Non-blocking initial render - Uses lightweight Fallback ErrorBoundary first
+ * 2. Async Sentry ErrorBoundary loading - Loads full error tracking in background
+ * 3. Graceful degradation - Falls back to FallbackErrorBoundary if Sentry fails to load
  */
 export const LazyErrorBoundary = ({ children }: LazyErrorBoundaryProps) => {
-  // 懒加载 Sentry ErrorBoundary
+  // Lazy load Sentry ErrorBoundary
   const SentryErrorBoundaryLazy = lazy<typeof SentryErrorBoundary>(() =>
     import('@sentry/react')
       .then((module) => ({
@@ -93,7 +93,7 @@ export const LazyErrorBoundary = ({ children }: LazyErrorBoundaryProps) => {
       }))
       .catch((error) => {
         console.warn('Failed to load Sentry ErrorBoundary, using fallback:', error);
-        // 加载失败时，返回 FallbackErrorBoundary
+        // Return FallbackErrorBoundary on load failure
         return {
           default: FallbackErrorBoundary as any,
         };

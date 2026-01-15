@@ -19,23 +19,23 @@ import { Subscription, Account } from 'refly-icons';
 import { Avatar, Divider } from 'antd';
 import defaultAvatar from '../../../assets/refly_default_avatar_v2.webp';
 
-// ========== 懒加载大型组件 ==========
-// 优势：这些组件不会在首屏立即需要，懒加载可以显著减少初始 bundle 大小
-// PureCopilot - AI Copilot 组件（~300-500KB）
+// ========== Lazy load large components ==========
+// Advantage: These components are not immediately needed on first screen, lazy loading significantly reduces initial bundle size
+// PureCopilot - AI Copilot component (~300-500KB)
 const PureCopilot = lazy(() =>
   import('@refly-packages/ai-workspace-common/components/pure-copilot').then((m) => ({
     default: m.PureCopilot,
   })),
 );
 
-// TemplateList - 模板列表组件（~200-300KB）- 只在 canvasTemplateEnabled 时才加载
+// TemplateList - Template list component (~200-300KB) - Only loaded when canvasTemplateEnabled
 const TemplateList = lazy(() =>
   import('@refly-packages/ai-workspace-common/components/canvas-template/template-list').then(
     (m) => ({ default: m.TemplateList }),
   ),
 );
 
-// RecentWorkflow - 最近的工作流（可能引入 Canvas 组件）
+// RecentWorkflow - Recent workflows (may include Canvas components)
 const RecentWorkflow = lazy(() =>
   import('./recent-workflow').then((m) => ({ default: m.RecentWorkflow })),
 );

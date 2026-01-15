@@ -22,8 +22,8 @@ const WorkspacePage = () => {
   // Handle claiming voucher that was pending when user was not logged in
   usePendingVoucherClaim();
 
-  // 预加载 workflow 页面资源（在浏览器空闲时）
-  // 用户可能会点击某个 workflow，提前加载可以让切换更流畅
+  // Prefetch workflow page resources (during browser idle time)
+  // User may click a workflow, preloading makes transition smoother
   usePrefetchWorkflow();
 
   useEffect(() => {

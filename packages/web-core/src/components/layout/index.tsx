@@ -153,8 +153,8 @@ export const AppLayout = (props: AppLayoutProps) => {
 
         case 'login':
           // Another tab logged in
-          // 不要自动刷新，因为会导致无限循环
-          // useGetUserSettings 会自动更新 userStore，UI 会自动响应
+          // Don't auto-refresh as it causes infinite loops
+          // useGetUserSettings will auto-update userStore and UI will respond reactively
           console.log('[Auth] Login event received from another tab, uid:', event.uid);
           break;
       }
