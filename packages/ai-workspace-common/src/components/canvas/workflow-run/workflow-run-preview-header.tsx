@@ -25,8 +25,8 @@ const WorkflowRunPreviewHeaderComponent = ({
       }
     : {
         // Unselected state: gray
-        backgroundColor: '#E6E8EA',
-        border: '1px solid #E6E8EA',
+        backgroundColor: '#F4F5F6',
+        border: '1px solid #B9C1C1',
         iconColor: '#1C1F23',
         textColor: '#1C1F23',
       };
@@ -97,7 +97,7 @@ const WorkflowRunPreviewHeaderComponent = ({
                 fontFamily: 'Inter',
                 fontWeight: 400,
                 fontSize: '12px',
-                lineHeight: '1.5em',
+                lineHeight: '18px',
                 color: buttonStyles.textColor,
                 whiteSpace: 'nowrap',
               }}
