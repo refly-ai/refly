@@ -1467,7 +1467,24 @@ export class ToolService {
       return toolsetPo2GenericToolset(globalToolset, inventoryMap);
     }
 
-    // Step 3: Check inventory (for tools that may need authorization)
+    // Step 3: Check builtin tools by name (like generate_doc, send_email, etc.)
+    const builtinItem = builtinToolsetInventory[normalizedKey];
+    if (builtinItem) {
+      const definition = builtinItem.definition;
+      return {
+        type: ToolsetType.REGULAR,
+        id: normalizedKey,
+        name: (definition.labelDict?.en as string) || normalizedKey,
+        builtin: true,
+        toolset: {
+          toolsetId: normalizedKey,
+          name: (definition.labelDict?.en as string) || normalizedKey,
+          key: normalizedKey,
+        },
+      };
+    }
+
+    // Step 4: Check inventory (for tools that may need authorization)
     const inventoryItem = await this.inventoryService.getInventoryItem(normalizedKey);
     if (!inventoryItem) {
       return null;

@@ -433,6 +433,38 @@ export class WorkflowCliController {
           body.spec.nodes as unknown as CliNodeInput[],
         );
 
+        // Resolve toolset keys to full GenericToolset objects with nested toolset.key
+        // This ensures proper authorization checking in the frontend
+        for (const node of transformedNodes) {
+          const toolsetKeys = (node.data?.metadata as Record<string, unknown>)?.toolsetKeys as
+            | string[]
+            | undefined;
+          if (toolsetKeys?.length) {
+            this.logger.log(`[CREATE] Resolving toolset keys: ${toolsetKeys.join(', ')}`);
+            const { resolved } = await this.toolService.resolveToolsetsByKeys(user, toolsetKeys);
+            this.logger.log(`[CREATE] Resolved ${resolved.length} toolsets`);
+            const metadata = node.data?.metadata as Record<string, unknown>;
+            const existingToolsets = (metadata?.selectedToolsets as unknown[]) || [];
+            metadata.selectedToolsets = [...existingToolsets, ...resolved];
+            metadata.toolsetKeys = undefined;
+
+            // Insert toolset mentions into query for proper frontend display
+            if (resolved.length > 0) {
+              const toolsetMentions = resolved
+                .map((t) => `@{type=toolset,id=${t.id},name=${t.name}}`)
+                .join(' ');
+              const existingQuery = (metadata.query as string) || '';
+              // Add toolset mentions if not already present
+              if (!existingQuery.includes('@{type=toolset')) {
+                metadata.query = existingQuery
+                  ? `使用 ${toolsetMentions} ${existingQuery}`
+                  : toolsetMentions;
+                this.logger.log(`[CREATE] Updated query with toolset mentions: ${metadata.query}`);
+              }
+            }
+          }
+        }
+
         // If user doesn't provide a start node, create one and connect first node to it
         if (!userProvidesStartNode) {
           // Create a start node first
