@@ -1,6 +1,23 @@
-import { HomeRedirect } from '@refly-packages/ai-workspace-common/components/home-redirect';
-import BackendRedirect from '@refly-packages/ai-workspace-common/components/backend-redirect';
-import { InviteRedirect } from '@refly-packages/ai-workspace-common/components/invite-redirect';
+import { lazy } from 'react';
+import type { RouteObject } from 'react-router-dom';
+import { CanvasRedirect, WorkspaceRedirect, ProtectedRoute } from './redirects';
+
+// Lazy load 所有组件，包括 redirect 组件
+const HomeRedirect = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/home-redirect').then((m) => ({
+    default: m.HomeRedirect,
+  })),
+);
+const BackendRedirect = lazy(
+  () => import('@refly-packages/ai-workspace-common/components/backend-redirect'),
+);
+const InviteRedirect = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/invite-redirect').then((m) => ({
+    default: m.InviteRedirect,
+  })),
+);
+
+// 从 web-core 导入的已经是 lazy 组件
 import {
   Pricing,
   ShareCanvasPage,
@@ -19,9 +36,6 @@ import {
   RunDetailPage,
   CliAuthPage,
 } from '@refly/web-core';
-
-import type { RouteObject } from 'react-router-dom';
-import { CanvasRedirect, WorkspaceRedirect, ProtectedRoute } from './redirects';
 
 export const RoutesList: RouteObject[] = [
   // TODO: deprecated and navigate to framer page

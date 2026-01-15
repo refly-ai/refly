@@ -208,28 +208,42 @@ export default defineConfig({
 
     // Chunk splitting strategy to reduce bundle size
     chunkSplit: {
-      strategy: 'split-by-experience',
-      minSize: 20000,
-      maxSize: 500000,
+      strategy: 'custom',
 
-      // 关键配置：提高 minChunks 阈值
-      // 只有被 3+ 个 chunk 使用的模块才会被提取到共享 chunk
-      // Ant Design 虽然被 workspace 和 workflow 使用（2个），不会被提取
       override: {
         cacheGroups: {
-          vendors: {
-            test: /[\\/]node_modules[\\/]/,
-            priority: 10,
-            minChunks: 3, // 关键！只有被 3+ 个页面使用才提取
+          // 禁用默认的 cache groups
+          default: false,
+          defaultVendors: false,
+
+          // 只提取 React 核心库（所有页面都需要）
+          react: {
+            test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+            name: 'lib-react',
+            chunks: 'all',
+            priority: 100,
           },
+
+          // 只提取 React Router（所有页面都需要）
+          router: {
+            test: /[\\/]node_modules[\\/](react-router|react-router-dom|@remix-run)[\\/]/,
+            name: 'lib-router',
+            chunks: 'all',
+            priority: 90,
+          },
+
+          // 不提取其他 vendor，让它们留在页面 chunk 中
         },
+
+        // 关键：调整大小限制，减少拆分数量
+        minSize: 100000, // 100KB - 增大最小 chunk 大小
+        maxSize: 3000000, // 3MB - 允许更大的 chunk，减少拆分
       },
 
       // 目标：
-      // - Ant Design 被 2 个页面使用，不会被提取到共享 chunk
-      // - workspace 页面包含自己的 Ant Design 组件
-      // - workflow 页面包含自己的 Ant Design 组件
-      // - 稍微有重复，但第一次加载体验更重要！
+      // - 减少 chunk 数量（不要 54 个，目标 5-10 个）
+      // - 每个页面的依赖留在自己的 chunk 中
+      // - Ant Design 不被提取到共享 chunk
     },
   },
   output: {
