@@ -10456,6 +10456,9 @@ components:
                 identity:
                   type: string
                   description: User identity
+                interests:
+                  type: string
+                  description: User interests
     GetCreditRechargeResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
