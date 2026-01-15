@@ -72,18 +72,20 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
-  const { debouncedCreateCanvas, isCreating } = useCreateCanvas({
-    afterCreateSuccess: () => {
-      setTimeout(() => {
-        setHidePureCopilotModal(true);
-      }, 1000);
-    },
-  });
-
   const { setHidePureCopilotModal, showOnboardingFormModal } = useUserStoreShallow((state) => ({
     setHidePureCopilotModal: state.setHidePureCopilotModal,
     showOnboardingFormModal: state.showOnboardingFormModal,
   }));
+
+  const handleAfterCreateSuccess = useCallback(() => {
+    setTimeout(() => {
+      setHidePureCopilotModal(true);
+    }, 1000);
+  }, [setHidePureCopilotModal]);
+
+  const { debouncedCreateCanvas, isCreating } = useCreateCanvas({
+    afterCreateSuccess: handleAfterCreateSuccess,
+  });
 
   const isFloatingVisible = useMemo(
     () => source === 'frontPage' && isFocused && !query.trim(),

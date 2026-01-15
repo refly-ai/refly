@@ -58,15 +58,9 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   const currentLanguage = i18n.language || 'en';
   const [isCollapsed, setIsCollapsed] = useState(true);
 
-  // Get canvas context for adding files to library
-  let canvasId: string | undefined;
-  try {
-    const ctx = useCanvasContext();
-    canvasId = ctx.canvasId;
-  } catch {
-    // Not in canvas context, skip
-    canvasId = undefined;
-  }
+  // Get canvas context for adding files to library (optional)
+  const ctx = useCanvasContext(true);
+  const canvasId = ctx?.canvasId;
 
   const queryClient = useQueryClient();
 

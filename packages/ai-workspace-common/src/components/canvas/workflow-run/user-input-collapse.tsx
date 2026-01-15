@@ -1,10 +1,11 @@
+import React, { useMemo } from 'react';
 import { Collapse } from 'antd';
 import { ArrowDown, MessageSmile } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
 import cn from 'classnames';
 import type { WorkflowVariable } from '@refly/openapi-schema';
 import { VariableTypeSection } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/start';
-import { useMemo } from 'react';
+import type { RawCanvasData } from '@refly/openapi-schema';
 
 interface UserInputCollapseProps {
   workflowVariables: WorkflowVariable[];
@@ -17,18 +18,18 @@ interface UserInputCollapseProps {
    * Whether to render tools dependency checker section.
    */
   showToolsDependency?: boolean;
-  workflowApp?: any;
-  ToolsDependencyChecker?: React.ComponentType<{ canvasData: any }>;
+  workflowApp?: { canvasData?: RawCanvasData };
+  ToolsDependencyChecker?: React.ComponentType<{ canvasData?: RawCanvasData }>;
 }
 
-export const UserInputCollapse = ({
+export const UserInputCollapse = React.memo(function UserInputCollapse({
   workflowVariables,
   canvasId,
   defaultActiveKey = ['input'],
   showToolsDependency = false,
   workflowApp,
   ToolsDependencyChecker,
-}: UserInputCollapseProps) => {
+}: UserInputCollapseProps): JSX.Element {
   const { t } = useTranslation();
 
   // Group variables by type
@@ -174,7 +175,7 @@ export const UserInputCollapse = ({
 
                     {/* Tools Dependency Form */}
                     {showToolsDependency && workflowApp?.canvasData && ToolsDependencyChecker && (
-                      <div className="mt-5 ">
+                      <div className="mt-5">
                         <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
                       </div>
                     )}
@@ -187,4 +188,4 @@ export const UserInputCollapse = ({
       </div>
     </>
   );
-};
+});

@@ -1049,8 +1049,18 @@ export class WorkflowService {
    * @param params - Pagination and filter parameters
    * @returns Promise<WorkflowExecution[]> - Paginated workflow execution details
    */
-  async listWorkflowExecutions(user: User, params: ListWorkflowExecutionsData['query']) {
-    const { canvasId, status, after, page = 1, pageSize = 10, order = 'creationDesc' } = params;
+  async listWorkflowExecutions(user: User, params: ListWorkflowExecutionsData['query'] = {}) {
+    const {
+      canvasId,
+      status,
+      after,
+      page: rawPage = 1,
+      pageSize: rawPageSize = 10,
+      order = 'creationDesc',
+    } = params;
+
+    const page = Math.max(1, rawPage);
+    const pageSize = Math.min(100, Math.max(1, rawPageSize));
     const skip = (page - 1) * pageSize;
 
     // Build where clause
@@ -1061,7 +1071,7 @@ export class WorkflowService {
     if (status) {
       whereClause.status = status;
     }
-    if (after) {
+    if (after != null) {
       // after is unix timestamp in milliseconds
       whereClause.createdAt = {
         gt: new Date(after),
