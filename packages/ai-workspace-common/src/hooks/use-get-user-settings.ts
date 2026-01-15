@@ -206,6 +206,4 @@ export const useGetUserSettings = () => {
   useEffect(() => {
     getLoginStatus();
   }, [hasLoginCredentials]);
-
-  return { getLoginStatus };
 };
