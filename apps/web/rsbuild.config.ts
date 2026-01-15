@@ -48,14 +48,24 @@ export default defineConfig({
             skipWaiting: true,
 
             // Code Caching Strategy
-            // 只预缓存核心代码，页面 chunks 通过 runtime cache 按需加载
+            // 预缓存核心资源和主要页面 chunks，提升首次加载体验
             include: [
               /\.html$/,
-              // 核心 chunks（所有页面都需要）
+              // 核心库（所有页面都需要）
               /lib-react\.[a-f0-9]+\.js$/, // React library (~136KB)
               /lib-router\.[a-f0-9]+\.js$/, // Router library (~22KB)
-              // 注意：不预缓存 index~*.js，让它们通过 runtime cache 按需加载
-              // 这样首次安装 SW 时不会下载 3.5MB 的代码
+
+              // 主入口文件
+              /index\.[a-f0-9]+\.js$/, // 主 bundle (~690KB)
+              /index\.[a-f0-9]+\.css$/, // 主样式文件
+
+              // 非 async 目录的所有 JS chunks（核心功能代码）
+              /static\/js\/(?!async)[^/]+\.[a-f0-9]+\.js$/,
+
+              // 重要页面的 chunks（workspace 和 workflow）
+              /group-workspace\.[a-f0-9]+\.js$/,
+              /group-workflow\.[a-f0-9]+\.js$/,
+              /group-workflow\.[a-f0-9]+\.css$/,
             ],
 
             // 排除不需要缓存的文件
@@ -154,8 +164,9 @@ export default defineConfig({
             // SPA 路由由前端处理，不需要 fallback
             // navigateFallback: '/index.html',
 
-            // 所有 chunks 都通过 runtime cache 按需加载和缓存
-            maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // 20MB to be safe
+            // 提高文件大小限制以支持预缓存更多资源
+            // 预计总大小：~3-4MB（核心库 + 主 bundle + 非 async chunks + workflow/workspace）
+            maximumFileSizeToCacheInBytes: 30 * 1024 * 1024, // 30MB 上限
           }),
         );
       }
