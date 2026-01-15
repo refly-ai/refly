@@ -35,121 +35,122 @@ export default defineConfig({
     rspack: (config, { prependPlugins, appendPlugins }) => {
       // ... existing plugins ...
       // SERVICE WORKER CONFIGURATION
-      // TODO: Uncomment this block after successfully installing 'workbox-webpack-plugin'
-      // Run: pnpm add -D workbox-webpack-plugin --filter=@refly/web
+      if (isProduction) {
+        const { GenerateSW } = require('workbox-webpack-plugin');
 
-      const { GenerateSW } = require('workbox-webpack-plugin');
+        appendPlugins(
+          new GenerateSW({
+            mode: 'production', // Disable Workbox logging
+            sourcemap: false,
+            // PWA basics
+            clientsClaim: true,
+            skipWaiting: true,
 
-      appendPlugins(
-        new GenerateSW({
-          // PWA basics
-          clientsClaim: true,
-          skipWaiting: true,
+            // Code Caching Strategy - 简化版，只缓存核心代码
+            // 策略：让页面专用的代码通过 runtime cache 按需缓存
+            include: [
+              /\.html$/,
+              /\.css$/,
+              // 只预缓存核心 chunks
+              /index\.[a-f0-9]+\.js$/, // Main app bundle
+              /lib-react\.[a-f0-9]+\.js$/, // React library
+              /lib-router\.[a-f0-9]+\.js$/, // Router library
+            ],
 
-          // Code Caching Strategy - 简化版，只缓存核心代码
-          // 策略：让页面专用的代码通过 runtime cache 按需缓存
-          include: [
-            /\.html$/,
-            /\.css$/,
-            // 只预缓存核心 chunks
-            /index\.[a-f0-9]+\.js$/, // Main app bundle
-            /lib-react\.[a-f0-9]+\.js$/, // React library
-            /lib-router\.[a-f0-9]+\.js$/, // Router library
-          ],
+            // 所有其他 chunks（包括 vendor）通过 runtime cache 按需缓存
+            exclude: [
+              /\.map$/, // Source maps
+              /asset-manifest\.json$/,
+              /\.LICENSE\.txt$/,
+            ],
 
-          // 所有其他 chunks（包括 vendor）通过 runtime cache 按需缓存
-          exclude: [
-            /\.map$/, // Source maps
-            /asset-manifest\.json$/,
-            /\.LICENSE\.txt$/,
-          ],
-
-          // Runtime caching strategies
-          runtimeCaching: [
-            // === Strategy 1: JavaScript chunks - CacheFirst for faster load ===
-            {
-              urlPattern: /\.js$/,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'js-runtime',
-                expiration: {
-                  maxEntries: 50,
-                  maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-
-            // === Strategy 2: CSS - StaleWhileRevalidate for style updates ===
-            {
-              urlPattern: /\.css$/,
-              handler: 'StaleWhileRevalidate',
-              options: {
-                cacheName: 'css-runtime',
-                expiration: {
-                  maxEntries: 30,
-                  maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+            // Runtime caching strategies
+            runtimeCaching: [
+              // === Strategy 1: JavaScript chunks - CacheFirst for faster load ===
+              {
+                urlPattern: /\.js$/,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'js-runtime',
+                  expiration: {
+                    maxEntries: 50,
+                    maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+                  },
+                  cacheableResponse: {
+                    statuses: [0, 200],
+                  },
                 },
               },
-            },
 
-            // === Strategy 3: Images - CacheFirst with longer expiration ===
-            {
-              urlPattern: /\.(?:png|jpg|jpeg|webp|svg|gif|ico)$/,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'images',
-                expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+              // === Strategy 2: CSS - StaleWhileRevalidate for style updates ===
+              {
+                urlPattern: /\.css$/,
+                handler: 'StaleWhileRevalidate',
+                options: {
+                  cacheName: 'css-runtime',
+                  expiration: {
+                    maxEntries: 30,
+                    maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+                  },
                 },
               },
-            },
 
-            // === Strategy 4: Fonts - CacheFirst with very long expiration ===
-            {
-              urlPattern: /\.(?:woff|woff2|ttf|eot)$/,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'fonts',
-                expiration: {
-                  maxEntries: 30,
-                  maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+              // === Strategy 3: Images - CacheFirst with longer expiration ===
+              {
+                urlPattern: /\.(?:png|jpg|jpeg|webp|svg|gif|ico)$/,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'images',
+                  expiration: {
+                    maxEntries: 100,
+                    maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+                  },
                 },
               },
-            },
 
-            // === Strategy 5: Google Fonts ===
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com/,
-              handler: 'StaleWhileRevalidate',
-              options: {
-                cacheName: 'google-fonts-stylesheets',
-              },
-            },
-            {
-              urlPattern: /^https:\/\/fonts\.gstatic\.com/,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'google-fonts-webfonts',
-                expiration: {
-                  maxEntries: 30,
-                  maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+              // === Strategy 4: Fonts - CacheFirst with very long expiration ===
+              {
+                urlPattern: /\.(?:woff|woff2|ttf|eot)$/,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'fonts',
+                  expiration: {
+                    maxEntries: 30,
+                    maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+                  },
                 },
               },
-            },
-          ],
 
-          // Navigation fallback
-          navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/v1/, /^\/api/], // Exclude API calls
+              // === Strategy 5: Google Fonts ===
+              {
+                urlPattern: /^https:\/\/fonts\.googleapis\.com/,
+                handler: 'StaleWhileRevalidate',
+                options: {
+                  cacheName: 'google-fonts-stylesheets',
+                },
+              },
+              {
+                urlPattern: /^https:\/\/fonts\.gstatic\.com/,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'google-fonts-webfonts',
+                  expiration: {
+                    maxEntries: 30,
+                    maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+                  },
+                },
+              },
+            ],
 
-          // 所有 chunks 都通过 runtime cache 按需加载和缓存
-          maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // 20MB to be safe
-        }),
-      );
+            // Navigation fallback
+            navigateFallback: '/index.html',
+            navigateFallbackDenylist: [/^\/v1/, /^\/api/], // Exclude API calls
+
+            // 所有 chunks 都通过 runtime cache 按需加载和缓存
+            maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // 20MB to be safe
+          }),
+        );
+      }
 
       process.env.SENTRY_AUTH_TOKEN &&
         appendPlugins(
