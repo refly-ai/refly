@@ -7882,6 +7882,14 @@ export type WorkflowNodeExecution = {
    */
   errorMessage?: string;
   /**
+   * Execution start time
+   */
+  startTime?: string;
+  /**
+   * Execution end time
+   */
+  endTime?: string;
+  /**
    * Node creation timestamp
    */
   createdAt?: string;

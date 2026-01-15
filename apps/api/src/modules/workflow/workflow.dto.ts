@@ -47,6 +47,9 @@ export const workflowNodeExecutionPO2DTO = (
       'errorMessage',
     ]),
     status: nodeExecution.status as ActionStatus,
+    // Use startTime/endTime for execution duration calculation on frontend
+    startTime: nodeExecution.startTime ? nodeExecution.startTime.toJSON() : undefined,
+    endTime: nodeExecution.endTime ? nodeExecution.endTime.toJSON() : undefined,
     createdAt: nodeExecution.createdAt.toJSON(),
     updatedAt: nodeExecution.updatedAt.toJSON(),
   };

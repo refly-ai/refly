@@ -605,10 +605,12 @@ const WorkflowRunPreviewComponent = () => {
                       node.data?.metadata?.errors?.[0];
 
                     // Get execution time from nodeExecution
-                    // Use createdAt as start time, updatedAt as end time (or current time if still executing)
+                    // Prefer startTime/endTime for execution duration, fallback to createdAt/updatedAt for backward compatibility
                     const executionTime = formatExecutionTime(
-                      nodeExecution?.createdAt,
-                      isExecuting ? currentTime : nodeExecution?.updatedAt,
+                      nodeExecution?.startTime ?? nodeExecution?.createdAt,
+                      isExecuting
+                        ? currentTime
+                        : (nodeExecution?.endTime ?? nodeExecution?.updatedAt),
                     );
 
                     // Agent title
