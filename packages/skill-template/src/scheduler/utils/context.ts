@@ -1,7 +1,45 @@
-import { ActionResult, SkillContext } from '@refly/openapi-schema';
+import { ActionResult, SkillContext, ToolCallResult } from '@refly/openapi-schema';
 import { countToken } from '@refly/utils/token';
 import { SkillEngine } from '../../engine';
-import { truncateContent } from './token';
+
+// ============================================================================
+// Summary extraction keywords - used to find conclusion/summary sections
+// ============================================================================
+
+const SUMMARY_KEYWORDS = [
+  // Chinese - completion
+  '已完成',
+  '完成了',
+  '实现了',
+  '搞定',
+  '做好了',
+  // Chinese - summary
+  '总结',
+  '综上',
+  '因此',
+  '总的来说',
+  '最终',
+  '结论',
+  // English - completion
+  'done',
+  'completed',
+  'finished',
+  "i've implemented",
+  'i have implemented',
+  "i've created",
+  "i've added",
+  "i've updated",
+  "i've fixed",
+  // English - summary
+  'in summary',
+  'to summarize',
+  'in conclusion',
+  'finally',
+  'as a result',
+];
+
+// Maximum tokens for summary extraction
+const MAX_SUMMARY_TOKENS = 100;
 
 // Regex to match and remove tool_use code blocks from content
 // This prevents the model from seeing and copying these internal XML patterns
@@ -42,6 +80,54 @@ export interface AgentResult {
 }
 
 // ============================================================================
+// Metadata-only types for on-demand result reading
+// These types are used to reduce context size - LLM reads full content via tools
+// ============================================================================
+
+/**
+ * Metadata for a tool call within an agent result
+ * Used in AgentResultMeta to provide summary of tool calls without full input/output
+ */
+export interface ToolCallMeta {
+  /** Tool call ID for retrieval via read_tool_result */
+  callId: string;
+  /** Name of the tool that was called */
+  toolName: string;
+  /** Execution status */
+  status: 'success' | 'failed';
+  /** Error message if failed */
+  error?: string;
+  /** Files produced by this tool call */
+  outputFiles?: {
+    fileId: string;
+    fileName: string;
+  }[];
+}
+
+/**
+ * Metadata-only version of AgentResult (without full content)
+ * Used in ContextBlock to reduce token usage - LLM should use read_agent_result to get full content
+ */
+export interface AgentResultMeta {
+  /** Result ID for retrieval via read_agent_result */
+  resultId: string;
+  /** Title/description of the task */
+  title: string;
+  /** Execution status */
+  status: 'success' | 'failed';
+  /** Summary extracted from content (max 300 tokens) */
+  summary: string;
+  /** Token count of full content (helps LLM decide if worth reading) */
+  contentTokens: number;
+  /** Creation timestamp */
+  createdAt: string;
+  /** Summary of tool calls made during execution */
+  toolCallsMeta: ToolCallMeta[];
+  /** Files produced by this result */
+  outputFiles: ContextFileMeta[];
+}
+
+// ============================================================================
 // Archived Reference - Protected routing table for compressed/archived content
 // This field is NEVER truncated and allows quick retrieval of archived data
 // ============================================================================
@@ -67,7 +153,8 @@ export interface ArchivedRef {
 
 export interface ContextBlock {
   files: ContextFileMeta[];
-  results: AgentResult[];
+  /** Metadata-only results for on-demand reading via read_agent_result tool */
+  resultsMeta?: AgentResultMeta[];
   totalTokens?: number;
   /**
    * Protected routing table for archived/compressed content references.
@@ -76,10 +163,6 @@ export interface ContextBlock {
    */
   archivedRefs?: ArchivedRef[];
 }
-
-// Maximum tokens for a single result/file to prevent one item from consuming too much space
-// Can be overridden via environment variables
-const MAX_SINGLE_RESULT_TOKENS = Number(process.env.MAX_SINGLE_RESULT_TOKENS) || 30000;
 
 /**
  * Strip tool_use code blocks from content.
@@ -131,24 +214,164 @@ function extractResultContent(result: ActionResult): string {
 }
 
 /**
+ * Truncate content from the end, keeping approximately maxTokens worth of content.
+ * Tries to start from a sentence boundary for cleaner truncation.
+ */
+function truncateFromEnd(content: string, maxTokens: number): string {
+  if (!content) return '';
+
+  const estimatedChars = maxTokens * 3.5;
+
+  // If content is shorter than limit, return as-is
+  if (content.length <= estimatedChars) {
+    return content.trim();
+  }
+
+  const tail = content.slice(-estimatedChars);
+  const truncationMarker = '... [TRUNCATED DUE TO LENGTH LIMIT] ';
+
+  // Try to start from a sentence boundary (within first 30% of tail)
+  const sentenceStart = tail.search(/[.。!！?？\n]\s*/);
+  if (sentenceStart !== -1 && sentenceStart < tail.length * 0.3) {
+    return truncationMarker + tail.slice(sentenceStart + 1).trim();
+  }
+
+  return truncationMarker + tail.trim();
+}
+
+/**
+ * Extract summary from content by:
+ * 1. Looking for summary keywords (e.g., "已完成", "completed", "in summary") from the end
+ * 2. If found, extract from that point to the end
+ * 3. If not found or too long, fallback to taking the last maxTokens from content
+ */
+export function extractSummaryFromContent(
+  content: string,
+  maxTokens: number = MAX_SUMMARY_TOKENS,
+): string {
+  if (!content) return '';
+
+  // Search for summary keywords from the end
+  let bestMatchIndex = -1;
+  const lowerContent = content.toLowerCase();
+
+  for (const keyword of SUMMARY_KEYWORDS) {
+    const index = lowerContent.lastIndexOf(keyword.toLowerCase());
+    if (index > bestMatchIndex) {
+      bestMatchIndex = index;
+    }
+  }
+
+  if (bestMatchIndex !== -1) {
+    // Found a keyword, expand to paragraph start
+    const paragraphStart = content.lastIndexOf('\n\n', bestMatchIndex);
+    const startIndex = paragraphStart !== -1 ? paragraphStart + 2 : bestMatchIndex;
+    const summary = content.slice(startIndex).trim();
+
+    // Check if summary is within token limit
+    if (countToken(summary) <= maxTokens) {
+      return summary;
+    }
+  }
+
+  // No keyword found or too long, fallback to taking last maxTokens
+  return truncateFromEnd(content, maxTokens);
+}
+
+/**
+ * Build ToolCallMeta array from ToolCallResult array
+ * Extracts only metadata needed for context, full content available via read_tool_result
+ */
+export function buildToolCallsMeta(toolCalls: ToolCallResult[] | undefined): ToolCallMeta[] {
+  if (!toolCalls || !Array.isArray(toolCalls)) return [];
+
+  return toolCalls.map((tc) => ({
+    callId: tc.callId,
+    toolName: tc.toolName || 'unknown',
+    status: tc.status === 'completed' ? 'success' : 'failed',
+    ...(tc.error && { error: tc.error.slice(0, 200) }), // Truncate error message
+    // Note: outputFiles from toolCall may need to be mapped from a different structure
+    // This depends on how tool results store file references
+  }));
+}
+
+/**
+ * Extract ToolCallResult array from ActionResult
+ * Prioritizes result.toolCalls, falls back to extracting from messages
+ */
+function extractToolCalls(result: ActionResult): ToolCallResult[] {
+  // Priority 1: Use toolCalls array if available
+  if (result.toolCalls && Array.isArray(result.toolCalls) && result.toolCalls.length > 0) {
+    return result.toolCalls;
+  }
+
+  // Priority 2: Extract from messages (toolCallResult is attached to tool type messages)
+  if (result.messages && Array.isArray(result.messages)) {
+    const toolCalls: ToolCallResult[] = [];
+    for (const msg of result.messages) {
+      if (msg?.type === 'tool' && msg.toolCallResult) {
+        toolCalls.push(msg.toolCallResult);
+      }
+    }
+    return toolCalls;
+  }
+
+  return [];
+}
+
+/**
+ * Build AgentResultMeta from ActionResult
+ * Extracts metadata and summary for context, full content available via read_agent_result
+ */
+export function buildAgentResultMeta(result: ActionResult): AgentResultMeta {
+  // Extract full content for summary generation
+  let fullContent = extractResultContent(result);
+  fullContent = stripToolUseBlocks(fullContent);
+  const contentTokens = countToken(fullContent);
+
+  // Generate summary from content
+  const summary = extractSummaryFromContent(fullContent, MAX_SUMMARY_TOKENS);
+
+  // Build tool calls metadata - extract from result.toolCalls or messages
+  const toolCalls = extractToolCalls(result);
+  const toolCallsMeta = buildToolCallsMeta(toolCalls);
+
+  return {
+    resultId: result.resultId,
+    title: result.title || 'Untitled',
+    status: result.status === 'finish' ? 'success' : 'failed',
+    summary,
+    contentTokens,
+    createdAt: result.createdAt || new Date().toISOString(),
+    toolCallsMeta,
+    outputFiles:
+      result.files?.map((f) => ({
+        name: f.name ?? 'Untitled File',
+        fileId: f.fileId ?? 'unknown',
+        type: f.type ?? 'unknown',
+        summary: f.summary ?? '',
+      })) ?? [],
+  };
+}
+
+/**
  * Prepare context from SkillContext into a structured ContextBlock format
  * Filters files and results based on token limits estimated from their content
  */
 export async function prepareContext(
   context: SkillContext,
-  options: {
-    maxTokens: number;
-    engine: SkillEngine;
+  _options?: {
+    maxTokens?: number;
+    engine?: SkillEngine;
     summarizerConcurrentLimit?: number;
   },
 ): Promise<ContextBlock> {
   if (!context) {
-    return { files: [], results: [], totalTokens: 0 };
+    return { files: [], totalTokens: 0 };
   }
 
-  const maxTokens = options?.maxTokens ?? 0;
   const selectedFiles: ContextFileMeta[] = [];
-  const selectedResults: AgentResult[] = [];
+  const selectedResultsMeta: AgentResultMeta[] = [];
   let currentTokens = 0;
 
   // Helper function to estimate tokens for content
@@ -176,62 +399,26 @@ export async function prepareContext(
     }
   }
 
-  // Process results with token estimation
+  // Process results - only store metadata with summary
+  // LLM should use read_agent_result/read_tool_result tools to get full content
   if (context?.results?.length > 0) {
-    // Sort results by content length (shortest first) to prioritize smaller results
-    // This ensures shorter results are less likely to be truncated later
-    const sortedResults = [...context.results].sort((a, b) => {
-      // Prefer using messages for content estimation if available
-      const aContent = extractResultContent(a?.result);
-      const bContent = extractResultContent(b?.result);
-      return aContent.length - bContent.length;
-    });
-
-    for (const item of sortedResults) {
+    for (const item of context.results) {
       const result = item?.result;
       if (!result) continue;
 
-      // Extract content from result, preferring messages over steps
-      // Messages provide cleaner separation between AI responses and tool calls
-      let resultContent = extractResultContent(result);
-      resultContent = stripToolUseBlocks(resultContent);
-      let contentTokens = estimateTokens(resultContent);
+      const meta = buildAgentResultMeta(result);
 
-      // Truncate single result if it exceeds the limit
-      if (contentTokens > MAX_SINGLE_RESULT_TOKENS) {
-        resultContent = truncateContent(resultContent, MAX_SINGLE_RESULT_TOKENS);
-        contentTokens = estimateTokens(resultContent);
-      }
+      // Estimate tokens for metadata (summary + other fields)
+      const metaTokens = estimateTokens(JSON.stringify(meta));
+      currentTokens += metaTokens;
 
-      // Check if adding this result would exceed token limit
-      if (maxTokens > 0 && currentTokens + contentTokens > maxTokens) {
-        // If we can't add the full result, skip it
-        continue;
-      }
-
-      const agentResult: AgentResult = {
-        resultId: result?.resultId ?? 'unknown',
-        title: result?.title ?? 'Untitled Agent',
-        content: resultContent,
-        // outputFiles only contain metadata (no content) to save tokens
-        // LLM should use read_file tool to get full content when needed
-        outputFiles:
-          result?.files?.map((file) => ({
-            name: file?.name ?? 'Untitled File',
-            fileId: file?.fileId ?? 'unknown',
-            type: file?.type ?? 'unknown',
-            summary: file?.summary ?? '',
-          })) ?? [],
-      };
-
-      selectedResults.push(agentResult);
-      currentTokens += contentTokens;
+      selectedResultsMeta.push(meta);
     }
   }
 
   return {
     files: selectedFiles,
-    results: selectedResults,
+    resultsMeta: selectedResultsMeta,
     totalTokens: currentTokens,
   };
 }

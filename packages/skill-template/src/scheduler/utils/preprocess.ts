@@ -28,7 +28,7 @@ export const preprocess = async (
 
   const result: PreprocessResult = {
     optimizedQuery,
-    context: { files: [], results: [] },
+    context: { files: [] },
     sources: [],
     usedChatHistory,
   };

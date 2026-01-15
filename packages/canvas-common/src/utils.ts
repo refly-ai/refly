@@ -154,6 +154,8 @@ export const prepareAddNode = (
     position: newPosition,
     selected: false,
     id: node?.id || `node-${genUniqueId()}`,
+    // Preserve style from input or use default for proper rendering
+    style: node.style ?? { width: 288, height: 'auto' },
   };
 
   // Create new edges based on connection types

@@ -12,6 +12,7 @@ export const isPublicAccessPageByPath = (pathname: string): boolean => {
   const isLoginPage = (pathname ?? '') === '/login';
   const isPricingPage = pathname === '/pricing';
   const isInvitePage = pathname === '/invite';
+  const isCliAuthPage = pathname === '/cli/auth';
   return (
     isPreviewPage ||
     isSharePage ||
@@ -19,7 +20,8 @@ export const isPublicAccessPageByPath = (pathname: string): boolean => {
     isWorkflowTemplatePage ||
     isLoginPage ||
     isPricingPage ||
-    isInvitePage
+    isInvitePage ||
+    isCliAuthPage
   );
 };
 

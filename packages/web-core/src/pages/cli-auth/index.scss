@@ -1,0 +1,141 @@
+/* CLI Auth Page Styles - Only antd button related styles remain */
+
+.cli-auth-copy-btn {
+  padding: 0 4px !important;
+  height: auto !important;
+  color: var(--refly-text-3, rgba(28, 31, 35, 0.6)) !important;
+}
+
+.cli-auth-copy-btn:hover {
+  color: var(--refly-primary-default, #1890ff) !important;
+}
+
+.cli-auth-btn-cancel {
+  width: 138px !important;
+  height: 50px !important;
+  border-radius: 12px !important;
+  background-color: transparent !important;
+  border: 1px solid var(--border---refly-line, #b9c1c1) !important;
+  color: var(--refly-text-1, #333) !important;
+  padding: 13px 42px !important;
+  font-weight: 600 !important;
+}
+
+.cli-auth-btn-cancel:hover {
+  border-color: var(--refly-text-2, #666) !important;
+  color: var(--refly-text-0, #1c1f23) !important;
+}
+
+.cli-auth-btn-close {
+  width: 186px !important;
+  height: 50px !important;
+  border-radius: 12px !important;
+  background-color: transparent !important;
+  border: 1px solid var(--border---refly-line, #b9c1c1) !important;
+  color: var(--refly-text-1, #333) !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+.cli-auth-btn-close:hover {
+  border-color: var(--refly-text-2, #666) !important;
+  color: var(--refly-text-0, #1c1f23) !important;
+}
+
+.cli-auth-btn-authorize {
+  width: 290px !important;
+  height: 50px !important;
+  border-radius: 12px !important;
+  background: var(--text-icon-refly-text-0, #1c1f23) !important;
+  border: none !important;
+  color: white !important;
+  padding: 13px 32px !important;
+}
+
+.cli-auth-btn-authorize:not(:disabled):hover {
+  background: var(--text-icon-refly-text-0, #1c1f23) !important;
+  color: white !important;
+  opacity: 0.9 !important;
+}
+
+.cli-auth-btn-authorized,
+.cli-auth-btn-authorized:hover,
+.cli-auth-btn-authorized:disabled,
+.cli-auth-btn-authorized:disabled:hover {
+  background: var(--refly-secondary-hover) !important;
+  color: var(--refly-text-0) !important;
+  opacity: 1 !important;
+  cursor: default !important;
+  border: none !important;
+}
+
+.cli-auth-btn-authorize:disabled {
+  cursor: not-allowed !important;
+}
+
+@keyframes slideInBottom {
+  0% {
+    transform: translate(-50%, 10px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-bottom {
+  animation: slideInBottom 0.2s ease-out forwards;
+}
+
+.cli-auth-otp {
+  .ant-otp-input {
+    width: 44px !important;
+    height: 52px !important;
+    font-size: 20px !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--refly-tertiary-hover, #e5e7eb) !important;
+    background: white !important;
+    color: var(--refly-text-0, #1c1f23) !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .ant-otp-input:focus {
+    border-color: var(--refly-primary-default, #1890ff) !important;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1) !important;
+    outline: none !important;
+  }
+
+  .ant-otp-input:disabled {
+    background: #f9fafb !important;
+    cursor: default !important;
+    opacity: 0.8 !important;
+  }
+}
+
+.cli-auth-otp-small {
+  .ant-otp-input {
+    width: 32px !important;
+    height: 36px !important;
+    font-size: 16px !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--refly-tertiary-hover, #e5e7eb) !important;
+    background: white !important;
+    color: var(--refly-text-0, #1c1f23) !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .ant-otp-input:focus {
+    border-color: var(--refly-primary-default, #1890ff) !important;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1) !important;
+    outline: none !important;
+  }
+
+  .ant-otp-input:disabled {
+    background: #f9fafb !important;
+    cursor: default !important;
+    opacity: 0.8 !important;
+  }
+}

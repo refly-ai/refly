@@ -21,9 +21,6 @@ import {
 // ============================================================================
 
 const DEFAULT_MAX_CONTEXT_FILES = 100;
-const DEFAULT_MAX_CONTEXT_RESULTS = 100;
-const DEFAULT_MAX_CONTEXT_OUTPUT_FILES = 100;
-const DEFAULT_MIN_CONTEXT_ITEM_CONTENT_TOKENS = 1000;
 
 // History compression thresholds
 const REMAINING_SPACE_THRESHOLD = 0.2; // 20%
@@ -745,20 +742,22 @@ export function truncateContextBlockForPrompt(
 ): ContextBlock {
   // IMPORTANT: Always preserve archivedRefs - this is the protected routing table
   const archivedRefs = context?.archivedRefs;
+  // IMPORTANT: Always preserve resultsMeta - this is metadata only, LLM reads full content via tools
+  const resultsMeta = context?.resultsMeta;
 
   if (!context || maxTokens <= 0) {
-    return { files: [], results: [], totalTokens: 0, archivedRefs };
+    return { files: [], resultsMeta, totalTokens: 0, archivedRefs };
   }
 
   const maxFiles = opts?.maxFiles ?? DEFAULT_MAX_CONTEXT_FILES;
-  const maxResults = opts?.maxResults ?? DEFAULT_MAX_CONTEXT_RESULTS;
-  const maxOutputFiles = opts?.maxOutputFiles ?? DEFAULT_MAX_CONTEXT_OUTPUT_FILES;
-  const minItemContentTokens =
-    opts?.minItemContentTokens ?? DEFAULT_MIN_CONTEXT_ITEM_CONTENT_TOKENS;
 
   let usedTokens = 0;
   const files: ContextBlock['files'] = [];
-  const results: ContextBlock['results'] = [];
+
+  // Count resultsMeta tokens (always included, not truncated)
+  if (resultsMeta?.length) {
+    usedTokens += estimateToken(JSON.stringify(resultsMeta));
+  }
 
   for (const file of (context.files ?? []).slice(0, maxFiles)) {
     if (usedTokens >= maxTokens) break;
@@ -774,37 +773,8 @@ export function truncateContextBlockForPrompt(
     usedTokens += metaTokens;
   }
 
-  for (const result of (context.results ?? []).slice(0, maxResults)) {
-    if (usedTokens >= maxTokens) break;
-
-    const baseText = `${result.title ?? ''}`;
-    const baseTokens = estimateToken(baseText);
-
-    const remaining = Math.max(0, maxTokens - usedTokens - baseTokens);
-    if (remaining <= 0) break;
-
-    let content = String(result.content ?? '');
-    const originalContentTokens = estimateToken(content);
-
-    if (originalContentTokens > remaining) {
-      if (remaining < minItemContentTokens) {
-        continue;
-      }
-      content = truncateContentFast(content, remaining);
-    }
-
-    // outputFiles can be huge; keep metadata only.
-    const outputFiles = (result.outputFiles ?? []).slice(0, maxOutputFiles).map((of) => ({
-      ...of,
-      content: '',
-    }));
-
-    results.push({ ...result, content, outputFiles });
-    usedTokens += baseTokens + estimateToken(content);
-  }
-
-  // Return with preserved archivedRefs
-  return { files, results, totalTokens: usedTokens, archivedRefs };
+  // Return with preserved archivedRefs and resultsMeta
+  return { files, resultsMeta, totalTokens: usedTokens, archivedRefs };
 }
 
 // ============================================================================

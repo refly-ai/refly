@@ -162,7 +162,7 @@ const SkillResponseNodePreviewComponent = ({
 
     // Reset failed state before retrying
     resetFailedState(resultId);
-    const { llmInputQuery } = processQuery(query, {
+    const { llmInputQuery, referencedVariables } = processQuery(query, {
       replaceVars: true,
       variables,
     });
@@ -192,7 +192,7 @@ const SkillResponseNodePreviewComponent = ({
         contextItems,
         selectedToolsets,
         version: nextVersion,
-        workflowVariables: variables,
+        workflowVariables: referencedVariables,
       },
       {
         entityId: canvasId,
