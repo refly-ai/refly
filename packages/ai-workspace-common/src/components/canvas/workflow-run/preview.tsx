@@ -15,6 +15,7 @@ import { ConfigureTab } from '@refly-packages/ai-workspace-common/components/can
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { WorkflowRunPreviewHeader } from './workflow-run-preview-header';
 import { WorkflowRunForm } from './workflow-run-form';
+import { UserInputCollapse } from './user-input-collapse';
 import { WorkflowVariable } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import {
@@ -563,6 +564,17 @@ const WorkflowRunPreviewComponent = () => {
             ) : (
               // Normal mode: Show agent collapse components
               <div className="flex flex-col gap-2 px-4">
+                {/* User Input Section */}
+                {workflowVariables && workflowVariables.length > 0 && (
+                  <UserInputCollapse
+                    workflowVariables={workflowVariables}
+                    canvasId={canvasId}
+                    readonly={readonly}
+                    defaultActiveKey={[]}
+                    showToolsDependency={false}
+                  />
+                )}
+
                 {skillResponseNodes.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-refly-text-2">
                     {t('canvas.workflow.run.noNodes') || 'No skill response nodes found'}

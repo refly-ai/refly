@@ -4,9 +4,9 @@ import type {
   WorkflowExecutionStatus,
 } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
-import { Button, Collapse, Form, message, Tooltip } from 'antd';
-import { ArrowDown, StopCircle, MessageSmile } from 'refly-icons';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Button, Form, message, Tooltip } from 'antd';
+import { StopCircle } from 'refly-icons';
+import { useState, useEffect, useCallback } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useAbortWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-abort-workflow';
 import cn from 'classnames';
@@ -25,7 +25,7 @@ import type { GenericToolset, UserTool } from '@refly/openapi-schema';
 import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
 import GiftIcon from '@refly-packages/ai-workspace-common/assets/gift.png';
 import { useFirstSuccessExecutionToday } from '@refly-packages/ai-workspace-common/hooks/canvas';
-import { VariableTypeSection } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/start';
+import { UserInputCollapse } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/user-input-collapse';
 
 /**
  * Check if a toolset is authorized/installed.
@@ -429,160 +429,21 @@ export const WorkflowRunForm = ({
 
   const workflowIsRunning = isRunning || isPolling;
 
-  const groupedVariables = useMemo(() => {
-    const groups = {
-      string: [] as WorkflowVariable[],
-      resource: [] as WorkflowVariable[],
-      option: [] as WorkflowVariable[],
-    };
-
-    if (workflowVariables) {
-      for (const variable of workflowVariables) {
-        const type = variable.variableType ?? 'string';
-        if (groups[type as 'string' | 'resource' | 'option']) {
-          groups[type as 'string' | 'resource' | 'option'].push(variable);
-        }
-      }
-    }
-
-    return groups;
-  }, [workflowVariables]);
-
   return (
     <div className={cn('w-full h-full gap-3 flex flex-col rounded-2xl', className)}>
       {
         <>
-          <style>
-            {`
-            .workflow-run-collapse .ant-collapse-item {
-              border: none !important;
-              margin-bottom: 0 !important;
-            }
-            .workflow-run-collapse .ant-collapse-item + .ant-collapse-item {
-              margin-top: 2px !important;
-            }
-            .workflow-run-collapse .ant-collapse-item:first-child .ant-collapse-header {
-              border-radius: 6px 6px 0px 0px !important;
-            }
-            .workflow-run-collapse .ant-collapse-header {
-              background-color: #F9EDD2 !important;
-              height: 40px !important;
-              min-height: 40px !important;
-              padding: 0 12px !important;
-              margin: 0 !important;
-              color: #1C1F23 !important;
-              font-weight: 500 !important;
-              border-radius: 0 !important;
-              border: none !important;
-              display: flex !important;
-              align-items: center !important;
-            }
-            .workflow-run-collapse .ant-collapse-expand-icon {
-              padding-right: 0 !important;
-              padding-left: 0 !important;
-              margin-left: 0 !important;
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              height: 100% !important;
-            }
-            .workflow-run-collapse .ant-collapse-content {
-              background-color: #FFFFFF !important;
-              padding: 0 !important;
-              border: none !important;
-            }
-            .workflow-run-collapse .ant-collapse-content-box {
-              padding: 0 !important;
-            }
-          `}
-          </style>
-
           <div className="px-4 flex-1 overflow-y-auto">
             {workflowVariables.length > 0 ? (
-              <div
-                className="overflow-hidden bg-[#F6F6F6]"
-                style={{
-                  borderRadius: '8px',
-                  width: 'calc(100%)',
-                  marginLeft: 'auto',
-                  marginRight: 'auto',
-                }}
-              >
-                <Collapse
-                  defaultActiveKey={['input']}
-                  ghost
-                  expandIcon={({ isActive }) => (
-                    <ArrowDown
-                      size={14}
-                      className={cn('transition-transform', {
-                        'rotate-180': isActive,
-                      })}
-                    />
-                  )}
-                  expandIconPosition="end"
-                  className="workflow-run-collapse"
-                  items={[
-                    {
-                      key: 'input',
-                      label: (
-                        <div className="flex items-center w-full min-w-0 gap-2">
-                          <MessageSmile size={20} className="flex-shrink-0" />
-                          <span
-                            className="truncate"
-                            style={{
-                              fontFamily: 'Inter',
-                              fontWeight: 500,
-                              fontSize: '13px',
-                              lineHeight: '1.5em',
-                            }}
-                          >
-                            {t('canvas.workflow.run.inputPanelTitle', 'User Input')}
-                          </span>
-                        </div>
-                      ),
-                      children: (
-                        <div className="p-2">
-                          <div className="space-y-5">
-                            <VariableTypeSection
-                              canvasId={canvasId ?? ''}
-                              type="string"
-                              variables={groupedVariables.string}
-                              totalVariables={workflowVariables}
-                              readonly={false}
-                              highlightedVariableId={undefined}
-                            />
-
-                            <VariableTypeSection
-                              canvasId={canvasId ?? ''}
-                              type="resource"
-                              variables={groupedVariables.resource}
-                              totalVariables={workflowVariables}
-                              readonly={false}
-                              highlightedVariableId={undefined}
-                            />
-
-                            <VariableTypeSection
-                              canvasId={canvasId ?? ''}
-                              type="option"
-                              variables={groupedVariables.option}
-                              totalVariables={workflowVariables}
-                              readonly={false}
-                              highlightedVariableId={undefined}
-                            />
-
-                            {/* Tools Dependency Form */}
-                            {workflowApp?.canvasData && (
-                              <div className="mt-5 ">
-                                <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ),
-                    },
-                  ]}
-                />
-              </div>
+              <UserInputCollapse
+                workflowVariables={workflowVariables}
+                canvasId={canvasId}
+                readonly={false}
+                defaultActiveKey={['input']}
+                showToolsDependency={true}
+                workflowApp={workflowApp}
+                ToolsDependencyChecker={ToolsDependencyChecker}
+              />
             ) : loading ? null : (
               <EmptyContent />
             )}
