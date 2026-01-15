@@ -168,6 +168,18 @@ const WorkflowRunPreviewComponent = () => {
   }, [workflowStatus, canvasId, showWorkflowRun, queryClient, executionId]);
 
   const [isRunning, setIsRunning] = useState(false);
+  // State to track current time for real-time execution time updates
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Update current time periodically when workflow is executing to show real-time execution time
+  useEffect(() => {
+    if (workflowStatus === 'executing' || isPolling) {
+      const interval = setInterval(() => {
+        setCurrentTime(Date.now());
+      }, 1000); // Update every 1s for real-time execution time updates
+      return () => clearInterval(interval);
+    }
+  }, [workflowStatus, isPolling]);
 
   const onSubmitVariables = useCallback(
     async (variables: WorkflowVariable[]) => {
@@ -212,24 +224,28 @@ const WorkflowRunPreviewComponent = () => {
   );
 
   // Helper function to format execution time duration
-  const formatExecutionTime = useCallback((startTime?: string, endTime?: string): string => {
-    if (!startTime) {
-      return '';
-    }
-    const start = new Date(startTime).getTime();
-    const end = endTime ? new Date(endTime).getTime() : Date.now();
-    const ms = Math.max(0, end - start);
-    if (ms < 1000) {
-      return `${ms}ms`;
-    }
-    const seconds = ms / 1000;
-    if (seconds < 60) {
-      return `${seconds.toFixed(1)}s`;
-    }
-    const minutes = Math.floor(seconds / 60);
-    const remainSec = Math.floor(seconds % 60);
-    return `${minutes}m ${remainSec}s`;
-  }, []);
+  const formatExecutionTime = useCallback(
+    (startTime?: string, endTime?: string | number): string => {
+      if (!startTime) {
+        return '';
+      }
+      const start = new Date(startTime).getTime();
+      const end =
+        typeof endTime === 'number' ? endTime : endTime ? new Date(endTime).getTime() : Date.now();
+      const ms = Math.max(0, end - start);
+      if (ms < 1000) {
+        return `${ms}ms`;
+      }
+      const seconds = ms / 1000;
+      if (seconds < 60) {
+        return `${seconds.toFixed(1)}s`;
+      }
+      const minutes = Math.floor(seconds / 60);
+      const remainSec = Math.floor(seconds % 60);
+      return `${minutes}m ${remainSec}s`;
+    },
+    [],
+  );
 
   // Filter and sort skillResponse nodes by execution order (topological sort)
   // Show all nodes (including not executed ones)
@@ -589,9 +605,10 @@ const WorkflowRunPreviewComponent = () => {
                       node.data?.metadata?.errors?.[0];
 
                     // Get execution time from nodeExecution
+                    // Use createdAt as start time, updatedAt as end time (or current time if still executing)
                     const executionTime = formatExecutionTime(
                       nodeExecution?.createdAt,
-                      nodeExecution?.updatedAt,
+                      isExecuting ? currentTime : nodeExecution?.updatedAt,
                     );
 
                     // Agent title
@@ -769,8 +786,9 @@ const WorkflowRunPreviewComponent = () => {
                                     {/* Collapsed state: show different info based on status */}
                                     {/* 
                                     - Not executed: Only show node name (no time, no credit)
-                                    - Running: Show node name + execution time
+                                    - Running: Show node name + execution time (real-time updates)
                                     - Finished/Failed: Show node name + execution time + credit usage
+                                    Note: Node name is always shown on the left side
                                   */}
                                     {isNotExecuted ? // Not executed: Only show node name (nothing else)
                                     null : (
