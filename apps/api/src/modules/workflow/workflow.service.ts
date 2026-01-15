@@ -44,10 +44,29 @@ import { VoucherService } from '../voucher/voucher.service';
 import { ceil } from 'lodash';
 import { SkillInvokerService } from '../skill/skill-invoker.service';
 import { WORKFLOW_EXECUTION_CONSTANTS } from './workflow.constants';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class WorkflowService {
   private readonly logger = new Logger(WorkflowService.name);
+
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+    private readonly skillService: SkillService,
+    private readonly canvasService: CanvasService,
+    private readonly canvasSyncService: CanvasSyncService,
+    private readonly toolInventoryService: ToolInventoryService,
+    private readonly toolService: ToolService,
+    private readonly creditService: CreditService,
+    private readonly skillInvokerService: SkillInvokerService,
+    private readonly voucherService: VoucherService,
+    private readonly eventEmitter: EventEmitter2,
+    @InjectQueue(QUEUE_RUN_WORKFLOW) private readonly runWorkflowQueue?: Queue<RunWorkflowJobData>,
+    @InjectQueue(QUEUE_POLL_WORKFLOW)
+    private readonly pollWorkflowQueue?: Queue<PollWorkflowJobData>,
+  ) {}
 
   /**
    * Get poll interval from config, falling back to constants default
@@ -88,23 +107,6 @@ export class WorkflowService {
       WORKFLOW_EXECUTION_CONSTANTS.POLL_LOCK_TTL_MS
     );
   }
-
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
-    private readonly skillService: SkillService,
-    private readonly canvasService: CanvasService,
-    private readonly canvasSyncService: CanvasSyncService,
-    private readonly toolInventoryService: ToolInventoryService,
-    private readonly toolService: ToolService,
-    private readonly creditService: CreditService,
-    private readonly skillInvokerService: SkillInvokerService,
-    private readonly voucherService: VoucherService,
-    private readonly eventEmitter: EventEmitter2,
-    @InjectQueue(QUEUE_RUN_WORKFLOW) private readonly runWorkflowQueue?: Queue<RunWorkflowJobData>,
-    @InjectQueue(QUEUE_POLL_WORKFLOW)
-    private readonly pollWorkflowQueue?: Queue<PollWorkflowJobData>,
-  ) {}
 
   private async buildLookupToolsetDefinitionById(
     user: User,
