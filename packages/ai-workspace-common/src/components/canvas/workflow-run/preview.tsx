@@ -562,7 +562,7 @@ const WorkflowRunPreviewComponent = () => {
               </div>
             ) : (
               // Normal mode: Show agent collapse components
-              <div className="flex flex-col gap-4 p-4">
+              <div className="flex flex-col gap-2 p-4">
                 {skillResponseNodes.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-refly-text-2">
                     {t('canvas.workflow.run.noNodes') || 'No skill response nodes found'}
@@ -575,7 +575,13 @@ const WorkflowRunPreviewComponent = () => {
                     }
 
                     // Get node execution from workflow detail (prioritize this over canvas node metadata)
-                    const nodeExecution = nodeExecutionMap.get(node.id);
+                    // Extend WorkflowNodeExecution with optional startTime/endTime for backward compatibility
+                    const nodeExecution = nodeExecutionMap.get(node.id) as
+                      | (WorkflowNodeExecution & {
+                          startTime?: string;
+                          endTime?: string;
+                        })
+                      | null;
                     const result = resultMap[resultId];
                     const isStreaming = !!streamResults[resultId];
                     const loading = !result && !isStreaming;
