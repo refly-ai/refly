@@ -84,7 +84,7 @@ NodeCreditUsage.displayName = 'NodeCreditUsage';
 const WorkflowRunPreviewComponent = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<ResultActiveTab>('configure');
-  const { canvasId, readonly, workflow } = useCanvasContext();
+  const { canvasId, workflow } = useCanvasContext();
   const { nodes, edges } = useRealtimeCanvasData();
   const { resultMap, streamResults } = useActionResultStoreShallow((state) => ({
     resultMap: state.resultMap,
@@ -684,13 +684,13 @@ const WorkflowRunPreviewComponent = () => {
                             }}
                           >
                             <ConfigureTab
-                              readonly={readonly}
+                              readonly={true}
                               query={query}
                               version={version}
                               resultId={resultId}
                               nodeId={node.id}
                               canvasId={canvasId}
-                              disabled={readonly || isExecuting}
+                              disabled={true}
                             />
                           </div>
                         ),
@@ -829,13 +829,13 @@ const WorkflowRunPreviewComponent = () => {
                                         {/* Finished/Failed state: Show execution time + credit usage */}
                                         {(isFinished || isFailed) && (
                                           <>
-                                            {executionTime && <span>{executionTime}</span>}
-                                            {executionTime && <span>·</span>}
                                             <NodeCreditUsage
                                               resultId={resultId}
                                               version={version}
                                               enabled={!!resultId && (isFinished || isFailed)}
                                             />
+                                            {executionTime && <span>·</span>}
+                                            {executionTime && <span>{executionTime}</span>}
                                           </>
                                         )}
                                       </div>
