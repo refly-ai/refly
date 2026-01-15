@@ -32,88 +32,86 @@ const ActionDropdown = memo(
 );
 ActionDropdown.displayName = 'ActionDropdown';
 
-export const RecentWorkflow = memo(
-  ({ canvases, onPrefetch }: { canvases: SiderData[]; onPrefetch?: () => void }) => {
-    const { i18n, t } = useTranslation();
-    const language = i18n.languages?.[0];
-    const navigate = useNavigate();
+export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => {
+  const { i18n, t } = useTranslation();
+  const language = i18n.languages?.[0];
+  const navigate = useNavigate();
 
-    const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas();
+  const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas();
 
-    const { setIsManualCollapse } = useSiderStoreShallow((state) => ({
-      setIsManualCollapse: state.setIsManualCollapse,
-    }));
+  const { setIsManualCollapse } = useSiderStoreShallow((state) => ({
+    setIsManualCollapse: state.setIsManualCollapse,
+  }));
 
-    const handleNewWorkflow = useCallback(() => {
-      logEvent('new_workflow', Date.now(), {});
+  const handleNewWorkflow = useCallback(() => {
+    logEvent('new_workflow', Date.now(), {});
+    setIsManualCollapse(false);
+    debouncedCreateCanvas();
+  }, [debouncedCreateCanvas, setIsManualCollapse, logEvent]);
+
+  const handleEditCanvas = useCallback(
+    (canvasId: string) => {
       setIsManualCollapse(false);
-      debouncedCreateCanvas();
-    }, [debouncedCreateCanvas, setIsManualCollapse, logEvent]);
+      navigate(`/canvas/${canvasId}`);
+    },
+    [navigate, setIsManualCollapse],
+  );
 
-    const handleEditCanvas = useCallback(
-      (canvasId: string) => {
-        setIsManualCollapse(false);
-        navigate(`/canvas/${canvasId}`);
-      },
-      [navigate, setIsManualCollapse],
-    );
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Button
+        className="h-[120px] flex items-center flex-col gap-3 border-[1px] border-dashed border-refly-Control-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover hover:shadow-refly-m transition-colors"
+        onClick={handleNewWorkflow}
+        loading={createCanvasLoading}
+      >
+        <div className="flex justify-center items-center w-[30px] h-[30px] bg-refly-text-0 rounded-full">
+          <Add size={16} color="var(--refly-bg-body-z0)" />
+        </div>
+        <div className="text-sm leading-5 font-bold text-refly-text-0 line-clamp-1">
+          {t('frontPage.newWorkflow.buttonText')}
+        </div>
+      </Button>
 
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Button
-          className="h-[120px] flex items-center flex-col gap-3 border-[1px] border-dashed border-refly-Control-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover hover:shadow-refly-m transition-colors"
-          onClick={handleNewWorkflow}
-          loading={createCanvasLoading}
-        >
-          <div className="flex justify-center items-center w-[30px] h-[30px] bg-refly-text-0 rounded-full">
-            <Add size={16} color="var(--refly-bg-body-z0)" />
-          </div>
-          <div className="text-sm leading-5 font-bold text-refly-text-0 line-clamp-1">
-            {t('frontPage.newWorkflow.buttonText')}
-          </div>
-        </Button>
-
-        {canvases?.map((canvas) => (
-          <div key={canvas.id} onClick={() => handleEditCanvas(canvas.id)}>
-            <div className="h-[120px] flex flex-col justify-between p-4 border-[1px] border-solid border-refly-Card-Border bg-refly-bg-control-z0 rounded-xl bg-refly-bg-content-z2 hover:bg-refly-fill-hover hover:shadow-refly-m transition-shadow cursor-pointer">
-              <div>
-                <div className="text-sm leading-5 font-semibold text-refly-text-0 line-clamp-1">
-                  {canvas.name || t('common.untitled')}
-                </div>
-                <div className="mt-1" onClick={(e) => e.stopPropagation()}>
-                  <UsedToolsets toolsets={canvas.usedToolsets} />
-                </div>
+      {canvases?.map((canvas) => (
+        <div key={canvas.id} onClick={() => handleEditCanvas(canvas.id)}>
+          <div className="h-[120px] flex flex-col justify-between p-4 border-[1px] border-solid border-refly-Card-Border bg-refly-bg-control-z0 rounded-xl bg-refly-bg-content-z2 hover:bg-refly-fill-hover hover:shadow-refly-m transition-shadow cursor-pointer">
+            <div>
+              <div className="text-sm leading-5 font-semibold text-refly-text-0 line-clamp-1">
+                {canvas.name || t('common.untitled')}
               </div>
-
-              <div className="flex items-center gap-2 justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex items-center gap-1 min-w-0">
-                    <Avatar
-                      className="flex-shrink-0"
-                      size={18}
-                      src={canvas.owner?.avatar || defaultAvatar}
-                    />
-                    <div className="text-xs leading-4 text-refly-text-2 truncate">
-                      {canvas.owner?.nickname ? canvas.owner?.nickname : `@${canvas.owner?.name}`}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className="text-refly-text-3 text-xs leading-4 whitespace-nowrap">
-                      {time(canvas.updatedAt, language as LOCALE)
-                        ?.utc()
-                        ?.fromNow()}
-                    </span>
-                  </div>
-                </div>
-
-                <ActionDropdown canvasId={canvas.id} canvasName={canvas.name} />
+              <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                <UsedToolsets toolsets={canvas.usedToolsets} />
               </div>
             </div>
+
+            <div className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-1 min-w-0">
+                  <Avatar
+                    className="flex-shrink-0"
+                    size={18}
+                    src={canvas.owner?.avatar || defaultAvatar}
+                  />
+                  <div className="text-xs leading-4 text-refly-text-2 truncate">
+                    {canvas.owner?.nickname ? canvas.owner?.nickname : `@${canvas.owner?.name}`}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className="text-refly-text-3 text-xs leading-4 whitespace-nowrap">
+                    {time(canvas.updatedAt, language as LOCALE)
+                      ?.utc()
+                      ?.fromNow()}
+                  </span>
+                </div>
+              </div>
+
+              <ActionDropdown canvasId={canvas.id} canvasName={canvas.name} />
+            </div>
           </div>
-        ))}
-      </div>
-    );
-  },
-);
+        </div>
+      ))}
+    </div>
+  );
+});
 
 RecentWorkflow.displayName = 'RecentWorkflow';

@@ -1,6 +1,5 @@
 import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import { CanvasRedirect, WorkspaceRedirect, ProtectedRoute } from './redirects';
 
 // Lazy load 所有组件，包括 redirect 组件
 const HomeRedirect = lazy(() =>
@@ -15,6 +14,17 @@ const InviteRedirect = lazy(() =>
   import('@refly-packages/ai-workspace-common/components/invite-redirect').then((m) => ({
     default: m.InviteRedirect,
   })),
+);
+
+// Lazy load redirect 组件
+const CanvasRedirect = lazy(() =>
+  import('./redirects').then((m) => ({ default: m.CanvasRedirect })),
+);
+const WorkspaceRedirect = lazy(() =>
+  import('./redirects').then((m) => ({ default: m.WorkspaceRedirect })),
+);
+const ProtectedRoute = lazy(() =>
+  import('./redirects').then((m) => ({ default: m.ProtectedRoute })),
 );
 
 // 从 web-core 导入的已经是 lazy 组件

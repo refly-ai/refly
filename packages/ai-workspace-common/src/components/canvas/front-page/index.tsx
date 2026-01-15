@@ -237,11 +237,7 @@ const ModuleContainer = ({
   );
 };
 
-interface FrontPageProps {
-  onPrefetch?: () => void;
-}
-
-export const FrontPage = memo(({ onPrefetch }: FrontPageProps) => {
+export const FrontPage = memo(() => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { getCanvasList } = useHandleSiderData();
@@ -370,21 +366,6 @@ export const FrontPage = memo(({ onPrefetch }: FrontPageProps) => {
   useEffect(() => {
     getCanvasList();
   }, [getCanvasList]);
-
-  useEffect(() => {
-    // Prefetch workflow resources when browser is idle
-    const handlePrefetch = () => {
-      onPrefetch?.();
-    };
-
-    if ('requestIdleCallback' in window) {
-      const idleCallback = (window as any).requestIdleCallback(handlePrefetch, { timeout: 2000 });
-      return () => (window as any).cancelIdleCallback(idleCallback);
-    } else {
-      const timeoutId = setTimeout(handlePrefetch, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [onPrefetch]);
 
   useEffect(() => {
     if (isCopilotFloating) {
