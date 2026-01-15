@@ -69,9 +69,7 @@ const NodeCreditUsage = memo(
       },
     );
     const creditUsage = creditData?.data?.total ?? 0;
-    if (creditUsage === 0) {
-      return null;
-    }
+
     return (
       <div className="flex items-center gap-1">
         <Subscription size={12} className="text-refly-text-2" />
