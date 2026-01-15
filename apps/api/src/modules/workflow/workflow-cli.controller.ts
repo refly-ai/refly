@@ -98,14 +98,36 @@ interface CliNodeInput {
   type: string;
   input?: Record<string, unknown>;
   dependsOn?: string[];
+  // Top-level shorthand fields (for simplified CLI/agent usage)
+  query?: string;
+  toolsetKeys?: string[];
   // Also support proper CanvasNode fields if passed
   data?: {
     title?: string;
     entityId?: string;
     metadata?: Record<string, unknown>;
+    // Common fields that should go into metadata
+    query?: string;
+    selectedToolsets?: unknown[];
+    toolsetKeys?: string[];
+    modelInfo?: Record<string, unknown>;
     [key: string]: unknown;
   };
   position?: { x: number; y: number };
+}
+
+/**
+ * Map CLI node types to canvas node types.
+ * CLI uses simplified type names (e.g., 'agent') that need to be mapped
+ * to proper canvas node types (e.g., 'skillResponse').
+ */
+function mapCliNodeTypeToCanvasType(cliType: string): CanvasNodeType {
+  const typeMapping: Record<string, CanvasNodeType> = {
+    agent: 'skillResponse',
+    skill: 'skillResponse',
+    // Add more mappings as needed
+  };
+  return (typeMapping[cliType] || cliType) as CanvasNodeType;
 }
 
 /**
@@ -115,15 +137,17 @@ interface CliNodeInput {
  *
  * This function ensures nodes have:
  * - Unique node ID (generated if missing)
- * - Valid canvas node type
+ * - Valid canvas node type (maps 'agent' -> 'skillResponse')
  * - Proper data structure with entityId and metadata
+ * - Fields like query, selectedToolsets, modelInfo are moved to metadata
  * - Default position (prepareAddNode will calculate actual position)
  */
 function transformCliNodesToCanvasNodes(
   cliNodes: CliNodeInput[],
 ): Array<Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>> {
   return cliNodes.map((cliNode) => {
-    const nodeType = cliNode.type as CanvasNodeType;
+    // Map CLI type to canvas type (e.g., 'agent' -> 'skillResponse')
+    const nodeType = mapCliNodeTypeToCanvasType(cliNode.type);
 
     // Generate entityId based on node type
     const entityId = cliNode.data?.entityId || genNodeEntityId(nodeType);
@@ -132,11 +156,38 @@ function transformCliNodesToCanvasNodes(
     const defaultMetadata = getDefaultMetadataForNodeType(nodeType);
     const inputMetadata = cliNode.input || {};
 
-    // Merge CLI input into metadata (for configuration like query, modelInfo, etc.)
+    // Extract fields from data that should be in metadata
+    // Supports both top-level shorthand and nested data fields
+    // Priority: top-level > data.field > data.metadata.field
+    const dataFieldsForMetadata: Record<string, unknown> = {};
+
+    // query: top-level > data.query
+    if (cliNode.query !== undefined) {
+      dataFieldsForMetadata.query = cliNode.query;
+    } else if (cliNode.data?.query !== undefined) {
+      dataFieldsForMetadata.query = cliNode.data.query;
+    }
+
+    // toolsetKeys: top-level > data.toolsetKeys > data.metadata.toolsetKeys
+    if (cliNode.toolsetKeys !== undefined) {
+      dataFieldsForMetadata.toolsetKeys = cliNode.toolsetKeys;
+    } else if (cliNode.data?.toolsetKeys !== undefined) {
+      dataFieldsForMetadata.toolsetKeys = cliNode.data.toolsetKeys;
+    }
+
+    if (cliNode.data?.selectedToolsets !== undefined) {
+      dataFieldsForMetadata.selectedToolsets = cliNode.data.selectedToolsets;
+    }
+    if (cliNode.data?.modelInfo !== undefined) {
+      dataFieldsForMetadata.modelInfo = cliNode.data.modelInfo;
+    }
+
+    // Merge all metadata sources (priority: dataFieldsForMetadata > input > data.metadata > default)
     const metadata = {
       ...defaultMetadata,
       ...cliNode.data?.metadata,
       ...inputMetadata,
+      ...dataFieldsForMetadata,
       sizeMode: 'compact' as const,
     };
 
@@ -159,6 +210,8 @@ function transformCliNodesToCanvasNodes(
  */
 function getDefaultMetadataForNodeType(nodeType: CanvasNodeType): Record<string, unknown> {
   switch (nodeType) {
+    case 'start':
+      return {};
     case 'skillResponse':
       return {
         status: 'init',
@@ -197,6 +250,8 @@ function getDefaultMetadataForNodeType(nodeType: CanvasNodeType): Record<string,
  */
 function getDefaultTitleForNodeType(nodeType: CanvasNodeType): string {
   switch (nodeType) {
+    case 'start':
+      return 'Start';
     case 'skillResponse':
       return 'Agent';
     case 'document':
@@ -348,9 +403,13 @@ export class WorkflowCliController {
    * Create a new workflow
    * POST /v1/cli/workflow
    *
-   * Note: Canvas is created with default nodes (start node + skillResponse node)
-   * to ensure proper canvas initialization. The start node is displayed as "User Input"
-   * in the UI and is required for the canvas to function correctly.
+   * When spec.nodes is provided:
+   * - If nodes include a start node, skip default nodes and use user's nodes directly
+   * - If nodes don't include a start node, create only a start node (not start + skillResponse)
+   *   and connect user's first node to it
+   *
+   * When spec.nodes is not provided:
+   * - Create default nodes (start + skillResponse) for normal canvas behavior
    */
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -361,35 +420,130 @@ export class WorkflowCliController {
     this.logger.log(`Creating workflow for user ${user.uid}: ${body.name}`);
 
     try {
-      // Create canvas with workflow data
-      // Do NOT skip default nodes - the start node (User Input) is required for canvas to work properly
       const canvasId = genCanvasID();
-      const canvas = await this.canvasService.createCanvas(user, {
-        canvasId,
-        title: body.name,
-        variables: body.variables,
-      });
 
-      // If spec contains nodes/edges, add them to the canvas (in addition to default nodes)
-      if (body.spec?.nodes?.length) {
+      // Check if user provides nodes in spec
+      const hasUserNodes = body.spec?.nodes?.length > 0;
+      // Check if user provides a start node
+      const userProvidesStartNode = body.spec?.nodes?.some((n: any) => n.type === 'start');
+
+      // Determine whether to skip default nodes:
+      // - If user provides nodes with a start node: skip all default nodes
+      // - If user provides nodes without a start node: we'll create only a start node below
+      // - If no user nodes: use default behavior (start + skillResponse)
+      const skipDefaultNodes = hasUserNodes;
+
+      const canvas = await this.canvasService.createCanvas(
+        user,
+        {
+          canvasId,
+          title: body.name,
+          variables: body.variables,
+        },
+        { skipDefaultNodes },
+      );
+
+      // If spec contains nodes/edges, add them to the canvas
+      if (hasUserNodes) {
         // Transform CLI nodes to proper canvas node format
-        // CLI nodes may use simplified schema with `input` field instead of proper `data` structure
         const transformedNodes = transformCliNodesToCanvasNodes(
           body.spec.nodes as unknown as CliNodeInput[],
         );
 
-        // Build connection map using original node IDs (before transformation)
-        const connectToMap = body.spec.edges
-          ? buildConnectToFilters(
-              transformedNodes.map((n) => ({
-                ...n,
-                id: n.id!,
-                position: { x: 0, y: 0 },
-              })) as CanvasNode[],
-              body.spec.edges,
-            )
-          : new Map();
+        // Resolve toolset keys to full GenericToolset objects with nested toolset.key
+        // This ensures proper authorization checking in the frontend
+        for (const node of transformedNodes) {
+          const toolsetKeys = (node.data?.metadata as Record<string, unknown>)?.toolsetKeys as
+            | string[]
+            | undefined;
+          if (toolsetKeys?.length) {
+            this.logger.log(`[CREATE] Resolving toolset keys: ${toolsetKeys.join(', ')}`);
+            const { resolved } = await this.toolService.resolveToolsetsByKeys(user, toolsetKeys);
+            this.logger.log(`[CREATE] Resolved ${resolved.length} toolsets`);
+            const metadata = node.data?.metadata as Record<string, unknown>;
+            const existingToolsets = (metadata?.selectedToolsets as unknown[]) || [];
+            metadata.selectedToolsets = [...existingToolsets, ...resolved];
+            metadata.toolsetKeys = undefined;
 
+            // Insert toolset mentions into query for proper frontend display
+            if (resolved.length > 0) {
+              const toolsetMentions = resolved
+                .map((t) => `@{type=toolset,id=${t.id},name=${t.name}}`)
+                .join(' ');
+              const existingQuery = (metadata.query as string) || '';
+              // Add toolset mentions if not already present
+              if (!existingQuery.includes('@{type=toolset')) {
+                metadata.query = existingQuery
+                  ? `使用 ${toolsetMentions} ${existingQuery}`
+                  : toolsetMentions;
+                this.logger.log(`[CREATE] Updated query with toolset mentions: ${metadata.query}`);
+              }
+            }
+          }
+        }
+
+        // If user doesn't provide a start node, create one and connect first node to it
+        if (!userProvidesStartNode) {
+          // Create a start node first
+          const startNode = {
+            node: {
+              id: genNodeID(),
+              type: 'start' as const,
+              data: {
+                title: 'Start',
+                entityId: genNodeEntityId('start'),
+              },
+            },
+            connectTo: [],
+          };
+
+          await this.canvasSyncService.addNodesToCanvas(user, canvasId, [startNode], {
+            autoLayout: true,
+          });
+        }
+
+        // Build connection map using original node IDs
+        // This maps target node IDs to their source node filters based on edges
+        let connectToMap: Map<string, CanvasNodeFilter[]> = new Map();
+
+        if (body.spec.edges) {
+          // Use explicit edges if provided
+          connectToMap = buildConnectToFilters(
+            transformedNodes.map((n) => ({
+              ...n,
+              id: n.id!,
+              position: { x: 0, y: 0 },
+            })) as CanvasNode[],
+            body.spec.edges,
+          );
+        } else {
+          // Build connections from dependsOn fields in simplified format
+          const cliNodes = body.spec.nodes as unknown as CliNodeInput[];
+          for (const cliNode of cliNodes) {
+            if (cliNode.dependsOn?.length) {
+              // Find entityIds for the source nodes
+              const connectTo: CanvasNodeFilter[] = cliNode.dependsOn
+                .map((sourceId) => {
+                  const sourceNode = transformedNodes.find((n) => n.id === sourceId);
+                  if (sourceNode?.data?.entityId) {
+                    return {
+                      type: sourceNode.type as CanvasNodeType,
+                      entityId: sourceNode.data.entityId,
+                    };
+                  }
+                  return null;
+                })
+                .filter((x): x is CanvasNodeFilter => x !== null);
+
+              if (connectTo.length > 0) {
+                connectToMap.set(cliNode.id, connectTo);
+              }
+            }
+          }
+        }
+
+        // Build nodes to add with their connection info
+        // If connectTo is empty for a node, prepareAddNode will auto-connect to start node
         const nodesToAdd = transformedNodes.map((node) => ({
           node,
           connectTo: connectToMap.get(node.id!) || [],
@@ -583,7 +737,7 @@ export class WorkflowCliController {
     };
   }> {
     this.logger.log(`Listing toolset keys for user ${user.uid}`);
-    const keys = await this.toolService.listInventoryKeys();
+    const keys = await this.toolService.listInventoryKeysForCli();
     return buildCliSuccessResponse({ keys });
   }
 
@@ -1058,9 +1212,369 @@ export class WorkflowCliController {
     }
   }
 
+  // ============================================================================
+  // New workflowId-based endpoints (recommended)
+  // These endpoints use workflowId and automatically find the current/latest run
+  // ============================================================================
+
+  /**
+   * Get current workflow execution status by workflowId
+   * GET /v1/cli/workflow/:id/status
+   *
+   * Returns the status of the currently active or latest execution for this workflow.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/status')
+  async getStatusByWorkflowId(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+  ): Promise<{ success: boolean; data: WorkflowRunStatus }> {
+    this.logger.log(`Getting status for workflow ${workflowId}, user ${user.uid}`);
+
+    try {
+      const detail = await this.workflowService.getActiveOrLatestExecution(user, workflowId);
+
+      const nodeStatuses: NodeExecutionStatus[] = (detail.nodeExecutions ?? []).map((nodeExec) => ({
+        nodeId: nodeExec.nodeId,
+        nodeType: nodeExec.nodeType,
+        status: nodeExec.status,
+        title: nodeExec.title ?? '',
+        startTime: nodeExec.startTime?.toJSON(),
+        endTime: nodeExec.endTime?.toJSON(),
+        progress: nodeExec.progress ?? 0,
+        errorMessage: nodeExec.errorMessage ?? undefined,
+      }));
+
+      const executedNodes = nodeStatuses.filter((n) => n.status === 'finish').length;
+      const failedNodes = nodeStatuses.filter((n) => n.status === 'failed').length;
+
+      return buildCliSuccessResponse({
+        runId: detail.executionId,
+        workflowId: detail.canvasId,
+        status: detail.status as any,
+        title: detail.title,
+        totalNodes: detail.totalNodes,
+        executedNodes,
+        failedNodes,
+        nodeStatuses,
+        createdAt: detail.createdAt.toJSON(),
+        updatedAt: detail.updatedAt.toJSON(),
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to get status for workflow ${workflowId}: ${(error as Error).message}`,
+      );
+      throwCliError(
+        CLI_ERROR_CODES.NOT_FOUND,
+        `No execution found for workflow ${workflowId}`,
+        'Run the workflow first with `refly workflow run <workflowId>`',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Get detailed execution info by workflowId
+   * GET /v1/cli/workflow/:id/detail
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/detail')
+  async getDetailByWorkflowId(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+    @Query('outputPreviewLength') outputPreviewLength?: string,
+  ): Promise<{ success: boolean; data: WorkflowRunDetail }> {
+    this.logger.log(`Getting detail for workflow ${workflowId}, user ${user.uid}`);
+
+    try {
+      const detail = await this.workflowService.getActiveOrLatestExecution(user, workflowId);
+      const _previewLength = outputPreviewLength ? Number.parseInt(outputPreviewLength, 10) : 500;
+
+      const nodes: NodeExecutionDetail[] = (detail.nodeExecutions ?? []).map((nodeExec) => ({
+        nodeId: nodeExec.nodeId,
+        nodeExecutionId: nodeExec.nodeExecutionId,
+        resultId: nodeExec.entityId ?? undefined,
+        nodeType: nodeExec.nodeType,
+        status: nodeExec.status,
+        title: nodeExec.title ?? '',
+        startTime: nodeExec.startTime?.toJSON(),
+        endTime: nodeExec.endTime?.toJSON(),
+        progress: nodeExec.progress ?? 0,
+        query: nodeExec.originalQuery ?? nodeExec.processedQuery ?? undefined,
+        errorMessage: nodeExec.errorMessage ?? undefined,
+        toolCallsCount: 0,
+      }));
+
+      const errors = nodes
+        .filter((n) => n.status === 'failed' && n.errorMessage)
+        .map((n) => ({
+          nodeId: n.nodeId,
+          nodeTitle: n.title,
+          errorType: 'execution_error',
+          errorMessage: n.errorMessage ?? 'Unknown error',
+          timestamp: n.endTime ?? new Date().toJSON(),
+        }));
+
+      const executedNodes = nodes.filter((n) => n.status === 'finish').length;
+      const failedNodes = nodes.filter((n) => n.status === 'failed').length;
+
+      const durationMs =
+        detail.createdAt && detail.updatedAt
+          ? new Date(detail.updatedAt).getTime() - new Date(detail.createdAt).getTime()
+          : undefined;
+
+      return buildCliSuccessResponse({
+        runId: detail.executionId,
+        workflowId: detail.canvasId,
+        title: detail.title,
+        status: detail.status as WorkflowRunDetail['status'],
+        totalNodes: detail.totalNodes,
+        executedNodes,
+        failedNodes,
+        startedAt: detail.createdAt.toJSON(),
+        finishedAt:
+          detail.status === 'finish' || detail.status === 'failed'
+            ? detail.updatedAt.toJSON()
+            : undefined,
+        durationMs,
+        nodes,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to get detail for workflow ${workflowId}: ${(error as Error).message}`,
+      );
+      throwCliError(
+        CLI_ERROR_CODES.NOT_FOUND,
+        `No execution found for workflow ${workflowId}`,
+        'Run the workflow first with `refly workflow run <workflowId>`',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Get tool calls by workflowId
+   * GET /v1/cli/workflow/:id/toolcalls
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/toolcalls')
+  async getToolCallsByWorkflowId(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+    @Query('nodeId') nodeId?: string,
+    @Query('toolsetId') toolsetId?: string,
+    @Query('toolName') toolName?: string,
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('sanitizeForDisplay') sanitizeForDisplay?: string,
+  ): Promise<{ success: boolean; data: any }> {
+    this.logger.log(`Getting tool calls for workflow ${workflowId}, user ${user.uid}`);
+
+    try {
+      const detail = await this.workflowService.getActiveOrLatestExecution(user, workflowId);
+      const nodeExecutions = detail.nodeExecutions ?? [];
+
+      const filteredNodeExecutions = nodeId
+        ? nodeExecutions.filter((n) => n.nodeId === nodeId)
+        : nodeExecutions;
+
+      const allToolCalls: any[] = [];
+      for (const nodeExec of filteredNodeExecutions) {
+        if (!nodeExec.entityId) continue;
+
+        const toolCalls = await this.prisma.toolCallResult.findMany({
+          where: {
+            resultId: nodeExec.entityId,
+            deletedAt: null,
+            ...(toolsetId ? { toolsetId } : {}),
+            ...(toolName ? { toolName } : {}),
+            ...(status ? { status } : {}),
+          },
+          orderBy: { createdAt: 'asc' },
+        });
+
+        for (const tc of toolCalls) {
+          allToolCalls.push({
+            callId: tc.callId,
+            nodeId: nodeExec.nodeId,
+            nodeTitle: nodeExec.title,
+            toolsetId: tc.toolsetId,
+            toolName: tc.toolName,
+            stepName: tc.stepName,
+            input: this.safeParseJSON(tc.input),
+            output:
+              sanitizeForDisplay === 'false'
+                ? this.safeParseJSON(tc.output)
+                : this.truncateOutput(this.safeParseJSON(tc.output)),
+            status: tc.status,
+            error: tc.error,
+            createdAt: tc.createdAt.toISOString(),
+            updatedAt: tc.updatedAt.toISOString(),
+            durationMs: tc.updatedAt.getTime() - tc.createdAt.getTime(),
+          });
+        }
+      }
+
+      const limitNum = limit ? Number.parseInt(limit, 10) : 100;
+      const offsetNum = offset ? Number.parseInt(offset, 10) : 0;
+      const paginatedToolCalls = allToolCalls.slice(offsetNum, offsetNum + limitNum);
+
+      const byStatus = {
+        executing: allToolCalls.filter((tc) => tc.status === 'executing').length,
+        completed: allToolCalls.filter((tc) => tc.status === 'completed').length,
+        failed: allToolCalls.filter((tc) => tc.status === 'failed').length,
+      };
+
+      const byToolset: Record<string, number> = {};
+      const byTool: Record<string, number> = {};
+      for (const tc of allToolCalls) {
+        byToolset[tc.toolsetId] = (byToolset[tc.toolsetId] || 0) + 1;
+        byTool[tc.toolName] = (byTool[tc.toolName] || 0) + 1;
+      }
+
+      return buildCliSuccessResponse({
+        workflowId,
+        runId: detail.executionId,
+        totalCount: allToolCalls.length,
+        toolCalls: paginatedToolCalls,
+        byStatus,
+        byToolset,
+        byTool,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to get tool calls for workflow ${workflowId}: ${(error as Error).message}`,
+      );
+      throwCliError(
+        CLI_ERROR_CODES.NOT_FOUND,
+        `No execution found for workflow ${workflowId}`,
+        'Run the workflow first with `refly workflow run <workflowId>`',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Abort current workflow execution by workflowId
+   * POST /v1/cli/workflow/:id/abort
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/abort')
+  async abortByWorkflowId(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+  ): Promise<{ success: boolean; data: { message: string; workflowId: string; runId?: string } }> {
+    this.logger.log(`Aborting workflow ${workflowId} for user ${user.uid}`);
+
+    try {
+      // Find the active execution
+      const activeExecution = await this.workflowService.getActiveExecution(user, workflowId);
+
+      if (!activeExecution) {
+        throwCliError(
+          CLI_ERROR_CODES.NOT_FOUND,
+          `No active execution found for workflow ${workflowId}`,
+          'The workflow is not currently running',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      await this.workflowService.abortWorkflow(user, activeExecution.executionId);
+
+      return buildCliSuccessResponse({
+        message: 'Workflow execution aborted',
+        workflowId,
+        runId: activeExecution.executionId,
+      });
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`Failed to abort workflow ${workflowId}: ${(error as Error).message}`);
+      throwCliError(
+        CLI_ERROR_CODES.EXECUTION_FAILED,
+        `Failed to abort workflow: ${(error as Error).message}`,
+        'The workflow may have already completed',
+      );
+    }
+  }
+
+  /**
+   * List workflow run history
+   * GET /v1/cli/workflow/:id/runs
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/runs')
+  async listRuns(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<{
+    success: boolean;
+    data: {
+      workflowId: string;
+      runs: Array<{
+        runId: string;
+        status: string;
+        totalNodes: number;
+        startedAt: string;
+        finishedAt?: string;
+        triggerType: string;
+      }>;
+      total: number;
+    };
+  }> {
+    this.logger.log(`Listing runs for workflow ${workflowId}, user ${user.uid}`);
+
+    try {
+      const limitNum = limit ? Number.parseInt(limit, 10) : 20;
+      const offsetNum = offset ? Number.parseInt(offset, 10) : 0;
+
+      const { executions, total } = await this.workflowService.listWorkflowExecutions(
+        user,
+        workflowId,
+        { limit: limitNum, offset: offsetNum },
+      );
+
+      const runs = executions.map((exec) => ({
+        runId: exec.executionId,
+        status: exec.status,
+        totalNodes: exec.totalNodes,
+        startedAt: exec.createdAt.toJSON(),
+        finishedAt:
+          exec.status === 'finish' || exec.status === 'failed'
+            ? exec.updatedAt.toJSON()
+            : undefined,
+        triggerType: exec.triggerType ?? 'manual',
+      }));
+
+      return buildCliSuccessResponse({
+        workflowId,
+        runs,
+        total,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to list runs for workflow ${workflowId}: ${(error as Error).message}`,
+      );
+      throwCliError(
+        CLI_ERROR_CODES.NOT_FOUND,
+        `Workflow ${workflowId} not found`,
+        'Check the workflow ID and try again',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  // ============================================================================
+  // Legacy runId-based endpoints (deprecated, kept for backwards compatibility)
+  // ============================================================================
+
   /**
    * Get workflow run status
    * GET /v1/cli/workflow/run/:runId
+   * @deprecated Use GET /v1/cli/workflow/:id/status instead
    */
   @UseGuards(JwtAuthGuard)
   @Get('run/:runId')
@@ -1068,7 +1582,7 @@ export class WorkflowCliController {
     @LoginedUser() user: User,
     @Param('runId') runId: string,
   ): Promise<{ success: boolean; data: WorkflowRunStatus }> {
-    this.logger.log(`Getting run status for ${runId}, user ${user.uid}`);
+    this.logger.log(`[DEPRECATED] Getting run status for ${runId}, user ${user.uid}`);
 
     try {
       const detail = await this.workflowService.getWorkflowDetail(user, runId);

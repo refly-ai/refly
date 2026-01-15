@@ -18,6 +18,7 @@ import ClockIcon from '@refly-packages/ai-workspace-common/assets/clock.svg';
 import './index.scss';
 import { HiOutlineLightningBolt } from 'react-icons/hi';
 import { GoShieldCheck } from 'react-icons/go';
+import { logEvent, updateUserProperties } from '@refly/telemetry-web';
 // ============================================================================
 // Types
 // ============================================================================
@@ -416,6 +417,8 @@ const CliAuthPage = () => {
         setIsAuthorized(true);
         setCountdown(10);
         setPageState('authorize_confirm');
+        logEvent('authorize_success', null);
+        updateUserProperties({ is_cli_authorize: 'true' });
       } else {
         if (result.error === 'invalid_verification_code') {
           message.error(t('cliAuth.errors.invalidVerificationCode'));
