@@ -35,6 +35,7 @@ export default defineConfig({
     rspack: (config, { prependPlugins, appendPlugins }) => {
       // ... existing plugins ...
       // SERVICE WORKER CONFIGURATION
+      // 只在生产环境启用 Service Worker，避免开发时缓存问题
       if (isProduction) {
         const { GenerateSW } = require('workbox-webpack-plugin');
 
@@ -47,15 +48,14 @@ export default defineConfig({
             skipWaiting: true,
 
             // Code Caching Strategy
-            // 预缓存核心代码，其他通过 runtime cache + prefetch 按需加载
+            // 只预缓存核心代码，页面 chunks 通过 runtime cache 按需加载
             include: [
               /\.html$/,
-              /\.css$/,
               // 核心 chunks（所有页面都需要）
-              /lib-react\.[a-f0-9]+\.js$/, // React library
-              /lib-router\.[a-f0-9]+\.js$/, // Router library
-              // 主入口 bundles - 通过文件名模式匹配
-              /index~[0-9]+\.[a-f0-9]+\.js$/, // 所有 index 异步 chunks
+              /lib-react\.[a-f0-9]+\.js$/, // React library (~136KB)
+              /lib-router\.[a-f0-9]+\.js$/, // Router library (~22KB)
+              // 注意：不预缓存 index~*.js，让它们通过 runtime cache 按需加载
+              // 这样首次安装 SW 时不会下载 3.5MB 的代码
             ],
 
             // 排除不需要缓存的文件
@@ -68,31 +68,37 @@ export default defineConfig({
 
             // Runtime caching strategies
             runtimeCaching: [
-              // === Strategy 1: JavaScript chunks - CacheFirst for faster load ===
+              // === Strategy 1: JavaScript chunks - CacheFirst for instant load ===
+              // 使用 CacheFirst 策略，从缓存直接读取，极快（~0ms）
+              // 因为 JS 文件有 hash，内容变化时文件名会变，所以缓存安全
               {
                 urlPattern: /\.js$/,
                 handler: 'CacheFirst',
                 options: {
-                  cacheName: 'js-runtime',
+                  cacheName: 'js-cache-v1',
                   expiration: {
-                    maxEntries: 60, // 增加到 60 以容纳更多 chunks
-                    maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days - 延长缓存时间
+                    maxEntries: 60,
+                    maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
                   },
                   cacheableResponse: {
-                    statuses: [0, 200],
+                    statuses: [200], // 只缓存成功的响应（避免缓存 HTML 错误页）
                   },
                 },
               },
 
-              // === Strategy 2: CSS - StaleWhileRevalidate for style updates ===
+              // === Strategy 2: CSS - CacheFirst for instant load ===
+              // CSS 文件也有 hash，使用 CacheFirst 安全且快速
               {
                 urlPattern: /\.css$/,
-                handler: 'StaleWhileRevalidate',
+                handler: 'CacheFirst',
                 options: {
-                  cacheName: 'css-runtime',
+                  cacheName: 'css-cache-v1',
                   expiration: {
-                    maxEntries: 30,
-                    maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+                    maxEntries: 40,
+                    maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+                  },
+                  cacheableResponse: {
+                    statuses: [200],
                   },
                 },
               },
@@ -144,9 +150,9 @@ export default defineConfig({
               },
             ],
 
-            // Navigation fallback
-            navigateFallback: '/index.html',
-            navigateFallbackDenylist: [/^\/v1/, /^\/api/], // Exclude API calls
+            // 完全禁用 navigateFallback 以避免 JS 文件被错误缓存为 HTML
+            // SPA 路由由前端处理，不需要 fallback
+            // navigateFallback: '/index.html',
 
             // 所有 chunks 都通过 runtime cache 按需加载和缓存
             maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // 20MB to be safe
