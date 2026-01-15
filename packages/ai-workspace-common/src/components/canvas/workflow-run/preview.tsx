@@ -562,7 +562,7 @@ const WorkflowRunPreviewComponent = () => {
               </div>
             ) : (
               // Normal mode: Show agent collapse components
-              <div className="flex flex-col gap-2 p-4">
+              <div className="flex flex-col gap-2 px-4">
                 {skillResponseNodes.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-refly-text-2">
                     {t('canvas.workflow.run.noNodes') || 'No skill response nodes found'}

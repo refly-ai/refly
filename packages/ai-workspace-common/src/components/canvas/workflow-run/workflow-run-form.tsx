@@ -497,17 +497,13 @@ export const WorkflowRunForm = ({
           `}
           </style>
 
-          <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
+          <div className="px-4 flex-1 overflow-y-auto">
             {workflowVariables.length > 0 ? (
               <div
                 className="overflow-hidden bg-[#F6F6F6]"
                 style={{
-                  borderWidth: '0.5px',
-                  borderColor: 'rgba(0, 0, 0, 0.14)',
-                  borderStyle: 'solid',
                   borderRadius: '8px',
-                  marginTop: '10px',
-                  width: 'calc(100% - 8px)',
+                  width: 'calc(100%)',
                   marginLeft: 'auto',
                   marginRight: 'auto',
                 }}
@@ -545,7 +541,7 @@ export const WorkflowRunForm = ({
                         </div>
                       ),
                       children: (
-                        <div className="p-3 sm:p-4">
+                        <div className="p-2">
                           <div className="space-y-5">
                             <VariableTypeSection
                               canvasId={canvasId ?? ''}
