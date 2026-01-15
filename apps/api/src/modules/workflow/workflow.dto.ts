@@ -13,6 +13,11 @@ import { pick } from '@refly/utils';
 
 type JobUser = Pick<User, 'uid'>;
 
+type WorkflowNodeExecutionWithTime = WorkflowNodeExecution & {
+  startTime?: string;
+  endTime?: string;
+};
+
 export interface RunWorkflowJobData {
   user: JobUser;
   executionId: string;
@@ -34,7 +39,7 @@ export interface InitializeWorkflowResponse {
 
 export const workflowNodeExecutionPO2DTO = (
   nodeExecution: WorkflowNodeExecutionPO,
-): WorkflowNodeExecution => {
+): WorkflowNodeExecutionWithTime => {
   return {
     ...pick(nodeExecution, [
       'nodeExecutionId',
