@@ -79,7 +79,7 @@ const ActionCell = memo(
             break;
           case 'fixWorkflow':
             if (record.sourceCanvasId) {
-              navigate(`/canvas/${record.sourceCanvasId}`);
+              navigate(`/workflow/${record.sourceCanvasId}`);
             } else {
               message.warning(t('runDetail.failureActions.workflowDeleted'));
             }

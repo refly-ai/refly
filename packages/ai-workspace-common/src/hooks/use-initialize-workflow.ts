@@ -191,7 +191,7 @@ export const useInitializeWorkflow = (
 
         // Wait for 2 seconds before navigating to the new canvas
         await new Promise((resolve) => setTimeout(resolve, 125));
-        navigate(`/canvas/${newCanvasId}`);
+        navigate(`/workflow/${newCanvasId}`);
         return true;
       } catch (err) {
         console.error('Error initializing workflow in new canvas:', err);

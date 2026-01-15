@@ -28,6 +28,7 @@ export const useGetUserSettings = () => {
     userProfile: state.userProfile,
     localSettings: state.localSettings,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
+    isLogin: state.isLogin,
   }));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

@@ -52,7 +52,7 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
   const handleEditCanvas = useCallback(
     (canvasId: string) => {
       setIsManualCollapse(false);
-      navigate(`/canvas/${canvasId}`);
+      navigate(`/workflow/${canvasId}`);
     },
     [navigate, setIsManualCollapse],
   );
@@ -79,7 +79,7 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
               <div className="text-sm leading-5 font-semibold text-refly-text-0 line-clamp-1">
                 {canvas.name || t('common.untitled')}
               </div>
-              <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+              <div className="mt-1">
                 <UsedToolsets toolsets={canvas.usedToolsets} />
               </div>
             </div>

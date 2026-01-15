@@ -1,9 +1,10 @@
-import { Suspense, useEffect, lazy } from 'react';
+import { Suspense, useEffect, lazy, useMemo } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { LightLoading } from '@refly/ui-kit';
 
-// 懒加载 AppLayout - 只在需要时加载（跳过 login 等页面）
-const AppLayout = lazy(() => import('@refly/web-core').then((m) => ({ default: m.AppLayout })));
+const AppLayout = lazy(() =>
+  import('@refly/web-core/src/components/layout').then((m) => ({ default: m.AppLayout })),
+);
 
 import { RoutesList } from './routes';
 import { InitializationSuspense } from './prepare/InitializationSuspense';
@@ -15,16 +16,20 @@ const AppContent = () => {
   const location = useLocation();
   const skipLayout = shouldSkipLayout(location.pathname);
 
-  const routes = (
-    <LazyErrorBoundary>
-      <Suspense fallback={<LightLoading />}>
-        <Routes>
-          {RoutesList.map((route) => (
-            <Route key={route.path} path={route.path} element={route.element} />
-          ))}
-        </Routes>
-      </Suspense>
-    </LazyErrorBoundary>
+  // Memoize routes to prevent unnecessary re-renders of AppLayout children
+  const routes = useMemo(
+    () => (
+      <LazyErrorBoundary>
+        <Suspense fallback={<LightLoading />}>
+          <Routes>
+            {RoutesList.map((route) => (
+              <Route key={route.path} path={route.path} element={route.element} />
+            ))}
+          </Routes>
+        </Suspense>
+      </LazyErrorBoundary>
+    ),
+    [], // Empty deps - RoutesList is static
   );
 
   // Pages that should not be wrapped in AppLayout

@@ -124,6 +124,13 @@ const createCanvasVersion = async (canvasId: string, state: CanvasState) => {
 
 const CanvasContext = createContext<CanvasContextType | null>(null);
 
+// Global refs to prevent duplicate initializations across component mount/unmount cycles
+// These persist even when the component unmounts and remounts rapidly
+const globalLastInitializedCanvasIdRef = { current: null as string | null };
+const globalLastInitTimeRef = { current: 0 };
+const globalLastCleanupTimeRef = { current: 0 }; // Track when cleanup happened
+const MIN_REINIT_INTERVAL_MS = 500; // Minimum 500ms between initializations
+
 const getInternalState = ({
   nodes,
   edges,
@@ -783,10 +790,35 @@ export const CanvasProvider = ({
   useEffect(() => {
     if (readonly) return;
 
+    const now = Date.now();
+    const timeSinceLastInit = now - globalLastInitTimeRef.current;
+    const timeSinceLastCleanup = now - globalLastCleanupTimeRef.current;
+    const lastCanvasId = globalLastInitializedCanvasIdRef.current;
+
+    // Skip initialization if:
+    // 1. Same canvasId AND no cleanup happened recently AND time is too soon
+    const isSameCanvas = lastCanvasId === canvasId;
+    const hadRecentCleanup = timeSinceLastCleanup < MIN_REINIT_INTERVAL_MS;
+    const isTooSoon = timeSinceLastInit < MIN_REINIT_INTERVAL_MS;
+
+    // If we had a recent cleanup for the same canvas, we need to reinitialize even if it's "too soon"
+    // because the cleanup cleared the canvas data
+    if (isSameCanvas && isTooSoon && !hadRecentCleanup) {
+      // Return WITHOUT a cleanup function - we don't want to clean up
+      return;
+    }
+
+    globalLastInitializedCanvasIdRef.current = canvasId;
+    globalLastInitTimeRef.current = now;
     setSyncFailureCount(0);
     initialFetchCanvasState(canvasId);
 
     return () => {
+      globalLastCleanupTimeRef.current = Date.now(); // Record cleanup time
+
+      // DON'T reset the global ref here - let it persist to prevent rapid re-initializations
+      // It will be reset by the next different canvasId or after MIN_REINIT_INTERVAL_MS
+
       // Cancel pending debounced calls to prevent race conditions
       initialFetchCanvasState.cancel();
       syncCanvasDataDebounced.flush();

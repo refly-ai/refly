@@ -114,7 +114,7 @@ const WorkflowList = memo(() => {
   const handleEdit = useCallback(
     (canvas: Canvas) => {
       setIsManualCollapse(false);
-      navigate(`/canvas/${canvas.canvasId}`);
+      navigate(`/workflow/${canvas.canvasId}`);
     },
     [navigate, setIsManualCollapse],
   );

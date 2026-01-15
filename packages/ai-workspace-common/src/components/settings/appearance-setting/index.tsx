@@ -96,19 +96,17 @@ export const AppearanceSetting = () => {
   const userStore = useUserStore();
   const isLoggedIn = !!userStore?.userProfile?.uid;
 
-  const { themeMode, setThemeMode, initTheme, setLoggedIn } = useThemeStoreShallow((state) => ({
+  const { themeMode, setThemeMode, setLoggedIn } = useThemeStoreShallow((state) => ({
     themeMode: state.themeMode,
     setThemeMode: state.setThemeMode,
-    initTheme: state.initTheme,
     setLoggedIn: state.setLoggedIn,
   }));
 
   useEffect(() => {
     // Update login status in theme store
+    // Note: setLoggedIn already calls initTheme internally, so we don't need to call it again
     setLoggedIn(isLoggedIn);
-    // Initialize theme based on current login status
-    initTheme();
-  }, [initTheme, isLoggedIn, setLoggedIn]);
+  }, [isLoggedIn, setLoggedIn]);
 
   const handleThemeModeChange = useCallback(
     (theme: ThemeMode) => {
