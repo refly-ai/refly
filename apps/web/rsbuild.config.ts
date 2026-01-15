@@ -215,15 +215,14 @@ export default defineConfig({
   performance: {
     removeConsole: isProduction,
 
-    // Chunk splitting strategy to reduce bundle size
+    // 使用 Rsbuild 推荐的策略 + 强制分离大型库
     chunkSplit: {
-      strategy: 'custom',
+      strategy: 'split-by-experience', // 官方推荐的默认策略
 
       override: {
         cacheGroups: {
           // 禁用默认的 cache groups
           default: false,
-          defaultVendors: false,
 
           // 只提取 React 核心库（所有页面都需要）
           react: {

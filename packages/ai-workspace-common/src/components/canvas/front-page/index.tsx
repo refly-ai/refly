@@ -1,13 +1,11 @@
-import React, { memo, useCallback, useEffect, useState, useMemo } from 'react';
+import React, { memo, useCallback, useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
-import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
 import { TemplateCardSkeleton } from '@refly-packages/ai-workspace-common/components/canvas-template/template-card-skeleton';
 import { canvasTemplateEnabled } from '@refly/ui-kit';
 import { useSiderStoreShallow } from '@refly/stores';
 import cn from 'classnames';
-import { RecentWorkflow } from './recent-workflow';
 import { useListCanvasTemplateCategories } from '@refly-packages/ai-workspace-common/queries/queries';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
@@ -20,7 +18,27 @@ import { SiderMenuSettingList } from '../../sider-menu-setting-list';
 import { Subscription, Account } from 'refly-icons';
 import { Avatar, Divider } from 'antd';
 import defaultAvatar from '../../../assets/refly_default_avatar_v2.webp';
-import { PureCopilot } from '@refly-packages/ai-workspace-common/components/pure-copilot';
+
+// ========== 懒加载大型组件 ==========
+// 优势：这些组件不会在首屏立即需要，懒加载可以显著减少初始 bundle 大小
+// PureCopilot - AI Copilot 组件（~300-500KB）
+const PureCopilot = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/pure-copilot').then((m) => ({
+    default: m.PureCopilot,
+  })),
+);
+
+// TemplateList - 模板列表组件（~200-300KB）- 只在 canvasTemplateEnabled 时才加载
+const TemplateList = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/canvas-template/template-list').then(
+    (m) => ({ default: m.TemplateList }),
+  ),
+);
+
+// RecentWorkflow - 最近的工作流（可能引入 Canvas 组件）
+const RecentWorkflow = lazy(() =>
+  import('./recent-workflow').then((m) => ({ default: m.RecentWorkflow })),
+);
 
 // User avatar component for displaying user profile
 const UserAvatar = React.memo(
@@ -393,11 +411,13 @@ export const FrontPage = memo(() => {
         <SettingItem showName={false} avatarAlign={'right'} />
       </div>
 
-      <PureCopilot
-        source="frontPage"
-        classnames={cn('mt-[120px] relative z-10', isCopilotFloating && 'z-20')}
-        onFloatingChange={setIsCopilotFloating}
-      />
+      <Suspense fallback={<div className="mt-[120px] h-20" />}>
+        <PureCopilot
+          source="frontPage"
+          classnames={cn('mt-[120px] relative z-10', isCopilotFloating && 'z-20')}
+          onFloatingChange={setIsCopilotFloating}
+        />
+      </Suspense>
 
       <AnimatePresence>
         {isCopilotFloating && (
@@ -416,7 +436,15 @@ export const FrontPage = memo(() => {
         title={t('frontPage.recentWorkflows.title')}
         handleTitleClick={handleViewAllWorkflows}
       >
-        <RecentWorkflow canvases={canvases} />
+        <Suspense
+          fallback={
+            <div className="h-40 flex items-center justify-center text-refly-text-2">
+              {t('common.loading')}
+            </div>
+          }
+        >
+          <RecentWorkflow canvases={canvases} />
+        </Suspense>
       </ModuleContainer>
 
       {canvasTemplateEnabled && (
@@ -478,13 +506,23 @@ export const FrontPage = memo(() => {
               </div>
             ) : templateCategoryId && templateCategoryId.trim().length > 0 ? (
               // Show template list when category is selected and valid
-              <TemplateList
-                source="front-page"
-                scrollableTargetId="front-page-scrollable-div"
-                language={currentLanguage}
-                categoryId={templateCategoryId}
-                className="!bg-transparent !px-0 !pt-0"
-              />
+              <Suspense
+                fallback={
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <TemplateCardSkeleton key={index} />
+                    ))}
+                  </div>
+                }
+              >
+                <TemplateList
+                  source="front-page"
+                  scrollableTargetId="front-page-scrollable-div"
+                  language={currentLanguage}
+                  categoryId={templateCategoryId}
+                  className="!bg-transparent !px-0 !pt-0"
+                />
+              </Suspense>
             ) : (
               // Fallback: show loading skeleton if categoryId is invalid
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

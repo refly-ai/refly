@@ -11,7 +11,8 @@
     "update:tokens": "node token/generate-css.cjs",
     "copy-env": "ncp .env.example .env",
     "copy-env:develop": "ncp .env.example .env",
-    "generate:sitemap": "node scripts/generate-sitemap.js"
+    "generate:sitemap": "node scripts/generate-sitemap.js",
+    "analyze:chunks": "node scripts/analyze-chunks.cjs"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
@@ -53,6 +54,8 @@
     "refly-icons": "^1.1.5"
   },
   "devDependencies": {
+    "@babel/parser": "^7.26.3",
+    "@babel/traverse": "^7.26.5",
     "@rsbuild/core": "^1.4.6",
     "@rsbuild/plugin-react": "^1.3.4",
     "@rsbuild/plugin-sass": "^1.3.3",
