@@ -11,14 +11,12 @@ export interface InitializationSuspenseProps {
 }
 
 export function InitializationSuspense({ children }: InitializationSuspenseProps) {
-  // 优化：如果页面是从预渲染激活的，直接显示内容，不显示 loading
-  // document.prerendering 在预渲染期间为 true，激活后为 false
-  const wasPrerendered = useRef(
-    typeof document !== 'undefined' && 'prerendering' in document && !document.prerendering,
+  // 检测页面是否正在被预渲染
+  // 正在预渲染时跳过初始化，激活时快速初始化
+  const [isInitialized, setIsInitialized] = useState(false);
+  const isPrerendering = useRef(
+    typeof document !== 'undefined' && 'prerendering' in document && document.prerendering === true,
   );
-
-  // 如果是从预渲染激活的，直接设为已初始化
-  const [isInitialized, setIsInitialized] = useState(wasPrerendered.current);
   const updateTheme = useConfigProviderStore((state) => state.updateTheme);
 
   const { isDarkMode, initTheme } = useThemeStoreShallow((state) => ({
@@ -27,23 +25,20 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
   }));
 
   const init = async () => {
-    setRuntime('web');
-    initTheme();
-
-    // 如果是预渲染激活的页面，在后台静默初始化，不阻塞渲染
-    if (wasPrerendered.current) {
-      console.log('[Init] Page was prerendered, initializing in background');
-      // 后台初始化，不阻塞
-      Promise.all([setupI18n(), setupSentry(), setupStatsig()]).catch((e) => {
-        console.error('Failed to initialize:', e);
-      });
+    // 如果正在预渲染，暂停初始化
+    if (isPrerendering.current) {
+      console.log('[Init] Page is being prerendered, deferring initialization');
       return;
     }
 
-    // 正常首次加载，需要等待 i18n 初始化
+    setRuntime('web');
+    initTheme();
+
+    // 正常加载或预渲染激活后的初始化
     try {
       await setupI18n();
       setIsInitialized(true);
+      console.log('[Init] Initialization complete');
     } catch (error) {
       console.error('Failed to initialize i18n:', error);
       // 即使失败也允许继续，避免永久 loading
@@ -58,6 +53,16 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
 
   useEffect(() => {
     init();
+
+    // 监听预渲染激活事件
+    if ('prerendering' in document) {
+      const handleActivation = () => {
+        console.log('[Init] Page activated from prerender');
+        init();
+      };
+      document.addEventListener('prerenderingchange', handleActivation);
+      return () => document.removeEventListener('prerenderingchange', handleActivation);
+    }
   }, []);
 
   useEffect(() => {
