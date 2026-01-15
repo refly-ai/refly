@@ -9,8 +9,13 @@ import { useMemo } from 'react';
 interface UserInputCollapseProps {
   workflowVariables: WorkflowVariable[];
   canvasId?: string;
-  readonly?: boolean;
+  /**
+   * Keys of panels to expand by default.
+   */
   defaultActiveKey?: string[];
+  /**
+   * Whether to render tools dependency checker section.
+   */
   showToolsDependency?: boolean;
   workflowApp?: any;
   ToolsDependencyChecker?: React.ComponentType<{ canvasData: any }>;
@@ -19,7 +24,6 @@ interface UserInputCollapseProps {
 export const UserInputCollapse = ({
   workflowVariables,
   canvasId,
-  readonly = false,
   defaultActiveKey = ['input'],
   showToolsDependency = false,
   workflowApp,
@@ -138,32 +142,38 @@ export const UserInputCollapse = ({
               children: (
                 <div className="p-2">
                   <div className="space-y-5">
-                    <VariableTypeSection
-                      canvasId={canvasId ?? ''}
-                      type="string"
-                      variables={groupedVariables.string}
-                      totalVariables={workflowVariables}
-                      readonly={readonly}
-                      highlightedVariableId={undefined}
-                    />
+                    {groupedVariables.string.length > 0 && (
+                      <VariableTypeSection
+                        canvasId={canvasId ?? ''}
+                        type="string"
+                        variables={groupedVariables.string}
+                        totalVariables={workflowVariables}
+                        readonly={true}
+                        highlightedVariableId={undefined}
+                      />
+                    )}
 
-                    <VariableTypeSection
-                      canvasId={canvasId ?? ''}
-                      type="resource"
-                      variables={groupedVariables.resource}
-                      totalVariables={workflowVariables}
-                      readonly={readonly}
-                      highlightedVariableId={undefined}
-                    />
+                    {groupedVariables.resource.length > 0 && (
+                      <VariableTypeSection
+                        canvasId={canvasId ?? ''}
+                        type="resource"
+                        variables={groupedVariables.resource}
+                        totalVariables={workflowVariables}
+                        readonly={true}
+                        highlightedVariableId={undefined}
+                      />
+                    )}
 
-                    <VariableTypeSection
-                      canvasId={canvasId ?? ''}
-                      type="option"
-                      variables={groupedVariables.option}
-                      totalVariables={workflowVariables}
-                      readonly={readonly}
-                      highlightedVariableId={undefined}
-                    />
+                    {groupedVariables.option.length > 0 && (
+                      <VariableTypeSection
+                        canvasId={canvasId ?? ''}
+                        type="option"
+                        variables={groupedVariables.option}
+                        totalVariables={workflowVariables}
+                        readonly={true}
+                        highlightedVariableId={undefined}
+                      />
+                    )}
 
                     {/* Tools Dependency Form */}
                     {showToolsDependency && workflowApp?.canvasData && ToolsDependencyChecker && (

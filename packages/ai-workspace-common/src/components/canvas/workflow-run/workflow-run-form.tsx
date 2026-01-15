@@ -438,7 +438,6 @@ export const WorkflowRunForm = ({
               <UserInputCollapse
                 workflowVariables={workflowVariables}
                 canvasId={canvasId}
-                readonly={false}
                 defaultActiveKey={['input']}
                 showToolsDependency={true}
                 workflowApp={workflowApp}

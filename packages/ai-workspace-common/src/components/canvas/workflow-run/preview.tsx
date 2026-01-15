@@ -562,14 +562,13 @@ const WorkflowRunPreviewComponent = () => {
                 )}
               </div>
             ) : (
-              // Normal mode: Show agent collapse components
+              // Normal mode: Show user input + agent collapse components
               <div className="flex flex-col gap-2 px-4">
                 {/* User Input Section */}
                 {workflowVariables && workflowVariables.length > 0 && (
                   <UserInputCollapse
                     workflowVariables={workflowVariables}
                     canvasId={canvasId}
-                    readonly={readonly}
                     defaultActiveKey={[]}
                     showToolsDependency={false}
                   />
