@@ -12,7 +12,7 @@ import { useAuthStoreShallow } from '@refly/stores';
 import { serverOrigin } from '@refly/ui-kit';
 import { useGetAuthConfig } from '@refly-packages/ai-workspace-common/queries';
 import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
-import { logEvent } from '@refly/telemetry-web';
+import { logEvent, updateUserProperties } from '@refly/telemetry-web';
 import { getAndClearSignupEntryPoint } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
 
@@ -113,11 +113,14 @@ export const LoginContent: React.FC<LoginContentProps> = ({
 
         if (data.data?.skipVerification) {
           const entryPoint = getAndClearSignupEntryPoint();
+          const signupSource = from === 'cli_auth' ? 'refly_cli' : source;
           logEvent('signup_success', null, {
+            ...(signupSource ? { source: signupSource } : {}),
             ...(source ? { source } : {}),
             ...(entryPoint ? { entry_point: entryPoint } : {}),
             user_type: 'free',
           });
+          updateUserProperties({ is_cli_signup: 'true' });
           authStore.reset();
           const returnUrl = searchParams.get('returnUrl');
           const redirectUrl = returnUrl
@@ -143,7 +146,8 @@ export const LoginContent: React.FC<LoginContentProps> = ({
       authStore.setLoginInProgress(false);
 
       if (data?.success) {
-        logEvent('login_success', null, source ? { source } : undefined);
+        const loginSource = from === 'cli_auth' ? 'refly_cli' : source;
+        logEvent('login_success', null, loginSource ? { source: loginSource } : undefined);
         onSuccess?.();
         authStore.reset();
         const returnUrl = searchParams.get('returnUrl');
