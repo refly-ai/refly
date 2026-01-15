@@ -116,11 +116,12 @@ export const LoginContent: React.FC<LoginContentProps> = ({
           const signupSource = from === 'cli_auth' ? 'refly_cli' : source;
           logEvent('signup_success', null, {
             ...(signupSource ? { source: signupSource } : {}),
-            ...(source ? { source } : {}),
             ...(entryPoint ? { entry_point: entryPoint } : {}),
             user_type: 'free',
           });
-          updateUserProperties({ is_cli_signup: 'true' });
+          if (from === 'cli_auth') {
+            updateUserProperties({ is_cli_signup: 'true' });
+          }
           authStore.reset();
           const returnUrl = searchParams.get('returnUrl');
           const redirectUrl = returnUrl
