@@ -211,7 +211,7 @@ export class WorkflowService {
       });
     }
 
-    // Check if it's the first execution today to trigger voucher
+    // Check if there is no successful execution today to trigger voucher
     try {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -219,6 +219,7 @@ export class WorkflowService {
       const executionsToday = await this.prisma.workflowExecution.count({
         where: {
           uid: user.uid,
+          status: 'finish',
           createdAt: {
             gte: todayStart,
           },
