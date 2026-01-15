@@ -106,11 +106,11 @@ function generateSummary(changedNodes: NodeStatus[]): string {
 
 export const workflowStatusCommand = new Command('status')
   .description('Get detailed workflow execution status')
-  .argument('<runId>', 'Workflow run ID')
+  .argument('<workflowId>', 'Workflow ID')
   .option('--watch', 'Watch mode: continuously poll until completion')
   .option('--interval <ms>', 'Poll interval in ms (default: 2000)', '2000')
   .option('--full', 'In watch mode, output full status every time (not just changes)')
-  .action(async (runId, options) => {
+  .action(async (workflowId, options) => {
     try {
       // Validate poll interval
       const pollInterval = Number.parseInt(options.interval, 10);
@@ -121,7 +121,7 @@ export const workflowStatusCommand = new Command('status')
       }
 
       const fetchStatus = async () => {
-        return await apiRequest<WorkflowRunStatus>(`/v1/cli/workflow/run/${runId}`);
+        return await apiRequest<WorkflowRunStatus>(`/v1/cli/workflow/${workflowId}/status`);
       };
 
       if (options.watch) {

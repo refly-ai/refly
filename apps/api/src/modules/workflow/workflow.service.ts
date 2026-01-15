@@ -161,8 +161,27 @@ export class WorkflowService {
       scheduleId?: string;
       scheduleRecordId?: string;
       triggerType?: string;
+      skipActiveCheck?: boolean; // Skip active execution check (for internal use)
     },
   ): Promise<string> {
+    // Check if there's already an active execution for this workflow
+    // Rule: Only one execution can run at a time per workflow
+    if (!options?.skipActiveCheck) {
+      const activeExecution = await this.prisma.workflowExecution.findFirst({
+        where: {
+          canvasId,
+          uid: user.uid,
+          status: { in: ['init', 'executing'] },
+        },
+      });
+
+      if (activeExecution) {
+        throw new Error(
+          `Workflow already has an active execution (${activeExecution.executionId}). Please wait for it to complete or abort it first.`,
+        );
+      }
+    }
+
     let canvasData: RawCanvasData;
     const {
       sourceCanvasId = canvasId,
@@ -1048,6 +1067,82 @@ export class WorkflowService {
 
     // Return workflow execution detail
     return { ...workflowExecution, nodeExecutions: sortedNodeExecutions };
+  }
+
+  /**
+   * Get the currently active (running) workflow execution for a canvas
+   * @param user - The user requesting the execution
+   * @param canvasId - The canvas ID
+   * @returns Promise<WorkflowExecution | null> - The active execution or null
+   */
+  async getActiveExecution(user: User, canvasId: string) {
+    const activeExecution = await this.prisma.workflowExecution.findFirst({
+      where: {
+        canvasId,
+        uid: user.uid,
+        status: { in: ['init', 'executing'] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!activeExecution) {
+      return null;
+    }
+
+    // Get node executions
+    const nodeExecutions = await this.prisma.workflowNodeExecution.findMany({
+      where: { executionId: activeExecution.executionId },
+    });
+
+    const sortedNodeExecutions = sortNodeExecutionsByExecutionOrder(nodeExecutions);
+    return { ...activeExecution, nodeExecutions: sortedNodeExecutions };
+  }
+
+  /**
+   * Get the active execution if exists, otherwise get the latest execution
+   * This is used for CLI commands that need the "current" execution by workflowId
+   * @param user - The user requesting the execution
+   * @param canvasId - The canvas ID (workflowId)
+   * @returns Promise<WorkflowExecution> - The active or latest execution
+   */
+  async getActiveOrLatestExecution(user: User, canvasId: string) {
+    // First try to get active execution
+    const activeExecution = await this.getActiveExecution(user, canvasId);
+    if (activeExecution) {
+      return activeExecution;
+    }
+
+    // Fall back to latest execution
+    return this.getLatestWorkflowDetail(user, canvasId);
+  }
+
+  /**
+   * List all workflow executions for a canvas (run history)
+   * @param user - The user requesting the list
+   * @param canvasId - The canvas ID (workflowId)
+   * @param options - Pagination options
+   * @returns Promise<WorkflowExecution[]> - List of executions
+   */
+  async listWorkflowExecutions(
+    user: User,
+    canvasId: string,
+    options?: { limit?: number; offset?: number },
+  ) {
+    const { limit = 20, offset = 0 } = options ?? {};
+
+    const executions = await this.prisma.workflowExecution.findMany({
+      where: { canvasId, uid: user.uid },
+      orderBy: { createdAt: 'desc' },
+      skip: offset,
+      take: limit,
+    });
+
+    // Get total count
+    const total = await this.prisma.workflowExecution.count({
+      where: { canvasId, uid: user.uid },
+    });
+
+    return { executions, total };
   }
 
   /**
