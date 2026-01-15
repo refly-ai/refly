@@ -68,7 +68,13 @@ export const useGetUserSettings = () => {
       // - Do NOT navigate if we are already on public pages (including /login)
       // - Do NOT navigate when we are already at root '/', because AppLayout will handle root redirection
       if (!isPublicPage && currentPath !== '/' && currentPath !== '/login') {
-        navigate(`/?${searchParams.toString()}`); // Extension should navigate to home
+        // Preserve current path and query params as returnUrl for post-login redirect
+        const currentSearch = window?.location?.search ?? '';
+        const fullPath = currentPath + currentSearch;
+        const returnUrl = encodeURIComponent(fullPath);
+        navigate(
+          `/login?returnUrl=${returnUrl}${searchParams.toString() ? `&${searchParams.toString()}` : ''}`,
+        );
       }
 
       return;

@@ -1,7 +1,7 @@
 import { Button, Input, Form } from 'antd';
 import { Link } from '@refly-packages/ai-workspace-common/utils/router';
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { useSearchParams, Navigate } from 'react-router-dom';
+import { useSearchParams, Navigate, useNavigate } from 'react-router-dom';
 
 import { OAuthButton } from '../../components/login-modal/oauth-button';
 import { VerificationModal } from '../../components/verification-modal';
@@ -25,7 +25,6 @@ import {
   getAndClearSignupEntryPoint,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
-import { authChannel } from '@refly-packages/ai-workspace-common/utils/auth-channel';
 
 interface FormValues {
   email: string;
@@ -35,6 +34,7 @@ interface FormValues {
 const LoginPage = () => {
   const [form] = Form.useForm<FormValues>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [isEmailFormExpanded, setIsEmailFormExpanded] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { getLoginStatus } = useIsLogin();
@@ -69,6 +69,48 @@ const LoginPage = () => {
     return () => observer.disconnect();
   }, []);
 
+  // Preload returnUrl page resources when idle
+  useEffect(() => {
+    const returnUrl = searchParams.get('returnUrl');
+    if (!returnUrl) return;
+
+    const decodedUrl = decodeURIComponent(returnUrl);
+    // Extract just the pathname for preloading (remove query params)
+    const urlPath = decodedUrl.split('?')[0];
+
+    // Use requestIdleCallback to prefetch during idle time
+    const idleCallback = window.requestIdleCallback || ((cb) => setTimeout(cb, 1));
+
+    const idleId = idleCallback(() => {
+      // Add prefetch link for the return URL
+      const prefetchLink = document.createElement('link');
+      prefetchLink.rel = 'prefetch';
+      prefetchLink.href = urlPath;
+      document.head.appendChild(prefetchLink);
+
+      // Also try to prerender using Speculation Rules API (modern browsers)
+      const speculationScript = document.createElement('script');
+      speculationScript.type = 'speculationrules';
+      speculationScript.textContent = JSON.stringify({
+        prefetch: [
+          {
+            source: 'list',
+            urls: [urlPath],
+          },
+        ],
+      });
+      document.head.appendChild(speculationScript);
+
+      console.log(`[Login] Preloading resources for: ${urlPath}`);
+    });
+
+    return () => {
+      if (window.cancelIdleCallback) {
+        window.cancelIdleCallback(idleId);
+      }
+    };
+  }, [searchParams]);
+
   const authStore = useAuthStoreShallow((state) => ({
     loginInProgress: state.loginInProgress,
     loginProvider: state.loginProvider,
@@ -86,6 +128,36 @@ const LoginPage = () => {
   const isPublicAccessPage = usePublicAccessPage();
 
   const { t } = useTranslation();
+
+  /**
+   * Smart redirect function - uses SPA navigation for internal routes, hard redirect for external URLs
+   * @param url - The URL to redirect to (can be relative path or full URL)
+   */
+  const handleRedirect = useCallback(
+    (url: string) => {
+      try {
+        // Check if it's an external URL
+        const urlObj = new URL(url, window.location.origin);
+        const isExternal =
+          urlObj.origin !== window.location.origin ||
+          url.startsWith('http://') ||
+          url.startsWith('https://');
+
+        if (isExternal) {
+          // External URL - use hard redirect
+          window.location.replace(url);
+        } else {
+          // Internal route - use SPA navigation (no page refresh!)
+          const pathWithSearch = url.startsWith('/') ? url : `/${url}`;
+          navigate(pathWithSearch, { replace: true });
+        }
+      } catch (_error) {
+        // If URL parsing fails, assume it's an internal path
+        navigate(url.startsWith('/') ? url : `/${url}`, { replace: true });
+      }
+    },
+    [navigate],
+  );
 
   const { data: authConfig, isLoading: isAuthConfigLoading } = useGetAuthConfig();
 
@@ -177,12 +249,8 @@ const LoginPage = () => {
             user_type: 'free',
           });
 
-          // Broadcast login event to other tabs
-          const uid = data.data?.uid;
-          if (uid) {
-            console.log('[Signup] Broadcasting login event to other tabs');
-            authChannel.broadcast({ type: 'login', uid });
-          }
+          // Note: No need to broadcast login event here
+          // useGetUserSettings will detect the new login state and broadcast automatically
 
           authStore.reset();
           const returnUrl = searchParams.get('returnUrl');
@@ -191,7 +259,8 @@ const LoginPage = () => {
             : isPublicAccessPage
               ? window.location.href
               : '/workspace';
-          window.location.replace(redirectUrl);
+          // Use smart redirect - SPA navigation for internal routes
+          handleRedirect(redirectUrl);
         } else {
           authStore.setEmail(values.email);
           authStore.setSessionId(data.data?.sessionId ?? null);
@@ -212,22 +281,18 @@ const LoginPage = () => {
         // Log login success event with source
         logEvent('login_success', null, source ? { source } : undefined);
 
-        // Broadcast login event to other tabs
-        // This will NOT cause infinite loop because we're about to navigate away
-        const uid = data.data?.uid;
-        if (uid) {
-          console.log('[Login] Broadcasting login event to other tabs');
-          authChannel.broadcast({ type: 'login', uid });
-        }
+        // Note: No need to broadcast login event here
+        // useGetUserSettings will detect the new login state and broadcast automatically
 
         // Note: No need to close modal as this is a standalone login page
         authStore.reset();
         const returnUrl = searchParams.get('returnUrl');
         const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/workspace';
-        window.location.replace(redirectUrl);
+        // Use smart redirect - SPA navigation for internal routes
+        handleRedirect(redirectUrl);
       }
     }
-  }, [authStore, form, isPublicAccessPage, searchParams]);
+  }, [authStore, form, isPublicAccessPage, searchParams, handleRedirect]);
 
   const handleResetPassword = useCallback(() => {
     authStore.setResetPasswordModalOpen(true);
