@@ -46,22 +46,24 @@ export default defineConfig({
             clientsClaim: true,
             skipWaiting: true,
 
-            // Code Caching Strategy - 简化版，只缓存核心代码
-            // 策略：让页面专用的代码通过 runtime cache 按需缓存
+            // Code Caching Strategy
+            // 预缓存核心代码，其他通过 runtime cache + prefetch 按需加载
             include: [
               /\.html$/,
               /\.css$/,
-              // 只预缓存核心 chunks
-              /index\.[a-f0-9]+\.js$/, // Main app bundle
+              // 核心 chunks（所有页面都需要）
               /lib-react\.[a-f0-9]+\.js$/, // React library
               /lib-router\.[a-f0-9]+\.js$/, // Router library
+              // 主入口 bundles - 通过文件名模式匹配
+              /index~[0-9]+\.[a-f0-9]+\.js$/, // 所有 index 异步 chunks
             ],
 
-            // 所有其他 chunks（包括 vendor）通过 runtime cache 按需缓存
+            // 排除不需要缓存的文件
             exclude: [
               /\.map$/, // Source maps
               /asset-manifest\.json$/,
               /\.LICENSE\.txt$/,
+              /workbox-.*\.js$/, // Workbox runtime
             ],
 
             // Runtime caching strategies
@@ -73,8 +75,8 @@ export default defineConfig({
                 options: {
                   cacheName: 'js-runtime',
                   expiration: {
-                    maxEntries: 50,
-                    maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+                    maxEntries: 60, // 增加到 60 以容纳更多 chunks
+                    maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days - 延长缓存时间
                   },
                   cacheableResponse: {
                     statuses: [0, 200],

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Layout, Modal } from 'antd';
 import { useMatch, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ErrorBoundary } from '@sentry/react';
+import { LazyErrorBoundary } from './LazyErrorBoundary';
 import { SiderLayout } from '@refly-packages/ai-workspace-common/components/sider/layout';
 import { useBindCommands } from '@refly-packages/ai-workspace-common/hooks/use-bind-commands';
 import { useUserStoreShallow } from '@refly/stores';
@@ -279,7 +279,7 @@ export const AppLayout = (props: AppLayoutProps) => {
   }
 
   return (
-    <ErrorBoundary>
+    <LazyErrorBoundary>
       <EnvironmentBanner />
       <Layout
         className="app-layout main w-full overflow-x-hidden"
@@ -454,6 +454,6 @@ export const AppLayout = (props: AppLayoutProps) => {
           }
         />
       </Layout>
-    </ErrorBoundary>
+    </LazyErrorBoundary>
   );
 };
