@@ -25,6 +25,7 @@ import {
   getAndClearSignupEntryPoint,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
+import { authChannel } from '@refly-packages/ai-workspace-common/utils/auth-channel';
 
 interface FormValues {
   email: string;
@@ -175,6 +176,14 @@ const LoginPage = () => {
             ...(entryPoint ? { entry_point: entryPoint } : {}),
             user_type: 'free',
           });
+
+          // Broadcast login event to other tabs
+          const uid = data.data?.uid;
+          if (uid) {
+            console.log('[Signup] Broadcasting login event to other tabs');
+            authChannel.broadcast({ type: 'login', uid });
+          }
+
           authStore.reset();
           const returnUrl = searchParams.get('returnUrl');
           const redirectUrl = returnUrl
@@ -202,6 +211,15 @@ const LoginPage = () => {
       if (data?.success) {
         // Log login success event with source
         logEvent('login_success', null, source ? { source } : undefined);
+
+        // Broadcast login event to other tabs
+        // This will NOT cause infinite loop because we're about to navigate away
+        const uid = data.data?.uid;
+        if (uid) {
+          console.log('[Login] Broadcasting login event to other tabs');
+          authChannel.broadcast({ type: 'login', uid });
+        }
+
         // Note: No need to close modal as this is a standalone login page
         authStore.reset();
         const returnUrl = searchParams.get('returnUrl');

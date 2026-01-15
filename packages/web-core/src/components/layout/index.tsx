@@ -240,8 +240,10 @@ export const AppLayout = (props: AppLayoutProps) => {
           break;
 
         case 'login':
-          // Another tab logged in, reload page
-          window.location.reload();
+          // Another tab logged in
+          // 不要自动刷新，因为会导致无限循环
+          // useGetUserSettings 会自动更新 userStore，UI 会自动响应
+          console.log('[Auth] Login event received from another tab, uid:', event.uid);
           break;
       }
     });
