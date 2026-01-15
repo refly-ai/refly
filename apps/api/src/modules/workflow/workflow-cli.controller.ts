@@ -98,6 +98,9 @@ interface CliNodeInput {
   type: string;
   input?: Record<string, unknown>;
   dependsOn?: string[];
+  // Top-level shorthand fields (for simplified CLI/agent usage)
+  query?: string;
+  toolsetKeys?: string[];
   // Also support proper CanvasNode fields if passed
   data?: {
     title?: string;
@@ -106,6 +109,7 @@ interface CliNodeInput {
     // Common fields that should go into metadata
     query?: string;
     selectedToolsets?: unknown[];
+    toolsetKeys?: string[];
     modelInfo?: Record<string, unknown>;
     [key: string]: unknown;
   };
@@ -153,11 +157,24 @@ function transformCliNodesToCanvasNodes(
     const inputMetadata = cliNode.input || {};
 
     // Extract fields from data that should be in metadata
-    // These fields are commonly passed directly in data but belong in metadata
+    // Supports both top-level shorthand and nested data fields
+    // Priority: top-level > data.field > data.metadata.field
     const dataFieldsForMetadata: Record<string, unknown> = {};
-    if (cliNode.data?.query !== undefined) {
+
+    // query: top-level > data.query
+    if (cliNode.query !== undefined) {
+      dataFieldsForMetadata.query = cliNode.query;
+    } else if (cliNode.data?.query !== undefined) {
       dataFieldsForMetadata.query = cliNode.data.query;
     }
+
+    // toolsetKeys: top-level > data.toolsetKeys > data.metadata.toolsetKeys
+    if (cliNode.toolsetKeys !== undefined) {
+      dataFieldsForMetadata.toolsetKeys = cliNode.toolsetKeys;
+    } else if (cliNode.data?.toolsetKeys !== undefined) {
+      dataFieldsForMetadata.toolsetKeys = cliNode.data.toolsetKeys;
+    }
+
     if (cliNode.data?.selectedToolsets !== undefined) {
       dataFieldsForMetadata.selectedToolsets = cliNode.data.selectedToolsets;
     }
@@ -487,16 +504,43 @@ export class WorkflowCliController {
 
         // Build connection map using original node IDs
         // This maps target node IDs to their source node filters based on edges
-        const connectToMap = body.spec.edges
-          ? buildConnectToFilters(
-              transformedNodes.map((n) => ({
-                ...n,
-                id: n.id!,
-                position: { x: 0, y: 0 },
-              })) as CanvasNode[],
-              body.spec.edges,
-            )
-          : new Map();
+        let connectToMap: Map<string, CanvasNodeFilter[]> = new Map();
+
+        if (body.spec.edges) {
+          // Use explicit edges if provided
+          connectToMap = buildConnectToFilters(
+            transformedNodes.map((n) => ({
+              ...n,
+              id: n.id!,
+              position: { x: 0, y: 0 },
+            })) as CanvasNode[],
+            body.spec.edges,
+          );
+        } else {
+          // Build connections from dependsOn fields in simplified format
+          const cliNodes = body.spec.nodes as unknown as CliNodeInput[];
+          for (const cliNode of cliNodes) {
+            if (cliNode.dependsOn?.length) {
+              // Find entityIds for the source nodes
+              const connectTo: CanvasNodeFilter[] = cliNode.dependsOn
+                .map((sourceId) => {
+                  const sourceNode = transformedNodes.find((n) => n.id === sourceId);
+                  if (sourceNode?.data?.entityId) {
+                    return {
+                      type: sourceNode.type as CanvasNodeType,
+                      entityId: sourceNode.data.entityId,
+                    };
+                  }
+                  return null;
+                })
+                .filter((x): x is CanvasNodeFilter => x !== null);
+
+              if (connectTo.length > 0) {
+                connectToMap.set(cliNode.id, connectTo);
+              }
+            }
+          }
+        }
 
         // Build nodes to add with their connection info
         // If connectTo is empty for a node, prepareAddNode will auto-connect to start node
