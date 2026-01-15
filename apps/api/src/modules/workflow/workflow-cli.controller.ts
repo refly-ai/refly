@@ -103,9 +103,27 @@ interface CliNodeInput {
     title?: string;
     entityId?: string;
     metadata?: Record<string, unknown>;
+    // Common fields that should go into metadata
+    query?: string;
+    selectedToolsets?: unknown[];
+    modelInfo?: Record<string, unknown>;
     [key: string]: unknown;
   };
   position?: { x: number; y: number };
+}
+
+/**
+ * Map CLI node types to canvas node types.
+ * CLI uses simplified type names (e.g., 'agent') that need to be mapped
+ * to proper canvas node types (e.g., 'skillResponse').
+ */
+function mapCliNodeTypeToCanvasType(cliType: string): CanvasNodeType {
+  const typeMapping: Record<string, CanvasNodeType> = {
+    agent: 'skillResponse',
+    skill: 'skillResponse',
+    // Add more mappings as needed
+  };
+  return (typeMapping[cliType] || cliType) as CanvasNodeType;
 }
 
 /**
@@ -115,15 +133,17 @@ interface CliNodeInput {
  *
  * This function ensures nodes have:
  * - Unique node ID (generated if missing)
- * - Valid canvas node type
+ * - Valid canvas node type (maps 'agent' -> 'skillResponse')
  * - Proper data structure with entityId and metadata
+ * - Fields like query, selectedToolsets, modelInfo are moved to metadata
  * - Default position (prepareAddNode will calculate actual position)
  */
 function transformCliNodesToCanvasNodes(
   cliNodes: CliNodeInput[],
 ): Array<Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>> {
   return cliNodes.map((cliNode) => {
-    const nodeType = cliNode.type as CanvasNodeType;
+    // Map CLI type to canvas type (e.g., 'agent' -> 'skillResponse')
+    const nodeType = mapCliNodeTypeToCanvasType(cliNode.type);
 
     // Generate entityId based on node type
     const entityId = cliNode.data?.entityId || genNodeEntityId(nodeType);
@@ -132,11 +152,25 @@ function transformCliNodesToCanvasNodes(
     const defaultMetadata = getDefaultMetadataForNodeType(nodeType);
     const inputMetadata = cliNode.input || {};
 
-    // Merge CLI input into metadata (for configuration like query, modelInfo, etc.)
+    // Extract fields from data that should be in metadata
+    // These fields are commonly passed directly in data but belong in metadata
+    const dataFieldsForMetadata: Record<string, unknown> = {};
+    if (cliNode.data?.query !== undefined) {
+      dataFieldsForMetadata.query = cliNode.data.query;
+    }
+    if (cliNode.data?.selectedToolsets !== undefined) {
+      dataFieldsForMetadata.selectedToolsets = cliNode.data.selectedToolsets;
+    }
+    if (cliNode.data?.modelInfo !== undefined) {
+      dataFieldsForMetadata.modelInfo = cliNode.data.modelInfo;
+    }
+
+    // Merge all metadata sources (priority: dataFieldsForMetadata > input > data.metadata > default)
     const metadata = {
       ...defaultMetadata,
       ...cliNode.data?.metadata,
       ...inputMetadata,
+      ...dataFieldsForMetadata,
       sizeMode: 'compact' as const,
     };
 
@@ -159,6 +193,8 @@ function transformCliNodesToCanvasNodes(
  */
 function getDefaultMetadataForNodeType(nodeType: CanvasNodeType): Record<string, unknown> {
   switch (nodeType) {
+    case 'start':
+      return {};
     case 'skillResponse':
       return {
         status: 'init',
@@ -197,6 +233,8 @@ function getDefaultMetadataForNodeType(nodeType: CanvasNodeType): Record<string,
  */
 function getDefaultTitleForNodeType(nodeType: CanvasNodeType): string {
   switch (nodeType) {
+    case 'start':
+      return 'Start';
     case 'skillResponse':
       return 'Agent';
     case 'document':
@@ -348,9 +386,13 @@ export class WorkflowCliController {
    * Create a new workflow
    * POST /v1/cli/workflow
    *
-   * Note: Canvas is created with default nodes (start node + skillResponse node)
-   * to ensure proper canvas initialization. The start node is displayed as "User Input"
-   * in the UI and is required for the canvas to function correctly.
+   * When spec.nodes is provided:
+   * - If nodes include a start node, skip default nodes and use user's nodes directly
+   * - If nodes don't include a start node, create only a start node (not start + skillResponse)
+   *   and connect user's first node to it
+   *
+   * When spec.nodes is not provided:
+   * - Create default nodes (start + skillResponse) for normal canvas behavior
    */
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -361,24 +403,58 @@ export class WorkflowCliController {
     this.logger.log(`Creating workflow for user ${user.uid}: ${body.name}`);
 
     try {
-      // Create canvas with workflow data
-      // Do NOT skip default nodes - the start node (User Input) is required for canvas to work properly
       const canvasId = genCanvasID();
-      const canvas = await this.canvasService.createCanvas(user, {
-        canvasId,
-        title: body.name,
-        variables: body.variables,
-      });
 
-      // If spec contains nodes/edges, add them to the canvas (in addition to default nodes)
-      if (body.spec?.nodes?.length) {
+      // Check if user provides nodes in spec
+      const hasUserNodes = body.spec?.nodes?.length > 0;
+      // Check if user provides a start node
+      const userProvidesStartNode = body.spec?.nodes?.some((n: any) => n.type === 'start');
+
+      // Determine whether to skip default nodes:
+      // - If user provides nodes with a start node: skip all default nodes
+      // - If user provides nodes without a start node: we'll create only a start node below
+      // - If no user nodes: use default behavior (start + skillResponse)
+      const skipDefaultNodes = hasUserNodes;
+
+      const canvas = await this.canvasService.createCanvas(
+        user,
+        {
+          canvasId,
+          title: body.name,
+          variables: body.variables,
+        },
+        { skipDefaultNodes },
+      );
+
+      // If spec contains nodes/edges, add them to the canvas
+      if (hasUserNodes) {
         // Transform CLI nodes to proper canvas node format
-        // CLI nodes may use simplified schema with `input` field instead of proper `data` structure
         const transformedNodes = transformCliNodesToCanvasNodes(
           body.spec.nodes as unknown as CliNodeInput[],
         );
 
-        // Build connection map using original node IDs (before transformation)
+        // If user doesn't provide a start node, create one and connect first node to it
+        if (!userProvidesStartNode) {
+          // Create a start node first
+          const startNode = {
+            node: {
+              id: genNodeID(),
+              type: 'start' as const,
+              data: {
+                title: 'Start',
+                entityId: genNodeEntityId('start'),
+              },
+            },
+            connectTo: [],
+          };
+
+          await this.canvasSyncService.addNodesToCanvas(user, canvasId, [startNode], {
+            autoLayout: true,
+          });
+        }
+
+        // Build connection map using original node IDs
+        // This maps target node IDs to their source node filters based on edges
         const connectToMap = body.spec.edges
           ? buildConnectToFilters(
               transformedNodes.map((n) => ({
@@ -390,6 +466,8 @@ export class WorkflowCliController {
             )
           : new Map();
 
+        // Build nodes to add with their connection info
+        // If connectTo is empty for a node, prepareAddNode will auto-connect to start node
         const nodesToAdd = transformedNodes.map((node) => ({
           node,
           connectTo: connectToMap.get(node.id!) || [],
