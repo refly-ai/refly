@@ -1,5 +1,5 @@
 import { setupI18n, setupSentry } from '@refly/web-core';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { LightLoading, ReflyConfigProvider, useConfigProviderStore } from '@refly/ui-kit';
 import { ConfigProvider, theme } from 'antd';
 import { useThemeStoreShallow } from '@refly/stores';
@@ -11,7 +11,14 @@ export interface InitializationSuspenseProps {
 }
 
 export function InitializationSuspense({ children }: InitializationSuspenseProps) {
-  const [isInitialized, setIsInitialized] = useState(false);
+  // 优化：如果页面是从预渲染激活的，直接显示内容，不显示 loading
+  // document.prerendering 在预渲染期间为 true，激活后为 false
+  const wasPrerendered = useRef(
+    typeof document !== 'undefined' && 'prerendering' in document && !document.prerendering,
+  );
+
+  // 如果是从预渲染激活的，直接设为已初始化
+  const [isInitialized, setIsInitialized] = useState(wasPrerendered.current);
   const updateTheme = useConfigProviderStore((state) => state.updateTheme);
 
   const { isDarkMode, initTheme } = useThemeStoreShallow((state) => ({
@@ -23,9 +30,25 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
     setRuntime('web');
     initTheme();
 
-    // support multiple initialization
-    await setupI18n();
-    setIsInitialized(true);
+    // 如果是预渲染激活的页面，在后台静默初始化，不阻塞渲染
+    if (wasPrerendered.current) {
+      console.log('[Init] Page was prerendered, initializing in background');
+      // 后台初始化，不阻塞
+      Promise.all([setupI18n(), setupSentry(), setupStatsig()]).catch((e) => {
+        console.error('Failed to initialize:', e);
+      });
+      return;
+    }
+
+    // 正常首次加载，需要等待 i18n 初始化
+    try {
+      await setupI18n();
+      setIsInitialized(true);
+    } catch (error) {
+      console.error('Failed to initialize i18n:', error);
+      // 即使失败也允许继续，避免永久 loading
+      setIsInitialized(true);
+    }
 
     // non-blocking initialization
     Promise.all([setupSentry(), setupStatsig()]).catch((e) => {
