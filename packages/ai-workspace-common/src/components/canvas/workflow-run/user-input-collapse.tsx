@@ -63,7 +63,7 @@ export const UserInputCollapse = ({
           margin-top: 2px !important;
         }
         .workflow-run-collapse .ant-collapse-item:first-child .ant-collapse-header {
-          border-radius: 6px 6px 0px 0px !important;
+          border-radius: 6px 6px 6px 6px !important;
         }
         .workflow-run-collapse .ant-collapse-header {
           background-color: #F9EDD2 !important;
