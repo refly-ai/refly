@@ -21,6 +21,7 @@ import { logEvent } from '@refly/telemetry-web';
 import {
   useGetCreditUsageByCanvasId,
   useGetWorkflowDetail,
+  useListWorkflowExecutions,
   useGetCreditUsageByResultId,
   useListDriveFiles,
 } from '@refly-packages/ai-workspace-common/queries/queries';
@@ -113,14 +114,33 @@ const WorkflowRunPreviewComponent = () => {
 
   const queryClient = useQueryClient();
 
-  // Get workflow detail to sync node execution status
-  const { data: workflowDetail } = useGetWorkflowDetail(
+  // Fetch latest workflow execution for this canvas when executionId is not available (e.g. after refresh)
+  const { data: latestExecutionList } = useListWorkflowExecutions(
     {
-      query: { executionId: executionId ?? '' },
+      query: {
+        canvasId: canvasId ?? '',
+        order: 'creationDesc',
+        pageSize: 1,
+      },
     },
     undefined,
     {
-      enabled: !!executionId && showWorkflowRun,
+      enabled: !executionId && !!canvasId && showWorkflowRun,
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  const latestExecutionId = latestExecutionList?.data?.[0]?.executionId;
+  const effectiveExecutionId = executionId ?? latestExecutionId ?? '';
+
+  // Get workflow detail to sync node execution status
+  const { data: workflowDetail } = useGetWorkflowDetail(
+    {
+      query: { executionId: effectiveExecutionId },
+    },
+    undefined,
+    {
+      enabled: !!effectiveExecutionId && showWorkflowRun,
       refetchOnWindowFocus: false,
     },
   );
@@ -213,7 +233,8 @@ const WorkflowRunPreviewComponent = () => {
           // Reset running state on failure
           setIsRunning(false);
         } else {
-          setShowWorkflowRun(false);
+          // Switch to Runlog tab after successful run
+          setActiveTab('lastRun');
         }
       } catch (error) {
         console.error('Error initializing workflow:', error);
@@ -221,7 +242,7 @@ const WorkflowRunPreviewComponent = () => {
         setIsRunning(false);
       }
     },
-    [canvasId, initializeWorkflow, setVariables, setShowWorkflowRun],
+    [canvasId, initializeWorkflow, setVariables],
   );
 
   // Helper function to format execution time duration
@@ -234,16 +255,12 @@ const WorkflowRunPreviewComponent = () => {
       const end =
         typeof endTime === 'number' ? endTime : endTime ? new Date(endTime).getTime() : Date.now();
       const ms = Math.max(0, end - start);
-      if (ms < 1000) {
-        return `${ms}ms`;
-      }
-      const seconds = ms / 1000;
-      if (seconds < 60) {
-        return `${seconds.toFixed(1)}s`;
-      }
-      const minutes = Math.floor(seconds / 60);
-      const remainSec = Math.floor(seconds % 60);
-      return `${minutes}m ${remainSec}s`;
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const remainSec = totalSeconds % 60;
+      const mm = String(minutes).padStart(2, '0');
+      const ss = String(remainSec).padStart(2, '0');
+      return `${mm}:${ss}`;
     },
     [],
   );
@@ -814,7 +831,7 @@ const WorkflowRunPreviewComponent = () => {
                                       <div
                                         className="flex items-center"
                                         style={{
-                                          gap: '6px',
+                                          gap: '2px',
                                           fontFamily: 'Inter',
                                           fontWeight: 400,
                                           fontSize: '10px',
