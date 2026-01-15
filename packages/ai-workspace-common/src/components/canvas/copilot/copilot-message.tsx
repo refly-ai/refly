@@ -1,7 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, Button, Divider } from 'antd';
-import { useListTools } from '@refly-packages/ai-workspace-common/queries';
-import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import { useSearchParams } from 'react-router-dom';
+import { useListTools, useUpdateSettings } from '@refly-packages/ai-workspace-common/queries';
+import { useCanvasResourcesPanelStoreShallow, useUserStoreShallow } from '@refly/stores';
 import { ActionResult, WorkflowPlanRecord } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -19,6 +20,7 @@ import { logEvent } from '@refly/telemetry-web';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasStoreShallow } from '@refly/stores';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
 interface CopilotMessageProps {
   result: ActionResult;
@@ -27,6 +29,9 @@ interface CopilotMessageProps {
 }
 
 export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessageProps) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const source = useMemo(() => searchParams.get('source'), [searchParams]);
+
   const { resultId, input, steps, status } = result;
   const query = useMemo(() => input?.query ?? '', [input]);
 
@@ -69,6 +74,12 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
 
   const { updateTitle } = useUpdateCanvasTitle(canvasId, canvasTitle ?? '');
 
+  const { userProfile, setUserProfile } = useUserStoreShallow((state) => ({
+    userProfile: state.userProfile,
+    setUserProfile: state.setUserProfile,
+  }));
+  const { mutate: updateUserSettings } = useUpdateSettings();
+
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
 
@@ -98,8 +109,11 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     const startNodes = currentNodes.filter((node) => node.type === 'start');
     const skillNodes = currentNodes.filter((node) => node.type === 'skillResponse');
 
+    const isOnboarding = Boolean(userProfile?.preferences?.needOnboarding);
+
     // Check if canvas only contains one start node or one start node + one skill node with empty contentPreview
     const shouldSkipConfirmation =
+      isOnboarding ||
       (currentNodes.length === 1 && startNodes.length === 1) ||
       (currentNodes.length === 2 &&
         startNodes.length === 1 &&
@@ -171,9 +185,33 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       }
     }
 
+    if (isOnboarding) {
+      setUserProfile({
+        ...userProfile,
+        preferences: {
+          ...userProfile?.preferences,
+          needOnboarding: false,
+        },
+      });
+      updateUserSettings({
+        body: {
+          preferences: {
+            ...userProfile?.preferences,
+            needOnboarding: false,
+          },
+        },
+      });
+    }
+
     setTimeout(() => {
       onLayout('LR');
-    }, 200);
+    }, 1000);
+
+    if (source === 'onboarding') {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('source');
+      setSearchParams(newParams);
+    }
   }, [
     canvasId,
     workflowPlan,
@@ -191,6 +229,10 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     canvasTitle,
     query,
     updateTitle,
+    source,
+    searchParams,
+    setSearchParams,
+    userProfile,
   ]);
 
   const handleRetry = useCallback(() => {
@@ -228,8 +270,17 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       {/* AI response - left aligned */}
       <MessageList result={result} stepStatus="finish" handleRetry={handleRetry} />
       {workflowPlan && (
-        <div className="mt-1">
-          <Button type="primary" onClick={handleApprove} loading={loading}>
+        <div className="w-full mt-1 flex justify-end">
+          <Button
+            type="primary"
+            className="!bg-refly-text-0 hover:!bg-refly-text-0 hover:opacity-80 text-refly-bg-canvas hover:!text-refly-bg-canvas font-bold"
+            onClick={handleApprove}
+            loading={
+              loading
+                ? { icon: <Spin size="small" className="!text-refly-bg-canvas" /> }
+                : undefined
+            }
+          >
             {t('copilot.sessionDetail.approve')}
           </Button>
         </div>

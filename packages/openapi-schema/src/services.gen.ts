@@ -357,6 +357,9 @@ import type {
   AbortWorkflowData,
   AbortWorkflowError,
   AbortWorkflowResponse,
+  ListWorkflowExecutionsData,
+  ListWorkflowExecutionsError,
+  ListWorkflowExecutionsResponse2,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
   GetWorkflowDetailResponse2,
@@ -556,6 +559,8 @@ import type {
   ConvertData,
   ConvertError,
   ConvertResponse2,
+  GetPromptSuggestionsError,
+  GetPromptSuggestionsResponse2,
   GetAvailableVouchersError,
   GetAvailableVouchersResponse2,
   ListUserVouchersError,
@@ -2488,6 +2493,23 @@ export const abortWorkflow = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * List workflow executions
+ * List all workflow executions
+ */
+export const listWorkflowExecutions = <ThrowOnError extends boolean = false>(
+  options?: Options<ListWorkflowExecutionsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListWorkflowExecutionsResponse2,
+    ListWorkflowExecutionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow/list',
+  });
+};
+
+/**
  * Get workflow detail
  * Get detail for a workflow execution
  */
@@ -3633,6 +3655,23 @@ export const convert = <ThrowOnError extends boolean = false>(
       ...options?.headers,
     },
     url: '/misc/convert',
+  });
+};
+
+/**
+ * Get prompt suggestions
+ * Get prompt suggestions for a given user
+ */
+export const getPromptSuggestions = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetPromptSuggestionsResponse2,
+    GetPromptSuggestionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/misc/promptSuggestions',
   });
 };
 

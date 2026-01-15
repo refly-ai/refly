@@ -2116,6 +2116,23 @@ model FormSubmission {
   @@map("form_submissions")
 }
 
+model PromptSuggestion {
+  /// Primary key
+  pk        BigInt    @id @default(autoincrement())
+  /// Prompt (JSON map, key is language code, value is prompt)
+  prompt    String    @map("prompt")
+  /// Metadata (JSON)
+  metadata  String    @map("metadata")
+  /// Create timestamp
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@map("prompt_suggestions")
+}
+
 /// Voucher/discount code for template publishing rewards
 model Voucher {
   /// Primary key
@@ -2128,7 +2145,7 @@ model Voucher {
   discountPercent   Int       @map("discount_percent")
   /// Voucher status: unused, used, expired, invalid
   status            String    @default("unused") @map("status")
-  /// Voucher source: template_publish, invitation_claim
+  /// Voucher source: template_publish, invitation_claim, run_workflow
   source            String    @map("source")
   /// Source entity ID (template_id for publish, invitation_id for claim)
   sourceId          String?   @map("source_id")
@@ -2498,6 +2515,8 @@ model CliDeviceSession {
   cliVersion   String   @map("cli_version")
   /// Hostname where CLI is running
   host         String   @map("host")
+  /// 6-digit verification code (set when initialized)
+  userCode     String?  @map("user_code")
   /// Client IP address for additional security
   clientIp     String?  @map("client_ip")
   /// Session status: pending, authorized, cancelled, expired

@@ -21,6 +21,7 @@ interface CanvasResourcesPanelState {
   showWorkflowRun: boolean;
   toolsDependencyOpen: Record<string, boolean>;
   toolsDependencyHighlight: Record<string, boolean>;
+  hasFirstSuccessExecutionToday: boolean;
 
   // Methods
   setCurrentResource: (resource: CanvasNode | null) => void;
@@ -36,6 +37,7 @@ interface CanvasResourcesPanelState {
   setToolsDependencyOpen: (canvasId: string, open: boolean) => void;
   setToolsDependencyHighlight: (canvasId: string, highlight: boolean) => void;
   resetToolsDependency: (canvasId: string) => void;
+  setHasFirstSuccessExecutionToday: (has: boolean) => void;
   resetState: () => void;
 }
 
@@ -46,6 +48,7 @@ const defaultState = {
   wideScreenVisible: false,
   searchKeyword: '',
   showWorkflowRun: false,
+  hasFirstSuccessExecutionToday: false,
 };
 
 export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
@@ -102,6 +105,8 @@ export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
             toolsDependencyHighlight: restHighlight,
           };
         }),
+      setHasFirstSuccessExecutionToday: (has: boolean) =>
+        set({ hasFirstSuccessExecutionToday: has }),
       resetState: () => set(defaultState),
     }),
     {

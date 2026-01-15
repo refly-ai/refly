@@ -3,11 +3,16 @@ import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { delay } from '@refly-packages/ai-workspace-common/utils/delay';
 import { genCanvasID } from '@refly/utils';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { useWorkflowExecutionPolling } from './use-workflow-execution-polling';
-import { useCanvasStoreShallow } from '@refly/stores';
-import { InitializeWorkflowRequest } from '@refly/openapi-schema';
+import {
+  useCanvasResourcesPanelStoreShallow,
+  useCanvasStoreShallow,
+  useSubscriptionStoreShallow,
+} from '@refly/stores';
+import { GetWorkflowDetailResponse, InitializeWorkflowRequest } from '@refly/openapi-schema';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { guessModelProviderError, ModelUsageQuotaExceeded } from '@refly/errors';
 
@@ -20,6 +25,12 @@ export const useInitializeWorkflow = (
   const [loading, setLoading] = useState(false);
   const [newModeLoading, setNewModeLoading] = useState(false);
   const { getCanvasList } = useHandleSiderData();
+  const { showEarnedVoucherPopup } = useSubscriptionStoreShallow((state) => ({
+    showEarnedVoucherPopup: state.showEarnedVoucherPopup,
+  }));
+  const { setHasFirstSuccessExecutionToday } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setHasFirstSuccessExecutionToday: state.setHasFirstSuccessExecutionToday,
+  }));
 
   const { executionId, setCanvasExecutionId } = useCanvasStoreShallow((state) => ({
     executionId: state.canvasExecutionId[canvasId],
@@ -29,11 +40,45 @@ export const useInitializeWorkflow = (
 
   // Memoize callbacks to avoid recreating them on every render
   const handleComplete = useMemo(
-    () => (status: string, data: any) => {
+    () => async (status: string, data: GetWorkflowDetailResponse) => {
       if (status === 'finish') {
         message.success(
           t('canvas.workflow.run.completed') || 'Workflow execution completed successfully',
         );
+        setHasFirstSuccessExecutionToday(true);
+
+        // If current workflow execution is the first successful execution today, trigger voucher popup
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const { data: listWorkflowExecutionsData, error } =
+          await getClient().listWorkflowExecutions({
+            query: {
+              after: startOfToday.getTime(),
+              order: 'creationAsc',
+              status: 'finish',
+              pageSize: 1,
+            },
+          });
+        const firstSuccessExecutionToday = listWorkflowExecutionsData?.data?.[0];
+        if (!error && firstSuccessExecutionToday?.executionId === data?.data?.executionId) {
+          // Poll for available vouchers if not immediately found
+          // This handles cases where the voucher might be generated with a slight delay after execution completion
+          for (let attempts = 0; attempts < 10; attempts++) {
+            const { data: voucherData } = await getClient().getAvailableVouchers();
+            const bestVoucher = voucherData?.data?.bestVoucher;
+            if (bestVoucher) {
+              showEarnedVoucherPopup({
+                voucher: bestVoucher,
+                score: bestVoucher.llmScore,
+                triggerLimitReached: false,
+              });
+              break;
+            }
+            if (attempts < 9) {
+              await delay(2000);
+            }
+          }
+        }
       } else if (status === 'failed') {
         // Check if this is a credit insufficient error
         const nodeExecutions = data?.data?.nodeExecutions || [];
@@ -51,7 +96,7 @@ export const useInitializeWorkflow = (
         }
       }
     },
-    [t],
+    [t, canvasId, showEarnedVoucherPopup],
   );
 
   const handleError = useMemo(

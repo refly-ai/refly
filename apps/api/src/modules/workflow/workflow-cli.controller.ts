@@ -20,13 +20,16 @@ import {
   CanvasEdge,
   WorkflowVariable,
   CanvasNodeType,
+  InvokeSkillRequest,
 } from '@refly/openapi-schema';
 import { CanvasNodeFilter } from '@refly/canvas-common';
 import { CanvasService } from '../canvas/canvas.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { WorkflowService } from './workflow.service';
 import { ToolService } from '../tool/tool.service';
-import { genCanvasID, genNodeID, genNodeEntityId } from '@refly/utils';
+import { SkillService } from '../skill/skill.service';
+import { RedisService } from '../common/redis.service';
+import { genCanvasID, genNodeID, genNodeEntityId, genActionResultID } from '@refly/utils';
 import {
   CreateWorkflowRequest,
   CreateWorkflowResponse,
@@ -695,6 +698,25 @@ export class WorkflowCliController {
                 const existingToolsets = (metadata?.selectedToolsets as unknown[]) || [];
                 metadata.selectedToolsets = [...existingToolsets, ...resolved];
                 metadata.toolsetKeys = undefined;
+
+                // Insert toolset mentions into query for proper frontend display
+                if (resolved.length > 0) {
+                  const toolsetMentions = resolved
+                    .map((t) => `@{type=toolset,id=${t.id},name=${t.name}}`)
+                    .join(' ');
+                  const existingQuery = (metadata.query as string) || '';
+                  // Add toolset mentions if not already present
+                  if (!existingQuery.includes('@{type=toolset')) {
+                    // If no query exists, just set the toolset mentions
+                    // If query exists, prepend toolset mentions with "使用" prefix
+                    metadata.query = existingQuery
+                      ? `使用 ${toolsetMentions} ${existingQuery}`
+                      : toolsetMentions;
+                    this.logger.log(
+                      `[PATCH] Updated query with toolset mentions: ${metadata.query}`,
+                    );
+                  }
+                }
               }
             }
           }
@@ -1111,6 +1133,7 @@ export class WorkflowCliController {
         const nodeDetail: NodeExecutionDetail = {
           nodeId: nodeExec.nodeId,
           nodeExecutionId: nodeExec.nodeExecutionId,
+          resultId: nodeExec.entityId ?? undefined, // entityId is used as resultId for action results
           nodeType: nodeExec.nodeType,
           status: nodeExec.status,
           title: nodeExec.title ?? '',
@@ -1340,7 +1363,12 @@ export class WorkflowCliController {
 export class NodeCliController {
   private readonly logger = new Logger(NodeCliController.name);
 
-  constructor(private readonly toolService: ToolService) {}
+  constructor(
+    private readonly toolService: ToolService,
+    private readonly skillService: SkillService,
+    private readonly redis: RedisService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   /**
    * List available node types
@@ -1429,9 +1457,8 @@ export class NodeCliController {
    * Run a single node (for debugging/testing)
    * POST /v1/cli/node/run
    *
-   * TODO: Implement full node execution.
-   * This requires invokeSkillForCli wrapper and executeToolNode helper
-   * to properly execute nodes outside of a workflow context.
+   * Supports skillResponse node type with concurrency control.
+   * Uses Redis distributed lock to prevent concurrent execution of the same node.
    */
   @UseGuards(JwtAuthGuard)
   @Post('run')
@@ -1439,20 +1466,217 @@ export class NodeCliController {
     @LoginedUser() user: User,
     @Body() body: RunNodeRequest,
   ): Promise<{ success: boolean; data: RunNodeResponse }> {
+    const startTime = Date.now();
     this.logger.log(`Running node type ${body.nodeType} for user ${user.uid}`);
 
-    // TODO: Implement single node execution
-    // This requires:
-    // 1. invokeSkillForCli wrapper for skillResponse nodes
-    // 2. executeToolNode helper for tool nodes
-    // 3. Proper context setup and result handling
+    // Validate node type
+    if (!body.nodeType) {
+      throwCliError(
+        CLI_ERROR_CODES.VALIDATION_ERROR,
+        'nodeType is required',
+        'Specify a node type like "skillResponse" or "tool:execute_code"',
+      );
+    }
 
-    // For now, return a placeholder response indicating the feature is pending
-    throwCliError(
-      CLI_ERROR_CODES.VALIDATION_ERROR,
-      'Single node execution not yet implemented',
-      'Use workflow execution instead: refly workflow run <id>',
-      HttpStatus.NOT_IMPLEMENTED,
-    );
+    // Currently only support skillResponse node type
+    if (body.nodeType !== 'skillResponse') {
+      throwCliError(
+        CLI_ERROR_CODES.NODE_TYPE_NOT_FOUND,
+        `Node type "${body.nodeType}" execution not supported`,
+        'Currently only "skillResponse" node type is supported for single node execution',
+        HttpStatus.NOT_IMPLEMENTED,
+      );
+    }
+
+    // Generate a unique result ID for this execution
+    const resultId = genActionResultID();
+
+    // Build lock key based on user and result ID to prevent concurrent executions
+    // of the same node by the same user
+    const lockKey = `cli:node:run:${user.uid}:${resultId}`;
+
+    let releaseLock: (() => Promise<boolean>) | null = null;
+
+    try {
+      // Try to acquire lock with retry logic
+      releaseLock = await this.redis.waitLock(lockKey, {
+        maxRetries: 3,
+        initialDelay: 100,
+        ttlSeconds: 300, // 5 minute TTL for long-running executions
+        noThrow: true,
+      });
+
+      if (!releaseLock) {
+        throwCliError(
+          CLI_ERROR_CODES.EXECUTION_FAILED,
+          'Node execution is already in progress',
+          'Wait for the current execution to complete before starting a new one',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      // Build InvokeSkillRequest from CLI input
+      const skillRequest: InvokeSkillRequest = {
+        resultId,
+        input: {
+          query: body.input?.query ?? '',
+        },
+        target: {},
+        context: {
+          resources: (body.input?.context as any[]) ?? [],
+        },
+        modelItemId: body.config?.modelItemId as string,
+        mode: 'node_agent',
+      };
+
+      // Extract toolset keys/ids from query (e.g., @{type=toolset,id=perplexity,name=Perplexity})
+      const toolsetKeysFromQuery = this.extractToolsetIdsFromQuery(body.input?.query ?? '');
+
+      // Add toolsets if specified in config or extracted from query
+      const configToolsets = (body.config?.selectedToolsets as any[]) ?? [];
+      const configToolsetKeys = configToolsets.map((t) => t.toolsetId || t.id || t.key || t);
+      const allToolsetKeys = [...new Set([...toolsetKeysFromQuery, ...configToolsetKeys])];
+
+      if (allToolsetKeys.length > 0) {
+        // Use ToolService to resolve toolset keys to proper GenericToolset objects
+        const { resolved, errors } = await this.toolService.resolveToolsetsByKeys(
+          user,
+          allToolsetKeys,
+        );
+
+        if (errors.length > 0) {
+          this.logger.warn(
+            `Some toolsets could not be resolved: ${errors.map((e) => `${e.key}: ${e.reason}`).join(', ')}`,
+          );
+        }
+
+        if (resolved.length > 0) {
+          skillRequest.toolsets = resolved;
+          this.logger.log(
+            `Resolved ${resolved.length} toolsets: ${resolved.map((t) => t.id).join(', ')}`,
+          );
+        }
+      }
+
+      this.logger.log(`Invoking skill for resultId: ${resultId}`);
+
+      // Execute the skill via sendInvokeSkillTask (queued execution)
+      const actionResult = await this.skillService.sendInvokeSkillTask(user, skillRequest);
+
+      // Poll for completion (with timeout)
+      const maxWaitTime = 120000; // 2 minutes max wait
+      const pollInterval = 1000; // 1 second poll interval
+      let elapsed = 0;
+      const finalResult = actionResult;
+
+      while (elapsed < maxWaitTime) {
+        // Check the status of the action result
+        const result = await this.prisma.actionResult.findFirst({
+          where: {
+            resultId,
+            uid: user.uid,
+          },
+          orderBy: { version: 'desc' },
+        });
+
+        if (!result) {
+          break;
+        }
+
+        if (result.status === 'finish' || result.status === 'failed') {
+          // Build final result
+          const duration = Date.now() - startTime;
+          const errors = result.errors ? JSON.parse(result.errors) : [];
+
+          return buildCliSuccessResponse({
+            nodeType: body.nodeType,
+            status: result.status === 'finish' ? 'completed' : 'failed',
+            output: {
+              resultId: result.resultId,
+              version: result.version,
+              status: result.status,
+            },
+            duration,
+            error: errors.length > 0 ? errors.join('; ') : undefined,
+          });
+        }
+
+        // Wait before next poll
+        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        elapsed += pollInterval;
+      }
+
+      // Timeout reached - return current status
+      const duration = Date.now() - startTime;
+      return buildCliSuccessResponse({
+        nodeType: body.nodeType,
+        status: 'completed',
+        output: {
+          resultId: finalResult.resultId,
+          message: 'Execution started but did not complete within timeout',
+          hint: `Use "refly node result ${finalResult.resultId}" to check the result`,
+        },
+        duration,
+      });
+    } catch (error) {
+      // If it's already an HttpException, rethrow it
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      this.logger.error(`Failed to run node: ${(error as Error).message}`, (error as Error).stack);
+      throwCliError(
+        CLI_ERROR_CODES.EXECUTION_FAILED,
+        `Failed to execute node: ${(error as Error).message}`,
+        'Check the node configuration and try again',
+      );
+    } finally {
+      // Always release the lock
+      if (releaseLock) {
+        try {
+          await releaseLock();
+        } catch (lockError) {
+          this.logger.warn(`Failed to release lock: ${lockError}`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Extract toolset IDs from a query string containing @{type=toolset,...} mentions
+   * @param query - The query string to parse
+   * @returns Array of toolset IDs found in the query
+   */
+  private extractToolsetIdsFromQuery(query: string): string[] {
+    if (!query) return [];
+
+    const mentionRegex = /@\{([^}]+)\}/g;
+    const matches = query.match(mentionRegex);
+    if (!matches) return [];
+
+    const toolsetIds: string[] = [];
+
+    for (const match of matches) {
+      const paramsStr = match.match(/@\{([^}]+)\}/)?.[1];
+      if (!paramsStr) continue;
+
+      // Skip malformed mentions
+      if (paramsStr.includes('@{') || paramsStr.includes('}')) continue;
+
+      const params: Record<string, string> = {};
+      for (const param of paramsStr.split(',')) {
+        const [key, value] = param.split('=');
+        if (key && value) {
+          params[key.trim()] = value.trim();
+        }
+      }
+
+      // Only extract toolset type mentions
+      if (params.type === 'toolset' && params.id) {
+        toolsetIds.push(params.id);
+      }
+    }
+
+    return toolsetIds;
   }
 }

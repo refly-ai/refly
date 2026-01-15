@@ -10,6 +10,7 @@ interface CopilotState {
   createdCopilotSessionIds: Record<string, boolean>;
   canvasCopilotWidth: Record<string, number | null | undefined>;
   historyTemplateSessions: Record<string, CopilotSession[]>;
+  pendingPrompt: Record<string, string | null>;
 
   // method
   setCurrentSessionId: (canvasId: string, sessionId: string | null) => void;
@@ -19,6 +20,7 @@ interface CopilotState {
   setCanvasCopilotWidth: (canvasId: string, width: number) => void;
   addHistoryTemplateSession: (canvasId: string, session: CopilotSession) => void;
   removeHistoryTemplateSession: (canvasId: string, sessionId: string) => void;
+  setPendingPrompt: (canvasId: string, prompt: string | null) => void;
 }
 
 export const useCopilotStore = create<CopilotState>()(
@@ -30,6 +32,7 @@ export const useCopilotStore = create<CopilotState>()(
         createdCopilotSessionIds: {},
         canvasCopilotWidth: {},
         historyTemplateSessions: {},
+        pendingPrompt: {},
 
         setCurrentSessionId: (canvasId: string, sessionId: string | null) =>
           set((state) => ({
@@ -88,6 +91,14 @@ export const useCopilotStore = create<CopilotState>()(
                 [],
             },
           })),
+
+        setPendingPrompt: (canvasId: string, prompt: string | null) =>
+          set((state) => ({
+            pendingPrompt: {
+              ...state.pendingPrompt,
+              [canvasId]: prompt,
+            },
+          })),
       }),
       {
         name: 'copilot-storage',
@@ -95,6 +106,7 @@ export const useCopilotStore = create<CopilotState>()(
           currentSessionId: state.currentSessionId,
           canvasCopilotWidth: state.canvasCopilotWidth,
           historyTemplateSessions: state.historyTemplateSessions,
+          pendingPrompt: state.pendingPrompt,
         }),
       },
     ),

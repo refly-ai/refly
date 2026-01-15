@@ -101,6 +101,7 @@ import {
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
   getScheduleDetail,
@@ -153,6 +154,7 @@ import {
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
@@ -649,6 +651,18 @@ export const UseGetCopilotSessionDetailKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetCopilotSessionDetailKey, ...(queryKey ?? [clientOptions])];
+export type ListWorkflowExecutionsDefaultResponse = Awaited<
+  ReturnType<typeof listWorkflowExecutions>
+>['data'];
+export type ListWorkflowExecutionsQueryResult<
+  TData = ListWorkflowExecutionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListWorkflowExecutionsKey = 'ListWorkflowExecutions';
+export const UseListWorkflowExecutionsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListWorkflowExecutionsKey, ...(queryKey ?? [clientOptions])];
 export type GetWorkflowDetailDefaultResponse = Awaited<
   ReturnType<typeof getWorkflowDetail>
 >['data'];
@@ -997,6 +1011,18 @@ export const UseServeStaticKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useServeStaticKey, ...(queryKey ?? [clientOptions])];
+export type GetPromptSuggestionsDefaultResponse = Awaited<
+  ReturnType<typeof getPromptSuggestions>
+>['data'];
+export type GetPromptSuggestionsQueryResult<
+  TData = GetPromptSuggestionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetPromptSuggestionsKey = 'GetPromptSuggestions';
+export const UseGetPromptSuggestionsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useGetPromptSuggestionsKey, ...(queryKey ?? [clientOptions])];
 export type GetAvailableVouchersDefaultResponse = Awaited<
   ReturnType<typeof getAvailableVouchers>
 >['data'];

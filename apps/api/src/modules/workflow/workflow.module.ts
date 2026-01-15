@@ -4,8 +4,8 @@ import { CommonModule } from '../common/common.module';
 import { CanvasModule } from '../canvas/canvas.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { SkillModule } from '../skill/skill.module';
-import { ActionModule } from '../action/action.module';
 import { ToolModule } from '../tool/tool.module';
+import { VoucherModule } from '../voucher/voucher.module';
 import { ToolCallModule } from '../tool-call/tool-call.module';
 import { ProviderModule } from '../provider/provider.module';
 import { CopilotAutogenModule } from '../copilot-autogen/copilot-autogen.module';
@@ -28,9 +28,9 @@ import { NotificationModule } from '../notification/notification.module';
     ToolModule,
     ToolCallModule,
     SkillModule,
-    ActionModule,
     CreditModule,
     NotificationModule,
+    VoucherModule,
     ProviderModule,
     forwardRef(() => CopilotAutogenModule),
     ...(isDesktop()

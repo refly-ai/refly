@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Divider, Spin, Avatar, message } from 'antd';
+import { Button, Divider, Spin, Avatar, message, Input } from 'antd';
 import { DesktopOutlined, ExclamationCircleFilled, CheckCircleFilled } from '@ant-design/icons';
 import { FaBan } from 'react-icons/fa6';
 import { Account, Flow, CheckCircleBroken, Copy } from 'refly-icons';
@@ -17,6 +17,7 @@ import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_defa
 import ClockIcon from '@refly-packages/ai-workspace-common/assets/clock.svg';
 import './index.scss';
 import { HiOutlineLightningBolt } from 'react-icons/hi';
+import { GoShieldCheck } from 'react-icons/go';
 // ============================================================================
 // Types
 // ============================================================================
@@ -25,7 +26,6 @@ type PageState =
   | 'checking_session'
   | 'login_or_register'
   | 'authorize_confirm'
-  | 'authorizing'
   | 'authorized_cancel'
   | 'error';
 
@@ -100,7 +100,10 @@ async function fetchDeviceInit(
   }
 }
 
-async function authorizeDevice(deviceId: string): Promise<{ success: boolean; error?: string }> {
+async function authorizeDevice(
+  deviceId: string,
+  userCode: string,
+): Promise<{ success: boolean; error?: string }> {
   try {
     const response = await fetch(`${API_BASE}/device/authorize`, {
       method: 'POST',
@@ -108,7 +111,7 @@ async function authorizeDevice(deviceId: string): Promise<{ success: boolean; er
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ device_id: deviceId }),
+      body: JSON.stringify({ device_id: deviceId, user_code: userCode }),
     });
 
     if (!response.ok) {
@@ -151,42 +154,81 @@ async function cancelDevice(deviceId: string): Promise<{ success: boolean; error
 interface DeviceCardProps {
   deviceInfo: DeviceInfo | null;
   loading: boolean;
+  showVerificationCode?: boolean;
+  verificationCode?: string;
+  onVerificationCodeChange?: (code: string) => void;
+  isAuthorized?: boolean;
+  isSubmitting?: boolean;
 }
 
-const DeviceCard: React.FC<DeviceCardProps> = React.memo(({ deviceInfo, loading }) => {
-  const { t } = useTranslation();
+const DeviceCard: React.FC<DeviceCardProps> = React.memo(
+  ({
+    deviceInfo,
+    loading,
+    showVerificationCode = false,
+    verificationCode = '',
+    onVerificationCodeChange,
+    isAuthorized = false,
+    isSubmitting = false,
+  }) => {
+    const { t } = useTranslation();
 
-  if (loading) {
+    if (loading) {
+      return (
+        <div className="flex items-start gap-4 p-4 rounded-xl justify-center items-center gap-3 text-[#666]">
+          <Spin size="small" />
+          <span>{t('cliAuth.loadingDevice')}</span>
+        </div>
+      );
+    }
+
+    if (!deviceInfo) {
+      return null;
+    }
+
     return (
-      <div className="flex items-start gap-4 p-4 rounded-xl justify-center items-center gap-3 text-[#666]">
-        <Spin size="small" />
-        <span>{t('cliAuth.loadingDevice')}</span>
+      <div className="flex flex-col gap-2 px-4 py-3 rounded-xl bg-white border border-solid border-refly-tertiary-hover">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center flex-shrink-0">
+            <DesktopOutlined size={16} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-inter text-[rgba(28,31,35,0.6)] flex-shrink-0">
+                {t('cliAuth.host')}
+              </span>
+              <span className="text-xs font-inter font-medium text-[#1c1f23] leading-[18px] overflow-hidden text-ellipsis whitespace-nowrap">
+                {deviceInfo.host}
+              </span>
+            </div>
+          </div>
+        </div>
+        {showVerificationCode && (
+          <div className="flex flex-col gap-2 pt-2 border-t border-refly-tertiary-hover">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center flex-shrink-0">
+                <GoShieldCheck size={18} />
+              </div>
+              <span className="text-xs font-medium text-refly-text-0">
+                {t('cliAuth.verificationCodeLabel')}
+              </span>
+            </div>
+            <div className="flex justify-center">
+              <Input.OTP
+                length={6}
+                value={verificationCode}
+                onChange={onVerificationCodeChange}
+                disabled={isAuthorized || isSubmitting}
+                size="small"
+                className="cli-auth-otp-small"
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
-  }
-
-  if (!deviceInfo) {
-    return null;
-  }
-
-  return (
-    <div className="flex items-center gap-3 px-6 py-2 rounded-xl bg-white border border-solid border-refly-tertiary-hover">
-      <div className="flex items-center justify-center flex-shrink-0">
-        <DesktopOutlined size={20} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-inter text-[rgba(28,31,35,0.6)] flex-shrink-0">
-            {t('cliAuth.host')}
-          </span>
-          <span className="text-sm font-inter font-medium text-[#1c1f23] leading-[21px] overflow-hidden text-ellipsis whitespace-nowrap">
-            {deviceInfo.host}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-});
+  },
+);
 
 // ============================================================================
 // Main Page Component
@@ -210,6 +252,8 @@ const CliAuthPage = () => {
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [deviceLoading, setDeviceLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [verificationCode, setVerificationCode] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
   const [countdown, setCountdown] = useState(10);
@@ -359,24 +403,34 @@ const CliAuthPage = () => {
   // Handlers
   const handleAuthorize = useCallback(async () => {
     if (!deviceId) return;
+    if (!verificationCode || verificationCode.length !== 6) {
+      message.error(t('cliAuth.verificationCodePlaceholder'));
+      return;
+    }
 
-    setPageState('authorizing');
+    setIsSubmitting(true);
     try {
-      const result = await authorizeDevice(deviceId);
+      const result = await authorizeDevice(deviceId, verificationCode);
 
       if (result.success) {
         setIsAuthorized(true);
         setCountdown(10);
         setPageState('authorize_confirm');
       } else {
-        setPageState('error');
-        setErrorMessage(t('cliAuth.errors.authorizeFailed'));
+        if (result.error === 'invalid_verification_code') {
+          message.error(t('cliAuth.errors.invalidVerificationCode'));
+        } else {
+          setPageState('error');
+          setErrorMessage(t('cliAuth.errors.authorizeFailed'));
+        }
       }
     } catch {
       setPageState('error');
       setErrorMessage(t('cliAuth.errors.authorizeFailed'));
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [deviceId, t]);
+  }, [deviceId, verificationCode, t]);
 
   const handleCancel = useCallback(async () => {
     if (!deviceId) return;
@@ -413,18 +467,23 @@ const CliAuthPage = () => {
               <p className="m-0 text-base text-refly-text-0 font-semibold">
                 {t('cliAuth.permissionSummary')}
               </p>
-              <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
-                <Flow size={20} />
-                {t('cliAuth.permissionItem1')}
-              </p>
-              <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
-                <HiOutlineLightningBolt size={20} />
-                {t('cliAuth.permissionItem2')}
-              </p>
-              <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
-                <BsDatabase size={20} style={{ transform: 'scaleX(1.1)', strokeWidth: '0.3px' }} />
-                {t('cliAuth.permissionItem3')}
-              </p>
+              <div className="flex flex-col gap-3">
+                <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
+                  <Flow size={20} />
+                  {t('cliAuth.permissionItem1')}
+                </p>
+                <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
+                  <HiOutlineLightningBolt size={20} />
+                  {t('cliAuth.permissionItem2')}
+                </p>
+                <p className="m-0 text-base font-inter font-normal text-refly-text-1 flex items-center gap-2">
+                  <BsDatabase
+                    size={20}
+                    style={{ transform: 'scaleX(1.1)', strokeWidth: '0.3px' }}
+                  />
+                  {t('cliAuth.permissionItem3')}
+                </p>
+              </div>
             </div>
             <div className="cli-auth-actions flex justify-between gap-4 relative">
               {isAuthorized && (
@@ -453,12 +512,13 @@ const CliAuthPage = () => {
               <Button
                 onClick={handleCancel}
                 className="cli-auth-btn cli-auth-btn-cancel"
-                disabled={isAuthorized}
+                disabled={isAuthorized || isSubmitting}
               >
                 {t('cliAuth.cancelButton')}
               </Button>
               <Button
                 onClick={handleAuthorize}
+                loading={isSubmitting}
                 className={`cli-auth-btn cli-auth-btn-authorize flex items-center justify-center gap-2 ${
                   isAuthorized ? 'cli-auth-btn-authorized' : ''
                 }`}
@@ -475,17 +535,9 @@ const CliAuthPage = () => {
           </div>
         );
 
-      case 'authorizing':
-        return (
-          <div className="flex flex-col gap-6 items-center text-center py-6">
-            <Spin size="large" />
-            <p className="m-0 text-sm text-[#666] leading-[1.6]">{t('cliAuth.authorizing')}</p>
-          </div>
-        );
-
       case 'authorized_cancel':
         return (
-          <div className="flex flex-col items-center text-center w-full mt-8">
+          <div className="flex flex-col items-center text-center w-full mt-16">
             <div className="w-[56px] h-[56px] rounded-full bg-[#FFF4EB] flex items-center justify-center mb-4">
               <img src={ClockIcon} alt="Clock" className="w-[20px] h-[20px]" />
             </div>
@@ -551,7 +603,7 @@ const CliAuthPage = () => {
       {pageState === 'login_or_register' ? (
         <LoginCard from="cli_auth" />
       ) : (
-        <div className="w-[504px] h-[612px] bg-refly-bg-body-z0 rounded-[20px] p-6 flex flex-col shadow-lg">
+        <div className="w-[504px] h-[697px] bg-refly-bg-body-z0 rounded-[20px] p-6 flex flex-col shadow-lg">
           <div className="p-1 px-2 rounded-lg">
             <div className="flex items-start gap-2">
               <Avatar icon={<Account />} src={userProfile?.avatar || defaultAvatar} size={46} />
@@ -581,7 +633,15 @@ const CliAuthPage = () => {
           {/* Device Card - Hide when cancelled */}
           {pageState !== 'authorized_cancel' && (
             <div className="mb-6">
-              <DeviceCard deviceInfo={deviceInfo} loading={deviceLoading} />
+              <DeviceCard
+                deviceInfo={deviceInfo}
+                loading={deviceLoading}
+                showVerificationCode={pageState === 'authorize_confirm'}
+                verificationCode={verificationCode}
+                onVerificationCodeChange={setVerificationCode}
+                isAuthorized={isAuthorized}
+                isSubmitting={isSubmitting}
+              />
             </div>
           )}
 

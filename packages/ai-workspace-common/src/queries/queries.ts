@@ -102,6 +102,7 @@ import {
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
   getScheduleDetail,
@@ -154,6 +155,7 @@ import {
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
@@ -392,6 +394,7 @@ import {
   GetPilotSessionDetailError,
   GetProjectDetailData,
   GetProjectDetailError,
+  GetPromptSuggestionsError,
   GetRecordSnapshotData,
   GetRecordSnapshotError,
   GetResourceDetailData,
@@ -483,6 +486,8 @@ import {
   ListUserVouchersError,
   ListWorkflowAppsData,
   ListWorkflowAppsError,
+  ListWorkflowExecutionsData,
+  ListWorkflowExecutionsError,
   LogoutError,
   MultiLingualWebSearchData,
   MultiLingualWebSearchError,
@@ -1207,6 +1212,23 @@ export const useGetCopilotSessionDetail = <
       ) as TData,
     ...options,
   });
+export const useListWorkflowExecutions = <
+  TData = Common.ListWorkflowExecutionsDefaultResponse,
+  TError = ListWorkflowExecutionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListWorkflowExecutionsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseListWorkflowExecutionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listWorkflowExecutions({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
 export const useGetWorkflowDetail = <
   TData = Common.GetWorkflowDetailDefaultResponse,
   TError = GetWorkflowDetailError,
@@ -1694,6 +1716,23 @@ export const useServeStatic = <
     queryKey: Common.UseServeStaticKeyFn(clientOptions, queryKey),
     queryFn: () =>
       serveStatic({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetPromptSuggestions = <
+  TData = Common.GetPromptSuggestionsDefaultResponse,
+  TError = GetPromptSuggestionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetPromptSuggestionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getPromptSuggestions({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetAvailableVouchers = <

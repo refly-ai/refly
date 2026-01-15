@@ -110,6 +110,7 @@ export interface NodeExecutionStatus {
 // Extended node execution detail for run detail endpoint
 export interface NodeExecutionDetail extends NodeExecutionStatus {
   nodeExecutionId?: string;
+  resultId?: string; // entityId used as resultId for action results, can be used for abort
   query?: string;
   toolCallsCount?: number;
 }

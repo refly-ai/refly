@@ -1,5 +1,6 @@
-import { memo, useCallback, useEffect, useState, useRef } from 'react';
-
+import { memo, useCallback, useEffect, useState, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { Copilot } from '../copilot';
 
 interface CopilotContainerProps {
@@ -10,6 +11,10 @@ interface CopilotContainerProps {
 
 export const CopilotContainer = memo(
   ({ copilotWidth, setCopilotWidth, maxPanelWidth }: CopilotContainerProps) => {
+    const [searchParams] = useSearchParams();
+    const source = useMemo(() => searchParams.get('source'), [searchParams]);
+    const isOnboarding = source === 'onboarding';
+
     // Handle drag resize for Copilot panel
     const [isResizing, setIsResizing] = useState(false);
     const resizeStartXRef = useRef<number>(0);
@@ -61,20 +66,28 @@ export const CopilotContainer = memo(
       };
     }, [isResizing, handleResizeMove, handleResizeEnd]);
 
-    if (copilotWidth <= 0) {
+    if (copilotWidth <= 0 && !isOnboarding) {
       return null;
     }
 
     return (
       <>
         <div
-          className="absolute -top-[1px] left-[-1px] bottom-[-1px] bg-refly-bg-content-z2 border-solid border-[1px] border-refly-Card-Border shadow-refly-m z-[30] rounded-xl overflow-hidden"
-          style={{ width: `${copilotWidth}px` }}
+          className={cn(
+            'absolute -top-[1px] left-[-1px] bottom-[-1px] bg-refly-bg-content-z2 border-solid border-[1px] border-refly-Card-Border shadow-refly-m z-[30] rounded-xl overflow-hidden',
+            !isResizing && 'transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          )}
+          style={{ width: isOnboarding ? '100%' : `${copilotWidth}px` }}
         >
-          <Copilot copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
+          <div className="max-w-[1000px] h-full mx-auto">
+            <Copilot copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
+          </div>
         </div>
         <div
-          className="absolute top-2 bottom-2 w-2 cursor-col-resize z-[30] group"
+          className={cn(
+            'absolute top-2 bottom-2 w-2 cursor-col-resize z-[30] group transition-opacity duration-500',
+            isOnboarding ? 'opacity-0 pointer-events-none' : 'opacity-100 delay-500',
+          )}
           style={{ left: `${copilotWidth - 4}px` }}
           onMouseDown={handleResizeStart}
         >

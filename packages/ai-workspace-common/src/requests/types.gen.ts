@@ -2809,6 +2809,10 @@ export type UserPreferences = {
    */
   requireInvitationCode?: boolean;
   /**
+   * Whether this user needs onboarding
+   */
+  needOnboarding?: boolean;
+  /**
    * Web search config
    */
   webSearch?: ProviderConfig;
@@ -6318,6 +6322,25 @@ export type ConvertResponse = BaseResponse & {
   };
 };
 
+/**
+ * Prompt suggestion
+ */
+export type PromptSuggestion = {
+  /**
+   * Prompt (JSON map, key is language code, value is prompt)
+   */
+  prompt: {
+    [key: string]: string;
+  };
+};
+
+export type GetPromptSuggestionsResponse = BaseResponse & {
+  /**
+   * Prompt suggestions
+   */
+  data?: Array<PromptSuggestion>;
+};
+
 export type MediaGenerationModelCapabilities = {
   /**
    * Whether this model supports image generation
@@ -7907,6 +7930,13 @@ export type WorkflowExecution = {
    * Workflow update timestamp
    */
   updatedAt?: string;
+};
+
+export type ListWorkflowExecutionsResponse = BaseResponse & {
+  /**
+   * List of workflow executions
+   */
+  data?: Array<WorkflowExecution>;
 };
 
 export type WorkflowTask = {
@@ -9874,7 +9904,7 @@ export type VoucherStatus = 'unused' | 'used' | 'expired' | 'invalid';
 /**
  * Voucher source
  */
-export type VoucherSource = 'template_publish' | 'invitation_claim';
+export type VoucherSource = 'template_publish' | 'invitation_claim' | 'run_workflow';
 
 /**
  * Invitation status
@@ -11570,6 +11600,39 @@ export type AbortWorkflowResponse = BaseResponse;
 
 export type AbortWorkflowError = unknown;
 
+export type ListWorkflowExecutionsData = {
+  query?: {
+    /**
+     * Creation time after filter (unix timestamp in milliseconds)
+     */
+    after?: number;
+    /**
+     * Canvas ID
+     */
+    canvasId?: string;
+    /**
+     * List order
+     */
+    order?: ListOrder;
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+    /**
+     * Execution status
+     */
+    status?: WorkflowExecutionStatus;
+  };
+};
+
+export type ListWorkflowExecutionsResponse2 = ListWorkflowExecutionsResponse;
+
+export type ListWorkflowExecutionsError = unknown;
+
 export type GetWorkflowDetailData = {
   query: {
     /**
@@ -12254,6 +12317,10 @@ export type ConvertData = {
 export type ConvertResponse2 = ConvertResponse;
 
 export type ConvertError = unknown;
+
+export type GetPromptSuggestionsResponse2 = GetPromptSuggestionsResponse;
+
+export type GetPromptSuggestionsError = unknown;
 
 export type GetAvailableVouchersResponse2 = GetAvailableVouchersResponse;
 

@@ -81,7 +81,7 @@ function MentionNodeViewBase(props: NodeViewProps) {
     return [];
   }, [source, variableId, initialLabel]);
 
-  const latestVariables = useFindLatestVariableMetions(variableMentions);
+  const { latestVariables } = useFindLatestVariableMetions(variableMentions);
   const labelText = (source === 'variables' && latestVariables?.[0]?.name) || initialLabel;
 
   return (

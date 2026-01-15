@@ -20,6 +20,7 @@ import {
   ScrapeWeblinkResponse,
   UploadRequest,
   UploadResponse,
+  GetPromptSuggestionsResponse,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
@@ -38,6 +39,13 @@ export class MiscController {
   async scrapeWeblink(@Body() body: ScrapeWeblinkRequest): Promise<ScrapeWeblinkResponse> {
     const result = await this.miscService.scrapeWeblink(body);
     return buildSuccessResponse(result);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('promptSuggestions')
+  async getPromptSuggestions(@LoginedUser() user: User): Promise<GetPromptSuggestionsResponse> {
+    const results = await this.miscService.getPromptSuggestions(user);
+    return buildSuccessResponse(results);
   }
 
   @UseGuards(JwtAuthGuard)

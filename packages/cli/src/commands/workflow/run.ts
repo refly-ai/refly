@@ -27,6 +27,7 @@ export const workflowRunCommand = new Command('run')
   .description('Run workflows and get execution results')
   .argument('[workflowId]', 'Workflow ID to run')
   .option('--input <json>', 'Input variables as JSON', '{}')
+  .option('--from-node <nodeId>', 'Start workflow execution from a specific node (Run From Here)')
   .action(async (workflowId, options) => {
     // If no workflowId provided, show help
     if (!workflowId) {
@@ -45,18 +46,27 @@ export const workflowRunCommand = new Command('run')
         });
       }
 
+      // Build request body with optional startNodes
+      const body: { input?: unknown; startNodes?: string[] } = { input };
+      if (options.fromNode) {
+        body.startNodes = [options.fromNode];
+      }
+
       const result = await apiRequest<RunResult>(`/v1/cli/workflow/${workflowId}/run`, {
         method: 'POST',
-        body: { input },
+        body,
       });
 
       ok('workflow.run', {
-        message: 'Workflow run started',
+        message: options.fromNode
+          ? `Workflow run started from node ${options.fromNode}`
+          : 'Workflow run started',
         runId: result.runId,
         workflowId: result.workflowId,
         status: result.status,
+        startNode: options.fromNode || undefined,
         createdAt: result.createdAt,
-        nextStep: `Check status with \`refly workflow run get ${result.runId}\``,
+        nextStep: `Check status with \`refly workflow status ${result.runId}\``,
       });
     } catch (error) {
       if (error instanceof CLIError) {

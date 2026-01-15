@@ -22,10 +22,10 @@ import {
 import {
   DAILY_POPUP_TRIGGER_LIMIT,
   VoucherStatus,
-  VoucherSource,
   InvitationStatus,
   INVITER_REWARD_CREDITS,
   AnalyticsEvents,
+  VoucherSourceType,
 } from './voucher.constants';
 import { generateVoucherEmail, calculateDiscountValues } from './voucher-email-templates';
 import { ConfigService } from '@nestjs/config';
@@ -159,25 +159,29 @@ export class VoucherService implements OnModuleInit {
   }
 
   /**
-   * Handle template publish event - main entry point
+   * Handle create voucher from source event - main entry point
    * Checks daily limit, scores template, generates voucher
    *
-   * @param user - User publishing the template
+   * @param user - User creating the voucher
    * @param canvasData - Pre-fetched canvas data with nodes
    * @param variables - Workflow variables
-   * @param templateId - Generated template/app ID
+   * @param source - Voucher source
+   * @param sourceId - Source entity ID
    * @param description - Template description
    * @returns VoucherTriggerResult or null if limit reached
    */
-  async handleTemplatePublish(
+  async handleCreateVoucherFromSource(
     user: User,
     canvasData: CanvasDataForScoring,
     variables: WorkflowVariable[],
-    templateId: string,
+    source: VoucherSourceType,
+    sourceId?: string,
     description?: string,
   ): Promise<VoucherTriggerResult | null> {
     try {
-      this.logger.log(`Handling template publish for user ${user.uid}, template ${templateId}`);
+      this.logger.log(
+        `Handling create voucher for user ${user.uid}, source ${source}, source id ${sourceId}`,
+      );
 
       // 1. Check daily trigger limit
       const { canTrigger, currentCount } = await this.checkDailyTriggerLimit(user.uid);
@@ -220,13 +224,13 @@ export class VoucherService implements OnModuleInit {
         uid: user.uid,
         discountPercent,
         llmScore: scoringResult.score,
-        source: VoucherSource.TEMPLATE_PUBLISH,
-        sourceId: templateId,
+        source,
+        sourceId: sourceId,
         expiresAt,
       });
 
       // 5. Record popup trigger
-      await this.recordPopupTrigger(user.uid, templateId, voucher.voucherId);
+      await this.recordPopupTrigger(user.uid, sourceId, voucher.voucherId);
 
       // 6. Track analytics event
       this.trackEvent(AnalyticsEvents.VOUCHER_POPUP_DISPLAY, {

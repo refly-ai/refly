@@ -1431,6 +1431,7 @@ const translations = {
         startRunning: 'Your workflow starts running',
         executing: 'Running',
         remix: 'Remix',
+        runTooltip: 'Unlock a Pro Plan discount after first run',
         copyWorkflow: 'Remix Workflow',
         copyShareLink: 'Copy Share Link',
         shareLinkCopied: 'Share link copied to clipboard',
@@ -1442,6 +1443,7 @@ const translations = {
         error: 'Error monitoring workflow execution',
         validationError: 'Please fill in all required fields before running the workflow',
         installToolsBeforeRunning: 'Please install the required tools before running.',
+        emptyPromptsError: 'Some agents are missing prompts and cannot be run',
         requiredFileInputsMissing:
           'This agent has required file inputs. Please upload the missing files before running.',
         requiredFileInputsMissingForChain:
@@ -1506,7 +1508,9 @@ const translations = {
       rerunSingle: 'Rerun This Node',
       runSingle: 'Run This Node',
       stopSingle: 'Stop',
+      promptRequired: 'Please add a prompt first',
       rerunFromHere: 'Run From Here',
+      downstreamAgentsMissingPrompts: 'Some downstream agents are missing prompts',
       stopConfirmModal: {
         title: 'Stop Agent Task?',
         main: 'Are you sure you want to stop this agent task?',
@@ -3232,6 +3236,8 @@ const translations = {
     assistant: 'Copilot',
     placeholder: 'Describe the workflow you want to generate...',
     loadingWorkflow: 'Loading workflow...',
+    pureCopilotPlaceholder: 'Hi, what workflow do you want to create today?',
+    samplePrompt: 'Sample Prompt',
     header: {
       history: 'Chat History',
       newConversation: 'New Chat',
@@ -4501,8 +4507,7 @@ const translations = {
     successMessage: 'You have successfully authorized this device.',
     autoCloseCountdown: 'This page will close automatically in {{seconds}}s',
     cancelledTitle: 'Link Expired',
-    cancelledMessage:
-      'This authorization session has timed out. To generate a new link, please run the following command in your terminal:',
+    cancelledMessage: 'Cancelled. No access granted',
     closeWindow: 'Close Window',
     errorTitle: 'Authorization Error',
     errorHint: 'Please run `refly init` again to start a new authorization request.',
@@ -4513,7 +4518,11 @@ const translations = {
       invalidDevice: 'Invalid or expired device request.',
       expiredDevice: 'This authorization request has expired. Please run `refly init` again.',
       authorizeFailed: 'Failed to authorize device. Please try again.',
+      invalidVerificationCode: 'Invalid verification code. Please try again.',
     },
+    verificationCodeLabel: 'Verification Code',
+    verificationCodePlaceholder: 'Enter 6-digit code',
+    verificationCodeHint: 'Enter the 6-digit code shown in your terminal',
     copied: 'Copied!',
   },
 };

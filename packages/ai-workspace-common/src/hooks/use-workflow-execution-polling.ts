@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGetWorkflowDetail } from '@refly-packages/ai-workspace-common/queries';
-import { WorkflowExecution, WorkflowExecutionStatus } from '@refly/openapi-schema';
+import {
+  GetWorkflowDetailResponse,
+  WorkflowExecution,
+  WorkflowExecutionStatus,
+} from '@refly/openapi-schema';
 import { useCanvasStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
 import { guessModelProviderError, ModelUsageQuotaExceeded } from '@refly/errors';
 
@@ -25,7 +29,7 @@ interface UseWorkflowExecutionPollingOptions {
   enabled?: boolean;
   interval?: number;
   onStatusChange?: (status: WorkflowExecutionStatus) => void;
-  onComplete?: (status: WorkflowExecutionStatus, data?: any) => void;
+  onComplete?: (status: WorkflowExecutionStatus, data?: GetWorkflowDetailResponse) => void;
   onError?: (error: any) => void;
 }
 

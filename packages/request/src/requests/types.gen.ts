@@ -639,6 +639,14 @@ export type WorkflowSchedule = {
    */
   scheduleId?: string;
   /**
+   * User ID
+   */
+  uid?: string;
+  /**
+   * Canvas ID
+   */
+  canvasId?: string;
+  /**
    * Schedule name
    */
   name?: string;
@@ -661,11 +669,23 @@ export type WorkflowSchedule = {
   /**
    * Next run time
    */
-  nextRunAt?: string;
+  nextRunAt?: string | null;
   /**
    * Last run time
    */
-  lastRunAt?: string;
+  lastRunAt?: string | null;
+  /**
+   * Creation time
+   */
+  createdAt?: string;
+  /**
+   * Update time
+   */
+  updatedAt?: string;
+  /**
+   * Deletion time
+   */
+  deletedAt?: string | null;
 };
 
 export type CreateScheduleRequest = {
@@ -758,6 +778,7 @@ export type DeleteScheduleResponse = {
    * Whether the operation was successful
    */
   success?: boolean;
+  data?: WorkflowSchedule;
   /**
    * Response message
    */
@@ -784,22 +805,24 @@ export type ListSchedulesResponse = {
    * Whether the operation was successful
    */
   success?: boolean;
-  /**
-   * List of schedules
-   */
-  data?: Array<WorkflowSchedule>;
-  /**
-   * Total number of schedules
-   */
-  total?: number;
-  /**
-   * Current page number
-   */
-  page?: number;
-  /**
-   * Number of items per page
-   */
-  pageSize?: number;
+  data?: {
+    /**
+     * Total number of schedules
+     */
+    total?: number;
+    /**
+     * Current page number
+     */
+    page?: number;
+    /**
+     * Number of items per page
+     */
+    pageSize?: number;
+    /**
+     * List of schedules
+     */
+    items?: Array<WorkflowSchedule>;
+  };
 };
 
 export type GetScheduleDetailRequest = {
@@ -819,6 +842,325 @@ export type GetScheduleDetailResponse = {
    * Response message
    */
   message?: string;
+};
+
+export type WorkflowScheduleRecord = {
+  /**
+   * Schedule record ID
+   */
+  scheduleRecordId?: string;
+  /**
+   * Schedule ID
+   */
+  scheduleId?: string;
+  /**
+   * User ID
+   */
+  uid?: string;
+  /**
+   * Source canvas ID (template)
+   */
+  sourceCanvasId?: string;
+  /**
+   * Execution canvas ID
+   */
+  canvasId?: string;
+  /**
+   * Workflow execution ID
+   */
+  workflowExecutionId?: string;
+  /**
+   * Workflow title
+   */
+  workflowTitle?: string;
+  /**
+   * Execution status
+   */
+  status?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed' | 'skipped';
+  /**
+   * Scheduled execution time
+   */
+  scheduledAt?: string;
+  /**
+   * Actual trigger time
+   */
+  triggeredAt?: string;
+  /**
+   * Execution completion time
+   */
+  completedAt?: string | null;
+  /**
+   * Execution priority
+   */
+  priority?: number;
+  /**
+   * Credit used for execution
+   */
+  creditUsed?: number;
+  /**
+   * Failure reason if failed
+   */
+  failureReason?: string | null;
+  /**
+   * Detailed error information
+   */
+  errorDetails?: string | null;
+  /**
+   * JSON string of tools used
+   */
+  usedTools?: string | null;
+  /**
+   * Canvas snapshot storage key
+   */
+  snapshotStorageKey?: string | null;
+  /**
+   * Record creation time
+   */
+  createdAt?: string;
+  /**
+   * Record update time
+   */
+  updatedAt?: string;
+};
+
+/**
+ * Execution status
+ */
+export type status2 =
+  | 'scheduled'
+  | 'pending'
+  | 'processing'
+  | 'running'
+  | 'success'
+  | 'failed'
+  | 'skipped';
+
+export type GetScheduleRecordsRequest = {
+  /**
+   * Schedule ID
+   */
+  scheduleId: string;
+  /**
+   * Page number for pagination
+   */
+  page?: number;
+  /**
+   * Number of items per page
+   */
+  pageSize?: number;
+};
+
+export type GetScheduleRecordsResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: {
+    /**
+     * Total number of records
+     */
+    total?: number;
+    /**
+     * Current page number
+     */
+    page?: number;
+    /**
+     * Number of items per page
+     */
+    pageSize?: number;
+    /**
+     * List of schedule records
+     */
+    items?: Array<WorkflowScheduleRecord>;
+  };
+};
+
+export type ListAllScheduleRecordsRequest = {
+  /**
+   * Page number for pagination
+   */
+  page?: number;
+  /**
+   * Number of items per page
+   */
+  pageSize?: number;
+  /**
+   * Filter by execution status
+   */
+  status?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
+  /**
+   * Search keyword for workflow title
+   */
+  keyword?: string;
+  /**
+   * Filter by tools used
+   */
+  tools?: Array<string>;
+  /**
+   * Filter by canvas ID
+   */
+  canvasId?: string;
+};
+
+/**
+ * Filter by execution status
+ */
+export type status3 = 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
+
+export type ListAllScheduleRecordsResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: {
+    /**
+     * Total number of records
+     */
+    total?: number;
+    /**
+     * Current page number
+     */
+    page?: number;
+    /**
+     * Number of items per page
+     */
+    pageSize?: number;
+    /**
+     * List of schedule records with schedule names
+     */
+    items?: Array<
+      WorkflowScheduleRecord & {
+        /**
+         * Schedule name
+         */
+        scheduleName?: string;
+      }
+    >;
+  };
+};
+
+export type GetAvailableToolsResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  /**
+   * List of available tools
+   */
+  data?: Array<{
+    /**
+     * Tool ID
+     */
+    id?: string;
+    /**
+     * Tool name
+     */
+    name?: string;
+  }>;
+};
+
+export type GetScheduleRecordDetailRequest = {
+  /**
+   * Schedule record ID
+   */
+  scheduleRecordId: string;
+};
+
+export type GetScheduleRecordDetailResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: WorkflowScheduleRecord & {
+    /**
+     * Schedule name
+     */
+    scheduleName?: string;
+  };
+};
+
+export type GetRecordSnapshotRequest = {
+  /**
+   * Schedule record ID
+   */
+  scheduleRecordId: string;
+};
+
+export type GetRecordSnapshotResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  /**
+   * Canvas snapshot data (JSON object)
+   */
+  data?: {
+    [key: string]: unknown;
+  };
+};
+
+export type TriggerScheduleManuallyRequest = {
+  /**
+   * Schedule ID to trigger
+   */
+  scheduleId: string;
+};
+
+export type TriggerScheduleManuallyResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: {
+    /**
+     * Schedule ID
+     */
+    scheduleId?: string;
+    /**
+     * Created schedule record ID
+     */
+    scheduleRecordId?: string;
+    /**
+     * Trigger time
+     */
+    triggeredAt?: string;
+    /**
+     * Execution priority
+     */
+    priority?: number;
+  };
+};
+
+export type RetryScheduleRecordRequest = {
+  /**
+   * Schedule record ID to retry
+   */
+  scheduleRecordId: string;
+};
+
+export type RetryScheduleRecordResponse = {
+  /**
+   * Whether the operation was successful
+   */
+  success?: boolean;
+  data?: {
+    /**
+     * Schedule record ID
+     */
+    scheduleRecordId?: string;
+    /**
+     * Schedule ID
+     */
+    scheduleId?: string;
+    /**
+     * New status (pending)
+     */
+    status?: string;
+    /**
+     * Execution priority
+     */
+    priority?: number;
+  };
 };
 
 export type CanvasTemplateCategory = {
@@ -2467,6 +2809,10 @@ export type UserPreferences = {
    */
   requireInvitationCode?: boolean;
   /**
+   * Whether this user needs onboarding
+   */
+  needOnboarding?: boolean;
+  /**
    * Web search config
    */
   webSearch?: ProviderConfig;
@@ -2759,7 +3105,7 @@ export type BaseResponseV2 = {
 /**
  * Response status
  */
-export type status2 = 'success' | 'failed';
+export type status4 = 'success' | 'failed';
 
 export type ListCanvasResponse = BaseResponse & {
   /**
@@ -4960,7 +5306,7 @@ export type HeyGenGenerateVideoResponse = BaseResponseV2 & {
 /**
  * Video generation status
  */
-export type status3 = 'pending' | 'processing' | 'completed' | 'failed';
+export type status5 = 'pending' | 'processing' | 'completed' | 'failed';
 
 export type SandboxExecuteParams = {
   /**
@@ -5976,6 +6322,25 @@ export type ConvertResponse = BaseResponse & {
   };
 };
 
+/**
+ * Prompt suggestion
+ */
+export type PromptSuggestion = {
+  /**
+   * Prompt (JSON map, key is language code, value is prompt)
+   */
+  prompt: {
+    [key: string]: string;
+  };
+};
+
+export type GetPromptSuggestionsResponse = BaseResponse & {
+  /**
+   * Prompt suggestions
+   */
+  data?: Array<PromptSuggestion>;
+};
+
 export type MediaGenerationModelCapabilities = {
   /**
    * Whether this model supports image generation
@@ -6714,7 +7079,7 @@ export type ProviderTestResult = {
 /**
  * Test result status
  */
-export type status4 = 'success' | 'failed' | 'unknown';
+export type status6 = 'success' | 'failed' | 'unknown';
 
 export type TestProviderConnectionResponse = BaseResponse & {
   data?: ProviderTestResult;
@@ -7567,6 +7932,13 @@ export type WorkflowExecution = {
   updatedAt?: string;
 };
 
+export type ListWorkflowExecutionsResponse = BaseResponse & {
+  /**
+   * List of workflow executions
+   */
+  data?: Array<WorkflowExecution>;
+};
+
 export type WorkflowTask = {
   /**
    * Unique ID for the task
@@ -8012,6 +8384,63 @@ export type DriveFile = {
   url?: string;
 };
 
+/**
+ * Status of an export job
+ */
+export type ExportJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export type ExportJob = {
+  /**
+   * Export job ID
+   */
+  jobId: string;
+  /**
+   * Source file ID being exported
+   */
+  fileId?: string;
+  status: ExportJobStatus;
+  /**
+   * Export format
+   */
+  format?: 'pdf' | 'docx';
+  /**
+   * Output file name
+   */
+  name?: string;
+  /**
+   * Error message if job failed
+   */
+  error?: string;
+  /**
+   * Job creation timestamp
+   */
+  createdAt?: string;
+};
+
+/**
+ * Export format
+ */
+export type format2 = 'pdf' | 'docx';
+
+export type StartExportJobRequest = {
+  /**
+   * File ID to export
+   */
+  fileId: string;
+  /**
+   * Target export format
+   */
+  format: 'pdf' | 'docx';
+};
+
+export type StartExportJobResponse = BaseResponse & {
+  data?: ExportJob;
+};
+
+export type GetExportJobStatusResponse = BaseResponse & {
+  data?: ExportJob;
+};
+
 export type ListDriveFilesResponse = BaseResponse & {
   /**
    * List of drive files
@@ -8235,7 +8664,7 @@ export type FormDefinition = {
 /**
  * Form status
  */
-export type status5 = 'draft' | 'published' | 'archived';
+export type status7 = 'draft' | 'published' | 'archived';
 
 export type FormSubmission = {
   /**
@@ -8271,7 +8700,7 @@ export type FormSubmission = {
 /**
  * Submission status
  */
-export type status6 = 'draft' | 'submitted' | 'reviewed';
+export type status8 = 'draft' | 'submitted' | 'reviewed';
 
 /**
  * RJSF compatible field schema definition
@@ -9475,7 +9904,7 @@ export type VoucherStatus = 'unused' | 'used' | 'expired' | 'invalid';
 /**
  * Voucher source
  */
-export type VoucherSource = 'template_publish' | 'invitation_claim';
+export type VoucherSource = 'template_publish' | 'invitation_claim' | 'run_workflow';
 
 /**
  * Invitation status
@@ -10513,6 +10942,43 @@ export type ExportDocumentResponse = Blob | File;
 
 export type ExportDocumentError = unknown;
 
+export type StartExportJobData = {
+  /**
+   * Export job request
+   */
+  body: StartExportJobRequest;
+};
+
+export type StartExportJobResponse2 = StartExportJobResponse;
+
+export type StartExportJobError = unknown;
+
+export type GetExportJobStatusData = {
+  path: {
+    /**
+     * Export job ID
+     */
+    jobId: string;
+  };
+};
+
+export type GetExportJobStatusResponse2 = GetExportJobStatusResponse;
+
+export type GetExportJobStatusError = unknown;
+
+export type DownloadExportJobResultData = {
+  path: {
+    /**
+     * Export job ID
+     */
+    jobId: string;
+  };
+};
+
+export type DownloadExportJobResultResponse = Blob | File;
+
+export type DownloadExportJobResultError = unknown;
+
 export type UpdateDocumentData = {
   /**
    * Document update request
@@ -11134,6 +11600,39 @@ export type AbortWorkflowResponse = BaseResponse;
 
 export type AbortWorkflowError = unknown;
 
+export type ListWorkflowExecutionsData = {
+  query?: {
+    /**
+     * Creation time after filter (unix timestamp in milliseconds)
+     */
+    after?: number;
+    /**
+     * Canvas ID
+     */
+    canvasId?: string;
+    /**
+     * List order
+     */
+    order?: ListOrder;
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+    /**
+     * Execution status
+     */
+    status?: WorkflowExecutionStatus;
+  };
+};
+
+export type ListWorkflowExecutionsResponse2 = ListWorkflowExecutionsResponse;
+
+export type ListWorkflowExecutionsError = unknown;
+
 export type GetWorkflowDetailData = {
   query: {
     /**
@@ -11282,6 +11781,58 @@ export type GetScheduleDetailData = {
 export type GetScheduleDetailResponse2 = GetScheduleDetailResponse;
 
 export type GetScheduleDetailError = unknown;
+
+export type GetScheduleRecordsData = {
+  body: GetScheduleRecordsRequest;
+};
+
+export type GetScheduleRecordsResponse2 = GetScheduleRecordsResponse;
+
+export type GetScheduleRecordsError = unknown;
+
+export type ListAllScheduleRecordsData = {
+  body: ListAllScheduleRecordsRequest;
+};
+
+export type ListAllScheduleRecordsResponse2 = ListAllScheduleRecordsResponse;
+
+export type ListAllScheduleRecordsError = unknown;
+
+export type GetAvailableToolsResponse2 = GetAvailableToolsResponse;
+
+export type GetAvailableToolsError = unknown;
+
+export type GetScheduleRecordDetailData = {
+  body: GetScheduleRecordDetailRequest;
+};
+
+export type GetScheduleRecordDetailResponse2 = GetScheduleRecordDetailResponse;
+
+export type GetScheduleRecordDetailError = unknown;
+
+export type GetRecordSnapshotData = {
+  body: GetRecordSnapshotRequest;
+};
+
+export type GetRecordSnapshotResponse2 = GetRecordSnapshotResponse;
+
+export type GetRecordSnapshotError = unknown;
+
+export type TriggerScheduleManuallyData = {
+  body: TriggerScheduleManuallyRequest;
+};
+
+export type TriggerScheduleManuallyResponse2 = TriggerScheduleManuallyResponse;
+
+export type TriggerScheduleManuallyError = unknown;
+
+export type RetryScheduleRecordData = {
+  body: RetryScheduleRecordRequest;
+};
+
+export type RetryScheduleRecordResponse2 = RetryScheduleRecordResponse;
+
+export type RetryScheduleRecordError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 
@@ -11766,6 +12317,10 @@ export type ConvertData = {
 export type ConvertResponse2 = ConvertResponse;
 
 export type ConvertError = unknown;
+
+export type GetPromptSuggestionsResponse2 = GetPromptSuggestionsResponse;
+
+export type GetPromptSuggestionsError = unknown;
 
 export type GetAvailableVouchersResponse2 = GetAvailableVouchersResponse;
 

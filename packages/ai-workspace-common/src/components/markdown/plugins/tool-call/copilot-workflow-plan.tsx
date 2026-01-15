@@ -1,7 +1,7 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { NewConversation, Mcp, ArrowRight, ArrowDown } from 'refly-icons';
-import { InputParameterRow } from '@refly-packages/ai-workspace-common/components/canvas/nodes/start';
+import { InputParameterRow } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/input-parameter-row';
 import { LabelWrapper } from './label-wrapper';
 import { useTranslation } from 'react-i18next';
 import { Typography, Dropdown, Divider } from 'antd';
@@ -250,10 +250,9 @@ export const CopilotWorkflowPlan = memo(
               {variables?.map((variable) => (
                 <InputParameterRow
                   key={variable.name}
-                  variableType={variable.variableType as 'string' | 'option' | 'resource'}
-                  label={variable.name}
-                  isRequired={true}
-                  isSingle={true}
+                  variable={variable}
+                  readonly={true}
+                  isHighlighted={false}
                 />
               ))}
             </div>

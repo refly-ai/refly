@@ -35,7 +35,7 @@ export const toolCallsCommand = new Command('calls')
         params.set('version', options.version);
       }
 
-      const result = await apiRequest<ToolCallsResponse>(`/v1/cli/toolcall?${params}`);
+      const result = await apiRequest<ToolCallsResponse>(`/v1/cli/tool-call?${params}`);
 
       ok('tool.calls', {
         resultId: options.resultId,

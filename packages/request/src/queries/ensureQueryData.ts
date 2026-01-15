@@ -5,6 +5,7 @@ import { type QueryClient } from '@tanstack/react-query';
 import {
   checkSettingsField,
   checkToolOauthStatus,
+  downloadExportJobResult,
   exportCanvas,
   exportDocument,
   getActionResult,
@@ -26,11 +27,13 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getExportJobStatus,
   getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
   getResourceDetail,
   getSettings,
   getSubscriptionPlans,
@@ -74,12 +77,14 @@ import {
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   serveStatic,
   verifyVoucherInvitation,
 } from '../requests/services.gen';
 import {
   CheckSettingsFieldData,
   CheckToolOauthStatusData,
+  DownloadExportJobResultData,
   ExportCanvasData,
   ExportDocumentData,
   GetActionResultData,
@@ -97,6 +102,7 @@ import {
   GetCreditUsageByResultIdData,
   GetCreditUsageData,
   GetDocumentDetailData,
+  GetExportJobStatusData,
   GetPageByCanvasIdData,
   GetPageDetailData,
   GetPilotSessionDetailData,
@@ -131,6 +137,7 @@ import {
   ListToolsData,
   ListToolsetsData,
   ListWorkflowAppsData,
+  ListWorkflowExecutionsData,
   VerifyVoucherInvitationData,
 } from '../requests/types.gen';
 import * as Common from './common';
@@ -319,6 +326,22 @@ export const ensureUseExportDocumentData = (
     queryKey: Common.UseExportDocumentKeyFn(clientOptions),
     queryFn: () => exportDocument({ ...clientOptions }).then((response) => response.data),
   });
+export const ensureUseGetExportJobStatusData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetExportJobStatusData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetExportJobStatusKeyFn(clientOptions),
+    queryFn: () => getExportJobStatus({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseDownloadExportJobResultData = (
+  queryClient: QueryClient,
+  clientOptions: Options<DownloadExportJobResultData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseDownloadExportJobResultKeyFn(clientOptions),
+    queryFn: () => downloadExportJobResult({ ...clientOptions }).then((response) => response.data),
+  });
 export const ensureUseListProjectsData = (
   queryClient: QueryClient,
   clientOptions: Options<ListProjectsData, true> = {},
@@ -446,6 +469,14 @@ export const ensureUseGetCopilotSessionDetailData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseGetCopilotSessionDetailKeyFn(clientOptions),
     queryFn: () => getCopilotSessionDetail({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseListWorkflowExecutionsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListWorkflowExecutionsData, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListWorkflowExecutionsKeyFn(clientOptions),
+    queryFn: () => listWorkflowExecutions({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetWorkflowDetailData = (
   queryClient: QueryClient,
@@ -698,6 +729,14 @@ export const ensureUseServeStaticData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseServeStaticKeyFn(clientOptions),
     queryFn: () => serveStatic({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetPromptSuggestionsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetPromptSuggestionsKeyFn(clientOptions),
+    queryFn: () => getPromptSuggestions({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetAvailableVouchersData = (
   queryClient: QueryClient,

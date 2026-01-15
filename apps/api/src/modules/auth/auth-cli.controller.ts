@@ -620,22 +620,32 @@ export class AuthCliController {
   @Post('device/authorize')
   async authorizeDevice(
     @LoginedUser() user: User,
-    @Body() body: { device_id: string },
-  ): Promise<{ success: boolean }> {
-    const { device_id: deviceId } = body;
+    @Body() body: { device_id: string; user_code: string },
+  ): Promise<{ success: boolean; errCode?: string }> {
+    const { device_id: deviceId, user_code: userCode } = body;
 
     this.logger.log(`[DEVICE_AUTHORIZE] uid=${user.uid} deviceId=${deviceId}`);
 
-    if (!deviceId) {
-      throw new BadRequestException('device_id is required');
+    if (!deviceId || !userCode) {
+      throw new BadRequestException('device_id and user_code are required');
     }
 
-    const authorized = await this.deviceAuthService.authorizeDevice(deviceId, user);
+    const session = await this.deviceAuthService.getDeviceSession(deviceId);
+    if (!session) {
+      throw new NotFoundException('Device session not found');
+    }
+
+    if (session.status !== 'pending') {
+      throw new BadRequestException('Device session is already processed or expired');
+    }
+
+    const authorized = await this.deviceAuthService.authorizeDevice(deviceId, userCode, user);
 
     if (!authorized) {
-      throw new BadRequestException(
-        'Failed to authorize device. Session may be expired or already processed.',
-      );
+      return {
+        success: false,
+        errCode: 'invalid_verification_code',
+      };
     }
 
     return buildSuccessResponse(null);

@@ -3575,6 +3575,10 @@ export const UserPreferencesSchema = {
       type: 'boolean',
       description: 'Whether to require invitation code',
     },
+    needOnboarding: {
+      type: 'boolean',
+      description: 'Whether this user needs onboarding',
+    },
     webSearch: {
       description: 'Web search config',
       $ref: '#/components/schemas/ProviderConfig',
@@ -8872,6 +8876,41 @@ export const ConvertResponseSchema = {
   ],
 } as const;
 
+export const PromptSuggestionSchema = {
+  type: 'object',
+  description: 'Prompt suggestion',
+  required: ['prompt'],
+  properties: {
+    prompt: {
+      type: 'object',
+      description: 'Prompt (JSON map, key is language code, value is prompt)',
+      additionalProperties: {
+        type: 'string',
+      },
+    },
+  },
+} as const;
+
+export const GetPromptSuggestionsResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Prompt suggestions',
+          items: {
+            $ref: '#/components/schemas/PromptSuggestion',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const MediaGenerationModelCapabilitiesSchema = {
   type: 'object',
   properties: {
@@ -10990,6 +11029,26 @@ export const WorkflowExecutionSchema = {
       description: 'Workflow update timestamp',
     },
   },
+} as const;
+
+export const ListWorkflowExecutionsResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'List of workflow executions',
+          items: {
+            $ref: '#/components/schemas/WorkflowExecution',
+          },
+        },
+      },
+    },
+  ],
 } as const;
 
 export const WorkflowTaskSchema = {
@@ -13586,7 +13645,7 @@ export const VoucherStatusSchema = {
 
 export const VoucherSourceSchema = {
   type: 'string',
-  enum: ['template_publish', 'invitation_claim'],
+  enum: ['template_publish', 'invitation_claim', 'run_workflow'],
   description: 'Voucher source',
 } as const;
 

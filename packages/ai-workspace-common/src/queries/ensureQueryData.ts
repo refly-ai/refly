@@ -33,6 +33,7 @@ import {
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
   getResourceDetail,
   getSettings,
   getSubscriptionPlans,
@@ -76,6 +77,7 @@ import {
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   serveStatic,
   verifyVoucherInvitation,
 } from '../requests/services.gen';
@@ -135,6 +137,7 @@ import {
   ListToolsData,
   ListToolsetsData,
   ListWorkflowAppsData,
+  ListWorkflowExecutionsData,
   VerifyVoucherInvitationData,
 } from '../requests/types.gen';
 import * as Common from './common';
@@ -467,6 +470,14 @@ export const ensureUseGetCopilotSessionDetailData = (
     queryKey: Common.UseGetCopilotSessionDetailKeyFn(clientOptions),
     queryFn: () => getCopilotSessionDetail({ ...clientOptions }).then((response) => response.data),
   });
+export const ensureUseListWorkflowExecutionsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListWorkflowExecutionsData, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListWorkflowExecutionsKeyFn(clientOptions),
+    queryFn: () => listWorkflowExecutions({ ...clientOptions }).then((response) => response.data),
+  });
 export const ensureUseGetWorkflowDetailData = (
   queryClient: QueryClient,
   clientOptions: Options<GetWorkflowDetailData, true>,
@@ -718,6 +729,14 @@ export const ensureUseServeStaticData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseServeStaticKeyFn(clientOptions),
     queryFn: () => serveStatic({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetPromptSuggestionsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetPromptSuggestionsKeyFn(clientOptions),
+    queryFn: () => getPromptSuggestions({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetAvailableVouchersData = (
   queryClient: QueryClient,

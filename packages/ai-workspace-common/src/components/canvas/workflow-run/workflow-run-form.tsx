@@ -4,8 +4,8 @@ import type {
   WorkflowExecutionStatus,
 } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Select, Form, Typography, message } from 'antd';
-import { Play, StopCircle } from 'refly-icons';
+import { Button, Input, Select, Form, Typography, message, Tooltip } from 'antd';
+import { StopCircle } from 'refly-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useAbortWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-abort-workflow';
@@ -14,13 +14,13 @@ import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.we
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { useNavigate } from 'react-router-dom';
 import { ToolsDependencyChecker } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';
+import { useCheckEmptyPrompts } from '@refly-packages/ai-workspace-common/hooks/canvas/use-check-empty-prompts';
 import { MixedTextEditor } from '@refly-packages/ai-workspace-common/components/workflow-app/mixed-text-editor';
 import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/resource-upload';
 import { useFileUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables';
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useSubscriptionStoreShallow } from '@refly/stores';
-import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import { useSubscriptionStoreShallow, useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import {
   useGetCanvasData,
@@ -28,6 +28,8 @@ import {
 } from '@refly-packages/ai-workspace-common/queries/queries';
 import type { GenericToolset, UserTool } from '@refly/openapi-schema';
 import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
+import GiftIcon from '@refly-packages/ai-workspace-common/assets/gift.png';
+import { useFirstSuccessExecutionToday } from '@refly-packages/ai-workspace-common/hooks/canvas';
 
 /**
  * Check if a toolset is authorized/installed.
@@ -66,10 +68,10 @@ const EmptyContent = () => {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
       <img src={EmptyImage} alt="no variables" className="w-[120px] h-[120px] -mb-4" />
-      <div className="text-sm text-refly-text-2 leading-5">
+      <div className="text-sm text-refly-text-2 leading-5 text-center">
         {t('canvas.workflow.run.emptyTitle', 'No variables defined')}
       </div>
-      <div className="text-sm text-refly-text-2 leading-5">
+      <div className="text-sm text-refly-text-2 leading-5 text-center mt-5">
         {t(
           'canvas.workflow.run.emptyDescription',
           ' the workflow will be executed once if continued.',
@@ -133,11 +135,14 @@ export const WorkflowRunForm = ({
     setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
   }));
   const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
+  const { checkEmptyPrompts } = useCheckEmptyPrompts();
+  useFirstSuccessExecutionToday();
 
-  const { setToolsDependencyOpen, setToolsDependencyHighlight } =
+  const { setToolsDependencyOpen, setToolsDependencyHighlight, hasFirstSuccessExecutionToday } =
     useCanvasResourcesPanelStoreShallow((state) => ({
       setToolsDependencyOpen: state.setToolsDependencyOpen,
       setToolsDependencyHighlight: state.setToolsDependencyHighlight,
+      hasFirstSuccessExecutionToday: state.hasFirstSuccessExecutionToday,
     }));
 
   const [internalIsRunning, setInternalIsRunning] = useState(false);
@@ -515,6 +520,12 @@ export const WorkflowRunForm = ({
       return;
     }
 
+    // Check for empty prompts in the workflow
+    const emptyPromptNodeIds = checkEmptyPrompts();
+    if (emptyPromptNodeIds.length > 0) {
+      return;
+    }
+
     // Ensure we have canvas nodes to calculate tool dependencies.
     let effectiveNodes = nodes;
     if (!effectiveNodes.length && canvasId && isLogin) {
@@ -867,24 +878,44 @@ export const WorkflowRunForm = ({
                 {t('canvas.workflow.run.creditUsage', { count: creditUsage })}
               </div>
             )}
-            <Button
-              className="w-full h-8 text-sm"
-              {...(workflowIsRunning ? { color: 'primary' } : { type: 'primary' })}
-              icon={
-                workflowIsRunning ? (
-                  <StopCircle size={16} className="translate-y-[1px]" />
-                ) : (
-                  <Play size={16} className="translate-y-[1px]" />
-                )
+            <Tooltip
+              title={
+                !workflowIsRunning && !hasFirstSuccessExecutionToday
+                  ? t('canvas.workflow.run.runTooltip')
+                  : undefined
               }
-              onClick={workflowIsRunning ? handleAbort : handleRun}
-              loading={loading}
-              disabled={loading || (workflowIsRunning && !executionId)}
+              placement="top"
+              arrow={false}
+              overlayStyle={{ maxWidth: 300 }}
             >
-              {workflowIsRunning
-                ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
-                : t('canvas.workflow.run.run') || 'Run'}
-            </Button>
+              <Button
+                className={cn(
+                  'w-full h-8 text-sm group',
+                  !workflowIsRunning
+                    ? 'bg-refly-text-0 text-refly-bg-body-z0 hover:!bg-refly-text-0 hover:!text-refly-bg-body-z0 hover:opacity-80'
+                    : '',
+                )}
+                {...(workflowIsRunning ? { color: 'primary' } : { type: 'default' })}
+                icon={
+                  workflowIsRunning ? <StopCircle size={16} className="translate-y-[1px]" /> : null
+                }
+                onClick={workflowIsRunning ? handleAbort : handleRun}
+                loading={loading}
+                disabled={loading || (workflowIsRunning && !executionId)}
+              >
+                {workflowIsRunning
+                  ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
+                  : t('canvas.workflow.run.run') || 'Run'}
+
+                {!workflowIsRunning && !hasFirstSuccessExecutionToday && (
+                  <img
+                    src={GiftIcon}
+                    alt="gift"
+                    className="w-[18px] h-[18px] group-hover:animate-shake"
+                  />
+                )}
+              </Button>
+            </Tooltip>
           </div>
         </>
       }

@@ -57,8 +57,10 @@ export class AuthService {
   private getUserPreferences(): string {
     const requireInvitationCode =
       this.configService.get('auth.invitation.requireInvitationCode') ?? false;
+    const needOnboarding = this.configService.get('auth.onboarding.enabled') ?? false;
     return JSON.stringify({
       requireInvitationCode,
+      needOnboarding,
       hasBeenInvited: false,
       hasFilledForm: false,
     });

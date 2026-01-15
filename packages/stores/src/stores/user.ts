@@ -27,6 +27,7 @@ export interface UserState {
   showInvitationCodeModal: boolean;
   showOnboardingFormModal: boolean;
   showOnboardingSuccessAnimation: boolean;
+  hidePureCopilotModal: boolean;
 
   // method
   setIsCheckingLoginStatus: (val: boolean) => void;
@@ -41,6 +42,7 @@ export interface UserState {
   setShowInvitationCodeModal: (val: boolean) => void;
   setShowOnboardingFormModal: (val: boolean) => void;
   setShowOnboardingSuccessAnimation: (val: boolean) => void;
+  setHidePureCopilotModal: (val: boolean) => void;
 }
 
 const getDefaultLocale = () => {
@@ -74,6 +76,7 @@ export const defaultExtraState = {
   userProfile: undefined,
   runtime: 'web' as IRuntime,
   localSettings: { ...defaultLocalSettings },
+  hidePureCopilotModal: false,
 };
 
 export const defaultState = {
@@ -108,6 +111,8 @@ export const useUserStore = create<UserState>()(
       set((state) => ({ ...state, showOnboardingFormModal: val })),
     setShowOnboardingSuccessAnimation: (val: boolean) =>
       set((state) => ({ ...state, showOnboardingSuccessAnimation: val })),
+    setHidePureCopilotModal: (val: boolean) =>
+      set((state) => ({ ...state, hidePureCopilotModal: val })),
   })),
 );
 

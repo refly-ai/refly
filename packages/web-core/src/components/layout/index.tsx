@@ -8,6 +8,13 @@ import { useBindCommands } from '@refly-packages/ai-workspace-common/hooks/use-b
 import { useUserStoreShallow } from '@refly/stores';
 import { LOCALE } from '@refly/common-types';
 import { authChannel } from '@refly-packages/ai-workspace-common/utils/auth-channel';
+import {
+  useAuthStoreShallow,
+  useSearchStoreShallow,
+  useSubscriptionStoreShallow,
+  useImportResourceStoreShallow,
+  useCanvasOperationStoreShallow,
+} from '@refly/stores';
 import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 import { safeParseJSON } from '@refly-packages/ai-workspace-common/utils/parse';
 
@@ -22,7 +29,6 @@ import { useHandleUrlParamsCallback } from '@refly-packages/ai-workspace-common/
 import { useRouteCollapse } from '@refly-packages/ai-workspace-common/hooks/use-route-collapse';
 import cn from 'classnames';
 import { LazyModal } from './LazyModal';
-
 const Content = Layout.Content;
 
 interface AppLayoutProps {
@@ -42,21 +48,58 @@ export const AppLayout = (props: AppLayoutProps) => {
       setShowLibraryModal: state.setShowLibraryModal,
     }));
 
-  // 模态框显示状态 - 使用 useState 触发懒加载
-  // 当模态框需要显示时，这些状态会变为 true，触发组件加载
+  // Get global modal visibility states for lazy loading
+  const { isSearchOpen } = useSearchStoreShallow((state) => ({ isSearchOpen: state.isSearchOpen }));
+  const { loginModalOpen, verificationModalOpen, resetPasswordModalOpen } = useAuthStoreShallow(
+    (state) => ({
+      loginModalOpen: state.loginModalOpen,
+      verificationModalOpen: state.verificationModalOpen,
+      resetPasswordModalOpen: state.resetPasswordModalOpen,
+    }),
+  );
+  const { subscribeModalVisible, claimedVoucherPopupVisible, earnedVoucherPopupVisible } =
+    useSubscriptionStoreShallow((state) => ({
+      subscribeModalVisible: state.subscribeModalVisible,
+      claimedVoucherPopupVisible: state.claimedVoucherPopupVisible,
+      earnedVoucherPopupVisible: state.earnedVoucherPopupVisible,
+    }));
+  const { importResourceModalVisible } = useImportResourceStoreShallow((state) => ({
+    importResourceModalVisible: state.importResourceModalVisible,
+  }));
+  const { modalVisible, modalType } = useCanvasOperationStoreShallow((state) => ({
+    modalVisible: state.modalVisible,
+    modalType: state.modalType,
+  }));
+
+  const {
+    showOnboardingFormModal,
+    showOnboardingSuccessAnimation,
+    showInvitationCodeModal,
+    hidePureCopilotModal,
+    userProfile: profileForOnboarding,
+  } = useUserStoreShallow((state) => ({
+    showOnboardingFormModal: state.showOnboardingFormModal,
+    showOnboardingSuccessAnimation: state.showOnboardingSuccessAnimation,
+    showInvitationCodeModal: state.showInvitationCodeModal,
+    hidePureCopilotModal: state.hidePureCopilotModal,
+    userProfile: state.userProfile,
+  }));
+
+  const needOnboarding = profileForOnboarding?.preferences?.needOnboarding;
+  const isPureCopilotVisible = !hidePureCopilotModal && !!needOnboarding;
+
+  // 模态框预加载状态 (键盘快捷键或特定交互触发)
   const [shouldLoadBigSearch, setShouldLoadBigSearch] = useState(false);
-  const [shouldLoadLogin, _setShouldLoadLogin] = useState(false);
-  const [shouldLoadVerification, _setShouldLoadVerification] = useState(false);
-  const [shouldLoadFormOnboarding, _setShouldLoadFormOnboarding] = useState(false);
-  const [shouldLoadOnboardingSuccess, _setShouldLoadOnboardingSuccess] = useState(false);
-  const [shouldLoadInvitationCode, _setShouldLoadInvitationCode] = useState(false);
-  const [shouldLoadResetPassword, _setShouldLoadResetPassword] = useState(false);
-  const [shouldLoadSubscribe, _setShouldLoadSubscribe] = useState(false);
-  const [shouldLoadClaimedVoucher, _setShouldLoadClaimedVoucher] = useState(false);
-  const [shouldLoadImportResource, _setShouldLoadImportResource] = useState(false);
   const [shouldLoadCanvasRename, setShouldLoadCanvasRename] = useState(false);
   const [shouldLoadCanvasDelete, setShouldLoadCanvasDelete] = useState(false);
   const [shouldLoadDuplicateCanvas, setShouldLoadDuplicateCanvas] = useState(false);
+
+  // Combine store visibility and preloading for each modal
+  const isBigSearchShown = isSearchOpen || shouldLoadBigSearch;
+  const isCanvasRenameShown = (modalVisible && modalType === 'rename') || shouldLoadCanvasRename;
+  const isCanvasDeleteShown = (modalVisible && modalType === 'delete') || shouldLoadCanvasDelete;
+  const isDuplicateCanvasShown =
+    (modalVisible && modalType === 'duplicate') || shouldLoadDuplicateCanvas;
 
   // 监听键盘事件，预加载 BigSearchModal (Cmd/Ctrl + K)
   useEffect(() => {
@@ -259,7 +302,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         </Layout>
         {/* 懒加载模态框 - 只在需要时才加载代码 */}
         <LazyModal
-          visible={shouldLoadBigSearch}
+          visible={isBigSearchShown}
           loader={() =>
             import('@refly-packages/ai-workspace-common/components/search/modal').then((m) => ({
               default: m.BigSearchModal,
@@ -268,14 +311,14 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadLogin}
+          visible={loginModalOpen}
           loader={() =>
             import('../../components/login-modal').then((m) => ({ default: m.LoginModal }))
           }
         />
 
         <LazyModal
-          visible={shouldLoadVerification}
+          visible={verificationModalOpen}
           loader={() =>
             import('../../components/verification-modal').then((m) => ({
               default: m.VerificationModal,
@@ -284,7 +327,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadFormOnboarding}
+          visible={showOnboardingFormModal}
           loader={() =>
             import('../form-onboarding-modal').then((m) => ({
               default: m.FormOnboardingModal,
@@ -293,7 +336,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadOnboardingSuccess}
+          visible={showOnboardingSuccessAnimation}
           loader={() =>
             import('../onboarding-success-modal').then((m) => ({
               default: m.OnboardingSuccessModal,
@@ -302,7 +345,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadInvitationCode}
+          visible={showInvitationCodeModal}
           loader={() =>
             import('../../components/invitation-code-modal').then((m) => ({
               default: m.InvitationCodeModal,
@@ -311,7 +354,16 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadResetPassword}
+          visible={isPureCopilotVisible}
+          loader={() =>
+            import('../pure-copilot-modal').then((m) => ({
+              default: m.PureCopilotModal,
+            }))
+          }
+        />
+
+        <LazyModal
+          visible={resetPasswordModalOpen}
           loader={() =>
             import('../../components/reset-password-modal').then((m) => ({
               default: m.ResetPasswordModal,
@@ -320,7 +372,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadSubscribe}
+          visible={subscribeModalVisible}
           loader={() =>
             import('@refly-packages/ai-workspace-common/components/settings/subscribe-modal').then(
               (m) => ({ default: m.SubscribeModal }),
@@ -329,7 +381,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadClaimedVoucher}
+          visible={claimedVoucherPopupVisible}
           loader={() =>
             import(
               '@refly-packages/ai-workspace-common/components/voucher/claimed-voucher-popup'
@@ -338,7 +390,16 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadImportResource}
+          visible={earnedVoucherPopupVisible}
+          loader={() =>
+            import(
+              '@refly-packages/ai-workspace-common/components/voucher/earned-voucher-popup'
+            ).then((m) => ({ default: m.EarnedVoucherPopup }))
+          }
+        />
+
+        <LazyModal
+          visible={importResourceModalVisible}
           loader={() =>
             import('@refly-packages/ai-workspace-common/components/import-resource').then((m) => ({
               default: m.ImportResourceModal,
@@ -367,7 +428,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadCanvasRename}
+          visible={isCanvasRenameShown}
           loader={() =>
             import(
               '@refly-packages/ai-workspace-common/components/canvas/modals/canvas-rename'
@@ -376,7 +437,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadCanvasDelete}
+          visible={isCanvasDeleteShown}
           loader={() =>
             import(
               '@refly-packages/ai-workspace-common/components/canvas/modals/canvas-delete'
@@ -385,7 +446,7 @@ export const AppLayout = (props: AppLayoutProps) => {
         />
 
         <LazyModal
-          visible={shouldLoadDuplicateCanvas}
+          visible={isDuplicateCanvasShown}
           loader={() =>
             import(
               '@refly-packages/ai-workspace-common/components/canvas/modals/duplicate-canvas-modal'

@@ -2945,6 +2945,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /workflow/list:
+    get:
+      tags:
+        - workflow
+      summary: List workflow executions
+      description: List all workflow executions
+      operationId: listWorkflowExecutions
+      parameters:
+        - name: canvasId
+          in: query
+          description: Canvas ID
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Execution status
+          schema:
+            $ref: '#/components/schemas/WorkflowExecutionStatus'
+        - name: after
+          in: query
+          description: Creation time after filter (unix timestamp in milliseconds)
+          schema:
+            type: number
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: number
+            default: 1
+        - name: pageSize
+          in: query
+          description: Page size
+          schema:
+            type: number
+            default: 10
+        - name: order
+          in: query
+          description: List order
+          schema:
+            $ref: '#/components/schemas/ListOrder'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWorkflowExecutionsResponse'
   /workflow/detail:
     get:
       tags:
@@ -4508,7 +4555,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConvertResponse'
-
+  /misc/promptSuggestions:
+    get:
+      tags:
+        - misc
+      summary: Get prompt suggestions
+      description: Get prompt suggestions for a given user
+      operationId: getPromptSuggestions
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPromptSuggestionsResponse'
   # Voucher endpoints
   /voucher/available:
     get:
@@ -7426,6 +7486,9 @@ components:
         requireInvitationCode:
           type: boolean
           description: Whether to require invitation code
+        needOnboarding:
+          type: boolean
+          description: Whether this user needs onboarding
         webSearch:
           description: Web search config
           $ref: '#/components/schemas/ProviderConfig'
@@ -11025,6 +11088,27 @@ components:
                 content:
                   type: string
                   description: Converted markdown content
+    PromptSuggestion:
+      type: object
+      description: Prompt suggestion
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: object
+          description: Prompt (JSON map, key is language code, value is prompt)
+          additionalProperties:
+            type: string
+    GetPromptSuggestionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Prompt suggestions
+              items:
+                $ref: '#/components/schemas/PromptSuggestion'
     MediaGenerationModelCapabilities:
       type: object
       properties:
@@ -12583,6 +12667,16 @@ components:
           type: string
           format: date-time
           description: Workflow update timestamp
+    ListWorkflowExecutionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of workflow executions
+              items:
+                $ref: '#/components/schemas/WorkflowExecution'
     WorkflowTask:
       type: object
       required:
@@ -14619,6 +14713,7 @@ components:
       enum:
         - template_publish
         - invitation_claim
+        - run_workflow
       description: Voucher source
 
     InvitationStatus:
