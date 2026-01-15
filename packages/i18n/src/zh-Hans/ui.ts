@@ -1580,7 +1580,7 @@ const translations = {
         startRunning: '工作流开始运行',
         executing: '运行中',
         remix: '再创作',
-        runTooltip: '首次运行成功，即刻解锁Plus套餐优惠',
+        runTooltip: '完成首次体验，解锁Plus会员折扣',
         copyWorkflow: '再创作工作流',
         copyShareLink: '复制分享链接',
         shareLinkCopied: '分享链接已复制到剪贴板',

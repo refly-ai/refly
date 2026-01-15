@@ -1431,7 +1431,7 @@ const translations = {
         startRunning: 'Your workflow starts running',
         executing: 'Running',
         remix: 'Remix',
-        runTooltip: 'Get a Plus plan discount after your first successful run today',
+        runTooltip: 'Unlock a Plus Plan discount after first run',
         copyWorkflow: 'Remix Workflow',
         copyShareLink: 'Copy Share Link',
         shareLinkCopied: 'Share link copied to clipboard',
