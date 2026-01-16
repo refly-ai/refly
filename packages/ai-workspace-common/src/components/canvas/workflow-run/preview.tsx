@@ -31,6 +31,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { ActionStatus } from '@refly/openapi-schema';
 import type { WorkflowNodeExecution } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import './preview.scss';
 
 const OUTPUT_STEP_NAMES = ['answerQuestion', 'generateDocument', 'generateCodeArtifact'];
 
@@ -861,49 +862,6 @@ const WorkflowRunPreviewComponent = () => {
                               ),
                               children: (
                                 <>
-                                  <style>
-                                    {`
-                                    .workflow-run-collapse .ant-collapse-item {
-                                      border: none !important;
-                                      margin-bottom: 0 !important;
-                                    }
-                                    .workflow-run-collapse .ant-collapse-item + .ant-collapse-item {
-                                      margin-top: 2px !important;
-                                    }
-                                    .workflow-run-collapse .ant-collapse-item:first-child .ant-collapse-header {
-                                      border-radius: 6px 6px 0px 0px !important;
-                                    }
-                                    .workflow-run-collapse .ant-collapse-header {
-                                      background-color: #E6E8EA !important;
-                                      height: 34px !important;
-                                      min-height: 34px !important;
-                                      padding: 0 !important;
-                                      margin: 0 !important;
-                                      color: #1C1F23 !important;
-                                      font-weight: 500 !important;
-                                      border-radius: 0 !important;
-                                      border: none !important;
-                                      display: flex !important;
-                                      align-items: center !important;
-                                    }
-                                    .workflow-run-collapse .ant-collapse-expand-icon {
-                                      padding-right: 10px !important;
-                                      padding-left: 0 !important;
-                                      display: flex !important;
-                                      align-items: center !important;
-                                      justify-content: center !important;
-                                      height: 100% !important;
-                                    }
-                                    .workflow-run-collapse .ant-collapse-content {
-                                      background-color: #FFFFFF !important;
-                                      padding: 0 !important;
-                                      border: none !important;
-                                    }
-                                    .workflow-run-collapse .ant-collapse-content-box {
-                                      padding: 0 !important;
-                                    }
-                                  `}
-                                  </style>
                                   <div
                                     className="overflow-hidden bg-[#F6F6F6]"
                                     style={{
