@@ -16,7 +16,7 @@ interface ResourceTypeFormProps {
   uploading: boolean;
   onFileUpload: (file: File) => Promise<boolean>;
   onFileRemove: (file: UploadFile) => void;
-  onRefreshFile: () => void;
+  onRefreshFile: (file: UploadFile) => void;
   form?: any;
   showError?: boolean;
   isRequired?: boolean;
@@ -49,12 +49,10 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
     );
 
     const handleChange = useCallback((info: any) => {
-      // Handle file status changes
-      if (info.file.status === 'uploading') {
-        // Uploading state is handled by parent
-      } else if (info.file.status === 'done') {
-        // Done state is handled by parent
-      } else if (info.file.status === 'error') {
+      // Prevent Upload component from automatically updating fileList
+      // File list is managed manually through beforeUpload handler
+      // Only handle error status for user feedback
+      if (info.file.status === 'error') {
         message.error(`${info.file.name} upload failed`);
       }
     }, []);
@@ -92,10 +90,10 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
             beforeUpload={handleUpload}
             onRemove={handleRemove}
             onChange={handleChange}
-            multiple={false}
+            multiple={true}
             listType="text"
             disabled={uploading}
-            maxCount={1}
+            maxCount={10}
             itemRender={(_originNode, file) => (
               <Spin className="w-full" spinning={uploading}>
                 <div className="w-full h-9 flex items-center justify-between gap-2 box-border px-2 bg-refly-bg-control-z0 rounded-lg hover:bg-refly-tertiary-hover">
@@ -118,7 +116,7 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
                         size="small"
                         type="text"
                         icon={<Refresh size={16} color="var(--refly-text-1)" />}
-                        onClick={onRefreshFile}
+                        onClick={() => onRefreshFile(file)}
                       />
                     </Tooltip>
 

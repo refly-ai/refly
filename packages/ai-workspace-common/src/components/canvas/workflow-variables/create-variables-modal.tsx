@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Button, Modal, Form, Input, Checkbox, message } from 'antd';
 import { /*Attachment, */ Attachment, Close, List, Text1 } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +40,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       defaultValue?.variableType || initialVariableType || 'string',
     );
     const [fileList, setFileList] = useState<UploadFile[]>([]);
+    const fileListRef = useRef<UploadFile[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const { canvasId } = useCanvasContext();
     const { handleVariableView } = useVariableView(canvasId);
@@ -150,6 +151,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
                 status: 'done',
                 url: value.resource?.storageKey || '',
               }));
+              fileListRef.current = files;
               setFileList(files);
             }
           } else if (defaultValue.variableType === 'option') {
@@ -258,36 +260,50 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
 
     // Update file list and sync with resource form data
     const handleFileListChange = useCallback(
-      (newFileList: UploadFile[]) => {
-        setFileList(newFileList);
+      (newFileListOrUpdater: UploadFile[] | ((prev: UploadFile[]) => UploadFile[])) => {
+        setFileList((prevFileList) => {
+          const newFileList =
+            typeof newFileListOrUpdater === 'function'
+              ? newFileListOrUpdater(prevFileList)
+              : newFileListOrUpdater;
 
-        // Update resource form data with current file list
-        if (variableType === 'resource') {
-          const resourceValues: VariableValue[] = newFileList.map((file) => ({
-            type: 'resource',
-            resource: {
-              name: file.name || '',
-              storageKey: file.url || '', // Use url field to store storageKey
-              fileType: getFileType(file.name, file.type),
-            },
-          }));
+          // Update ref to keep it in sync with state
+          fileListRef.current = newFileList;
 
-          updateResourceFormData({
-            value: resourceValues,
-          });
+          // Update resource form data with current file list
+          if (variableType === 'resource') {
+            const resourceValues: VariableValue[] = newFileList.map((file) => ({
+              type: 'resource',
+              resource: {
+                name: file.name || '',
+                storageKey: file.url || '', // Use url field to store storageKey
+                fileType: getFileType(file.name, file.type),
+              },
+            }));
 
-          // Update form values to sync with the form
-          form.setFieldValue('value', resourceValues);
-        }
+            updateResourceFormData({
+              value: resourceValues,
+            });
+
+            // Update form values to sync with the form
+            form.setFieldValue('value', resourceValues);
+          }
+
+          return newFileList;
+        });
       },
       [variableType, form, updateResourceFormData],
     );
 
     const handleFileUpload = useCallback(
       async (file: File) => {
-        const result = await uploadFile(file, fileList);
+        // Use ref to get the latest fileList state
+        // This ensures concurrent uploads don't overwrite each other
+        const currentFileList = fileListRef.current;
+
+        const result = await uploadFile(file, currentFileList);
         if (result && typeof result === 'object' && 'storageKey' in result) {
-          // Add file to list with storageKey
+          // Add file to list with storageKey using functional update
           const newFile: UploadFile = {
             uid: result.uid,
             name: file.name,
@@ -295,13 +311,12 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
             url: result.storageKey, // Store storageKey in url field
           };
 
-          const newFileList = [...fileList, newFile];
-          handleFileListChange(newFileList);
+          handleFileListChange((prev) => [...prev, newFile]);
           return false; // Prevent default upload behavior
         }
         return false;
       },
-      [fileList, handleFileListChange, uploadFile],
+      [handleFileListChange, uploadFile],
     );
 
     const handleFileRemove = useCallback(
@@ -312,30 +327,35 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       [fileList, handleFileListChange],
     );
 
-    const handleRefreshFile = useCallback(() => {
-      // Get old fileId from defaultValue (if editing existing variable)
-      const oldFileId = defaultValue?.value?.[0]?.resource?.fileId;
-      const variableId = defaultValue?.variableId || genVariableID();
+    const handleRefreshFile = useCallback(
+      (fileToReplace: UploadFile) => {
+        // Get old fileId from the file to replace
+        const oldFileId = fileToReplace.uid;
+        const variableId = defaultValue?.variableId || genVariableID();
 
-      refreshFile(
+        refreshFile(
+          fileList,
+          handleFileListChange,
+          resourceFormData.resourceTypes,
+          oldFileId,
+          canvasId,
+          variableId,
+          fileToReplace,
+        );
+      },
+      [
         fileList,
         handleFileListChange,
+        refreshFile,
         resourceFormData.resourceTypes,
-        oldFileId,
+        defaultValue,
         canvasId,
-        variableId,
-      );
-    }, [
-      fileList,
-      handleFileListChange,
-      refreshFile,
-      resourceFormData.resourceTypes,
-      defaultValue,
-      canvasId,
-    ]);
+      ],
+    );
 
     const resetState = useCallback(() => {
       resetFormData();
+      fileListRef.current = [];
       setFileList([]);
       resetOptions();
       form.resetFields();

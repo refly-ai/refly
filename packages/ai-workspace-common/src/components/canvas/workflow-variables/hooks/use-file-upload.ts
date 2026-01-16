@@ -94,7 +94,7 @@ export const useFileUpload = () => {
 
   const handleFileUpload = useCallback(
     async (file: File, fileList: UploadFile[]) => {
-      const maxFileCount = 1;
+      const maxFileCount = 10;
       if (fileList.length >= maxFileCount) {
         message.error(
           t('canvas.workflow.variables.tooManyFiles', { max: maxFileCount }) ||
@@ -133,6 +133,7 @@ export const useFileUpload = () => {
       _oldFileId?: string,
       canvasId?: string | null,
       variableId?: string,
+      fileToReplace?: UploadFile,
     ) => {
       // Generate accept attribute based on resource types
       const generateAcceptAttribute = (types?: string[]) => {
@@ -215,9 +216,15 @@ export const useFileUpload = () => {
               url: data.storageKey,
             };
 
-            // Replace the file list with the new file
-            const newFileList = [newFile];
-            onFileListChange(newFileList);
+            // Replace only the specific file in the list, or replace all if no fileToReplace specified
+            if (fileToReplace) {
+              const newFileList = _fileList.map((f) => (f.uid === fileToReplace.uid ? newFile : f));
+              onFileListChange(newFileList);
+            } else {
+              // Fallback: replace the entire list (for backward compatibility)
+              const newFileList = [newFile];
+              onFileListChange(newFileList);
+            }
 
             message.success(t('common.uploadSuccess') || 'File refreshed successfully');
           }
