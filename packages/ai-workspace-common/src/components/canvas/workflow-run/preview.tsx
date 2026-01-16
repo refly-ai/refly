@@ -474,7 +474,7 @@ const WorkflowRunPreviewComponent = () => {
         pageSize: 1000, // Large page size to get all files
       },
     },
-    [],
+    undefined,
     {
       enabled: outputsOnly && !!canvasId && showWorkflowRun,
       refetchOnWindowFocus: false,

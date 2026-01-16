@@ -38,7 +38,7 @@ export const ImportResourceModal = memo(() => {
   const { projectId, canvasId } = useGetProjectCanvasId();
   const { refetchUsage, storageUsage } = useSubscriptionUsage();
   const canImportCount = getAvailableFileCount(storageUsage);
-  const { refetch: refetchDriveFiles } = useListDriveFiles({ query: { canvasId } }, [], {
+  const { refetch: refetchDriveFiles } = useListDriveFiles({ query: { canvasId } }, undefined, {
     enabled: false,
   });
 
