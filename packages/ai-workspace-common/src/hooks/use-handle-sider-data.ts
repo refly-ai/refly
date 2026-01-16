@@ -77,24 +77,31 @@ export const useHandleSiderData = (initData?: boolean) => {
 
   const getProjectsList = useCallback(
     async (setLoading?: boolean) => {
-      setLoading && setIsLoadingProjects(true);
+      if (setLoading) {
+        setIsLoadingProjects(true);
+      }
 
-      const projects = await requestProjectsList();
+      try {
+        const projects = await requestProjectsList();
 
-      if (!projects) return [];
+        if (!projects) return [];
 
-      setLoading && setIsLoadingProjects(false);
-      const formattedProjects = projects.map((project) => ({
-        id: project.projectId,
-        name: project.name,
-        description: project.description,
-        createdAt: project.createdAt ?? '',
-        updatedAt: project.updatedAt ?? '',
-        coverUrl: project.coverUrl,
-        type: 'project' as const,
-      }));
-      updateProjectsList(formattedProjects);
-      return formattedProjects;
+        const formattedProjects = projects.map((project) => ({
+          id: project.projectId,
+          name: project.name,
+          description: project.description,
+          createdAt: project.createdAt ?? '',
+          updatedAt: project.updatedAt ?? '',
+          coverUrl: project.coverUrl,
+          type: 'project' as const,
+        }));
+        updateProjectsList(formattedProjects);
+        return formattedProjects;
+      } finally {
+        if (setLoading) {
+          setIsLoadingProjects(false);
+        }
+      }
     },
     [requestProjectsList, updateProjectsList],
   );

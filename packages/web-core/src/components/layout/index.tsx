@@ -1,9 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, lazy, Suspense } from 'react';
 import { Layout, Modal } from 'antd';
 import { useMatch, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LazyErrorBoundary } from './LazyErrorBoundary';
-import { SiderLayout } from '@refly-packages/ai-workspace-common/components/sider/layout';
 import { useBindCommands } from '@refly-packages/ai-workspace-common/hooks/use-bind-commands';
 import { useUserStoreShallow } from '@refly/stores';
 import { LOCALE } from '@refly/common-types';
@@ -21,6 +20,13 @@ import { useHandleUrlParamsCallback } from '@refly-packages/ai-workspace-common/
 import { useRouteCollapse } from '@refly-packages/ai-workspace-common/hooks/use-route-collapse';
 import cn from 'classnames';
 import { ModalContainer } from './ModalContainer';
+
+// Lazy load SiderLayout to reduce initial bundle size
+const SiderLayout = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/sider/layout').then((m) => ({
+    default: m.SiderLayout,
+  })),
+);
 
 const Content = Layout.Content;
 
@@ -203,7 +209,11 @@ export const AppLayout = (props: AppLayoutProps) => {
             'linear-gradient(124deg,rgba(31,201,150,0.1) 0%,rgba(69,190,255,0.06) 24.85%),var(--refly-bg-body-z0, #FFFFFF)',
         }}
       >
-        {showSider ? <SiderLayout source="sider" /> : null}
+        {showSider ? (
+          <Suspense fallback={<div className="w-64" />}>
+            <SiderLayout source="sider" />
+          </Suspense>
+        ) : null}
         <Layout
           className={cn(
             'content-layout bg-transparent flex-grow overflow-y-auto overflow-x-hidden rounded-xl min-w-0 min-h-0 overscroll-contain',

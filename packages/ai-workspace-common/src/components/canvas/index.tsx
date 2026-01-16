@@ -1394,7 +1394,7 @@ export const Canvas = memo(
       return () => {
         setCurrentCanvasId(null);
       };
-    }, [canvasId, setCurrentCanvasId]);
+    }, [canvasId, setCurrentCanvasId, readonly, setSidePanelVisible]);
 
     // Calculate max width as 50% of parent container
     const [maxPanelWidth, setMaxPanelWidth] = useState(800);

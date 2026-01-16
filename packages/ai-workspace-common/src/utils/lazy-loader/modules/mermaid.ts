@@ -15,7 +15,7 @@ export interface MermaidConfig {
 let mermaidConfig: MermaidConfig = {
   startOnLoad: false,
   theme: 'default',
-  securityLevel: 'loose',
+  securityLevel: 'strict',
   fontFamily: 'inherit',
 };
 

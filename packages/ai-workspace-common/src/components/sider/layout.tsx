@@ -662,9 +662,17 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
   return (
     <>
       {/* Lazy load Modal components, only load when needed */}
+      {showSettingModal && (
+        <Suspense fallback={null}>
+          <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
+        </Suspense>
+      )}
+      {showInvitationModal && (
+        <Suspense fallback={null}>
+          <InvitationModal visible={showInvitationModal} setVisible={setShowInvitationModal} />
+        </Suspense>
+      )}
       <Suspense fallback={null}>
-        <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
-        <InvitationModal visible={showInvitationModal} setVisible={setShowInvitationModal} />
         <StorageExceededModal />
         <CreditInsufficientModal />
         <CanvasTemplateModal />

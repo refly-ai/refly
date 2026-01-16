@@ -124,12 +124,27 @@ const createCanvasVersion = async (canvasId: string, state: CanvasState) => {
 
 const CanvasContext = createContext<CanvasContextType | null>(null);
 
-// Global refs to prevent duplicate initializations across component mount/unmount cycles
-// These persist even when the component unmounts and remounts rapidly
-const globalLastInitializedCanvasIdRef = { current: null as string | null };
-const globalLastInitTimeRef = { current: 0 };
-const globalLastCleanupTimeRef = { current: 0 }; // Track when cleanup happened
+// Per-canvas initialization tracker to prevent duplicate initializations
+// Uses Map keyed by canvasId so concurrent CanvasProvider instances don't interfere
+interface CanvasInitState {
+  lastInitializedId: string | null;
+  lastInitTime: number;
+  lastCleanupTime: number;
+}
+
+const globalCanvasInitTracker = new Map<string, CanvasInitState>();
 const MIN_REINIT_INTERVAL_MS = 500; // Minimum 500ms between initializations
+
+const getCanvasInitState = (canvasId: string): CanvasInitState => {
+  if (!globalCanvasInitTracker.has(canvasId)) {
+    globalCanvasInitTracker.set(canvasId, {
+      lastInitializedId: null,
+      lastInitTime: 0,
+      lastCleanupTime: 0,
+    });
+  }
+  return globalCanvasInitTracker.get(canvasId)!;
+};
 
 const getInternalState = ({
   nodes,
@@ -791,9 +806,10 @@ export const CanvasProvider = ({
     if (readonly) return;
 
     const now = Date.now();
-    const timeSinceLastInit = now - globalLastInitTimeRef.current;
-    const timeSinceLastCleanup = now - globalLastCleanupTimeRef.current;
-    const lastCanvasId = globalLastInitializedCanvasIdRef.current;
+    const initState = getCanvasInitState(canvasId);
+    const timeSinceLastInit = now - initState.lastInitTime;
+    const timeSinceLastCleanup = now - initState.lastCleanupTime;
+    const lastCanvasId = initState.lastInitializedId;
 
     // Skip initialization if:
     // 1. Same canvasId AND no cleanup happened recently AND time is too soon
@@ -808,13 +824,14 @@ export const CanvasProvider = ({
       return;
     }
 
-    globalLastInitializedCanvasIdRef.current = canvasId;
-    globalLastInitTimeRef.current = now;
+    initState.lastInitializedId = canvasId;
+    initState.lastInitTime = now;
     setSyncFailureCount(0);
     initialFetchCanvasState(canvasId);
 
     return () => {
-      globalLastCleanupTimeRef.current = Date.now(); // Record cleanup time
+      const state = getCanvasInitState(canvasId);
+      state.lastCleanupTime = Date.now(); // Record cleanup time
 
       // DON'T reset the global ref here - let it persist to prevent rapid re-initializations
       // It will be reset by the next different canvasId or after MIN_REINIT_INTERVAL_MS
