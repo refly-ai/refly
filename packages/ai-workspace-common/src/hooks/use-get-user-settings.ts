@@ -28,6 +28,7 @@ export const useGetUserSettings = () => {
     userProfile: state.userProfile,
     localSettings: state.localSettings,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
+    isLogin: state.isLogin,
   }));
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -68,7 +69,13 @@ export const useGetUserSettings = () => {
       // - Do NOT navigate if we are already on public pages (including /login)
       // - Do NOT navigate when we are already at root '/', because AppLayout will handle root redirection
       if (!isPublicPage && currentPath !== '/' && currentPath !== '/login') {
-        navigate(`/?${searchParams.toString()}`); // Extension should navigate to home
+        // Preserve current path and query params as returnUrl for post-login redirect
+        const currentSearch = window?.location?.search ?? '';
+        const fullPath = currentPath + currentSearch;
+        const returnUrl = encodeURIComponent(fullPath);
+        navigate(
+          `/login?returnUrl=${returnUrl}${searchParams.toString() ? `&${searchParams.toString()}` : ''}`,
+        );
       }
 
       return;
@@ -108,13 +115,23 @@ export const useGetUserSettings = () => {
       userTypeForUserProperties = userType;
     }
 
+    // Check if this is a transition from not-logged-in to logged-in
+    // This happens after OAuth callback, email verification, or other backend auth flows
+    const wasNotLoggedIn = !userStore.isLogin;
+
     localStorage.setItem('refly-user-profile', safeStringifyJSON(settings));
     userStore.setIsLogin(true);
 
-    // Update authChannel current uid and broadcast login event
+    // Update authChannel current uid (for user-changed detection)
     const currentUid = settings?.uid;
     if (currentUid) {
       authChannel.updateCurrentUid(currentUid);
+    }
+
+    // Broadcast login event to other tabs only on transition from not-logged-in to logged-in
+    // This covers OAuth callbacks and email verification redirects
+    if (wasNotLoggedIn && currentUid) {
+      console.log('[Auth] Broadcasting login event after authentication (OAuth/verification)');
       authChannel.broadcast({ type: 'login', uid: currentUid });
     }
 

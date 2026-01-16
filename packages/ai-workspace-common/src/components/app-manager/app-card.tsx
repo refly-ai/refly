@@ -6,7 +6,7 @@ import { LOCALE } from '@refly/common-types';
 import { useTranslation } from 'react-i18next';
 import { WiTime3 } from 'react-icons/wi';
 import { memo, useMemo, useCallback } from 'react';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '../../assets/refly_default_avatar_v2.webp';
 import { useDuplicateCanvas } from '@refly-packages/ai-workspace-common/hooks/use-duplicate-canvas';
 import { useUserStoreShallow, useAuthStoreShallow } from '@refly/stores';
 import { storeSignupEntryPoint } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';

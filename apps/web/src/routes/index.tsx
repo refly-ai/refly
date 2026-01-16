@@ -1,6 +1,33 @@
-import { HomeRedirect } from '@refly-packages/ai-workspace-common/components/home-redirect';
-import BackendRedirect from '@refly-packages/ai-workspace-common/components/backend-redirect';
-import { InviteRedirect } from '@refly-packages/ai-workspace-common/components/invite-redirect';
+import { lazy } from 'react';
+import type { RouteObject } from 'react-router-dom';
+
+// Lazy load all components, including redirect components
+const HomeRedirect = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/home-redirect').then((m) => ({
+    default: m.HomeRedirect,
+  })),
+);
+const BackendRedirect = lazy(
+  () => import('@refly-packages/ai-workspace-common/components/backend-redirect'),
+);
+const InviteRedirect = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/invite-redirect').then((m) => ({
+    default: m.InviteRedirect,
+  })),
+);
+
+// Lazy load redirect components
+const CanvasRedirect = lazy(() =>
+  import('./redirects').then((m) => ({ default: m.CanvasRedirect })),
+);
+const WorkspaceRedirect = lazy(() =>
+  import('./redirects').then((m) => ({ default: m.WorkspaceRedirect })),
+);
+const ProtectedRoute = lazy(() =>
+  import('./redirects').then((m) => ({ default: m.ProtectedRoute })),
+);
+
+// Components imported from web-core are already lazy-loaded
 import {
   Pricing,
   ShareCanvasPage,
@@ -19,9 +46,6 @@ import {
   RunDetailPage,
   CliAuthPage,
 } from '@refly/web-core';
-
-import type { RouteObject } from 'react-router-dom';
-import { CanvasRedirect, WorkspaceRedirect, ProtectedRoute } from './redirects';
 
 export const RoutesList: RouteObject[] = [
   // TODO: deprecated and navigate to framer page

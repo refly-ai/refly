@@ -1,5 +1,5 @@
 import { setupI18n, setupSentry } from '@refly/web-core';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { LightLoading, ReflyConfigProvider, useConfigProviderStore } from '@refly/ui-kit';
 import { ConfigProvider, theme } from 'antd';
 import { useThemeStoreShallow } from '@refly/stores';
@@ -11,7 +11,12 @@ export interface InitializationSuspenseProps {
 }
 
 export function InitializationSuspense({ children }: InitializationSuspenseProps) {
+  // Detect if page is being prerendered
+  // Skip initialization during prerender, quickly initialize on activation
   const [isInitialized, setIsInitialized] = useState(false);
+  const isPrerendering = useRef(
+    typeof document !== 'undefined' && 'prerendering' in document && document.prerendering === true,
+  );
   const updateTheme = useConfigProviderStore((state) => state.updateTheme);
 
   const { isDarkMode, initTheme } = useThemeStoreShallow((state) => ({
@@ -20,16 +25,44 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
   }));
 
   const init = async () => {
+    // If prerendering, defer initialization
+    if (isPrerendering.current) {
+      console.log('[Init] Page is being prerendered, deferring initialization');
+      return;
+    }
+
     setRuntime('web');
     initTheme();
 
-    // support multiple initialization
-    await Promise.all([setupI18n(), setupSentry(), setupStatsig()]);
-    setIsInitialized(true);
+    // Initialization for normal load or after prerender activation
+    try {
+      await setupI18n();
+      setIsInitialized(true);
+      console.log('[Init] Initialization complete');
+    } catch (error) {
+      console.error('Failed to initialize i18n:', error);
+      // Allow continuation even on failure to avoid permanent loading state
+      setIsInitialized(true);
+    }
+
+    // non-blocking initialization
+    Promise.all([setupSentry(), setupStatsig()]).catch((e) => {
+      console.error('Failed to initialize metrics:', e);
+    });
   };
 
   useEffect(() => {
     init();
+
+    // Listen for prerender activation event
+    if ('prerendering' in document) {
+      const handleActivation = () => {
+        console.log('[Init] Page activated from prerender');
+        init();
+      };
+      document.addEventListener('prerenderingchange', handleActivation);
+      return () => document.removeEventListener('prerenderingchange', handleActivation);
+    }
   }, []);
 
   useEffect(() => {

@@ -3,7 +3,7 @@ import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useTranslation } from 'react-i18next';
 import { Input, Button, Empty } from 'antd';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { Search, Sort, SortAsc } from 'refly-icons';
 import {
   EndMessage,

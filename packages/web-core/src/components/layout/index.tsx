@@ -2,32 +2,16 @@ import { useEffect, useRef } from 'react';
 import { Layout, Modal } from 'antd';
 import { useMatch, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ErrorBoundary } from '@sentry/react';
+import { LazyErrorBoundary } from './LazyErrorBoundary';
 import { SiderLayout } from '@refly-packages/ai-workspace-common/components/sider/layout';
 import { useBindCommands } from '@refly-packages/ai-workspace-common/hooks/use-bind-commands';
 import { useUserStoreShallow } from '@refly/stores';
 import { LOCALE } from '@refly/common-types';
 import { authChannel } from '@refly-packages/ai-workspace-common/utils/auth-channel';
-
-import { LoginModal } from '../../components/login-modal';
-import { SubscribeModal } from '@refly-packages/ai-workspace-common/components/settings/subscribe-modal';
-import { ClaimedVoucherPopup } from '@refly-packages/ai-workspace-common/components/voucher/claimed-voucher-popup';
-import { EarnedVoucherPopup } from '@refly-packages/ai-workspace-common/components/voucher/earned-voucher-popup';
-import { VerificationModal } from '../../components/verification-modal';
-import { ResetPasswordModal } from '../../components/reset-password-modal';
-import { InvitationCodeModal } from '../../components/invitation-code-modal';
 import { usePublicAccessPage } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
-import { CanvasListModal } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal';
-import { LibraryModal } from '@refly-packages/ai-workspace-common/components/workspace/library-modal';
-import { ImportResourceModal } from '@refly-packages/ai-workspace-common/components/import-resource';
-import './index.scss';
-import { useSiderStoreShallow } from '@refly/stores';
-import { BigSearchModal } from '@refly-packages/ai-workspace-common/components/search/modal';
-import { CanvasRenameModal } from '@refly-packages/ai-workspace-common/components/canvas/modals/canvas-rename';
-import { CanvasDeleteModal } from '@refly-packages/ai-workspace-common/components/canvas/modals/canvas-delete';
-import { DuplicateCanvasModal } from '@refly-packages/ai-workspace-common/components/canvas/modals/duplicate-canvas-modal';
 import { safeParseJSON } from '@refly-packages/ai-workspace-common/utils/parse';
 
+import './index.scss';
 import { LightLoading } from '@refly/ui-kit';
 import { isDesktop } from '@refly/ui-kit';
 import { useGetUserSettings } from '@refly-packages/ai-workspace-common/hooks/use-get-user-settings';
@@ -36,9 +20,8 @@ import { useGetMediaModel } from '@refly-packages/ai-workspace-common/hooks/use-
 import { useHandleUrlParamsCallback } from '@refly-packages/ai-workspace-common/hooks/use-handle-url-params-callback';
 import { useRouteCollapse } from '@refly-packages/ai-workspace-common/hooks/use-route-collapse';
 import cn from 'classnames';
-import { FormOnboardingModal } from '../form-onboarding-modal';
-import { OnboardingSuccessModal } from '../onboarding-success-modal';
-import { PureCopilotModal } from '../pure-copilot-modal';
+import { ModalContainer } from './ModalContainer';
+
 const Content = Layout.Content;
 
 interface AppLayoutProps {
@@ -50,18 +33,6 @@ export const AppLayout = (props: AppLayoutProps) => {
   const location = useLocation();
   const hasRedirectedRef = useRef(false);
 
-  const { showCanvasListModal, setShowCanvasListModal, showLibraryModal, setShowLibraryModal } =
-    useSiderStoreShallow((state) => ({
-      showCanvasListModal: state.showCanvasListModal,
-      showLibraryModal: state.showLibraryModal,
-      setShowCanvasListModal: state.setShowCanvasListModal,
-      setShowLibraryModal: state.setShowLibraryModal,
-    }));
-
-  const isPublicAccessPage = usePublicAccessPage();
-  const matchPricing = useMatch('/pricing');
-  const matchApp = useMatch('/app/:appId');
-
   useBindCommands();
 
   const userStore = useUserStoreShallow((state) => ({
@@ -70,6 +41,10 @@ export const AppLayout = (props: AppLayoutProps) => {
     localSettings: state.localSettings,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
   }));
+
+  const isPublicAccessPage = usePublicAccessPage();
+  const matchPricing = useMatch('/pricing');
+  const matchApp = useMatch('/app/:appId');
 
   const showSider = (isPublicAccessPage || (!!userStore.userProfile && !matchPricing)) && !matchApp;
 
@@ -152,7 +127,8 @@ export const AppLayout = (props: AppLayoutProps) => {
                 '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66] rounded-lg',
             },
             onOk: () => {
-              window.location.href = '/login';
+              // Use SPA navigation instead of hard redirect
+              navigate('/login', { replace: true });
             },
           });
           break;
@@ -176,10 +152,10 @@ export const AppLayout = (props: AppLayoutProps) => {
           break;
 
         case 'login':
-          // Another tab logged in, redirect if currently on login page
-          if (window.location.pathname === '/login') {
-            window.location.href = '/workspace';
-          }
+          // Another tab logged in
+          // Don't auto-refresh as it causes infinite loops
+          // useGetUserSettings will auto-update userStore and UI will respond reactively
+          console.log('[Auth] Login event received from another tab, uid:', event.uid);
           break;
       }
     });
@@ -217,7 +193,7 @@ export const AppLayout = (props: AppLayoutProps) => {
   }
 
   return (
-    <ErrorBoundary>
+    <LazyErrorBoundary>
       <EnvironmentBanner />
       <Layout
         className="app-layout main w-full overflow-x-hidden"
@@ -238,24 +214,12 @@ export const AppLayout = (props: AppLayoutProps) => {
         >
           <Content>{props.children}</Content>
         </Layout>
-        <BigSearchModal />
-        <LoginModal />
-        <VerificationModal />
-        <FormOnboardingModal />
-        <OnboardingSuccessModal />
-        <InvitationCodeModal />
-        <PureCopilotModal />
-        <ResetPasswordModal />
-        <SubscribeModal />
-        <ClaimedVoucherPopup />
-        <EarnedVoucherPopup />
-        <CanvasListModal visible={showCanvasListModal} setVisible={setShowCanvasListModal} />
-        <LibraryModal visible={showLibraryModal} setVisible={setShowLibraryModal} />
-        <ImportResourceModal />
-        <CanvasRenameModal />
-        <CanvasDeleteModal />
-        <DuplicateCanvasModal />
+        {/* Modal container is isolated to prevent modal state from causing content re-renders */}
+        <ModalContainer />
       </Layout>
-    </ErrorBoundary>
+    </LazyErrorBoundary>
   );
 };
+
+// Export LazyErrorBoundary for use in other parts of the app
+export { LazyErrorBoundary } from './LazyErrorBoundary';

@@ -72,7 +72,9 @@
       "yjs": "13.6.16",
       "zod": "3.25.76",
       "zod-to-json-schema": "3.24.6",
-      "zod-validation-error": "3.4.1"
+      "zod-validation-error": "3.4.1",
+      "layout-base": "2.0.1",
+      "cose-base": "2.2.0"
     }
   },
   "dependencies": {

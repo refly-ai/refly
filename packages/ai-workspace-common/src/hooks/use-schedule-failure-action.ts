@@ -166,7 +166,7 @@ export const useScheduleFailureAction = (canvasId: string) => {
           break;
         case 'viewSchedule':
         case 'fixWorkflow':
-          navigate(`/canvas/${canvasId}`);
+          navigate(`/workflow/${canvasId}`);
           break;
       }
     },

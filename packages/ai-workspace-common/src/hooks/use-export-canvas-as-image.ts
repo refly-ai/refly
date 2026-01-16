@@ -2,11 +2,12 @@ import { useReactFlow } from '@xyflow/react';
 import { useCallback, useState } from 'react';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import html2canvas, { Options } from 'html2canvas';
+import type { Options } from 'html2canvas';
 import { UploadResponse } from '@refly/openapi-schema';
 import { useSiderStore } from '@refly/stores';
 import { staticPrivateEndpoint } from '@refly/ui-kit';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { getHtml2Canvas } from '@refly-packages/ai-workspace-common/utils/lazy-loader';
 
 export const useExportCanvasAsImage = () => {
   const { t } = useTranslation();
@@ -62,6 +63,9 @@ export const useExportCanvasAsImage = () => {
         if (!reactFlowContainer) {
           throw new Error('React Flow container not found');
         }
+
+        // Get html2canvas from lazy loader
+        const html2canvas = await getHtml2Canvas();
 
         // use html2canvas to create an image
         const canvas = await html2canvas(reactFlowContainer as HTMLElement, {

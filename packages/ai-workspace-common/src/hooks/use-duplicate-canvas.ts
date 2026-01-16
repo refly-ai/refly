@@ -77,7 +77,7 @@ export const useDuplicateCanvas = () => {
             }
             const url = projectId
               ? `/project/${projectId}?canvasId=${newEntityId}`
-              : `/canvas/${newEntityId}`;
+              : `/workflow/${newEntityId}`;
             navigate(url);
           }
         }

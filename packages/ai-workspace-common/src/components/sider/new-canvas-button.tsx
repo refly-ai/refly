@@ -52,7 +52,7 @@ export const NewCanvasButton = React.memo(() => {
       getCanvasList();
 
       // Navigate to the newly imported canvas
-      navigate(`/canvas/${importedCanvasId}`);
+      navigate(`/workflow/${importedCanvasId}`);
     } catch (error) {
       console.error('Import canvas error:', error);
       message.error(t('canvas.import.importFailed', 'Failed to import canvas'));
