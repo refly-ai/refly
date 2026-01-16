@@ -18,8 +18,8 @@
  *   - chunk-optimization-report.md：人类可读的报告
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const { parse } = require('@babel/parser');
 const traverse = require('@babel/traverse').default;
 
@@ -57,10 +57,10 @@ const CONFIG = {
   // 用户行为模式（页面之间的跳转频率）
   // 数值越高表示用户越频繁在这两个页面之间切换
   userBehavior: {
-    'workspace-workflow': 0.8,     // 非常频繁
+    'workspace-workflow': 0.8, // 非常频繁
     'workflow-app-marketplace': 0.6, // 比较频繁
-    'share-canvas-workspace': 0.3,  // 偶尔
-    'login-workspace': 0.5,         // 登录后进入
+    'share-canvas-workspace': 0.3, // 偶尔
+    'login-workspace': 0.5, // 登录后进入
     // ... 可以根据实际用户数据调整
   },
 };
@@ -81,7 +81,7 @@ function findAllFiles(dir, extensions = ['.tsx', '.ts', '.jsx', '.js']) {
 
       if (entry.isDirectory()) {
         walk(fullPath);
-      } else if (extensions.some(ext => entry.name.endsWith(ext))) {
+      } else if (extensions.some((ext) => entry.name.endsWith(ext))) {
         files.push(fullPath);
       }
     }
@@ -127,7 +127,9 @@ function analyzePage(pageDir) {
 
   for (const file of files) {
     const imports = parseImports(file);
-    imports.forEach(imp => allImports.add(imp));
+    for (const imp of imports) {
+      allImports.add(imp);
+    }
   }
 
   // 分类依赖
@@ -232,7 +234,7 @@ function calculateSimilarity(page1, page2) {
   const allDeps2 = Object.values(deps2).flat();
   const set1 = new Set(allDeps1);
   const set2 = new Set(allDeps2);
-  const intersection = new Set([...set1].filter(x => set2.has(x)));
+  const intersection = new Set([...set1].filter((x) => set2.has(x)));
   const union = new Set([...set1, ...set2]);
 
   const importSimilarity = union.size > 0 ? intersection.size / union.size : 0;
@@ -249,7 +251,7 @@ function buildSimilarityMatrix(pages) {
   const matrix = {};
 
   for (let i = 0; i < pageNames.length; i++) {
-me1 = pageNames[i];
+    me1 = pageNames[i];
     matrix[name1] = {};
 
     for (let j = 0; j < pageNames.length; j++) {
@@ -281,7 +283,7 @@ function hierarchicalClustering(pages, similarityMatrix, targetGroups = 5) {
   const pageNames = Object.keys(pages);
 
   // 初始化：每个页面是一个簇
-  let clusters = pageNames.map(name => ({
+  let clusters = pageNames.map((name) => ({
     pages: [name],
     centroid: name, // 代表页面
   }));
@@ -326,20 +328,20 @@ function hierarchicalClustering(pages, similarityMatrix, targetGroups = 5) {
 /**
  * 计算分组策略的收益
  */
-function calculateGroupingBenefit(pages, groups, similarityMatrix) {
+function calculateGroupingBenefit(pages, groups, _similarityMatrix) {
   const pageNames = Object.keys(pages);
 
   // 计算每个组的总体积
-  const groupSizes = groups.map(group => {
+  const groupSizes = groups.map((group) => {
     let totalSize = 0;
-    const sharedDeps = new Set();
+    const _sharedDeps = new Set();
 
     // 计算共享依赖
     const allCategories = Object.keys(CONFIG.importPatterns);
 
     for (const category of allCategories) {
       const pagesUsingCategory = group.pages.filter(
-        pageName => pages[pageName].dependencies[category].length > 0
+        (pageName) => pages[pageName].dependencies[category].length > 0,
       );
 
       if (pagesUsingCategory.length > 0) {
@@ -367,7 +369,10 @@ function calculateGroupingBenefit(pages, groups, similarityMatrix) {
   let typicalDownload = 0;
   // 简化计算：假设用户平均访问 3 个不同的组
   const avgGroupsVisited = Math.min(3, groups.length);
-  typicalDownload = groupSizes.sort((a, b) => a - b).slice(0, avgGroupsVisited).reduce((sum, size) => sum + size, 0);
+  typicalDownload = groupSizes
+    .sort((a, b) => a - b)
+    .slice(0, avgGroupsVisited)
+    .reduce((sum, size) => sum + size, 0);
 
   // 计算缓存效率（组内页面切换时的缓存命中率）
   let totalSwitches = 0;
@@ -381,8 +386,8 @@ function calculateGroupingBenefit(pages, groups, similarityMatrix) {
       totalSwitches++;
 
       // 检查是否在同一组
-      const inSameGroup = groups.some(group =>
-        group.pages.includes(page1) && group.pages.includes(page2)
+      const inSameGroup = groups.some(
+        (group) => group.pages.includes(page1) && group.pages.includes(page2),
       );
 
       if (inSameGroup) {
@@ -449,7 +454,7 @@ function generateMarkdownReport(pages, groups, benefits, similarityMatrix) {
 
     for (const category of Object.keys(CONFIG.importPatterns)) {
       const pagesUsingCategory = group.pages.filter(
-        pageName => pages[pageName].dependencies[category].length > 0
+        (pageName) => pages[pageName].dependencies[category].length > 0,
       );
 
       if (pagesUsingCategory.length > 0) {
@@ -509,7 +514,7 @@ function generateMarkdownReport(pages, groups, benefits, similarityMatrix) {
 
   report += '### 缓存效率\n\n';
   report += `- **组内页面切换缓存命中率**: ${(benefits.cacheHitRate * 100).toFixed(1)}%\n`;
-  report += `- 用户在组内页面切换时，无需重新下载依赖\n\n`;
+  report += '- 用户在组内页面切换时，无需重新下载依赖\n\n';
 
   // 6. 实施建议
   report += '## 🚀 实施建议\n\n';
@@ -523,10 +528,13 @@ function generateMarkdownReport(pages, groups, benefits, similarityMatrix) {
 
     report += `// Group ${i + 1}: ${groupName}\n`;
     for (const pageName of group.pages) {
-      const componentName = pageName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('') + 'Page';
+      const componentName = `${pageName
+        .split('-')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join('')}Page`;
       report += `export const ${componentName} = lazy(\n`;
       report += `  () => import(/* webpackChunkName: "${groupName}" */ './pages/${pageName}'),\n`;
-      report += `);\n`;
+      report += ');\n';
     }
     report += '\n';
   }
@@ -603,7 +611,7 @@ function main() {
   fs.writeFileSync(jsonPath, JSON.stringify(jsonReport, null, 2));
   fs.writeFileSync(mdPath, markdownReport);
 
-  console.log(`✅ 报告已生成:`);
+  console.log('✅ 报告已生成:');
   console.log(`   - JSON: ${jsonPath}`);
   console.log(`   - Markdown: ${mdPath}\n`);
 
