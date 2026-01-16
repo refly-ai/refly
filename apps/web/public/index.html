@@ -45,7 +45,8 @@
       align-items: center;
       background-color: #fff;
       z-index: 9999;
-      transition: opacity 0.3s ease-out;
+      opacity: 1;
+      transition: opacity 0.2s ease-out;
     }
     html.dark #refly-initial-loader {
       background-color: #0d0d0d;
@@ -101,11 +102,20 @@
       // Loading controller
       window.__REFLY_SHOW_LOADING__ = function() {
         var loader = document.getElementById('refly-initial-loader');
-        if (loader) loader.style.display = 'flex';
+        if (loader) {
+          loader.classList.remove('hidden');
+          loader.style.display = 'flex';
+        }
       };
       window.__REFLY_HIDE_LOADING__ = function() {
         var loader = document.getElementById('refly-initial-loader');
-        if (loader) loader.style.display = 'none';
+        if (loader) {
+          loader.classList.add('hidden');
+          // Wait for fade-out animation to complete before hiding
+          setTimeout(function() {
+            loader.style.display = 'none';
+          }, 300); // Match the transition duration
+        }
       };
     })();
   </script>
