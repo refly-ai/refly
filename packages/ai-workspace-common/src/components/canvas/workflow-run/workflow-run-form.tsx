@@ -142,7 +142,7 @@ export const WorkflowRunForm = ({
     useCanvasResourcesPanelStoreShallow((state) => ({
       setToolsDependencyOpen: state.setToolsDependencyOpen,
       setToolsDependencyHighlight: state.setToolsDependencyHighlight,
-      hasFirstSuccessExecutionToday: state.hasFirstSuccessExecutionToday,
+      hasFirstSuccessExecutionToday: state.hasFirstExecutionToday,
     }));
 
   const [internalIsRunning, setInternalIsRunning] = useState(false);

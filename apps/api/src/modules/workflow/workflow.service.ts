@@ -219,7 +219,6 @@ export class WorkflowService {
       const executionsToday = await this.prisma.workflowExecution.count({
         where: {
           uid: user.uid,
-          status: 'finish',
           createdAt: {
             gte: todayStart,
           },

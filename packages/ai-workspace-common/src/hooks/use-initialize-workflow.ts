@@ -28,8 +28,8 @@ export const useInitializeWorkflow = (
   const { showEarnedVoucherPopup } = useSubscriptionStoreShallow((state) => ({
     showEarnedVoucherPopup: state.showEarnedVoucherPopup,
   }));
-  const { setHasFirstSuccessExecutionToday } = useCanvasResourcesPanelStoreShallow((state) => ({
-    setHasFirstSuccessExecutionToday: state.setHasFirstSuccessExecutionToday,
+  const { setHasFirstExecutionToday } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setHasFirstExecutionToday: state.setHasFirstExecutionToday,
   }));
 
   const { executionId, setCanvasExecutionId } = useCanvasStoreShallow((state) => ({
@@ -45,40 +45,6 @@ export const useInitializeWorkflow = (
         message.success(
           t('canvas.workflow.run.completed') || 'Workflow execution completed successfully',
         );
-        setHasFirstSuccessExecutionToday(true);
-
-        // If current workflow execution is the first successful execution today, trigger voucher popup
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        const { data: listWorkflowExecutionsData, error } =
-          await getClient().listWorkflowExecutions({
-            query: {
-              after: startOfToday.getTime(),
-              order: 'creationAsc',
-              status: 'finish',
-              pageSize: 1,
-            },
-          });
-        const firstSuccessExecutionToday = listWorkflowExecutionsData?.data?.[0];
-        if (!error && firstSuccessExecutionToday?.executionId === data?.data?.executionId) {
-          // Poll for available vouchers if not immediately found
-          // This handles cases where the voucher might be generated with a slight delay after execution completion
-          for (let attempts = 0; attempts < 10; attempts++) {
-            const { data: voucherData } = await getClient().getAvailableVouchers();
-            const bestVoucher = voucherData?.data?.bestVoucher;
-            if (bestVoucher) {
-              showEarnedVoucherPopup({
-                voucher: bestVoucher,
-                score: bestVoucher.llmScore,
-                triggerLimitReached: false,
-              });
-              break;
-            }
-            if (attempts < 9) {
-              await delay(2000);
-            }
-          }
-        }
       } else if (status === 'failed') {
         // Check if this is a credit insufficient error
         const nodeExecutions = data?.data?.nodeExecutions || [];
@@ -129,6 +95,20 @@ export const useInitializeWorkflow = (
         setLoading(true);
         await forceSyncState({ syncRemote: true });
 
+        // If current workflow execution is the first successful execution today, trigger voucher popup
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const { data: listWorkflowExecutionsData, error: listWorkflowExecutionsError } =
+          await getClient().listWorkflowExecutions({
+            query: {
+              after: startOfToday.getTime(),
+              order: 'creationAsc',
+              pageSize: 1,
+            },
+          });
+        const firstExecutionToday = listWorkflowExecutionsData?.data?.[0];
+        const shouldTriggerVoucherPopup = !listWorkflowExecutionsError && !firstExecutionToday;
+
         const { data, error } = await getClient().initializeWorkflow({
           body: {
             variables: workflowVariables,
@@ -143,6 +123,29 @@ export const useInitializeWorkflow = (
         }
         if (data?.data?.workflowExecutionId && canvasId) {
           setCanvasExecutionId(canvasId, data.data.workflowExecutionId);
+        }
+
+        setHasFirstExecutionToday(true);
+
+        if (shouldTriggerVoucherPopup) {
+          console.log('start polling for available vouchers');
+          // Poll for available vouchers if not immediately found
+          // This handles cases where the voucher might be generated with a slight delay after execution completion
+          for (let attempts = 0; attempts < 10; attempts++) {
+            const { data: voucherData } = await getClient().getAvailableVouchers();
+            const bestVoucher = voucherData?.data?.bestVoucher;
+            if (bestVoucher) {
+              showEarnedVoucherPopup({
+                voucher: bestVoucher,
+                score: bestVoucher.llmScore,
+                triggerLimitReached: false,
+              });
+              break;
+            }
+            if (attempts < 9) {
+              await delay(2000);
+            }
+          }
         }
 
         message.success({
