@@ -30,9 +30,7 @@
     "./queries": "./src/queries/index.ts",
     "./queries/*": "./src/queries/*.ts",
     "./requests/*": "./src/requests/*.ts",
-    "./utils/*": "./src/utils/*.ts",
-    "./stores": "./src/stores/index.ts",
-    "./stores/*": "./src/stores/*.ts"
+    "./utils/*": "./src/utils/*.ts"
   },
   "scripts": {
     "codegen": "openapi-rq -i ../openapi-schema/schema.yml -o src --noSchemas && node scripts/postprocess-codegen.cjs"

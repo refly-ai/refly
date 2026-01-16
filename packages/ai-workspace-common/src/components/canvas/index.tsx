@@ -1368,7 +1368,7 @@ export const Canvas = memo(
 
     useEffect(() => {
       if (readonly || !isLogin) {
-        handleSetCopilotWidth(0);
+        setCopilotWidth(0);
         return;
       }
       if (!canvasCopilotWidth && canvasCopilotWidth !== 0) {
@@ -1376,7 +1376,7 @@ export const Canvas = memo(
       } else {
         setCopilotWidth(canvasCopilotWidth);
       }
-    }, [canvasCopilotWidth, canvasId]);
+    }, [canvasCopilotWidth, canvasId, readonly, isLogin, handleSetCopilotWidth]);
 
     useEffect(() => {
       setSidePanelVisible(false);

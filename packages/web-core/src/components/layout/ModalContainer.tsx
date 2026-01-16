@@ -69,7 +69,7 @@ export const ModalContainer = memo(() => {
   const needOnboarding = profileForOnboarding?.preferences?.needOnboarding;
   const isPureCopilotVisible = !hidePureCopilotModal && !!needOnboarding;
 
-  // 模态框预加载状态 (键盘快捷键或特定交互触发)
+  // Modal pre-load flags (triggered by keyboard shortcuts or specific interactions)
   const [shouldLoadBigSearch, setShouldLoadBigSearch] = useState(false);
   const [shouldLoadCanvasRename, setShouldLoadCanvasRename] = useState(false);
   const [shouldLoadCanvasDelete, setShouldLoadCanvasDelete] = useState(false);
@@ -82,7 +82,7 @@ export const ModalContainer = memo(() => {
   const isDuplicateCanvasShown =
     (modalVisible && modalType === 'duplicate') || shouldLoadDuplicateCanvas;
 
-  // 监听键盘事件，预加载 BigSearchModal (Cmd/Ctrl + K)
+  // Listen for keyboard events to preload BigSearchModal (Cmd/Ctrl + K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -93,10 +93,10 @@ export const ModalContainer = memo(() => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // 监听 CanvasListModal 和 LibraryModal 的状态变化
+  // Listen for CanvasListModal and LibraryModal state changes
   useEffect(() => {
     if (showCanvasListModal || showLibraryModal) {
-      // 当用户打开这些模态框时，预加载其他可能会用到的模态框
+      // When user opens these modals, preload other potentially needed modals
       setShouldLoadCanvasRename(true);
       setShouldLoadCanvasDelete(true);
       setShouldLoadDuplicateCanvas(true);
@@ -105,7 +105,7 @@ export const ModalContainer = memo(() => {
 
   return (
     <>
-      {/* 懒加载模态框 - 只在需要时才加载代码 */}
+      {/* Lazy-loaded modals - only load code when needed */}
       <LazyModal
         visible={isBigSearchShown}
         loader={() =>

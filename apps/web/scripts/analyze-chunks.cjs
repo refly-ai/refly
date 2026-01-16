@@ -251,7 +251,7 @@ function buildSimilarityMatrix(pages) {
   const matrix = {};
 
   for (let i = 0; i < pageNames.length; i++) {
-    me1 = pageNames[i];
+    const name1 = pageNames[i];
     matrix[name1] = {};
 
     for (let j = 0; j < pageNames.length; j++) {

@@ -1,9 +1,9 @@
-import { lazy, Suspense, ComponentType } from 'react';
+import { lazy, Suspense, ComponentType, useMemo } from 'react';
 
 interface LazyModalProps {
   visible: boolean;
   loader: () => Promise<{ default: ComponentType<any> }>;
-  [key: string]: any;
+  setVisible?: (visible: boolean) => void;
 }
 
 /**
@@ -14,18 +14,22 @@ interface LazyModalProps {
  *
  * @param visible - Whether the modal is visible
  * @param loader - Dynamic import function
- * @param props - Other props to pass to the modal
+ * @param setVisible - Optional setter for visibility
  */
-export const LazyModal = ({ visible, loader, ...props }: LazyModalProps) => {
+export const LazyModal = ({
+  visible,
+  loader,
+  setVisible,
+}: LazyModalProps): React.ReactElement | null => {
   // Return null directly when not visible, don't load component
   if (!visible) return null;
 
-  // Dynamically load component when visible=true
-  const Component = lazy(loader);
+  // Memoize lazy component to prevent recreation on every render
+  const Component = useMemo(() => lazy(loader), [loader]);
 
   return (
     <Suspense fallback={null}>
-      <Component {...props} />
+      <Component visible={visible} setVisible={setVisible} />
     </Suspense>
   );
 };

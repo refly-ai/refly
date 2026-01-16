@@ -76,6 +76,21 @@ interface LazyErrorBoundaryProps {
   children: ReactNode;
 }
 
+// Lazy load Sentry ErrorBoundary at module scope (only created once)
+const SentryErrorBoundaryLazy = lazy<typeof SentryErrorBoundary>(() =>
+  import('@sentry/react')
+    .then((module) => ({
+      default: module.ErrorBoundary,
+    }))
+    .catch((error) => {
+      console.warn('Failed to load Sentry ErrorBoundary, using fallback:', error);
+      // Return FallbackErrorBoundary on load failure
+      return {
+        default: FallbackErrorBoundary as any,
+      };
+    }),
+);
+
 /**
  * Lazy-loaded ErrorBoundary component
  *
@@ -85,21 +100,6 @@ interface LazyErrorBoundaryProps {
  * 3. Graceful degradation - Falls back to FallbackErrorBoundary if Sentry fails to load
  */
 export const LazyErrorBoundary = ({ children }: LazyErrorBoundaryProps) => {
-  // Lazy load Sentry ErrorBoundary
-  const SentryErrorBoundaryLazy = lazy<typeof SentryErrorBoundary>(() =>
-    import('@sentry/react')
-      .then((module) => ({
-        default: module.ErrorBoundary,
-      }))
-      .catch((error) => {
-        console.warn('Failed to load Sentry ErrorBoundary, using fallback:', error);
-        // Return FallbackErrorBoundary on load failure
-        return {
-          default: FallbackErrorBoundary as any,
-        };
-      }),
-  );
-
   return (
     <FallbackErrorBoundary>
       <Suspense fallback={children}>
