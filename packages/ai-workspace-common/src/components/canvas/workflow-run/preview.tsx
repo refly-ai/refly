@@ -31,6 +31,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { ActionStatus } from '@refly/openapi-schema';
 import type { WorkflowNodeExecution } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
+import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
+import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use-query-processor';
+import { parseMentionsFromQuery } from '@refly/utils';
+import { convertResultContextToItems } from '@refly/canvas-common';
+import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import './preview.scss';
 
 const OUTPUT_STEP_NAMES = ['answerQuestion', 'generateDocument', 'generateCodeArtifact'];
@@ -364,9 +370,97 @@ const WorkflowRunPreviewComponent = () => {
     setShowWorkflowRun(false);
   }, [setShowWorkflowRun]);
 
-  const handleRetry = () => {
-    // Placeholder: retry handler
-  };
+  // Hooks for retry functionality
+  const { invokeAction } = useInvokeAction({ source: 'workflow-run-preview' });
+  const { resetFailedState } = useActionPolling();
+  const { processQuery } = useQueryProcessor();
+  const { setNodeData } = useNodeData();
+
+  // Create retry handler for a specific node
+  const createRetryHandler = useCallback(
+    (node: CanvasNode<ResponseNodeMeta>, resultId: string) => {
+      return () => {
+        // Check for empty required file variables that are referenced in the current query
+        const query = node.data?.metadata?.query ?? resultMap[resultId]?.input?.query ?? '';
+        const mentions = parseMentionsFromQuery(query || '');
+        const referencedVariableIds = new Set<string>(
+          mentions.filter((m) => m.type === 'var').map((m) => m.id),
+        );
+
+        // Find empty required file variables that are referenced in the query
+        const emptyRequiredFileVar = workflowVariables?.find(
+          (v) =>
+            referencedVariableIds.has(v.variableId) &&
+            v.required &&
+            v.variableType === 'resource' &&
+            (!v.value || v.value.length === 0),
+        );
+
+        if (emptyRequiredFileVar) {
+          message.warning(
+            t('canvas.workflow.run.requiredFileInputsMissing') ||
+              'This agent has required file inputs. Please upload the missing files before running.',
+          );
+          return;
+        }
+
+        // Reset failed state before retrying
+        resetFailedState(resultId);
+
+        // Process query with variables
+        const { llmInputQuery, referencedVariables } = processQuery(query, {
+          replaceVars: true,
+          variables: workflowVariables ?? [],
+        });
+
+        // Get node metadata
+        const title = node.data?.title ?? resultMap[resultId]?.title;
+        const modelInfo = node.data?.metadata?.modelInfo ?? resultMap[resultId]?.modelInfo;
+        const contextItems =
+          node.data?.metadata?.contextItems ??
+          convertResultContextToItems(resultMap[resultId]?.context, resultMap[resultId]?.history);
+        const selectedToolsets =
+          node.data?.metadata?.selectedToolsets ?? resultMap[resultId]?.toolsets ?? [];
+
+        // Calculate next version
+        const currentVersion = resultMap[resultId]?.version ?? node.data?.metadata?.version ?? 0;
+        const nextVersion = node.data?.metadata?.status === 'init' ? 0 : currentVersion + 1;
+
+        // Update node status immediately to show "waiting" state
+        setNodeData(node.id, {
+          metadata: {
+            status: 'waiting',
+            version: nextVersion,
+          },
+        });
+
+        logEvent('run_agent_node', Date.now(), {
+          canvasId: canvasId ?? '',
+          nodeId: node.id,
+        });
+
+        // Invoke action to retry
+        invokeAction(
+          {
+            title: title ?? query,
+            nodeId: node.id,
+            resultId,
+            query: llmInputQuery,
+            modelInfo,
+            contextItems,
+            selectedToolsets,
+            version: nextVersion,
+            workflowVariables: referencedVariables,
+          },
+          {
+            entityId: canvasId ?? '',
+            entityType: 'canvas',
+          },
+        );
+      };
+    },
+    [canvasId, workflowVariables, resultMap, resetFailedState, setNodeData, invokeAction, t],
+  );
 
   const [outputsOnly, setOutputsOnly] = useState(false);
 
@@ -768,7 +862,7 @@ const WorkflowRunPreviewComponent = () => {
                                     title={title}
                                     nodeId={node.id}
                                     selectedToolsets={selectedToolsets}
-                                    handleRetry={handleRetry}
+                                    handleRetry={createRetryHandler(node, resultId)}
                                   />
                                 </div>
                               ),
@@ -891,7 +985,7 @@ const WorkflowRunPreviewComponent = () => {
                                         />
                                       )}
                                       expandIconPosition="end"
-                                      className="workflow-run-collapse"
+                                      className="workflow-run-preview-collapse"
                                       items={collapseItems}
                                     />
                                   </div>

@@ -1589,6 +1589,7 @@ const translations = {
         emptyDescription: '点击"运行"，Workflow 将被执行一次',
         completed: 'Workflow 运行完成',
         failed: 'Workflow 运行失败',
+        executionFailed: '执行失败',
         error: 'Workflow 运行状态时出错',
         validationError: '请填写所有必填字段后再运行工作流',
         installToolsBeforeRunning: '请先安装所需工具后再运行工作流',

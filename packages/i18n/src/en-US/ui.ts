@@ -1440,6 +1440,7 @@ const translations = {
         emptyDescription: 'Click run, the workflow will be executed once if continued.',
         completed: 'Workflow execution completed successfully',
         failed: 'Workflow execution failed',
+        executionFailed: 'Execution Failed',
         error: 'Error monitoring workflow execution',
         validationError: 'Please fill in all required fields before running the workflow',
         installToolsBeforeRunning: 'Please install the required tools before running.',
