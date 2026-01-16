@@ -50,6 +50,7 @@ export class SandboxClient {
       config: {
         s3: context.s3Config,
         s3DrivePath: context.s3DrivePath,
+        s3LibConfig: context.s3LibConfig,
         timeout: context.timeout || timeoutMs,
         limits: context.limits,
       },

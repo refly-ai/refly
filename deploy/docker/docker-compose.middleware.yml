@@ -90,7 +90,8 @@ services:
       - refly_network
   sandbox:
     container_name: refly_sandbox
-    image: refly-sandbox:local
+    # image: ghcr.io/refly-ai/refly-sandbox:latest
+    image: refly-sandbox-worker:local
     restart: unless-stopped
     ports:
       - 7651:7651

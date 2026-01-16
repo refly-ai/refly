@@ -335,6 +335,13 @@ export default () => ({
     whiteList: process.env.SANDBOX_WHITELIST, // 'uid,uid'
     blackList: process.env.SANDBOX_BLACKLIST, // 'uid,uid'
     randomRate: process.env.SANDBOX_RANDOM_RATE, // '20'
+    s3Lib: {
+      enabled: process.env.SANDBOX_S3LIB_ENABLED,
+      pathPrefix: process.env.SANDBOX_S3LIB_PATH_PREFIX,
+      hash: process.env.SANDBOX_S3LIB_HASH,
+      cache: process.env.SANDBOX_S3LIB_CACHE,
+      reset: process.env.SANDBOX_S3LIB_RESET,
+    },
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
       // Wrapper
