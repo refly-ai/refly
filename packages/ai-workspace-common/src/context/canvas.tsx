@@ -856,10 +856,10 @@ export const CanvasProvider = ({
   );
 };
 
-export const useCanvasContext = () => {
+export const useCanvasContext = (optional = false) => {
   const context = useContext(CanvasContext);
-  if (!context) {
+  if (!context && !optional) {
     throw new Error('useCanvasContext must be used within a CanvasProvider');
   }
-  return context;
+  return context ?? null;
 };

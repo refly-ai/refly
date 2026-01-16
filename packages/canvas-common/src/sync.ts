@@ -34,6 +34,8 @@ export const initEmptyCanvasState = (options?: InitEmptyCanvasOptions): CanvasSt
     ? '生成一份 Refly.ai 的产品介绍，并使用发送邮件工具通过邮件发送给我'
     : 'Generate a product introduction for Refly.ai and send it to me via email using the send email tool';
 
+  const toolsetName = isZh ? '发送邮件' : 'Send Email';
+
   // Create a start node for the initial canvas
   const startNode: CanvasNode = {
     id: genNodeID(),
@@ -63,11 +65,11 @@ export const initEmptyCanvasState = (options?: InitEmptyCanvasOptions): CanvasSt
           {
             builtin: true,
             id: 'send_email',
-            name: 'Send Email',
+            name: toolsetName,
             type: 'regular',
             toolset: {
               key: 'send_email',
-              name: 'Send Email',
+              name: toolsetName,
               toolsetId: 'builtin',
             },
           },

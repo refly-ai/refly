@@ -42,7 +42,7 @@ export const Copilot = memo(({ copilotWidth, setCopilotWidth }: CopilotProps) =>
         copilotWidth={copilotWidth}
         setCopilotWidth={setCopilotWidth}
       />
-      <div className="z-[1] absolute top-0 left-0 right-0 h-[80px] bg-gradient-to-b from-refly-bg-body to-transparent" />
+      <div className="z-[1] absolute top-0 left-0 right-0 h-[80px] bg-gradient-to-b from-refly-bg-body to-transparent pointer-events-none" />
 
       <div ref={scrollContainerRef} className="flex-grow overflow-y-auto pt-[56px]">
         {sessionId ? (

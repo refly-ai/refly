@@ -159,7 +159,7 @@ export const useInitializeWorkflow = (
         setLoading(false);
       }
     },
-    [t, canvasId, setCanvasExecutionId, forceSyncState, workflowVariables],
+    [t, canvasId, setCanvasExecutionId, forceSyncState, workflowVariables, showEarnedVoucherPopup],
   );
 
   const initializeWorkflowInNewCanvas = useCallback(
