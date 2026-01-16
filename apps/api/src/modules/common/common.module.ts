@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from './prisma.service';
 import { PrismaMetrics } from './prisma.metrics';
@@ -8,6 +8,7 @@ import { createObjectStorageServiceFactory, OSS_EXTERNAL, OSS_INTERNAL } from '.
 import { FULLTEXT_SEARCH, createFulltextSearchFactory } from './fulltext-search';
 import { VECTOR_SEARCH, createVectorSearchFactory } from './vector-search';
 
+@Global()
 @Module({
   providers: [
     PrismaService,

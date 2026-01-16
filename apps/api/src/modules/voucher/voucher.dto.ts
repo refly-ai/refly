@@ -48,6 +48,17 @@ export interface CreateVoucherInput {
 }
 
 /**
+ * Update Voucher Input
+ */
+export interface UpdateVoucherInput {
+  discountPercent?: number;
+  llmScore?: number;
+  expiresAt?: Date;
+  sourceId?: string;
+  status?: VoucherStatusType;
+}
+
+/**
  * Voucher Trigger Result - returned when template is published
  */
 export interface VoucherTriggerResult {

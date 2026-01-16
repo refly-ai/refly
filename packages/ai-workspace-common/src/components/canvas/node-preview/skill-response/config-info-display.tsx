@@ -83,9 +83,8 @@ export const ConfigInfoDisplay = memo(
       return mentions.filter((item) => item.type === 'var');
     }, [prompt]);
 
-    const { latestVariables, sourceVariables } = useFindLatestVariableMetions(variables);
-    console.log('latestVariables', latestVariables);
-    console.log('sourceVariables', sourceVariables);
+    const { sourceVariables } = useFindLatestVariableMetions(variables);
+
     const escapeRegExp = useCallback(
       (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
       [],

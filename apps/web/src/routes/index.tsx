@@ -17,6 +17,7 @@ import {
   LoginPage,
   RunHistoryPage,
   RunDetailPage,
+  CliAuthPage,
 } from '@refly/web-core';
 
 import type { RouteObject } from 'react-router-dom';
@@ -31,6 +32,10 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/cli/auth',
+    element: <CliAuthPage />,
   },
   {
     path: '/invite',

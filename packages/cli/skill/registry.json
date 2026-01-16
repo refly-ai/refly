@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "updatedAt": "2025-01-14T00:00:00Z",
+  "skills": [
+    {
+      "name": "pdf-processing",
+      "description": "从 PDF 文件中提取文本和表格、填充表单、合并文档。在处理 PDF 文件或用户提及 PDF、表单或文档提取时使用。",
+      "workflowId": "wf_pdf_processing_v1",
+      "triggers": ["pdf extract", "pdf 提取", "处理 pdf", "fill pdf form"],
+      "path": "domain-skills/pdf-processing/",
+      "createdAt": "2025-01-14T00:00:00Z",
+      "source": "local"
+    }
+  ]
+}

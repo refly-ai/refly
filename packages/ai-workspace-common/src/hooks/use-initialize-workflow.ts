@@ -129,6 +129,20 @@ export const useInitializeWorkflow = (
         setLoading(true);
         await forceSyncState({ syncRemote: true });
 
+        // If current workflow execution is the first successful execution today, trigger voucher popup
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const { data: listWorkflowExecutionsData, error: listWorkflowExecutionsError } =
+          await getClient().listWorkflowExecutions({
+            query: {
+              after: startOfToday.getTime(),
+              order: 'creationAsc',
+              pageSize: 1,
+            },
+          });
+        const firstExecutionToday = listWorkflowExecutionsData?.data?.[0];
+        const shouldTriggerVoucherPopup = !listWorkflowExecutionsError && !firstExecutionToday;
+
         const { data, error } = await getClient().initializeWorkflow({
           body: {
             variables: workflowVariables,
@@ -143,6 +157,27 @@ export const useInitializeWorkflow = (
         }
         if (data?.data?.workflowExecutionId && canvasId) {
           setCanvasExecutionId(canvasId, data.data.workflowExecutionId);
+        }
+
+        if (shouldTriggerVoucherPopup) {
+          setHasFirstExecutionToday(true);
+          // Poll for available vouchers if not immediately found
+          // This handles cases where the voucher might be generated with a slight delay after execution completion
+          for (let attempts = 0; attempts < 10; attempts++) {
+            const { data: voucherData } = await getClient().getAvailableVouchers();
+            const bestVoucher = voucherData?.data?.bestVoucher;
+            if (bestVoucher) {
+              showEarnedVoucherPopup({
+                voucher: bestVoucher,
+                score: bestVoucher.llmScore,
+                triggerLimitReached: false,
+              });
+              break;
+            }
+            if (attempts < 9) {
+              await delay(2000);
+            }
+          }
         }
 
         message.success({
