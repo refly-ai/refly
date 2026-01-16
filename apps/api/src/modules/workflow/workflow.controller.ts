@@ -101,7 +101,7 @@ export class WorkflowController {
     @Query('pageSize', new DefaultValuePipe(10), ParseIntPipe) pageSize = 10,
     @Query('order', new DefaultValuePipe('creationDesc')) order: ListOrder = 'creationDesc',
   ): Promise<ListWorkflowExecutionsResponse> {
-    const workflowDetails = await this.workflowService.listWorkflowExecutions(user, {
+    const { executions } = await this.workflowService.listWorkflowExecutions(user, {
       canvasId,
       status,
       after,
@@ -109,7 +109,7 @@ export class WorkflowController {
       pageSize,
       order,
     });
-    return buildSuccessResponse(workflowDetails.map(workflowExecutionPO2DTO));
+    return buildSuccessResponse(executions.map(workflowExecutionPO2DTO));
   }
 
   @UseGuards(JwtAuthGuard)

@@ -230,7 +230,7 @@ export class WorkflowService {
       });
     }
 
-    // Check if it's the first execution today to trigger voucher
+    // Check if there is no successful execution today to trigger voucher
     try {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -1102,6 +1102,61 @@ export class WorkflowService {
   }
 
   /**
+   * List workflow executions with pagination
+   * @param user - The user requesting the workflow details
+   * @param params - Pagination and filter parameters
+   * @returns Promise<WorkflowExecution[]> - Paginated workflow execution details
+   */
+  async listWorkflowExecutions(user: User, params: ListWorkflowExecutionsData['query']) {
+    const { canvasId, status, after, page = 1, pageSize = 10, order = 'creationDesc' } = params;
+    const skip = (page - 1) * pageSize;
+
+    // Build where clause
+    const whereClause: Prisma.WorkflowExecutionWhereInput = { uid: user.uid };
+    if (canvasId) {
+      whereClause.canvasId = canvasId;
+    }
+    if (status) {
+      whereClause.status = status;
+    }
+    if (after) {
+      // after is unix timestamp in milliseconds
+      whereClause.createdAt = {
+        gt: new Date(after),
+      };
+    }
+
+    // Build order by
+    const orderBy: Prisma.WorkflowExecutionOrderByWithRelationInput = {};
+    if (order === 'creationAsc') {
+      orderBy.createdAt = 'asc';
+    } else if (order === 'creationDesc') {
+      orderBy.createdAt = 'desc';
+    } else if (order === 'updationAsc') {
+      orderBy.updatedAt = 'asc';
+    } else if (order === 'updationDesc') {
+      orderBy.updatedAt = 'desc';
+    } else {
+      orderBy.createdAt = 'desc';
+    }
+
+    // Get workflow executions with pagination
+    const [executions, total] = await Promise.all([
+      this.prisma.workflowExecution.findMany({
+        where: whereClause,
+        orderBy,
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.workflowExecution.count({
+        where: whereClause,
+      }),
+    ]);
+
+    return { executions, total };
+  }
+
+  /**
    * Get the currently active (running) workflow execution for a canvas
    * @param user - The user requesting the execution
    * @param canvasId - The canvas ID
@@ -1146,54 +1201,6 @@ export class WorkflowService {
 
     // Fall back to latest execution
     return this.getLatestWorkflowDetail(user, canvasId);
-  }
-
-  /**
-   * List workflow executions with pagination
-   * @param user - The user requesting the workflow details
-   * @param params - Pagination and filter parameters
-   * @returns Promise<WorkflowExecution[]> - Paginated workflow execution details
-   */
-  async listWorkflowExecutions(user: User, params: ListWorkflowExecutionsData['query']) {
-    const { canvasId, status, after, page = 1, pageSize = 10, order = 'creationDesc' } = params;
-    const skip = (page - 1) * pageSize;
-
-    // Build where clause
-    const whereClause: Prisma.WorkflowExecutionWhereInput = { uid: user.uid };
-    if (canvasId) {
-      whereClause.canvasId = canvasId;
-    }
-    if (status) {
-      whereClause.status = status;
-    }
-    if (after) {
-      // after is unix timestamp in milliseconds
-      whereClause.createdAt = {
-        gt: new Date(after),
-      };
-    }
-
-    // Build order by
-    const orderBy: Prisma.WorkflowExecutionOrderByWithRelationInput = {};
-    if (order === 'creationAsc') {
-      orderBy.createdAt = 'asc';
-    } else if (order === 'creationDesc') {
-      orderBy.createdAt = 'desc';
-    } else if (order === 'updationAsc') {
-      orderBy.updatedAt = 'asc';
-    } else if (order === 'updationDesc') {
-      orderBy.updatedAt = 'desc';
-    } else {
-      orderBy.createdAt = 'desc';
-    }
-
-    // Get workflow executions with pagination
-    return this.prisma.workflowExecution.findMany({
-      where: whereClause,
-      orderBy,
-      skip,
-      take: pageSize,
-    });
   }
 
   /**

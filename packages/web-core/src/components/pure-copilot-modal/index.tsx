@@ -31,7 +31,7 @@ export const PureCopilotModal = () => {
       <Tooltip title={t('common.goBack')} arrow={false}>
         <Button
           type="text"
-          className="absolute top-4 left-4 !w-8 !h-8"
+          className="absolute top-[calc(var(--banner-height)+1rem)] left-4 !w-8 !h-8"
           icon={<Home size={24} />}
           onClick={handleClose}
         />

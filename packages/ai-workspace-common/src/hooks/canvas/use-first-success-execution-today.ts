@@ -8,7 +8,7 @@ import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
  */
 export const useFirstSuccessExecutionToday = () => {
   const { setHasFirstSuccessExecutionToday } = useCanvasResourcesPanelStoreShallow((state) => ({
-    setHasFirstSuccessExecutionToday: state.setHasFirstSuccessExecutionToday,
+    setHasFirstSuccessExecutionToday: state.setHasFirstExecutionToday,
   }));
 
   const startOfToday = new Date();
@@ -18,7 +18,6 @@ export const useFirstSuccessExecutionToday = () => {
     query: {
       after: startOfToday.getTime(),
       order: 'creationAsc',
-      status: 'finish',
       pageSize: 1,
     },
   });

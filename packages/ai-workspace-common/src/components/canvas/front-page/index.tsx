@@ -394,6 +394,15 @@ export const FrontPage = memo(() => {
     }
   }, [isCopilotFloating]);
 
+  useEffect(() => {
+    if (isCopilotFloating) {
+      const scrollableDiv = document.getElementById('front-page-scrollable-div');
+      if (scrollableDiv) {
+        scrollableDiv.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }, [isCopilotFloating]);
+
   return (
     <div
       className={cn(

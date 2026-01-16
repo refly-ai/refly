@@ -1529,18 +1529,12 @@ export class WorkflowCliController {
 
     try {
       const limitNum = limit ? Number.parseInt(limit, 10) : 20;
-      const pageNum = offset ? Math.floor(Number.parseInt(offset, 10) / limitNum) + 1 : 1;
+      const offsetNum = offset ? Number.parseInt(offset, 10) : 0;
 
-      const executions = await this.workflowService.listWorkflowExecutions(user, {
+      const { executions, total } = await this.workflowService.listWorkflowExecutions(user, {
         canvasId: workflowId,
-        page: pageNum,
+        page: offsetNum / limitNum + 1,
         pageSize: limitNum,
-        order: 'creationDesc',
-      });
-
-      // Get total count separately
-      const total = await this.prisma.workflowExecution.count({
-        where: { canvasId: workflowId, uid: user.uid },
       });
 
       const runs = executions.map((exec) => ({
