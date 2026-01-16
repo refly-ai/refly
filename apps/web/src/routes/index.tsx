@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
 
-// Lazy load 所有组件，包括 redirect 组件
+// Lazy load all components, including redirect components
 const HomeRedirect = lazy(() =>
   import('@refly-packages/ai-workspace-common/components/home-redirect').then((m) => ({
     default: m.HomeRedirect,
@@ -16,7 +16,7 @@ const InviteRedirect = lazy(() =>
   })),
 );
 
-// Lazy load redirect 组件
+// Lazy load redirect components
 const CanvasRedirect = lazy(() =>
   import('./redirects').then((m) => ({ default: m.CanvasRedirect })),
 );
