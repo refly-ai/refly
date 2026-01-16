@@ -38,7 +38,9 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
     try {
       await setupI18n();
       setIsInitialized(true);
-      console.log('[Init] Initialization complete');
+
+      // hide loading
+      (window as any).__REFLY_HIDE_LOADING__?.();
     } catch (error) {
       console.error('Failed to initialize i18n:', error);
       // Allow continuation even on failure to avoid permanent loading state

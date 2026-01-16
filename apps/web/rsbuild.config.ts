@@ -50,7 +50,9 @@ export default defineConfig({
             // Code Caching Strategy
             // Precache core resources and main page chunks to improve first load experience
             include: [
-              /\.html$/,
+              // ⚠️ DON'T precache HTML - it changes frequently and has no hash
+              // /\.html$/,  // REMOVED to prevent stale HTML issues
+
               // Core libraries (required by all pages)
               /lib-react\.[a-f0-9]+\.js$/, // React library (~136KB)
               /lib-router\.[a-f0-9]+\.js$/, // Router library (~22KB)
@@ -78,6 +80,34 @@ export default defineConfig({
 
             // Runtime caching strategies
             runtimeCaching: [
+              // === Strategy 0: HTML - StaleWhileRevalidate for best UX ===
+              // Serve from cache immediately (fast), then update cache in background
+              // This ensures users always see content quickly, and get updates on next visit
+              {
+                urlPattern: /\.html$/,
+                handler: 'StaleWhileRevalidate',
+                options: {
+                  cacheName: 'html-cache',
+                  expiration: {
+                    maxEntries: 10,
+                    maxAgeSeconds: 24 * 60 * 60, // 1 day
+                  },
+                  // Use network cache for 304 responses
+                  plugins: [
+                    {
+                      cacheWillUpdate: async ({ response }: { response: Response }) => {
+                        // Cache 200 responses
+                        if (response.status === 200) {
+                          return response;
+                        }
+                        // Don't cache error responses
+                        return null;
+                      },
+                    },
+                  ],
+                },
+              },
+
               // === Strategy 1: JavaScript chunks - CacheFirst for instant load ===
               // Use CacheFirst strategy to read directly from cache, extremely fast (~0ms)
               // Safe to cache because JS files have hash, filename changes when content changes
@@ -85,10 +115,10 @@ export default defineConfig({
                 urlPattern: /\.js$/,
                 handler: 'CacheFirst',
                 options: {
-                  cacheName: 'js-cache-v1',
+                  cacheName: 'js-cache-v2', // Increment version to bust old cache
                   expiration: {
                     maxEntries: 60,
-                    maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+                    maxAgeSeconds: 7 * 24 * 60 * 60, // Reduced to 7 days for faster updates
                   },
                   cacheableResponse: {
                     statuses: [200], // Only cache successful responses (avoid caching HTML error pages)
@@ -102,10 +132,10 @@ export default defineConfig({
                 urlPattern: /\.css$/,
                 handler: 'CacheFirst',
                 options: {
-                  cacheName: 'css-cache-v1',
+                  cacheName: 'css-cache-v2', // Increment version
                   expiration: {
                     maxEntries: 40,
-                    maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+                    maxAgeSeconds: 7 * 24 * 60 * 60, // Reduced to 7 days
                   },
                   cacheableResponse: {
                     statuses: [200],

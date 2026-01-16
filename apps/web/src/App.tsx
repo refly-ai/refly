@@ -42,7 +42,6 @@ const AppContent = () => {
 
 export const App = () => {
   // Register Service Worker for Code Caching
-  // Register Service Worker for Code Caching
   useEffect(() => {
     // Debug log to verify environment
     console.log('[SW] Checking eligibility...', {
@@ -50,26 +49,43 @@ export const App = () => {
       env: process.env.NODE_ENV,
     });
 
-    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      const registerSW = () => {
-        console.log('[SW] Attempting registration...');
-        navigator.serviceWorker
-          .register('/service-worker.js')
-          .then((registration) => {
-            console.log(
-              '[SW] ServiceWorker registration successful with scope: ',
-              registration.scope,
-            );
-          })
-          .catch((registrationError) => {
-            console.error('[SW] ServiceWorker registration failed: ', registrationError);
-          });
-      };
+    if ('serviceWorker' in navigator) {
+      if (process.env.NODE_ENV === 'production') {
+        // Register SW in production
+        const registerSW = () => {
+          console.log('[SW] Attempting registration...');
+          navigator.serviceWorker
+            .register('/service-worker.js')
+            .then((registration) => {
+              console.log(
+                '[SW] ServiceWorker registration successful with scope: ',
+                registration.scope,
+              );
+            })
+            .catch((registrationError) => {
+              console.error('[SW] ServiceWorker registration failed: ', registrationError);
+            });
+        };
 
-      if (document.readyState === 'complete') {
-        registerSW();
+        if (document.readyState === 'complete') {
+          registerSW();
+        } else {
+          window.addEventListener('load', registerSW);
+        }
       } else {
-        window.addEventListener('load', registerSW);
+        // Unregister all service workers in development to avoid caching issues
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          if (registrations.length > 0) {
+            console.log(
+              '[SW] Unregistering',
+              registrations.length,
+              'service worker(s) in development',
+            );
+            for (const registration of registrations) {
+              registration.unregister();
+            }
+          }
+        });
       }
     }
   }, []);
