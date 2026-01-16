@@ -9,16 +9,16 @@ import { CLIError } from '../../utils/errors.js';
 
 export const workflowAbortCommand = new Command('abort')
   .description('Abort a running workflow')
-  .argument('<runId>', 'Run ID')
-  .action(async (runId) => {
+  .argument('<workflowId>', 'Workflow ID')
+  .action(async (workflowId) => {
     try {
-      await apiRequest(`/v1/cli/workflow/run/${runId}/abort`, {
+      await apiRequest(`/v1/cli/workflow/${workflowId}/abort`, {
         method: 'POST',
       });
 
       ok('workflow.abort', {
         message: 'Workflow run aborted',
-        runId,
+        workflowId,
       });
     } catch (error) {
       if (error instanceof CLIError) {

@@ -1,5 +1,8 @@
 /**
  * refly workflow - Workflow command group
+ *
+ * All commands use workflowId (not runId) for simplicity.
+ * The backend automatically finds the current/latest execution.
  */
 
 import { Command } from 'commander';
@@ -10,30 +13,33 @@ import { workflowGetCommand } from './get.js';
 import { workflowEditCommand } from './edit.js';
 import { workflowDeleteCommand } from './delete.js';
 import { workflowRunCommand } from './run.js';
+import { workflowRunsCommand } from './runs.js';
 import { workflowAbortCommand } from './abort.js';
 import { workflowStatusCommand } from './status.js';
+import { workflowDetailCommand } from './detail.js';
+import { workflowToolcallsCommand } from './toolcalls.js';
 import { workflowToolsetKeysCommand } from './toolset-keys.js';
 import { workflowLayoutCommand } from './layout.js';
 import { workflowNodesCommand } from './nodes.js';
 import { workflowNodeGetCommand } from './node-get.js';
 
-// The run command is now a command group with subcommands:
-//   refly workflow run <workflowId> - Start a workflow
-//   refly workflow run detail <runId> - Get detailed run info
-//   refly workflow run node <runId> <nodeId> - Get node result
-//   refly workflow run toolcalls <runId> - Get tool calls
-
 export const workflowCommand = new Command('workflow')
   .description('Manage and run workflows')
+  // Workflow management
   .addCommand(workflowCreateCommand)
   .addCommand(workflowGenerateCommand)
   .addCommand(workflowListCommand)
   .addCommand(workflowGetCommand)
   .addCommand(workflowEditCommand)
   .addCommand(workflowDeleteCommand)
+  // Workflow execution
   .addCommand(workflowRunCommand)
-  .addCommand(workflowAbortCommand)
+  .addCommand(workflowRunsCommand)
   .addCommand(workflowStatusCommand)
+  .addCommand(workflowDetailCommand)
+  .addCommand(workflowToolcallsCommand)
+  .addCommand(workflowAbortCommand)
+  // Workflow utilities
   .addCommand(workflowToolsetKeysCommand)
   .addCommand(workflowLayoutCommand)
   .addCommand(workflowNodesCommand)

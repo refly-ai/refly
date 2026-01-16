@@ -15,9 +15,13 @@ export const workflowCreateCommand = new Command('create')
   .action(async (options) => {
     try {
       // Parse spec JSON
+      // Supports both formats:
+      // - Array shorthand: [node1, node2] -> { nodes: [node1, node2] }
+      // - Full object: { nodes: [...], edges: [...] } -> as-is
       let spec: unknown;
       try {
-        spec = JSON.parse(options.spec);
+        const parsed = JSON.parse(options.spec);
+        spec = Array.isArray(parsed) ? { nodes: parsed } : parsed;
       } catch {
         fail(ErrorCodes.INVALID_INPUT, 'Invalid JSON in --spec', {
           hint: 'Ensure the spec is valid JSON',
