@@ -96,7 +96,7 @@ export const useInitializeWorkflow = (
         }
       }
     },
-    [t, canvasId, showEarnedVoucherPopup],
+    [t, canvasId, showEarnedVoucherPopup, setHasFirstSuccessExecutionToday],
   );
 
   const handleError = useMemo(
@@ -160,7 +160,7 @@ export const useInitializeWorkflow = (
         }
 
         if (shouldTriggerVoucherPopup) {
-          setHasFirstExecutionToday(true);
+          setHasFirstSuccessExecutionToday(true);
           // Poll for available vouchers if not immediately found
           // This handles cases where the voucher might be generated with a slight delay after execution completion
           for (let attempts = 0; attempts < 10; attempts++) {
@@ -193,7 +193,15 @@ export const useInitializeWorkflow = (
         setLoading(false);
       }
     },
-    [t, canvasId, setCanvasExecutionId, forceSyncState, workflowVariables],
+    [
+      t,
+      canvasId,
+      setCanvasExecutionId,
+      forceSyncState,
+      workflowVariables,
+      setHasFirstSuccessExecutionToday,
+      showEarnedVoucherPopup,
+    ],
   );
 
   const initializeWorkflowInNewCanvas = useCallback(
