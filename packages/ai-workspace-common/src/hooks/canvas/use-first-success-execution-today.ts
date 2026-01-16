@@ -18,7 +18,6 @@ export const useFirstSuccessExecutionToday = () => {
     query: {
       after: startOfToday.getTime(),
       order: 'creationAsc',
-      status: 'finish',
       pageSize: 1,
     },
   });

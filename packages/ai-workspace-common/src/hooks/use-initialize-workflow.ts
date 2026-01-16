@@ -125,10 +125,8 @@ export const useInitializeWorkflow = (
           setCanvasExecutionId(canvasId, data.data.workflowExecutionId);
         }
 
-        setHasFirstExecutionToday(true);
-
         if (shouldTriggerVoucherPopup) {
-          console.log('start polling for available vouchers');
+          setHasFirstExecutionToday(true);
           // Poll for available vouchers if not immediately found
           // This handles cases where the voucher might be generated with a slight delay after execution completion
           for (let attempts = 0; attempts < 10; attempts++) {
