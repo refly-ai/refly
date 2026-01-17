@@ -25,6 +25,7 @@ export const CliAuthPage = lazy(
 // Features: User's most frequently used core functions, frequent switching between these pages
 // Shared dependencies: Ant Design, Monaco Editor, chart libraries, state management
 // Estimated size: ~1500 KB (but 0 download when switching)
+// Note: Prefetch is handled conditionally after login, not globally
 export const WorkspacePage = lazy(
   () => import(/* webpackChunkName: "group-workspace" */ './pages/workspace'),
 );
@@ -38,7 +39,7 @@ export const WorkflowPage = lazy(
 // Estimated size: ~700 KB
 // Note: ShareCanvasPage and WorkflowPage use similar components, but different purposes (view vs edit)
 export const ShareCanvasPage = lazy(
-  () => import(/* webpackChunkName: "group-share" */ './pages/share'),
+  () => import(/* webpackChunkName: "group-share-canvas" */ './pages/share'),
 );
 export const ShareCodePage = lazy(
   () => import(/* webpackChunkName: "group-share" */ './pages/code-share'),
@@ -53,7 +54,7 @@ export const DocumentSharePage = lazy(
   () => import(/* webpackChunkName: "group-share" */ './pages/document-share'),
 );
 export const DriveFileSharePage = lazy(
-  () => import(/* webpackChunkName: "group-share" */ './pages/drive-file-share'),
+  () => import(/* webpackChunkName: "group-share-file" */ './pages/drive-file-share'),
 );
 
 // ========== Group 4: Workflow Public (Public workflow pages) ==========

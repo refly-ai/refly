@@ -1,6 +1,6 @@
 import { Suspense, useEffect, lazy, useMemo } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
-import { LightLoading } from '@refly/ui-kit';
+import { InlineLoading } from '@refly/ui-kit';
 
 const AppLayout = lazy(() =>
   import('@refly/web-core/src/components/layout').then((m) => ({ default: m.AppLayout })),
@@ -20,7 +20,7 @@ const AppContent = () => {
   const routes = useMemo(
     () => (
       <LazyErrorBoundary>
-        <Suspense fallback={<LightLoading />}>
+        <Suspense fallback={<InlineLoading />}>
           <Routes>
             {RoutesList.map((route) => (
               <Route key={route.path} path={route.path} element={route.element} />
@@ -51,20 +51,32 @@ export const App = () => {
 
     if ('serviceWorker' in navigator) {
       if (process.env.NODE_ENV === 'production') {
-        // Register SW in production
-        const registerSW = () => {
-          console.log('[SW] Attempting registration...');
-          navigator.serviceWorker
-            .register('/service-worker.js')
-            .then((registration) => {
-              console.log(
-                '[SW] ServiceWorker registration successful with scope: ',
-                registration.scope,
-              );
-            })
-            .catch((registrationError) => {
-              console.error('[SW] ServiceWorker registration failed: ', registrationError);
-            });
+        // Register SW in production with dynamic filename (includes build hash)
+        const registerSW = async () => {
+          try {
+            // Get SW URL from global variable (injected at build time)
+            const swUrl =
+              typeof __SERVICE_WORKER_URL__ !== 'undefined'
+                ? __SERVICE_WORKER_URL__
+                : '/service-worker.js';
+
+            console.log('[SW] Attempting registration...', swUrl);
+            const registration = await navigator.serviceWorker.register(swUrl);
+            console.log(
+              '[SW] ServiceWorker registration successful with scope: ',
+              registration.scope,
+            );
+
+            // Check for updates periodically
+            setInterval(
+              () => {
+                registration.update();
+              },
+              60 * 60 * 1000,
+            ); // Check every hour
+          } catch (registrationError) {
+            console.error('[SW] ServiceWorker registration failed: ', registrationError);
+          }
         };
 
         if (document.readyState === 'complete') {

@@ -38,9 +38,26 @@ export default defineConfig({
       // Only enable Service Worker in production to avoid caching issues during development
       if (isProduction) {
         const { GenerateSW } = require('workbox-webpack-plugin');
+        const crypto = require('node:crypto');
+
+        // Generate a unique hash based on build time to force SW updates
+        const swVersion = crypto
+          .createHash('md5')
+          .update(Date.now().toString())
+          .digest('hex')
+          .slice(0, 8);
+
+        // Define global variable with SW URL using Rspack's DefinePlugin
+        config.plugins = config.plugins || [];
+        config.plugins.push(
+          new (require('@rspack/core').DefinePlugin)({
+            __SERVICE_WORKER_URL__: JSON.stringify(`/service-worker.${swVersion}.js`),
+          }),
+        );
 
         appendPlugins(
           new GenerateSW({
+            swDest: `service-worker.${swVersion}.js`, // Add version hash to SW filename
             mode: 'production', // Disable Workbox logging
             sourcemap: false,
             // PWA basics
@@ -50,8 +67,8 @@ export default defineConfig({
             // Code Caching Strategy
             // Precache core resources and main page chunks to improve first load experience
             include: [
-              // ⚠️ DON'T precache HTML - it changes frequently and has no hash
-              // /\.html$/,  // REMOVED to prevent stale HTML issues
+              // HTML files - precache for instant subsequent visits
+              /\.html$/,
 
               // Core libraries (required by all pages)
               /lib-react\.[a-f0-9]+\.js$/, // React library (~136KB)
@@ -64,10 +81,9 @@ export default defineConfig({
               // All JS chunks outside async directory (core functionality code)
               /static\/js\/(?!async)[^/]+\.[a-f0-9]+\.js$/,
 
-              // Important page chunks (workspace and workflow)
-              /group-workspace\.[a-f0-9]+\.js$/,
-              /group-workflow\.[a-f0-9]+\.js$/,
-              /group-workflow\.[a-f0-9]+\.css$/,
+              // Note: We intentionally DON'T precache group-workspace and group-workflow
+              // They will be loaded on-demand and cached by runtime caching
+              // This reduces initial SW installation time and bandwidth
             ],
 
             // Exclude files that don't need caching
@@ -80,27 +96,26 @@ export default defineConfig({
 
             // Runtime caching strategies
             runtimeCaching: [
-              // === Strategy 0: HTML - StaleWhileRevalidate for best UX ===
-              // Serve from cache immediately (fast), then update cache in background
-              // This ensures users always see content quickly, and get updates on next visit
+              // === Strategy 0: HTML - StaleWhileRevalidate for instant load ===
+              // Serve cached HTML immediately (fast!), then update cache in background
+              // Users see content instantly, and get updates on next visit/refresh
               {
-                urlPattern: /\.html$/,
+                urlPattern: ({ request }: { request: Request }) =>
+                  request.destination === 'document',
                 handler: 'StaleWhileRevalidate',
                 options: {
-                  cacheName: 'html-cache',
+                  cacheName: 'html-cache-v1',
                   expiration: {
                     maxEntries: 10,
                     maxAgeSeconds: 24 * 60 * 60, // 1 day
                   },
-                  // Use network cache for 304 responses
                   plugins: [
                     {
                       cacheWillUpdate: async ({ response }: { response: Response }) => {
-                        // Cache 200 responses
-                        if (response.status === 200) {
+                        // Only cache successful responses
+                        if (response && response.status === 200) {
                           return response;
                         }
-                        // Don't cache error responses
                         return null;
                       },
                     },
@@ -108,34 +123,41 @@ export default defineConfig({
                 },
               },
 
-              // === Strategy 1: JavaScript chunks - CacheFirst for instant load ===
-              // Use CacheFirst strategy to read directly from cache, extremely fast (~0ms)
-              // Safe to cache because JS files have hash, filename changes when content changes
+              // Note: We intentionally DON'T cache async JS chunks in runtime
+              // This is because:
+              // 1. First load should be fast - no SW overhead
+              // 2. Browser's HTTP cache (Cache-Control) already handles caching
+              // 3. Users can see the actual network requests in DevTools
+              // 4. Prefetch (import()) works naturally without SW interference
+
+              // === Strategy 1: Core JS chunks (not async) - CacheFirst ===
+              // Only cache non-async JS files that were precached
               {
-                urlPattern: /\.js$/,
+                urlPattern: ({ url }: { url: URL }) => {
+                  return url.pathname.endsWith('.js') && !url.pathname.includes('/async/');
+                },
                 handler: 'CacheFirst',
                 options: {
-                  cacheName: 'js-cache-v2', // Increment version to bust old cache
+                  cacheName: 'js-cache-v4',
                   expiration: {
-                    maxEntries: 60,
-                    maxAgeSeconds: 7 * 24 * 60 * 60, // Reduced to 7 days for faster updates
+                    maxEntries: 30,
+                    maxAgeSeconds: 365 * 24 * 60 * 60,
                   },
                   cacheableResponse: {
-                    statuses: [200], // Only cache successful responses (avoid caching HTML error pages)
+                    statuses: [200],
                   },
                 },
               },
 
-              // === Strategy 2: CSS - CacheFirst for instant load ===
-              // CSS files also have hash, using CacheFirst is safe and fast
+              // === Strategy 2: CSS - CacheFirst ===
               {
                 urlPattern: /\.css$/,
                 handler: 'CacheFirst',
                 options: {
-                  cacheName: 'css-cache-v2', // Increment version
+                  cacheName: 'css-cache-v4',
                   expiration: {
                     maxEntries: 40,
-                    maxAgeSeconds: 7 * 24 * 60 * 60, // Reduced to 7 days
+                    maxAgeSeconds: 365 * 24 * 60 * 60,
                   },
                   cacheableResponse: {
                     statuses: [200],
@@ -254,7 +276,7 @@ export default defineConfig({
     define: publicVars,
   },
   performance: {
-    removeConsole: isProduction,
+    removeConsole: false,
 
     // Use Rsbuild recommended strategy + force split large libraries
     chunkSplit: {
