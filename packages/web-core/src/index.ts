@@ -39,7 +39,7 @@ export const WorkflowPage = lazy(
 // Estimated size: ~700 KB
 // Note: ShareCanvasPage and WorkflowPage use similar components, but different purposes (view vs edit)
 export const ShareCanvasPage = lazy(
-  () => import(/* webpackChunkName: "group-share-canvas" */ './pages/share'),
+  () => import(/* webpackChunkName: "group-share" */ './pages/share'),
 );
 export const ShareCodePage = lazy(
   () => import(/* webpackChunkName: "group-share" */ './pages/code-share'),
@@ -51,7 +51,7 @@ export const SkillResponseSharePage = lazy(
   () => import(/* webpackChunkName: "group-share" */ './pages/skill-response-share'),
 );
 export const DocumentSharePage = lazy(
-  () => import(/* webpackChunkName: "group-share" */ './pages/document-share'),
+  () => import(/* webpackChunkName: "group-share-file" */ './pages/document-share'),
 );
 export const DriveFileSharePage = lazy(
   () => import(/* webpackChunkName: "group-share-file" */ './pages/drive-file-share'),

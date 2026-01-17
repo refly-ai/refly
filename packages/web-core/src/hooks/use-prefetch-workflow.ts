@@ -39,21 +39,17 @@ export const usePrefetchWorkflow = () => {
           (window as any).__REFLY_PREFETCH_START__ = Date.now();
         }
 
-        // Prefetch workflow page (the main chunk: group-workflow)
-        // Note: This will be bundled as group-workflow.{hash}.js
-        // Async dependencies inside workflow page will still load on-demand
+        // Prefetch workflow page (includes Canvas component and dependencies)
+        // Workflow page automatically imports required dependencies:
+        // - @xyflow/react (Canvas core)
+        // - Tiptap (rich text editor)
+        // - Various workflow-related components
         import('../pages/workflow')
           .then(() => {
-            console.log('[Workspace] Workflow page main chunk loaded');
-            if (process.env.NODE_ENV === 'production') {
-              (window as any).__REFLY_PREFETCH_SUCCESS__ = Date.now();
-            }
+            console.log('[Workspace] Workflow page and dependencies loaded');
           })
           .catch((err) => {
             console.warn('[Workspace] Failed to prefetch workflow page:', err);
-            if (process.env.NODE_ENV === 'production') {
-              (window as any).__REFLY_PREFETCH_ERROR__ = err;
-            }
           });
 
         // Note: We don't prefetch all async chunks because:

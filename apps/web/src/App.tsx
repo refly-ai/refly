@@ -55,11 +55,12 @@ export const App = () => {
         const registerSW = async () => {
           try {
             // Get SW URL from global variable (injected at build time)
-            const swUrl =
-              typeof __SERVICE_WORKER_URL__ !== 'undefined'
-                ? __SERVICE_WORKER_URL__
-                : '/service-worker.js';
+            if (typeof __SERVICE_WORKER_URL__ === 'undefined') {
+              console.warn('[SW] Service Worker URL not defined, skipping registration');
+              return;
+            }
 
+            const swUrl = __SERVICE_WORKER_URL__;
             console.log('[SW] Attempting registration...', swUrl);
             const registration = await navigator.serviceWorker.register(swUrl);
             console.log(
