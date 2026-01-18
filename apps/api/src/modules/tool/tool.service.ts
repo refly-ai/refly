@@ -182,7 +182,13 @@ export class ToolService {
    * List builtin tools for mentionList.
    * Filters out internal (system-level) tools that are auto-included.
    */
-  listBuiltinTools(): GenericToolset[] {
+  listBuiltinTools(param?: ListToolsData['query']): GenericToolset[] {
+    const { isGlobal } = param ?? {};
+    // Builtin tools are always global, so return empty if filtering for non-global
+    if (isGlobal === false) {
+      return [];
+    }
+
     return Object.values(builtinToolsetInventory)
       .filter(
         (toolset) =>
@@ -210,7 +216,13 @@ export class ToolService {
    * Queries active integrations from composio_connections and returns corresponding toolsets
    */
   async listOAuthTools(user: User, param?: ListToolsData['query']): Promise<GenericToolset[]> {
-    const { enabled } = param ?? {};
+    const { enabled, isGlobal } = param ?? {};
+
+    // OAuth tools are currently always user-specific, return empty if filtering for global
+    if (isGlobal === true) {
+      return [];
+    }
+
     // Get active Composio connections for the user
     const activeConnections = await this.prisma.composioConnection.findMany({
       where: {
@@ -238,6 +250,7 @@ export class ToolService {
         uninstalled: false,
         deletedAt: null,
         uid: user.uid,
+        isGlobal: false,
         ...(enabled !== undefined && { enabled }),
       },
     });
@@ -259,12 +272,18 @@ export class ToolService {
       uninstalled: false,
       deletedAt: null,
       authType: { not: AuthType.OAUTH },
-      OR:
-        isGlobal !== undefined
-          ? [{ isGlobal }, { uid: user.uid }]
-          : [{ isGlobal: true }, { uid: user.uid }],
       ...(enabled !== undefined && { enabled }),
     };
+
+    if (isGlobal === true) {
+      whereCondition.isGlobal = true;
+    } else if (isGlobal === false) {
+      whereCondition.isGlobal = false;
+      whereCondition.uid = user.uid;
+    } else {
+      // Default: show both global and personal
+      whereCondition.OR = [{ isGlobal: true }, { uid: user.uid }];
+    }
 
     const toolsets = await this.prisma.toolset.findMany({
       where: whereCondition,
@@ -285,7 +304,7 @@ export class ToolService {
   }
 
   async listTools(user: User, param?: ListToolsData['query']): Promise<GenericToolset[]> {
-    const builtinTools = this.listBuiltinTools();
+    const builtinTools = this.listBuiltinTools(param);
     const [regularTools, oauthTools, mcpTools] = await Promise.all([
       this.listRegularTools(user, param), // Includes both regular
       this.listOAuthTools(user, param), // OAuth tools from Composio connections

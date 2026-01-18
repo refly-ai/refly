@@ -32,3 +32,6 @@ The backend API is organized in a modular structure using NestJS. Each module co
 - Use dependency injection
 - Implement proper error handling
 - Document APIs with OpenAPI
+- Schema-First Development
+    - All API contracts must be defined in [schema.yml](mdc:packages/openapi-schema/schema.yml)
+    - Controllers must use types imported from `@refly/openapi-schema` for Request and Response

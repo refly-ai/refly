@@ -179,10 +179,10 @@ export class ComposioService {
    * @param userId - The user ID (user.uid for OAuth, 'refly_global' for API Key tools)
    * @param integrationId - The integration/toolkit ID
    */
-  async fetchTools(userId: string, integrationId: string): Promise<any[]> {
+  async fetchTools(userId: string, integrationId: string, limit = 100): Promise<any[]> {
     const tools = await this.composio.tools.get(userId, {
       toolkits: [integrationId],
-      limit: 100,
+      limit,
     });
     return tools;
   }
