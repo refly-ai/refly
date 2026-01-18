@@ -4399,6 +4399,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /tool/toolset/exportDefinitions:
+    get:
+      tags:
+        - tool
+      summary: Export toolset definitions
+      description: Export tool schemas for specified toolsets. Used for generating Python SDK.
+      operationId: exportToolsetDefinitions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: toolsetKey
+          in: query
+          required: false
+          description: Toolset key(s) to export, comma-separated for multiple toolsets. If not provided, exports all supported toolsets.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportToolsetDefinitionsResponse'
+  /tool/execute:
+    post:
+      tags:
+        - tool
+      summary: Execute tool
+      description: Execute a tool by toolset key and tool name.
+      operationId: executeTool
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteToolRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteToolResponse'
   /tool/call/result:
     get:
       tags:
@@ -12376,6 +12421,70 @@ components:
         toolsetId:
           type: string
           description: Toolset ID
+    ExecuteToolRequest:
+      type: object
+      required:
+        - toolsetKey
+        - toolName
+        - arguments
+      properties:
+        toolsetKey:
+          type: string
+          description: Toolset key
+        toolName:
+          type: string
+          description: Tool method name to execute
+        arguments:
+          type: object
+          additionalProperties: true
+          description: Tool arguments
+    ExecuteToolResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              additionalProperties: true
+              description: Tool execution result data
+    ExportToolsetDefinitionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ToolsetExportDefinition'
+    ToolsetExportDefinition:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Toolset unique key
+        name:
+          type: string
+          description: Toolset display name
+        description:
+          type: string
+          description: Toolset description
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolExportDefinition'
+    ToolExportDefinition:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Tool method name
+        description:
+          type: string
+          description: Tool description
+        inputSchema:
+          type: object
+          additionalProperties: true
+          description: JSON Schema format input parameter definition
     GetToolCallResultResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'

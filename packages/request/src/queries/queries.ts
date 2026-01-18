@@ -72,6 +72,7 @@ import {
   executeWorkflowApp,
   exportCanvas,
   exportDocument,
+  exportToolsetDefinitions,
   extractVariables,
   generateAppTemplate,
   generateMedia,
@@ -341,6 +342,8 @@ import {
   ExportCanvasError,
   ExportDocumentData,
   ExportDocumentError,
+  ExportToolsetDefinitionsData,
+  ExportToolsetDefinitionsError,
   ExtractVariablesData,
   ExtractVariablesError,
   GenerateAppTemplateData,
@@ -1668,6 +1671,23 @@ export const useListToolsets = <
     queryKey: Common.UseListToolsetsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listToolsets({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useExportToolsetDefinitions = <
+  TData = Common.ExportToolsetDefinitionsDefaultResponse,
+  TError = ExportToolsetDefinitionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ExportToolsetDefinitionsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseExportToolsetDefinitionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      exportToolsetDefinitions({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetToolCallResult = <

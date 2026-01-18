@@ -536,6 +536,12 @@ import type {
   DeleteToolsetData,
   DeleteToolsetError,
   DeleteToolsetResponse,
+  ExportToolsetDefinitionsData,
+  ExportToolsetDefinitionsError,
+  ExportToolsetDefinitionsResponse2,
+  ExecuteToolData,
+  ExecuteToolError,
+  ExecuteToolResponse2,
   GetToolCallResultData,
   GetToolCallResultError,
   GetToolCallResultResponse2,
@@ -3525,6 +3531,36 @@ export const deleteToolset = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<DeleteToolsetResponse, DeleteToolsetError, ThrowOnError>({
     ...options,
     url: '/tool/toolset/delete',
+  });
+};
+
+/**
+ * Export toolset definitions
+ * Export tool schemas for specified toolsets. Used for generating Python SDK.
+ */
+export const exportToolsetDefinitions = <ThrowOnError extends boolean = false>(
+  options?: Options<ExportToolsetDefinitionsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ExportToolsetDefinitionsResponse2,
+    ExportToolsetDefinitionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/tool/toolset/exportDefinitions',
+  });
+};
+
+/**
+ * Execute tool
+ * Execute a tool by toolset key and tool name.
+ */
+export const executeTool = <ThrowOnError extends boolean = false>(
+  options: Options<ExecuteToolData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<ExecuteToolResponse2, ExecuteToolError, ThrowOnError>({
+    ...options,
+    url: '/tool/execute',
   });
 };
 

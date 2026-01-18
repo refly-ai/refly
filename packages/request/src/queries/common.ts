@@ -72,6 +72,7 @@ import {
   executeWorkflowApp,
   exportCanvas,
   exportDocument,
+  exportToolsetDefinitions,
   extractVariables,
   generateAppTemplate,
   generateMedia,
@@ -977,6 +978,18 @@ export const UseListToolsetsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListToolsetsKey, ...(queryKey ?? [clientOptions])];
+export type ExportToolsetDefinitionsDefaultResponse = Awaited<
+  ReturnType<typeof exportToolsetDefinitions>
+>['data'];
+export type ExportToolsetDefinitionsQueryResult<
+  TData = ExportToolsetDefinitionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useExportToolsetDefinitionsKey = 'ExportToolsetDefinitions';
+export const UseExportToolsetDefinitionsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useExportToolsetDefinitionsKey, ...(queryKey ?? [clientOptions])];
 export type GetToolCallResultDefaultResponse = Awaited<
   ReturnType<typeof getToolCallResult>
 >['data'];
