@@ -40,6 +40,7 @@ import {
   AppManager,
   MarketplacePage,
   WorkflowPage,
+  ToolInstallPage,
   WorkspacePage,
   LoginPage,
   RunHistoryPage,
@@ -161,6 +162,14 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/workflow/:workflowId',
     element: <WorkflowPage />,
+  },
+  {
+    path: '/workflow/:workflowId/install-tools',
+    element: (
+      <ProtectedRoute>
+        <ToolInstallPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/workflow-template/:shareId',

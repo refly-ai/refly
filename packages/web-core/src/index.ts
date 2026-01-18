@@ -31,6 +31,9 @@ export const WorkspacePage = lazy(
 export const WorkflowPage = lazy(
   () => import(/* webpackChunkName: "group-workflow" */ './pages/workflow'),
 );
+export const ToolInstallPage = lazy(
+  () => import(/* webpackChunkName: "group-workflow" */ './pages/tool-install'),
+);
 
 // ========== Group 3: Share (Share/View pages) ==========
 // Features: Public share pages, need viewer components but no editing functionality

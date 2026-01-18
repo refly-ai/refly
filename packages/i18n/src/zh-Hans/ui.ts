@@ -4555,6 +4555,13 @@ const translations = {
     verificationCodeHint: '请输入终端显示的 6 位数字验证码',
     copied: '已复制!',
   },
+  toolInstall: {
+    title: '安装所需工具',
+    description: '安装并授权此工作流所需的工具。',
+    noUnauthorizedTools: '已安装所有必需工具。',
+    invalidWorkflow: '无效的工作流 ID。',
+    referencedNodes: '相关节点',
+  },
 };
 
 export default translations;

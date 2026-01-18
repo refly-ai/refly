@@ -4529,6 +4529,13 @@ const translations = {
     verificationCodeHint: 'Enter the 6-digit code shown in your terminal',
     copied: 'Copied!',
   },
+  toolInstall: {
+    title: 'Install required tools',
+    description: 'Install and authorize the tools required by this workflow.',
+    noUnauthorizedTools: 'All required tools are already installed.',
+    invalidWorkflow: 'Invalid workflow ID.',
+    referencedNodes: 'Referenced nodes',
+  },
 };
 
 export default translations;
