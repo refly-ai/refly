@@ -312,6 +312,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     selectedTools?: StructuredToolInterface[];
     installedToolsets?: GenericToolset[];
     preprocessResult?: PreprocessResult;
+    isPtcEnabled?: boolean;
   };
   metadata?: SkillRunnableMeta;
 }

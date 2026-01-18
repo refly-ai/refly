@@ -98,7 +98,7 @@ export class Agent extends BaseSkill {
 
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
-    const { preprocessResult, mode = 'node_agent' } = config.configurable;
+    const { preprocessResult, mode = 'node_agent', isPtcEnabled = false } = config.configurable;
     const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
 
     const systemPrompt =
@@ -106,7 +106,7 @@ export class Agent extends BaseSkill {
         ? buildWorkflowCopilotPrompt({
             installedToolsets: config.configurable.installedToolsets ?? [],
           })
-        : buildNodeAgentSystemPrompt();
+        : buildNodeAgentSystemPrompt({ isPtcEnabled });
 
     // Use copilot scene for copilot_agent mode, agent scene for node_agent mode, otherwise use chat scene
     const modelConfigScene = getModelSceneFromMode(mode);

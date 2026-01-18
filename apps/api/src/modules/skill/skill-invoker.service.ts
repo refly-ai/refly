@@ -72,6 +72,7 @@ import { StepService } from '../step/step.service';
 import { SyncRequestUsageJobData, SyncTokenUsageJobData } from '../subscription/subscription.dto';
 import { ToolCallService, ToolCallStatus } from '../tool-call/tool-call.service';
 import { ToolService } from '../tool/tool.service';
+import { getPtcConfig, isPtcEnabledForToolsets } from '../tool/ptc/ptc-config';
 import { InvokeSkillJobData } from './skill.dto';
 import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
@@ -364,6 +365,17 @@ export class SkillInvokerService {
         context,
       });
       config.configurable.selectedTools = tools as any;
+
+      // Calculate PTC status based on user and toolsets
+      const ptcConfig = getPtcConfig(this.config);
+      const toolsetKeys = toolsets.map((t) => t.id);
+      const isPtcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
+
+      this.logger.info(
+        `PTC status for user ${user.uid} with toolsets [${toolsetKeys.join(', ')}]: ${isPtcEnabled}`,
+      );
+
+      config.configurable.isPtcEnabled = isPtcEnabled;
     }
 
     config.configurable.installedToolsets = await this.toolService.listTools(user, {
