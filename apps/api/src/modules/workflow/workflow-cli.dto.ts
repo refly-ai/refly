@@ -3,7 +3,13 @@
  * These work with the canvas-based workflow system
  */
 
-import { CanvasNode, CanvasEdge, WorkflowVariable, WorkflowPlan } from '@refly/openapi-schema';
+import {
+  CanvasNode,
+  CanvasEdge,
+  WorkflowVariable,
+  WorkflowPlan,
+  GenericToolset,
+} from '@refly/openapi-schema';
 import { WorkflowPatchOperation } from '@refly/canvas-common';
 
 // ============================================================================
@@ -79,6 +85,15 @@ export interface RunWorkflowResponse {
   workflowId: string;
   status: WorkflowExecutionStatus;
   startedAt: string;
+  unauthorizedTools?: Array<{
+    toolset: GenericToolset;
+    referencedNodes: Array<{
+      id: string;
+      entityId: string;
+      title: string;
+      type: string;
+    }>;
+  }>;
 }
 
 export type WorkflowExecutionStatus = 'init' | 'executing' | 'finish' | 'failed';

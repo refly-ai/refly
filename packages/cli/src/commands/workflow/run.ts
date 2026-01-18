@@ -10,8 +10,28 @@ import { CLIError } from '../../utils/errors.js';
 interface RunResult {
   runId: string;
   workflowId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'aborted';
-  createdAt: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'aborted' | 'init';
+  startedAt: string;
+  unauthorizedTools?: Array<{
+    toolset: {
+      type: string;
+      id: string;
+      name: string;
+      builtin?: boolean;
+      toolset?: {
+        key?: string;
+      };
+      mcpServer?: {
+        name?: string;
+      };
+    };
+    referencedNodes: Array<{
+      id: string;
+      entityId: string;
+      title: string;
+      type: string;
+    }>;
+  }>;
 }
 
 export const workflowRunCommand = new Command('run')
@@ -42,6 +62,21 @@ export const workflowRunCommand = new Command('run')
         body,
       });
 
+      // Check if there are unauthorized tools
+      if (result.unauthorizedTools && result.unauthorizedTools.length > 0) {
+        const toolNames = result.unauthorizedTools.map((tool) => tool.toolset.name).join(', ');
+        fail(ErrorCodes.EXECUTION_FAILED, `Workflow contains unauthorized tools: ${toolNames}`, {
+          hint: 'Please install and authorize these tools before running the workflow',
+          details: {
+            unauthorizedTools: result.unauthorizedTools.map((tool) => ({
+              name: tool.toolset.name,
+              type: tool.toolset.type,
+              referencedNodes: tool.referencedNodes.length,
+            })),
+          },
+        });
+      }
+
       ok('workflow.run', {
         message: options.fromNode
           ? `Workflow run started from node ${options.fromNode}`
@@ -50,7 +85,7 @@ export const workflowRunCommand = new Command('run')
         workflowId: result.workflowId,
         status: result.status,
         startNode: options.fromNode || undefined,
-        createdAt: result.createdAt,
+        startedAt: result.startedAt,
         nextStep: `Check status with \`refly workflow status ${workflowId}\``,
       });
     } catch (error) {
