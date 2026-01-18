@@ -7985,6 +7985,10 @@ export const HasFilledFormResponseSchema = {
               type: 'string',
               description: 'User identity',
             },
+            interests: {
+              type: 'string',
+              description: 'User interests',
+            },
           },
         },
       },

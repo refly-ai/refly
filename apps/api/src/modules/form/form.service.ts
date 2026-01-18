@@ -25,6 +25,21 @@ export class FormService {
     }
   }
 
+  private extractInterestsFromAnswers(answers: string): string | null {
+    if (!answers?.trim()) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(answers) as { interests?: unknown } | null;
+      const interests =
+        typeof parsed?.interests === 'object' ? JSON.stringify(parsed.interests) : null;
+      return interests || null;
+    } catch {
+      return null;
+    }
+  }
+
   async getFormDefinition(_uid: string): Promise<FormDefinition | null> {
     const formDefinition = await this.prisma.formDefinition.findFirst();
     if (!formDefinition) {
@@ -79,7 +94,9 @@ export class FormService {
     }
   }
 
-  async hasFilledForm(uid: string): Promise<{ hasFilledForm: boolean; identity: string | null }> {
+  async hasFilledForm(
+    uid: string,
+  ): Promise<{ hasFilledForm: boolean; identity: string; interests: string }> {
     const user = await this.prisma.user.findUnique({
       where: { uid },
       select: { preferences: true },
@@ -92,14 +109,17 @@ export class FormService {
 
     const identity = this.extractRoleFromAnswers(answers?.answers);
 
+    const interests = this.extractInterestsFromAnswers(answers?.answers);
+
     if (!user?.preferences) {
-      return { hasFilledForm: false, identity: identity ?? null };
+      return { hasFilledForm: false, identity: identity ?? null, interests: interests ?? null };
     }
 
     const preferences = JSON.parse(user.preferences);
     return {
       hasFilledForm: preferences.hasFilledForm ?? true,
       identity: identity ?? null,
+      interests: interests ?? null,
     };
   }
 }

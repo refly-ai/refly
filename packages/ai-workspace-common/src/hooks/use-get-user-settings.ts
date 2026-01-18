@@ -137,6 +137,7 @@ export const useGetUserSettings = () => {
 
     // Check if user has been invited to show invitation code modal
     let identity: string | null = null;
+    let interests: string | null = null;
     try {
       const invitationResp = await getClient().hasBeenInvited();
       const hasBeenInvited = invitationResp.data?.data ?? false;
@@ -148,6 +149,7 @@ export const useGetUserSettings = () => {
           const formResp = await getClient().hasFilledForm();
           const hasFilledForm = formResp.data?.data?.hasFilledForm ?? false;
           identity = formResp.data?.data?.identity ?? null;
+          interests = formResp.data?.data?.interests ?? null;
           userStore.setShowOnboardingFormModal(!hasFilledForm);
         } catch (_formError) {
           // If form check fails, don't block user login, default to not showing modal
@@ -164,7 +166,11 @@ export const useGetUserSettings = () => {
     }
 
     if (userTypeForUserProperties) {
-      updateUserProperties({ user_plan: userTypeForUserProperties, user_identity: identity });
+      updateUserProperties({
+        user_plan: userTypeForUserProperties,
+        user_identity: identity,
+        user_acquisition_source: interests,
+      });
     }
 
     // set tour guide

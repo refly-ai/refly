@@ -36,6 +36,10 @@ export class FormController {
   @Get('/hasFilledForm')
   async hasFilledForm(@LoginedUser() user: User): Promise<HasFilledFormResponse> {
     const result = await this.formService.hasFilledForm(user.uid);
-    return buildSuccessResponse({ hasFilledForm: result.hasFilledForm, identity: result.identity });
+    return buildSuccessResponse({
+      hasFilledForm: result.hasFilledForm,
+      identity: result.identity,
+      interests: result.interests,
+    });
   }
 }

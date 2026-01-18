@@ -5758,6 +5758,10 @@ export type HasFilledFormResponse = BaseResponse & {
      * User identity
      */
     identity?: string;
+    /**
+     * User interests
+     */
+    interests?: string;
   };
 };
 
