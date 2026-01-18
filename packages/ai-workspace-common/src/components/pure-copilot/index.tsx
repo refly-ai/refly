@@ -1,7 +1,7 @@
 import { memo, useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Skeleton } from 'antd';
-import { Send, ArrowRight } from 'refly-icons';
+import { Send } from 'refly-icons';
 import { ChatInput } from '../canvas/launchpad/chat-input';
 import { useCreateCanvas } from '../../hooks/canvas/use-create-canvas';
 import { cn } from '@refly/utils/cn';
@@ -12,14 +12,7 @@ import { useUserStoreShallow } from '@refly/stores';
 import { PromptSuggestion } from '@refly/openapi-schema';
 import { useGetPromptSuggestions } from '@refly-packages/ai-workspace-common/queries';
 
-interface SamplePromptProps {
-  icon: React.ReactNode;
-  text: string;
-  onClick: (text: string) => void;
-  iconBgColor: string;
-}
-
-const fallbackPrompts: PromptSuggestion[] = [
+export const fallbackPrompts: PromptSuggestion[] = [
   {
     prompt: {
       zh: '搭建一个播客生成工作流，抓取昨日 Product Hunt Top 5 产品并分析其价值，生成完整播客脚本、男女声对话音频、封面与节目笔记，并通过邮件通知我。',
@@ -33,33 +26,6 @@ const fallbackPrompts: PromptSuggestion[] = [
     },
   },
 ];
-
-const SamplePrompt = memo(({ icon, text, onClick, iconBgColor }: SamplePromptProps) => {
-  return (
-    <div
-      className="group flex items-center justify-between p-4 bg-white border border-refly-Card-Border rounded-xl cursor-pointer hover:bg-refly-fill-hover transition-colors"
-      onClick={() => onClick(text)}
-    >
-      <div className="flex items-center gap-3 overflow-hidden">
-        <div
-          className={cn(
-            'flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center',
-            iconBgColor,
-          )}
-        >
-          {icon}
-        </div>
-        <span className="text-refly-text-1 text-base truncate">{text}</span>
-      </div>
-      <ArrowRight
-        size={20}
-        className="flex-shrink-0 text-refly-text-3 group-hover:text-refly-text-1 transition-colors"
-      />
-    </div>
-  );
-});
-
-SamplePrompt.displayName = 'SamplePrompt';
 
 interface PureCopilotProps {
   source?: 'frontPage' | 'onboarding';
