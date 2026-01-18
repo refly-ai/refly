@@ -291,7 +291,10 @@ export const SkillResponseNode = memo(
     });
 
     const nodeStyle = useMemo(
-      () => (isPreview ? { width: NODE_WIDTH, height: 214 } : NODE_SIDE_CONFIG),
+      () =>
+        isPreview
+          ? { width: NODE_WIDTH, height: 214 }
+          : { width: 'auto', height: 'auto', maxHeight: 300 },
       [isPreview],
     );
 
