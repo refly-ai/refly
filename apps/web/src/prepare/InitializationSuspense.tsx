@@ -1,5 +1,5 @@
 import { setupI18n, setupSentry } from '@refly/web-core';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { LightLoading, ReflyConfigProvider, useConfigProviderStore } from '@refly/ui-kit';
 import { ConfigProvider, theme } from 'antd';
 import { useThemeStoreShallow } from '@refly/stores';
@@ -11,12 +11,8 @@ export interface InitializationSuspenseProps {
 }
 
 export function InitializationSuspense({ children }: InitializationSuspenseProps) {
-  // Detect if page is being prerendered
-  // Skip initialization during prerender, quickly initialize on activation
+  // Initialization state
   const [isInitialized, setIsInitialized] = useState(false);
-  const isPrerendering = useRef(
-    typeof document !== 'undefined' && 'prerendering' in document && document.prerendering === true,
-  );
   const updateTheme = useConfigProviderStore((state) => state.updateTheme);
 
   const { isDarkMode, initTheme } = useThemeStoreShallow((state) => ({
@@ -25,21 +21,16 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
   }));
 
   const init = async () => {
-    // If prerendering, defer initialization
-    if (isPrerendering.current) {
-      console.log('[Init] Page is being prerendered, deferring initialization');
-      return;
-    }
-
+    // Initialize runtime and theme regardless of prerendering state
     setRuntime('web');
     initTheme();
 
-    // Initialization for normal load or after prerender activation
+    // Initialization for normal load or prerender
     try {
       await setupI18n();
       setIsInitialized(true);
 
-      // hide loading
+      // Hide loading - safe to call during prerendering
       (window as any).__REFLY_HIDE_LOADING__?.();
     } catch (error) {
       console.error('Failed to initialize i18n:', error);
@@ -47,7 +38,8 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
       setIsInitialized(true);
     }
 
-    // non-blocking initialization
+    // Non-blocking initialization - can run during prerendering
+    // These services should handle prerendering internally if needed
     Promise.all([setupSentry(), setupStatsig()]).catch((e) => {
       console.error('Failed to initialize metrics:', e);
     });
@@ -55,16 +47,6 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
 
   useEffect(() => {
     init();
-
-    // Listen for prerender activation event
-    if ('prerendering' in document) {
-      const handleActivation = () => {
-        console.log('[Init] Page activated from prerender');
-        init();
-      };
-      document.addEventListener('prerenderingchange', handleActivation);
-      return () => document.removeEventListener('prerenderingchange', handleActivation);
-    }
   }, []);
 
   useEffect(() => {
