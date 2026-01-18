@@ -650,7 +650,7 @@ export class SkillInvokerService {
 
     // Helper function for timeout message generation
     const getTimeoutMessage = () => {
-      // ✅ UPDATED: Use unified timeout message
+      // Use unified timeout message constant
       return ABORT_MESSAGES.STREAM_TIMEOUT;
     };
 
@@ -1368,11 +1368,11 @@ export class SkillInvokerService {
       const errorMessage = err.message || 'Unknown error';
       const errorType = err.name || 'Error';
 
-      // ✅ NEW: Detect LangGraph abort errors (which lose the original reason)
+      // Detect LangGraph abort errors (which lose the original reason)
       const isLangGraphAbort =
         errorMessage === 'Abort' && err.stack?.includes('langgraph/dist/pregel/runner');
 
-      // ✅ NEW: For LangGraph aborts, query database to get the correct errorType and errors
+      // For LangGraph aborts, query database to get the correct errorType and errors
       // This prevents overwriting the errorType that was already set by abortActionFromReq
       let dbErrorType: string | null = null;
       let dbErrors: string[] | null = null;
@@ -1471,7 +1471,7 @@ export class SkillInvokerService {
 
       // Normal error handling - send error SSE (triggers popup) and set failed status
 
-      // ✅ NEW: Determine final errorType and error message
+      // Determine final errorType and error message
       // Priority: database values (for LangGraph aborts) > categorization > result.errorType > default
       let finalErrorType: 'systemError' | 'userAbort';
       let finalErrorMessage: string;
@@ -1505,7 +1505,7 @@ export class SkillInvokerService {
         });
       }
 
-      // ✅ Set final status and errorType
+      // Set final status and errorType
       result.status = 'failed';
       result.errorType = finalErrorType;
       result.errors.push(finalErrorMessage);
@@ -1569,7 +1569,7 @@ export class SkillInvokerService {
           where: { resultId, version },
           data: {
             status,
-            // ✅ UPDATED: Use || instead of ?? to ensure errorType is never empty string
+            // Use || instead of ?? to ensure errorType is never empty string
             // If status is failed, use result.errorType (which should always be set now), fallback to 'systemError'
             errorType: status === 'failed' ? result.errorType || 'systemError' : null,
             errors: JSON.stringify(result.errors),

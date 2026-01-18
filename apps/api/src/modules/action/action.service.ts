@@ -611,7 +611,7 @@ export class ActionService {
     // Get the abort controller for this action
     const entry = this.activeAbortControllers.get(resultId);
 
-    // ✅ UPDATED: Use unified abort message constant
+    // Use unified abort message constant
     const abortReason = reason || ABORT_MESSAGES.USER_ABORT;
     const errorMessage = reason || ABORT_MESSAGES.USER_ABORT;
 
