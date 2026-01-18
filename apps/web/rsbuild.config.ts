@@ -67,9 +67,6 @@ export default defineConfig({
             // Code Caching Strategy
             // Precache core resources and main page chunks to improve first load experience
             include: [
-              // HTML files - precache for instant subsequent visits
-              /\.html$/,
-
               // Core libraries (required by all pages)
               /lib-react\.[a-f0-9]+\.js$/, // React library (~136KB)
               /lib-router\.[a-f0-9]+\.js$/, // Router library (~22KB)
@@ -91,12 +88,21 @@ export default defineConfig({
               /\.map$/, // Source maps
               /asset-manifest\.json$/,
               /\.LICENSE\.txt$/,
+              /\.html$/, // Do not precache HTML; runtime caching handles it
               /workbox-.*\.js$/, // Workbox runtime
             ],
 
             // Runtime caching strategies
             runtimeCaching: [
-              // === Strategy 0: HTML - StaleWhileRevalidate for instant load ===
+              // === Strategy 0: Home page - NetworkOnly (no HTML cache) ===
+              // Ensure "/" always hits the network (supports domain redirect)
+              {
+                urlPattern: ({ request, url }: { request: Request; url: URL }) =>
+                  request.destination === 'document' && url.pathname === '/',
+                handler: 'NetworkOnly',
+              },
+
+              // === Strategy 1: HTML (non-home) - StaleWhileRevalidate for instant load ===
               // Serve cached HTML immediately (fast!), then update cache in background
               // Users see content instantly, and get updates on next visit/refresh
               {
