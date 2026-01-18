@@ -133,17 +133,6 @@ const LoginPage = () => {
     return getLoginStatus() || isLogin;
   }, [getLoginStatus, isLogin]);
 
-  // Wait only when explicitly checking to avoid flicker; do not block on undefined
-  if (isCheckingLoginStatus === true) {
-    return null;
-  }
-
-  // Avoid redirect loop: only use cookie-based fast path when there is no returnUrl
-  const hasReturnUrl = !!searchParams.get('returnUrl');
-  if (isLoggedIn || (hasLoginCredentials && !hasReturnUrl)) {
-    return <Navigate to="/workspace" replace />;
-  }
-
   // Provide default values if config is not loaded
   const { isGithubEnabled, isGoogleEnabled, isEmailEnabled } = useMemo(() => {
     // Default to showing email login if config is not available
@@ -274,6 +263,17 @@ const LoginPage = () => {
   const handleToggleEmailForm = useCallback(() => {
     setIsEmailFormExpanded((prev) => !prev);
   }, []);
+
+  // Wait only when explicitly checking to avoid flicker; do not block on undefined
+  if (isCheckingLoginStatus === true) {
+    return null;
+  }
+
+  // Avoid redirect loop: only use cookie-based fast path when there is no returnUrl
+  const hasReturnUrl = !!searchParams.get('returnUrl');
+  if (isLoggedIn || (hasLoginCredentials && !hasReturnUrl)) {
+    return <Navigate to="/workspace" replace />;
+  }
 
   return (
     <div
