@@ -69,9 +69,11 @@ import {
   duplicateShare,
   emailLogin,
   emailSignup,
+  executeTool,
   executeWorkflowApp,
   exportCanvas,
   exportDocument,
+  exportToolsetDefinitions,
   extractVariables,
   generateAppTemplate,
   generateMedia,
@@ -977,6 +979,18 @@ export const UseListToolsetsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListToolsetsKey, ...(queryKey ?? [clientOptions])];
+export type ExportToolsetDefinitionsDefaultResponse = Awaited<
+  ReturnType<typeof exportToolsetDefinitions>
+>['data'];
+export type ExportToolsetDefinitionsQueryResult<
+  TData = ExportToolsetDefinitionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useExportToolsetDefinitionsKey = 'ExportToolsetDefinitions';
+export const UseExportToolsetDefinitionsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useExportToolsetDefinitionsKey, ...(queryKey ?? [clientOptions])];
 export type GetToolCallResultDefaultResponse = Awaited<
   ReturnType<typeof getToolCallResult>
 >['data'];
@@ -1729,6 +1743,12 @@ export type DeleteToolsetMutationResult = Awaited<ReturnType<typeof deleteToolse
 export const useDeleteToolsetKey = 'DeleteToolset';
 export const UseDeleteToolsetKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteToolsetKey,
+  ...(mutationKey ?? []),
+];
+export type ExecuteToolMutationResult = Awaited<ReturnType<typeof executeTool>>;
+export const useExecuteToolKey = 'ExecuteTool';
+export const UseExecuteToolKeyFn = (mutationKey?: Array<unknown>) => [
+  useExecuteToolKey,
   ...(mutationKey ?? []),
 ];
 export type AuthorizeComposioConnectionMutationResult = Awaited<

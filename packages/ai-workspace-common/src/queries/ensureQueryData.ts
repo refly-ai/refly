@@ -8,6 +8,7 @@ import {
   downloadExportJobResult,
   exportCanvas,
   exportDocument,
+  exportToolsetDefinitions,
   getActionResult,
   getAuthConfig,
   getAvailableVouchers,
@@ -87,6 +88,7 @@ import {
   DownloadExportJobResultData,
   ExportCanvasData,
   ExportDocumentData,
+  ExportToolsetDefinitionsData,
   GetActionResultData,
   GetCanvasCommissionByCanvasIdData,
   GetCanvasDataData,
@@ -704,6 +706,14 @@ export const ensureUseListToolsetsData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListToolsetsKeyFn(clientOptions),
     queryFn: () => listToolsets({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseExportToolsetDefinitionsData = (
+  queryClient: QueryClient,
+  clientOptions: Options<ExportToolsetDefinitionsData, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseExportToolsetDefinitionsKeyFn(clientOptions),
+    queryFn: () => exportToolsetDefinitions({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetToolCallResultData = (
   queryClient: QueryClient,
