@@ -203,15 +203,15 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       });
     }
 
-    setTimeout(() => {
-      onLayout('LR');
-    }, 1000);
-
-    if (source === 'onboarding') {
+    if (['onboarding', 'frontPage'].includes(source ?? '')) {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('source');
       setSearchParams(newParams);
     }
+
+    setTimeout(() => {
+      onLayout('LR');
+    }, 1000);
   }, [
     canvasId,
     workflowPlan,

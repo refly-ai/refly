@@ -12,6 +12,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
 import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
 const ActionDropdown = memo(
   ({ canvasId, canvasName }: { canvasId: string; canvasName: string }) => {
@@ -62,10 +63,14 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
       <Button
         className="h-[120px] flex items-center flex-col gap-3 border-[1px] border-dashed border-refly-Control-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover hover:shadow-refly-m transition-colors"
         onClick={handleNewWorkflow}
-        loading={createCanvasLoading}
+        disabled={createCanvasLoading}
       >
         <div className="flex justify-center items-center w-[30px] h-[30px] bg-refly-text-0 rounded-full">
-          <Add size={16} color="var(--refly-bg-body-z0)" />
+          {createCanvasLoading ? (
+            <Spin size="small" className="text-refly-bg-body-z0" />
+          ) : (
+            <Add size={16} color="var(--refly-bg-body-z0)" />
+          )}
         </div>
         <div className="text-sm leading-5 font-bold text-refly-text-0 line-clamp-1">
           {t('frontPage.newWorkflow.buttonText')}

@@ -13,7 +13,7 @@ export const CopilotContainer = memo(
   ({ copilotWidth, setCopilotWidth, maxPanelWidth }: CopilotContainerProps) => {
     const [searchParams] = useSearchParams();
     const source = useMemo(() => searchParams.get('source'), [searchParams]);
-    const isOnboarding = source === 'onboarding';
+    const isOnboarding = ['onboarding', 'frontPage'].includes(source ?? '');
 
     // Handle drag resize for Copilot panel
     const [isResizing, setIsResizing] = useState(false);
