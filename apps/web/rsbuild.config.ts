@@ -100,8 +100,8 @@ export default defineConfig({
               // Serve cached HTML immediately (fast!), then update cache in background
               // Users see content instantly, and get updates on next visit/refresh
               {
-                urlPattern: ({ request }: { request: Request }) =>
-                  request.destination === 'document',
+                urlPattern: ({ request, url }: { request: Request; url: URL }) =>
+                  request.destination === 'document' && url.pathname !== '/',
                 handler: 'StaleWhileRevalidate',
                 options: {
                   cacheName: 'html-cache-v1',
@@ -123,12 +123,7 @@ export default defineConfig({
                 },
               },
 
-              // Note: We intentionally DON'T cache async JS chunks in runtime
-              // This is because:
-              // 1. First load should be fast - no SW overhead
-              // 2. Browser's HTTP cache (Cache-Control) already handles caching
-              // 3. Users can see the actual network requests in DevTools
-              // 4. Prefetch (import()) works naturally without SW interference
+              // Note: Async JS chunks are cached via runtime strategy below.
 
               // === Strategy 1: Core JS chunks (not async) - CacheFirst ===
               // Only cache non-async JS files that were precached
@@ -141,6 +136,24 @@ export default defineConfig({
                   cacheName: 'js-cache-v4',
                   expiration: {
                     maxEntries: 30,
+                    maxAgeSeconds: 365 * 24 * 60 * 60,
+                  },
+                  cacheableResponse: {
+                    statuses: [200],
+                  },
+                },
+              },
+
+              // === Strategy 1.1: Async JS chunks - CacheFirst ===
+              {
+                urlPattern: ({ url }: { url: URL }) => {
+                  return url.pathname.endsWith('.js') && url.pathname.includes('/async/');
+                },
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'js-async-cache-v1',
+                  expiration: {
+                    maxEntries: 60,
                     maxAgeSeconds: 365 * 24 * 60 * 60,
                   },
                   cacheableResponse: {

@@ -6,6 +6,7 @@ import { ensureIndexedDbSupport } from '@refly-packages/ai-workspace-common/util
 import { isPublicAccessPageByPath } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 import { useUserStoreShallow } from '@refly/stores';
 import { authChannel } from '@refly-packages/ai-workspace-common/utils/auth-channel';
+import { resetUserSettingsRequestState } from '@refly-packages/ai-workspace-common/hooks/use-get-user-settings';
 
 // Clear IndexedDB
 const deleteIndexedDB = async () => {
@@ -36,9 +37,6 @@ const deleteIndexedDB = async () => {
   }
 };
 
-// Add flag to track logout status
-let isLoggingOut = false;
-
 export const logout = async ({
   callRemoteLogout,
   resetUserState,
@@ -48,15 +46,12 @@ export const logout = async ({
   resetUserState?: () => void;
   navigate?: (path: string) => void;
 } = {}) => {
-  // Return early if already logging out
-  if (isLoggingOut) {
-    console.log('Logout already in progress');
-    return;
-  }
+  // Note: No lock needed here because:
+  // 1. This function is idempotent (safe to call multiple times)
+  // 2. Modal confirmation prevents accidental double-clicks
+  // 3. Module-level locks cause issues in SPA when components unmount
 
   try {
-    isLoggingOut = true;
-
     // Strategy: Navigate FIRST, then cleanup
     // This prevents components from making unauthorized requests during cleanup
     const currentPath = window.location.pathname;
@@ -78,27 +73,32 @@ export const logout = async ({
 
     // Now that we're on login page (or public page), safe to cleanup
 
+    // Broadcast logout event to other tabs FIRST
+    // This ensures other tabs know about logout even if subsequent steps fail
+    authChannel.broadcast({ type: 'logout' });
+    authChannel.updateCurrentUid(null);
+    resetUserSettingsRequestState();
+
     // Call logout api to clear cookies and revoke refresh token
     if (callRemoteLogout) {
-      await getClient().logout();
+      await getClient()
+        .logout()
+        .catch((err) => {
+          // Don't block logout if API call fails (e.g., network error, already logged out)
+          console.warn('[Logout] API call failed:', err);
+        });
     }
 
     // Reset user state in store
     resetUserState?.();
 
-    // Broadcast logout event to other tabs
-    authChannel.broadcast({ type: 'logout' });
-    authChannel.updateCurrentUid(null);
-
-    // Clear IndexedDB
+    // Clear IndexedDB (non-blocking, errors already handled internally)
     await deleteIndexedDB();
 
     // Clear localStorage
     localStorage.clear();
   } catch (error) {
-    console.error('Failed to logout:', error);
-  } finally {
-    isLoggingOut = false;
+    console.error('[Logout] Failed:', error);
   }
 };
 

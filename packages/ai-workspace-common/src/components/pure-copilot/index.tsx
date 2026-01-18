@@ -78,7 +78,6 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
   }, []);
 
   const { data, isLoading, refetch } = useGetPromptSuggestions();
-  console.log('data', data);
 
   useEffect(() => {
     if (!showOnboardingFormModal) {
