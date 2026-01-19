@@ -160,9 +160,7 @@ const ToolInstallCard = memo(
 ToolInstallCard.displayName = 'ToolInstallCard';
 
 const ToolInstallPage = memo(() => {
-  const translation = useTranslation();
-  const t = translation?.t ?? ((key: string) => key);
-  const i18n = translation?.i18n;
+  const { t, i18n } = useTranslation();
   const params = useParams();
   const workflowId = params?.workflowId ?? '';
   const userStore = useUserStoreShallow((state) => ({
