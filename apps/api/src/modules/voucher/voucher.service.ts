@@ -225,12 +225,35 @@ export class VoucherService implements OnModuleInit {
 
       let voucher: VoucherDTO;
 
-      if (source === VoucherSource.RUN_WORKFLOW) {
+      // Check if there is an existing unused and unexpired voucher to reuse
+      const unusedVoucher = await this.prisma.voucher.findFirst({
+        where: {
+          uid: user.uid,
+          status: VoucherStatus.UNUSED,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
+      });
+
+      if (unusedVoucher) {
+        // Update existing unused voucher with latest values and fresh expiration
+        voucher = await this.updateVoucher(unusedVoucher.voucherId, {
+          discountPercent,
+          llmScore,
+          expiresAt,
+          sourceId,
+          status: VoucherStatus.UNUSED,
+        });
+        this.logger.log(
+          `Reusing existing unused voucher for user ${user.uid}: ${voucher.voucherId} (source: ${source})`,
+        );
+      } else if (source === VoucherSource.RUN_WORKFLOW) {
         // Ensure only one voucher per day for run_workflow source
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
-        const existingVoucher = await this.prisma.voucher.findFirst({
+        const existingVoucherToday = await this.prisma.voucher.findFirst({
           where: {
             uid: user.uid,
             source: VoucherSource.RUN_WORKFLOW,
@@ -240,22 +263,23 @@ export class VoucherService implements OnModuleInit {
           },
         });
 
-        if (existingVoucher) {
-          if (existingVoucher.status !== VoucherStatus.USED) {
-            // Update existing voucher with latest values
-            voucher = await this.updateVoucher(existingVoucher.voucherId, {
+        if (existingVoucherToday) {
+          if (existingVoucherToday.status !== VoucherStatus.USED) {
+            // This case is actually covered by the unusedVoucher check above,
+            // but we keep it for clarity and in case unusedVoucher check was slightly different
+            voucher = await this.updateVoucher(existingVoucherToday.voucherId, {
               discountPercent,
               llmScore,
               expiresAt,
               sourceId,
-              status: VoucherStatus.UNUSED, // Reset to unused if it was expired/invalid
+              status: VoucherStatus.UNUSED,
             });
             this.logger.log(
               `Updated existing workflow voucher for user ${user.uid}: ${voucher.voucherId}`,
             );
           } else {
             // Already used today, just return it
-            voucher = this.toVoucherDTO(existingVoucher);
+            voucher = this.toVoucherDTO(existingVoucherToday);
             this.logger.log(
               `Workflow voucher for user ${user.uid} already used today: ${voucher.voucherId}`,
             );
@@ -272,7 +296,7 @@ export class VoucherService implements OnModuleInit {
           });
         }
       } else {
-        // For other sources, always create new voucher
+        // For other sources, always create new voucher if no unused one exists
         voucher = await this.createVoucher({
           uid: user.uid,
           discountPercent,
