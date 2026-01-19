@@ -38,7 +38,7 @@ export const CopilotContainer = memo(
 
         const deltaX = e.clientX - resizeStartXRef.current;
         const newWidth = resizeStartWidthRef.current + deltaX;
-        const minWidth = 300;
+        const minWidth = 400;
         const maxWidth = maxPanelWidth;
 
         const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));

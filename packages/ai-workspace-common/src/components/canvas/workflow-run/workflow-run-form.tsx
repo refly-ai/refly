@@ -26,6 +26,7 @@ import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
 import GiftIcon from '@refly-packages/ai-workspace-common/assets/gift.png';
 import { useFirstSuccessExecutionToday } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { UserInputCollapse } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/user-input-collapse';
+import { useUserMembership } from '@refly-packages/ai-workspace-common/hooks/use-user-membership';
 
 /**
  * Check if a toolset is authorized/installed.
@@ -124,6 +125,7 @@ export const WorkflowRunForm = ({
   const [fallbackToolsCanvasData, setFallbackToolsCanvasData] = useState<RawCanvasData | undefined>(
     undefined,
   );
+  const { planType } = useUserMembership();
 
   // Use external isRunning if provided, otherwise use internal state
   const isRunning = externalIsRunning ?? internalIsRunning;
@@ -483,7 +485,7 @@ export const WorkflowRunForm = ({
                   ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
                   : t('canvas.workflow.run.run') || 'Run'}
 
-                {!workflowIsRunning && !hasFirstSuccessExecutionToday && (
+                {!workflowIsRunning && !hasFirstSuccessExecutionToday && planType === 'free' && (
                   <img
                     src={GiftIcon}
                     alt="gift"

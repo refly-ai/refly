@@ -1622,7 +1622,12 @@ const translations = {
         },
         forbiddenToAddNodeWhenWorkflowIsRunning: '工作流正在运行中，无法添加节点，请稍后再试',
         noArtifacts: '未找到产物',
+        noNodes: '未找到智能体响应节点',
+        defaultAgentTitle: '智能体',
         addToFileLibrarySuccess: '已成功添加到文件库',
+        preview: '预览',
+        outputsOnly: '仅产物',
+        inputPanelTitle: '用户输入',
       },
       template: {
         updating: '模板正在发布中...',
@@ -2300,7 +2305,7 @@ const translations = {
   agent: {
     configure: '输入',
     lastRun: '输出',
-    runlog: 'Runlog',
+    runlog: '运行日志',
     noResult: '运行后才有记录哦',
     editTitlePlaceholder: '输入智能体的标题',
     config: {
@@ -4554,6 +4559,23 @@ const translations = {
     verificationCodePlaceholder: '输入 6 位验证码',
     verificationCodeHint: '请输入终端显示的 6 位数字验证码',
     copied: '已复制!',
+  },
+  toolInstall: {
+    title: '安装所需工具',
+    description: '安装并授权此工作流所需的工具。',
+    noUnauthorizedTools: '已安装所有必需工具。',
+    invalidWorkflow: '无效的工作流 ID。',
+    referencedNodes: '相关节点',
+    authorizeTitle: '授权工具',
+    authorizeSubtitle: '要运行此技能，您需要连接 {{count}} 个工具',
+    workflowToolsTitle: '授权工具',
+    workflowToolsSubtitle: '此工作流使用了 {{count}} 个工具，请安装所需工具。',
+    allToolsNeedInstall: '要运行此技能，你需要连接 {{count}} 个工具',
+    partialToolsInstalled: '连接 {{installed}}/{{total}} 个工具以运行技能',
+    allToolsInstalled: '全部设置完成！返回终端运行此技能',
+    noTools: '此工作流中未找到工具。',
+    connect: '连接',
+    connected: '已连接',
   },
 };
 

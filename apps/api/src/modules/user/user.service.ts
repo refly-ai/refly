@@ -11,7 +11,7 @@ import { Subscription } from '@prisma/client';
 import { pick, safeParseJSON, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { RedisService } from '../common/redis.service';
-import { OperationTooFrequent, ParamsError } from '@refly/errors';
+import { AccountNotFoundError, OperationTooFrequent, ParamsError } from '@refly/errors';
 import { MiscService } from '../misc/misc.service';
 import { ConfigService } from '@nestjs/config';
 import { isDesktop } from '../../utils/runtime';
@@ -69,8 +69,7 @@ export class UserService implements OnModuleInit {
     });
 
     if (!userPo) {
-      this.logger.error(`User not found in database: ${user.uid}, email: ${user.email}`);
-      throw new Error(`User not found: ${user.uid}`);
+      throw new AccountNotFoundError();
     }
 
     let subscription: Subscription | null = null;

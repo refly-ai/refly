@@ -1475,7 +1475,12 @@ const translations = {
         forbiddenToAddNodeWhenWorkflowIsRunning:
           'Workflow is running, cannot add node, please try again later',
         noArtifacts: 'No artifacts found',
+        noNodes: 'No skill response nodes found',
+        defaultAgentTitle: 'Agent',
         addToFileLibrarySuccess: 'Successfully added to file library',
+        preview: 'Preview',
+        outputsOnly: 'Outputs only',
+        inputPanelTitle: 'User Input',
       },
       template: {
         updating: 'The template description string you are using is being updated...',
@@ -4528,6 +4533,23 @@ const translations = {
     verificationCodePlaceholder: 'Enter 6-digit code',
     verificationCodeHint: 'Enter the 6-digit code shown in your terminal',
     copied: 'Copied!',
+  },
+  toolInstall: {
+    title: 'Install required tools',
+    description: 'Install and authorize the tools required by this workflow.',
+    noUnauthorizedTools: 'All required tools are already installed.',
+    invalidWorkflow: 'Invalid workflow ID.',
+    referencedNodes: 'Referenced nodes',
+    authorizeTitle: 'Authorize tools',
+    authorizeSubtitle: 'To run this skill, you need to connect {{count}} tool',
+    workflowToolsTitle: 'Authorize Tools',
+    workflowToolsSubtitle: 'This workflow uses {{count}} tool(s). Install the ones you need.',
+    allToolsNeedInstall: 'To run this skill, you need to connect {{count}} tools',
+    partialToolsInstalled: 'Connect {{installed}}/{{total}} tools to run skill',
+    allToolsInstalled: 'All set! Return to your terminal to run this skill',
+    noTools: 'No tools found in this workflow.',
+    connect: 'Connect',
+    connected: 'Connected',
   },
 };
 

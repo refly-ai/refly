@@ -236,8 +236,8 @@ export const CopilotWorkflowPlan = memo(
     const { tasks = [], variables = [] } = displayData ?? {};
 
     return (
-      <div className="flex flex-col gap-3 pt-2">
-        <div className="flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas">
+      <div className="flex flex-col items-end gap-3 pt-2">
+        <div className="w-[360px] flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas">
           <div className="flex items-center gap-1.5">
             <NodeIcon type="start" small />
             <div className="text-refly-text-caption font-medium leading-5 flex-1 truncate text-sm">
@@ -261,7 +261,7 @@ export const CopilotWorkflowPlan = memo(
 
         {tasks.map((task) => (
           <div
-            className="flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas"
+            className="w-[360px] flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas"
             key={task.id}
           >
             <div className="flex items-center gap-1.5">

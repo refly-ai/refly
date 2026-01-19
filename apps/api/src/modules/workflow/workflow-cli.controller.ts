@@ -21,8 +21,10 @@ import {
   WorkflowVariable,
   CanvasNodeType,
   InvokeSkillRequest,
+  GenericToolset,
+  UserTool,
 } from '@refly/openapi-schema';
-import { CanvasNodeFilter } from '@refly/canvas-common';
+import { CanvasNodeFilter, extractToolsetsWithNodes } from '@refly/canvas-common';
 import { CanvasService } from '../canvas/canvas.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { WorkflowService } from './workflow.service';
@@ -48,6 +50,7 @@ import {
   NodeExecutionStatus,
   NodeExecutionDetail,
   WorkflowRunDetail,
+  WorkflowToolsStatusResponse,
   GenerateWorkflowCliRequest,
   GenerateWorkflowCliResponse,
   GenerateWorkflowAsyncResponse,
@@ -62,6 +65,35 @@ import { PrismaService } from '../common/prisma.service';
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * Check if a toolset is authorized/installed
+ * - MCP servers: check if exists in userTools by name
+ * - Builtin tools: always available, no installation needed
+ * - Regular tools: check if exists in userTools by key and authorized status
+ */
+const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): boolean => {
+  // MCP servers need to be checked separately
+  if (toolset.type === 'mcp') {
+    return userTools.some((t) => t.toolset?.name === toolset.name);
+  }
+
+  // Builtin tools are always available
+  if (toolset.builtin) {
+    return true;
+  }
+
+  // Find matching user tool by key
+  const matchingUserTool = userTools.find((t) => t.key === toolset.toolset?.key);
+
+  // If not in userTools list, user hasn't installed/authorized this tool
+  if (!matchingUserTool) {
+    return false;
+  }
+
+  // For external OAuth tools, check authorized status
+  return matchingUserTool.authorized ?? false;
+};
 
 /**
  * Build connectTo filters from edges to preserve connections when adding nodes.
@@ -1183,7 +1215,32 @@ export class WorkflowCliController {
         checkOwnership: true,
       });
 
+      const toolsetsWithNodes = extractToolsetsWithNodes(rawData.nodes);
+
+      // Get user's installed tools for authorization check
+      const userTools = await this.toolService.listUserTools(user);
+
+      // Check for unauthorized tools
+      const unauthorizedTools = toolsetsWithNodes.filter((toolWithNodes) => {
+        return !isToolsetAuthorized(toolWithNodes.toolset, userTools);
+      });
+
       const mergedVariables = mergeWorkflowVariables(rawData.variables, body.variables);
+
+      // If there are unauthorized tools, return them instead of executing
+      if (unauthorizedTools.length > 0) {
+        this.logger.log(
+          `Workflow ${workflowId} has ${unauthorizedTools.length} unauthorized tools, returning tool list`,
+        );
+
+        return buildCliSuccessResponse({
+          runId: '',
+          workflowId,
+          status: 'failed',
+          startedAt: new Date().toJSON(),
+          unauthorizedTools,
+        });
+      }
 
       // Initialize workflow execution
       const executionId = await this.workflowService.initializeWorkflowExecution(
@@ -1269,6 +1326,52 @@ export class WorkflowCliController {
         `No execution found for workflow ${workflowId}`,
         'Run the workflow first with `refly workflow run <workflowId>`',
         HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Get workflow tools authorization status by workflowId
+   * GET /v1/cli/workflow/:id/tools-status
+   *
+   * Returns the authorization status of all tools required by this workflow.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/tools-status')
+  async getToolsStatusByWorkflowId(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+  ): Promise<{ success: boolean; data: WorkflowToolsStatusResponse }> {
+    this.logger.log(`Getting tools status for workflow ${workflowId}, user ${user.uid}`);
+
+    try {
+      // Get existing workflow variables and merge with runtime variables
+      const rawData = await this.canvasService.getCanvasRawData(user, workflowId, {
+        checkOwnership: true,
+      });
+
+      const toolsetsWithNodes = extractToolsetsWithNodes(rawData.nodes);
+
+      // Get user's installed tools for authorization check
+      const userTools = await this.toolService.listUserTools(user);
+
+      // Check for unauthorized tools
+      const unauthorizedTools = toolsetsWithNodes.filter((toolWithNodes) => {
+        return !isToolsetAuthorized(toolWithNodes.toolset, userTools);
+      });
+
+      return buildCliSuccessResponse({
+        authorized: unauthorizedTools.length === 0,
+        unauthorizedTools,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to get tools status for workflow ${workflowId}: ${(error as Error).message}`,
+      );
+      throwCliError(
+        CLI_ERROR_CODES.EXECUTION_FAILED,
+        `Failed to check tools status: ${(error as Error).message}`,
+        'Check the workflow configuration and try again',
       );
     }
   }

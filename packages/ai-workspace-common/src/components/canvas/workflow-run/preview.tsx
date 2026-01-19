@@ -41,17 +41,6 @@ import './preview.scss';
 
 const OUTPUT_STEP_NAMES = ['answerQuestion', 'generateDocument', 'generateCodeArtifact'];
 
-// Placeholder data
-const PLACEHOLDER_DATA = {
-  nodeId: 'placeholder-node-id',
-  entityId: 'placeholder-entity-id',
-  title: 'Placeholder Title',
-  readonly: false,
-  isExecuting: false,
-  workflowIsRunning: false,
-  currentFile: null,
-};
-
 // Component to display credit usage for a node
 const NodeCreditUsage = memo(
   ({
@@ -92,9 +81,10 @@ const WorkflowRunPreviewComponent = () => {
   const [activeTab, setActiveTab] = useState<ResultActiveTab>('configure');
   const { canvasId, workflow } = useCanvasContext();
   const { nodes, edges } = useRealtimeCanvasData();
-  const { resultMap, streamResults } = useActionResultStoreShallow((state) => ({
+  const { resultMap, streamResults, currentFile } = useActionResultStoreShallow((state) => ({
     resultMap: state.resultMap,
     streamResults: state.streamResults,
+    currentFile: state.currentFile,
   }));
   const { fetchActionResult } = useFetchActionResult();
   const { setShowWorkflowRun, showWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
@@ -139,7 +129,7 @@ const WorkflowRunPreviewComponent = () => {
   const effectiveExecutionId = executionId ?? latestExecutionId ?? '';
 
   // Get workflow detail to sync node execution status
-  const { data: workflowDetail } = useGetWorkflowDetail(
+  const { data: workflowDetail, refetch: refetchWorkflowDetail } = useGetWorkflowDetail(
     {
       query: { executionId: effectiveExecutionId },
     },
@@ -397,10 +387,7 @@ const WorkflowRunPreviewComponent = () => {
         );
 
         if (emptyRequiredFileVar) {
-          message.warning(
-            t('canvas.workflow.run.requiredFileInputsMissing') ||
-              'This agent has required file inputs. Please upload the missing files before running.',
-          );
+          message.warning(t('canvas.workflow.run.requiredFileInputsMissing'));
           return;
         }
 
@@ -457,6 +444,14 @@ const WorkflowRunPreviewComponent = () => {
             entityType: 'canvas',
           },
         );
+
+        // Refetch workflow detail after a short delay to sync node execution status
+        // This ensures the Preview panel shows the updated status after individual node retry
+        setTimeout(() => {
+          if (refetchWorkflowDetail) {
+            refetchWorkflowDetail();
+          }
+        }, 1000);
       };
     },
     [canvasId, workflowVariables, resultMap, resetFailedState, setNodeData, invokeAction, t],
@@ -485,7 +480,7 @@ const WorkflowRunPreviewComponent = () => {
   const handleAddToFileLibrary = useCallback(
     async (file: DriveFile) => {
       if (!canvasId || !file?.storageKey) {
-        message.error(t('common.saveFailed') || 'Failed to add file to library');
+        message.error(t('common.saveFailed'));
         return;
       }
 
@@ -493,7 +488,7 @@ const WorkflowRunPreviewComponent = () => {
         const { data, error } = await getClient().createDriveFile({
           body: {
             canvasId,
-            name: file.name ?? 'Untitled file',
+            name: file.name ?? t('common.untitled'),
             type: file.type ?? 'text/plain',
             storageKey: file.storageKey,
             source: 'manual',
@@ -526,12 +521,10 @@ const WorkflowRunPreviewComponent = () => {
           },
         });
 
-        message.success(
-          t('canvas.workflow.run.addToFileLibrarySuccess') || 'Successfully added to file',
-        );
+        message.success(t('canvas.workflow.run.addToFileLibrarySuccess'));
       } catch (err) {
         console.error('Failed to add file to library:', err);
-        message.error(t('common.saveFailed') || 'Failed to add file to library');
+        message.error(t('common.saveFailed'));
         throw err;
       }
     },
@@ -600,6 +593,7 @@ const WorkflowRunPreviewComponent = () => {
         onClose={handleClose}
         onToggleOutputsOnly={() => setOutputsOnly(!outputsOnly)}
         outputsOnly={outputsOnly}
+        showOutputsOnlyButton={activeTab === 'lastRun'}
       />
 
       <div className="flex-1 flex flex-col min-h-0 relative">
@@ -656,7 +650,7 @@ const WorkflowRunPreviewComponent = () => {
               <div className="flex flex-col gap-4 p-4">
                 {allProductFiles.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-refly-text-2">
-                    {t('canvas.workflow.run.noArtifacts') || 'No artifacts found'}
+                    {t('canvas.workflow.run.noArtifacts')}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
@@ -686,7 +680,7 @@ const WorkflowRunPreviewComponent = () => {
 
                 {skillResponseNodes.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-refly-text-2">
-                    {t('canvas.workflow.run.noNodes') || 'No skill response nodes found'}
+                    {t('canvas.workflow.run.noNodes')}
                   </div>
                 ) : (
                   skillResponseNodes.map((node) => {
@@ -741,7 +735,7 @@ const WorkflowRunPreviewComponent = () => {
                     );
 
                     // Agent title
-                    const agentTitle = title || 'Retrieve information and...';
+                    const agentTitle = title || t('canvas.workflow.run.defaultAgentTitle');
 
                     // Get status icon based on node status (only for executed nodes)
                     const getStatusIcon = () => {
@@ -783,7 +777,7 @@ const WorkflowRunPreviewComponent = () => {
                               width: '100%',
                             }}
                           >
-                            <span>Input</span>
+                            <span>{t('agent.configure')}</span>
                           </div>
                         ),
                         children: (
@@ -826,7 +820,7 @@ const WorkflowRunPreviewComponent = () => {
                                     width: '100%',
                                   }}
                                 >
-                                  <span>Output</span>
+                                  <span>{t('agent.lastRun')}</span>
                                 </div>
                               ),
                               children: (
@@ -842,8 +836,7 @@ const WorkflowRunPreviewComponent = () => {
                                       <div className="flex items-center gap-2 mb-2">
                                         <Cancelled size={16} color="#F04438" />
                                         <span className="text-sm font-semibold text-refly-func-danger-default">
-                                          {t('canvas.workflow.run.executionFailed') ||
-                                            'Execution Failed'}
+                                          {t('canvas.workflow.run.executionFailed')}
                                         </span>
                                       </div>
                                       <div className="text-sm text-refly-text-1 bg-refly-Colorful-red-light rounded-lg p-3">
@@ -919,8 +912,7 @@ const WorkflowRunPreviewComponent = () => {
                                     - Finished/Failed: Show node name + execution time + credit usage
                                     Note: Node name is always shown on the left side
                                   */}
-                                    {isNotExecuted ? // Not executed: Only show node name (nothing else)
-                                    null : (
+                                    {isNotExecuted ? null : ( // Not executed: Only show node name (nothing else)
                                       <div
                                         className="flex items-center"
                                         style={{
@@ -1003,12 +995,13 @@ const WorkflowRunPreviewComponent = () => {
           </div>
         </div>
 
-        {PLACEHOLDER_DATA.currentFile && (
+        {currentFile && (
           <div className="absolute inset-0 bg-refly-bg-content-z2 z-10">
             <ProductCard
-              file={PLACEHOLDER_DATA.currentFile}
+              file={currentFile}
               classNames="w-full h-full"
               source="preview"
+              onAddToFileLibrary={handleAddToFileLibrary}
             />
           </div>
         )}

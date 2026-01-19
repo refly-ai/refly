@@ -9,7 +9,7 @@ import {
 } from '@refly/openapi-schema';
 import { SandboxClient } from './sandbox.client';
 import { DriveService } from '../drive/drive.service';
-import { SandboxExecutionContext, S3Config } from './sandbox.schema';
+import { SandboxExecutionContext, S3Config, S3LibConfig } from './sandbox.schema';
 import { SandboxCanvasIdRequiredError } from './sandbox.exception';
 import { SandboxResponseFactory } from './sandbox.response';
 import { guard } from '@refly/utils';
@@ -32,6 +32,21 @@ export class SandboxService {
   @Config.object<S3Config>('objectStorage.minio.internal', (raw) => raw as S3Config)
   private readonly s3Config: S3Config;
 
+  @Config.boolean('sandbox.s3Lib.enabled', false)
+  private readonly s3LibEnabled: boolean;
+
+  @Config.string('sandbox.s3Lib.pathPrefix', '')
+  private readonly s3LibPathPrefix: string;
+
+  @Config.string('sandbox.s3Lib.hash', '')
+  private readonly s3LibHash: string;
+
+  @Config.boolean('sandbox.s3Lib.cache', true)
+  private readonly s3LibCache: boolean;
+
+  @Config.boolean('sandbox.s3Lib.reset', true)
+  private readonly s3LibReset: boolean;
+
   constructor(
     private readonly config: ConfigService,
     private readonly client: SandboxClient,
@@ -51,12 +66,14 @@ export class SandboxService {
         .orThrow(() => SandboxCanvasIdRequiredError.create());
 
       const storagePath = this.driveService.buildS3DrivePath(user.uid, canvasId);
+      const s3LibConfig = this.buildS3LibConfig();
 
       const context: SandboxExecutionContext = {
         uid: user.uid,
         canvasId: canvasId,
         s3Config: this.s3Config,
         s3DrivePath: storagePath,
+        s3LibConfig,
         timeout: this.timeoutMs,
         parentResultId: request.context?.parentResultId,
         version: request.context?.version,
@@ -93,6 +110,23 @@ export class SandboxService {
 
       return SandboxResponseFactory.error(error);
     }
+  }
+
+  private buildS3LibConfig(): S3LibConfig | undefined {
+    if (!this.s3LibEnabled || !this.s3LibPathPrefix || !this.s3LibHash) return undefined;
+
+    const normalizedPrefix = this.s3LibPathPrefix.replace(/\/+$/, '');
+
+    return {
+      accessKey: this.s3Config.accessKey,
+      secretKey: this.s3Config.secretKey,
+      bucket: this.s3Config.bucket,
+      region: this.s3Config.region,
+      path: `${normalizedPrefix}/${this.s3LibHash}`,
+      hash: this.s3LibHash,
+      cache: this.s3LibCache,
+      reset: this.s3LibReset,
+    };
   }
 
   private async registerFiles(
