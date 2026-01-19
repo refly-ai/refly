@@ -20,7 +20,7 @@ import { compressAgentLoopMessages } from '../utils/context-manager';
 import { getModelSceneFromMode } from '@refly/utils';
 
 // prompts
-import { buildNodeAgentSystemPrompt } from '../prompts/node-agent';
+import { buildNodeAgentSystemPrompt, PtcConfig } from '../prompts/node-agent';
 import { buildUserPrompt } from '../prompts/user-prompt';
 import { buildWorkflowCopilotPrompt } from '../prompts/copilot-agent';
 
@@ -96,17 +96,32 @@ export class Agent extends BaseSkill {
     ...baseStateGraphArgs,
   };
 
+  private buildPtcConfig(config: SkillRunnableConfig): PtcConfig {
+    const { nonBuiltInToolsets = [] } = config.configurable;
+    return {
+      toolsets: nonBuiltInToolsets.map((t) => {
+        return {
+          id: t.id,
+          name: t.name,
+          key: t.toolset.key,
+        };
+      }),
+    };
+  }
+
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
-    const { preprocessResult, mode = 'node_agent' } = config.configurable;
+    const { preprocessResult, mode = 'node_agent', ptcEnabled = false } = config.configurable;
     const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
+
+    const ptcConfig = this.buildPtcConfig(config);
 
     const systemPrompt =
       mode === 'copilot_agent'
         ? buildWorkflowCopilotPrompt({
             installedToolsets: config.configurable.installedToolsets ?? [],
           })
-        : buildNodeAgentSystemPrompt();
+        : buildNodeAgentSystemPrompt({ ptcEnabled, ptcConfig });
 
     // Use copilot scene for copilot_agent mode, agent scene for node_agent mode, otherwise use chat scene
     const modelConfigScene = getModelSceneFromMode(mode);
@@ -130,7 +145,15 @@ export class Agent extends BaseSkill {
     _user: User,
     config?: SkillRunnableConfig,
   ): Promise<AgentComponents> {
-    const { selectedTools = [], mode = 'node_agent' } = config?.configurable ?? {};
+    const {
+      selectedTools: rawSelectedTools = [],
+      builtInTools = [],
+      mode = 'node_agent',
+      ptcEnabled = false,
+    } = config?.configurable ?? {};
+
+    // In PTC mode, only use builtin tools in the tool definition
+    const selectedTools = ptcEnabled ? builtInTools : rawSelectedTools;
 
     let actualToolNodeInstance: ToolNode<typeof MessagesAnnotation.State> | null = null;
     let availableToolsForNode: StructuredToolInterface[] = [];
@@ -482,6 +505,9 @@ export class Agent extends BaseSkill {
 
     config.metadata.step = { name: 'answerQuestion' };
 
+    const ptcEnabled = config.configurable.ptcEnabled;
+    const ptcConfig = this.buildPtcConfig(config);
+
     try {
       const result = await compiledLangGraphApp.invoke(
         { messages: requestMessages },
@@ -501,6 +527,8 @@ export class Agent extends BaseSkill {
               description: t.description,
               parameters: getJsonSchema(t.schema),
             })),
+            ptcEnabled: ptcEnabled,
+            ptcToolsets: ptcEnabled ? ptcConfig.toolsets : undefined,
             // Runtime config for reproducibility
             // Note: systemPrompt already in input[0], modelConfig duplicates modelParameters
             toolChoice: toolsAvailable ? 'auto' : undefined,

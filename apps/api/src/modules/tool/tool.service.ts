@@ -54,6 +54,22 @@ import {
 } from './tool.dto';
 import { ToolWrapperFactoryService } from './tool-execution/wrapper/wrapper.service';
 
+/**
+ * Categorized tools returned from instantiateToolsets
+ */
+export interface InstantiatedTools {
+  // All tools (builtin + non-builtin), for backward compatibility
+  all: StructuredToolInterface[];
+  // Builtin tools (builtin + copilot), available in PTC mode
+  builtIn: StructuredToolInterface[];
+  // Non-builtin tools (regular + MCP + OAuth), used as SDK tools in PTC mode
+  nonBuiltIn: StructuredToolInterface[];
+  // Builtin toolsets (builtin + copilot)
+  builtInToolsets: GenericToolset[];
+  // Non-builtin toolsets (regular + MCP + OAuth)
+  nonBuiltInToolsets: GenericToolset[];
+}
+
 @Injectable()
 export class ToolService {
   private logger = new Logger(ToolService.name);
@@ -999,6 +1015,7 @@ export class ToolService {
 
   /**
    * Instantiate toolsets into structured tools, ready to be used in skill invocation.
+   * Returns categorized tools: all, builtIn, and nonBuiltIn.
    */
   async instantiateToolsets(
     user: User,
@@ -1008,7 +1025,7 @@ export class ToolService {
       context?: SkillContext;
       canvasId?: string;
     },
-  ): Promise<StructuredToolInterface[]> {
+  ): Promise<InstantiatedTools> {
     const builtinKeys = toolsets
       .filter((t) => t.type === ToolsetType.REGULAR && t.builtin)
       .map((t) => t.id);
@@ -1017,8 +1034,11 @@ export class ToolService {
       builtinTools = this.instantiateBuiltinToolsets(user, engine, builtinKeys);
     }
 
+    const copilotToolset = toolsets.find(
+      (t) => t.type === ToolsetType.REGULAR && t.id === 'copilot',
+    );
     let copilotTools: DynamicStructuredTool[] = [];
-    if (toolsets.find((t) => t.type === ToolsetType.REGULAR && t.id === 'copilot')) {
+    if (copilotToolset) {
       copilotTools = this.instantiateCopilotToolsets(user, engine);
     }
 
@@ -1031,13 +1051,34 @@ export class ToolService {
       this.instantiateMcpServers(user, mcpServers),
       this.composioService.instantiateToolsets(user, toolsets, 'oauth'),
     ]);
-    return [
-      ...builtinTools,
-      ...copilotTools,
+
+    // Categorize tools: builtIn (builtin + copilot) and nonBuiltIn (regular + MCP + OAuth)
+    const builtIn = [...builtinTools, ...copilotTools];
+    const nonBuiltIn = [
       ...(Array.isArray(regularTools) ? regularTools : []),
       ...(Array.isArray(mcpTools) ? mcpTools : []),
       ...(Array.isArray(oauthToolsets) ? oauthToolsets : []),
     ];
+    const all = [...builtIn, ...nonBuiltIn];
+
+    // Categorize toolsets: builtIn and nonBuiltIn
+    const builtInToolsets = toolsets.filter(
+      (t) => (t.type === ToolsetType.REGULAR && t.builtin) || t.id === 'copilot',
+    );
+    const nonBuiltInToolsets = toolsets.filter(
+      (t) =>
+        (t.type === ToolsetType.REGULAR && !t.builtin && t.id !== 'copilot') ||
+        t.type === ToolsetType.MCP ||
+        t.type === ToolsetType.EXTERNAL_OAUTH,
+    );
+
+    return {
+      all,
+      builtIn,
+      nonBuiltIn,
+      builtInToolsets,
+      nonBuiltInToolsets,
+    };
   }
 
   /**

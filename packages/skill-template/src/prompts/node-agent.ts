@@ -147,6 +147,22 @@ Now begin!
 
 `.trim();
 
-export const buildNodeAgentSystemPrompt = (): string => {
+export interface PtcConfig {
+  toolsets: {
+    id: string;
+    name: string;
+    key: string;
+  }[];
+}
+
+export interface BuildNodeAgentSystemPromptOptions {
+  ptcEnabled?: boolean;
+  ptcConfig?: PtcConfig;
+}
+
+export const buildNodeAgentSystemPrompt = (
+  _options?: BuildNodeAgentSystemPromptOptions,
+): string => {
+  // TODO: Build PTC mode system prompt
   return SYSTEM_PROMPT;
 };

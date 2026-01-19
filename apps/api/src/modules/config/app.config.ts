@@ -246,6 +246,12 @@ export default () => ({
     // For testing, use smaller values like 7 (7 minutes)
     expirationMinutes: Number(process.env.VOUCHER_EXPIRATION_MINUTES) || 10080,
   },
+  ptc: {
+    mode: process.env.PTC_MODE || 'off',
+    userAllowlist: process.env.PTC_USER_ALLOWLIST || '',
+    toolsetAllowlist: process.env.PTC_TOOLSET_ALLOWLIST || '',
+    toolsetBlocklist: process.env.PTC_TOOLSET_BLOCKLIST || '',
+  },
   schedule: {
     // Rate limiting - controls global and per-user concurrency
     globalMaxConcurrent: Number.parseInt(process.env.SCHEDULE_GLOBAL_MAX_CONCURRENT) || 50,
