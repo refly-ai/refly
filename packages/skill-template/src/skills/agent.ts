@@ -144,11 +144,14 @@ export class Agent extends BaseSkill {
     config?: SkillRunnableConfig,
   ): Promise<AgentComponents> {
     const {
-      selectedTools = [],
+      selectedTools: rawSelectedTools = [],
       builtInTools = [],
       mode = 'node_agent',
       isPtcEnabled = false,
     } = config?.configurable ?? {};
+
+    // In PTC mode, only use builtin tools in the tool definition
+    const selectedTools = isPtcEnabled ? builtInTools : rawSelectedTools;
 
     let actualToolNodeInstance: ToolNode<typeof MessagesAnnotation.State> | null = null;
     let availableToolsForNode: StructuredToolInterface[] = [];
@@ -160,12 +163,9 @@ export class Agent extends BaseSkill {
     let llmForGraph: Runnable<BaseMessage[], AIMessage>;
 
     if (selectedTools.length > 0) {
-      // In PTC mode, only use builtin tools in the tool definition
-      const toolsToInitialize = isPtcEnabled ? builtInTools : selectedTools;
-
       // Ensure tool definitions are valid before binding
       // Also filter out tools with names exceeding 64 characters (OpenAI limit)
-      const validTools = toolsToInitialize.filter((tool) => {
+      const validTools = selectedTools.filter((tool) => {
         if (!tool.name || !tool.description || !tool.schema) {
           this.engine.logger.warn(`Skipping invalid tool: ${tool.name || 'unnamed'}`);
           return false;
@@ -481,9 +481,9 @@ export class Agent extends BaseSkill {
     const compiledGraph = workflow.compile();
 
     const components: AgentComponents = {
-      tools: availableToolsForNode, // Store the successfully initialized tools
+      tools: selectedTools, // Store the successfully initialized tools
       compiledLangGraphApp: compiledGraph, // Store the compiled graph
-      toolsAvailable: availableToolsForNode.length > 0,
+      toolsAvailable: selectedTools.length > 0,
     };
 
     return components;
