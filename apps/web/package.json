@@ -51,9 +51,15 @@
     "react-router-dom": "^6.22.1",
     "react-tweet": "^3.2.1",
     "react-use": "^17.5.0",
-    "refly-icons": "^1.1.5"
+    "refly-icons": "^1.1.5",
+    "workbox-cacheable-response": "^7.4.0",
+    "workbox-expiration": "^7.4.0",
+    "workbox-precaching": "^7.4.0",
+    "workbox-routing": "^7.4.0",
+    "workbox-strategies": "^7.4.0"
   },
   "devDependencies": {
+    "@aaroon/workbox-rspack-plugin": "^0.3.2",
     "@babel/parser": "^7.26.3",
     "@babel/traverse": "^7.26.5",
     "@rsbuild/core": "^1.4.6",
@@ -69,7 +75,6 @@
     "node-polyfill-webpack-plugin": "^4.1.0",
     "tailwindcss": "^3",
     "tailwindcss-animate": "^1.0.6",
-    "typescript": "^5.8.3",
-    "workbox-webpack-plugin": "^7.4.0"
+    "typescript": "^5.8.3"
   }
 }

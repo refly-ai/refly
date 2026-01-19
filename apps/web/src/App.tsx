@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { InlineLoading } from '@refly/ui-kit';
 import { AppLayout, LazyErrorBoundary } from '@refly/web-core';
@@ -37,68 +37,6 @@ const AppContent = () => {
 };
 
 export const App = () => {
-  // Register Service Worker for Code Caching
-  useEffect(() => {
-    // Debug log to verify environment
-    console.log('[SW] Checking eligibility...', {
-      hasSW: 'serviceWorker' in navigator,
-      env: process.env.NODE_ENV,
-    });
-
-    if ('serviceWorker' in navigator) {
-      if (process.env.NODE_ENV === 'production') {
-        // Register SW in production with dynamic filename (includes build hash)
-        const registerSW = async () => {
-          try {
-            // Get SW URL from global variable (injected at build time)
-            if (typeof __SERVICE_WORKER_URL__ === 'undefined') {
-              console.warn('[SW] Service Worker URL not defined, skipping registration');
-              return;
-            }
-
-            const swUrl = __SERVICE_WORKER_URL__;
-            console.log('[SW] Attempting registration...', swUrl);
-            const registration = await navigator.serviceWorker.register(swUrl);
-            console.log(
-              '[SW] ServiceWorker registration successful with scope: ',
-              registration.scope,
-            );
-
-            // Check for updates periodically
-            setInterval(
-              () => {
-                registration.update();
-              },
-              60 * 60 * 1000,
-            ); // Check every hour
-          } catch (registrationError) {
-            console.error('[SW] ServiceWorker registration failed: ', registrationError);
-          }
-        };
-
-        if (document.readyState === 'complete') {
-          registerSW();
-        } else {
-          window.addEventListener('load', registerSW);
-        }
-      } else {
-        // Unregister all service workers in development to avoid caching issues
-        navigator.serviceWorker.getRegistrations().then((registrations) => {
-          if (registrations.length > 0) {
-            console.log(
-              '[SW] Unregistering',
-              registrations.length,
-              'service worker(s) in development',
-            );
-            for (const registration of registrations) {
-              registration.unregister();
-            }
-          }
-        });
-      }
-    }
-  }, []);
-
   return (
     <>
       <GlobalSEO />

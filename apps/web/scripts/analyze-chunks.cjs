@@ -27,7 +27,7 @@ const traverse = require('@babel/traverse').default;
 
 const CONFIG = {
   // 页面目录
-  pagesDir: path.join(__dirname, '../packages/web-core/src/pages'),
+  pagesDir: path.join(__dirname, '../../../packages/web-core/src/pages'),
 
   // 要分析的导入类型
   importPatterns: {

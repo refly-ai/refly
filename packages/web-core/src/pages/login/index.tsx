@@ -25,7 +25,6 @@ import {
   getAndClearSignupEntryPoint,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
-import { usePrefetchLoginRedirect } from '../../hooks/use-prefetch-login-redirect';
 
 interface FormValues {
   email: string;
@@ -69,12 +68,6 @@ const LoginPage = () => {
 
     return () => observer.disconnect();
   }, []);
-
-  // Intelligently prefetch page that may be redirected to after login
-  // - If returnUrl exists, prefetch corresponding page chunk
-  // - If no returnUrl, default prefetch workspace (default post-login destination)
-  const returnUrl = searchParams.get('returnUrl');
-  usePrefetchLoginRedirect(returnUrl);
 
   const authStore = useAuthStoreShallow((state) => ({
     loginInProgress: state.loginInProgress,

@@ -6,7 +6,6 @@ import {
   usePendingVoucherClaim,
   storePendingVoucherCode,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
-import { usePrefetchWorkflow } from '../../hooks/use-prefetch-workflow';
 
 const WorkspacePage = () => {
   const [searchParams] = useSearchParams();
@@ -24,7 +23,6 @@ const WorkspacePage = () => {
 
   // Prefetch workflow page resources (during browser idle time)
   // User may click a workflow, preloading makes transition smoother
-  usePrefetchWorkflow();
 
   useEffect(() => {
     logEvent('enter_workspace');

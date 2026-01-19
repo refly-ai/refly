@@ -7,15 +7,32 @@ import NodePolyfill from 'node-polyfill-webpack-plugin';
 import { codeInspectorPlugin } from 'code-inspector-plugin';
 import { pluginTypeCheck } from '@rsbuild/plugin-type-check';
 import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin';
+import { PrecacheManifestPlugin } from './config/plugins/precache-manifest-plugin';
+import { ChunkDependencyReportPlugin } from './config/plugins/chunk-dependency-report-plugin';
 
 const { publicVars } = loadEnv({ prefixes: ['VITE_'] });
 
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const gtagId = process.env.VITE_GTAG_ID;
 
 const isProduction = process.env.NODE_ENV === 'production';
 const enableBundleAnalyze = process.env.ANALYZE === 'true';
+const enableChunkAnalysis = process.env.ANALYZE_CHUNKS === 'true';
+const buildVersion = isProduction
+  ? crypto.createHash('md5').update(Date.now().toString()).digest('hex').slice(0, 8)
+  : 'dev';
+
+const shouldIncludeAsset = (asset: string): boolean => {
+  if (!asset) {
+    return false;
+  }
+  if (asset.endsWith('.map')) {
+    return false;
+  }
+  return asset.endsWith('.js') || asset.endsWith('.css');
+};
 
 export default defineConfig({
   plugins: [
@@ -33,19 +50,12 @@ export default defineConfig({
   },
   tools: {
     rspack: (config, { prependPlugins, appendPlugins }) => {
-      // ... existing plugins ...
       // SERVICE WORKER CONFIGURATION
       // Only enable Service Worker in production to avoid caching issues during development
       if (isProduction) {
-        const { GenerateSW } = require('workbox-webpack-plugin');
-        const crypto = require('node:crypto');
-
+        const { InjectManifest } = require('@aaroon/workbox-rspack-plugin');
         // Generate a unique hash based on build time to force SW updates
-        const swVersion = crypto
-          .createHash('md5')
-          .update(Date.now().toString())
-          .digest('hex')
-          .slice(0, 8);
+        const swVersion = buildVersion;
 
         // Define global variable with SW URL using Rspack's DefinePlugin
         config.plugins = config.plugins || [];
@@ -56,31 +66,46 @@ export default defineConfig({
         );
 
         appendPlugins(
-          new GenerateSW({
-            swDest: `service-worker.${swVersion}.js`, // Add version hash to SW filename
-            mode: 'production', // Disable Workbox logging
-            sourcemap: false,
-            // PWA basics
-            clientsClaim: true,
-            skipWaiting: true,
+          new InjectManifest({
+            swSrc: path.resolve(__dirname, './src/service-worker-sw.ts'),
+            swDest: `service-worker.${swVersion}.js`,
 
-            // Code Caching Strategy
-            // Precache core resources and main page chunks to improve first load experience
+            // Two-Stage Precaching Configuration
+            // Stage 1: Critical resources (precached during install via __WB_MANIFEST)
+            // Stage 2: Non-critical resources (lazy loaded in background by SW itself)
             include: [
-              // Core libraries (required by all pages)
-              /lib-react\.[a-f0-9]+\.js$/, // React library (~136KB)
-              /lib-router\.[a-f0-9]+\.js$/, // Router library (~22KB)
+              // === Stage 1: Critical Core Resources (~2-3MB) ===
+              // These are precached immediately during SW install
 
-              // Main entry files
-              /index\.[a-f0-9]+\.js$/, // Main bundle (~690KB)
-              /index\.[a-f0-9]+\.css$/, // Main stylesheet
+              // Core framework libraries (must load immediately)
+              /lib-react\.[a-f0-9]+\.js$/, // React (~137KB)
+              /lib-router\.[a-f0-9]+\.js$/, // Router (~22KB)
+              /index\.[a-f0-9]+\.js$/, // Main entry (~700KB)
 
-              // All JS chunks outside async directory (core functionality code)
+              // Core CSS (needed for initial render)
+              /static\/css\/index\.[a-f0-9]+\.css$/,
+
+              // Critical page chunks (non-async)
               /static\/js\/(?!async)[^/]+\.[a-f0-9]+\.js$/,
 
-              // Note: We intentionally DON'T precache group-workspace and group-workflow
-              // They will be loaded on-demand and cached by runtime caching
-              // This reduces initial SW installation time and bandwidth
+              // === Stage 2: Important but not critical ===
+              // High-priority async chunks (workflow, workspace, project)
+              /static\/js\/async\/group-workflow[^/]*\.[a-f0-9]+\.js$/,
+              /static\/js\/async\/group-workspace\.[a-f0-9]+\.js$/,
+              /static\/js\/async\/page-project\.[a-f0-9]+\.js$/,
+
+              // Critical async CSS (for above pages)
+              /static\/css\/async\/group-workflow[^/]*\.[a-f0-9]+\.css$/,
+              /static\/css\/async\/group-workspace\.[a-f0-9]+\.css$/,
+              /static\/css\/async\/page-project\.[a-f0-9]+\.css$/,
+
+              // Note: Other async chunks will be cached on-demand via runtime caching
+              // and lazily preloaded in background by Service Worker itself
+              // Benefits:
+              // 1. Faster initial load (less bandwidth usage)
+              // 2. Critical resources available immediately
+              // 3. Other resources cached lazily when accessed
+              // 4. Background precaching works on ANY page with this SW (even activity pages)
             ],
 
             // Exclude files that don't need caching
@@ -92,154 +117,12 @@ export default defineConfig({
               /workbox-.*\.js$/, // Workbox runtime
             ],
 
-            // Runtime caching strategies
-            runtimeCaching: [
-              // === Strategy 0: Home page - NetworkOnly (no HTML cache) ===
-              // Ensure "/" always hits the network (supports domain redirect)
-              {
-                urlPattern: ({ request, url }: { request: Request; url: URL }) =>
-                  request.destination === 'document' && url.pathname === '/',
-                handler: 'NetworkOnly',
-              },
-
-              // === Strategy 1: HTML (non-home) - StaleWhileRevalidate for instant load ===
-              // Serve cached HTML immediately (fast!), then update cache in background
-              // Users see content instantly, and get updates on next visit/refresh
-              {
-                urlPattern: ({ request, url }: { request: Request; url: URL }) =>
-                  request.destination === 'document' && url.pathname !== '/',
-                handler: 'StaleWhileRevalidate',
-                options: {
-                  cacheName: 'html-cache-v1',
-                  expiration: {
-                    maxEntries: 10,
-                    maxAgeSeconds: 24 * 60 * 60, // 1 day
-                  },
-                  plugins: [
-                    {
-                      cacheWillUpdate: async ({ response }: { response: Response }) => {
-                        // Only cache successful responses
-                        if (response && response.status === 200) {
-                          return response;
-                        }
-                        return null;
-                      },
-                    },
-                  ],
-                },
-              },
-
-              // Note: Async JS chunks are cached via runtime strategy below.
-
-              // === Strategy 1: Core JS chunks (not async) - CacheFirst ===
-              // Only cache non-async JS files that were precached
-              {
-                urlPattern: ({ url }: { url: URL }) => {
-                  return url.pathname.endsWith('.js') && !url.pathname.includes('/async/');
-                },
-                handler: 'CacheFirst',
-                options: {
-                  cacheName: 'js-cache-v4',
-                  expiration: {
-                    maxEntries: 30,
-                    maxAgeSeconds: 365 * 24 * 60 * 60,
-                  },
-                  cacheableResponse: {
-                    statuses: [200],
-                  },
-                },
-              },
-
-              // === Strategy 1.1: Async JS chunks - CacheFirst ===
-              {
-                urlPattern: ({ url }: { url: URL }) => {
-                  return url.pathname.endsWith('.js') && url.pathname.includes('/async/');
-                },
-                handler: 'CacheFirst',
-                options: {
-                  cacheName: 'js-async-cache-v1',
-                  expiration: {
-                    maxEntries: 60,
-                    maxAgeSeconds: 365 * 24 * 60 * 60,
-                  },
-                  cacheableResponse: {
-                    statuses: [200],
-                  },
-                },
-              },
-
-              // === Strategy 2: CSS - CacheFirst ===
-              {
-                urlPattern: /\.css$/,
-                handler: 'CacheFirst',
-                options: {
-                  cacheName: 'css-cache-v4',
-                  expiration: {
-                    maxEntries: 40,
-                    maxAgeSeconds: 365 * 24 * 60 * 60,
-                  },
-                  cacheableResponse: {
-                    statuses: [200],
-                  },
-                },
-              },
-
-              // === Strategy 3: Images - CacheFirst with longer expiration ===
-              {
-                urlPattern: /\.(?:png|jpg|jpeg|webp|svg|gif|ico)$/,
-                handler: 'CacheFirst',
-                options: {
-                  cacheName: 'images',
-                  expiration: {
-                    maxEntries: 100,
-                    maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-                  },
-                },
-              },
-
-              // === Strategy 4: Fonts - CacheFirst with very long expiration ===
-              {
-                urlPattern: /\.(?:woff|woff2|ttf|eot)$/,
-                handler: 'CacheFirst',
-                options: {
-                  cacheName: 'fonts',
-                  expiration: {
-                    maxEntries: 30,
-                    maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
-                  },
-                },
-              },
-
-              // === Strategy 5: Google Fonts ===
-              {
-                urlPattern: /^https:\/\/fonts\.googleapis\.com/,
-                handler: 'StaleWhileRevalidate',
-                options: {
-                  cacheName: 'google-fonts-stylesheets',
-                },
-              },
-              {
-                urlPattern: /^https:\/\/fonts\.gstatic\.com/,
-                handler: 'CacheFirst',
-                options: {
-                  cacheName: 'google-fonts-webfonts',
-                  expiration: {
-                    maxEntries: 30,
-                    maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
-                  },
-                },
-              },
-            ],
-
-            // Completely disable navigateFallback to avoid JS files being incorrectly cached as HTML
-            // SPA routing is handled by frontend, no fallback needed
-            // navigateFallback: '/index.html',
-
             // Increase file size limit to support precaching more resources
-            // Estimated total size: ~3-4MB (core libraries + main bundle + non-async chunks + workflow/workspace)
             maximumFileSizeToCacheInBytes: 30 * 1024 * 1024, // 30MB limit
           }),
         );
+
+        appendPlugins(new PrecacheManifestPlugin({ shouldIncludeAsset }));
       }
 
       process.env.SENTRY_AUTH_TOKEN &&
@@ -277,6 +160,10 @@ export default defineConfig({
         );
       }
 
+      if (enableChunkAnalysis) {
+        appendPlugins(new ChunkDependencyReportPlugin());
+      }
+
       return config;
     },
   },
@@ -295,7 +182,7 @@ export default defineConfig({
     define: publicVars,
   },
   performance: {
-    removeConsole: isProduction,
+    removeConsole: false,
 
     // Use Rsbuild recommended strategy + force split large libraries
     chunkSplit: {
@@ -342,6 +229,27 @@ export default defineConfig({
       js: isProduction ? 'source-map' : 'cheap-module-source-map',
       css: true,
     },
+    manifest: {
+      filename: 'asset-manifest.json',
+      filter: (file) => {
+        if (!file.path) {
+          return false;
+        }
+        return shouldIncludeAsset(file.path);
+      },
+      generate: ({ files }) => {
+        const fileMap: Record<string, string> = {};
+        for (const file of files) {
+          if (file.name && file.path) {
+            fileMap[file.name] = file.path;
+          }
+        }
+        return {
+          files: fileMap,
+          allFiles: Object.values(fileMap),
+        };
+      },
+    },
   },
   resolve: {
     alias: {
@@ -356,18 +264,26 @@ export default defineConfig({
   },
   html: {
     template: './public/index.html',
-    tags: gtagId
-      ? [
-          {
-            tag: 'script',
-            attrs: {
-              async: true,
-              src: `https://www.googletagmanager.com/gtag/js?id=${gtagId}`,
+    tags: [
+      {
+        tag: 'meta',
+        attrs: {
+          name: 'app-version',
+          content: buildVersion,
+        },
+      },
+      ...(gtagId
+        ? [
+            {
+              tag: 'script',
+              attrs: {
+                async: true,
+                src: `https://www.googletagmanager.com/gtag/js?id=${gtagId}`,
+              },
             },
-          },
-          {
-            tag: 'script',
-            children: `
+            {
+              tag: 'script',
+              children: `
           window.dataLayer = window.dataLayer || [];
           function gtag() {
             dataLayer.push(arguments);
@@ -375,8 +291,9 @@ export default defineConfig({
           gtag('js', new Date());
           gtag('config', '${gtagId}');
       `,
-          },
-        ]
-      : [],
+            },
+          ]
+        : []),
+    ],
   },
 });

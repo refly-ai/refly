@@ -68,15 +68,17 @@ export class UserService implements OnModuleInit {
       where: { uid: user.uid },
     });
 
+    if (!userPo) {
+      this.logger.error(`User not found in database: ${user.uid}, email: ${user.email}`);
+      throw new Error(`User not found: ${user.uid}`);
+    }
+
     let subscription: Subscription | null = null;
-    if (userPo?.subscriptionId) {
+    if (userPo.subscriptionId) {
       subscription = await this.subscriptionService.getSubscription(userPo.subscriptionId);
     }
 
-    const userPreferences = await this.providerService.getUserPreferences(
-      user,
-      userPo?.preferences,
-    );
+    const userPreferences = await this.providerService.getUserPreferences(user, userPo.preferences);
     userPo.preferences = JSON.stringify(userPreferences);
 
     return {
