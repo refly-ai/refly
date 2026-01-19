@@ -4537,7 +4537,6 @@ const translations = {
     referencedNodes: 'Referenced nodes',
     authorizeTitle: 'Authorize tools',
     authorizeSubtitle: 'To run this skill, you need to connect {{count}} tool',
-    authorizeSubtitle_plural: 'To run this skill, you need to connect {{count}} tools',
     workflowToolsTitle: 'Authorize Tools',
     workflowToolsSubtitle: 'This workflow uses {{count}} tool(s). Install the ones you need.',
     allToolsNeedInstall: 'To run this skill, you need to connect {{count}} tools',
