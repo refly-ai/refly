@@ -129,7 +129,7 @@ const WorkflowRunPreviewComponent = () => {
   const effectiveExecutionId = executionId ?? latestExecutionId ?? '';
 
   // Get workflow detail to sync node execution status
-  const { data: workflowDetail } = useGetWorkflowDetail(
+  const { data: workflowDetail, refetch: refetchWorkflowDetail } = useGetWorkflowDetail(
     {
       query: { executionId: effectiveExecutionId },
     },
@@ -447,6 +447,14 @@ const WorkflowRunPreviewComponent = () => {
             entityType: 'canvas',
           },
         );
+
+        // Refetch workflow detail after a short delay to sync node execution status
+        // This ensures the Preview panel shows the updated status after individual node retry
+        setTimeout(() => {
+          if (refetchWorkflowDetail) {
+            refetchWorkflowDetail();
+          }
+        }, 1000);
       };
     },
     [canvasId, workflowVariables, resultMap, resetFailedState, setNodeData, invokeAction, t],

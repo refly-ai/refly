@@ -278,7 +278,12 @@ export const ProductCard = memo(
 
       setIsAdding(true);
       try {
-        await onAddToFileLibrary(file);
+        // Ensure platform-generated documents have .md extension for preview support
+        const fileWithExtension = {
+          ...file,
+          name: file.name?.includes('.') ? file.name : `${file.name || t('common.untitled')}.md`,
+        };
+        await onAddToFileLibrary(fileWithExtension);
       } catch (error) {
         // Error handling is done in the parent component
         console.error('Failed to add file to library:', error);
@@ -287,7 +292,7 @@ export const ProductCard = memo(
       } finally {
         setIsAdding(false);
       }
-    }, [onAddToFileLibrary, file, isAdding, isAddingToFileLibrary]);
+    }, [onAddToFileLibrary, file, isAdding, isAddingToFileLibrary, t]);
 
     const actions = useMemo<ActionButtonProps[]>(() => {
       const baseShareAction: ActionButtonProps | null = !isMediaFile
