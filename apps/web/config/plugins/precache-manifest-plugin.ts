@@ -4,13 +4,16 @@ type Compiler = any;
 
 type PrecacheManifestPluginOptions = {
   shouldIncludeAsset: (asset: string) => boolean;
+  filename: string;
 };
 
 export class PrecacheManifestPlugin {
   private shouldIncludeAsset: (asset: string) => boolean;
+  private filename: string;
 
   constructor(options: PrecacheManifestPluginOptions) {
     this.shouldIncludeAsset = options.shouldIncludeAsset;
+    this.filename = options.filename;
   }
 
   apply(compiler: Compiler) {
@@ -98,7 +101,7 @@ export class PrecacheManifestPlugin {
         };
 
         const content = JSON.stringify(payload, null, 2);
-        compilation.emitAsset('precache.json', new sources.RawSource(content));
+        compilation.emitAsset(this.filename, new sources.RawSource(content));
       });
     });
   }

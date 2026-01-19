@@ -23,6 +23,7 @@ const enableChunkAnalysis = process.env.ANALYZE_CHUNKS === 'true';
 const buildVersion = isProduction
   ? crypto.createHash('md5').update(Date.now().toString()).digest('hex').slice(0, 8)
   : 'dev';
+const precacheManifestFilename = `precache.${buildVersion}.json`;
 
 const shouldIncludeAsset = (asset: string): boolean => {
   if (!asset) {
@@ -62,6 +63,7 @@ export default defineConfig({
         config.plugins.push(
           new (require('@rspack/core').DefinePlugin)({
             __SERVICE_WORKER_URL__: JSON.stringify(`/service-worker.${swVersion}.js`),
+            __PRECACHE_MANIFEST_URL__: JSON.stringify(`/${precacheManifestFilename}`),
           }),
         );
 
@@ -122,7 +124,12 @@ export default defineConfig({
           }),
         );
 
-        appendPlugins(new PrecacheManifestPlugin({ shouldIncludeAsset }));
+        appendPlugins(
+          new PrecacheManifestPlugin({
+            shouldIncludeAsset,
+            filename: precacheManifestFilename,
+          }),
+        );
       }
 
       process.env.SENTRY_AUTH_TOKEN &&
@@ -229,27 +236,7 @@ export default defineConfig({
       js: isProduction ? 'source-map' : 'cheap-module-source-map',
       css: true,
     },
-    manifest: {
-      filename: 'asset-manifest.json',
-      filter: (file) => {
-        if (!file.path) {
-          return false;
-        }
-        return shouldIncludeAsset(file.path);
-      },
-      generate: ({ files }) => {
-        const fileMap: Record<string, string> = {};
-        for (const file of files) {
-          if (file.name && file.path) {
-            fileMap[file.name] = file.path;
-          }
-        }
-        return {
-          files: fileMap,
-          allFiles: Object.values(fileMap),
-        };
-      },
-    },
+    manifest: false,
   },
   resolve: {
     alias: {
