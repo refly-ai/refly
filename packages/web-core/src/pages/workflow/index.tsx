@@ -1,17 +1,16 @@
 import { useParams } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, memo } from 'react';
 import { Canvas } from '@refly-packages/ai-workspace-common/components/canvas';
 import { useSiderStoreShallow } from '@refly/stores';
 import cn from 'classnames';
 import { logEvent } from '@refly/telemetry-web';
 
-const WorkflowPage = () => {
+const WorkflowPage = memo(() => {
   const { workflowId = '' } = useParams();
   const isShareMode = workflowId?.startsWith('can-');
 
-  const { collapse } = useSiderStoreShallow((state) => ({
-    collapse: state.collapse,
-  }));
+  // Use a stable selector to prevent unnecessary re-renders
+  const collapse = useSiderStoreShallow((state) => state.collapse);
 
   useEffect(() => {
     if (workflowId) {
@@ -23,19 +22,18 @@ const WorkflowPage = () => {
     }
   }, [workflowId, isShareMode]);
 
-  if (isShareMode) {
-    return (
-      <div className={cn('w-full h-full flex flex-col p-2', { '!p-0': collapse })}>
-        <Canvas canvasId={workflowId} readonly />
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full h-full flex flex-col">
-      <Canvas canvasId={workflowId} />
+    <div
+      className={cn('w-full h-full flex flex-col', {
+        'p-2': isShareMode,
+        '!p-0': isShareMode && collapse,
+      })}
+    >
+      <Canvas canvasId={workflowId} readonly={isShareMode} />
     </div>
   );
-};
+});
+
+WorkflowPage.displayName = 'WorkflowPage';
 
 export default WorkflowPage;

@@ -12,7 +12,7 @@ import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { BiSolidEdit } from 'react-icons/bi';
 import { ContentHeader } from '../contentHeader';
 import { useLogout } from '@refly-packages/ai-workspace-common/hooks/use-logout';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '../../../assets/refly_default_avatar_v2.webp';
 
 // Compress image utilities to ensure avatar file size under 5MB
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;

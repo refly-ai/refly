@@ -1316,182 +1316,185 @@ const Flow = memo(
   },
 );
 
-export const Canvas = (props: {
-  canvasId: string;
-  readonly?: boolean;
-  snapshotData?: SnapshotData;
-  hideLogoButton?: boolean;
-  runDetailInfo?: RunDetailInfo;
-  onDuplicate?: () => void;
-  duplicateLoading?: boolean;
-}) => {
-  const {
-    canvasId,
-    readonly,
-    snapshotData,
-    hideLogoButton,
-    runDetailInfo,
-    onDuplicate,
-    duplicateLoading,
-  } = props;
-  const { t } = useTranslation();
-  const setCurrentCanvasId = useCanvasStoreShallow((state) => state.setCurrentCanvasId);
+export const Canvas = memo(
+  (props: {
+    canvasId: string;
+    readonly?: boolean;
+    snapshotData?: SnapshotData;
+    hideLogoButton?: boolean;
+    runDetailInfo?: RunDetailInfo;
+    onDuplicate?: () => void;
+    duplicateLoading?: boolean;
+  }) => {
+    const {
+      canvasId,
+      readonly,
+      snapshotData,
+      hideLogoButton,
+      runDetailInfo,
+      onDuplicate,
+      duplicateLoading,
+    } = props;
+    const { t } = useTranslation();
+    const setCurrentCanvasId = useCanvasStoreShallow((state) => state.setCurrentCanvasId);
 
-  const { sidePanelVisible, setSidePanelVisible, resetState } = useCanvasResourcesPanelStoreShallow(
-    (state) => ({
-      sidePanelVisible: state.sidePanelVisible,
-      setSidePanelVisible: state.setSidePanelVisible,
-      resetState: state.resetState,
-    }),
-  );
+    const { sidePanelVisible, setSidePanelVisible, resetState } =
+      useCanvasResourcesPanelStoreShallow((state) => ({
+        sidePanelVisible: state.sidePanelVisible,
+        setSidePanelVisible: state.setSidePanelVisible,
+        resetState: state.resetState,
+      }));
 
-  const { canvasCopilotWidth, setCanvasCopilotWidth } = useCopilotStoreShallow((state) => ({
-    canvasCopilotWidth: state.canvasCopilotWidth[canvasId] ?? 400,
-    setCanvasCopilotWidth: state.setCanvasCopilotWidth,
-  }));
-  const isLogin = useUserStoreShallow((state) => state.isLogin);
+    const { canvasCopilotWidth, setCanvasCopilotWidth } = useCopilotStoreShallow((state) => ({
+      canvasCopilotWidth: state.canvasCopilotWidth[canvasId] ?? 400,
+      setCanvasCopilotWidth: state.setCanvasCopilotWidth,
+    }));
+    const isLogin = useUserStoreShallow((state) => state.isLogin);
 
-  const { toolStoreModalOpen, setToolStoreModalOpen } = useToolStoreShallow((state) => ({
-    toolStoreModalOpen: state.toolStoreModalOpen,
-    setToolStoreModalOpen: state.setToolStoreModalOpen,
-  }));
+    const { toolStoreModalOpen, setToolStoreModalOpen } = useToolStoreShallow((state) => ({
+      toolStoreModalOpen: state.toolStoreModalOpen,
+      setToolStoreModalOpen: state.setToolStoreModalOpen,
+    }));
 
-  const [copilotWidth, setCopilotWidth] = useState(!readonly && isLogin ? 400 : 0);
+    const [copilotWidth, setCopilotWidth] = useState(!readonly && isLogin ? 400 : 0);
 
-  const handleSetCopilotWidth = useCallback(
-    (width: number) => {
-      setCopilotWidth(width);
-      setCanvasCopilotWidth(canvasId, width);
-    },
-    [canvasId, setCanvasCopilotWidth, setCopilotWidth],
-  );
+    const handleSetCopilotWidth = useCallback(
+      (width: number) => {
+        setCopilotWidth(width);
+        setCanvasCopilotWidth(canvasId, width);
+      },
+      [canvasId, setCanvasCopilotWidth, setCopilotWidth],
+    );
 
-  useEffect(() => {
-    if (readonly || !isLogin) {
-      handleSetCopilotWidth(0);
-      return;
-    }
-    if (!canvasCopilotWidth && canvasCopilotWidth !== 0) {
-      handleSetCopilotWidth(400);
-    } else {
-      setCopilotWidth(canvasCopilotWidth);
-    }
-  }, [canvasCopilotWidth, canvasId]);
-
-  useEffect(() => {
-    setSidePanelVisible(false);
-
-    if (readonly) {
-      return;
-    }
-
-    if (canvasId && canvasId !== 'empty') {
-      setCurrentCanvasId(canvasId);
-    } else {
-      setCurrentCanvasId(null);
-    }
-
-    return () => {
-      setCurrentCanvasId(null);
-    };
-  }, [canvasId, setCurrentCanvasId]);
-
-  // Calculate max width as 50% of parent container
-  const [maxPanelWidth, setMaxPanelWidth] = useState(800);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const updateMaxWidth = () => {
-      if (containerRef.current) {
-        setMaxPanelWidth(Math.floor(containerRef.current.clientWidth * 0.5));
+    useEffect(() => {
+      if (readonly || !isLogin) {
+        setCopilotWidth(0);
+        return;
       }
-    };
+      if (!canvasCopilotWidth && canvasCopilotWidth !== 0) {
+        handleSetCopilotWidth(400);
+      } else {
+        setCopilotWidth(canvasCopilotWidth);
+      }
+    }, [canvasCopilotWidth, canvasId, readonly, isLogin, handleSetCopilotWidth]);
 
-    // Initial calculation
-    updateMaxWidth();
+    useEffect(() => {
+      setSidePanelVisible(false);
 
-    // Listen for window resize events
-    const resizeObserver = new ResizeObserver(updateMaxWidth);
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-    }
+      if (readonly) {
+        return;
+      }
 
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
+      if (canvasId && canvasId !== 'empty') {
+        setCurrentCanvasId(canvasId);
+      } else {
+        setCurrentCanvasId(null);
+      }
 
-  useEffect(() => {
-    resetState();
-  }, [canvasId]);
+      return () => {
+        setCurrentCanvasId(null);
+      };
+    }, [canvasId, setCurrentCanvasId, readonly, setSidePanelVisible]);
 
-  return (
-    <EditorPerformanceProvider>
-      <ReactFlowProvider>
-        <CanvasProvider readonly={readonly} canvasId={canvasId} snapshotData={snapshotData}>
-          <UploadNotification />
-          <TopToolbar
-            canvasId={canvasId}
-            hideLogoButton={hideLogoButton}
-            isRunDetail={!!runDetailInfo}
-          />
+    // Calculate max width as 50% of parent container
+    const [maxPanelWidth, setMaxPanelWidth] = useState(800);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-          <div
-            ref={containerRef}
-            className={cn(
-              'canvas-container flex w-full h-full flex-grow overflow-hidden',
-              !sidePanelVisible ? 'gap-0' : 'gap-2',
-            )}
-          >
-            <Flow
+    useEffect(() => {
+      const updateMaxWidth = () => {
+        if (containerRef.current) {
+          setMaxPanelWidth(Math.floor(containerRef.current.clientWidth * 0.5));
+        }
+      };
+
+      // Initial calculation
+      updateMaxWidth();
+
+      // Listen for window resize events
+      const resizeObserver = new ResizeObserver(updateMaxWidth);
+      if (containerRef.current) {
+        resizeObserver.observe(containerRef.current);
+      }
+
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }, []);
+
+    useEffect(() => {
+      resetState();
+    }, [canvasId]);
+
+    return (
+      <EditorPerformanceProvider>
+        <ReactFlowProvider>
+          <CanvasProvider readonly={readonly} canvasId={canvasId} snapshotData={snapshotData}>
+            <UploadNotification />
+            <TopToolbar
               canvasId={canvasId}
-              copilotWidth={copilotWidth}
-              setCopilotWidth={handleSetCopilotWidth}
-              maxPanelWidth={maxPanelWidth}
-              runDetailPanelWidth={runDetailInfo ? 320 : 0}
-              runDetailInfo={runDetailInfo}
-              onDuplicate={onDuplicate}
-              duplicateLoading={duplicateLoading}
+              hideLogoButton={hideLogoButton}
+              isRunDetail={!!runDetailInfo}
             />
-            <CanvasDrive className={!sidePanelVisible ? 'hidden' : ''} />
-          </div>
 
-          <CanvasResourcesWidescreenModal />
-
-          {/* Tool Store Modal */}
-          <Modal
-            open={toolStoreModalOpen}
-            onCancel={() => setToolStoreModalOpen(false)}
-            title={null}
-            footer={null}
-            className="provider-store-modal"
-            width="calc(100vw - 80px)"
-            style={{ height: 'calc(var(--screen-height) - 80px)' }}
-            centered
-            closable={false}
-            destroyOnClose
-            zIndex={10001}
-          >
-            <div className="h-full w-full overflow-hidden flex flex-col">
-              <div className="flex items-center justify-between p-5 border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
-                <div className="text-lg font-semibold text-refly-text-0 leading-7">
-                  {t('settings.toolStore.title')}
-                </div>
-                <Button
-                  type="text"
-                  icon={<Close size={24} />}
-                  onClick={() => setToolStoreModalOpen(false)}
-                />
-              </div>
-
-              <ToolStore />
+            <div
+              ref={containerRef}
+              className={cn(
+                'canvas-container flex w-full h-full flex-grow overflow-hidden',
+                !sidePanelVisible ? 'gap-0' : 'gap-2',
+              )}
+            >
+              <Flow
+                canvasId={canvasId}
+                copilotWidth={copilotWidth}
+                setCopilotWidth={handleSetCopilotWidth}
+                maxPanelWidth={maxPanelWidth}
+                runDetailPanelWidth={runDetailInfo ? 320 : 0}
+                runDetailInfo={runDetailInfo}
+                onDuplicate={onDuplicate}
+                duplicateLoading={duplicateLoading}
+              />
+              <CanvasDrive className={!sidePanelVisible ? 'hidden' : ''} />
             </div>
-          </Modal>
-        </CanvasProvider>
-      </ReactFlowProvider>
-    </EditorPerformanceProvider>
-  );
-};
+
+            <CanvasResourcesWidescreenModal />
+
+            {/* Tool Store Modal */}
+            <Modal
+              open={toolStoreModalOpen}
+              onCancel={() => setToolStoreModalOpen(false)}
+              title={null}
+              footer={null}
+              className="provider-store-modal"
+              width="calc(100vw - 80px)"
+              style={{ height: 'calc(var(--screen-height) - 80px)' }}
+              centered
+              closable={false}
+              destroyOnClose
+              zIndex={10001}
+            >
+              <div className="h-full w-full overflow-hidden flex flex-col">
+                <div className="flex items-center justify-between p-5 border-solid border-[1px] border-x-0 border-t-0 border-refly-Card-Border">
+                  <div className="text-lg font-semibold text-refly-text-0 leading-7">
+                    {t('settings.toolStore.title')}
+                  </div>
+                  <Button
+                    type="text"
+                    icon={<Close size={24} />}
+                    onClick={() => setToolStoreModalOpen(false)}
+                  />
+                </div>
+
+                <ToolStore />
+              </div>
+            </Modal>
+          </CanvasProvider>
+        </ReactFlowProvider>
+      </EditorPerformanceProvider>
+    );
+  },
+);
+
+Canvas.displayName = 'Canvas';
 
 // Re-export providers for external use
 export { ReactFlowProvider } from '@xyflow/react';

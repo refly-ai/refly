@@ -13,6 +13,11 @@ import { pick } from '@refly/utils';
 
 type JobUser = Pick<User, 'uid'>;
 
+type WorkflowNodeExecutionWithTime = WorkflowNodeExecution & {
+  startTime?: string;
+  endTime?: string;
+};
+
 export interface RunWorkflowJobData {
   user: JobUser;
   executionId: string;
@@ -34,7 +39,7 @@ export interface InitializeWorkflowResponse {
 
 export const workflowNodeExecutionPO2DTO = (
   nodeExecution: WorkflowNodeExecutionPO,
-): WorkflowNodeExecution => {
+): WorkflowNodeExecutionWithTime => {
   return {
     ...pick(nodeExecution, [
       'nodeExecutionId',
@@ -47,6 +52,9 @@ export const workflowNodeExecutionPO2DTO = (
       'errorMessage',
     ]),
     status: nodeExecution.status as ActionStatus,
+    // Use startTime/endTime for execution duration calculation on frontend
+    startTime: nodeExecution.startTime ? nodeExecution.startTime.toJSON() : undefined,
+    endTime: nodeExecution.endTime ? nodeExecution.endTime.toJSON() : undefined,
     createdAt: nodeExecution.createdAt.toJSON(),
     updatedAt: nodeExecution.updatedAt.toJSON(),
   };

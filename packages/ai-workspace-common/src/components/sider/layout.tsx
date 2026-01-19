@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback, useState, useEffect, lazy, Suspense } from 'react';
 import { Button, Layout, Divider } from 'antd';
 import {
   useLocation,
@@ -8,12 +8,28 @@ import {
 
 import cn from 'classnames';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
-// components
+// components - Lazy load Modal components to reduce initial bundle size
 import { useTranslation } from 'react-i18next';
-import { SettingModal } from '@refly-packages/ai-workspace-common/components/settings';
-import { InvitationModal } from '@refly-packages/ai-workspace-common/components/settings/invitation-modal';
-import { StorageExceededModal } from '@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal';
-import { CreditInsufficientModal } from '@refly-packages/ai-workspace-common/components/subscription/credit-insufficient-modal';
+const SettingModal = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/settings').then((m) => ({
+    default: m.SettingModal,
+  })),
+);
+const InvitationModal = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/settings/invitation-modal').then((m) => ({
+    default: m.InvitationModal,
+  })),
+);
+const StorageExceededModal = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/subscription/storage-exceeded-modal').then(
+    (m) => ({ default: m.StorageExceededModal }),
+  ),
+);
+const CreditInsufficientModal = lazy(() =>
+  import(
+    '@refly-packages/ai-workspace-common/components/subscription/credit-insufficient-modal'
+  ).then((m) => ({ default: m.CreditInsufficientModal })),
+);
 // hooks
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { SettingsModalActiveTab, useSiderStoreShallow } from '@refly/stores';
@@ -32,13 +48,16 @@ import {
 } from 'refly-icons';
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
-import GiftPromotionIcon from '@refly-packages/ai-workspace-common/assets/community.svg';
 import {
   useKnowledgeBaseStoreShallow,
   useUserStoreShallow,
   useSubscriptionStoreShallow,
 } from '@refly/stores';
-import { CanvasTemplateModal } from '@refly-packages/ai-workspace-common/components/canvas-template';
+const CanvasTemplateModal = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/canvas-template').then((m) => ({
+    default: m.CanvasTemplateModal,
+  })),
+);
 import { SiderLoggedOut } from './sider-logged-out';
 
 import './layout.scss';
@@ -192,7 +211,7 @@ export const PromotionItem = React.memo(
         {/* Header with gift icon and title */}
         <div className="flex items-center gap-1">
           <div className="flex-shrink-0">
-            <img src={GiftPromotionIcon} className="w-12 h-15" />
+            <img src={'https://static.refly.ai/static/community.webp'} className="w-12 h-15" />
           </div>
           <div className="flex flex-col pl-1">
             <div className="flex items-baseline flex-wrap">
@@ -642,11 +661,22 @@ export const SiderLayout = (props: { source: 'sider' | 'popover' }) => {
 
   return (
     <>
-      <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
-      <InvitationModal visible={showInvitationModal} setVisible={setShowInvitationModal} />
-      <StorageExceededModal />
-      <CreditInsufficientModal />
-      <CanvasTemplateModal />
+      {/* Lazy load Modal components, only load when needed */}
+      {showSettingModal && (
+        <Suspense fallback={null}>
+          <SettingModal visible={showSettingModal} setVisible={setShowSettingModal} />
+        </Suspense>
+      )}
+      {showInvitationModal && (
+        <Suspense fallback={null}>
+          <InvitationModal visible={showInvitationModal} setVisible={setShowInvitationModal} />
+        </Suspense>
+      )}
+      <Suspense fallback={null}>
+        <StorageExceededModal />
+        <CreditInsufficientModal />
+        <CanvasTemplateModal />
+      </Suspense>
 
       {isLogin ? <SiderLoggedIn source={source} /> : <SiderLoggedOut source={source} />}
     </>

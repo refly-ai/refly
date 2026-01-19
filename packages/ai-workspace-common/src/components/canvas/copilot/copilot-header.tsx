@@ -21,7 +21,7 @@ export const CopilotHeader = memo(
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [searchParams] = useSearchParams();
     const source = useMemo(() => searchParams.get('source'), [searchParams]);
-    const isOnboarding = source === 'onboarding';
+    const isOnboarding = ['onboarding', 'frontPage'].includes(source ?? '');
 
     const { setCurrentSessionId, historyTemplateSessions, removeHistoryTemplateSession } =
       useCopilotStoreShallow((state) => ({

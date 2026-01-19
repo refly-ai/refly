@@ -21,7 +21,7 @@ export const MAX_VARIABLE_LENGTH = {
 };
 
 // Variable type section component
-const VariableTypeSection = ({
+export const VariableTypeSection = ({
   canvasId,
   type,
   variables,

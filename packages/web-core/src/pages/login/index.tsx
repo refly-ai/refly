@@ -1,7 +1,7 @@
 import { Button, Input, Form } from 'antd';
 import { Link } from '@refly-packages/ai-workspace-common/utils/router';
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { useSearchParams, Navigate } from 'react-router-dom';
+import { useSearchParams, Navigate, useNavigate } from 'react-router-dom';
 
 import { OAuthButton } from '../../components/login-modal/oauth-button';
 import { VerificationModal } from '../../components/verification-modal';
@@ -18,8 +18,6 @@ import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo
 import { logEvent } from '@refly/telemetry-web';
 import { useCookie } from 'react-use';
 import { UID_COOKIE } from '@refly/utils';
-import loginImage from '../../assets/login.png';
-import loginDarkImage from '../../assets/login-dark.png';
 import './index.css';
 import { useUserStoreShallow } from '@refly/stores';
 import {
@@ -27,6 +25,7 @@ import {
   getAndClearSignupEntryPoint,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
 import { storePendingRedirect } from '@refly-packages/ai-workspace-common/hooks/use-pending-redirect';
+import { usePrefetchLoginRedirect } from '../../hooks/use-prefetch-login-redirect';
 
 interface FormValues {
   email: string;
@@ -36,6 +35,7 @@ interface FormValues {
 const LoginPage = () => {
   const [form] = Form.useForm<FormValues>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [isEmailFormExpanded, setIsEmailFormExpanded] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const { getLoginStatus } = useIsLogin();
@@ -70,6 +70,12 @@ const LoginPage = () => {
     return () => observer.disconnect();
   }, []);
 
+  // Intelligently prefetch page that may be redirected to after login
+  // - If returnUrl exists, prefetch corresponding page chunk
+  // - If no returnUrl, default prefetch workspace (default post-login destination)
+  const returnUrl = searchParams.get('returnUrl');
+  usePrefetchLoginRedirect(returnUrl);
+
   const authStore = useAuthStoreShallow((state) => ({
     loginInProgress: state.loginInProgress,
     loginProvider: state.loginProvider,
@@ -88,6 +94,36 @@ const LoginPage = () => {
 
   const { t } = useTranslation();
 
+  /**
+   * Smart redirect function - uses SPA navigation for internal routes, hard redirect for external URLs
+   * @param url - The URL to redirect to (can be relative path or full URL)
+   */
+  const handleRedirect = useCallback(
+    (url: string) => {
+      try {
+        // Check if it's an external URL
+        const urlObj = new URL(url, window.location.origin);
+        const isExternal =
+          urlObj.origin !== window.location.origin ||
+          url.startsWith('http://') ||
+          url.startsWith('https://');
+
+        if (isExternal) {
+          // External URL - use hard redirect
+          window.location.replace(url);
+        } else {
+          // Internal route - use SPA navigation (no page refresh!)
+          const pathWithSearch = url.startsWith('/') ? url : `/${url}`;
+          navigate(pathWithSearch, { replace: true });
+        }
+      } catch (_error) {
+        // If URL parsing fails, assume it's an internal path
+        navigate(url.startsWith('/') ? url : `/${url}`, { replace: true });
+      }
+    },
+    [navigate],
+  );
+
   const { data: authConfig, isLoading: isAuthConfigLoading } = useGetAuthConfig();
 
   // If already logged in, redirect to /workspace
@@ -96,17 +132,6 @@ const LoginPage = () => {
   const isLoggedIn = useMemo(() => {
     return getLoginStatus() || isLogin;
   }, [getLoginStatus, isLogin]);
-
-  // Wait only when explicitly checking to avoid flicker; do not block on undefined
-  if (isCheckingLoginStatus === true) {
-    return null;
-  }
-
-  // Avoid redirect loop: only use cookie-based fast path when there is no returnUrl
-  const hasReturnUrl = !!searchParams.get('returnUrl');
-  if (isLoggedIn || (hasLoginCredentials && !hasReturnUrl)) {
-    return <Navigate to="/workspace" replace />;
-  }
 
   // Provide default values if config is not loaded
   const { isGithubEnabled, isGoogleEnabled, isEmailEnabled } = useMemo(() => {
@@ -177,6 +202,10 @@ const LoginPage = () => {
             ...(entryPoint ? { entry_point: entryPoint } : {}),
             user_type: 'free',
           });
+
+          // Note: No need to broadcast login event here
+          // useGetUserSettings will detect the new login state and broadcast automatically
+
           authStore.reset();
           const returnUrl = searchParams.get('returnUrl');
           const redirectUrl = returnUrl
@@ -184,7 +213,8 @@ const LoginPage = () => {
             : isPublicAccessPage
               ? window.location.href
               : '/workspace';
-          window.location.replace(redirectUrl);
+          // Use smart redirect - SPA navigation for internal routes
+          handleRedirect(redirectUrl);
         } else {
           authStore.setEmail(values.email);
           authStore.setSessionId(data.data?.sessionId ?? null);
@@ -204,14 +234,19 @@ const LoginPage = () => {
       if (data?.success) {
         // Log login success event with source
         logEvent('login_success', null, source ? { source } : undefined);
+
+        // Note: No need to broadcast login event here
+        // useGetUserSettings will detect the new login state and broadcast automatically
+
         // Note: No need to close modal as this is a standalone login page
         authStore.reset();
         const returnUrl = searchParams.get('returnUrl');
         const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/workspace';
-        window.location.replace(redirectUrl);
+        // Use smart redirect - SPA navigation for internal routes
+        handleRedirect(redirectUrl);
       }
     }
-  }, [authStore, form, isPublicAccessPage, searchParams]);
+  }, [authStore, form, isPublicAccessPage, searchParams, handleRedirect]);
 
   const handleResetPassword = useCallback(() => {
     authStore.setResetPasswordModalOpen(true);
@@ -228,6 +263,17 @@ const LoginPage = () => {
   const handleToggleEmailForm = useCallback(() => {
     setIsEmailFormExpanded((prev) => !prev);
   }, []);
+
+  // Wait only when explicitly checking to avoid flicker; do not block on undefined
+  if (isCheckingLoginStatus === true) {
+    return null;
+  }
+
+  // Avoid redirect loop: only use cookie-based fast path when there is no returnUrl
+  const hasReturnUrl = !!searchParams.get('returnUrl');
+  if (isLoggedIn || (hasLoginCredentials && !hasReturnUrl)) {
+    return <Navigate to="/workspace" replace />;
+  }
 
   return (
     <div
@@ -248,7 +294,11 @@ const LoginPage = () => {
             }}
           >
             <img
-              src={isDarkMode ? loginDarkImage : loginImage}
+              src={
+                isDarkMode
+                  ? 'https://static.refly.ai/static/login-dark.webp'
+                  : 'https://static.refly.ai/static/login.webp'
+              }
               alt="Welcome to Refly"
               className="w-full h-full object-cover"
             />

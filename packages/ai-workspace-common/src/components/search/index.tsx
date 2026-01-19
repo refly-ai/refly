@@ -194,7 +194,7 @@ export const Search = React.memo((props: SearchProps) => {
         icon: <IconCanvas style={{ fontSize: 12 }} />,
         onItemClick: (item: SearchResult) => {
           searchStore.setIsSearchOpen(false);
-          navigate(`/canvas/${item.id}`);
+          navigate(`/workflow/${item.id}`);
         },
       },
       {

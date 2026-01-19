@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { message } from 'antd';
 import type { DriveFile, WorkflowPlan } from '@refly/openapi-schema';
 
 import { MarkdownMode } from '../../types';
@@ -11,6 +12,9 @@ import { ProductCard } from './product-card';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { Button, Typography } from 'antd';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
+import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { ArrowDown, ArrowUp, Cancelled, CheckCircleBroken } from 'refly-icons';
 import {
@@ -53,6 +57,72 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   const { t, i18n } = useTranslation();
   const currentLanguage = i18n.language || 'en';
   const [isCollapsed, setIsCollapsed] = useState(true);
+
+  // Get canvas context for adding files to library (optional)
+  const ctx = useCanvasContext(true);
+  const canvasId = ctx?.canvasId;
+
+  const queryClient = useQueryClient();
+
+  // Handle adding file to file library
+  const handleAddToFileLibrary = useCallback(
+    async (file: DriveFile) => {
+      if (!canvasId || !file?.storageKey) {
+        message.error(t('common.saveFailed') || 'Failed to add file to library');
+        return;
+      }
+
+      try {
+        const { data, error } = await getClient().createDriveFile({
+          body: {
+            canvasId,
+            name: file.name ?? 'Untitled file',
+            type: file.type ?? 'text/plain',
+            storageKey: file.storageKey,
+            source: 'manual',
+            summary: file.summary,
+          },
+        });
+
+        if (error || !data?.success) {
+          throw new Error(error ? String(error) : 'Failed to create drive file');
+        }
+
+        // Refetch only file library queries (source: 'manual') to refresh the file list
+        // Using refetchQueries instead of invalidateQueries to avoid clearing cache
+        // This will trigger a refetch in FileOverview component without affecting other queries
+        if (canvasId) {
+          queryClient.refetchQueries({
+            predicate: (query) => {
+              const queryKey = query.queryKey;
+              // Check if this is a ListDriveFiles query
+              if (queryKey[0] !== 'ListDriveFiles') {
+                return false;
+              }
+              // Check if the query has source: 'manual'
+              // Query key structure: ['ListDriveFiles', { query: { canvasId, source, ... } }]
+              const queryOptions = queryKey[1] as
+                | { query?: { source?: string; canvasId?: string } }
+                | undefined;
+              return (
+                queryOptions?.query?.source === 'manual' &&
+                queryOptions?.query?.canvasId === canvasId
+              );
+            },
+          });
+        }
+
+        message.success(
+          t('canvas.workflow.run.addToFileLibrarySuccess') || 'Successfully added to file',
+        );
+      } catch (err) {
+        console.error('Failed to add file to library:', err);
+        message.error(t('common.saveFailed') || 'Failed to add file to library');
+        throw err;
+      }
+    },
+    [canvasId, t, queryClient],
+  );
 
   // Extract tool call ID
   const toolCallId = props['data-tool-call-id'];
@@ -487,7 +557,13 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
 
       {shouldRenderFilePreview &&
         filePreviewDriveFile.map((file) => (
-          <ProductCard key={file.fileId} file={file} source="card" classNames="mt-3" />
+          <ProductCard
+            key={file.fileId}
+            file={file}
+            source="card"
+            classNames="mt-3"
+            onAddToFileLibrary={canvasId ? handleAddToFileLibrary : undefined}
+          />
         ))}
     </>
   );

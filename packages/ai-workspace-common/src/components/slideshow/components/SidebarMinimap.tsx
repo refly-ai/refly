@@ -1,12 +1,12 @@
 import { useMemo, CSSProperties, useCallback } from 'react';
 import { Tooltip } from 'antd';
 import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DraggingStyle,
-  NotDraggingStyle,
-} from 'react-beautiful-dnd';
+  LazyDnDContext as DragDropContext,
+  LazyDroppable as Droppable,
+  LazyDraggable as Draggable,
+  type DraggingStyle,
+  type NotDraggingStyle,
+} from '@refly-packages/ai-workspace-common/components/common/lazy-dnd';
 import { type NodeRelation } from './ArtifactRenderer';
 import { NodeRenderer } from './NodeRenderer';
 import { getNodeTitle } from '../utils/nodeUtils';

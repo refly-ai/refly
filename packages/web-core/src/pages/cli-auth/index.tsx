@@ -13,12 +13,13 @@ import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo
 import { LoginCard } from '../../components/login-modal/login-card';
 import { VerificationModal } from '../../components/verification-modal';
 import { ResetPasswordModal } from '../../components/reset-password-modal';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
 import ClockIcon from '@refly-packages/ai-workspace-common/assets/clock.svg';
 import './index.scss';
 import { HiOutlineLightningBolt } from 'react-icons/hi';
 import { GoShieldCheck } from 'react-icons/go';
 import { logEvent, updateUserProperties } from '@refly/telemetry-web';
+import { serverOrigin } from '@refly/ui-kit';
 // ============================================================================
 // Types
 // ============================================================================
@@ -41,18 +42,9 @@ interface DeviceInfo {
 // API Functions
 // ============================================================================
 
-// Get API base URL from window.ENV or use relative path as fallback
-// This allows the page to work both in development (with proxy) and production (with separate API domain)
-const getApiBase = () => {
-  const apiUrl = window.ENV?.API_URL;
-  if (apiUrl) {
-    return `${apiUrl}/v1/auth/cli`;
-  }
-  // Fallback to relative path for development with proxy
-  return '/v1/auth/cli';
-};
-
-const API_BASE = getApiBase();
+// Get API base URL from serverOrigin (consistent with the rest of the app)
+// serverOrigin checks: window.electronEnv > window.ENV.API_URL > VITE_API_URL > ''
+const API_BASE = serverOrigin ? `${serverOrigin}/v1/auth/cli` : '/v1/auth/cli';
 
 async function fetchDeviceInit(
   deviceId: string,

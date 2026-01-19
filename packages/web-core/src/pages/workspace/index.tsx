@@ -6,6 +6,7 @@ import {
   usePendingVoucherClaim,
   storePendingVoucherCode,
 } from '@refly-packages/ai-workspace-common/hooks/use-pending-voucher-claim';
+import { usePrefetchWorkflow } from '../../hooks/use-prefetch-workflow';
 
 const WorkspacePage = () => {
   const [searchParams] = useSearchParams();
@@ -20,6 +21,10 @@ const WorkspacePage = () => {
 
   // Handle claiming voucher that was pending when user was not logged in
   usePendingVoucherClaim();
+
+  // Prefetch workflow page resources (during browser idle time)
+  // User may click a workflow, preloading makes transition smoother
+  usePrefetchWorkflow();
 
   useEffect(() => {
     logEvent('enter_workspace');

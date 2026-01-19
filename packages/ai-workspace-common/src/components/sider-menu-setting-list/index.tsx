@@ -24,7 +24,7 @@ import React from 'react';
 import { TFunction } from 'i18next';
 import { useSubscriptionStoreShallow } from '@refly/stores';
 import { UserSettings } from '@refly/openapi-schema';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
 
 // Reusable dropdown item component
 const DropdownItem = React.memo(
@@ -197,18 +197,17 @@ export const SiderMenuSettingList = (props: SiderMenuSettingListProps) => {
     setSettingsModalActiveTab: state.setSettingsModalActiveTab,
   }));
   const { handleLogout, contextHolder } = useLogout();
-  const { themeMode, setThemeMode, setLoggedIn, initTheme } = useThemeStoreShallow((state) => ({
+  const { themeMode, setThemeMode, setLoggedIn } = useThemeStoreShallow((state) => ({
     themeMode: state.themeMode,
     setThemeMode: state.setThemeMode,
     setLoggedIn: state.setLoggedIn,
-    initTheme: state.initTheme,
   }));
 
   // Initialize theme based on login status
   useEffect(() => {
+    // Note: setLoggedIn already calls initTheme internally, so we don't need to call it again
     setLoggedIn(isLoggedIn);
-    initTheme();
-  }, [isLoggedIn, setLoggedIn, initTheme]);
+  }, [isLoggedIn, setLoggedIn]);
 
   // Handle menu item clicks
   const handleSettingsClick = useCallback(() => {

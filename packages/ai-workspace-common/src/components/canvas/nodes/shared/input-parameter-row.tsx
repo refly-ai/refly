@@ -72,12 +72,13 @@ export const InputParameterRow = memo(
     const handleDeleteVariable = async (variable: WorkflowVariable) => {
       try {
         setIsDeleting(true);
-        onDelete?.(variable);
+        await onDelete?.(variable);
         message.success(
           t('canvas.workflow.variables.deleteSuccess') || 'Variable deleted successfully',
         );
       } catch (error) {
         console.error('Failed to delete variable:', error);
+        message.error(t('common.deleteFailed') || 'Failed to delete');
       } finally {
         setIsDeleting(false);
       }

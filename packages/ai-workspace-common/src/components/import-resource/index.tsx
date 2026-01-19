@@ -14,8 +14,8 @@ import { UpsertDriveFileRequest } from '@refly/openapi-schema';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import { getAvailableFileCount } from '@refly/utils/quota';
-import { useListDriveFiles } from '@refly-packages/ai-workspace-common/queries';
 import { logEvent } from '@refly/telemetry-web';
+import { canvasEmitter } from '@refly/utils';
 
 export const ImportResourceModal = memo(() => {
   const { t } = useTranslation();
@@ -38,9 +38,6 @@ export const ImportResourceModal = memo(() => {
   const { projectId, canvasId } = useGetProjectCanvasId();
   const { refetchUsage, storageUsage } = useSubscriptionUsage();
   const canImportCount = getAvailableFileCount(storageUsage);
-  const { refetch: refetchDriveFiles } = useListDriveFiles({ query: { canvasId } }, [], {
-    enabled: false,
-  });
 
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(projectId);
 
@@ -94,8 +91,7 @@ export const ImportResourceModal = memo(() => {
       }
 
       refetchUsage();
-      refetchDriveFiles();
-
+      canvasEmitter.emit('canvas:drive-files:refetch');
       message.success(t('common.upload.notification.allUploaded'));
 
       const mediaFiles = waitingList.filter(

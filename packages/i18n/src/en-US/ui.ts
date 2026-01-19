@@ -1440,6 +1440,7 @@ const translations = {
         emptyDescription: 'Click run, the workflow will be executed once if continued.',
         completed: 'Workflow execution completed successfully',
         failed: 'Workflow execution failed',
+        executionFailed: 'Execution Failed',
         error: 'Error monitoring workflow execution',
         validationError: 'Please fill in all required fields before running the workflow',
         installToolsBeforeRunning: 'Please install the required tools before running.',
@@ -1473,6 +1474,8 @@ const translations = {
         },
         forbiddenToAddNodeWhenWorkflowIsRunning:
           'Workflow is running, cannot add node, please try again later',
+        noArtifacts: 'No artifacts found',
+        addToFileLibrarySuccess: 'Successfully added to file library',
       },
       template: {
         updating: 'The template description string you are using is being updated...',
@@ -2166,6 +2169,7 @@ const translations = {
   agent: {
     configure: 'Input',
     lastRun: 'Output',
+    runlog: 'Runlog',
     noResult: 'Run to get results',
     editTitlePlaceholder: 'Enter title for the agent',
     config: {

@@ -1,4 +1,4 @@
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
 
 // Placeholder image for card covers
 export const CARD_PLACEHOLDER_IMAGE =

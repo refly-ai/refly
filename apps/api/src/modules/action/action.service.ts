@@ -17,6 +17,7 @@ import {
   safeParseJSON,
 } from '@refly/utils';
 import pLimit from 'p-limit';
+import { ABORT_MESSAGES } from '../skill/skill.constants';
 import {
   ActionResult,
   ActionMessage as ActionMessageModel,
@@ -610,10 +611,9 @@ export class ActionService {
     // Get the abort controller for this action
     const entry = this.activeAbortControllers.get(resultId);
 
-    // Determine the error message based on the reason
-    const defaultReason = 'User aborted the action';
-    const abortReason = reason || 'User requested abort';
-    const errorMessage = reason || defaultReason;
+    // Use unified abort message constant
+    const abortReason = reason || ABORT_MESSAGES.USER_ABORT;
+    const errorMessage = reason || ABORT_MESSAGES.USER_ABORT;
 
     if (entry) {
       // Abort the action
