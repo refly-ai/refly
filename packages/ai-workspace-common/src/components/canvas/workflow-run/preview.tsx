@@ -41,17 +41,6 @@ import './preview.scss';
 
 const OUTPUT_STEP_NAMES = ['answerQuestion', 'generateDocument', 'generateCodeArtifact'];
 
-// Placeholder data
-const PLACEHOLDER_DATA = {
-  nodeId: 'placeholder-node-id',
-  entityId: 'placeholder-entity-id',
-  title: 'Placeholder Title',
-  readonly: false,
-  isExecuting: false,
-  workflowIsRunning: false,
-  currentFile: null,
-};
-
 // Component to display credit usage for a node
 const NodeCreditUsage = memo(
   ({
@@ -92,9 +81,10 @@ const WorkflowRunPreviewComponent = () => {
   const [activeTab, setActiveTab] = useState<ResultActiveTab>('configure');
   const { canvasId, workflow } = useCanvasContext();
   const { nodes, edges } = useRealtimeCanvasData();
-  const { resultMap, streamResults } = useActionResultStoreShallow((state) => ({
+  const { resultMap, streamResults, currentFile } = useActionResultStoreShallow((state) => ({
     resultMap: state.resultMap,
     streamResults: state.streamResults,
+    currentFile: state.currentFile,
   }));
   const { fetchActionResult } = useFetchActionResult();
   const { setShowWorkflowRun, showWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
@@ -1003,12 +993,13 @@ const WorkflowRunPreviewComponent = () => {
           </div>
         </div>
 
-        {PLACEHOLDER_DATA.currentFile && (
+        {currentFile && (
           <div className="absolute inset-0 bg-refly-bg-content-z2 z-10">
             <ProductCard
-              file={PLACEHOLDER_DATA.currentFile}
+              file={currentFile}
               classNames="w-full h-full"
               source="preview"
+              onAddToFileLibrary={handleAddToFileLibrary}
             />
           </div>
         )}
