@@ -11,7 +11,7 @@ import { Subscription } from '@prisma/client';
 import { pick, safeParseJSON, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { RedisService } from '../common/redis.service';
-import { OperationTooFrequent, ParamsError } from '@refly/errors';
+import { AccountNotFoundError, OperationTooFrequent, ParamsError } from '@refly/errors';
 import { MiscService } from '../misc/misc.service';
 import { ConfigService } from '@nestjs/config';
 import { isDesktop } from '../../utils/runtime';
@@ -68,15 +68,16 @@ export class UserService implements OnModuleInit {
       where: { uid: user.uid },
     });
 
+    if (!userPo) {
+      throw new AccountNotFoundError();
+    }
+
     let subscription: Subscription | null = null;
-    if (userPo?.subscriptionId) {
+    if (userPo.subscriptionId) {
       subscription = await this.subscriptionService.getSubscription(userPo.subscriptionId);
     }
 
-    const userPreferences = await this.providerService.getUserPreferences(
-      user,
-      userPo?.preferences,
-    );
+    const userPreferences = await this.providerService.getUserPreferences(user, userPo.preferences);
     userPo.preferences = JSON.stringify(userPreferences);
 
     return {
