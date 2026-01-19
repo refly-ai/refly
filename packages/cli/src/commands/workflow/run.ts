@@ -192,11 +192,11 @@ async function runWorkflow(workflowId: string, options: any): Promise<void> {
         console.log('You can close the browser tab and return here when done.');
         console.log('');
 
-        // 开始轮询工具授权状态
+        // start polling tool authorization status
         const allAuthorized = await pollToolsStatus(workflowId);
 
         if (allAuthorized) {
-          // 二次确认是否立即运行workflow
+          // confirm again whether to run the workflow immediately
           console.log('');
           const shouldRunNow = await confirmAction(
             'All required tools are authorized now. Run workflow now?',
@@ -205,7 +205,7 @@ async function runWorkflow(workflowId: string, options: any): Promise<void> {
           if (shouldRunNow) {
             console.log('');
             console.log('Running workflow...');
-            // 递归调用自身，但此时应该不会有未授权工具了
+            // recursively call itself, but there should be no unauthorized tools now
             return await runWorkflow(workflowId, options);
           } else {
             console.log('');
@@ -214,7 +214,7 @@ async function runWorkflow(workflowId: string, options: any): Promise<void> {
             return;
           }
         } else {
-          // 轮询超时
+          // poll timeout
           console.log('');
           console.log(
             'Authorization timed out. You can try again later or install tools manually:',

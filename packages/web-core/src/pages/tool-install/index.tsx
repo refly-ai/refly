@@ -210,7 +210,7 @@ const ToolInstallPage = memo(() => {
 
   const workflowTools = useMemo(() => {
     const safeToolsets = Array.isArray(toolsetsWithNodes) ? toolsetsWithNodes : [];
-    return safeToolsets; // 返回所有workflow使用的工具
+    return safeToolsets; // return all tools used in the workflow
   }, [toolsetsWithNodes]);
 
   const installedToolsCount = useMemo(() => {
