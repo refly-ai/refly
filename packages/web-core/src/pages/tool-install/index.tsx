@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Button, Typography, Avatar, Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Account } from 'refly-icons';
@@ -16,6 +16,7 @@ import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canv
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { extractToolsetsWithNodes } from '@refly/canvas-common';
 import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
+import './index.scss';
 
 import type {
   GenericToolset,
@@ -100,14 +101,15 @@ const ToolInstallCard = memo(
     isInstalling: boolean;
     onInstall: (toolset: GenericToolset) => void;
     label: string;
-    referencedNodesLabel: string;
+    isAuthorized: boolean;
   }) => {
+    const { t } = useTranslation();
     const toolWithNodes = props?.toolWithNodes;
     const description = props?.description ?? '';
     const isInstalling = props?.isInstalling ?? false;
     const onInstall = props?.onInstall ?? (() => undefined);
     const label = props?.label ?? '';
-    //const referencedNodesLabel = props?.referencedNodesLabel ?? '';
+    const isAuthorized = props?.isAuthorized ?? false;
     const toolset = toolWithNodes?.toolset;
 
     const handleInstallClick = useCallback(() => {
@@ -118,7 +120,7 @@ const ToolInstallCard = memo(
     }, [onInstall, toolset]);
 
     return (
-      <div className="rounded-xl border border-refly-Card-Border bg-white px-4 py-2 shadow-sm">
+      <div className="rounded-xl border border-solid border-refly-primary-default bg-white p-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
             <ToolsetIcon toolset={toolset} />
@@ -129,15 +131,22 @@ const ToolInstallCard = memo(
               <div className="mt-1 text-xs text-refly-text-2 truncate">{description}</div>
             ) : null}
           </div>
-          <Button
-            size="middle"
-            className="custom-configure-button flex-shrink-0"
-            loading={isInstalling}
-            disabled={isInstalling}
-            onClick={handleInstallClick}
-          >
-            Install
-          </Button>
+          {isAuthorized ? (
+            <div className="flex items-center gap-2 text-refly-primary-default">
+              <div className="w-2 h-2 bg-refly-primary-default rounded-full" />
+              <span className="text-sm font-medium">Installed</span>
+            </div>
+          ) : (
+            <Button
+              size="middle"
+              className="custom-configure-button flex-shrink-0"
+              loading={isInstalling}
+              disabled={isInstalling}
+              onClick={handleInstallClick}
+            >
+              {t('toolInstall.connect')}
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -152,22 +161,12 @@ const ToolInstallPage = memo(() => {
   const i18n = translation?.i18n;
   const params = useParams();
   const workflowId = params?.workflowId ?? '';
-  const [searchParams] = useSearchParams();
   const userStore = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
     userProfile: state.userProfile,
   }));
   const isLogin = userStore?.isLogin ?? false;
   const userProfile = userStore?.userProfile;
-
-  const toolKeysParam = searchParams?.get('tools') ?? '';
-  const toolKeys = useMemo(() => {
-    if (!toolKeysParam) {
-      return [];
-    }
-    const splitKeys = toolKeysParam.split(',').map((key) => key.trim());
-    return splitKeys.filter((key) => Boolean(key));
-  }, [toolKeysParam]);
 
   const { data: canvasResponse, isLoading: canvasLoading } = useGetCanvasData(
     { query: { canvasId: workflowId } },
@@ -205,22 +204,18 @@ const ToolInstallPage = memo(() => {
     return extractToolsetsWithNodes(nodes);
   }, [nodes]);
 
-  const unauthorizedTools = useMemo(() => {
+  const workflowTools = useMemo(() => {
     const safeToolsets = Array.isArray(toolsetsWithNodes) ? toolsetsWithNodes : [];
-    const filtered = safeToolsets.filter((toolWithNodes) => {
-      return !isToolsetAuthorized(toolWithNodes.toolset, userTools);
-    });
+    return safeToolsets; // 返回所有workflow使用的工具
+  }, [toolsetsWithNodes]);
 
-    if (toolKeys.length === 0) {
-      return filtered;
-    }
+  const installedToolsCount = useMemo(() => {
+    return workflowTools.filter((toolWithNodes) => {
+      return isToolsetAuthorized(toolWithNodes.toolset, userTools);
+    }).length;
+  }, [workflowTools, userTools]);
 
-    return filtered.filter((toolWithNodes) => {
-      const toolKey = toolWithNodes?.toolset?.toolset?.key ?? '';
-      const toolName = toolWithNodes?.toolset?.name ?? '';
-      return toolKeys.includes(toolKey) || toolKeys.includes(toolName);
-    });
-  }, [toolsetsWithNodes, userTools, toolKeys]);
+  const totalToolsCount = workflowTools.length;
 
   const { openInstallToolByKey } = useOpenInstallTool();
   const { openInstallMcp } = useOpenInstallMcp();
@@ -277,15 +272,16 @@ const ToolInstallPage = memo(() => {
   );
 
   const isLoading = canvasLoading || toolsLoading;
-  const hasUnauthorizedTools = unauthorizedTools.length > 0;
+  const hasWorkflowTools = workflowTools.length > 0;
 
   const toolCards = useMemo(() => {
-    if (!Array.isArray(unauthorizedTools)) {
+    if (!Array.isArray(workflowTools)) {
       return [];
     }
 
-    return unauthorizedTools.map((toolWithNodes) => {
+    return workflowTools.map((toolWithNodes) => {
       const toolset = toolWithNodes?.toolset;
+      const isAuthorized = isToolsetAuthorized(toolset, userTools);
       const toolsetDefinition = toolset ? getToolsetDefinition(toolset) : null;
       const label =
         (toolsetDefinition?.labelDict?.[currentLanguage] as string) ??
@@ -304,12 +300,12 @@ const ToolInstallPage = memo(() => {
           isInstalling={isPolling || isOpening}
           onInstall={handleInstallTool}
           label={label}
-          referencedNodesLabel={referencedNodesLabel}
+          isAuthorized={isAuthorized}
         />
       );
     });
   }, [
-    unauthorizedTools,
+    workflowTools,
     getToolsetDefinition,
     currentLanguage,
     t,
@@ -349,10 +345,17 @@ const ToolInstallPage = memo(() => {
         <div className="flex flex-col items-center mb-6 gap-1">
           <Logo className="w-[120px] h-[32px] mb-2" />
           <h1 className="text-2xl font-semibold text-[#1c1f23] m-0 text-center leading-8">
-            {t('toolInstall.authorizeTitle')}
+            {t('toolInstall.workflowToolsTitle')}
           </h1>
           <p className="text-sm text-refly-text-2 m-0 text-center leading-5">
-            {t('toolInstall.authorizeSubtitle', { count: unauthorizedTools.length })}
+            {installedToolsCount === 0
+              ? t('toolInstall.allToolsNeedInstall', { count: totalToolsCount })
+              : installedToolsCount === totalToolsCount
+                ? t('toolInstall.allToolsInstalled')
+                : t('toolInstall.partialToolsInstalled', {
+                    installed: installedToolsCount,
+                    total: totalToolsCount,
+                  })}
           </p>
         </div>
 
@@ -362,15 +365,13 @@ const ToolInstallPage = memo(() => {
           </div>
         ) : null}
 
-        {!isLoading && hasUnauthorizedTools ? (
-          <div className="flex flex-col gap-3 border border-solid border-refly-primary-default rounded-xl">
-            {toolCards}
-          </div>
+        {!isLoading && hasWorkflowTools ? (
+          <div className="flex flex-col gap-3">{toolCards}</div>
         ) : null}
 
-        {!isLoading && !hasUnauthorizedTools ? (
+        {!isLoading && !hasWorkflowTools ? (
           <div className="rounded-2xl border border-refly-Card-Border bg-white p-6 shadow-sm">
-            <Text className="text-refly-text-2">{t('toolInstall.noUnauthorizedTools')}</Text>
+            <Text className="text-refly-text-2">{t('toolInstall.noTools')}</Text>
           </div>
         ) : null}
       </div>

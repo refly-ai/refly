@@ -4538,6 +4538,13 @@ const translations = {
     authorizeTitle: 'Authorize tools',
     authorizeSubtitle: 'To run this skill, you need to connect {{count}} tool',
     authorizeSubtitle_plural: 'To run this skill, you need to connect {{count}} tools',
+    workflowToolsTitle: 'Workflow Tools',
+    workflowToolsSubtitle: 'This workflow uses {{count}} tool(s). Install the ones you need.',
+    allToolsNeedInstall: 'To run this skill, you need to connect {{count}} tools',
+    partialToolsInstalled: 'Connect {{installed}}/{{total}} tools to run skill',
+    allToolsInstalled: 'All set! Return to your terminal to run this skill',
+    noTools: 'No tools found in this workflow.',
+    connect: 'Connect',
   },
 };
 

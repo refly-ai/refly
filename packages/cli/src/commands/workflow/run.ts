@@ -89,6 +89,8 @@ async function pollToolsStatus(
   console.log('\nWaiting for tool authorization...');
   console.log('This may take a few minutes. You can complete the authorization in your browser.');
 
+  let previousRemainingCount = -1; // Track previous count to only log when it changes
+
   while (Date.now() - startTime < maxWaitTime) {
     try {
       const result = await apiRequest<ToolsStatusResult>(
@@ -101,9 +103,12 @@ async function pollToolsStatus(
       }
 
       const remainingCount = result.unauthorizedTools.length;
-      console.log(
-        `⏳ Still waiting... ${remainingCount} tool${remainingCount > 1 ? 's' : ''} remaining to authorize.`,
-      );
+      if (remainingCount !== previousRemainingCount) {
+        console.log(
+          `⏳ Still waiting... ${remainingCount} tool${remainingCount > 1 ? 's' : ''} remaining to authorize.`,
+        );
+        previousRemainingCount = remainingCount;
+      }
 
       // Wait before next poll
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
@@ -127,7 +132,7 @@ const promptToOpenBrowser = async (installUrl: string): Promise<boolean> => {
   const rl = readline.createInterface({ input, output });
   try {
     const answer = await rl.question(
-      `${installUrl}\nOpen browser to install required tools? (y/N) > `,
+      `${installUrl}\nOpen browser to view workflow tools? (y/N) > `,
     );
     const normalized = answer.trim().toLowerCase();
     return normalized === 'y' || normalized === 'yes';
@@ -136,10 +141,9 @@ const promptToOpenBrowser = async (installUrl: string): Promise<boolean> => {
   }
 };
 
-const buildInstallUrl = (workflowId: string, toolKeys: string[]): string => {
+const buildInstallUrl = (workflowId: string): string => {
   const webUrl = getWebUrl();
-  const toolsParam = toolKeys.join(',');
-  return `${webUrl}/workflow/${workflowId}/install-tools?tools=${encodeURIComponent(toolsParam)}`;
+  return `${webUrl}/workflow/${workflowId}/install-tools`;
 };
 
 /**
@@ -176,16 +180,17 @@ async function runWorkflow(workflowId: string, options: any): Promise<void> {
     const toolNames = unauthorizedTools
       .map((tool) => tool.toolset?.name ?? 'Unknown tool')
       .join(', ');
-    const toolKeys = unauthorizedTools
-      .map((tool) => tool.toolset?.toolset?.key ?? tool.toolset?.name ?? '')
-      .filter((key) => Boolean(key));
-    const installUrl = buildInstallUrl(workflowId, toolKeys);
+    const installUrl = buildInstallUrl(workflowId);
     const shouldOpenBrowser = await promptToOpenBrowser(installUrl);
 
     if (shouldOpenBrowser) {
       try {
         await open(installUrl);
         console.log('✅ Browser opened successfully!');
+        console.log('');
+        console.log('Please install any required tools in your browser.');
+        console.log('You can close the browser tab and return here when done.');
+        console.log('');
 
         // 开始轮询工具授权状态
         const allAuthorized = await pollToolsStatus(workflowId);
@@ -229,7 +234,7 @@ async function runWorkflow(workflowId: string, options: any): Promise<void> {
     }
 
     fail(ErrorCodes.EXECUTION_FAILED, `Workflow contains unauthorized tools: ${toolNames}`, {
-      hint: 'Please install and authorize these tools before running the workflow',
+      hint: 'Open browser to view all workflow tools and install the ones you need',
       details: {
         installUrl,
         unauthorizedTools: unauthorizedTools.map((tool) => ({

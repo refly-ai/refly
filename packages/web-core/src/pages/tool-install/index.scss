@@ -1,0 +1,11 @@
+.custom-configure-button {
+  background-color: #000000 !important;
+  color: white !important;
+  border: 1px solid #000000 !important;
+}
+
+.custom-configure-button:hover:not(:disabled) {
+  background-color: #646a73 !important;
+  border-color: #646a73 !important;
+  color: white !important;
+}
