@@ -190,14 +190,26 @@ Notes:
 
 export interface BuildNodeAgentSystemPromptOptions {
   isPtcEnabled?: boolean;
+  sdkTools?: { name: string; description: string; toolsetKey: string }[];
 }
 
 export const buildNodeAgentSystemPrompt = (options?: BuildNodeAgentSystemPromptOptions): string => {
-  const { isPtcEnabled = false } = options ?? {};
+  const { isPtcEnabled = false, sdkTools = [] } = options ?? {};
 
   if (isPtcEnabled) {
+    const availableTools = sdkTools
+      .map((tool) => {
+        return `- **\`${tool.name}\`** (from \`${tool.toolsetKey}\`): ${tool.description}`;
+      })
+      .join('\n');
+
+    const ptcPrompt = PTC_MODE_PROMPT.replace(
+      '{AVAILABLE_TOOLS_PLACEHOLDER}',
+      availableTools || 'No specialized SDK tools available.',
+    );
+
     // In PTC mode, append PTC-specific instructions to the system prompt
-    return `${SYSTEM_PROMPT}\n\n${PTC_MODE_PROMPT}`;
+    return `${SYSTEM_PROMPT}\n\n${ptcPrompt}`;
   }
 
   return SYSTEM_PROMPT;

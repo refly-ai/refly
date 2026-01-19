@@ -96,17 +96,40 @@ export class Agent extends BaseSkill {
     ...baseStateGraphArgs,
   };
 
+  private isBuiltinTool(tool: StructuredToolInterface): boolean {
+    const toolsetName = (tool as any).metadata?.toolsetName;
+    const toolsetKey = (tool as any).metadata?.toolsetKey;
+    return (
+      toolsetKey === 'builtin' || toolsetName === 'Builtin' || tool.name.startsWith('builtin_')
+    );
+  }
+
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
-    const { preprocessResult, mode = 'node_agent', isPtcEnabled = false } = config.configurable;
+    const {
+      preprocessResult,
+      mode = 'node_agent',
+      isPtcEnabled = false,
+      selectedTools = [],
+    } = config.configurable;
     const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
+
+    const sdkTools = isPtcEnabled
+      ? selectedTools
+          .filter((tool: any) => !this.isBuiltinTool(tool))
+          .map((tool: any) => ({
+            name: tool.name,
+            description: tool.description,
+            toolsetKey: tool.metadata?.toolsetKey ?? 'unknown',
+          }))
+      : [];
 
     const systemPrompt =
       mode === 'copilot_agent'
         ? buildWorkflowCopilotPrompt({
             installedToolsets: config.configurable.installedToolsets ?? [],
           })
-        : buildNodeAgentSystemPrompt({ isPtcEnabled });
+        : buildNodeAgentSystemPrompt({ isPtcEnabled, sdkTools });
 
     // Use copilot scene for copilot_agent mode, agent scene for node_agent mode, otherwise use chat scene
     const modelConfigScene = getModelSceneFromMode(mode);
@@ -130,7 +153,11 @@ export class Agent extends BaseSkill {
     _user: User,
     config?: SkillRunnableConfig,
   ): Promise<AgentComponents> {
-    const { selectedTools = [], mode = 'node_agent' } = config?.configurable ?? {};
+    const {
+      selectedTools = [],
+      mode = 'node_agent',
+      isPtcEnabled = false,
+    } = config?.configurable ?? {};
 
     let actualToolNodeInstance: ToolNode<typeof MessagesAnnotation.State> | null = null;
     let availableToolsForNode: StructuredToolInterface[] = [];
@@ -142,9 +169,14 @@ export class Agent extends BaseSkill {
     let llmForGraph: Runnable<BaseMessage[], AIMessage>;
 
     if (selectedTools.length > 0) {
+      // In PTC mode, only keep builtin tools in the tool definition
+      const toolsToInitialize = isPtcEnabled
+        ? selectedTools.filter((tool) => this.isBuiltinTool(tool))
+        : selectedTools;
+
       // Ensure tool definitions are valid before binding
       // Also filter out tools with names exceeding 64 characters (OpenAI limit)
-      const validTools = selectedTools.filter((tool) => {
+      const validTools = toolsToInitialize.filter((tool) => {
         if (!tool.name || !tool.description || !tool.schema) {
           this.engine.logger.warn(`Skipping invalid tool: ${tool.name || 'unnamed'}`);
           return false;
@@ -460,9 +492,9 @@ export class Agent extends BaseSkill {
     const compiledGraph = workflow.compile();
 
     const components: AgentComponents = {
-      tools: selectedTools, // Store the successfully initialized tools
+      tools: availableToolsForNode, // Store the successfully initialized tools
       compiledLangGraphApp: compiledGraph, // Store the compiled graph
-      toolsAvailable: selectedTools.length > 0,
+      toolsAvailable: availableToolsForNode.length > 0,
     };
 
     return components;
