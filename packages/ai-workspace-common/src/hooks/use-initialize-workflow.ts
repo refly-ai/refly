@@ -99,7 +99,7 @@ export const useInitializeWorkflow = (
 
         // If current workflow execution is the first successful execution today, trigger voucher popup
         let shouldTriggerVoucherPopup = false;
-        if (planType !== 'free') {
+        if (planType === 'free') {
           const startOfToday = new Date();
           startOfToday.setHours(0, 0, 0, 0);
           const { data: listWorkflowExecutionsData, error: listWorkflowExecutionsError } =

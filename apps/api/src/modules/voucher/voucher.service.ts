@@ -213,8 +213,7 @@ export class VoucherService implements OnModuleInit {
       }
 
       // 2. Calculate discount percentage from config
-      const defaultDiscountRate = this.configService.get('voucher.defaultDiscountRate') ?? 0.2;
-      const discountPercent = Math.round(defaultDiscountRate * 100);
+      const discountPercent = this.configService.get('voucher.defaultDiscountPercent') ?? 80;
       const llmScore = 100; // Default score when not using LLM scoring
 
       const VOUCHER_EXPIRATION_MINUTES = this.configService.get('voucher.expirationMinutes');
