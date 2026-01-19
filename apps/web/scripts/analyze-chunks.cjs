@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 
 /**
- * 页面依赖分析工具
+ * Page dependency analysis tool
  *
- * 功能：
- * 1. 分析每个页面的依赖关系（导入了哪些组件、库）
- * 2. 计算页面间的相似度（共享依赖的比例）
- * 3. 使用聚类算法自动分组
- * 4. 计算每种分组策略的收益（减少下载量、缓存命中率）
- * 5. 生成最优的 chunk 分组建议
+ * Features:
+ * 1. Analyze per-page dependencies (components and libraries).
+ * 2. Compute page similarity (shared dependency ratio).
+ * 3. Cluster pages automatically.
+ * 4. Estimate grouping benefits (download reduction, cache hit rate).
+ * 5. Output recommended chunk grouping hints.
  *
- * 使用方法：
+ * Usage:
  *   node analyze-chunks.js
  *
- * 输出：
- *   - chunk-analysis-report.json：详细数据
- *   - chunk-optimization-report.md：人类可读的报告
+ * Output:
+ *   - chunk-analysis-report.json: detailed data
+ *   - chunk-optimization-report.md: human-readable report
  */
 
 const fs = require('node:fs');
@@ -23,13 +23,13 @@ const path = require('node:path');
 const { parse } = require('@babel/parser');
 const traverse = require('@babel/traverse').default;
 
-// ==================== 配置 ====================
+// ==================== Configuration ====================
 
 const CONFIG = {
-  // 页面目录
+  // Pages directory
   pagesDir: path.join(__dirname, '../../../packages/web-core/src/pages'),
 
-  // 要分析的导入类型
+  // Import categories to analyze
   importPatterns: {
     antd: /^(antd|@ant-design|rc-)/,
     editor: /^(monaco-editor|@monaco-editor|codemirror)/,
@@ -41,7 +41,7 @@ const CONFIG = {
     router: /^(react-router|@remix-run)/,
   },
 
-  // 页面预估体积（KB）
+  // Estimated page sizes (KB)
   estimatedSizes: {
     antd: 500,
     editor: 200,
@@ -51,24 +51,24 @@ const CONFIG = {
     utils: 30,
     react: 135,
     router: 25,
-    pageCode: 50, // 单个页面代码平均体积
+    pageCode: 50, // Average per-page code size
   },
 
-  // 用户行为模式（页面之间的跳转频率）
-  // 数值越高表示用户越频繁在这两个页面之间切换
+  // User behavior model (page-to-page navigation frequency)
+  // Higher values mean more frequent switches
   userBehavior: {
-    'workspace-workflow': 0.8, // 非常频繁
-    'workflow-app-marketplace': 0.6, // 比较频繁
-    'share-canvas-workspace': 0.3, // 偶尔
-    'login-workspace': 0.5, // 登录后进入
-    // ... 可以根据实际用户数据调整
+    'workspace-workflow': 0.8, // very frequent
+    'workflow-app-marketplace': 0.6, // frequent
+    'share-canvas-workspace': 0.3, // occasional
+    'login-workspace': 0.5, // after login
+    // ... tune based on real usage data
   },
 };
 
-// ==================== 工具函数 ====================
+// ==================== Utilities ====================
 
 /**
- * 递归查找所有文件
+ * Recursively collect all files.
  */
 function findAllFiles(dir, extensions = ['.tsx', '.ts', '.jsx', '.js']) {
   const files = [];
@@ -92,7 +92,7 @@ function findAllFiles(dir, extensions = ['.tsx', '.ts', '.jsx', '.js']) {
 }
 
 /**
- * 解析文件中的 import 语句
+ * Parse import statements in a file.
  */
 function parseImports(filePath) {
   try {
@@ -119,7 +119,7 @@ function parseImports(filePath) {
 }
 
 /**
- * 分析页面的依赖
+ * Analyze dependencies for a page.
  */
 function analyzePage(pageDir) {
   const files = findAllFiles(pageDir);
@@ -132,7 +132,7 @@ function analyzePage(pageDir) {
     }
   }
 
-  // 分类依赖
+  // Categorize dependencies
   const dependencies = {
     antd: [],
     editor: [],
@@ -161,7 +161,7 @@ function analyzePage(pageDir) {
     }
   }
 
-  // 计算预估体积
+  // Compute estimated size
   let estimatedSize = CONFIG.estimatedSizes.pageCode;
 
   for (const [category, imports] of Object.entries(dependencies)) {
@@ -178,7 +178,7 @@ function analyzePage(pageDir) {
 }
 
 /**
- * 分析所有页面
+ * Analyze all pages.
  */
 function analyzeAllPages() {
   const pagesDir = CONFIG.pagesDir;
@@ -205,7 +205,7 @@ function analyzeAllPages() {
 }
 
 /**
- * 计算两个页面之间的相似度（0-1）
+ * Compute similarity between two pages (0-1).
  */
 function calculateSimilarity(page1, page2) {
   const deps1 = page1.dependencies;
@@ -214,7 +214,7 @@ function calculateSimilarity(page1, page2) {
   let sharedCategories = 0;
   let totalCategories = 0;
 
-  // 计算分类级别的相似度（权重更高）
+  // Category-level similarity (higher weight)
   for (const category of Object.keys(CONFIG.importPatterns)) {
     const has1 = deps1[category].length > 0;
     const has2 = deps2[category].length > 0;
@@ -229,7 +229,7 @@ function calculateSimilarity(page1, page2) {
 
   const categorySimilarity = totalCategories > 0 ? sharedCategories / totalCategories : 0;
 
-  // 计算具体导入的相似度
+  // Specific import similarity
   const allDeps1 = Object.values(deps1).flat();
   const allDeps2 = Object.values(deps2).flat();
   const set1 = new Set(allDeps1);
@@ -239,12 +239,12 @@ function calculateSimilarity(page1, page2) {
 
   const importSimilarity = union.size > 0 ? intersection.size / union.size : 0;
 
-  // 综合相似度（分类相似度权重更高）
+  // Combined similarity (category weight is higher)
   return categorySimilarity * 0.7 + importSimilarity * 0.3;
 }
 
 /**
- * 构建相似度矩阵
+ * Build similarity matrix.
  */
 function buildSimilarityMatrix(pages) {
   const pageNames = Object.keys(pages);
@@ -260,7 +260,7 @@ function buildSimilarityMatrix(pages) {
       if (i === j) {
         matrix[name1][name2] = 1.0;
       } else if (j < i) {
-        // 复用已计算的值（对称矩阵）
+        // Reuse computed values (symmetric matrix)
         matrix[name1][name2] = matrix[name2][name1];
       } else {
         matrix[name1][name2] = calculateSimilarity(pages[name1], pages[name2]);
@@ -272,31 +272,31 @@ function buildSimilarityMatrix(pages) {
 }
 
 /**
- * 使用层次聚类算法对页面分组
+ * Group pages with hierarchical clustering.
  *
- * 算法：Agglomerative Hierarchical Clustering
- * 1. 开始时每个页面是一个独立的簇
- * 2. 重复合并最相似的两个簇
- * 3. 直到达到目标簇数量或相似度阈值
+ * Algorithm: Agglomerative Hierarchical Clustering
+ * 1. Start with each page as its own cluster.
+ * 2. Repeatedly merge the closest clusters.
+ * 3. Stop at target cluster count or similarity threshold.
  */
 function hierarchicalClustering(pages, similarityMatrix, targetGroups = 5) {
   const pageNames = Object.keys(pages);
 
-  // 初始化：每个页面是一个簇
+  // Initialize: each page is a cluster
   let clusters = pageNames.map((name) => ({
     pages: [name],
-    centroid: name, // 代表页面
+    centroid: name, // representative page
   }));
 
-  // 聚类过程
+  // Clustering loop
   while (clusters.length > targetGroups) {
     let maxSimilarity = -1;
     let mergeIndices = [0, 1];
 
-    // 找到最相似的两个簇
+    // Find the closest clusters
     for (let i = 0; i < clusters.length; i++) {
       for (let j = i + 1; j < clusters.length; j++) {
-        // 计算两个簇之间的相似度（使用质心）
+        // Compute cluster similarity via centroids
         const sim = similarityMatrix[clusters[i].centroid][clusters[j].centroid];
 
         if (sim > maxSimilarity) {
@@ -306,14 +306,14 @@ function hierarchicalClustering(pages, similarityMatrix, targetGroups = 5) {
       }
     }
 
-    // 合并簇
+    // Merge clusters
     const [i, j] = mergeIndices;
     const newCluster = {
       pages: [...clusters[i].pages, ...clusters[j].pages],
-      centroid: clusters[i].centroid, // 保留第一个簇的质心
+      centroid: clusters[i].centroid, // keep the first centroid
     };
 
-    // 更新簇列表
+    // Update cluster list
     clusters = [
       ...clusters.slice(0, i),
       ...clusters.slice(i + 1, j),
@@ -326,17 +326,17 @@ function hierarchicalClustering(pages, similarityMatrix, targetGroups = 5) {
 }
 
 /**
- * 计算分组策略的收益
+ * Calculate grouping benefits.
  */
 function calculateGroupingBenefit(pages, groups, _similarityMatrix) {
   const pageNames = Object.keys(pages);
 
-  // 计算每个组的总体积
+  // Compute total size per group
   const groupSizes = groups.map((group) => {
     let totalSize = 0;
     const _sharedDeps = new Set();
 
-    // 计算共享依赖
+    // Compute shared dependencies
     const allCategories = Object.keys(CONFIG.importPatterns);
 
     for (const category of allCategories) {
@@ -345,36 +345,36 @@ function calculateGroupingBenefit(pages, groups, _similarityMatrix) {
       );
 
       if (pagesUsingCategory.length > 0) {
-        // 至少有一个页面使用这个分类的依赖
+        // At least one page uses this category
         totalSize += CONFIG.estimatedSizes[category] || 0;
       }
     }
 
-    // 加上页面代码
+    // Add page code size
     totalSize += group.pages.length * CONFIG.estimatedSizes.pageCode;
 
     return totalSize;
   });
 
-  // 计算用户场景下的总下载量
-  // 假设用户按照某种模式访问页面
+  // Total download under user scenarios
+  // Assumes users follow the behavior model
 
-  // 场景1：用户访问所有页面（最坏情况）
+  // Scenario 1: visit all pages (worst case)
   const worstCaseDownload = groupSizes.reduce((sum, size) => sum + size, 0);
 
-  // 场景2：用户只访问组内页面（最好情况）
+  // Scenario 2: stay within a group (best case)
   const bestCaseDownload = Math.min(...groupSizes);
 
-  // 场景3：典型用户行为（加权平均）
+  // Scenario 3: typical behavior (weighted average)
   let typicalDownload = 0;
-  // 简化计算：假设用户平均访问 3 个不同的组
+  // Simplified: users visit 3 groups on average
   const avgGroupsVisited = Math.min(3, groups.length);
   typicalDownload = groupSizes
     .sort((a, b) => a - b)
     .slice(0, avgGroupsVisited)
     .reduce((sum, size) => sum + size, 0);
 
-  // 计算缓存效率（组内页面切换时的缓存命中率）
+  // Cache efficiency (intra-group hit rate)
   let totalSwitches = 0;
   let cachedSwitches = 0;
 
@@ -385,7 +385,7 @@ function calculateGroupingBenefit(pages, groups, _similarityMatrix) {
 
       totalSwitches++;
 
-      // 检查是否在同一组
+      // Check if in the same group
       const inSameGroup = groups.some(
         (group) => group.pages.includes(page1) && group.pages.includes(page2),
       );
@@ -410,22 +410,22 @@ function calculateGroupingBenefit(pages, groups, _similarityMatrix) {
 }
 
 /**
- * 生成 Markdown 报告
+ * Generate markdown report.
  */
 function generateMarkdownReport(pages, groups, benefits, similarityMatrix) {
-  let report = '# 页面 Chunk 分组优化报告\n\n';
-  report += `生成时间: ${new Date().toLocaleString()}\n\n`;
+  let report = '# Page Chunk Grouping Optimization Report\n\n';
+  report += `Generated at: ${new Date().toLocaleString()}\n\n`;
 
-  // 1. 页面分析概览
-  report += '## 📊 页面分析概览\n\n';
-  report += `- 总页面数: ${Object.keys(pages).length}\n`;
-  report += `- 推荐分组数: ${groups.length}\n`;
-  report += `- 缓存命中率: ${(benefits.cacheHitRate * 100).toFixed(1)}%\n`;
-  report += `- 平均组体积: ${benefits.avgGroupSize.toFixed(0)} KB\n\n`;
+  // 1. Page analysis summary
+  report += '## 📊 Page Summary\n\n';
+  report += `- Total pages: ${Object.keys(pages).length}\n`;
+  report += `- Recommended group count: ${groups.length}\n`;
+  report += `- Cache hit rate: ${(benefits.cacheHitRate * 100).toFixed(1)}%\n`;
+  report += `- Average group size: ${benefits.avgGroupSize.toFixed(0)} KB\n\n`;
 
-  // 2. 每个页面的详细信息
-  report += '## 📄 页面依赖详情\n\n';
-  report += '| 页面 | 预估体积 | 主要依赖 | 导入总数 |\n';
+  // 2. Per-page details
+  report += '## 📄 Page Dependencies\n\n';
+  report += '| Page | Estimated Size | Main Dependencies | Total Imports |\n';
   report += '|------|---------|---------|----------|\n';
 
   for (const [pageName, pageData] of Object.entries(pages)) {
@@ -438,18 +438,18 @@ function generateMarkdownReport(pages, groups, benefits, similarityMatrix) {
   }
   report += '\n';
 
-  // 3. 推荐的分组
-  report += '## 🎯 推荐的分组策略\n\n';
+  // 3. Recommended groups
+  report += '## 🎯 Recommended Grouping Strategy\n\n';
 
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
     const groupSize = benefits.groupSizes[i];
 
     report += `### Group ${i + 1}: \`group-${group.centroid}\`\n\n`;
-    report += `**包含页面**: ${group.pages.join(', ')}\n\n`;
-    report += `**预估体积**: ${groupSize.toFixed(0)} KB\n\n`;
+    report += `**Pages**: ${group.pages.join(', ')}\n\n`;
+    report += `**Estimated Size**: ${groupSize.toFixed(0)} KB\n\n`;
 
-    // 计算组内页面的共享依赖
+    // Shared deps within the group
     const sharedDeps = {};
 
     for (const category of Object.keys(CONFIG.importPatterns)) {
@@ -463,37 +463,37 @@ function generateMarkdownReport(pages, groups, benefits, similarityMatrix) {
     }
 
     if (Object.keys(sharedDeps).length > 0) {
-      report += '**共享依赖**:\n';
+      report += '**Shared Dependencies**:\n';
       for (const [category, count] of Object.entries(sharedDeps)) {
         const percentage = ((count / group.pages.length) * 100).toFixed(0);
-        report += `- ${category}: ${count}/${group.pages.length} 页面使用 (${percentage}%)\n`;
+        report += `- ${category}: ${count}/${group.pages.length} pages (${percentage}%)\n`;
       }
     }
 
     report += '\n';
   }
 
-  // 4. 相似度矩阵（热力图数据）
-  report += '## 🔥 页面相似度矩阵\n\n';
-  report += '（数值越高表示两个页面共享的依赖越多）\n\n';
+  // 4. Similarity matrix (heatmap data)
+  report += '## 🔥 Page Similarity Matrix\n\n';
+  report += '(Higher values indicate more shared dependencies between pages)\n\n';
 
   const pageNames = Object.keys(pages);
 
-  // 表头
-  report += '| 页面 |';
+  // Header row
+  report += '| Page |';
   for (const name of pageNames) {
     report += ` ${name} |`;
   }
   report += '\n';
 
-  // 分隔线
+  // Separator
   report += '|------|';
   for (const _ of pageNames) {
     report += '------|';
   }
   report += '\n';
 
-  // 数据行
+  // Data rows
   for (const name1 of pageNames) {
     report += `| **${name1}** |`;
     for (const name2 of pageNames) {
@@ -505,20 +505,20 @@ function generateMarkdownReport(pages, groups, benefits, similarityMatrix) {
   }
   report += '\n';
 
-  // 5. 收益分析
-  report += '## 💰 收益分析\n\n';
-  report += '### 下载量对比\n\n';
-  report += `- **最坏情况**（访问所有页面）: ${benefits.worstCaseDownload.toFixed(0)} KB\n`;
-  report += `- **最好情况**（只访问单组）: ${benefits.bestCaseDownload.toFixed(0)} KB\n`;
-  report += `- **典型情况**（访问 3 个组）: ${benefits.typicalDownload.toFixed(0)} KB\n\n`;
+  // 5. Benefit analysis
+  report += '## 💰 Benefit Analysis\n\n';
+  report += '### Download Comparison\n\n';
+  report += `- **Worst case** (all pages): ${benefits.worstCaseDownload.toFixed(0)} KB\n`;
+  report += `- **Best case** (single group): ${benefits.bestCaseDownload.toFixed(0)} KB\n`;
+  report += `- **Typical case** (3 groups): ${benefits.typicalDownload.toFixed(0)} KB\n\n`;
 
-  report += '### 缓存效率\n\n';
-  report += `- **组内页面切换缓存命中率**: ${(benefits.cacheHitRate * 100).toFixed(1)}%\n`;
-  report += '- 用户在组内页面切换时，无需重新下载依赖\n\n';
+  report += '### Cache Efficiency\n\n';
+  report += `- **Intra-group cache hit rate**: ${(benefits.cacheHitRate * 100).toFixed(1)}%\n`;
+  report += '- No re-download needed when navigating within a group\n\n';
 
-  // 6. 实施建议
-  report += '## 🚀 实施建议\n\n';
-  report += '### 1. 修改 `packages/web-core/src/index.ts`\n\n';
+  // 6. Implementation suggestions
+  report += '## 🚀 Implementation Suggestions\n\n';
+  report += '### 1. Update `packages/web-core/src/index.ts`\n\n';
   report += '```typescript\n';
   report += 'import { lazy } from "react";\n\n';
 
@@ -541,58 +541,58 @@ function generateMarkdownReport(pages, groups, benefits, similarityMatrix) {
 
   report += '```\n\n';
 
-  report += '### 2. 配置 rsbuild.config.ts\n\n';
-  report += '使用文档中的分层 vendor 配置，让大型库也按组分离。\n\n';
+  report += '### 2. Configure rsbuild.config.ts\n\n';
+  report += 'Use layered vendor config to split large libraries by group.\n\n';
 
-  report += '### 3. 验证效果\n\n';
+  report += '### 3. Verify results\n\n';
   report += '```bash\n';
   report += 'ANALYZE=true pnpm build\n';
   report += 'ls -lh dist/static/js/ | grep group\n';
   report += '```\n\n';
 
-  // 7. 注意事项
-  report += '## ⚠️ 注意事项\n\n';
-  report += '1. 本报告基于静态分析和预估数据，实际效果可能有偏差\n';
-  report += '2. 建议结合实际用户行为数据进行微调\n';
-  report += '3. 某些页面如果完全独立使用，可以单独成组\n';
-  report += '4. 定期重新运行分析，因为页面依赖可能会变化\n\n';
+  // 7. Notes
+  report += '## ⚠️ Notes\n\n';
+  report += '1. This report is based on static analysis and estimates; results may vary.\n';
+  report += '2. Tune based on real user behavior data.\n';
+  report += '3. Fully independent pages can be grouped separately.\n';
+  report += '4. Re-run periodically as dependencies evolve.\n\n';
 
   return report;
 }
 
-// ==================== 主函数 ====================
+// ==================== Main ====================
 
 function main() {
-  console.log('🔍 开始分析页面依赖...\n');
+  console.log('🔍 Starting page dependency analysis...\n');
 
-  // 1. 分析所有页面
+  // 1. Analyze all pages
   const pages = analyzeAllPages();
-  console.log(`\n✅ 分析完成，共 ${Object.keys(pages).length} 个页面\n`);
+  console.log(`\n✅ Analysis complete, ${Object.keys(pages).length} pages\n`);
 
-  // 2. 构建相似度矩阵
-  console.log('📊 构建页面相似度矩阵...\n');
+  // 2. Build similarity matrix
+  console.log('📊 Building similarity matrix...\n');
   const similarityMatrix = buildSimilarityMatrix(pages);
 
-  // 3. 聚类分组
-  console.log('🎯 使用聚类算法进行分组...\n');
-  const targetGroups = 6; // 可调整
+  // 3. Cluster grouping
+  console.log('🎯 Clustering pages...\n');
+  const targetGroups = 6; // adjustable
   const groups = hierarchicalClustering(pages, similarityMatrix, targetGroups);
 
-  console.log(`✅ 分组完成，共 ${groups.length} 个组:\n`);
+  console.log(`✅ Grouping complete, ${groups.length} groups:\n`);
   groups.forEach((group, i) => {
     console.log(`  Group ${i + 1}: ${group.pages.join(', ')}`);
   });
   console.log();
 
-  // 4. 计算收益
-  console.log('💰 计算优化收益...\n');
+  // 4. Compute benefits
+  console.log('💰 Calculating benefits...\n');
   const benefits = calculateGroupingBenefit(pages, groups, similarityMatrix);
 
-  console.log(`  缓存命中率: ${(benefits.cacheHitRate * 100).toFixed(1)}%`);
-  console.log(`  典型下载量: ${benefits.typicalDownload.toFixed(0)} KB\n`);
+  console.log(`  Cache hit rate: ${(benefits.cacheHitRate * 100).toFixed(1)}%`);
+  console.log(`  Typical download: ${benefits.typicalDownload.toFixed(0)} KB\n`);
 
-  // 5. 生成报告
-  console.log('📝 生成报告...\n');
+  // 5. Generate report
+  console.log('📝 Generating report...\n');
 
   const jsonReport = {
     pages,
@@ -604,21 +604,21 @@ function main() {
 
   const markdownReport = generateMarkdownReport(pages, groups, benefits, similarityMatrix);
 
-  // 保存报告
+  // Save report
   const jsonPath = path.join(__dirname, '../chunk-analysis-report.json');
   const mdPath = path.join(__dirname, '../CHUNK_OPTIMIZATION_REPORT.md');
 
   fs.writeFileSync(jsonPath, JSON.stringify(jsonReport, null, 2));
   fs.writeFileSync(mdPath, markdownReport);
 
-  console.log('✅ 报告已生成:');
+  console.log('✅ Report generated:');
   console.log(`   - JSON: ${jsonPath}`);
   console.log(`   - Markdown: ${mdPath}\n`);
 
-  console.log('🎉 分析完成！请查看报告了解详细信息。\n');
+  console.log('🎉 Done! Check the report for details.\n');
 }
 
-// 执行
+// Execute
 if (require.main === module) {
   main();
 }

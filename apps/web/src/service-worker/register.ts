@@ -1,12 +1,12 @@
 /**
- * Service Worker 注册管理
- * 整合了 App.tsx 中的原有逻辑
+ * Service Worker registration manager
+ * Consolidated from the previous App.tsx logic
  */
 
 declare const __SERVICE_WORKER_URL__: string;
 
 /**
- * 注册 Service Worker
+ * Register Service Worker
  */
 export function registerServiceWorker() {
   console.log('[SW] Checking eligibility...', {
@@ -27,7 +27,7 @@ export function registerServiceWorker() {
 }
 
 /**
- * 生产环境：注册 Service Worker
+ * Production: register Service Worker
  */
 function registerInProduction() {
   const register = async () => {
@@ -66,8 +66,8 @@ function registerInProduction() {
 }
 
 /**
- * 开发环境：卸载所有 Service Workers
- * 避免开发时的缓存问题
+ * Development: unregister all Service Workers
+ * Avoid cache issues during development
  */
 function unregisterInDevelopment() {
   navigator.serviceWorker.getRegistrations().then((registrations) => {
