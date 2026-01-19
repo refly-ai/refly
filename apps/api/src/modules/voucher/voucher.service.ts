@@ -2,7 +2,6 @@ import { Injectable, Logger, Inject, forwardRef, OnModuleInit, Optional } from '
 import { User, WorkflowVariable } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
-import { TemplateScoringService, CanvasDataForScoring } from './template-scoring.service';
 import { CreditService } from '../credit/credit.service';
 import { NotificationService } from '../notification/notification.service';
 import { genVoucherID, genVoucherInvitationID, genInviteCode, getYYYYMMDD } from '@refly/utils';
@@ -46,7 +45,6 @@ export class VoucherService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly templateScoringService: TemplateScoringService,
     private readonly configService: ConfigService,
     private readonly notificationService: NotificationService,
     @Inject(forwardRef(() => CreditService))
@@ -176,11 +174,11 @@ export class VoucherService implements OnModuleInit {
    */
   async handleCreateVoucherFromSource(
     user: User,
-    canvasData: CanvasDataForScoring,
-    variables: WorkflowVariable[],
+    _canvasData: any,
+    _variables: WorkflowVariable[],
     source: VoucherSourceType,
     sourceId?: string,
-    description?: string,
+    _description?: string,
   ): Promise<VoucherTriggerResult | null> {
     const lockKey = `voucher-create-lock:${user.uid}:${source}`;
     const releaseLock = await this.redis.waitLock(lockKey, { ttlSeconds: 10 });
@@ -214,22 +212,14 @@ export class VoucherService implements OnModuleInit {
         return null;
       }
 
-      // 2. Score the template using pre-fetched canvas data
-      const scoringResult = await this.templateScoringService.scoreTemplateWithCanvasData(
-        user,
-        canvasData,
-        variables,
-        description,
-      );
-
-      // 3. Calculate discount percentage from score
-      const discountPercent = this.templateScoringService.scoreToDiscountPercent(
-        scoringResult.score,
-      );
+      // 2. Calculate discount percentage from config
+      const defaultDiscountRate = this.configService.get('voucher.defaultDiscountRate') ?? 0.2;
+      const discountPercent = Math.round(defaultDiscountRate * 100);
+      const llmScore = 100; // Default score when not using LLM scoring
 
       const VOUCHER_EXPIRATION_MINUTES = this.configService.get('voucher.expirationMinutes');
 
-      // 4. Generate voucher
+      // 3. Generate voucher
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + VOUCHER_EXPIRATION_MINUTES);
 
@@ -255,7 +245,7 @@ export class VoucherService implements OnModuleInit {
             // Update existing voucher with latest values
             voucher = await this.updateVoucher(existingVoucher.voucherId, {
               discountPercent,
-              llmScore: scoringResult.score,
+              llmScore,
               expiresAt,
               sourceId,
               status: VoucherStatus.UNUSED, // Reset to unused if it was expired/invalid
@@ -275,7 +265,7 @@ export class VoucherService implements OnModuleInit {
           voucher = await this.createVoucher({
             uid: user.uid,
             discountPercent,
-            llmScore: scoringResult.score,
+            llmScore,
             source,
             sourceId: sourceId,
             expiresAt,
@@ -286,37 +276,37 @@ export class VoucherService implements OnModuleInit {
         voucher = await this.createVoucher({
           uid: user.uid,
           discountPercent,
-          llmScore: scoringResult.score,
+          llmScore,
           source,
           sourceId: sourceId,
           expiresAt,
         });
       }
 
-      // 5. Record popup trigger
+      // 4. Record popup trigger
       await this.recordPopupTrigger(user.uid, sourceId, voucher.voucherId);
 
-      // 6. Track analytics event
+      // 5. Track analytics event
       this.trackEvent(AnalyticsEvents.VOUCHER_POPUP_DISPLAY, {
         uid: user.uid,
         voucherId: voucher.voucherId,
         discountPercent,
-        llmScore: scoringResult.score,
+        llmScore,
       });
 
       this.logger.log(
         `Voucher generated for user ${user.uid}: ${voucher.voucherId} (${discountPercent}% off)`,
       );
 
-      // 7. Send email notification (async, don't wait)
+      // 6. Send email notification (async, don't wait)
       this.sendVoucherEmail(user.uid, voucher.voucherId, discountPercent).catch((err) => {
         this.logger.error(`Failed to send voucher email for user ${user.uid}: ${err.stack}`);
       });
 
       return {
         voucher,
-        score: scoringResult.score,
-        feedback: scoringResult.feedback,
+        score: llmScore,
+        feedback: 'Thank you for using Refly!',
       };
     } catch (error) {
       this.logger.error(`Failed to handle voucher creation for user ${user.uid}: ${error.stack}`);
