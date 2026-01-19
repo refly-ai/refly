@@ -96,7 +96,7 @@ export const UserInputCollapse = React.memo(function UserInputCollapse({
                     lineHeight: '1.5em',
                   }}
                 >
-                  {t('canvas.workflow.run.inputPanelTitle', 'User Input')}
+                  {t('canvas.workflow.run.inputPanelTitle')}
                 </span>
               </div>
             ),

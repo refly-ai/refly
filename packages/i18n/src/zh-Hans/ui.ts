@@ -1622,7 +1622,12 @@ const translations = {
         },
         forbiddenToAddNodeWhenWorkflowIsRunning: '工作流正在运行中，无法添加节点，请稍后再试',
         noArtifacts: '未找到产物',
+        noNodes: '未找到智能体响应节点',
+        defaultAgentTitle: '智能体',
         addToFileLibrarySuccess: '已成功添加到文件库',
+        preview: '预览',
+        outputsOnly: '仅产物',
+        inputPanelTitle: '用户输入',
       },
       template: {
         updating: '模板正在发布中...',
@@ -2300,7 +2305,7 @@ const translations = {
   agent: {
     configure: '输入',
     lastRun: '输出',
-    runlog: 'Runlog',
+    runlog: '运行日志',
     noResult: '运行后才有记录哦',
     editTitlePlaceholder: '输入智能体的标题',
     config: {

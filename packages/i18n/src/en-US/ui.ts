@@ -1475,7 +1475,12 @@ const translations = {
         forbiddenToAddNodeWhenWorkflowIsRunning:
           'Workflow is running, cannot add node, please try again later',
         noArtifacts: 'No artifacts found',
+        noNodes: 'No skill response nodes found',
+        defaultAgentTitle: 'Agent',
         addToFileLibrarySuccess: 'Successfully added to file library',
+        preview: 'Preview',
+        outputsOnly: 'Outputs only',
+        inputPanelTitle: 'User Input',
       },
       template: {
         updating: 'The template description string you are using is being updated...',
