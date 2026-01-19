@@ -96,32 +96,22 @@ export class Agent extends BaseSkill {
     ...baseStateGraphArgs,
   };
 
-  private isBuiltinTool(tool: StructuredToolInterface): boolean {
-    const toolsetName = (tool as any).metadata?.toolsetName;
-    const toolsetKey = (tool as any).metadata?.toolsetKey;
-    return (
-      toolsetKey === 'builtin' || toolsetName === 'Builtin' || tool.name.startsWith('builtin_')
-    );
-  }
-
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
     const {
       preprocessResult,
       mode = 'node_agent',
       isPtcEnabled = false,
-      selectedTools = [],
+      nonBuiltInTools = [],
     } = config.configurable;
     const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
 
     const sdkTools = isPtcEnabled
-      ? selectedTools
-          .filter((tool: any) => !this.isBuiltinTool(tool))
-          .map((tool: any) => ({
-            name: tool.name,
-            description: tool.description,
-            toolsetKey: tool.metadata?.toolsetKey ?? 'unknown',
-          }))
+      ? nonBuiltInTools.map((tool: any) => ({
+          name: tool.name,
+          description: tool.description,
+          toolsetKey: tool.metadata?.toolsetKey ?? 'unknown',
+        }))
       : [];
 
     const systemPrompt =
@@ -155,6 +145,7 @@ export class Agent extends BaseSkill {
   ): Promise<AgentComponents> {
     const {
       selectedTools = [],
+      builtInTools = [],
       mode = 'node_agent',
       isPtcEnabled = false,
     } = config?.configurable ?? {};
@@ -169,10 +160,8 @@ export class Agent extends BaseSkill {
     let llmForGraph: Runnable<BaseMessage[], AIMessage>;
 
     if (selectedTools.length > 0) {
-      // In PTC mode, only keep builtin tools in the tool definition
-      const toolsToInitialize = isPtcEnabled
-        ? selectedTools.filter((tool) => this.isBuiltinTool(tool))
-        : selectedTools;
+      // In PTC mode, only use builtin tools in the tool definition
+      const toolsToInitialize = isPtcEnabled ? builtInTools : selectedTools;
 
       // Ensure tool definitions are valid before binding
       // Also filter out tools with names exceeding 64 characters (OpenAI limit)

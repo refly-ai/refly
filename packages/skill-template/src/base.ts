@@ -291,6 +291,8 @@ export interface SkillRunnableConfig extends RunnableConfig {
     copilotSessionId?: string;
     locale?: string;
     uiLocale?: string;
+    builtInTools?: StructuredToolInterface[];
+    nonBuiltInTools?: StructuredToolInterface[];
     modelConfigMap?: {
       chat?: LLMModelConfig;
       agent?: LLMModelConfig;

@@ -364,7 +364,11 @@ export class SkillInvokerService {
       const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine, {
         context,
       });
-      config.configurable.selectedTools = tools as any;
+
+      // Inject categorized tools into config
+      config.configurable.selectedTools = tools.all as any;
+      config.configurable.builtInTools = tools.builtIn as any;
+      config.configurable.nonBuiltInTools = tools.nonBuiltIn as any;
 
       // Calculate PTC status based on user and toolsets
       const ptcConfig = getPtcConfig(this.config);
