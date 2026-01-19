@@ -45,40 +45,6 @@ export const useInitializeWorkflow = (
         message.success(
           t('canvas.workflow.run.completed') || 'Workflow execution completed successfully',
         );
-        setHasFirstExecutionToday(true);
-
-        // If current workflow execution is the first successful execution today, trigger voucher popup
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        const { data: listWorkflowExecutionsData, error } =
-          await getClient().listWorkflowExecutions({
-            query: {
-              after: startOfToday.getTime(),
-              order: 'creationAsc',
-              status: 'finish',
-              pageSize: 1,
-            },
-          });
-        const firstSuccessExecutionToday = listWorkflowExecutionsData?.data?.[0];
-        if (!error && firstSuccessExecutionToday?.executionId === data?.data?.executionId) {
-          // Poll for available vouchers if not immediately found
-          // This handles cases where the voucher might be generated with a slight delay after execution completion
-          for (let attempts = 0; attempts < 10; attempts++) {
-            const { data: voucherData } = await getClient().getAvailableVouchers();
-            const bestVoucher = voucherData?.data?.bestVoucher;
-            if (bestVoucher) {
-              showEarnedVoucherPopup({
-                voucher: bestVoucher,
-                score: bestVoucher.llmScore,
-                triggerLimitReached: false,
-              });
-              break;
-            }
-            if (attempts < 9) {
-              await delay(2000);
-            }
-          }
-        }
       } else if (status === 'failed') {
         // Check if this is a credit insufficient error
         const nodeExecutions = data?.data?.nodeExecutions || [];
@@ -96,7 +62,7 @@ export const useInitializeWorkflow = (
         }
       }
     },
-    [t, canvasId, showEarnedVoucherPopup],
+    [t, canvasId],
   );
 
   const handleError = useMemo(
