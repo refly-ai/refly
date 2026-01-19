@@ -21,6 +21,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasStoreShallow } from '@refly/stores';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
+import { BsMagic } from 'react-icons/bs';
 
 interface CopilotMessageProps {
   result: ActionResult;
@@ -263,7 +264,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     <div className="flex flex-col gap-2">
       {/* User query - right aligned blue bubble */}
       <div className="flex justify-end pl-5">
-        <div className="rounded-xl bg-[#F2FDFF] dark:bg-[#327576] text-refly-text-0 px-4 py-3 text-[15px] break-all">
+        <div className="rounded-xl bg-refly-node-fill-1 text-refly-text-0 px-4 py-3 text-[15px] break-all">
           {input?.query}
         </div>
       </div>
@@ -275,6 +276,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
             type="primary"
             className="!bg-refly-text-0 hover:!bg-refly-text-0 hover:opacity-80 text-refly-bg-canvas hover:!text-refly-bg-canvas font-bold"
             onClick={handleApprove}
+            icon={<BsMagic size={16} className="flex-shrink-0 text-refly-bg-canvas" />}
             loading={
               loading
                 ? { icon: <Spin size="small" className="!text-refly-bg-canvas" /> }

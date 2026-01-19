@@ -10,6 +10,7 @@ export * from './scrape-weblink';
 export * from './models';
 export * from './event-emitter/editor';
 export * from './event-emitter/model';
+export * from './event-emitter/canvas';
 export * from './file';
 export * from './timeTracker';
 export * from './search-source-converter';

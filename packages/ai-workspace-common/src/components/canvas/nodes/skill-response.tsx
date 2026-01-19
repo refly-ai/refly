@@ -294,7 +294,7 @@ export const SkillResponseNode = memo(
       () =>
         isPreview
           ? { width: NODE_WIDTH, height: 214 }
-          : { width: 'auto', height: 'auto', maxHeight: 300 },
+          : { width: 'auto', height: 'auto', maxWidth: 320, maxHeight: 300 },
       [isPreview],
     );
 
