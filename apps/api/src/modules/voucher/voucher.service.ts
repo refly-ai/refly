@@ -322,7 +322,7 @@ export class VoucherService implements OnModuleInit {
       );
 
       // 6. Send email notification (async, don't wait)
-      this.sendVoucherEmail(user.uid, voucher.voucherId, discountPercent).catch((err) => {
+      this.sendVoucherEmail(user.uid, discountPercent).catch((err) => {
         this.logger.error(`Failed to send voucher email for user ${user.uid}: ${err.stack}`);
       });
 
@@ -342,11 +342,7 @@ export class VoucherService implements OnModuleInit {
   /**
    * Send voucher notification email to user
    */
-  private async sendVoucherEmail(
-    uid: string,
-    voucherId: string,
-    discountPercent: number,
-  ): Promise<void> {
+  private async sendVoucherEmail(uid: string, discountPercent: number): Promise<void> {
     // Get user info including locale
     const userPo = await this.prisma.user.findUnique({
       where: { uid },
@@ -357,11 +353,6 @@ export class VoucherService implements OnModuleInit {
       this.logger.warn(`Cannot send voucher email: user ${uid} has no email`);
       return;
     }
-
-    // Create invitation for the share link
-    const invitation = await this.createInvitation(uid, voucherId);
-    const origin = this.configService.get('origin') || 'https://refly.ai';
-    const inviteLink = `${origin}/invite?invite=${invitation.invitation.inviteCode}`;
 
     // Calculate discount values
     const { discountValue, discountedPrice } = calculateDiscountValues(discountPercent);
@@ -377,7 +368,6 @@ export class VoucherService implements OnModuleInit {
         discountPercent,
         discountValue,
         discountedPrice,
-        inviteLink,
         expirationDays,
       },
       userPo.uiLocale || undefined,
