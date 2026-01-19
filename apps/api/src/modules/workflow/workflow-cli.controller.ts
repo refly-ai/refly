@@ -50,6 +50,7 @@ import {
   NodeExecutionStatus,
   NodeExecutionDetail,
   WorkflowRunDetail,
+  WorkflowToolsStatusResponse,
   GenerateWorkflowCliRequest,
   GenerateWorkflowCliResponse,
   GenerateWorkflowAsyncResponse,
@@ -1325,6 +1326,52 @@ export class WorkflowCliController {
         `No execution found for workflow ${workflowId}`,
         'Run the workflow first with `refly workflow run <workflowId>`',
         HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Get workflow tools authorization status by workflowId
+   * GET /v1/cli/workflow/:id/tools-status
+   *
+   * Returns the authorization status of all tools required by this workflow.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/tools-status')
+  async getToolsStatusByWorkflowId(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+  ): Promise<{ success: boolean; data: WorkflowToolsStatusResponse }> {
+    this.logger.log(`Getting tools status for workflow ${workflowId}, user ${user.uid}`);
+
+    try {
+      // Get existing workflow variables and merge with runtime variables
+      const rawData = await this.canvasService.getCanvasRawData(user, workflowId, {
+        checkOwnership: true,
+      });
+
+      const toolsetsWithNodes = extractToolsetsWithNodes(rawData.nodes);
+
+      // Get user's installed tools for authorization check
+      const userTools = await this.toolService.listUserTools(user);
+
+      // Check for unauthorized tools
+      const unauthorizedTools = toolsetsWithNodes.filter((toolWithNodes) => {
+        return !isToolsetAuthorized(toolWithNodes.toolset, userTools);
+      });
+
+      return buildCliSuccessResponse({
+        authorized: unauthorizedTools.length === 0,
+        unauthorizedTools,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to get tools status for workflow ${workflowId}: ${(error as Error).message}`,
+      );
+      throwCliError(
+        CLI_ERROR_CODES.EXECUTION_FAILED,
+        `Failed to check tools status: ${(error as Error).message}`,
+        'Check the workflow configuration and try again',
       );
     }
   }

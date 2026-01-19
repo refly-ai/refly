@@ -4535,6 +4535,9 @@ const translations = {
     noUnauthorizedTools: 'All required tools are already installed.',
     invalidWorkflow: 'Invalid workflow ID.',
     referencedNodes: 'Referenced nodes',
+    authorizeTitle: 'Authorize tools',
+    authorizeSubtitle: 'To run this skill, you need to connect {{count}} tool',
+    authorizeSubtitle_plural: 'To run this skill, you need to connect {{count}} tools',
   },
 };
 

@@ -1,8 +1,8 @@
 import { memo, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Button, Typography } from 'antd';
+import { Button, Typography, Avatar, Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft } from 'refly-icons';
+import { Account } from 'refly-icons';
 
 import { useUserStoreShallow } from '@refly/stores';
 import {
@@ -13,7 +13,9 @@ import { useOpenInstallTool } from '@refly-packages/ai-workspace-common/hooks/us
 import { useOpenInstallMcp } from '@refly-packages/ai-workspace-common/hooks/use-open-install-mcp';
 import { useOAuthPopup } from '@refly-packages/ai-workspace-common/hooks/use-oauth-popup';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
+import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { extractToolsetsWithNodes } from '@refly/canvas-common';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
 
 import type {
   GenericToolset,
@@ -22,11 +24,7 @@ import type {
   UserTool,
 } from '@refly/openapi-schema';
 
-const { Title, Text } = Typography;
-
-const TOOLSET_ICON_CONFIG = {
-  builtinClassName: '!w-5 !h-5',
-};
+const { Text } = Typography;
 
 /**
  * Check if a toolset is authorized/installed
@@ -109,7 +107,7 @@ const ToolInstallCard = memo(
     const isInstalling = props?.isInstalling ?? false;
     const onInstall = props?.onInstall ?? (() => undefined);
     const label = props?.label ?? '';
-    const referencedNodesLabel = props?.referencedNodesLabel ?? '';
+    //const referencedNodesLabel = props?.referencedNodesLabel ?? '';
     const toolset = toolWithNodes?.toolset;
 
     const handleInstallClick = useCallback(() => {
@@ -120,20 +118,16 @@ const ToolInstallCard = memo(
     }, [onInstall, toolset]);
 
     return (
-      <div className="rounded-xl border border-refly-Card-Border bg-white p-4 shadow-sm">
-        <div className="flex items-start gap-3">
+      <div className="rounded-xl border border-refly-Card-Border bg-white px-4 py-2 shadow-sm">
+        <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
-            <ToolsetIcon toolset={toolset} config={TOOLSET_ICON_CONFIG} />
+            <ToolsetIcon toolset={toolset} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-refly-text-0">{label}</div>
             {description ? (
-              <div className="mt-1 text-xs text-refly-text-2">{description}</div>
+              <div className="mt-1 text-xs text-refly-text-2 truncate">{description}</div>
             ) : null}
-            <ReferencedNodesList
-              nodes={toolWithNodes.referencedNodes}
-              label={referencedNodesLabel}
-            />
           </div>
           <Button
             size="middle"
@@ -161,8 +155,10 @@ const ToolInstallPage = memo(() => {
   const [searchParams] = useSearchParams();
   const userStore = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,
+    userProfile: state.userProfile,
   }));
   const isLogin = userStore?.isLogin ?? false;
+  const userProfile = userStore?.userProfile;
 
   const toolKeysParam = searchParams?.get('tools') ?? '';
   const toolKeys = useMemo(() => {
@@ -280,10 +276,6 @@ const ToolInstallPage = memo(() => {
     [openInstallMcp, openInstallToolByKey, openOAuthPopup, isOpening, isPolling, userTools],
   );
 
-  const handleBack = useCallback(() => {
-    window.history.back();
-  }, []);
-
   const isLoading = canvasLoading || toolsLoading;
   const hasUnauthorizedTools = unauthorizedTools.length > 0;
 
@@ -336,19 +328,32 @@ const ToolInstallPage = memo(() => {
   }
 
   return (
-    <div className="min-h-screen bg-refly-bg-body-z0 p-6">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <Button type="text" icon={<ArrowLeft size={16} />} onClick={handleBack}>
-            {t('common.goBack')}
-          </Button>
-        </div>
+    <div className="min-h-screen w-full flex items-center justify-center p-6 bg-refly-bg-body-z0">
+      <div className="w-[504px] h-[697px] bg-refly-bg-body-z0 rounded-[20px] p-6 flex flex-col shadow-lg">
+        <div className="p-1 px-2 rounded-lg">
+          <div className="flex items-start gap-2">
+            <Avatar icon={<Account />} src={userProfile?.avatar || defaultAvatar} size={46} />
 
-        <div className="rounded-2xl border border-refly-Card-Border bg-white p-6 shadow-sm">
-          <Title level={3} className="!mb-2">
-            {t('toolInstall.title')}
-          </Title>
-          <Text className="text-refly-text-2">{t('toolInstall.description')}</Text>
+            <div className="flex flex-col justify-between h-[44px] gap-[2px] opacity-100">
+              <div className="max-w-40 text-base font-semibold text-refly-text-0 leading-5 truncate">
+                {userProfile?.nickname || 'No nickname'}
+              </div>
+              <div className="max-w-40 text-xs text-refly-text-2 leading-4 truncate">
+                {userProfile?.email ?? 'No email provided'}
+              </div>
+            </div>
+          </div>
+        </div>
+        <Divider className="my-4 -mx-6 !w-[calc(100%+48px)]" />
+        {/* Header */}
+        <div className="flex flex-col items-center mb-6 gap-1">
+          <Logo className="w-[120px] h-[32px] mb-2" />
+          <h1 className="text-2xl font-semibold text-[#1c1f23] m-0 text-center leading-8">
+            {t('toolInstall.authorizeTitle')}
+          </h1>
+          <p className="text-sm text-refly-text-2 m-0 text-center leading-5">
+            {t('toolInstall.authorizeSubtitle', { count: unauthorizedTools.length })}
+          </p>
         </div>
 
         {isLoading ? (
@@ -358,7 +363,9 @@ const ToolInstallPage = memo(() => {
         ) : null}
 
         {!isLoading && hasUnauthorizedTools ? (
-          <div className="flex flex-col gap-3">{toolCards}</div>
+          <div className="flex flex-col gap-3 border border-solid border-refly-primary-default rounded-xl">
+            {toolCards}
+          </div>
         ) : null}
 
         {!isLoading && !hasUnauthorizedTools ? (

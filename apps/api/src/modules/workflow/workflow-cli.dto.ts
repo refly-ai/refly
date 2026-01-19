@@ -94,6 +94,20 @@ export interface RunWorkflowResponse {
       type: string;
     }>;
   }>;
+  installToolsUrl?: string;
+}
+
+export interface WorkflowToolsStatusResponse {
+  authorized: boolean;
+  unauthorizedTools: Array<{
+    toolset: GenericToolset;
+    referencedNodes: Array<{
+      id: string;
+      entityId: string;
+      title: string;
+      type: string;
+    }>;
+  }>;
 }
 
 export type WorkflowExecutionStatus = 'init' | 'executing' | 'finish' | 'failed';

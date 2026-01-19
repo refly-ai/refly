@@ -4561,6 +4561,8 @@ const translations = {
     noUnauthorizedTools: '已安装所有必需工具。',
     invalidWorkflow: '无效的工作流 ID。',
     referencedNodes: '相关节点',
+    authorizeTitle: '授权工具',
+    authorizeSubtitle: '要运行此技能，您需要连接 {{count}} 个工具',
   },
 };
 
