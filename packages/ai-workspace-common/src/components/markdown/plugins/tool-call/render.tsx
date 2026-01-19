@@ -358,6 +358,8 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
           canvasId: String(file.canvasId ?? ''),
           name: String(file.name ?? file.fileName ?? 'Drive file'),
           type: String(file.type ?? file.mimeType ?? 'application/octet-stream'),
+          storageKey: file.storageKey,
+          summary: file.summary,
         }));
     }
 
@@ -368,6 +370,8 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
           canvasId: String(resultData.canvasId ?? ''),
           name: String(resultData.name ?? resultData.fileName ?? 'Drive file'),
           type: String(resultData.type ?? resultData.mimeType ?? 'application/octet-stream'),
+          storageKey: resultData.storageKey,
+          summary: resultData.summary,
         },
       ];
     }

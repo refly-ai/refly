@@ -282,6 +282,8 @@ export const ProductCard = memo(
       } catch (error) {
         // Error handling is done in the parent component
         console.error('Failed to add file to library:', error);
+        // Re-throw to let parent component handle the error
+        throw error;
       } finally {
         setIsAdding(false);
       }
