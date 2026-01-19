@@ -7,12 +7,14 @@ interface WorkflowRunPreviewHeaderProps {
   onClose?: () => void;
   onToggleOutputsOnly?: () => void;
   outputsOnly?: boolean;
+  showOutputsOnlyButton?: boolean;
 }
 
 const WorkflowRunPreviewHeaderComponent = ({
   onClose,
   onToggleOutputsOnly,
   outputsOnly = false,
+  showOutputsOnlyButton = true,
 }: WorkflowRunPreviewHeaderProps) => {
   // Button styles based on selected state
   const buttonStyles = outputsOnly
@@ -70,50 +72,54 @@ const WorkflowRunPreviewHeaderComponent = ({
           }}
         >
           {/* Outputs only button */}
-          <button
-            type="button"
-            onClick={onToggleOutputsOnly}
-            className="flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
-            style={{
-              width: '114px',
-              height: '24px',
-              backgroundColor: buttonStyles.backgroundColor,
-              border: buttonStyles.border,
-              borderRadius: '20px',
-              gap: '6px',
-              padding: 0,
-            }}
-          >
-            <FiEye
-              size={16}
-              style={{
-                color: buttonStyles.iconColor,
-                strokeWidth: '1.5px',
-                flexShrink: 0,
-              }}
-            />
-            <span
-              style={{
-                fontFamily: 'Inter',
-                fontWeight: 400,
-                fontSize: '12px',
-                lineHeight: '18px',
-                color: buttonStyles.textColor,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Outputs only
-            </span>
-          </button>
+          {showOutputsOnlyButton && (
+            <>
+              <button
+                type="button"
+                onClick={onToggleOutputsOnly}
+                className="flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+                style={{
+                  width: '114px',
+                  height: '24px',
+                  backgroundColor: buttonStyles.backgroundColor,
+                  border: buttonStyles.border,
+                  borderRadius: '20px',
+                  gap: '6px',
+                  padding: 0,
+                }}
+              >
+                <FiEye
+                  size={16}
+                  style={{
+                    color: buttonStyles.iconColor,
+                    strokeWidth: '1.5px',
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  style={{
+                    fontFamily: 'Inter',
+                    fontWeight: 400,
+                    fontSize: '12px',
+                    lineHeight: '18px',
+                    color: buttonStyles.textColor,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Outputs only
+                </span>
+              </button>
 
-          {/* Divider */}
-          <div
-            style={{
-              width: '1px',
-              height: '20px',
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-            }}
-          />
+              {/* Divider */}
+              <div
+                style={{
+                  width: '1px',
+                  height: '20px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                }}
+              />
+            </>
+          )}
 
           {/* Close button */}
           <Button

@@ -600,6 +600,7 @@ const WorkflowRunPreviewComponent = () => {
         onClose={handleClose}
         onToggleOutputsOnly={() => setOutputsOnly(!outputsOnly)}
         outputsOnly={outputsOnly}
+        showOutputsOnlyButton={activeTab === 'lastRun'}
       />
 
       <div className="flex-1 flex flex-col min-h-0 relative">
@@ -919,8 +920,7 @@ const WorkflowRunPreviewComponent = () => {
                                     - Finished/Failed: Show node name + execution time + credit usage
                                     Note: Node name is always shown on the left side
                                   */}
-                                    {isNotExecuted ? // Not executed: Only show node name (nothing else)
-                                    null : (
+                                    {isNotExecuted ? null : ( // Not executed: Only show node name (nothing else)
                                       <div
                                         className="flex items-center"
                                         style={{
