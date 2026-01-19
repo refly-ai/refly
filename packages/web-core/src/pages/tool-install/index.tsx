@@ -132,10 +132,14 @@ const ToolInstallCard = memo(
             ) : null}
           </div>
           {isAuthorized ? (
-            <div className="flex items-center gap-2 text-refly-primary-default">
-              <div className="w-2 h-2 bg-refly-primary-default rounded-full" />
-              <span className="text-sm font-medium">Installed</span>
-            </div>
+            <Button
+              size="middle"
+              className="custom-configure-button flex-shrink-0"
+              disabled={true}
+              onClick={handleInstallClick}
+            >
+              {t('toolInstall.connected')}
+            </Button>
           ) : (
             <Button
               size="middle"

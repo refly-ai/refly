@@ -4563,13 +4563,14 @@ const translations = {
     referencedNodes: '相关节点',
     authorizeTitle: '授权工具',
     authorizeSubtitle: '要运行此技能，您需要连接 {{count}} 个工具',
-    workflowToolsTitle: '工作流工具',
+    workflowToolsTitle: '授权工具',
     workflowToolsSubtitle: '此工作流使用了 {{count}} 个工具，请安装所需工具。',
     allToolsNeedInstall: '要运行此技能，你需要连接 {{count}} 个工具',
     partialToolsInstalled: '连接 {{installed}}/{{total}} 个工具以运行技能',
     allToolsInstalled: '全部设置完成！返回终端运行此技能',
     noTools: '此工作流中未找到工具。',
     connect: '连接',
+    connected: '已连接',
   },
 };
 
