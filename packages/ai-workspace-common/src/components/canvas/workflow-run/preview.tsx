@@ -81,11 +81,19 @@ const WorkflowRunPreviewComponent = () => {
   const [activeTab, setActiveTab] = useState<ResultActiveTab>('configure');
   const { canvasId, workflow } = useCanvasContext();
   const { nodes, edges } = useRealtimeCanvasData();
-  const { resultMap, streamResults, currentFile } = useActionResultStoreShallow((state) => ({
-    resultMap: state.resultMap,
-    streamResults: state.streamResults,
-    currentFile: state.currentFile,
-  }));
+  const { resultMap, streamResults, currentFile, setCurrentFile } = useActionResultStoreShallow(
+    (state) => ({
+      resultMap: state.resultMap,
+      streamResults: state.streamResults,
+      currentFile: state.currentFile,
+      setCurrentFile: state.setCurrentFile,
+    }),
+  );
+
+  // Clear current file when opening the workflow run preview to ensure we show the input page
+  useEffect(() => {
+    setCurrentFile(null);
+  }, [setCurrentFile]);
   const { fetchActionResult } = useFetchActionResult();
   const { setShowWorkflowRun, showWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
     setShowWorkflowRun: state.setShowWorkflowRun,
@@ -675,6 +683,7 @@ const WorkflowRunPreviewComponent = () => {
                     canvasId={canvasId}
                     defaultActiveKey={[]}
                     showToolsDependency={false}
+                    readonly={true}
                   />
                 )}
 
