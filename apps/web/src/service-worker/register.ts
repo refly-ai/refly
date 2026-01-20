@@ -9,6 +9,11 @@ declare const __SERVICE_WORKER_URL__: string;
  * Register Service Worker
  */
 export function registerServiceWorker() {
+  if (typeof navigator === 'undefined') {
+    console.warn('[SW] Navigator not available, skipping registration');
+    return;
+  }
+
   console.log('[SW] Checking eligibility...', {
     hasSW: 'serviceWorker' in navigator,
     env: process.env.NODE_ENV,
@@ -30,6 +35,12 @@ export function registerServiceWorker() {
  * Production: register Service Worker
  */
 function registerInProduction() {
+  if (!navigator?.serviceWorker) {
+    console.warn('[SW] Service Worker not supported');
+    return;
+  }
+
+  const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
   const register = async () => {
     try {
       // Get SW URL from global variable (injected at build time)
@@ -45,13 +56,12 @@ function registerInProduction() {
       console.log('[SW] ServiceWorker registration successful with scope:', registration.scope);
 
       // Check for updates periodically (every hour)
-      setInterval(
-        () => {
-          console.log('[SW] Checking for updates...');
-          registration.update();
-        },
-        60 * 60 * 1000,
-      ); // 1 hour
+      setInterval(() => {
+        console.log('[SW] Checking for updates...');
+        registration.update().catch((error) => {
+          console.warn('[SW] ServiceWorker update failed:', error);
+        });
+      }, UPDATE_INTERVAL_MS); // 1 hour
     } catch (error) {
       console.error('[SW] ServiceWorker registration failed:', error);
     }
@@ -61,7 +71,7 @@ function registerInProduction() {
   if (document.readyState === 'complete') {
     register();
   } else {
-    window.addEventListener('load', register);
+    window.addEventListener('load', register, { once: true });
   }
 }
 
@@ -69,14 +79,22 @@ function registerInProduction() {
  * Development: unregister all Service Workers
  * Avoid cache issues during development
  */
-function unregisterInDevelopment() {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    if (registrations.length > 0) {
-      console.log('[SW] Unregistering', registrations.length, 'service worker(s) in development');
+async function unregisterInDevelopment() {
+  if (!navigator?.serviceWorker) {
+    return;
+  }
 
-      for (const registration of registrations) {
-        registration.unregister();
-      }
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    if (registrations.length === 0) {
+      return;
     }
-  });
+
+    console.log('[SW] Unregistering', registrations.length, 'service worker(s) in development');
+    for (const registration of registrations) {
+      await registration.unregister();
+    }
+  } catch (error) {
+    console.error('[SW] Failed to unregister service workers:', error);
+  }
 }
