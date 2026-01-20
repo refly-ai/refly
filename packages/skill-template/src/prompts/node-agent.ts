@@ -1,12 +1,5 @@
 import { PromptTemplate } from './prompt-template';
-
-export interface PtcConfig {
-  toolsets: {
-    id: string;
-    name: string;
-    key: string;
-  }[];
-}
+import { PtcConfig } from '../base';
 
 export interface BuildNodeAgentSystemPromptOptions {
   ptcEnabled?: boolean;
@@ -19,6 +12,8 @@ export const buildNodeAgentSystemPrompt = (options?: BuildNodeAgentSystemPromptO
   const { ptcEnabled = false, ptcConfig } = options ?? {};
   const ptcToolsets = ptcConfig?.toolsets ?? [];
 
+  const sdkDefinitions = ptcToolsets.map((t) => t.sdkDefinition);
+
   // Prepare available tools string
   const availableTools =
     ptcToolsets.length > 0
@@ -29,5 +24,6 @@ export const buildNodeAgentSystemPrompt = (options?: BuildNodeAgentSystemPromptO
   return template.render({
     ptcEnabled,
     availableTools,
+    sdkDefinitions,
   });
 };

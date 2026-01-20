@@ -35,3 +35,11 @@ Notes:
 ### Available SDK Tools
 
 {{availableTools}}
+
+### Available SDK Definitions
+
+{{#each sdkDefinitions}}
+```python
+{{this}}
+```
+{{/each}}

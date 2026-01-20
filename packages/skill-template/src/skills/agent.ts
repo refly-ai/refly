@@ -20,7 +20,7 @@ import { compressAgentLoopMessages } from '../utils/context-manager';
 import { getModelSceneFromMode } from '@refly/utils';
 
 // prompts
-import { buildNodeAgentSystemPrompt, PtcConfig } from '../prompts/node-agent';
+import { buildNodeAgentSystemPrompt } from '../prompts/node-agent';
 import { buildUserPrompt } from '../prompts/user-prompt';
 import { buildWorkflowCopilotPrompt } from '../prompts/copilot-agent';
 
@@ -96,25 +96,15 @@ export class Agent extends BaseSkill {
     ...baseStateGraphArgs,
   };
 
-  private buildPtcConfig(config: SkillRunnableConfig): PtcConfig {
-    const { nonBuiltInToolsets = [] } = config.configurable;
-    return {
-      toolsets: nonBuiltInToolsets.map((t) => {
-        return {
-          id: t.id,
-          name: t.name,
-          key: t.toolset.key,
-        };
-      }),
-    };
-  }
-
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
-    const { preprocessResult, mode = 'node_agent', ptcEnabled = false } = config.configurable;
+    const {
+      preprocessResult,
+      mode = 'node_agent',
+      ptcEnabled = false,
+      ptcConfig = undefined,
+    } = config.configurable;
     const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
-
-    const ptcConfig = this.buildPtcConfig(config);
 
     const systemPrompt =
       mode === 'copilot_agent'
@@ -506,7 +496,7 @@ export class Agent extends BaseSkill {
     config.metadata.step = { name: 'answerQuestion' };
 
     const ptcEnabled = config.configurable.ptcEnabled;
-    const ptcConfig = this.buildPtcConfig(config);
+    const ptcConfig = config.configurable.ptcConfig;
 
     try {
       const result = await compiledLangGraphApp.invoke(
@@ -528,7 +518,15 @@ export class Agent extends BaseSkill {
               parameters: getJsonSchema(t.schema),
             })),
             ptcEnabled: ptcEnabled,
-            ptcToolsets: ptcEnabled ? ptcConfig.toolsets : undefined,
+            ptcToolsets: ptcEnabled
+              ? ptcConfig.toolsets.map((t) => {
+                  return {
+                    id: t.id,
+                    name: t.name,
+                    key: t.key,
+                  };
+                })
+              : undefined,
             // Runtime config for reproducibility
             // Note: systemPrompt already in input[0], modelConfig duplicates modelParameters
             toolChoice: toolsAvailable ? 'auto' : undefined,
