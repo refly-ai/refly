@@ -21,8 +21,6 @@ export interface UserState {
   localSettings: LocalSettings;
 
   runtime: IRuntime;
-  showTourModal: boolean;
-  showSettingsGuideModal: boolean;
   showInvitationCodeModal: boolean;
   showOnboardingFormModal: boolean;
   showOnboardingSuccessAnimation: boolean;
@@ -35,8 +33,6 @@ export interface UserState {
   setLocalSettings: (val: LocalSettings) => void;
   setRuntime: (val: IRuntime) => void;
   resetState: () => void;
-  setShowTourModal: (val: boolean) => void;
-  setShowSettingsGuideModal: (val: boolean) => void;
   setShowInvitationCodeModal: (val: boolean) => void;
   setShowOnboardingFormModal: (val: boolean) => void;
   setShowOnboardingSuccessAnimation: (val: boolean) => void;
@@ -80,8 +76,6 @@ export const defaultExtraState = {
 export const defaultState = {
   ...defaultExtraState,
   ...defaultCheckingLoginStatus,
-  showTourModal: false,
-  showSettingsGuideModal: false,
   showInvitationCodeModal: false,
   showOnboardingFormModal: false,
   showOnboardingSuccessAnimation: false,
@@ -98,9 +92,6 @@ export const useUserStore = create<UserState>()(
     setLocalSettings: (val: LocalSettings) => set((state) => ({ ...state, localSettings: val })),
     setRuntime: (val: IRuntime) => set((state) => ({ ...state, runtime: val })),
     resetState: () => set((state) => ({ ...state, ...defaultExtraState })),
-    setShowTourModal: (val: boolean) => set((state) => ({ ...state, showTourModal: val })),
-    setShowSettingsGuideModal: (val: boolean) =>
-      set((state) => ({ ...state, showSettingsGuideModal: val })),
     setShowInvitationCodeModal: (val: boolean) =>
       set((state) => ({ ...state, showInvitationCodeModal: val })),
     setShowOnboardingFormModal: (val: boolean) =>
