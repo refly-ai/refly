@@ -40,12 +40,9 @@ export const VariableHoverCard = memo(
                 <div className="text-sm font-bold">
                   {t('canvas.workflow.variables.variableTypeOptions.string')}
                 </div>
-                <Divider type="vertical" className="bg-refly-Card-Border mx-1.5" />
-                <div className="text-sm font-bold flex-1 truncate text-refly-func-warning-hover">
-                  {label}
-                </div>
               </div>
-              <div className="flex-1 overflow-y-auto text-sm break-all">
+              <div className="flex-1 overflow-y-auto text-xs break-all leading-[18px]">
+                <div className="text-refly-func-warning-hover">{label}</div>
                 {value?.[0]?.text || t('common.noData')}
               </div>
             </div>
@@ -58,12 +55,11 @@ export const VariableHoverCard = memo(
                 <div className="text-sm font-bold">
                   {t('canvas.workflow.variables.variableTypeOptions.option')}
                 </div>
-                <Divider type="vertical" className="bg-refly-Card-Border mx-1.5" />
-                <div className="text-sm font-bold flex-1 text-refly-func-warning-hover truncate">
-                  {label}
-                </div>
               </div>
               <div className="flex-1 overflow-y-auto rounded-lg">
+                <div className="text-xs text-refly-func-warning-hover leading-[18px] mx-3 mb-1.5">
+                  {label}
+                </div>
                 <div className="flex flex-col gap-1.5">
                   {options?.map((opt, i) => (
                     <div

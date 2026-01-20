@@ -12,7 +12,15 @@ import { useUserStoreShallow } from '@refly/stores';
 import { PromptSuggestion } from '@refly/openapi-schema';
 import { useGetPromptSuggestions } from '@refly-packages/ai-workspace-common/queries';
 
+export const defaultPromt: PromptSuggestion = {
+  prompt: {
+    zh: 'Refly.ai 能帮我完成哪些事情？',
+    en: 'What can Refly.ai do for me?',
+  },
+};
+
 export const fallbackPrompts: PromptSuggestion[] = [
+  defaultPromt,
   {
     prompt: {
       zh: '搭建一个播客生成工作流，抓取昨日 Product Hunt Top 5 产品并分析其价值，生成完整播客脚本、男女声对话音频、封面与节目笔记，并通过邮件通知我。',
@@ -87,7 +95,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
 
   const samplePrompts = useMemo(() => {
     if (data?.data && data.data.length > 0) {
-      return data.data;
+      return [defaultPromt, ...data.data];
     }
     return fallbackPrompts;
   }, [data?.data]);
@@ -183,7 +191,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
               : 'border-transparent pure-copilot-glow-effect',
           )}
         >
-          <div className={cn('mb-1', source === 'onboarding' && 'min-h-[100px]')}>
+          <div className={cn('mb-1', source === 'onboarding' && 'min-h-[80px]')}>
             <ChatInput
               readonly={false}
               autoFocus={false}
@@ -191,7 +199,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
               setQuery={setQuery}
               handleSendMessage={handleSendMessage}
               placeholder={t('copilot.pureCopilotPlaceholder')}
-              minRows={source === 'frontPage' ? 2 : 3}
+              minRows={2}
               inputClassName="text-lg text-refly-text-1"
               onFocus={() => setIsFocused(true)}
               onBlur={() => {

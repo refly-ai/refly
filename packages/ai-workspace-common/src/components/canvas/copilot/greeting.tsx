@@ -4,7 +4,10 @@ import { Skeleton } from 'antd';
 import { useUserStoreShallow } from '@refly/stores';
 import { PromptSuggestion } from '@refly/openapi-schema';
 import { useGetPromptSuggestions } from '@refly-packages/ai-workspace-common/queries';
-import { fallbackPrompts } from '@refly-packages/ai-workspace-common/components/pure-copilot';
+import {
+  fallbackPrompts,
+  defaultPromt,
+} from '@refly-packages/ai-workspace-common/components/pure-copilot';
 
 interface GreetingProps {
   onQueryClick: (query: string) => void;
@@ -27,9 +30,9 @@ export const Greeting = memo(({ onQueryClick }: GreetingProps) => {
 
   const samplePrompts = useMemo(() => {
     if (data?.data && data.data.length > 0) {
-      return data.data;
+      return [defaultPromt, ...data.data];
     }
-    return fallbackPrompts;
+    return [...fallbackPrompts];
   }, [data?.data]);
 
   const getPromptText = useCallback(
