@@ -62,6 +62,9 @@ function registerInProduction() {
           console.warn('[SW] ServiceWorker update failed:', error);
         });
       }, UPDATE_INTERVAL_MS); // 1 hour
+
+      // Start background precache after page is fully loaded
+      startPrecacheWhenReady();
     } catch (error) {
       console.error('[SW] ServiceWorker registration failed:', error);
     }
@@ -72,6 +75,37 @@ function registerInProduction() {
     register();
   } else {
     window.addEventListener('load', register, { once: true });
+  }
+}
+
+/**
+ * Start background precache only after page is fully loaded
+ */
+function startPrecacheWhenReady() {
+  const startPrecache = () => {
+    const controller = navigator.serviceWorker?.controller;
+    if (!controller) {
+      console.warn('[SW] No active controller, cannot start precache');
+      return;
+    }
+
+    console.log('[SW] Page fully loaded, requesting background precache to start');
+    controller.postMessage({ type: 'START_PRECACHE' });
+  };
+
+  // Ensure page is fully loaded (readyState === 'complete')
+  if (document.readyState === 'complete') {
+    // Add a small delay to ensure all immediate post-load requests complete
+    setTimeout(startPrecache, 3000);
+  } else {
+    window.addEventListener(
+      'load',
+      () => {
+        // Add a small delay to ensure all immediate post-load requests complete
+        setTimeout(startPrecache, 3000);
+      },
+      { once: true },
+    );
   }
 }
 

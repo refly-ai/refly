@@ -1,19 +1,17 @@
 /// <reference lib="webworker" />
 
 /**
- * Custom Service Worker with Background Precaching
- * This file runs in Service Worker context, not page context
+ * Custom Service Worker with Background Precaching - Simplified Single Cache
  *
- * Benefits:
- * 1. Works on any page that registers this SW (main app, activity pages, etc.)
- * 2. Independent of page lifecycle
- * 3. More reliable - continues running even after pages close
+ * Key improvements:
+ * 1. Single cache bucket (app-cache-v1) for all resources
+ * 2. No expiration/maxEntries (files are hashed, no need for cleanup)
+ * 3. Explicit cache checking before precaching (avoid duplicate downloads)
+ * 4. Singleton pattern for background precacher (avoid duplicate instances)
  */
 
-import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { StaleWhileRevalidate, CacheFirst, NetworkOnly } from 'workbox-strategies';
-import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import type { PrecacheEntry } from 'workbox-precaching';
 
@@ -24,6 +22,13 @@ declare global {
 }
 
 declare const __PRECACHE_MANIFEST_URL__: string;
+
+type CacheKeyPlugin = {
+  cacheKeyWillBeUsed?: (args: {
+    request: Request;
+    mode: string;
+  }) => Promise<Request | string>;
+};
 
 type CacheWillUpdatePlugin = {
   cacheWillUpdate?: (args: {
@@ -36,6 +41,12 @@ type CacheWillUpdatePlugin = {
 // TypeScript declarations for Service Worker context
 declare const self: ServiceWorkerGlobalScope;
 
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const CACHE_NAME = 'app-cache-v1';
+
 const getClientId = (event: ExtendableEvent): string | null => {
   if ('clientId' in event) {
     return (event as FetchEvent).clientId || null;
@@ -43,11 +54,89 @@ const getClientId = (event: ExtendableEvent): string | null => {
   return null;
 };
 
-// Precache all files listed in the manifest (Stage 1: Critical resources)
-precacheAndRoute(self.__WB_MANIFEST);
+const normalizeHtmlCacheKey = (request: Request): string => {
+  const url = new URL(request.url);
 
-// PWA basics
-self.skipWaiting();
+  // Normalize /workflow/* routes to /workflow/
+  if (url.pathname.startsWith('/workflow/')) {
+    return `${url.origin}/workflow/`;
+  }
+
+  // Normalize /workspace routes (ignore query params)
+  if (url.pathname === '/workspace' || url.pathname.startsWith('/workspace/')) {
+    return `${url.origin}/workspace`;
+  }
+
+  // Normalize /share/file/* routes to /share/file/
+  if (url.pathname.startsWith('/share/file/')) {
+    return `${url.origin}/share/file/`;
+  }
+
+  return request.url;
+};
+
+const isSsrPath = (path: string): boolean => {
+  return (
+    path === '/pricing' ||
+    path.startsWith('/workflow-marketplace') ||
+    path.startsWith('/workflow-template')
+  );
+};
+
+// ============================================================================
+// Service Worker Lifecycle
+// ============================================================================
+
+self.addEventListener('install', (event) => {
+  console.log('[SW] Install event');
+
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+
+      // Precache critical resources from build manifest
+      const urls = self.__WB_MANIFEST.map((entry) => {
+        return typeof entry === 'string' ? entry : entry.url;
+      });
+
+      console.log(`[SW] Precaching ${urls.length} critical resources`);
+
+      try {
+        await cache.addAll(urls);
+        console.log('[SW] Critical resources precached');
+      } catch (error) {
+        console.error('[SW] Precache failed:', error);
+      }
+    })(),
+  );
+
+  // Activate immediately
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activate event');
+
+  event.waitUntil(
+    (async () => {
+      // Clean up old caches
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => {
+            console.log(`[SW] Deleting old cache: ${name}`);
+            return caches.delete(name);
+          }),
+      );
+
+      // Take control immediately
+      await self.clients.claim();
+
+      console.log('[SW] Activated, waiting for page load before starting precache');
+    })(),
+  );
+});
 
 // ============================================================================
 // Runtime Caching Strategies
@@ -59,16 +148,22 @@ registerRoute(
   new NetworkOnly(),
 );
 
-// === Strategy 1: HTML (non-home) - StaleWhileRevalidate with version check ===
+// === Strategy 1: SSR HTML - NetworkOnly ===
 registerRoute(
-  ({ request, url }) => request.destination === 'document' && url.pathname !== '/',
+  ({ request, url }) => request.destination === 'document' && isSsrPath(url.pathname),
+  new NetworkOnly(),
+);
+
+// === Strategy 2: HTML (non-home) - StaleWhileRevalidate with version check ===
+registerRoute(
+  ({ request, url }) =>
+    request.destination === 'document' && url.pathname !== '/' && !isSsrPath(url.pathname),
   new StaleWhileRevalidate({
-    cacheName: 'html-cache-v1',
+    cacheName: CACHE_NAME,
     plugins: [
-      new ExpirationPlugin({
-        maxEntries: 10,
-        maxAgeSeconds: 24 * 60 * 60, // 1 day
-      }),
+      {
+        cacheKeyWillBeUsed: async ({ request }) => normalizeHtmlCacheKey(request),
+      } satisfies CacheKeyPlugin,
       {
         cacheWillUpdate: async ({ request, response, event }) => {
           // Only cache successful responses
@@ -77,7 +172,7 @@ registerRoute(
           }
 
           // Get cached HTML for version comparison
-          const cache = await caches.open('html-cache-v1');
+          const cache = await caches.open(CACHE_NAME);
           const cachedResponse = await cache.match(request);
 
           if (cachedResponse) {
@@ -138,16 +233,12 @@ registerRoute(
   }),
 );
 
-// === Strategy 2: Core JS chunks (not async) - CacheFirst ===
+// === Strategy 3: All other same-origin resources - CacheFirst ===
 registerRoute(
-  ({ url }) => url.pathname.endsWith('.js') && !url.pathname.includes('/async/'),
+  ({ url }) => url.origin === self.location.origin,
   new CacheFirst({
-    cacheName: 'js-cache-v4',
+    cacheName: CACHE_NAME,
     plugins: [
-      new ExpirationPlugin({
-        maxEntries: 30,
-        maxAgeSeconds: 365 * 24 * 60 * 60,
-      }),
       new CacheableResponsePlugin({
         statuses: [200],
       }),
@@ -155,92 +246,24 @@ registerRoute(
   }),
 );
 
-// === Strategy 3: Async JS chunks - CacheFirst ===
-registerRoute(
-  ({ url }) => url.pathname.endsWith('.js') && url.pathname.includes('/async/'),
-  new CacheFirst({
-    cacheName: 'js-async-cache-v1',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 60,
-        maxAgeSeconds: 365 * 24 * 60 * 60,
-      }),
-      new CacheableResponsePlugin({
-        statuses: [200],
-      }),
-    ],
-  }),
-);
-
-// === Strategy 4: CSS - CacheFirst ===
-registerRoute(
-  ({ url }) => url.pathname.endsWith('.css'),
-  new CacheFirst({
-    cacheName: 'css-cache-v4',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 40,
-        maxAgeSeconds: 365 * 24 * 60 * 60,
-      }),
-      new CacheableResponsePlugin({
-        statuses: [200],
-      }),
-    ],
-  }),
-);
-
-// === Strategy 5: Images - CacheFirst ===
-registerRoute(
-  ({ url }) => /\.(?:png|jpg|jpeg|webp|svg|gif|ico)$/.test(url.pathname),
-  new CacheFirst({
-    cacheName: 'images',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 100,
-        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-      }),
-    ],
-  }),
-);
-
-// === Strategy 6: Fonts - CacheFirst ===
-registerRoute(
-  ({ url }) => /\.(?:woff|woff2|ttf|eot)$/.test(url.pathname),
-  new CacheFirst({
-    cacheName: 'fonts',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 30,
-        maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
-      }),
-    ],
-  }),
-);
-
-// === Strategy 7: Google Fonts ===
+// === Strategy 4: Google Fonts CSS - StaleWhileRevalidate ===
 registerRoute(
   ({ url }) => url.origin === 'https://fonts.googleapis.com',
   new StaleWhileRevalidate({
-    cacheName: 'google-fonts-stylesheets',
+    cacheName: CACHE_NAME,
   }),
 );
 
+// === Strategy 5: Google Fonts files - CacheFirst ===
 registerRoute(
   ({ url }) => url.origin === 'https://fonts.gstatic.com',
   new CacheFirst({
-    cacheName: 'google-fonts-webfonts',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 30,
-        maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
-      }),
-    ],
+    cacheName: CACHE_NAME,
   }),
 );
 
 // ============================================================================
 // Background Precaching (Stage 2)
-// Runs in Service Worker context - works on any page with this SW
 // ============================================================================
 
 interface PrecacheConfig {
@@ -269,6 +292,9 @@ let resumeTimer: number | null = null;
 let routeIdleTimer: number | null = null;
 const activePrecacheControllers = new Set<AbortController>();
 
+// ✅ Global singleton precacher
+let globalPrecacher: ServiceWorkerBackgroundPrecache | null = null;
+
 const isNetworkBusy = () => networkStatus === NetworkStatus.Busy;
 
 const abortActivePrecache = () => {
@@ -296,17 +322,20 @@ const handleNetworkIdle = () => {
     }
     const resourcesToResume = pendingResources;
     pendingResources = null;
-    const precacher = new ServiceWorkerBackgroundPrecache();
-    precacher
-      .precacheResources(resourcesToResume)
-      .then(() => {
-        if (!pendingResources || pendingResources.length === 0) {
-          console.log('[SW Background Precache] Completed after resume');
-        }
-      })
-      .catch((error) => {
-        console.error('[SW Background Precache] Error after resume:', error);
-      });
+
+    // ✅ Reuse global precacher instance
+    if (globalPrecacher) {
+      globalPrecacher
+        .precacheResources(resourcesToResume)
+        .then(() => {
+          if (!pendingResources || pendingResources.length === 0) {
+            console.log('[SW Background Precache] Completed after resume');
+          }
+        })
+        .catch((error) => {
+          console.error('[SW Background Precache] Error after resume:', error);
+        });
+    }
   }, 3000);
 };
 
@@ -314,7 +343,7 @@ const handleNetworkIdle = () => {
  * Background precache manager running in Service Worker context
  */
 class ServiceWorkerBackgroundPrecache {
-  private isRunning = false;
+  public isRunning = false;
 
   async start() {
     if (!PRECACHE_CONFIG.enabled || this.isRunning) {
@@ -396,7 +425,7 @@ class ServiceWorkerBackgroundPrecache {
   }
 
   /**
-   * Get list of resources to precache
+   * ✅ Get list of resources to precache, checking the single cache
    */
   private async getResourcesToPrecache(mode: PrecacheMode): Promise<string[]> {
     const resources: Set<string> = new Set();
@@ -409,20 +438,17 @@ class ServiceWorkerBackgroundPrecache {
     const normalizePath = (path: string) => (path.startsWith('/') ? path : `/${path}`);
 
     try {
-      // Get all cached resources first to know what we already have
+      // ✅ Get all cached resources from the single cache
       const cachedUrls = new Set<string>();
-      const cacheNames = await caches.keys();
-      for (const cacheName of cacheNames) {
-        const cache = await caches.open(cacheName);
-        const requests = await cache.keys();
-        for (const request of requests) {
-          cachedUrls.add(request.url);
-        }
+      const cache = await caches.open(CACHE_NAME);
+      const requests = await cache.keys();
+      for (const request of requests) {
+        cachedUrls.add(request.url);
       }
 
       console.log('[SW Background Precache] Already cached:', cachedUrls.size, 'resources');
 
-      // Method 1: Try to fetch precache manifest based on chunk graph
+      // Fetch precache manifest
       try {
         const precachePath =
           typeof __PRECACHE_MANIFEST_URL__ !== 'undefined'
@@ -467,9 +493,6 @@ class ServiceWorkerBackgroundPrecache {
         }
       } catch (error) {
         console.log('[SW Background Precache] Precache manifest not available:', error);
-
-        // Fallback: Cannot enumerate resources without manifest
-        console.warn('[SW Background Precache] Falling back to asset manifest');
       }
     } catch (error) {
       console.warn('[SW Background Precache] Error getting resources:', error);
@@ -482,7 +505,6 @@ class ServiceWorkerBackgroundPrecache {
 
     console.log('[SW Background Precache] Found', resources.size, 'uncached resources');
 
-    // Prioritize resources
     return this.prioritizeResources(Array.from(resources));
   }
 
@@ -521,14 +543,18 @@ class ServiceWorkerBackgroundPrecache {
   }
 
   /**
-   * Precache resources with throttling
+   * ✅ Precache resources (can be called externally for resume)
    */
   public async precacheResources(resources: string[]) {
     await this.precacheWithThrottle(resources);
   }
 
+  /**
+   * ✅ Precache with explicit cache checking and writing
+   */
   private async precacheWithThrottle(resources: string[]) {
     const chunks = this.chunkArray(resources, PRECACHE_CONFIG.maxConcurrent);
+    const cache = await caches.open(CACHE_NAME);
 
     for (let i = 0; i < chunks.length; i++) {
       if (isNetworkBusy()) {
@@ -538,28 +564,42 @@ class ServiceWorkerBackgroundPrecache {
 
       const chunk = chunks[i];
 
-      // Fetch chunk concurrently
+      // ✅ Fetch chunk concurrently with explicit cache checking
       await Promise.all(
-        chunk.map((url) => {
+        chunk.map(async (url) => {
           const controller = new AbortController();
           activePrecacheControllers.add(controller);
-          return fetch(url, {
-            cache: 'default',
-            signal: controller.signal,
-          })
-            .catch((error) => {
-              if (error?.name !== 'AbortError') {
-                console.warn('[SW Background Precache] Failed to fetch:', url, error);
-              }
-            })
-            .finally(() => {
-              activePrecacheControllers.delete(controller);
+
+          try {
+            // ✅ Check if already cached (real-time check)
+            const cached = await cache.match(url);
+            if (cached) {
+              console.log(`[SW] Skip cached: ${url}`);
+              return;
+            }
+
+            // ✅ Fetch and explicitly cache
+            const response = await fetch(url, {
+              cache: 'default',
+              signal: controller.signal,
             });
+
+            if (response.ok) {
+              await cache.put(url, response.clone());
+              console.log(`[SW] Cached: ${url}`);
+            }
+          } catch (error) {
+            if (error?.name !== 'AbortError') {
+              console.warn('[SW Background Precache] Failed to fetch:', url, error);
+            }
+          } finally {
+            activePrecacheControllers.delete(controller);
+          }
         }),
       );
 
       if (isNetworkBusy()) {
-        pendingResources = resources.slice(i * PRECACHE_CONFIG.maxConcurrent);
+        pendingResources = resources.slice((i + 1) * PRECACHE_CONFIG.maxConcurrent);
         return;
       }
 
@@ -594,33 +634,29 @@ class ServiceWorkerBackgroundPrecache {
 }
 
 // ============================================================================
-// Service Worker Lifecycle Events
+// Message Handling
 // ============================================================================
 
-// Start background precaching after activation
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activate event');
-
-  event.waitUntil(
-    (async () => {
-      // Claim clients immediately
-      await self.clients.claim();
-
-      // Start background precaching
-      const precacher = new ServiceWorkerBackgroundPrecache();
-      await precacher.start();
-    })(),
-  );
-});
-
-// Handle messages from clients
 self.addEventListener('message', (event) => {
   console.log('[SW] Message received:', event.data);
 
   // Handle connection check requests
   if (event.data.type === 'CHECK_CONNECTION') {
-    // Client will respond via the message port
-    // This is handled by the client code
+    return;
+  }
+
+  // ✅ Handle start precache request - use singleton
+  if (event.data.type === 'START_PRECACHE') {
+    if (globalPrecacher?.isRunning) {
+      console.log('[SW] Precache already running, ignoring duplicate request');
+      return;
+    }
+
+    console.log('[SW] Received START_PRECACHE, starting background precache');
+    globalPrecacher = new ServiceWorkerBackgroundPrecache();
+    globalPrecacher.start().catch((error) => {
+      console.error('[SW] Error starting precache:', error);
+    });
     return;
   }
 
@@ -666,4 +702,4 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-console.log('[SW] Service Worker loaded with background precaching support');
+console.log('[SW] Service Worker loaded with simplified single-cache architecture');

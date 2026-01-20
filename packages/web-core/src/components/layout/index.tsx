@@ -108,13 +108,41 @@ export const AppLayout = (props: AppLayoutProps) => {
     let lastEventTime = 0;
     const DEBOUNCE_MS = 500;
 
+    // Track if modal has been shown to prevent duplicate popups
+    let hasShownLogoutModal = false;
+    let hasShownUserChangedModal = false;
+
     const unsubscribe = authChannel.subscribe((event) => {
       const now = Date.now();
       if (now - lastEventTime < DEBOUNCE_MS) return;
       lastEventTime = now;
 
+      // Don't show modals on read-only public pages like /share/* and /preview/*
+      // These pages are view-only and don't require authentication state sync
+      const currentPath = window?.location?.pathname ?? '';
+      const isReadOnlyPage =
+        currentPath?.startsWith('/share/') || currentPath?.startsWith('/preview/');
+
+      if (isReadOnlyPage) {
+        console.log('[Auth] Skipping modal on read-only page:', currentPath);
+        return;
+      }
+
+      // For other public pages (like /app/*), skip modal only if user is not logged in
+      if (isPublicAccessPage && !userStore.isLogin) {
+        console.log('[Auth] Skipping modal on public page (not logged in):', currentPath);
+        return;
+      }
+
       switch (event.type) {
         case 'logout':
+          // Prevent duplicate logout modals
+          if (hasShownLogoutModal) {
+            console.log('[Auth] Logout modal already shown, skipping');
+            return;
+          }
+          hasShownLogoutModal = true;
+
           // Another tab logged out, show prompt then redirect to login
           Modal.info({
             title: t('common.loggedOut.title'),
@@ -134,6 +162,13 @@ export const AppLayout = (props: AppLayoutProps) => {
           break;
 
         case 'user-changed':
+          // Prevent duplicate user-changed modals
+          if (hasShownUserChangedModal) {
+            console.log('[Auth] User-changed modal already shown, skipping');
+            return;
+          }
+          hasShownUserChangedModal = true;
+
           // Another tab switched user, show prompt then refresh
           Modal.info({
             title: t('common.userChanged.title'),
@@ -172,7 +207,7 @@ export const AppLayout = (props: AppLayoutProps) => {
       unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [t]);
+  }, [t, isPublicAccessPage, navigate, userStore.isLogin]);
 
   const routeLogin = useMatch('/');
   const isPricing = useMatch('/pricing');

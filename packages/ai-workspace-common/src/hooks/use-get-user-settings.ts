@@ -73,6 +73,9 @@ export const useGetUserSettings = () => {
       userStore.setUserProfile(undefined);
       userStore.setIsLogin(false);
 
+      // Clear authChannel's currentUid to prevent false logout detection
+      authChannel.updateCurrentUid(null);
+
       // Use window.location.pathname to get current route (always latest, no dependency needed).
       // We use isPublicAccessPageByPath (extracted from usePublicAccessPage) to check.
       // This ensures we get the latest route value even in async context.
