@@ -60,8 +60,8 @@ export const shikiLoader = createLazyLoader<
   Highlighter
 >({
   name: 'shiki-highlighter',
-  loader: () => import('shiki/bundle/web'),
-  extractor: (m) => (m as { createHighlighter: typeof createLazyLoader }).createHighlighter as any,
+  loader: () => import('shiki/bundle/full'),
+  extractor: (m) => (m as any).createHighlighter,
   initializer: (createHighlighter) =>
     createHighlighter({
       langs: currentConfig.langs,
