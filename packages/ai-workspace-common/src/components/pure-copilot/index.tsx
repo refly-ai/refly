@@ -109,7 +109,9 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     <div
       className={cn(
         'w-full flex flex-col gap-3',
-        isFloating ? 'bg-refly-bg-control-z0 px-3 pt-6 pb-3 rounded-b-xl -mt-5 ' : 'mt-6',
+        isFloating
+          ? 'bg-refly-bg-body-z0 px-3 pt-6 pb-3 rounded-b-xl -mt-5 shadow-refly-m'
+          : 'mt-6',
       )}
     >
       {!isFloating && <div className="text-xs text-refly-text-2">{t('copilot.samplePrompt')}</div>}
@@ -127,8 +129,10 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
             <div
               key={index}
               className={cn(
-                'flex items-start justify-between gap-4 px-4 py-3 bg-refly-bg-body-z0 rounded-xl cursor-pointer hover:bg-refly-secondary-hover transition-colors',
-                isFloating ? '' : 'border-[0.5px] border-solid border-refly-text-4',
+                'flex items-start justify-between gap-4 px-4 py-3 rounded-xl cursor-pointer hover:bg-refly-secondary-hover transition-colors',
+                isFloating
+                  ? 'bg-refly-bg-canvas'
+                  : 'border-[0.5px] border-solid border-refly-text-4 bg-refly-bg-body-z0',
               )}
               onMouseDown={(e) => {
                 // Use onMouseDown to trigger before blur
@@ -175,11 +179,11 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
           className={cn(
             'w-full px-4 py-3 rounded-[12px] border-[1px] border-solid bg-refly-bg-content-z2 transition-all duration-300 relative z-20',
             source === 'frontPage'
-              ? cn('border-refly-primary-default my-2', isFocused && 'shadow-lg')
+              ? cn('border-refly-primary-default my-2')
               : 'border-transparent pure-copilot-glow-effect',
           )}
         >
-          <div className="min-h-[120px] mb-4">
+          <div className={cn('mb-1', source === 'onboarding' && 'min-h-[100px]')}>
             <ChatInput
               readonly={false}
               autoFocus={false}
@@ -187,7 +191,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
               setQuery={setQuery}
               handleSendMessage={handleSendMessage}
               placeholder={t('copilot.pureCopilotPlaceholder')}
-              minRows={4}
+              minRows={source === 'frontPage' ? 2 : 3}
               inputClassName="text-lg text-refly-text-1"
               onFocus={() => setIsFocused(true)}
               onBlur={() => {
