@@ -1312,6 +1312,9 @@ const translations = {
     fileNoContent: '文件没有内容。',
     notFound: '文件未找到',
     notFoundDesc: '您查找的文件不存在或已被删除。',
+    download: '下载',
+    addToFileLibrary: '保存到文件库',
+    share: '分享',
   },
   artifact: {
     generating: '生成中',

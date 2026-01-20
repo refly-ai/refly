@@ -916,12 +916,10 @@ const WorkflowRunPreviewComponent = () => {
                                       <div
                                         className="flex items-center"
                                         style={{
-                                          gap: '2px',
-                                          fontFamily: 'Inter',
+                                          gap: '5px',
                                           fontWeight: 400,
                                           fontSize: '10px',
                                           lineHeight: '1.4em',
-                                          color: 'rgba(28, 31, 35, 0.35)',
                                         }}
                                       >
                                         {/* Running state: Show execution time */}
@@ -936,8 +934,16 @@ const WorkflowRunPreviewComponent = () => {
                                               version={version}
                                               enabled={!!resultId && (isFinished || isFailed)}
                                             />
-                                            {executionTime && <span>·</span>}
-                                            {executionTime && <span>{executionTime}</span>}
+
+                                            {executionTime && (
+                                              <span
+                                                style={{
+                                                  color: 'rgba(28, 31, 35, 0.35)',
+                                                }}
+                                              >
+                                                {executionTime}
+                                              </span>
+                                            )}
                                           </>
                                         )}
                                       </div>
