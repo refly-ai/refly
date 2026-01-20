@@ -34,22 +34,24 @@ export const VariableHoverCard = memo(
       switch (variableType) {
         case 'string':
           return (
-            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 p-3 w-[256px] max-h-[160px] overflow-hidden">
-              <div className="flex items-center">
+            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 py-3 w-[256px] max-h-[160px] overflow-hidden">
+              <div className="flex items-center px-3">
                 <BiText size={18} className="mr-2" />
                 <div className="text-sm font-bold">
                   {t('canvas.workflow.variables.variableTypeOptions.string')}
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto text-xs break-all leading-[18px]">
-                <div className="text-refly-func-warning-hover">{label}</div>
-                {value?.[0]?.text || t('common.noData')}
+                <div className="mx-3">
+                  <div className="text-refly-func-warning-hover">{label}</div>
+                  {value?.[0]?.text || t('common.noData')}
+                </div>
               </div>
             </div>
           );
         case 'option':
           return (
-            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 py-3 w-[256px] h-[160px] overflow-hidden">
+            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 py-3 w-[256px] max-h-[160px] overflow-hidden">
               <div className="flex items-center px-3">
                 <List size={18} className="mr-2" />
                 <div className="text-sm font-bold">
