@@ -8,13 +8,13 @@ import { useCallback } from 'react';
 export const PureCopilotModal = () => {
   const { t } = useTranslation();
 
-  const { hidePureCopilotModal, setHidePureCopilotModal, userProfile } = useUserStoreShallow(
-    (state) => ({
+  const { hidePureCopilotModal, setHidePureCopilotModal, showInvitationCodeModal, userProfile } =
+    useUserStoreShallow((state) => ({
       hidePureCopilotModal: state.hidePureCopilotModal,
       setHidePureCopilotModal: state.setHidePureCopilotModal,
+      showInvitationCodeModal: state.showInvitationCodeModal,
       userProfile: state.userProfile,
-    }),
-  );
+    }));
 
   const needOnboarding = userProfile?.preferences?.needOnboarding;
 
@@ -22,7 +22,7 @@ export const PureCopilotModal = () => {
     setHidePureCopilotModal(true);
   }, [setHidePureCopilotModal]);
 
-  if (hidePureCopilotModal || !needOnboarding) {
+  if (showInvitationCodeModal || hidePureCopilotModal || !needOnboarding) {
     return null;
   }
 
