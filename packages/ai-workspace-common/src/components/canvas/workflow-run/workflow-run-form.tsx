@@ -149,8 +149,7 @@ export const WorkflowRunForm = ({
 
   const [internalIsRunning, setInternalIsRunning] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
-  const [_toolsPanelOpen, setToolsPanelOpen] = useState(false);
-  const [_highlightInstallButtons, setHighlightInstallButtons] = useState(false);
+
   const [fallbackToolsCanvasData, setFallbackToolsCanvasData] = useState<RawCanvasData | undefined>(
     undefined,
   );
@@ -179,16 +178,6 @@ export const WorkflowRunForm = ({
 
   const toolsDependencyCanvasData: RawCanvasData | undefined =
     workflowApp?.canvasData ?? canvasResponse?.data ?? fallbackToolsCanvasData;
-
-  const _handleToolsDependencyOpenChange = useCallback(
-    (nextOpen: boolean) => {
-      setToolsPanelOpen(nextOpen);
-      if (!nextOpen) {
-        setHighlightInstallButtons(false);
-      }
-    },
-    [setToolsPanelOpen, setHighlightInstallButtons],
-  );
 
   // Abort workflow with optimistic UI update (immediately marks nodes as 'failed')
   const { handleAbort } = useAbortWorkflow({
