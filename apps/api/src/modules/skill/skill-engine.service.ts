@@ -7,6 +7,7 @@ import { SkillEngine, SkillEngineOptions } from '@refly/skill-template';
 import { genImageID, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 import { buildSuccessResponse } from '../../utils';
 import { genBaseRespDataFromError } from '../../utils/exception';
+import { User, SandboxExecuteRequest, SandboxExecuteResponse } from '@refly/openapi-schema';
 import { ActionService } from '../action/action.service';
 import { AuthService } from '../auth/auth.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
@@ -287,7 +288,7 @@ export class SkillEngineService implements OnModuleInit {
       genImageID: async () => {
         return genImageID();
       },
-      execute: async (user, req) => {
+      execute: async (user: User, req: SandboxExecuteRequest): Promise<SandboxExecuteResponse> => {
         // Inject PTC environment variables if enabled
         if (req.context?.ptcEnabled) {
           const resultId = req.context.parentResultId;
@@ -295,8 +296,8 @@ export class SkillEngineService implements OnModuleInit {
 
           // Ensure context and env exist
           req.context = req.context || {};
-          (req.context as any).env = {
-            ...(req.context as any).env,
+          req.context.env = {
+            ...req.context.env,
             ...ptcEnvVars,
           };
         }

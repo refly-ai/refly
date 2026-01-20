@@ -7373,7 +7373,14 @@ export const SandboxExecuteContextSchema = {
     },
     ptcEnabled: {
       type: 'boolean',
-      description: 'Whether PTC (Programmatic Tool Calling) mode is enabled',
+      description: 'Whether PTC (Project Tool Context) is enabled',
+    },
+    env: {
+      type: 'object',
+      additionalProperties: {
+        type: 'string',
+      },
+      description: 'Environment variables for execution',
     },
   },
 } as const;

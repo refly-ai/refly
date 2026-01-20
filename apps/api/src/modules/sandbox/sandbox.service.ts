@@ -83,7 +83,6 @@ export class SandboxService {
         timeout: this.timeoutMs,
         parentResultId: request.context?.parentResultId,
         version: request.context?.version,
-        ptcEnabled: request.context?.ptcEnabled,
       };
 
       const workerResponse = await this.client.executeCode(request.params, context);

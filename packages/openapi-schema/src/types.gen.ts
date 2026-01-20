@@ -5354,9 +5354,15 @@ export type SandboxExecuteContext = {
    */
   version?: number;
   /**
-   * Whether PTC (Programmatic Tool Calling) mode is enabled
+   * Whether PTC (Project Tool Context) is enabled
    */
   ptcEnabled?: boolean;
+  /**
+   * Environment variables for execution
+   */
+  env?: {
+    [key: string]: string;
+  };
 };
 
 export type SandboxExecuteRequest = {

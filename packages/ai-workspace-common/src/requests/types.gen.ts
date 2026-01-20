@@ -5353,10 +5353,6 @@ export type SandboxExecuteContext = {
    * Result version for file registration
    */
   version?: number;
-  /**
-   * Whether PTC (Programmatic Tool Calling) mode is enabled
-   */
-  ptcEnabled?: boolean;
 };
 
 export type SandboxExecuteRequest = {
