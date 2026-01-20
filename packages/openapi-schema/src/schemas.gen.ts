@@ -7371,6 +7371,10 @@ export const SandboxExecuteContextSchema = {
       type: 'number',
       description: 'Result version for file registration',
     },
+    ptcEnabled: {
+      type: 'boolean',
+      description: 'Whether PTC (Programmatic Tool Calling) mode is enabled',
+    },
   },
 } as const;
 

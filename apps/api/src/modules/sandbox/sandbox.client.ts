@@ -41,6 +41,7 @@ export class SandboxClient {
       uid: context.uid,
       codeLength: params.code?.length,
       envKeys: context.env ? Object.keys(context.env) : [],
+      ptcEnabled: context.ptcEnabled,
     });
 
     const request: WorkerExecuteRequest = {

@@ -151,6 +151,7 @@ export const SandboxExecutionContextSchema = z.object({
   model: z.string().optional(),
   providerItemId: z.string().optional(),
   version: z.number().int().nonnegative().optional(),
+  ptcEnabled: z.boolean().optional(),
 });
 
 export type SandboxExecutionContext = z.infer<typeof SandboxExecutionContextSchema>;

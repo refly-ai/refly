@@ -29,6 +29,7 @@ import { ShareCreationService } from '../share/share-creation.service';
 import { SandboxService } from '../sandbox/sandbox.service';
 import { ScaleboxService } from '../tool/sandbox/scalebox.service';
 import { ToolService } from '../tool/tool.service';
+import { PtcEnvService } from '../tool/ptc';
 import { WorkflowPlanService } from '../workflow/workflow-plan.service';
 
 @Injectable()
@@ -51,6 +52,7 @@ export class SkillEngineService implements OnModuleInit {
   private toolService: ToolService;
   private sandboxService: SandboxService;
   private scaleboxService: ScaleboxService;
+  private ptcEnvService: PtcEnvService;
   private shareCreationService: ShareCreationService;
   private workflowPlanService: WorkflowPlanService;
   constructor(
@@ -81,6 +83,7 @@ export class SkillEngineService implements OnModuleInit {
         this.toolService = this.moduleRef.get(ToolService, { strict: false });
         this.sandboxService = this.moduleRef.get(SandboxService, { strict: false });
         this.scaleboxService = this.moduleRef.get(ScaleboxService, { strict: false });
+        this.ptcEnvService = this.moduleRef.get(PtcEnvService, { strict: false });
         this.shareCreationService = this.moduleRef.get(ShareCreationService, { strict: false });
         this.workflowPlanService = this.moduleRef.get(WorkflowPlanService, { strict: false });
       },
@@ -285,6 +288,19 @@ export class SkillEngineService implements OnModuleInit {
         return genImageID();
       },
       execute: async (user, req) => {
+        // Inject PTC environment variables if enabled
+        if (req.context?.ptcEnabled) {
+          const resultId = req.context.parentResultId;
+          const ptcEnvVars = await this.ptcEnvService.getPtcEnvVars(user.uid, resultId);
+
+          // Ensure context and env exist
+          req.context = req.context || {};
+          (req.context as any).env = {
+            ...(req.context as any).env,
+            ...ptcEnvVars,
+          };
+        }
+
         const whiteList =
           this.config
             .get<string>('sandbox.whiteList')

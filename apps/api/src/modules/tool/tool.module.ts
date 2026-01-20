@@ -30,6 +30,7 @@ import {
   ToolIdentifyService,
   ToolDefinitionService,
   PtcSdkService,
+  PtcEnvService,
 } from './ptc';
 import { ToolController } from './tool.controller';
 import { ToolService } from './tool.service';
@@ -62,6 +63,8 @@ import { ToolService } from './tool.service';
     ToolDefinitionService,
     // PTC SDK service for loading SDK definitions
     PtcSdkService,
+    // PTC env service for sandbox environment variables
+    PtcEnvService,
 
     SyncToolCreditUsageProcessor,
     // Tool inventory service (loads from database)
@@ -76,6 +79,6 @@ import { ToolService } from './tool.service';
     ComposioToolPostHandlerService,
     ToolWrapperFactoryService,
   ],
-  exports: [ToolService, ToolInventoryService, ToolFactory, PtcSdkService],
+  exports: [ToolService, ToolInventoryService, ToolFactory, PtcSdkService, PtcEnvService],
 })
 export class ToolModule {}
