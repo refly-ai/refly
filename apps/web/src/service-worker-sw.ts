@@ -96,7 +96,9 @@ self.addEventListener('install', (event) => {
 
       // Precache critical resources from build manifest
       const urls = self.__WB_MANIFEST.map((entry) => {
-        return typeof entry === 'string' ? entry : entry.url;
+        const url = typeof entry === 'string' ? entry : entry.url;
+        // ✅ Ensure URLs are absolute for consistent cache key matching
+        return new URL(url, self.location.origin).href;
       });
 
       console.log(`[SW] Precaching ${urls.length} critical resources`);
@@ -106,12 +108,12 @@ self.addEventListener('install', (event) => {
         console.log('[SW] Critical resources precached');
       } catch (error) {
         console.error('[SW] Precache failed:', error);
+      } finally {
+        // Activate immediately after precache attempt (success or failure)
+        await self.skipWaiting();
       }
     })(),
   );
-
-  // Activate immediately
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -173,7 +175,9 @@ registerRoute(
 
           // Get cached HTML for version comparison
           const cache = await caches.open(CACHE_NAME);
-          const cachedResponse = await cache.match(request);
+          // ✅ Use normalized key to match the stored cache key
+          const normalizedKey = normalizeHtmlCacheKey(request);
+          const cachedResponse = await cache.match(normalizedKey);
 
           if (cachedResponse) {
             try {
@@ -242,7 +246,23 @@ registerRoute(
       new CacheableResponsePlugin({
         statuses: [200],
       }),
+      // ✅ Add debug logging to see if cache matching works
+      {
+        cachedResponseWillBeUsed: async ({ request, cachedResponse }) => {
+          if (cachedResponse) {
+            console.log('[SW] Cache HIT:', request.url);
+          } else {
+            console.log('[SW] Cache MISS:', request.url);
+          }
+          return cachedResponse;
+        },
+      },
     ],
+    matchOptions: {
+      ignoreSearch: false,
+      ignoreMethod: false,
+      ignoreVary: false,
+    },
   }),
 );
 
@@ -571,26 +591,28 @@ class ServiceWorkerBackgroundPrecache {
           activePrecacheControllers.add(controller);
 
           try {
+            // ✅ Create Request object for consistent cache key
+            const request = new Request(url);
+
             // ✅ Check if already cached (real-time check)
-            const cached = await cache.match(url);
+            const cached = await cache.match(request);
             if (cached) {
-              console.log(`[SW] Skip cached: ${url}`);
               return;
             }
 
             // ✅ Fetch and explicitly cache
-            const response = await fetch(url, {
+            const response = await fetch(request, {
               cache: 'default',
               signal: controller.signal,
             });
 
             if (response.ok) {
-              await cache.put(url, response.clone());
-              console.log(`[SW] Cached: ${url}`);
+              // ✅ Use Request object as key for consistent matching with Workbox
+              await cache.put(request, response.clone());
             }
           } catch (error) {
             if (error?.name !== 'AbortError') {
-              console.warn('[SW Background Precache] Failed to fetch:', url, error);
+              console.warn('[SW] Failed to fetch:', url);
             }
           } finally {
             activePrecacheControllers.delete(controller);

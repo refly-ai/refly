@@ -103,14 +103,13 @@ export const AppLayout = (props: AppLayoutProps) => {
   useRouteCollapse();
 
   // Cross-tab auth state sync
+  const hasShownLogoutModalRef = useRef<boolean>(false);
+  const hasShownUserChangedModalRef = useRef<boolean>(false);
+
   useEffect(() => {
     // Debounce to avoid multiple triggers in short time
     let lastEventTime = 0;
     const DEBOUNCE_MS = 500;
-
-    // Track if modal has been shown to prevent duplicate popups
-    let hasShownLogoutModal = false;
-    let hasShownUserChangedModal = false;
 
     const unsubscribe = authChannel.subscribe((event) => {
       const now = Date.now();
@@ -129,7 +128,7 @@ export const AppLayout = (props: AppLayoutProps) => {
       }
 
       // For other public pages (like /app/*), skip modal only if user is not logged in
-      if (isPublicAccessPage && !userStore.isLogin) {
+      if (isPublicAccessPage && !userStore?.isLogin) {
         console.log('[Auth] Skipping modal on public page (not logged in):', currentPath);
         return;
       }
@@ -137,11 +136,11 @@ export const AppLayout = (props: AppLayoutProps) => {
       switch (event.type) {
         case 'logout':
           // Prevent duplicate logout modals
-          if (hasShownLogoutModal) {
+          if (hasShownLogoutModalRef.current) {
             console.log('[Auth] Logout modal already shown, skipping');
             return;
           }
-          hasShownLogoutModal = true;
+          hasShownLogoutModalRef.current = true;
 
           // Another tab logged out, show prompt then redirect to login
           Modal.info({
@@ -163,11 +162,11 @@ export const AppLayout = (props: AppLayoutProps) => {
 
         case 'user-changed':
           // Prevent duplicate user-changed modals
-          if (hasShownUserChangedModal) {
+          if (hasShownUserChangedModalRef.current) {
             console.log('[Auth] User-changed modal already shown, skipping');
             return;
           }
-          hasShownUserChangedModal = true;
+          hasShownUserChangedModalRef.current = true;
 
           // Another tab switched user, show prompt then refresh
           Modal.info({
