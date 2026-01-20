@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react';
 import { Button, Dropdown, Space, Divider, Tooltip } from 'antd';
-import { LuCompass, LuLayoutDashboard, LuLightbulb, LuShipWheel } from 'react-icons/lu';
+import { LuLayoutDashboard, LuLightbulb, LuShipWheel } from 'react-icons/lu';
 import { RiFullscreenFill } from 'react-icons/ri';
 import { FiHelpCircle } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,6 @@ import {
 import { useReactFlow, useOnViewportChange } from '@xyflow/react';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { TFunction } from 'i18next';
-import { HelpModal } from './help-modal';
 
 import './index.scss';
 import { useUserStoreShallow } from '@refly/stores';
@@ -195,13 +194,10 @@ export const LayoutControl: React.FC<LayoutControlProps> = memo(
     const [currentZoom, setCurrentZoom] = useState(reactFlowInstance?.getZoom() ?? 1);
     const minZoom = 0.1;
     const maxZoom = 2;
-    const { helpModalVisible, setShowTourModal, setShowSettingsGuideModal, setHelpModalVisible } =
-      useUserStoreShallow((state) => ({
-        helpModalVisible: state.helpModalVisible,
-        setShowTourModal: state.setShowTourModal,
-        setShowSettingsGuideModal: state.setShowSettingsGuideModal,
-        setHelpModalVisible: state.setHelpModalVisible,
-      }));
+    const { setShowTourModal, setShowSettingsGuideModal } = useUserStoreShallow((state) => ({
+      setShowTourModal: state.setShowTourModal,
+      setShowSettingsGuideModal: state.setShowSettingsGuideModal,
+    }));
 
     // Use ref to avoid recreating the timeout on each render
     const timeoutRef = useRef<NodeJS.Timeout>();
@@ -298,19 +294,13 @@ export const LayoutControl: React.FC<LayoutControlProps> = memo(
           onClick: () => setShowTourModal(true),
         },
         {
-          key: 'guide',
-          icon: <LuCompass className={iconClass} size={14} />,
-          label: <Space>{t('canvas.toolbar.openGuide')}</Space>,
-          onClick: () => setHelpModalVisible(true),
-        },
-        {
           key: 'docs',
           icon: <IconDocumentation className={iconClass} size={14} />,
           label: <Space>{t('canvas.toolbar.openDocs')}</Space>,
           onClick: () => window.open('https://docs.refly.ai', '_blank'),
         },
       ],
-      [t, setShowSettingsGuideModal, setShowTourModal, setHelpModalVisible],
+      [t, setShowSettingsGuideModal, setShowTourModal],
     );
 
     return (
@@ -357,9 +347,6 @@ export const LayoutControl: React.FC<LayoutControlProps> = memo(
             </Tooltip>
           </Dropdown>
         </div>
-        {helpModalVisible ? (
-          <HelpModal visible={helpModalVisible} onClose={() => setHelpModalVisible(false)} />
-        ) : null}
       </>
     );
   },

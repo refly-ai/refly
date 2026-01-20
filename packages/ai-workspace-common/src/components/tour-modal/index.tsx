@@ -137,14 +137,14 @@ const TourContent = ({ description, videoUrl, videoType }: TourContentProps) => 
 
 export const TourModal = () => {
   const { t } = useTranslation();
-  const { showTourModal, setShowTourModal, userProfile, setUserProfile, setHelpModalVisible } =
-    useUserStoreShallow((state) => ({
+  const { showTourModal, setShowTourModal, userProfile, setUserProfile } = useUserStoreShallow(
+    (state) => ({
       showTourModal: state.showTourModal,
       setShowTourModal: state.setShowTourModal,
       userProfile: state.userProfile,
       setUserProfile: state.setUserProfile,
-      setHelpModalVisible: state.setHelpModalVisible,
-    }));
+    }),
+  );
 
   const [currentStep, setCurrentStep] = useState(0);
   const [finishedOnboardingTour, setFinishedOnboardingTour] = useState<boolean>(
@@ -181,7 +181,6 @@ export const TourModal = () => {
       setCurrentStep(currentStep + 1);
     } else {
       handleClose('completed');
-      setHelpModalVisible(true);
     }
   };
 
