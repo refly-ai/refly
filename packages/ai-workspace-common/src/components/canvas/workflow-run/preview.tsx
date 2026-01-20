@@ -67,9 +67,9 @@ const NodeCreditUsage = memo(
     const creditUsage = creditData?.data?.total ?? 0;
 
     return (
-      <div className="flex items-center gap-1">
-        <Subscription size={12} className="text-refly-text-2" />
-        <span>{creditUsage}</span>
+      <div className="flex items-center gap-[2px]">
+        <Subscription size={12} className="text-refly-text-2" color="rgba(28, 31, 35, 0.6)" />
+        <span style={{ color: 'rgba(28, 31, 35, 0.6)' }}>{creditUsage}</span>
       </div>
     );
   },
@@ -901,10 +901,7 @@ const WorkflowRunPreviewComponent = () => {
                                       {agentTitle}
                                     </span>
                                   </div>
-                                  <div
-                                    className="flex items-center flex-shrink-0"
-                                    style={{ gap: '12px' }}
-                                  >
+                                  <div className="flex items-center flex-shrink-0 gap-3">
                                     {/* Collapsed state: show different info based on status */}
                                     {/* 
                                     - Not executed: Only show node name (no time, no credit)
@@ -913,18 +910,12 @@ const WorkflowRunPreviewComponent = () => {
                                     Note: Node name is always shown on the left side
                                   */}
                                     {isNotExecuted ? null : ( // Not executed: Only show node name (nothing else)
-                                      <div
-                                        className="flex items-center"
-                                        style={{
-                                          gap: '5px',
-                                          fontWeight: 400,
-                                          fontSize: '10px',
-                                          lineHeight: '1.4em',
-                                        }}
-                                      >
+                                      <div className="flex items-center gap-2 text-[10px] leading-[1.4em] font-normal">
                                         {/* Running state: Show execution time */}
                                         {isExecuting && executionTime && (
-                                          <span>{executionTime}</span>
+                                          <span style={{ color: 'rgba(28, 31, 35, 0.35)' }}>
+                                            {executionTime}
+                                          </span>
                                         )}
                                         {/* Finished/Failed state: Show execution time + credit usage */}
                                         {(isFinished || isFailed) && (
@@ -936,11 +927,7 @@ const WorkflowRunPreviewComponent = () => {
                                             />
 
                                             {executionTime && (
-                                              <span
-                                                style={{
-                                                  color: 'rgba(28, 31, 35, 0.35)',
-                                                }}
-                                              >
+                                              <span style={{ color: 'rgba(28, 31, 35, 0.35)' }}>
                                                 {executionTime}
                                               </span>
                                             )}
