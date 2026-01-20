@@ -189,7 +189,7 @@ export default defineConfig({
     define: publicVars,
   },
   performance: {
-    removeConsole: false,
+    removeConsole: isProduction,
 
     // Use Rsbuild recommended strategy + force split large libraries
     chunkSplit: {
