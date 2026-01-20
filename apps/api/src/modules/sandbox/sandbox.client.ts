@@ -40,6 +40,7 @@ export class SandboxClient {
       canvasId: context.canvasId,
       uid: context.uid,
       codeLength: params.code?.length,
+      envKeys: context.env ? Object.keys(context.env) : [],
     });
 
     const request: WorkerExecuteRequest = {
@@ -51,6 +52,7 @@ export class SandboxClient {
         s3: context.s3Config,
         s3DrivePath: context.s3DrivePath,
         s3LibConfig: context.s3LibConfig,
+        env: context.env,
         timeout: context.timeout || timeoutMs,
         limits: context.limits,
       },
