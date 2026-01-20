@@ -467,6 +467,41 @@ class ServiceWorkerBackgroundPrecache {
         }
       } catch (error) {
         console.log('[SW Background Precache] Precache manifest not available:', error);
+
+        // Fallback: Cannot enumerate resources without manifest
+        console.warn('[SW Background Precache] Falling back to asset manifest');
+      }
+
+      // Method 2: Try to fetch asset manifest for all build files
+      try {
+        const manifestUrl = new URL('/asset-manifest.json', self.location.origin).href;
+        const response = await fetch(manifestUrl, { cache: 'no-cache' });
+
+        if (response.ok) {
+          const manifest = await response.json();
+
+          // Extract only JS/CSS static resources (exclude maps, images, fonts)
+          for (const file of Object.values(manifest.files || {})) {
+            if (typeof file === 'string' && file.includes('/static/') && isPrecacheAsset(file)) {
+              const url = new URL(normalizePath(file), self.location.origin).href;
+              // Only add if not already cached
+              if (!cachedUrls.has(url) && this.shouldPrecacheUrl(url, mode)) {
+                resources.add(url);
+              }
+            }
+          }
+
+          console.log(
+            '[SW Background Precache] Found',
+            Object.keys(manifest.files || {}).length,
+            'files in asset manifest',
+          );
+        }
+      } catch (error) {
+        console.log('[SW Background Precache] Asset manifest not available:', error);
+
+        // Fallback: Cannot enumerate resources without manifest
+        console.warn('[SW Background Precache] Cannot enumerate resources without manifest');
       }
     } catch (error) {
       console.warn('[SW Background Precache] Error getting resources:', error);
