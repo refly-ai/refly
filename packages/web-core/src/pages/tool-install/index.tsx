@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button, Typography, Avatar, Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
@@ -120,7 +120,7 @@ const ToolInstallCard = memo(
     }, [onInstall, toolset]);
 
     return (
-      <div className="rounded-xl border border-solid border-refly-primary-default bg-white p-4 shadow-sm">
+      <div className="bg-white p-4">
         <div className="flex items-center gap-3">
           <div className="flex-shrink-0">
             <ToolsetIcon toolset={toolset} />
@@ -221,11 +221,14 @@ const ToolInstallPage = memo(() => {
 
   const { openInstallToolByKey } = useOpenInstallTool();
   const { openInstallMcp } = useOpenInstallMcp();
-  const { openOAuthPopup, isPolling, isOpening } = useOAuthPopup({
+  const { openOAuthPopup } = useOAuthPopup({
     onSuccess: () => {
       refetchUserTools();
     },
   });
+
+  // Track loading state for each tool individually
+  const [toolLoadingStates, setToolLoadingStates] = useState<Map<string, boolean>>(new Map());
 
   const currentLanguage = i18n?.language ?? 'en';
   const referencedNodesLabel = t('toolInstall.referencedNodes');
@@ -248,29 +251,45 @@ const ToolInstallPage = memo(() => {
 
   const handleInstallTool = useCallback(
     async (toolset: GenericToolset) => {
-      if (toolset.type === 'mcp') {
-        openInstallMcp(toolset.mcpServer as McpServerDTO);
+      const toolKey =
+        toolset.type === 'mcp' ? (toolset.mcpServer?.url ?? toolset.name) : toolset.toolset?.key;
+
+      if (!toolKey) {
         return;
       }
 
-      const isAuthorized = isToolsetAuthorized(toolset, userTools);
-      const toolsetKey = toolset.toolset?.key;
+      // Set loading state for this specific tool
+      setToolLoadingStates((prev) => new Map(prev.set(toolKey, true)));
 
-      if (!toolsetKey) {
-        return;
-      }
-
-      if (!isAuthorized) {
-        if (isPolling || isOpening) {
+      try {
+        if (toolset.type === 'mcp') {
+          openInstallMcp(toolset.mcpServer as McpServerDTO);
           return;
         }
-        await openOAuthPopup(toolsetKey);
-        return;
-      }
 
-      openInstallToolByKey(toolsetKey);
+        const isAuthorized = isToolsetAuthorized(toolset, userTools);
+        const toolsetKey = toolset.toolset?.key;
+
+        if (!toolsetKey) {
+          return;
+        }
+
+        if (!isAuthorized) {
+          await openOAuthPopup(toolsetKey);
+          return;
+        }
+
+        openInstallToolByKey(toolsetKey);
+      } finally {
+        // Clear loading state for this specific tool
+        setToolLoadingStates((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(toolKey);
+          return newMap;
+        });
+      }
     },
-    [openInstallMcp, openInstallToolByKey, openOAuthPopup, isOpening, isPolling, userTools],
+    [openInstallMcp, openInstallToolByKey, openOAuthPopup, userTools],
   );
 
   const isLoading = canvasLoading || toolsLoading;
@@ -294,12 +313,19 @@ const ToolInstallPage = memo(() => {
           ? (toolset?.mcpServer?.url ?? toolset?.name ?? '')
           : (toolsetDefinition?.descriptionDict?.[currentLanguage] ?? '');
 
+      // Get loading state for this specific tool
+      const toolKey =
+        toolset?.type === 'mcp'
+          ? (toolset?.mcpServer?.url ?? toolset?.name)
+          : toolset?.toolset?.key;
+      const isInstalling = toolKey ? (toolLoadingStates.get(toolKey) ?? false) : false;
+
       return (
         <ToolInstallCard
           key={toolset?.id ?? label}
           toolWithNodes={toolWithNodes}
           description={description as unknown as string}
-          isInstalling={isPolling || isOpening}
+          isInstalling={isInstalling}
           onInstall={handleInstallTool}
           label={label}
           isAuthorized={isAuthorized}
@@ -311,8 +337,7 @@ const ToolInstallPage = memo(() => {
     getToolsetDefinition,
     currentLanguage,
     t,
-    isPolling,
-    isOpening,
+    toolLoadingStates,
     handleInstallTool,
     referencedNodesLabel,
   ]);
@@ -326,7 +351,7 @@ const ToolInstallPage = memo(() => {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-6 bg-refly-bg-body-z0">
+    <div className="fixed inset-0 flex items-center justify-center p-6 bg-refly-bg-body-z0 overflow-hidden">
       <div className="w-[504px] h-[697px] bg-refly-bg-body-z0 rounded-[20px] p-6 flex flex-col shadow-lg">
         <div className="p-1 px-2 rounded-lg">
           <div className="flex items-start gap-2">
@@ -368,7 +393,9 @@ const ToolInstallPage = memo(() => {
         ) : null}
 
         {!isLoading && hasWorkflowTools ? (
-          <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto">{toolCards}</div>
+          <div className="flex-1 min-h-0 rounded-2xl border border-solid border-refly-primary-default shadow-sm overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto flex flex-col">{toolCards}</div>
+          </div>
         ) : null}
 
         {!isLoading && !hasWorkflowTools ? (
