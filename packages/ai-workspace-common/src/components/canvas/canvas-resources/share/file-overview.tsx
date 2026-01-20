@@ -1,17 +1,32 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useCanvasResourcesPanelStoreShallow, useImportResourceStoreShallow } from '@refly/stores';
 import { Button, Input, Tooltip } from 'antd';
 import { Add, SideRight } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { FileList } from '../file-list';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
+import { canvasEmitter } from '@refly/utils';
 
 export const FileOverview = memo(() => {
   const { t } = useTranslation();
   const { shareLoading, readonly } = useCanvasContext();
-  const { data: files, isLoading: isLoadingFiles } = useFetchDriveFiles();
+  const {
+    data: files,
+    isLoading: isLoadingFiles,
+    refetch: refetchDriveFiles,
+  } = useFetchDriveFiles();
+
+  useEffect(() => {
+    const handleRefetch = () => {
+      refetchDriveFiles();
+    };
+    canvasEmitter.on('canvas:drive-files:refetch', handleRefetch);
+    return () => {
+      canvasEmitter.off('canvas:drive-files:refetch', handleRefetch);
+    };
+  }, [refetchDriveFiles]);
 
   const { setSidePanelVisible, setWideScreenVisible } = useCanvasResourcesPanelStoreShallow(
     (state) => ({

@@ -74,7 +74,10 @@ export class ToolInventoryService implements OnModuleInit {
     const inventory = new Map<string, ToolsetInventoryItem>();
 
     // First, load static toolset inventory from @refly/agent-tools
-    for (const [key, item] of Object.entries(staticToolsetInventory)) {
+    for (const [key, item] of Object.entries(staticToolsetInventory) as [
+      string,
+      { class: any; definition: ToolsetDefinition },
+    ][]) {
       inventory.set(key, {
         class: item.class,
         definition: item.definition,

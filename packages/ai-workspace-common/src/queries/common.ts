@@ -69,9 +69,11 @@ import {
   duplicateShare,
   emailLogin,
   emailSignup,
+  executeTool,
   executeWorkflowApp,
   exportCanvas,
   exportDocument,
+  exportToolsetDefinitions,
   extractVariables,
   generateAppTemplate,
   generateMedia,
@@ -101,6 +103,7 @@ import {
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
   getScheduleDetail,
@@ -153,6 +156,7 @@ import {
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
@@ -649,6 +653,18 @@ export const UseGetCopilotSessionDetailKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetCopilotSessionDetailKey, ...(queryKey ?? [clientOptions])];
+export type ListWorkflowExecutionsDefaultResponse = Awaited<
+  ReturnType<typeof listWorkflowExecutions>
+>['data'];
+export type ListWorkflowExecutionsQueryResult<
+  TData = ListWorkflowExecutionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListWorkflowExecutionsKey = 'ListWorkflowExecutions';
+export const UseListWorkflowExecutionsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListWorkflowExecutionsKey, ...(queryKey ?? [clientOptions])];
 export type GetWorkflowDetailDefaultResponse = Awaited<
   ReturnType<typeof getWorkflowDetail>
 >['data'];
@@ -963,6 +979,18 @@ export const UseListToolsetsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListToolsetsKey, ...(queryKey ?? [clientOptions])];
+export type ExportToolsetDefinitionsDefaultResponse = Awaited<
+  ReturnType<typeof exportToolsetDefinitions>
+>['data'];
+export type ExportToolsetDefinitionsQueryResult<
+  TData = ExportToolsetDefinitionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useExportToolsetDefinitionsKey = 'ExportToolsetDefinitions';
+export const UseExportToolsetDefinitionsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useExportToolsetDefinitionsKey, ...(queryKey ?? [clientOptions])];
 export type GetToolCallResultDefaultResponse = Awaited<
   ReturnType<typeof getToolCallResult>
 >['data'];
@@ -997,6 +1025,18 @@ export const UseServeStaticKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useServeStaticKey, ...(queryKey ?? [clientOptions])];
+export type GetPromptSuggestionsDefaultResponse = Awaited<
+  ReturnType<typeof getPromptSuggestions>
+>['data'];
+export type GetPromptSuggestionsQueryResult<
+  TData = GetPromptSuggestionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetPromptSuggestionsKey = 'GetPromptSuggestions';
+export const UseGetPromptSuggestionsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useGetPromptSuggestionsKey, ...(queryKey ?? [clientOptions])];
 export type GetAvailableVouchersDefaultResponse = Awaited<
   ReturnType<typeof getAvailableVouchers>
 >['data'];
@@ -1703,6 +1743,12 @@ export type DeleteToolsetMutationResult = Awaited<ReturnType<typeof deleteToolse
 export const useDeleteToolsetKey = 'DeleteToolset';
 export const UseDeleteToolsetKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteToolsetKey,
+  ...(mutationKey ?? []),
+];
+export type ExecuteToolMutationResult = Awaited<ReturnType<typeof executeTool>>;
+export const useExecuteToolKey = 'ExecuteTool';
+export const UseExecuteToolKeyFn = (mutationKey?: Array<unknown>) => [
+  useExecuteToolKey,
   ...(mutationKey ?? []),
 ];
 export type AuthorizeComposioConnectionMutationResult = Awaited<

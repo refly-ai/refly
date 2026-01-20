@@ -1,19 +1,17 @@
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
-import { memo, useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
-import { Divider, Button, Popconfirm, message, Typography } from 'antd';
-import { Add, Edit, Delete, Image, Doc2, Video, Audio } from 'refly-icons';
+import { Button } from 'antd';
+import { Add } from 'refly-icons';
 import type { WorkflowVariable } from '@refly/openapi-schema';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { useTranslation } from 'react-i18next';
-import SVGX from '../../../assets/x.svg';
 import { CreateVariablesModal } from '../workflow-variables';
 import { locateToVariableEmitter } from '@refly-packages/ai-workspace-common/events/locateToVariable';
 import { StartNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/start-node-header';
 import { BiText } from 'react-icons/bi';
-import { VARIABLE_TYPE_ICON_MAP } from '../nodes/start';
+import { VARIABLE_TYPE_ICON_MAP, InputParameterRow } from '../nodes/shared/input-parameter-row';
 import { useCanvasStoreShallow } from '@refly/stores';
-const { Paragraph } = Typography;
 
 type VariableType = 'string' | 'option' | 'resource';
 export const MAX_VARIABLE_LENGTH = {
@@ -22,140 +20,8 @@ export const MAX_VARIABLE_LENGTH = {
   resource: 50,
 };
 
-const RESOURCE_TYPE_ICON_MAP = {
-  image: Image,
-  document: Doc2,
-  video: Video,
-  audio: Audio,
-};
-
-const VariableItem = memo(
-  ({
-    variable,
-    onEdit,
-    onDelete,
-    readonly,
-    isHighlighted = false,
-  }: {
-    variable: WorkflowVariable;
-    onEdit?: (variable: WorkflowVariable) => void;
-    onDelete?: (variable: WorkflowVariable) => void;
-    readonly: boolean;
-    isHighlighted?: boolean;
-  }) => {
-    const { name, variableType, required, isSingle } = variable;
-    const { t } = useTranslation();
-    const [isPopconfirmOpen, setIsPopconfirmOpen] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-
-    const handleDeleteVariable = async (variable: WorkflowVariable) => {
-      try {
-        setIsDeleting(true);
-        onDelete?.(variable);
-        message.success(
-          t('canvas.workflow.variables.deleteSuccess') || 'Variable deleted successfully',
-        );
-      } catch (error) {
-        console.error('Failed to delete variable:', error);
-      } finally {
-        setIsDeleting(false);
-      }
-    };
-
-    return (
-      <div
-        data-variable-id={variable.variableId}
-        className={`group flex h-9 box-border gap-2 items-center justify-between py-1.5  px-3 rounded-xl border-[1px] border-solid border-refly-Card-Border cursor-pointer transition-all duration-300 ${
-          isHighlighted ? 'bg-refly-Colorful-orange-light' : 'bg-refly-bg-body-z0'
-        } ${isPopconfirmOpen ? 'bg-refly-tertiary-hover' : 'hover:bg-refly-tertiary-hover'}`}
-      >
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <img src={SVGX} alt="x" className="w-[10px] h-[10px] flex-shrink-0" />
-          <Divider type="vertical" className="bg-refly-Card-Border mx-2 my-0 flex-shrink-0" />
-          <div className="text-sm font-medium text-refly-text-1 truncate max-w-full">{name}</div>
-          {required && (
-            <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
-              {t('canvas.workflow.variables.required')}
-            </div>
-          )}
-          {['option'].includes(variableType) && (
-            <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
-              {t(`canvas.workflow.variables.${isSingle ? 'singleSelect' : 'multipleSelect'}`)}
-            </div>
-          )}
-        </div>
-
-        {variableType === 'resource' && (
-          <div className="flex items-center gap-1">
-            {variable.resourceTypes?.map((type) => {
-              const Icon = RESOURCE_TYPE_ICON_MAP[type];
-              if (!Icon) {
-                return null;
-              }
-              return <Icon size={16} key={type} color="var(--refly-text-3)" />;
-            })}
-          </div>
-        )}
-
-        {!readonly && (
-          <div
-            className={`items-center gap-1 flex-shrink-0 ${
-              isPopconfirmOpen ? 'flex' : 'hidden group-hover:flex'
-            }`}
-          >
-            <Button
-              type="text"
-              size="small"
-              icon={<Edit size={16} />}
-              onClick={() => onEdit?.(variable)}
-            />
-            <Popconfirm
-              icon={null}
-              title={
-                <Paragraph
-                  className="!m-0 text-[16px] font-semibold leading-[26px] p-3 max-w-[400px]"
-                  ellipsis={{
-                    rows: 1,
-                    tooltip: (
-                      <div className="max-h-[200px] overflow-y-auto">
-                        {t('canvas.workflow.variables.deleteUserInput', { value: name })}
-                      </div>
-                    ),
-                  }}
-                >
-                  {t('canvas.workflow.variables.deleteUserInput', { value: name })}
-                </Paragraph>
-              }
-              description={
-                <div className="w-[400px] leading-5 px-3 pt-1 pb-2">
-                  {t('canvas.workflow.variables.deleteConfirm')}
-                </div>
-              }
-              arrow={false}
-              onConfirm={() => handleDeleteVariable(variable)}
-              okText={t('common.confirm')}
-              cancelText={t('common.cancel')}
-              onOpenChange={setIsPopconfirmOpen}
-              okButtonProps={{ loading: isDeleting, className: 'w-20 h-8 mb-3 mr-3' }}
-              cancelButtonProps={{ className: 'w-20 h-8 mb-3' }}
-              placement="topRight"
-            >
-              <Button
-                type="text"
-                size="small"
-                icon={<Delete size={16} />}
-                className={isPopconfirmOpen ? 'bg-refly-tertiary-hover' : ''}
-              />
-            </Popconfirm>
-          </div>
-        )}
-      </div>
-    );
-  },
-);
-
 // Variable type section component
-const VariableTypeSection = ({
+export const VariableTypeSection = ({
   canvasId,
   type,
   variables,
@@ -245,13 +111,14 @@ const VariableTypeSection = ({
       {variables.length > 0 ? (
         <div className="space-y-2">
           {variables.map((variable) => (
-            <VariableItem
+            <InputParameterRow
               key={variable.name}
               variable={variable}
               onEdit={handleEditVariable}
               onDelete={handleDeleteVariable}
               readonly={readonly}
               isHighlighted={highlightedVariableId === variable.variableId}
+              isPreview={true}
             />
           ))}
         </div>

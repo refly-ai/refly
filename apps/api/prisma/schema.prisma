@@ -97,6 +97,34 @@ model User {
   @@map("users")
 }
 
+/// API Keys for CLI authentication
+model UserApiKey {
+  /// Primary key
+  pk         BigInt    @id @default(autoincrement())
+  /// API Key ID (public identifier)
+  keyId      String    @unique @map("key_id")
+  /// Hashed API Key (for validation)
+  keyHash    String    @map("key_hash")
+  /// Key prefix (first 8 chars for display, e.g., "rf_xxxx")
+  keyPrefix  String    @map("key_prefix")
+  /// User ID
+  uid        String    @map("uid")
+  /// Key name/description
+  name       String    @map("name")
+  /// Last used timestamp
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz()
+  /// Expiration timestamp (null = never expires)
+  expiresAt  DateTime? @map("expires_at") @db.Timestamptz()
+  /// Create timestamp
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Revoked timestamp (soft delete)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz()
+
+  @@index([uid, revokedAt])
+  @@index([keyHash])
+  @@map("user_api_keys")
+}
+
 model ActionResult {
   /// Primary key
   pk                      BigInt       @id @default(autoincrement())
@@ -2088,6 +2116,23 @@ model FormSubmission {
   @@map("form_submissions")
 }
 
+model PromptSuggestion {
+  /// Primary key
+  pk        BigInt    @id @default(autoincrement())
+  /// Prompt (JSON map, key is language code, value is prompt)
+  prompt    String    @map("prompt")
+  /// Metadata (JSON)
+  metadata  String    @map("metadata")
+  /// Create timestamp
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@map("prompt_suggestions")
+}
+
 /// Voucher/discount code for template publishing rewards
 model Voucher {
   /// Primary key
@@ -2100,7 +2145,7 @@ model Voucher {
   discountPercent   Int       @map("discount_percent")
   /// Voucher status: unused, used, expired, invalid
   status            String    @default("unused") @map("status")
-  /// Voucher source: template_publish, invitation_claim
+  /// Voucher source: template_publish, invitation_claim, run_workflow
   source            String    @map("source")
   /// Source entity ID (template_id for publish, invitation_id for claim)
   sourceId          String?   @map("source_id")
@@ -2457,4 +2502,39 @@ model LambdaJob {
   @@index([fileId])
   @@index([resultId, resultVersion])
   @@map("lambda_jobs")
+}
+
+/// CLI Device Authorization Session
+/// Stores pending device authorization requests for CLI login flow
+model CliDeviceSession {
+  /// Primary key
+  pk           BigInt   @id @default(autoincrement())
+  /// Unique device session ID (cryptographically random)
+  deviceId     String   @unique @map("device_id")
+  /// CLI version that initiated the request
+  cliVersion   String   @map("cli_version")
+  /// Hostname where CLI is running
+  host         String   @map("host")
+  /// 6-digit verification code (set when initialized)
+  userCode     String?  @map("user_code")
+  /// Client IP address for additional security
+  clientIp     String?  @map("client_ip")
+  /// Session status: pending, authorized, cancelled, expired
+  status       String   @default("pending") @map("status")
+  /// User ID (set when authorized)
+  uid          String?  @map("uid")
+  /// Access token (set when authorized, hashed for security)
+  accessToken  String?  @map("access_token")
+  /// Refresh token (set when authorized, hashed for security)
+  refreshToken String?  @map("refresh_token")
+  /// Expiration timestamp (short TTL: 5-10 minutes)
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz()
+  /// Create timestamp
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp (when status changes)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([status, expiresAt])
+  @@index([uid, createdAt])
+  @@map("cli_device_sessions")
 }

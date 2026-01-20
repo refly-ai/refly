@@ -20,7 +20,7 @@ import { compressAgentLoopMessages } from '../utils/context-manager';
 import { getModelSceneFromMode } from '@refly/utils';
 
 // prompts
-import { buildNodeAgentSystemPrompt } from '../prompts/node-agent';
+import { buildNodeAgentSystemPrompt, PtcConfig } from '../prompts/node-agent';
 import { buildUserPrompt } from '../prompts/user-prompt';
 import { buildWorkflowCopilotPrompt } from '../prompts/copilot-agent';
 
@@ -96,17 +96,32 @@ export class Agent extends BaseSkill {
     ...baseStateGraphArgs,
   };
 
+  private buildPtcConfig(config: SkillRunnableConfig): PtcConfig {
+    const { nonBuiltInToolsets = [] } = config.configurable;
+    return {
+      toolsets: nonBuiltInToolsets.map((t) => {
+        return {
+          id: t.id,
+          name: t.name,
+          key: t.toolset.key,
+        };
+      }),
+    };
+  }
+
   commonPreprocess = async (state: GraphState, config: SkillRunnableConfig) => {
     const { messages = [], images = [] } = state;
-    const { preprocessResult, mode = 'node_agent' } = config.configurable;
+    const { preprocessResult, mode = 'node_agent', ptcEnabled = false } = config.configurable;
     const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
+
+    const ptcConfig = this.buildPtcConfig(config);
 
     const systemPrompt =
       mode === 'copilot_agent'
         ? buildWorkflowCopilotPrompt({
             installedToolsets: config.configurable.installedToolsets ?? [],
           })
-        : buildNodeAgentSystemPrompt();
+        : buildNodeAgentSystemPrompt({ ptcEnabled, ptcConfig });
 
     // Use copilot scene for copilot_agent mode, agent scene for node_agent mode, otherwise use chat scene
     const modelConfigScene = getModelSceneFromMode(mode);
@@ -130,7 +145,15 @@ export class Agent extends BaseSkill {
     _user: User,
     config?: SkillRunnableConfig,
   ): Promise<AgentComponents> {
-    const { selectedTools = [], mode = 'node_agent' } = config?.configurable ?? {};
+    const {
+      selectedTools: rawSelectedTools = [],
+      builtInTools = [],
+      mode = 'node_agent',
+      ptcEnabled = false,
+    } = config?.configurable ?? {};
+
+    // In PTC mode, only use builtin tools in the tool definition
+    const selectedTools = ptcEnabled ? builtInTools : rawSelectedTools;
 
     let actualToolNodeInstance: ToolNode<typeof MessagesAnnotation.State> | null = null;
     let availableToolsForNode: StructuredToolInterface[] = [];
@@ -348,18 +371,44 @@ export class Agent extends BaseSkill {
             }
           }
           if ((lastMessage as any).response_metadata?.model_provider === 'google-vertexai') {
-            const originalSignatures = (lastMessage as any).additional_kwargs?.signatures;
+            const originalSignatures = (lastMessage as any).additional_kwargs?.signatures as any[];
             const toolCallsCount = lastMessage.tool_calls?.length ?? 0;
 
-            // CRITICAL: Vertex AI (Gemini) requires the original non-empty signatures passed back
-            // LangChain extracts the first functionCall's signature and promotes it to signatures[0]
-            // When we clear text content (to avoid 400 INVALID_ARGUMENT from mixed content),
-            // we MUST trim the signatures array to remove redundant empty signatures.
+            // CRITICAL: Vertex AI (Gemini) requires valid signatures for tool calls
+            // The signatures array structure varies based on the response:
+            // - Valid signatures can be anywhere: beginning, middle, or end
+            // - Empty strings are placeholders for text parts
+            // Strategy: Find the first non-empty signature, then take N consecutive elements
+            // from that position, preserving the original structure and positional relationships
             if (Array.isArray(originalSignatures) && originalSignatures.length > toolCallsCount) {
-              lastMessage.additional_kwargs.signatures = originalSignatures.slice(
-                0,
-                toolCallsCount,
+              // Find the index of the first non-empty signature
+              const firstNonEmptyIndex = originalSignatures.findIndex(
+                (s) => typeof s === 'string' && s.length > 0,
               );
+
+              if (firstNonEmptyIndex >= 0) {
+                // Take N consecutive elements starting from the first non-empty signature
+                const extractedSignatures = originalSignatures.slice(
+                  firstNonEmptyIndex,
+                  firstNonEmptyIndex + toolCallsCount,
+                );
+
+                // If we don't have enough elements, pad with empty strings
+                while (extractedSignatures.length < toolCallsCount) {
+                  extractedSignatures.push('');
+                }
+
+                lastMessage.additional_kwargs.signatures = extractedSignatures;
+              } else {
+                // Fallback: no non-empty signatures found (shouldn't happen)
+                this.engine.logger.warn(
+                  `No non-empty signatures found for ${toolCallsCount} tool calls`,
+                );
+                lastMessage.additional_kwargs.signatures = originalSignatures.slice(
+                  0,
+                  toolCallsCount,
+                );
+              }
             }
 
             // Clear content to avoid 400 INVALID_ARGUMENT when AIMessage has both text and tool_calls
@@ -456,6 +505,9 @@ export class Agent extends BaseSkill {
 
     config.metadata.step = { name: 'answerQuestion' };
 
+    const ptcEnabled = config.configurable.ptcEnabled;
+    const ptcConfig = this.buildPtcConfig(config);
+
     try {
       const result = await compiledLangGraphApp.invoke(
         { messages: requestMessages },
@@ -475,6 +527,8 @@ export class Agent extends BaseSkill {
               description: t.description,
               parameters: getJsonSchema(t.schema),
             })),
+            ptcEnabled: ptcEnabled,
+            ptcToolsets: ptcEnabled ? ptcConfig.toolsets : undefined,
             // Runtime config for reproducibility
             // Note: systemPrompt already in input[0], modelConfig duplicates modelParameters
             toolChoice: toolsAvailable ? 'auto' : undefined,

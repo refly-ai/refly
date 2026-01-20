@@ -87,6 +87,8 @@ const FIXED_BUILTIN_TOOLSETS: GenericToolset[] = [
   { type: 'regular', id: 'read_file', name: 'read_file', builtin: true },
   { type: 'regular', id: 'list_files', name: 'list_files', builtin: true },
   { type: 'regular', id: 'get_time', name: 'get_time', builtin: true },
+  { type: 'regular', id: 'read_agent_result', name: 'read_agent_result', builtin: true },
+  { type: 'regular', id: 'read_tool_result', name: 'read_tool_result', builtin: true },
 ];
 
 function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
@@ -1126,12 +1128,14 @@ export class SkillService implements OnModuleInit {
         await Promise.all(
           resultIds.map((id) =>
             limit(() =>
-              this.actionService.getActionResult(user, { resultId: id }).catch((error) => {
-                this.logger.error(
-                  `Failed to get action result detail for resultId ${id}: ${error?.message}`,
-                );
-                return null;
-              }),
+              this.actionService
+                .getActionResult(user, { resultId: id, includeFiles: true })
+                .catch((error) => {
+                  this.logger.error(
+                    `Failed to get action result detail for resultId ${id}: ${error?.message}`,
+                  );
+                  return null;
+                }),
             ),
           ),
         )

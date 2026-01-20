@@ -1,6 +1,8 @@
-import { memo, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { memo, useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react';
 import { Button, Dropdown, Typography } from 'antd';
 import { Close } from 'refly-icons';
+import type { WorkflowVariable } from '@refly/openapi-schema';
+import { UserInputItem } from '../user-input-item';
 
 const { Paragraph } = Typography;
 
@@ -13,13 +15,6 @@ export interface LabelConfig {
   onClose?: () => void;
   onMouseEnter?: (event: React.MouseEvent<HTMLDivElement>) => void;
   onMouseLeave?: (event: React.MouseEvent<HTMLDivElement>) => void;
-}
-
-interface LabelDisplayProps {
-  title?: ReactNode;
-  labels: LabelConfig[];
-  showMore?: boolean;
-  labelClassnames?: string;
 }
 
 // Single label item component
@@ -64,19 +59,44 @@ export const LabelItem = memo(
 
 LabelItem.displayName = 'LabelItem';
 
+interface LabelDisplayProps {
+  title?: ReactNode;
+  variables?: WorkflowVariable[];
+  labels?: LabelConfig[];
+  showMore?: boolean;
+  labelClassnames?: string;
+}
+
 export const LabelDisplay = memo(
-  ({ title, labels, showMore = false, labelClassnames }: LabelDisplayProps) => {
-    if (labels?.length === 0) {
-      return null;
-    }
+  ({
+    title,
+    labels = [],
+    variables = [],
+    showMore = false,
+    labelClassnames,
+  }: LabelDisplayProps) => {
+    const totalItems = useMemo(() => {
+      const items: (
+        | { type: 'variable'; data: WorkflowVariable }
+        | { type: 'label'; data: LabelConfig }
+      )[] = [];
+      for (const v of variables) {
+        items.push({ type: 'variable', data: v });
+      }
+      for (const l of labels) {
+        items.push({ type: 'label', data: l });
+      }
+      return items;
+    }, [variables, labels]);
+
     const labelsContainerRef = useRef<HTMLDivElement>(null);
     const measureContainerRef = useRef<HTMLDivElement>(null);
-    const [visibleCount, setVisibleCount] = useState(labels.length);
+    const [visibleCount, setVisibleCount] = useState(totalItems.length);
     const [isOverflowing, setIsOverflowing] = useState(false);
 
     // Calculate how many labels can fit in the container
     const calculateVisibleCount = useCallback(() => {
-      if (!labelsContainerRef.current || labels.length === 0) {
+      if (!labelsContainerRef.current || totalItems.length === 0) {
         return;
       }
 
@@ -102,7 +122,7 @@ export const LabelDisplay = memo(
       let totalWidth = 0;
       let fitCount = 0;
 
-      for (let i = 0; i < labels.length; i++) {
+      for (let i = 0; i < totalItems.length; i++) {
         const currentLabelElement = labelElements[i];
         if (!currentLabelElement) {
           break;
@@ -112,7 +132,7 @@ export const LabelDisplay = memo(
 
         // Check if adding this label plus ellipsis (if needed) would fit
         const wouldFit =
-          totalWidth + labelWidth + (i < labels.length - 1 ? ellipsisWidth + gapWidth : 0) <=
+          totalWidth + labelWidth + (i < totalItems.length - 1 ? ellipsisWidth + gapWidth : 0) <=
           containerWidth;
 
         if (wouldFit) {
@@ -124,10 +144,10 @@ export const LabelDisplay = memo(
       }
 
       setVisibleCount(Math.max(0, fitCount));
-      setIsOverflowing(fitCount < labels.length);
-    }, [labels]);
+      setIsOverflowing(fitCount < totalItems.length);
+    }, [totalItems]);
 
-    // Calculate on mount and when labelConfig changes
+    // Calculate on mount and when totalItems changes
     useEffect(() => {
       const timer = requestAnimationFrame(() => {
         calculateVisibleCount();
@@ -155,22 +175,33 @@ export const LabelDisplay = memo(
       };
     }, [calculateVisibleCount]);
 
-    if (labels.length === 0) {
+    if (totalItems.length === 0) {
       return null;
     }
 
-    const visibleLabels = labels.slice(0, visibleCount);
-    const hiddenLabels = labels.slice(visibleCount);
+    const visibleItems = totalItems.slice(0, visibleCount);
+    const hiddenItems = totalItems.slice(visibleCount);
 
     // Create dropdown menu items for hidden labels
-    const dropdownMenuItems = hiddenLabels.map((label, index) => ({
-      key: label.key ?? `hidden-${index}`,
-      label: (
-        <div className="flex items-center">
-          <LabelItem {...label} />
-        </div>
-      ),
-    }));
+    const dropdownMenuItems = hiddenItems.map((item, index) => {
+      const key =
+        item.type === 'variable'
+          ? (item.data.name ?? `hidden-var-${index}`)
+          : (item.data.key ?? `hidden-label-${index}`);
+
+      return {
+        key,
+        label: (
+          <div className="flex items-center">
+            {item.type === 'variable' ? (
+              <UserInputItem variable={item.data} classnames={labelClassnames} />
+            ) : (
+              <LabelItem {...item.data} classnames={labelClassnames} />
+            )}
+          </div>
+        ),
+      };
+    });
 
     return (
       <div className="flex items-center gap-1 min-w-0 flex-1 h-5">
@@ -181,13 +212,21 @@ export const LabelDisplay = memo(
           ref={labelsContainerRef}
           className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden"
         >
-          {visibleLabels.map((label, index) => (
-            <LabelItem
-              key={label.key ?? `label-${index}`}
-              {...label}
-              classnames={labelClassnames}
-            />
-          ))}
+          {visibleItems.map((item, index) =>
+            item.type === 'variable' ? (
+              <UserInputItem
+                key={item.data.name ?? `var-${index}`}
+                variable={item.data}
+                classnames={labelClassnames}
+              />
+            ) : (
+              <LabelItem
+                key={item.data.key ?? `label-${index}`}
+                {...item.data}
+                classnames={labelClassnames}
+              />
+            ),
+          )}
           {isOverflowing ? (
             showMore ? (
               <Dropdown
@@ -212,9 +251,18 @@ export const LabelDisplay = memo(
           aria-hidden="true"
           className="absolute left-[-9999px] top-[-9999px] whitespace-nowrap pointer-events-none flex items-center gap-1"
         >
-          {labels.map((label, index) => (
-            <div key={`measure-${label.key ?? index}`} className="label-measure-item">
-              <LabelItem {...label} classnames={labelClassnames} />
+          {totalItems.map((item, index) => (
+            <div
+              key={`measure-${
+                item.type === 'variable' ? (item.data.name ?? index) : (item.data.key ?? index)
+              }`}
+              className="label-measure-item"
+            >
+              {item.type === 'variable' ? (
+                <UserInputItem variable={item.data} classnames={labelClassnames} />
+              ) : (
+                <LabelItem {...item.data} classnames={labelClassnames} />
+              )}
             </div>
           ))}
         </div>

@@ -1,0 +1,11 @@
+src/
+tests/
+*.test.ts
+*.spec.ts
+tsconfig.json
+tsconfig.*.json
+.DS_Store
+*.log
+coverage/
+.nyc_output/
+vitest.config.ts

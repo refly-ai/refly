@@ -34,6 +34,7 @@ export type VoucherStatusType = (typeof VoucherStatus)[keyof typeof VoucherStatu
 export const VoucherSource = {
   TEMPLATE_PUBLISH: 'template_publish',
   INVITATION_CLAIM: 'invitation_claim',
+  RUN_WORKFLOW: 'run_workflow',
 } as const;
 
 export type VoucherSourceType = (typeof VoucherSource)[keyof typeof VoucherSource];

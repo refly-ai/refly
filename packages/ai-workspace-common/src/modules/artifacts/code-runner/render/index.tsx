@@ -1,11 +1,21 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, Suspense, lazy } from 'react';
 
 import HTMLRenderer from './html';
 import SVGRender from './svg';
-import ReactRenderer from './react';
 import { Markdown } from '@refly-packages/ai-workspace-common/components/markdown';
 import { CodeArtifactType } from '@refly/openapi-schema';
 import MindMapRenderer from './mind-map';
+import { Skeleton } from 'antd';
+
+// Lazy load ReactRenderer as it contains Sandpack (~500KB)
+const ReactRenderer = lazy(() => import('./react'));
+
+// Loading fallback for Sandpack
+const SandpackLoadingFallback = () => (
+  <div className="flex items-center justify-center h-full w-full bg-gray-50">
+    <Skeleton active paragraph={{ rows: 4 }} />
+  </div>
+);
 
 interface RendererProps {
   content: string;
@@ -44,14 +54,16 @@ const Renderer = memo<RendererProps>(
     switch (type) {
       case 'application/refly.artifacts.react': {
         return (
-          <ReactRenderer
-            code={content}
-            title={title}
-            language={language}
-            onRequestFix={onRequestFix}
-            showActions={showActions}
-            purePreview={purePreview}
-          />
+          <Suspense fallback={<SandpackLoadingFallback />}>
+            <ReactRenderer
+              code={content}
+              title={title}
+              language={language}
+              onRequestFix={onRequestFix}
+              showActions={showActions}
+              purePreview={purePreview}
+            />
+          </Suspense>
         );
       }
 

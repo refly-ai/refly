@@ -160,6 +160,9 @@ export default () => ({
       bonusCreditExpiresInMonths:
         Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_EXPIRES_IN_MONTHS) || 3,
     },
+    onboarding: {
+      enabled: process.env.ONBOARDING_ENABLED === 'true' || false,
+    },
   },
   tools: {
     supportedToolsets: process.env.SUPPORTED_TOOLSETS || '', // comma separated list of toolset keys
@@ -242,6 +245,14 @@ export default () => ({
     // Expiration time in minutes (default: 7 days = 10080 minutes)
     // For testing, use smaller values like 7 (7 minutes)
     expirationMinutes: Number(process.env.VOUCHER_EXPIRATION_MINUTES) || 10080,
+    // Default discount percentage for vouchers (default: 80% off)
+    defaultDiscountPercent: Number(process.env.VOUCHER_DEFAULT_DISCOUNT_PERCENT) || 80,
+  },
+  ptc: {
+    mode: process.env.PTC_MODE || 'off',
+    userAllowlist: process.env.PTC_USER_ALLOWLIST || '',
+    toolsetAllowlist: process.env.PTC_TOOLSET_ALLOWLIST || '',
+    toolsetBlocklist: process.env.PTC_TOOLSET_BLOCKLIST || '',
   },
   schedule: {
     // Rate limiting - controls global and per-user concurrency
@@ -313,12 +324,32 @@ export default () => ({
     parseTimeoutMs: Number.parseInt(process.env.LAMBDA_PARSE_TIMEOUT_MS) || 3 * 60 * 1000, // 3 minutes
   },
 
+  workflow: {
+    // Interval between polling checks for workflow status (default: 1.5 seconds)
+    pollIntervalMs: Number.parseInt(process.env.WORKFLOW_POLL_INTERVAL_MS) || 1500,
+    // Maximum time allowed for entire workflow execution (default: 30 minutes)
+    executionTimeoutMs:
+      Number.parseInt(process.env.WORKFLOW_EXECUTION_TIMEOUT_MS) || 30 * 60 * 1000,
+    // Maximum time allowed for a single node execution (default: 30 minutes)
+    nodeExecutionTimeoutMs:
+      Number.parseInt(process.env.WORKFLOW_NODE_EXECUTION_TIMEOUT_MS) || 30 * 60 * 1000,
+    // TTL for distributed lock during polling (default: 5 seconds)
+    pollLockTtlMs: Number.parseInt(process.env.WORKFLOW_POLL_LOCK_TTL_MS) || 5000,
+  },
+
   sandbox: {
     url: process.env.SANDBOX_URL,
     timeout: process.env.SANDBOX_TIMEOUT_MS,
     whiteList: process.env.SANDBOX_WHITELIST, // 'uid,uid'
     blackList: process.env.SANDBOX_BLACKLIST, // 'uid,uid'
     randomRate: process.env.SANDBOX_RANDOM_RATE, // '20'
+    s3Lib: {
+      enabled: process.env.SANDBOX_S3LIB_ENABLED,
+      pathPrefix: process.env.SANDBOX_S3LIB_PATH_PREFIX,
+      hash: process.env.SANDBOX_S3LIB_HASH,
+      cache: process.env.SANDBOX_S3LIB_CACHE,
+      reset: process.env.SANDBOX_S3LIB_RESET,
+    },
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
       // Wrapper

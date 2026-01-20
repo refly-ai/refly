@@ -357,6 +357,9 @@ import type {
   AbortWorkflowData,
   AbortWorkflowError,
   AbortWorkflowResponse,
+  ListWorkflowExecutionsData,
+  ListWorkflowExecutionsError,
+  ListWorkflowExecutionsResponse2,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
   GetWorkflowDetailResponse2,
@@ -396,6 +399,26 @@ import type {
   GetScheduleDetailData,
   GetScheduleDetailError,
   GetScheduleDetailResponse2,
+  GetScheduleRecordsData,
+  GetScheduleRecordsError,
+  GetScheduleRecordsResponse2,
+  ListAllScheduleRecordsData,
+  ListAllScheduleRecordsError,
+  ListAllScheduleRecordsResponse2,
+  GetAvailableToolsError,
+  GetAvailableToolsResponse2,
+  GetScheduleRecordDetailData,
+  GetScheduleRecordDetailError,
+  GetScheduleRecordDetailResponse2,
+  GetRecordSnapshotData,
+  GetRecordSnapshotError,
+  GetRecordSnapshotResponse2,
+  TriggerScheduleManuallyData,
+  TriggerScheduleManuallyError,
+  TriggerScheduleManuallyResponse2,
+  RetryScheduleRecordData,
+  RetryScheduleRecordError,
+  RetryScheduleRecordResponse2,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -513,6 +536,12 @@ import type {
   DeleteToolsetData,
   DeleteToolsetError,
   DeleteToolsetResponse,
+  ExportToolsetDefinitionsData,
+  ExportToolsetDefinitionsError,
+  ExportToolsetDefinitionsResponse2,
+  ExecuteToolData,
+  ExecuteToolError,
+  ExecuteToolResponse2,
   GetToolCallResultData,
   GetToolCallResultError,
   GetToolCallResultResponse2,
@@ -536,6 +565,8 @@ import type {
   ConvertData,
   ConvertError,
   ConvertResponse2,
+  GetPromptSuggestionsError,
+  GetPromptSuggestionsResponse2,
   GetAvailableVouchersError,
   GetAvailableVouchersResponse2,
   ListUserVouchersError,
@@ -2468,6 +2499,23 @@ export const abortWorkflow = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * List workflow executions
+ * List all workflow executions
+ */
+export const listWorkflowExecutions = <ThrowOnError extends boolean = false>(
+  options?: Options<ListWorkflowExecutionsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListWorkflowExecutionsResponse2,
+    ListWorkflowExecutionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow/list',
+  });
+};
+
+/**
  * Get workflow detail
  * Get detail for a workflow execution
  */
@@ -2683,6 +2731,125 @@ export const getScheduleDetail = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/schedule/detail',
+  });
+};
+
+/**
+ * Get schedule records
+ * Get execution records for a specific schedule
+ */
+export const getScheduleRecords = <ThrowOnError extends boolean = false>(
+  options: Options<GetScheduleRecordsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetScheduleRecordsResponse2,
+    GetScheduleRecordsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/records',
+  });
+};
+
+/**
+ * List all schedule records
+ * List all schedule execution records with filtering options
+ */
+export const listAllScheduleRecords = <ThrowOnError extends boolean = false>(
+  options: Options<ListAllScheduleRecordsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    ListAllScheduleRecordsResponse2,
+    ListAllScheduleRecordsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/records/list',
+  });
+};
+
+/**
+ * Get available tools
+ * Get list of tools used in schedule executions
+ */
+export const getAvailableTools = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetAvailableToolsResponse2,
+    GetAvailableToolsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/records/tools',
+  });
+};
+
+/**
+ * Get schedule record detail
+ * Get detailed information about a specific schedule execution record
+ */
+export const getScheduleRecordDetail = <ThrowOnError extends boolean = false>(
+  options: Options<GetScheduleRecordDetailData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetScheduleRecordDetailResponse2,
+    GetScheduleRecordDetailError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/record/detail',
+  });
+};
+
+/**
+ * Get record snapshot
+ * Get the canvas snapshot for a schedule execution record
+ */
+export const getRecordSnapshot = <ThrowOnError extends boolean = false>(
+  options: Options<GetRecordSnapshotData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GetRecordSnapshotResponse2,
+    GetRecordSnapshotError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/record/snapshot',
+  });
+};
+
+/**
+ * Trigger schedule manually
+ * Manually trigger a schedule execution
+ */
+export const triggerScheduleManually = <ThrowOnError extends boolean = false>(
+  options: Options<TriggerScheduleManuallyData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    TriggerScheduleManuallyResponse2,
+    TriggerScheduleManuallyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/trigger',
+  });
+};
+
+/**
+ * Retry schedule record
+ * Retry a failed schedule execution record
+ */
+export const retryScheduleRecord = <ThrowOnError extends boolean = false>(
+  options: Options<RetryScheduleRecordData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    RetryScheduleRecordResponse2,
+    RetryScheduleRecordError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/schedule/record/retry',
   });
 };
 
@@ -3368,6 +3535,36 @@ export const deleteToolset = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Export toolset definitions
+ * Export tool schemas for specified toolsets. Used for generating Python SDK.
+ */
+export const exportToolsetDefinitions = <ThrowOnError extends boolean = false>(
+  options?: Options<ExportToolsetDefinitionsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ExportToolsetDefinitionsResponse2,
+    ExportToolsetDefinitionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/tool/toolset/exportDefinitions',
+  });
+};
+
+/**
+ * Execute tool
+ * Execute a tool by toolset key and tool name.
+ */
+export const executeTool = <ThrowOnError extends boolean = false>(
+  options: Options<ExecuteToolData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<ExecuteToolResponse2, ExecuteToolError, ThrowOnError>({
+    ...options,
+    url: '/tool/execute',
+  });
+};
+
+/**
  * Get tool call result
  * Get the result of a tool call
  */
@@ -3494,6 +3691,23 @@ export const convert = <ThrowOnError extends boolean = false>(
       ...options?.headers,
     },
     url: '/misc/convert',
+  });
+};
+
+/**
+ * Get prompt suggestions
+ * Get prompt suggestions for a given user
+ */
+export const getPromptSuggestions = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetPromptSuggestionsResponse2,
+    GetPromptSuggestionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/misc/promptSuggestions',
   });
 };
 

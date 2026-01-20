@@ -9,7 +9,7 @@ import { AiOutlineUser } from 'react-icons/ai';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { useNavigate } from 'react-router-dom';
 import { useUserStoreShallow } from '@refly/stores';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
 import { LuSparkles } from 'react-icons/lu';
 import { useUpdateCanvasTitle } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import type { InputRef } from 'antd';

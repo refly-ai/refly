@@ -21,6 +21,9 @@ const WorkspacePage = () => {
   // Handle claiming voucher that was pending when user was not logged in
   usePendingVoucherClaim();
 
+  // Prefetch workflow page resources (during browser idle time)
+  // User may click a workflow, preloading makes transition smoother
+
   useEffect(() => {
     logEvent('enter_workspace');
   }, []);

@@ -4,12 +4,16 @@ import {
   ExecutionContext,
   UnauthorizedException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ACCESS_TOKEN_COOKIE } from '@refly/utils';
 import { isDesktop } from '../../../utils/runtime';
+import { ApiKeyService } from '../api-key.service';
+import { PrismaService } from '../../common/prisma.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -18,6 +22,9 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
+    @Inject(forwardRef(() => ApiKeyService))
+    private apiKeyService: ApiKeyService,
+    private prismaService: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -29,6 +36,24 @@ export class JwtAuthGuard implements CanActivate {
       return true;
     }
 
+    // Try API Key authentication first (for CLI)
+    const apiKey = this.extractApiKeyFromRequest(request);
+    if (apiKey) {
+      const uid = await this.apiKeyService.validateApiKey(apiKey);
+      if (uid) {
+        // Fetch user info from database
+        const user = await this.prismaService.user.findUnique({
+          where: { uid },
+        });
+        if (user) {
+          request.user = { uid: user.uid, email: user.email, name: user.name };
+          return true;
+        }
+      }
+      throw new UnauthorizedException('Invalid API key');
+    }
+
+    // Fall back to JWT authentication
     const token = this.extractTokenFromRequest(request);
     if (!token) {
       throw new UnauthorizedException();
@@ -48,12 +73,35 @@ export class JwtAuthGuard implements CanActivate {
     return true;
   }
 
+  /**
+   * Extract API key from request
+   * Supports: Authorization: Bearer rf_xxx or X-API-Key: rf_xxx
+   */
+  private extractApiKeyFromRequest(request: Request): string | undefined {
+    // Check X-API-Key header first
+    const apiKeyHeader = request.headers?.['x-api-key'];
+    if (apiKeyHeader && typeof apiKeyHeader === 'string' && apiKeyHeader.startsWith('rf_')) {
+      return apiKeyHeader;
+    }
+
+    // Check Authorization header for API key (Bearer rf_xxx)
+    const authHeader = request.headers?.authorization;
+    if (authHeader) {
+      const [type, token] = authHeader.split(' ');
+      if (type === 'Bearer' && token?.startsWith('rf_')) {
+        return token;
+      }
+    }
+
+    return undefined;
+  }
+
   private extractTokenFromRequest(request: Request): string | undefined {
     // Try to get token from Authorization header
     const authHeader = request.headers?.authorization;
     if (authHeader) {
       const [type, token] = authHeader.split(' ');
-      if (type === 'Bearer') {
+      if (type === 'Bearer' && !token?.startsWith('rf_')) {
         return token;
       }
     }

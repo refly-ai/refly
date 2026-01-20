@@ -9,6 +9,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { useCleanupAbortedNode } from './use-cleanup-aborted-node';
 import { useAbortAction } from './use-abort-action';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import { useCheckEmptyPrompts } from './use-check-empty-prompts';
 import { useVariableView } from './use-variable-view';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +35,8 @@ export const useSkillResponseActions = ({
   const { setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
     setShowWorkflowRun: state.setShowWorkflowRun,
   }));
+
+  const { checkEmptyPrompts } = useCheckEmptyPrompts();
 
   // Get variable view handler for auto-opening config panel
   const { handleVariableView } = useVariableView(canvasId || '');
@@ -125,6 +128,12 @@ export const useSkillResponseActions = ({
       return;
     }
 
+    // Check for empty prompts in the workflow starting from this node
+    const emptyPromptNodeIds = checkEmptyPrompts(nodeId);
+    if (emptyPromptNodeIds.length > 0) {
+      return;
+    }
+
     logEvent('run_from_here', Date.now(), {
       canvasId,
       nodeId,
@@ -146,6 +155,7 @@ export const useSkillResponseActions = ({
     setShowWorkflowRun,
     getFirstEmptyRequiredFileVariable,
     handleVariableView,
+    checkEmptyPrompts,
     t,
   ]);
 

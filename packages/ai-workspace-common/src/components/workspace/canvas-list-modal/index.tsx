@@ -104,7 +104,7 @@ export const CanvasListModal = memo((props: CanvasListProps) => {
 
   const handleClickCanvas = (canvas: Canvas) => {
     setVisible(false);
-    navigate(`/canvas/${canvas.canvasId}`);
+    navigate(`/workflow/${canvas.canvasId}`);
   };
 
   const afterDelete = (canvas: Canvas) => {

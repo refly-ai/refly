@@ -20,6 +20,8 @@ interface ChatInputProps {
   onUploadImage?: (file: File) => Promise<void>;
   onUploadMultipleImages?: (files: File[]) => Promise<void>;
   onFocus?: () => void;
+  onBlur?: () => void;
+  autoFocus?: boolean;
 }
 
 const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
@@ -36,6 +38,8 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       onUploadImage,
       onUploadMultipleImages,
       onFocus,
+      onBlur,
+      autoFocus = true,
     },
     ref,
   ) => {
@@ -213,11 +217,12 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
         <TextArea
           ref={inputRef}
           style={{ paddingLeft: 0, paddingRight: 0, paddingTop: '4px', paddingBottom: '4px' }}
-          autoFocus={!readonly}
+          autoFocus={autoFocus && !readonly}
           disabled={readonly}
           onFocus={handleFocus}
           onBlur={() => {
             setIsFocused(false);
+            onBlur?.();
           }}
           value={query ?? ''}
           onChange={handleInputChange}

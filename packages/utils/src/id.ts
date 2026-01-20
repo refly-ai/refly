@@ -56,6 +56,8 @@ export enum IDPrefix {
   ROUTING_RULE = 'rrl-',
   WORKFLOW_SCHEDULE = 'wh-',
   SCHEDULE_RECORD = 'sr-',
+  API_KEY = 'ak-',
+  DEVICE_SESSION = 'ds-',
 }
 
 export function genUID(): string {
@@ -357,3 +359,11 @@ export function genInviteCode(): string {
 export const genVoucherInviterRewardRechargeId = (invitationId: string) => {
   return `${IDPrefix.CREDIT_RECHARGE}voucher-inviter-${invitationId}`;
 };
+
+export function genApiKeyId(): string {
+  return IDPrefix.API_KEY + createId();
+}
+
+export function genDeviceSessionId(): string {
+  return IDPrefix.DEVICE_SESSION + createId();
+}

@@ -13,7 +13,7 @@ import {
 import { Segmented, Button, message } from 'antd';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
 import { ConfigureTab } from './configure-tab';
 import { LastRunTab } from './last-run-tab';
@@ -28,6 +28,9 @@ import { useVariableView } from '@refly-packages/ai-workspace-common/hooks/canva
 import { logEvent } from '@refly/telemetry-web';
 import { useShareDataContext } from '@refly-packages/ai-workspace-common/context/use-share-data';
 import { parseMentionsFromQuery } from '@refly/utils';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import type { DriveFile } from '@refly/openapi-schema';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SkillResponseNodePreviewProps {
   node: CanvasNode<ResponseNodeMeta>;
@@ -71,6 +74,7 @@ const SkillResponseNodePreviewComponent = ({
   const { resetFailedState } = useActionPolling();
 
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: variables = [] } = useVariablesManagement(canvasId);
   const { processQuery } = useQueryProcessor();
   const { handleVariableView } = useVariableView(canvasId);
@@ -224,6 +228,63 @@ const SkillResponseNodePreviewComponent = ({
     setNodePreview(canvasId, null);
   }, [canvasId, setNodePreview]);
 
+  // Handle adding file to file library
+  const handleAddToFileLibrary = useCallback(
+    async (file: DriveFile) => {
+      if (!canvasId || !file?.storageKey) {
+        message.error(t('common.saveFailed') || 'Failed to add file to library');
+        return;
+      }
+
+      try {
+        const { data, error } = await getClient().createDriveFile({
+          body: {
+            canvasId,
+            name: file.name ?? 'Untitled file',
+            type: file.type ?? 'text/plain',
+            storageKey: file.storageKey,
+            source: 'manual',
+            summary: file.summary,
+          },
+        });
+
+        if (error || !data?.success) {
+          throw new Error(error ? String(error) : 'Failed to create drive file');
+        }
+
+        // Refetch only file library queries (source: 'manual') to refresh the file list
+        // Using refetchQueries instead of invalidateQueries to avoid clearing cache
+        // This will trigger a refetch in FileOverview component without affecting other queries
+        queryClient.refetchQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            // Check if this is a ListDriveFiles query
+            if (queryKey[0] !== 'ListDriveFiles') {
+              return false;
+            }
+            // Check if the query has source: 'manual'
+            // Query key structure: ['ListDriveFiles', { query: { canvasId, source, ... } }]
+            const queryOptions = queryKey[1] as
+              | { query?: { source?: string; canvasId?: string } }
+              | undefined;
+            return (
+              queryOptions?.query?.source === 'manual' && queryOptions?.query?.canvasId === canvasId
+            );
+          },
+        });
+
+        message.success(
+          t('canvas.workflow.run.addToFileLibrarySuccess') || 'Successfully added to file',
+        );
+      } catch (err) {
+        console.error('Failed to add file to library:', err);
+        message.error(t('common.saveFailed') || 'Failed to add file to library');
+        throw err;
+      }
+    },
+    [canvasId, t, queryClient],
+  );
+
   // Get node execution status
   const isExecuting = data.metadata?.status === 'executing' || data.metadata?.status === 'waiting';
 
@@ -334,7 +395,12 @@ const SkillResponseNodePreviewComponent = ({
 
         {currentFile && (
           <div className="absolute inset-0 bg-refly-bg-content-z2 z-10">
-            <ProductCard file={currentFile} classNames="w-full h-full" source="preview" />
+            <ProductCard
+              file={currentFile}
+              classNames="w-full h-full"
+              source="preview"
+              onAddToFileLibrary={handleAddToFileLibrary}
+            />
           </div>
         )}
       </div>

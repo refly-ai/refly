@@ -70,9 +70,11 @@ import {
   duplicateShare,
   emailLogin,
   emailSignup,
+  executeTool,
   executeWorkflowApp,
   exportCanvas,
   exportDocument,
+  exportToolsetDefinitions,
   extractVariables,
   generateAppTemplate,
   generateMedia,
@@ -102,6 +104,7 @@ import {
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
   getScheduleDetail,
@@ -154,6 +157,7 @@ import {
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
@@ -334,12 +338,16 @@ import {
   EmailLoginError,
   EmailSignupData,
   EmailSignupError,
+  ExecuteToolData,
+  ExecuteToolError,
   ExecuteWorkflowAppData,
   ExecuteWorkflowAppError,
   ExportCanvasData,
   ExportCanvasError,
   ExportDocumentData,
   ExportDocumentError,
+  ExportToolsetDefinitionsData,
+  ExportToolsetDefinitionsError,
   ExtractVariablesData,
   ExtractVariablesError,
   GenerateAppTemplateData,
@@ -392,6 +400,7 @@ import {
   GetPilotSessionDetailError,
   GetProjectDetailData,
   GetProjectDetailError,
+  GetPromptSuggestionsError,
   GetRecordSnapshotData,
   GetRecordSnapshotError,
   GetResourceDetailData,
@@ -483,6 +492,8 @@ import {
   ListUserVouchersError,
   ListWorkflowAppsData,
   ListWorkflowAppsError,
+  ListWorkflowExecutionsData,
+  ListWorkflowExecutionsError,
   LogoutError,
   MultiLingualWebSearchData,
   MultiLingualWebSearchError,
@@ -1207,6 +1218,23 @@ export const useGetCopilotSessionDetail = <
       ) as TData,
     ...options,
   });
+export const useListWorkflowExecutions = <
+  TData = Common.ListWorkflowExecutionsDefaultResponse,
+  TError = ListWorkflowExecutionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ListWorkflowExecutionsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseListWorkflowExecutionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listWorkflowExecutions({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
 export const useGetWorkflowDetail = <
   TData = Common.GetWorkflowDetailDefaultResponse,
   TError = GetWorkflowDetailError,
@@ -1649,6 +1677,23 @@ export const useListToolsets = <
       listToolsets({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
+export const useExportToolsetDefinitions = <
+  TData = Common.ExportToolsetDefinitionsDefaultResponse,
+  TError = ExportToolsetDefinitionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ExportToolsetDefinitionsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseExportToolsetDefinitionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      exportToolsetDefinitions({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
 export const useGetToolCallResult = <
   TData = Common.GetToolCallResultDefaultResponse,
   TError = GetToolCallResultError,
@@ -1694,6 +1739,23 @@ export const useServeStatic = <
     queryKey: Common.UseServeStaticKeyFn(clientOptions, queryKey),
     queryFn: () =>
       serveStatic({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetPromptSuggestions = <
+  TData = Common.GetPromptSuggestionsDefaultResponse,
+  TError = GetPromptSuggestionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetPromptSuggestionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getPromptSuggestions({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetAvailableVouchers = <
@@ -3609,6 +3671,23 @@ export const useDeleteToolset = <
   useMutation<TData, TError, Options<DeleteToolsetData, true>, TContext>({
     mutationKey: Common.UseDeleteToolsetKeyFn(mutationKey),
     mutationFn: (clientOptions) => deleteToolset(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useExecuteTool = <
+  TData = Common.ExecuteToolMutationResult,
+  TError = ExecuteToolError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<ExecuteToolData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<ExecuteToolData, true>, TContext>({
+    mutationKey: Common.UseExecuteToolKeyFn(mutationKey),
+    mutationFn: (clientOptions) => executeTool(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useAuthorizeComposioConnection = <

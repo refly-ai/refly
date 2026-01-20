@@ -357,6 +357,9 @@ import type {
   AbortWorkflowData,
   AbortWorkflowError,
   AbortWorkflowResponse,
+  ListWorkflowExecutionsData,
+  ListWorkflowExecutionsError,
+  ListWorkflowExecutionsResponse2,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
   GetWorkflowDetailResponse2,
@@ -533,6 +536,12 @@ import type {
   DeleteToolsetData,
   DeleteToolsetError,
   DeleteToolsetResponse,
+  ExportToolsetDefinitionsData,
+  ExportToolsetDefinitionsError,
+  ExportToolsetDefinitionsResponse2,
+  ExecuteToolData,
+  ExecuteToolError,
+  ExecuteToolResponse2,
   GetToolCallResultData,
   GetToolCallResultError,
   GetToolCallResultResponse2,
@@ -556,6 +565,8 @@ import type {
   ConvertData,
   ConvertError,
   ConvertResponse2,
+  GetPromptSuggestionsError,
+  GetPromptSuggestionsResponse2,
   GetAvailableVouchersError,
   GetAvailableVouchersResponse2,
   ListUserVouchersError,
@@ -2488,6 +2499,23 @@ export const abortWorkflow = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * List workflow executions
+ * List all workflow executions
+ */
+export const listWorkflowExecutions = <ThrowOnError extends boolean = false>(
+  options?: Options<ListWorkflowExecutionsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListWorkflowExecutionsResponse2,
+    ListWorkflowExecutionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/workflow/list',
+  });
+};
+
+/**
  * Get workflow detail
  * Get detail for a workflow execution
  */
@@ -3507,6 +3535,36 @@ export const deleteToolset = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Export toolset definitions
+ * Export tool schemas for specified toolsets. Used for generating Python SDK.
+ */
+export const exportToolsetDefinitions = <ThrowOnError extends boolean = false>(
+  options?: Options<ExportToolsetDefinitionsData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ExportToolsetDefinitionsResponse2,
+    ExportToolsetDefinitionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/tool/toolset/exportDefinitions',
+  });
+};
+
+/**
+ * Execute tool
+ * Execute a tool by toolset key and tool name.
+ */
+export const executeTool = <ThrowOnError extends boolean = false>(
+  options: Options<ExecuteToolData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<ExecuteToolResponse2, ExecuteToolError, ThrowOnError>({
+    ...options,
+    url: '/tool/execute',
+  });
+};
+
+/**
  * Get tool call result
  * Get the result of a tool call
  */
@@ -3633,6 +3691,23 @@ export const convert = <ThrowOnError extends boolean = false>(
       ...options?.headers,
     },
     url: '/misc/convert',
+  });
+};
+
+/**
+ * Get prompt suggestions
+ * Get prompt suggestions for a given user
+ */
+export const getPromptSuggestions = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetPromptSuggestionsResponse2,
+    GetPromptSuggestionsError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/misc/promptSuggestions',
   });
 };
 

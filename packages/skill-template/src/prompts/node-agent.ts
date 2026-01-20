@@ -110,9 +110,14 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
   - **Important**: File content is NOT included to save context tokens
   - Use \`read_file\` tool with \`fileId\` to retrieve full content when needed
   - Use \`name\` with \`execute_code\` for file processing
-- \`results\`: outputs from upstream nodes; access via \`@agent:Title\` mention
-  - \`outputFiles\`: metadata only, use \`read_file\` to get content
-- \`summary\` fields: quick preview without reading full content
+- \`resultsMeta\`: outputs from upstream nodes (**metadata only**)
+  - Contains: resultId, title, status, summary, contentTokens, toolCallsMeta, outputFiles
+  - **Summary format**: If prefixed with \`... [TRUNCATED DUE TO LENGTH LIMIT]\`, it's a tail excerpt
+  - **When to read full content**: Use \`read_agent_result(resultId)\` when:
+    - contentTokens > 300 (substantial content)
+    - You need specific details, reasoning, or complete data
+    - The task relates to or builds upon previous results
+  - Use \`read_tool_result(resultId, callId)\` for specific tool input/output
 
 ### File Access Strategy
 1. **Check summary first** — often sufficient for understanding file purpose
@@ -142,6 +147,22 @@ Now begin!
 
 `.trim();
 
-export const buildNodeAgentSystemPrompt = (): string => {
+export interface PtcConfig {
+  toolsets: {
+    id: string;
+    name: string;
+    key: string;
+  }[];
+}
+
+export interface BuildNodeAgentSystemPromptOptions {
+  ptcEnabled?: boolean;
+  ptcConfig?: PtcConfig;
+}
+
+export const buildNodeAgentSystemPrompt = (
+  _options?: BuildNodeAgentSystemPromptOptions,
+): string => {
+  // TODO: Build PTC mode system prompt
   return SYSTEM_PROMPT;
 };

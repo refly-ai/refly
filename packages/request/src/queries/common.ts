@@ -64,6 +64,7 @@ import {
   deleteSkillTrigger,
   deleteToolset,
   deleteWorkflowApp,
+  downloadExportJobResult,
   duplicateCanvas,
   duplicateShare,
   emailLogin,
@@ -76,6 +77,7 @@ import {
   generateMedia,
   getActionResult,
   getAuthConfig,
+  getAvailableTools,
   getAvailableVouchers,
   getCanvasCommissionByCanvasId,
   getCanvasData,
@@ -93,13 +95,18 @@ import {
   getCreditUsageByExecutionId,
   getCreditUsageByResultId,
   getDocumentDetail,
+  getExportJobStatus,
   getFormDefinition,
   getPageByCanvasId,
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
+  getRecordSnapshot,
   getResourceDetail,
   getScheduleDetail,
+  getScheduleRecordDetail,
+  getScheduleRecords,
   getSettings,
   getSubscriptionPlans,
   getSubscriptionUsage,
@@ -116,6 +123,7 @@ import {
   invokeSkill,
   listAccounts,
   listActions,
+  listAllScheduleRecords,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
@@ -146,6 +154,7 @@ import {
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   logout,
   multiLingualWebSearch,
   pinSkillInstance,
@@ -153,16 +162,19 @@ import {
   refreshToken,
   reindexResource,
   resendVerification,
+  retryScheduleRecord,
   revokeComposioConnection,
   scrape,
   search,
   serveStatic,
   setCanvasState,
   sharePage,
+  startExportJob,
   streamInvokeSkill,
   submitForm,
   syncCanvasState,
   testProviderConnection,
+  triggerScheduleManually,
   triggerVoucher,
   unpinSkillInstance,
   updateCanvas,
@@ -437,6 +449,30 @@ export const UseExportDocumentKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useExportDocumentKey, ...(queryKey ?? [clientOptions])];
+export type GetExportJobStatusDefaultResponse = Awaited<
+  ReturnType<typeof getExportJobStatus>
+>['data'];
+export type GetExportJobStatusQueryResult<
+  TData = GetExportJobStatusDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetExportJobStatusKey = 'GetExportJobStatus';
+export const UseGetExportJobStatusKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetExportJobStatusKey, ...(queryKey ?? [clientOptions])];
+export type DownloadExportJobResultDefaultResponse = Awaited<
+  ReturnType<typeof downloadExportJobResult>
+>['data'];
+export type DownloadExportJobResultQueryResult<
+  TData = DownloadExportJobResultDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useDownloadExportJobResultKey = 'DownloadExportJobResult';
+export const UseDownloadExportJobResultKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useDownloadExportJobResultKey, ...(queryKey ?? [clientOptions])];
 export type ListProjectsDefaultResponse = Awaited<ReturnType<typeof listProjects>>['data'];
 export type ListProjectsQueryResult<
   TData = ListProjectsDefaultResponse,
@@ -615,6 +651,18 @@ export const UseGetCopilotSessionDetailKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetCopilotSessionDetailKey, ...(queryKey ?? [clientOptions])];
+export type ListWorkflowExecutionsDefaultResponse = Awaited<
+  ReturnType<typeof listWorkflowExecutions>
+>['data'];
+export type ListWorkflowExecutionsQueryResult<
+  TData = ListWorkflowExecutionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListWorkflowExecutionsKey = 'ListWorkflowExecutions';
+export const UseListWorkflowExecutionsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListWorkflowExecutionsKey, ...(queryKey ?? [clientOptions])];
 export type GetWorkflowDetailDefaultResponse = Awaited<
   ReturnType<typeof getWorkflowDetail>
 >['data'];
@@ -963,6 +1011,18 @@ export const UseServeStaticKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useServeStaticKey, ...(queryKey ?? [clientOptions])];
+export type GetPromptSuggestionsDefaultResponse = Awaited<
+  ReturnType<typeof getPromptSuggestions>
+>['data'];
+export type GetPromptSuggestionsQueryResult<
+  TData = GetPromptSuggestionsDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetPromptSuggestionsKey = 'GetPromptSuggestions';
+export const UseGetPromptSuggestionsKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useGetPromptSuggestionsKey, ...(queryKey ?? [clientOptions])];
 export type GetAvailableVouchersDefaultResponse = Awaited<
   ReturnType<typeof getAvailableVouchers>
 >['data'];
@@ -1221,6 +1281,12 @@ export type DeleteResourceMutationResult = Awaited<ReturnType<typeof deleteResou
 export const useDeleteResourceKey = 'DeleteResource';
 export const UseDeleteResourceKeyFn = (mutationKey?: Array<unknown>) => [
   useDeleteResourceKey,
+  ...(mutationKey ?? []),
+];
+export type StartExportJobMutationResult = Awaited<ReturnType<typeof startExportJob>>;
+export const useStartExportJobKey = 'StartExportJob';
+export const UseStartExportJobKeyFn = (mutationKey?: Array<unknown>) => [
+  useStartExportJobKey,
   ...(mutationKey ?? []),
 ];
 export type UpdateDocumentMutationResult = Awaited<ReturnType<typeof updateDocument>>;
@@ -1491,6 +1557,54 @@ export type GetScheduleDetailMutationResult = Awaited<ReturnType<typeof getSched
 export const useGetScheduleDetailKey = 'GetScheduleDetail';
 export const UseGetScheduleDetailKeyFn = (mutationKey?: Array<unknown>) => [
   useGetScheduleDetailKey,
+  ...(mutationKey ?? []),
+];
+export type GetScheduleRecordsMutationResult = Awaited<ReturnType<typeof getScheduleRecords>>;
+export const useGetScheduleRecordsKey = 'GetScheduleRecords';
+export const UseGetScheduleRecordsKeyFn = (mutationKey?: Array<unknown>) => [
+  useGetScheduleRecordsKey,
+  ...(mutationKey ?? []),
+];
+export type ListAllScheduleRecordsMutationResult = Awaited<
+  ReturnType<typeof listAllScheduleRecords>
+>;
+export const useListAllScheduleRecordsKey = 'ListAllScheduleRecords';
+export const UseListAllScheduleRecordsKeyFn = (mutationKey?: Array<unknown>) => [
+  useListAllScheduleRecordsKey,
+  ...(mutationKey ?? []),
+];
+export type GetAvailableToolsMutationResult = Awaited<ReturnType<typeof getAvailableTools>>;
+export const useGetAvailableToolsKey = 'GetAvailableTools';
+export const UseGetAvailableToolsKeyFn = (mutationKey?: Array<unknown>) => [
+  useGetAvailableToolsKey,
+  ...(mutationKey ?? []),
+];
+export type GetScheduleRecordDetailMutationResult = Awaited<
+  ReturnType<typeof getScheduleRecordDetail>
+>;
+export const useGetScheduleRecordDetailKey = 'GetScheduleRecordDetail';
+export const UseGetScheduleRecordDetailKeyFn = (mutationKey?: Array<unknown>) => [
+  useGetScheduleRecordDetailKey,
+  ...(mutationKey ?? []),
+];
+export type GetRecordSnapshotMutationResult = Awaited<ReturnType<typeof getRecordSnapshot>>;
+export const useGetRecordSnapshotKey = 'GetRecordSnapshot';
+export const UseGetRecordSnapshotKeyFn = (mutationKey?: Array<unknown>) => [
+  useGetRecordSnapshotKey,
+  ...(mutationKey ?? []),
+];
+export type TriggerScheduleManuallyMutationResult = Awaited<
+  ReturnType<typeof triggerScheduleManually>
+>;
+export const useTriggerScheduleManuallyKey = 'TriggerScheduleManually';
+export const UseTriggerScheduleManuallyKeyFn = (mutationKey?: Array<unknown>) => [
+  useTriggerScheduleManuallyKey,
+  ...(mutationKey ?? []),
+];
+export type RetryScheduleRecordMutationResult = Awaited<ReturnType<typeof retryScheduleRecord>>;
+export const useRetryScheduleRecordKey = 'RetryScheduleRecord';
+export const UseRetryScheduleRecordKeyFn = (mutationKey?: Array<unknown>) => [
+  useRetryScheduleRecordKey,
   ...(mutationKey ?? []),
 ];
 export type SubmitFormMutationResult = Awaited<ReturnType<typeof submitForm>>;

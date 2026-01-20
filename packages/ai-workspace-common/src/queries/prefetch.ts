@@ -8,6 +8,7 @@ import {
   downloadExportJobResult,
   exportCanvas,
   exportDocument,
+  exportToolsetDefinitions,
   getActionResult,
   getAuthConfig,
   getAvailableVouchers,
@@ -33,6 +34,7 @@ import {
   getPageDetail,
   getPilotSessionDetail,
   getProjectDetail,
+  getPromptSuggestions,
   getResourceDetail,
   getSettings,
   getSubscriptionPlans,
@@ -76,6 +78,7 @@ import {
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   serveStatic,
   verifyVoucherInvitation,
 } from '../requests/services.gen';
@@ -85,6 +88,7 @@ import {
   DownloadExportJobResultData,
   ExportCanvasData,
   ExportDocumentData,
+  ExportToolsetDefinitionsData,
   GetActionResultData,
   GetCanvasCommissionByCanvasIdData,
   GetCanvasDataData,
@@ -135,6 +139,7 @@ import {
   ListToolsData,
   ListToolsetsData,
   ListWorkflowAppsData,
+  ListWorkflowExecutionsData,
   VerifyVoucherInvitationData,
 } from '../requests/types.gen';
 import * as Common from './common';
@@ -467,6 +472,14 @@ export const prefetchUseGetCopilotSessionDetail = (
     queryKey: Common.UseGetCopilotSessionDetailKeyFn(clientOptions),
     queryFn: () => getCopilotSessionDetail({ ...clientOptions }).then((response) => response.data),
   });
+export const prefetchUseListWorkflowExecutions = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListWorkflowExecutionsData, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListWorkflowExecutionsKeyFn(clientOptions),
+    queryFn: () => listWorkflowExecutions({ ...clientOptions }).then((response) => response.data),
+  });
 export const prefetchUseGetWorkflowDetail = (
   queryClient: QueryClient,
   clientOptions: Options<GetWorkflowDetailData, true>,
@@ -694,6 +707,14 @@ export const prefetchUseListToolsets = (
     queryKey: Common.UseListToolsetsKeyFn(clientOptions),
     queryFn: () => listToolsets({ ...clientOptions }).then((response) => response.data),
   });
+export const prefetchUseExportToolsetDefinitions = (
+  queryClient: QueryClient,
+  clientOptions: Options<ExportToolsetDefinitionsData, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseExportToolsetDefinitionsKeyFn(clientOptions),
+    queryFn: () => exportToolsetDefinitions({ ...clientOptions }).then((response) => response.data),
+  });
 export const prefetchUseGetToolCallResult = (
   queryClient: QueryClient,
   clientOptions: Options<GetToolCallResultData, true>,
@@ -718,6 +739,14 @@ export const prefetchUseServeStatic = (
   queryClient.prefetchQuery({
     queryKey: Common.UseServeStaticKeyFn(clientOptions),
     queryFn: () => serveStatic({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetPromptSuggestions = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetPromptSuggestionsKeyFn(clientOptions),
+    queryFn: () => getPromptSuggestions({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetAvailableVouchers = (
   queryClient: QueryClient,

@@ -48,4 +48,14 @@ export class UserController {
     const result = await this.userService.checkSettingsField(user, { field, value });
     return buildSuccessResponse(result);
   }
+
+  /**
+   * Get current user info (for CLI authentication verification)
+   * Supports both JWT and API Key authentication
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async me(@LoginedUser() user: User): Promise<{ success: boolean; data: User }> {
+    return buildSuccessResponse(user);
+  }
 }
