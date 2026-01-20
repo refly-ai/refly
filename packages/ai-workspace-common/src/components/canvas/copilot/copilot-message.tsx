@@ -84,7 +84,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
 
-  const { data: tools } = useListTools({ query: { enabled: true } }, undefined, {
+  const { data: tools } = useListTools({ query: { includeUnauthorized: true } }, undefined, {
     enabled: !!canvasId,
   });
 

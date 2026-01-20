@@ -35,7 +35,16 @@ export class ToolController {
     @LoginedUser() user: UserModel,
     @Query('isGlobal', new ParseBoolPipe({ optional: true })) isGlobal: boolean,
     @Query('enabled', new ParseBoolPipe({ optional: true })) enabled: boolean,
+    @Query('includeUnauthorized', new ParseBoolPipe({ optional: true }))
+    includeUnauthorized: boolean,
   ): Promise<ListToolsResponse> {
+    // If includeUnauthorized is true, use listAllToolsForCopilot which includes unauthorized tools
+    if (includeUnauthorized) {
+      const tools = await this.toolService.listAllToolsForCopilot(user);
+      const populatedTools = await this.toolService.populateToolsetsWithDefinition(tools);
+      return buildSuccessResponse(populatedTools);
+    }
+
     const tools = await this.toolService.listTools(user, {
       isGlobal,
       enabled,

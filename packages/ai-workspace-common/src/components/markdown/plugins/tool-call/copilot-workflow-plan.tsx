@@ -170,7 +170,7 @@ const isPlanDataEmpty = (data: WorkflowPlanRecord) => {
 export const CopilotWorkflowPlan = memo(
   ({ data, status, error, toolName }: CopilotWorkflowPlanProps) => {
     const { t } = useTranslation();
-    const { data: toolsData } = useListTools({ query: { enabled: true } });
+    const { data: toolsData } = useListTools({ query: { includeUnauthorized: true } });
     const [isErrorExpanded, setIsErrorExpanded] = useState(false);
 
     const isEmpty = isPlanDataEmpty(data);
