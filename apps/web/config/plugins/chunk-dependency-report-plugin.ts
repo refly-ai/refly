@@ -78,11 +78,9 @@ export class ChunkDependencyReportPlugin {
                 const moduleId = module.identifier || module.name || '(anonymous)';
                 if (name.includes('group-workspace')) {
                   addToGroup('workspace', moduleId);
-                }
-                if (name.includes('group-workflow-public')) {
+                } else if (name.includes('group-workflow-public')) {
                   addToGroup('workflowPublic', moduleId);
-                }
-                if (name.includes('group-workflow')) {
+                } else if (name.includes('group-workflow')) {
                   addToGroup('workflow', moduleId);
                 }
               }

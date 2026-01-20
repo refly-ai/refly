@@ -24,6 +24,11 @@ export function initMessageHandler() {
  * Handle Service Worker messages
  */
 function handleMessage(event: MessageEvent) {
+  if (!event.data || typeof event.data !== 'object') {
+    console.log('[SW Handler] Ignoring message without data:', event.data);
+    return;
+  }
+
   const { type, oldVersion, newVersion, url } = event.data;
 
   console.log('[SW Handler] Received message:', event.data);
