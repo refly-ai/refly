@@ -197,7 +197,6 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       updateUserSettings({
         body: {
           preferences: {
-            ...userProfile?.preferences,
             needOnboarding: false,
           },
         },
