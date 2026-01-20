@@ -235,14 +235,25 @@ export interface BaseToolParams extends ToolParams {
   engine: SkillEngine;
 }
 
-export interface PtcConfig {
+export interface PtcContext {
   toolsets: {
     id: string;
     name: string;
     key: string;
-    sdkDefinitionPath?: string; // SDK definition file path in S3 (for debugging)
-    sdkDefinition?: string; // SDK definition file content (Python SDK)
   }[];
+  sdk: {
+    pathPrefix: string;
+    codes: {
+      toolsetKey: string;
+      path: string;
+      content: string;
+    }[];
+    docs: {
+      toolsetKey: string;
+      path: string;
+      content: string;
+    }[];
+  };
 }
 
 export interface BaseSkillState extends SkillInput {
@@ -327,7 +338,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     installedToolsets?: GenericToolset[];
     preprocessResult?: PreprocessResult;
     ptcEnabled?: boolean;
-    ptcConfig?: PtcConfig;
+    ptcContext?: PtcContext;
   };
   metadata?: SkillRunnableMeta;
 }

@@ -378,19 +378,12 @@ export class SkillInvokerService {
       const toolsetKeys = toolsets.map((t) => t.id);
       const ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
 
-      this.logger.info(
-        `[PTC] Status for user ${user.uid} with toolsets [${toolsetKeys.join(', ')}]: ${ptcEnabled}`,
-      );
-
       config.configurable.ptcEnabled = ptcEnabled;
 
       // Read SDK definitions for PTC mode using PtcSdkService
-      if (ptcEnabled && toolsets.length > 0) {
-        const ptcConfig = await this.ptcSdkService.buildPtcConfigWithSdkDefinitions(
-          user,
-          tools.nonBuiltInToolsets,
-        );
-        config.configurable.ptcConfig = ptcConfig;
+      if (ptcEnabled && tools.nonBuiltInToolsets.length > 0) {
+        const ptcContext = await this.ptcSdkService.buildPtcContext(tools.nonBuiltInToolsets);
+        config.configurable.ptcContext = ptcContext;
       }
     }
 

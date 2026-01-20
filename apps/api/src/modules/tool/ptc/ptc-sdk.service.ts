@@ -6,19 +6,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PinoLogger } from 'nestjs-pino';
-import type { GenericToolset, User } from '@refly/openapi-schema';
-import type { PtcConfig } from '@refly/skill-template';
+import type { GenericToolset } from '@refly/openapi-schema';
+import type { PtcContext } from '@refly/skill-template';
 import { ObjectStorageService, OSS_INTERNAL } from '../../common/object-storage';
 import { streamToBuffer } from '../../../utils';
 import { Config } from '../../config/config.decorator';
-
-export interface ToolsetSdkInfo {
-  toolsetId: string;
-  toolsetKey: string;
-  toolsetName: string;
-  sdkDefinitionPath?: string;
-  sdkDefinition?: string;
-}
 
 @Injectable()
 export class PtcSdkService {
@@ -37,118 +29,80 @@ export class PtcSdkService {
     void this.config; // Suppress unused warning - used by @Config decorators
   }
 
-  /**
-   * Build PTC config with SDK definitions for given toolsets
-   * @param user - Current user
-   * @param toolsets - Toolsets to load SDK definitions for
-   * @returns PTC config with SDK definitions
-   */
-  async buildPtcConfigWithSdkDefinitions(
-    user: User,
-    toolsets: GenericToolset[],
-  ): Promise<PtcConfig> {
-    this.logger.info(
-      `[PTC SDK] Building PTC config with SDK definitions for toolsets: ${toolsets.map((t) => t.name).join(', ')}`,
+  async buildPtcContext(toolsets: GenericToolset[]): Promise<PtcContext> {
+    const toolsetInfos = toolsets.map((toolset) => ({
+      id: toolset.id,
+      name: toolset.name,
+      key: toolset.toolset?.key || toolset.id,
+    }));
+
+    const codes = await Promise.all(
+      toolsetInfos.map((info) =>
+        this.getToolsetSdk(info).then((code) => ({
+          toolsetKey: info.key,
+          path: code.path,
+          content: code.content,
+        })),
+      ),
+    );
+    const docs = await Promise.all(
+      toolsetInfos.map((info) =>
+        this.getToolsetSdkDoc(info).then((doc) => ({
+          toolsetKey: info.key,
+          path: doc.path,
+          content: doc.content,
+        })),
+      ),
     );
 
-    const toolsetSdkInfos = await Promise.all(
-      toolsets.map((toolset) => this.loadToolsetSdkDefinition(user, toolset)),
-    );
-
-    const ptcConfig: PtcConfig = {
-      toolsets: toolsetSdkInfos.map((info) => ({
-        id: info.toolsetId,
-        name: info.toolsetName,
-        key: info.toolsetKey,
-        sdkDefinitionPath: info.sdkDefinitionPath,
-        sdkDefinition: info.sdkDefinition,
-      })),
+    return {
+      toolsets: toolsetInfos,
+      sdk: {
+        pathPrefix: this.getSdkPathPrefix(),
+        codes,
+        docs,
+      },
     };
-
-    const loadedCount = toolsetSdkInfos.filter((info) => info.sdkDefinition).length;
-    this.logger.info(
-      `[PTC SDK] Loaded ${loadedCount}/${toolsets.length} SDK definitions successfully`,
-    );
-
-    return ptcConfig;
   }
 
-  /**
-   * Load SDK definition for a single toolset
-   * @param user - Current user
-   * @param toolset - Toolset to load SDK definition for
-   * @returns Toolset SDK info with definition content
-   */
-  private async loadToolsetSdkDefinition(
-    _user: User,
-    toolset: GenericToolset,
-  ): Promise<ToolsetSdkInfo> {
-    const toolsetInfo: ToolsetSdkInfo = {
-      toolsetId: toolset.id,
-      toolsetName: toolset.name,
-      toolsetKey: toolset.toolset?.key || toolset.id,
+  private async getToolsetSdk(toolsetInfo: { id: string; name: string; key: string }): Promise<{
+    path: string;
+    content: string;
+  }> {
+    const path = this.getToolsetSdkCodePath(toolsetInfo.key);
+    const content = await this.readSdkDefinitionFromS3(path);
+    return {
+      path,
+      content,
     };
-
-    try {
-      // Get SDK definition path for this toolset
-      const sdkDefinitionPath = this.getToolsetSdkPath(toolset);
-
-      if (!sdkDefinitionPath) {
-        this.logger.warn(
-          `[PTC SDK] No SDK path found for toolset ${toolset.id} (${toolset.name}), skipping`,
-        );
-        return toolsetInfo;
-      }
-
-      this.logger.info(`[PTC SDK] Toolset ${toolset.name}: SDK path = ${sdkDefinitionPath}`);
-
-      toolsetInfo.sdkDefinitionPath = sdkDefinitionPath;
-
-      // Read SDK definition from S3
-      const sdkDefinition = await this.readSdkDefinitionFromS3(sdkDefinitionPath);
-
-      if (sdkDefinition) {
-        toolsetInfo.sdkDefinition = sdkDefinition;
-        this.logger.info(
-          `[PTC SDK] Successfully loaded SDK definition for toolset ${toolset.id} (${toolset.name})`,
-        );
-      } else {
-        this.logger.warn(
-          `[PTC SDK] Failed to read SDK definition for toolset ${toolset.id} (${toolset.name})`,
-        );
-      }
-    } catch (error) {
-      this.logger.error(
-        `[PTC SDK] Error loading SDK definition for toolset ${toolset.id}: ${error?.message}`,
-      );
-    }
-
-    return toolsetInfo;
   }
 
-  /**
-   * Get SDK definition path for a toolset
-   * @param toolset - Toolset to get SDK path for
-   * @returns SDK definition path in S3, or null if not available
-   */
-  private getToolsetSdkPath(toolset: GenericToolset): string | null {
-    try {
-      const pathPrefix = this.s3LibPathPrefix;
-      const hash = this.s3LibHash;
+  private async getToolsetSdkDoc(toolsetInfo: { id: string; name: string; key: string }): Promise<{
+    path: string;
+    content: string;
+  }> {
+    const path = this.getToolsetSdkDocPath(toolsetInfo.key);
+    const content = await this.readSdkDefinitionFromS3(path);
+    return {
+      path,
+      content,
+    };
+  }
 
-      // Normalize path prefix (remove trailing slashes)
-      const normalizedPrefix = pathPrefix.replace(/\/+$/, '');
+  private getSdkPathPrefix(): string {
+    const hash = this.s3LibHash;
+    const normalizedPrefix = this.s3LibPathPrefix.replace(/\/+$/, '');
+    return `${normalizedPrefix}/${hash}`;
+  }
 
-      const toolsetKey = toolset.toolset?.key;
+  private getToolsetSdkCodePath(toolsetKey: string): string {
+    const pathPrefix = this.getSdkPathPrefix();
+    return `${pathPrefix}/refly_tools/${toolsetKey}.py`;
+  }
 
-      // Construct SDK path
-      return `${normalizedPrefix}/${hash}/refly_tools/${toolsetKey}.py`;
-    } catch (error) {
-      this.logger.error(
-        `[PTC SDK] Error getting SDK path for toolset ${toolset.id}: ${error?.message}`,
-      );
-      return null;
-    }
+  private getToolsetSdkDocPath(toolsetKey: string): string {
+    const pathPrefix = this.getSdkPathPrefix();
+    return `${pathPrefix}/refly_tools/${toolsetKey}.py`;
   }
 
   /**
@@ -158,8 +112,6 @@ export class PtcSdkService {
    */
   private async readSdkDefinitionFromS3(sdkDefinitionPath: string): Promise<string | null> {
     try {
-      this.logger.debug(`[PTC SDK] Reading SDK definition from S3: ${sdkDefinitionPath}`);
-
       const stream = await this.internalOss.getObject(sdkDefinitionPath);
       if (!stream) {
         this.logger.warn(`[PTC SDK] SDK definition file not found in S3: ${sdkDefinitionPath}`);

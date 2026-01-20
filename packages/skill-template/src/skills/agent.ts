@@ -102,7 +102,7 @@ export class Agent extends BaseSkill {
       preprocessResult,
       mode = 'node_agent',
       ptcEnabled = false,
-      ptcConfig = undefined,
+      ptcContext = undefined,
     } = config.configurable;
     const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
 
@@ -111,7 +111,7 @@ export class Agent extends BaseSkill {
         ? buildWorkflowCopilotPrompt({
             installedToolsets: config.configurable.installedToolsets ?? [],
           })
-        : buildNodeAgentSystemPrompt({ ptcEnabled, ptcConfig });
+        : buildNodeAgentSystemPrompt({ ptcEnabled, ptcContext });
 
     // Use copilot scene for copilot_agent mode, agent scene for node_agent mode, otherwise use chat scene
     const modelConfigScene = getModelSceneFromMode(mode);
@@ -496,7 +496,13 @@ export class Agent extends BaseSkill {
     config.metadata.step = { name: 'answerQuestion' };
 
     const ptcEnabled = config.configurable.ptcEnabled;
-    const ptcConfig = config.configurable.ptcConfig;
+    const ptcContext = config.configurable.ptcContext;
+    const ptcMetadata = ptcEnabled
+      ? {
+          ptcToolsets: ptcContext.toolsets,
+          ptcSdkPathPrefix: ptcContext.sdk.pathPrefix,
+        }
+      : {};
 
     try {
       const result = await compiledLangGraphApp.invoke(
@@ -517,16 +523,8 @@ export class Agent extends BaseSkill {
               description: t.description,
               parameters: getJsonSchema(t.schema),
             })),
-            ptcEnabled: ptcEnabled,
-            ptcToolsets: ptcEnabled
-              ? ptcConfig.toolsets.map((t) => {
-                  return {
-                    id: t.id,
-                    name: t.name,
-                    key: t.key,
-                  };
-                })
-              : undefined,
+            ptcEnabled,
+            ...ptcMetadata,
             // Runtime config for reproducibility
             // Note: systemPrompt already in input[0], modelConfig duplicates modelParameters
             toolChoice: toolsAvailable ? 'auto' : undefined,

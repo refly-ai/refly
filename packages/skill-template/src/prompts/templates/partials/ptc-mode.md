@@ -32,14 +32,18 @@ Notes:
 - Generate complete code each time. Your code will be executed as a standalone Python script.
 - If the result structure of a tool is not clear, you can print the first several lines to figure out the result structure, and then generate the entire code.
 
-### Available SDK Tools
+### Available SDK Toolsets
 
-{{availableTools}}
+{{#each toolsets}}
+- {{this.key}}
+{{/each}}
 
-### Available SDK Definitions
+### Available SDK Documentation
 
-{{#each sdkDefinitions}}
+{{#each sdkDocs}}
+{{this.toolsetKey}}.py:
+
 ```python
-{{this}}
+{{this.content}}
 ```
 {{/each}}
