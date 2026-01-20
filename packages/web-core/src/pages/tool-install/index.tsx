@@ -208,7 +208,10 @@ const ToolInstallPage = memo(() => {
 
   const workflowTools = useMemo(() => {
     const safeToolsets = Array.isArray(toolsetsWithNodes) ? toolsetsWithNodes : [];
-    return safeToolsets; // return all tools used in the workflow
+    // Only show external_oauth tools
+    return safeToolsets.filter(
+      (toolWithNodes) => toolWithNodes?.toolset?.type === 'external_oauth',
+    );
   }, [toolsetsWithNodes]);
 
   const installedToolsCount = useMemo(() => {
@@ -393,8 +396,8 @@ const ToolInstallPage = memo(() => {
         ) : null}
 
         {!isLoading && hasWorkflowTools ? (
-          <div className="flex-1 min-h-0 rounded-2xl border border-solid border-refly-primary-default shadow-sm overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-y-auto flex flex-col">{toolCards}</div>
+          <div className="min-h-0 rounded-2xl border border-solid border-refly-primary-default shadow-sm overflow-hidden flex flex-col">
+            <div className="overflow-y-auto flex flex-col">{toolCards}</div>
           </div>
         ) : null}
 
