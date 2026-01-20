@@ -14,7 +14,6 @@ import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.we
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { useNavigate } from 'react-router-dom';
 import { ToolsDependencyChecker } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';
-import { MixedTextEditor } from '@refly-packages/ai-workspace-common/components/workflow-app/mixed-text-editor';
 import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/resource-upload';
 import { useFileUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables';
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
@@ -150,8 +149,8 @@ export const WorkflowRunForm = ({
 
   const [internalIsRunning, setInternalIsRunning] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
-  const [toolsPanelOpen, setToolsPanelOpen] = useState(false);
-  const [highlightInstallButtons, setHighlightInstallButtons] = useState(false);
+  const [_toolsPanelOpen, setToolsPanelOpen] = useState(false);
+  const [_highlightInstallButtons, setHighlightInstallButtons] = useState(false);
   const [fallbackToolsCanvasData, setFallbackToolsCanvasData] = useState<RawCanvasData | undefined>(
     undefined,
   );
@@ -181,7 +180,7 @@ export const WorkflowRunForm = ({
   const toolsDependencyCanvasData: RawCanvasData | undefined =
     workflowApp?.canvasData ?? canvasResponse?.data ?? fallbackToolsCanvasData;
 
-  const handleToolsDependencyOpenChange = useCallback(
+  const _handleToolsDependencyOpenChange = useCallback(
     (nextOpen: boolean) => {
       setToolsPanelOpen(nextOpen);
       if (!nextOpen) {
@@ -806,7 +805,7 @@ export const WorkflowRunForm = ({
   };
 
   // Handle template variable changes
-  const handleTemplateVariableChange = useCallback((variables: WorkflowVariable[]) => {
+  const _handleTemplateVariableChange = useCallback((variables: WorkflowVariable[]) => {
     setTemplateVariables(variables);
   }, []);
 
@@ -818,31 +817,7 @@ export const WorkflowRunForm = ({
         <>
           {/* default show Form */}
           {/* biome-ignore lint/correctness/noConstantCondition: <explanation> */}
-          {false ? (
-            <div className="space-y-4">
-              <div className="bg-refly-bg-content-z2 rounded-2xl shadow-[0px_2px_20px_4px_rgba(0,0,0,0.04)] p-4">
-                <MixedTextEditor
-                  templateContent={templateContent}
-                  variables={templateVariables.length > 0 ? templateVariables : workflowVariables}
-                  onVariablesChange={handleTemplateVariableChange}
-                  disabled={isFormDisabled}
-                  originalVariables={workflowVariables}
-                />
-
-                {/* Tools Dependency Form */}
-                {toolsDependencyCanvasData && (
-                  <div className="mt-3 ">
-                    <ToolsDependencyChecker
-                      canvasData={toolsDependencyCanvasData}
-                      externalOpen={toolsPanelOpen}
-                      highlightInstallButtons={highlightInstallButtons}
-                      onOpenChange={handleToolsDependencyOpenChange}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
+          {
             <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
               {/* Show loading state when loading */}
               {workflowVariables.length > 0 ? (
@@ -867,7 +842,7 @@ export const WorkflowRunForm = ({
                 <EmptyContent />
               )}
             </div>
-          )}
+          }
 
           <div className="p-3 border-t-[1px] border-x-0 border-b-0 border-solid border-refly-Card-Border bg-refly-bg-body-z0 rounded-b-lg flex flex-col gap-2">
             {creditUsage !== null && creditUsage !== undefined && (
