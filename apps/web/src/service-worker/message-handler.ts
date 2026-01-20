@@ -33,6 +33,9 @@ function handleMessage(event: MessageEvent) {
 
   switch (type) {
     case 'NEW_VERSION_AVAILABLE':
+      handleAutoRefreshDuringLoad();
+      break;
+
     case 'CHUNK_LOAD_ERROR':
       break;
 
@@ -43,6 +46,13 @@ function handleMessage(event: MessageEvent) {
 
     default:
       console.log('[SW Handler] Unknown message type:', type);
+  }
+}
+
+function handleAutoRefreshDuringLoad() {
+  if (document.readyState !== 'complete') {
+    console.log('[SW Handler] Reloading page during initial load for new version');
+    window.location.reload();
   }
 }
 
