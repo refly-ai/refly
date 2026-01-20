@@ -55,12 +55,7 @@ const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): bo
 };
 
 const RequiredTagText = () => {
-  const { t } = useTranslation();
-  return (
-    <div className="flex-shrink-0 text-[10px] text-refly-text-2 leading-[16px] px-1 border-[1px] border-solid border-refly-Card-Border rounded-[4px]">
-      {t('canvas.workflow.variables.required') || 'Required'}
-    </div>
-  );
+  return null;
 };
 
 const EmptyContent = () => {
