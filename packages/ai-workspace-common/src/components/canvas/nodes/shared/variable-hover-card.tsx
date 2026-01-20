@@ -1,9 +1,9 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import mime from 'mime';
 import { DriveFile, VariableValue } from '@refly/openapi-schema';
 import { RESOURCE_TYPE_ICON_MAP } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/input-parameter-row';
 import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
-import { Attachment, List } from 'refly-icons';
+import { Attachment, Checked, List } from 'refly-icons';
 import { BiText } from 'react-icons/bi';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { Divider } from 'antd';
@@ -22,6 +22,13 @@ export const VariableHoverCard = memo(
     const { t } = useTranslation();
     const { canvasId } = useCanvasContext();
     const resource = value?.[0]?.resource;
+
+    const selectedValues = useMemo(() => {
+      if (variableType === 'option') {
+        return value?.map((val) => val.text) ?? [];
+      }
+      return [];
+    }, [variableType, value]);
 
     const renderContent = () => {
       switch (variableType) {
@@ -61,9 +68,12 @@ export const VariableHoverCard = memo(
                   {options?.map((opt, i) => (
                     <div
                       key={i}
-                      className="mx-3 px-2 py-1.5 text-xs bg-refly-bg-canvas rounded-[4px]"
+                      className="flex items-center justify-between gap-2 mx-3 px-2 py-1.5 text-xs bg-refly-bg-canvas rounded-[4px]"
                     >
-                      {opt}
+                      <div className="text-refly-text-0">{opt}</div>
+                      {selectedValues.includes(opt) && (
+                        <Checked size={16} color="var(--refly-primary-default)" />
+                      )}
                     </div>
                   ))}
                 </div>
