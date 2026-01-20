@@ -793,11 +793,6 @@ export const WorkflowRunForm = ({
     return null;
   };
 
-  // Handle template variable changes
-  const _handleTemplateVariableChange = useCallback((variables: WorkflowVariable[]) => {
-    setTemplateVariables(variables);
-  }, []);
-
   const workflowIsRunning = isRunning || isPolling;
 
   return (
@@ -805,7 +800,6 @@ export const WorkflowRunForm = ({
       {
         <>
           {/* default show Form */}
-          {/* biome-ignore lint/correctness/noConstantCondition: <explanation> */}
           {
             <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
               {/* Show loading state when loading */}
