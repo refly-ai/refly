@@ -72,7 +72,7 @@ import { StepService } from '../step/step.service';
 import { SyncRequestUsageJobData, SyncTokenUsageJobData } from '../subscription/subscription.dto';
 import { ToolCallService, ToolCallStatus } from '../tool-call/tool-call.service';
 import { ToolService } from '../tool/tool.service';
-import { getPtcConfig, isPtcEnabledForToolsets, PtcSdkService } from '../tool/ptc';
+import { getPtcConfig, isPtcEnabledForToolsets } from '../tool/ptc/ptc-config';
 import { InvokeSkillJobData } from './skill.dto';
 import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
@@ -102,7 +102,6 @@ export class SkillInvokerService {
     private readonly creditService: CreditService,
     private readonly canvasSyncService: CanvasSyncService,
     private readonly metrics: SkillInvokeMetrics,
-    private readonly ptcSdkService: PtcSdkService,
     @Optional()
     @InjectQueue(QUEUE_SYNC_REQUEST_USAGE)
     private requestUsageQueue?: Queue<SyncRequestUsageJobData>,
@@ -378,12 +377,11 @@ export class SkillInvokerService {
       const toolsetKeys = toolsets.map((t) => t.id);
       const ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
 
-      config.configurable.ptcEnabled = ptcEnabled;
+      this.logger.info(
+        `PTC status for user ${user.uid} with toolsets [${toolsetKeys.join(', ')}]: ${ptcEnabled}`,
+      );
 
-      if (ptcEnabled && tools.nonBuiltInToolsets.length > 0) {
-        const ptcContext = await this.ptcSdkService.buildPtcContext(tools.nonBuiltInToolsets);
-        config.configurable.ptcContext = ptcContext;
-      }
+      config.configurable.ptcEnabled = ptcEnabled;
     }
 
     // For copilot_agent mode, include all tools (authorized and unauthorized)
