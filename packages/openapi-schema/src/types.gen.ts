@@ -5354,7 +5354,7 @@ export type SandboxExecuteContext = {
    */
   version?: number;
   /**
-   * Whether PTC (Project Tool Context) is enabled
+   * Whether PTC (Programmatic Tool Calling) is enabled
    */
   ptcEnabled?: boolean;
   /**
