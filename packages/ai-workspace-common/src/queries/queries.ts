@@ -70,9 +70,11 @@ import {
   duplicateShare,
   emailLogin,
   emailSignup,
+  executeTool,
   executeWorkflowApp,
   exportCanvas,
   exportDocument,
+  exportToolsetDefinitions,
   extractVariables,
   generateAppTemplate,
   generateMedia,
@@ -336,12 +338,16 @@ import {
   EmailLoginError,
   EmailSignupData,
   EmailSignupError,
+  ExecuteToolData,
+  ExecuteToolError,
   ExecuteWorkflowAppData,
   ExecuteWorkflowAppError,
   ExportCanvasData,
   ExportCanvasError,
   ExportDocumentData,
   ExportDocumentError,
+  ExportToolsetDefinitionsData,
+  ExportToolsetDefinitionsError,
   ExtractVariablesData,
   ExtractVariablesError,
   GenerateAppTemplateData,
@@ -1669,6 +1675,23 @@ export const useListToolsets = <
     queryKey: Common.UseListToolsetsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listToolsets({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useExportToolsetDefinitions = <
+  TData = Common.ExportToolsetDefinitionsDefaultResponse,
+  TError = ExportToolsetDefinitionsError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<ExportToolsetDefinitionsData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseExportToolsetDefinitionsKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      exportToolsetDefinitions({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetToolCallResult = <
@@ -3648,6 +3671,23 @@ export const useDeleteToolset = <
   useMutation<TData, TError, Options<DeleteToolsetData, true>, TContext>({
     mutationKey: Common.UseDeleteToolsetKeyFn(mutationKey),
     mutationFn: (clientOptions) => deleteToolset(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useExecuteTool = <
+  TData = Common.ExecuteToolMutationResult,
+  TError = ExecuteToolError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<ExecuteToolData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<ExecuteToolData, true>, TContext>({
+    mutationKey: Common.UseExecuteToolKeyFn(mutationKey),
+    mutationFn: (clientOptions) => executeTool(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useAuthorizeComposioConnection = <

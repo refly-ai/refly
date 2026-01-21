@@ -1,29 +1,22 @@
 import { useEffect, useRef, memo, ReactNode, useCallback, useMemo, useState } from 'react';
-import mermaid from 'mermaid';
 import { useTranslation } from 'react-i18next';
 import debounce from 'lodash.debounce';
 import { cn, BRANDING_NAME } from '@refly/utils';
 import { CopyIcon, DownloadIcon } from 'lucide-react';
 import { Tooltip, Button, Space, message } from 'antd';
 import { ImagePreview } from '@refly-packages/ai-workspace-common/components/common/image-preview';
-import { domToPng } from 'modern-screenshot';
-import copyToClipboard from 'copy-to-clipboard';
 import { IconCodeArtifact } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { CopyOutlined, CodeOutlined, EyeOutlined } from '@ant-design/icons';
 import { MarkdownMode } from '../../types';
 import { PiMagnifyingGlassPlusBold } from 'react-icons/pi';
 import { useCreateCodeArtifact } from '@refly-packages/ai-workspace-common/hooks/use-create-code-artifact';
 import { useThemeStoreShallow } from '@refly/stores';
-
-// Initialize mermaid config
-const initializeMermaid = (isDarkMode: boolean) => {
-  mermaid.initialize({
-    startOnLoad: true,
-    theme: isDarkMode ? 'dark' : 'default',
-    securityLevel: 'loose',
-    fontFamily: 'inherit',
-  });
-};
+import {
+  getMermaid,
+  configureMermaid,
+  domToPng,
+  copyText,
+} from '@refly-packages/ai-workspace-common/utils/lazy-loader';
 
 interface MermaidProps {
   children: ReactNode;
@@ -82,7 +75,7 @@ const MermaidComponent = memo(
     // Initialize mermaid with the current theme
     useEffect(() => {
       // Update mermaid config when theme changes
-      initializeMermaid(isDarkMode);
+      configureMermaid({ theme: isDarkMode ? 'dark' : 'default' });
 
       // Re-render the diagram when theme changes
       if (rendered) {
@@ -109,8 +102,16 @@ const MermaidComponent = memo(
           // Clear previous content
           mermaidRef.current.innerHTML = '';
 
-          // Ensure mermaid is initialized with current theme
-          initializeMermaid(isDarkMode);
+          // Get mermaid instance (will be initialized with current config)
+          const mermaid = await getMermaid();
+
+          // Re-apply theme config in case it changed
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: isDarkMode ? 'dark' : 'default',
+            securityLevel: 'loose',
+            fontFamily: 'inherit',
+          });
 
           // Validate mermaid syntax first
           await mermaid.parse(mermaidCode);
@@ -174,7 +175,7 @@ const MermaidComponent = memo(
         const originalBg = svgElement.style.background;
         svgElement.style.background = isDarkMode ? '#1f2937' : 'white';
 
-        // Use domToPng with proper settings for diagrams
+        // Use domToPng from lazy-loader
         const dataUrl = await domToPng(svgElement, {
           features: {
             removeControlCharacter: false,
@@ -279,12 +280,12 @@ const MermaidComponent = memo(
     }, [generatePng, diagramTitle, t]);
 
     // Copy the source code to clipboard
-    const copySourceCode = useCallback(() => {
+    const copySourceCode = useCallback(async () => {
       if (!mermaidCode) return;
 
       const messageKey = 'copySourceCode';
       try {
-        copyToClipboard(mermaidCode);
+        await copyText(mermaidCode);
         message.success({
           content:
             t('components.markdown.mermaid.copySourceSuccess') ?? 'Source code copied to clipboard',
@@ -337,7 +338,7 @@ const MermaidComponent = memo(
         console.error('Error generating zoom image:', error);
         message.error('Failed to generate zoom image');
       }
-    }, [generatePng, t]);
+    }, [generatePng]);
 
     useEffect(() => {
       renderDiagram();

@@ -245,6 +245,14 @@ export default () => ({
     // Expiration time in minutes (default: 7 days = 10080 minutes)
     // For testing, use smaller values like 7 (7 minutes)
     expirationMinutes: Number(process.env.VOUCHER_EXPIRATION_MINUTES) || 10080,
+    // Default discount percentage for vouchers (default: 80% off)
+    defaultDiscountPercent: Number(process.env.VOUCHER_DEFAULT_DISCOUNT_PERCENT) || 80,
+  },
+  ptc: {
+    mode: process.env.PTC_MODE || 'off',
+    userAllowlist: process.env.PTC_USER_ALLOWLIST || '',
+    toolsetAllowlist: process.env.PTC_TOOLSET_ALLOWLIST || '',
+    toolsetBlocklist: process.env.PTC_TOOLSET_BLOCKLIST || '',
   },
   schedule: {
     // Rate limiting - controls global and per-user concurrency
@@ -335,6 +343,13 @@ export default () => ({
     whiteList: process.env.SANDBOX_WHITELIST, // 'uid,uid'
     blackList: process.env.SANDBOX_BLACKLIST, // 'uid,uid'
     randomRate: process.env.SANDBOX_RANDOM_RATE, // '20'
+    s3Lib: {
+      enabled: process.env.SANDBOX_S3LIB_ENABLED,
+      pathPrefix: process.env.SANDBOX_S3LIB_PATH_PREFIX,
+      hash: process.env.SANDBOX_S3LIB_HASH,
+      cache: process.env.SANDBOX_S3LIB_CACHE,
+      reset: process.env.SANDBOX_S3LIB_RESET,
+    },
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
       // Wrapper

@@ -6,11 +6,31 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "sideEffects": [
+    "*.css",
+    "*.scss",
+    "*.less",
+    "*.sass",
+    "**/*.css",
+    "**/*.scss",
+    "**/*.less",
+    "**/*.sass"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./components": "./src/components/index.ts",
-    "./stores": "./src/stores/index.ts",
-    "./utils": "./src/utils/index.ts"
+    "./components/*": "./src/components/*/index.ts",
+    "./components/sider/*": "./src/components/sider/*.tsx",
+    "./components/common/*": "./src/components/common/*.tsx",
+    "./components/settings": "./src/components/settings/index.ts",
+    "./components/settings/*": "./src/components/settings/*.tsx",
+    "./components/canvas": "./src/components/canvas/index.tsx",
+    "./components/canvas/*": "./src/components/canvas/*.tsx",
+    "./hooks/*": "./src/hooks/*.ts",
+    "./queries": "./src/queries/index.ts",
+    "./queries/*": "./src/queries/*.ts",
+    "./requests/*": "./src/requests/*.ts",
+    "./utils/*": "./src/utils/*.ts"
   },
   "scripts": {
     "codegen": "openapi-rq -i ../openapi-schema/schema.yml -o src --noSchemas && node scripts/postprocess-codegen.cjs"

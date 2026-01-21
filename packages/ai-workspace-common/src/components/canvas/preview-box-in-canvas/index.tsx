@@ -2,8 +2,8 @@ import { PreviewComponent } from '@refly-packages/ai-workspace-common/components
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { CanvasNode } from '@refly/canvas-common';
-import { WorkflowRun } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import { WorkflowRunPreview } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/preview';
 
 interface PreviewBoxInCanvasProps {
   node?: CanvasNode;
@@ -80,7 +80,7 @@ export const PreviewBoxInCanvas = memo(
           className="z-30 absolute -top-[1px] -right-[1px] -bottom-[1px] flex flex-col rounded-xl bg-refly-bg-content-z2 border-solid border-[1px] border-refly-Card-Border shadow-refly-m overflow-hidden"
           style={{ width: `${previewWidth}px` }}
         >
-          {showWorkflowRun ? <WorkflowRun /> : <PreviewComponent node={node} />}
+          {showWorkflowRun ? <WorkflowRunPreview /> : <PreviewComponent node={node} />}
         </div>
         <div
           className="absolute top-2 bottom-2 w-2 cursor-col-resize z-[31] group"

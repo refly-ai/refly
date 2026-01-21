@@ -10,17 +10,16 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useAbortWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-abort-workflow';
 import cn from 'classnames';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { useNavigate } from 'react-router-dom';
 import { ToolsDependencyChecker } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';
-import { useCheckEmptyPrompts } from '@refly-packages/ai-workspace-common/hooks/canvas/use-check-empty-prompts';
-import { MixedTextEditor } from '@refly-packages/ai-workspace-common/components/workflow-app/mixed-text-editor';
 import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/resource-upload';
 import { useFileUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables';
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useSubscriptionStoreShallow, useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import { useSubscriptionStoreShallow } from '@refly/stores';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/use-subscription-usage';
 import {
   useGetCanvasData,
@@ -30,6 +29,7 @@ import type { GenericToolset, UserTool } from '@refly/openapi-schema';
 import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
 import GiftIcon from '@refly-packages/ai-workspace-common/assets/gift.png';
 import { useFirstSuccessExecutionToday } from '@refly-packages/ai-workspace-common/hooks/canvas';
+import { useUserMembership } from '@refly-packages/ai-workspace-common/hooks/use-user-membership';
 
 /**
  * Check if a toolset is authorized/installed.
@@ -55,12 +55,7 @@ const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): bo
 };
 
 const RequiredTagText = () => {
-  const { t } = useTranslation();
-  return (
-    <div className="flex-shrink-0 text-[10px] text-refly-text-2 leading-[16px] px-1 border-[1px] border-solid border-refly-Card-Border rounded-[4px]">
-      {t('canvas.workflow.variables.required') || 'Required'}
-    </div>
-  );
+  return null;
 };
 
 const EmptyContent = () => {
@@ -68,10 +63,10 @@ const EmptyContent = () => {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center">
       <img src={EmptyImage} alt="no variables" className="w-[120px] h-[120px] -mb-4" />
-      <div className="text-sm text-refly-text-2 leading-5 text-center">
+      <div className="text-sm text-refly-text-2 leading-5">
         {t('canvas.workflow.run.emptyTitle', 'No variables defined')}
       </div>
-      <div className="text-sm text-refly-text-2 leading-5 text-center mt-5">
+      <div className="text-sm text-refly-text-2 leading-5">
         {t(
           'canvas.workflow.run.emptyDescription',
           ' the workflow will be executed once if continued.',
@@ -135,7 +130,7 @@ export const WorkflowRunForm = ({
     setCreditInsufficientModalVisible: state.setCreditInsufficientModalVisible,
   }));
   const { creditBalance, isBalanceSuccess } = useSubscriptionUsage();
-  const { checkEmptyPrompts } = useCheckEmptyPrompts();
+
   useFirstSuccessExecutionToday();
 
   const { setToolsDependencyOpen, setToolsDependencyHighlight, hasFirstSuccessExecutionToday } =
@@ -145,10 +140,11 @@ export const WorkflowRunForm = ({
       hasFirstSuccessExecutionToday: state.hasFirstExecutionToday,
     }));
 
+  const { planType } = useUserMembership();
+
   const [internalIsRunning, setInternalIsRunning] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
-  const [toolsPanelOpen, setToolsPanelOpen] = useState(false);
-  const [highlightInstallButtons, setHighlightInstallButtons] = useState(false);
+
   const [fallbackToolsCanvasData, setFallbackToolsCanvasData] = useState<RawCanvasData | undefined>(
     undefined,
   );
@@ -177,16 +173,6 @@ export const WorkflowRunForm = ({
 
   const toolsDependencyCanvasData: RawCanvasData | undefined =
     workflowApp?.canvasData ?? canvasResponse?.data ?? fallbackToolsCanvasData;
-
-  const handleToolsDependencyOpenChange = useCallback(
-    (nextOpen: boolean) => {
-      setToolsPanelOpen(nextOpen);
-      if (!nextOpen) {
-        setHighlightInstallButtons(false);
-      }
-    },
-    [setToolsPanelOpen, setHighlightInstallButtons],
-  );
 
   // Abort workflow with optimistic UI update (immediately marks nodes as 'failed')
   const { handleAbort } = useAbortWorkflow({
@@ -497,7 +483,7 @@ export const WorkflowRunForm = ({
     const newValues = convertVariableToFormValue();
     setVariableValues(newValues);
     form.setFieldsValue(newValues);
-  }, [workflowVariables, form]);
+  }, [workflowVariables, convertVariableToFormValue]);
 
   const handleRun = async () => {
     // Mark that user has attempted to submit (for showing validation errors)
@@ -517,12 +503,6 @@ export const WorkflowRunForm = ({
       // Redirect to login with return URL
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
       navigate(`/?autoLogin=true&returnUrl=${returnUrl}`);
-      return;
-    }
-
-    // Check for empty prompts in the workflow
-    const emptyPromptNodeIds = checkEmptyPrompts();
-    if (emptyPromptNodeIds.length > 0) {
       return;
     }
 
@@ -808,11 +788,6 @@ export const WorkflowRunForm = ({
     return null;
   };
 
-  // Handle template variable changes
-  const handleTemplateVariableChange = useCallback((variables: WorkflowVariable[]) => {
-    setTemplateVariables(variables);
-  }, []);
-
   const workflowIsRunning = isRunning || isPolling;
 
   return (
@@ -820,32 +795,7 @@ export const WorkflowRunForm = ({
       {
         <>
           {/* default show Form */}
-          {/* biome-ignore lint/correctness/noConstantCondition: <explanation> */}
-          {false ? (
-            <div className="space-y-4">
-              <div className="bg-refly-bg-content-z2 rounded-2xl shadow-[0px_2px_20px_4px_rgba(0,0,0,0.04)] p-4">
-                <MixedTextEditor
-                  templateContent={templateContent}
-                  variables={templateVariables.length > 0 ? templateVariables : workflowVariables}
-                  onVariablesChange={handleTemplateVariableChange}
-                  disabled={isFormDisabled}
-                  originalVariables={workflowVariables}
-                />
-
-                {/* Tools Dependency Form */}
-                {toolsDependencyCanvasData && (
-                  <div className="mt-3 ">
-                    <ToolsDependencyChecker
-                      canvasData={toolsDependencyCanvasData}
-                      externalOpen={toolsPanelOpen}
-                      highlightInstallButtons={highlightInstallButtons}
-                      onOpenChange={handleToolsDependencyOpenChange}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
+          {
             <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
               {/* Show loading state when loading */}
               {workflowVariables.length > 0 ? (
@@ -870,7 +820,7 @@ export const WorkflowRunForm = ({
                 <EmptyContent />
               )}
             </div>
-          )}
+          }
 
           <div className="p-3 border-t-[1px] border-x-0 border-b-0 border-solid border-refly-Card-Border bg-refly-bg-body-z0 rounded-b-lg flex flex-col gap-2">
             {creditUsage !== null && creditUsage !== undefined && (
@@ -907,7 +857,7 @@ export const WorkflowRunForm = ({
                   ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
                   : t('canvas.workflow.run.run') || 'Run'}
 
-                {!workflowIsRunning && !hasFirstSuccessExecutionToday && (
+                {!workflowIsRunning && !hasFirstSuccessExecutionToday && planType === 'free' && (
                   <img
                     src={GiftIcon}
                     alt="gift"

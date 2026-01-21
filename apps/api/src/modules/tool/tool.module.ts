@@ -25,6 +25,7 @@ import {
   RegularToolPostHandlerService,
   ToolWrapperFactoryService,
 } from './tool-execution';
+import { ToolExecutionService, ToolIdentifyService, ToolDefinitionService } from './ptc';
 import { ToolController } from './tool.controller';
 import { ToolService } from './tool.service';
 
@@ -48,6 +49,12 @@ import { ToolService } from './tool.service';
   controllers: [ToolController],
   providers: [
     ToolService,
+    // Tool identify service for determining tool type
+    ToolIdentifyService,
+    // Tool execution service for API-based tool execution
+    ToolExecutionService,
+    // Tool definition service for schema export
+    ToolDefinitionService,
 
     SyncToolCreditUsageProcessor,
     // Tool inventory service (loads from database)

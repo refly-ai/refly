@@ -19,15 +19,19 @@ import {
   CanvasNode,
   CanvasEdge,
   WorkflowVariable,
+  CanvasNodeType,
   InvokeSkillRequest,
+  GenericToolset,
+  UserTool,
 } from '@refly/openapi-schema';
+import { CanvasNodeFilter, extractToolsetsWithNodes } from '@refly/canvas-common';
 import { CanvasService } from '../canvas/canvas.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { WorkflowService } from './workflow.service';
 import { ToolService } from '../tool/tool.service';
 import { SkillService } from '../skill/skill.service';
 import { RedisService } from '../common/redis.service';
-import { genActionResultID } from '@refly/utils';
+import { genCanvasID, genNodeID, genNodeEntityId, genActionResultID } from '@refly/utils';
 import {
   CreateWorkflowRequest,
   CreateWorkflowResponse,
@@ -46,23 +50,256 @@ import {
   NodeExecutionStatus,
   NodeExecutionDetail,
   WorkflowRunDetail,
+  WorkflowToolsStatusResponse,
   GenerateWorkflowCliRequest,
   GenerateWorkflowCliResponse,
   GenerateWorkflowAsyncResponse,
   GenerateStatusResponse,
-  NodeOutputResponse,
   CLI_ERROR_CODES,
 } from './workflow-cli.dto';
 import { genCopilotSessionID } from '@refly/utils';
 import { CopilotAutogenService } from '../copilot-autogen/copilot-autogen.service';
 import { ToolCallService } from '../tool-call/tool-call.service';
 import { PrismaService } from '../common/prisma.service';
-import { WorkflowCliService } from './workflow-cli.service';
-import { transformCliNodesToCanvasNodes, CliNodeInput } from './workflow-cli.utils';
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * Check if a toolset is authorized/installed
+ * - MCP servers: check if exists in userTools by name
+ * - Builtin tools: always available, no installation needed
+ * - Regular tools: check if exists in userTools by key and authorized status
+ */
+const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): boolean => {
+  // MCP servers need to be checked separately
+  if (toolset.type === 'mcp') {
+    return userTools.some((t) => t.toolset?.name === toolset.name);
+  }
+
+  // Builtin tools are always available
+  if (toolset.builtin) {
+    return true;
+  }
+
+  // Find matching user tool by key
+  const matchingUserTool = userTools.find((t) => t.key === toolset.toolset?.key);
+
+  // If not in userTools list, user hasn't installed/authorized this tool
+  if (!matchingUserTool) {
+    return false;
+  }
+
+  // For external OAuth tools, check authorized status
+  return matchingUserTool.authorized ?? false;
+};
+
+/**
+ * Build connectTo filters from edges to preserve connections when adding nodes.
+ * Maps target node IDs to source node filters for CanvasSyncService.addNodesToCanvas.
+ */
+function buildConnectToFilters(
+  nodes: CanvasNode[],
+  edges: Array<{ source: string; target: string }>,
+): Map<string, CanvasNodeFilter[]> {
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  const map = new Map<string, CanvasNodeFilter[]>();
+
+  for (const edge of edges) {
+    const sourceNode = nodeById.get(edge.source);
+    if (!sourceNode) continue;
+
+    const list = map.get(edge.target) || [];
+    list.push({
+      type: sourceNode.type as CanvasNodeType,
+      entityId: (sourceNode.data?.entityId as string) || '',
+      handleType: 'source',
+    });
+    map.set(edge.target, list);
+  }
+
+  return map;
+}
+
+/**
+ * CLI node input structure (from CLI builder schema)
+ */
+interface CliNodeInput {
+  id: string;
+  type: string;
+  input?: Record<string, unknown>;
+  dependsOn?: string[];
+  // Top-level shorthand fields (for simplified CLI/agent usage)
+  query?: string;
+  toolsetKeys?: string[];
+  // Also support proper CanvasNode fields if passed
+  data?: {
+    title?: string;
+    entityId?: string;
+    metadata?: Record<string, unknown>;
+    // Common fields that should go into metadata
+    query?: string;
+    selectedToolsets?: unknown[];
+    toolsetKeys?: string[];
+    modelInfo?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+  position?: { x: number; y: number };
+}
+
+/**
+ * Map CLI node types to canvas node types.
+ * CLI uses simplified type names (e.g., 'agent') that need to be mapped
+ * to proper canvas node types (e.g., 'skillResponse').
+ */
+function mapCliNodeTypeToCanvasType(cliType: string): CanvasNodeType {
+  const typeMapping: Record<string, CanvasNodeType> = {
+    agent: 'skillResponse',
+    skill: 'skillResponse',
+    // Add more mappings as needed
+  };
+  return (typeMapping[cliType] || cliType) as CanvasNodeType;
+}
+
+/**
+ * Transform CLI nodes to proper canvas node format.
+ * CLI nodes use a simplified schema with `input` field, but canvas expects
+ * proper `data` structure with `entityId`, `metadata`, etc.
+ *
+ * This function ensures nodes have:
+ * - Unique node ID (generated if missing)
+ * - Valid canvas node type (maps 'agent' -> 'skillResponse')
+ * - Proper data structure with entityId and metadata
+ * - Fields like query, selectedToolsets, modelInfo are moved to metadata
+ * - Default position (prepareAddNode will calculate actual position)
+ */
+function transformCliNodesToCanvasNodes(
+  cliNodes: CliNodeInput[],
+): Array<Pick<CanvasNode, 'type' | 'data'> & Partial<Pick<CanvasNode, 'id'>>> {
+  return cliNodes.map((cliNode) => {
+    // Map CLI type to canvas type (e.g., 'agent' -> 'skillResponse')
+    const nodeType = mapCliNodeTypeToCanvasType(cliNode.type);
+
+    // Generate entityId based on node type
+    const entityId = cliNode.data?.entityId || genNodeEntityId(nodeType);
+
+    // Build metadata based on node type
+    const defaultMetadata = getDefaultMetadataForNodeType(nodeType);
+    const inputMetadata = cliNode.input || {};
+
+    // Extract fields from data that should be in metadata
+    // Supports both top-level shorthand and nested data fields
+    // Priority: top-level > data.field > data.metadata.field
+    const dataFieldsForMetadata: Record<string, unknown> = {};
+
+    // query: top-level > data.query
+    if (cliNode.query !== undefined) {
+      dataFieldsForMetadata.query = cliNode.query;
+    } else if (cliNode.data?.query !== undefined) {
+      dataFieldsForMetadata.query = cliNode.data.query;
+    }
+
+    // toolsetKeys: top-level > data.toolsetKeys > data.metadata.toolsetKeys
+    if (cliNode.toolsetKeys !== undefined) {
+      dataFieldsForMetadata.toolsetKeys = cliNode.toolsetKeys;
+    } else if (cliNode.data?.toolsetKeys !== undefined) {
+      dataFieldsForMetadata.toolsetKeys = cliNode.data.toolsetKeys;
+    }
+
+    if (cliNode.data?.selectedToolsets !== undefined) {
+      dataFieldsForMetadata.selectedToolsets = cliNode.data.selectedToolsets;
+    }
+    if (cliNode.data?.modelInfo !== undefined) {
+      dataFieldsForMetadata.modelInfo = cliNode.data.modelInfo;
+    }
+
+    // Merge all metadata sources (priority: dataFieldsForMetadata > input > data.metadata > default)
+    const metadata = {
+      ...defaultMetadata,
+      ...cliNode.data?.metadata,
+      ...inputMetadata,
+      ...dataFieldsForMetadata,
+      sizeMode: 'compact' as const,
+    };
+
+    // Build the canvas node
+    return {
+      id: cliNode.id || genNodeID(),
+      type: nodeType,
+      data: {
+        title: cliNode.data?.title || getDefaultTitleForNodeType(nodeType),
+        entityId,
+        contentPreview: (cliNode.data?.contentPreview as string) || '',
+        metadata,
+      },
+    };
+  });
+}
+
+/**
+ * Get default metadata for a node type
+ */
+function getDefaultMetadataForNodeType(nodeType: CanvasNodeType): Record<string, unknown> {
+  switch (nodeType) {
+    case 'start':
+      return {};
+    case 'skillResponse':
+      return {
+        status: 'init',
+        version: 0,
+      };
+    case 'document':
+      return {
+        contentPreview: '',
+        lastModified: new Date().toISOString(),
+        status: 'finish',
+      };
+    case 'resource':
+      return {
+        resourceType: 'weblink',
+        lastAccessed: new Date().toISOString(),
+      };
+    case 'tool':
+      return {
+        toolType: 'TextToSpeech',
+        configuration: {},
+        status: 'ready',
+      };
+    case 'toolResponse':
+      return {
+        status: 'waiting',
+      };
+    case 'memo':
+      return {};
+    default:
+      return {};
+  }
+}
+
+/**
+ * Get default title for a node type
+ */
+function getDefaultTitleForNodeType(nodeType: CanvasNodeType): string {
+  switch (nodeType) {
+    case 'start':
+      return 'Start';
+    case 'skillResponse':
+      return 'Agent';
+    case 'document':
+      return 'Document';
+    case 'resource':
+      return 'Resource';
+    case 'tool':
+      return 'Tool';
+    case 'toolResponse':
+      return 'Tool Response';
+    case 'memo':
+      return 'Memo';
+    default:
+      return 'Untitled';
+  }
+}
 
 /**
  * Merge workflow variables with runtime variables.
@@ -188,13 +425,10 @@ export class WorkflowCliController {
     private readonly canvasService: CanvasService,
     private readonly canvasSyncService: CanvasSyncService,
     private readonly workflowService: WorkflowService,
-    private readonly workflowCliService: WorkflowCliService,
     private readonly copilotAutogenService: CopilotAutogenService,
     private readonly toolCallService: ToolCallService,
     private readonly toolService: ToolService,
     private readonly prisma: PrismaService,
-    private readonly skillService: SkillService,
-    private readonly redis: RedisService,
   ) {}
 
   /**
@@ -215,13 +449,147 @@ export class WorkflowCliController {
     @LoginedUser() user: User,
     @Body() body: CreateWorkflowRequest,
   ): Promise<{ success: boolean; data: CreateWorkflowResponse }> {
+    this.logger.log(`Creating workflow for user ${user.uid}: ${body.name}`);
+
     try {
-      const result = await this.workflowCliService.createWorkflowFromSpec(user, body);
+      const canvasId = genCanvasID();
+
+      // Check if user provides nodes in spec
+      const hasUserNodes = body.spec?.nodes?.length > 0;
+      // Check if user provides a start node
+      const userProvidesStartNode = body.spec?.nodes?.some((n: any) => n.type === 'start');
+
+      // Determine whether to skip default nodes:
+      // - If user provides nodes with a start node: skip all default nodes
+      // - If user provides nodes without a start node: we'll create only a start node below
+      // - If no user nodes: use default behavior (start + skillResponse)
+      const skipDefaultNodes = hasUserNodes;
+
+      const canvas = await this.canvasService.createCanvas(
+        user,
+        {
+          canvasId,
+          title: body.name,
+          variables: body.variables,
+        },
+        { skipDefaultNodes },
+      );
+
+      // If spec contains nodes/edges, add them to the canvas
+      if (hasUserNodes) {
+        // Transform CLI nodes to proper canvas node format
+        const transformedNodes = transformCliNodesToCanvasNodes(
+          body.spec.nodes as unknown as CliNodeInput[],
+        );
+
+        // Resolve toolset keys to full GenericToolset objects with nested toolset.key
+        // This ensures proper authorization checking in the frontend
+        for (const node of transformedNodes) {
+          const toolsetKeys = (node.data?.metadata as Record<string, unknown>)?.toolsetKeys as
+            | string[]
+            | undefined;
+          if (toolsetKeys?.length) {
+            this.logger.log(`[CREATE] Resolving toolset keys: ${toolsetKeys.join(', ')}`);
+            const { resolved } = await this.toolService.resolveToolsetsByKeys(user, toolsetKeys);
+            this.logger.log(`[CREATE] Resolved ${resolved.length} toolsets`);
+            const metadata = node.data?.metadata as Record<string, unknown>;
+            const existingToolsets = (metadata?.selectedToolsets as unknown[]) || [];
+            metadata.selectedToolsets = [...existingToolsets, ...resolved];
+            metadata.toolsetKeys = undefined;
+
+            // Insert toolset mentions into query for proper frontend display
+            if (resolved.length > 0) {
+              const toolsetMentions = resolved
+                .map((t) => `@{type=toolset,id=${t.id},name=${t.name}}`)
+                .join(' ');
+              const existingQuery = (metadata.query as string) || '';
+              // Add toolset mentions if not already present
+              if (!existingQuery.includes('@{type=toolset')) {
+                metadata.query = existingQuery
+                  ? `使用 ${toolsetMentions} ${existingQuery}`
+                  : toolsetMentions;
+                this.logger.log(`[CREATE] Updated query with toolset mentions: ${metadata.query}`);
+              }
+            }
+          }
+        }
+
+        // If user doesn't provide a start node, create one and connect first node to it
+        if (!userProvidesStartNode) {
+          // Create a start node first
+          const startNode = {
+            node: {
+              id: genNodeID(),
+              type: 'start' as const,
+              data: {
+                title: 'Start',
+                entityId: genNodeEntityId('start'),
+              },
+            },
+            connectTo: [],
+          };
+
+          await this.canvasSyncService.addNodesToCanvas(user, canvasId, [startNode], {
+            autoLayout: true,
+          });
+        }
+
+        // Build connection map using original node IDs
+        // This maps target node IDs to their source node filters based on edges
+        let connectToMap: Map<string, CanvasNodeFilter[]> = new Map();
+
+        if (body.spec.edges) {
+          // Use explicit edges if provided
+          connectToMap = buildConnectToFilters(
+            transformedNodes.map((n) => ({
+              ...n,
+              id: n.id!,
+              position: { x: 0, y: 0 },
+            })) as CanvasNode[],
+            body.spec.edges,
+          );
+        } else {
+          // Build connections from dependsOn fields in simplified format
+          const cliNodes = body.spec.nodes as unknown as CliNodeInput[];
+          for (const cliNode of cliNodes) {
+            if (cliNode.dependsOn?.length) {
+              // Find entityIds for the source nodes
+              const connectTo: CanvasNodeFilter[] = cliNode.dependsOn
+                .map((sourceId) => {
+                  const sourceNode = transformedNodes.find((n) => n.id === sourceId);
+                  if (sourceNode?.data?.entityId) {
+                    return {
+                      type: sourceNode.type as CanvasNodeType,
+                      entityId: sourceNode.data.entityId,
+                    };
+                  }
+                  return null;
+                })
+                .filter((x): x is CanvasNodeFilter => x !== null);
+
+              if (connectTo.length > 0) {
+                connectToMap.set(cliNode.id, connectTo);
+              }
+            }
+          }
+        }
+
+        // Build nodes to add with their connection info
+        // If connectTo is empty for a node, prepareAddNode will auto-connect to start node
+        const nodesToAdd = transformedNodes.map((node) => ({
+          node,
+          connectTo: connectToMap.get(node.id!) || [],
+        }));
+
+        await this.canvasSyncService.addNodesToCanvas(user, canvasId, nodesToAdd, {
+          autoLayout: true,
+        });
+      }
 
       return buildCliSuccessResponse({
-        workflowId: result.workflowId,
-        name: result.name,
-        createdAt: result.createdAt,
+        workflowId: canvas.canvasId,
+        name: canvas.title ?? body.name,
+        createdAt: canvas.createdAt.toJSON(),
       });
     } catch (error) {
       this.logger.error(`Failed to create workflow: ${(error as Error).message}`);
@@ -406,48 +774,6 @@ export class WorkflowCliController {
   }
 
   /**
-   * List CLI-supported workflow node types
-   * GET /v1/cli/workflow/node-types
-   *
-   * Returns only the node types that CLI workflows actually support:
-   * - start: Workflow entry point
-   * - skillResponse: AI Agent execution node
-   *
-   * NOTE: This route must be defined BEFORE the :id route to avoid being caught by it.
-   */
-  @UseGuards(JwtAuthGuard)
-  @Get('node-types')
-  async listWorkflowNodeTypes(): Promise<{
-    success: boolean;
-    data: {
-      nodeTypes: Array<{
-        type: 'start' | 'skillResponse';
-        name: string;
-        description: string;
-      }>;
-      total: number;
-    };
-  }> {
-    const nodeTypes = [
-      {
-        type: 'start' as const,
-        name: 'Start / User Input',
-        description: 'Workflow entry point that captures user input and initiates execution',
-      },
-      {
-        type: 'skillResponse' as const,
-        name: 'AI Agent',
-        description: 'AI-powered response node that can use tools and generate content',
-      },
-    ];
-
-    return buildCliSuccessResponse({
-      nodeTypes,
-      total: nodeTypes.length,
-    });
-  }
-
-  /**
    * Get workflow details
    * GET /v1/cli/workflow/:id
    */
@@ -582,15 +908,13 @@ export class WorkflowCliController {
           }
 
           // Add default style and position for proper rendering
-          // Node widths: start = 250px, skillResponse = 320px
           const nodesToAdd = transformedNodes.map((node, index) => {
             const inputNode = addNodeOps[index] as { type: 'add_node'; node: CanvasNode };
-            const nodeWidth = node.type === 'start' ? 250 : 320;
             return {
               node: {
                 ...node,
                 position: inputNode.node.position || { x: 0, y: 0 },
-                style: { width: nodeWidth, height: 'auto' },
+                style: { width: 288, height: 'auto' },
               } as unknown as CanvasNode,
               connectTo: [],
             };
@@ -741,8 +1065,7 @@ export class WorkflowCliController {
       }
 
       // Layout constants (match canvas-common spacing)
-      // Use max node width (320 for skillResponse) as layout base
-      const NODE_WIDTH = 320;
+      const NODE_WIDTH = 288;
       const NODE_HEIGHT = 180; // Compact node height estimate
       const SPACING_X = 100;
       const SPACING_Y = 30; // Match canvas-common SPACING.Y
@@ -892,7 +1215,32 @@ export class WorkflowCliController {
         checkOwnership: true,
       });
 
+      const toolsetsWithNodes = extractToolsetsWithNodes(rawData.nodes);
+
+      // Get user's installed tools for authorization check
+      const userTools = await this.toolService.listUserTools(user);
+
+      // Check for unauthorized tools
+      const unauthorizedTools = toolsetsWithNodes.filter((toolWithNodes) => {
+        return !isToolsetAuthorized(toolWithNodes.toolset, userTools);
+      });
+
       const mergedVariables = mergeWorkflowVariables(rawData.variables, body.variables);
+
+      // If there are unauthorized tools, return them instead of executing
+      if (unauthorizedTools.length > 0) {
+        this.logger.log(
+          `Workflow ${workflowId} has ${unauthorizedTools.length} unauthorized tools, returning tool list`,
+        );
+
+        return buildCliSuccessResponse({
+          runId: '',
+          workflowId,
+          status: 'failed',
+          startedAt: new Date().toJSON(),
+          unauthorizedTools,
+        });
+      }
 
       // Initialize workflow execution
       const executionId = await this.workflowService.initializeWorkflowExecution(
@@ -978,6 +1326,52 @@ export class WorkflowCliController {
         `No execution found for workflow ${workflowId}`,
         'Run the workflow first with `refly workflow run <workflowId>`',
         HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Get workflow tools authorization status by workflowId
+   * GET /v1/cli/workflow/:id/tools-status
+   *
+   * Returns the authorization status of all tools required by this workflow.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/tools-status')
+  async getToolsStatusByWorkflowId(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+  ): Promise<{ success: boolean; data: WorkflowToolsStatusResponse }> {
+    this.logger.log(`Getting tools status for workflow ${workflowId}, user ${user.uid}`);
+
+    try {
+      // Get existing workflow variables and merge with runtime variables
+      const rawData = await this.canvasService.getCanvasRawData(user, workflowId, {
+        checkOwnership: true,
+      });
+
+      const toolsetsWithNodes = extractToolsetsWithNodes(rawData.nodes);
+
+      // Get user's installed tools for authorization check
+      const userTools = await this.toolService.listUserTools(user);
+
+      // Check for unauthorized tools
+      const unauthorizedTools = toolsetsWithNodes.filter((toolWithNodes) => {
+        return !isToolsetAuthorized(toolWithNodes.toolset, userTools);
+      });
+
+      return buildCliSuccessResponse({
+        authorized: unauthorizedTools.length === 0,
+        unauthorizedTools,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to get tools status for workflow ${workflowId}: ${(error as Error).message}`,
+      );
+      throwCliError(
+        CLI_ERROR_CODES.EXECUTION_FAILED,
+        `Failed to check tools status: ${(error as Error).message}`,
+        'Check the workflow configuration and try again',
       );
     }
   }
@@ -1271,48 +1665,6 @@ export class WorkflowCliController {
         CLI_ERROR_CODES.NOT_FOUND,
         `Workflow ${workflowId} not found`,
         'Check the workflow ID and try again',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-  }
-
-  /**
-   * Get node execution output by workflowId
-   * GET /v1/cli/workflow/:id/node/:nodeId/output
-   *
-   * Returns the execution output content for a specific node from the latest run.
-   */
-  @UseGuards(JwtAuthGuard)
-  @Get(':id/node/:nodeId/output')
-  async getNodeOutputByWorkflowId(
-    @LoginedUser() user: User,
-    @Param('id') workflowId: string,
-    @Param('nodeId') nodeId: string,
-    @Query('includeToolCalls') includeToolCalls?: string,
-    @Query('raw') raw?: string,
-  ): Promise<{ success: boolean; data: NodeOutputResponse }> {
-    this.logger.log(
-      `Getting node output for workflow ${workflowId}, node ${nodeId}, user ${user.uid}`,
-    );
-
-    try {
-      const detail = await this.workflowService.getActiveOrLatestExecution(user, workflowId);
-      return this.buildNodeOutputResponse(
-        user,
-        detail,
-        nodeId,
-        workflowId,
-        includeToolCalls === 'true',
-        raw === 'true',
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to get node output for workflow ${workflowId}: ${(error as Error).message}`,
-      );
-      throwCliError(
-        CLI_ERROR_CODES.NOT_FOUND,
-        `No execution found for workflow ${workflowId}`,
-        'Run the workflow first with `refly workflow run <workflowId>`',
         HttpStatus.NOT_FOUND,
       );
     }
@@ -1614,192 +1966,6 @@ export class WorkflowCliController {
       );
     }
   }
-
-  /**
-   * Get node execution output by runId
-   * GET /v1/cli/workflow/run/:runId/node/:nodeId/output
-   *
-   * Returns the execution output content for a specific node from a specific run.
-   */
-  @UseGuards(JwtAuthGuard)
-  @Get('run/:runId/node/:nodeId/output')
-  async getNodeOutputByRunId(
-    @LoginedUser() user: User,
-    @Param('runId') runId: string,
-    @Param('nodeId') nodeId: string,
-    @Query('includeToolCalls') includeToolCalls?: string,
-    @Query('raw') raw?: string,
-  ): Promise<{ success: boolean; data: NodeOutputResponse }> {
-    this.logger.log(`Getting node output for run ${runId}, node ${nodeId}, user ${user.uid}`);
-
-    try {
-      const detail = await this.workflowService.getWorkflowDetail(user, runId);
-      return this.buildNodeOutputResponse(
-        user,
-        detail,
-        nodeId,
-        detail.canvasId,
-        includeToolCalls === 'true',
-        raw === 'true',
-      );
-    } catch (error) {
-      this.logger.error(`Failed to get node output for run ${runId}: ${(error as Error).message}`);
-      throwCliError(
-        CLI_ERROR_CODES.NOT_FOUND,
-        `Workflow run ${runId} not found`,
-        'Check the run ID and try again',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-  }
-
-  // ============================================================================
-  // Helper Methods
-  // ============================================================================
-
-  /**
-   * Build node output response from workflow execution detail
-   * @param user - The authenticated user (for permission verification)
-   * @param detail - Workflow execution detail
-   * @param nodeId - The node ID to get output for
-   * @param workflowId - The workflow ID (for error messages)
-   * @param includeToolCalls - Whether to include tool call details
-   * @param raw - Whether to return raw content without truncation
-   */
-  private async buildNodeOutputResponse(
-    user: User,
-    detail: any,
-    nodeId: string,
-    workflowId: string,
-    includeToolCalls: boolean,
-    raw: boolean,
-  ): Promise<{ success: boolean; data: NodeOutputResponse }> {
-    const nodeExecutions = detail.nodeExecutions ?? [];
-    const nodeExec = nodeExecutions.find((n: any) => n.nodeId === nodeId);
-
-    if (!nodeExec) {
-      throwCliError(
-        CLI_ERROR_CODES.NODE_NOT_FOUND,
-        `Node ${nodeId} not found in workflow execution`,
-        `Use 'refly workflow nodes ${workflowId}' to list all nodes`,
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    // Build base response
-    const response: NodeOutputResponse = {
-      runId: detail.executionId,
-      workflowId: detail.canvasId,
-      nodeId: nodeExec.nodeId,
-      nodeTitle: nodeExec.title ?? '',
-      nodeType: nodeExec.nodeType,
-      status: nodeExec.status,
-      timing: {
-        startTime: nodeExec.startTime?.toJSON(),
-        endTime: nodeExec.endTime?.toJSON(),
-        durationMs:
-          nodeExec.startTime && nodeExec.endTime
-            ? new Date(nodeExec.endTime).getTime() - new Date(nodeExec.startTime).getTime()
-            : undefined,
-      },
-    };
-
-    // Add error info if failed
-    if (nodeExec.status === 'failed' && nodeExec.errorMessage) {
-      response.error = {
-        type: 'execution_error',
-        message: nodeExec.errorMessage,
-      };
-    }
-
-    // Get content from ActionStep if entityId exists
-    if (nodeExec.entityId) {
-      // Defense-in-depth: Verify the action result belongs to this user
-      const actionResult = await this.prisma.actionResult.findFirst({
-        where: {
-          resultId: nodeExec.entityId,
-          uid: user.uid,
-        },
-      });
-
-      if (!actionResult) {
-        this.logger.warn(
-          `Permission denied: User ${user.uid} attempted to access node output ${nodeExec.entityId}`,
-        );
-        throwCliError(
-          CLI_ERROR_CODES.NOT_FOUND,
-          'Node output not found or access denied',
-          'Verify you have access to this workflow',
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      // Get the latest action step for this result (content is stored in steps)
-      const actionSteps = await this.prisma.actionStep.findMany({
-        where: {
-          resultId: nodeExec.entityId,
-          deletedAt: null,
-        },
-        orderBy: [{ version: 'desc' }, { order: 'desc' }],
-      });
-
-      if (actionSteps.length > 0) {
-        // Combine content from all steps (usually there's one "final" step with the content)
-        const latestVersion = actionSteps[0].version;
-        const stepsOfLatestVersion = actionSteps.filter((s) => s.version === latestVersion);
-
-        // Get the content from the steps
-        let content = stepsOfLatestVersion
-          .sort((a, b) => a.order - b.order)
-          .map((s) => s.content)
-          .join('\n\n');
-
-        if (!raw && content.length > 10000) {
-          content = `${content.substring(0, 10000)}\n... [truncated, use --raw for full content]`;
-        }
-        response.content = content;
-        response.contentType = 'text/markdown';
-
-        // Calculate output tokens from token usage in steps
-        let totalOutputTokens = 0;
-        for (const step of stepsOfLatestVersion) {
-          try {
-            const tokenUsage = JSON.parse(step.tokenUsage || '[]');
-            for (const usage of tokenUsage) {
-              totalOutputTokens += usage.outputTokens || 0;
-            }
-          } catch {
-            // Ignore parsing errors
-          }
-        }
-        if (totalOutputTokens > 0) {
-          response.outputTokens = totalOutputTokens;
-        }
-      }
-
-      // Include tool calls if requested
-      if (includeToolCalls) {
-        const toolCalls = await this.prisma.toolCallResult.findMany({
-          where: {
-            resultId: nodeExec.entityId,
-            deletedAt: null,
-          },
-          orderBy: { createdAt: 'asc' },
-        });
-
-        response.toolCalls = toolCalls.map((tc) => ({
-          callId: tc.callId,
-          toolName: tc.toolName,
-          status: tc.status,
-          output: raw
-            ? this.safeParseJSON(tc.output)
-            : this.truncateOutput(this.safeParseJSON(tc.output)),
-        }));
-      }
-    }
-
-    return buildCliSuccessResponse(response);
-  }
 }
 
 // ============================================================================
@@ -1824,8 +1990,6 @@ export class NodeCliController {
   /**
    * List available node types
    * GET /v1/cli/node/types
-   *
-   * Only returns the two supported workflow node types: start and skillResponse.
    */
   @UseGuards(JwtAuthGuard)
   @Get('types')
@@ -1834,21 +1998,71 @@ export class NodeCliController {
   ): Promise<{ success: boolean; data: ListNodeTypesResponse }> {
     this.logger.log(`Listing node types for user ${user.uid}`);
 
-    // Only two node types are supported for CLI workflows
-    const nodeTypes: NodeTypeInfo[] = [
-      {
-        type: 'start',
-        name: 'Start / User Input',
-        description: 'Workflow entry point that captures user input and initiates execution',
-        category: 'core',
-      },
-      {
-        type: 'skillResponse',
-        name: 'AI Agent',
-        description: 'AI-powered response node that can use tools and generate content',
-        category: 'core',
-      },
-    ];
+    const nodeTypes: NodeTypeInfo[] = [];
+
+    // Core node types (always available)
+    nodeTypes.push({
+      type: 'start',
+      name: 'Start / User Input',
+      description: 'Workflow entry point that captures user input and initiates execution',
+      category: 'core',
+    });
+
+    nodeTypes.push({
+      type: 'skillResponse',
+      name: 'AI Agent',
+      description: 'AI-powered response node that can use tools and generate content',
+      category: 'core',
+    });
+
+    nodeTypes.push({
+      type: 'document',
+      name: 'Document',
+      description: 'Reference a document from your library',
+      category: 'core',
+    });
+
+    nodeTypes.push({
+      type: 'resource',
+      name: 'Resource',
+      description: 'Reference a resource (URL, file, etc.)',
+      category: 'core',
+    });
+
+    nodeTypes.push({
+      type: 'memo',
+      name: 'Memo',
+      description: 'Add notes or instructions',
+      category: 'core',
+    });
+
+    // Get builtin tools
+    const builtinTools = this.toolService.listBuiltinTools();
+    for (const tool of builtinTools) {
+      nodeTypes.push({
+        type: `tool:${tool.toolset?.key ?? tool.id}`,
+        name: tool.name,
+        description: (tool.toolset?.definition?.descriptionDict?.en as string) ?? 'Builtin tool',
+        category: 'builtin',
+        authorized: true,
+      });
+    }
+
+    // Get user tools (authorized and unauthorized)
+    try {
+      const userTools = await this.toolService.listUserTools(user);
+      for (const tool of userTools) {
+        nodeTypes.push({
+          type: `tool:${tool.key}`,
+          name: tool.name,
+          description: tool.description ?? 'External tool',
+          category: 'installed',
+          authorized: tool.authorized,
+        });
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to get user tools: ${(error as Error).message}`);
+    }
 
     return buildCliSuccessResponse({
       nodeTypes,

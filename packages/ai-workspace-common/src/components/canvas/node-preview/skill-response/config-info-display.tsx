@@ -84,6 +84,7 @@ export const ConfigInfoDisplay = memo(
     }, [prompt]);
 
     const { sourceVariables } = useFindLatestVariableMetions(variables);
+
     const escapeRegExp = useCallback(
       (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
       [],

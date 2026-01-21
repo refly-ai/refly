@@ -331,7 +331,7 @@ export class WorkflowPlanCliController {
       }
 
       // 3. Get tools and default model for node generation
-      const toolsData = await this.toolService.listTools(user, { enabled: true });
+      const toolsData = await this.toolService.listAllToolsForCopilot(user);
       const defaultModel = await this.providerService.findDefaultProviderItem(
         user,
         'agent' as ModelScene,

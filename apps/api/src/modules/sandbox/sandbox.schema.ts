@@ -23,6 +23,19 @@ export const S3ConfigSchema = z.object({
 
 export type S3Config = z.infer<typeof S3ConfigSchema>;
 
+export const S3LibConfigSchema = z.object({
+  accessKey: z.string().optional(),
+  secretKey: z.string().optional(),
+  bucket: z.string(),
+  region: z.string(),
+  path: z.string(),
+  hash: z.string(),
+  cache: z.boolean().optional(),
+  reset: z.boolean().optional(),
+});
+
+export type S3LibConfig = z.infer<typeof S3LibConfigSchema>;
+
 /**
  * Resource limits for code execution
  */
@@ -39,6 +52,8 @@ export const ExecuteConfigSchema = z
   .object({
     s3: S3ConfigSchema,
     s3DrivePath: z.string(),
+    s3LibConfig: S3LibConfigSchema.optional(),
+    env: z.record(z.string()).optional(),
     timeout: z.number().int().positive(),
     limits: ExecutorLimitsSchema.optional(),
     codeSizeThreshold: z.number().int().positive().optional(),
@@ -126,6 +141,8 @@ export const SandboxExecutionContextSchema = z.object({
   canvasId: z.string(),
   s3Config: S3ConfigSchema,
   s3DrivePath: z.string(),
+  s3LibConfig: S3LibConfigSchema.optional(),
+  env: z.record(z.string()).optional(),
   timeout: z.number().int().positive().optional(),
   limits: ExecutorLimitsSchema.optional(),
   parentResultId: z.string().optional(),

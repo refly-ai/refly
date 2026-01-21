@@ -582,7 +582,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
             form.setFieldValue(fieldName, [{ text: trimmedValue }]);
           }
         } else {
-          if (value) {
+          if (typeof value === 'string') {
             const trimmedValue = value.trim();
             if (trimmedValue !== value) {
               form.setFieldValue(fieldName, trimmedValue);

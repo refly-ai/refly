@@ -52,7 +52,7 @@ describe('processQueryWithMentions', () => {
   describe('basic functionality', () => {
     it('should return original query when no options provided', () => {
       const result = processQueryWithMentions('hello world');
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         processedQuery: 'hello world',
         updatedQuery: 'hello world',
         resourceVars: [],
@@ -64,7 +64,7 @@ describe('processQueryWithMentions', () => {
         replaceVars: false,
         variables: [mockWorkflowVariable],
       });
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         processedQuery: '@testVar hello',
         updatedQuery: '@{type=var,id=var-1,name=testVar} hello',
         resourceVars: [],
@@ -73,7 +73,7 @@ describe('processQueryWithMentions', () => {
 
     it('should return empty query for empty input', () => {
       const result = processQueryWithMentions('');
-      expect(result).toEqual({ processedQuery: '', updatedQuery: '', resourceVars: [] });
+      expect(result).toMatchObject({ processedQuery: '', updatedQuery: '', resourceVars: [] });
     });
   });
 
@@ -273,6 +273,37 @@ describe('processQueryWithMentions', () => {
       expect(result.processedQuery).toBe('@Resource From Array');
       expect(result.updatedQuery).toBe('@{type=file,id=resource-123,name=Resource From Array}');
       expect(result.resourceVars).toEqual([]);
+    });
+  });
+
+  describe('referenced variables JSON block', () => {
+    const mockOptionalVariable: WorkflowVariable = {
+      variableId: 'var-2',
+      name: 'optionalVar',
+      variableType: 'option',
+      required: false,
+      value: [],
+    };
+
+    it('should append JSON block with referenced variables when present', () => {
+      const query = '@{type=var,id=var-1,name=testVar} and @{type=var,id=var-2,name=optionalVar}';
+      const result = processQueryWithMentions(query, {
+        replaceVars: true,
+        variables: [mockWorkflowVariable, mockOptionalVariable],
+      });
+
+      const expectedVariablesBlock = JSON.stringify(
+        [
+          { name: 'testVar', value: 'hello world' },
+          { name: 'optionalVar', value: null },
+        ],
+        null,
+        2,
+      );
+
+      expect(result.llmInputQuery).toBe(
+        `Variables:\n${expectedVariablesBlock}\n\n@var:testVar and @var:optionalVar`,
+      );
     });
   });
 

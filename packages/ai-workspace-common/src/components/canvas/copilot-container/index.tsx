@@ -13,7 +13,7 @@ export const CopilotContainer = memo(
   ({ copilotWidth, setCopilotWidth, maxPanelWidth }: CopilotContainerProps) => {
     const [searchParams] = useSearchParams();
     const source = useMemo(() => searchParams.get('source'), [searchParams]);
-    const isOnboarding = source === 'onboarding';
+    const isOnboarding = ['onboarding', 'frontPage'].includes(source ?? '');
 
     // Handle drag resize for Copilot panel
     const [isResizing, setIsResizing] = useState(false);
@@ -38,7 +38,7 @@ export const CopilotContainer = memo(
 
         const deltaX = e.clientX - resizeStartXRef.current;
         const newWidth = resizeStartWidthRef.current + deltaX;
-        const minWidth = 300;
+        const minWidth = 400;
         const maxWidth = maxPanelWidth;
 
         const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
@@ -79,7 +79,7 @@ export const CopilotContainer = memo(
           )}
           style={{ width: isOnboarding ? '100%' : `${copilotWidth}px` }}
         >
-          <div className="max-w-[1000px] h-full mx-auto">
+          <div className={cn('h-full mx-auto', isOnboarding ? 'max-w-[638px]' : 'max-w-[1000px] ')}>
             <Copilot copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
           </div>
         </div>

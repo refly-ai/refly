@@ -3571,6 +3571,14 @@ export const UserPreferencesSchema = {
       description: 'Whether the user has been invited',
       default: false,
     },
+    hasFilledForm: {
+      type: 'boolean',
+      description: 'Whether the user has filled the survey form',
+    },
+    identity: {
+      type: 'string',
+      description: 'User identity in survey form',
+    },
     requireInvitationCode: {
       type: 'boolean',
       description: 'Whether to require invitation code',
@@ -7965,6 +7973,7 @@ export const GetFormDefinitionResponseSchema = {
 } as const;
 
 export const HasFilledFormResponseSchema = {
+  deprecated: true,
   allOf: [
     {
       $ref: '#/components/schemas/BaseResponse',
@@ -8283,6 +8292,7 @@ export const ListInvitationCodesResponseSchema = {
 } as const;
 
 export const HasBeenInvitedResponseSchema = {
+  deprecated: true,
   allOf: [
     {
       $ref: '#/components/schemas/BaseResponse',
@@ -10639,6 +10649,106 @@ export const DeleteToolsetRequestSchema = {
     toolsetId: {
       type: 'string',
       description: 'Toolset ID',
+    },
+  },
+} as const;
+
+export const ExecuteToolRequestSchema = {
+  type: 'object',
+  required: ['toolsetKey', 'toolName', 'arguments'],
+  properties: {
+    toolsetKey: {
+      type: 'string',
+      description: 'Toolset key',
+    },
+    toolName: {
+      type: 'string',
+      description: 'Tool method name to execute',
+    },
+    arguments: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Tool arguments',
+    },
+  },
+} as const;
+
+export const ExecuteToolResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Tool execution result data',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ExportToolsetDefinitionsResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            $ref: '#/components/schemas/ToolsetExportDefinition',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ToolsetExportDefinitionSchema = {
+  type: 'object',
+  properties: {
+    key: {
+      type: 'string',
+      description: 'Toolset unique key',
+    },
+    name: {
+      type: 'string',
+      description: 'Toolset display name',
+    },
+    description: {
+      type: 'string',
+      description: 'Toolset description',
+    },
+    tools: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/ToolExportDefinition',
+      },
+    },
+  },
+} as const;
+
+export const ToolExportDefinitionSchema = {
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Tool method name',
+    },
+    description: {
+      type: 'string',
+      description: 'Tool description',
+    },
+    inputSchema: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'JSON Schema format input parameter definition',
     },
   },
 } as const;

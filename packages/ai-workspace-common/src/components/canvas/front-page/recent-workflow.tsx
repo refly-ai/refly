@@ -4,14 +4,14 @@ import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useNavigate } from 'react-router-dom';
 import { SiderData, useSiderStoreShallow } from '@refly/stores';
-import { Avatar, Button } from 'antd';
+import { Button } from 'antd';
 import { UsedToolsets } from '@refly-packages/ai-workspace-common/components/workflow-list/used-toolsets';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
 import { More, Add } from 'refly-icons';
 import { logEvent } from '@refly/telemetry-web';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
 import { CanvasActionDropdown } from '@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal/canvasActionDropdown';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
+import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
 const ActionDropdown = memo(
   ({ canvasId, canvasName }: { canvasId: string; canvasName: string }) => {
@@ -52,7 +52,7 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
   const handleEditCanvas = useCallback(
     (canvasId: string) => {
       setIsManualCollapse(false);
-      navigate(`/canvas/${canvasId}`);
+      navigate(`/workflow/${canvasId}`);
     },
     [navigate, setIsManualCollapse],
   );
@@ -62,10 +62,14 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
       <Button
         className="h-[120px] flex items-center flex-col gap-3 border-[1px] border-dashed border-refly-Control-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover hover:shadow-refly-m transition-colors"
         onClick={handleNewWorkflow}
-        loading={createCanvasLoading}
+        disabled={createCanvasLoading}
       >
         <div className="flex justify-center items-center w-[30px] h-[30px] bg-refly-text-0 rounded-full">
-          <Add size={16} color="var(--refly-bg-body-z0)" />
+          {createCanvasLoading ? (
+            <Spin size="small" className="text-refly-bg-body-z0" />
+          ) : (
+            <Add size={16} color="var(--refly-bg-body-z0)" />
+          )}
         </div>
         <div className="text-sm leading-5 font-bold text-refly-text-0 line-clamp-1">
           {t('frontPage.newWorkflow.buttonText')}
@@ -79,23 +83,13 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
               <div className="text-sm leading-5 font-semibold text-refly-text-0 line-clamp-1">
                 {canvas.name || t('common.untitled')}
               </div>
-              <div className="mt-1 flex w-fit" onClick={(e) => e.stopPropagation()}>
+              <div className="mt-1 flex w-fit">
                 <UsedToolsets toolsets={canvas.usedToolsets} />
               </div>
             </div>
 
             <div className="flex items-center gap-2 justify-between">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="flex items-center gap-1 min-w-0">
-                  <Avatar
-                    className="flex-shrink-0"
-                    size={18}
-                    src={canvas.owner?.avatar || defaultAvatar}
-                  />
-                  <div className="text-xs leading-4 text-refly-text-2 truncate">
-                    {canvas.owner?.nickname ? canvas.owner?.nickname : `@${canvas.owner?.name}`}
-                  </div>
-                </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <span className="text-refly-text-3 text-xs leading-4 whitespace-nowrap">
                     {time(canvas.updatedAt, language as LOCALE)
