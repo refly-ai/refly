@@ -14,10 +14,14 @@ import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/us
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
 const ActionDropdown = memo(
-  ({ canvasId, canvasName }: { canvasId: string; canvasName: string }) => {
+  ({
+    canvasId,
+    canvasName,
+    className,
+  }: { canvasId: string; canvasName: string; className?: string }) => {
     const { getCanvasList } = useHandleSiderData();
     return (
-      <div onClick={(e) => e.stopPropagation()}>
+      <div className={className} onClick={(e) => e.stopPropagation()}>
         <CanvasActionDropdown
           canvasId={canvasId}
           canvasName={canvasName}
@@ -78,7 +82,7 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
 
       {canvases?.map((canvas) => (
         <div key={canvas.id} onClick={() => handleEditCanvas(canvas.id)}>
-          <div className="h-[120px] flex flex-col justify-between p-4 border-[1px] border-solid border-refly-Card-Border bg-refly-bg-control-z0 rounded-xl bg-refly-bg-content-z2 hover:bg-refly-fill-hover hover:shadow-refly-m transition-shadow cursor-pointer">
+          <div className="h-[120px] flex flex-col justify-between p-4 pb-2 border-[1px] border-solid border-refly-Card-Border bg-refly-bg-control-z0 rounded-xl bg-refly-bg-content-z2 hover:bg-refly-fill-hover hover:shadow-refly-m transition-shadow cursor-pointer">
             <div>
               <div className="text-sm leading-5 font-semibold text-refly-text-0 line-clamp-1">
                 {canvas.name || t('common.untitled')}
@@ -99,7 +103,11 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
                 </div>
               </div>
 
-              <ActionDropdown canvasId={canvas.id} canvasName={canvas.name} />
+              <ActionDropdown
+                canvasId={canvas.id}
+                canvasName={canvas.name}
+                className="translate-x-2"
+              />
             </div>
           </div>
         </div>

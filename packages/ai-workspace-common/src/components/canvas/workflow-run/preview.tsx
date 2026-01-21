@@ -67,9 +67,9 @@ const NodeCreditUsage = memo(
     const creditUsage = creditData?.data?.total ?? 0;
 
     return (
-      <div className="flex items-center gap-1">
-        <Subscription size={12} className="text-refly-text-2" />
-        <span>{creditUsage}</span>
+      <div className="flex items-center gap-[2px]">
+        <Subscription size={12} className="text-refly-text-2" color="rgba(28, 31, 35, 0.6)" />
+        <span style={{ color: 'rgba(28, 31, 35, 0.6)' }}>{creditUsage}</span>
       </div>
     );
   },
@@ -855,6 +855,7 @@ const WorkflowRunPreviewComponent = () => {
                                   )}
                                   {/* Show result content for executed states (running, finished, failed) */}
                                   <LastRunTab
+                                    location="runlog"
                                     loading={loading}
                                     isStreaming={isStreaming}
                                     resultId={resultId}
@@ -878,6 +879,14 @@ const WorkflowRunPreviewComponent = () => {
                         <Collapse
                           defaultActiveKey={[]}
                           ghost
+                          onChange={(keys) => {
+                            if (keys.includes('agent')) {
+                              logEvent('runlog_agent_expand', Date.now(), {
+                                canvasId: canvasId ?? '',
+                                nodeId: node.id,
+                              });
+                            }
+                          }}
                           expandIcon={({ isActive }) => (
                             <ArrowDown
                               size={14}
@@ -910,10 +919,7 @@ const WorkflowRunPreviewComponent = () => {
                                       {agentTitle}
                                     </span>
                                   </div>
-                                  <div
-                                    className="flex items-center flex-shrink-0"
-                                    style={{ gap: '12px' }}
-                                  >
+                                  <div className="flex items-center flex-shrink-0 gap-3">
                                     {/* Collapsed state: show different info based on status */}
                                     {/* 
                                     - Not executed: Only show node name (no time, no credit)
@@ -922,20 +928,12 @@ const WorkflowRunPreviewComponent = () => {
                                     Note: Node name is always shown on the left side
                                   */}
                                     {isNotExecuted ? null : ( // Not executed: Only show node name (nothing else)
-                                      <div
-                                        className="flex items-center"
-                                        style={{
-                                          gap: '2px',
-                                          fontFamily: 'Inter',
-                                          fontWeight: 400,
-                                          fontSize: '10px',
-                                          lineHeight: '1.4em',
-                                          color: 'rgba(28, 31, 35, 0.35)',
-                                        }}
-                                      >
+                                      <div className="flex items-center gap-2 text-[10px] leading-[1.4em] font-normal">
                                         {/* Running state: Show execution time */}
                                         {isExecuting && executionTime && (
-                                          <span>{executionTime}</span>
+                                          <span style={{ color: 'rgba(28, 31, 35, 0.35)' }}>
+                                            {executionTime}
+                                          </span>
                                         )}
                                         {/* Finished/Failed state: Show execution time + credit usage */}
                                         {(isFinished || isFailed) && (
@@ -945,8 +943,12 @@ const WorkflowRunPreviewComponent = () => {
                                               version={version}
                                               enabled={!!resultId && (isFinished || isFailed)}
                                             />
-                                            {executionTime && <span>·</span>}
-                                            {executionTime && <span>{executionTime}</span>}
+
+                                            {executionTime && (
+                                              <span style={{ color: 'rgba(28, 31, 35, 0.35)' }}>
+                                                {executionTime}
+                                              </span>
+                                            )}
                                           </>
                                         )}
                                       </div>
@@ -979,6 +981,14 @@ const WorkflowRunPreviewComponent = () => {
                                             : [] // Finished/Failed: Input area (collapsed) + Output area (collapsed)
                                       }
                                       ghost
+                                      onChange={(keys) => {
+                                        if (keys.includes('output')) {
+                                          logEvent('agent_output_select', Date.now(), {
+                                            canvasId: canvasId ?? '',
+                                            nodeId: node.id,
+                                          });
+                                        }
+                                      }}
                                       expandIcon={({ isActive }) => (
                                         <ArrowDown
                                           size={14}

@@ -249,14 +249,20 @@ export class SubscriptionService implements OnModuleInit {
       consent_collection: {
         terms_of_service: 'required',
       },
-      metadata: validatedVoucherId
-        ? {
-            voucherId: validatedVoucherId,
-            voucherDiscountPercent: voucherDiscountPercent?.toString(),
-            voucherEntryPoint,
-            voucherUserType,
-          }
-        : undefined,
+      metadata: {
+        ...(userPo?.email && { customer_email: userPo.email }),
+        ...(validatedVoucherId && {
+          voucherId: validatedVoucherId,
+          voucherDiscountPercent: voucherDiscountPercent?.toString(),
+          voucherEntryPoint,
+          voucherUserType,
+        }),
+      },
+      subscription_data: {
+        metadata: {
+          ...(userPo?.email && { customer_email: userPo.email }),
+        },
+      },
     };
 
     // Apply voucher promotion code or allow promotion codes (not both)
@@ -282,7 +288,9 @@ export class SubscriptionService implements OnModuleInit {
 
         // Remove discount and allow manual promotion code entry instead
         sessionParams.discounts = undefined;
-        sessionParams.metadata = undefined;
+        sessionParams.metadata = {
+          ...(userPo?.email && { customer_email: userPo.email }),
+        };
         sessionParams.allow_promotion_codes = true;
 
         session = await this.stripeClient.checkout.sessions.create(sessionParams);
@@ -371,6 +379,7 @@ export class SubscriptionService implements OnModuleInit {
         terms_of_service: 'required',
       },
       metadata: {
+        ...(userPo?.email && { customer_email: userPo.email }),
         purpose: 'credit_pack',
         packId: param.packId,
         lookupKey,

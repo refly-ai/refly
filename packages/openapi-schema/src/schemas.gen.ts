@@ -3687,7 +3687,13 @@ export const UserSettingsSchema = {
       description: 'User preferences',
       $ref: '#/components/schemas/UserPreferences',
     },
+    attributes: {
+      type: 'object',
+      description: 'User attributes',
+      additionalProperties: true,
+    },
     onboarding: {
+      deprecated: true,
       description: 'Onboarding config',
       $ref: '#/components/schemas/OnboardingConfig',
     },
@@ -7378,6 +7384,17 @@ export const SandboxExecuteContextSchema = {
     version: {
       type: 'number',
       description: 'Result version for file registration',
+    },
+    ptcEnabled: {
+      type: 'boolean',
+      description: 'Whether PTC (Programmatic Tool Calling) is enabled',
+    },
+    env: {
+      type: 'object',
+      additionalProperties: {
+        type: 'string',
+      },
+      description: 'Environment variables for execution',
     },
   },
 } as const;

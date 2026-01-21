@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { Typography, Button, Dropdown, message, notification } from 'antd';
+import { Typography, Button, Dropdown, message, notification, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import { Share, Download, Markdown, Doc1, Pdf } from 'refly-icons';
 import { LuLayoutGrid } from 'react-icons/lu';
@@ -19,6 +19,9 @@ import {
   useExportDocument,
   ExportCancelledError,
 } from '@refly-packages/ai-workspace-common/hooks/use-export-document';
+import { logEvent } from '@refly/telemetry-web';
+import { useLastRunTabContext } from '@refly-packages/ai-workspace-common/context/run-location';
+
 const { Paragraph } = Typography;
 
 // Convert DriveFile type to ResourceType
@@ -41,10 +44,11 @@ type ActionButtonProps = {
   loading?: boolean;
   onClick?: () => void;
   dropdownMenuItems?: MenuProps['items'];
+  tooltip?: string;
 };
 
 const ActionButton = memo<ActionButtonProps>(
-  ({ label, icon, onClick, loading, dropdownMenuItems }) => {
+  ({ label, icon, onClick, loading, dropdownMenuItems, tooltip }) => {
     const buttonNode = (
       <Button
         type="text"
@@ -57,15 +61,23 @@ const ActionButton = memo<ActionButtonProps>(
       />
     );
 
+    const wrappedButton = tooltip ? (
+      <Tooltip title={tooltip} placement="top">
+        {buttonNode}
+      </Tooltip>
+    ) : (
+      buttonNode
+    );
+
     if (dropdownMenuItems?.length) {
       return (
         <Dropdown menu={{ items: dropdownMenuItems }} trigger={['click']} placement="bottomRight">
-          {buttonNode}
+          {wrappedButton}
         </Dropdown>
       );
     }
 
-    return buttonNode;
+    return wrappedButton;
   },
 );
 
@@ -94,6 +106,7 @@ export const ProductCard = memo(
     const { t } = useTranslation();
     const { handleDownload, isDownloading } = useDownloadFile();
     const { exportDocument } = useExportDocument();
+    const { location } = useLastRunTabContext();
 
     const title = file?.name ?? 'Untitled file';
 
@@ -110,11 +123,15 @@ export const ProductCard = memo(
     }, [file, inheritedUsePublicFileUrl, setCurrentFile]);
 
     const handleDownloadProduct = useCallback(() => {
+      logEvent('artifact_download', Date.now(), {
+        artifact_type: file.category,
+        artifact_location: location,
+      });
       handleDownload({
         currentFile: file,
         contentType: file.type,
       });
-    }, [handleDownload, file]);
+    }, [handleDownload, file, location]);
 
     const [isSharing, setIsSharing] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
@@ -125,6 +142,12 @@ export const ProductCard = memo(
         if (isExporting || !file?.fileId) {
           return;
         }
+
+        logEvent('artifact_download', Date.now(), {
+          artifact_type: file.category,
+          artifact_location: location,
+          export_type: type,
+        });
 
         const notificationKey = `export-${file.fileId}-${Date.now()}`;
         const abortController = new AbortController();
@@ -276,6 +299,11 @@ export const ProductCard = memo(
         return;
       }
 
+      logEvent('add_to_file', Date.now(), {
+        artifact_type: file.category,
+        artifact_location: location,
+      });
+
       setIsAdding(true);
       try {
         // Ensure platform-generated documents have .md extension for preview support
@@ -292,7 +320,7 @@ export const ProductCard = memo(
       } finally {
         setIsAdding(false);
       }
-    }, [onAddToFileLibrary, file, isAdding, isAddingToFileLibrary, t]);
+    }, [onAddToFileLibrary, file, isAdding, isAddingToFileLibrary, t, location]);
 
     const actions = useMemo<ActionButtonProps[]>(() => {
       const baseShareAction: ActionButtonProps | null = !isMediaFile
@@ -301,6 +329,7 @@ export const ProductCard = memo(
             icon: <Share size={16} />,
             onClick: handleShare,
             loading: isSharing,
+            tooltip: t('driveFile.share'),
           }
         : null;
 
@@ -310,6 +339,7 @@ export const ProductCard = memo(
             icon: <LuLayoutGrid size={16} />,
             onClick: handleAddToFileLibrary,
             loading: isAdding || isAddingToFileLibrary,
+            tooltip: t('driveFile.addToFileLibrary'),
           }
         : null;
 
@@ -320,6 +350,7 @@ export const ProductCard = memo(
             icon: <Download size={16} />,
             loading: isExporting,
             dropdownMenuItems: exportMenuItems,
+            tooltip: t('driveFile.download'),
           },
           addToFileLibraryAction,
           baseShareAction,
@@ -332,6 +363,7 @@ export const ProductCard = memo(
           icon: <Download size={16} />,
           onClick: handleDownloadProduct,
           loading: isDownloading,
+          tooltip: t('driveFile.download'),
         },
         addToFileLibraryAction,
         baseShareAction,
@@ -349,6 +381,7 @@ export const ProductCard = memo(
       isAdding,
       isAddingToFileLibrary,
       onAddToFileLibrary,
+      t,
     ]);
 
     const handleClosePreview = useCallback(() => {
@@ -408,6 +441,7 @@ export const ProductCard = memo(
                     onClick={action.onClick}
                     loading={action.loading}
                     dropdownMenuItems={action.dropdownMenuItems}
+                    tooltip={action.tooltip}
                   />
                 ),
             )}
