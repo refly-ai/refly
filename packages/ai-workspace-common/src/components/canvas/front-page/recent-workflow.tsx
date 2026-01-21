@@ -4,9 +4,8 @@ import { time } from '@refly-packages/ai-workspace-common/utils/time';
 import { LOCALE } from '@refly/common-types';
 import { useNavigate } from 'react-router-dom';
 import { SiderData, useSiderStoreShallow } from '@refly/stores';
-import { Avatar, Button } from 'antd';
+import { Button } from 'antd';
 import { UsedToolsets } from '@refly-packages/ai-workspace-common/components/workflow-list/used-toolsets';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar_v2.webp';
 import { More, Add } from 'refly-icons';
 import { logEvent } from '@refly/telemetry-web';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
@@ -91,16 +90,6 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
 
             <div className="flex items-center gap-2 justify-between">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="flex items-center gap-1 min-w-0">
-                  <Avatar
-                    className="flex-shrink-0"
-                    size={18}
-                    src={canvas.owner?.avatar || defaultAvatar}
-                  />
-                  <div className="text-xs leading-4 text-refly-text-2 truncate">
-                    {canvas.owner?.nickname ? canvas.owner?.nickname : `@${canvas.owner?.name}`}
-                  </div>
-                </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <span className="text-refly-text-3 text-xs leading-4 whitespace-nowrap">
                     {time(canvas.updatedAt, language as LOCALE)

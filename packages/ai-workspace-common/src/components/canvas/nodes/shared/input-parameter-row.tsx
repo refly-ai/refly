@@ -103,7 +103,7 @@ export const InputParameterRow = memo(
       >
         <div
           className={cn(
-            'group flex gap-2 items-center justify-between py-1.5 px-3 cursor-pointer hover:bg-refly-tertiary-hover transition-colors',
+            'group relative flex gap-2 items-center justify-between py-1.5 px-3 cursor-pointer hover:bg-refly-tertiary-hover transition-colors',
             isPreview
               ? 'h-[37px] border-solid border-[1px] border-refly-Card-Border rounded-xl'
               : 'h-[30px] bg-refly-bg-control-z0 rounded-[4px]',
@@ -124,7 +124,7 @@ export const InputParameterRow = memo(
               {displayValue && (
                 <div
                   className={cn(
-                    'text-refly-text-3 truncate ml-1 min-w-0 flex-grow-0 shrink-[100] basis-auto',
+                    'text-refly-text-1 truncate ml-1 min-w-0 flex-grow-0 shrink-[100] basis-auto',
                     isPreview ? 'text-sm' : 'text-xs',
                   )}
                 >
@@ -138,9 +138,10 @@ export const InputParameterRow = memo(
             {VariableIcon}
             {!readonly && (
               <div
-                className={`items-center gap-1 flex-shrink-0 ${
-                  isPopconfirmOpen ? 'flex' : 'hidden group-hover:flex'
-                }`}
+                className={cn(
+                  'absolute right-0 top-0 bottom-0 items-center gap-1 px-2 rounded-r-xl bg-refly-fill-hover',
+                  isPopconfirmOpen ? 'flex' : 'hidden group-hover:flex',
+                )}
               >
                 <Button
                   type="text"

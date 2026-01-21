@@ -1,9 +1,9 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import mime from 'mime';
 import { DriveFile, VariableValue } from '@refly/openapi-schema';
 import { RESOURCE_TYPE_ICON_MAP } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/input-parameter-row';
 import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
-import { Attachment, List } from 'refly-icons';
+import { Attachment, Checked, List } from 'refly-icons';
 import { BiText } from 'react-icons/bi';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { Divider } from 'antd';
@@ -23,47 +23,55 @@ export const VariableHoverCard = memo(
     const { canvasId } = useCanvasContext();
     const resource = value?.[0]?.resource;
 
+    const selectedValues = useMemo(() => {
+      if (variableType === 'option') {
+        return value?.map((val) => val.text) ?? [];
+      }
+      return [];
+    }, [variableType, value]);
+
     const renderContent = () => {
       switch (variableType) {
         case 'string':
           return (
-            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 p-3 w-[256px] max-h-[160px] overflow-hidden">
-              <div className="flex items-center">
+            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 py-3 w-[256px] max-h-[160px] overflow-hidden">
+              <div className="flex items-center px-3">
                 <BiText size={18} className="mr-2" />
                 <div className="text-sm font-bold">
                   {t('canvas.workflow.variables.variableTypeOptions.string')}
                 </div>
-                <Divider type="vertical" className="bg-refly-Card-Border mx-1.5" />
-                <div className="text-sm font-bold flex-1 truncate text-refly-func-warning-hover">
-                  {label}
-                </div>
               </div>
-              <div className="flex-1 overflow-y-auto text-sm break-all">
-                {value?.[0]?.text || t('common.noData')}
+              <div className="flex-1 overflow-y-auto text-xs break-all leading-[18px]">
+                <div className="mx-3">
+                  <div className="text-refly-func-warning-hover">{label}</div>
+                  {value?.[0]?.text || t('common.noData')}
+                </div>
               </div>
             </div>
           );
         case 'option':
           return (
-            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 py-3 w-[256px] h-[160px] overflow-hidden">
+            <div className="flex flex-col gap-2 bg-refly-bg-content-z2 py-3 w-[256px] max-h-[160px] overflow-hidden">
               <div className="flex items-center px-3">
                 <List size={18} className="mr-2" />
                 <div className="text-sm font-bold">
                   {t('canvas.workflow.variables.variableTypeOptions.option')}
                 </div>
-                <Divider type="vertical" className="bg-refly-Card-Border mx-1.5" />
-                <div className="text-sm font-bold flex-1 text-refly-func-warning-hover truncate">
-                  {label}
-                </div>
               </div>
               <div className="flex-1 overflow-y-auto rounded-lg">
+                <div className="text-xs text-refly-func-warning-hover leading-[18px] mx-3 mb-1.5">
+                  {label}
+                </div>
                 <div className="flex flex-col gap-1.5">
                   {options?.map((opt, i) => (
                     <div
                       key={i}
-                      className="mx-3 px-2 py-1.5 text-xs bg-refly-bg-canvas rounded-[4px]"
+                      className="flex items-center justify-between gap-2 mx-3 px-2 py-1.5 text-xs bg-refly-bg-canvas rounded-[4px]"
                     >
-                      {opt}
+                      <div className="text-refly-text-0">{opt}</div>
+                      {selectedValues.includes(opt) && (
+                        <Checked size={16} color="var(--refly-primary-default)" />
+                      )}
                     </div>
                   ))}
                 </div>

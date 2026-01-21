@@ -79,7 +79,7 @@ export const CopilotContainer = memo(
           )}
           style={{ width: isOnboarding ? '100%' : `${copilotWidth}px` }}
         >
-          <div className="max-w-[1000px] h-full mx-auto">
+          <div className={cn('h-full mx-auto', isOnboarding ? 'max-w-[638px]' : 'max-w-[1000px] ')}>
             <Copilot copilotWidth={copilotWidth} setCopilotWidth={setCopilotWidth} />
           </div>
         </div>

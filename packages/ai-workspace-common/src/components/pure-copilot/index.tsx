@@ -12,7 +12,15 @@ import { useUserStoreShallow } from '@refly/stores';
 import { PromptSuggestion } from '@refly/openapi-schema';
 import { useGetPromptSuggestions } from '@refly-packages/ai-workspace-common/queries';
 
+export const defaultPromt: PromptSuggestion = {
+  prompt: {
+    zh: 'Refly.ai 能帮我完成哪些事情？',
+    en: 'What can Refly.ai do for me?',
+  },
+};
+
 export const fallbackPrompts: PromptSuggestion[] = [
+  defaultPromt,
   {
     prompt: {
       zh: '搭建一个播客生成工作流，抓取昨日 Product Hunt Top 5 产品并分析其价值，生成完整播客脚本、男女声对话音频、封面与节目笔记，并通过邮件通知我。',
@@ -87,7 +95,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
 
   const samplePrompts = useMemo(() => {
     if (data?.data && data.data.length > 0) {
-      return data.data;
+      return [defaultPromt, ...data.data];
     }
     return fallbackPrompts;
   }, [data?.data]);
@@ -109,7 +117,9 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     <div
       className={cn(
         'w-full flex flex-col gap-3',
-        isFloating ? 'bg-refly-bg-control-z0 px-3 pt-6 pb-3 rounded-b-xl -mt-5 ' : 'mt-6',
+        isFloating
+          ? 'bg-refly-bg-body-z0 px-3 pt-6 pb-3 rounded-b-xl -mt-5 shadow-refly-m'
+          : 'mt-6',
       )}
     >
       {!isFloating && <div className="text-xs text-refly-text-2">{t('copilot.samplePrompt')}</div>}
@@ -127,8 +137,10 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
             <div
               key={index}
               className={cn(
-                'flex items-start justify-between gap-4 px-4 py-3 bg-refly-bg-body-z0 rounded-xl cursor-pointer hover:bg-refly-secondary-hover transition-colors',
-                isFloating ? '' : 'border-[0.5px] border-solid border-refly-text-4',
+                'flex items-start justify-between gap-4 px-4 py-3 rounded-xl cursor-pointer hover:bg-refly-secondary-hover transition-colors',
+                isFloating
+                  ? 'bg-refly-bg-canvas'
+                  : 'border-[0.5px] border-solid border-refly-text-4 bg-refly-bg-body-z0',
               )}
               onMouseDown={(e) => {
                 // Use onMouseDown to trigger before blur
@@ -175,11 +187,11 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
           className={cn(
             'w-full px-4 py-3 rounded-[12px] border-[1px] border-solid bg-refly-bg-content-z2 transition-all duration-300 relative z-20',
             source === 'frontPage'
-              ? cn('border-refly-primary-default my-2', isFocused && 'shadow-lg')
+              ? cn('border-refly-primary-default my-2')
               : 'border-transparent pure-copilot-glow-effect',
           )}
         >
-          <div className="min-h-[120px] mb-4">
+          <div className={cn('mb-1', source === 'onboarding' && 'min-h-[80px]')}>
             <ChatInput
               readonly={false}
               autoFocus={false}
@@ -187,7 +199,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
               setQuery={setQuery}
               handleSendMessage={handleSendMessage}
               placeholder={t('copilot.pureCopilotPlaceholder')}
-              minRows={4}
+              minRows={2}
               inputClassName="text-lg text-refly-text-1"
               onFocus={() => setIsFocused(true)}
               onBlur={() => {

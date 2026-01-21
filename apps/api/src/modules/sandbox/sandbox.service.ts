@@ -67,6 +67,11 @@ export class SandboxService {
 
       const storagePath = this.driveService.buildS3DrivePath(user.uid, canvasId);
       const s3LibConfig = this.buildS3LibConfig();
+      const requestEnv = (request.context as { env?: Record<string, string> } | undefined)?.env;
+      const env = {
+        ...requestEnv,
+        REFLY_EXECUTOR_SLIM_INVOKER: 'refly-api',
+      };
 
       const context: SandboxExecutionContext = {
         uid: user.uid,
@@ -74,6 +79,7 @@ export class SandboxService {
         s3Config: this.s3Config,
         s3DrivePath: storagePath,
         s3LibConfig,
+        env,
         timeout: this.timeoutMs,
         parentResultId: request.context?.parentResultId,
         version: request.context?.version,

@@ -158,7 +158,7 @@ export class CopilotAutogenService {
     );
 
     // 6. Get tools list and default model (reuse ToolService and ProviderService)
-    const toolsData = await this.toolService.listTools(user, { enabled: true });
+    const toolsData = await this.toolService.listAllToolsForCopilot(user);
     const defaultModel = await this.providerService.findDefaultProviderItem(
       user,
       'agent' as ModelScene,
@@ -295,7 +295,7 @@ export class CopilotAutogenService {
     );
 
     // 6. Get tools list and default model (reuse ToolService and ProviderService)
-    const toolsData = await this.toolService.listTools(user, { enabled: true });
+    const toolsData = await this.toolService.listAllToolsForCopilot(user);
     const defaultModel = await this.providerService.findDefaultProviderItem(
       user,
       'agent' as ModelScene,
@@ -569,7 +569,7 @@ export class CopilotAutogenService {
     const finalCanvasId = canvasId || actionResult.targetId || '';
 
     // Get tools and default model
-    const toolsData = await this.toolService.listTools(user, { enabled: true });
+    const toolsData = await this.toolService.listAllToolsForCopilot(user);
     const defaultModel = await this.providerService.findDefaultProviderItem(
       user,
       'agent' as ModelScene,

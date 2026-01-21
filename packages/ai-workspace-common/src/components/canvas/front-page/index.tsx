@@ -237,11 +237,11 @@ const ModuleContainer = ({
   const { t } = useTranslation();
   return (
     <div className={cn('flex flex-col gap-4 mb-10', className)}>
-      <div className="text-[18px] leading-7 font-semibold text-refly-text-1 flex items-center gap-2 justify-center">
+      <div className="text-[18px] leading-7 font-semibold text-refly-text-0 flex items-center gap-2 justify-between">
         {title}
         {handleTitleClick && (
           <Button
-            className="!h-8 !min-w-8 py-0 px-1 absolute right-5 text-refly-text-2"
+            className="!h-8 !min-w-8 py-0 px-1 text-refly-text-2"
             type="text"
             size="small"
             onClick={handleTitleClick}

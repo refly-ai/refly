@@ -31,8 +31,6 @@ export const useGetUserSettings = () => {
     setLocalSettings: state.setLocalSettings,
     setIsCheckingLoginStatus: state.setIsCheckingLoginStatus,
     setIsLogin: state.setIsLogin,
-    setShowTourModal: state.setShowTourModal,
-    setShowSettingsGuideModal: state.setShowSettingsGuideModal,
     setShowInvitationCodeModal: state.setShowInvitationCodeModal,
     setShowOnboardingFormModal: state.setShowOnboardingFormModal,
     userProfile: state.userProfile,
@@ -191,16 +189,6 @@ export const useGetUserSettings = () => {
 
     // Execute non-blocking - don't await, let the page render first
     checkModalsAsync();
-
-    // set tour guide
-    const showSettingsGuideModal = !['skipped', 'completed'].includes(
-      settings?.onboarding?.settings ?? '',
-    );
-    userStore.setShowSettingsGuideModal(showSettingsGuideModal);
-    const showTourModal =
-      !showSettingsGuideModal &&
-      !['skipped', 'completed'].includes(settings?.onboarding?.tour ?? '');
-    userStore.setShowTourModal(showTourModal);
 
     // Add localSettings
     let uiLocale = mapDefaultLocale(settings?.uiLocale as LOCALE) as LOCALE;
