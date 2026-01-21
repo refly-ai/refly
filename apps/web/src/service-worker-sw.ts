@@ -175,7 +175,7 @@ registerRoute(
 
           // Get cached HTML for version comparison
           const cache = await caches.open(CACHE_NAME);
-          // ✅ Use normalized key to match the stored cache key
+          //  Use normalized key to match the stored cache key
           const normalizedKey = normalizeHtmlCacheKey(request);
           const cachedResponse = await cache.match(normalizedKey);
 
@@ -246,7 +246,7 @@ registerRoute(
       new CacheableResponsePlugin({
         statuses: [200],
       }),
-      // ✅ Add debug logging to see if cache matching works
+      //  Add debug logging to see if cache matching works
       {
         cachedResponseWillBeUsed: async ({ request, cachedResponse }) => {
           if (cachedResponse) {
@@ -591,23 +591,23 @@ class ServiceWorkerBackgroundPrecache {
           activePrecacheControllers.add(controller);
 
           try {
-            // ✅ Create Request object for consistent cache key
+            //  Create Request object for consistent cache key
             const request = new Request(url);
 
-            // ✅ Check if already cached (real-time check)
+            //  Check if already cached (real-time check)
             const cached = await cache.match(request);
             if (cached) {
               return;
             }
 
-            // ✅ Fetch and explicitly cache
+            //  Fetch and explicitly cache
             const response = await fetch(request, {
               cache: 'default',
               signal: controller.signal,
             });
 
             if (response.ok) {
-              // ✅ Use Request object as key for consistent matching with Workbox
+              // Use Request object as key for consistent matching with Workbox
               await cache.put(request, response.clone());
             }
           } catch (error) {
