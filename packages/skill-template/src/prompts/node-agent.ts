@@ -13,7 +13,7 @@ export const buildNodeAgentSystemPrompt = (options?: BuildNodeAgentSystemPromptO
 
   return template.render({
     ptcEnabled,
-    toolsets: ptcContext.toolsets,
-    sdkDocs: ptcContext.sdk.docs,
+    toolsets: ptcContext?.toolsets,
+    sdkDocs: ptcContext?.sdk?.docs,
   });
 };
