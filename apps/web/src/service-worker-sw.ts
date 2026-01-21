@@ -94,22 +94,33 @@ self.addEventListener('install', (event) => {
     (async () => {
       const cache = await caches.open(CACHE_NAME);
 
-      // Precache critical resources from build manifest
-      const urls = self.__WB_MANIFEST.map((entry) => {
-        const url = typeof entry === 'string' ? entry : entry.url;
-        // Ensure URLs are absolute for consistent cache key matching
-        return new URL(url, self.location.origin).href;
-      });
+      // Only precache the most critical resources to avoid bandwidth contention
+      const criticalUrls = self.__WB_MANIFEST
+        .filter((entry) => {
+          const url = typeof entry === 'string' ? entry : entry.url;
+          // Only cache core framework files (React, Router, main entry)
+          return (
+            url.includes('lib-react.') ||
+            url.includes('lib-router.') ||
+            url.includes('/index.') ||
+            url.includes('/static/css/index.')
+          );
+        })
+        .map((entry) => {
+          const url = typeof entry === 'string' ? entry : entry.url;
+          return new URL(url, self.location.origin).href;
+        });
 
-      console.log(`[SW] Precaching ${urls.length} critical resources`);
+      console.log(
+        `[SW] Precaching ${criticalUrls.length} critical resources (filtered from ${self.__WB_MANIFEST.length})`,
+      );
 
       try {
-        await cache.addAll(urls);
+        await cache.addAll(criticalUrls);
         console.log('[SW] Critical resources precached');
       } catch (error) {
         console.error('[SW] Precache failed:', error);
       } finally {
-        // Activate immediately after precache attempt (success or failure)
         await self.skipWaiting();
       }
     })(),

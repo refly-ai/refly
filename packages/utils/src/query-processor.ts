@@ -93,6 +93,8 @@ function formatMention(data: MentionCommonData, mode: MentionFormatMode): string
       return toolsetKey ? `@toolset:${toolsetKey}` : `@toolset:${name}`;
     } else if (type === 'tool') {
       return toolsetKey ? `@tool:${toolsetKey}_${name}` : `@tool:${name}`;
+    } else if (type === 'agent') {
+      return `@agent:${data.id || name}`;
     } else {
       return `@${type}:${name}`;
     }

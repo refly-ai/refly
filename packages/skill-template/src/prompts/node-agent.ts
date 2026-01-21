@@ -129,7 +129,7 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
 | Mention | Action |
 |---------|--------|
 | \`@file:name\` | Access file content |
-| \`@agent:Title\` | Use upstream node output |
+| \`@agent:resultId\` | Use upstream node output |
 | \`@toolset:x\` | Prioritize \`x_*\` tools |
 | \`@tool:name\` | Call specific tool |
 
