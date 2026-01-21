@@ -108,18 +108,18 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     // Check current canvas nodes
     const currentNodes = getNodes() as CanvasNode[];
     const startNodes = currentNodes.filter((node) => node.type === 'start');
-    const skillNodes = currentNodes.filter((node) => node.type === 'skillResponse');
+    const agentNodes = currentNodes.filter((node) => node.type === 'skillResponse');
 
     const isOnboarding = Boolean(userProfile?.preferences?.needOnboarding);
 
-    // Check if canvas only contains one start node or one start node + one skill node with empty contentPreview
+    // Check if canvas only contains one start node or one start node + one agent node with empty contentPreview
     const shouldSkipConfirmation =
       isOnboarding ||
       (currentNodes.length === 1 && startNodes.length === 1) ||
       (currentNodes.length === 2 &&
         startNodes.length === 1 &&
-        skillNodes.length === 1 &&
-        !skillNodes[0]?.data?.metadata?.query);
+        agentNodes.length === 1 &&
+        (!agentNodes[0]?.data?.metadata?.query || agentNodes[0]?.data?.metadata?.untouched));
 
     if (!shouldSkipConfirmation) {
       // Show confirmation modal
