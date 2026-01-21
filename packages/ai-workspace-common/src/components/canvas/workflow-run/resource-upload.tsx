@@ -171,23 +171,6 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
             </Button>
           )}
         </Upload>
-
-        {/* {resourceTypes && resourceTypes.length > 0 && (
-          <div className="text-xs text-refly-text-2">
-            {t('canvas.workflow.variables.acceptResourceTypes') || 'Accept Resource Types: '}
-            {resourceTypes.map((type, index) => (
-              <span key={type}>
-                {index > 0 && '、'}
-                {t(`canvas.workflow.variables.resourceType.${type}`)}
-              </span>
-            ))}
-            （
-            {t('canvas.workflow.variables.fileSizeLimit', {
-              size: 50, // 50MB
-            })}
-            ）
-          </div>
-        )} */}
       </div>
     );
   },
