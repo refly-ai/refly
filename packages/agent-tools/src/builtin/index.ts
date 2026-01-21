@@ -1250,13 +1250,13 @@ Check toolCallsMeta.status first - only read if status is 'success' and you need
       }
 
       const toolCall =
-        result.toolCalls?.find((tc: any) => tc.callId === input.callId) ??
-        result.steps
-          ?.flatMap((step: any) => step?.toolCalls ?? [])
-          .find((tc: any) => tc?.callId === input.callId) ??
-        result.messages
-          ?.map((msg: any) => msg?.toolCallResult)
-          .find((tc: any) => tc?.callId === input.callId);
+        (result.toolCalls ?? []).find((tc: any) => tc.callId === input.callId) ??
+        (result.steps?.flatMap((step: any) => step?.toolCalls ?? []) ?? []).find(
+          (tc: any) => tc?.callId === input.callId,
+        ) ??
+        (result.messages?.map((msg: any) => msg?.toolCallResult) ?? []).find(
+          (tc: any) => tc?.callId === input.callId,
+        );
       if (!toolCall) {
         return {
           status: 'error',
