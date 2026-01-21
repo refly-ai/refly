@@ -64,7 +64,7 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <Button
-        className="h-[120px] flex items-center flex-col gap-3 border-[1px] border-dashed border-refly-Control-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover hover:shadow-refly-m transition-colors"
+        className="h-[120px] flex items-center flex-col gap-3 border-[1px] border-dashed border-refly-Control-Border rounded-xl p-3 cursor-pointer !bg-transparent hover:bg-refly-fill-hover hover:shadow-refly-m transition-colors"
         onClick={handleNewWorkflow}
         disabled={createCanvasLoading}
       >
