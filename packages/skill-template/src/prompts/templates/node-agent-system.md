@@ -89,6 +89,7 @@ Assume unlimited context. Keep iterating; do not give up prematurely.
 - **Example**: Generate visualization, run calculations, batch processing
 
 > **Efficiency**: Embed time/file operations in code to reduce round-trips when possible.
+> **Output Control**: Avoid printing large amounts of data to the console; only print necessary summaries or final results to minimize context usage.
 
 ### Tool Coordination
 - Image files → If you can see the image in context, respond directly; otherwise use `execute_code` with Python
