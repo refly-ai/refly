@@ -7,7 +7,7 @@ import {
   UpdateUserSettingsRequest,
   User,
 } from '@refly/openapi-schema';
-import { Subscription, User as UserPo } from '@prisma/client';
+import { User as UserPo } from '@prisma/client';
 import { pick, safeParseJSON, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { RedisService } from '../common/redis.service';
@@ -67,15 +67,10 @@ export class UserService implements OnModuleInit {
     );
   }
 
-  private async getUserAttributes(userPo: UserPo): Promise<Record<string, unknown>> {
+  private getUserAttributes(userPo: UserPo, workflowExecutionCnt: number): Record<string, unknown> {
     const isNewUserToday = userPo.createdAt > new Date(Date.now() - 24 * 60 * 60 * 1000);
     const isNewUserThisWeek = userPo.createdAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const isNewUserThisMonth = userPo.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const workflowExecutionCnt = await this.prisma.workflowExecution.count({
-      where: {
-        uid: userPo.uid,
-      },
-    });
 
     return {
       is_new_user_today: isNewUserToday,
@@ -86,27 +81,38 @@ export class UserService implements OnModuleInit {
   }
 
   async getUserSettings(user: User) {
-    const userPo = await this.prisma.user.findUnique({
-      where: { uid: user.uid },
-    });
+    const [userPo, workflowExecutionCnt, formSubmission] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { uid: user.uid },
+      }),
+      this.prisma.workflowExecution.count({
+        where: {
+          uid: user.uid,
+        },
+      }),
+      this.prisma.formSubmission.findFirst({
+        where: { uid: user.uid },
+        select: { answers: true },
+      }),
+    ]);
 
     if (!userPo) {
       throw new AccountNotFoundError();
     }
 
-    let subscription: Subscription | null = null;
-    if (userPo.subscriptionId) {
-      subscription = await this.subscriptionService.getSubscription(userPo.subscriptionId);
-    }
+    const [subscription, userPreferences, hasBeenInvited, formResult] = await Promise.all([
+      userPo.subscriptionId
+        ? this.subscriptionService.getSubscription(userPo.subscriptionId)
+        : Promise.resolve(null),
+      this.providerService.getUserPreferences(user, userPo.preferences),
+      this.invitationService.hasBeenInvited(user.uid, userPo),
+      this.formService.hasFilledForm(user.uid, userPo.preferences, formSubmission?.answers),
+    ]);
 
-    const userPreferences = await this.providerService.getUserPreferences(user, userPo.preferences);
-    const userAttributes = await this.getUserAttributes(userPo);
-
-    userPreferences.hasBeenInvited = await this.invitationService.hasBeenInvited(user.uid, userPo);
-
-    const { hasFilledForm, identity } = await this.formService.hasFilledForm(user.uid);
-    userPreferences.hasFilledForm = hasFilledForm;
-    userAttributes.user_identity = identity;
+    const userAttributes = this.getUserAttributes(userPo, workflowExecutionCnt);
+    userPreferences.hasBeenInvited = hasBeenInvited;
+    userPreferences.hasFilledForm = formResult.hasFilledForm;
+    userAttributes.user_identity = formResult.identity;
 
     return {
       ...userPo,
