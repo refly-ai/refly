@@ -2805,6 +2805,14 @@ export type UserPreferences = {
    */
   hasBeenInvited?: boolean;
   /**
+   * Whether the user has filled the survey form
+   */
+  hasFilledForm?: boolean;
+  /**
+   * User identity in survey form
+   */
+  identity?: string;
+  /**
    * Whether to require invitation code
    */
   requireInvitationCode?: boolean;
@@ -5745,6 +5753,9 @@ export type GetFormDefinitionResponse = BaseResponse & {
   data?: FormDefinition;
 };
 
+/**
+ * @deprecated
+ */
 export type HasFilledFormResponse = BaseResponse & {
   /**
    * Has filled form data
@@ -5938,6 +5949,9 @@ export type ListInvitationCodesResponse = BaseResponse & {
   data?: Array<InvitationCode>;
 };
 
+/**
+ * @deprecated
+ */
 export type HasBeenInvitedResponse = BaseResponse & {
   /**
    * Has been invited data

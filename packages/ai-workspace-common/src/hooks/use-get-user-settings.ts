@@ -8,7 +8,7 @@ import { LocalSettings, useSubscriptionStore, useUserStoreShallow } from '@refly
 import { safeStringifyJSON } from '@refly-packages/ai-workspace-common/utils/parse';
 import { mapDefaultLocale } from '@refly-packages/ai-workspace-common/utils/locale';
 import { LOCALE, OutputLocale } from '@refly/common-types';
-import { UserSettings } from '@refly/openapi-schema';
+import { UserPreferences, UserSettings } from '@refly/openapi-schema';
 import { UID_COOKIE } from '@refly/utils/cookie';
 import { isPublicAccessPageByPath } from '@refly-packages/ai-workspace-common/hooks/use-is-share-page';
 import { isDesktop } from '@refly/ui-kit';
@@ -55,6 +55,7 @@ export const useGetUserSettings = () => {
 
     if (!isLatestRequest()) return;
     userStore.setIsCheckingLoginStatus(true);
+    (window as any).__REFLY_SHOW_LOADING__?.();
     if (hasLoginCredentials) {
       const resp = await getClient().getSettings();
       error = resp.error;
@@ -62,6 +63,7 @@ export const useGetUserSettings = () => {
         settings = resp.data.data;
       }
     }
+    (window as any).__REFLY_HIDE_LOADING__?.();
     let { localSettings } = userStore;
 
     // Handle
@@ -151,34 +153,16 @@ export const useGetUserSettings = () => {
       authChannel.broadcast({ type: 'login', uid: currentUid });
     }
 
-    // Check modals asynchronously (non-blocking) to improve initial page load
-    // This keeps the serial dependency (hasBeenInvited → hasFilledForm) but doesn't block the main flow
-    const checkModalsAsync = async () => {
-      let identity: string | null = null;
-      try {
-        const invitationResp = await getClient().hasBeenInvited();
-        const hasBeenInvited = invitationResp.data?.data ?? false;
-        userStore.setShowInvitationCodeModal(!hasBeenInvited);
+    // Update modal status based on user preferences
+    const updateModalStatus = (preferences: UserPreferences) => {
+      const identity = preferences.identity ?? null;
+      const hasBeenInvited = preferences.hasBeenInvited;
+      userStore.setShowInvitationCodeModal(!preferences.hasBeenInvited);
 
-        // Only check form filling status if user has been invited
-        if (hasBeenInvited) {
-          try {
-            const formResp = await getClient().hasFilledForm();
-            const hasFilledForm = formResp.data?.data?.hasFilledForm ?? false;
-            identity = formResp.data?.data?.identity ?? null;
-            userStore.setShowOnboardingFormModal(!hasFilledForm);
-          } catch (_formError) {
-            // If form check fails, don't block user login, default to not showing modal
-            userStore.setShowOnboardingFormModal(false);
-          }
-        } else {
-          // If not invited, don't show form modal
-          userStore.setShowOnboardingFormModal(false);
-        }
-      } catch (_error) {
-        // If invitation check fails, don't block user login, default to not showing modals
-        userStore.setShowInvitationCodeModal(false);
-        userStore.setShowOnboardingFormModal(false);
+      // Only check form filling status if user has been invited
+      if (hasBeenInvited) {
+        const hasFilledForm = preferences.hasFilledForm ?? false;
+        userStore.setShowOnboardingFormModal(!hasFilledForm);
       }
 
       // Update user properties after identity is resolved
@@ -187,8 +171,9 @@ export const useGetUserSettings = () => {
       }
     };
 
-    // Execute non-blocking - don't await, let the page render first
-    checkModalsAsync();
+    if (settings?.preferences) {
+      updateModalStatus(settings?.preferences);
+    }
 
     // Add localSettings
     let uiLocale = mapDefaultLocale(settings?.uiLocale as LOCALE) as LOCALE;
@@ -231,6 +216,7 @@ export const useGetUserSettings = () => {
     localStorage.setItem('refly-user-profile', safeStringifyJSON(settings));
     localStorage.setItem('refly-local-settings', safeStringifyJSON(localSettings));
     userStore.setIsCheckingLoginStatus(false);
+    (window as any).__REFLY_HIDE_LOADING__?.();
   };
 
   useEffect(() => {

@@ -7528,6 +7528,12 @@ components:
           type: boolean
           description: Whether the user has been invited
           default: false
+        hasFilledForm:
+          type: boolean
+          description: Whether the user has filled the survey form
+        identity:
+          type: string
+          description: User identity in survey form
         requireInvitationCode:
           type: boolean
           description: Whether to require invitation code
@@ -10549,6 +10555,7 @@ components:
               description: Form definition
               $ref: '#/components/schemas/FormDefinition'
     HasFilledFormResponse:
+      deprecated: true
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
         - type: object
@@ -10737,6 +10744,7 @@ components:
               items:
                 $ref: '#/components/schemas/InvitationCode'
     HasBeenInvitedResponse:
+      deprecated: true
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
         - type: object

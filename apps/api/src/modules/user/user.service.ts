@@ -16,6 +16,8 @@ import { MiscService } from '../misc/misc.service';
 import { ConfigService } from '@nestjs/config';
 import { isDesktop } from '../../utils/runtime';
 import { ProviderService } from '../provider/provider.service';
+import { InvitationService } from '../invitation/invitation.service';
+import { FormService } from '../form/form.service';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -28,6 +30,8 @@ export class UserService implements OnModuleInit {
     private miscService: MiscService,
     private subscriptionService: SubscriptionService,
     private providerService: ProviderService,
+    private invitationService: InvitationService,
+    private formService: FormService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -78,6 +82,13 @@ export class UserService implements OnModuleInit {
     }
 
     const userPreferences = await this.providerService.getUserPreferences(user, userPo.preferences);
+
+    userPreferences.hasBeenInvited = await this.invitationService.hasBeenInvited(user.uid, userPo);
+
+    const { hasFilledForm, identity } = await this.formService.hasFilledForm(user.uid);
+    userPreferences.hasFilledForm = hasFilledForm;
+    userPreferences.identity = identity;
+
     userPo.preferences = JSON.stringify(userPreferences);
 
     return {

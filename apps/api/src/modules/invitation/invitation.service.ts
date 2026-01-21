@@ -4,6 +4,7 @@ import { CreditService } from '../credit/credit.service';
 import { ConfigService } from '@nestjs/config';
 import { InvitationCode } from '@refly/openapi-schema';
 import { BaseResponse } from '@refly/openapi-schema';
+import { User as UserPo } from '@prisma/client';
 
 @Injectable()
 export class InvitationService {
@@ -102,7 +103,7 @@ export class InvitationService {
   /**
    * check if a user has been invited (check hasBeenInvited field in user preferences)
    */
-  async hasBeenInvited(uid: string): Promise<boolean> {
+  async hasBeenInvited(uid: string, userPo?: UserPo): Promise<boolean> {
     const requireInvitationCode =
       this.configService.get('auth.invitation.requireInvitationCode') ?? false;
 
@@ -112,10 +113,12 @@ export class InvitationService {
     }
 
     // If invitation code is required, check user's hasBeenInvited preference
-    const user = await this.prisma.user.findUnique({
-      where: { uid },
-      select: { preferences: true },
-    });
+    const user =
+      userPo ??
+      (await this.prisma.user.findUnique({
+        where: { uid },
+        select: { preferences: true },
+      }));
 
     if (!user?.preferences) {
       return false;

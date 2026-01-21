@@ -3571,6 +3571,14 @@ export const UserPreferencesSchema = {
       description: 'Whether the user has been invited',
       default: false,
     },
+    hasFilledForm: {
+      type: 'boolean',
+      description: 'Whether the user has filled the survey form',
+    },
+    identity: {
+      type: 'string',
+      description: 'User identity in survey form',
+    },
     requireInvitationCode: {
       type: 'boolean',
       description: 'Whether to require invitation code',
@@ -7965,6 +7973,7 @@ export const GetFormDefinitionResponseSchema = {
 } as const;
 
 export const HasFilledFormResponseSchema = {
+  deprecated: true,
   allOf: [
     {
       $ref: '#/components/schemas/BaseResponse',
@@ -8283,6 +8292,7 @@ export const ListInvitationCodesResponseSchema = {
 } as const;
 
 export const HasBeenInvitedResponseSchema = {
+  deprecated: true,
   allOf: [
     {
       $ref: '#/components/schemas/BaseResponse',

@@ -8,6 +8,9 @@ import {
   useSiderStoreShallow,
   useUserStoreShallow,
 } from '@refly/stores';
+import { InvitationCodeModal } from '../invitation-code-modal';
+import { FormOnboardingModal } from '../form-onboarding-modal';
+import { PureCopilotModal } from '../pure-copilot-modal';
 import { LazyModal } from './LazyModal';
 
 /**
@@ -52,22 +55,9 @@ export const ModalContainer = memo(() => {
     modalType: state.modalType,
   }));
 
-  const {
-    showOnboardingFormModal,
-    showOnboardingSuccessAnimation,
-    showInvitationCodeModal,
-    hidePureCopilotModal,
-    userProfile: profileForOnboarding,
-  } = useUserStoreShallow((state) => ({
-    showOnboardingFormModal: state.showOnboardingFormModal,
+  const { showOnboardingSuccessAnimation } = useUserStoreShallow((state) => ({
     showOnboardingSuccessAnimation: state.showOnboardingSuccessAnimation,
-    showInvitationCodeModal: state.showInvitationCodeModal,
-    hidePureCopilotModal: state.hidePureCopilotModal,
-    userProfile: state.userProfile,
   }));
-
-  const needOnboarding = profileForOnboarding?.preferences?.needOnboarding;
-  const isPureCopilotVisible = !hidePureCopilotModal && !!needOnboarding;
 
   // Modal pre-load flags (triggered by keyboard shortcuts or specific interactions)
   const [shouldLoadBigSearch, setShouldLoadBigSearch] = useState(false);
@@ -105,6 +95,11 @@ export const ModalContainer = memo(() => {
 
   return (
     <>
+      {/* Pre-loaded modals - load code when page loads */}
+      <InvitationCodeModal />
+      <FormOnboardingModal />
+      <PureCopilotModal />
+
       {/* Lazy-loaded modals - only load code when needed */}
       <LazyModal
         visible={isBigSearchShown}
@@ -132,36 +127,11 @@ export const ModalContainer = memo(() => {
       />
 
       <LazyModal
-        visible={showOnboardingFormModal}
-        loader={() =>
-          import('../form-onboarding-modal').then((m) => ({
-            default: m.FormOnboardingModal,
-          }))
-        }
-      />
-
-      <LazyModal
         visible={showOnboardingSuccessAnimation}
         loader={() =>
           import('../onboarding-success-modal').then((m) => ({
             default: m.OnboardingSuccessModal,
           }))
-        }
-      />
-
-      <LazyModal
-        visible={showInvitationCodeModal}
-        loader={() =>
-          import('../invitation-code-modal').then((m) => ({
-            default: m.InvitationCodeModal,
-          }))
-        }
-      />
-
-      <LazyModal
-        visible={isPureCopilotVisible}
-        loader={() =>
-          import('../pure-copilot-modal').then((m) => ({ default: m.PureCopilotModal }))
         }
       />
 
