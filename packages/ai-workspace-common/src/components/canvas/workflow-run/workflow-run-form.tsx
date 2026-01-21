@@ -4,8 +4,8 @@ import type {
   WorkflowExecutionStatus,
 } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Select, Form, Typography, message, Tooltip, Collapse } from 'antd';
-import { StopCircle, ArrowDown, MessageSmile } from 'refly-icons';
+import { Button, Input, Select, Form, Typography, message, Tooltip } from 'antd';
+import { StopCircle } from 'refly-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useAbortWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-abort-workflow';
@@ -29,6 +29,7 @@ import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
 import GiftIcon from '@refly-packages/ai-workspace-common/assets/gift.png';
 import { useFirstSuccessExecutionToday } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useUserMembership } from '@refly-packages/ai-workspace-common/hooks/use-user-membership';
+import { WorkflowInputFormCollapse } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/workflow-input-form-collapse';
 import './user-input-collapse.scss';
 
 /**
@@ -712,7 +713,8 @@ export const WorkflowRunForm = ({
             status={hasError ? 'error' : undefined}
             className={cn(
               '!h-[37px] !border-[#E5E5E5] !rounded-xl !px-3',
-              '!text-sm !text-[rgba(28,31,35,0.35)] !leading-[1.5em]',
+              '!text-sm !leading-[1.5em]',
+              isFormDisabled ? '!text-[rgba(28,31,35,0.35)]' : '!text-[#1C1F23]',
               'placeholder:!text-[rgba(28,31,35,0.35)]',
               'hover:!border-[#E5E5E5] focus:!border-[#155EEF] focus:!shadow-none',
               'overflow-hidden text-ellipsis whitespace-nowrap',
@@ -764,7 +766,10 @@ export const WorkflowRunForm = ({
               '[&_.ant-select-selector]:!py-0 [&_.ant-select-selector]:!leading-[35px]',
               '[&_.ant-select-selector]:!text-sm [&_.ant-select-selector]:!text-[rgba(28,31,35,0.35)]',
               '[&_.ant-select-selection-placeholder]:!text-[rgba(28,31,35,0.35)]',
-              '[&_.ant-select-selection-item]:!text-[#1C1F23] [&_.ant-select-selection-item]:!leading-[35px]',
+              '[&_.ant-select-selection-item]:!leading-[35px]',
+              isFormDisabled
+                ? '[&_.ant-select-selection-item]:!text-[rgba(28,31,35,0.35)]'
+                : '[&_.ant-select-selection-item]:!text-[#1C1F23]',
               '[&_.ant-select-selector]:hover:!border-[#E5E5E5]',
               '[&_.ant-select-focused_.ant-select-selector]:!border-[#155EEF]',
               '[&_.ant-select-focused_.ant-select-selector]:!shadow-none',
@@ -828,67 +833,15 @@ export const WorkflowRunForm = ({
         <>
           {/* default show Form */}
           {
-            <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
+            <div className="px-4 flex-1 overflow-y-auto">
               {/* Show loading state when loading */}
               {workflowVariables.length > 0 ? (
-                <div
-                  className="overflow-hidden bg-[#F6F6F6]"
-                  style={{
-                    borderRadius: '8px',
-                    width: 'calc(100%)',
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                  }}
-                >
-                  <Collapse
-                    defaultActiveKey={['input']}
-                    ghost
-                    expandIcon={({ isActive }) => (
-                      <ArrowDown
-                        size={14}
-                        className={cn('transition-transform', {
-                          'rotate-180': isActive,
-                        })}
-                      />
-                    )}
-                    expandIconPosition="end"
-                    className="workflow-run-collapse"
-                    items={[
-                      {
-                        key: 'input',
-                        label: (
-                          <div className="flex items-center w-full min-w-0 gap-2">
-                            <MessageSmile size={20} className="flex-shrink-0" />
-                            <span
-                              className="truncate"
-                              style={{
-                                fontFamily: 'Inter',
-                                fontWeight: 500,
-                                fontSize: '13px',
-                                lineHeight: '1.5em',
-                              }}
-                            >
-                              {t('canvas.workflow.run.inputPanelTitle')}
-                            </span>
-                          </div>
-                        ),
-                        children: (
-                          <div className="p-2">
-                            <Form
-                              form={form}
-                              layout="horizontal"
-                              colon={false}
-                              className="flex flex-col gap-4"
-                              initialValues={variableValues}
-                            >
-                              {workflowVariables.map((variable) => renderFormField(variable))}
-                            </Form>
-                          </div>
-                        ),
-                      },
-                    ]}
-                  />
-                </div>
+                <WorkflowInputFormCollapse
+                  form={form}
+                  workflowVariables={workflowVariables}
+                  variableValues={variableValues}
+                  renderFormField={renderFormField}
+                />
               ) : loading ? null : (
                 <EmptyContent />
               )}

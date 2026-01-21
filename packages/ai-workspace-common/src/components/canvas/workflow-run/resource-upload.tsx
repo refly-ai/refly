@@ -3,6 +3,7 @@ import { Button, Upload, Spin, Tooltip } from 'antd';
 import { Attachment } from 'refly-icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useTranslation } from 'react-i18next';
+import cn from 'classnames';
 import {
   IMAGE_FILE_EXTENSIONS,
   DOCUMENT_FILE_EXTENSIONS,
@@ -119,7 +120,12 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
               <div className="w-full h-[37px] flex items-center justify-between gap-[10px] box-border px-3 border border-solid border-[#E5E5E5] rounded-xl hover:border-[#155EEF] transition-colors">
                 <div className="flex items-center gap-1 min-w-0 flex-1">
                   <ImageFileIcon />
-                  <div className="min-w-0 flex-1 text-sm text-[#1C1F23] leading-[37px] truncate h-[37px]">
+                  <div
+                    className={cn(
+                      'min-w-0 flex-1 text-sm leading-[37px] truncate h-[37px]',
+                      disabled ? 'text-[rgba(28,31,35,0.35)]' : 'text-[#1C1F23]',
+                    )}
+                  >
                     {file.name}
                   </div>
                 </div>
