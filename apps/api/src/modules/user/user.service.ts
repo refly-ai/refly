@@ -18,6 +18,7 @@ import { isDesktop } from '../../utils/runtime';
 import { ProviderService } from '../provider/provider.service';
 import { InvitationService } from '../invitation/invitation.service';
 import { FormService } from '../form/form.service';
+import { updateUserProperties, StatsigUserCustomValue } from '@refly/telemetry-node';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -113,6 +114,8 @@ export class UserService implements OnModuleInit {
     userPreferences.hasBeenInvited = hasBeenInvited;
     userPreferences.hasFilledForm = formResult.hasFilledForm;
     userAttributes.user_identity = formResult.identity;
+
+    updateUserProperties(user, userAttributes as Record<string, StatsigUserCustomValue>);
 
     return {
       ...userPo,
