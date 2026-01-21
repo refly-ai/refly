@@ -20,6 +20,8 @@ import { AudioRenderer } from './audio';
 import { UnsupportedRenderer } from './unsupported';
 import { HtmlRenderer } from './html';
 import { MarkdownRenderer } from './markdown';
+import { logEvent } from '@refly/telemetry-web';
+import { useLastRunTabContext } from '@refly-packages/ai-workspace-common/context/run-location';
 
 interface ContentCategoryResult {
   category: string;
@@ -93,6 +95,8 @@ export const FilePreview = memo(
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
+
+    const { location } = useLastRunTabContext();
 
     // useFileUrl now automatically fetches publicURL if needed in share pages
     const { fileUrl, isLoading: isLoadingUrl } = useDriveFileUrl({ file });
@@ -183,6 +187,16 @@ export const FilePreview = memo(
     const handleTabChange = useCallback((tab: 'code' | 'preview') => {
       setActiveTab(tab);
     }, []);
+
+    const handleClickPreview = useCallback(() => {
+      if (onPreview) {
+        logEvent('artifact_view', Date.now(), {
+          artifact_type: file.category,
+          artifact_location: location,
+        });
+        onPreview();
+      }
+    }, [file, onPreview, location]);
 
     const renderFilePreview = () => {
       if (loading) {
@@ -303,7 +317,7 @@ export const FilePreview = memo(
           <div className="absolute z-10 bottom-0 left-0 right-0 top-0 rounded-[10px] bg-refly-modal-mask flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
             <div
               className="p-3 rounded-[80px] bg-refly-text-2 text-sm leading-5 font-semibold text-refly-text-flip cursor-pointer select-none"
-              onClick={onPreview}
+              onClick={handleClickPreview}
             >
               {t('common.view')}
             </div>

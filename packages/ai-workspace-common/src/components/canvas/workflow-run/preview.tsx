@@ -855,6 +855,7 @@ const WorkflowRunPreviewComponent = () => {
                                   )}
                                   {/* Show result content for executed states (running, finished, failed) */}
                                   <LastRunTab
+                                    location="runlog"
                                     loading={loading}
                                     isStreaming={isStreaming}
                                     resultId={resultId}
@@ -878,6 +879,14 @@ const WorkflowRunPreviewComponent = () => {
                         <Collapse
                           defaultActiveKey={[]}
                           ghost
+                          onChange={(keys) => {
+                            if (keys.includes('agent')) {
+                              logEvent('runlog_agent_expand', Date.now(), {
+                                canvasId: canvasId ?? '',
+                                nodeId: node.id,
+                              });
+                            }
+                          }}
                           expandIcon={({ isActive }) => (
                             <ArrowDown
                               size={14}
@@ -972,6 +981,14 @@ const WorkflowRunPreviewComponent = () => {
                                             : [] // Finished/Failed: Input area (collapsed) + Output area (collapsed)
                                       }
                                       ghost
+                                      onChange={(keys) => {
+                                        if (keys.includes('output')) {
+                                          logEvent('agent_output_select', Date.now(), {
+                                            canvasId: canvasId ?? '',
+                                            nodeId: node.id,
+                                          });
+                                        }
+                                      }}
                                       expandIcon={({ isActive }) => (
                                         <ArrowDown
                                           size={14}
