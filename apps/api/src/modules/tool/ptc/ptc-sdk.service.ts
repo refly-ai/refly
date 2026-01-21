@@ -102,7 +102,7 @@ export class PtcSdkService {
 
   private getToolsetSdkDocPath(toolsetKey: string): string {
     const pathPrefix = this.getSdkPathPrefix();
-    return `${pathPrefix}/refly_tools/${toolsetKey}.py`;
+    return `${pathPrefix}/refly_tools/docs/${toolsetKey}.md`;
   }
 
   /**

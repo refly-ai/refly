@@ -47,9 +47,7 @@ print(final_result)
 ### Available SDK Documentation
 
 {{#each sdkDocs}}
-{{this.toolsetKey}}.py:
 
-```python
-{{this.content}}
-```
+{{{this.content}}}
+
 {{/each}}
