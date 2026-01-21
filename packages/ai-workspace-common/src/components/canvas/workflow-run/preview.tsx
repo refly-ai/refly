@@ -467,6 +467,19 @@ const WorkflowRunPreviewComponent = () => {
 
   const [outputsOnly, setOutputsOnly] = useState(false);
 
+  // Handler for toggling outputs only mode with telemetry
+  const handleToggleOutputsOnly = useCallback(() => {
+    const newOutputsOnly = !outputsOnly;
+    setOutputsOnly(newOutputsOnly);
+
+    // Track when user enables "only view result" mode
+    if (newOutputsOnly) {
+      logEvent('only_view_result', null, {
+        canvasId: canvasId ?? '',
+      });
+    }
+  }, [outputsOnly, canvasId]);
+
   // Fetch all agent-generated files from the canvas when outputsOnly is enabled
   const { data: driveFilesData } = useListDriveFiles(
     {
@@ -486,11 +499,17 @@ const WorkflowRunPreviewComponent = () => {
 
   // Handle adding file to file library
   const handleAddToFileLibrary = useCallback(
-    async (file: DriveFile) => {
+    async (file: DriveFile, artifactLocation?: 'agent' | 'runlog') => {
       if (!canvasId || !file?.storageKey) {
         message.error(t('common.saveFailed'));
         return;
       }
+
+      // Track when user saves artifact to file library
+      logEvent('add_to_file', null, {
+        canvasId,
+        artifact_location: artifactLocation ?? 'runlog',
+      });
 
       try {
         const { data, error } = await getClient().createDriveFile({
@@ -599,7 +618,7 @@ const WorkflowRunPreviewComponent = () => {
     <div className="h-full w-full flex flex-col overflow-hidden">
       <WorkflowRunPreviewHeader
         onClose={handleClose}
-        onToggleOutputsOnly={() => setOutputsOnly(!outputsOnly)}
+        onToggleOutputsOnly={handleToggleOutputsOnly}
         outputsOnly={outputsOnly}
         showOutputsOnlyButton={activeTab === 'lastRun'}
       />
@@ -667,7 +686,7 @@ const WorkflowRunPreviewComponent = () => {
                         key={file.fileId}
                         file={file}
                         source="card"
-                        onAddToFileLibrary={handleAddToFileLibrary}
+                        onAddToFileLibrary={(file) => handleAddToFileLibrary(file, 'runlog')}
                       />
                     ))}
                   </div>
@@ -886,6 +905,20 @@ const WorkflowRunPreviewComponent = () => {
                           )}
                           expandIconPosition="end"
                           className="agent-node-collapse [&_.ant-collapse-item]:!border-0 [&_.ant-collapse-header]:!bg-[#D9FFFE] [&_.ant-collapse-header]:!p-3 [&_.ant-collapse-header]:!rounded-lg [&_.ant-collapse-header]:!h-12 [&_.ant-collapse-content]:!bg-transparent [&_.ant-collapse-content]:!p-0 [&_.ant-collapse-content-box]:!p-0"
+                          onChange={(activeKeys) => {
+                            // Track when user expands agent node in run log
+                            if (
+                              Array.isArray(activeKeys) &&
+                              activeKeys.includes('agent') &&
+                              canvasId
+                            ) {
+                              logEvent('runlog_agent_expand', null, {
+                                canvasId,
+                                nodeId: node.id,
+                                resultId,
+                              });
+                            }
+                          }}
                           items={[
                             {
                               key: 'agent',
@@ -987,6 +1020,20 @@ const WorkflowRunPreviewComponent = () => {
                                       )}
                                       expandIconPosition="end"
                                       className="workflow-run-preview-collapse"
+                                      onChange={(activeKeys) => {
+                                        // Track when user selects agent output panel
+                                        if (
+                                          Array.isArray(activeKeys) &&
+                                          activeKeys.includes('output') &&
+                                          canvasId
+                                        ) {
+                                          logEvent('agent_output_select', null, {
+                                            canvasId,
+                                            nodeId: node.id,
+                                            resultId,
+                                          });
+                                        }
+                                      }}
                                       items={collapseItems}
                                     />
                                   </div>
@@ -1010,7 +1057,7 @@ const WorkflowRunPreviewComponent = () => {
               file={currentFile}
               classNames="w-full h-full"
               source="preview"
-              onAddToFileLibrary={handleAddToFileLibrary}
+              onAddToFileLibrary={(file) => handleAddToFileLibrary(file, 'agent')}
             />
           </div>
         )}

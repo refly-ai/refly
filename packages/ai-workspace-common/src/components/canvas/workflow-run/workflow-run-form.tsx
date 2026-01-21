@@ -4,8 +4,8 @@ import type {
   WorkflowExecutionStatus,
 } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Select, Form, Typography, message, Tooltip } from 'antd';
-import { StopCircle } from 'refly-icons';
+import { Button, Input, Select, Form, Typography, message, Tooltip, Collapse } from 'antd';
+import { StopCircle, ArrowDown, MessageSmile } from 'refly-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useAbortWorkflow } from '@refly-packages/ai-workspace-common/hooks/use-abort-workflow';
@@ -13,7 +13,6 @@ import cn from 'classnames';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-login';
 import { useNavigate } from 'react-router-dom';
-import { ToolsDependencyChecker } from '@refly-packages/ai-workspace-common/components/canvas/tools-dependency';
 import { ResourceUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/resource-upload';
 import { useFileUpload } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables';
 import { getFileType } from '@refly-packages/ai-workspace-common/components/canvas/workflow-variables/utils';
@@ -30,6 +29,7 @@ import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
 import GiftIcon from '@refly-packages/ai-workspace-common/assets/gift.png';
 import { useFirstSuccessExecutionToday } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useUserMembership } from '@refly-packages/ai-workspace-common/hooks/use-user-membership';
+import './user-input-collapse.scss';
 
 /**
  * Check if a toolset is authorized/installed.
@@ -55,7 +55,7 @@ const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): bo
 };
 
 const RequiredTagText = () => {
-  return null;
+  return <span className="text-refly-text-3 flex-shrink-0 mr-0.5">*</span>;
 };
 
 const EmptyContent = () => {
@@ -78,15 +78,14 @@ const EmptyContent = () => {
 
 const FormItemLabel = ({ name, required }: { name: string; required: boolean }) => {
   return (
-    <div className="flex items-center gap-2 min-w-0">
+    <div className="flex items-center min-w-0">
+      {required && <RequiredTagText />}
       <Typography.Paragraph
         ellipsis={{ rows: 1, tooltip: <div className="max-h-[200px] overflow-y-auto">{name}</div> }}
-        className="!m-0 text-xs font-semibold text-refly-text-0 leading-4 max-w-[100px]"
+        className="!m-0 text-sm font-medium text-[#D26700] leading-[1.5em] max-w-[150px]"
       >
         {name}
       </Typography.Paragraph>
-
-      {required && <RequiredTagText />}
     </div>
   );
 };
@@ -687,13 +686,16 @@ export const WorkflowRunForm = ({
           key={name}
           label={<FormItemLabel name={name} required={required} />}
           name={name}
+          required={false}
           rules={
             required
               ? [{ required: true, message: t('canvas.workflow.variables.inputPlaceholder') }]
               : []
           }
           data-field-name={name}
-          className={cn({ 'has-validation-error': hasError })}
+          className={cn('!mb-0 [&_.ant-form-item-label]:!pb-3 [&_.ant-form-item-label]:!mb-0', {
+            'has-validation-error': hasError,
+          })}
           validateStatus={hasError ? 'error' : undefined}
           help={
             hasError
@@ -701,15 +703,24 @@ export const WorkflowRunForm = ({
               : undefined
           }
         >
-          <Input.TextArea
-            variant="filled"
+          <Input
             placeholder={t('canvas.workflow.variables.inputPlaceholder')}
             value={value}
             onChange={(e) => handleValueChange(name, e.target.value)}
             data-field-name={name}
-            autoSize={{ minRows: 1, maxRows: 5 }}
             disabled={isFormDisabled}
             status={hasError ? 'error' : undefined}
+            className={cn(
+              '!h-[37px] !border-[#E5E5E5] !rounded-xl !px-3',
+              '!text-sm !text-[rgba(28,31,35,0.35)] !leading-[1.5em]',
+              'placeholder:!text-[rgba(28,31,35,0.35)]',
+              'hover:!border-[#E5E5E5] focus:!border-[#155EEF] focus:!shadow-none',
+              'overflow-hidden text-ellipsis whitespace-nowrap',
+              hasError && '!border-[#F04438]',
+            )}
+            style={{
+              backgroundColor: 'transparent',
+            }}
           />
         </Form.Item>
       );
@@ -722,12 +733,15 @@ export const WorkflowRunForm = ({
           key={name}
           label={<FormItemLabel name={name} required={required} />}
           name={name}
+          required={false}
           rules={
             required
               ? [{ required: true, message: t('canvas.workflow.variables.selectPlaceholder') }]
               : []
           }
-          className={cn({ 'has-validation-error': hasError })}
+          className={cn('!mb-0 [&_.ant-form-item-label]:!pb-3 [&_.ant-form-item-label]:!mb-0', {
+            'has-validation-error': hasError,
+          })}
           validateStatus={hasError ? 'error' : undefined}
           help={
             hasError
@@ -736,7 +750,6 @@ export const WorkflowRunForm = ({
           }
         >
           <Select
-            variant="filled"
             placeholder={t('canvas.workflow.variables.selectPlaceholder')}
             mode={isSingle ? undefined : 'multiple'}
             value={value}
@@ -745,6 +758,22 @@ export const WorkflowRunForm = ({
             data-field-name={name}
             disabled={isFormDisabled}
             status={hasError ? 'error' : undefined}
+            className={cn(
+              '[&_.ant-select-selector]:!border-[#E5E5E5] [&_.ant-select-selector]:!rounded-xl',
+              '[&_.ant-select-selector]:!px-3 [&_.ant-select-selector]:!min-h-[37px]',
+              '[&_.ant-select-selector]:!py-0 [&_.ant-select-selector]:!leading-[35px]',
+              '[&_.ant-select-selector]:!text-sm [&_.ant-select-selector]:!text-[rgba(28,31,35,0.35)]',
+              '[&_.ant-select-selection-placeholder]:!text-[rgba(28,31,35,0.35)]',
+              '[&_.ant-select-selection-item]:!text-[#1C1F23] [&_.ant-select-selection-item]:!leading-[35px]',
+              '[&_.ant-select-selector]:hover:!border-[#E5E5E5]',
+              '[&_.ant-select-focused_.ant-select-selector]:!border-[#155EEF]',
+              '[&_.ant-select-focused_.ant-select-selector]:!shadow-none',
+              '[&_.ant-select-selector]:!bg-transparent',
+              hasError && '[&_.ant-select-selector]:!border-[#F04438]',
+            )}
+            style={{
+              width: '100%',
+            }}
           />
         </Form.Item>
       );
@@ -757,12 +786,15 @@ export const WorkflowRunForm = ({
           key={name}
           label={<FormItemLabel name={name} required={required} />}
           name={name}
+          required={false}
           rules={
             required
               ? [{ required: true, message: t('canvas.workflow.variables.uploadPlaceholder') }]
               : []
           }
-          className={cn({ 'has-validation-error': hasError })}
+          className={cn('!mb-0 [&_.ant-form-item-label]:!pb-3 [&_.ant-form-item-label]:!mb-0', {
+            'has-validation-error': hasError,
+          })}
           validateStatus={hasError ? 'error' : undefined}
           help={
             hasError
@@ -799,23 +831,64 @@ export const WorkflowRunForm = ({
             <div className="p-3 sm:p-4 flex-1 overflow-y-auto">
               {/* Show loading state when loading */}
               {workflowVariables.length > 0 ? (
-                <>
-                  <Form
-                    form={form}
-                    layout="horizontal"
-                    className="space-y-3 sm:space-y-4"
-                    initialValues={variableValues}
-                  >
-                    {workflowVariables.map((variable) => renderFormField(variable))}
-                  </Form>
-
-                  {/* Tools Dependency Form */}
-                  {workflowApp?.canvasData && (
-                    <div className="mt-5 ">
-                      <ToolsDependencyChecker canvasData={workflowApp?.canvasData} />
-                    </div>
-                  )}
-                </>
+                <div
+                  className="overflow-hidden bg-[#F6F6F6]"
+                  style={{
+                    borderRadius: '8px',
+                    width: 'calc(100%)',
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
+                  }}
+                >
+                  <Collapse
+                    defaultActiveKey={['input']}
+                    ghost
+                    expandIcon={({ isActive }) => (
+                      <ArrowDown
+                        size={14}
+                        className={cn('transition-transform', {
+                          'rotate-180': isActive,
+                        })}
+                      />
+                    )}
+                    expandIconPosition="end"
+                    className="workflow-run-collapse"
+                    items={[
+                      {
+                        key: 'input',
+                        label: (
+                          <div className="flex items-center w-full min-w-0 gap-2">
+                            <MessageSmile size={20} className="flex-shrink-0" />
+                            <span
+                              className="truncate"
+                              style={{
+                                fontFamily: 'Inter',
+                                fontWeight: 500,
+                                fontSize: '13px',
+                                lineHeight: '1.5em',
+                              }}
+                            >
+                              {t('canvas.workflow.run.inputPanelTitle')}
+                            </span>
+                          </div>
+                        ),
+                        children: (
+                          <div className="p-2">
+                            <Form
+                              form={form}
+                              layout="horizontal"
+                              colon={false}
+                              className="flex flex-col gap-4"
+                              initialValues={variableValues}
+                            >
+                              {workflowVariables.map((variable) => renderFormField(variable))}
+                            </Form>
+                          </div>
+                        ),
+                      },
+                    ]}
+                  />
+                </div>
               ) : loading ? null : (
                 <EmptyContent />
               )}
