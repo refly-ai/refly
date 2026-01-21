@@ -10,9 +10,7 @@ import { setOAuthTokens, setApiKey, getApiEndpoint, getWebUrl } from '../config/
 import { apiRequest } from '../api/client.js';
 import { logger } from '../utils/logger.js';
 import { styled, Style } from '../utils/ui.js';
-
-// CLI version for device registration
-const CLI_VERSION = '0.1.0';
+import { getCliVersion } from '../config/paths.js';
 
 export const loginCommand = new Command('login')
   .description('Authenticate with Refly')
@@ -106,8 +104,9 @@ interface DeviceSessionWithTokens extends DeviceSessionInfo {
  * Login using device authorization flow
  * Opens browser to login page, polls for authorization
  * Exported for use by init command
+ * @param emitOutput - Whether to call ok() on success (default: true). Set to false when called from init.
  */
-export async function loginWithDeviceFlow(): Promise<boolean> {
+export async function loginWithDeviceFlow(emitOutput = true): Promise<boolean> {
   logger.info('Starting device authorization flow...');
 
   // 1. Initialize device session
@@ -115,7 +114,7 @@ export async function loginWithDeviceFlow(): Promise<boolean> {
   const initResponse = await apiRequest<DeviceSessionInfo>('/v1/auth/cli/device/init', {
     method: 'POST',
     body: {
-      cliVersion: CLI_VERSION,
+      cliVersion: getCliVersion(),
       host: hostname,
     },
     requireAuth: false,
@@ -167,7 +166,7 @@ export async function loginWithDeviceFlow(): Promise<boolean> {
   // 2. Build authorization URL
   // Use web URL for browser authorization page (may differ from API endpoint in some environments)
   const webUrl = getWebUrl();
-  const authUrl = `${webUrl}/cli/auth?device_id=${encodeURIComponent(deviceId)}&cli_version=${encodeURIComponent(CLI_VERSION)}&host=${encodeURIComponent(hostname)}`;
+  const authUrl = `${webUrl}/cli/auth?device_id=${encodeURIComponent(deviceId)}&cli_version=${encodeURIComponent(getCliVersion())}&host=${encodeURIComponent(hostname)}`;
 
   // 3. Print instructions and open browser
   process.stderr.write('\n');
@@ -224,11 +223,14 @@ export async function loginWithDeviceFlow(): Promise<boolean> {
               user: userInfo,
             });
 
-            ok('login', {
-              message: 'Successfully authenticated via device authorization',
-              user: userInfo,
-              method: 'device',
-            });
+            // Only emit output when called directly (not from init command)
+            if (emitOutput) {
+              ok('login', {
+                message: 'Successfully authenticated via device authorization',
+                user: userInfo,
+                method: 'device',
+              });
+            }
             return true;
           }
           break;

@@ -263,6 +263,17 @@ export class WorkflowService {
 
     const lookupToolsetDefinitionById = await this.buildLookupToolsetDefinitionById(user);
 
+    // Validate that all provided startNodes exist in the canvas
+    if (options?.startNodes?.length) {
+      const nodeIds = new Set(canvasData.nodes?.map((n) => n.id) ?? []);
+      const invalidNodes = options.startNodes.filter((nodeId) => !nodeIds.has(nodeId));
+      if (invalidNodes.length > 0) {
+        throw new Error(
+          `Invalid start node(s): ${invalidNodes.join(', ')}. Node(s) not found in workflow.`,
+        );
+      }
+    }
+
     const { nodeExecutions, startNodes } = prepareNodeExecutions({
       executionId,
       canvasData,

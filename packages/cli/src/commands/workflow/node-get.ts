@@ -1,11 +1,16 @@
 /**
  * refly workflow node - Get single node information from a workflow
+ *
+ * Supports both workflowId (c-xxx) and runId (we-xxx).
+ * - workflowId: gets node definition from workflow
+ * - runId: gets node definition from the workflow associated with the run
  */
 
 import { Command } from 'commander';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import { apiRequest } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
+import { detectIdType } from './utils.js';
 
 interface NodeData {
   id: string;
@@ -35,11 +40,22 @@ interface WorkflowData {
 
 export const workflowNodeGetCommand = new Command('node')
   .description('Get single node information from a workflow')
-  .argument('<workflowId>', 'Workflow ID')
+  .argument('<id>', 'Workflow ID (c-xxx) or Run ID (we-xxx)')
   .argument('<nodeId>', 'Node ID')
   .option('--include-connections', 'Include incoming and outgoing connections')
-  .action(async (workflowId, nodeId, options) => {
+  .action(async (id, nodeId, options) => {
     try {
+      // Auto-detect ID type
+      const idType = detectIdType(id);
+
+      // For runId, we need to first get the workflowId from the run
+      let workflowId = id;
+      if (idType === 'run') {
+        // Get run info to extract workflowId
+        const runInfo = await apiRequest<{ workflowId: string }>(`/v1/cli/workflow/run/${id}`);
+        workflowId = runInfo.workflowId;
+      }
+
       const result = await apiRequest<WorkflowData>(`/v1/cli/workflow/${workflowId}`);
 
       // Find the specific node
@@ -47,7 +63,7 @@ export const workflowNodeGetCommand = new Command('node')
 
       if (!node) {
         fail(ErrorCodes.NODE_NOT_FOUND, `Node ${nodeId} not found in workflow ${workflowId}`, {
-          hint: `Use 'refly workflow nodes ${workflowId}' to list all nodes`,
+          hint: `Use 'refly workflow nodes ${id}' to list all nodes`,
         });
       }
 
@@ -55,6 +71,8 @@ export const workflowNodeGetCommand = new Command('node')
       const output: Record<string, unknown> = {
         workflowId: result.workflowId,
         workflowName: result.name,
+        idType,
+        ...(idType === 'run' ? { runId: id } : {}),
         node: {
           id: node.id,
           type: node.type,

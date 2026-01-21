@@ -1,65 +1,44 @@
 /**
- * refly workflow run - Start a workflow execution
+ * refly workflow run - Workflow run command group
+ *
+ * Subcommands:
+ * - `workflow run start <workflowId>` - Start a workflow execution
+ * - `workflow run get <runId>` - Get run status
+ * - `workflow run detail <runId>` - Get detailed run info
+ * - `workflow run node-detail <runId> <nodeId>` - Get node execution detail
+ * - `workflow run toolcalls <runId>` - Get tool calls for run
+ * - `workflow run node-start` - Run single node for debugging or start from node
+ * - `workflow run node-result <resultId>` - Get node execution result
+ * - `workflow run node-abort <resultId>` - Abort running node execution
+ * - `workflow run node-toolcalls <resultId>` - List tool calls from node execution
+ * - `workflow run node-toolcall <callId>` - Get single tool call detail
  */
 
 import { Command } from 'commander';
-import { ok, fail, ErrorCodes } from '../../utils/output.js';
-import { apiRequest } from '../../api/client.js';
-import { CLIError } from '../../utils/errors.js';
-
-interface RunResult {
-  runId: string;
-  workflowId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'aborted';
-  createdAt: string;
-}
+import { workflowRunStartCommand } from './run-start.js';
+import { workflowRunGetCommand } from './run-get.js';
+import { workflowRunDetailCommand } from './run-detail.js';
+import { workflowRunNodeDetailCommand } from './run-node-detail.js';
+import { workflowRunToolcallsCommand } from './run-toolcalls.js';
+import { workflowRunNodeStartCommand } from './run-node-start.js';
+import { workflowRunNodeResultCommand } from './run-node-result.js';
+import { workflowRunNodeAbortCommand } from './run-node-abort.js';
+import { workflowRunNodeToolcallsCommand } from './run-node-toolcalls.js';
+import { workflowRunNodeToolcallCommand } from './run-node-toolcall.js';
 
 export const workflowRunCommand = new Command('run')
-  .description('Start a workflow execution')
-  .argument('<workflowId>', 'Workflow ID to run')
-  .option('--input <json>', 'Input variables as JSON', '{}')
-  .option('--from-node <nodeId>', 'Start workflow execution from a specific node (Run From Here)')
-  .action(async (workflowId, options) => {
-    try {
-      // Parse input JSON
-      let input: unknown;
-      try {
-        input = JSON.parse(options.input);
-      } catch {
-        fail(ErrorCodes.INVALID_INPUT, 'Invalid JSON in --input', {
-          hint: 'Ensure the input is valid JSON',
-        });
-      }
-
-      // Build request body with optional startNodes
-      const body: { input?: unknown; startNodes?: string[] } = { input };
-      if (options.fromNode) {
-        body.startNodes = [options.fromNode];
-      }
-
-      const result = await apiRequest<RunResult>(`/v1/cli/workflow/${workflowId}/run`, {
-        method: 'POST',
-        body,
-      });
-
-      ok('workflow.run', {
-        message: options.fromNode
-          ? `Workflow run started from node ${options.fromNode}`
-          : 'Workflow run started',
-        runId: result.runId,
-        workflowId: result.workflowId,
-        status: result.status,
-        startNode: options.fromNode || undefined,
-        createdAt: result.createdAt,
-        nextStep: `Check status with \`refly workflow status ${workflowId}\``,
-      });
-    } catch (error) {
-      if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
-      }
-      fail(
-        ErrorCodes.INTERNAL_ERROR,
-        error instanceof Error ? error.message : 'Failed to run workflow',
-      );
-    }
+  .description('Workflow run operations: start, query status, and inspect results')
+  .addCommand(workflowRunStartCommand)
+  .addCommand(workflowRunGetCommand)
+  .addCommand(workflowRunDetailCommand)
+  .addCommand(workflowRunNodeDetailCommand)
+  .addCommand(workflowRunToolcallsCommand)
+  .addCommand(workflowRunNodeStartCommand)
+  .addCommand(workflowRunNodeResultCommand)
+  .addCommand(workflowRunNodeAbortCommand)
+  .addCommand(workflowRunNodeToolcallsCommand)
+  .addCommand(workflowRunNodeToolcallCommand)
+  .action(() => {
+    // Show help when no subcommand is provided
+    workflowRunCommand.help();
   });

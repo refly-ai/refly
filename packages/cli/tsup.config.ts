@@ -1,4 +1,10 @@
 import { defineConfig } from 'tsup';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+// Read package.json version
+const packageJson = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8'));
+const cliVersion = packageJson.version;
 
 // Build-time configuration for different environments
 // Usage:
@@ -11,26 +17,32 @@ const customEndpoint = process.env.REFLY_BUILD_ENDPOINT;
 const customWebUrl = process.env.REFLY_BUILD_WEB_URL;
 
 // Environment configuration mapping
-const ENV_CONFIG: Record<string, { apiEndpoint: string; webUrl: string }> = {
+// npmTag: the npm distribution tag used for publishing and upgrading
+const ENV_CONFIG: Record<string, { apiEndpoint: string; webUrl: string; npmTag: string }> = {
   production: {
     apiEndpoint: 'https://api.refly.ai',
     webUrl: 'https://refly.ai',
+    npmTag: 'latest',
   },
   staging: {
     apiEndpoint: 'https://staging-api.refly.ai',
-    webUrl: 'https://refly.ai', // staging 使用同一个前端
+    webUrl: 'https://staging.refly.ai',
+    npmTag: 'staging',
   },
   test: {
     apiEndpoint: 'https://refly-api.powerformer.net',
     webUrl: 'https://refly.powerformer.net',
+    npmTag: 'test',
   },
   dev: {
     apiEndpoint: 'http://localhost:5800',
     webUrl: 'http://localhost:5173',
+    npmTag: 'dev',
   },
   development: {
     apiEndpoint: 'http://localhost:5173',
     webUrl: 'http://localhost:5173',
+    npmTag: 'dev',
   },
 };
 
@@ -47,10 +59,18 @@ function getDefaultWebUrl(): string {
   return ENV_CONFIG[buildEnv]?.webUrl ?? ENV_CONFIG.production.webUrl;
 }
 
+// Determine the npm tag based on build environment
+function getNpmTag(): string {
+  return ENV_CONFIG[buildEnv]?.npmTag ?? 'latest';
+}
+
 const defaultEndpoint = getDefaultEndpoint();
 const defaultWebUrl = getDefaultWebUrl();
+const npmTag = getNpmTag();
 
 console.log(`[tsup] Building CLI for environment: ${buildEnv}`);
+console.log(`[tsup] CLI version: ${cliVersion}`);
+console.log(`[tsup] NPM tag: ${npmTag}`);
 console.log(`[tsup] Default API endpoint: ${defaultEndpoint}`);
 console.log(`[tsup] Default Web URL: ${defaultWebUrl}`);
 
@@ -75,5 +95,7 @@ export default defineConfig({
     'process.env.REFLY_BUILD_DEFAULT_ENDPOINT': JSON.stringify(defaultEndpoint),
     'process.env.REFLY_BUILD_DEFAULT_WEB_URL': JSON.stringify(defaultWebUrl),
     'process.env.REFLY_BUILD_ENV': JSON.stringify(buildEnv),
+    'process.env.REFLY_BUILD_CLI_VERSION': JSON.stringify(cliVersion),
+    'process.env.REFLY_BUILD_NPM_TAG': JSON.stringify(npmTag),
   },
 });

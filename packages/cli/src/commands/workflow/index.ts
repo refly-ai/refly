@@ -1,8 +1,9 @@
 /**
  * refly workflow - Workflow command group
  *
- * All commands use workflowId (not runId) for simplicity.
- * The backend automatically finds the current/latest execution.
+ * Most commands support both workflowId (c-xxx) and runId (we-xxx):
+ * - workflowId: operates on the latest run
+ * - runId: operates on the specific run
  */
 
 import { Command } from 'commander';
@@ -22,6 +23,8 @@ import { workflowToolsetKeysCommand } from './toolset-keys.js';
 import { workflowLayoutCommand } from './layout.js';
 import { workflowNodesCommand } from './nodes.js';
 import { workflowNodeGetCommand } from './node-get.js';
+import { workflowNodeOutputCommand } from './node-output.js';
+import { workflowPatchCommand } from './patch.js';
 
 export const workflowCommand = new Command('workflow')
   .description('Manage and run workflows')
@@ -43,4 +46,7 @@ export const workflowCommand = new Command('workflow')
   .addCommand(workflowToolsetKeysCommand)
   .addCommand(workflowLayoutCommand)
   .addCommand(workflowNodesCommand)
-  .addCommand(workflowNodeGetCommand);
+  .addCommand(workflowNodeGetCommand)
+  .addCommand(workflowNodeOutputCommand)
+  // Workflow plan operations
+  .addCommand(workflowPatchCommand);

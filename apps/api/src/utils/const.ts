@@ -57,3 +57,7 @@ export const LAMBDA_JOB_STATUS_FAILED = 'failed';
 // Lambda storage types
 export const LAMBDA_STORAGE_TYPE_TEMPORARY = 'temporary';
 export const LAMBDA_STORAGE_TYPE_PERMANENT = 'permanent';
+
+// Skill Execution Queues
+export const QUEUE_SKILL_EXECUTION = 'skillExecution';
+export const QUEUE_SKILL_WORKFLOW = 'skillWorkflow';

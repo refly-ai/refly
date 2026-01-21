@@ -29,11 +29,10 @@ import { statusCommand } from '../commands/status.js';
 import { whoamiCommand } from '../commands/whoami.js';
 import { upgradeCommand } from '../commands/upgrade.js';
 import { configCommand } from '../commands/config.js';
-import { builderCommand } from '../commands/builder/index.js';
 import { workflowCommand } from '../commands/workflow/index.js';
-import { nodeCommand } from '../commands/node/index.js';
 import { toolCommand } from '../commands/tool/index.js';
 import { fileCommand } from '../commands/file/index.js';
+import { skillCommand } from '../commands/skill/index.js';
 
 const VERSION = getVersion();
 
@@ -85,11 +84,10 @@ program.addCommand(statusCommand);
 program.addCommand(whoamiCommand);
 program.addCommand(upgradeCommand);
 program.addCommand(configCommand);
-program.addCommand(builderCommand);
 program.addCommand(workflowCommand);
-program.addCommand(nodeCommand);
 program.addCommand(toolCommand);
 program.addCommand(fileCommand);
+program.addCommand(skillCommand);
 
 // Error handling
 program.exitOverride((err) => {

@@ -13,10 +13,7 @@ import {
 } from '../config/config.js';
 import { verifyConnection } from '../api/client.js';
 import { isSkillInstalled } from '../skill/installer.js';
-import { getReflyDir } from '../config/paths.js';
-
-// CLI version from package.json
-const CLI_VERSION = '0.1.0';
+import { getReflyDir, getCliVersion } from '../config/paths.js';
 
 export const statusCommand = new Command('status')
   .description('Check CLI configuration and authentication status')
@@ -53,7 +50,7 @@ export const statusCommand = new Command('status')
 
       // Build response
       const payload = {
-        cli_version: CLI_VERSION,
+        cli_version: getCliVersion(),
         config_dir: getReflyDir(),
         api_endpoint: getApiEndpoint(),
         auth_status: authStatus,

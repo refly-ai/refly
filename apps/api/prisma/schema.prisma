@@ -2538,3 +2538,256 @@ model CliDeviceSession {
   @@index([uid, createdAt])
   @@map("cli_device_sessions")
 }
+
+/// Skill package - a bundle containing multiple workflow templates
+model SkillPackage {
+  /// Primary key
+  pk              BigInt    @id @default(autoincrement())
+  /// Skill package id
+  skillId         String    @unique @map("skill_id")
+  /// Package name
+  name            String    @map("name")
+  /// Package version (semver)
+  version         String    @map("version")
+  /// Package description
+  description     String?   @map("description")
+  /// Creator UID
+  uid             String    @map("uid")
+  /// Package icon (JSON)
+  icon            String?   @map("icon")
+  /// Triggers for activation
+  triggers        String[]  @default([]) @map("triggers")
+  /// Category tags
+  tags            String[]  @default([]) @map("tags")
+  /// MCP configuration (JSON) - NOT yet implemented, reserved for MCP integration
+  mcpConfig       String?   @map("mcp_config")
+  /// Input schema (JSON) - NOT yet implemented
+  inputSchema     String?   @map("input_schema")
+  /// Output schema (JSON) - NOT yet implemented
+  outputSchema    String?   @map("output_schema")
+  /// Package status: draft, published, deprecated
+  status          String    @default("draft") @map("status")
+  /// Whether this package is public
+  isPublic        Boolean   @default(false) @map("is_public")
+  /// Cover image storage key
+  coverStorageKey String?   @map("cover_storage_key")
+  /// Download count
+  downloadCount   Int       @default(0) @map("download_count")
+  /// Share ID for public access
+  shareId         String?   @map("share_id")
+  /// Create timestamp
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
+
+  /// Relation to workflows
+  workflows     SkillWorkflow[]
+  /// Relation to installations
+  installations SkillInstallation[]
+
+  @@index([uid, status, deletedAt])
+  @@index([isPublic, status, deletedAt])
+  @@index([shareId])
+  @@map("skill_packages")
+}
+
+/// Workflow template within a skill package
+model SkillWorkflow {
+  /// Primary key
+  pk               BigInt    @id @default(autoincrement())
+  /// Skill workflow id
+  skillWorkflowId  String    @unique @map("skill_workflow_id")
+  /// Parent skill package id
+  skillId          String    @map("skill_id")
+  /// Workflow name
+  name             String    @map("name")
+  /// Workflow description
+  description      String?   @map("description")
+  /// Canvas data storage key (S3) - stores complete canvas snapshot
+  canvasStorageKey String    @map("canvas_storage_key")
+  /// Source canvas id (original canvas when publishing)
+  sourceCanvasId   String?   @map("source_canvas_id")
+  /// Workflow-level input schema (JSON Schema) - NOT yet implemented
+  inputSchema      String?   @map("input_schema")
+  /// Workflow-level output schema (JSON Schema) - NOT yet implemented
+  outputSchema     String?   @map("output_schema")
+  /// Workflow variables (JSON)
+  variables        String?   @map("variables")
+  /// Whether this is the entry workflow (no dependencies, execution starts here)
+  isEntry          Boolean   @default(false) @map("is_entry")
+  /// Create timestamp
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
+
+  /// Parent skill package
+  skillPackage SkillPackage              @relation(fields: [skillId], references: [skillId])
+  /// Dependencies (workflows this workflow depends on)
+  dependencies SkillWorkflowDependency[] @relation("DependentWorkflow")
+  /// Dependents (workflows that depend on this workflow)
+  dependents   SkillWorkflowDependency[] @relation("DependencyWorkflow")
+
+  @@index([skillId])
+  @@map("skill_workflows")
+}
+
+/// Workflow dependencies within a skill package
+model SkillWorkflowDependency {
+  /// Primary key
+  pk                   BigInt   @id @default(autoincrement())
+  /// Dependent workflow id (this workflow depends on...)
+  dependentWorkflowId  String   @map("dependent_workflow_id")
+  /// Dependency workflow id (...this workflow)
+  dependencyWorkflowId String   @map("dependency_workflow_id")
+  /// Dependency type: sequential, conditional
+  dependencyType       String   @default("sequential") @map("dependency_type")
+  /// Condition expression (for conditional dependencies) - NOT yet implemented
+  condition            String?  @map("condition")
+  /// Data mapping from dependency output -> dependent input (JSON) - NOT yet implemented
+  inputMapping         String?  @map("input_mapping")
+  /// Output selector for dependency workflow (JSON) - NOT yet implemented
+  outputSelector       String?  @map("output_selector")
+  /// Merge strategy for multiple inputs: merge|override|custom (default merge) - NOT yet implemented
+  mergeStrategy        String?  @map("merge_strategy")
+  /// Custom merge expression (used only when mergeStrategy = custom) - NOT yet implemented
+  customMerge          String?  @map("custom_merge")
+  /// Create timestamp
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  /// Relations
+  dependentWorkflow  SkillWorkflow @relation("DependentWorkflow", fields: [dependentWorkflowId], references: [skillWorkflowId])
+  dependencyWorkflow SkillWorkflow @relation("DependencyWorkflow", fields: [dependencyWorkflowId], references: [skillWorkflowId])
+
+  @@unique([dependentWorkflowId, dependencyWorkflowId])
+  @@map("skill_workflow_dependencies")
+}
+
+/// User installation of a skill package
+model SkillInstallation {
+  /// Primary key
+  pk               BigInt    @id @default(autoincrement())
+  /// Installation id
+  installationId   String    @unique @map("installation_id")
+  /// Source skill package id
+  skillId          String    @map("skill_id")
+  /// User who installed
+  uid              String    @map("uid")
+  /// Installation status: downloading, downloaded, initializing, ready, partial_failed, failed
+  status           String    @default("downloading") @map("status")
+  /// Cloned workflow mapping with per-workflow status (JSON)
+  /// Format: { skillWorkflowId: { workflowId: string, status: 'pending'|'ready'|'failed', error?: string } }
+  workflowMapping  String?   @map("workflow_mapping")
+  /// User-specific configuration overrides (JSON) - NOT yet implemented
+  userConfig       String?   @map("user_config")
+  /// Installation error message (if failed)
+  errorMessage     String?   @map("error_message")
+  /// Installed version
+  installedVersion String    @map("installed_version")
+  /// Whether a newer version is available
+  hasUpdate        Boolean   @default(false) @map("has_update")
+  /// Available version for upgrade (if hasUpdate = true)
+  availableVersion String?   @map("available_version")
+  /// Create timestamp
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp (uninstalled)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz()
+
+  /// Parent skill package
+  skillPackage SkillPackage     @relation(fields: [skillId], references: [skillId])
+  /// Relation to executions
+  executions   SkillExecution[]
+
+  @@unique([skillId, uid])
+  @@index([uid, status, deletedAt])
+  @@map("skill_installations")
+}
+
+/// Runtime execution record for a skill package
+/// NOTE: Backend implementation exists but NOT yet integrated:
+///   - OpenAPI schema not defined
+///   - Frontend/CLI not calling these APIs
+///   - Currently unused, pending frontend integration
+model SkillExecution {
+  /// Primary key
+  pk             BigInt    @id @default(autoincrement())
+  /// Execution id
+  executionId    String    @unique @map("execution_id")
+  /// Installation id
+  installationId String    @map("installation_id")
+  /// Skill package id
+  skillId        String    @map("skill_id")
+  /// User who triggered execution
+  uid            String    @map("uid")
+  /// Execution status: pending, running, success, partial_failed, failed, cancelled
+  status         String    @default("pending") @map("status")
+  /// Input JSON
+  input          String?   @map("input")
+  /// Output JSON (aggregated from all workflows)
+  output         String?   @map("output")
+  /// Error message if failed
+  errorMessage   String?   @map("error_message")
+  /// Execution started timestamp
+  startedAt      DateTime? @map("started_at") @db.Timestamptz()
+  /// Execution completed timestamp
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz()
+  /// Create timestamp
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  /// Relation to workflow executions
+  workflowExecutions SkillExecutionWorkflow[]
+  /// Relation to installation
+  installation       SkillInstallation        @relation(fields: [installationId], references: [installationId])
+
+  @@index([installationId, status])
+  @@index([uid, createdAt])
+  @@index([skillId, status])
+  @@map("skill_executions")
+}
+
+/// Runtime execution record for a single workflow within a skill execution
+/// NOTE: Backend implementation exists but NOT yet integrated (see SkillExecution)
+model SkillExecutionWorkflow {
+  /// Primary key
+  pk                  BigInt    @id @default(autoincrement())
+  /// Execution workflow id
+  executionWorkflowId String    @unique @map("execution_workflow_id")
+  /// Parent skill execution id
+  executionId         String    @map("execution_id")
+  /// Skill workflow id (template reference)
+  skillWorkflowId     String    @map("skill_workflow_id")
+  /// Cloned workflow id (actual canvas to execute)
+  workflowId          String    @map("workflow_id")
+  /// Execution level (topological level, 0 = entry)
+  executionLevel      Int       @default(0) @map("execution_level")
+  /// Workflow status: pending, queued, running, success, failed, skipped, blocked
+  status              String    @default("pending") @map("status")
+  /// Input JSON (after mapping applied)
+  input               String?   @map("input")
+  /// Output JSON
+  output              String?   @map("output")
+  /// Error message if failed
+  errorMessage        String?   @map("error_message")
+  /// Retry count
+  retryCount          Int       @default(0) @map("retry_count")
+  /// Execution started timestamp
+  startedAt           DateTime? @map("started_at") @db.Timestamptz()
+  /// Execution completed timestamp
+  completedAt         DateTime? @map("completed_at") @db.Timestamptz()
+  /// Create timestamp
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  /// Parent skill execution
+  execution SkillExecution @relation(fields: [executionId], references: [executionId])
+
+  @@index([executionId, status])
+  @@index([executionLevel])
+  @@map("skill_execution_workflows")
+}
