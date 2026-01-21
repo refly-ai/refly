@@ -69,6 +69,13 @@ export interface ProcessQueryResult {
 
 type MentionFormatMode = 'display' | 'llm_input';
 
+type VariableJsonValue = string | string[] | null;
+
+interface ReferencedVariableJsonItem {
+  name: string;
+  value: VariableJsonValue;
+}
+
 /**
  * Format mention based on type and mode
  */
@@ -90,6 +97,34 @@ function formatMention(data: MentionCommonData, mode: MentionFormatMode): string
       return `@${type}:${name}`;
     }
   }
+}
+
+function buildReferencedVariablesJson(
+  referencedVariables: WorkflowVariable[],
+): ReferencedVariableJsonItem[] {
+  const items: ReferencedVariableJsonItem[] = [];
+  const seen = new Set<string>();
+
+  for (const variable of referencedVariables) {
+    if (variable.variableType === 'resource') continue;
+    if (seen.has(variable.variableId)) continue;
+    seen.add(variable.variableId);
+
+    const textValues =
+      variable.value
+        ?.filter((value) => value.type === 'text')
+        .map((value) => value.text)
+        .filter((value): value is string => value !== undefined && value !== null) ?? [];
+
+    let value: VariableJsonValue = null;
+    if (textValues.length > 0) {
+      value = variable.isSingle || textValues.length === 1 ? textValues[0] : textValues;
+    }
+
+    items.push({ name: variable.name, value });
+  }
+
+  return items;
 }
 
 /**
@@ -361,9 +396,15 @@ export function processQueryWithMentions(
     return result.replacement;
   });
 
+  const referencedVariablesJson = buildReferencedVariablesJson(referencedVariables);
+  const llmInputQueryWithVariables =
+    referencedVariablesJson.length > 0
+      ? `${llmInputQuery}\n\nVariables:\n${JSON.stringify(referencedVariablesJson, null, 2)}`
+      : llmInputQuery;
+
   return {
     processedQuery,
-    llmInputQuery,
+    llmInputQuery: llmInputQueryWithVariables,
     updatedQuery,
     referencedVariables,
     resourceVars,
