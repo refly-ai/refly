@@ -235,6 +235,27 @@ export interface BaseToolParams extends ToolParams {
   engine: SkillEngine;
 }
 
+export interface PtcContext {
+  toolsets: {
+    id: string;
+    name: string;
+    key: string;
+  }[];
+  sdk: {
+    pathPrefix: string;
+    codes: {
+      toolsetKey: string;
+      path: string;
+      content: string;
+    }[];
+    docs: {
+      toolsetKey: string;
+      path: string;
+      content: string;
+    }[];
+  };
+}
+
 export interface BaseSkillState extends SkillInput {
   messages: BaseMessage[];
 }
@@ -317,6 +338,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     installedToolsets?: GenericToolset[];
     preprocessResult?: PreprocessResult;
     ptcEnabled?: boolean;
+    ptcContext?: PtcContext;
   };
   metadata?: SkillRunnableMeta;
 }
