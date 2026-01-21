@@ -584,6 +584,41 @@ async function confirmUpload(uploadId: string): Promise<DriveFileUploadResult> {
  * @param options - Optional configuration including progress callback
  * @returns Upload result with file metadata
  */
+/**
+ * Workflow variable definition
+ */
+export interface WorkflowVariable {
+  variableId?: string;
+  name: string;
+  variableType?: string;
+  value?: unknown[];
+  required?: boolean;
+  isSingle?: boolean;
+  resourceTypes?: string[];
+}
+
+/**
+ * Workflow info returned from GET /v1/cli/workflow/:id
+ */
+export interface WorkflowInfo {
+  workflowId: string;
+  name: string;
+  nodes: unknown[];
+  edges: unknown[];
+  variables: WorkflowVariable[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Fetch workflow details by ID
+ * @param workflowId - The workflow ID to fetch
+ * @returns Workflow details including variables
+ */
+export async function apiGetWorkflow(workflowId: string): Promise<WorkflowInfo> {
+  return apiRequest<WorkflowInfo>(`/v1/cli/workflow/${workflowId}`);
+}
+
 export async function apiUploadDriveFile(
   filePath: string,
   canvasId: string,
