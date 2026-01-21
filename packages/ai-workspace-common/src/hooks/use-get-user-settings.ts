@@ -153,9 +153,17 @@ export const useGetUserSettings = () => {
       authChannel.broadcast({ type: 'login', uid: currentUid });
     }
 
+    // Update user properties after identity is resolved
+    const userAttributes = settings?.attributes;
+    if (userAttributes) {
+      updateUserProperties({
+        ...userAttributes,
+        ...(userTypeForUserProperties ? { user_plan: userTypeForUserProperties } : {}),
+      });
+    }
+
     // Update modal status based on user preferences
     const updateModalStatus = (preferences: UserPreferences) => {
-      const identity = preferences.identity ?? null;
       const hasBeenInvited = preferences.hasBeenInvited;
       userStore.setShowInvitationCodeModal(!preferences.hasBeenInvited);
 
@@ -163,11 +171,6 @@ export const useGetUserSettings = () => {
       if (hasBeenInvited) {
         const hasFilledForm = preferences.hasFilledForm ?? false;
         userStore.setShowOnboardingFormModal(!hasFilledForm);
-      }
-
-      // Update user properties after identity is resolved
-      if (userTypeForUserProperties) {
-        updateUserProperties({ user_plan: userTypeForUserProperties, user_identity: identity });
       }
     };
 

@@ -7,7 +7,7 @@ import {
   UpdateUserSettingsRequest,
   User,
 } from '@refly/openapi-schema';
-import { Subscription } from '@prisma/client';
+import { Subscription, User as UserPo } from '@prisma/client';
 import { pick, safeParseJSON, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { RedisService } from '../common/redis.service';
@@ -67,6 +67,24 @@ export class UserService implements OnModuleInit {
     );
   }
 
+  private async getUserAttributes(userPo: UserPo): Promise<Record<string, unknown>> {
+    const isNewUserToday = userPo.createdAt > new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const isNewUserThisWeek = userPo.createdAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const isNewUserThisMonth = userPo.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const workflowExecutionCnt = await this.prisma.workflowExecution.count({
+      where: {
+        uid: userPo.uid,
+      },
+    });
+
+    return {
+      is_new_user_today: isNewUserToday,
+      is_new_user_this_week: isNewUserThisWeek,
+      is_new_user_this_month: isNewUserThisMonth,
+      has_run_workflow: workflowExecutionCnt > 0,
+    };
+  }
+
   async getUserSettings(user: User) {
     const userPo = await this.prisma.user.findUnique({
       where: { uid: user.uid },
@@ -82,17 +100,18 @@ export class UserService implements OnModuleInit {
     }
 
     const userPreferences = await this.providerService.getUserPreferences(user, userPo.preferences);
+    const userAttributes = await this.getUserAttributes(userPo);
 
     userPreferences.hasBeenInvited = await this.invitationService.hasBeenInvited(user.uid, userPo);
 
     const { hasFilledForm, identity } = await this.formService.hasFilledForm(user.uid);
     userPreferences.hasFilledForm = hasFilledForm;
-    userPreferences.identity = identity;
-
-    userPo.preferences = JSON.stringify(userPreferences);
+    userAttributes.user_identity = identity;
 
     return {
       ...userPo,
+      preferences: JSON.stringify(userPreferences),
+      attributes: userAttributes,
       subscription,
     };
   }

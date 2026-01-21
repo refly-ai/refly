@@ -3687,7 +3687,13 @@ export const UserSettingsSchema = {
       description: 'User preferences',
       $ref: '#/components/schemas/UserPreferences',
     },
+    attributes: {
+      type: 'object',
+      description: 'User attributes',
+      additionalProperties: true,
+    },
     onboarding: {
+      deprecated: true,
       description: 'Onboarding config',
       $ref: '#/components/schemas/OnboardingConfig',
     },

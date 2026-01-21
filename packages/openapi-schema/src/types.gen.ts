@@ -2904,7 +2904,14 @@ export type UserSettings = {
    */
   preferences?: UserPreferences;
   /**
+   * User attributes
+   */
+  attributes?: {
+    [key: string]: unknown;
+  };
+  /**
    * Onboarding config
+   * @deprecated
    */
   onboarding?: OnboardingConfig;
 };
