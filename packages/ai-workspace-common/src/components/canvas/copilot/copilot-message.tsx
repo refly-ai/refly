@@ -119,6 +119,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       (currentNodes.length === 2 &&
         startNodes.length === 1 &&
         agentNodes.length === 1 &&
+        agentNodes[0]?.data?.metadata?.status === 'init' &&
         (!agentNodes[0]?.data?.metadata?.query || agentNodes[0]?.data?.metadata?.untouched));
 
     if (!shouldSkipConfirmation) {
