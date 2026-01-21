@@ -14,10 +14,14 @@ import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/us
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 
 const ActionDropdown = memo(
-  ({ canvasId, canvasName }: { canvasId: string; canvasName: string }) => {
+  ({
+    canvasId,
+    canvasName,
+    className,
+  }: { canvasId: string; canvasName: string; className?: string }) => {
     const { getCanvasList } = useHandleSiderData();
     return (
-      <div onClick={(e) => e.stopPropagation()}>
+      <div className={className} onClick={(e) => e.stopPropagation()}>
         <CanvasActionDropdown
           canvasId={canvasId}
           canvasName={canvasName}
@@ -99,7 +103,11 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
                 </div>
               </div>
 
-              <ActionDropdown canvasId={canvas.id} canvasName={canvas.name} />
+              <ActionDropdown
+                canvasId={canvas.id}
+                canvasName={canvas.name}
+                className="translate-x-2"
+              />
             </div>
           </div>
         </div>
