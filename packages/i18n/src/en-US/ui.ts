@@ -1158,6 +1158,9 @@ const translations = {
     fileNoContent: 'File has no content.',
     notFound: 'File Not Found',
     notFoundDesc: 'The file you are looking for does not exist or has been removed.',
+    download: 'Download',
+    addToFileLibrary: 'Add to File Library',
+    share: 'Share',
   },
   artifact: {
     generating: 'Generating',

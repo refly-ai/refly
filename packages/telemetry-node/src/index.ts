@@ -2,8 +2,8 @@ import { Statsig, StatsigUser } from '@statsig/statsig-node-core';
 
 let statsig: Statsig | null = null;
 
-type StatsigUserCustomValue = string | number | boolean | Array<string | number | boolean>;
-type StatsigUserCustom = Record<string, StatsigUserCustomValue>;
+export type StatsigUserCustomValue = string | number | boolean | Array<string | number | boolean>;
+export type StatsigUserCustom = Record<string, StatsigUserCustomValue>;
 
 export const setupStatsig = async () => {
   const secretKey = process.env.STATSIG_SECRET_KEY;

@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { Typography, Button, Dropdown, message, notification } from 'antd';
+import { Typography, Button, Dropdown, message, notification, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import { Share, Download, Markdown, Doc1, Pdf, Resource } from 'refly-icons';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
@@ -40,10 +40,11 @@ type ActionButtonProps = {
   loading?: boolean;
   onClick?: () => void;
   dropdownMenuItems?: MenuProps['items'];
+  tooltip?: string;
 };
 
 const ActionButton = memo<ActionButtonProps>(
-  ({ label, icon, onClick, loading, dropdownMenuItems }) => {
+  ({ label, icon, onClick, loading, dropdownMenuItems, tooltip }) => {
     const buttonNode = (
       <Button
         type="text"
@@ -56,15 +57,23 @@ const ActionButton = memo<ActionButtonProps>(
       />
     );
 
+    const wrappedButton = tooltip ? (
+      <Tooltip title={tooltip} placement="top">
+        {buttonNode}
+      </Tooltip>
+    ) : (
+      buttonNode
+    );
+
     if (dropdownMenuItems?.length) {
       return (
         <Dropdown menu={{ items: dropdownMenuItems }} trigger={['click']} placement="bottomRight">
-          {buttonNode}
+          {wrappedButton}
         </Dropdown>
       );
     }
 
-    return buttonNode;
+    return wrappedButton;
   },
 );
 
@@ -300,6 +309,7 @@ export const ProductCard = memo(
             icon: <Share size={16} />,
             onClick: handleShare,
             loading: isSharing,
+            tooltip: t('driveFile.share'),
           }
         : null;
 
@@ -309,6 +319,7 @@ export const ProductCard = memo(
             icon: <Resource size={16} />,
             onClick: handleAddToFileLibrary,
             loading: isAdding || isAddingToFileLibrary,
+            tooltip: t('driveFile.addToFileLibrary'),
           }
         : null;
 
@@ -319,6 +330,7 @@ export const ProductCard = memo(
             icon: <Download size={16} />,
             loading: isExporting,
             dropdownMenuItems: exportMenuItems,
+            tooltip: t('driveFile.download'),
           },
           addToFileLibraryAction,
           baseShareAction,
@@ -331,6 +343,7 @@ export const ProductCard = memo(
           icon: <Download size={16} />,
           onClick: handleDownloadProduct,
           loading: isDownloading,
+          tooltip: t('driveFile.download'),
         },
         addToFileLibraryAction,
         baseShareAction,
@@ -348,6 +361,7 @@ export const ProductCard = memo(
       isAdding,
       isAddingToFileLibrary,
       onAddToFileLibrary,
+      t,
     ]);
 
     const handleClosePreview = useCallback(() => {
@@ -407,6 +421,7 @@ export const ProductCard = memo(
                     onClick={action.onClick}
                     loading={action.loading}
                     dropdownMenuItems={action.dropdownMenuItems}
+                    tooltip={action.tooltip}
                   />
                 ),
             )}
