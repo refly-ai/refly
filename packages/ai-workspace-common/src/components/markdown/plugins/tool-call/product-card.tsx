@@ -1,8 +1,7 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Typography, Button, Dropdown, message, notification } from 'antd';
 import type { MenuProps } from 'antd';
-import { Share, Download, Markdown, Doc1, Pdf } from 'refly-icons';
-import { LuLayoutGrid } from 'react-icons/lu';
+import { Share, Download, Markdown, Doc1, Pdf, Resource } from 'refly-icons';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
 import { DriveFile, ResourceType, EntityType } from '@refly/openapi-schema';
@@ -307,7 +306,7 @@ export const ProductCard = memo(
       const addToFileLibraryAction: ActionButtonProps | null = onAddToFileLibrary
         ? {
             label: 'Add to File Library',
-            icon: <LuLayoutGrid size={16} />,
+            icon: <Resource size={16} />,
             onClick: handleAddToFileLibrary,
             loading: isAdding || isAddingToFileLibrary,
           }
