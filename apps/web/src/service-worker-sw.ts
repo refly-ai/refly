@@ -97,7 +97,7 @@ self.addEventListener('install', (event) => {
       // Precache critical resources from build manifest
       const urls = self.__WB_MANIFEST.map((entry) => {
         const url = typeof entry === 'string' ? entry : entry.url;
-        // ✅ Ensure URLs are absolute for consistent cache key matching
+        // Ensure URLs are absolute for consistent cache key matching
         return new URL(url, self.location.origin).href;
       });
 

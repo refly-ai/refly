@@ -302,7 +302,7 @@ describe('processQueryWithMentions', () => {
       );
 
       expect(result.llmInputQuery).toBe(
-        `hello world and \n\nVariables:\n${expectedVariablesBlock}`,
+        `Variables:\n${expectedVariablesBlock}\n\n@var:testVar and @var:optionalVar`,
       );
     });
   });

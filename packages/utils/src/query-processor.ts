@@ -230,6 +230,10 @@ function processMention(
               .map((v) => v.text)
               .filter(Boolean) ?? [];
 
+          if (mode === 'llm_input') {
+            return { replacement: formatMention({ type, name, id }, mode), updatedQuery };
+          }
+
           const stringValue = textValues.length > 0 ? textValues.join(', ') : '';
           return { replacement: stringValue, updatedQuery };
         }
@@ -399,7 +403,7 @@ export function processQueryWithMentions(
   const referencedVariablesJson = buildReferencedVariablesJson(referencedVariables);
   const llmInputQueryWithVariables =
     referencedVariablesJson.length > 0
-      ? `${llmInputQuery}\n\nVariables:\n${JSON.stringify(referencedVariablesJson, null, 2)}`
+      ? `Variables:\n${JSON.stringify(referencedVariablesJson, null, 2)}\n\n${llmInputQuery}`
       : llmInputQuery;
 
   return {
