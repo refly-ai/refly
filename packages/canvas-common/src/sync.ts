@@ -61,6 +61,7 @@ export const initEmptyCanvasState = (options?: InitEmptyCanvasOptions): CanvasSt
         status: 'init',
         modelInfo: options?.defaultModelInfo,
         query: defaultQuery,
+        untouched: true, // This is a flag to indicate that this agent node was never edited by the user
         selectedToolsets: [
           {
             builtin: true,
