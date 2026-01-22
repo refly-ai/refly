@@ -1808,20 +1808,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DuplicateShareResponse'
-  /action/list:
-    get:
-      tags:
-        - action
-      summary: List actions
-      description: List all actions
-      operationId: listActions
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListActionResponse'
   /action/result:
     get:
       tags:
@@ -1870,20 +1856,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
-  /skill/list:
-    get:
-      tags:
-        - skill
-      summary: List skills
-      description: List all skills
-      operationId: listSkills
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListSkillResponse'
   /skill/invoke:
     post:
       tags:
@@ -5215,27 +5187,6 @@ components:
         value:
           type: string
           description: Icon value
-    Skill:
-      type: object
-      description: Skill
-      required:
-        - name
-      properties:
-        name:
-          type: string
-          description: Skill name
-        description:
-          type: string
-          description: Skill description
-        icon:
-          description: Skill icon
-          $ref: '#/components/schemas/Icon'
-        configSchema:
-          description: Skill config schema
-          $ref: '#/components/schemas/SkillTemplateConfigDefinition'
-        tplConfig:
-          description: Skill template config
-          $ref: '#/components/schemas/SkillTemplateConfig'
     SkillMeta:
       type: object
       description: Skill metadata
@@ -7518,42 +7469,6 @@ components:
             data:
               description: Duplicated entity
               $ref: '#/components/schemas/Entity'
-    Action:
-      type: object
-      required:
-        - actionType
-        - actionName
-      properties:
-        actionType:
-          type: string
-          description: Action type
-          $ref: '#/components/schemas/ActionType'
-        actionName:
-          type: string
-          description: Action name
-        icon:
-          description: Action icon
-          $ref: '#/components/schemas/Icon'
-    ListActionResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Action list
-              items:
-                $ref: '#/components/schemas/Action'
-    ListSkillResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Skill list
-              items:
-                $ref: '#/components/schemas/Skill'
     SkillInput:
       type: object
       description: Skill input

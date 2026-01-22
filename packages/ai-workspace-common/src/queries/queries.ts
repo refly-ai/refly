@@ -106,7 +106,6 @@ import {
   initializeWorkflow,
   invokeSkill,
   listAccounts,
-  listActions,
   listAllScheduleRecords,
   listCanvases,
   listCanvasTemplateCategories,
@@ -124,7 +123,6 @@ import {
   listResources,
   listSchedules,
   listShares,
-  listSkills,
   listTools,
   listToolsetInventory,
   listToolsets,
@@ -360,7 +358,6 @@ import {
   InvokeSkillError,
   ListAccountsData,
   ListAccountsError,
-  ListActionsError,
   ListAllScheduleRecordsData,
   ListAllScheduleRecordsError,
   ListCanvasesData,
@@ -392,7 +389,6 @@ import {
   ListSchedulesError,
   ListSharesData,
   ListSharesError,
-  ListSkillsError,
   ListToolsData,
   ListToolsError,
   ListToolsetInventoryError,
@@ -860,21 +856,6 @@ export const useListShares = <
       listShares({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
-export const useListActions = <
-  TData = Common.ListActionsDefaultResponse,
-  TError = ListActionsError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useQuery<TData, TError>({
-    queryKey: Common.UseListActionsKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listActions({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
 export const useGetActionResult = <
   TData = Common.GetActionResultDefaultResponse,
   TError = GetActionResultError,
@@ -888,21 +869,6 @@ export const useGetActionResult = <
     queryKey: Common.UseGetActionResultKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getActionResult({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useListSkills = <
-  TData = Common.ListSkillsDefaultResponse,
-  TError = ListSkillsError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useQuery<TData, TError>({
-    queryKey: Common.UseListSkillsKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listSkills({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useListCopilotSessions = <

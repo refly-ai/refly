@@ -29,19 +29,13 @@ import {
 } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
 import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
-import { usePilotRecovery } from '@refly-packages/ai-workspace-common/hooks/pilot/use-pilot-recovery';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import {
   useGetCreditBalance,
   useGetCreditUsageByResultId,
-  useGetPilotSessionDetail,
 } from '@refly-packages/ai-workspace-common/queries/queries';
 import { processContentPreview } from '@refly-packages/ai-workspace-common/utils/content';
-import {
-  usePilotStoreShallow,
-  useCanvasNodesStoreShallow,
-  useCanvasStoreShallow,
-} from '@refly/stores';
+import { useCanvasNodesStoreShallow, useCanvasStoreShallow } from '@refly/stores';
 import cn from 'classnames';
 
 import { SkillResponseContentPreview } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-content-preview';
@@ -265,22 +259,6 @@ export const SkillResponseNode = memo(
       onHoverEnd(selected);
     }, [onHoverEnd, selected]);
 
-    // Get current pilot session info
-    const activeSessionId = usePilotStoreShallow(
-      (state) => state.activeSessionIdByCanvas[canvasId || ''],
-    );
-
-    // Get pilot session data to check if this node corresponds to a pilot step
-    const { data: sessionData } = useGetPilotSessionDetail(
-      {
-        query: { sessionId: activeSessionId },
-      },
-      undefined,
-      {
-        enabled: !!activeSessionId,
-      },
-    );
-
     const isExecuting =
       data.metadata?.status === 'executing' || data.metadata?.status === 'waiting';
 
@@ -301,13 +279,6 @@ export const SkillResponseNode = memo(
     const { t } = useTranslation();
 
     const { title, metadata, entityId } = data ?? {};
-
-    // Find current node's corresponding pilot step
-    const currentPilotStep = useMemo(() => {
-      if (!sessionData?.data?.steps || !entityId) return null;
-
-      return sessionData.data.steps.find((step) => step.entityId === entityId);
-    }, [sessionData, entityId]);
 
     const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
     const { data: variables } = useVariablesManagement(canvasId);
@@ -375,12 +346,6 @@ export const SkillResponseNode = memo(
         });
       }
     }, [id, data?.editedTitle]);
-
-    // Use pilot recovery hook for pilot steps
-    const { recoverSteps } = usePilotRecovery({
-      canvasId: canvasId || '',
-      sessionId: activeSessionId || '',
-    });
 
     useEffect(() => {
       // Don't start polling in readonly mode (e.g., run-detail page)
@@ -456,23 +421,6 @@ export const SkillResponseNode = memo(
       }
     }, [readonly, entityId, shareId, fetchActionResult, id, result, data?.metadata?.version]);
 
-    // Listen to pilot step status changes and sync with node status
-    useEffect(() => {
-      if (currentPilotStep?.status && currentPilotStep.status !== data?.metadata?.status) {
-        console.log(
-          `[Pilot Step Sync] Updating node ${id} status from ${data?.metadata?.status} to ${currentPilotStep.status}`,
-        );
-
-        setNodeData(id, {
-          ...data,
-          metadata: {
-            ...data?.metadata,
-            status: currentPilotStep.status,
-          },
-        });
-      }
-    }, [currentPilotStep?.status, data, id, setNodeData]);
-
     const skill = {
       name: currentSkill?.name || 'commonQnA',
       icon: currentSkill?.icon,
@@ -484,46 +432,6 @@ export const SkillResponseNode = memo(
     const isSourceConnected = edges?.some((edge) => edge.source === id);
 
     const { invokeAction } = useInvokeAction({ source: 'skill-response-node' });
-
-    // Pilot recovery mode
-    const handlePilotRecovery = useCallback(async () => {
-      if (!currentPilotStep?.stepId || !activeSessionId) return;
-
-      message.info(
-        t('canvas.skillResponse.startPilotRecovery', {
-          defaultValue: 'Starting pilot recovery...',
-        }),
-      );
-
-      try {
-        // 使用 usePilotRecovery hook
-        await recoverSteps([currentPilotStep]);
-
-        // 前端状态更新
-        setNodeData(id, {
-          ...data,
-          contentPreview: '',
-          metadata: {
-            ...data?.metadata,
-            status: 'waiting',
-            version: (data?.metadata?.version || 0) + 1,
-          },
-        });
-
-        message.success(
-          t('canvas.skillResponse.pilotRecoveryStarted', {
-            defaultValue: 'Pilot recovery started successfully',
-          }),
-        );
-      } catch (error) {
-        console.error('Pilot recovery failed:', error);
-        message.error(
-          t('canvas.skillResponse.pilotRecoveryFailed', {
-            defaultValue: 'Pilot recovery failed',
-          }),
-        );
-      }
-    }, [currentPilotStep, activeSessionId, recoverSteps, data, id, setNodeData, t]);
 
     // Direct rerun mode (original logic)
     const handleDirectRerun = useCallback(() => {
@@ -600,25 +508,9 @@ export const SkillResponseNode = memo(
         nodeId: id,
       });
 
-      // 判断是否为 pilot step
-      if (currentPilotStep?.stepId && activeSessionId) {
-        // 使用 pilot recovery 模式
-        handlePilotRecovery();
-      } else {
-        // 使用原有的直接重试模式
-        handleDirectRerun();
-      }
-    }, [
-      readonly,
-      data?.metadata?.status,
-      t,
-      currentPilotStep,
-      activeSessionId,
-      handlePilotRecovery,
-      handleDirectRerun,
-      canvasId,
-      id,
-    ]);
+      // 使用直接重试模式
+      handleDirectRerun();
+    }, [readonly, data?.metadata?.status, t, handleDirectRerun, canvasId, id]);
 
     const { deleteNode } = useDeleteNode();
     const { duplicateNode } = useDuplicateNode();

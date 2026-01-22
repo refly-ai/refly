@@ -10,7 +10,6 @@ import { Response } from 'express';
 import {
   InvokeSkillRequest,
   SkillContext,
-  Skill,
   User,
   ActionResult,
   LLMModelConfig,
@@ -18,7 +17,6 @@ import {
   DriveFile,
   GenericToolset,
 } from '@refly/openapi-schema';
-import { BaseSkill } from '@refly/skill-template';
 import {
   purgeContextForActionResult,
   purgeToolsets,
@@ -73,7 +71,6 @@ const FIXED_BUILTIN_TOOLSETS: GenericToolset[] = [
 export class SkillService implements OnModuleInit {
   private readonly logger = new Logger(SkillService.name);
   private readonly INIT_TIMEOUT = 10000; // 10 seconds timeout for initialization
-  private skillInventory: BaseSkill[];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -94,10 +91,7 @@ export class SkillService implements OnModuleInit {
     @Optional()
     @InjectQueue(QUEUE_CHECK_STUCK_ACTIONS)
     private checkStuckActionsQueue?: Queue,
-  ) {
-    this.skillInventory = this.skillInvokerService.getSkillInventory();
-    this.logger.log(`Skill inventory initialized: ${this.skillInventory.length}`);
-  }
+  ) {}
 
   async onModuleInit(): Promise<void> {
     await runModuleInitWithTimeoutAndRetry(
@@ -250,22 +244,6 @@ export class SkillService implements OnModuleInit {
       this.logger.error(`Error checking stuck actions: ${error?.stack}`);
       throw error;
     }
-  }
-
-  listSkills(includeAll = false): Skill[] {
-    let skills = this.skillInventory.map((skill) => ({
-      name: skill.name,
-      icon: skill.icon,
-      description: skill.description,
-      configSchema: skill.configSchema,
-    }));
-
-    if (!includeAll) {
-      // TODO: figure out a better way to filter applicable skills
-      skills = skills.filter((skill) => !['commonQnA', 'editDoc'].includes(skill.name));
-    }
-
-    return skills;
   }
 
   /**
@@ -571,12 +549,6 @@ export class SkillService implements OnModuleInit {
     }
 
     param.skillName ||= 'commonQnA';
-    let skill = this.skillInventory.find((s) => s.name === param.skillName);
-    if (!skill) {
-      // throw new SkillNotFoundError(`skill ${param.skillName} not found`);
-      param.skillName = 'commonQnA';
-      skill = this.skillInventory.find((s) => s.name === param.skillName);
-    }
 
     const data: InvokeSkillJobData = {
       ...param,

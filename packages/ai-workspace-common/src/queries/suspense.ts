@@ -44,7 +44,6 @@ import {
   hasBeenInvited,
   hasFilledForm,
   listAccounts,
-  listActions,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
@@ -60,7 +59,6 @@ import {
   listProviders,
   listResources,
   listShares,
-  listSkills,
   listTools,
   listToolsetInventory,
   listToolsets,
@@ -143,7 +141,6 @@ import {
   HasFilledFormError,
   ListAccountsData,
   ListAccountsError,
-  ListActionsError,
   ListCanvasesData,
   ListCanvasesError,
   ListCanvasTemplateCategoriesError,
@@ -171,7 +168,6 @@ import {
   ListResourcesError,
   ListSharesData,
   ListSharesError,
-  ListSkillsError,
   ListToolsData,
   ListToolsError,
   ListToolsetInventoryError,
@@ -575,21 +571,6 @@ export const useListSharesSuspense = <
       listShares({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
-export const useListActionsSuspense = <
-  TData = Common.ListActionsDefaultResponse,
-  TError = ListActionsError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseListActionsKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listActions({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
 export const useGetActionResultSuspense = <
   TData = Common.GetActionResultDefaultResponse,
   TError = GetActionResultError,
@@ -603,21 +584,6 @@ export const useGetActionResultSuspense = <
     queryKey: Common.UseGetActionResultKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getActionResult({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useListSkillsSuspense = <
-  TData = Common.ListSkillsDefaultResponse,
-  TError = ListSkillsError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseListSkillsKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listSkills({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useListCopilotSessionsSuspense = <

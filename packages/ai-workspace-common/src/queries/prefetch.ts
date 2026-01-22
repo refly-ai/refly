@@ -44,7 +44,6 @@ import {
   hasBeenInvited,
   hasFilledForm,
   listAccounts,
-  listActions,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
@@ -60,7 +59,6 @@ import {
   listProviders,
   listResources,
   listShares,
-  listSkills,
   listTools,
   listToolsetInventory,
   listToolsets,
@@ -322,14 +320,6 @@ export const prefetchUseListShares = (
     queryKey: Common.UseListSharesKeyFn(clientOptions),
     queryFn: () => listShares({ ...clientOptions }).then((response) => response.data),
   });
-export const prefetchUseListActions = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListActionsKeyFn(clientOptions),
-    queryFn: () => listActions({ ...clientOptions }).then((response) => response.data),
-  });
 export const prefetchUseGetActionResult = (
   queryClient: QueryClient,
   clientOptions: Options<GetActionResultData, true>,
@@ -337,14 +327,6 @@ export const prefetchUseGetActionResult = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetActionResultKeyFn(clientOptions),
     queryFn: () => getActionResult({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseListSkills = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListSkillsKeyFn(clientOptions),
-    queryFn: () => listSkills({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListCopilotSessions = (
   queryClient: QueryClient,

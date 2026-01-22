@@ -1,24 +1,14 @@
-import { Controller, UseGuards, Get, Post, Body, Res } from '@nestjs/common';
+import { Controller, UseGuards, Post, Body, Res } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { SkillService } from './skill.service';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
-import {
-  User,
-  InvokeSkillRequest,
-  InvokeSkillResponse,
-  ListSkillResponse,
-} from '@refly/openapi-schema';
+import { User, InvokeSkillRequest, InvokeSkillResponse } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils';
 import { Response } from 'express';
 
 @Controller('v1/skill')
 export class SkillController {
   constructor(private skillService: SkillService) {}
-
-  @Get('/list')
-  async listSkillTemplates(): Promise<ListSkillResponse> {
-    return buildSuccessResponse(this.skillService.listSkills());
-  }
 
   @UseGuards(JwtAuthGuard)
   @Post('/invoke')

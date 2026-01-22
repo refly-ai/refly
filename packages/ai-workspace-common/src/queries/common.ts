@@ -105,7 +105,6 @@ import {
   initializeWorkflow,
   invokeSkill,
   listAccounts,
-  listActions,
   listAllScheduleRecords,
   listCanvases,
   listCanvasTemplateCategories,
@@ -123,7 +122,6 @@ import {
   listResources,
   listSchedules,
   listShares,
-  listSkills,
   listTools,
   listToolsetInventory,
   listToolsets,
@@ -439,16 +437,6 @@ export const UseListSharesKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListSharesKey, ...(queryKey ?? [clientOptions])];
-export type ListActionsDefaultResponse = Awaited<ReturnType<typeof listActions>>['data'];
-export type ListActionsQueryResult<
-  TData = ListActionsDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListActionsKey = 'ListActions';
-export const UseListActionsKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListActionsKey, ...(queryKey ?? [clientOptions])];
 export type GetActionResultDefaultResponse = Awaited<ReturnType<typeof getActionResult>>['data'];
 export type GetActionResultQueryResult<
   TData = GetActionResultDefaultResponse,
@@ -459,16 +447,6 @@ export const UseGetActionResultKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetActionResultKey, ...(queryKey ?? [clientOptions])];
-export type ListSkillsDefaultResponse = Awaited<ReturnType<typeof listSkills>>['data'];
-export type ListSkillsQueryResult<
-  TData = ListSkillsDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListSkillsKey = 'ListSkills';
-export const UseListSkillsKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListSkillsKey, ...(queryKey ?? [clientOptions])];
 export type ListCopilotSessionsDefaultResponse = Awaited<
   ReturnType<typeof listCopilotSessions>
 >['data'];

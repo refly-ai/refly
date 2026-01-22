@@ -1782,34 +1782,6 @@ export const IconSchema = {
   },
 } as const;
 
-export const SkillSchema = {
-  type: 'object',
-  description: 'Skill',
-  required: ['name'],
-  properties: {
-    name: {
-      type: 'string',
-      description: 'Skill name',
-    },
-    description: {
-      type: 'string',
-      description: 'Skill description',
-    },
-    icon: {
-      description: 'Skill icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    configSchema: {
-      description: 'Skill config schema',
-      $ref: '#/components/schemas/SkillTemplateConfigDefinition',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-  },
-} as const;
-
 export const SkillMetaSchema = {
   type: 'object',
   description: 'Skill metadata',
@@ -4955,66 +4927,6 @@ export const DuplicateShareResponseSchema = {
         data: {
           description: 'Duplicated entity',
           $ref: '#/components/schemas/Entity',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const ActionSchema = {
-  type: 'object',
-  required: ['actionType', 'actionName'],
-  properties: {
-    actionType: {
-      type: 'string',
-      description: 'Action type',
-      $ref: '#/components/schemas/ActionType',
-    },
-    actionName: {
-      type: 'string',
-      description: 'Action name',
-    },
-    icon: {
-      description: 'Action icon',
-      $ref: '#/components/schemas/Icon',
-    },
-  },
-} as const;
-
-export const ListActionResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Action list',
-          items: {
-            $ref: '#/components/schemas/Action',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const ListSkillResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill list',
-          items: {
-            $ref: '#/components/schemas/Skill',
-          },
         },
       },
     },

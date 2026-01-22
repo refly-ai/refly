@@ -212,16 +212,12 @@ import type {
   DuplicateShareData,
   DuplicateShareError,
   DuplicateShareResponse2,
-  ListActionsError,
-  ListActionsResponse,
   GetActionResultData,
   GetActionResultError,
   GetActionResultResponse2,
   AbortActionData,
   AbortActionError,
   AbortActionResponse,
-  ListSkillsError,
-  ListSkillsResponse,
   InvokeSkillData,
   InvokeSkillError,
   InvokeSkillResponse2,
@@ -1612,19 +1608,6 @@ export const duplicateShare = <ThrowOnError extends boolean = false>(
 };
 
 /**
- * List actions
- * List all actions
- */
-export const listActions = <ThrowOnError extends boolean = false>(
-  options?: Options<unknown, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<ListActionsResponse, ListActionsError, ThrowOnError>({
-    ...options,
-    url: '/action/list',
-  });
-};
-
-/**
  * Get action result
  * Get action result by result ID
  */
@@ -1651,19 +1634,6 @@ export const abortAction = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<AbortActionResponse, AbortActionError, ThrowOnError>({
     ...options,
     url: '/action/abort',
-  });
-};
-
-/**
- * List skills
- * List all skills
- */
-export const listSkills = <ThrowOnError extends boolean = false>(
-  options?: Options<unknown, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<ListSkillsResponse, ListSkillsError, ThrowOnError>({
-    ...options,
-    url: '/skill/list',
   });
 };
 

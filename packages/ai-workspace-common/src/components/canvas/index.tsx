@@ -54,7 +54,6 @@ import { toolsetEmitter } from '@refly-packages/ai-workspace-common/events/tools
 import '@xyflow/react/dist/style.css';
 import './index.scss';
 import { EmptyGuide } from './empty-guide';
-import { useLinearThreadReset } from '@refly-packages/ai-workspace-common/hooks/canvas/use-linear-thread-reset';
 import HelperLines from './common/helper-line/index';
 import { useListenNodeOperationEvents } from '@refly-packages/ai-workspace-common/hooks/canvas/use-listen-node-events';
 import { runtime } from '@refly/ui-kit';
@@ -409,9 +408,6 @@ const Flow = memo(
       }));
 
     const { previewNode } = useNodePreviewControl({ canvasId });
-
-    // Use the reset hook to handle canvas ID changes
-    useLinearThreadReset(canvasId);
 
     useEffect(() => {
       return () => {

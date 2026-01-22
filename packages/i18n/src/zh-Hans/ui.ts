@@ -3632,19 +3632,6 @@ const translations = {
       open: '已开启内容选择器',
       close: '已关闭内容选择器',
     },
-    convListModal: {
-      title: '会话库',
-    },
-    sourceListModal: {
-      title: '结果来源',
-      moreSources: '查看更多并导入画布',
-      searchPlaceholder: '搜索来源...',
-      openOriginWebsite: '打开来源链接',
-      openKnowledgeBaseLink: '打开项目链接',
-      webSearchTab: '全网搜索',
-      libraryTab: '知识库搜索',
-      noUrl: '该来源没有链接，可选中之后导入画布',
-    },
     premiumBanner: {
       message: '需要更多使用次数？升级到高级版解锁更高限制。',
       upgrade: '升级方案',

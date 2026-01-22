@@ -1387,32 +1387,6 @@ export type Icon = {
 };
 
 /**
- * Skill
- */
-export type Skill = {
-  /**
-   * Skill name
-   */
-  name: string;
-  /**
-   * Skill description
-   */
-  description?: string;
-  /**
-   * Skill icon
-   */
-  icon?: Icon;
-  /**
-   * Skill config schema
-   */
-  configSchema?: SkillTemplateConfigDefinition;
-  /**
-   * Skill template config
-   */
-  tplConfig?: SkillTemplateConfig;
-};
-
-/**
  * Skill metadata
  */
 export type SkillMeta = {
@@ -3713,35 +3687,6 @@ export type DuplicateShareResponse = BaseResponse & {
    * Duplicated entity
    */
   data?: Entity;
-};
-
-export type Action = {
-  /**
-   * Action type
-   */
-  actionType: ActionType;
-  /**
-   * Action name
-   */
-  actionName: string;
-  /**
-   * Action icon
-   */
-  icon?: Icon;
-};
-
-export type ListActionResponse = BaseResponse & {
-  /**
-   * Action list
-   */
-  data?: Array<Action>;
-};
-
-export type ListSkillResponse = BaseResponse & {
-  /**
-   * Skill list
-   */
-  data?: Array<Skill>;
 };
 
 /**
@@ -10109,10 +10054,6 @@ export type DuplicateShareResponse2 = DuplicateShareResponse;
 
 export type DuplicateShareError = unknown;
 
-export type ListActionsResponse = ListActionResponse;
-
-export type ListActionsError = unknown;
-
 export type GetActionResultData = {
   query: {
     /**
@@ -10140,10 +10081,6 @@ export type AbortActionData = {
 export type AbortActionResponse = BaseResponse;
 
 export type AbortActionError = unknown;
-
-export type ListSkillsResponse = ListSkillResponse;
-
-export type ListSkillsError = unknown;
 
 export type InvokeSkillData = {
   /**

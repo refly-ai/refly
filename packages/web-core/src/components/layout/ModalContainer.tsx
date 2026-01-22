@@ -5,7 +5,6 @@ import {
   useSubscriptionStoreShallow,
   useImportResourceStoreShallow,
   useCanvasOperationStoreShallow,
-  useSiderStoreShallow,
   useUserStoreShallow,
 } from '@refly/stores';
 import { InvitationCodeModal } from '../invitation-code-modal';
@@ -24,14 +23,6 @@ import { LazyModal } from './LazyModal';
  * - All modals are co-located for easier management
  */
 export const ModalContainer = memo(() => {
-  const { showCanvasListModal, setShowCanvasListModal, showLibraryModal, setShowLibraryModal } =
-    useSiderStoreShallow((state) => ({
-      showCanvasListModal: state.showCanvasListModal,
-      setShowCanvasListModal: state.setShowCanvasListModal,
-      showLibraryModal: state.showLibraryModal,
-      setShowLibraryModal: state.setShowLibraryModal,
-    }));
-
   // Get global modal visibility states for lazy loading
   const { isSearchOpen } = useSearchStoreShallow((state) => ({ isSearchOpen: state.isSearchOpen }));
   const { loginModalOpen, verificationModalOpen, resetPasswordModalOpen } = useAuthStoreShallow(
@@ -61,16 +52,12 @@ export const ModalContainer = memo(() => {
 
   // Modal pre-load flags (triggered by keyboard shortcuts or specific interactions)
   const [shouldLoadBigSearch, setShouldLoadBigSearch] = useState(false);
-  const [shouldLoadCanvasRename, setShouldLoadCanvasRename] = useState(false);
-  const [shouldLoadCanvasDelete, setShouldLoadCanvasDelete] = useState(false);
-  const [shouldLoadDuplicateCanvas, setShouldLoadDuplicateCanvas] = useState(false);
 
   // Combine store visibility and preloading for each modal
   const isBigSearchShown = isSearchOpen || shouldLoadBigSearch;
-  const isCanvasRenameShown = (modalVisible && modalType === 'rename') || shouldLoadCanvasRename;
-  const isCanvasDeleteShown = (modalVisible && modalType === 'delete') || shouldLoadCanvasDelete;
-  const isDuplicateCanvasShown =
-    (modalVisible && modalType === 'duplicate') || shouldLoadDuplicateCanvas;
+  const isCanvasRenameShown = modalVisible && modalType === 'rename';
+  const isCanvasDeleteShown = modalVisible && modalType === 'delete';
+  const isDuplicateCanvasShown = modalVisible && modalType === 'duplicate';
 
   // Listen for keyboard events to preload BigSearchModal (Cmd/Ctrl + K)
   useEffect(() => {
@@ -82,16 +69,6 @@ export const ModalContainer = memo(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  // Listen for CanvasListModal and LibraryModal state changes
-  useEffect(() => {
-    if (showCanvasListModal || showLibraryModal) {
-      // When user opens these modals, preload other potentially needed modals
-      setShouldLoadCanvasRename(true);
-      setShouldLoadCanvasDelete(true);
-      setShouldLoadDuplicateCanvas(true);
-    }
-  }, [showCanvasListModal, showLibraryModal]);
 
   return (
     <>
@@ -178,26 +155,6 @@ export const ModalContainer = memo(() => {
             default: m.ImportResourceModal,
           }))
         }
-      />
-
-      <LazyModal
-        visible={showCanvasListModal}
-        loader={() =>
-          import('@refly-packages/ai-workspace-common/components/workspace/canvas-list-modal').then(
-            (m) => ({ default: m.CanvasListModal }),
-          )
-        }
-        setVisible={setShowCanvasListModal}
-      />
-
-      <LazyModal
-        visible={showLibraryModal}
-        loader={() =>
-          import('@refly-packages/ai-workspace-common/components/workspace/library-modal').then(
-            (m) => ({ default: m.LibraryModal }),
-          )
-        }
-        setVisible={setShowLibraryModal}
       />
 
       <LazyModal
