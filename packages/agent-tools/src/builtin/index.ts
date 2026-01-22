@@ -370,6 +370,8 @@ Placeholder formats:
 - \`![alt](file-content://df-<fileId>)\` - For images/media (direct file URL)
 - \`[text](file://df-<fileId>)\` - For links (share page URL)
 
+For HTML/SVG content, use \`file-content://df-<fileId>\` for all file references (both src and href).
+
 If no files are in context, do NOT use file placeholders.`,
     ),
   });
@@ -495,9 +497,12 @@ export class BuiltinGenerateCodeArtifact extends AgentBaseTool<BuiltinToolParams
 When embedding files, you MUST use the EXACT fileId provided in context (e.g., from list_files or file metadata).
 ⚠️ NEVER invent or guess file IDs. File IDs follow the format \`df-<alphanumeric>\` (e.g., df-abc123xyz).
 
-Placeholder formats:
+Placeholder formats for Markdown (.md):
 - \`![alt](file-content://df-<fileId>)\` - For images/media (direct file URL)
 - \`[text](file://df-<fileId>)\` - For links (share page URL)
+
+Placeholder formats for HTML/SVG (.html, .svg):
+- \`file-content://df-<fileId>\` - For all file references (src and href use direct file URLs)
 
 If no files are in context, do NOT use file placeholders.`,
     ),
@@ -539,7 +544,9 @@ If no files are in context, do NOT use file placeholders.`,
       const canvasId = config.configurable?.canvasId;
 
       // Replace file placeholders with HTTP URLs before writing
-      const processedContent = await this.replaceFilePlaceholders(input.content);
+      // Detect if HTML to use appropriate replacement strategy
+      const isHtml = input.filename.toLowerCase().endsWith('.html');
+      const processedContent = await this.replaceFilePlaceholders(input.content, isHtml);
 
       const file = await reflyService.writeFile(user, {
         name: input.filename,
@@ -572,8 +579,9 @@ If no files are in context, do NOT use file placeholders.`,
    * Supported formats:
    * - `![alt](file-content://df-xxx)` → Direct file content URL (for images)
    * - `[text](file://df-xxx)` → Share page URL (for links)
+   * - For HTML: `src="df-xxx"` → content URL, `href="df-xxx"` → share URL
    */
-  private async replaceFilePlaceholders(content: string): Promise<string> {
+  private async replaceFilePlaceholders(content: string, isHtml = false): Promise<string> {
     if (!content) {
       return content;
     }
@@ -621,8 +629,10 @@ If no files are in context, do NOT use file placeholders.`,
       }
     }
 
-    // Use shared utility to replace all file ID patterns in markdown content
-    return replaceAllMarkdownFileIds(content, contentUrlMap, shareUrlMap);
+    // Use appropriate replacement based on content type
+    return isHtml
+      ? replaceAllHtmlFileIds(content, contentUrlMap)
+      : replaceAllMarkdownFileIds(content, contentUrlMap, shareUrlMap);
   }
 }
 
@@ -640,8 +650,7 @@ When embedding files, you MUST use the EXACT fileId provided in context (e.g., f
 ⚠️ NEVER invent or guess file IDs. File IDs follow the format \`df-<alphanumeric>\` (e.g., df-abc123xyz).
 
 Placeholder formats:
-- \`file-content://df-<fileId>\` - For images/media in src attributes (direct file URL)
-- \`file://df-<fileId>\` - For links in href attributes (share page URL)
+- \`file-content://df-<fileId>\` - For all file references in HTML (src and href use direct file URLs)
 
 If no files are in context, do NOT use file placeholders.`,
     ),
@@ -664,8 +673,7 @@ Each fileId must be an exact match from list_files or file metadata (format: df-
   description = `Send an email to a specified recipient with subject and HTML content.
 
 ## File Reference Placeholders
-- \`file-content://df-<fileId>\` → Use in <img>, <video>, <audio> src attributes (direct file URL)
-- \`file://df-<fileId>\` → Use in <a> href for clickable links (share page URL)
+- \`file-content://df-<fileId>\` → Use for all HTML references (<img>, <video>, <audio>, <a> href)
 
 ⚠️ IMPORTANT: Only use fileIds that exist in context. Never invent file IDs.`;
 
@@ -764,7 +772,7 @@ Each fileId must be an exact match from list_files or file metadata (format: df-
     }
 
     // Use shared utility to replace all file ID patterns in HTML content
-    return replaceAllHtmlFileIds(html, contentUrlMap, shareUrlMap);
+    return replaceAllHtmlFileIds(html, contentUrlMap);
   }
 }
 
