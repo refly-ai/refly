@@ -2912,7 +2912,7 @@ export class DriveService implements OnModuleInit {
           createdAt: { lt: cutoffTime },
           storageKey: { startsWith: cliPrefix },
         },
-        select: { fileId: true, storageKey: true },
+        select: { fileId: true, storageKey: true, createdAt: true, updatedAt: true },
         take: 100, // Limit batch size
       });
 
@@ -2925,6 +2925,11 @@ export class DriveService implements OnModuleInit {
       // Delete from storage and database
       for (const file of staleFiles) {
         try {
+          // Skip confirmed zero-byte uploads (updatedAt changes on confirmation)
+          if (file.updatedAt.getTime() - file.createdAt.getTime() > 500) {
+            continue;
+          }
+
           // Delete from object storage (ignore if not found)
           if (file.storageKey) {
             await this.internalOss.removeObject(file.storageKey, true).catch(() => {});
