@@ -1476,7 +1476,7 @@ const translations = {
         defaultAgentTitle: 'Agent',
         addToFileLibrarySuccess: 'Successfully added to file library',
         preview: 'Preview',
-        outputsOnly: 'Outputs only',
+        outputsOnly: 'Files only',
         inputPanelTitle: 'User Input',
       },
       template: {
