@@ -1,9 +1,9 @@
 import { findParentNode } from '@tiptap/core';
 import { Selection, Transaction } from '@tiptap/pm/state';
 import { CellSelection, Rect, TableMap } from '@tiptap/pm/tables';
-import { Node, ResolvedPos } from '@tiptap/pm/model';
+import { Node } from '@tiptap/pm/model';
 
-export const isRectSelected = (rect: Rect) => (selection: CellSelection) => {
+const isRectSelected = (rect: Rect) => (selection: CellSelection) => {
   const map = TableMap.get(selection.$anchorCell.node(-1));
   const start = selection.$anchorCell.start(-1);
   const cells = map.cellsInRect(rect);
@@ -20,12 +20,12 @@ export const isRectSelected = (rect: Rect) => (selection: CellSelection) => {
   return true;
 };
 
-export const findTable = (selection: Selection) =>
+const findTable = (selection: Selection) =>
   findParentNode((node) => node.type.spec.tableRole && node.type.spec.tableRole === 'table')(
     selection,
   );
 
-export const isCellSelection = (selection: Selection): selection is CellSelection =>
+const isCellSelection = (selection: Selection): selection is CellSelection =>
   selection instanceof CellSelection;
 
 export const isColumnSelected = (columnIndex: number) => (selection: Selection) => {
@@ -142,56 +142,6 @@ export const getCellsInRow = (rowIndex: number | number[]) => (selection: Select
   return null;
 };
 
-export const getCellsInTable = (selection: Selection) => {
-  const table = findTable(selection);
-
-  if (table) {
-    const map = TableMap.get(table.node);
-    const cells = map.cellsInRect({
-      left: 0,
-      right: map.width,
-      top: 0,
-      bottom: map.height,
-    });
-
-    return cells.map((nodePos) => {
-      const node = table.node.nodeAt(nodePos);
-      const pos = nodePos + table.start;
-
-      return { pos, start: pos + 1, node };
-    });
-  }
-
-  return null;
-};
-
-export const findParentNodeClosestToPos = (
-  $pos: ResolvedPos,
-  predicate: (node: Node) => boolean,
-) => {
-  for (let i = $pos.depth; i > 0; i -= 1) {
-    const node = $pos.node(i);
-
-    if (predicate(node)) {
-      return {
-        pos: i > 0 ? $pos.before(i) : 0,
-        start: $pos.start(i),
-        depth: i,
-        node,
-      };
-    }
-  }
-
-  return null;
-};
-
-export const findCellClosestToPos = ($pos: ResolvedPos) => {
-  const predicate = (node: Node) =>
-    node.type.spec.tableRole && /cell/i.test(node.type.spec.tableRole);
-
-  return findParentNodeClosestToPos($pos, predicate);
-};
-
 const select = (type: 'row' | 'column') => (index: number) => (tr: Transaction) => {
   const table = findTable(tr.selection);
   const isRowSelection = type === 'row';
@@ -237,22 +187,3 @@ const select = (type: 'row' | 'column') => (index: number) => (tr: Transaction) 
 export const selectColumn = select('column');
 
 export const selectRow = select('row');
-
-export const selectTable = (tr: Transaction) => {
-  const table = findTable(tr.selection);
-
-  if (table) {
-    const { map } = TableMap.get(table.node);
-
-    if (map?.length) {
-      const head = table.start + map[0];
-      const anchor = table.start + map[map.length - 1];
-      const $head = tr.doc.resolve(head);
-      const $anchor = tr.doc.resolve(anchor);
-
-      return tr.setSelection(new CellSelection($anchor, $head));
-    }
-  }
-
-  return tr;
-};

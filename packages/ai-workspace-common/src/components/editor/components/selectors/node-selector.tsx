@@ -6,7 +6,7 @@ import { RiH1, RiH2, RiH3, RiQuoteText, RiText } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
 import { Button, Popover } from 'antd';
 
-export type SelectorItem = {
+type SelectorItem = {
   name: string;
   icon: (props: SVGProps<SVGSVGElement>) => React.ReactNode;
   command: (editor: ReturnType<typeof useEditor>['editor']) => void;

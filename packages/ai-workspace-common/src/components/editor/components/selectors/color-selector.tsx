@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Popover } from 'antd';
 import './color-selector.scss';
 
-export interface BubbleColorMenuItem {
+interface BubbleColorMenuItem {
   name: string;
   color: string;
 }

@@ -35,5 +35,3 @@ export const EditorCommandItem = forwardRef<
 EditorCommandItem.displayName = 'EditorCommandItem';
 
 export const EditorCommandEmpty = CommandEmpty;
-
-export default EditorCommandItem;

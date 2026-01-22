@@ -33,5 +33,3 @@ export const InternalToolRenderer: React.FC<InternalToolRendererMainProps> = (pr
   // Fallback for unknown internal tools
   return <DefaultInternalRenderer toolsetKey={toolsetKey} toolsetName={toolsetName} {...rest} />;
 };
-
-export type { InternalToolRendererProps, InternalToolRendererMainProps } from './types';

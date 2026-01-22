@@ -44,14 +44,15 @@
     "packages/ai-workspace-common": {
       "entry": [
         "src/index.ts",
-        "src/components/**/index.{ts,tsx}",
         "src/components/slideshow/**/*.{ts,tsx,css}",
+        "src/components/app-manager/**/*.{ts,tsx,css,scss}",
+        "src/components/run-history/**/*.{ts,tsx,css,scss}",
+        "src/components/run-detail/**/*.{ts,tsx,css,scss}",
+        "src/components/invite-redirect/**/*.{ts,tsx,css,scss}",
         "src/components/workflow-app/**/*.{ts,tsx,css,scss,svg}",
         "src/components/workflow-list/**/*.{ts,tsx,css,scss,svg}",
         "src/components/subscription/**/*.{ts,tsx,css,scss}",
         "src/components/rjsf/**/*.{ts,tsx}",
-        "src/components/canvas-template/**/*.{ts,tsx,css,scss,svg}",
-        "src/components/editor/**/*.{ts,tsx,css,scss}",
         "src/hooks/**/*.{ts,tsx}",
         "src/context/**/*.{ts,tsx}",
         "src/modules/**/*.{ts,tsx}",

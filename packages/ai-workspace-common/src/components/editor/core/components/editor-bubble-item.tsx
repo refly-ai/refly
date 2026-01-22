@@ -30,5 +30,3 @@ export const EditorBubbleItem = forwardRef<
 });
 
 EditorBubbleItem.displayName = 'EditorBubbleItem';
-
-export default EditorBubbleItem;
