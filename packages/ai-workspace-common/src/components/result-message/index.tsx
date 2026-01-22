@@ -83,13 +83,14 @@ const ToolMessageCard = memo(({ message }: ToolMessageCardProps) => {
       'data-tool-arguments': JSON.stringify(toolCallResult?.input),
       'data-tool-result': JSON.stringify(toolCallResult?.output),
       'data-tool-error': toolCallMeta?.error,
+      'data-tool-is-ptc': message.isPtc ? 'true' : undefined,
     }),
     [toolCallMeta, message, toolCallResult],
   );
 
   return (
     <div
-      className="my-1"
+      className={message.isPtc ? 'my-1 ml-4' : 'my-1'}
       style={{
         contentVisibility: 'auto',
         containIntrinsicSize: '0 300px',
