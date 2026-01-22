@@ -38,7 +38,8 @@
     "test:integration": "pnpm -r --if-present test:integration",
     "i18n:check": "node scripts/check-i18n-consistency.js",
     "prepare": "husky",
-    "knip": "knip"
+    "knip": "knip",
+    "knip:fix": "knip --fix --allow-remove-files"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
@@ -46,7 +47,6 @@
     "commitizen": "^4.2.4",
     "cypress": "14.0.1",
     "cz-conventional-changelog": "^3.3.0",
-    "dotenv": "~16.4.5",
     "husky": "^9.1.6",
     "knip": "^5.82.1",
     "lint-staged": "^15.2.10",
