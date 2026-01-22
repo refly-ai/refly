@@ -849,6 +849,7 @@ const WorkflowRunPreviewComponent = () => {
                                   )}
                                   {/* Show result content for executed states (running, finished, failed) */}
                                   <LastRunTab
+                                    location="runlog"
                                     loading={loading}
                                     isStreaming={isStreaming}
                                     resultId={resultId}
@@ -872,14 +873,6 @@ const WorkflowRunPreviewComponent = () => {
                         <Collapse
                           defaultActiveKey={[]}
                           ghost
-                          expandIcon={({ isActive }) => (
-                            <ArrowDown
-                              size={14}
-                              className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
-                            />
-                          )}
-                          expandIconPosition="end"
-                          className="agent-node-collapse [&_.ant-collapse-item]:!border-0 [&_.ant-collapse-header]:!bg-[#D9FFFE] [&_.ant-collapse-header]:!p-3 [&_.ant-collapse-header]:!rounded-lg [&_.ant-collapse-header]:!h-12 [&_.ant-collapse-content]:!bg-transparent [&_.ant-collapse-content]:!p-0 [&_.ant-collapse-content-box]:!p-0"
                           onChange={(activeKeys) => {
                             // Track when user expands agent node in run log
                             if (
@@ -894,6 +887,14 @@ const WorkflowRunPreviewComponent = () => {
                               });
                             }
                           }}
+                          expandIcon={({ isActive }) => (
+                            <ArrowDown
+                              size={14}
+                              className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
+                            />
+                          )}
+                          expandIconPosition="end"
+                          className="agent-node-collapse [&_.ant-collapse-item]:!border-0 [&_.ant-collapse-header]:!bg-[#D9FFFE] [&_.ant-collapse-header]:!p-3 [&_.ant-collapse-header]:!rounded-lg [&_.ant-collapse-header]:!h-12 [&_.ant-collapse-content]:!bg-transparent [&_.ant-collapse-content]:!p-0 [&_.ant-collapse-content-box]:!p-0"
                           items={[
                             {
                               key: 'agent',
@@ -958,14 +959,6 @@ const WorkflowRunPreviewComponent = () => {
                                             : [] // Finished/Failed: Input area (collapsed) + Output area (collapsed)
                                       }
                                       ghost
-                                      expandIcon={({ isActive }) => (
-                                        <ArrowDown
-                                          size={14}
-                                          className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
-                                        />
-                                      )}
-                                      expandIconPosition="end"
-                                      className="workflow-run-preview-collapse"
                                       onChange={(activeKeys) => {
                                         // Track when user selects agent output panel
                                         if (
@@ -980,6 +973,14 @@ const WorkflowRunPreviewComponent = () => {
                                           });
                                         }
                                       }}
+                                      expandIcon={({ isActive }) => (
+                                        <ArrowDown
+                                          size={14}
+                                          className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
+                                        />
+                                      )}
+                                      expandIconPosition="end"
+                                      className="workflow-run-preview-collapse"
                                       items={collapseItems}
                                     />
                                   </div>

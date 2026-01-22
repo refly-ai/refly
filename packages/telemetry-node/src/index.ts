@@ -30,7 +30,20 @@ export const updateUserProperties = (
     return;
   }
 
-  statsig.identify(new StatsigUser({ userID: user.uid, email: user.email, custom }));
+  const cleanedCustom: Record<string, StatsigUserCustomValue> = {};
+  for (const [key, value] of Object.entries(custom)) {
+    if (value !== null && value !== undefined) {
+      cleanedCustom[key] = value;
+    }
+  }
+
+  try {
+    statsig.identify(
+      new StatsigUser({ userID: user.uid, email: user.email, custom: cleanedCustom }),
+    );
+  } catch (error) {
+    console.error('Failed to update user properties:', error);
+  }
 };
 
 /**

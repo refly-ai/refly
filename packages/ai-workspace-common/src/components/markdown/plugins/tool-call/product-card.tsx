@@ -18,6 +18,9 @@ import {
   useExportDocument,
   ExportCancelledError,
 } from '@refly-packages/ai-workspace-common/hooks/use-export-document';
+import { logEvent } from '@refly/telemetry-web';
+import { useLastRunTabContext } from '@refly-packages/ai-workspace-common/context/run-location';
+
 const { Paragraph } = Typography;
 
 // Convert DriveFile type to ResourceType
@@ -102,6 +105,7 @@ export const ProductCard = memo(
     const { t } = useTranslation();
     const { handleDownload, isDownloading } = useDownloadFile();
     const { exportDocument } = useExportDocument();
+    const { location } = useLastRunTabContext();
 
     const title = file?.name ?? 'Untitled file';
 
@@ -118,11 +122,15 @@ export const ProductCard = memo(
     }, [file, inheritedUsePublicFileUrl, setCurrentFile]);
 
     const handleDownloadProduct = useCallback(() => {
+      logEvent('artifact_download', Date.now(), {
+        artifact_type: file.category,
+        artifact_location: location,
+      });
       handleDownload({
         currentFile: file,
         contentType: file.type,
       });
-    }, [handleDownload, file]);
+    }, [handleDownload, file, location]);
 
     const [isSharing, setIsSharing] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
@@ -133,6 +141,12 @@ export const ProductCard = memo(
         if (isExporting || !file?.fileId) {
           return;
         }
+
+        logEvent('artifact_download', Date.now(), {
+          artifact_type: file.category,
+          artifact_location: location,
+          export_type: type,
+        });
 
         const notificationKey = `export-${file.fileId}-${Date.now()}`;
         const abortController = new AbortController();
@@ -284,6 +298,11 @@ export const ProductCard = memo(
         return;
       }
 
+      logEvent('add_to_file', Date.now(), {
+        artifact_type: file.category,
+        artifact_location: location,
+      });
+
       setIsAdding(true);
       try {
         // Ensure platform-generated documents have .md extension for preview support
@@ -300,7 +319,7 @@ export const ProductCard = memo(
       } finally {
         setIsAdding(false);
       }
-    }, [onAddToFileLibrary, file, isAdding, isAddingToFileLibrary, t]);
+    }, [onAddToFileLibrary, file, isAdding, isAddingToFileLibrary, t, location]);
 
     const actions = useMemo<ActionButtonProps[]>(() => {
       const baseShareAction: ActionButtonProps | null = !isMediaFile

@@ -71,6 +71,7 @@ import { ActionService } from '../action/action.service';
 import { ConfigService } from '@nestjs/config';
 import { ToolService } from '../tool/tool.service';
 import { DriveService } from '../drive/drive.service';
+import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { AutoModelRoutingService, RoutingContext } from '../provider/auto-model-router.service';
 import { AutoModelTrialService } from '../provider/auto-model-trial.service';
 import { getTracer } from '@refly/observability';
@@ -117,6 +118,7 @@ export class SkillService implements OnModuleInit {
     private readonly providerService: ProviderService,
     private readonly toolService: ToolService,
     private readonly driveService: DriveService,
+    private readonly canvasSyncService: CanvasSyncService,
     private readonly skillInvokerService: SkillInvokerService,
     private readonly actionService: ActionService,
     private readonly autoModelRoutingService: AutoModelRoutingService,
@@ -630,7 +632,11 @@ export class SkillService implements OnModuleInit {
     };
 
     if (param.context) {
-      param.context = await this.populateSkillContext(user, param.context);
+      const query = param.input?.query ?? '';
+      const needsAgentTitleLookup = /@agent:(?!ar-[a-z0-9])/i.test(query);
+      param.context = await this.populateSkillContext(user, param.context, {
+        resolveAgentTitles: needsAgentTitleLookup,
+      });
     }
     if (param.resultHistory && Array.isArray(param.resultHistory)) {
       param.resultHistory = await this.populateSkillResultHistory(user, param.resultHistory);
@@ -1087,7 +1093,11 @@ export class SkillService implements OnModuleInit {
    * Populate skill context with actual resources and documents.
    * These data can be used in skill invocation.
    */
-  async populateSkillContext(user: User, context: SkillContext): Promise<SkillContext> {
+  async populateSkillContext(
+    user: User,
+    context: SkillContext,
+    options?: { resolveAgentTitles?: boolean },
+  ): Promise<SkillContext> {
     if (context.files?.length > 0) {
       const fileIds = [...new Set(context.files.map((item) => item.fileId).filter((id) => id))];
       const limit = pLimit(10);
@@ -1144,6 +1154,59 @@ export class SkillService implements OnModuleInit {
       const resultMap = new Map<string, ActionResult>();
       for (const r of results) {
         resultMap.set(r.resultId, actionResultPO2DTO(r));
+      }
+
+      if (options?.resolveAgentTitles) {
+        const resultsByCanvas = new Map<string, ActionResult[]>();
+        for (const result of resultMap.values()) {
+          if (result?.targetType !== 'canvas') continue;
+          const canvasId = result?.targetId;
+          if (!canvasId) continue;
+          const list = resultsByCanvas.get(canvasId) ?? [];
+          list.push(result);
+          resultsByCanvas.set(canvasId, list);
+        }
+
+        if (resultsByCanvas.size > 0) {
+          const limitCanvas = pLimit(3);
+          const canvasNodes = (
+            await Promise.all(
+              Array.from(resultsByCanvas.entries()).map(([canvasId, list]) =>
+                limitCanvas(async () => {
+                  try {
+                    const { nodes } = await this.canvasSyncService.getCanvasData(user, {
+                      canvasId,
+                    });
+                    return { canvasId, list, nodes: nodes ?? [] };
+                  } catch (error) {
+                    this.logger.error(
+                      `Failed to get canvas data for canvasId ${canvasId}: ${error?.message}`,
+                    );
+                    return null;
+                  }
+                }),
+              ),
+            )
+          )?.filter(Boolean);
+
+          for (const entry of canvasNodes ?? []) {
+            const nodeTitleMap = new Map<string, string>();
+            for (const node of entry.nodes ?? []) {
+              const entityId = node?.data?.entityId;
+              const title = node?.data?.title;
+              if (entityId && title) {
+                nodeTitleMap.set(entityId, title);
+              }
+            }
+
+            for (const result of entry.list ?? []) {
+              const nodeTitle = nodeTitleMap.get(result.resultId);
+              if (nodeTitle) {
+                result.title = nodeTitle;
+              }
+            }
+          }
+        }
       }
 
       for (const item of context.results) {

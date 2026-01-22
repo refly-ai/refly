@@ -72,7 +72,7 @@ import { StepService } from '../step/step.service';
 import { SyncRequestUsageJobData, SyncTokenUsageJobData } from '../subscription/subscription.dto';
 import { ToolCallService, ToolCallStatus } from '../tool-call/tool-call.service';
 import { ToolService } from '../tool/tool.service';
-import { getPtcConfig, isPtcEnabledForToolsets } from '../tool/ptc/ptc-config';
+import { getPtcConfig, isPtcEnabledForToolsets, PtcSdkService } from '../tool/ptc';
 import { InvokeSkillJobData } from './skill.dto';
 import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
@@ -102,6 +102,7 @@ export class SkillInvokerService {
     private readonly creditService: CreditService,
     private readonly canvasSyncService: CanvasSyncService,
     private readonly metrics: SkillInvokeMetrics,
+    private readonly ptcSdkService: PtcSdkService,
     @Optional()
     @InjectQueue(QUEUE_SYNC_REQUEST_USAGE)
     private requestUsageQueue?: Queue<SyncRequestUsageJobData>,
@@ -339,6 +340,53 @@ export class SkillInvokerService {
       },
     };
 
+    const skillMetaName = data.skillName ?? data.result?.actionMeta?.name ?? 'unknown';
+    const metadata: SkillRunnableMeta = { name: skillMetaName };
+    const setMetadata = (key: string, value: unknown) => {
+      if (value !== undefined) {
+        metadata[key] = value;
+      }
+    };
+
+    if (data.result?.actionMeta?.icon) {
+      metadata.icon = data.result.actionMeta.icon;
+    }
+
+    const modelInfo = data.result?.modelInfo;
+    const providerInfo = providerItem?.provider ?? provider;
+    const providerConfig = providerItem?.config as any;
+    const traceparent =
+      typeof data.traceCarrier?.traceparent === 'string'
+        ? data.traceCarrier?.traceparent
+        : undefined;
+    const traceId = traceparent?.split('-')[1];
+
+    setMetadata('runType', 'skill');
+    setMetadata('traceId', traceId);
+    setMetadata('skillName', data.skillName ?? data.result?.actionMeta?.name);
+    setMetadata('query', data.input?.query);
+    setMetadata('originalQuery', data.input?.originalQuery);
+    setMetadata('locale', outputLocale);
+    setMetadata('uiLocale', userPo?.uiLocale);
+    setMetadata('mode', data.mode);
+    setMetadata('resultId', data.result?.resultId);
+    setMetadata('resultVersion', data.result?.version);
+    setMetadata('status', data.result?.status);
+    setMetadata('errorType', data.result?.errorType);
+    setMetadata('modelName', modelInfo?.name ?? providerConfig?.modelName ?? data.modelName);
+    setMetadata(
+      'modelItemId',
+      data.modelItemId ?? modelInfo?.providerItemId ?? data.result?.actualProviderItemId,
+    );
+    setMetadata('providerKey', modelInfo?.provider ?? providerInfo?.providerKey);
+    setMetadata('providerId', providerInfo?.providerId ?? providerItem?.providerId);
+    setMetadata('workflowExecutionId', data.workflowExecutionId);
+    setMetadata('workflowNodeExecutionId', data.workflowNodeExecutionId);
+
+    if (Object.keys(metadata).length > 0) {
+      config.metadata = metadata;
+    }
+
     if (data.copilotSessionId) {
       config.configurable.copilotSessionId = data.copilotSessionId;
     }
@@ -377,11 +425,12 @@ export class SkillInvokerService {
       const toolsetKeys = toolsets.map((t) => t.id);
       const ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
 
-      this.logger.info(
-        `PTC status for user ${user.uid} with toolsets [${toolsetKeys.join(', ')}]: ${ptcEnabled}`,
-      );
-
       config.configurable.ptcEnabled = ptcEnabled;
+
+      if (ptcEnabled && tools.nonBuiltInToolsets.length > 0) {
+        const ptcContext = await this.ptcSdkService.buildPtcContext(tools.nonBuiltInToolsets);
+        config.configurable.ptcContext = ptcContext;
+      }
     }
 
     // For copilot_agent mode, include all tools (authorized and unauthorized)

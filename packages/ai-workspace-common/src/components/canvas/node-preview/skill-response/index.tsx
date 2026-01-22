@@ -379,6 +379,7 @@ const SkillResponseNodePreviewComponent = ({
             style={{ display: activeTab === 'lastRun' ? 'block' : 'none' }}
           >
             <LastRunTab
+              location="agent"
               loading={loading}
               isStreaming={isStreaming}
               resultId={resultId}

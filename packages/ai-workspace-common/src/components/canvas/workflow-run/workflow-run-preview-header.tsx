@@ -1,9 +1,10 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Close } from 'refly-icons';
 import { IoEyeOutline } from 'react-icons/io5';
 import { Button } from 'antd';
 import cn from 'classnames';
+import { logEvent } from '@refly/telemetry-web';
 
 interface WorkflowRunPreviewHeaderProps {
   onClose?: () => void;
@@ -19,6 +20,11 @@ const WorkflowRunPreviewHeaderComponent = ({
   showOutputsOnlyButton = true,
 }: WorkflowRunPreviewHeaderProps) => {
   const { t } = useTranslation();
+
+  const handleClickOutputsOnly = useCallback(() => {
+    logEvent('only_view_result', outputsOnly ? 'off' : 'on');
+    onToggleOutputsOnly?.();
+  }, [onToggleOutputsOnly, outputsOnly]);
 
   return (
     <div className="flex flex-col bg-white">
@@ -39,7 +45,7 @@ const WorkflowRunPreviewHeaderComponent = ({
             <>
               <button
                 type="button"
-                onClick={onToggleOutputsOnly}
+                onClick={handleClickOutputsOnly}
                 className={cn(
                   'flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity p-0 w-[114px] h-6 rounded-[20px] gap-1.5',
                   outputsOnly

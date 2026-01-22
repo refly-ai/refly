@@ -189,69 +189,8 @@ export function fillDefaultValues(
 // FileId Validation & Extraction
 // ============================================================================
 
-/**
- * Validate if a value is a valid fileId
- * FileId can be in formats:
- * - Direct: 'df-xxx'
- * - URI format: 'fileId://df-xxx'
- * - Mention format: '@file:df-xxx'
- * - Path format: 'files/df-xxx'
- * - URL format: 'https://files.refly.ai/df-xxx'
- *
- * @param value - Value to validate (can be string or object with fileId property)
- * @returns True if the value is a valid fileId
- */
-export function isValidFileId(value: unknown): boolean {
-  return extractFileId(value) !== null;
-}
-
-/**
- * Extract fileId from various formats
- * @param value - Value that may contain a fileId (string or object with fileId property)
- * @returns The extracted fileId (df-xxx format) or null if not found
- */
-export function extractFileId(value: unknown): string | null {
-  if (typeof value === 'string') {
-    return extractFileIdFromString(value);
-  }
-  if (value && typeof value === 'object' && 'fileId' in value) {
-    const fileId = (value as { fileId: unknown }).fileId;
-    return typeof fileId === 'string' ? extractFileIdFromString(fileId) : null;
-  }
-  return null;
-}
-
-/**
- * Extract fileId from a string in various formats
- * @param value - String value that may contain a fileId
- * @returns The extracted fileId (df-xxx format) or null if not found
- */
-function extractFileIdFromString(value: string): string | null {
-  // Direct format: 'df-xxx'
-  if (value.startsWith('df-')) {
-    return value;
-  }
-  // URI format: 'fileId://df-xxx'
-  if (value.startsWith('fileId://df-')) {
-    return value.slice('fileId://'.length);
-  }
-  // Mention format: '@file:df-xxx'
-  if (value.startsWith('@file:df-')) {
-    return value.slice('@file:'.length);
-  }
-  // Path format: 'files/df-xxx'
-  if (value.startsWith('files/df-')) {
-    return value.slice('files/'.length);
-  }
-  // URL format or fallback: extract 'df-xxx' pattern from anywhere in the string
-  // Use lookbehind to ensure 'df-' is not preceded by alphanumeric (avoid matching 'pdf-xxx', 'abcdf-xxx')
-  // This handles URLs like 'https://files.refly.ai/.../df-xxx' and any other format
-  const match = value.match(/(?<![a-z0-9])(df-[a-z0-9]+)\b/i);
-  if (match) {
-    return match[1];
-  }
-  return null;
-}
+// Re-export from shared utils package for backward compatibility
+export { extractFileId, isValidFileId } from '@refly/utils';
 
 // ============================================================================
 // Field Removal

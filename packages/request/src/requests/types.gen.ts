@@ -5368,6 +5368,16 @@ export type SandboxExecuteContext = {
    * Result version for file registration
    */
   version?: number;
+  /**
+   * Whether PTC (Programmatic Tool Calling) is enabled
+   */
+  ptcEnabled?: boolean;
+  /**
+   * Environment variables for execution
+   */
+  env?: {
+    [key: string]: string;
+  };
 };
 
 export type SandboxExecuteRequest = {

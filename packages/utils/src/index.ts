@@ -32,3 +32,4 @@ export * from './guard';
 // Note: token.ts uses tiktoken (WASM) which is not compatible with frontend bundlers
 // Backend should import directly: import { countToken } from '@refly/utils/src/token'
 export * from './on-module-init';
+export * from './file-id';
