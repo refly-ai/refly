@@ -1,8 +1,41 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-lintignore"],
-  "ignore": ["apps/web/src/service-worker-sw.ts", "apps/api/load-tests/**", "docs/.vitepress/**"],
+  "ignore": [
+    "tailwind.config.ts",
+    "apps/web/src/service-worker-sw.ts",
+    "apps/api/load-tests/**",
+    "docs/.vitepress/**",
+    "packages/cli/**"
+  ],
   "workspaces": {
-    ".": {}
+    ".": {},
+    "apps/web": {
+      "paths": {
+        "@refly-packages/ai-workspace-common": ["../../packages/ai-workspace-common/src/index.ts"],
+        "@refly-packages/ai-workspace-common/*": ["../../packages/ai-workspace-common/src/*"]
+      }
+    },
+    "packages/web-core": {
+      "paths": {
+        "@refly-packages/ai-workspace-common": ["../ai-workspace-common/src/index.ts"],
+        "@refly-packages/ai-workspace-common/*": ["../ai-workspace-common/src/*"]
+      }
+    },
+    "packages/ai-workspace-common": {
+      "entry": [
+        "src/index.ts",
+        "src/components/**/index.{ts,tsx}",
+        "src/hooks/**/*.{ts,tsx}",
+        "src/queries/**/*.{ts,tsx}",
+        "src/requests/**/*.{ts,tsx}",
+        "src/utils/**/*.{ts,tsx}",
+        "src/events/**/*.{ts,tsx}"
+      ],
+      "paths": {
+        "@refly-packages/ai-workspace-common": ["./src/index.ts"],
+        "@refly-packages/ai-workspace-common/*": ["./src/*"]
+      }
+    }
   }
 }

@@ -38,9 +38,6 @@ importers:
       cz-conventional-changelog:
         specifier: ^3.3.0
         version: 3.3.0(@types/node@20.19.0)(typescript@5.3.3)
-      dotenv:
-        specifier: ~16.4.5
-        version: 16.4.7
       husky:
         specifier: ^9.1.6
         version: 9.1.7
@@ -1440,9 +1437,6 @@ importers:
       '@ant-design/icons':
         specifier: ^5.5.2
         version: 5.6.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@refly/ai-workspace-common':
-        specifier: workspace:*
-        version: link:../ai-workspace-common
       '@refly/canvas-common':
         specifier: workspace:*
         version: link:../canvas-common
@@ -27241,14 +27235,14 @@ snapshots:
       axios: 1.11.0(debug@4.4.3)
       camelcase: 6.3.0
       debug: 4.4.3(supports-color@5.5.0)
-      dotenv: 16.4.7
+      dotenv: 16.6.1
       extend: 3.0.2
       file-type: 16.5.4
       form-data: 4.0.0
       isstream: 0.1.2
       jsonwebtoken: 9.0.2
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.11.0)
+      retry-axios: 2.6.0(axios@1.11.0(debug@4.4.3))
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -31201,7 +31195,7 @@ snapshots:
       onetime: 7.0.0
       signal-exit: 4.1.0
 
-  retry-axios@2.6.0(axios@1.11.0):
+  retry-axios@2.6.0(axios@1.11.0(debug@4.4.3)):
     dependencies:
       axios: 1.11.0(debug@4.4.3)
 
