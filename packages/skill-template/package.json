@@ -33,6 +33,7 @@
     "dotenv": "~16.4.5",
     "eventsource": "^3.0.6",
     "extended-eventsource": "^2.1.0",
+    "handlebars": "^4.7.8",
     "is-url": "~1.2.4",
     "json-parse-even-better-errors": "^4.0.0",
     "jsonrepair": "^3.12.0",
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "@types/debug": "^4.1.12",
+    "@types/handlebars": "^4.1.0",
     "nestjs-pino": "^4.0.0"
   }
 }
