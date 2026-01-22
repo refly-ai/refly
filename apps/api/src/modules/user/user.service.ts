@@ -7,7 +7,7 @@ import {
   UpdateUserSettingsRequest,
   User,
 } from '@refly/openapi-schema';
-import { Subscription } from '@prisma/client';
+import { User as UserPo } from '@prisma/client';
 import { pick, safeParseJSON, runModuleInitWithTimeoutAndRetry } from '@refly/utils';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { RedisService } from '../common/redis.service';
@@ -18,6 +18,7 @@ import { isDesktop } from '../../utils/runtime';
 import { ProviderService } from '../provider/provider.service';
 import { InvitationService } from '../invitation/invitation.service';
 import { FormService } from '../form/form.service';
+import { updateUserProperties, StatsigUserCustomValue } from '@refly/telemetry-node';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -67,32 +68,59 @@ export class UserService implements OnModuleInit {
     );
   }
 
+  private getUserAttributes(userPo: UserPo, workflowExecutionCnt: number): Record<string, unknown> {
+    const isNewUserToday = userPo.createdAt > new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const isNewUserThisWeek = userPo.createdAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const isNewUserThisMonth = userPo.createdAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    return {
+      is_new_user_today: isNewUserToday,
+      is_new_user_this_week: isNewUserThisWeek,
+      is_new_user_this_month: isNewUserThisMonth,
+      has_run_workflow: workflowExecutionCnt > 0,
+    };
+  }
+
   async getUserSettings(user: User) {
-    const userPo = await this.prisma.user.findUnique({
-      where: { uid: user.uid },
-    });
+    const [userPo, workflowExecutionCnt, formSubmission] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { uid: user.uid },
+      }),
+      this.prisma.workflowExecution.count({
+        where: {
+          uid: user.uid,
+        },
+      }),
+      this.prisma.formSubmission.findFirst({
+        where: { uid: user.uid },
+        select: { answers: true },
+      }),
+    ]);
 
     if (!userPo) {
       throw new AccountNotFoundError();
     }
 
-    let subscription: Subscription | null = null;
-    if (userPo.subscriptionId) {
-      subscription = await this.subscriptionService.getSubscription(userPo.subscriptionId);
-    }
+    const [subscription, userPreferences, hasBeenInvited, formResult] = await Promise.all([
+      userPo.subscriptionId
+        ? this.subscriptionService.getSubscription(userPo.subscriptionId)
+        : Promise.resolve(null),
+      this.providerService.getUserPreferences(user, userPo.preferences),
+      this.invitationService.hasBeenInvited(user.uid, userPo),
+      this.formService.hasFilledForm(user.uid, userPo.preferences, formSubmission?.answers),
+    ]);
 
-    const userPreferences = await this.providerService.getUserPreferences(user, userPo.preferences);
+    const userAttributes = this.getUserAttributes(userPo, workflowExecutionCnt);
+    userPreferences.hasBeenInvited = hasBeenInvited;
+    userPreferences.hasFilledForm = formResult.hasFilledForm;
+    userAttributes.user_identity = formResult.identity;
 
-    userPreferences.hasBeenInvited = await this.invitationService.hasBeenInvited(user.uid, userPo);
-
-    const { hasFilledForm, identity } = await this.formService.hasFilledForm(user.uid);
-    userPreferences.hasFilledForm = hasFilledForm;
-    userPreferences.identity = identity;
-
-    userPo.preferences = JSON.stringify(userPreferences);
+    updateUserProperties(user, userAttributes as Record<string, StatsigUserCustomValue>);
 
     return {
       ...userPo,
+      preferences: JSON.stringify(userPreferences),
+      attributes: userAttributes,
       subscription,
     };
   }

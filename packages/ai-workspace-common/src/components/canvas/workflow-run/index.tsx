@@ -13,6 +13,8 @@ import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hook
 import { useWorkflowIncompleteNodes } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useQueryClient } from '@tanstack/react-query';
 
+export { WorkflowInputFormCollapse } from './workflow-input-form-collapse';
+
 export const WorkflowRun = () => {
   const { t } = useTranslation();
   const { setShowWorkflowRun, showWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({

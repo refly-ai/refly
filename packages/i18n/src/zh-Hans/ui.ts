@@ -335,7 +335,7 @@ const translations = {
   },
   onboarding: {
     rewardTitle: '获得奖励积分',
-    rewardPoints: '3000积分',
+    rewardPoints: '500积分',
     startExperience: '立即体验',
   },
   privacyPage: {
@@ -1312,6 +1312,9 @@ const translations = {
     fileNoContent: '文件没有内容。',
     notFound: '文件未找到',
     notFoundDesc: '您查找的文件不存在或已被删除。',
+    download: '下载',
+    addToFileLibrary: '保存到文件库',
+    share: '分享',
   },
   artifact: {
     generating: '生成中',

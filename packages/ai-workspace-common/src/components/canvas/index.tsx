@@ -1219,7 +1219,7 @@ const Flow = memo(
             <ReactFlow
               {...flowConfig}
               selectionMode={SelectionMode.Partial}
-              className="bg-refly-bg-canvas"
+              className="!bg-refly-bg-canvas"
               snapToGrid={true}
               snapGrid={[GRID_SIZE, GRID_SIZE]}
               edgeTypes={edgeTypes}

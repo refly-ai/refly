@@ -4,7 +4,7 @@ import { pick, safeParseJSON } from '@refly/utils';
 import { subscriptionPO2DTO } from '../subscription/subscription.dto';
 
 export const userPO2Settings = (
-  user: UserModel & { subscription: SubscriptionModel },
+  user: UserModel & { subscription: SubscriptionModel; attributes: Record<string, unknown> },
 ): UserSettings => {
   return {
     ...pick(user, [
@@ -21,5 +21,6 @@ export const userPO2Settings = (
     preferences: safeParseJSON(user.preferences ?? '{}'),
     onboarding: safeParseJSON(user.onboarding ?? '{}'),
     subscription: user.subscription ? subscriptionPO2DTO(user.subscription) : null,
+    attributes: user.attributes,
   };
 };

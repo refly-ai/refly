@@ -15,7 +15,7 @@ import { ConfigureTab } from '@refly-packages/ai-workspace-common/components/can
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { WorkflowRunPreviewHeader } from './workflow-run-preview-header';
 import { WorkflowRunForm } from './workflow-run-form';
-import { UserInputCollapse } from './user-input-collapse';
+import { WorkflowInputFormCollapse } from './workflow-input-form-collapse';
 import { WorkflowVariable } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import {
@@ -67,9 +67,9 @@ const NodeCreditUsage = memo(
     const creditUsage = creditData?.data?.total ?? 0;
 
     return (
-      <div className="flex items-center gap-1">
-        <Subscription size={12} className="text-refly-text-2" />
-        <span>{creditUsage}</span>
+      <div className="flex items-center gap-[2px]">
+        <Subscription size={12} className="text-refly-text-2" color="rgba(28, 31, 35, 0.6)" />
+        <span className="text-[rgba(28,31,35,0.6)]">{creditUsage}</span>
       </div>
     );
   },
@@ -113,9 +113,17 @@ const WorkflowRunPreviewComponent = () => {
     data: workflowVariables,
     setVariables,
     isLoading: workflowVariablesLoading,
+    refetch: refetchWorkflowVariables,
   } = useVariablesManagement(canvasId ?? '');
 
   const queryClient = useQueryClient();
+
+  // Refresh workflow variables when switching to lastRun tab to show the latest execution input
+  useEffect(() => {
+    if (activeTab === 'lastRun' && refetchWorkflowVariables) {
+      refetchWorkflowVariables();
+    }
+  }, [activeTab, refetchWorkflowVariables]);
 
   // Fetch latest workflow execution for this canvas when executionId is not available (e.g. after refresh)
   const { data: latestExecutionList } = useListWorkflowExecutions(
@@ -467,8 +475,21 @@ const WorkflowRunPreviewComponent = () => {
 
   const [outputsOnly, setOutputsOnly] = useState(false);
 
+  // Handler for toggling outputs only mode with telemetry
+  const handleToggleOutputsOnly = useCallback(() => {
+    const newOutputsOnly = !outputsOnly;
+    setOutputsOnly(newOutputsOnly);
+
+    // Track when user enables "only view result" mode
+    if (newOutputsOnly) {
+      logEvent('only_view_result', null, {
+        canvasId: canvasId ?? '',
+      });
+    }
+  }, [outputsOnly, canvasId]);
+
   // Fetch all agent-generated files from the canvas when outputsOnly is enabled
-  const { data: driveFilesData } = useListDriveFiles(
+  const { data: driveFilesData, isLoading: isDriveFilesLoading } = useListDriveFiles(
     {
       query: {
         canvasId: canvasId ?? '',
@@ -486,11 +507,17 @@ const WorkflowRunPreviewComponent = () => {
 
   // Handle adding file to file library
   const handleAddToFileLibrary = useCallback(
-    async (file: DriveFile) => {
+    async (file: DriveFile, artifactLocation?: 'agent' | 'runlog') => {
       if (!canvasId || !file?.storageKey) {
         message.error(t('common.saveFailed'));
         return;
       }
+
+      // Track when user saves artifact to file library
+      logEvent('add_to_file', null, {
+        canvasId,
+        artifact_location: artifactLocation ?? 'runlog',
+      });
 
       try {
         const { data, error } = await getClient().createDriveFile({
@@ -599,7 +626,7 @@ const WorkflowRunPreviewComponent = () => {
     <div className="h-full w-full flex flex-col overflow-hidden">
       <WorkflowRunPreviewHeader
         onClose={handleClose}
-        onToggleOutputsOnly={() => setOutputsOnly(!outputsOnly)}
+        onToggleOutputsOnly={handleToggleOutputsOnly}
         outputsOnly={outputsOnly}
         showOutputsOnlyButton={activeTab === 'lastRun'}
       />
@@ -656,7 +683,9 @@ const WorkflowRunPreviewComponent = () => {
             {outputsOnly ? (
               // Outputs only mode: Show only product cards
               <div className="flex flex-col gap-4 p-4">
-                {allProductFiles.length === 0 ? (
+                {isDriveFilesLoading ? (
+                  <Skeleton paragraph={{ rows: 6 }} active title={false} />
+                ) : allProductFiles.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-refly-text-2">
                     {t('canvas.workflow.run.noArtifacts')}
                   </div>
@@ -667,7 +696,7 @@ const WorkflowRunPreviewComponent = () => {
                         key={file.fileId}
                         file={file}
                         source="card"
-                        onAddToFileLibrary={handleAddToFileLibrary}
+                        onAddToFileLibrary={(file) => handleAddToFileLibrary(file, 'runlog')}
                       />
                     ))}
                   </div>
@@ -678,11 +707,11 @@ const WorkflowRunPreviewComponent = () => {
               <div className="flex flex-col gap-2 px-4">
                 {/* User Input Section */}
                 {workflowVariables && workflowVariables.length > 0 && (
-                  <UserInputCollapse
+                  <WorkflowInputFormCollapse
+                    key={`workflow-input-${workflowVariables.map((v) => `${v.variableId}-${JSON.stringify(v.value)}`).join('-')}`}
                     workflowVariables={workflowVariables}
                     canvasId={canvasId}
                     defaultActiveKey={[]}
-                    showToolsDependency={false}
                     readonly={true}
                   />
                 )}
@@ -772,30 +801,12 @@ const WorkflowRunPreviewComponent = () => {
                       {
                         key: 'input',
                         label: (
-                          <div
-                            className="flex items-center justify-between w-full"
-                            style={{
-                              padding: '10px 10px 10px 16px',
-                              fontFamily: 'PingFang SC',
-                              fontWeight: 500,
-                              fontSize: '14px',
-                              lineHeight: '1.7142857142857142em',
-                              height: '34px',
-                              borderRadius: '6px 6px 0px 0px',
-                              backgroundColor: '#E6E8EA',
-                              width: '100%',
-                            }}
-                          >
+                          <div className="flex items-center justify-between w-full py-[10px] pl-4 pr-[10px] font-medium text-sm leading-[1.7142857142857142em] h-[34px] rounded-t-[6px] bg-[#E6E8EA]">
                             <span>{t('agent.configure')}</span>
                           </div>
                         ),
                         children: (
-                          <div
-                            className="bg-white"
-                            style={{
-                              padding: '8px 1px 12px',
-                            }}
-                          >
+                          <div className="bg-white pt-2 px-[1px] pb-3">
                             <ConfigureTab
                               readonly={true}
                               query={query}
@@ -816,29 +827,12 @@ const WorkflowRunPreviewComponent = () => {
                             {
                               key: 'output',
                               label: (
-                                <div
-                                  className="flex items-center justify-between w-full"
-                                  style={{
-                                    padding: '10px 16px',
-                                    fontFamily: 'PingFang SC',
-                                    fontWeight: 500,
-                                    fontSize: '14px',
-                                    lineHeight: '1.7142857142857142em',
-                                    height: '34px',
-                                    backgroundColor: '#E6E8EA',
-                                    width: '100%',
-                                  }}
-                                >
+                                <div className="flex items-center justify-between w-full py-[10px] px-4 font-medium text-sm leading-[1.7142857142857142em] h-[34px] bg-[#E6E8EA]">
                                   <span>{t('agent.lastRun')}</span>
                                 </div>
                               ),
                               children: (
-                                <div
-                                  className="bg-white"
-                                  style={{
-                                    padding: '8px 1px 12px',
-                                  }}
-                                >
+                                <div className="bg-white pt-2 px-[1px] pb-3">
                                   {/* Show error message if execution failed */}
                                   {isFailed && errorMessage && (
                                     <div className="flex flex-col py-3 px-4 mb-2">
@@ -855,6 +849,7 @@ const WorkflowRunPreviewComponent = () => {
                                   )}
                                   {/* Show result content for executed states (running, finished, failed) */}
                                   <LastRunTab
+                                    location="runlog"
                                     loading={loading}
                                     isStreaming={isStreaming}
                                     resultId={resultId}
@@ -873,11 +868,25 @@ const WorkflowRunPreviewComponent = () => {
                     ];
 
                     return (
-                      <div key={node.id} className="flex flex-col" style={{ gap: '8px' }}>
+                      <div key={node.id} className="flex flex-col gap-2">
                         {/* Agent Node Collapse */}
                         <Collapse
                           defaultActiveKey={[]}
                           ghost
+                          onChange={(activeKeys) => {
+                            // Track when user expands agent node in run log
+                            if (
+                              Array.isArray(activeKeys) &&
+                              activeKeys.includes('agent') &&
+                              canvasId
+                            ) {
+                              logEvent('runlog_agent_expand', null, {
+                                canvasId,
+                                nodeId: node.id,
+                                resultId,
+                              });
+                            }
+                          }}
                           expandIcon={({ isActive }) => (
                             <ArrowDown
                               size={14}
@@ -893,27 +902,14 @@ const WorkflowRunPreviewComponent = () => {
                                 <div className="flex items-center justify-between w-full min-w-0">
                                   <div
                                     title={agentTitle}
-                                    className="flex items-center flex-1 min-w-0"
-                                    style={{ gap: '4px' }}
+                                    className="flex items-center flex-1 min-w-0 gap-1"
                                   >
                                     <AiChat size={20} className="flex-shrink-0" />
-                                    <span
-                                      className="text-[#1C1F23] truncate"
-                                      style={{
-                                        fontFamily: 'Inter',
-                                        fontWeight: 500,
-                                        fontSize: '14px',
-                                        lineHeight: '1.5em',
-                                        width: '180px',
-                                      }}
-                                    >
+                                    <span className="text-[#1C1F23] truncate font-inter font-medium text-sm leading-[1.5em] w-[180px]">
                                       {agentTitle}
                                     </span>
                                   </div>
-                                  <div
-                                    className="flex items-center flex-shrink-0"
-                                    style={{ gap: '12px' }}
-                                  >
+                                  <div className="flex items-center flex-shrink-0 gap-3">
                                     {/* Collapsed state: show different info based on status */}
                                     {/* 
                                     - Not executed: Only show node name (no time, no credit)
@@ -922,20 +918,12 @@ const WorkflowRunPreviewComponent = () => {
                                     Note: Node name is always shown on the left side
                                   */}
                                     {isNotExecuted ? null : ( // Not executed: Only show node name (nothing else)
-                                      <div
-                                        className="flex items-center"
-                                        style={{
-                                          gap: '2px',
-                                          fontFamily: 'Inter',
-                                          fontWeight: 400,
-                                          fontSize: '10px',
-                                          lineHeight: '1.4em',
-                                          color: 'rgba(28, 31, 35, 0.35)',
-                                        }}
-                                      >
+                                      <div className="flex items-center gap-2 text-[10px] leading-[1.4em] font-normal">
                                         {/* Running state: Show execution time */}
                                         {isExecuting && executionTime && (
-                                          <span>{executionTime}</span>
+                                          <span className="text-[rgba(28,31,35,0.35)]">
+                                            {executionTime}
+                                          </span>
                                         )}
                                         {/* Finished/Failed state: Show execution time + credit usage */}
                                         {(isFinished || isFailed) && (
@@ -945,8 +933,12 @@ const WorkflowRunPreviewComponent = () => {
                                               version={version}
                                               enabled={!!resultId && (isFinished || isFailed)}
                                             />
-                                            {executionTime && <span>·</span>}
-                                            {executionTime && <span>{executionTime}</span>}
+
+                                            {executionTime && (
+                                              <span className="text-[rgba(28,31,35,0.35)]">
+                                                {executionTime}
+                                              </span>
+                                            )}
                                           </>
                                         )}
                                       </div>
@@ -957,19 +949,7 @@ const WorkflowRunPreviewComponent = () => {
                               ),
                               children: (
                                 <>
-                                  <div
-                                    className="overflow-hidden bg-[#F6F6F6]"
-                                    style={{
-                                      borderWidth: '0.5px',
-                                      borderColor: 'rgba(0, 0, 0, 0.14)',
-                                      borderStyle: 'solid',
-                                      borderRadius: '8px',
-                                      marginTop: '10px',
-                                      width: 'calc(100% - 8px)',
-                                      marginLeft: 'auto',
-                                      marginRight: 'auto',
-                                    }}
-                                  >
+                                  <div className="overflow-hidden bg-transparent border-[0.5px] border-solid border-[rgba(0,0,0,0.14)] rounded-lg mt-[10px] w-[calc(100%-8px)] mx-auto">
                                     <Collapse
                                       defaultActiveKey={
                                         isNotExecuted
@@ -979,6 +959,20 @@ const WorkflowRunPreviewComponent = () => {
                                             : [] // Finished/Failed: Input area (collapsed) + Output area (collapsed)
                                       }
                                       ghost
+                                      onChange={(activeKeys) => {
+                                        // Track when user selects agent output panel
+                                        if (
+                                          Array.isArray(activeKeys) &&
+                                          activeKeys.includes('output') &&
+                                          canvasId
+                                        ) {
+                                          logEvent('agent_output_select', null, {
+                                            canvasId,
+                                            nodeId: node.id,
+                                            resultId,
+                                          });
+                                        }
+                                      }}
                                       expandIcon={({ isActive }) => (
                                         <ArrowDown
                                           size={14}
@@ -1010,7 +1004,7 @@ const WorkflowRunPreviewComponent = () => {
               file={currentFile}
               classNames="w-full h-full"
               source="preview"
-              onAddToFileLibrary={handleAddToFileLibrary}
+              onAddToFileLibrary={(file) => handleAddToFileLibrary(file, 'agent')}
             />
           </div>
         )}

@@ -202,6 +202,24 @@ describe('generateCanvasDataFromWorkflowPlan', () => {
     expect(taskNode.data?.metadata?.selectedToolsets).toEqual([]);
   });
 
+  it('should replace agent task-id mentions with entityId', () => {
+    const task1 = createTask('task-1', 'First', 'Hello');
+    const task2 = createTask('task-2', 'Second', 'Use @{type=agent,id=task-1,name=First}', {
+      dependentTasks: ['task-1'],
+    });
+
+    const workflowPlan = createWorkflowPlan([task1, task2]);
+    const result = generateCanvasDataFromWorkflowPlan(workflowPlan, []);
+
+    const firstNode = result.nodes.find((n) => n.data?.title === 'First');
+    const secondNode = result.nodes.find((n) => n.data?.title === 'Second');
+    const firstEntityId = firstNode?.data?.entityId as string;
+    const secondQuery = (secondNode?.data?.metadata as any)?.query ?? '';
+
+    expect(firstEntityId).toBeTruthy();
+    expect(secondQuery).toContain(`@{type=agent,id=${firstEntityId},name=First}`);
+  });
+
   it('should create complex workflow with multiple interconnected tasks', () => {
     // Task 1
     const task1 = createTask('research', 'Research Task', 'Research prompt');
