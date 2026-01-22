@@ -8,7 +8,6 @@ import { cn } from '@refly/utils/cn';
 import { IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { safeParseJSON } from '@refly/utils/parse';
 import { getArtifactIcon } from '@refly-packages/ai-workspace-common/components/common/result-display';
-import { RecommendQuestions } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/recommend-questions';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 import { getParsedReasoningContent } from '@refly/utils/content-parser';
 import { Thinking, ArrowDown, ArrowUp } from 'refly-icons';
@@ -260,10 +259,6 @@ export const ActionStepCard = memo(
     const parsedData = useMemo(
       () => ({
         sources: parseStructuredData(step?.structuredData ?? {}, 'sources'),
-        recommendedQuestions: parseStructuredData(
-          step?.structuredData ?? {},
-          'recommendedQuestions',
-        ),
       }),
       [step?.structuredData],
     );
@@ -321,8 +316,6 @@ export const ActionStepCard = memo(
               onSelect={() => handleArtifactSelect(artifact)}
             />
           ))}
-
-        <RecommendQuestions relatedQuestions={parsedData.recommendedQuestions?.questions || []} />
       </div>
     );
   },

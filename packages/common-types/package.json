@@ -21,9 +21,5 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
-  "devDependencies": {
-    "@types/chrome": "0.0.227",
-    "@types/react": "^18.2.56",
-    "@types/react-dom": "^18.2.19"
-  }
+  "devDependencies": {}
 }

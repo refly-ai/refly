@@ -181,10 +181,7 @@
   },
   "devDependencies": {
     "@7nohe/openapi-react-query-codegen": "2.0.0-beta.3",
-    "@redux-devtools/extension": "^3.3.0",
     "@refly/common-types": "workspace:*",
-    "@types/chrome": "0.0.227",
-    "@types/is-hotkey": "~0.1.7",
     "@types/lodash.debounce": "~4.0.9",
     "@types/lodash.throttle": "^4.1.9",
     "@types/markdown-it": "~14.1.1",
@@ -193,9 +190,7 @@
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^18.2.22",
     "@types/react-helmet": "^6.1.11",
-    "@types/react-syntax-highlighter": "^15.5.6",
     "@types/unist": "^3.0.3",
-    "@types/uuid": "^9.0.1",
-    "tailwindcss": "^3.2.6"
+    "@types/uuid": "^9.0.1"
   }
 }

@@ -38,12 +38,10 @@
     "lottie-react": "^2.4.1",
     "lucide-react": "~0.454.0",
     "react": "^18.2.0",
-    "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18.2.0",
     "react-helmet": "^6.1.0",
     "react-i18next": "^15.6.0",
     "react-icons": "~5.4.0",
-    "react-resizable-panels": "^2.0.19",
     "react-router-dom": "^6.22.1",
     "react-use": "^17.5.0",
     "refly-icons": "^1.1.5"
@@ -51,7 +49,6 @@
   "devDependencies": {
     "@refly/tsconfig": "workspace:*",
     "@types/react": "^18.2.56",
-    "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^18.2.19",
     "@types/react-helmet": "^6.1.11"
   }
