@@ -350,13 +350,13 @@ export class CreditService {
     }
 
     const bonusCreditAmount = this.configService.get('auth.registration.bonusCreditAmount');
-    const bonusCreditExpiresInMonths = this.configService.get(
-      'auth.registration.bonusCreditExpiresInMonths',
+    const bonusCreditExpiresInDays = this.configService.get(
+      'auth.registration.bonusCreditExpiresInDays',
     );
 
     // Calculate expiration date
     const expiresAt = new Date(now);
-    expiresAt.setMonth(expiresAt.getMonth() + bonusCreditExpiresInMonths);
+    expiresAt.setDate(expiresAt.getDate() + bonusCreditExpiresInDays);
 
     await this.processCreditRecharge(
       uid,
@@ -387,19 +387,19 @@ export class CreditService {
   ): Promise<void> {
     const inviterCreditAmount = this.configService.get('auth.invitation.inviterCreditAmount');
     const inviteeCreditAmount = this.configService.get('auth.invitation.inviteeCreditAmount');
-    const inviterCreditExpiresInMonths = this.configService.get(
-      'auth.invitation.inviterCreditExpiresInMonths',
+    const inviterCreditExpiresInDays = this.configService.get(
+      'auth.invitation.inviterCreditExpiresInDays',
     );
-    const inviteeCreditExpiresInMonths = this.configService.get(
-      'auth.invitation.inviteeCreditExpiresInMonths',
+    const inviteeCreditExpiresInDays = this.configService.get(
+      'auth.invitation.inviteeCreditExpiresInDays',
     );
 
     // Calculate expiration dates
     const inviterExpiresAt = new Date(now);
-    inviterExpiresAt.setMonth(inviterExpiresAt.getMonth() + inviterCreditExpiresInMonths);
+    inviterExpiresAt.setDate(inviterExpiresAt.getDate() + inviterCreditExpiresInDays);
 
     const inviteeExpiresAt = new Date(now);
-    inviteeExpiresAt.setMonth(inviteeExpiresAt.getMonth() + inviteeCreditExpiresInMonths);
+    inviteeExpiresAt.setDate(inviteeExpiresAt.getDate() + inviteeCreditExpiresInDays);
 
     // Create recharge for inviter
     await this.processCreditRecharge(

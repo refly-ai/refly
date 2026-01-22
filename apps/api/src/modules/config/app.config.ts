@@ -150,15 +150,15 @@ export default () => ({
       requireInvitationCode: process.env.AUTH_REQUIRE_INVITATION_CODE === 'true' || false,
       inviterCreditAmount: Number.parseInt(process.env.INVITATION_INVITER_CREDIT_AMOUNT) || 500,
       inviteeCreditAmount: Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_AMOUNT) || 500,
-      inviterCreditExpiresInMonths:
-        Number.parseInt(process.env.INVITATION_INVITER_CREDIT_EXPIRES_IN_MONTHS) || 3,
-      inviteeCreditExpiresInMonths:
-        Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_EXPIRES_IN_MONTHS) || 3,
+      inviterCreditExpiresInDays:
+        Number.parseInt(process.env.INVITATION_INVITER_CREDIT_EXPIRES_IN_DAYS) || 7,
+      inviteeCreditExpiresInDays:
+        Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_EXPIRES_IN_DAYS) || 7,
     },
     registration: {
-      bonusCreditAmount: Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_AMOUNT) || 3000,
-      bonusCreditExpiresInMonths:
-        Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_EXPIRES_IN_MONTHS) || 3,
+      bonusCreditAmount: Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_AMOUNT) || 500,
+      bonusCreditExpiresInDays:
+        Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_EXPIRES_IN_DAYS) || 7,
     },
     onboarding: {
       enabled: process.env.ONBOARDING_ENABLED === 'true' || false,
