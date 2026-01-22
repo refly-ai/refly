@@ -6,7 +6,7 @@ import { Extension } from '@tiptap/core';
  * (such as mention). This centralizes Backspace/Delete/Mod-Backspace/Mod-Delete handling
  * instead of scattering logic in specific node extensions.
  */
-export const AtomicInlineKeymap = Extension.create({
+const AtomicInlineKeymap = Extension.create({
   name: 'atomicInlineKeymap',
 
   addKeyboardShortcuts() {

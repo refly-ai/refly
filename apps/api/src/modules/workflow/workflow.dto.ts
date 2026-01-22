@@ -32,12 +32,7 @@ export interface PollWorkflowJobData {
   nodeBehavior?: 'create' | 'update';
 }
 
-export interface InitializeWorkflowResponse {
-  executionId: string;
-  success: boolean;
-}
-
-export const workflowNodeExecutionPO2DTO = (
+const workflowNodeExecutionPO2DTO = (
   nodeExecution: WorkflowNodeExecutionPO,
 ): WorkflowNodeExecutionWithTime => {
   return {

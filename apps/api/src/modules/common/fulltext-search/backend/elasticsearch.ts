@@ -42,7 +42,7 @@ const commonSettings = {
   },
 };
 
-export const indexConfig = {
+const indexConfig = {
   resource: {
     index: 'refly_resources',
     settings: commonSettings,

@@ -329,32 +329,3 @@ export type ResultPayload =
 // ============================================================================
 // Effective Status (Computed from status + storageType)
 // ============================================================================
-
-export type EffectiveJobStatus =
-  | 'PENDING'
-  | 'PROCESSING'
-  | 'PENDING_PERSIST'
-  | 'COMPLETED'
-  | 'FAILED';
-
-export function getEffectiveStatus(
-  status: LambdaJobStatus,
-  storageType: LambdaStorageType,
-): EffectiveJobStatus {
-  if (status === 'failed') {
-    return 'FAILED';
-  }
-
-  if (status === 'success') {
-    if (storageType === 'temporary') {
-      return 'PENDING_PERSIST';
-    }
-    return 'COMPLETED';
-  }
-
-  if (status === 'processing') {
-    return 'PROCESSING';
-  }
-
-  return 'PENDING';
-}

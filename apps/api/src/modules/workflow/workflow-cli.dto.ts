@@ -224,11 +224,6 @@ export interface PatchWorkflowPlanRequest {
   operations: WorkflowPatchOperation[];
 }
 
-export interface GetWorkflowPlanRequest {
-  planId: string;
-  version?: number;
-}
-
 // ============================================================================
 // AI Workflow Generation DTOs (CLI)
 // ============================================================================
@@ -281,38 +276,6 @@ export interface GenerateWorkflowCliResponse {
   edgesCount: number;
 }
 
-/**
- * Request to refine an existing workflow using AI
- */
-export interface RefineWorkflowCliRequest {
-  /** Refinement instruction */
-  instruction: string;
-  /** Optional model to use for refinement */
-  modelItemId?: string;
-  /** Output language locale */
-  locale?: string;
-}
-
-/**
- * Response from workflow refinement
- */
-export interface RefineWorkflowCliResponse {
-  /** Workflow/Canvas ID */
-  workflowId: string;
-  /** Copilot session ID */
-  sessionId: string;
-  /** Action result ID */
-  resultId: string;
-  /** Updated workflow plan ID */
-  planId: string;
-  /** Number of operations applied */
-  operationsCount: number;
-  /** Number of nodes after refinement */
-  nodesCount: number;
-  /** Number of edges after refinement */
-  edgesCount: number;
-}
-
 // ============================================================================
 // Async Generation DTOs (Polling-based streaming simulation)
 // ============================================================================
@@ -352,21 +315,6 @@ export interface GenerateStatusResponse {
   error?: string;
   /** Completed result (only when status === 'completed') */
   result?: GenerateWorkflowCliResponse;
-}
-
-// ============================================================================
-// Error Response DTOs
-// ============================================================================
-
-export interface CliErrorResponse {
-  ok: false;
-  type: 'error';
-  version: string;
-  error: {
-    code: string;
-    message: string;
-    hint?: string;
-  };
 }
 
 export const CLI_ERROR_CODES = {

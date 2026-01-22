@@ -1,6 +1,5 @@
 export const QUEUE_RESOURCE = 'resource';
 export const QUEUE_SKILL = 'skill';
-export const QUEUE_ACTION = 'action';
 export const QUEUE_SYNC_TOKEN_USAGE = 'syncTokenUsage';
 export const QUEUE_SYNC_TOKEN_CREDIT_USAGE = 'syncTokenCreditUsage';
 export const QUEUE_SYNC_MEDIA_CREDIT_USAGE = 'syncMediaCreditUsage';
@@ -19,7 +18,6 @@ export const QUEUE_CREATE_SHARE = 'createShare';
 export const QUEUE_SCALEBOX_EXECUTE = 'scaleboxExecute';
 export const QUEUE_SCALEBOX_PAUSE = 'scaleboxPause';
 export const QUEUE_SCALEBOX_KILL = 'scaleboxKill';
-export const QUEUE_SCHEDULE_EXECUTION = 'scheduleExecution';
 
 export const QUEUE_CHECK_CANCELED_SUBSCRIPTIONS = 'checkCanceledSubscriptions';
 export const QUEUE_EXPIRE_AND_RECHARGE_CREDITS = 'expireAndRechargeCredits';
@@ -28,8 +26,8 @@ export const QUEUE_IMAGE_PROCESSING = 'imageProcessing';
 export const QUEUE_CLEAN_STATIC_FILES = 'cleanStaticFiles';
 export const QUEUE_CHECK_STUCK_ACTIONS = 'checkStuckActions';
 export const QUEUE_CLEANUP_EXPIRED_VOUCHERS = 'cleanupExpiredVouchers';
-export const SUCCESS_STATUS = 'success';
-export const FAILED_STATUS = 'failed';
+const _SUCCESS_STATUS = 'success';
+const _FAILED_STATUS = 'failed';
 export const QUEUE_WORKFLOW_APP_TEMPLATE = 'workflowAppTemplate';
 
 // Lambda processing queues
@@ -38,12 +36,6 @@ export const QUEUE_LAMBDA_IMAGE_TRANSFORM = 'lambdaImageTransform';
 export const QUEUE_LAMBDA_DOC_RENDER = 'lambdaDocRender';
 export const QUEUE_LAMBDA_VIDEO_ANALYZE = 'lambdaVideoAnalyze';
 export const QUEUE_LAMBDA_RESULT = 'lambdaResult';
-
-// Lambda job types
-export const LAMBDA_JOB_TYPE_DOC_INGEST = 'document-ingest';
-export const LAMBDA_JOB_TYPE_IMAGE_TRANSFORM = 'image-transform';
-export const LAMBDA_JOB_TYPE_DOC_RENDER = 'document-render';
-export const LAMBDA_JOB_TYPE_VIDEO_ANALYZE = 'video-analyze';
 
 // Lambda job statuses
 export const LAMBDA_JOB_STATUS_PENDING = 'pending';

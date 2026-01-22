@@ -19,7 +19,6 @@
     "@langchain/openai": "0.6.7",
     "@langchain/google-vertexai": "^2.1.2",
     "@refly/errors": "workspace:*",
-    "@refly/observability": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
     "@refly/utils": "workspace:*",
     "langfuse": "^3.6.0"

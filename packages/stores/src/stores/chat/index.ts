@@ -6,7 +6,7 @@ import type { ModelInfo, ProviderItem } from '@refly/openapi-schema';
 
 export type ChatMode = 'ask' | 'agent' | 'media';
 
-export interface ChatState {
+interface ChatState {
   newQAText: string;
   selectedModel: ModelInfo | null;
   skillSelectedModel: ModelInfo | null;
@@ -38,9 +38,9 @@ const defaultConfigurableState = {
   mediaModelListLoading: false,
 };
 
-export const defaultNewQAText = '';
+const defaultNewQAText = '';
 
-export const defaultState = {
+const defaultState = {
   newQAText: defaultNewQAText,
   ...defaultConfigurableState,
 };

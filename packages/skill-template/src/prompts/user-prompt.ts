@@ -1,7 +1,7 @@
 import { ContextBlock } from '../scheduler/utils/context';
 import { PromptTemplate } from './prompt-template';
 
-export interface BuildUserPromptOptions {
+interface BuildUserPromptOptions {
   hasVisionCapability?: boolean;
 }
 

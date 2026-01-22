@@ -98,5 +98,3 @@ export const VoucherSelect = ({ value, onChange, disabled }: VoucherSelectProps)
     </div>
   );
 };
-
-export default VoucherSelect;

@@ -30,7 +30,7 @@ export type DocumentDetail = DocumentModel & {
   content?: string;
 };
 
-export type ResourceDetail = ResourceModel & {
+type ResourceDetail = ResourceModel & {
   content?: string;
   downloadURL?: string;
   publicURL?: string;

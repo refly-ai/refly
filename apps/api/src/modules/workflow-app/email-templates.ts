@@ -2,7 +2,7 @@
  * Email templates for workflow app notifications
  */
 
-export interface WorkflowAppReviewEmailTemplate {
+interface WorkflowAppReviewEmailTemplate {
   subject: string;
   body: {
     greeting: string;

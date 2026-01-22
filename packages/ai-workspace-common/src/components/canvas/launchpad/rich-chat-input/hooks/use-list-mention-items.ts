@@ -29,7 +29,7 @@ const getDownstreamNodeIds = (startNodeId: string, edges: Edge[]): Set<string> =
   return downstreamIds;
 };
 
-export interface UseListMentionItemsResult {
+interface UseListMentionItemsResult {
   allItems: MentionItem[];
   suggestableItems: MentionItem[];
 }

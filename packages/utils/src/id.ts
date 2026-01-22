@@ -20,7 +20,6 @@ export enum IDPrefix {
   STORAGE_USAGE_METER = 'sum-',
   SKILL = 'sk-',
   SKILL_TRIGGER = 'tr-',
-  SKILL_JOB = 'sj-',
   PILOT_SESSION = 'ps-',
   PILOT_STEP = 'pst-',
   COPILOT_SESSION = 'cps-',

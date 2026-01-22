@@ -280,8 +280,6 @@ export const SchedulePeriodType = {
   CUSTOM: 'custom', // For complex schedules or when parsing fails
 } as const;
 
-export type SchedulePeriodTypeValue = (typeof SchedulePeriodType)[keyof typeof SchedulePeriodType];
-
 /**
  * Analytics event names for schedule module
  */

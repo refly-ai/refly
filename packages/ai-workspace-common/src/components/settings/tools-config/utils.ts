@@ -98,7 +98,7 @@ export const convertCommunityConfigToServerRequest = (
 };
 
 // Apply API key configuration to community MCP configuration
-export const applyCommunityMcpApiKey = (
+const applyCommunityMcpApiKey = (
   config: CommunityMcpConfig,
   apiKey: string,
 ): CommunityMcpConfig => {
@@ -148,47 +148,6 @@ export const applyCommunityMcpApiKey = (
 // Check if community MCP config requires API key
 export const requiresApiKey = (config: CommunityMcpConfig): boolean => {
   return config.authorization?.some((auth) => auth.type === 'apiKey') ?? false;
-};
-
-// Get auth method display text for a community MCP config
-export const getAuthMethodText = (config: CommunityMcpConfig): string => {
-  const auth = config.authorization?.find((a) => a.type === 'apiKey');
-  if (!auth) return '';
-
-  switch (auth.apiKeyIn) {
-    case 'url':
-      return 'URL Parameter';
-    case 'authorizationBearer':
-      return 'Bearer Token';
-    case 'headers':
-      return `Header (${auth.paramName || 'X-API-Key'})`;
-    default:
-      return 'API Key';
-  }
-};
-
-// Check if a community config is already installed based on name
-export const isConfigInstalled = (
-  config: CommunityMcpConfig,
-  installedServers: Array<{ name: string }>,
-): boolean => {
-  return installedServers.some((server) => server.name === config.name);
-};
-
-// Generate a unique name if there's a conflict
-export const generateUniqueName = (
-  baseName: string,
-  installedServers: Array<{ name: string }>,
-): string => {
-  let uniqueName = baseName;
-  let counter = 1;
-
-  while (installedServers.some((server) => server.name === uniqueName)) {
-    uniqueName = `${baseName} (${counter})`;
-    counter++;
-  }
-
-  return uniqueName;
 };
 
 // Get description with locale support from translation function

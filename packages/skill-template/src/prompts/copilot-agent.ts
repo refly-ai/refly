@@ -1,7 +1,7 @@
 import { GenericToolset } from '@refly/openapi-schema';
 import { PromptTemplate } from './prompt-template';
 
-export const formatInstalledToolsets = (installedToolsets: GenericToolset[]) => {
+const formatInstalledToolsets = (installedToolsets: GenericToolset[]) => {
   return installedToolsets.map((toolset) => ({
     id: toolset.id,
     key: toolset.toolset?.key || toolset.name,

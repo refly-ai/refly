@@ -32,14 +32,15 @@
     "format": "biome format .",
     "format:fix": "biome format . --write",
     "check": "biome check .",
-    "check:fix": "biome check . --write",
+    "check:fix": "biome check . --write --unsafe",
     "test": "pnpm -r --if-present test",
     "test:unit": "pnpm -r --if-present test:unit",
     "test:integration": "pnpm -r --if-present test:integration",
     "i18n:check": "node scripts/check-i18n-consistency.js",
     "prepare": "husky",
     "knip": "knip",
-    "knip:fix": "knip --fix --allow-remove-files"
+    "knip:fix": "knip --fix --allow-remove-files",
+    "remove-unused-vars": "biome lint --only correctness/noUnusedVariables --only correctness/noUnusedImports --only correctness/noUnusedFunctionParameters --reporter json | remove-unused-vars"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
@@ -53,6 +54,7 @@
     "minio": "7.1.3",
     "ncp": "^2.0.0",
     "nodemon": "~3.1.7",
+    "remove-unused-vars": "^0.0.12",
     "rimraf": "^5.0.10",
     "turbo": "^2.1.2",
     "typescript": "5.3.3",

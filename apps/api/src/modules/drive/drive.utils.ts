@@ -36,7 +36,7 @@ const SVG_MIME_TYPES = new Set(['image/svg+xml']);
  * @param contentType - MIME type of the file
  * @returns true if the file is markdown
  */
-export function isMarkdownFile(filename: string, contentType: string): boolean {
+function isMarkdownFile(filename: string, contentType: string): boolean {
   const ext = path.extname(filename).toLowerCase();
   const normalizedContentType = contentType.toLowerCase();
 
@@ -53,7 +53,7 @@ export function isMarkdownFile(filename: string, contentType: string): boolean {
  * @param contentType - MIME type of the file
  * @returns true if the file is HTML
  */
-export function isHtmlFile(filename: string, contentType: string): boolean {
+function isHtmlFile(filename: string, contentType: string): boolean {
   const ext = path.extname(filename).toLowerCase();
   const normalizedContentType = contentType.toLowerCase();
 
@@ -70,7 +70,7 @@ export function isHtmlFile(filename: string, contentType: string): boolean {
  * @param contentType - MIME type of the file
  * @returns true if the file is SVG
  */
-export function isSvgFile(filename: string, contentType: string): boolean {
+function isSvgFile(filename: string, contentType: string): boolean {
   const ext = path.extname(filename).toLowerCase();
   const normalizedContentType = contentType.toLowerCase();
 

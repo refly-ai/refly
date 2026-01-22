@@ -61,7 +61,7 @@ interface ActionResultState {
   setCurrentFile: (file: DriveFile | null, options?: { usePublicFileUrl?: boolean }) => void;
 }
 
-export const defaultState = {
+const defaultState = {
   resultMap: {},
   resultActiveTabMap: {},
   pollingStateMap: {},

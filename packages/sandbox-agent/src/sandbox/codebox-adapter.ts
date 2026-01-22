@@ -628,4 +628,4 @@ export class CodeBox {
   }
 }
 
-export type { CodeBoxOptions as CodeBoxConfig, FileMetadata };
+export type { FileMetadata };

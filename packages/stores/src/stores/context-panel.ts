@@ -41,13 +41,13 @@ interface ContextPanelState {
   clearContextItems: () => void;
 }
 
-export const defaultSelectedTextCardState = {
+const defaultSelectedTextCardState = {
   enableMultiSelect: true, // default enable multi select, later to see if we need to enable multiSelect ability
   filterErrorInfo: {} as FilterErrorInfo,
   formErrors: {} as Record<string, string>,
 };
 
-export const defaultState = {
+const defaultState = {
   contextPanelPopoverVisible: false,
   importPopoverVisible: false,
   contextItems: [],

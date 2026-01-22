@@ -7,7 +7,7 @@ import {
   IconLoading,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 
-export const isReflyThinkingClosed = (input = '') => {
+const isReflyThinkingClosed = (input = '') => {
   // More robust check - look for both the opening tag (anywhere) and the closing tag (after the opening)
   const openTagPos = input.indexOf(`<${ARTIFACT_THINKING_TAG}`);
   if (openTagPos === -1) return false;

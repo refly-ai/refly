@@ -56,6 +56,9 @@ importers:
       nodemon:
         specifier: ~3.1.7
         version: 3.1.10
+      remove-unused-vars:
+        specifier: ^0.0.12
+        version: 0.0.12
       rimraf:
         specifier: ^5.0.10
         version: 5.0.10
@@ -483,21 +486,6 @@ importers:
       react-router-dom:
         specifier: ^6.22.1
         version: 6.30.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      workbox-cacheable-response:
-        specifier: ^7.4.0
-        version: 7.4.0
-      workbox-expiration:
-        specifier: ^7.4.0
-        version: 7.4.0
-      workbox-precaching:
-        specifier: ^7.4.0
-        version: 7.4.0
-      workbox-routing:
-        specifier: ^7.4.0
-        version: 7.4.0
-      workbox-strategies:
-        specifier: ^7.4.0
-        version: 7.4.0
     devDependencies:
       '@aaroon/workbox-rspack-plugin':
         specifier: ^0.3.2
@@ -1110,9 +1098,6 @@ importers:
       '@refly/errors':
         specifier: workspace:*
         version: link:../errors
-      '@refly/observability':
-        specifier: workspace:*
-        version: link:../observability
       '@refly/openapi-schema':
         specifier: workspace:*
         version: link:../openapi-schema
@@ -13691,6 +13676,10 @@ packages:
 
   remark-rehype@10.1.0:
     resolution: {integrity: sha512-EFmR5zppdBp0WQeDVZ/b66CWJipB2q2VLNFMabzDSGR66Z2fQii83G5gTBbgGEnEEA0QRussvrFHxk1HWGJskw==}
+
+  remove-unused-vars@0.0.12:
+    resolution: {integrity: sha512-tRfrA0KwG2O1Yz+2JaZC6+DC7P5yCaB/tX6rsis9ZBQgNKogiueBAPVVBU/mzWm/TKDQO8W0WUiA7xzvQb+beg==}
+    hasBin: true
 
   replicate@1.1.0:
     resolution: {integrity: sha512-6D49t/etFvRUz7hOseEmI6mxm3vypFPffpTR37Gai924s6JmeNmnPk+QooFINYsq4Gu5HYlg49ut6zxwhfKxqQ==}
@@ -27242,7 +27231,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.2
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.11.0(debug@4.4.3))
+      retry-axios: 2.6.0(axios@1.11.0)
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -31125,6 +31114,10 @@ snapshots:
       mdast-util-to-hast: 12.3.0
       unified: 10.1.2
 
+  remove-unused-vars@0.0.12:
+    dependencies:
+      typescript: 5.8.3
+
   replicate@1.1.0:
     optionalDependencies:
       readable-stream: 4.7.0
@@ -31195,7 +31188,7 @@ snapshots:
       onetime: 7.0.0
       signal-exit: 4.1.0
 
-  retry-axios@2.6.0(axios@1.11.0(debug@4.4.3)):
+  retry-axios@2.6.0(axios@1.11.0):
     dependencies:
       axios: 1.11.0(debug@4.4.3)
 
