@@ -4013,7 +4013,7 @@ const translations = {
   },
   onboarding: {
     rewardTitle: 'Reward Credits',
-    rewardPoints: '3000 Credits',
+    rewardPoints: '500 Credits',
     startExperience: 'Start Now',
   },
   template: {

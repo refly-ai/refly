@@ -335,7 +335,7 @@ const translations = {
   },
   onboarding: {
     rewardTitle: '获得奖励积分',
-    rewardPoints: '3000积分',
+    rewardPoints: '500积分',
     startExperience: '立即体验',
   },
   privacyPage: {
