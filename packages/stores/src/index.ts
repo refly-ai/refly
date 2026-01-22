@@ -44,7 +44,6 @@ export {
   useKnowledgeBaseStoreShallow,
 } from './stores/knowledge-base';
 export { useSearchStateStore, useSearchStateStoreShallow } from './stores/search-state';
-export { useSearchStore, useSearchStoreShallow } from './stores/search';
 export { useSiderStore, useSiderStoreShallow } from './stores/sider';
 export { useSubscriptionStore, useSubscriptionStoreShallow } from './stores/subscription';
 export {

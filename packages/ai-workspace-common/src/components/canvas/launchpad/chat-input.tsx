@@ -2,7 +2,6 @@ import { Input } from 'antd';
 import { memo, useRef, useState, useCallback, forwardRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
-import { useSearchStoreShallow } from '@refly/stores';
 import { cn } from '@refly/utils/cn';
 import { useUserStoreShallow } from '@refly/stores';
 
@@ -50,10 +49,6 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
     const inputRef = useRef<TextAreaRef>(null);
     const [isFocused, setIsFocused] = useState(false);
 
-    const searchStore = useSearchStoreShallow((state) => ({
-      setIsSearchOpen: state.setIsSearchOpen,
-    }));
-
     const defaultPlaceholder = useMemo(() => {
       return placeholder || t('canvas.richChatInput.defaultPlaceholder');
     }, [placeholder, t]);
@@ -96,12 +91,6 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
         if (readonly) {
           e.preventDefault();
           return;
-        }
-
-        // Handle Ctrl+K or Cmd+K to open search
-        if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          searchStore.setIsSearchOpen(true);
         }
 
         // Handle the Enter key

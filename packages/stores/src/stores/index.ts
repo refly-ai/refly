@@ -14,7 +14,6 @@ export { useFrontPageStore, useFrontPageStoreShallow } from './front-page';
 export { useImportResourceStore, useImportResourceStoreShallow } from './import-resource';
 export { useKnowledgeBaseStore, useKnowledgeBaseStoreShallow } from './knowledge-base';
 export { useSearchStateStore, useSearchStateStoreShallow } from './search-state';
-export { useSearchStore, useSearchStoreShallow } from './search';
 export { useSiderStore, useSiderStoreShallow } from './sider';
 export { useSubscriptionStore, useSubscriptionStoreShallow } from './subscription';
 export {
