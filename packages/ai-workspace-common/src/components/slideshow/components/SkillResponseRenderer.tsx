@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react';
 import { useGetActionResult } from '@refly-packages/ai-workspace-common/queries/queries';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
-import { ActionStep, GetActionResultResponse } from '@refly-packages/ai-workspace-common/requests';
+import { ActionStep, GetActionResultResponse } from '@refly/openapi-schema';
 import { PreviewChatInput } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/preview-chat-input';
 import { SimpleStepCard } from './SimpleStepCard';
 import { useTranslation } from 'react-i18next';

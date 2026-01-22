@@ -13,7 +13,7 @@ import {
   listResources,
   listWorkflowApps,
   listWorkflowExecutions,
-} from '../requests/services.gen';
+} from '@refly/openapi-schema';
 import {
   GetCreditRechargeData,
   GetCreditRechargeError,
@@ -35,7 +35,7 @@ import {
   ListWorkflowAppsError,
   ListWorkflowExecutionsData,
   ListWorkflowExecutionsError,
-} from '../requests/types.gen';
+} from '@refly/openapi-schema';
 import * as Common from './common';
 export const useListCanvasesInfinite = <
   TData = InfiniteData<Common.ListCanvasesDefaultResponse>,

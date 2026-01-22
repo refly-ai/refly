@@ -6333,35 +6333,6 @@ export const GetFormDefinitionResponseSchema = {
   ],
 } as const;
 
-export const HasFilledFormResponseSchema = {
-  deprecated: true,
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          description: 'Has filled form data',
-          properties: {
-            hasFilledForm: {
-              type: 'boolean',
-              description: 'Whether the user has filled the form',
-              default: false,
-            },
-            identity: {
-              type: 'string',
-              description: 'User identity',
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
 export const GetCreditRechargeResponseSchema = {
   allOf: [
     {
@@ -6645,31 +6616,6 @@ export const ListInvitationCodesResponseSchema = {
           description: 'Invitation code list',
           items: {
             $ref: '#/components/schemas/InvitationCode',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const HasBeenInvitedResponseSchema = {
-  deprecated: true,
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          description: 'Has been invited data',
-          properties: {
-            hasBeenInvited: {
-              type: 'boolean',
-              description: 'Whether user has been invited',
-              default: false,
-            },
           },
         },
       },

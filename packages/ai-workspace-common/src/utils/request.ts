@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-import { client } from '@refly-packages/ai-workspace-common/requests';
+import { client } from '@refly/openapi-schema';
 import { responseInterceptorWithTokenRefresh } from '@refly-packages/ai-workspace-common/utils/auth';
 import { isDesktop, serverOrigin } from '@refly/ui-kit';
 

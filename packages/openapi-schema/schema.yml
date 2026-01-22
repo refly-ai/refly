@@ -2675,20 +2675,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
-  /form/hasFilledForm:
-    get:
-      tags:
-        - form
-      summary: Check if user has filled the form
-      description: Check if user has filled the form
-      operationId: hasFilledForm
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HasFilledFormResponse'
   /credit/recharge:
     get:
       tags:
@@ -2892,20 +2878,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
-  /invitation/invited:
-    get:
-      tags:
-        - invitation
-      summary: Check if user has been invited
-      description: Check if user has been invited
-      operationId: hasBeenInvited
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HasBeenInvitedResponse'
   /subscription/plans:
     get:
       tags:
@@ -8473,23 +8445,6 @@ components:
               type: object
               description: Form definition
               $ref: '#/components/schemas/FormDefinition'
-    HasFilledFormResponse:
-      deprecated: true
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              description: Has filled form data
-              properties:
-                hasFilledForm:
-                  type: boolean
-                  description: Whether the user has filled the form
-                  default: false
-                identity:
-                  type: string
-                  description: User identity
     GetCreditRechargeResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -8662,20 +8617,6 @@ components:
               description: Invitation code list
               items:
                 $ref: '#/components/schemas/InvitationCode'
-    HasBeenInvitedResponse:
-      deprecated: true
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              description: Has been invited data
-              properties:
-                hasBeenInvited:
-                  type: boolean
-                  description: Whether user has been invited
-                  default: false
     SubscriptionPlan:
       type: object
       properties:

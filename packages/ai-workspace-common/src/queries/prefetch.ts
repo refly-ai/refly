@@ -41,8 +41,6 @@ import {
   getWorkflowDetail,
   getWorkflowPlanDetail,
   getWorkflowVariables,
-  hasBeenInvited,
-  hasFilledForm,
   listAccounts,
   listCanvases,
   listCanvasTemplateCategories,
@@ -68,7 +66,7 @@ import {
   listWorkflowExecutions,
   serveStatic,
   verifyVoucherInvitation,
-} from '../requests/services.gen';
+} from '@refly/openapi-schema';
 import {
   CheckSettingsFieldData,
   CheckToolOauthStatusData,
@@ -117,7 +115,7 @@ import {
   ListWorkflowAppsData,
   ListWorkflowExecutionsData,
   VerifyVoucherInvitationData,
-} from '../requests/types.gen';
+} from '@refly/openapi-schema';
 import * as Common from './common';
 export const prefetchUseListMcpServers = (
   queryClient: QueryClient,
@@ -417,14 +415,6 @@ export const prefetchUseGetFormDefinition = (
     queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions),
     queryFn: () => getFormDefinition({ ...clientOptions }).then((response) => response.data),
   });
-export const prefetchUseHasFilledForm = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseHasFilledFormKeyFn(clientOptions),
-    queryFn: () => hasFilledForm({ ...clientOptions }).then((response) => response.data),
-  });
 export const prefetchUseGetCreditRecharge = (
   queryClient: QueryClient,
   clientOptions: Options<GetCreditRechargeData, true> = {},
@@ -490,14 +480,6 @@ export const prefetchUseListInvitationCodes = (
   queryClient.prefetchQuery({
     queryKey: Common.UseListInvitationCodesKeyFn(clientOptions),
     queryFn: () => listInvitationCodes({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseHasBeenInvited = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseHasBeenInvitedKeyFn(clientOptions),
-    queryFn: () => hasBeenInvited({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetSubscriptionPlans = (
   queryClient: QueryClient,

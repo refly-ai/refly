@@ -314,8 +314,6 @@ import type {
   SubmitFormData,
   SubmitFormError,
   SubmitFormResponse,
-  HasFilledFormError,
-  HasFilledFormResponse2,
   GetCreditRechargeData,
   GetCreditRechargeError,
   GetCreditRechargeResponse2,
@@ -341,8 +339,6 @@ import type {
   ActivateInvitationCodeData,
   ActivateInvitationCodeError,
   ActivateInvitationCodeResponse,
-  HasBeenInvitedError,
-  HasBeenInvitedResponse2,
   GetSubscriptionPlansError,
   GetSubscriptionPlansResponse2,
   GetSubscriptionUsageError,
@@ -2175,19 +2171,6 @@ export const submitForm = <ThrowOnError extends boolean = false>(
 };
 
 /**
- * Check if user has filled the form
- * Check if user has filled the form
- */
-export const hasFilledForm = <ThrowOnError extends boolean = false>(
-  options?: Options<unknown, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<HasFilledFormResponse2, HasFilledFormError, ThrowOnError>({
-    ...options,
-    url: '/form/hasFilledForm',
-  });
-};
-
-/**
  * Get credit recharge
  * Get credit recharge
  */
@@ -2337,23 +2320,6 @@ export const activateInvitationCode = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/invitation/activate',
-  });
-};
-
-/**
- * Check if user has been invited
- * Check if user has been invited
- */
-export const hasBeenInvited = <ThrowOnError extends boolean = false>(
-  options?: Options<unknown, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<
-    HasBeenInvitedResponse2,
-    HasBeenInvitedError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/invitation/invited',
   });
 };
 

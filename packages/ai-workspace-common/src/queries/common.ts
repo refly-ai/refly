@@ -99,8 +99,6 @@ import {
   getWorkflowDetail,
   getWorkflowPlanDetail,
   getWorkflowVariables,
-  hasBeenInvited,
-  hasFilledForm,
   importCanvas,
   initializeWorkflow,
   invokeSkill,
@@ -164,7 +162,7 @@ import {
   validateMcpServer,
   validateVoucher,
   verifyVoucherInvitation,
-} from '../requests/services.gen';
+} from '@refly/openapi-schema';
 export type ListMcpServersDefaultResponse = Awaited<ReturnType<typeof listMcpServers>>['data'];
 export type ListMcpServersQueryResult<
   TData = ListMcpServersDefaultResponse,
@@ -575,16 +573,6 @@ export const UseGetFormDefinitionKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useGetFormDefinitionKey, ...(queryKey ?? [clientOptions])];
-export type HasFilledFormDefaultResponse = Awaited<ReturnType<typeof hasFilledForm>>['data'];
-export type HasFilledFormQueryResult<
-  TData = HasFilledFormDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useHasFilledFormKey = 'HasFilledForm';
-export const UseHasFilledFormKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useHasFilledFormKey, ...(queryKey ?? [clientOptions])];
 export type GetCreditRechargeDefaultResponse = Awaited<
   ReturnType<typeof getCreditRecharge>
 >['data'];
@@ -677,16 +665,6 @@ export const UseListInvitationCodesKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListInvitationCodesKey, ...(queryKey ?? [clientOptions])];
-export type HasBeenInvitedDefaultResponse = Awaited<ReturnType<typeof hasBeenInvited>>['data'];
-export type HasBeenInvitedQueryResult<
-  TData = HasBeenInvitedDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useHasBeenInvitedKey = 'HasBeenInvited';
-export const UseHasBeenInvitedKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useHasBeenInvitedKey, ...(queryKey ?? [clientOptions])];
 export type GetSubscriptionPlansDefaultResponse = Awaited<
   ReturnType<typeof getSubscriptionPlans>
 >['data'];

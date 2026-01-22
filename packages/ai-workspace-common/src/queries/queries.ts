@@ -100,8 +100,6 @@ import {
   getWorkflowDetail,
   getWorkflowPlanDetail,
   getWorkflowVariables,
-  hasBeenInvited,
-  hasFilledForm,
   importCanvas,
   initializeWorkflow,
   invokeSkill,
@@ -165,7 +163,7 @@ import {
   validateMcpServer,
   validateVoucher,
   verifyVoucherInvitation,
-} from '../requests/services.gen';
+} from '@refly/openapi-schema';
 import {
   AbortActionData,
   AbortActionError,
@@ -348,8 +346,6 @@ import {
   GetWorkflowPlanDetailError,
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
-  HasBeenInvitedError,
-  HasFilledFormError,
   ImportCanvasData,
   ImportCanvasError,
   InitializeWorkflowData,
@@ -467,7 +463,7 @@ import {
   ValidateVoucherError,
   VerifyVoucherInvitationData,
   VerifyVoucherInvitationError,
-} from '../requests/types.gen';
+} from '@refly/openapi-schema';
 import * as Common from './common';
 export const useListMcpServers = <
   TData = Common.ListMcpServersDefaultResponse,
@@ -1046,21 +1042,6 @@ export const useGetFormDefinition = <
       getFormDefinition({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
-export const useHasFilledForm = <
-  TData = Common.HasFilledFormDefaultResponse,
-  TError = HasFilledFormError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useQuery<TData, TError>({
-    queryKey: Common.UseHasFilledFormKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      hasFilledForm({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
 export const useGetCreditRecharge = <
   TData = Common.GetCreditRechargeDefaultResponse,
   TError = GetCreditRechargeError,
@@ -1187,21 +1168,6 @@ export const useListInvitationCodes = <
     queryKey: Common.UseListInvitationCodesKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listInvitationCodes({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useHasBeenInvited = <
-  TData = Common.HasBeenInvitedDefaultResponse,
-  TError = HasBeenInvitedError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useQuery<TData, TError>({
-    queryKey: Common.UseHasBeenInvitedKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      hasBeenInvited({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetSubscriptionPlans = <

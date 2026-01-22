@@ -4720,25 +4720,6 @@ export type GetFormDefinitionResponse = BaseResponse & {
   data?: FormDefinition;
 };
 
-/**
- * @deprecated
- */
-export type HasFilledFormResponse = BaseResponse & {
-  /**
-   * Has filled form data
-   */
-  data?: {
-    /**
-     * Whether the user has filled the form
-     */
-    hasFilledForm?: boolean;
-    /**
-     * User identity
-     */
-    identity?: string;
-  };
-};
-
 export type GetCreditRechargeResponse = BaseResponse & {
   /**
    * Credit recharge data with pagination
@@ -4914,21 +4895,6 @@ export type ListInvitationCodesResponse = BaseResponse & {
    * Invitation code list
    */
   data?: Array<InvitationCode>;
-};
-
-/**
- * @deprecated
- */
-export type HasBeenInvitedResponse = BaseResponse & {
-  /**
-   * Has been invited data
-   */
-  data?: {
-    /**
-     * Whether user has been invited
-     */
-    hasBeenInvited?: boolean;
-  };
 };
 
 export type SubscriptionPlan = {
@@ -10429,10 +10395,6 @@ export type SubmitFormResponse = BaseResponse;
 
 export type SubmitFormError = unknown;
 
-export type HasFilledFormResponse2 = HasFilledFormResponse;
-
-export type HasFilledFormError = unknown;
-
 export type GetCreditRechargeData = {
   query?: {
     /**
@@ -10538,10 +10500,6 @@ export type ActivateInvitationCodeData = {
 export type ActivateInvitationCodeResponse = BaseResponse;
 
 export type ActivateInvitationCodeError = unknown;
-
-export type HasBeenInvitedResponse2 = HasBeenInvitedResponse;
-
-export type HasBeenInvitedError = unknown;
 
 export type GetSubscriptionPlansResponse2 = GetSubscriptionPlansResponse;
 
