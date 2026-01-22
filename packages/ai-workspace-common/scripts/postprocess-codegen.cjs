@@ -104,7 +104,7 @@ function updateImportPaths() {
 
   // Get all .ts files in the queries directory
   const fs = require('node:fs');
-  const files = fs.readdirSync(queriesDir).filter(file => file.endsWith('.ts'));
+  const files = fs.readdirSync(queriesDir).filter((file) => file.endsWith('.ts'));
 
   console.log('Updating import paths in queries files...');
 
@@ -119,7 +119,7 @@ function updateImportPaths() {
       const replacements = [
         { from: '../requests/services.gen', to: '@refly/openapi-schema' },
         { from: '../requests/types.gen', to: '@refly/openapi-schema' },
-        { from: '../requests/provider-community', to: '@refly/openapi-schema' }
+        { from: '../requests/provider-community', to: '@refly/openapi-schema' },
       ];
 
       for (const replacement of replacements) {
