@@ -30,6 +30,7 @@ export interface PtcConfig {
   userAllowlist: Set<string>;
   toolsetAllowlist: Set<string> | null;
   toolsetBlocklist: Set<string>;
+  workflowAllowlist: Set<string> | null;
 }
 
 /**
@@ -47,12 +48,16 @@ export function getPtcConfig(configService: ConfigService): PtcConfig {
   const toolsetBlocklist = parseCommaSeparatedList(
     configService.get<string>('ptc.toolsetBlocklist'),
   );
+  const workflowAllowlist = parseOptionalCommaSeparatedList(
+    configService.get<string>('ptc.workflowAllowlist'),
+  );
 
   return {
     mode,
     userAllowlist,
     toolsetAllowlist,
     toolsetBlocklist,
+    workflowAllowlist,
   };
 }
 

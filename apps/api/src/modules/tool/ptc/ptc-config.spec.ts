@@ -69,6 +69,7 @@ describe('PtcConfig', () => {
         userAllowlist: new Set<string>(),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
+        workflowAllowlist: null,
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(false);
     });
@@ -79,6 +80,7 @@ describe('PtcConfig', () => {
         userAllowlist: new Set<string>(),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
+        workflowAllowlist: null,
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(true);
     });
@@ -89,6 +91,7 @@ describe('PtcConfig', () => {
         userAllowlist: new Set<string>(['u-123']),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
+        workflowAllowlist: null,
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(true);
       expect(isPtcEnabledForUser({ uid: 'u-other' } as User, config)).toBe(false);
@@ -101,6 +104,7 @@ describe('PtcConfig', () => {
       userAllowlist: new Set<string>(),
       toolsetAllowlist: null,
       toolsetBlocklist: new Set<string>(),
+      workflowAllowlist: null,
     };
 
     it('should return false if toolset is in blocklist', () => {
@@ -138,6 +142,7 @@ describe('PtcConfig', () => {
       userAllowlist: new Set<string>(),
       toolsetAllowlist: new Set<string>(['t1', 't2']),
       toolsetBlocklist: new Set<string>(['blocked']),
+      workflowAllowlist: null,
     };
 
     it('should return true if user is enabled and all toolsets are allowed', () => {
