@@ -16,7 +16,6 @@ import {
   QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_TOKEN_CREDIT_USAGE,
 } from '../../utils';
-import { LabelModule } from '../label/label.module';
 import { SkillProcessor, CheckStuckActionsProcessor } from '../skill/skill.processor';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { CreditModule } from '../credit/credit.module';
@@ -42,7 +41,6 @@ import { SandboxModule } from '../sandbox/sandbox.module';
     CommonModule,
     StepModule,
     forwardRef(() => ActionModule),
-    LabelModule,
     SearchModule,
     KnowledgeModule,
     RAGModule,

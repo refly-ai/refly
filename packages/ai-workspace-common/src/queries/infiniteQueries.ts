@@ -10,14 +10,7 @@ import {
   listCodeArtifacts,
   listDocuments,
   listDriveFiles,
-  listLabelClasses,
-  listLabelInstances,
-  listPages,
-  listPilotSessions,
-  listProjects,
   listResources,
-  listSkillInstances,
-  listSkillTriggers,
   listWorkflowApps,
   listWorkflowExecutions,
 } from '../requests/services.gen';
@@ -36,53 +29,14 @@ import {
   ListDocumentsError,
   ListDriveFilesData,
   ListDriveFilesError,
-  ListLabelClassesData,
-  ListLabelClassesError,
-  ListLabelInstancesData,
-  ListLabelInstancesError,
-  ListPagesData,
-  ListPagesError,
-  ListPilotSessionsData,
-  ListPilotSessionsError,
-  ListProjectsData,
-  ListProjectsError,
   ListResourcesData,
   ListResourcesError,
-  ListSkillInstancesData,
-  ListSkillInstancesError,
-  ListSkillTriggersData,
-  ListSkillTriggersError,
   ListWorkflowAppsData,
   ListWorkflowAppsError,
   ListWorkflowExecutionsData,
   ListWorkflowExecutionsError,
 } from '../requests/types.gen';
 import * as Common from './common';
-export const useListPagesInfinite = <
-  TData = InfiniteData<Common.ListPagesDefaultResponse>,
-  TError = ListPagesError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListPagesData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useInfiniteQuery({
-    queryKey: Common.UseListPagesKeyFn(clientOptions, queryKey),
-    queryFn: ({ pageParam }) =>
-      listPages({
-        ...clientOptions,
-        query: { ...clientOptions.query, page: pageParam as number },
-      }).then((response) => response.data as TData) as TData,
-    initialPageParam: '1',
-    getNextPageParam: (response) =>
-      (
-        response as {
-          nextPage: number;
-        }
-      ).nextPage,
-    ...options,
-  });
 export const useListCanvasesInfinite = <
   TData = InfiniteData<Common.ListCanvasesDefaultResponse>,
   TError = ListCanvasesError,
@@ -208,31 +162,6 @@ export const useListDocumentsInfinite = <
       ).nextPage,
     ...options,
   });
-export const useListProjectsInfinite = <
-  TData = InfiniteData<Common.ListProjectsDefaultResponse>,
-  TError = ListProjectsError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListProjectsData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useInfiniteQuery({
-    queryKey: Common.UseListProjectsKeyFn(clientOptions, queryKey),
-    queryFn: ({ pageParam }) =>
-      listProjects({
-        ...clientOptions,
-        query: { ...clientOptions.query, page: pageParam as number },
-      }).then((response) => response.data as TData) as TData,
-    initialPageParam: '1',
-    getNextPageParam: (response) =>
-      (
-        response as {
-          nextPage: number;
-        }
-      ).nextPage,
-    ...options,
-  });
 export const useListCodeArtifactsInfinite = <
   TData = InfiniteData<Common.ListCodeArtifactsDefaultResponse>,
   TError = ListCodeArtifactsError,
@@ -246,131 +175,6 @@ export const useListCodeArtifactsInfinite = <
     queryKey: Common.UseListCodeArtifactsKeyFn(clientOptions, queryKey),
     queryFn: ({ pageParam }) =>
       listCodeArtifacts({
-        ...clientOptions,
-        query: { ...clientOptions.query, page: pageParam as number },
-      }).then((response) => response.data as TData) as TData,
-    initialPageParam: '1',
-    getNextPageParam: (response) =>
-      (
-        response as {
-          nextPage: number;
-        }
-      ).nextPage,
-    ...options,
-  });
-export const useListLabelClassesInfinite = <
-  TData = InfiniteData<Common.ListLabelClassesDefaultResponse>,
-  TError = ListLabelClassesError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListLabelClassesData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useInfiniteQuery({
-    queryKey: Common.UseListLabelClassesKeyFn(clientOptions, queryKey),
-    queryFn: ({ pageParam }) =>
-      listLabelClasses({
-        ...clientOptions,
-        query: { ...clientOptions.query, page: pageParam as number },
-      }).then((response) => response.data as TData) as TData,
-    initialPageParam: '1',
-    getNextPageParam: (response) =>
-      (
-        response as {
-          nextPage: number;
-        }
-      ).nextPage,
-    ...options,
-  });
-export const useListLabelInstancesInfinite = <
-  TData = InfiniteData<Common.ListLabelInstancesDefaultResponse>,
-  TError = ListLabelInstancesError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListLabelInstancesData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useInfiniteQuery({
-    queryKey: Common.UseListLabelInstancesKeyFn(clientOptions, queryKey),
-    queryFn: ({ pageParam }) =>
-      listLabelInstances({
-        ...clientOptions,
-        query: { ...clientOptions.query, page: pageParam as number },
-      }).then((response) => response.data as TData) as TData,
-    initialPageParam: '1',
-    getNextPageParam: (response) =>
-      (
-        response as {
-          nextPage: number;
-        }
-      ).nextPage,
-    ...options,
-  });
-export const useListSkillInstancesInfinite = <
-  TData = InfiniteData<Common.ListSkillInstancesDefaultResponse>,
-  TError = ListSkillInstancesError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListSkillInstancesData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useInfiniteQuery({
-    queryKey: Common.UseListSkillInstancesKeyFn(clientOptions, queryKey),
-    queryFn: ({ pageParam }) =>
-      listSkillInstances({
-        ...clientOptions,
-        query: { ...clientOptions.query, page: pageParam as number },
-      }).then((response) => response.data as TData) as TData,
-    initialPageParam: '1',
-    getNextPageParam: (response) =>
-      (
-        response as {
-          nextPage: number;
-        }
-      ).nextPage,
-    ...options,
-  });
-export const useListSkillTriggersInfinite = <
-  TData = InfiniteData<Common.ListSkillTriggersDefaultResponse>,
-  TError = ListSkillTriggersError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListSkillTriggersData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useInfiniteQuery({
-    queryKey: Common.UseListSkillTriggersKeyFn(clientOptions, queryKey),
-    queryFn: ({ pageParam }) =>
-      listSkillTriggers({
-        ...clientOptions,
-        query: { ...clientOptions.query, page: pageParam as number },
-      }).then((response) => response.data as TData) as TData,
-    initialPageParam: '1',
-    getNextPageParam: (response) =>
-      (
-        response as {
-          nextPage: number;
-        }
-      ).nextPage,
-    ...options,
-  });
-export const useListPilotSessionsInfinite = <
-  TData = InfiniteData<Common.ListPilotSessionsDefaultResponse>,
-  TError = ListPilotSessionsError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListPilotSessionsData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useInfiniteQuery({
-    queryKey: Common.UseListPilotSessionsKeyFn(clientOptions, queryKey),
-    queryFn: ({ pageParam }) =>
-      listPilotSessions({
         ...clientOptions,
         query: { ...clientOptions.query, page: pageParam as number },
       }).then((response) => response.data as TData) as TData,

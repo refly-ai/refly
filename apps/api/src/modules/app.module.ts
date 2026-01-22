@@ -16,11 +16,9 @@ import configuration from './config/app.config';
 import { AppController } from './app.controller';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { SkillModule } from './skill/skill.module';
-import { PilotModule } from './pilot/pilot.module';
 import { CopilotModule } from './copilot/copilot.module';
 import { CopilotAutogenModule } from './copilot-autogen/copilot-autogen.module';
 import { SearchModule } from './search/search.module';
-import { LabelModule } from './label/label.module';
 import { EventModule } from './event/event.module';
 import { MiscModule } from './misc/misc.module';
 import { SubscriptionModule } from './subscription/subscription.module';
@@ -32,8 +30,6 @@ import { ShareModule } from './share/share.module';
 import { ProviderModule } from './provider/provider.module';
 import { TemplateModule } from './template/template.module';
 import { CodeArtifactModule } from './code-artifact/code-artifact.module';
-import { PagesModule } from './pages/pages.module';
-import { ProjectModule } from './project/project.module';
 import { McpServerModule } from './mcp-server/mcp-server.module';
 import { InternalMcpModule } from './internal-mcp/internal-mcp.module';
 import { MediaGeneratorModule } from './media-generator/media-generator.module';
@@ -113,11 +109,9 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     NotificationModule,
     KnowledgeModule,
     SkillModule,
-    PilotModule,
     CopilotModule,
     CopilotAutogenModule,
     SearchModule,
-    LabelModule,
     EventModule,
     MiscModule,
     SubscriptionModule,
@@ -129,8 +123,6 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     ToolModule,
     TemplateModule,
     CodeArtifactModule,
-    PagesModule,
-    ProjectModule,
     McpServerModule,
     InternalMcpModule,
     MediaGeneratorModule,

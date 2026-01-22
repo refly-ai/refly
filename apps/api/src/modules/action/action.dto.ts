@@ -143,8 +143,6 @@ export function actionResultPO2DTO(result: ActionDetail, options?: SanitizeOptio
       'version',
       'title',
       'targetId',
-      'pilotSessionId',
-      'pilotStepId',
       'workflowExecutionId',
       'workflowNodeExecutionId',
       'actualProviderItemId',

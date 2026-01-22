@@ -6,7 +6,6 @@ import {
   abortAction,
   abortWorkflow,
   activateInvitationCode,
-  addNodesToCanvasPage,
   authorizeComposioConnection,
   autoNameCanvas,
   batchCreateDriveFiles,
@@ -27,20 +26,14 @@ import {
   createCreditPackCheckoutSession,
   createDocument,
   createDriveFile,
-  createLabelClass,
-  createLabelInstance,
   createMcpServer,
-  createPilotSession,
   createPortalSession,
-  createProject,
   createProvider,
   createProviderItem,
   createResource,
   createResourceWithFile,
   createSchedule,
   createShare,
-  createSkillInstance,
-  createSkillTrigger,
   createToolset,
   createVerification,
   createVoucherInvitation,
@@ -48,20 +41,12 @@ import {
   deleteCanvas,
   deleteDocument,
   deleteDriveFile,
-  deleteLabelClass,
-  deleteLabelInstance,
   deleteMcpServer,
-  deletePage,
-  deletePageNode,
-  deleteProject,
-  deleteProjectItems,
   deleteProvider,
   deleteProviderItem,
   deleteResource,
   deleteSchedule,
   deleteShare,
-  deleteSkillInstance,
-  deleteSkillTrigger,
   deleteToolset,
   deleteWorkflowApp,
   downloadExportJobResult,
@@ -99,10 +84,6 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
-  getPageByCanvasId,
-  getPageDetail,
-  getPilotSessionDetail,
-  getProjectDetail,
   getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
@@ -134,22 +115,15 @@ import {
   listDocuments,
   listDriveFiles,
   listInvitationCodes,
-  listLabelClasses,
-  listLabelInstances,
   listMcpServers,
   listModels,
-  listPages,
-  listPilotSessions,
-  listProjects,
   listProviderItemOptions,
   listProviderItems,
   listProviders,
   listResources,
   listSchedules,
   listShares,
-  listSkillInstances,
   listSkills,
-  listSkillTriggers,
   listTools,
   listToolsetInventory,
   listToolsets,
@@ -159,8 +133,6 @@ import {
   listWorkflowExecutions,
   logout,
   multiLingualWebSearch,
-  pinSkillInstance,
-  recoverPilotSession,
   refreshToken,
   reindexResource,
   resendVerification,
@@ -170,7 +142,6 @@ import {
   search,
   serveStatic,
   setCanvasState,
-  sharePage,
   startExportJob,
   streamInvokeSkill,
   submitForm,
@@ -178,26 +149,17 @@ import {
   testProviderConnection,
   triggerScheduleManually,
   triggerVoucher,
-  unpinSkillInstance,
   updateCanvas,
   updateCanvasTemplate,
   updateCodeArtifact,
   updateDocument,
   updateDriveFile,
-  updateLabelClass,
-  updateLabelInstance,
   updateMcpServer,
-  updatePage,
-  updatePilotSession,
-  updateProject,
-  updateProjectItems,
   updateProvider,
   updateProviderItem,
   updateResource,
   updateSchedule,
   updateSettings,
-  updateSkillInstance,
-  updateSkillTrigger,
   updateToolset,
   updateWorkflowVariables,
   upload,
@@ -215,38 +177,6 @@ export const UseListMcpServersKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListMcpServersKey, ...(queryKey ?? [clientOptions])];
-export type ListPagesDefaultResponse = Awaited<ReturnType<typeof listPages>>['data'];
-export type ListPagesQueryResult<
-  TData = ListPagesDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListPagesKey = 'ListPages';
-export const UseListPagesKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListPagesKey, ...(queryKey ?? [clientOptions])];
-export type GetPageDetailDefaultResponse = Awaited<ReturnType<typeof getPageDetail>>['data'];
-export type GetPageDetailQueryResult<
-  TData = GetPageDetailDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useGetPageDetailKey = 'GetPageDetail';
-export const UseGetPageDetailKeyFn = (
-  clientOptions: Options<unknown, true>,
-  queryKey?: Array<unknown>,
-) => [useGetPageDetailKey, ...(queryKey ?? [clientOptions])];
-export type GetPageByCanvasIdDefaultResponse = Awaited<
-  ReturnType<typeof getPageByCanvasId>
->['data'];
-export type GetPageByCanvasIdQueryResult<
-  TData = GetPageByCanvasIdDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useGetPageByCanvasIdKey = 'GetPageByCanvasId';
-export const UseGetPageByCanvasIdKeyFn = (
-  clientOptions: Options<unknown, true>,
-  queryKey?: Array<unknown>,
-) => [useGetPageByCanvasIdKey, ...(queryKey ?? [clientOptions])];
 export type GetAuthConfigDefaultResponse = Awaited<ReturnType<typeof getAuthConfig>>['data'];
 export type GetAuthConfigQueryResult<
   TData = GetAuthConfigDefaultResponse,
@@ -475,26 +405,6 @@ export const UseDownloadExportJobResultKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useDownloadExportJobResultKey, ...(queryKey ?? [clientOptions])];
-export type ListProjectsDefaultResponse = Awaited<ReturnType<typeof listProjects>>['data'];
-export type ListProjectsQueryResult<
-  TData = ListProjectsDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListProjectsKey = 'ListProjects';
-export const UseListProjectsKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListProjectsKey, ...(queryKey ?? [clientOptions])];
-export type GetProjectDetailDefaultResponse = Awaited<ReturnType<typeof getProjectDetail>>['data'];
-export type GetProjectDetailQueryResult<
-  TData = GetProjectDetailDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useGetProjectDetailKey = 'GetProjectDetail';
-export const UseGetProjectDetailKeyFn = (
-  clientOptions: Options<unknown, true>,
-  queryKey?: Array<unknown>,
-) => [useGetProjectDetailKey, ...(queryKey ?? [clientOptions])];
 export type ListCodeArtifactsDefaultResponse = Awaited<
   ReturnType<typeof listCodeArtifacts>
 >['data'];
@@ -529,28 +439,6 @@ export const UseListSharesKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListSharesKey, ...(queryKey ?? [clientOptions])];
-export type ListLabelClassesDefaultResponse = Awaited<ReturnType<typeof listLabelClasses>>['data'];
-export type ListLabelClassesQueryResult<
-  TData = ListLabelClassesDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListLabelClassesKey = 'ListLabelClasses';
-export const UseListLabelClassesKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListLabelClassesKey, ...(queryKey ?? [clientOptions])];
-export type ListLabelInstancesDefaultResponse = Awaited<
-  ReturnType<typeof listLabelInstances>
->['data'];
-export type ListLabelInstancesQueryResult<
-  TData = ListLabelInstancesDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListLabelInstancesKey = 'ListLabelInstances';
-export const UseListLabelInstancesKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListLabelInstancesKey, ...(queryKey ?? [clientOptions])];
 export type ListActionsDefaultResponse = Awaited<ReturnType<typeof listActions>>['data'];
 export type ListActionsQueryResult<
   TData = ListActionsDefaultResponse,
@@ -581,54 +469,6 @@ export const UseListSkillsKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListSkillsKey, ...(queryKey ?? [clientOptions])];
-export type ListSkillInstancesDefaultResponse = Awaited<
-  ReturnType<typeof listSkillInstances>
->['data'];
-export type ListSkillInstancesQueryResult<
-  TData = ListSkillInstancesDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListSkillInstancesKey = 'ListSkillInstances';
-export const UseListSkillInstancesKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListSkillInstancesKey, ...(queryKey ?? [clientOptions])];
-export type ListSkillTriggersDefaultResponse = Awaited<
-  ReturnType<typeof listSkillTriggers>
->['data'];
-export type ListSkillTriggersQueryResult<
-  TData = ListSkillTriggersDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListSkillTriggersKey = 'ListSkillTriggers';
-export const UseListSkillTriggersKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListSkillTriggersKey, ...(queryKey ?? [clientOptions])];
-export type ListPilotSessionsDefaultResponse = Awaited<
-  ReturnType<typeof listPilotSessions>
->['data'];
-export type ListPilotSessionsQueryResult<
-  TData = ListPilotSessionsDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListPilotSessionsKey = 'ListPilotSessions';
-export const UseListPilotSessionsKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListPilotSessionsKey, ...(queryKey ?? [clientOptions])];
-export type GetPilotSessionDetailDefaultResponse = Awaited<
-  ReturnType<typeof getPilotSessionDetail>
->['data'];
-export type GetPilotSessionDetailQueryResult<
-  TData = GetPilotSessionDetailDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useGetPilotSessionDetailKey = 'GetPilotSessionDetail';
-export const UseGetPilotSessionDetailKeyFn = (
-  clientOptions: Options<unknown, true>,
-  queryKey?: Array<unknown>,
-) => [useGetPilotSessionDetailKey, ...(queryKey ?? [clientOptions])];
 export type ListCopilotSessionsDefaultResponse = Awaited<
   ReturnType<typeof listCopilotSessions>
 >['data'];
@@ -1107,18 +947,6 @@ export const UseValidateMcpServerKeyFn = (mutationKey?: Array<unknown>) => [
   useValidateMcpServerKey,
   ...(mutationKey ?? []),
 ];
-export type SharePageMutationResult = Awaited<ReturnType<typeof sharePage>>;
-export const useSharePageKey = 'SharePage';
-export const UseSharePageKeyFn = (mutationKey?: Array<unknown>) => [
-  useSharePageKey,
-  ...(mutationKey ?? []),
-];
-export type AddNodesToCanvasPageMutationResult = Awaited<ReturnType<typeof addNodesToCanvasPage>>;
-export const useAddNodesToCanvasPageKey = 'AddNodesToCanvasPage';
-export const UseAddNodesToCanvasPageKeyFn = (mutationKey?: Array<unknown>) => [
-  useAddNodesToCanvasPageKey,
-  ...(mutationKey ?? []),
-];
 export type RefreshTokenMutationResult = Awaited<ReturnType<typeof refreshToken>>;
 export const useRefreshTokenKey = 'RefreshToken';
 export const UseRefreshTokenKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1327,36 +1155,6 @@ export const UseBatchUpdateDocumentKeyFn = (mutationKey?: Array<unknown>) => [
   useBatchUpdateDocumentKey,
   ...(mutationKey ?? []),
 ];
-export type CreateProjectMutationResult = Awaited<ReturnType<typeof createProject>>;
-export const useCreateProjectKey = 'CreateProject';
-export const UseCreateProjectKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreateProjectKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateProjectMutationResult = Awaited<ReturnType<typeof updateProject>>;
-export const useUpdateProjectKey = 'UpdateProject';
-export const UseUpdateProjectKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateProjectKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateProjectItemsMutationResult = Awaited<ReturnType<typeof updateProjectItems>>;
-export const useUpdateProjectItemsKey = 'UpdateProjectItems';
-export const UseUpdateProjectItemsKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateProjectItemsKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteProjectMutationResult = Awaited<ReturnType<typeof deleteProject>>;
-export const useDeleteProjectKey = 'DeleteProject';
-export const UseDeleteProjectKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteProjectKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteProjectItemsMutationResult = Awaited<ReturnType<typeof deleteProjectItems>>;
-export const useDeleteProjectItemsKey = 'DeleteProjectItems';
-export const UseDeleteProjectItemsKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteProjectItemsKey,
-  ...(mutationKey ?? []),
-];
 export type CreateCodeArtifactMutationResult = Awaited<ReturnType<typeof createCodeArtifact>>;
 export const useCreateCodeArtifactKey = 'CreateCodeArtifact';
 export const UseCreateCodeArtifactKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1387,42 +1185,6 @@ export const UseDuplicateShareKeyFn = (mutationKey?: Array<unknown>) => [
   useDuplicateShareKey,
   ...(mutationKey ?? []),
 ];
-export type CreateLabelClassMutationResult = Awaited<ReturnType<typeof createLabelClass>>;
-export const useCreateLabelClassKey = 'CreateLabelClass';
-export const UseCreateLabelClassKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreateLabelClassKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateLabelClassMutationResult = Awaited<ReturnType<typeof updateLabelClass>>;
-export const useUpdateLabelClassKey = 'UpdateLabelClass';
-export const UseUpdateLabelClassKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateLabelClassKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteLabelClassMutationResult = Awaited<ReturnType<typeof deleteLabelClass>>;
-export const useDeleteLabelClassKey = 'DeleteLabelClass';
-export const UseDeleteLabelClassKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteLabelClassKey,
-  ...(mutationKey ?? []),
-];
-export type CreateLabelInstanceMutationResult = Awaited<ReturnType<typeof createLabelInstance>>;
-export const useCreateLabelInstanceKey = 'CreateLabelInstance';
-export const UseCreateLabelInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreateLabelInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateLabelInstanceMutationResult = Awaited<ReturnType<typeof updateLabelInstance>>;
-export const useUpdateLabelInstanceKey = 'UpdateLabelInstance';
-export const UseUpdateLabelInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateLabelInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteLabelInstanceMutationResult = Awaited<ReturnType<typeof deleteLabelInstance>>;
-export const useDeleteLabelInstanceKey = 'DeleteLabelInstance';
-export const UseDeleteLabelInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteLabelInstanceKey,
-  ...(mutationKey ?? []),
-];
 export type AbortActionMutationResult = Awaited<ReturnType<typeof abortAction>>;
 export const useAbortActionKey = 'AbortAction';
 export const UseAbortActionKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1441,76 +1203,10 @@ export const UseStreamInvokeSkillKeyFn = (mutationKey?: Array<unknown>) => [
   useStreamInvokeSkillKey,
   ...(mutationKey ?? []),
 ];
-export type CreateSkillInstanceMutationResult = Awaited<ReturnType<typeof createSkillInstance>>;
-export const useCreateSkillInstanceKey = 'CreateSkillInstance';
-export const UseCreateSkillInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreateSkillInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateSkillInstanceMutationResult = Awaited<ReturnType<typeof updateSkillInstance>>;
-export const useUpdateSkillInstanceKey = 'UpdateSkillInstance';
-export const UseUpdateSkillInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateSkillInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type PinSkillInstanceMutationResult = Awaited<ReturnType<typeof pinSkillInstance>>;
-export const usePinSkillInstanceKey = 'PinSkillInstance';
-export const UsePinSkillInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  usePinSkillInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type UnpinSkillInstanceMutationResult = Awaited<ReturnType<typeof unpinSkillInstance>>;
-export const useUnpinSkillInstanceKey = 'UnpinSkillInstance';
-export const UseUnpinSkillInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useUnpinSkillInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteSkillInstanceMutationResult = Awaited<ReturnType<typeof deleteSkillInstance>>;
-export const useDeleteSkillInstanceKey = 'DeleteSkillInstance';
-export const UseDeleteSkillInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteSkillInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type CreateSkillTriggerMutationResult = Awaited<ReturnType<typeof createSkillTrigger>>;
-export const useCreateSkillTriggerKey = 'CreateSkillTrigger';
-export const UseCreateSkillTriggerKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreateSkillTriggerKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateSkillTriggerMutationResult = Awaited<ReturnType<typeof updateSkillTrigger>>;
-export const useUpdateSkillTriggerKey = 'UpdateSkillTrigger';
-export const UseUpdateSkillTriggerKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateSkillTriggerKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteSkillTriggerMutationResult = Awaited<ReturnType<typeof deleteSkillTrigger>>;
-export const useDeleteSkillTriggerKey = 'DeleteSkillTrigger';
-export const UseDeleteSkillTriggerKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteSkillTriggerKey,
-  ...(mutationKey ?? []),
-];
 export type GenerateMediaMutationResult = Awaited<ReturnType<typeof generateMedia>>;
 export const useGenerateMediaKey = 'GenerateMedia';
 export const UseGenerateMediaKeyFn = (mutationKey?: Array<unknown>) => [
   useGenerateMediaKey,
-  ...(mutationKey ?? []),
-];
-export type CreatePilotSessionMutationResult = Awaited<ReturnType<typeof createPilotSession>>;
-export const useCreatePilotSessionKey = 'CreatePilotSession';
-export const UseCreatePilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreatePilotSessionKey,
-  ...(mutationKey ?? []),
-];
-export type UpdatePilotSessionMutationResult = Awaited<ReturnType<typeof updatePilotSession>>;
-export const useUpdatePilotSessionKey = 'UpdatePilotSession';
-export const UseUpdatePilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdatePilotSessionKey,
-  ...(mutationKey ?? []),
-];
-export type RecoverPilotSessionMutationResult = Awaited<ReturnType<typeof recoverPilotSession>>;
-export const useRecoverPilotSessionKey = 'RecoverPilotSession';
-export const UseRecoverPilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
-  useRecoverPilotSessionKey,
   ...(mutationKey ?? []),
 ];
 export type InitializeWorkflowMutationResult = Awaited<ReturnType<typeof initializeWorkflow>>;
@@ -1813,27 +1509,9 @@ export const UseTriggerVoucherKeyFn = (mutationKey?: Array<unknown>) => [
   useTriggerVoucherKey,
   ...(mutationKey ?? []),
 ];
-export type UpdatePageMutationResult = Awaited<ReturnType<typeof updatePage>>;
-export const useUpdatePageKey = 'UpdatePage';
-export const UseUpdatePageKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdatePageKey,
-  ...(mutationKey ?? []),
-];
 export type UpdateSettingsMutationResult = Awaited<ReturnType<typeof updateSettings>>;
 export const useUpdateSettingsKey = 'UpdateSettings';
 export const UseUpdateSettingsKeyFn = (mutationKey?: Array<unknown>) => [
   useUpdateSettingsKey,
-  ...(mutationKey ?? []),
-];
-export type DeletePageMutationResult = Awaited<ReturnType<typeof deletePage>>;
-export const useDeletePageKey = 'DeletePage';
-export const UseDeletePageKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeletePageKey,
-  ...(mutationKey ?? []),
-];
-export type DeletePageNodeMutationResult = Awaited<ReturnType<typeof deletePageNode>>;
-export const useDeletePageNodeKey = 'DeletePageNode';
-export const UseDeletePageNodeKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeletePageNodeKey,
   ...(mutationKey ?? []),
 ];

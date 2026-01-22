@@ -30,10 +30,6 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
-  getPageByCanvasId,
-  getPageDetail,
-  getPilotSessionDetail,
-  getProjectDetail,
   getPromptSuggestions,
   getResourceDetail,
   getSettings,
@@ -57,21 +53,14 @@ import {
   listDocuments,
   listDriveFiles,
   listInvitationCodes,
-  listLabelClasses,
-  listLabelInstances,
   listMcpServers,
   listModels,
-  listPages,
-  listPilotSessions,
-  listProjects,
   listProviderItemOptions,
   listProviderItems,
   listProviders,
   listResources,
   listShares,
-  listSkillInstances,
   listSkills,
-  listSkillTriggers,
   listTools,
   listToolsetInventory,
   listToolsets,
@@ -132,14 +121,6 @@ import {
   GetExportJobStatusData,
   GetExportJobStatusError,
   GetFormDefinitionError,
-  GetPageByCanvasIdData,
-  GetPageByCanvasIdError,
-  GetPageDetailData,
-  GetPageDetailError,
-  GetPilotSessionDetailData,
-  GetPilotSessionDetailError,
-  GetProjectDetailData,
-  GetProjectDetailError,
   GetPromptSuggestionsError,
   GetResourceDetailData,
   GetResourceDetailError,
@@ -177,19 +158,9 @@ import {
   ListDriveFilesData,
   ListDriveFilesError,
   ListInvitationCodesError,
-  ListLabelClassesData,
-  ListLabelClassesError,
-  ListLabelInstancesData,
-  ListLabelInstancesError,
   ListMcpServersData,
   ListMcpServersError,
   ListModelsError,
-  ListPagesData,
-  ListPagesError,
-  ListPilotSessionsData,
-  ListPilotSessionsError,
-  ListProjectsData,
-  ListProjectsError,
   ListProviderItemOptionsData,
   ListProviderItemOptionsError,
   ListProviderItemsData,
@@ -200,11 +171,7 @@ import {
   ListResourcesError,
   ListSharesData,
   ListSharesError,
-  ListSkillInstancesData,
-  ListSkillInstancesError,
   ListSkillsError,
-  ListSkillTriggersData,
-  ListSkillTriggersError,
   ListToolsData,
   ListToolsError,
   ListToolsetInventoryError,
@@ -234,51 +201,6 @@ export const useListMcpServersSuspense = <
     queryKey: Common.UseListMcpServersKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listMcpServers({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useListPagesSuspense = <
-  TData = Common.ListPagesDefaultResponse,
-  TError = ListPagesError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListPagesData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseListPagesKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listPages({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useGetPageDetailSuspense = <
-  TData = Common.GetPageDetailDefaultResponse,
-  TError = GetPageDetailError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<GetPageDetailData, true>,
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseGetPageDetailKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      getPageDetail({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useGetPageByCanvasIdSuspense = <
-  TData = Common.GetPageByCanvasIdDefaultResponse,
-  TError = GetPageByCanvasIdError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<GetPageByCanvasIdData, true>,
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseGetPageByCanvasIdKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      getPageByCanvasId({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetAuthConfigSuspense = <
@@ -606,36 +528,6 @@ export const useDownloadExportJobResultSuspense = <
       ) as TData,
     ...options,
   });
-export const useListProjectsSuspense = <
-  TData = Common.ListProjectsDefaultResponse,
-  TError = ListProjectsError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListProjectsData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseListProjectsKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listProjects({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useGetProjectDetailSuspense = <
-  TData = Common.GetProjectDetailDefaultResponse,
-  TError = GetProjectDetailError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<GetProjectDetailData, true>,
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseGetProjectDetailKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      getProjectDetail({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
 export const useListCodeArtifactsSuspense = <
   TData = Common.ListCodeArtifactsDefaultResponse,
   TError = ListCodeArtifactsError,
@@ -683,36 +575,6 @@ export const useListSharesSuspense = <
       listShares({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
-export const useListLabelClassesSuspense = <
-  TData = Common.ListLabelClassesDefaultResponse,
-  TError = ListLabelClassesError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListLabelClassesData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseListLabelClassesKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listLabelClasses({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useListLabelInstancesSuspense = <
-  TData = Common.ListLabelInstancesDefaultResponse,
-  TError = ListLabelInstancesError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListLabelInstancesData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseListLabelInstancesKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listLabelInstances({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
 export const useListActionsSuspense = <
   TData = Common.ListActionsDefaultResponse,
   TError = ListActionsError,
@@ -756,68 +618,6 @@ export const useListSkillsSuspense = <
     queryKey: Common.UseListSkillsKeyFn(clientOptions, queryKey),
     queryFn: () =>
       listSkills({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useListSkillInstancesSuspense = <
-  TData = Common.ListSkillInstancesDefaultResponse,
-  TError = ListSkillInstancesError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListSkillInstancesData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseListSkillInstancesKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listSkillInstances({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useListSkillTriggersSuspense = <
-  TData = Common.ListSkillTriggersDefaultResponse,
-  TError = ListSkillTriggersError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListSkillTriggersData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseListSkillTriggersKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listSkillTriggers({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useListPilotSessionsSuspense = <
-  TData = Common.ListPilotSessionsDefaultResponse,
-  TError = ListPilotSessionsError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<ListPilotSessionsData, true> = {},
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseListPilotSessionsKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      listPilotSessions({ ...clientOptions }).then((response) => response.data as TData) as TData,
-    ...options,
-  });
-export const useGetPilotSessionDetailSuspense = <
-  TData = Common.GetPilotSessionDetailDefaultResponse,
-  TError = GetPilotSessionDetailError,
-  TQueryKey extends Array<unknown> = unknown[],
->(
-  clientOptions: Options<GetPilotSessionDetailData, true>,
-  queryKey?: TQueryKey,
-  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
-) =>
-  useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseGetPilotSessionDetailKeyFn(clientOptions, queryKey),
-    queryFn: () =>
-      getPilotSessionDetail({ ...clientOptions }).then(
-        (response) => response.data as TData,
-      ) as TData,
     ...options,
   });
 export const useListCopilotSessionsSuspense = <

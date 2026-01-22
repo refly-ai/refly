@@ -648,7 +648,6 @@ export class WorkflowCliController {
       const result = await this.copilotAutogenService.generateWorkflowForCli(user, {
         query: body.query,
         canvasId: body.canvasId,
-        projectId: body.projectId,
         modelItemId: body.modelItemId,
         locale: body.locale,
         variables: body.variables,

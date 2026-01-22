@@ -14,11 +14,7 @@ import { FilteredLangfuseCallbackHandler, Trace, getTracer } from '@refly/observ
 import { propagation, context, SpanStatusCode } from '@opentelemetry/api';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
-import {
-  ModelUsageQuotaExceeded,
-  ProjectNotFoundError,
-  WorkflowExecutionNotFoundError,
-} from '@refly/errors';
+import { ModelUsageQuotaExceeded, WorkflowExecutionNotFoundError } from '@refly/errors';
 import {
   ActionMessage,
   ActionResult,
@@ -48,7 +44,6 @@ import * as Y from 'yjs';
 import { countToken } from '@refly/utils/token';
 import {
   QUEUE_AUTO_NAME_CANVAS,
-  QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_SYNC_TOKEN_USAGE,
 } from '../../utils/const';
@@ -64,8 +59,6 @@ import { PrismaService } from '../common/prisma.service';
 import { CreditUsageStep, SyncBatchTokenCreditUsageJobData } from '../credit/credit.dto';
 import { CreditService } from '../credit/credit.service';
 import { MiscService } from '../misc/misc.service';
-import { SyncPilotStepJobData } from '../pilot/pilot.processor';
-import { projectPO2DTO } from '../project/project.dto';
 import { ProviderService } from '../provider/provider.service';
 import { SkillEngineService } from '../skill/skill-engine.service';
 import { StepService } from '../step/step.service';
@@ -112,9 +105,6 @@ export class SkillInvokerService {
     @Optional()
     @InjectQueue(QUEUE_AUTO_NAME_CANVAS)
     private autoNameCanvasQueue?: Queue<AutoNameCanvasJobData>,
-    @Optional()
-    @InjectQueue(QUEUE_SYNC_PILOT_STEP)
-    private pilotStepQueue?: Queue<SyncPilotStepJobData>,
   ) {
     this.logger.setContext(SkillInvokerService.name);
     this.skillEngine = this.skillEngineService.getEngine();
@@ -268,7 +258,6 @@ export class SkillInvokerService {
       modelConfigMap,
       provider,
       resultHistory,
-      projectId,
       eventListener,
       toolsets,
     } = data;
@@ -389,17 +378,6 @@ export class SkillInvokerService {
 
     if (data.copilotSessionId) {
       config.configurable.copilotSessionId = data.copilotSessionId;
-    }
-
-    // Add project info if projectId is provided
-    if (projectId) {
-      const project = await this.prisma.project.findUnique({
-        where: { projectId, uid: user.uid, deletedAt: null },
-      });
-      if (!project) {
-        throw new ProjectNotFoundError(`project ${projectId} not found`);
-      }
-      config.configurable.project = projectPO2DTO(project);
     }
 
     if (resultHistory?.length > 0) {
@@ -1623,14 +1601,6 @@ export class SkillInvokerService {
         ...(messages.length > 0
           ? [this.prisma.actionMessage.createMany({ data: messages, skipDuplicates: true })]
           : []),
-        ...(result.pilotStepId
-          ? [
-              this.prisma.pilotStep.updateMany({
-                where: { stepId: result.pilotStepId },
-                data: { status },
-              }),
-            ]
-          : []),
         ...(result.workflowNodeExecutionId
           ? [
               this.prisma.workflowNodeExecution.updateMany({
@@ -1725,17 +1695,6 @@ export class SkillInvokerService {
           });
         }
         // In desktop mode, we could handle usage tracking differently if needed
-      }
-
-      // Sync pilot step if needed
-      if (result.pilotStepId && this.pilotStepQueue) {
-        this.logger.info(
-          `Sync pilot step for result ${resultId}, pilotStepId: ${result.pilotStepId}`,
-        );
-        await this.pilotStepQueue.add('syncPilotStep', {
-          user: { uid: user.uid },
-          stepId: result.pilotStepId,
-        });
       }
 
       await resultAggregator.clearCache();

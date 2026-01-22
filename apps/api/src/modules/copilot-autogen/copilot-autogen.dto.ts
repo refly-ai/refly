@@ -6,7 +6,6 @@ import type { WorkflowVariable, WorkflowPlan } from '@refly/openapi-schema';
 export interface GenerateWorkflowRequest {
   query: string; // User requirement description
   canvasId?: string; // Optional: Specify Canvas ID, create new if not provided
-  projectId?: string; // Optional: Project ID
   variables?: WorkflowVariable[]; // Optional: Predefined variables
   locale?: string; // Optional: Output language
   modelItemId?: string; // Optional: Model to use
@@ -31,7 +30,6 @@ export interface GenerateWorkflowResponse {
 export interface GenerateWorkflowCliRequest {
   query: string; // User requirement description
   canvasId?: string; // Optional: Specify Canvas ID, create new if not provided
-  projectId?: string; // Optional: Project ID
   variables?: WorkflowVariable[]; // Optional: Predefined variables
   locale?: string; // Optional: Output language
   modelItemId?: string; // Optional: Model to use

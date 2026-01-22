@@ -24,7 +24,6 @@ import {
   StorageQuotaExceeded,
   DuplicationNotAllowedError,
   CanvasNotFoundError,
-  ProjectNotFoundError,
 } from '@refly/errors';
 import pLimit, { type Limit } from 'p-limit';
 import { SubscriptionService } from '../subscription/subscription.service';
@@ -57,7 +56,6 @@ import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 
 interface DuplicateOptions {
   skipCanvasCheck?: boolean;
-  skipProjectCheck?: boolean;
   targetId?: string;
 }
 
@@ -88,29 +86,15 @@ export class ShareDuplicationService {
     }
   }
 
-  async checkProjectExists(user: User, projectId: string) {
-    const project = await this.prisma.project.findFirst({
-      select: { pk: true },
-      where: { projectId, uid: user.uid, deletedAt: null },
-    });
-    if (!project) {
-      throw new ProjectNotFoundError();
-    }
-  }
-
   async duplicateSharedDocument(
     user: User,
     param: DuplicateShareRequest,
     options?: DuplicateOptions,
   ): Promise<Entity> {
-    const { shareId, projectId, canvasId } = param;
+    const { shareId, canvasId } = param;
 
     if (canvasId && !options?.skipCanvasCheck) {
       await this.checkCanvasExists(user, canvasId);
-    }
-
-    if (projectId && !options?.skipProjectCheck) {
-      await this.checkProjectExists(user, projectId);
     }
 
     // Check storage quota
@@ -158,7 +142,6 @@ export class ShareDuplicationService {
         uid: user.uid,
         storageKey: newStorageKey,
         stateStorageKey: newStateStorageKey,
-        projectId,
         canvasId: targetCanvasId,
       },
     });
@@ -210,14 +193,10 @@ export class ShareDuplicationService {
     param: DuplicateShareRequest,
     options?: DuplicateOptions,
   ): Promise<Entity> {
-    const { shareId, projectId, canvasId } = param;
+    const { shareId, canvasId } = param;
 
     if (canvasId && !options?.skipCanvasCheck) {
       await this.checkCanvasExists(user, canvasId);
-    }
-
-    if (projectId && !options?.skipProjectCheck) {
-      await this.checkProjectExists(user, projectId);
     }
 
     // Check storage quota
@@ -284,7 +263,6 @@ export class ShareDuplicationService {
         uid: user.uid,
         storageKey: newStorageKey,
         rawFileKey: finalRawFileKey,
-        projectId,
         canvasId: targetCanvasId,
       },
     });
@@ -429,7 +407,7 @@ export class ShareDuplicationService {
       replaceToolsetMap?: Record<string, GenericToolset>;
     },
   ): Promise<Entity> {
-    const { shareId, projectId } = param;
+    const { shareId } = param;
     const { replaceEntityMap, target, replaceToolsetMap } = extra ?? {};
 
     // Find the source record
@@ -531,7 +509,6 @@ export class ShareDuplicationService {
           errorType: result.errorType,
           modelName: result.modelInfo?.name,
           duplicateFrom: result.resultId,
-          projectId,
           version: 0, // Reset version to 0 for the new duplicate
           toolsets: JSON.stringify(replacedToolsets),
         },
@@ -730,7 +707,6 @@ export class ShareDuplicationService {
   private createLibEntityDuplicationPromises(
     user: User,
     nodes: CanvasNode[],
-    projectId: string | undefined,
     newCanvasId: string,
     replaceEntityMap: Record<string, string>,
     limit: Limit,
@@ -749,13 +725,11 @@ export class ShareDuplicationService {
 
         const nodeDupParam: DuplicateShareRequest = {
           shareId,
-          projectId,
           canvasId: newCanvasId,
         };
         const targetId = replaceEntityMap[entityId];
         const nodeDupOptions: DuplicateOptions = {
           skipCanvasCheck: true,
-          skipProjectCheck: true,
           targetId,
         };
 
@@ -778,7 +752,7 @@ export class ShareDuplicationService {
         }
 
         // Normalize metadata and update values
-        node.data.metadata = { ...(node.data.metadata ?? {}), shareId: undefined, projectId };
+        node.data.metadata = { ...(node.data.metadata ?? {}), shareId: undefined };
       }),
     );
   }
@@ -789,7 +763,6 @@ export class ShareDuplicationService {
   private createSkillResponseDuplicationPromises(
     user: User,
     nodes: CanvasNode[],
-    projectId: string | undefined,
     newCanvasId: string,
     replaceEntityMap: Record<string, string>,
     replaceToolsetMap: Record<string, GenericToolset>,
@@ -804,7 +777,7 @@ export class ShareDuplicationService {
 
         const result = await this.duplicateSharedSkillResponse(
           user,
-          { shareId, projectId },
+          { shareId },
           {
             replaceEntityMap,
             replaceToolsetMap,
@@ -816,7 +789,7 @@ export class ShareDuplicationService {
         }
 
         // Normalize metadata and update values
-        node.data.metadata = { ...(node.data.metadata ?? {}), shareId: undefined, projectId };
+        node.data.metadata = { ...(node.data.metadata ?? {}), shareId: undefined };
 
         // Replace the context with the new entity ID
         if (node.data.metadata.contextItems) {
@@ -851,7 +824,7 @@ export class ShareDuplicationService {
     record: any,
     precomputedStorageQuota?: any,
   ): Promise<Entity> {
-    const { shareId, projectId, title } = param;
+    const { shareId, title } = param;
 
     // Extract canvas data (handles both canvas and workflow app formats)
     const { canvasData } = await this.extractCanvasData(record, shareId);
@@ -876,7 +849,6 @@ export class ShareDuplicationService {
       {
         canvasId: newCanvasId,
         title: title ?? canvasData.title,
-        projectId,
         variables: canvasData.variables,
       },
       state,
@@ -964,7 +936,6 @@ export class ShareDuplicationService {
     const libDupPromises = this.createLibEntityDuplicationPromises(
       user,
       nodesWithResources,
-      projectId,
       newCanvasId,
       replaceEntityMap,
       limit,
@@ -973,7 +944,6 @@ export class ShareDuplicationService {
     const skillDupPromises = this.createSkillResponseDuplicationPromises(
       user,
       nodesWithResources,
-      projectId,
       newCanvasId,
       replaceEntityMap,
       replaceToolsetMap,

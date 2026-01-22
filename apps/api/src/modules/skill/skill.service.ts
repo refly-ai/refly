@@ -3,29 +3,14 @@ import pLimit from 'p-limit';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 import {
-  Prisma,
-  SkillTrigger as SkillTriggerModel,
   ActionResult as ActionResultModel,
   ProviderItem as ProviderItemModel,
 } from '@prisma/client';
 import { Response } from 'express';
 import {
-  CreateSkillInstanceRequest,
-  CreateSkillTriggerRequest,
-  DeleteSkillInstanceRequest,
-  DeleteSkillTriggerRequest,
   InvokeSkillRequest,
-  ListSkillInstancesData,
-  ListSkillTriggersData,
-  PinSkillInstanceRequest,
   SkillContext,
   Skill,
-  SkillTriggerCreateParam,
-  TimerInterval,
-  TimerTriggerConfig,
-  UnpinSkillInstanceRequest,
-  UpdateSkillInstanceRequest,
-  UpdateSkillTriggerRequest,
   User,
   ActionResult,
   LLMModelConfig,
@@ -41,8 +26,6 @@ import {
 } from '@refly/canvas-common';
 import {
   genActionResultID,
-  genSkillID,
-  genSkillTriggerID,
   genCopilotSessionID,
   safeParseJSON,
   safeStringifyJSON,
@@ -52,16 +35,10 @@ import {
 } from '@refly/utils';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService, LockReleaseFn } from '../common/redis.service';
-import { QUEUE_SKILL, pick, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
+import { QUEUE_SKILL, QUEUE_CHECK_STUCK_ACTIONS } from '../../utils';
 import { InvokeSkillJobData, ModelConfigMap } from './skill.dto';
 import { CreditService } from '../credit/credit.service';
-import {
-  ModelUsageQuotaExceeded,
-  ParamsError,
-  ProjectNotFoundError,
-  ProviderItemNotFoundError,
-  SkillNotFoundError,
-} from '@refly/errors';
+import { ModelUsageQuotaExceeded, ParamsError, ProviderItemNotFoundError } from '@refly/errors';
 import { actionResultPO2DTO } from '../action/action.dto';
 import { ProviderService } from '../provider/provider.service';
 import { providerPO2DTO, providerItemPO2DTO } from '../provider/provider.dto';
@@ -91,18 +68,6 @@ const FIXED_BUILTIN_TOOLSETS: GenericToolset[] = [
   { type: 'regular', id: 'read_agent_result', name: 'read_agent_result', builtin: true },
   { type: 'regular', id: 'read_tool_result', name: 'read_tool_result', builtin: true },
 ];
-
-function validateSkillTriggerCreateParam(param: SkillTriggerCreateParam) {
-  if (param.triggerType === 'simpleEvent') {
-    if (!param.simpleEventName) {
-      throw new ParamsError('invalid event trigger config');
-    }
-  } else if (param.triggerType === 'timer') {
-    if (!param.timerConfig) {
-      throw new ParamsError('invalid timer trigger config');
-    }
-  }
-}
 
 @Injectable()
 export class SkillService implements OnModuleInit {
@@ -281,30 +246,6 @@ export class SkillService implements OnModuleInit {
       if (failed > 0) {
         this.logger.warn(`Failed to update ${failed} stuck actions`);
       }
-
-      // Also update related pilot steps if they exist
-      const pilotStepUpdates = await Promise.allSettled(
-        stuckResults
-          .filter((result) => result.pilotStepId)
-          .map(async (result) => {
-            return this.prisma.pilotStep.updateMany({
-              where: {
-                stepId: result.pilotStepId,
-                status: 'executing',
-              },
-              data: {
-                status: 'failed',
-              },
-            });
-          }),
-      );
-
-      const pilotStepsUpdated = pilotStepUpdates.filter(
-        (result) => result.status === 'fulfilled',
-      ).length;
-      if (pilotStepsUpdated > 0) {
-        this.logger.log(`Updated ${pilotStepsUpdated} related pilot steps to failed status`);
-      }
     } catch (error) {
       this.logger.error(`Error checking stuck actions: ${error?.stack}`);
       throw error;
@@ -325,128 +266,6 @@ export class SkillService implements OnModuleInit {
     }
 
     return skills;
-  }
-
-  async listSkillInstances(user: User, param: ListSkillInstancesData['query']) {
-    const { skillId, sortByPin, page, pageSize } = param;
-
-    const orderBy: Prisma.SkillInstanceOrderByWithRelationInput[] = [{ updatedAt: 'desc' }];
-    if (sortByPin) {
-      orderBy.unshift({ pinnedAt: { sort: 'desc', nulls: 'last' } });
-    }
-
-    return this.prisma.skillInstance.findMany({
-      where: { skillId, uid: user.uid, deletedAt: null },
-      orderBy,
-      take: pageSize,
-      skip: (page - 1) * pageSize,
-    });
-  }
-
-  async createSkillInstance(user: User, param: CreateSkillInstanceRequest) {
-    const { uid } = user;
-    const { instanceList } = param;
-    const tplConfigMap = new Map<string, BaseSkill>();
-
-    for (const instance of instanceList) {
-      if (!instance.displayName) {
-        throw new ParamsError('skill display name is required');
-      }
-      let tpl = this.skillInventory.find((tpl) => tpl.name === instance.tplName);
-      if (!tpl) {
-        this.logger.log(`skill ${instance.tplName} not found`);
-        tpl = this.skillInventory?.[0];
-      }
-      tplConfigMap.set(instance.tplName, tpl);
-    }
-
-    const instances = await this.prisma.skillInstance.createManyAndReturn({
-      data: instanceList.map((instance) => ({
-        skillId: genSkillID(),
-        uid,
-        ...pick(instance, ['tplName', 'displayName', 'description']),
-        icon: JSON.stringify(instance.icon ?? tplConfigMap.get(instance.tplName)?.icon),
-        ...{
-          tplConfig: instance.tplConfig ? JSON.stringify(instance.tplConfig) : undefined,
-          configSchema: tplConfigMap.get(instance.tplName)?.configSchema
-            ? JSON.stringify(tplConfigMap.get(instance.tplName)?.configSchema)
-            : undefined,
-        },
-      })),
-    });
-
-    return instances;
-  }
-
-  async updateSkillInstance(user: User, param: UpdateSkillInstanceRequest) {
-    const { uid } = user;
-    const { skillId } = param;
-
-    if (!skillId) {
-      throw new ParamsError('skill id is required');
-    }
-
-    return this.prisma.skillInstance.update({
-      where: { skillId, uid, deletedAt: null },
-      data: {
-        ...pick(param, ['displayName', 'description']),
-        tplConfig: param.tplConfig ? JSON.stringify(param.tplConfig) : undefined,
-      },
-    });
-  }
-
-  async pinSkillInstance(user: User, param: PinSkillInstanceRequest) {
-    const { uid } = user;
-    const { skillId } = param;
-
-    if (!skillId) {
-      throw new ParamsError('skill id is required');
-    }
-
-    return this.prisma.skillInstance.update({
-      where: { skillId, uid, deletedAt: null },
-      data: { pinnedAt: new Date() },
-    });
-  }
-
-  async unpinSkillInstance(user: User, param: UnpinSkillInstanceRequest) {
-    const { uid } = user;
-    const { skillId } = param;
-
-    if (!skillId) {
-      throw new ParamsError('skill id is required');
-    }
-
-    return this.prisma.skillInstance.update({
-      where: { skillId, uid, deletedAt: null },
-      data: { pinnedAt: null },
-    });
-  }
-
-  async deleteSkillInstance(user: User, param: DeleteSkillInstanceRequest) {
-    const { skillId } = param;
-    if (!skillId) {
-      throw new ParamsError('skill id is required');
-    }
-    const skill = await this.prisma.skillInstance.findUnique({
-      where: { skillId, uid: user.uid, deletedAt: null },
-    });
-    if (!skill) {
-      throw new SkillNotFoundError('skill not found');
-    }
-
-    // delete skill and triggers
-    const deletedAt = new Date();
-    await this.prisma.$transaction([
-      this.prisma.skillTrigger.updateMany({
-        where: { skillId, uid: user.uid },
-        data: { deletedAt },
-      }),
-      this.prisma.skillInstance.update({
-        where: { skillId, uid: user.uid },
-        data: { deletedAt },
-      }),
-    ]);
   }
 
   /**
@@ -494,7 +313,6 @@ export class SkillService implements OnModuleInit {
       param.resultHistory ??= safeParseJSON(existingResult.history);
       param.tplConfig ??= safeParseJSON(existingResult.tplConfig);
       param.runtimeConfig ??= safeParseJSON(existingResult.runtimeConfig);
-      param.projectId ??= existingResult.projectId;
     }
 
     param.input ||= { query: '' };
@@ -640,26 +458,6 @@ export class SkillService implements OnModuleInit {
     }
     if (param.resultHistory && Array.isArray(param.resultHistory)) {
       param.resultHistory = await this.populateSkillResultHistory(user, param.resultHistory);
-    }
-    if (param.projectId) {
-      const project = await this.prisma.project.findUnique({
-        where: {
-          projectId: param.projectId,
-          uid: user.uid,
-          deletedAt: null,
-        },
-      });
-      if (!project) {
-        // Create failed action result record before throwing error
-        await this.createFailedActionResult(
-          resultId,
-          uid,
-          `Project ${param.projectId} not found`,
-          param,
-          { actualProviderItemId, isAutoModelRouted },
-        );
-        throw new ProjectNotFoundError(`project ${param.projectId} not found`);
-      }
     }
 
     // Validate toolsets if provided
@@ -897,56 +695,41 @@ export class SkillService implements OnModuleInit {
       const effectiveExistingResult = latestResult || existingResult;
 
       if (effectiveExistingResult) {
-        if (effectiveExistingResult.pilotStepId) {
-          const result = await this.prisma.actionResult.update({
-            where: { pk: effectiveExistingResult.pk },
+        const [result] = await this.prisma.$transaction([
+          this.prisma.actionResult.create({
             data: {
+              resultId,
+              uid,
+              version: (effectiveExistingResult.version ?? 0) + 1,
+              type: 'skill',
+              tier: providerItem?.tier ?? '',
               status: 'executing',
+              title: data.title || data.input?.query,
+              targetId: data.target?.entityId,
+              targetType: data.target?.entityType,
+              modelName,
+              actualProviderItemId,
+              isAutoModelRouted,
+              errors: JSON.stringify([]),
+              input: JSON.stringify(data.input),
+              context: JSON.stringify(purgeContextForActionResult(data.context)),
+              tplConfig: JSON.stringify(data.tplConfig),
+              runtimeConfig: JSON.stringify(data.runtimeConfig),
+              history: JSON.stringify(purgeHistoryForActionResult(data.resultHistory)),
+              toolsets: JSON.stringify(purgeToolsets(data.toolsets)),
+              providerItemId: param.modelItemId,
+              copilotSessionId: data.copilotSessionId,
+              workflowExecutionId: data.workflowExecutionId,
+              workflowNodeExecutionId: data.workflowNodeExecutionId,
             },
-          });
-          data.result = actionResultPO2DTO(result);
-          if (data.workflowExecutionId && data.workflowNodeExecutionId) {
-            data.result.workflowExecutionId = data.workflowExecutionId;
-            data.result.workflowNodeExecutionId = data.workflowNodeExecutionId;
-          }
-        } else {
-          const [result] = await this.prisma.$transaction([
-            this.prisma.actionResult.create({
-              data: {
-                resultId,
-                uid,
-                version: (effectiveExistingResult.version ?? 0) + 1,
-                type: 'skill',
-                tier: providerItem?.tier ?? '',
-                status: 'executing',
-                title: data.title || data.input?.query,
-                targetId: data.target?.entityId,
-                targetType: data.target?.entityType,
-                modelName,
-                actualProviderItemId,
-                isAutoModelRouted,
-                projectId: data.projectId ?? null,
-                errors: JSON.stringify([]),
-                input: JSON.stringify(data.input),
-                context: JSON.stringify(purgeContextForActionResult(data.context)),
-                tplConfig: JSON.stringify(data.tplConfig),
-                runtimeConfig: JSON.stringify(data.runtimeConfig),
-                history: JSON.stringify(purgeHistoryForActionResult(data.resultHistory)),
-                toolsets: JSON.stringify(purgeToolsets(data.toolsets)),
-                providerItemId: param.modelItemId,
-                copilotSessionId: data.copilotSessionId,
-                workflowExecutionId: data.workflowExecutionId,
-                workflowNodeExecutionId: data.workflowNodeExecutionId,
-              },
-            }),
-            // Delete existing step data
-            this.prisma.actionStep.updateMany({
-              where: { resultId },
-              data: { deletedAt: new Date() },
-            }),
-          ]);
-          data.result = actionResultPO2DTO(result);
-        }
+          }),
+          // Delete existing step data
+          this.prisma.actionStep.updateMany({
+            where: { resultId },
+            data: { deletedAt: new Date() },
+          }),
+        ]);
+        data.result = actionResultPO2DTO(result);
       } else {
         const result = await this.prisma.actionResult.create({
           data: {
@@ -962,7 +745,6 @@ export class SkillService implements OnModuleInit {
             isAutoModelRouted,
             type: 'skill',
             status: 'executing',
-            projectId: data.projectId,
             input: JSON.stringify(data.input),
             context: JSON.stringify(purgeContextForActionResult(data.context)),
             tplConfig: JSON.stringify(data.tplConfig),
@@ -1055,7 +837,6 @@ export class SkillService implements OnModuleInit {
           modelName: param.modelName ?? 'unknown',
           actualProviderItemId: routing?.actualProviderItemId ?? null,
           isAutoModelRouted: routing?.isAutoModelRouted ?? false,
-          projectId: param.projectId,
           errors: JSON.stringify([errorMessage]),
           input: JSON.stringify(param.input ?? {}),
           context: JSON.stringify(purgeContextForActionResult(param.context as SkillContext)),
@@ -1329,188 +1110,5 @@ export class SkillService implements OnModuleInit {
       );
       throw error;
     }
-  }
-
-  async listSkillTriggers(user: User, param: ListSkillTriggersData['query']) {
-    const { skillId, page = 1, pageSize = 10 } = param;
-
-    return this.prisma.skillTrigger.findMany({
-      where: { uid: user.uid, skillId, deletedAt: null },
-      orderBy: { updatedAt: 'desc' },
-      take: pageSize,
-      skip: (page - 1) * pageSize,
-    });
-  }
-
-  async startTimerTrigger(user: User, trigger: SkillTriggerModel) {
-    if (!trigger.timerConfig) {
-      this.logger.warn(`No timer config found for trigger: ${trigger.triggerId}, cannot start it`);
-      return;
-    }
-
-    if (trigger.bullJobId) {
-      this.logger.warn(`Trigger already bind to a bull job: ${trigger.triggerId}, skip start it`);
-      return;
-    }
-
-    if (!this.skillQueue) {
-      this.logger.warn(
-        `Skill queue not available, cannot start timer trigger: ${trigger.triggerId}`,
-      );
-      return;
-    }
-
-    const timerConfig: TimerTriggerConfig = safeParseJSON(trigger.timerConfig || '{}');
-    const { datetime, repeatInterval } = timerConfig;
-
-    const repeatIntervalToMillis: Record<TimerInterval, number> = {
-      hour: 60 * 60 * 1000,
-      day: 24 * 60 * 60 * 1000,
-      week: 7 * 24 * 60 * 60 * 1000,
-      month: 30 * 24 * 60 * 60 * 1000,
-      year: 365 * 24 * 60 * 60 * 1000,
-    };
-
-    const param: InvokeSkillRequest = {
-      input: safeParseJSON(trigger.input || '{}'),
-      target: {},
-      context: safeParseJSON(trigger.context || '{}'),
-      tplConfig: safeParseJSON(trigger.tplConfig || '{}'),
-      runtimeConfig: {}, // TODO: add runtime config when trigger is ready
-      skillId: trigger.skillId,
-      triggerId: trigger.triggerId,
-    };
-
-    const job = await this.skillQueue.add(
-      'invokeSkill',
-      {
-        ...param,
-        uid: user.uid,
-        rawParam: JSON.stringify(param),
-      },
-      {
-        delay: new Date(datetime).getTime() - new Date().getTime(),
-        repeat: repeatInterval ? { every: repeatIntervalToMillis[repeatInterval] } : undefined,
-      },
-    );
-
-    return this.prisma.skillTrigger.update({
-      where: { triggerId: trigger.triggerId },
-      data: { bullJobId: String(job.id) },
-    });
-  }
-
-  async stopTimerTrigger(_user: User, trigger: SkillTriggerModel) {
-    if (!trigger.bullJobId) {
-      this.logger.warn(`No bull job found for trigger: ${trigger.triggerId}, cannot stop it`);
-      return;
-    }
-
-    if (!this.skillQueue) {
-      this.logger.warn(
-        `Skill queue not available, cannot stop timer trigger: ${trigger.triggerId}`,
-      );
-      return;
-    }
-
-    const jobToRemove = await this.skillQueue.getJob(trigger.bullJobId);
-    if (jobToRemove) {
-      await jobToRemove.remove();
-    }
-
-    await this.prisma.skillTrigger.update({
-      where: { triggerId: trigger.triggerId },
-      data: { bullJobId: null },
-    });
-  }
-
-  async createSkillTrigger(user: User, param: CreateSkillTriggerRequest) {
-    const { uid } = user;
-
-    if (param.triggerList.length === 0) {
-      throw new ParamsError('trigger list is empty');
-    }
-
-    for (const trigger of param.triggerList) {
-      validateSkillTriggerCreateParam(trigger);
-    }
-
-    const triggers = await this.prisma.skillTrigger.createManyAndReturn({
-      data: param.triggerList.map((trigger) => ({
-        uid,
-        triggerId: genSkillTriggerID(),
-        displayName: trigger.displayName,
-        ...pick(trigger, ['skillId', 'triggerType', 'simpleEventName']),
-        ...{
-          timerConfig: trigger.timerConfig ? JSON.stringify(trigger.timerConfig) : undefined,
-          input: trigger.input ? JSON.stringify(trigger.input) : undefined,
-          context: trigger.context ? JSON.stringify(trigger.context) : undefined,
-          tplConfig: trigger.tplConfig ? JSON.stringify(trigger.tplConfig) : undefined,
-        },
-        enabled: !!trigger.enabled,
-      })),
-    });
-
-    for (const trigger of triggers) {
-      if (trigger.triggerType === 'timer' && trigger.enabled) {
-        await this.startTimerTrigger(user, trigger);
-      }
-    }
-
-    return triggers;
-  }
-
-  async updateSkillTrigger(user: User, param: UpdateSkillTriggerRequest) {
-    const { uid } = user;
-    const { triggerId } = param;
-    if (!triggerId) {
-      throw new ParamsError('trigger id is required');
-    }
-
-    const trigger = await this.prisma.skillTrigger.update({
-      where: { triggerId, uid, deletedAt: null },
-      data: {
-        ...pick(param, ['triggerType', 'displayName', 'enabled', 'simpleEventName']),
-        ...{
-          timerConfig: param.timerConfig ? JSON.stringify(param.timerConfig) : undefined,
-          input: param.input ? JSON.stringify(param.input) : undefined,
-          context: param.context ? JSON.stringify(param.context) : undefined,
-          tplConfig: param.tplConfig ? JSON.stringify(param.tplConfig) : undefined,
-        },
-      },
-    });
-
-    if (trigger.triggerType === 'timer') {
-      if (trigger.enabled && !trigger.bullJobId) {
-        await this.startTimerTrigger(user, trigger);
-      } else if (!trigger.enabled && trigger.bullJobId) {
-        await this.stopTimerTrigger(user, trigger);
-      }
-    }
-
-    return trigger;
-  }
-
-  async deleteSkillTrigger(user: User, param: DeleteSkillTriggerRequest) {
-    const { uid } = user;
-    const { triggerId } = param;
-    if (!triggerId) {
-      throw new ParamsError('skill id and trigger id are required');
-    }
-    const trigger = await this.prisma.skillTrigger.findFirst({
-      where: { triggerId, uid, deletedAt: null },
-    });
-    if (!trigger) {
-      throw new ParamsError('trigger not found');
-    }
-
-    if (trigger.bullJobId) {
-      await this.stopTimerTrigger(user, trigger);
-    }
-
-    await this.prisma.skillTrigger.update({
-      where: { triggerId: trigger.triggerId, uid: user.uid },
-      data: { deletedAt: new Date() },
-    });
   }
 }

@@ -45,7 +45,6 @@ import {
   ResourceNotFoundError,
   ParamsError,
   CanvasNotFoundError,
-  ProjectNotFoundError,
 } from '@refly/errors';
 import { DeleteCanvasNodesJobData } from '../canvas/canvas.dto';
 import { ParserFactory } from '../knowledge/parsers/factory';
@@ -85,7 +84,6 @@ export class ResourceService {
     const {
       resourceId,
       resourceType,
-      projectId,
       canvasId,
       page = 1,
       pageSize = 10,
@@ -100,7 +98,6 @@ export class ResourceService {
         resourceType,
         uid: user.uid,
         deletedAt: null,
-        projectId,
         canvasId,
       },
       skip: (page - 1) * pageSize,
@@ -288,10 +285,6 @@ export class ResourceService {
       await this.checkCanvasExists(user, param.canvasId);
     }
 
-    if (param.projectId) {
-      await this.checkProjectExists(user, param.projectId);
-    }
-
     if (param.resourceId) {
       const existingResource = await this.prisma.resource.findFirst({
         where: { resourceId: param.resourceId },
@@ -327,7 +320,6 @@ export class ResourceService {
         storageKey,
         storageSize,
         rawFileKey: staticFile?.storageKey,
-        projectId: param.projectId,
         canvasId: param.canvasId,
         uid: user.uid,
         title: param.title || '',
@@ -514,19 +506,6 @@ export class ResourceService {
   }
 
   /**
-   * Check if the project exists
-   */
-  async checkProjectExists(user: User, projectId: string) {
-    const project = await this.prisma.project.findUnique({
-      select: { pk: true },
-      where: { projectId, uid: user.uid, deletedAt: null },
-    });
-    if (!project) {
-      throw new ProjectNotFoundError();
-    }
-  }
-
-  /**
    * Parse resource content from remote URL into markdown.
    * Currently only weblinks are supported.
    */
@@ -639,7 +618,7 @@ export class ResourceService {
       url,
       createdAt: resource.createdAt.toJSON(),
       updatedAt: resource.updatedAt.toJSON(),
-      ...pick(updatedResource, ['title', 'uid', 'projectId']),
+      ...pick(updatedResource, ['title', 'uid']),
     });
 
     return updatedResource;
@@ -672,7 +651,6 @@ export class ResourceService {
           title,
           resourceType: resourceType as ResourceType,
           resourceId,
-          projectId: resource.projectId,
         },
       });
       updates.vectorSize = size;
@@ -795,14 +773,6 @@ export class ResourceService {
       updates.meta = JSON.stringify({ ...existingMeta, ...metadata, ...param.data });
     }
 
-    if (param.projectId !== undefined) {
-      if (param.projectId) {
-        updates.project = { connect: { projectId: param.projectId } };
-      } else {
-        updates.project = { disconnect: true };
-      }
-    }
-
     if (param.canvasId !== undefined) {
       if (param.canvasId) {
         updates.canvas = { connect: { canvasId: param.canvasId } };
@@ -839,7 +809,7 @@ export class ResourceService {
       content: param.content || undefined,
       createdAt: updatedResource.createdAt.toJSON(),
       updatedAt: updatedResource.updatedAt.toJSON(),
-      ...pick(updatedResource, ['title', 'uid', 'projectId']),
+      ...pick(updatedResource, ['title', 'uid']),
     });
 
     // Send to processing queue if resource needs parsing or indexing

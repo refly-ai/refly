@@ -112,11 +112,6 @@ export const RoutesList: RouteObject[] = [
     path: '/canvas/:canvasId',
     element: <CanvasRedirect />,
   },
-  // TODO: deprecated and navigate to /workspace
-  {
-    path: '/project/:projectId',
-    element: <WorkspaceRedirect />,
-  },
   // TODO: deprecated and navigate to /workflow-template/:shareId
   {
     path: '/app/:shareId',
