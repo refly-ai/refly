@@ -340,6 +340,53 @@ export class SkillInvokerService {
       },
     };
 
+    const skillMetaName = data.skillName ?? data.result?.actionMeta?.name ?? 'unknown';
+    const metadata: SkillRunnableMeta = { name: skillMetaName };
+    const setMetadata = (key: string, value: unknown) => {
+      if (value !== undefined) {
+        metadata[key] = value;
+      }
+    };
+
+    if (data.result?.actionMeta?.icon) {
+      metadata.icon = data.result.actionMeta.icon;
+    }
+
+    const modelInfo = data.result?.modelInfo;
+    const providerInfo = providerItem?.provider ?? provider;
+    const providerConfig = providerItem?.config as any;
+    const traceparent =
+      typeof data.traceCarrier?.traceparent === 'string'
+        ? data.traceCarrier?.traceparent
+        : undefined;
+    const traceId = traceparent?.split('-')[1];
+
+    setMetadata('runType', 'skill');
+    setMetadata('traceId', traceId);
+    setMetadata('skillName', data.skillName ?? data.result?.actionMeta?.name);
+    setMetadata('query', data.input?.query);
+    setMetadata('originalQuery', data.input?.originalQuery);
+    setMetadata('locale', outputLocale);
+    setMetadata('uiLocale', userPo?.uiLocale);
+    setMetadata('mode', data.mode);
+    setMetadata('resultId', data.result?.resultId);
+    setMetadata('resultVersion', data.result?.version);
+    setMetadata('status', data.result?.status);
+    setMetadata('errorType', data.result?.errorType);
+    setMetadata('modelName', modelInfo?.name ?? providerConfig?.modelName ?? data.modelName);
+    setMetadata(
+      'modelItemId',
+      data.modelItemId ?? modelInfo?.providerItemId ?? data.result?.actualProviderItemId,
+    );
+    setMetadata('providerKey', modelInfo?.provider ?? providerInfo?.providerKey);
+    setMetadata('providerId', providerInfo?.providerId ?? providerItem?.providerId);
+    setMetadata('workflowExecutionId', data.workflowExecutionId);
+    setMetadata('workflowNodeExecutionId', data.workflowNodeExecutionId);
+
+    if (Object.keys(metadata).length > 0) {
+      config.metadata = metadata;
+    }
+
     if (data.copilotSessionId) {
       config.configurable.copilotSessionId = data.copilotSessionId;
     }
