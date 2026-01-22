@@ -43,12 +43,6 @@ export {
   useKnowledgeBaseStore,
   useKnowledgeBaseStoreShallow,
 } from './stores/knowledge-base';
-export { useLaunchpadStore, useLaunchpadStoreShallow } from './stores/launchpad';
-export { useProjectSelectorStore, useProjectSelectorStoreShallow } from './stores/project-selector';
-export {
-  useQuickSearchStateStore,
-  useQuickSearchStateStoreShallow,
-} from './stores/quick-search-state';
 export { useSearchStateStore, useSearchStateStoreShallow } from './stores/search-state';
 export { useSearchStore, useSearchStoreShallow } from './stores/search';
 export { useSiderStore, useSiderStoreShallow } from './stores/sider';
