@@ -407,7 +407,14 @@ export class SkillInvokerService {
       // Calculate PTC status based on user and toolsets
       const ptcConfig = getPtcConfig(this.config);
       const toolsetKeys = toolsets.map((t) => t.id);
-      const ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
+      let ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
+
+      // Workflow allowlist check (for local testing)
+      // Check if we have a canvas ID and workflow allowlist is configured
+      const canvasId = data.target?.entityType === 'canvas' ? data.target?.entityId : undefined;
+      if (ptcEnabled && canvasId && ptcConfig.workflowAllowlist?.size) {
+        ptcEnabled = ptcConfig.workflowAllowlist.has(canvasId);
+      }
 
       config.configurable.ptcEnabled = ptcEnabled;
 
