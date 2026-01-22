@@ -27,7 +27,6 @@ import {
   IndexError,
 } from '@refly/openapi-schema';
 import {
-  QUEUE_SIMPLE_EVENT,
   QUEUE_RESOURCE,
   streamToString,
   QUEUE_CLEAR_CANVAS_ENTITY,
@@ -37,7 +36,6 @@ import {
 } from '../../utils';
 import { genResourceID, cleanMarkdownForIngest, safeParseJSON } from '@refly/utils';
 import { ResourcePrepareResult, FinalizeResourceParam } from './knowledge.dto';
-import { SimpleEventData } from '../event/event.dto';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { MiscService } from '../misc/misc.service';
 import {
@@ -71,7 +69,6 @@ export class ResourceService {
     @Inject(OSS_INTERNAL) private oss: ObjectStorageService,
     @Inject(FULLTEXT_SEARCH) private fts: FulltextSearchService,
     @Optional() @InjectQueue(QUEUE_RESOURCE) private queue?: Queue<FinalizeResourceParam>,
-    @Optional() @InjectQueue(QUEUE_SIMPLE_EVENT) private simpleEventQueue?: Queue<SimpleEventData>,
     @Optional()
     @InjectQueue(QUEUE_CLEAR_CANVAS_ENTITY)
     private canvasQueue?: Queue<DeleteCanvasNodesJobData>,
@@ -710,16 +707,6 @@ export class ResourceService {
           indexStatus: 'index_failed',
           indexError: JSON.stringify({ type: 'unknownError' } as IndexError),
         },
-      });
-    }
-
-    // Send simple event
-    if (resource.indexStatus === 'finish') {
-      await this.simpleEventQueue?.add('simpleEvent', {
-        entityType: 'resource',
-        entityId: resourceId,
-        name: 'onResourceReady',
-        uid: user.uid,
       });
     }
 

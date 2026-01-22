@@ -19,7 +19,6 @@ import { SkillModule } from './skill/skill.module';
 import { CopilotModule } from './copilot/copilot.module';
 import { CopilotAutogenModule } from './copilot-autogen/copilot-autogen.module';
 import { SearchModule } from './search/search.module';
-import { EventModule } from './event/event.module';
 import { MiscModule } from './misc/misc.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { StripeModule } from '@golevelup/nestjs-stripe';
@@ -112,7 +111,6 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     CopilotModule,
     CopilotAutogenModule,
     SearchModule,
-    EventModule,
     MiscModule,
     SubscriptionModule,
     CanvasModule,

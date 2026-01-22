@@ -1,7 +1,6 @@
 export const QUEUE_RESOURCE = 'resource';
 export const QUEUE_SKILL = 'skill';
 export const QUEUE_ACTION = 'action';
-export const QUEUE_SIMPLE_EVENT = 'simpleEvent';
 export const QUEUE_SYNC_TOKEN_USAGE = 'syncTokenUsage';
 export const QUEUE_SYNC_TOKEN_CREDIT_USAGE = 'syncTokenCreditUsage';
 export const QUEUE_SYNC_MEDIA_CREDIT_USAGE = 'syncMediaCreditUsage';
@@ -14,8 +13,6 @@ export const QUEUE_POST_DELETE_KNOWLEDGE_ENTITY = 'postDeleteKnowledgeEntity';
 export const QUEUE_AUTO_NAME_CANVAS = 'autoNameCanvas';
 export const QUEUE_POST_DELETE_CANVAS = 'postDeleteCanvas';
 export const QUEUE_VERIFY_NODE_ADDITION = 'verifyNodeAddition';
-export const QUEUE_RUN_PILOT = 'runPilot';
-export const QUEUE_SYNC_PILOT_STEP = 'syncPilotStep';
 export const QUEUE_RUN_WORKFLOW = 'runWorkflow';
 export const QUEUE_POLL_WORKFLOW = 'pollWorkflow';
 export const QUEUE_CREATE_SHARE = 'createShare';

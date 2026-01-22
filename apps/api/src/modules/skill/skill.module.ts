@@ -13,7 +13,6 @@ import {
   QUEUE_CHECK_STUCK_ACTIONS,
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_AUTO_NAME_CANVAS,
-  QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_TOKEN_CREDIT_USAGE,
 } from '../../utils';
 import { SkillProcessor, CheckStuckActionsProcessor } from '../skill/skill.processor';
@@ -66,7 +65,6 @@ import { SandboxModule } from '../sandbox/sandbox.module';
           BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_CREDIT_USAGE }),
           BullModule.registerQueue({ name: QUEUE_SYNC_REQUEST_USAGE }),
           BullModule.registerQueue({ name: QUEUE_AUTO_NAME_CANVAS }),
-          BullModule.registerQueue({ name: QUEUE_SYNC_PILOT_STEP }),
         ]),
   ],
   providers: [

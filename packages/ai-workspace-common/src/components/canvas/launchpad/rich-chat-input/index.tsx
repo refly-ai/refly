@@ -827,7 +827,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         query,
         readonly,
         handleSendMessageWithMentions,
-        searchStore,
         isLogin,
         isMentionListVisible,
         handlePopupShow,

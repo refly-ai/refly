@@ -126,7 +126,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           }
         }
       },
-      [query, readonly, handleSendMessage, searchStore, isLogin],
+      [query, readonly, handleSendMessage, isLogin],
     );
 
     const handleInputChange = useCallback(
