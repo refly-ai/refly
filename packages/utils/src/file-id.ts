@@ -234,10 +234,16 @@ const MARKDOWN_COMBINED_PATTERN =
 
 /**
  * Combined pattern for single-pass HTML replacement
- * Matches: file-content://df-xxx | file://df-xxx | src="df-xxx" | href="df-xxx"
+ * Matches: attr with file URIs | file-content://df-xxx | file://df-xxx | bare file IDs in attributes
+ *
+ * Groups:
+ * 1-3: (src|href)="file-content://..." or (src|href)="file://..." (attribute with URI)
+ * 4: standalone file-content://df-xxx
+ * 5: standalone file://df-xxx
+ * 6-8: src="df-xxx" or href="df-xxx" (bare IDs in attributes)
  */
 const HTML_COMBINED_PATTERN =
-  /file-content:\/\/(df-[a-z0-9]+)|(?<!file-content:)file:\/\/(df-[a-z0-9]+)|((?:src|href)=["'])(df-[a-z0-9]+)(["'])/gi;
+  /((?:src|href)=["'])(?:file-content:\/\/|file:\/\/)(df-[a-z0-9]+)(["'])|file-content:\/\/(df-[a-z0-9]+)|(?<!file-content:)file:\/\/(df-[a-z0-9]+)|((?:src|href)=["'])(df-[a-z0-9]+)(["'])/gi;
 
 /**
  * Replace all file ID patterns in markdown content with URLs (optimized single-pass)
@@ -298,27 +304,15 @@ export function replaceAllMarkdownFileIds(
  * Replace all file ID patterns in HTML content with URLs (optimized single-pass)
  * Handles: file-content://, file://, and bare file IDs in src/href attributes
  *
- * Performance optimizations:
- * - Early exit if no file IDs detected
- * - Single-pass replacement using combined regex
- * - Efficient for large documents (O(n) instead of O(3n))
- *
  * @param content - HTML content to process
- * @param contentUrlMap - Map of fileId to content URL (for images/media)
- * @param shareUrlMap - Map of fileId to share URL (for links)
+ * @param urlMap - Map of fileId to URL (content URL for direct file access)
  * @returns Processed content
  */
-export function replaceAllHtmlFileIds(
-  content: string,
-  contentUrlMap: Map<string, string>,
-  shareUrlMap: Map<string, string>,
-): string {
-  // Early exit: skip processing if no file IDs or empty maps
-  if (!content || (contentUrlMap.size === 0 && shareUrlMap.size === 0)) {
+export function replaceAllHtmlFileIds(content: string, urlMap: Map<string, string>): string {
+  if (!content || urlMap.size === 0) {
     return content;
   }
 
-  // Quick check: skip if no potential file ID patterns
   if (
     !hasFileIds(content) &&
     !content.includes('file-content://') &&
@@ -327,33 +321,35 @@ export function replaceAllHtmlFileIds(
     return content;
   }
 
-  // Single-pass replacement
   return content.replace(
     HTML_COMBINED_PATTERN,
     (
       match,
+      attrWithUriPrefix?: string,
+      attrWithUriFileId?: string,
+      attrWithUriSuffix?: string,
       fileContentId?: string,
       fileShareId?: string,
-      attrPrefix?: string,
-      attrFileId?: string,
-      attrSuffix?: string,
+      bareAttrPrefix?: string,
+      bareAttrFileId?: string,
+      bareAttrSuffix?: string,
     ) => {
-      // file-content://df-xxx → contentUrl
-      if (fileContentId) {
-        return contentUrlMap.get(fileContentId) ?? match;
+      // Attribute-based patterns: (src|href)="file://..." or (src|href)="df-xxx"
+      const prefix = attrWithUriPrefix ?? bareAttrPrefix;
+      const fileId = attrWithUriFileId ?? bareAttrFileId;
+      const suffix = attrWithUriSuffix ?? bareAttrSuffix;
+
+      if (fileId && prefix && suffix) {
+        const url = urlMap.get(fileId);
+        return url ? `${prefix}${url}${suffix}` : match;
       }
-      // file://df-xxx → shareUrl
-      if (fileShareId) {
-        return shareUrlMap.get(fileShareId) ?? match;
+
+      // Standalone file-content://df-xxx or file://df-xxx
+      const standaloneId = fileContentId ?? fileShareId;
+      if (standaloneId) {
+        return urlMap.get(standaloneId) ?? match;
       }
-      // src="df-xxx" or href="df-xxx" → src="contentUrl" or href="shareUrl"
-      if (attrFileId && attrPrefix && attrSuffix) {
-        const isHref = attrPrefix.startsWith('href=');
-        const url = isHref
-          ? (shareUrlMap.get(attrFileId) ?? contentUrlMap.get(attrFileId))
-          : (contentUrlMap.get(attrFileId) ?? shareUrlMap.get(attrFileId));
-        return url ? `${attrPrefix}${url}${attrSuffix}` : match;
-      }
+
       return match;
     },
   );

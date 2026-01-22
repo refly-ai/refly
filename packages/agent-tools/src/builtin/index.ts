@@ -750,21 +750,18 @@ Each fileId must be an exact match from list_files or file metadata (format: df-
       }),
     );
 
-    // Build maps for both URL types (only include successful results)
-    const shareUrlMap = new Map<string, string>();
+    // Build content URL map (only include successful results)
+    // HTML documents use contentUrl for all file references
     const contentUrlMap = new Map<string, string>();
 
-    for (const { fileId, shareUrl, contentUrl } of urlResults) {
-      if (shareUrl) {
-        shareUrlMap.set(fileId, shareUrl);
-      }
+    for (const { fileId, contentUrl } of urlResults) {
       if (contentUrl) {
         contentUrlMap.set(fileId, contentUrl);
       }
     }
 
     // Use shared utility to replace all file ID patterns in HTML content
-    return replaceAllHtmlFileIds(html, contentUrlMap, shareUrlMap);
+    return replaceAllHtmlFileIds(html, contentUrlMap);
   }
 }
 
