@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-lintignore"],
-  "ignore": ["apps/web/src/service-worker-sw.ts"],
+  "ignore": ["apps/web/src/service-worker-sw.ts", "apps/api/load-tests/**", "docs/.vitepress/**"],
   "workspaces": {
     ".": {}
   }
