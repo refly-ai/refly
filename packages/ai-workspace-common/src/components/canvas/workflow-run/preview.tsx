@@ -489,7 +489,7 @@ const WorkflowRunPreviewComponent = () => {
   }, [outputsOnly, canvasId]);
 
   // Fetch all agent-generated files from the canvas when outputsOnly is enabled
-  const { data: driveFilesData } = useListDriveFiles(
+  const { data: driveFilesData, isLoading: isDriveFilesLoading } = useListDriveFiles(
     {
       query: {
         canvasId: canvasId ?? '',
@@ -683,7 +683,9 @@ const WorkflowRunPreviewComponent = () => {
             {outputsOnly ? (
               // Outputs only mode: Show only product cards
               <div className="flex flex-col gap-4 p-4">
-                {allProductFiles.length === 0 ? (
+                {isDriveFilesLoading ? (
+                  <Skeleton paragraph={{ rows: 6 }} active title={false} />
+                ) : allProductFiles.length === 0 ? (
                   <div className="flex items-center justify-center h-32 text-refly-text-2">
                     {t('canvas.workflow.run.noArtifacts')}
                   </div>
