@@ -217,9 +217,13 @@ export class CreditService {
       return;
     }
 
-    const giftCreditAmount = this.configService.get('credit.firstSubscriptionGiftCreditAmount');
-    const giftCreditExpiresInMonths = this.configService.get(
+    const giftCreditAmount = this.configService.get<number>(
+      'credit.firstSubscriptionGiftCreditAmount',
+      2000,
+    );
+    const giftCreditExpiresInMonths = this.configService.get<number>(
       'credit.firstSubscriptionGiftCreditExpiresInMonths',
+      1,
     );
 
     // Calculate expiration date
@@ -251,7 +255,7 @@ export class CreditService {
     description?: string,
     now: Date = new Date(),
   ): Promise<void> {
-    const expiresInDays = this.configService.get('credit.creditPackExpiresInDays');
+    const expiresInDays = this.configService.get<number>('credit.creditPackExpiresInDays', 90);
     const expiresAt = new Date(now);
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
     await this.processCreditRecharge(
@@ -284,7 +288,7 @@ export class CreditService {
     const now = new Date();
     const expiresAt = new Date(now);
     expiresAt.setMonth(
-      expiresAt.getMonth() + this.configService.get('credit.commissionCreditExpiresIn'),
+      expiresAt.getMonth() + this.configService.get<number>('credit.commissionCreditExpiresIn', 6),
     );
 
     await this.processCreditRecharge(
@@ -303,7 +307,7 @@ export class CreditService {
         shareId,
         title,
         appId,
-        commissionRate: this.configService.get('credit.canvasCreditCommissionRate'),
+        commissionRate: this.configService.get<number>('credit.canvasCreditCommissionRate', 0.2),
       },
       appId,
     );
@@ -323,7 +327,7 @@ export class CreditService {
         shareId,
         title,
         appId,
-        commissionRate: this.configService.get('credit.canvasCreditCommissionRate'),
+        commissionRate: this.configService.get<number>('credit.canvasCreditCommissionRate', 0.2),
       },
     );
   }
@@ -349,9 +353,13 @@ export class CreditService {
       return;
     }
 
-    const bonusCreditAmount = this.configService.get('auth.registration.bonusCreditAmount');
-    const bonusCreditExpiresInDays = this.configService.get(
+    const bonusCreditAmount = this.configService.get<number>(
+      'auth.registration.bonusCreditAmount',
+      500,
+    );
+    const bonusCreditExpiresInDays = this.configService.get<number>(
       'auth.registration.bonusCreditExpiresInDays',
+      7,
     );
 
     // Calculate expiration date
@@ -385,13 +393,21 @@ export class CreditService {
     inviteeUid: string,
     now: Date = new Date(),
   ): Promise<void> {
-    const inviterCreditAmount = this.configService.get('auth.invitation.inviterCreditAmount');
-    const inviteeCreditAmount = this.configService.get('auth.invitation.inviteeCreditAmount');
-    const inviterCreditExpiresInDays = this.configService.get(
-      'auth.invitation.inviterCreditExpiresInDays',
+    const inviterCreditAmount = this.configService.get<number>(
+      'auth.invitation.inviterCreditAmount',
+      500,
     );
-    const inviteeCreditExpiresInDays = this.configService.get(
+    const inviteeCreditAmount = this.configService.get<number>(
+      'auth.invitation.inviteeCreditAmount',
+      500,
+    );
+    const inviterCreditExpiresInDays = this.configService.get<number>(
+      'auth.invitation.inviterCreditExpiresInDays',
+      7,
+    );
+    const inviteeCreditExpiresInDays = this.configService.get<number>(
       'auth.invitation.inviteeCreditExpiresInDays',
+      7,
     );
 
     // Calculate expiration dates
