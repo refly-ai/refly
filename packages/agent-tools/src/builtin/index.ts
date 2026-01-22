@@ -539,7 +539,7 @@ If no files are in context, do NOT use file placeholders.`,
       const canvasId = config.configurable?.canvasId;
 
       // Replace file placeholders with HTTP URLs before writing
-      const processedContent = await this.replaceFilePlaceholders(input.content);
+      const processedContent = await this.replaceFilePlaceholders(input.content, input.filename);
 
       const file = await reflyService.writeFile(user, {
         name: input.filename,
@@ -568,12 +568,23 @@ If no files are in context, do NOT use file placeholders.`,
   }
 
   /**
+   * Check if the filename indicates an HTML file
+   */
+  private isHtmlFile(filename: string): boolean {
+    const ext = filename.toLowerCase().split('.').pop();
+    return ext === 'html' || ext === 'htm';
+  }
+
+  /**
    * Replace file placeholders in content with HTTP URLs.
    * Supported formats:
    * - `![alt](file-content://df-xxx)` → Direct file content URL (for images)
    * - `[text](file://df-xxx)` → Share page URL (for links)
+   *
+   * For HTML files, all file references (including audio/video src) use content URLs
+   * to ensure proper media playback.
    */
-  private async replaceFilePlaceholders(content: string): Promise<string> {
+  private async replaceFilePlaceholders(content: string, filename: string): Promise<string> {
     if (!content) {
       return content;
     }
@@ -621,7 +632,14 @@ If no files are in context, do NOT use file placeholders.`,
       }
     }
 
-    // Use shared utility to replace all file ID patterns in markdown content
+    // For HTML files, use appropriate URLs based on attribute type:
+    // - src attributes (images, audio, video): contentUrl for direct playback
+    // - href attributes (links): shareUrl for navigation to share page
+    if (this.isHtmlFile(filename)) {
+      return replaceAllHtmlFileIds(content, contentUrlMap, shareUrlMap);
+    }
+
+    // For markdown and other files, use the standard replacement logic
     return replaceAllMarkdownFileIds(content, contentUrlMap, shareUrlMap);
   }
 }
@@ -750,18 +768,23 @@ Each fileId must be an exact match from list_files or file metadata (format: df-
       }),
     );
 
-    // Build content URL map (only include successful results)
-    // HTML documents use contentUrl for all file references
+    // Build URL maps (only include successful results)
     const contentUrlMap = new Map<string, string>();
+    const shareUrlMap = new Map<string, string>();
 
-    for (const { fileId, contentUrl } of urlResults) {
+    for (const { fileId, shareUrl, contentUrl } of urlResults) {
       if (contentUrl) {
         contentUrlMap.set(fileId, contentUrl);
+      }
+      if (shareUrl) {
+        shareUrlMap.set(fileId, shareUrl);
       }
     }
 
     // Use shared utility to replace all file ID patterns in HTML content
-    return replaceAllHtmlFileIds(html, contentUrlMap);
+    // - src attributes (images, audio, video): contentUrl for direct playback
+    // - href attributes (links): shareUrl for navigation to share page
+    return replaceAllHtmlFileIds(html, contentUrlMap, shareUrlMap);
   }
 }
 

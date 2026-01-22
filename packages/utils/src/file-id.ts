@@ -249,14 +249,16 @@ const HTML_COMBINED_PATTERN =
  * Replace all file ID patterns in markdown content with URLs (optimized single-pass)
  * Handles: file-content://, file://, and bare file IDs in ](df-xxx)
  *
+ * URL selection: All patterns use contentUrl for direct file access
+ *
  * Performance optimizations:
  * - Early exit if no file IDs detected
  * - Single-pass replacement using combined regex
  * - Efficient for large documents (O(n) instead of O(3n))
  *
  * @param content - Markdown content to process
- * @param contentUrlMap - Map of fileId to content URL (for images/media)
- * @param shareUrlMap - Map of fileId to share URL (for links)
+ * @param contentUrlMap - Map of fileId to content URL (primary)
+ * @param shareUrlMap - Map of fileId to share URL (fallback)
  * @returns Processed content
  */
 export function replaceAllMarkdownFileIds(
@@ -284,11 +286,11 @@ export function replaceAllMarkdownFileIds(
     (match, fileContentId?: string, fileShareId?: string, markdownId?: string) => {
       // file-content://df-xxx → contentUrl
       if (fileContentId) {
-        return contentUrlMap.get(fileContentId) ?? match;
+        return contentUrlMap.get(fileContentId) ?? shareUrlMap.get(fileContentId) ?? match;
       }
-      // file://df-xxx → shareUrl
+      // file://df-xxx → contentUrl (for direct file access)
       if (fileShareId) {
-        return shareUrlMap.get(fileShareId) ?? match;
+        return contentUrlMap.get(fileShareId) ?? shareUrlMap.get(fileShareId) ?? match;
       }
       // ](df-xxx) → ](contentUrl) with shareUrl fallback
       if (markdownId) {
@@ -304,12 +306,21 @@ export function replaceAllMarkdownFileIds(
  * Replace all file ID patterns in HTML content with URLs (optimized single-pass)
  * Handles: file-content://, file://, and bare file IDs in src/href attributes
  *
+ * URL selection logic:
+ * - href attributes: always use shareUrl (for navigation to share page)
+ * - everything else (src, standalone URIs): use contentUrl (for direct access)
+ *
  * @param content - HTML content to process
- * @param urlMap - Map of fileId to URL (content URL for direct file access)
+ * @param contentUrlMap - Map of fileId to content URL (for src attributes, media playback)
+ * @param shareUrlMap - Map of fileId to share URL (for href attributes, link navigation)
  * @returns Processed content
  */
-export function replaceAllHtmlFileIds(content: string, urlMap: Map<string, string>): string {
-  if (!content || urlMap.size === 0) {
+export function replaceAllHtmlFileIds(
+  content: string,
+  contentUrlMap: Map<string, string>,
+  shareUrlMap: Map<string, string>,
+): string {
+  if (!content || (contentUrlMap.size === 0 && shareUrlMap.size === 0)) {
     return content;
   }
 
@@ -334,20 +345,29 @@ export function replaceAllHtmlFileIds(content: string, urlMap: Map<string, strin
       bareAttrFileId?: string,
       bareAttrSuffix?: string,
     ) => {
-      // Attribute-based patterns: (src|href)="file://..." or (src|href)="df-xxx"
-      const prefix = attrWithUriPrefix ?? bareAttrPrefix;
-      const fileId = attrWithUriFileId ?? bareAttrFileId;
-      const suffix = attrWithUriSuffix ?? bareAttrSuffix;
-
-      if (fileId && prefix && suffix) {
-        const url = urlMap.get(fileId);
-        return url ? `${prefix}${url}${suffix}` : match;
+      // Pattern 1: Attribute with URI (src="file://..." or href="file://...")
+      if (attrWithUriFileId && attrWithUriPrefix && attrWithUriSuffix) {
+        const isHrefAttr = attrWithUriPrefix.toLowerCase().startsWith('href=');
+        const primaryMap = isHrefAttr ? shareUrlMap : contentUrlMap;
+        const fallbackMap = isHrefAttr ? contentUrlMap : shareUrlMap;
+        const url = primaryMap.get(attrWithUriFileId) ?? fallbackMap.get(attrWithUriFileId);
+        return url ? `${attrWithUriPrefix}${url}${attrWithUriSuffix}` : match;
       }
 
-      // Standalone file-content://df-xxx or file://df-xxx
+      // Pattern 4: Bare attribute (src="df-xxx" or href="df-xxx")
+      if (bareAttrFileId && bareAttrPrefix && bareAttrSuffix) {
+        const isHrefAttr = bareAttrPrefix.toLowerCase().startsWith('href=');
+        const primaryMap = isHrefAttr ? shareUrlMap : contentUrlMap;
+        const fallbackMap = isHrefAttr ? contentUrlMap : shareUrlMap;
+        const url = primaryMap.get(bareAttrFileId) ?? fallbackMap.get(bareAttrFileId);
+        return url ? `${bareAttrPrefix}${url}${bareAttrSuffix}` : match;
+      }
+
+      // Pattern 2 & 3: Standalone file-content:// or file:// → contentUrl
       const standaloneId = fileContentId ?? fileShareId;
       if (standaloneId) {
-        return urlMap.get(standaloneId) ?? match;
+        const url = contentUrlMap.get(standaloneId) ?? shareUrlMap.get(standaloneId);
+        return url ?? match;
       }
 
       return match;
