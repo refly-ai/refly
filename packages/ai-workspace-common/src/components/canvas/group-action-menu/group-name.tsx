@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { FC, useCallback, useState, useEffect } from 'react';
 import CommonColorPicker from '../nodes/shared/color-picker';
 import { More } from 'refly-icons';
-import { CanvasNodeType } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { CanvasNodeType } from '@refly/openapi-schema';
 import { nodeOperationsEmitter } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 
 interface GroupNameProps {

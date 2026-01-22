@@ -1,7 +1,6 @@
-import { useState, useEffect, memo } from 'react';
+import { memo } from 'react';
 import {
   useAuthStoreShallow,
-  useSearchStoreShallow,
   useSubscriptionStoreShallow,
   useImportResourceStoreShallow,
   useCanvasOperationStoreShallow,
@@ -24,7 +23,6 @@ import { LazyModal } from './LazyModal';
  */
 export const ModalContainer = memo(() => {
   // Get global modal visibility states for lazy loading
-  const { isSearchOpen } = useSearchStoreShallow((state) => ({ isSearchOpen: state.isSearchOpen }));
   const { loginModalOpen, verificationModalOpen, resetPasswordModalOpen } = useAuthStoreShallow(
     (state) => ({
       loginModalOpen: state.loginModalOpen,
@@ -50,25 +48,10 @@ export const ModalContainer = memo(() => {
     showOnboardingSuccessAnimation: state.showOnboardingSuccessAnimation,
   }));
 
-  // Modal pre-load flags (triggered by keyboard shortcuts or specific interactions)
-  const [shouldLoadBigSearch, setShouldLoadBigSearch] = useState(false);
-
   // Combine store visibility and preloading for each modal
-  const isBigSearchShown = isSearchOpen || shouldLoadBigSearch;
   const isCanvasRenameShown = modalVisible && modalType === 'rename';
   const isCanvasDeleteShown = modalVisible && modalType === 'delete';
   const isDuplicateCanvasShown = modalVisible && modalType === 'duplicate';
-
-  // Listen for keyboard events to preload BigSearchModal (Cmd/Ctrl + K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        setShouldLoadBigSearch(true);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   return (
     <>
@@ -76,16 +59,6 @@ export const ModalContainer = memo(() => {
       <InvitationCodeModal />
       <FormOnboardingModal />
       <PureCopilotModal />
-
-      {/* Lazy-loaded modals - only load code when needed */}
-      <LazyModal
-        visible={isBigSearchShown}
-        loader={() =>
-          import('@refly-packages/ai-workspace-common/components/search/modal').then((m) => ({
-            default: m.BigSearchModal,
-          }))
-        }
-      />
 
       <LazyModal
         visible={loginModalOpen}

@@ -1,5 +1,5 @@
 import { useListProviderItems } from '@refly-packages/ai-workspace-common/queries';
-import { ListProviderItemsData } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { ListProviderItemsData } from '@refly/openapi-schema';
 import { useUserStoreShallow } from '@refly/stores';
 import { providerItemToModelInfo } from '@refly/utils';
 

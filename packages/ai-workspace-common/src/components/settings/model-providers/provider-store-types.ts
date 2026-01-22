@@ -1,4 +1,4 @@
-import { Provider, ProviderCategory } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { Provider, ProviderCategory } from '@refly/openapi-schema';
 
 // Pricing model for community providers
 export type ProviderPricingModel = 'free' | 'paid' | 'freemium';

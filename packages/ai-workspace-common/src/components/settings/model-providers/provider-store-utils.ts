@@ -1,4 +1,4 @@
-import { Provider } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { Provider } from '@refly/openapi-schema';
 import { CommunityProviderConfig } from './provider-store-types';
 
 /**

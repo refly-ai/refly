@@ -30,7 +30,7 @@ import { useWorkflowIncompleteNodes } from '@refly-packages/ai-workspace-common/
 import { useQueryClient } from '@tanstack/react-query';
 import { IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { ActionStatus } from '@refly/openapi-schema';
-import type { WorkflowNodeExecution } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import type { WorkflowNodeExecution } from '@refly/openapi-schema';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useActionPolling } from '@refly-packages/ai-workspace-common/hooks/canvas/use-action-polling';
 import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use-query-processor';
