@@ -1186,9 +1186,6 @@ importers:
       '@refly/agent-tools':
         specifier: workspace:*
         version: link:../agent-tools
-      '@refly/common-types':
-        specifier: workspace:*
-        version: link:../common-types
       '@refly/openapi-schema':
         specifier: workspace:*
         version: link:../openapi-schema
