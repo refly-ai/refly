@@ -28,6 +28,11 @@ export interface PtcToolExecuteContext {
   version?: number;
 }
 
+export enum CallType {
+  PTC = 'ptc',
+  STANDALONE = 'standalone',
+}
+
 @Injectable()
 export class ToolExecutionService {
   private readonly logger = new Logger(ToolExecutionService.name);
@@ -65,13 +70,13 @@ export class ToolExecutionService {
 
     // Determine call type and context
     const hasPtcContext = !!ptcContext?.ptcCallId;
-    const callType = hasPtcContext ? 'ptc' : 'standalone';
+    const callType = hasPtcContext ? CallType.PTC : CallType.STANDALONE;
 
     // Get resultId/version from HTTP headers (ptcContext)
     const { resultId, version } = ptcContext ?? {};
 
     // Generate a unique call ID for this execution
-    const callId = this.generateCallId(ptcContext?.ptcCallId, toolsetKey, toolName);
+    const callId = this.generateCallId(callType, toolsetKey, toolName, ptcContext?.ptcCallId);
     const startTime = Date.now();
 
     this.logger.log(
@@ -87,7 +92,7 @@ export class ToolExecutionService {
       input: { input: args ?? {} },
       type: callType,
       ptcCallId: ptcContext?.ptcCallId,
-      resultId: resultId ?? `standalone-${callId}`,
+      resultId: resultId ?? 'non-result-id',
       version: version ?? 0,
       createdAt: startTime,
     });
@@ -152,16 +157,21 @@ export class ToolExecutionService {
 
   /**
    * Generate a unique call ID for tool execution
-   * PTC mode: {ptcCallId}:{toolsetKey}:{toolName}:{uuid}
-   * Standalone mode: standalone:{toolsetKey}:{toolName}:{uuid}
+   * PTC mode: `ptc:{ptcCallId}:{toolsetKey}:{toolName}:{uuid}`
+   * Standalone mode: `standalone:{toolsetKey}:{toolName}:{uuid}`
    */
   private generateCallId(
-    ptcCallId: string | undefined,
+    callType: CallType,
     toolsetKey: string,
     toolName: string,
+    ptcCallId: string | undefined,
   ): string {
-    const prefix = ptcCallId ?? 'standalone';
-    return `${prefix}:${toolsetKey}:${toolName}:${randomUUID()}`;
+    const uuid = randomUUID();
+    if (callType === CallType.PTC) {
+      return `${callType}:${ptcCallId ?? ''}:${toolsetKey}:${toolName}:${uuid}`;
+    } else {
+      return `${callType}:${toolsetKey}:${toolName}:${uuid}`;
+    }
   }
 
   /**
