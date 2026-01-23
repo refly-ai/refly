@@ -7,7 +7,10 @@ import { ActionResult, WorkflowPlanRecord } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { safeParseJSON } from '@refly/utils';
-import { generateCanvasDataFromWorkflowPlan } from '@refly/canvas-common';
+import {
+  generateCanvasDataFromWorkflowPlan,
+  applyIncrementalChangesToCanvas,
+} from '@refly/canvas-common';
 import { useReactFlow } from '@xyflow/react';
 import { MessageList } from '@refly-packages/ai-workspace-common/components/result-message';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
@@ -15,7 +18,7 @@ import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hook
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { useUpdateCanvasTitle } from '@refly-packages/ai-workspace-common/hooks/canvas';
-import { CanvasNode } from '@refly/openapi-schema';
+import { CanvasNode, CanvasEdge } from '@refly/openapi-schema';
 import { logEvent } from '@refly/telemetry-web';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
@@ -58,6 +61,15 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     return (output as { data: WorkflowPlanRecord })?.data;
   }, [steps]);
 
+  // Detect if the plan was created via patch_workflow
+  const isPatchOperation = useMemo(() => {
+    const allToolCalls = steps?.flatMap((step) => step.toolCalls ?? []) ?? [];
+    const workflowPlanToolCall = [...allToolCalls]
+      .reverse()
+      .find((call) => call.toolName === 'generate_workflow' || call.toolName === 'patch_workflow');
+    return workflowPlanToolCall?.toolName === 'patch_workflow';
+  }, [steps]);
+
   const { fetchActionResult } = useFetchActionResult();
 
   useEffect(() => {
@@ -88,7 +100,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     enabled: !!canvasId,
   });
 
-  const { getNodes, setNodes, setEdges } = useReactFlow();
+  const { getNodes, getEdges, setNodes, setEdges } = useReactFlow();
   const { setVariables } = useVariablesManagement(canvasId);
   const { onLayout } = useCanvasLayout();
   const { setShowWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
@@ -142,7 +154,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     }
 
     let finalPlan = workflowPlan;
-    if (workflowPlan.tasks === undefined) {
+    if (workflowPlan.tasks === undefined || (isPatchOperation && !workflowPlan.patchOperations)) {
       setLoading(true);
       try {
         const { data } = await getClient().getWorkflowPlanDetail({
@@ -159,31 +171,74 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       }
     }
 
-    const { nodes, edges, variables } = generateCanvasDataFromWorkflowPlan(
-      finalPlan,
-      tools?.data ?? [],
-      {
-        autoLayout: true,
-        defaultModel: defaultAgentModel,
-        startNodes,
-      },
-    );
-    setNodes(nodes);
-    setEdges(edges);
-    setVariables(variables ?? [], { archiveOldFiles: true });
-    setShowWorkflowRun(true);
+    // For patch operations with patchOperations available, use incremental changes
+    if (isPatchOperation && finalPlan.patchOperations?.length) {
+      const currentEdges = getEdges() as CanvasEdge[];
 
-    if (!canvasTitle && finalPlan.title) {
-      updateTitle(finalPlan.title);
-    }
+      const { nodes, edges, affectedNodeIds, variableOperations } = applyIncrementalChangesToCanvas(
+        finalPlan.patchOperations,
+        currentNodes,
+        currentEdges,
+        tools?.data ?? [],
+        { defaultModel: defaultAgentModel },
+      );
 
-    for (const node of nodes) {
-      if (node.type === 'skillResponse') {
-        logEvent('create_agent_node', Date.now(), {
-          canvasId,
-          nodeId: node.id,
-          source: 'copilot_generate',
-        });
+      setNodes(nodes);
+      setEdges(edges);
+
+      // Handle variable operations
+      if (variableOperations?.length) {
+        // For now, we'll handle this by setting all variables including updates
+        // The setVariables function will merge with existing variables
+        const existingVariables = finalPlan.variables ?? [];
+        setVariables(existingVariables, { archiveOldFiles: false });
+      }
+
+      setShowWorkflowRun(true);
+
+      if (!canvasTitle && finalPlan.title) {
+        updateTitle(finalPlan.title);
+      }
+
+      // Log events for affected nodes
+      for (const nodeId of affectedNodeIds) {
+        const node = nodes.find((n) => n.id === nodeId);
+        if (node?.type === 'skillResponse') {
+          logEvent('create_agent_node', Date.now(), {
+            canvasId,
+            nodeId: node.id,
+            source: 'copilot_patch',
+          });
+        }
+      }
+    } else {
+      // Full replacement for generate_workflow or when patchOperations not available
+      const { nodes, edges, variables } = generateCanvasDataFromWorkflowPlan(
+        finalPlan,
+        tools?.data ?? [],
+        {
+          autoLayout: true,
+          defaultModel: defaultAgentModel,
+          startNodes,
+        },
+      );
+      setNodes(nodes);
+      setEdges(edges);
+      setVariables(variables ?? [], { archiveOldFiles: true });
+      setShowWorkflowRun(true);
+
+      if (!canvasTitle && finalPlan.title) {
+        updateTitle(finalPlan.title);
+      }
+
+      for (const node of nodes) {
+        if (node.type === 'skillResponse') {
+          logEvent('create_agent_node', Date.now(), {
+            canvasId,
+            nodeId: node.id,
+            source: 'copilot_generate',
+          });
+        }
       }
     }
 
@@ -216,8 +271,10 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
   }, [
     canvasId,
     workflowPlan,
+    isPatchOperation,
     tools?.data,
     getNodes,
+    getEdges,
     setNodes,
     setEdges,
     setVariables,

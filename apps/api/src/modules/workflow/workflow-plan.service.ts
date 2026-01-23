@@ -5,12 +5,13 @@ import {
   GetWorkflowPlanDetailData,
   WorkflowPlan,
   WorkflowPlanRecord,
+  WorkflowPatchOperation,
   User,
 } from '@refly/openapi-schema';
 import { ParamsError } from '@refly/errors';
 import { genWorkflowPlanID, safeParseJSON } from '@refly/utils';
 import { WorkflowPlan as WorkflowPlanPO } from '@prisma/client';
-import { WorkflowPatchOperation, applyWorkflowPatchOperations } from '@refly/canvas-common';
+import { applyWorkflowPatchOperations } from '@refly/canvas-common';
 
 @Injectable()
 export class WorkflowPlanService {
@@ -233,7 +234,7 @@ export class WorkflowPlanService {
 
   /**
    * Convert WorkflowPlan PO to DTO
-   * The API schema only exposes: planId, version, data, patch, createdAt, updatedAt
+   * The API schema exposes: planId, version, data fields, patchOperations, createdAt, updatedAt
    * Internal fields (resultId, resultVersion, copilotSessionId) are not exposed
    */
   private workflowPlanPO2DTO(po: WorkflowPlanPO): WorkflowPlanRecord {
@@ -248,12 +249,32 @@ export class WorkflowPlanService {
       this.logger.error(`Failed to parse workflow plan data: ${error?.message ?? error}`);
     }
 
+    // Parse patch operations if present
+    let patchOperations: WorkflowPatchOperation[] | undefined;
+    if (po.patch) {
+      try {
+        const patchData = safeParseJSON(po.patch);
+        if (patchData?.operations && Array.isArray(patchData.operations)) {
+          // Filter to only include valid operations with required 'op' field and cast
+          const validOperations = patchData.operations.filter(
+            (op: unknown): boolean => typeof op === 'object' && op !== null && 'op' in op,
+          ) as WorkflowPatchOperation[];
+          if (validOperations.length > 0) {
+            patchOperations = validOperations;
+          }
+        }
+      } catch (error) {
+        this.logger.error(`Failed to parse workflow plan patch: ${error?.message ?? error}`);
+      }
+    }
+
     return {
       planId: po.planId,
       version: po.version,
       title: data.title,
       tasks: data.tasks,
       variables: data.variables,
+      patchOperations,
       createdAt: po.createdAt.toISOString(),
       updatedAt: po.updatedAt.toISOString(),
     };

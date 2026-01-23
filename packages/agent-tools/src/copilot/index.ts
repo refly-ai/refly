@@ -8,7 +8,7 @@ import {
   parseWorkflowPlanPatch,
 } from '@refly/canvas-common';
 import { ReflyService } from '../builtin/interface';
-import { User, WorkflowPlanRecord } from '@refly/openapi-schema';
+import { User, WorkflowPlanRecord, WorkflowPatchOperation } from '@refly/openapi-schema';
 import { RunnableConfig } from '@langchain/core/runnables';
 import { truncateContent } from '@refly/utils/token';
 
@@ -167,7 +167,7 @@ Notes:
 
       const result = await reflyService.patchWorkflowPlan(user, {
         planId: planId!,
-        operations: input.operations,
+        operations: input.operations as WorkflowPatchOperation[],
         resultId,
         resultVersion,
       });

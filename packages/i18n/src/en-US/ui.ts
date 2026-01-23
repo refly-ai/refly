@@ -3457,6 +3457,15 @@ const translations = {
       cancel: 'Cancel',
     },
     abortSuccess: 'Execution has been stopped',
+    nodeEdit: {
+      editing: 'Editing Node',
+      untitled: 'Untitled',
+      modifyNode: 'Modify',
+      extendFromNode: 'Extend',
+      modifyDescription: 'Edit this node directly',
+      extendDescription: 'Add new nodes after this node',
+      clearSelection: 'Clear Selection',
+    },
     recommendQuestions: {
       title: 'Recommended Questions',
       refresh: 'Refresh',

@@ -68,6 +68,7 @@ import { ToolbarButtons } from './top-toolbar/toolbar-buttons';
 import { CanvasControlButtons } from './top-toolbar/canvas-control-buttons';
 import { ToggleCopilotPanel } from './top-toolbar/toggle-copilot-panel';
 import { useHandleOrphanNode } from '@refly-packages/ai-workspace-common/hooks/use-handle-orphan-node';
+import { useNodeEditContext } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-edit-context';
 import { UploadNotification } from '@refly-packages/ai-workspace-common/components/common/upload-notification';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { useScheduleDependencyCheck } from '@refly-packages/ai-workspace-common/hooks/canvas/use-schedule-dependency-check';
@@ -157,6 +158,9 @@ const Flow = memo(
     );
 
     useHandleOrphanNode();
+
+    // Sync selected node to copilot store for targeted editing
+    useNodeEditContext();
 
     const { addNode } = useAddNode();
     const { nodes, edges } = useStore(

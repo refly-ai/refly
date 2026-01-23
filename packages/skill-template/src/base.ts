@@ -24,6 +24,7 @@ import {
   MediaGenerationModelConfig,
   AgentMode,
   GenericToolset,
+  NodeEditContext,
 } from '@refly/openapi-schema';
 import { EventEmitter } from 'node:stream';
 import { preprocess, PreprocessResult } from './scheduler/utils/preprocess';
@@ -339,6 +340,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     preprocessResult?: PreprocessResult;
     ptcEnabled?: boolean;
     ptcContext?: PtcContext;
+    nodeEditContext?: NodeEditContext;
   };
   metadata?: SkillRunnableMeta;
 }

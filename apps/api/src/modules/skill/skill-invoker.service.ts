@@ -337,6 +337,8 @@ export class SkillInvokerService {
         resultId: data.result?.resultId,
         version: data.result?.version,
         canvasId: data.target?.entityType === 'canvas' ? data.target?.entityId : undefined,
+        copilotSessionId: data.copilotSessionId,
+        nodeEditContext: data.nodeEditContext,
       },
     };
 
@@ -385,10 +387,6 @@ export class SkillInvokerService {
 
     if (Object.keys(metadata).length > 0) {
       config.metadata = metadata;
-    }
-
-    if (data.copilotSessionId) {
-      config.configurable.copilotSessionId = data.copilotSessionId;
     }
 
     // Add project info if projectId is provided

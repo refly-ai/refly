@@ -8071,6 +8071,100 @@ export type WorkflowPlan = {
   variables?: Array<WorkflowVariable>;
 };
 
+/**
+ * Type of patch operation to apply to a workflow plan
+ */
+export type WorkflowPatchOp =
+  | 'updateTitle'
+  | 'createTask'
+  | 'updateTask'
+  | 'deleteTask'
+  | 'createVariable'
+  | 'updateVariable'
+  | 'deleteVariable';
+
+/**
+ * Data for updating a task or variable
+ */
+export type WorkflowPatchData = {
+  /**
+   * New display title for the task
+   */
+  title?: string;
+  /**
+   * New prompt or instruction for this task
+   */
+  prompt?: string;
+  /**
+   * New list of task IDs that must execute before this task
+   */
+  dependentTasks?: Array<string>;
+  /**
+   * New list of toolset IDs for this task
+   */
+  toolsets?: Array<string>;
+  /**
+   * New variable type
+   */
+  variableType?: 'string' | 'resource';
+  /**
+   * New variable name
+   */
+  name?: string;
+  /**
+   * New variable description
+   */
+  description?: string;
+  /**
+   * Whether this variable is required
+   */
+  required?: boolean;
+  /**
+   * New accepted resource types
+   */
+  resourceTypes?: Array<VariableResourceType>;
+  /**
+   * New variable values
+   */
+  value?: Array<VariableValue>;
+};
+
+/**
+ * New variable type
+ */
+export type variableType = 'string' | 'resource';
+
+/**
+ * A single patch operation for modifying a workflow plan
+ */
+export type WorkflowPatchOperation = {
+  op: WorkflowPatchOp;
+  /**
+   * New workflow title (for updateTitle operation)
+   */
+  title?: string;
+  /**
+   * ID of the task to update or delete (for updateTask, deleteTask)
+   */
+  taskId?: string;
+  /**
+   * Task definition (for createTask operation)
+   */
+  task?: WorkflowTask;
+  /**
+   * ID of the variable to update or delete (for updateVariable, deleteVariable)
+   */
+  variableId?: string;
+  /**
+   * Variable definition (for createVariable operation)
+   */
+  variable?: WorkflowVariable;
+  /**
+   * Update data (for updateTask, updateVariable operations)
+   */
+  data?: WorkflowPatchData;
+};
+
 export type WorkflowPlanRecord = WorkflowPlan & {
   /**
    * Workflow plan ID
@@ -8080,6 +8174,10 @@ export type WorkflowPlanRecord = WorkflowPlan & {
    * Workflow plan version
    */
   version?: number;
+  /**
+   * Array of patch operations applied to create this version (only present for patched plans)
+   */
+  patchOperations?: Array<WorkflowPatchOperation>;
   /**
    * Workflow plan creation timestamp
    */
@@ -8370,7 +8468,7 @@ export type WorkflowVariable = {
 /**
  * Variable type
  */
-export type variableType = 'string' | 'option' | 'resource';
+export type variableType2 = 'string' | 'option' | 'resource';
 
 export type GetWorkflowVariablesResponse = BaseResponse & {
   /**

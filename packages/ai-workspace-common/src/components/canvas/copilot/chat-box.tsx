@@ -40,6 +40,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
     addHistoryTemplateSession,
     pendingPrompt,
     setPendingPrompt,
+    nodeEditContext,
   } = useCopilotStoreShallow((state) => ({
     currentSessionId: state.currentSessionId[canvasId],
     setCurrentSessionId: state.setCurrentSessionId,
@@ -49,6 +50,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
     addHistoryTemplateSession: state.addHistoryTemplateSession,
     pendingPrompt: state.pendingPrompt[canvasId],
     setPendingPrompt: state.setPendingPrompt,
+    nodeEditContext: state.nodeEditContext[canvasId],
   }));
 
   const { resultMap } = useActionResultStoreShallow((state) => ({
@@ -104,6 +106,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
           modelInfo: null,
           agentMode: 'copilot_agent',
           copilotSessionId: sessionId,
+          nodeEditContext: nodeEditContext ?? undefined,
         },
         {
           entityId: canvasId,
@@ -135,6 +138,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
       appendSessionResultId,
       setCreatedCopilotSessionId,
       addHistoryTemplateSession,
+      nodeEditContext,
       logEvent,
     ],
   );

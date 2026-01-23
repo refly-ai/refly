@@ -15,6 +15,7 @@ import {
   GenericToolset,
   InvokeSkillRequest,
   ModelInfo,
+  NodeEditContext,
   SkillEvent,
 } from '@refly/openapi-schema';
 import { useActionResultStore } from '@refly/stores';
@@ -50,6 +51,7 @@ export interface InvokeActionPayload {
   agentMode?: AgentMode;
   copilotSessionId?: string;
   workflowVariables?: any[]; // WorkflowVariable[] - for resolving resource variables
+  nodeEditContext?: NodeEditContext; // Context for targeted node editing in copilot
 }
 
 export const useInvokeAction = (params?: { source?: string }) => {
@@ -787,6 +789,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         agentMode = 'node_agent',
         copilotSessionId,
         workflowVariables,
+        nodeEditContext,
       } = payload;
 
       logEvent('model::invoke_trigger', Date.now(), {
@@ -820,6 +823,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
         toolsets: selectedToolsets,
         mode: agentMode,
         copilotSessionId,
+        nodeEditContext,
       };
 
       // Clear cache for this resultId to prevent old messages from previous runs
