@@ -89,7 +89,7 @@ export class ToolExecutionService {
       uid: user.uid,
       toolsetId: toolsetKey,
       toolName,
-      input: args ?? {},
+      input: { input: args ?? {} },
       type: callType,
       ptcCallId: ptcContext?.ptcCallId,
       resultId: resultId ?? `standalone-${callId}`,
