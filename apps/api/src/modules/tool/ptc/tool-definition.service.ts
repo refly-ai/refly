@@ -197,6 +197,19 @@ export class ToolDefinitionService {
   }
 
   /**
+   * Temporary mapping for Composio app keys that use different naming conventions.
+   * Composio uses names without underscores (e.g., 'googlesheets'), but our inventory
+   * uses names with underscores (e.g., 'google_sheets').
+   * TODO: Fix this by updating toolset_inventory keys to match Composio's naming.
+   */
+  private readonly composioKeyMapping: Record<string, string> = {
+    google_sheets: 'googlesheets',
+    google_docs: 'googledocs',
+    google_drive: 'googledrive',
+    google_calendar: 'googlecalendar',
+  };
+
+  /**
    * Export Composio toolset definition
    * Fetches tools from Composio API and extracts function.parameters as inputSchema
    *
@@ -219,9 +232,16 @@ export class ToolDefinitionService {
       (definition?.descriptionDict?.['zh-CN'] as string) ??
       '';
 
+    // Map toolset key to Composio's naming convention if needed
+    const composioAppKey = this.composioKeyMapping[toolsetKey] ?? toolsetKey;
+
     // Fetch tools from Composio API
     // Use 'refly_global' as userId since we're just fetching schemas
-    const composioTools = await this.composioService.fetchTools('refly_global', toolsetKey, 2000);
+    const composioTools = await this.composioService.fetchTools(
+      'refly_global',
+      composioAppKey,
+      2000,
+    );
 
     // Convert Composio tools to export format
     const tools: ToolExportDefinition[] = composioTools

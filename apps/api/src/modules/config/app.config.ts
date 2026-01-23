@@ -350,6 +350,13 @@ export default () => ({
       cache: process.env.SANDBOX_S3LIB_CACHE,
       reset: process.env.SANDBOX_S3LIB_RESET,
     },
+    s3: {
+      overlap: {
+        enabled: process.env.SANDBOX_S3_OVERLAP_ENABLED,
+        endpoint: process.env.SANDBOX_S3_OVERLAP_ENDPOINT,
+        port: process.env.SANDBOX_S3_OVERLAP_PORT,
+      },
+    },
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
       // Wrapper
