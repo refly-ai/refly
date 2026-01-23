@@ -1001,7 +1001,8 @@ export class SkillInvokerService {
               const input = data.input;
               const output = data.output;
               const errorMessage = String(data.errorMessage ?? '');
-              const createdAt = startTs;
+              // Use the actual tool call start time, not the skill invocation start time
+              const createdAt = toolCallStartTimes.get(toolCallId) ?? Date.now();
               const updatedAt = Date.now();
               await this.toolCallService.persistToolCallResult(
                 res,
@@ -1069,7 +1070,7 @@ export class SkillInvokerService {
                       stepName,
                       input: event.data?.input,
                       status: 'executing',
-                      createdAt: startTs,
+                      createdAt: toolStartTs,
                       updatedAt: Date.now(),
                     },
                   });

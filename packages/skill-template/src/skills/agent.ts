@@ -497,12 +497,13 @@ export class Agent extends BaseSkill {
 
     const ptcEnabled = config.configurable.ptcEnabled;
     const ptcContext = config.configurable.ptcContext;
-    const ptcMetadata = ptcEnabled
-      ? {
-          ptcToolsets: ptcContext.toolsets,
-          ptcSdkPathPrefix: ptcContext.sdk.pathPrefix,
-        }
-      : {};
+    const ptcMetadata =
+      ptcEnabled && ptcContext
+        ? {
+            ptcToolsets: ptcContext.toolsets,
+            ptcSdkPathPrefix: ptcContext.sdk.pathPrefix,
+          }
+        : {};
 
     try {
       const result = await compiledLangGraphApp.invoke(
