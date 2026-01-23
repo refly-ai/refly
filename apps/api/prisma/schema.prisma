@@ -1818,6 +1818,10 @@ model ToolCallResult {
   status    String    @default("executing") @map("status")
   /// Error message
   error     String?   @map("error")
+  /// Call type: agent (standard), ptc (sandbox), standalone (direct API)
+  type      String    @default("agent") @map("type")
+  /// PTC parent call ID (links to execute_code's callId, only for type='ptc')
+  ptcCallId String?   @map("ptc_call_id")
   /// Create timestamp
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
