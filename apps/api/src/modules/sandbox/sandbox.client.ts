@@ -49,11 +49,7 @@ export class SandboxClient {
       language: params.language,
       provider: params.provider,
       config: {
-        s3: {
-          ...context.s3Config,
-          endPoint: 'minio',
-          port: 9000,
-        },
+        s3: context.s3Config,
         s3DrivePath: context.s3DrivePath,
         s3LibConfig: context.s3LibConfig,
         env: context.env,
@@ -84,11 +80,6 @@ export class SandboxClient {
         },
         body: JSON.stringify(request),
         signal: controller.signal,
-      });
-      this.logger.info({
-        requestId,
-        msg: 'SandboxClient request S3 config override',
-        s3: request.config.s3,
       });
 
       clearTimeout(timer);

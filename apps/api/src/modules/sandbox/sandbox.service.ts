@@ -47,6 +47,15 @@ export class SandboxService {
   @Config.boolean('sandbox.s3Lib.reset', true)
   private readonly s3LibReset: boolean;
 
+  @Config.boolean('sandbox.s3.overlap.enabled', false)
+  private readonly s3OverlapEnabled: boolean;
+
+  @Config.string('sandbox.s3.overlap.endpoint', '')
+  private readonly s3OverlapEndpoint: string;
+
+  @Config.integer('sandbox.s3.overlap.port', 0)
+  private readonly s3OverlapPort: number;
+
   constructor(
     private readonly config: ConfigService,
     private readonly client: SandboxClient,
@@ -66,6 +75,7 @@ export class SandboxService {
         .orThrow(() => SandboxCanvasIdRequiredError.create());
 
       const storagePath = this.driveService.buildS3DrivePath(user.uid, canvasId);
+      const s3Config = this.buildS3Config();
       const s3LibConfig = this.buildS3LibConfig();
       const requestEnv = (request.context as { env?: Record<string, string> } | undefined)?.env;
       const env = {
@@ -76,7 +86,7 @@ export class SandboxService {
       const context: SandboxExecutionContext = {
         uid: user.uid,
         canvasId: canvasId,
-        s3Config: this.s3Config,
+        s3Config,
         s3DrivePath: storagePath,
         s3LibConfig,
         env,
@@ -84,17 +94,6 @@ export class SandboxService {
         parentResultId: request.context?.parentResultId,
         version: request.context?.version,
       };
-
-      // Temp debug: log effective S3 config (redacted secrets)
-      this.logger.info({
-        canvasId,
-        uid: user.uid,
-        s3Config: {
-          ...this.s3Config,
-          accessKey: this.s3Config.accessKey ? '***' : '',
-          secretKey: this.s3Config.secretKey ? '***' : '',
-        },
-      });
 
       const workerResponse = await this.client.executeCode(request.params, context);
 
@@ -143,6 +142,23 @@ export class SandboxService {
       hash: this.s3LibHash,
       cache: this.s3LibCache,
       reset: this.s3LibReset,
+    };
+  }
+
+  private buildS3Config(): S3Config {
+    if (!this.s3OverlapEnabled) return this.s3Config;
+
+    if (!this.s3OverlapEndpoint && !this.s3OverlapPort) {
+      this.logger.warn({
+        msg: 'sandbox.s3.overlap.enabled is true but no endpoint/port override provided',
+      });
+      return this.s3Config;
+    }
+
+    return {
+      ...this.s3Config,
+      ...(this.s3OverlapEndpoint ? { endPoint: this.s3OverlapEndpoint } : {}),
+      ...(this.s3OverlapPort ? { port: this.s3OverlapPort } : {}),
     };
   }
 
