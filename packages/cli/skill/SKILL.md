@@ -24,34 +24,37 @@ description: |
 refly status
 refly login
 refly skill list
-refly skill run <name> --input '<json>'
+refly skill installations
+refly skill run <installationId> --input '<json>'
 ```
+
+Tip: Get `installationId` from `refly skill installations` after installing a skill.
 
 ## Directory Structure
 
 ```
 ~/.claude/skills/refly/
-├── SKILL.md                    # Base skill (this file)
-├── registry.json               # Routing registry
-├── references/                 # Core CLI docs
-│   ├── workflow.md
-│   ├── node.md
-│   ├── file.md
-│   └── skill.md
-└── domain-skills/              # Domain skills (one directory per skill)
-    └── <skill-name>/
-        ├── skill.md            # Entry file
-        └── ...                 # Additional docs
+|-- SKILL.md                    # Base skill (this file)
+|-- registry.json               # Routing registry
+|-- references/                 # Core CLI docs
+|   |-- workflow.md
+|   |-- node.md
+|   |-- file.md
+|   `-- skill.md
+`-- domain-skills/              # Domain skills (one directory per skill)
+    `-- <skill-name>/
+        |-- skill.md            # Entry file
+        `-- ...                 # Additional docs
 ```
 
 ## Routing
 
-User intent → match domain skill (name/trigger/description) → read domain skill `.md`
-→ execute via `refly skill run` → return CLI-verified result.
+User intent -> match domain skill (name/trigger/description) -> read domain skill `.md`
+-> execute via `refly skill run` -> return CLI-verified result.
 
 ## References
 
-- `references/workflow.md`
-- `references/node.md`
-- `references/file.md`
-- `references/skill.md`
+- `references/workflow.md` - Workflow command reference
+- `references/node.md` - Node command reference
+- `references/file.md` - File command reference
+- `references/skill.md` - Customized Skill command reference

@@ -36,13 +36,24 @@ export class ObjectStorageService implements OnModuleInit {
   }
 
   /**
-   * Get a presigned URL for an object
+   * Get a presigned URL for downloading an object
    * @param key The storage key
    * @param expiresIn The expiration time in seconds
    * @returns A presigned URL for the object or null if it doesn't exist
    */
   async presignedGetObject(key: string, expiresIn: number): Promise<string | null> {
     return this.storageBackend.presignedGetObject(key, expiresIn);
+  }
+
+  /**
+   * Get a presigned URL for uploading an object
+   * @param key The storage key where the object will be stored
+   * @param expiresIn The expiration time in seconds
+   * @returns A presigned PUT URL for uploading the object
+   * @throws Error if presigned uploads are not supported by this backend
+   */
+  async presignedPutObject(key: string, expiresIn: number): Promise<string> {
+    return this.storageBackend.presignedPutObject(key, expiresIn);
   }
 
   /**

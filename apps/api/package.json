@@ -99,6 +99,7 @@
     "cheerio": "~1.0.0",
     "cookie-parser": "~1.4.6",
     "cron-parser": "^5.4.0",
+    "expr-eval": "^2.0.2",
     "express": "~4.19.2",
     "express-session": "^1.18.2",
     "file-type": "^21.1.1",

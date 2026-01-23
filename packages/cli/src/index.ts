@@ -3,20 +3,10 @@
  *
  * This package provides:
  * - CLI commands for workflow management
- * - Builder state machine for incremental workflow construction
  * - Skill files for Claude Code integration
  */
 
 // Re-export types
-export type {
-  BuilderSession,
-  WorkflowNode,
-  WorkflowDraft,
-  ValidationResult,
-  BuilderStateType,
-  Diff,
-} from './builder/schema.js';
-
 export type {
   SuccessResponse,
   ErrorResponse,
@@ -26,18 +16,7 @@ export type {
 
 // Re-export utilities
 export { ErrorCodes } from './utils/output.js';
-export { CLIError, AuthError, BuilderError, ValidationError } from './utils/errors.js';
-
-// Re-export builder functions
-export {
-  createSession,
-  loadSession,
-  saveSession,
-  getCurrentSession,
-} from './builder/store.js';
-
-export { validateDraft } from './builder/validate.js';
-export { generateGraph } from './builder/graph.js';
+export { CLIError, AuthError, ValidationError } from './utils/errors.js';
 
 // Re-export config functions
 export {

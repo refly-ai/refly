@@ -3,20 +3,20 @@
  */
 
 import { Command } from 'commander';
-import { ok, print, fail, ErrorCodes, isPrettyOutput } from '../utils/output.js';
-import { installSkill, isSkillInstalled } from '../skill/installer.js';
 import {
-  loadConfig,
-  saveConfig,
-  getApiEndpoint,
   getAccessToken,
+  getApiEndpoint,
   getApiKey,
   getAuthUser,
+  loadConfig,
+  saveConfig,
 } from '../config/config.js';
 import { getReflyDir } from '../config/paths.js';
-import { loginWithDeviceFlow } from './login.js';
+import { installSkill, isSkillInstalled } from '../skill/installer.js';
+import { printDim, printError, println, printLogo, printSuccess } from '../utils/logo.js';
+import { ErrorCodes, fail, isPrettyOutput, ok, print } from '../utils/output.js';
 import { isTTY, shouldUseColor } from '../utils/ui.js';
-import { printLogo, printSuccess, printError, printDim, println } from '../utils/logo.js';
+import { loginWithDeviceFlow } from './login.js';
 
 // Default API endpoint - injected at build time by tsup
 // Build with different environments:
@@ -123,25 +123,26 @@ export const initCommand = new Command('init')
           println('');
         }
 
-        // Call loginWithDeviceFlow without emitOutput so we can handle result ourselves
-        const loginResult = await loginWithDeviceFlow({ emitOutput: false });
+        // Call loginWithDeviceFlow with emitOutput=false so we can handle result ourselves
+        const loginSuccess = await loginWithDeviceFlow(false);
 
         if (pretty && tty) {
-          if (loginResult.ok) {
+          if (loginSuccess) {
             printSuccess('Authentication successful');
-            if (loginResult.user?.email) {
-              printDim(`  Welcome, ${loginResult.user.email}!`);
+            const user = getAuthUser();
+            if (user?.email) {
+              printDim(`  Welcome, ${user.email}!`);
             }
           } else {
             printError('Authentication was not completed');
             printDim('  Run `refly login` to authenticate later.');
           }
           println('');
-        } else if (!pretty && loginResult.ok) {
+        } else if (!pretty && loginSuccess) {
           // JSON mode: output login success
           print('login', {
             message: 'Successfully authenticated',
-            user: loginResult.user,
+            user: getAuthUser(),
           });
         }
       } else if (pretty && tty) {

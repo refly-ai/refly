@@ -10,6 +10,7 @@ import { ToolCallModule } from '../tool-call/tool-call.module';
 import { ProviderModule } from '../provider/provider.module';
 import { CopilotAutogenModule } from '../copilot-autogen/copilot-autogen.module';
 import { WorkflowService } from './workflow.service';
+import { WorkflowCliService } from './workflow-cli.service';
 import { WorkflowController } from './workflow.controller';
 import { WorkflowCliController, NodeCliController } from './workflow-cli.controller';
 import { WorkflowPlanCliController } from './workflow-plan-cli.controller';
@@ -49,8 +50,9 @@ import { NotificationModule } from '../notification/notification.module';
   providers: [
     WorkflowService,
     WorkflowPlanService,
+    WorkflowCliService,
     ...(isDesktop() ? [] : [RunWorkflowProcessor, PollWorkflowProcessor]),
   ],
-  exports: [WorkflowService],
+  exports: [WorkflowService, WorkflowCliService],
 })
 export class WorkflowModule {}

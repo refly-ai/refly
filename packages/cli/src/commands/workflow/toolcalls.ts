@@ -1,11 +1,16 @@
 /**
- * refly workflow toolcalls - Get all tool calls for the current workflow execution
+ * refly workflow toolcalls - Get all tool calls for workflow execution
+ *
+ * Supports both workflowId (c-xxx) and runId (we-xxx).
+ * - workflowId: gets tool calls for the latest run
+ * - runId: gets tool calls for the specific run
  */
 
 import { Command } from 'commander';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import { apiRequest } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
+import { buildWorkflowApiUrl, detectIdType } from './utils.js';
 
 interface ToolCallDetail {
   callId: string;
@@ -36,8 +41,8 @@ interface WorkflowToolCallsResponse {
 }
 
 export const workflowToolcallsCommand = new Command('toolcalls')
-  .description('Get all tool calls for the current workflow execution')
-  .argument('<workflowId>', 'Workflow ID')
+  .description('Get all tool calls for workflow execution')
+  .argument('<id>', 'Workflow ID (c-xxx) or Run ID (we-xxx)')
   .option('--node-id <nodeId>', 'Filter by node ID')
   .option('--toolset-id <toolsetId>', 'Filter by toolset ID')
   .option('--tool-name <toolName>', 'Filter by tool name')
@@ -45,7 +50,7 @@ export const workflowToolcallsCommand = new Command('toolcalls')
   .option('--limit <limit>', 'Maximum number of results (default: 100)', '100')
   .option('--offset <offset>', 'Pagination offset (default: 0)', '0')
   .option('--raw', 'Disable output sanitization (show full tool outputs)')
-  .action(async (workflowId, options) => {
+  .action(async (id, options) => {
     try {
       const params = new URLSearchParams();
       if (options.nodeId) {
@@ -70,13 +75,15 @@ export const workflowToolcallsCommand = new Command('toolcalls')
         params.set('sanitizeForDisplay', 'false');
       }
 
-      const queryString = params.toString();
-      const url = `/v1/cli/workflow/${workflowId}/toolcalls${queryString ? `?${queryString}` : ''}`;
+      // Auto-detect ID type and build appropriate URL
+      const idType = detectIdType(id);
+      const url = buildWorkflowApiUrl(id, 'toolcalls', params);
       const result = await apiRequest<WorkflowToolCallsResponse>(url);
 
       ok('workflow.toolcalls', {
         runId: result.runId,
         workflowId: result.workflowId,
+        idType,
         totalCount: result.totalCount,
         toolCalls: result.toolCalls,
         summary: {

@@ -104,13 +104,26 @@ function generateSummary(changedNodes: NodeStatus[]): string {
   return summaries.join('; ') || `${changedNodes.length} node(s) updated`;
 }
 
+/**
+ * Detect ID type based on prefix
+ * - workflowId: starts with 'c-' (canvas)
+ * - runId: starts with 'we-' (workflow execution)
+ */
+function detectIdType(id: string): 'workflow' | 'run' {
+  if (id.startsWith('we-')) {
+    return 'run';
+  }
+  // Default to workflow (c- prefix or other)
+  return 'workflow';
+}
+
 export const workflowStatusCommand = new Command('status')
   .description('Get detailed workflow execution status')
-  .argument('<workflowId>', 'Workflow ID')
+  .argument('<id>', 'Workflow ID (c-xxx) or Run ID (we-xxx)')
   .option('--watch', 'Watch mode: continuously poll until completion')
   .option('--interval <ms>', 'Poll interval in ms (default: 2000)', '2000')
   .option('--full', 'In watch mode, output full status every time (not just changes)')
-  .action(async (workflowId, options) => {
+  .action(async (id, options) => {
     try {
       // Validate poll interval
       const pollInterval = Number.parseInt(options.interval, 10);
@@ -120,8 +133,15 @@ export const workflowStatusCommand = new Command('status')
         });
       }
 
+      // Auto-detect ID type and use appropriate endpoint
+      const idType = detectIdType(id);
       const fetchStatus = async () => {
-        return await apiRequest<WorkflowRunStatus>(`/v1/cli/workflow/${workflowId}/status`);
+        if (idType === 'run') {
+          // Use run-specific endpoint for runId (deprecated but functional)
+          return await apiRequest<WorkflowRunStatus>(`/v1/cli/workflow/run/${id}`);
+        }
+        // Use workflow status endpoint for workflowId
+        return await apiRequest<WorkflowRunStatus>(`/v1/cli/workflow/${id}/status`);
       };
 
       if (options.watch) {

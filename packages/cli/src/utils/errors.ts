@@ -22,8 +22,6 @@ export class AuthError extends CLIError {
   }
 }
 
-export class BuilderError extends CLIError {}
-
 export class ValidationError extends CLIError {
   constructor(message: string, details?: Record<string, unknown>) {
     super(ErrorCodes.VALIDATION_ERROR, message, details, 'Fix validation errors and retry');

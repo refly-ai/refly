@@ -7,6 +7,19 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 
 /**
+ * Get CLI version from package.json
+ */
+export function getCliVersion(): string {
+  try {
+    const pkgPath = path.join(__dirname, '..', '..', 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    return pkg.version || '0.1.0';
+  } catch {
+    return '0.1.0';
+  }
+}
+
+/**
  * Get the Refly configuration directory (~/.refly)
  */
 export function getReflyDir(): string {
@@ -16,12 +29,11 @@ export function getReflyDir(): string {
 }
 
 /**
- * Get the builder data directory (~/.refly/builder)
+ * Get the legacy builder data directory (~/.refly/builder)
+ * @deprecated Builder functionality has been removed. This is only used for cleanup.
  */
-export function getBuilderDir(): string {
-  const dir = path.join(getReflyDir(), 'builder');
-  ensureDir(dir);
-  return dir;
+export function getLegacyBuilderDir(): string {
+  return path.join(getReflyDir(), 'builder');
 }
 
 /**
@@ -77,15 +89,18 @@ export function getConfigPath(): string {
 }
 
 /**
- * Get the current builder session path
+ * Get the skills directory (~/.refly/skills)
  */
-export function getCurrentSessionPath(): string {
-  return path.join(getBuilderDir(), 'current');
+export function getSkillsDir(): string {
+  return path.join(getReflyDir(), 'skills');
 }
 
 /**
- * Get a session file path by ID
+ * Ensure the skills directory exists
  */
-export function getSessionPath(sessionId: string): string {
-  return path.join(getBuilderDir(), `session-${sessionId}.json`);
+export async function ensureSkillsDir(): Promise<void> {
+  const dir = getSkillsDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  }
 }

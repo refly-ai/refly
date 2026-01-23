@@ -118,6 +118,18 @@ export class MinioStorageBackend implements ObjectStorageBackend {
     }
   }
 
+  async presignedPutObject(key: string, expiresIn: number): Promise<string> {
+    const objectKey = this.normalizeObjectKey(key);
+    try {
+      return await this.client.presignedPutObject(this.config.bucket, objectKey, expiresIn);
+    } catch (error) {
+      this.logger.error(
+        `Failed to get presigned PUT URL for object with key ${objectKey}: ${error?.stack}`,
+      );
+      throw error;
+    }
+  }
+
   async putObject(
     key: string,
     stream: Readable | Buffer | string,

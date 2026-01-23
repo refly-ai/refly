@@ -4,6 +4,10 @@
  * Supports both OAuth tokens and API Keys for authentication.
  */
 
+import * as fs from 'node:fs';
+import { statSync } from 'node:fs';
+import * as path from 'node:path';
+import mime from 'mime';
 import {
   getApiEndpoint,
   getAccessToken,
@@ -24,6 +28,9 @@ export interface APIResponse<T = unknown> {
   data?: T;
   errCode?: string;
   errMsg?: string;
+  // Alternative error format used by some API responses
+  error?: string;
+  message?: string;
 }
 
 export interface RequestOptions {
@@ -109,15 +116,40 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
     clearTimeout(timeoutId);
 
+    // Handle empty responses (e.g., 204 No Content for DELETE)
+    const contentLength = response.headers.get('content-length');
+    const contentType = response.headers.get('content-type');
+    if (
+      response.status === 204 ||
+      contentLength === '0' ||
+      (!contentType?.includes('application/json') &&
+        response.status >= 200 &&
+        response.status < 300)
+    ) {
+      if (!response.ok) {
+        throw new CLIError(ErrorCodes.API_ERROR, `HTTP ${response.status}: ${response.statusText}`);
+      }
+      return undefined as T;
+    }
+
     // Parse response
     const data = (await response.json()) as APIResponse<T>;
+    const hasSuccessFlag = typeof data === 'object' && data !== null && 'success' in data;
 
     // Handle API-level errors
-    if (!response.ok || !data.success) {
+    if (!response.ok) {
       throw mapAPIError(response.status, data);
     }
 
-    return data.data as T;
+    if (hasSuccessFlag) {
+      if (data.success) {
+        return data.data as T;
+      }
+      throw mapAPIError(response.status, data);
+    }
+
+    // Non-wrapped responses (raw DTOs)
+    return data as T;
   } catch (error) {
     clearTimeout(timeoutId);
 
@@ -200,8 +232,20 @@ async function refreshAccessToken(): Promise<string> {
  * Map API error response to CLIError
  */
 function mapAPIError(status: number, response: APIResponse): CLIError {
-  const errCode = response.errCode ?? 'UNKNOWN';
-  const errMsg = response.errMsg ?? 'Unknown error';
+  // Handle CLI error format: { ok: false, type: 'error', error: { code, message, hint } }
+  if (response.error && typeof response.error === 'object') {
+    const cliError = response.error as { code?: string; message?: string; hint?: string };
+    return new CLIError(
+      (cliError.code || 'UNKNOWN') as ErrorCode,
+      cliError.message || 'Unknown error',
+      undefined,
+      cliError.hint,
+    );
+  }
+
+  // Handle legacy format
+  const errCode = response.errCode ?? response.error ?? 'UNKNOWN';
+  const errMsg = response.errMsg ?? response.message ?? 'Unknown error';
 
   // Map HTTP status codes
   if (status === 401 || status === 403) {
@@ -398,5 +442,226 @@ export async function verifyConnection(): Promise<{
     }
     // For other errors, assume connection works but auth failed
     return { connected: true, authenticated: false };
+  }
+}
+
+/**
+ * Result of a drive file upload
+ */
+export interface DriveFileUploadResult {
+  fileId: string;
+  name: string;
+  type: string;
+  size: number;
+  storageKey: string;
+  url?: string;
+}
+
+/**
+ * Presigned upload URL response
+ */
+interface PresignedUploadResponse {
+  uploadId: string;
+  presignedUrl: string;
+  expiresIn: number;
+}
+
+/**
+ * Get MIME type for a file path
+ */
+function getMimeType(filePath: string): string {
+  return mime.getType(filePath) || 'application/octet-stream';
+}
+
+/**
+ * Step 1: Get a presigned URL for file upload
+ */
+async function getPresignedUploadUrl(
+  canvasId: string,
+  filename: string,
+  size: number,
+  contentType: string,
+): Promise<PresignedUploadResponse> {
+  return apiRequest<PresignedUploadResponse>('/v1/cli/drive/file/upload/presign', {
+    method: 'POST',
+    body: { canvasId, filename, size, contentType },
+  });
+}
+
+/**
+ * Step 2: Upload file to presigned URL with retry
+ */
+async function uploadToPresignedUrl(
+  presignedUrl: string,
+  filePath: string,
+  contentType: string,
+  retryCount = 1,
+): Promise<void> {
+  const fileStats = statSync(filePath);
+  const timeout = 300000; // 5 min timeout for upload
+
+  for (let attempt = 0; attempt <= retryCount; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      // Read file as buffer for presigned PUT
+      const fileBuffer = await fs.promises.readFile(filePath);
+
+      const response = await fetch(presignedUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': contentType,
+          'Content-Length': fileStats.size.toString(),
+        },
+        body: fileBuffer,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new CLIError(
+          ErrorCodes.API_ERROR,
+          `Upload to storage failed: HTTP ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
+        );
+      }
+
+      return; // Success
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      // Don't retry on auth or validation errors
+      if (error instanceof CLIError) {
+        throw error;
+      }
+
+      // Retry on network errors
+      if (attempt < retryCount) {
+        logger.debug(`Upload attempt ${attempt + 1} failed, retrying...`);
+        continue;
+      }
+
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new CLIError(
+            ErrorCodes.TIMEOUT,
+            'Upload timed out',
+            undefined,
+            'Try a smaller file or check network',
+          );
+        }
+
+        if (error.message.includes('fetch')) {
+          throw new NetworkError('Cannot connect to storage');
+        }
+      }
+
+      throw new CLIError(
+        ErrorCodes.INTERNAL_ERROR,
+        error instanceof Error ? error.message : 'Unknown upload error',
+      );
+    }
+  }
+}
+
+/**
+ * Step 3: Confirm upload completion
+ */
+async function confirmUpload(uploadId: string): Promise<DriveFileUploadResult> {
+  return apiRequest<DriveFileUploadResult>('/v1/cli/drive/file/upload/confirm', {
+    method: 'POST',
+    body: { uploadId },
+  });
+}
+
+/**
+ * Upload a file to a canvas using presigned URL flow.
+ * 3-step process: presign -> PUT to OSS -> confirm
+ * @param filePath - Absolute path to the file to upload
+ * @param canvasId - Canvas ID to associate the file with
+ * @param options - Optional configuration including progress callback
+ * @returns Upload result with file metadata
+ */
+/**
+ * Workflow variable definition
+ */
+export interface WorkflowVariable {
+  variableId?: string;
+  name: string;
+  variableType?: string;
+  value?: unknown[];
+  required?: boolean;
+  isSingle?: boolean;
+  resourceTypes?: string[];
+}
+
+/**
+ * Workflow info returned from GET /v1/cli/workflow/:id
+ */
+export interface WorkflowInfo {
+  workflowId: string;
+  name: string;
+  nodes: unknown[];
+  edges: unknown[];
+  variables: WorkflowVariable[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Fetch workflow details by ID
+ * @param workflowId - The workflow ID to fetch
+ * @returns Workflow details including variables
+ */
+export async function apiGetWorkflow(workflowId: string): Promise<WorkflowInfo> {
+  return apiRequest<WorkflowInfo>(`/v1/cli/workflow/${workflowId}`);
+}
+
+export async function apiUploadDriveFile(
+  filePath: string,
+  canvasId: string,
+  options?: {
+    timeout?: number;
+    onProgress?: (stage: 'presign' | 'upload' | 'confirm') => void;
+  },
+): Promise<DriveFileUploadResult> {
+  const filename = path.basename(filePath);
+  const mimeType = getMimeType(filePath);
+  const fileStats = statSync(filePath);
+
+  logger.debug(`Starting presigned upload: ${filename} (${fileStats.size} bytes)`);
+
+  // Step 1: Get presigned URL
+  options?.onProgress?.('presign');
+  let presignResponse: PresignedUploadResponse;
+  try {
+    presignResponse = await getPresignedUploadUrl(canvasId, filename, fileStats.size, mimeType);
+    logger.debug(`Got presigned URL, uploadId: ${presignResponse.uploadId}`);
+  } catch (error) {
+    logger.error('Failed to get presigned URL:', error);
+    throw error;
+  }
+
+  // Step 2: Upload to presigned URL
+  options?.onProgress?.('upload');
+  try {
+    await uploadToPresignedUrl(presignResponse.presignedUrl, filePath, mimeType);
+    logger.debug('File uploaded to presigned URL');
+  } catch (error) {
+    logger.error('Failed to upload to presigned URL:', error);
+    throw error;
+  }
+
+  // Step 3: Confirm upload
+  options?.onProgress?.('confirm');
+  try {
+    const result = await confirmUpload(presignResponse.uploadId);
+    logger.debug(`Upload confirmed, fileId: ${result.fileId}`);
+    return result;
+  } catch (error) {
+    logger.error('Failed to confirm upload:', error);
+    throw error;
   }
 }

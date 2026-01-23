@@ -152,9 +152,8 @@ export class NotificationService {
       ?.replace(/\/$/, '');
     const payloadMode = this.configService.get<'base64' | 'url'>('email.payloadMode');
 
-    // Try to extract file ID from URL to get proper filename (only for internal URLs)
-    const isInternalUrl = url.startsWith(privateStaticEndpoint);
-    const fileId = isInternalUrl ? extractFileId(url) : null;
+    // Try to extract file ID from URL to get proper filename
+    const fileId = extractFileId(url);
     let filename = url.split('/').pop() ?? 'attachment';
 
     if (fileId) {

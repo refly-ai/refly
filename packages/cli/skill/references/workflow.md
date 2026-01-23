@@ -2,30 +2,141 @@
 
 ## Workflow Commands
 
+### Management
+
 ```bash
-refly workflow create --name "<name>" --spec '<json>'
-refly workflow generate --query "<natural language description>"
-refly workflow edit <workflowId> --ops '<json>'
+# Create workflow
+refly workflow create [options]
+  --name <name>              # Workflow name
+  --spec <json>              # Workflow spec JSON
+  --description <desc>       # Description
+
+# Generate workflow from natural language
+refly workflow generate [options]
+  --query <query>            # Natural language description
+  --canvas-id <id>           # Update existing workflow
+  --model-id <id>            # Model for generation
+  --locale <locale>          # Output language (en, zh)
+  --timeout <ms>             # Timeout (default: 300000)
+  --variables <json>         # Predefined variables
+  --skip-default-nodes       # Skip default start+skillResponse
+  --no-cleanup               # Disable orphan cleanup on failure
+
+# Edit workflow
+refly workflow edit <workflowId> [options]
+  --name <name>              # New name
+  --ops <json>               # Node/edge operations
+  --variables <json>         # Variables array
+  --toolsets <keys>          # Toolset keys (comma-separated)
+  --auto-layout              # Auto-layout nodes
+
+# Patch workflow plan
+refly workflow patch <planId> [options]
+  --ops <json>               # Operations array
+  --ops-file <path>          # Read ops from file
+  --update-title <title>     # Shortcut: update title
+  --delete-task <taskId>     # Shortcut: delete task
+  --delete-variable <varId>  # Shortcut: delete variable
+
+# Other management
 refly workflow get <workflowId>
-woshrefly workflow nodes <workflowId>
-refly workflow nodes <workflowId> --include-edges
-refly workflow nodes <workflowId> --include-metadata
-refly workflow list
 refly workflow delete <workflowId>
-refly workflow run <workflowId> --input '<json>'
-refly workflow status <runId>
-refly workflow status <runId> --watch
-refly workflow run detail <runId>
-refly workflow run node <runId> <nodeId>
-refly workflow run toolcalls <runId>
-refly workflow abort <runId>
+refly workflow list [--limit <n>] [--offset <n>]
+refly workflow layout <workflowId> [--direction LR|TB]
+refly workflow toolset-keys [--type <type>]
+```
+
+### Execution
+
+```bash
+# Start workflow run
+refly workflow run start <workflowId> [options]
+  --input <json>             # Input variables
+  --from-node <nodeId>       # Run From Here
+
+# Query run status
+refly workflow run get <runId>
+refly workflow run detail <runId> [--no-tool-calls] [--preview-length <n>]
+refly workflow runs <workflowId> [--limit <n>] [--offset <n>] [--status <s>]
+refly workflow status <id> [--watch] [--interval <ms>] [--full]
+refly workflow detail <id> [--no-tool-calls] [--preview-length <n>]
+refly workflow abort <workflowId>
+```
+
+### Node Operations
+
+```bash
+# List/get nodes
+refly workflow nodes <workflowId> [--include-edges] [--include-position] [--include-metadata]
+refly workflow node <id> <nodeId> [--include-connections]
+refly workflow node-output <id> <nodeId> [--include-tool-calls] [--raw]
+
+# Run from node
+refly workflow run node-start [options]
+  --from <nodeId>            # Node to run from
+  --run-id <runId>           # Existing run context
+  --workflow-id <id>         # Start new run
+
+# Node results
+refly workflow run node-detail <runId> <nodeId> [--include-messages] [--raw]
+refly workflow run node-result <resultId> [--include-steps] [--include-messages] [--include-tool-calls]
+refly workflow run node-abort <resultId> [--version <n>]
+```
+
+### Tool Calls
+
+```bash
+# Workflow-level tool calls (full options)
+refly workflow toolcalls <id> [options]
+refly workflow run toolcalls <runId> [options]
+  --node-id <nodeId>         # Filter by node
+  --toolset-id <id>          # Filter by toolset
+  --tool-name <name>         # Filter by tool name
+  --status <status>          # Filter: executing, completed, failed
+  --limit <n>                # Max results (default: 100)
+  --offset <n>               # Pagination offset
+  --raw                      # Full output without sanitization
+
+# Node-level tool calls (limited options)
+refly workflow run node-toolcalls <resultId> [options]
+  --status <status>          # Filter: executing, completed, failed
+  --tool-name <name>         # Filter by tool name
+  --toolset-id <id>          # Filter by toolset
+
+# Single tool call
+refly workflow run node-toolcall <callId> [--raw]
 ```
 
 ## Interaction
 
-- `workflow run` returns `runId` used by `workflow status` and `workflow run node`.
-- `workflow run node` returns `resultId` for action/tool lookups (see `node.md`).
+- `workflow run start` returns `runId` used by `workflow run get` and `workflow run node-detail`.
+- `workflow run node-detail` returns `resultId` for action/tool lookups (see `node.md`).
+- `workflow node-output` retrieves the actual execution output content of a node.
 - Action results may include file IDs; use `file.md` to fetch/download.
+
+## Node Output Command
+
+Get the execution output content of a specific node:
+
+```bash
+# Using workflowId (gets output from latest run)
+refly workflow node-output c-xxx <nodeId>
+
+# Using runId (gets output from specific run)
+refly workflow node-output we-xxx <nodeId>
+
+# Include tool call details
+refly workflow node-output <id> <nodeId> --include-tool-calls
+
+# Get full content without truncation (default: 10KB limit)
+refly workflow node-output <id> <nodeId> --raw
+```
+
+**ID Type Detection:**
+- `c-xxx` prefix: Treated as workflowId, uses latest/active run
+- `we-xxx` prefix: Treated as runId, uses specific run
+
+**Security:** Node output access requires ownership verification at both workflow execution level and action result level (defense-in-depth).
 
 ## Workflow Generate Examples
 
@@ -37,7 +148,7 @@ refly workflow generate --query "Parse PDF, summarize content, translate to Chin
 refly workflow generate \
   --query "Research topic, write article, export to markdown" \
   --model-id <modelId> \
-  --locale zh \
+  --locale en \
   --timeout 300000
 ```
 
@@ -47,39 +158,21 @@ refly workflow generate \
   --variables '[{"variableId":"v1","name":"inputFolder","variableType":"string"}]'
 ```
 
-## Workflow Spec Schema (v1)
+## Workflow Spec Schema (Simplified)
+
+`workflow create` expects a simplified spec (no `version` or `metadata`).
+Supported node types: `skill`, `agent` (start node is auto-created).
 
 ```json
 {
-  "version": 1,
-  "name": "string",
-  "description": "string?",
   "nodes": [
     {
       "id": "string",
-      "type": "string",
-      "input": {},
+      "type": "skill",
+      "query": "string",
+      "toolsetKeys": ["string"],
       "dependsOn": ["string"]
     }
-  ],
-  "metadata": {
-    "tags": ["string"],
-    "owner": "string?"
-  }
+  ]
 }
 ```
-
-## Backend API (Workflow)
-
-- POST /v1/cli/workflow create
-- POST /v1/cli/workflow/generate AI generate
-- GET /v1/cli/workflow list
-- GET /v1/cli/workflow/:id detail
-- PATCH /v1/cli/workflow/:id update
-- DELETE /v1/cli/workflow/:id delete
-- POST /v1/cli/workflow/:id/run start run
-- GET /v1/cli/workflow/run/:runId run status
-- POST /v1/cli/workflow/run/:runId/abort abort run
-- GET /v1/cli/workflow/run/:runId/detail run detail
-- GET /v1/cli/workflow/run/:runId/node/:nodeId node result (workflow scope)
-- GET /v1/cli/workflow/run/:runId/toolcalls tool calls (workflow scope)

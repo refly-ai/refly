@@ -3,7 +3,7 @@
  * Provides drive file operations for CLI tooling
  */
 
-import { Controller, Get, Param, Query, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
@@ -77,5 +77,34 @@ export class DriveCliController {
     res.setHeader('Last-Modified', lastModified.toUTCString());
 
     res.send(data);
+  }
+
+  /**
+   * Get a presigned URL for file upload
+   * Step 1 of presigned upload flow
+   */
+  @Post('file/upload/presign')
+  async getUploadPresignedUrl(
+    @LoginedUser() user: User,
+    @Body()
+    body: {
+      canvasId: string;
+      filename: string;
+      size: number;
+      contentType: string;
+    },
+  ) {
+    const result = await this.driveService.createPresignedUpload(user, body);
+    return buildSuccessResponse(result);
+  }
+
+  /**
+   * Confirm a presigned upload has completed
+   * Step 2 of presigned upload flow
+   */
+  @Post('file/upload/confirm')
+  async confirmUpload(@LoginedUser() user: User, @Body() body: { uploadId: string }) {
+    const result = await this.driveService.confirmPresignedUpload(user, body.uploadId);
+    return buildSuccessResponse(result);
   }
 }
