@@ -489,6 +489,18 @@ importers:
       react-router-dom:
         specifier: ^6.22.1
         version: 6.30.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      workbox-cacheable-response:
+        specifier: ^7.4.0
+        version: 7.4.0
+      workbox-precaching:
+        specifier: ^7.4.0
+        version: 7.4.0
+      workbox-routing:
+        specifier: ^7.4.0
+        version: 7.4.0
+      workbox-strategies:
+        specifier: ^7.4.0
+        version: 7.4.0
     devDependencies:
       '@aaroon/workbox-rspack-plugin':
         specifier: ^0.3.2

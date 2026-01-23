@@ -21,7 +21,7 @@
       }
     },
     "apps/web": {
-      "entry": ["src/index.tsx"],
+      "entry": ["src/index.tsx", "src/service-worker-sw.ts"],
       "project": ["src/**/*.{ts,tsx,js,jsx}"],
       "paths": {
         "@refly-packages/ai-workspace-common": ["../../packages/ai-workspace-common/src/index.ts"],
