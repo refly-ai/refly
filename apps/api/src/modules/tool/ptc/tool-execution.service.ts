@@ -28,6 +28,11 @@ export interface PtcToolExecuteContext {
   version?: number;
 }
 
+export enum CallType {
+  PTC = 'ptc',
+  STANDALONE = 'standalone',
+}
+
 @Injectable()
 export class ToolExecutionService {
   private readonly logger = new Logger(ToolExecutionService.name);
@@ -65,18 +70,13 @@ export class ToolExecutionService {
 
     // Determine call type and context
     const hasPtcContext = !!ptcContext?.ptcCallId;
-    const callType = hasPtcContext ? 'ptc' : 'standalone';
+    const callType = hasPtcContext ? CallType.PTC : CallType.STANDALONE;
 
-    // For PTC calls, try to extract resultId/version from ptcCallId if not provided
-    let { resultId, version } = ptcContext ?? {};
-    if (hasPtcContext && (!resultId || version === undefined)) {
-      const parsed = this.parsePtcCallId(ptcContext.ptcCallId);
-      resultId = resultId ?? parsed.resultId;
-      version = version ?? parsed.version;
-    }
+    // Get resultId/version from HTTP headers (ptcContext)
+    const { resultId, version } = ptcContext ?? {};
 
     // Generate a unique call ID for this execution
-    const callId = this.generateCallId(resultId, version, toolsetKey, toolName);
+    const callId = this.generateCallId(callType, toolsetKey, toolName, ptcContext?.ptcCallId);
     const startTime = Date.now();
 
     this.logger.log(
@@ -92,7 +92,7 @@ export class ToolExecutionService {
       input: { input: args ?? {} },
       type: callType,
       ptcCallId: ptcContext?.ptcCallId,
-      resultId: resultId ?? `standalone-${callId}`,
+      resultId: resultId ?? 'non-result-id',
       version: version ?? 0,
       createdAt: startTime,
     });
@@ -156,36 +156,22 @@ export class ToolExecutionService {
   }
 
   /**
-   * Parse ptcCallId to extract resultId and version
-   * Format: {resultId}:{version}:{toolsetId}:{toolName}:{uuid}
-   */
-  private parsePtcCallId(ptcCallId: string): { resultId?: string; version?: number } {
-    if (!ptcCallId) {
-      return {};
-    }
-    const parts = ptcCallId.split(':');
-    if (parts.length >= 2) {
-      const resultId = parts[0];
-      const version = Number.parseInt(parts[1], 10);
-      return {
-        resultId,
-        version: Number.isNaN(version) ? undefined : version,
-      };
-    }
-    return {};
-  }
-
-  /**
    * Generate a unique call ID for tool execution
+   * PTC mode: `ptc:{ptcCallId}:{toolsetKey}:{toolName}:{uuid}`
+   * Standalone mode: `standalone:{toolsetKey}:{toolName}:{uuid}`
    */
   private generateCallId(
-    resultId: string | undefined,
-    version: number | undefined,
-    toolsetId: string,
+    callType: CallType,
+    toolsetKey: string,
     toolName: string,
+    ptcCallId: string | undefined,
   ): string {
-    const prefix = `${resultId ?? 'standalone'}:${version ?? 0}:${toolsetId}:${toolName}`;
-    return `${prefix}:${randomUUID()}`;
+    const uuid = randomUUID();
+    if (callType === CallType.PTC) {
+      return `${callType}:${ptcCallId ?? ''}:${toolsetKey}:${toolName}:${uuid}`;
+    } else {
+      return `${callType}:${toolsetKey}:${toolName}:${uuid}`;
+    }
   }
 
   /**
