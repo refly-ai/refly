@@ -76,7 +76,7 @@ export class SandboxService {
 
       const storagePath = this.driveService.buildS3DrivePath(user.uid, canvasId);
       const s3Config = this.buildS3Config();
-      const s3LibConfig = this.buildS3LibConfig();
+      const s3LibConfig = this.buildS3LibConfig(s3Config);
       const requestEnv = (request.context as { env?: Record<string, string> } | undefined)?.env;
       const env = {
         ...requestEnv,
@@ -128,10 +128,13 @@ export class SandboxService {
     }
   }
 
-  private buildS3LibConfig(): S3LibConfig | undefined {
+  private buildS3LibConfig(s3Config: S3Config): S3LibConfig | undefined {
     if (!this.s3LibEnabled || !this.s3LibPathPrefix || !this.s3LibHash) return undefined;
 
     const normalizedPrefix = this.s3LibPathPrefix.replace(/\/+$/, '');
+
+    const protocol = s3Config.useSSL ? 'https' : 'http';
+    const endpoint = `${protocol}://${s3Config.endPoint}:${s3Config.port}`;
 
     return {
       accessKey: this.s3Config.accessKey,
@@ -142,6 +145,7 @@ export class SandboxService {
       hash: this.s3LibHash,
       cache: this.s3LibCache,
       reset: this.s3LibReset,
+      endpoint,
     };
   }
 

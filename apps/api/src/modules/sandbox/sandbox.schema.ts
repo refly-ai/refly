@@ -32,6 +32,7 @@ export const S3LibConfigSchema = z.object({
   hash: z.string(),
   cache: z.boolean().optional(),
   reset: z.boolean().optional(),
+  endpoint: z.string(),
 });
 
 export type S3LibConfig = z.infer<typeof S3LibConfigSchema>;
