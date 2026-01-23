@@ -328,37 +328,3 @@ export const CLI_ERROR_CODES = {
   INSUFFICIENT_CREDITS: 'INSUFFICIENT_CREDITS',
   RATE_LIMITED: 'RATE_LIMITED',
 } as const;
-
-// ============================================================================
-// Node Output DTOs
-// ============================================================================
-
-/**
- * Response for node execution output
- */
-export interface NodeOutputResponse {
-  runId: string;
-  workflowId: string;
-  nodeId: string;
-  nodeTitle: string;
-  nodeType: string;
-  status: 'waiting' | 'executing' | 'finish' | 'failed';
-  content?: string;
-  contentType?: string;
-  outputTokens?: number;
-  toolCalls?: Array<{
-    callId: string;
-    toolName: string;
-    status: string;
-    output?: unknown;
-  }>;
-  error?: {
-    type: string;
-    message: string;
-  };
-  timing?: {
-    startTime?: string;
-    endTime?: string;
-    durationMs?: number;
-  };
-}
