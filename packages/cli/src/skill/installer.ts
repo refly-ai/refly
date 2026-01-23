@@ -6,23 +6,30 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { getClaudeSkillDir, getClaudeCommandsDir, ensureDir } from '../config/paths.js';
 import { updateSkillInfo } from '../config/config.js';
+import { logger } from '../utils/logger.js';
 
 // Get the skill files from the package
 function getPackageSkillDir(): string {
   // When installed globally, skill files are in the package's skill directory
   // During development, they're relative to the source
   const possiblePaths = [
-    path.join(__dirname, '..', '..', 'skill'), // Built package
-    path.join(__dirname, '..', '..', '..', 'skill'), // Development
+    path.join(__dirname, '..', '..', 'skill'), // Built package: dist/bin/../../skill
+    path.join(__dirname, '..', '..', '..', 'skill'), // Development: dist/bin/../../../skill
+    path.join(__dirname, '..', 'skill'), // Alternative: dist/../skill
   ];
 
+  logger.debug('Looking for skill files, __dirname:', __dirname);
+
   for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      return p;
+    const resolved = path.resolve(p);
+    const exists = fs.existsSync(resolved);
+    logger.debug(`  Checking path: ${resolved} - exists: ${exists}`);
+    if (exists) {
+      return resolved;
     }
   }
 
-  throw new Error('Skill files not found in package');
+  throw new Error(`Skill files not found in package. Searched paths from __dirname=${__dirname}`);
 }
 
 export interface InstallResult {
@@ -46,20 +53,33 @@ export function installSkill(): InstallResult {
   };
 
   const sourceDir = getPackageSkillDir();
+  logger.debug('Source skill directory:', sourceDir);
 
   // Install SKILL.md and references
   // Always try to create skills directory
   const targetDir = getClaudeSkillDir();
-  ensureDir(targetDir);
-  ensureDir(path.join(targetDir, 'references'));
+  logger.debug('Target skill directory:', targetDir);
+
+  try {
+    ensureDir(targetDir);
+    ensureDir(path.join(targetDir, 'references'));
+    logger.debug('Created target directories');
+  } catch (err) {
+    logger.error('Failed to create target directories:', err);
+    throw err;
+  }
 
   // Copy SKILL.md
   const skillSource = path.join(sourceDir, 'SKILL.md');
   const skillTarget = path.join(targetDir, 'SKILL.md');
+  logger.debug(`Copying SKILL.md: ${skillSource} -> ${skillTarget}`);
   if (fs.existsSync(skillSource)) {
     fs.copyFileSync(skillSource, skillTarget);
     result.skillInstalled = true;
     result.skillPath = targetDir;
+    logger.debug('SKILL.md copied successfully');
+  } else {
+    logger.warn('SKILL.md source not found:', skillSource);
   }
 
   // Copy references
@@ -67,6 +87,7 @@ export function installSkill(): InstallResult {
   const refsTarget = path.join(targetDir, 'references');
   if (fs.existsSync(refsSource)) {
     const files = fs.readdirSync(refsSource);
+    logger.debug(`Copying ${files.length} reference files`);
     for (const file of files) {
       fs.copyFileSync(path.join(refsSource, file), path.join(refsTarget, file));
     }
@@ -75,14 +96,21 @@ export function installSkill(): InstallResult {
   // Install slash commands
   // Always try to create commands directory (same as skills directory)
   const commandsDir = getClaudeCommandsDir();
+  logger.debug('Commands directory:', commandsDir);
   ensureDir(commandsDir);
   result.commandsInstalled = installSlashCommands(sourceDir, commandsDir);
   if (result.commandsInstalled) {
     result.commandsPath = commandsDir;
   }
+  logger.debug('Commands installed:', result.commandsInstalled);
 
   // Update config with installation info
   updateSkillInfo(result.version);
+
+  logger.info('Skill installation complete:', {
+    skillInstalled: result.skillInstalled,
+    commandsInstalled: result.commandsInstalled,
+  });
 
   return result;
 }

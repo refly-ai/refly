@@ -1,0 +1,370 @@
+/**
+ * Skill Package Service Tests
+ * Covers: spec/create, AI generate, validator, transaction branches
+ */
+
+import { Test, TestingModule } from '@nestjs/testing';
+import { SkillPackageService } from './skill-package.service';
+import { PrismaService } from '../common/prisma.service';
+import { CopilotAutogenService } from '../copilot-autogen/copilot-autogen.service';
+import { WorkflowCliService } from '../workflow/workflow-cli.service';
+import { User } from '@refly/openapi-schema';
+import { CreateSkillPackageCliDto } from './skill-package.dto';
+
+describe('SkillPackageService', () => {
+  let service: SkillPackageService;
+  let prismaService: jest.Mocked<PrismaService>;
+  let copilotAutogenService: jest.Mocked<CopilotAutogenService>;
+  let workflowCliService: jest.Mocked<WorkflowCliService>;
+
+  const mockUser: User = {
+    uid: 'test-user-id',
+    email: 'test@example.com',
+    name: 'Test User',
+    nickname: 'tester',
+  };
+
+  const mockSkillPackage = {
+    skillId: 'skp-test123',
+    name: 'test-skill',
+    version: '1.0.0',
+    description: 'Test skill description',
+    uid: 'test-user-id',
+    icon: null,
+    triggers: ['test', 'demo'],
+    tags: ['test'],
+    inputSchema: null,
+    outputSchema: null,
+    status: 'draft',
+    isPublic: false,
+    coverStorageKey: null,
+    downloadCount: 0,
+    shareId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: null,
+  };
+
+  const mockCanvas = {
+    canvasId: 'c-test123',
+    uid: 'test-user-id',
+    title: 'Test Workflow',
+    deletedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  beforeEach(async () => {
+    const mockPrismaService = {
+      skillPackage: {
+        create: jest.fn(),
+        findFirst: jest.fn(),
+        findMany: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+        count: jest.fn(),
+      },
+      skillWorkflow: {
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        findMany: jest.fn(),
+        update: jest.fn(),
+      },
+      skillWorkflowDependency: {
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
+      },
+      canvas: {
+        findFirst: jest.fn(),
+        findMany: jest.fn(),
+        updateMany: jest.fn(),
+      },
+      $transaction: jest.fn((callback) => callback(mockPrismaService)),
+    };
+
+    const mockCopilotAutogenService = {
+      generateWorkflowForCli: jest.fn(),
+    };
+
+    const mockWorkflowCliService = {
+      createWorkflowFromSpec: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SkillPackageService,
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: CopilotAutogenService, useValue: mockCopilotAutogenService },
+        { provide: WorkflowCliService, useValue: mockWorkflowCliService },
+      ],
+    }).compile();
+
+    service = module.get<SkillPackageService>(SkillPackageService);
+    prismaService = module.get(PrismaService);
+    copilotAutogenService = module.get(CopilotAutogenService);
+    workflowCliService = module.get(WorkflowCliService);
+  });
+
+  describe('createSkillPackageWithWorkflow', () => {
+    it('should create skill package with auto-generated workflow from description', async () => {
+      const input: CreateSkillPackageCliDto = {
+        name: 'test-skill',
+        version: '1.0.0',
+        description: 'A test skill for processing documents',
+        triggers: ['process', 'document'],
+      };
+
+      copilotAutogenService.generateWorkflowForCli.mockResolvedValue({
+        canvasId: 'c-generated123',
+        sessionId: 'session-123',
+        resultId: 'result-123',
+        nodesCount: 2,
+        edgesCount: 1,
+        workflowPlan: { title: 'Generated Workflow' },
+      });
+
+      prismaService.canvas.findFirst.mockResolvedValue(mockCanvas);
+      prismaService.skillPackage.create.mockResolvedValue(mockSkillPackage);
+      prismaService.skillWorkflow.create.mockResolvedValue({
+        skillWorkflowId: 'swf-test123',
+        skillId: 'skp-test123',
+        name: 'Generated Workflow',
+      });
+
+      const result = await service.createSkillPackageWithWorkflow(mockUser, input);
+
+      expect(result).toHaveProperty('skillId');
+      expect(result).toHaveProperty('workflowId');
+      expect(copilotAutogenService.generateWorkflowForCli).toHaveBeenCalled();
+    });
+
+    it('should create skill package with existing workflow ID', async () => {
+      const input: CreateSkillPackageCliDto = {
+        name: 'test-skill',
+        version: '1.0.0',
+        workflowId: 'c-existing123',
+      };
+
+      prismaService.canvas.findFirst.mockResolvedValue(mockCanvas);
+      prismaService.canvas.findMany.mockResolvedValue([mockCanvas]);
+      prismaService.skillPackage.create.mockResolvedValue(mockSkillPackage);
+      prismaService.skillWorkflow.create.mockResolvedValue({
+        skillWorkflowId: 'swf-test123',
+        skillId: 'skp-test123',
+        name: 'Existing Workflow',
+      });
+
+      const result = await service.createSkillPackageWithWorkflow(mockUser, input);
+
+      expect(result).toHaveProperty('skillId');
+      expect(result.workflowId).toBe('c-existing123');
+      expect(copilotAutogenService.generateWorkflowForCli).not.toHaveBeenCalled();
+    });
+
+    it('should create skill package from workflow spec', async () => {
+      const input: CreateSkillPackageCliDto = {
+        name: 'test-skill',
+        version: '1.0.0',
+        workflowSpec: {
+          nodes: [
+            { id: 'n1', type: 'start' },
+            { id: 'n2', type: 'skillResponse' },
+          ],
+          edges: [{ id: 'e1', source: 'n1', target: 'n2' }],
+        },
+      };
+
+      workflowCliService.createWorkflowFromSpec.mockResolvedValue({
+        workflowId: 'c-fromspec123',
+        name: 'Spec Workflow',
+        createdAt: new Date().toISOString(),
+      });
+
+      prismaService.canvas.findFirst.mockResolvedValue(mockCanvas);
+      prismaService.skillPackage.create.mockResolvedValue(mockSkillPackage);
+      prismaService.skillWorkflow.create.mockResolvedValue({
+        skillWorkflowId: 'swf-test123',
+        skillId: 'skp-test123',
+        name: 'Spec Workflow',
+      });
+
+      const result = await service.createSkillPackageWithWorkflow(mockUser, input);
+
+      expect(result).toHaveProperty('skillId');
+      expect(workflowCliService.createWorkflowFromSpec).toHaveBeenCalled();
+    });
+
+    it('should create skill package with noWorkflow flag', async () => {
+      const input: CreateSkillPackageCliDto = {
+        name: 'metadata-only-skill',
+        version: '1.0.0',
+        description: 'A skill without workflow',
+        noWorkflow: true,
+      };
+
+      prismaService.skillPackage.create.mockResolvedValue(mockSkillPackage);
+
+      const result = await service.createSkillPackageWithWorkflow(mockUser, input);
+
+      expect(result).toHaveProperty('skillId');
+      expect(result.workflowId).toBeUndefined();
+      expect(copilotAutogenService.generateWorkflowForCli).not.toHaveBeenCalled();
+      expect(workflowCliService.createWorkflowFromSpec).not.toHaveBeenCalled();
+    });
+
+    it('should cleanup orphan workflows on skill creation failure', async () => {
+      const input: CreateSkillPackageCliDto = {
+        name: 'test-skill',
+        version: '1.0.0',
+        description: 'A test skill',
+      };
+
+      copilotAutogenService.generateWorkflowForCli.mockResolvedValue({
+        canvasId: 'c-orphan123',
+        sessionId: 'session-123',
+        resultId: 'result-123',
+        nodesCount: 2,
+        edgesCount: 1,
+      });
+
+      prismaService.canvas.findFirst.mockResolvedValue(mockCanvas);
+      prismaService.skillPackage.create.mockRejectedValue(new Error('Database error'));
+      prismaService.canvas.updateMany.mockResolvedValue({ count: 1 });
+
+      await expect(service.createSkillPackageWithWorkflow(mockUser, input)).rejects.toThrow(
+        'Database error',
+      );
+
+      // Verify cleanup was called
+      expect(prismaService.canvas.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            canvasId: 'c-orphan123',
+          }),
+          data: expect.objectContaining({
+            deletedAt: expect.any(Date),
+          }),
+        }),
+      );
+    });
+
+    it('should throw error when workflow not found', async () => {
+      const input: CreateSkillPackageCliDto = {
+        name: 'test-skill',
+        version: '1.0.0',
+        workflowId: 'c-nonexistent123',
+      };
+
+      prismaService.canvas.findFirst.mockResolvedValue(null);
+      prismaService.canvas.findMany.mockResolvedValue([]);
+
+      await expect(service.createSkillPackageWithWorkflow(mockUser, input)).rejects.toThrow();
+    });
+
+    it('should bind multiple workflows', async () => {
+      const input: CreateSkillPackageCliDto = {
+        name: 'multi-workflow-skill',
+        version: '1.0.0',
+        workflowIds: ['c-workflow1', 'c-workflow2'],
+      };
+
+      prismaService.canvas.findFirst.mockResolvedValue(mockCanvas);
+      prismaService.canvas.findMany.mockResolvedValue([
+        { ...mockCanvas, canvasId: 'c-workflow1', title: 'Workflow 1' },
+        { ...mockCanvas, canvasId: 'c-workflow2', title: 'Workflow 2' },
+      ]);
+      prismaService.skillPackage.create.mockResolvedValue(mockSkillPackage);
+      prismaService.skillWorkflow.create.mockResolvedValue({
+        skillWorkflowId: 'swf-test123',
+        skillId: 'skp-test123',
+        name: 'Workflow',
+      });
+
+      const result = await service.createSkillPackageWithWorkflow(mockUser, input);
+
+      expect(result).toHaveProperty('skillId');
+      expect(result.workflowIds).toContain('c-workflow1');
+      expect(result.workflowIds).toContain('c-workflow2');
+    });
+  });
+
+  describe('getSkillPackage', () => {
+    it('should return skill package by ID', async () => {
+      prismaService.skillPackage.findFirst.mockResolvedValue(mockSkillPackage);
+
+      const result = await service.getSkillPackage('skp-test123', {
+        userId: mockUser.uid,
+      });
+
+      expect(result).toBeDefined();
+      expect(result?.skillId).toBe('skp-test123');
+    });
+
+    it('should return null when skill not found', async () => {
+      prismaService.skillPackage.findFirst.mockResolvedValue(null);
+
+      const result = await service.getSkillPackage('skp-nonexistent', {
+        userId: mockUser.uid,
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should include workflows when requested', async () => {
+      const skillWithWorkflows = {
+        ...mockSkillPackage,
+        workflows: [
+          {
+            skillWorkflowId: 'swf-test123',
+            skillId: 'skp-test123',
+            name: 'Test Workflow',
+            description: null,
+            inputSchema: null,
+            outputSchema: null,
+            isEntry: true,
+            deletedAt: null,
+            dependencies: [],
+          },
+        ],
+      };
+
+      prismaService.skillPackage.findFirst.mockResolvedValue(skillWithWorkflows as any);
+
+      const result = await service.getSkillPackage('skp-test123', {
+        userId: mockUser.uid,
+        includeWorkflows: true,
+      });
+
+      expect(result).toBeDefined();
+      expect(result?.workflows).toBeDefined();
+      expect(result?.workflows?.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('deleteSkillPackage', () => {
+    it('should soft delete skill package', async () => {
+      prismaService.skillPackage.findFirst.mockResolvedValue(mockSkillPackage);
+      prismaService.skillPackage.update.mockResolvedValue({
+        ...mockSkillPackage,
+        deletedAt: new Date(),
+      });
+
+      await service.deleteSkillPackage(mockUser, 'skp-test123');
+
+      expect(prismaService.skillPackage.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { skillId: 'skp-test123' },
+          data: expect.objectContaining({
+            deletedAt: expect.any(Date),
+          }),
+        }),
+      );
+    });
+
+    it('should throw error when skill not found', async () => {
+      prismaService.skillPackage.findFirst.mockResolvedValue(null);
+
+      await expect(service.deleteSkillPackage(mockUser, 'skp-nonexistent')).rejects.toThrow();
+    });
+  });
+});

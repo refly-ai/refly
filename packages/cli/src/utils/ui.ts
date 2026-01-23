@@ -178,6 +178,26 @@ export function styled(text: string, style: string, useColor: boolean = shouldUs
 }
 
 /**
+ * Format a stat value with the appropriate style based on type.
+ */
+function formatStatValue(value: string, type?: 'success' | 'error' | 'warning' | 'info'): string {
+  if (!type) {
+    return UI.bold(value);
+  }
+
+  switch (type) {
+    case 'success':
+      return UI.success(value);
+    case 'error':
+      return UI.error(value);
+    case 'warning':
+      return UI.warning(value);
+    case 'info':
+      return UI.info(value);
+  }
+}
+
+/**
  * Helper functions for common styles
  */
 export const UI = {
@@ -350,15 +370,7 @@ export const UI = {
   ) => {
     const parts = items.map((item) => {
       const value = String(item.value);
-      const styledValue = item.type
-        ? item.type === 'success'
-          ? UI.success(value)
-          : item.type === 'error'
-            ? UI.error(value)
-            : item.type === 'warning'
-              ? UI.warning(value)
-              : UI.info(value)
-        : UI.bold(value);
+      const styledValue = formatStatValue(value, item.type);
       return `${UI.dim(`${item.label}:`)} ${styledValue}`;
     });
     return `  ${parts.join('  ')}`;
@@ -720,12 +732,7 @@ export const UI = {
    */
   timeRemaining: (expiresAt: Date | string | number): string => {
     const now = Date.now();
-    const expiry =
-      typeof expiresAt === 'number'
-        ? expiresAt * 1000 // Assume Unix timestamp in seconds
-        : typeof expiresAt === 'string'
-          ? new Date(expiresAt).getTime()
-          : expiresAt.getTime();
+    const expiry = parseExpiryTimestamp(expiresAt);
     const diffMs = expiry - now;
 
     if (diffMs <= 0) return 'expired';
@@ -735,5 +742,18 @@ export const UI = {
     return `${Math.floor(diffMs / 86400000)}d left`;
   },
 };
+
+/**
+ * Parse expiry timestamp from various formats to milliseconds.
+ */
+function parseExpiryTimestamp(expiresAt: Date | string | number): number {
+  if (typeof expiresAt === 'number') {
+    return expiresAt * 1000; // Assume Unix timestamp in seconds
+  }
+  if (typeof expiresAt === 'string') {
+    return new Date(expiresAt).getTime();
+  }
+  return expiresAt.getTime();
+}
 
 export default UI;

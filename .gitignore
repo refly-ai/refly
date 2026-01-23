@@ -60,3 +60,4 @@ docs/.vitepress/cache/*
 
 apps/api/load-tests/results/*.json
 apps/api/load-tests/results/*.txt
+.playwright-mcp/*

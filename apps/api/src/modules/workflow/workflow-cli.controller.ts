@@ -303,29 +303,57 @@ function getDefaultTitleForNodeType(nodeType: CanvasNodeType): string {
 
 /**
  * Merge workflow variables with runtime variables.
- * Runtime variables override existing ones by name.
+ * Runtime variables override existing ones by variableId (preferred) or name (fallback).
  */
 function mergeWorkflowVariables(
   existing: WorkflowVariable[] = [],
   runtime: WorkflowVariable[] = [],
 ): WorkflowVariable[] {
-  const merged = new Map<string, WorkflowVariable>();
+  const mergedById = new Map<string, WorkflowVariable>();
+  const mergedByName = new Map<string, WorkflowVariable>();
 
-  // Add existing variables
+  // Add existing variables (index by both id and name)
   for (const v of existing) {
+    if (v.variableId) {
+      mergedById.set(v.variableId, v);
+    }
     if (v.name) {
-      merged.set(v.name, v);
+      mergedByName.set(v.name, v);
     }
   }
 
-  // Override with runtime variables
+  // Override with runtime variables (prefer variableId, fallback to name)
   for (const v of runtime) {
-    if (v.name) {
-      merged.set(v.name, v);
+    if (v.variableId && mergedById.has(v.variableId)) {
+      // Match by variableId (preferred)
+      mergedById.set(v.variableId, v);
+      // Also update name map if name exists
+      if (v.name) {
+        mergedByName.set(v.name, v);
+      }
+    } else if (v.name && mergedByName.has(v.name)) {
+      // Fallback: match by name
+      const existingVar = mergedByName.get(v.name)!;
+      mergedByName.set(v.name, v);
+      if (existingVar.variableId) {
+        mergedById.set(existingVar.variableId, v);
+      }
+    }
+    // If neither variableId nor name matches, skip (don't add new variables)
+  }
+
+  // Return deduplicated list (prefer id-based map)
+  const result = new Map<string, WorkflowVariable>();
+  for (const v of mergedById.values()) {
+    result.set(v.variableId || v.name, v);
+  }
+  for (const v of mergedByName.values()) {
+    if (!v.variableId || !result.has(v.variableId)) {
+      result.set(v.name, v);
     }
   }
 
-  return Array.from(merged.values());
+  return Array.from(result.values());
 }
 
 /**

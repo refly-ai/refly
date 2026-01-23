@@ -1,8 +1,9 @@
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Close } from 'refly-icons';
-import { FiEye } from 'react-icons/fi';
+import { IoEyeOutline } from 'react-icons/io5';
 import { Button } from 'antd';
+import cn from 'classnames';
 import { logEvent } from '@refly/telemetry-web';
 
 interface WorkflowRunPreviewHeaderProps {
@@ -45,18 +46,20 @@ const WorkflowRunPreviewHeaderComponent = ({
               <button
                 type="button"
                 onClick={handleClickOutputsOnly}
-                className={`flex border-0 items-center justify-center cursor-pointer hover:opacity-90 transition-opacity gap-1.5 p-0 w-28 h-6 rounded-full ${
-                  outputsOnly ? 'bg-green-600' : 'bg-gray-100'
-                }`}
+                className={cn(
+                  'flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity p-0 w-[114px] h-6 rounded-[20px] gap-1.5',
+                  outputsOnly
+                    ? 'bg-green-600 border-none'
+                    : 'bg-white border border-solid border-[#D0D5DD] box-border',
+                )}
               >
-                <FiEye
+                <IoEyeOutline
                   size={16}
-                  className={`flex-shrink-0 ${outputsOnly ? 'text-white' : 'text-gray-900'}`}
-                  style={{ strokeWidth: '1.5px' }}
+                  className={`flex-shrink-0 ${outputsOnly ? 'text-white' : 'text-[#1C1F23]'}`}
                 />
                 <span
-                  className={`font-normal text-xs leading-4.5 whitespace-nowrap ${
-                    outputsOnly ? 'text-white' : 'text-gray-900'
+                  className={`font-normal text-xs leading-[18px] whitespace-nowrap ${
+                    outputsOnly ? 'text-white' : 'text-[#1C1F23]'
                   }`}
                 >
                   {t('canvas.workflow.run.outputsOnly')}

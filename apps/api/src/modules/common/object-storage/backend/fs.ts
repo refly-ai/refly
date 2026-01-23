@@ -63,6 +63,12 @@ export class FsStorageBackend implements ObjectStorageBackend {
     throw new Error('presignedGetObject is not supported for FS storage backend');
   }
 
+  async presignedPutObject(_key: string, _expiresIn: number): Promise<string> {
+    throw new Error(
+      'PRESIGN_NOT_SUPPORTED: presignedPutObject is not supported for FS storage backend',
+    );
+  }
+
   async putObject(key: string, data: Readable | Buffer | string): Promise<ObjectInfo> {
     try {
       const filePath = this.getFilePath(key);

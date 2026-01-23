@@ -73,6 +73,40 @@ const CONTENT_TYPE_TO_CATEGORY = {
 };
 
 /**
+ * Map MIME type to file extension
+ */
+const MIME_TYPE_TO_EXTENSION: Record<string, string> = {
+  'text/plain': '.txt',
+  'text/html': '.html',
+  'text/css': '.css',
+  'text/javascript': '.js',
+  'text/markdown': '.md',
+  'application/json': '.json',
+  'application/pdf': '.pdf',
+  'application/xml': '.xml',
+  'application/zip': '.zip',
+  'application/epub+zip': '.epub',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/svg+xml': '.svg',
+  'image/bmp': '.bmp',
+  'audio/mpeg': '.mp3',
+  'audio/wav': '.wav',
+  'audio/ogg': '.ogg',
+  'audio/aac': '.aac',
+  'audio/webm': '.weba',
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+  'video/ogg': '.ogv',
+  'video/quicktime': '.mov',
+  'video/x-msvideo': '.avi',
+};
+
+/**
  * Get file extension from filename
  */
 const getFileExtension = (filename: string): string => {
@@ -148,4 +182,35 @@ export const isPlainTextMimeType = (mimeType: string): boolean => {
 
 export const getFileCategory = (contentType: string): DriveFileCategory => {
   return CONTENT_TYPE_TO_CATEGORY[contentType] || 'document';
+};
+
+/**
+ * Get file extension from MIME type
+ * @param mimeType - The MIME type to convert
+ * @returns File extension with leading dot (e.g., '.txt') or empty string if not found
+ */
+export const getExtensionFromMimeType = (mimeType: string): string => {
+  if (!mimeType) return '';
+  return MIME_TYPE_TO_EXTENSION[mimeType.toLowerCase()] || '';
+};
+
+/**
+ * Generate filename with proper extension based on MIME type
+ * @param name - The base filename (may or may not have extension)
+ * @param mimeType - The MIME type of the file
+ * @returns Filename with proper extension
+ */
+export const generateFilenameWithExtension = (name: string, mimeType: string): string => {
+  const baseName = name || 'attachment';
+
+  // Check if name already has an extension (up to 10 chars like .markdown, .dockerfile)
+  const lastDotIndex = baseName.lastIndexOf('.');
+  if (lastDotIndex > 0 && lastDotIndex > baseName.length - 11) {
+    // Name already has an extension
+    return baseName;
+  }
+
+  // Add extension based on MIME type
+  const ext = getExtensionFromMimeType(mimeType);
+  return ext ? `${baseName}${ext}` : baseName;
 };

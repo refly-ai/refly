@@ -13,11 +13,13 @@ export const genBaseRespDataFromError = (exception: any) => {
 
   const activeSpan = api.trace.getSpan(api.context.active());
 
+  const includeStack = process.env.EXPOSE_ERROR_STACK === 'true';
+
   return {
     success: false,
     errCode: err.code,
     errMsg: err.messageDict?.en,
     traceId: activeSpan?.spanContext().traceId,
-    stack: process.env.NODE_ENV === 'production' ? undefined : exception.stack,
+    stack: includeStack ? exception.stack : undefined,
   };
 };

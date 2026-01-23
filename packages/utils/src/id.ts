@@ -57,6 +57,12 @@ export enum IDPrefix {
   SCHEDULE_RECORD = 'sr-',
   API_KEY = 'ak-',
   DEVICE_SESSION = 'ds-',
+  SKILL_PACKAGE = 'skp-',
+  SKILL_PACKAGE_WORKFLOW = 'skpw-',
+  SKILL_PACKAGE_INSTALLATION = 'skpi-',
+  SKILL_PACKAGE_WORKFLOW_DEP = 'skpwd-',
+  SKILL_PACKAGE_WORKFLOW_EXEC = 'skpwe-',
+  SKILL_PACKAGE_EXECUTION = 'skpe-',
 }
 
 export function genUID(): string {
@@ -365,4 +371,28 @@ export function genApiKeyId(): string {
 
 export function genDeviceSessionId(): string {
   return IDPrefix.DEVICE_SESSION + createId();
+}
+
+export function genSkillPackageID(): string {
+  return IDPrefix.SKILL_PACKAGE + createId();
+}
+
+export function genSkillPackageWorkflowID(): string {
+  return IDPrefix.SKILL_PACKAGE_WORKFLOW + createId();
+}
+
+export function genSkillPackageInstallationID(): string {
+  return IDPrefix.SKILL_PACKAGE_INSTALLATION + createId();
+}
+
+export function genSkillPackageWorkflowDepID(): string {
+  return IDPrefix.SKILL_PACKAGE_WORKFLOW_DEP + createId();
+}
+
+export function genSkillPackageWorkflowExecID(): string {
+  return IDPrefix.SKILL_PACKAGE_WORKFLOW_EXEC + createId();
+}
+
+export function genSkillPackageExecutionID(): string {
+  return IDPrefix.SKILL_PACKAGE_EXECUTION + createId();
 }

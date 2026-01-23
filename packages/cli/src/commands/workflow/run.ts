@@ -6,10 +6,19 @@ import { Command } from 'commander';
 import open from 'open';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
+import * as path from 'node:path';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
-import { apiRequest } from '../../api/client.js';
+import {
+  apiRequest,
+  apiGetWorkflow,
+  apiUploadDriveFile,
+  type WorkflowVariable,
+  type WorkflowInfo,
+} from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
 import { getWebUrl } from '../../config/config.js';
+import { promptForFilePath, isInteractive } from '../../utils/prompt.js';
+import { determineFileType } from '../../utils/file-type.js';
 
 interface RunResult {
   runId: string;
@@ -147,21 +156,173 @@ const buildInstallUrl = (workflowId: string): string => {
 };
 
 /**
+ * Resource value structure for file variables
+ */
+interface ResourceValue {
+  type: 'resource';
+  resource: {
+    name: string;
+    fileType: string;
+    fileId: string;
+    storageKey: string;
+  };
+}
+
+/**
+ * Collect file variables interactively by prompting for file paths.
+ * Only prompts for required resource variables that don't have values in existingInput.
+ *
+ * @param workflowId - The workflow ID to fetch variables from
+ * @param existingInput - Variables already provided via --input
+ * @param noPrompt - If true, fail instead of prompting for missing required variables
+ * @returns Array of workflow variables with uploaded file bindings
+ */
+async function collectFileVariables(
+  workflowId: string,
+  existingInput: WorkflowVariable[],
+  noPrompt: boolean,
+): Promise<WorkflowVariable[]> {
+  // 1. Fetch workflow details to get variable definitions
+  let workflow: WorkflowInfo;
+  try {
+    workflow = await apiGetWorkflow(workflowId);
+  } catch (_error) {
+    // If we can't fetch the workflow, let the run endpoint handle it
+    return [];
+  }
+
+  // 2. Find required resource variables
+  const resourceVars = (workflow.variables ?? []).filter(
+    (v) => v.variableType === 'resource' && v.required === true,
+  );
+
+  if (resourceVars.length === 0) {
+    return [];
+  }
+
+  // 3. Filter out variables already provided in --input
+  // Check by both variableId and name for maximum compatibility
+  const providedIds = new Set(existingInput.map((v) => v.variableId).filter(Boolean));
+  const providedNames = new Set(existingInput.map((v) => v.name).filter(Boolean));
+
+  const missingVars = resourceVars.filter((v) => {
+    // Variable is provided if its ID or name matches
+    if (v.variableId && providedIds.has(v.variableId)) return false;
+    if (v.name && providedNames.has(v.name)) return false;
+    return true;
+  });
+
+  if (missingVars.length === 0) {
+    return [];
+  }
+
+  // 4. Check if we can prompt
+  if (noPrompt || !isInteractive()) {
+    const names = missingVars.map((v) => v.name).join(', ');
+    throw new CLIError(
+      ErrorCodes.INVALID_INPUT,
+      `Missing required file variables: ${names}`,
+      undefined,
+      'Provide files via --input or run interactively without --no-prompt',
+    );
+  }
+
+  // 5. Prompt for each variable
+  console.log('');
+  console.log('This workflow requires file inputs:');
+  const uploadedVars: WorkflowVariable[] = [];
+
+  for (const variable of missingVars) {
+    const filePath = await promptForFilePath(
+      variable.name,
+      variable.resourceTypes ?? ['document'],
+      true,
+    );
+
+    if (!filePath) {
+      // This shouldn't happen for required variables, but just in case
+      continue;
+    }
+
+    // Upload file
+    const filename = path.basename(filePath);
+    process.stdout.write(`  Uploading ${filename}...`);
+
+    try {
+      const uploadResult = await apiUploadDriveFile(filePath, workflowId);
+      console.log(' done');
+
+      // Build variable binding with resource value
+      const resourceValue: ResourceValue = {
+        type: 'resource',
+        resource: {
+          name: uploadResult.name,
+          fileType: determineFileType(filePath, uploadResult.type),
+          fileId: uploadResult.fileId,
+          storageKey: uploadResult.storageKey,
+        },
+      };
+
+      uploadedVars.push({
+        variableId: variable.variableId,
+        name: variable.name,
+        variableType: 'resource',
+        value: [resourceValue],
+        required: variable.required,
+        isSingle: variable.isSingle,
+        resourceTypes: variable.resourceTypes,
+      });
+    } catch (error) {
+      console.log(' failed');
+      throw new CLIError(
+        ErrorCodes.API_ERROR,
+        `Failed to upload file ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        undefined,
+        'Check your network connection and try again',
+      );
+    }
+  }
+
+  console.log('');
+  return uploadedVars;
+}
+
+/**
  * Main workflow execution logic
  */
 async function runWorkflow(workflowId: string, options: any): Promise<void> {
-  // Parse input JSON
-  let input: unknown;
+  // Parse input JSON to extract variables
+  let inputVars: WorkflowVariable[] = [];
   try {
-    input = JSON.parse(options?.input ?? '{}');
+    const parsed = JSON.parse(options?.input ?? '{}');
+    // Support both { variables: [...] } and raw array format
+    if (Array.isArray(parsed)) {
+      inputVars = parsed;
+    } else if (parsed.variables && Array.isArray(parsed.variables)) {
+      inputVars = parsed.variables;
+    }
   } catch {
     fail(ErrorCodes.INVALID_INPUT, 'Invalid JSON in --input', {
-      hint: 'Ensure the input is valid JSON',
+      hint: 'Ensure the input is valid JSON, e.g., {"variables":[...]}',
     });
+    return; // TypeScript flow control
   }
 
-  // Build request body with optional startNodes
-  const body: { input?: unknown; startNodes?: string[] } = { input };
+  // Collect file variables interactively (if needed)
+  const uploadedVars = await collectFileVariables(
+    workflowId,
+    inputVars,
+    options?.noPrompt ?? false,
+  );
+
+  // Merge: uploaded vars first, then input vars (input takes precedence)
+  const allVars = [...uploadedVars, ...inputVars];
+
+  // Build request body with variables and optional startNodes
+  const body: { variables?: WorkflowVariable[]; startNodes?: string[] } = {};
+  if (allVars.length > 0) {
+    body.variables = allVars;
+  }
   if (options?.fromNode) {
     body.startNodes = [options?.fromNode];
   }
@@ -264,6 +425,7 @@ export const workflowRunCommand = new Command('run')
   .argument('<workflowId>', 'Workflow ID to run')
   .option('--input <json>', 'Input variables as JSON', '{}')
   .option('--from-node <nodeId>', 'Start workflow execution from a specific node (Run From Here)')
+  .option('--no-prompt', 'Disable interactive prompts (fail if required variables are missing)')
   .action(async (workflowId, options) => {
     try {
       await runWorkflow(workflowId, options);
