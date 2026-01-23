@@ -90,7 +90,7 @@ services:
       - refly_network
   sandbox:
     container_name: refly_sandbox
-    image: refly-executor-slim:latest
+    image: ghcr.io/refly-ai/refly-executor-slim:latest
     restart: unless-stopped
     privileged: true
     ports:
