@@ -67,16 +67,11 @@ export class ToolExecutionService {
     const hasPtcContext = !!ptcContext?.ptcCallId;
     const callType = hasPtcContext ? 'ptc' : 'standalone';
 
-    // For PTC calls, try to extract resultId/version from ptcCallId if not provided
-    let { resultId, version } = ptcContext ?? {};
-    if (hasPtcContext && (!resultId || version === undefined)) {
-      const parsed = this.parsePtcCallId(ptcContext.ptcCallId);
-      resultId = resultId ?? parsed.resultId;
-      version = version ?? parsed.version;
-    }
+    // Get resultId/version from HTTP headers (ptcContext)
+    const { resultId, version } = ptcContext ?? {};
 
     // Generate a unique call ID for this execution
-    const callId = this.generateCallId(resultId, version, toolsetKey, toolName);
+    const callId = this.generateCallId(ptcContext?.ptcCallId, toolsetKey, toolName);
     const startTime = Date.now();
 
     this.logger.log(
@@ -156,36 +151,17 @@ export class ToolExecutionService {
   }
 
   /**
-   * Parse ptcCallId to extract resultId and version
-   * Format: {resultId}:{version}:{toolsetId}:{toolName}:{uuid}
-   */
-  private parsePtcCallId(ptcCallId: string): { resultId?: string; version?: number } {
-    if (!ptcCallId) {
-      return {};
-    }
-    const parts = ptcCallId.split(':');
-    if (parts.length >= 2) {
-      const resultId = parts[0];
-      const version = Number.parseInt(parts[1], 10);
-      return {
-        resultId,
-        version: Number.isNaN(version) ? undefined : version,
-      };
-    }
-    return {};
-  }
-
-  /**
    * Generate a unique call ID for tool execution
+   * PTC mode: {ptcCallId}:{toolsetKey}:{toolName}:{uuid}
+   * Standalone mode: standalone:{toolsetKey}:{toolName}:{uuid}
    */
   private generateCallId(
-    resultId: string | undefined,
-    version: number | undefined,
-    toolsetId: string,
+    ptcCallId: string | undefined,
+    toolsetKey: string,
     toolName: string,
   ): string {
-    const prefix = `${resultId ?? 'standalone'}:${version ?? 0}:${toolsetId}:${toolName}`;
-    return `${prefix}:${randomUUID()}`;
+    const prefix = ptcCallId ?? 'standalone';
+    return `${prefix}:${toolsetKey}:${toolName}:${randomUUID()}`;
   }
 
   /**
