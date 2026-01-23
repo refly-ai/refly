@@ -257,9 +257,6 @@ importers:
       cron-parser:
         specifier: ^5.4.0
         version: 5.4.0
-      expr-eval:
-        specifier: ^2.0.2
-        version: 2.0.2
       express:
         specifier: ~4.19.2
         version: 4.19.2
