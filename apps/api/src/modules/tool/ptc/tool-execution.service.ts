@@ -5,20 +5,38 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type { User } from '@refly/openapi-schema';
 import type { ExecuteToolRequest } from '@refly/openapi-schema';
 import { ParamsError } from '@refly/errors';
 import { ComposioService } from '../composio/composio.service';
 import { ToolIdentifyService } from './tool-identify.service';
 import type { ToolIdentification } from './tool-identify.service';
+import { ToolCallService, ToolCallStatus } from '../../tool-call/tool-call.service';
+import { PrismaService } from '../../common/prisma.service';
+
+/**
+ * PTC (Programmatic Tool Call) context for /v1/tool/execute API
+ * Passed from sandbox environment via HTTP headers
+ */
+export interface PtcToolExecuteContext {
+  /** Parent call ID from execute_code tool */
+  ptcCallId?: string;
+  /** Result ID for the action */
+  resultId?: string;
+  /** Result version */
+  version?: number;
+}
 
 @Injectable()
 export class ToolExecutionService {
   private readonly logger = new Logger(ToolExecutionService.name);
 
   constructor(
+    private readonly prisma: PrismaService,
     private readonly composioService: ComposioService,
     private readonly toolIdentifyService: ToolIdentifyService,
+    private readonly toolCallService: ToolCallService,
   ) {}
 
   /**
@@ -27,9 +45,14 @@ export class ToolExecutionService {
    *
    * @param user - The user executing the tool
    * @param request - The execution request (toolsetKey, toolName, arguments)
+   * @param ptcContext - Optional PTC context for sandbox tool calls
    * @returns Tool execution result
    */
-  async executeTool(user: User, request: ExecuteToolRequest): Promise<Record<string, unknown>> {
+  async executeTool(
+    user: User,
+    request: ExecuteToolRequest,
+    ptcContext?: PtcToolExecuteContext,
+  ): Promise<Record<string, unknown>> {
     const { toolsetKey, toolName, arguments: args } = request;
 
     if (!toolsetKey) {
@@ -40,43 +63,199 @@ export class ToolExecutionService {
       throw new ParamsError('toolName is required');
     }
 
-    // 1. Identify tool type and get connection info
-    const toolInfo = await this.toolIdentifyService.identifyTool(user, toolsetKey);
+    // Determine call type and context
+    const hasPtcContext = !!ptcContext?.ptcCallId;
+    const callType = hasPtcContext ? 'ptc' : 'standalone';
+
+    // For PTC calls, try to extract resultId/version from ptcCallId if not provided
+    let { resultId, version } = ptcContext ?? {};
+    if (hasPtcContext && (!resultId || version === undefined)) {
+      const parsed = this.parsePtcCallId(ptcContext.ptcCallId);
+      resultId = resultId ?? parsed.resultId;
+      version = version ?? parsed.version;
+    }
+
+    // Generate a unique call ID for this execution
+    const callId = this.generateCallId(resultId, version, toolsetKey, toolName);
+    const startTime = Date.now();
 
     this.logger.log(
-      `Executing tool: ${toolName} from toolset: ${toolsetKey}, type: ${toolInfo.type}`,
+      `Executing tool: ${toolName} from toolset: ${toolsetKey}, type: ${callType}, callId: ${callId}`,
     );
 
-    // 2. Route to appropriate executor based on type
-    switch (toolInfo.type) {
-      case 'composio_oauth':
-      case 'composio_apikey':
-        return await this.executeComposioTool(toolInfo, toolName, args ?? {});
+    // 1. Persist initial "executing" record BEFORE any execution logic
+    await this.persistToolCallStart({
+      callId,
+      uid: user.uid,
+      toolsetId: toolsetKey,
+      toolName,
+      input: args ?? {},
+      type: callType,
+      ptcCallId: ptcContext?.ptcCallId,
+      resultId: resultId ?? `standalone-${callId}`,
+      version: version ?? 0,
+      createdAt: startTime,
+    });
 
-      case 'config_based':
-        throw new ParamsError(
-          `Toolset ${toolsetKey} not supported: config_based tool execution is not implemented.`,
-        );
+    // 2. Execute tool and capture result
+    let result: Record<string, unknown>;
+    let errorMessage: string | undefined;
 
-      case 'legacy_sdk':
-        throw new ParamsError(
-          `Toolset ${toolsetKey} not supported: legacy_sdk tool execution is not implemented.`,
-        );
+    try {
+      // Identify tool type and get connection info
+      const toolInfo = await this.toolIdentifyService.identifyTool(user, toolsetKey);
 
-      case 'mcp':
-        // TODO return a user-friendly error message
-        throw new ParamsError(
-          `Toolset ${toolsetKey} not supported: MCP tool execution is not supported.`,
-        );
+      // Route to appropriate executor based on type
+      switch (toolInfo.type) {
+        case 'composio_oauth':
+        case 'composio_apikey':
+          result = await this.executeComposioTool(toolInfo, toolName, args ?? {});
+          break;
 
-      case 'builtin':
-        throw new ParamsError(
-          `Toolset ${toolsetKey} not supported: builtin tool execution is not supported.`,
-        );
+        case 'config_based':
+          throw new ParamsError(
+            `Toolset ${toolsetKey} not supported: config_based tool execution is not implemented.`,
+          );
 
-      default:
-        throw new ParamsError(`Unsupported tool type: ${toolInfo.type}`);
+        case 'legacy_sdk':
+          throw new ParamsError(
+            `Toolset ${toolsetKey} not supported: legacy_sdk tool execution is not implemented.`,
+          );
+
+        case 'mcp':
+          throw new ParamsError(
+            `Toolset ${toolsetKey} not supported: MCP tool execution is not supported.`,
+          );
+
+        case 'builtin':
+          throw new ParamsError(
+            `Toolset ${toolsetKey} not supported: builtin tool execution is not supported.`,
+          );
+
+        default:
+          throw new ParamsError(`Unsupported tool type: ${toolInfo.type}`);
+      }
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : String(error);
+      result = { status: 'error', error: errorMessage };
     }
+
+    // 4. Update record with final status
+    const endTime = Date.now();
+    const status = errorMessage ? ToolCallStatus.FAILED : ToolCallStatus.COMPLETED;
+
+    await this.persistToolCallEnd({
+      callId,
+      output: result,
+      status,
+      error: errorMessage,
+      updatedAt: endTime,
+    });
+
+    return result;
+  }
+
+  /**
+   * Parse ptcCallId to extract resultId and version
+   * Format: {resultId}:{version}:{toolsetId}:{toolName}:{uuid}
+   */
+  private parsePtcCallId(ptcCallId: string): { resultId?: string; version?: number } {
+    if (!ptcCallId) {
+      return {};
+    }
+    const parts = ptcCallId.split(':');
+    if (parts.length >= 2) {
+      const resultId = parts[0];
+      const version = Number.parseInt(parts[1], 10);
+      return {
+        resultId,
+        version: Number.isNaN(version) ? undefined : version,
+      };
+    }
+    return {};
+  }
+
+  /**
+   * Generate a unique call ID for tool execution
+   */
+  private generateCallId(
+    resultId: string | undefined,
+    version: number | undefined,
+    toolsetId: string,
+    toolName: string,
+  ): string {
+    const prefix = `${resultId ?? 'standalone'}:${version ?? 0}:${toolsetId}:${toolName}`;
+    return `${prefix}:${randomUUID()}`;
+  }
+
+  /**
+   * Persist initial tool call record with "executing" status
+   */
+  private async persistToolCallStart(params: {
+    callId: string;
+    uid: string;
+    toolsetId: string;
+    toolName: string;
+    input: Record<string, unknown>;
+    type: 'ptc' | 'standalone';
+    ptcCallId?: string;
+    resultId: string;
+    version: number;
+    createdAt: number;
+  }): Promise<void> {
+    const {
+      callId,
+      uid,
+      toolsetId,
+      toolName,
+      input,
+      type,
+      ptcCallId,
+      resultId,
+      version,
+      createdAt,
+    } = params;
+
+    await this.prisma.toolCallResult.create({
+      data: {
+        callId,
+        uid,
+        toolsetId,
+        toolName,
+        input: JSON.stringify(input),
+        output: '',
+        status: ToolCallStatus.EXECUTING,
+        type,
+        ptcCallId: ptcCallId ?? null,
+        resultId,
+        version,
+        createdAt: new Date(createdAt),
+        updatedAt: new Date(createdAt),
+      },
+    });
+  }
+
+  /**
+   * Update tool call record with final status
+   */
+  private async persistToolCallEnd(params: {
+    callId: string;
+    output: Record<string, unknown>;
+    status: ToolCallStatus;
+    error?: string;
+    updatedAt: number;
+  }): Promise<void> {
+    const { callId, output, status, error, updatedAt } = params;
+
+    await this.prisma.toolCallResult.update({
+      where: { callId },
+      data: {
+        output: JSON.stringify(output),
+        status,
+        error: error ?? null,
+        updatedAt: new Date(updatedAt),
+      },
+    });
   }
 
   /**
