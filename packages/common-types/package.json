@@ -13,5 +13,7 @@
   "dependencies": {
     "@refly/openapi-schema": "workspace:*"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "react-scripts": "^5.0.1"
+  }
 }

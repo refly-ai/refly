@@ -1,11 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-lintignore"],
-  "rules": {
-    "duplicates": "warn",
-    "unresolved": "warn",
-    "unlisted": "warn"
-  },
   "ignore": [
     "postcss.config.*",
     "*.config.ts",
@@ -18,7 +13,7 @@
   "workspaces": {
     ".": {},
     "apps/api": {
-      "entry": ["src/main.ts", "src/scripts/preload.ts"],
+      "entry": ["src/scripts/preload.ts"],
       "project": ["src/**/*.{ts,tsx,js,jsx}"],
       "paths": {
         "@refly-packages/ai-workspace-common": ["../../packages/ai-workspace-common/src/index.ts"],
@@ -34,7 +29,7 @@
       }
     },
     "packages/web-core": {
-      "entry": ["src/index.ts", "src/pages/**/*.{ts,tsx}"],
+      "entry": ["src/pages/**/*.{ts,tsx}"],
       "project": ["src/**/*.{ts,tsx,js,jsx}"],
       "paths": {
         "@refly-packages/ai-workspace-common": ["../ai-workspace-common/src/index.ts"],
@@ -43,7 +38,6 @@
     },
     "packages/ai-workspace-common": {
       "entry": [
-        "src/index.ts",
         "src/components/slideshow/**/*.{ts,tsx,css}",
         "src/components/app-manager/**/*.{ts,tsx,css,scss}",
         "src/components/run-history/**/*.{ts,tsx,css,scss}",

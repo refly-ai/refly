@@ -47,6 +47,7 @@
   "devDependencies": {
     "@types/linkify-it": "^5.0.0",
     "@types/markdown-it": "~14.1.1",
+    "@vitest/coverage-v8": "^2.1.9",
     "vitest": "^2.1.9"
   }
 }
