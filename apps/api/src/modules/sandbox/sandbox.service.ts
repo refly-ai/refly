@@ -85,6 +85,17 @@ export class SandboxService {
         version: request.context?.version,
       };
 
+      // Temp debug: log effective S3 config (redacted secrets)
+      this.logger.info({
+        canvasId,
+        uid: user.uid,
+        s3Config: {
+          ...this.s3Config,
+          accessKey: this.s3Config.accessKey ? '***' : '',
+          secretKey: this.s3Config.secretKey ? '***' : '',
+        },
+      });
+
       const workerResponse = await this.client.executeCode(request.params, context);
 
       let files: DriveFile[] = [];

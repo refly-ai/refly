@@ -90,12 +90,11 @@ services:
       - refly_network
   sandbox:
     container_name: refly_sandbox
-    image: ghcr.io/refly-ai/refly-sandbox:latest
+    image: refly-executor-slim:latest
     restart: unless-stopped
+    privileged: true
     ports:
-      - 7651:7651
-    env_file:
-      - .env
+      - 38088:8080
     networks:
       - refly_network
 
