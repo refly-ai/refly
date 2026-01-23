@@ -291,8 +291,7 @@ export class SkillEngineService implements OnModuleInit {
       execute: async (user: User, req: SandboxExecuteRequest): Promise<SandboxExecuteResponse> => {
         // Inject PTC environment variables if enabled
         if (req.context?.ptcEnabled) {
-          const resultId = req.context.parentResultId;
-          const ptcEnvVars = await this.ptcEnvService.getPtcEnvVars(user.uid, resultId);
+          const ptcEnvVars = await this.ptcEnvService.getPtcEnvVars(user, req);
 
           // Ensure context and env exist
           req.context = req.context || {};

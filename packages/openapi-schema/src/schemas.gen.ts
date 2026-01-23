@@ -7389,6 +7389,10 @@ export const SandboxExecuteContextSchema = {
       type: 'boolean',
       description: 'Whether PTC (Programmatic Tool Calling) is enabled',
     },
+    toolCallId: {
+      type: 'string',
+      description: "Tool call ID (execute_code's toolCallId) for PTC context tracking",
+    },
     env: {
       type: 'object',
       additionalProperties: {
