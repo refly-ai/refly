@@ -5131,6 +5131,10 @@ export type SandboxExecuteContext = {
    */
   ptcEnabled?: boolean;
   /**
+   * Tool call ID (execute_code's toolCallId) for PTC context tracking
+   */
+  toolCallId?: string;
+  /**
    * Environment variables for execution
    */
   env?: {
