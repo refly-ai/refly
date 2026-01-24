@@ -170,7 +170,11 @@ registerRoute(
 // === Strategy 2: HTML (non-home) - StaleWhileRevalidate with version check ===
 registerRoute(
   ({ request, url }) =>
-    request.destination === 'document' && url.pathname !== '/' && !isSsrPath(url.pathname),
+    request.destination === 'document' &&
+    url.pathname !== '/' &&
+    !isSsrPath(url.pathname) &&
+    // Exclude static assets to prevent caching HTML content for CSS/JS files
+    !url.pathname.startsWith('/static/'),
   new StaleWhileRevalidate({
     cacheName: CACHE_NAME,
     plugins: [
