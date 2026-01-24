@@ -33,7 +33,7 @@ function handleMessage(event: MessageEvent) {
 
   switch (type) {
     case 'NEW_VERSION_AVAILABLE':
-      handleAutoRefreshDuringLoad();
+      handleNewVersion();
       break;
 
     case 'CHUNK_LOAD_ERROR':
@@ -49,10 +49,15 @@ function handleMessage(event: MessageEvent) {
   }
 }
 
-function handleAutoRefreshDuringLoad() {
+function handleNewVersion() {
+  // Only auto-reload during initial page load
+  // Service Worker has already deleted the old cache, so reload will fetch fresh HTML
   if (document.readyState !== 'complete') {
-    console.log('[SW Handler] Reloading page during initial load for new version');
+    console.log('[SW Handler] New version detected during load, reloading...');
     window.location.reload();
+  } else {
+    console.log('[SW Handler] New version available, but page already loaded.');
+    // TODO: Show toast notification to user
   }
 }
 

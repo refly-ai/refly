@@ -224,9 +224,15 @@ registerRoute(
                 changed: newVersion !== oldVersion,
               });
 
-              // If version changed, notify the client
+              // If version changed, update cache immediately and notify the client
               if (newVersion && oldVersion && newVersion !== oldVersion) {
-                console.log('[SW] New version detected! Notifying client:', clientId);
+                console.log(
+                  '[SW] New version detected! Updating cache and notifying client:',
+                  clientId,
+                );
+
+                // Immediately cache the new HTML to ensure reload gets fresh version
+                await cache.put(normalizedKey, response.clone());
 
                 const client = clientId ? await self.clients.get(clientId) : null;
                 if (client) {
