@@ -17,9 +17,9 @@ export const DEFAULT_MAX_TOKENS = 4000; // Max tokens for entire tool result (~1
 export const MAX_SNIPPET_TOKENS = 800; // Max tokens per content snippet (~3.2KB)
 
 // Link filtering constants
-export const TOP_K_LINKS = 30; // Keep top 10 links total
-export const MAX_PER_DOMAIN = 10; // Max 3 links per domain (allows diversity while not losing all same-domain results)
-export const MIN_CONTENT_LENGTH = 100; // Skip items with content < 100 chars (low quality)
+const TOP_K_LINKS = 30; // Keep top 10 links total
+const MAX_PER_DOMAIN = 10; // Max 3 links per domain (allows diversity while not losing all same-domain results)
+const MIN_CONTENT_LENGTH = 100; // Skip items with content < 100 chars (low quality)
 
 // ============================================================================
 // Token Estimation
@@ -48,7 +48,7 @@ export function truncateToTokens(text: string, maxTokens: number): string {
 /**
  * Extract root domain from URL for deduplication
  */
-export function extractRootDomain(url: string): string {
+function extractRootDomain(url: string): string {
   try {
     const hostname = new URL(url).hostname;
     const parts = hostname.split('.');
@@ -95,7 +95,7 @@ export function filterAndDedupeUrls(urls: string[]): string[] {
  * Extract all URLs from raw text content
  * Uses indexOf-based scanning for better performance on large texts
  */
-export function extractUrlsFromText(text: string): string[] {
+function extractUrlsFromText(text: string): string[] {
   if (!text) return [];
 
   const urls: string[] = [];
@@ -345,7 +345,7 @@ export function truncateAndFilterContent(
  *   const truncated = truncateContent(rawText, maxTokens);  // O(1) - fast
  *   const { content, urls } = filterContent(truncated);      // then filter
  */
-export function filterContent(text: string): {
+function filterContent(text: string): {
   content: string;
   urls: string[];
   originalUrlCount: number;

@@ -5,7 +5,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { Helmet } from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 
-export const RunDetailPage = memo(() => {
+const RunDetailPage = memo(() => {
   const { t } = useTranslation();
   const { recordId = '' } = useParams();
 

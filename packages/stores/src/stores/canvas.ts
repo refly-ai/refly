@@ -26,7 +26,7 @@ export interface LinearThreadMessage {
   data: CanvasNodeData<ResponseNodeMeta>;
 }
 
-export interface CanvasState {
+interface CanvasState {
   config: Record<string, CanvasConfig & CacheInfo>;
   currentCanvasId: string | null;
   initialFitViewCompleted?: boolean;

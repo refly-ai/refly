@@ -9,7 +9,7 @@ export const isDesktop = (): boolean => process.env.MODE === 'desktop';
 /**
  * Type for the target to search for
  */
-export type TargetType = 'file' | 'directory';
+type TargetType = 'file' | 'directory';
 
 /**
  * Finds the path to the target file or directory by traversing up from the current directory
@@ -19,7 +19,7 @@ export type TargetType = 'file' | 'directory';
  * @param maxDepth Maximum number of parent directories to check
  * @returns Path to the target or null if not found
  */
-export const findTargetPath = (
+const findTargetPath = (
   startDir: string,
   targetName: string,
   targetType: TargetType = 'file',

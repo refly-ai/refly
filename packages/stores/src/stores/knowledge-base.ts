@@ -3,7 +3,7 @@ import { devtools } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { Source } from '@refly/openapi-schema';
 
-export interface SourceListDrawer {
+interface SourceListDrawer {
   visible: boolean;
   sources?: Source[];
   query?: string;
@@ -11,7 +11,7 @@ export interface SourceListDrawer {
 
 export type LibraryModalActiveKey = 'document' | 'resource' | 'project';
 
-export interface KnowledgeBaseState {
+interface KnowledgeBaseState {
   libraryModalActiveKey: LibraryModalActiveKey;
   sourceListDrawer: SourceListDrawer;
 
@@ -19,7 +19,7 @@ export interface KnowledgeBaseState {
   updateLibraryModalActiveKey: (key: LibraryModalActiveKey) => void;
 }
 
-export const defaultState = {
+const defaultState = {
   sourceListDrawer: {
     visible: false,
     sources: [],

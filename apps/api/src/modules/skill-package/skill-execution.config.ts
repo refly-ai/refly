@@ -15,7 +15,7 @@ export interface RetryPolicy {
   retryableErrors: string[];
 }
 
-export const DEFAULT_RETRY_POLICY: RetryPolicy = {
+const DEFAULT_RETRY_POLICY: RetryPolicy = {
   maxRetries: 3,
   backoffMs: 1000,
   backoffMultiplier: 2,
@@ -58,13 +58,6 @@ export function calculateBackoff(retryCount: number, policy: RetryPolicy): numbe
 }
 
 /**
- * Check if an error is retryable based on the policy.
- */
-export function isRetryable(errorCode: string, policy: RetryPolicy): boolean {
-  return policy.retryableErrors.includes(errorCode);
-}
-
-/**
  * Execution status constants.
  */
 export const EXECUTION_STATUS = {
@@ -75,8 +68,6 @@ export const EXECUTION_STATUS = {
   FAILED: 'failed',
   CANCELLED: 'cancelled',
 } as const;
-
-export type ExecutionStatus = (typeof EXECUTION_STATUS)[keyof typeof EXECUTION_STATUS];
 
 /**
  * Workflow execution status constants.
@@ -90,5 +81,3 @@ export const WORKFLOW_STATUS = {
   SKIPPED: 'skipped',
   BLOCKED: 'blocked',
 } as const;
-
-export type WorkflowStatus = (typeof WORKFLOW_STATUS)[keyof typeof WORKFLOW_STATUS];

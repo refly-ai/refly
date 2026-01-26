@@ -48,9 +48,6 @@ function makeAllObjectFieldsRequired(schema: z.ZodTypeAny): z.ZodTypeAny {
   return schema;
 }
 
-export type CallToolResultContentType = CallToolResult['content'][number]['type'];
-export type CallToolResultContent = TextContent | ImageContent | EmbeddedResource;
-
 async function _embeddedResourceToArtifact(
   resource: EmbeddedResource,
   client: Client,
@@ -73,7 +70,7 @@ async function _embeddedResourceToArtifact(
 /**
  * Custom error class for tool exceptions
  */
-export class ToolException extends Error {
+class ToolException extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ToolException';

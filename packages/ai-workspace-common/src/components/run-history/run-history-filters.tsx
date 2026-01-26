@@ -10,7 +10,7 @@ import './index.scss';
 export type RunStatusFilter = 'all' | 'success' | 'failed';
 export type RunTypeFilter = 'all' | 'workflow' | 'template' | 'schedule';
 
-export interface RunHistoryFiltersProps {
+interface RunHistoryFiltersProps {
   // Search by title
   titleFilter: string;
   onTitleChange: (value: string) => void;

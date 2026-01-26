@@ -64,7 +64,7 @@ export const FILE_UPLOAD_GUIDANCE = `
  * Convert JSON schema to Zod schema
  * Uses @dmitryrechkin/json-schema-to-zod for runtime conversion
  */
-export function jsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
+function jsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
   if (schema.type !== 'object') {
     throw new Error('Root schema must be of type "object"');
   }
@@ -96,7 +96,7 @@ export function parseJsonSchema(schemaJson: string): JsonSchema {
 /**
  * Validate JSON schema structure
  */
-export function validateJsonSchema(schema: JsonSchema): boolean {
+function validateJsonSchema(schema: JsonSchema): boolean {
   if (schema.type !== 'object') {
     throw new Error('Root schema must be of type "object"');
   }
@@ -307,48 +307,6 @@ export function collectResourceFields(schema: JsonSchema): ResourceField[] {
   });
 
   return fields;
-}
-
-/**
- * Find the matching object option from oneOf/anyOf based on discriminator field
- */
-export function findMatchingObjectOption(
-  options: SchemaProperty[],
-  dataObj: Record<string, unknown>,
-): SchemaProperty | undefined {
-  const objectOptions = options.filter(
-    (opt: SchemaProperty) => opt.type === 'object' && opt.properties,
-  );
-
-  if (objectOptions.length === 0) {
-    return undefined;
-  }
-
-  if (objectOptions.length === 1) {
-    return objectOptions[0];
-  }
-
-  for (const option of objectOptions) {
-    const props = option.properties!;
-    let allConstMatch = true;
-    let hasConst = false;
-
-    for (const [propKey, propSchema] of Object.entries(props)) {
-      if ('const' in propSchema && propSchema.const !== undefined) {
-        hasConst = true;
-        if (dataObj[propKey] !== (propSchema as { const: unknown }).const) {
-          allConstMatch = false;
-          break;
-        }
-      }
-    }
-
-    if (hasConst && allConstMatch) {
-      return option;
-    }
-  }
-
-  return objectOptions[0];
 }
 
 // ============================================================================

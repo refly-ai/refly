@@ -25,12 +25,6 @@ export const LazyDocumentRenderer = lazy(() =>
   })),
 );
 
-export const LazySkillResponseRenderer = lazy(() =>
-  import('./SkillResponseRenderer').then((module) => ({
-    default: module.SkillResponseRenderer,
-  })),
-);
-
 export const LazyVideoRenderer = lazy(() =>
   import('./VideoRenderer').then((module) => ({
     default: module.VideoRenderer,

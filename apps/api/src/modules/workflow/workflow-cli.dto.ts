@@ -224,11 +224,6 @@ export interface PatchWorkflowPlanRequest {
   operations: WorkflowPatchOperation[];
 }
 
-export interface GetWorkflowPlanRequest {
-  planId: string;
-  version?: number;
-}
-
 // ============================================================================
 // AI Workflow Generation DTOs (CLI)
 // ============================================================================
@@ -278,38 +273,6 @@ export interface GenerateWorkflowCliResponse {
   /** Number of nodes generated */
   nodesCount: number;
   /** Number of edges generated */
-  edgesCount: number;
-}
-
-/**
- * Request to refine an existing workflow using AI
- */
-export interface RefineWorkflowCliRequest {
-  /** Refinement instruction */
-  instruction: string;
-  /** Optional model to use for refinement */
-  modelItemId?: string;
-  /** Output language locale */
-  locale?: string;
-}
-
-/**
- * Response from workflow refinement
- */
-export interface RefineWorkflowCliResponse {
-  /** Workflow/Canvas ID */
-  workflowId: string;
-  /** Copilot session ID */
-  sessionId: string;
-  /** Action result ID */
-  resultId: string;
-  /** Updated workflow plan ID */
-  planId: string;
-  /** Number of operations applied */
-  operationsCount: number;
-  /** Number of nodes after refinement */
-  nodesCount: number;
-  /** Number of edges after refinement */
   edgesCount: number;
 }
 
@@ -385,37 +348,3 @@ export const CLI_ERROR_CODES = {
   INSUFFICIENT_CREDITS: 'INSUFFICIENT_CREDITS',
   RATE_LIMITED: 'RATE_LIMITED',
 } as const;
-
-// ============================================================================
-// Node Output DTOs
-// ============================================================================
-
-/**
- * Response for node execution output
- */
-export interface NodeOutputResponse {
-  runId: string;
-  workflowId: string;
-  nodeId: string;
-  nodeTitle: string;
-  nodeType: string;
-  status: 'waiting' | 'executing' | 'finish' | 'failed';
-  content?: string;
-  contentType?: string;
-  outputTokens?: number;
-  toolCalls?: Array<{
-    callId: string;
-    toolName: string;
-    status: string;
-    output?: unknown;
-  }>;
-  error?: {
-    type: string;
-    message: string;
-  };
-  timing?: {
-    startTime?: string;
-    endTime?: string;
-    durationMs?: number;
-  };
-}

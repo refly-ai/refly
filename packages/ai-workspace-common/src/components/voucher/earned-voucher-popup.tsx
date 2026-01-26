@@ -23,5 +23,3 @@ export const EarnedVoucherPopup = () => {
     />
   );
 };
-
-export default EarnedVoucherPopup;

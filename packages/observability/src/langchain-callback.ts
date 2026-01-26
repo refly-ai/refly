@@ -7,7 +7,7 @@ import { createId } from '@paralleldrive/cuid2';
 /**
  * Custom Langfuse callback handler that uses our TraceManager
  */
-export class LangfuseCallbackHandler extends BaseCallbackHandler {
+class LangfuseCallbackHandler extends BaseCallbackHandler {
   name = 'refly_langfuse_callback_handler';
 
   private config: {

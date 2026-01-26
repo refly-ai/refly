@@ -64,24 +64,6 @@ export interface PostHandlerOutput {
 }
 
 /**
- * Abstract base class for tool post-handlers
- *
- * Use this as an injection token in NestJS:
- * @example
- * ```typescript
- * @Injectable()
- * export class MyPostHandler extends AbstractToolPostHandler {
- *   readonly name = 'my-post-handler';
- *   async process(input: PostHandlerInput): Promise<PostHandlerOutput> { ... }
- * }
- * ```
- */
-export abstract class AbstractToolPostHandler {
-  abstract readonly name: string;
-  abstract process(input: PostHandlerInput): Promise<PostHandlerOutput>;
-}
-
-/**
  * Interface version for type checking (when abstract class is not needed)
  */
 export interface IToolPostHandler {

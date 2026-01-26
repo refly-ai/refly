@@ -3,7 +3,7 @@ import { devtools } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 
 // 搜索的内容来源
-export enum SearchTarget {
+enum SearchTarget {
   None = 'none', // 无上下文
   All = 'all', // 整个 Workspace
   CurrentPage = 'currentPage', // 当前 resource
@@ -12,7 +12,7 @@ export enum SearchTarget {
   SearchEnhance = 'searchEnhance', // 搜索增强
 }
 
-export interface SearchState {
+interface SearchState {
   // state
   searchTarget: SearchTarget;
 
@@ -20,7 +20,7 @@ export interface SearchState {
   setSearchTarget: (searchTarget: SearchTarget) => void;
 }
 
-export const defaultState = {
+const defaultState = {
   searchTarget: SearchTarget.All as SearchTarget,
 };
 

@@ -15,19 +15,6 @@ export interface VariableExtractionOptions {
   triggerType?: string;
 }
 
-// Save history record options
-export interface SaveHistoryOptions {
-  mode: string;
-  model?: string;
-  triggerType?: string;
-}
-
-// Save candidate record options
-export interface SaveCandidateOptions {
-  modelName?: string;
-  triggerType?: string;
-}
-
 // Core return type
 export interface VariableExtractionResult {
   originalPrompt: string; // Original user input
@@ -136,21 +123,6 @@ export interface ExtractionContextMetadata {
   recentVariablePatterns: string[]; // Recent variable patterns
 }
 
-// User workflow preferences
-export interface UserWorkflowPreferences {
-  preferredVariableTypes?: string[];
-  commonWorkflowPatterns?: string[];
-  extractionHistory?: ExtractionHistoryItem[];
-}
-
-// Extraction history item
-export interface ExtractionHistoryItem {
-  timestamp: Date;
-  prompt: string;
-  extractedVariables: string[];
-  confidence: number;
-}
-
 // Candidate record type
 export interface CandidateRecord {
   sessionId: string;
@@ -161,33 +133,6 @@ export interface CandidateRecord {
   reusedVariables: VariableReuse[];
   applied: boolean;
   createdAt: Date;
-}
-
-// LLM extraction response type
-export interface LLMExtractionResponse {
-  variables: ExtractedVariable[];
-  processedPrompt: string;
-  confidence: number;
-  reasoning?: string;
-}
-
-// Extracted variable
-export interface ExtractedVariable {
-  name: string;
-  value: string;
-  description?: string;
-  variableType: 'string' | 'option' | 'resource';
-  confidence: number;
-  source: 'llm_extraction' | 'variable_reuse' | 'context_analysis';
-}
-
-// Quality assessment result
-export interface QualityMetrics {
-  overallScore: number; // Overall score 0-100
-  variableCompleteness: number; // Variable completeness
-  promptClarity: number; // Prompt clarity
-  contextRelevance: number; // Context relevance
-  suggestions: string[]; // Improvement suggestions
 }
 
 // Historical data interface
@@ -201,27 +146,4 @@ export interface ExtractionHistoryRecord {
   extractedVariables: string;
   status: string;
   createdAt: Date;
-}
-
-// Content item type
-export interface CanvasContentItemWithType {
-  id: string;
-  type: string;
-  title: string;
-  content?: string;
-}
-
-// Prompt example interface for testing and reference
-export interface PromptExample {
-  id: string;
-  scenario: string;
-  complexity: 'Simple' | 'Complex';
-  originalPrompt: string;
-  extractedVariables: {
-    name: string;
-    value: string;
-    description: string;
-    variableType: 'string' | 'option' | 'resource';
-  }[];
-  processedPrompt: string;
 }

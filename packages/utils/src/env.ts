@@ -1,9 +1,6 @@
 import { IRuntime } from '@refly/common-types';
 
 export enum IENV {
-  PRODUCTION = 'production',
-  STAGING = 'staging',
-  TEST = 'test',
   DEVELOPMENT = 'development',
 }
 

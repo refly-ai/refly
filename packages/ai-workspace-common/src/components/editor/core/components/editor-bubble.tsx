@@ -4,7 +4,7 @@ import type { BubbleMenuProps } from '@tiptap/react';
 import type { ReactNode } from 'react';
 import type { Instance, Props } from 'tippy.js';
 
-export interface EditorBubbleProps extends Omit<BubbleMenuProps, 'editor'> {
+interface EditorBubbleProps extends Omit<BubbleMenuProps, 'editor'> {
   readonly children: ReactNode;
   askAIShow?: boolean;
 }
@@ -70,5 +70,3 @@ export const EditorBubble = forwardRef<HTMLDivElement, EditorBubbleProps>(
 );
 
 EditorBubble.displayName = 'EditorBubble';
-
-export default EditorBubble;

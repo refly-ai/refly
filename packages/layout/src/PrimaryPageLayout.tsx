@@ -7,17 +7,14 @@ import {
   LayoutContainer,
   LayoutContainerContextUpdater,
   type LayoutContainerRenderLayoutProps,
-  type LayoutContainerSlotProps,
   type LayoutContainerSlotType,
-  useLayoutContainerSlotProps,
 } from './components/LayoutContainer';
 
 const { Text } = Typography;
 
-export const PRIMARY_PAGE_CONTENT_MIN_WIDTH = 524;
-export const PRIMARY_PAGE_CONTENT_MAX_WIDTH = 1080;
+const PRIMARY_PAGE_CONTENT_MIN_WIDTH = 524;
 
-export interface PrimaryPageLayoutContext {
+interface PrimaryPageLayoutContext {
   title?: ReactNode;
   actions?: ReactNode;
   extra?: ReactNode;
@@ -57,11 +54,9 @@ function RenderLayout({
   );
 }
 
-export type PrimaryPageLayoutSlotProps = LayoutContainerSlotProps<PrimaryPageLayoutContext>;
+type PrimaryPageLayoutSlotType = LayoutContainerSlotType<PrimaryPageLayoutContext>;
 
-export type PrimaryPageLayoutSlotType = LayoutContainerSlotType<PrimaryPageLayoutContext>;
-
-export interface PrimaryPageLayoutProps {
+interface PrimaryPageLayoutProps {
   children?: PrimaryPageLayoutSlotType;
 }
 
@@ -79,11 +74,7 @@ export function PrimaryPageLayout({ children }: PrimaryPageLayoutProps): ReactEl
   );
 }
 
-export function usePrimaryPageLayoutSlotProps(): PrimaryPageLayoutSlotProps | null {
-  return useLayoutContainerSlotProps(RenderLayout);
-}
-
-export interface PrimaryPageLayoutContextUpdaterProps extends PrimaryPageLayoutContext {
+interface PrimaryPageLayoutContextUpdaterProps extends PrimaryPageLayoutContext {
   deps?: unknown[];
 }
 

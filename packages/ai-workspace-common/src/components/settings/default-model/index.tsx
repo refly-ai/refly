@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { ProviderItem } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { ProviderItem } from '@refly/openapi-schema';
 import { Select, message, Skeleton } from 'antd';
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 

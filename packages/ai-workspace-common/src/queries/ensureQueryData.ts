@@ -30,10 +30,6 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
-  getPageByCanvasId,
-  getPageDetail,
-  getPilotSessionDetail,
-  getProjectDetail,
   getPromptSuggestions,
   getResourceDetail,
   getSettings,
@@ -45,10 +41,7 @@ import {
   getWorkflowDetail,
   getWorkflowPlanDetail,
   getWorkflowVariables,
-  hasBeenInvited,
-  hasFilledForm,
   listAccounts,
-  listActions,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
@@ -57,21 +50,13 @@ import {
   listDocuments,
   listDriveFiles,
   listInvitationCodes,
-  listLabelClasses,
-  listLabelInstances,
   listMcpServers,
   listModels,
-  listPages,
-  listPilotSessions,
-  listProjects,
   listProviderItemOptions,
   listProviderItems,
   listProviders,
   listResources,
   listShares,
-  listSkillInstances,
-  listSkills,
-  listSkillTriggers,
   listTools,
   listToolsetInventory,
   listToolsets,
@@ -81,7 +66,7 @@ import {
   listWorkflowExecutions,
   serveStatic,
   verifyVoucherInvitation,
-} from '../requests/services.gen';
+} from '@refly/openapi-schema';
 import {
   CheckSettingsFieldData,
   CheckToolOauthStatusData,
@@ -105,10 +90,6 @@ import {
   GetCreditUsageData,
   GetDocumentDetailData,
   GetExportJobStatusData,
-  GetPageByCanvasIdData,
-  GetPageDetailData,
-  GetPilotSessionDetailData,
-  GetProjectDetailData,
   GetResourceDetailData,
   GetTemplateGenerationStatusData,
   GetToolCallResultData,
@@ -123,25 +104,18 @@ import {
   ListCopilotSessionsData,
   ListDocumentsData,
   ListDriveFilesData,
-  ListLabelClassesData,
-  ListLabelInstancesData,
   ListMcpServersData,
-  ListPagesData,
-  ListPilotSessionsData,
-  ListProjectsData,
   ListProviderItemOptionsData,
   ListProviderItemsData,
   ListProvidersData,
   ListResourcesData,
   ListSharesData,
-  ListSkillInstancesData,
-  ListSkillTriggersData,
   ListToolsData,
   ListToolsetsData,
   ListWorkflowAppsData,
   ListWorkflowExecutionsData,
   VerifyVoucherInvitationData,
-} from '../requests/types.gen';
+} from '@refly/openapi-schema';
 import * as Common from './common';
 export const ensureUseListMcpServersData = (
   queryClient: QueryClient,
@@ -150,30 +124,6 @@ export const ensureUseListMcpServersData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListMcpServersKeyFn(clientOptions),
     queryFn: () => listMcpServers({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseListPagesData = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListPagesData, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseListPagesKeyFn(clientOptions),
-    queryFn: () => listPages({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseGetPageDetailData = (
-  queryClient: QueryClient,
-  clientOptions: Options<GetPageDetailData, true>,
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseGetPageDetailKeyFn(clientOptions),
-    queryFn: () => getPageDetail({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseGetPageByCanvasIdData = (
-  queryClient: QueryClient,
-  clientOptions: Options<GetPageByCanvasIdData, true>,
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseGetPageByCanvasIdKeyFn(clientOptions),
-    queryFn: () => getPageByCanvasId({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetAuthConfigData = (
   queryClient: QueryClient,
@@ -344,22 +294,6 @@ export const ensureUseDownloadExportJobResultData = (
     queryKey: Common.UseDownloadExportJobResultKeyFn(clientOptions),
     queryFn: () => downloadExportJobResult({ ...clientOptions }).then((response) => response.data),
   });
-export const ensureUseListProjectsData = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListProjectsData, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseListProjectsKeyFn(clientOptions),
-    queryFn: () => listProjects({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseGetProjectDetailData = (
-  queryClient: QueryClient,
-  clientOptions: Options<GetProjectDetailData, true>,
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseGetProjectDetailKeyFn(clientOptions),
-    queryFn: () => getProjectDetail({ ...clientOptions }).then((response) => response.data),
-  });
 export const ensureUseListCodeArtifactsData = (
   queryClient: QueryClient,
   clientOptions: Options<ListCodeArtifactsData, true> = {},
@@ -384,30 +318,6 @@ export const ensureUseListSharesData = (
     queryKey: Common.UseListSharesKeyFn(clientOptions),
     queryFn: () => listShares({ ...clientOptions }).then((response) => response.data),
   });
-export const ensureUseListLabelClassesData = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListLabelClassesData, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseListLabelClassesKeyFn(clientOptions),
-    queryFn: () => listLabelClasses({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseListLabelInstancesData = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListLabelInstancesData, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseListLabelInstancesKeyFn(clientOptions),
-    queryFn: () => listLabelInstances({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseListActionsData = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseListActionsKeyFn(clientOptions),
-    queryFn: () => listActions({ ...clientOptions }).then((response) => response.data),
-  });
 export const ensureUseGetActionResultData = (
   queryClient: QueryClient,
   clientOptions: Options<GetActionResultData, true>,
@@ -415,46 +325,6 @@ export const ensureUseGetActionResultData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseGetActionResultKeyFn(clientOptions),
     queryFn: () => getActionResult({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseListSkillsData = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseListSkillsKeyFn(clientOptions),
-    queryFn: () => listSkills({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseListSkillInstancesData = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListSkillInstancesData, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseListSkillInstancesKeyFn(clientOptions),
-    queryFn: () => listSkillInstances({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseListSkillTriggersData = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListSkillTriggersData, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseListSkillTriggersKeyFn(clientOptions),
-    queryFn: () => listSkillTriggers({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseListPilotSessionsData = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListPilotSessionsData, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseListPilotSessionsKeyFn(clientOptions),
-    queryFn: () => listPilotSessions({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseGetPilotSessionDetailData = (
-  queryClient: QueryClient,
-  clientOptions: Options<GetPilotSessionDetailData, true>,
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseGetPilotSessionDetailKeyFn(clientOptions),
-    queryFn: () => getPilotSessionDetail({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseListCopilotSessionsData = (
   queryClient: QueryClient,
@@ -545,14 +415,6 @@ export const ensureUseGetFormDefinitionData = (
     queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions),
     queryFn: () => getFormDefinition({ ...clientOptions }).then((response) => response.data),
   });
-export const ensureUseHasFilledFormData = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseHasFilledFormKeyFn(clientOptions),
-    queryFn: () => hasFilledForm({ ...clientOptions }).then((response) => response.data),
-  });
 export const ensureUseGetCreditRechargeData = (
   queryClient: QueryClient,
   clientOptions: Options<GetCreditRechargeData, true> = {},
@@ -618,14 +480,6 @@ export const ensureUseListInvitationCodesData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseListInvitationCodesKeyFn(clientOptions),
     queryFn: () => listInvitationCodes({ ...clientOptions }).then((response) => response.data),
-  });
-export const ensureUseHasBeenInvitedData = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.ensureQueryData({
-    queryKey: Common.UseHasBeenInvitedKeyFn(clientOptions),
-    queryFn: () => hasBeenInvited({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetSubscriptionPlansData = (
   queryClient: QueryClient,

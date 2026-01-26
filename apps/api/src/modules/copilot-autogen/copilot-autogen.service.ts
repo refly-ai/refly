@@ -109,7 +109,6 @@ export class CopilotAutogenService {
       this.logger.log('[Autogen] Creating new canvas');
       const canvas = await this.canvasService.createCanvas(user, {
         title: `Workflow: ${request.query.slice(0, 50)}`,
-        projectId: request.projectId,
         variables: request.variables,
       });
       canvasId = canvas.canvasId;
@@ -132,7 +131,6 @@ export class CopilotAutogenService {
       input: { query: request.query },
       mode: 'copilot_agent',
       target: { entityId: canvasId, entityType: 'canvas' },
-      projectId: request.projectId,
       locale: request.locale,
       modelItemId: request.modelItemId,
     };
@@ -234,7 +232,6 @@ export class CopilotAutogenService {
         user,
         {
           title: `Workflow: ${request.query.slice(0, 50)}`,
-          projectId: request.projectId,
           variables: request.variables,
         },
         { skipDefaultNodes },
@@ -259,7 +256,6 @@ export class CopilotAutogenService {
       input: { query: request.query },
       mode: 'copilot_agent',
       target: { entityId: canvasId, entityType: 'canvas' },
-      projectId: request.projectId,
       locale: request.locale,
       modelItemId: request.modelItemId,
     };
@@ -382,7 +378,6 @@ export class CopilotAutogenService {
         user,
         {
           title: `Workflow: ${request.query.slice(0, 50)}`,
-          projectId: request.projectId,
           variables: request.variables,
         },
         { skipDefaultNodes },
@@ -395,7 +390,6 @@ export class CopilotAutogenService {
       input: { query: request.query },
       mode: 'copilot_agent',
       target: { entityId: canvasId, entityType: 'canvas' },
-      projectId: request.projectId,
       locale: request.locale,
       modelItemId: request.modelItemId,
       copilotSessionId: request.sessionId,

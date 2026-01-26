@@ -4,7 +4,6 @@ import { useMatch, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LazyErrorBoundary } from './LazyErrorBoundary';
 import { SiderLayout } from '@refly-packages/ai-workspace-common/components/sider/layout';
-import { useBindCommands } from '@refly-packages/ai-workspace-common/hooks/use-bind-commands';
 import { useUserStoreShallow } from '@refly/stores';
 import { LOCALE } from '@refly/common-types';
 import { authChannel } from '@refly-packages/ai-workspace-common/utils/auth-channel';
@@ -32,8 +31,6 @@ export const AppLayout = (props: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const hasRedirectedRef = useRef(false);
-
-  useBindCommands();
 
   const userStore = useUserStoreShallow((state) => ({
     isLogin: state.isLogin,

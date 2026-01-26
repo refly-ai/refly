@@ -44,5 +44,3 @@ export const isColumnGripSelected = ({
     return false;
   }
 };
-
-export default isColumnGripSelected;

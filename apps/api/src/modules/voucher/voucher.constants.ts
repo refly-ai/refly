@@ -5,18 +5,6 @@
 // Daily popup trigger limit per user
 export const DAILY_POPUP_TRIGGER_LIMIT = 3;
 
-// Default LLM score when scoring fails (50 = 50% discount)
-export const DEFAULT_LLM_SCORE = 50;
-
-// Scoring timeout in milliseconds (10 seconds)
-export const SCORING_TIMEOUT_MS = 10000;
-
-// Minimum discount percentage
-export const MIN_DISCOUNT_PERCENT = 10;
-
-// Maximum discount percentage
-export const MAX_DISCOUNT_PERCENT = 90;
-
 // Inviter reward credits
 export const INVITER_REWARD_CREDITS = 2000;
 

@@ -13,7 +13,7 @@ export interface VoucherEmailData {
 /**
  * Generate English email content for voucher notification
  */
-export function generateVoucherEmailEN(data: VoucherEmailData): { subject: string; html: string } {
+function generateVoucherEmailEN(data: VoucherEmailData): { subject: string; html: string } {
   const subject = "🎉 You've Earned an Exclusive Refly Discount!";
 
   const html = `<!DOCTYPE html>
@@ -219,7 +219,7 @@ export function generateVoucherEmailEN(data: VoucherEmailData): { subject: strin
 /**
  * Generate Chinese email content for voucher notification
  */
-export function generateVoucherEmailZH(data: VoucherEmailData): { subject: string; html: string } {
+function generateVoucherEmailZH(data: VoucherEmailData): { subject: string; html: string } {
   const subject = '🎉 恭喜！您获得了 Refly.ai 专属折扣';
 
   const html = `<!DOCTYPE html>

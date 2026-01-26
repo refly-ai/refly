@@ -307,7 +307,7 @@ export class CanvasService {
     param: DuplicateCanvasRequest,
     options?: { checkOwnership?: boolean },
   ) {
-    const { title, canvasId, projectId, duplicateEntities = true } = param;
+    const { title, canvasId, duplicateEntities = true } = param;
 
     const canvas = await this.prisma.canvas.findFirst({
       where: { canvasId, deletedAt: null, uid: options?.checkOwnership ? user.uid : undefined },
@@ -370,7 +370,6 @@ export class CanvasService {
         canvasId: newCanvasId,
         title: newTitle,
         status: 'creating', // Temporary status
-        projectId,
         version: '0', // Temporary version
         workflow: canvas.workflow,
       },
@@ -636,7 +635,6 @@ export class CanvasService {
           uid: user.uid,
           canvasId,
           title: param.title,
-          projectId: param.projectId,
           version: state.version,
           workflow: JSON.stringify({ variables: param.variables }),
           visibility: param.visibility ?? true,
@@ -670,7 +668,6 @@ export class CanvasService {
       createdAt: canvas.createdAt.toJSON(),
       updatedAt: canvas.updatedAt.toJSON(),
       uid: canvas.uid,
-      projectId: canvas.projectId,
     });
 
     return updatedCanvas;
@@ -715,7 +712,7 @@ export class CanvasService {
   }
 
   async updateCanvas(user: User, param: UpsertCanvasRequest) {
-    const { canvasId, title, minimapStorageKey, projectId } = param;
+    const { canvasId, title, minimapStorageKey } = param;
 
     const canvas = await this.prisma.canvas.findUnique({
       where: { canvasId, uid: user.uid, deletedAt: null },
@@ -729,13 +726,6 @@ export class CanvasService {
 
     if (title !== undefined) {
       updates.title = title;
-    }
-    if (projectId !== undefined) {
-      if (projectId) {
-        updates.project = { connect: { projectId } };
-      } else {
-        updates.project = { disconnect: true };
-      }
     }
     if (minimapStorageKey !== undefined) {
       const minimapFile = await this.miscService.findFileAndBindEntity(minimapStorageKey, {
@@ -771,7 +761,6 @@ export class CanvasService {
       title: updatedCanvas.title,
       updatedAt: updatedCanvas.updatedAt.toJSON(),
       uid: updatedCanvas.uid,
-      projectId: updatedCanvas.projectId,
     });
 
     return updatedCanvas;

@@ -80,7 +80,7 @@ const useId =
     return () => i++;
   })();
 
-export const FileIcon = ({
+const FileIcon = ({
   color = 'whitesmoke',
   extension,
   fold = true,

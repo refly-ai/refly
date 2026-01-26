@@ -347,5 +347,3 @@ export const VoucherPopup = ({
     </>
   );
 };
-
-export default VoucherPopup;

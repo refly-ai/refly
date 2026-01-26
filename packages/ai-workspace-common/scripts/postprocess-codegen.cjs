@@ -1,4 +1,4 @@
-const { readFileSync, writeFileSync } = require('node:fs');
+const { readFileSync, writeFileSync, unlinkSync, existsSync } = require('node:fs');
 const { execSync } = require('node:child_process');
 const { join } = require('node:path');
 
@@ -97,6 +97,82 @@ function addTsNoCheck(filePath) {
 }
 
 /**
+ * Updates import paths in queries files from relative requests imports to @refly/openapi-schema
+ */
+function updateImportPaths() {
+  const queriesDir = join(__dirname, '..', 'src', 'queries');
+
+  // Get all .ts files in the queries directory
+  const fs = require('node:fs');
+  const files = fs.readdirSync(queriesDir).filter((file) => file.endsWith('.ts'));
+
+  console.log('Updating import paths in queries files...');
+
+  for (const file of files) {
+    const filePath = join(queriesDir, file);
+
+    try {
+      let content = readFileSync(filePath, 'utf-8');
+      let modified = false;
+
+      // Replace import paths
+      const replacements = [
+        { from: '../requests/services.gen', to: '@refly/openapi-schema' },
+        { from: '../requests/types.gen', to: '@refly/openapi-schema' },
+        { from: '../requests/provider-community', to: '@refly/openapi-schema' },
+      ];
+
+      for (const replacement of replacements) {
+        if (content.includes(replacement.from)) {
+          content = content.replace(new RegExp(replacement.from, 'g'), replacement.to);
+          modified = true;
+        }
+      }
+
+      if (modified) {
+        writeFileSync(filePath, content, 'utf-8');
+        console.log(`Updated import paths in ${file}`);
+      }
+    } catch (error) {
+      console.error(`Error updating import paths in ${file}:`, error);
+      process.exit(1);
+    }
+  }
+
+  console.log('Import paths update completed!');
+}
+
+/**
+ * Removes generated files in the requests directory
+ */
+function removeGeneratedRequestsFiles() {
+  const requestsDir = join(__dirname, '..', 'src', 'requests');
+
+  // List of generated files to remove
+  const generatedFiles = ['index.ts', 'services.gen.ts', 'types.gen.ts'];
+
+  console.log('Removing generated files in requests directory...');
+
+  for (const fileName of generatedFiles) {
+    const filePath = join(requestsDir, fileName);
+
+    try {
+      if (existsSync(filePath)) {
+        unlinkSync(filePath);
+        console.log(`Removed generated file: ${fileName}`);
+      } else {
+        console.log(`File not found (already removed): ${fileName}`);
+      }
+    } catch (error) {
+      console.error(`Error removing file ${fileName}:`, error);
+      process.exit(1);
+    }
+  }
+
+  console.log('Generated files removal completed!');
+}
+
+/**
  * Processes queries workflow - runs biome check and adds ts-nocheck to queries.ts
  */
 function postprocessQueries() {
@@ -111,7 +187,13 @@ function postprocessQueries() {
 
   console.log('Starting queries processing...');
 
-  // First run biome check on the specified directories
+  // First remove generated files in requests directory
+  removeGeneratedRequestsFiles();
+
+  // Then update import paths in queries files
+  updateImportPaths();
+
+  // Then run biome check on the specified directories
   runBiomeCheck(directoriesToCheck);
 
   // Then add ts-nocheck to queries/queries.ts

@@ -76,5 +76,5 @@ const OAuthButton: React.FC<OAuthButtonProps> = ({
 };
 
 // Optimize with memo to prevent unnecessary re-renders
-export const MemoizedOAuthButton = React.memo(OAuthButton);
+const MemoizedOAuthButton = React.memo(OAuthButton);
 export { MemoizedOAuthButton as OAuthButton };

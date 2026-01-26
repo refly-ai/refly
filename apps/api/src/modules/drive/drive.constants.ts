@@ -21,7 +21,7 @@ export const MAX_CLI_UPLOAD_SIZE = 50 * 1024 * 1024;
 export const PENDING_UPLOAD_REDIS_PREFIX = 'cli:drive:upload:';
 
 // Default allowed content types for CLI uploads
-export const DEFAULT_ALLOWED_CONTENT_TYPES = [
+const DEFAULT_ALLOWED_CONTENT_TYPES = [
   'application/pdf',
   'text/markdown',
   'text/plain',
@@ -45,7 +45,7 @@ export const DEFAULT_ALLOWED_CONTENT_TYPES = [
 /**
  * Get allowed content types for CLI uploads from environment or defaults
  */
-export function getAllowedContentTypes(): string[] {
+function getAllowedContentTypes(): string[] {
   const env = process.env.CLI_UPLOAD_ALLOWED_CONTENT_TYPES;
   return env ? env.split(',').map((s) => s.trim()) : DEFAULT_ALLOWED_CONTENT_TYPES;
 }

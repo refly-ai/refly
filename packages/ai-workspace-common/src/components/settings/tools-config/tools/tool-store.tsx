@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useListToolsetInventory, useListTools } from '@refly-packages/ai-workspace-common/queries';
 import { Col, Empty, Row, Button, Typography, Skeleton, Input, message } from 'antd';
-import { ToolsetDefinition } from '@refly-packages/ai-workspace-common/requests';
+import { ToolsetDefinition } from '@refly/openapi-schema';
 import { Search } from 'refly-icons';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ToolInstallModal } from './tool-install-modal';

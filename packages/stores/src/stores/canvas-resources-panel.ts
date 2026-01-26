@@ -5,8 +5,6 @@ import { persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { DriveFile } from '@refly/openapi-schema';
 
-export type CanvasResourcesPanelMode = 'wide' | 'normal' | 'hidden';
-
 export type CanvasResourcesParentType = 'stepsRecord' | 'resultsRecord' | 'myUpload';
 
 interface CanvasResourcesPanelState {

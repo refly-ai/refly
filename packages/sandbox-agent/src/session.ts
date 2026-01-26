@@ -28,7 +28,7 @@ function handleDeprecatedKwargs(kwargs: Record<string, any>): void {
   if (kwargs.maxIterations !== undefined) settings.MAX_ITERATIONS = kwargs.maxIterations;
 }
 
-export interface CodeInterpreterSessionOptions {
+interface CodeInterpreterSessionOptions {
   /**
    * Pre-configured LLM instance to use for code interpretation.
    * When provided, this takes precedence over model configuration parameters.

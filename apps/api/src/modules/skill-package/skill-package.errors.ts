@@ -32,12 +32,10 @@ export const SKILL_CLI_ERROR_CODES = {
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 
-export type SkillCliErrorCode = (typeof SKILL_CLI_ERROR_CODES)[keyof typeof SKILL_CLI_ERROR_CODES];
-
 /**
  * CLI Error Response interface
  */
-export interface CliErrorResponse {
+interface CliErrorResponse {
   ok: false;
   type: 'error';
   version: string;
@@ -58,7 +56,7 @@ export interface CliErrorResponse {
 /**
  * Build a CLI-style error response
  */
-export function buildCliErrorResponse(
+function buildCliErrorResponse(
   code: string,
   message: string,
   hint?: string,

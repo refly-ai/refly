@@ -38,26 +38,3 @@ export class SandboxExecutionTimeoutError extends BaseError {
     return new SandboxExecutionTimeoutError(requestId, timeoutMs);
   }
 }
-
-/**
- * Sandbox Exception - Response Parse Error
- * Thrown when worker response cannot be parsed
- */
-export class SandboxResponseParseError extends BaseError {
-  code = 'SANDBOX_RESPONSE_PARSE_ERROR';
-  messageDict = {
-    en: 'Failed to parse sandbox worker response',
-    'zh-CN': '解析沙箱工作节点响应失败',
-  };
-
-  constructor(
-    public readonly requestId: string,
-    public readonly originalError: Error,
-  ) {
-    super(`Failed to parse worker response (requestId: ${requestId}): ${originalError.message}`);
-  }
-
-  static create(requestId: string, error: unknown): SandboxResponseParseError {
-    return new SandboxResponseParseError(requestId, error as Error);
-  }
-}

@@ -66,24 +66,6 @@ export function getContext(): RequestContext | undefined {
 }
 
 /**
- * Set LangChain config in current context
- * This is automatically called by tool handlers when executing from LangChain
- */
-export function setLangChainConfig(config: SkillRunnableConfig | undefined): void {
-  const context = asyncLocalStorage.getStore();
-  if (context) {
-    context.langchainConfig = config;
-  }
-}
-
-/**
- * Get LangChain config from current execution context
- */
-export function getLangChainConfig(): SkillRunnableConfig | undefined {
-  return asyncLocalStorage.getStore()?.langchainConfig;
-}
-
-/**
  * Get the current user from context
  * Tries direct user field first, then falls back to LangChain config
  */
@@ -91,37 +73,6 @@ export function getCurrentUser(): User | undefined {
   const context = asyncLocalStorage.getStore();
   // Priority 2: LangChain config
   return context.langchainConfig?.configurable?.user;
-}
-
-/**
- * Set user in current context (if context exists)
- */
-export function setCurrentUser(user: User | undefined): void {
-  const context = asyncLocalStorage.getStore();
-  if (context) {
-    context.user = user;
-  }
-}
-
-/**
- * Get request ID from context
- */
-export function getRequestId(): string | undefined {
-  const context = asyncLocalStorage.getStore();
-  if (!context) {
-    return undefined;
-  }
-  // Priority 1: Direct requestId field
-  if (context.requestId) {
-    return context.requestId;
-  }
-}
-
-/**
- * Check if we're currently in a request context
- */
-export function hasContext(): boolean {
-  return asyncLocalStorage.getStore() !== undefined;
 }
 
 /**

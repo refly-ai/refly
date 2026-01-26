@@ -3491,19 +3491,6 @@ const translations = {
       open: 'Content selector is enabled',
       close: 'Content selector is disabled',
     },
-    convListModal: {
-      title: 'Threads',
-    },
-    sourceListModal: {
-      title: 'Result Sources',
-      moreSources: 'View More and Import to Canvas',
-      searchPlaceholder: 'Search Sources...',
-      openOriginWebsite: 'Open Origin Website',
-      openKnowledgeBaseLink: 'Open Knowledge Base Link',
-      webSearchTab: 'Web Search',
-      libraryTab: 'Library Search',
-      noUrl: 'This source does not have a link, you can select it and import to canvas',
-    },
     premiumBanner: {
       message: 'Need more requests? Get higher limits with Premium.',
       upgrade: 'Upgrade',

@@ -18,7 +18,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@tanstack/react-query": "^5.61.3"
-  }
+  "dependencies": {}
 }

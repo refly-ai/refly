@@ -51,5 +51,3 @@ export const TicketBottomCard = ({ children, className = '' }: TicketBottomCardP
     </div>
   );
 };
-
-export default TicketBottomCard;

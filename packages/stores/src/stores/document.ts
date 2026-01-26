@@ -5,21 +5,6 @@ import { immer } from 'zustand/middleware/immer';
 import type { Document } from '@refly/openapi-schema';
 import { type CacheInfo, createAutoEvictionStorage } from '../utils/storage';
 
-export enum ActionSource {
-  KnowledgeBase = 'knowledge-base',
-  Conv = 'conv',
-  Canvas = 'canvas',
-}
-
-export interface TableOfContentsItem {
-  isActive: boolean;
-  isScrolledOver: boolean;
-  id: string;
-  itemIndex: number;
-  textContent: string;
-  level: number;
-}
-
 interface DocumentData {
   document?: Document;
   documentCharsCount?: number;
@@ -55,7 +40,7 @@ interface DocumentBaseState {
   clearState: () => void;
 }
 
-export const defaultState = () => ({
+const defaultState = () => ({
   hasEditorSelection: false,
   activeDocumentId: '',
   data: {},
