@@ -92,7 +92,7 @@ export class ToolExecutionService {
     }
 
     // Generate a unique call ID for this execution
-    const callId = this.generateCallId(callType, toolsetKey, toolName, ptcContext?.ptcCallId);
+    const callId = this.generateCallId(callType);
     const startTime = Date.now();
 
     this.logger.log(
@@ -174,21 +174,10 @@ export class ToolExecutionService {
 
   /**
    * Generate a unique call ID for tool execution
-   * PTC mode: `ptc:{ptcCallId}:{toolsetKey}:{toolName}:{uuid}`
-   * Standalone mode: `standalone:{toolsetKey}:{toolName}:{uuid}`
+   * Format: `{callType}:{uuid}` (toolset/tool info lives in the DB record)
    */
-  private generateCallId(
-    callType: CallType,
-    toolsetKey: string,
-    toolName: string,
-    ptcCallId: string | undefined,
-  ): string {
-    const uuid = randomUUID();
-    if (callType === CallType.PTC) {
-      return `${callType}:${ptcCallId ?? ''}:${toolsetKey}:${toolName}:${uuid}`;
-    } else {
-      return `${callType}:${toolsetKey}:${toolName}:${uuid}`;
-    }
+  private generateCallId(callType: CallType): string {
+    return `${callType}:${randomUUID()}`;
   }
 
   /**

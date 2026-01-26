@@ -71,6 +71,7 @@ import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { normalizeCreditBilling } from '../../utils/credit-billing';
 import { SkillInvokeMetrics } from './skill-invoke.metrics';
+import { PtcPollerManager } from './ptc-poller.manager';
 
 @Injectable()
 export class SkillInvokerService {
@@ -910,6 +911,20 @@ export class SkillInvokerService {
     let _lastStepName: string | undefined;
     let _lastToolCallMeta: ToolCallMeta | undefined;
 
+    // PTC polling manager for execute_code tools
+    // Declared outside try block so finally can clean up even if early error occurs
+    const ptcPollerManager = new PtcPollerManager(
+      {
+        res,
+        resultId,
+        version,
+        messageAggregator,
+        getRunMeta: () => runMeta,
+      },
+      this.toolCallService,
+      this.logger,
+    );
+
     try {
       // Check if already aborted before starting execution (handles queued aborts)
       const isAlreadyAborted = await this.actionService.isAbortRequested(resultId, version);
@@ -1068,6 +1083,12 @@ export class SkillInvokerService {
                     },
                   });
                 }
+
+                // Start PTC polling for execute_code tool
+                if (toolName === 'execute_code' && res) {
+                  ptcPollerManager.start(toolCallId);
+                }
+
                 break;
               }
             }
@@ -1139,6 +1160,11 @@ export class SkillInvokerService {
                 toolCallStartTimes.delete(toolCallId);
               }
               this.metrics.tool.fail({ toolName, toolsetKey, error: errorMsg });
+
+              // Stop PTC polling for execute_code tool on error
+              if (toolName === 'execute_code' && res) {
+                await ptcPollerManager.stop(toolCallId);
+              }
 
               break;
             }
@@ -1236,66 +1262,9 @@ export class SkillInvokerService {
                 this.metrics.tool.success({ toolName, toolsetKey });
               }
 
-              // Forward PTC tool call events for execute_code tool
+              // Stop PTC polling and send remaining events for execute_code tool
               if (toolName === 'execute_code' && res) {
-                try {
-                  const ptcToolCalls = await this.toolCallService.fetchPtcToolCalls(toolCallId);
-                  for (const ptcCall of ptcToolCalls) {
-                    // Parse input/output from DB (stored as JSON strings)
-                    const parsedInput = safeParseJSON(ptcCall.input || '{}') ?? {};
-                    const parsedOutput = safeParseJSON(ptcCall.output || '{}') ?? {};
-
-                    // Create toolCallMeta for PTC call (similar format to agent calls)
-                    const ptcToolCallMeta: ToolCallMeta = {
-                      toolName: ptcCall.toolName,
-                      toolsetId: ptcCall.toolsetId,
-                      toolsetKey: ptcCall.toolsetId, // Use toolsetId as toolsetKey
-                      toolCallId: ptcCall.callId,
-                      status: ptcCall.status === 'failed' ? 'failed' : 'completed',
-                      startTs: ptcCall.createdAt.getTime(),
-                      endTs: ptcCall.updatedAt.getTime(),
-                    };
-
-                    // Add PTC tool message to messageAggregator for persistence
-                    const ptcMessageId = messageAggregator.addToolMessage({
-                      toolCallId: ptcCall.callId,
-                      toolCallMeta: ptcToolCallMeta,
-                    });
-
-                    const ssePayload = {
-                      event: ptcCall.status === 'failed' ? 'tool_call_error' : 'tool_call_end',
-                      isPtc: true, // Marks this as a PTC internal tool call
-                      resultId,
-                      version,
-                      step: runMeta?.step, // Add step info for consistency with agent calls
-                      messageId: ptcMessageId, // Include messageId for frontend
-                      toolCallMeta: ptcToolCallMeta, // Add toolCallMeta for frontend display
-                      toolCallResult: {
-                        callId: ptcCall.callId,
-                        toolsetId: ptcCall.toolsetId,
-                        toolName: ptcCall.toolName,
-                        stepName: ptcCall.stepName, // Include stepName from DB
-                        input: parsedInput,
-                        output: parsedOutput,
-                        status: ptcCall.status === 'failed' ? 'failed' : 'completed',
-                        ...(ptcCall.error ? { error: ptcCall.error } : {}),
-                        createdAt: ptcCall.createdAt.getTime(),
-                        updatedAt: ptcCall.updatedAt.getTime(),
-                      },
-                    };
-                    // Use writeSSEResponse with isPtc flag (cast to bypass SkillEvent type restriction)
-                    writeSSEResponse(res, ssePayload as Parameters<typeof writeSSEResponse>[1]);
-                  }
-                  if (ptcToolCalls.length > 0) {
-                    this.logger.debug(
-                      `Forwarded ${ptcToolCalls.length} PTC tool call events for execute_code ${toolCallId}`,
-                    );
-                  }
-                } catch (error) {
-                  this.logger.error(
-                    `Failed to fetch/forward PTC tool calls for ${toolCallId}: ${error?.message}`,
-                  );
-                }
+                await ptcPollerManager.stop(toolCallId);
               }
 
               break;
@@ -1648,6 +1617,9 @@ export class SkillInvokerService {
       if (!cleanupExecuted) {
         performCleanup();
       }
+
+      // Cleanup all PTC pollers
+      ptcPollerManager.cleanup();
 
       // Unregister the abort controller
       this.actionService.unregisterAbortController(resultId);
@@ -2497,7 +2469,12 @@ export class SkillInvokerService {
     version: number,
     canvasId: string,
   ): Promise<{
-    file: { fileId: string; internalUrl: string; mimeType: string; name: string };
+    file: {
+      fileId: string;
+      internalUrl: string;
+      mimeType: string;
+      name: string;
+    };
     toolCallCount: number;
   } | null> {
     try {
