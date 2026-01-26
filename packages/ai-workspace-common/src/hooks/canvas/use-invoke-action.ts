@@ -630,21 +630,24 @@ export const useInvokeAction = (params?: { source?: string }) => {
     // PTC events have isPtc: true and toolCallResult, but no messageId and toolCallMeta
     if (isPtc && toolCallResult) {
       const currentMessages = getLatestMessages(resultId);
-      // Generate a unique message ID for PTC call using the tool call ID
-      const ptcMessageId = `ptc-${toolCallResult.callId}`;
+      // Use messageId from SSE if available, otherwise generate one
+      const ptcMessageId = messageId ?? `ptc-${toolCallResult.callId}`;
+      // Use toolCallMeta from SSE if available, otherwise construct one from toolCallResult
+      const effectiveToolCallMeta = toolCallMeta ?? {
+        toolName: toolCallResult.toolName,
+        toolsetId: toolCallResult.toolsetId,
+        toolsetKey: toolCallResult.toolsetId, // Use toolsetId as fallback for toolsetKey
+        toolCallId: toolCallResult.callId,
+        status: toolCallResult.status === 'failed' ? ('failed' as const) : ('completed' as const),
+        startTs: toolCallResult.createdAt,
+        endTs: toolCallResult.updatedAt,
+      };
       const ptcMessage: ActionMessage = {
         messageId: ptcMessageId,
         type: 'tool',
         isPtc: true,
         toolCallId: toolCallResult.callId,
-        toolCallMeta: {
-          toolName: toolCallResult.toolName,
-          toolsetId: toolCallResult.toolsetId,
-          toolCallId: toolCallResult.callId,
-          status: 'completed',
-          startTs: toolCallResult.createdAt,
-          endTs: toolCallResult.updatedAt,
-        },
+        toolCallMeta: effectiveToolCallMeta,
         toolCallResult,
         createdAt: new Date(toolCallResult.createdAt ?? Date.now()).toISOString(),
         updatedAt: new Date(toolCallResult.updatedAt ?? Date.now()).toISOString(),
