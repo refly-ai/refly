@@ -18,12 +18,6 @@ export interface ContentPayload extends DocumentPayload {
   content: string;
 }
 
-export interface ContentNode {
-  id: string;
-  vector: number[];
-  payload: ContentPayload;
-}
-
 export interface RetrieveFilter {
   nodeTypes?: ContentNodeType[];
   urls?: string[];

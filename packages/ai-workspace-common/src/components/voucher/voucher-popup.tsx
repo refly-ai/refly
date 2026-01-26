@@ -4,7 +4,6 @@ import { VoucherTriggerResult } from '@refly/openapi-schema';
 import { useState, useEffect } from 'react';
 import { logEvent } from '@refly/telemetry-web';
 import { X } from 'lucide-react';
-import { SharePoster } from './share-poster';
 import { useSubscriptionStoreShallow } from '@refly/stores';
 import { Confetti } from './confetti';
 import { TicketBottomCard } from './ticket-bottom-card';
@@ -17,11 +16,8 @@ interface VoucherPopupProps {
   onClose: () => void;
   voucherResult: VoucherTriggerResult | null;
   onUseNow?: () => void;
-  onShare?: () => void;
   /** If true, this voucher was claimed via invite link (not earned by publishing) */
   useOnlyMode?: boolean;
-  /** Name of the person who sent the voucher (for claimed vouchers) */
-  inviterName?: string;
 }
 
 export const VoucherPopup = ({
@@ -29,14 +25,9 @@ export const VoucherPopup = ({
   onClose,
   voucherResult,
   onUseNow: onUseNowProp,
-  onShare: onShareProp,
   useOnlyMode = false,
 }: VoucherPopupProps) => {
   const { t, i18n } = useTranslation();
-  const [showSharePoster, setShowSharePoster] = useState(false);
-  const [shareInvitation, setShareInvitation] = useState<any>(null);
-  const [shareUrl, setShareUrl] = useState('');
-  const [creatingInvitation, setCreatingInvitation] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   // Key to force Confetti remount on each popup open
   const [confettiKey, setConfettiKey] = useState(0);
@@ -105,13 +96,13 @@ export const VoucherPopup = ({
       return;
     }
 
-    // If Plus user in useOnlyMode (claimed via invite), just close - they can share
-    if (useOnlyMode && isPlusUser) {
+    // If Plus user, just close
+    if (isPlusUser) {
       onClose();
       return;
     }
 
-    // For non-Plus user (both useOnlyMode and normal mode): Create Stripe checkout session with voucher
+    // For non-Plus user: Create Stripe checkout session with voucher
     setIsCheckingOut(true);
     try {
       console.log('[voucher-popup] voucher:', voucher);
@@ -124,20 +115,27 @@ export const VoucherPopup = ({
 
       console.log('[voucher-popup] validateRes:', validateRes.data);
 
+      // Determine if user has a paid subscription
+      const currentPlan = planType || 'free';
+
       const body: {
         planType: 'plus';
         interval: 'monthly';
         voucherId?: string;
         voucherEntryPoint?: string;
         voucherUserType?: string;
+        source?: string;
+        currentPlan?: string;
       } = {
         planType: 'plus',
         interval: 'monthly',
+        currentPlan,
+        source: 'voucher',
       };
 
       if (validateRes.data?.data?.valid) {
         body.voucherId = voucher.voucherId;
-        body.voucherEntryPoint = useOnlyMode ? 'share_discount_popup' : 'discount_popup';
+        body.voucherEntryPoint = 'discount_popup';
         body.voucherUserType = userType;
         console.log('[voucher-popup] voucher is valid, adding to checkout body');
       } else {
@@ -166,51 +164,6 @@ export const VoucherPopup = ({
       );
     } finally {
       setIsCheckingOut(false);
-    }
-  };
-
-  // Handle "Share With Friend" button click
-  const handleShare = async () => {
-    // Log click event
-    logEvent('voucher_share_click', null, {
-      voucher_value: voucherValue,
-      user_type: userType,
-    });
-
-    // Use custom handler if provided
-    if (onShareProp) {
-      onShareProp();
-      return;
-    }
-
-    // Create invitation
-    setCreatingInvitation(true);
-    try {
-      const response = await getClient().createVoucherInvitation({
-        body: {
-          voucherId: voucher.voucherId,
-        },
-      });
-
-      if (response.data?.data?.invitation) {
-        const invitation = response.data.data.invitation;
-        setShareInvitation(invitation);
-
-        // Build share URL - pointing to homepage with invite parameter
-        const baseUrl = window.location.origin;
-        const url = `${baseUrl}/invite?invite=${invitation.inviteCode}`;
-        setShareUrl(url);
-
-        // Show share poster (don't close voucher popup yet - it will be closed when SharePoster closes)
-        setShowSharePoster(true);
-      } else {
-        message.error(t('voucher.share.createFailed', 'Failed to create invitation'));
-      }
-    } catch (error) {
-      console.error('Failed to create invitation:', error);
-      message.error(t('voucher.share.createFailed', 'Failed to create invitation'));
-    } finally {
-      setCreatingInvitation(false);
     }
   };
 
@@ -324,12 +277,13 @@ export const VoucherPopup = ({
                 className="text-center text-sm leading-relaxed"
                 style={{ color: 'rgba(28, 31, 35, 0.6)' }}
               >
-                {useOnlyMode && isPlusUser ? (
-                  // Plus user who claimed via invite: encourage sharing
+                {isPlusUser ? (
+                  // Plus user: show congratulations description
                   <p>
                     {t(
-                      'voucher.popup.plusUserClaimedDesc',
-                      "You're already a Plus member. Gift this coupon to a friend!",
+                      'voucher.popup.plusUserDesc1',
+                      "To celebrate your amazing work, we're giving you a {{discountPercent}}% off coupon.",
+                      { discountPercent, voucherValue },
                     )}
                   </p>
                 ) : useOnlyMode ? (
@@ -340,23 +294,6 @@ export const VoucherPopup = ({
                       'Upgrade to Refly.ai Plus and unlock advanced models like Gemini 3.',
                     )}
                   </p>
-                ) : isPlusUser ? (
-                  // Plus user who earned voucher: show invite description
-                  <>
-                    <p>
-                      {t(
-                        'voucher.popup.plusUserDesc1',
-                        "To celebrate your amazing work, we're giving you a {{discountPercent}}% off coupon.",
-                        { discountPercent, voucherValue },
-                      )}
-                    </p>
-                    <p className="mt-2">
-                      {t(
-                        'voucher.popup.plusUserDesc2',
-                        "Invite a friend to sign up and purchase a membership using your link, and you'll receive 2,000 bonus credits.",
-                      )}
-                    </p>
-                  </>
                 ) : (
                   // Non-Plus user who earned voucher: show discount and price description
                   <>
@@ -402,45 +339,11 @@ export const VoucherPopup = ({
                       : t('voucher.popup.useNow', 'Use It Now')}
                   </Button>
                 )}
-                {/* Show share button: always when not useOnlyMode, or when Plus user in useOnlyMode */}
-                {(!useOnlyMode || (useOnlyMode && isPlusUser)) && (
-                  <Button
-                    size="large"
-                    block
-                    shape="round"
-                    onClick={handleShare}
-                    loading={creatingInvitation}
-                    style={{
-                      height: 48,
-                      fontSize: 16,
-                      fontWeight: 500,
-                      boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, 0.08)',
-                    }}
-                  >
-                    {t('voucher.popup.shareWithFriend', 'Share With Friend')}
-                  </Button>
-                )}
               </div>
             </TicketBottomCard>
           </div>
         </div>
       </Modal>
-
-      {/* Share Poster Modal */}
-      {showSharePoster && (
-        <SharePoster
-          visible={showSharePoster}
-          onClose={() => {
-            setShowSharePoster(false);
-            onClose(); // Also close the voucher popup when SharePoster closes
-          }}
-          invitation={shareInvitation}
-          shareUrl={shareUrl}
-          discountPercent={discountPercent}
-        />
-      )}
     </>
   );
 };
-
-export default VoucherPopup;

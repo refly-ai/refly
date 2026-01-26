@@ -1,0 +1,61 @@
+.workflow-run-collapse {
+  .ant-collapse-item {
+    border: none !important;
+    margin-bottom: 0 !important;
+
+    + .ant-collapse-item {
+      margin-top: 2px !important;
+    }
+  }
+
+  .ant-collapse-header {
+    background-color: var(--refly-node-fill-2, #fef2cf) !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 12px !important;
+    margin: 0 !important;
+    color: var(--refly-text-0, #1c1f23) !important;
+    font-weight: 500 !important;
+    border-radius: 8px !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .ant-collapse-expand-icon {
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+  }
+
+  .ant-collapse-content {
+    background-color: var(--refly-bg-content-z2, #ffffff) !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 0 8px 8px !important;
+  }
+
+  .ant-collapse-content-box {
+    padding: 0 !important;
+    border-radius: 0 0 8px 8px !important;
+  }
+
+  // When item is active (expanded), adjust border-radius
+  .ant-collapse-item-active {
+    .ant-collapse-header {
+      border-radius: 8px 8px 0 0 !important;
+    }
+
+    .ant-collapse-content {
+      border-radius: 0 0 8px 8px !important;
+    }
+
+    .ant-collapse-content-box {
+      border-radius: 0 0 8px 8px !important;
+    }
+  }
+}

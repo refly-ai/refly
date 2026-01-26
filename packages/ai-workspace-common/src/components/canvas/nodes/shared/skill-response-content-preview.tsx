@@ -6,7 +6,7 @@ import { ResponseNodeMeta } from '@refly/canvas-common';
 import { ModelInfo } from '@refly/openapi-schema';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { IconError, ModelIcon } from '@refly-packages/ai-workspace-common/components/common/icon';
-import { X, AiChat } from 'refly-icons';
+import { AiChat } from 'refly-icons';
 import { LabelDisplay } from '@refly-packages/ai-workspace-common/components/canvas/common/label-display';
 import { parseMentionsFromQuery } from '@refly/utils/query-processor';
 import { useRealtimeUpstreamAgents } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-upstream-agent';
@@ -84,7 +84,7 @@ export const SkillResponseContentPreview = memo(
 
     // Extract input variable names from contextItems
     const variableMentions = parseMentionsFromQuery(query)?.filter((item) => item.type === 'var');
-    const latestVariables = useFindLatestVariableMetions(variableMentions);
+    const { sourceVariables } = useFindLatestVariableMetions(variableMentions);
 
     return (
       <div className={`flex flex-col gap-2 ${className}`}>
@@ -111,10 +111,7 @@ export const SkillResponseContentPreview = memo(
 
         <LabelDisplay
           title={t('canvas.skillResponse.config.input')}
-          labels={latestVariables.map((varName) => ({
-            labeltext: varName.name,
-            icon: <X size={12} className="flex-shrink-0" />,
-          }))}
+          variables={sourceVariables}
           labelClassnames="bg-refly-node-contrl-2"
           showMore={false}
         />

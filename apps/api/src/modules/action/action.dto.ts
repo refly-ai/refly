@@ -34,7 +34,7 @@ export type ActionDetail = ActionResultModel & {
 
 export type SanitizeOptions = { sanitizeForDisplay?: boolean };
 
-export function actionStepPO2DTO(step: ActionStepDetail, options?: SanitizeOptions): ActionStep {
+function actionStepPO2DTO(step: ActionStepDetail, options?: SanitizeOptions): ActionStep {
   return {
     ...pick(step, ['name', 'content', 'reasoningContent']),
     logs: safeParseJSON(step.logs || '[]'),
@@ -76,10 +76,42 @@ export function sanitizeToolOutput(
       };
     }
   }
+
+  // For read_agent_result, remove the content field but keep title and resultId
+  if (toolName === 'read_agent_result' && output?.data && typeof output.data === 'object') {
+    const data = output.data as Record<string, unknown>;
+    const title = typeof data.title === 'string' ? data.title : '';
+    // Truncate title to max 20 characters for display
+    const truncatedTitle = title.length > 20 ? `${title.slice(0, 20)}...` : title;
+    return {
+      ...output,
+      data: {
+        title: truncatedTitle,
+        resultId: data.resultId,
+        // content omitted
+      },
+    };
+  }
+
+  // For read_tool_result, remove input/output but keep metadata
+  if (toolName === 'read_tool_result' && output?.data && typeof output.data === 'object') {
+    const data = output.data as Record<string, unknown>;
+    return {
+      ...output,
+      data: {
+        callId: data.callId,
+        toolName: data.toolName,
+        status: data.status,
+        // input and output omitted
+        ...(data.error && { error: data.error }),
+      },
+    };
+  }
+
   return output;
 }
 
-export function toolCallResultPO2DTO(
+function toolCallResultPO2DTO(
   toolCall: ToolCallResultModel,
   options?: { sanitizeForDisplay?: boolean },
 ): ToolCallResult {
@@ -111,8 +143,6 @@ export function actionResultPO2DTO(result: ActionDetail, options?: SanitizeOptio
       'version',
       'title',
       'targetId',
-      'pilotSessionId',
-      'pilotStepId',
       'workflowExecutionId',
       'workflowNodeExecutionId',
       'actualProviderItemId',

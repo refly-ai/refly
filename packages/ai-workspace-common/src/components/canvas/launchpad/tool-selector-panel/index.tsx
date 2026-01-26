@@ -4,7 +4,7 @@ import type { PopoverProps } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { useListTools } from '@refly-packages/ai-workspace-common/queries';
-import { useLaunchpadStoreShallow, useUserStoreShallow } from '@refly/stores';
+import { useUserStoreShallow } from '@refly/stores';
 import { useSiderStoreShallow, SettingsModalActiveTab } from '@refly/stores';
 import { Mcp, Checked, Settings } from 'refly-icons';
 import { GenericToolset } from '@refly/openapi-schema';
@@ -38,9 +38,6 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
 
   const isLogin = useUserStoreShallow((state) => state.isLogin);
   if (!isLogin) return null;
-  const { setSelectedToolsets } = useLaunchpadStoreShallow((state) => ({
-    setSelectedToolsets: state.setSelectedToolsets,
-  }));
 
   // Get settings modal state
   const { setShowSettingModal, setSettingsModalActiveTab } = useSiderStoreShallow((state) => ({
@@ -66,10 +63,9 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
 
       if (filteredSelectedToolsets.length !== selectedToolsets.length) {
         onSelectedToolsetsChange?.(filteredSelectedToolsets);
-        setSelectedToolsets?.(filteredSelectedToolsets);
       }
     }
-  }, [toolsets, selectedToolsets, onSelectedToolsetsChange, setSelectedToolsets]);
+  }, [toolsets, selectedToolsets, onSelectedToolsetsChange]);
 
   const handleToolSelect = useCallback(
     (toolset: GenericToolset) => {
@@ -88,9 +84,8 @@ export const ToolSelectorPopover: React.FC<ToolsetSelectorPopoverProps> = ({
           ];
 
       onSelectedToolsetsChange(newSelectedToolsets);
-      setSelectedToolsets(newSelectedToolsets);
     },
-    [selectedToolsets, selectedToolsetIds, onSelectedToolsetsChange, setSelectedToolsets],
+    [selectedToolsets, selectedToolsetIds, onSelectedToolsetsChange],
   );
 
   const handleOpenToolStore = useCallback(() => {

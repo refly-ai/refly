@@ -7,9 +7,7 @@ import { CheckCircleOutlined } from '@ant-design/icons';
 import { cn } from '@refly/utils/cn';
 import { IconLoading } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { safeParseJSON } from '@refly/utils/parse';
-import { SourceViewer } from './source-viewer';
 import { getArtifactIcon } from '@refly-packages/ai-workspace-common/components/common/result-display';
-import { RecommendQuestions } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/recommend-questions';
 import { useNodeSelection } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-selection';
 import { getParsedReasoningContent } from '@refly/utils/content-parser';
 import { Thinking, ArrowDown, ArrowUp } from 'refly-icons';
@@ -240,7 +238,6 @@ export const ActionStepCard = memo(
     result,
     step,
     status,
-    query,
   }: {
     result: ActionResult;
     step: ActionStep;
@@ -259,22 +256,9 @@ export const ActionStepCard = memo(
       }
     }, [result?.status]);
 
-    // Prioritize original query from structuredData over other sources
-    const displayQuery = useMemo(() => {
-      const structuredData = step?.structuredData;
-      if (structuredData?.query) {
-        return structuredData.query; // Original query with variables
-      }
-      return query; // Fallback to processed query
-    }, [step?.structuredData, query]);
-
     const parsedData = useMemo(
       () => ({
         sources: parseStructuredData(step?.structuredData ?? {}, 'sources'),
-        recommendedQuestions: parseStructuredData(
-          step?.structuredData ?? {},
-          'recommendedQuestions',
-        ),
       }),
       [step?.structuredData],
     );
@@ -305,14 +289,6 @@ export const ActionStepCard = memo(
           />
         )}
 
-        {/* Ensure sources is an array and query is a string */}
-        {Array.isArray(parsedData.sources) && (
-          <SourceViewer
-            sources={parsedData.sources}
-            query={typeof displayQuery === 'string' ? displayQuery : ''}
-          />
-        )}
-
         {step?.reasoningContent && (
           <ReasoningContent
             resultId={result?.resultId}
@@ -340,8 +316,6 @@ export const ActionStepCard = memo(
               onSelect={() => handleArtifactSelect(artifact)}
             />
           ))}
-
-        <RecommendQuestions relatedQuestions={parsedData.recommendedQuestions?.questions || []} />
       </div>
     );
   },

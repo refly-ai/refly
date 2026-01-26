@@ -363,7 +363,7 @@ export const createToolNode = (attributes: Record<string, string>) => {
 /**
  * Split text by tool use match and create text nodes
  */
-export const splitTextByToolUse = (text: string, fullMatch: string, nodeType: 'text' | 'raw') => {
+const splitTextByToolUse = (text: string, fullMatch: string, nodeType: 'text' | 'raw') => {
   const parts = text.split(fullMatch);
   const nodes = [];
 

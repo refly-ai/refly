@@ -397,12 +397,3 @@ function buildHistoricalContextText(historicalData?: HistoricalData): string {
 
   return parts.join(', ');
 }
-
-// Legacy function for backward compatibility
-export function buildVariableExtractionPrompt(
-  userPrompt: string,
-  existingVariables: WorkflowVariable[],
-  canvasContext: CanvasContext,
-): string {
-  return buildUnifiedPrompt(userPrompt, existingVariables, canvasContext);
-}

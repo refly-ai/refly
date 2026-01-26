@@ -1,11 +1,12 @@
-import { memo, useState, useEffect, useCallback } from 'react';
-import { Button } from 'antd';
+import { memo, useState, useEffect, useCallback, useMemo } from 'react';
+import { Button, Skeleton } from 'antd';
 import { DriveFile } from '@refly/openapi-schema';
 import { File } from 'refly-icons';
 import { getCodeLanguage } from '@refly-packages/ai-workspace-common/utils/file-type';
 import { useDriveFileUrl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-drive-file-url';
 import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/canvas/use-download-file';
 import { cn } from '@refly/utils/cn';
+import { useTranslation } from 'react-i18next';
 
 // Import renderer components
 import type { FileContent } from './types';
@@ -19,6 +20,8 @@ import { AudioRenderer } from './audio';
 import { UnsupportedRenderer } from './unsupported';
 import { HtmlRenderer } from './html';
 import { MarkdownRenderer } from './markdown';
+import { logEvent } from '@refly/telemetry-web';
+import { useLastRunTabContext } from '@refly-packages/ai-workspace-common/context/run-location';
 
 interface ContentCategoryResult {
   category: string;
@@ -51,12 +54,6 @@ const extractContentCategory = (contentType: string, fileName: string): ContentC
   return { category: 'unsupported' };
 };
 
-const LoadingState = memo(() => (
-  <div className="h-full flex items-center justify-center">
-    <div className="text-gray-500">Loading...</div>
-  </div>
-));
-
 interface ErrorStateProps {
   error: string;
   onRetry: () => void;
@@ -64,10 +61,10 @@ interface ErrorStateProps {
 
 const ErrorState = memo(({ error, onRetry }: ErrorStateProps) => (
   <div className="h-full flex items-center justify-center flex-col gap-4">
-    <div className="text-red-500 text-center">
+    <div className="text-refly-func-danger-default text-center">
       <File className="w-12 h-12 mx-auto mb-2" />
       <div>Failed to load file</div>
-      <div className="text-sm text-gray-400 mt-1">{error}</div>
+      <div className="text-xs text-refly-text-3 mt-1">{error}</div>
     </div>
     <Button onClick={onRetry} size="small">
       Retry
@@ -81,6 +78,7 @@ interface FilePreviewProps {
   source?: 'card' | 'preview';
   disableTruncation?: boolean;
   purePreview?: boolean;
+  onPreview?: () => void;
 }
 
 export const FilePreview = memo(
@@ -90,11 +88,15 @@ export const FilePreview = memo(
     source = 'card',
     disableTruncation = false,
     purePreview = false,
+    onPreview,
   }: FilePreviewProps) => {
+    const { t } = useTranslation();
     const [fileContent, setFileContent] = useState<FileContent | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
+
+    const { location } = useLastRunTabContext();
 
     // useFileUrl now automatically fetches publicURL if needed in share pages
     const { fileUrl, isLoading: isLoadingUrl } = useDriveFileUrl({ file });
@@ -109,40 +111,59 @@ export const FilePreview = memo(
         return;
       }
 
-      try {
-        setLoading(true);
-        setError(null);
+      const maxRetries = 3;
+      let attempt = 0;
 
-        // Use credentials for all requests (publicURL doesn't need it, but it won't hurt)
-        const fetchOptions: RequestInit = { credentials: 'include' };
-        const response = await fetch(fileUrl, fetchOptions);
+      setLoading(true);
+      setError(null);
 
-        if (!response.ok) {
+      while (attempt <= maxRetries) {
+        try {
+          // Use credentials for all requests (publicURL doesn't need it, but it won't hurt)
+          const fetchOptions: RequestInit = { credentials: 'include' };
+          const response = await fetch(fileUrl, fetchOptions);
+
+          if (response.ok) {
+            // Use file.type (MIME type) instead of response header for publicURL
+            // because publicURL headers might return application/octet-stream
+            let contentType = file.type;
+            if (file.type === 'application/octet-stream') {
+              contentType = response.headers.get('content-type') || 'application/octet-stream';
+            }
+            const arrayBuffer = await response.arrayBuffer();
+
+            // Create object URL for the blob with correct MIME type
+            const blob = new Blob([arrayBuffer], { type: contentType });
+            const url = URL.createObjectURL(blob);
+
+            setFileContent({
+              data: arrayBuffer,
+              contentType,
+              url,
+            });
+            setLoading(false);
+            return;
+          }
+
+          // If we are here, response.ok is false
+          if (response.status === 404 && attempt < maxRetries) {
+            attempt++;
+            // Wait for 1 second before retrying
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            continue;
+          }
+
+          // Non-retryable error or max retries reached
           throw new Error(`Failed to fetch file: ${response.status}`);
+        } catch (err) {
+          // If we haven't reached max retries and it's a 404 (handled above) or if it's a network error,
+          // we might want to retry. However, the requirement specifically said 404.
+          // For non-404 errors or if we've reached max retries, we stop.
+          console.error('Error fetching file content:', err);
+          setError(err instanceof Error ? err.message : 'Failed to load file');
+          setLoading(false);
+          return;
         }
-
-        // Use file.type (MIME type) instead of response header for publicURL
-        // because publicURL headers might return application/octet-stream
-        let contentType = file.type;
-        if (file.type === 'application/octet-stream') {
-          contentType = response.headers.get('content-type') || 'application/octet-stream';
-        }
-        const arrayBuffer = await response.arrayBuffer();
-
-        // Create object URL for the blob with correct MIME type
-        const blob = new Blob([arrayBuffer], { type: contentType });
-        const url = URL.createObjectURL(blob);
-
-        setFileContent({
-          data: arrayBuffer,
-          contentType,
-          url,
-        });
-      } catch (err) {
-        console.error('Error fetching file content:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load file');
-      } finally {
-        setLoading(false);
       }
     }, [fileUrl, file.type, isLoadingUrl]);
 
@@ -167,10 +188,32 @@ export const FilePreview = memo(
       setActiveTab(tab);
     }, []);
 
+    const handleClickPreview = useCallback(() => {
+      if (onPreview) {
+        logEvent('artifact_view', Date.now(), {
+          artifact_type: file.category,
+          artifact_location: location,
+        });
+        onPreview();
+      }
+    }, [file, onPreview, location]);
+
     const renderFilePreview = () => {
-      if (loading) return <LoadingState />;
-      if (error) return <ErrorState error={error} onRetry={fetchFileContent} />;
-      if (!fileContent) return null;
+      if (loading) {
+        return <Skeleton.Button block active={true} size="large" style={{ height: '140px' }} />;
+      }
+
+      if (error) {
+        return <ErrorState error={error} onRetry={fetchFileContent} />;
+      }
+
+      if (!fileContent) {
+        return (
+          <div className="text-sm text-refly-text-3 text-center h-24 flex items-center justify-center">
+            {t('driveFile.fileNoContent')}
+          </div>
+        );
+      }
 
       const { category, language } = extractContentCategory(fileContent.contentType, file.name);
 
@@ -257,13 +300,29 @@ export const FilePreview = memo(
     // Check if the file is a video to skip max-height constraint
     const isVideo = file?.type?.startsWith('video/');
 
+    const canPreview = useMemo(() => {
+      if (loading || !!error || !fileContent) return false;
+      const type = file.type;
+      return !type?.startsWith('video/') && !type?.startsWith('audio/');
+    }, [file.type, loading, error, fileContent]);
+
     return (
       <div
-        className={cn('flex-1 overflow-hidden', {
+        className={cn('flex-1 overflow-hidden relative group', {
           'h-full': !isVideo,
           'max-h-[230px]': source === 'card' && !isVideo,
         })}
       >
+        {canPreview && source === 'card' && onPreview && (
+          <div className="absolute z-10 bottom-0 left-0 right-0 top-0 rounded-[10px] bg-refly-modal-mask flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
+            <div
+              className="p-3 rounded-[80px] bg-refly-text-2 text-sm leading-5 font-semibold text-refly-text-flip cursor-pointer select-none"
+              onClick={handleClickPreview}
+            >
+              {t('common.view')}
+            </div>
+          </div>
+        )}
         {renderFilePreview()}
       </div>
     );

@@ -157,6 +157,7 @@ const ConfigureTabComponent = ({
             type="default"
             size="small"
             className="text-xs !h-5 px-1 py-0.5 text-refly-text-1"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={handleAddToolsAndContext}
             disabled={readonly || disabled}
           >

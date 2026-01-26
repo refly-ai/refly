@@ -36,17 +36,17 @@ export const PerplexityToolsetDefinition: ToolsetDefinition = {
     'zh-CN': 'Perplexity',
   },
   descriptionDict: {
-    en: 'Perplexity is an AI-powered search engine that provides comprehensive answers to questions by searching the web and synthesizing information from multiple sources. It combines real-time web search with advanced reasoning capabilities, including the powerful sonar-deep-research model for exhaustive research across hundreds of sources with expert-level insights and detailed report generation.',
+    en: 'Perplexity is an AI-powered search engine that provides comprehensive answers to questions by searching the web and synthesizing information from multiple sources. It combines real-time web search with advanced reasoning capabilities.',
     'zh-CN':
-      'Perplexity 是一个由 AI 驱动的搜索引擎，通过搜索网络并综合多个来源的信息来提供全面的答案。它将实时网络搜索与高级推理能力相结合，包括强大的 sonar-deep-research 模型，可进行数百个来源的全面研究，提供专家级洞察和详细报告生成。',
+      'Perplexity 是一个由 AI 驱动的搜索引擎，通过搜索网络并综合多个来源的信息来提供全面的答案。它将实时网络搜索与高级推理能力相结合。',
   },
   tools: [
     {
       name: 'chat_completions',
       descriptionDict: {
-        en: 'Generate responses using Perplexity AI models with real-time web search capabilities. Supports various models including sonar, sonar-pro, reasoning models, and sonar-deep-research for exhaustive research across hundreds of sources with expert-level insights and detailed report generation. Now supports web search options and structured JSON output.',
+        en: 'Generate responses using Perplexity AI models with real-time web search capabilities. Supports various models including sonar and sonar-pro. Now supports web search options and structured JSON output.',
         'zh-CN':
-          '使用 Perplexity AI 模型生成响应，具有实时网络搜索功能。支持各种模型，包括 sonar、sonar-pro、推理模型和 sonar-deep-research，可进行数百个来源的全面研究，提供专家级洞察和详细报告生成。现在支持网页搜索选项和结构化 JSON 输出。',
+          '使用 Perplexity AI 模型生成响应，具有实时网络搜索功能。支持各种模型，包括 sonar 和 sonar-pro。现在支持网页搜索选项和结构化 JSON 输出。',
       },
     },
     {
@@ -110,13 +110,7 @@ export class PerplexityChatCompletions extends AgentBaseTool<PerplexityToolParam
   schema = z
     .object({
       model: z
-        .enum([
-          'sonar',
-          'sonar-pro',
-          'sonar-reasoning',
-          'sonar-reasoning-pro',
-          'sonar-deep-research',
-        ])
+        .enum(['sonar', 'sonar-pro'])
         .describe('The model to use for generating responses')
         .default('sonar'),
       messages: z
@@ -257,7 +251,7 @@ export class PerplexityChatCompletions extends AgentBaseTool<PerplexityToolParam
     });
 
   description =
-    'Generate responses using Perplexity AI models with real-time web search capabilities. Supports various models including sonar, sonar-pro, reasoning models, and sonar-deep-research for exhaustive research across hundreds of sources with expert-level insights and detailed report generation. Note: presence_penalty and frequency_penalty cannot be set simultaneously - choose one or neither.';
+    'Generate responses using Perplexity AI models with real-time web search capabilities. Supports various models including sonar and sonar-pro. Note: presence_penalty and frequency_penalty cannot be set simultaneously - choose one or neither.';
 
   protected params: PerplexityToolParams;
 
@@ -317,10 +311,6 @@ export class PerplexityChatCompletions extends AgentBaseTool<PerplexityToolParam
 
       if (response.usage?.total_tokens) {
         summaryParts.push(`with ${response.usage.total_tokens} tokens used`);
-      }
-
-      if (input.model === 'sonar-deep-research' && response.usage?.num_search_queries) {
-        summaryParts.push(`(${response.usage.num_search_queries} search queries performed)`);
       }
 
       // Calculate credit cost based on total_cost * 140, minimum 1, round up decimals

@@ -124,6 +124,28 @@ const createCanvasVersion = async (canvasId: string, state: CanvasState) => {
 
 const CanvasContext = createContext<CanvasContextType | null>(null);
 
+// Per-canvas initialization tracker to prevent duplicate initializations
+// Uses Map keyed by canvasId so concurrent CanvasProvider instances don't interfere
+interface CanvasInitState {
+  lastInitializedId: string | null;
+  lastInitTime: number;
+  lastCleanupTime: number;
+}
+
+const globalCanvasInitTracker = new Map<string, CanvasInitState>();
+const MIN_REINIT_INTERVAL_MS = 500; // Minimum 500ms between initializations
+
+const getCanvasInitState = (canvasId: string): CanvasInitState => {
+  if (!globalCanvasInitTracker.has(canvasId)) {
+    globalCanvasInitTracker.set(canvasId, {
+      lastInitializedId: null,
+      lastInitTime: 0,
+      lastCleanupTime: 0,
+    });
+  }
+  return globalCanvasInitTracker.get(canvasId)!;
+};
+
 const getInternalState = ({
   nodes,
   edges,
@@ -783,10 +805,37 @@ export const CanvasProvider = ({
   useEffect(() => {
     if (readonly) return;
 
+    const now = Date.now();
+    const initState = getCanvasInitState(canvasId);
+    const timeSinceLastInit = now - initState.lastInitTime;
+    const timeSinceLastCleanup = now - initState.lastCleanupTime;
+    const lastCanvasId = initState.lastInitializedId;
+
+    // Skip initialization if:
+    // 1. Same canvasId AND no cleanup happened recently AND time is too soon
+    const isSameCanvas = lastCanvasId === canvasId;
+    const hadRecentCleanup = timeSinceLastCleanup < MIN_REINIT_INTERVAL_MS;
+    const isTooSoon = timeSinceLastInit < MIN_REINIT_INTERVAL_MS;
+
+    // If we had a recent cleanup for the same canvas, we need to reinitialize even if it's "too soon"
+    // because the cleanup cleared the canvas data
+    if (isSameCanvas && isTooSoon && !hadRecentCleanup) {
+      // Return WITHOUT a cleanup function - we don't want to clean up
+      return;
+    }
+
+    initState.lastInitializedId = canvasId;
+    initState.lastInitTime = now;
     setSyncFailureCount(0);
     initialFetchCanvasState(canvasId);
 
     return () => {
+      const state = getCanvasInitState(canvasId);
+      state.lastCleanupTime = Date.now(); // Record cleanup time
+
+      // DON'T reset the global ref here - let it persist to prevent rapid re-initializations
+      // It will be reset by the next different canvasId or after MIN_REINIT_INTERVAL_MS
+
       // Cancel pending debounced calls to prevent race conditions
       initialFetchCanvasState.cancel();
       syncCanvasDataDebounced.flush();
@@ -856,10 +905,10 @@ export const CanvasProvider = ({
   );
 };
 
-export const useCanvasContext = () => {
+export const useCanvasContext = (optional = false) => {
   const context = useContext(CanvasContext);
-  if (!context) {
+  if (!context && !optional) {
     throw new Error('useCanvasContext must be used within a CanvasProvider');
   }
-  return context;
+  return context ?? null;
 };

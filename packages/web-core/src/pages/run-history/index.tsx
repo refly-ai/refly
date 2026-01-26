@@ -4,7 +4,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { Helmet } from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 
-export const RunHistoryPage = memo(() => {
+const RunHistoryPage = memo(() => {
   const { t } = useTranslation();
 
   useEffect(() => {

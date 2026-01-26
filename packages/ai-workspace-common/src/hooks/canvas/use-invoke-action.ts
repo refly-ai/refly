@@ -804,7 +804,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
       const context = convertContextItemsToInvokeParams(
         contextItems ?? [],
         upstreamAgentNodes.map((node) => node.data?.entityId) ?? [],
-        workflowVariables, // Pass workflow variables for resolving resource variables
+        workflowVariables,
       );
 
       const param: InvokeSkillRequest = {

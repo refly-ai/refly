@@ -70,19 +70,19 @@
       "**/release/**",
       "**/dist/**",
       "**/dist-electron/**",
-      "**/.wxt/**",
       "**/.output/**",
       "**/.turbo/**",
       "**/.vitepress/**",
       "**/build/**",
       "**/generated/**",
-      "packages/wxt/**",
       "**/common/temp/**",
       "**/*.timestamp-*",
       "**/*.mjs",
       "**/.next/**",
       "**/tmp/**",
-      "**/.swc/**"
+      "**/.swc/**",
+      "**/.vscode/**",
+      "**/specs/**"
     ]
   }
 }

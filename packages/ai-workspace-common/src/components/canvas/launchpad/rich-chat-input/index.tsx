@@ -8,7 +8,7 @@ import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hook
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import type { IContextItem } from '@refly/common-types';
 import type { GenericToolset } from '@refly/openapi-schema';
-import { useSearchStoreShallow, useUserStoreShallow, useToolStoreShallow } from '@refly/stores';
+import { useUserStoreShallow, useToolStoreShallow } from '@refly/stores';
 import { cn } from '@refly/utils/cn';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
@@ -86,9 +86,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const isLogin = useUserStoreShallow((state) => state.isLogin);
     const { canvasId } = useCanvasContext();
     const { data: files } = useFetchDriveFiles();
-    const searchStore = useSearchStoreShallow((state) => ({
-      setIsSearchOpen: state.setIsSearchOpen,
-    }));
     const { setToolStoreModalOpen } = useToolStoreShallow((state) => ({
       setToolStoreModalOpen: state.setToolStoreModalOpen,
     }));
@@ -105,14 +102,14 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const popupInstanceRef = useRef<any>(null);
 
     // Get all available items including canvas nodes with fallback data
-    const allItems = useListMentionItems(nodeId);
+    const { allItems, suggestableItems } = useListMentionItems(nodeId);
 
     // Keep latest items in a ref so Mention suggestion always sees fresh data
-    const allItemsRef = useRef<MentionItem[]>(allItems);
+    const allItemsRef = useRef<MentionItem[]>(suggestableItems);
 
     useEffect(() => {
-      allItemsRef.current = allItems;
-    }, [allItems]);
+      allItemsRef.current = suggestableItems;
+    }, [suggestableItems]);
 
     // Use ref to track previous canvas data to avoid infinite loops
     const prevCanvasDataRef = useRef({ canvasId: '', allItemsLength: 0 });
@@ -202,14 +199,14 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         if (mentionComponentRef.current) {
           try {
             mentionComponentRef.current.updateProps({
-              items: allItems,
+              items: suggestableItems,
             });
           } catch {
             // Ignore errors if component is not available
           }
         }
       }
-    }, [allItems, addToSelectedToolsets]);
+    }, [suggestableItems, addToSelectedToolsets]);
 
     // Note: toolsetInstalled event is now handled globally at canvas level
 
@@ -541,12 +538,9 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         insertAtSymbol: () => {
           if (editor && !readonly) {
             hasUserInteractedRef.current = true;
-            // If editor wasn't focused, move cursor to the end
-            const wasFocused = editor.isFocused;
-            if (!wasFocused) {
+            // If editor wasn't focused, focus it while maintaining current selection/position
+            if (!editor.isFocused) {
               editor.commands.focus('end');
-            } else {
-              editor.commands.focus();
             }
             editor.commands.insertContent('@');
             // Try to show mention popup after a short delay
@@ -726,7 +720,7 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
       const prevCanvasData = prevCanvasDataRef.current;
       const hasCanvasDataChanged =
         currentCanvasData.canvasId !== prevCanvasData.canvasId ||
-        currentCanvasData.allItemsLength !== prevCanvasData.allItemsLength;
+        (prevCanvasData.allItemsLength === 0 && currentCanvasData.allItemsLength > 0);
 
       if (!hasCanvasDataChanged) return;
 
@@ -816,12 +810,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
 
         handlePopupShow();
 
-        // Handle Ctrl+K or Cmd+K to open search
-        if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          searchStore.setIsSearchOpen(true);
-        }
-
         // Handle the Enter key
         if (e.keyCode === 13) {
           // Shift + Enter creates a new line (let default behavior handle it)
@@ -839,7 +827,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         query,
         readonly,
         handleSendMessageWithMentions,
-        searchStore,
         isLogin,
         isMentionListVisible,
         handlePopupShow,

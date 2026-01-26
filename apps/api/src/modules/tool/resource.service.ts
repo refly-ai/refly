@@ -35,25 +35,9 @@ import {
 } from './tool-context';
 
 /**
- * Error thrown when fileId format is invalid
- */
-export class InvalidFileIdError extends Error {
-  constructor(
-    public readonly fieldName: string,
-    public readonly invalidValue: unknown,
-  ) {
-    const valueStr = typeof invalidValue === 'string' ? invalidValue : JSON.stringify(invalidValue);
-    super(
-      `Invalid fileId format for field "${fieldName}": "${valueStr}". Expected formats: "df-xxx", "fileId://df-xxx", or "@file:df-xxx". Please provide a valid file ID.`,
-    );
-    this.name = 'InvalidFileIdError';
-  }
-}
-
-/**
  * Error thrown when resource value is neither a valid fileId nor a public URL
  */
-export class InvalidResourceInputError extends Error {
+class InvalidResourceInputError extends Error {
   constructor(
     public readonly fieldName: string,
     public readonly invalidValue: unknown,

@@ -7,15 +7,9 @@ import { AccountSetting } from '@refly-packages/ai-workspace-common/components/s
 import { LanguageSetting } from '@refly-packages/ai-workspace-common/components/settings/language-setting';
 import { AppearanceSetting } from '@refly-packages/ai-workspace-common/components/settings/appearance-setting';
 import { Subscription } from '@refly-packages/ai-workspace-common/components/settings/subscription';
-// import { ModelProviders } from '@refly-packages/ai-workspace-common/components/settings/model-providers';
-// import { ModelConfig } from '@refly-packages/ai-workspace-common/components/settings/model-config';
-// import { ParserConfig } from '@refly-packages/ai-workspace-common/components/settings/parser-config';
 
 import './index.scss';
 import {
-  // AIModel,
-  // Provider,
-  // Parse,
   Tools,
   Subscription as SubscriptionIcon,
   Account,
@@ -95,9 +89,9 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
     setSettingsModalActiveTab: state.setSettingsModalActiveTab,
   }));
 
-  const [localActiveTab, setLocalActiveTab] = useState<SettingsModalActiveTab>(
-    settingsModalActiveTab || SettingsModalActiveTab.ModelConfig,
-  );
+  const [localActiveTab, setLocalActiveTab] = useState<SettingsModalActiveTab>(() => {
+    return settingsModalActiveTab ?? SettingsModalActiveTab.ModelConfig;
+  });
 
   const { userProfile } = useUserStoreShallow((state) => ({
     userProfile: state.userProfile,
@@ -120,7 +114,7 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
       providerMode === 'custom'
         ? SettingsModalActiveTab.ModelProviders
         : SettingsModalActiveTab.ModelConfig;
-    setLocalActiveTab(settingsModalActiveTab || fallback);
+    setLocalActiveTab(settingsModalActiveTab ?? fallback);
   }, [visible, settingsModalActiveTab, providerMode]);
 
   // Handle tab change

@@ -20,7 +20,6 @@ export enum IDPrefix {
   STORAGE_USAGE_METER = 'sum-',
   SKILL = 'sk-',
   SKILL_TRIGGER = 'tr-',
-  SKILL_JOB = 'sj-',
   PILOT_SESSION = 'ps-',
   PILOT_STEP = 'pst-',
   COPILOT_SESSION = 'cps-',
@@ -56,6 +55,14 @@ export enum IDPrefix {
   ROUTING_RULE = 'rrl-',
   WORKFLOW_SCHEDULE = 'wh-',
   SCHEDULE_RECORD = 'sr-',
+  API_KEY = 'ak-',
+  DEVICE_SESSION = 'ds-',
+  SKILL_PACKAGE = 'skp-',
+  SKILL_PACKAGE_WORKFLOW = 'skpw-',
+  SKILL_PACKAGE_INSTALLATION = 'skpi-',
+  SKILL_PACKAGE_WORKFLOW_DEP = 'skpwd-',
+  SKILL_PACKAGE_WORKFLOW_EXEC = 'skpwe-',
+  SKILL_PACKAGE_EXECUTION = 'skpe-',
 }
 
 export function genUID(): string {
@@ -357,3 +364,35 @@ export function genInviteCode(): string {
 export const genVoucherInviterRewardRechargeId = (invitationId: string) => {
   return `${IDPrefix.CREDIT_RECHARGE}voucher-inviter-${invitationId}`;
 };
+
+export function genApiKeyId(): string {
+  return IDPrefix.API_KEY + createId();
+}
+
+export function genDeviceSessionId(): string {
+  return IDPrefix.DEVICE_SESSION + createId();
+}
+
+export function genSkillPackageID(): string {
+  return IDPrefix.SKILL_PACKAGE + createId();
+}
+
+export function genSkillPackageWorkflowID(): string {
+  return IDPrefix.SKILL_PACKAGE_WORKFLOW + createId();
+}
+
+export function genSkillPackageInstallationID(): string {
+  return IDPrefix.SKILL_PACKAGE_INSTALLATION + createId();
+}
+
+export function genSkillPackageWorkflowDepID(): string {
+  return IDPrefix.SKILL_PACKAGE_WORKFLOW_DEP + createId();
+}
+
+export function genSkillPackageWorkflowExecID(): string {
+  return IDPrefix.SKILL_PACKAGE_WORKFLOW_EXEC + createId();
+}
+
+export function genSkillPackageExecutionID(): string {
+  return IDPrefix.SKILL_PACKAGE_EXECUTION + createId();
+}

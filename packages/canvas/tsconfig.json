@@ -1,8 +1,5 @@
 {
   "extends": "@refly/tsconfig/react.json",
   "include": ["./"],
-  "exclude": ["node_modules", "dist"],
-  "devDependencies": {
-    "@refly/tsconfig": "workspace:*"
-  }
+  "exclude": ["node_modules", "dist"]
 }

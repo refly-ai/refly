@@ -2,7 +2,6 @@ import { memo, useEffect, useState, useCallback, useMemo } from 'react';
 import { NodeProps, Position } from '@xyflow/react';
 import { StartNodeHeader } from './shared/start-node-header';
 import cn from 'classnames';
-import { BiText } from 'react-icons/bi';
 import { useNodeData } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { getNodeCommonStyles } from './shared/styles';
 import { CustomHandle } from './shared/custom-handle';
@@ -11,7 +10,6 @@ import { useNodeHoverEffect } from '@refly-packages/ai-workspace-common/hooks/ca
 import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { CreateVariablesModal } from '../workflow-variables';
-import { Attachment, List } from 'refly-icons';
 import {
   nodeActionEmitter,
   createNodeEventName,
@@ -24,57 +22,9 @@ import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/n
 import { CanvasNode } from '@refly/openapi-schema';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useCanvasStoreShallow } from '@refly/stores';
+import { InputParameterRow } from './shared/input-parameter-row';
 
 const NODE_SIDE_CONFIG = { width: 250, height: 'auto' };
-
-export const VARIABLE_TYPE_ICON_MAP = {
-  string: BiText,
-  option: List,
-  resource: Attachment,
-};
-
-// Input parameter row component
-export const InputParameterRow = memo(
-  ({
-    variableType,
-    label,
-    isRequired = false,
-    isSingle = false,
-  }: {
-    variableType: 'string' | 'option' | 'resource';
-    label: string;
-    isRequired?: boolean;
-    isSingle?: boolean;
-  }) => {
-    const { t } = useTranslation();
-    const Icon = useMemo(() => {
-      // Fallback to BiText if the mapped icon is missing
-      return VARIABLE_TYPE_ICON_MAP[variableType] ?? BiText;
-    }, [variableType]);
-
-    return (
-      <div className="flex gap-2 items-center justify-between py-1.5 px-3 bg-refly-bg-control-z0 rounded-lg">
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          <div className="text-xs font-medium text-refly-text-1 truncate max-w-full">{label}</div>
-          {isRequired && (
-            <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
-              {t('canvas.workflow.variables.required')}
-            </div>
-          )}
-          {['option', 'resource'].includes(variableType) && (
-            <div className="h-4 px-1 flex items-center justify-center text-refly-text-2 text-[10px] leading-[14px] border-[1px] border-solid border-refly-Card-Border rounded-[4px] flex-shrink-0">
-              {t(`canvas.workflow.variables.${isSingle ? 'singleSelect' : 'multipleSelect'}`)}
-            </div>
-          )}
-        </div>
-
-        <Icon size={14} color="var(--refly-text-3)" className="flex-shrink-0" />
-      </div>
-    );
-  },
-);
-
-InputParameterRow.displayName = 'InputParameterRow';
 
 // Define StartNodeProps type
 type StartNodeProps = NodeProps & {
@@ -206,10 +156,9 @@ export const StartNode = memo(({ id, onNodeClick, data }: StartNodeProps) => {
               {workflowVariables.slice(0, 6).map((variable) => (
                 <InputParameterRow
                   key={variable.name}
-                  label={variable.name}
-                  isRequired={variable.required}
-                  variableType={variable.variableType}
-                  isSingle={variable.isSingle}
+                  variable={variable}
+                  readonly={true}
+                  isHighlighted={false}
                 />
               ))}
             </div>

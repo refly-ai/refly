@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { CanvasNodeType } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { CanvasNodeType } from '@refly/openapi-schema';
 import { useDebouncedCallback } from 'use-debounce';
 import { parseMarkdownCitationsAndCanvasTags } from '@refly/utils/parse';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';

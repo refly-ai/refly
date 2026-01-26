@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Source, SearchStep } from '@refly/openapi-schema';
 import { SearchLocale, SearchPageState, defaultLocalesMap } from '@refly/common-types';
 
-export interface SearchState {
+interface SearchState {
   query: string;
   searchLocales: SearchLocale[];
   outputLocale: SearchLocale;

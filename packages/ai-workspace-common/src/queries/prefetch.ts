@@ -8,6 +8,7 @@ import {
   downloadExportJobResult,
   exportCanvas,
   exportDocument,
+  exportToolsetDefinitions,
   getActionResult,
   getAuthConfig,
   getAvailableVouchers,
@@ -29,10 +30,7 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
-  getPageByCanvasId,
-  getPageDetail,
-  getPilotSessionDetail,
-  getProjectDetail,
+  getPromptSuggestions,
   getResourceDetail,
   getSettings,
   getSubscriptionPlans,
@@ -43,10 +41,7 @@ import {
   getWorkflowDetail,
   getWorkflowPlanDetail,
   getWorkflowVariables,
-  hasBeenInvited,
-  hasFilledForm,
   listAccounts,
-  listActions,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
@@ -55,36 +50,30 @@ import {
   listDocuments,
   listDriveFiles,
   listInvitationCodes,
-  listLabelClasses,
-  listLabelInstances,
   listMcpServers,
   listModels,
-  listPages,
-  listPilotSessions,
-  listProjects,
   listProviderItemOptions,
   listProviderItems,
   listProviders,
   listResources,
   listShares,
-  listSkillInstances,
-  listSkills,
-  listSkillTriggers,
   listTools,
   listToolsetInventory,
   listToolsets,
   listUserTools,
   listUserVouchers,
   listWorkflowApps,
+  listWorkflowExecutions,
   serveStatic,
   verifyVoucherInvitation,
-} from '../requests/services.gen';
+} from '@refly/openapi-schema';
 import {
   CheckSettingsFieldData,
   CheckToolOauthStatusData,
   DownloadExportJobResultData,
   ExportCanvasData,
   ExportDocumentData,
+  ExportToolsetDefinitionsData,
   GetActionResultData,
   GetCanvasCommissionByCanvasIdData,
   GetCanvasDataData,
@@ -101,10 +90,6 @@ import {
   GetCreditUsageData,
   GetDocumentDetailData,
   GetExportJobStatusData,
-  GetPageByCanvasIdData,
-  GetPageDetailData,
-  GetPilotSessionDetailData,
-  GetProjectDetailData,
   GetResourceDetailData,
   GetTemplateGenerationStatusData,
   GetToolCallResultData,
@@ -119,24 +104,18 @@ import {
   ListCopilotSessionsData,
   ListDocumentsData,
   ListDriveFilesData,
-  ListLabelClassesData,
-  ListLabelInstancesData,
   ListMcpServersData,
-  ListPagesData,
-  ListPilotSessionsData,
-  ListProjectsData,
   ListProviderItemOptionsData,
   ListProviderItemsData,
   ListProvidersData,
   ListResourcesData,
   ListSharesData,
-  ListSkillInstancesData,
-  ListSkillTriggersData,
   ListToolsData,
   ListToolsetsData,
   ListWorkflowAppsData,
+  ListWorkflowExecutionsData,
   VerifyVoucherInvitationData,
-} from '../requests/types.gen';
+} from '@refly/openapi-schema';
 import * as Common from './common';
 export const prefetchUseListMcpServers = (
   queryClient: QueryClient,
@@ -145,30 +124,6 @@ export const prefetchUseListMcpServers = (
   queryClient.prefetchQuery({
     queryKey: Common.UseListMcpServersKeyFn(clientOptions),
     queryFn: () => listMcpServers({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseListPages = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListPagesData, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListPagesKeyFn(clientOptions),
-    queryFn: () => listPages({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseGetPageDetail = (
-  queryClient: QueryClient,
-  clientOptions: Options<GetPageDetailData, true>,
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseGetPageDetailKeyFn(clientOptions),
-    queryFn: () => getPageDetail({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseGetPageByCanvasId = (
-  queryClient: QueryClient,
-  clientOptions: Options<GetPageByCanvasIdData, true>,
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseGetPageByCanvasIdKeyFn(clientOptions),
-    queryFn: () => getPageByCanvasId({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetAuthConfig = (
   queryClient: QueryClient,
@@ -339,22 +294,6 @@ export const prefetchUseDownloadExportJobResult = (
     queryKey: Common.UseDownloadExportJobResultKeyFn(clientOptions),
     queryFn: () => downloadExportJobResult({ ...clientOptions }).then((response) => response.data),
   });
-export const prefetchUseListProjects = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListProjectsData, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListProjectsKeyFn(clientOptions),
-    queryFn: () => listProjects({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseGetProjectDetail = (
-  queryClient: QueryClient,
-  clientOptions: Options<GetProjectDetailData, true>,
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseGetProjectDetailKeyFn(clientOptions),
-    queryFn: () => getProjectDetail({ ...clientOptions }).then((response) => response.data),
-  });
 export const prefetchUseListCodeArtifacts = (
   queryClient: QueryClient,
   clientOptions: Options<ListCodeArtifactsData, true> = {},
@@ -379,30 +318,6 @@ export const prefetchUseListShares = (
     queryKey: Common.UseListSharesKeyFn(clientOptions),
     queryFn: () => listShares({ ...clientOptions }).then((response) => response.data),
   });
-export const prefetchUseListLabelClasses = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListLabelClassesData, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListLabelClassesKeyFn(clientOptions),
-    queryFn: () => listLabelClasses({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseListLabelInstances = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListLabelInstancesData, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListLabelInstancesKeyFn(clientOptions),
-    queryFn: () => listLabelInstances({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseListActions = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListActionsKeyFn(clientOptions),
-    queryFn: () => listActions({ ...clientOptions }).then((response) => response.data),
-  });
 export const prefetchUseGetActionResult = (
   queryClient: QueryClient,
   clientOptions: Options<GetActionResultData, true>,
@@ -410,46 +325,6 @@ export const prefetchUseGetActionResult = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetActionResultKeyFn(clientOptions),
     queryFn: () => getActionResult({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseListSkills = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListSkillsKeyFn(clientOptions),
-    queryFn: () => listSkills({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseListSkillInstances = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListSkillInstancesData, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListSkillInstancesKeyFn(clientOptions),
-    queryFn: () => listSkillInstances({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseListSkillTriggers = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListSkillTriggersData, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListSkillTriggersKeyFn(clientOptions),
-    queryFn: () => listSkillTriggers({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseListPilotSessions = (
-  queryClient: QueryClient,
-  clientOptions: Options<ListPilotSessionsData, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseListPilotSessionsKeyFn(clientOptions),
-    queryFn: () => listPilotSessions({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseGetPilotSessionDetail = (
-  queryClient: QueryClient,
-  clientOptions: Options<GetPilotSessionDetailData, true>,
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseGetPilotSessionDetailKeyFn(clientOptions),
-    queryFn: () => getPilotSessionDetail({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseListCopilotSessions = (
   queryClient: QueryClient,
@@ -466,6 +341,14 @@ export const prefetchUseGetCopilotSessionDetail = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetCopilotSessionDetailKeyFn(clientOptions),
     queryFn: () => getCopilotSessionDetail({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListWorkflowExecutions = (
+  queryClient: QueryClient,
+  clientOptions: Options<ListWorkflowExecutionsData, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListWorkflowExecutionsKeyFn(clientOptions),
+    queryFn: () => listWorkflowExecutions({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetWorkflowDetail = (
   queryClient: QueryClient,
@@ -532,14 +415,6 @@ export const prefetchUseGetFormDefinition = (
     queryKey: Common.UseGetFormDefinitionKeyFn(clientOptions),
     queryFn: () => getFormDefinition({ ...clientOptions }).then((response) => response.data),
   });
-export const prefetchUseHasFilledForm = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseHasFilledFormKeyFn(clientOptions),
-    queryFn: () => hasFilledForm({ ...clientOptions }).then((response) => response.data),
-  });
 export const prefetchUseGetCreditRecharge = (
   queryClient: QueryClient,
   clientOptions: Options<GetCreditRechargeData, true> = {},
@@ -605,14 +480,6 @@ export const prefetchUseListInvitationCodes = (
   queryClient.prefetchQuery({
     queryKey: Common.UseListInvitationCodesKeyFn(clientOptions),
     queryFn: () => listInvitationCodes({ ...clientOptions }).then((response) => response.data),
-  });
-export const prefetchUseHasBeenInvited = (
-  queryClient: QueryClient,
-  clientOptions: Options<unknown, true> = {},
-) =>
-  queryClient.prefetchQuery({
-    queryKey: Common.UseHasBeenInvitedKeyFn(clientOptions),
-    queryFn: () => hasBeenInvited({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetSubscriptionPlans = (
   queryClient: QueryClient,
@@ -694,6 +561,14 @@ export const prefetchUseListToolsets = (
     queryKey: Common.UseListToolsetsKeyFn(clientOptions),
     queryFn: () => listToolsets({ ...clientOptions }).then((response) => response.data),
   });
+export const prefetchUseExportToolsetDefinitions = (
+  queryClient: QueryClient,
+  clientOptions: Options<ExportToolsetDefinitionsData, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseExportToolsetDefinitionsKeyFn(clientOptions),
+    queryFn: () => exportToolsetDefinitions({ ...clientOptions }).then((response) => response.data),
+  });
 export const prefetchUseGetToolCallResult = (
   queryClient: QueryClient,
   clientOptions: Options<GetToolCallResultData, true>,
@@ -718,6 +593,14 @@ export const prefetchUseServeStatic = (
   queryClient.prefetchQuery({
     queryKey: Common.UseServeStaticKeyFn(clientOptions),
     queryFn: () => serveStatic({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetPromptSuggestions = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetPromptSuggestionsKeyFn(clientOptions),
+    queryFn: () => getPromptSuggestions({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetAvailableVouchers = (
   queryClient: QueryClient,

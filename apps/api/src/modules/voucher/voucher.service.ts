@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject, forwardRef, OnModuleInit, Optional } from '@nestjs/common';
 import { User, WorkflowVariable } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
-import { TemplateScoringService, CanvasDataForScoring } from './template-scoring.service';
+import { RedisService } from '../common/redis.service';
 import { CreditService } from '../credit/credit.service';
 import { NotificationService } from '../notification/notification.service';
 import { genVoucherID, genVoucherInvitationID, genInviteCode, getYYYYMMDD } from '@refly/utils';
@@ -10,6 +10,7 @@ import {
   VoucherTriggerResult,
   DailyTriggerCheckResult,
   CreateVoucherInput,
+  UpdateVoucherInput,
   VoucherAvailableResult,
   VoucherValidateResult,
   UseVoucherInput,
@@ -22,10 +23,11 @@ import {
 import {
   DAILY_POPUP_TRIGGER_LIMIT,
   VoucherStatus,
-  VoucherSource,
   InvitationStatus,
   INVITER_REWARD_CREDITS,
   AnalyticsEvents,
+  VoucherSource,
+  VoucherSourceType,
 } from './voucher.constants';
 import { generateVoucherEmail, calculateDiscountValues } from './voucher-email-templates';
 import { ConfigService } from '@nestjs/config';
@@ -42,7 +44,7 @@ export class VoucherService implements OnModuleInit {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly templateScoringService: TemplateScoringService,
+    private readonly redis: RedisService,
     private readonly configService: ConfigService,
     private readonly notificationService: NotificationService,
     @Inject(forwardRef(() => CreditService))
@@ -159,25 +161,38 @@ export class VoucherService implements OnModuleInit {
   }
 
   /**
-   * Handle template publish event - main entry point
+   * Handle create voucher from source event - main entry point
    * Checks daily limit, scores template, generates voucher
    *
-   * @param user - User publishing the template
+   * @param user - User creating the voucher
    * @param canvasData - Pre-fetched canvas data with nodes
    * @param variables - Workflow variables
-   * @param templateId - Generated template/app ID
+   * @param source - Voucher source
+   * @param sourceId - Source entity ID
    * @param description - Template description
    * @returns VoucherTriggerResult or null if limit reached
    */
-  async handleTemplatePublish(
+  async handleCreateVoucherFromSource(
     user: User,
-    canvasData: CanvasDataForScoring,
-    variables: WorkflowVariable[],
-    templateId: string,
-    description?: string,
+    _canvasData: any,
+    _variables: WorkflowVariable[],
+    source: VoucherSourceType,
+    sourceId?: string,
+    _description?: string,
   ): Promise<VoucherTriggerResult | null> {
+    const lockKey = `voucher-create-lock:${user.uid}:${source}`;
+    const releaseLock = await this.redis.waitLock(lockKey, { ttlSeconds: 10 });
+    if (!releaseLock) {
+      this.logger.warn(
+        `Failed to acquire voucher create lock for user ${user.uid}, source ${source}`,
+      );
+      return null;
+    }
+
     try {
-      this.logger.log(`Handling template publish for user ${user.uid}, template ${templateId}`);
+      this.logger.log(
+        `Handling create voucher for user ${user.uid}, source ${source}, source id ${sourceId}`,
+      );
 
       // 1. Check daily trigger limit
       const { canTrigger, currentCount } = await this.checkDailyTriggerLimit(user.uid);
@@ -197,73 +212,137 @@ export class VoucherService implements OnModuleInit {
         return null;
       }
 
-      // 2. Score the template using pre-fetched canvas data
-      const scoringResult = await this.templateScoringService.scoreTemplateWithCanvasData(
-        user,
-        canvasData,
-        variables,
-        description,
-      );
-
-      // 3. Calculate discount percentage from score
-      const discountPercent = this.templateScoringService.scoreToDiscountPercent(
-        scoringResult.score,
-      );
+      // 2. Calculate discount percentage from config
+      const discountPercent = this.configService.get('voucher.defaultDiscountPercent') ?? 80;
+      const llmScore = 100; // Default score when not using LLM scoring
 
       const VOUCHER_EXPIRATION_MINUTES = this.configService.get('voucher.expirationMinutes');
 
-      // 4. Generate voucher
+      // 3. Generate voucher
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + VOUCHER_EXPIRATION_MINUTES);
 
-      const voucher = await this.createVoucher({
-        uid: user.uid,
-        discountPercent,
-        llmScore: scoringResult.score,
-        source: VoucherSource.TEMPLATE_PUBLISH,
-        sourceId: templateId,
-        expiresAt,
+      let voucher: VoucherDTO;
+
+      // Check if there is an existing unused and unexpired voucher to reuse
+      const unusedVoucher = await this.prisma.voucher.findFirst({
+        where: {
+          uid: user.uid,
+          status: VoucherStatus.UNUSED,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
       });
 
-      // 5. Record popup trigger
-      await this.recordPopupTrigger(user.uid, templateId, voucher.voucherId);
+      if (unusedVoucher) {
+        // Update existing unused voucher with latest values and fresh expiration
+        voucher = await this.updateVoucher(unusedVoucher.voucherId, {
+          discountPercent,
+          llmScore,
+          expiresAt,
+          sourceId,
+          status: VoucherStatus.UNUSED,
+        });
+        this.logger.log(
+          `Reusing existing unused voucher for user ${user.uid}: ${voucher.voucherId} (source: ${source})`,
+        );
+      } else if (source === VoucherSource.RUN_WORKFLOW) {
+        // Ensure only one voucher per day for run_workflow source
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
 
-      // 6. Track analytics event
+        const existingVoucherToday = await this.prisma.voucher.findFirst({
+          where: {
+            uid: user.uid,
+            source: VoucherSource.RUN_WORKFLOW,
+            createdAt: {
+              gte: startOfDay,
+            },
+          },
+        });
+
+        if (existingVoucherToday) {
+          if (existingVoucherToday.status !== VoucherStatus.USED) {
+            // This case is actually covered by the unusedVoucher check above,
+            // but we keep it for clarity and in case unusedVoucher check was slightly different
+            voucher = await this.updateVoucher(existingVoucherToday.voucherId, {
+              discountPercent,
+              llmScore,
+              expiresAt,
+              sourceId,
+              status: VoucherStatus.UNUSED,
+            });
+            this.logger.log(
+              `Updated existing workflow voucher for user ${user.uid}: ${voucher.voucherId}`,
+            );
+          } else {
+            // Already used today, just return it
+            voucher = this.toVoucherDTO(existingVoucherToday);
+            this.logger.log(
+              `Workflow voucher for user ${user.uid} already used today: ${voucher.voucherId}`,
+            );
+          }
+        } else {
+          // Create new voucher
+          voucher = await this.createVoucher({
+            uid: user.uid,
+            discountPercent,
+            llmScore,
+            source,
+            sourceId: sourceId,
+            expiresAt,
+          });
+        }
+      } else {
+        // For other sources, always create new voucher if no unused one exists
+        voucher = await this.createVoucher({
+          uid: user.uid,
+          discountPercent,
+          llmScore,
+          source,
+          sourceId: sourceId,
+          expiresAt,
+        });
+      }
+
+      // 4. Record popup trigger
+      await this.recordPopupTrigger(user.uid, sourceId, voucher.voucherId);
+
+      // 5. Track analytics event
       this.trackEvent(AnalyticsEvents.VOUCHER_POPUP_DISPLAY, {
         uid: user.uid,
         voucherId: voucher.voucherId,
         discountPercent,
-        llmScore: scoringResult.score,
+        llmScore,
       });
 
       this.logger.log(
         `Voucher generated for user ${user.uid}: ${voucher.voucherId} (${discountPercent}% off)`,
       );
 
-      // 7. Send email notification (async, don't wait)
-      this.sendVoucherEmail(user.uid, voucher.voucherId, discountPercent).catch((err) => {
-        this.logger.error(`Failed to send voucher email for user ${user.uid}: ${err.message}`);
+      // 6. Send email notification (async, don't wait)
+      this.sendVoucherEmail(user.uid, discountPercent).catch((err) => {
+        this.logger.error(`Failed to send voucher email for user ${user.uid}: ${err.stack}`);
       });
 
       return {
         voucher,
-        score: scoringResult.score,
-        feedback: scoringResult.feedback,
+        score: llmScore,
+        feedback: 'Thank you for using Refly!',
       };
     } catch (error) {
-      this.logger.error(`Failed to handle template publish for user ${user.uid}: ${error.message}`);
+      this.logger.error(`Failed to handle voucher creation for user ${user.uid}: ${error.stack}`);
       throw error;
+    } finally {
+      await releaseLock();
     }
   }
 
   /**
    * Send voucher notification email to user
    */
-  private async sendVoucherEmail(
-    uid: string,
-    voucherId: string,
-    discountPercent: number,
-  ): Promise<void> {
+  private async sendVoucherEmail(uid: string, discountPercent: number): Promise<void> {
     // Get user info including locale
     const userPo = await this.prisma.user.findUnique({
       where: { uid },
@@ -274,11 +353,6 @@ export class VoucherService implements OnModuleInit {
       this.logger.warn(`Cannot send voucher email: user ${uid} has no email`);
       return;
     }
-
-    // Create invitation for the share link
-    const invitation = await this.createInvitation(uid, voucherId);
-    const origin = this.configService.get('origin') || 'https://refly.ai';
-    const inviteLink = `${origin}/invite?invite=${invitation.invitation.inviteCode}`;
 
     // Calculate discount values
     const { discountValue, discountedPrice } = calculateDiscountValues(discountPercent);
@@ -294,7 +368,6 @@ export class VoucherService implements OnModuleInit {
         discountPercent,
         discountValue,
         discountedPrice,
-        inviteLink,
         expirationDays,
       },
       userPo.uiLocale || undefined,
@@ -414,6 +487,81 @@ export class VoucherService implements OnModuleInit {
     });
 
     return this.toVoucherDTO(voucher);
+  }
+
+  /**
+   * Update an existing voucher
+   */
+  async updateVoucher(voucherId: string, input: UpdateVoucherInput): Promise<VoucherDTO> {
+    const existing = await this.prisma.voucher.findUnique({
+      where: { voucherId },
+    });
+
+    if (!existing) {
+      throw new Error(`Voucher ${voucherId} not found`);
+    }
+
+    let stripePromoCodeId = existing.stripePromoCodeId;
+
+    // If discount percent changed, create a new Stripe promotion code
+    if (
+      this.stripeClient &&
+      input.discountPercent !== undefined &&
+      input.discountPercent !== existing.discountPercent
+    ) {
+      try {
+        const stripeCoupon = await this.prisma.stripeCoupon.findFirst({
+          where: {
+            discountPercent: input.discountPercent,
+            isActive: true,
+          },
+        });
+
+        if (stripeCoupon) {
+          const expiresAt = input.expiresAt ?? existing.expiresAt;
+          const promoCode = await this.stripeClient.promotionCodes.create({
+            coupon: stripeCoupon.stripeCouponId,
+            max_redemptions: 1,
+            restrictions: {
+              first_time_transaction: true,
+            },
+            expires_at: Math.floor(expiresAt.getTime() / 1000),
+            metadata: {
+              voucherId,
+              uid: existing.uid,
+              source: existing.source,
+            },
+          });
+
+          stripePromoCodeId = promoCode.id;
+          this.logger.log(
+            `Created new Stripe promotion code ${promoCode.id} for updated voucher ${voucherId} (${input.discountPercent}% off)`,
+          );
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to create Stripe promotion code for updated voucher ${voucherId}: ${error.message}`,
+        );
+      }
+    }
+
+    const updated = await this.prisma.voucher.update({
+      where: { pk: existing.pk },
+      data: {
+        discountPercent: input.discountPercent ?? existing.discountPercent,
+        llmScore: input.llmScore ?? existing.llmScore,
+        expiresAt: input.expiresAt ?? existing.expiresAt,
+        sourceId: input.sourceId ?? existing.sourceId,
+        status: input.status ?? existing.status,
+        stripePromoCodeId,
+        // Reset usage fields if status is set back to unused
+        usedAt: input.status === VoucherStatus.UNUSED ? null : undefined,
+        subscriptionId: input.status === VoucherStatus.UNUSED ? null : undefined,
+        updatedAt: new Date(),
+      },
+    });
+
+    return this.toVoucherDTO(updated);
   }
 
   /**

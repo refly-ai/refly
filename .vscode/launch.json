@@ -74,7 +74,30 @@
         "group": "debug",
         "order": 2
       }
-    }
+    },
+    {
+      "name": "Debug Current Test File",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vitest",
+        "run",
+        "${relativeFile}",
+        "--no-file-parallelism"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**"
+      ],
+      "presentation": {
+        "hidden": false,
+        "group": "test",
+        "order": 1
+      }
+    },
   ],
   "compounds": [
     {

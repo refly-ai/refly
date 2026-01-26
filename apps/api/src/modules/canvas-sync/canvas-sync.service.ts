@@ -191,16 +191,23 @@ export class CanvasSyncService {
     }
 
     if (!canvas.version) {
+      // Get user locale
+      const dbUser = await this.prisma.user.findUnique({
+        where: { uid: user.uid },
+        select: { uiLocale: true },
+      });
+      const locale = dbUser?.uiLocale ?? undefined;
+
       if (!canvas.stateStorageKey) {
-        return initEmptyCanvasState();
+        return initEmptyCanvasState({ locale });
       }
 
       const doc = await this.getCanvasYDoc(canvas.stateStorageKey);
       if (!doc) {
-        return initEmptyCanvasState();
+        return initEmptyCanvasState({ locale });
       }
 
-      const state = initEmptyCanvasState();
+      const state = initEmptyCanvasState({ locale });
       state.nodes = doc?.getArray('nodes').toJSON() ?? [];
       state.edges = doc?.getArray('edges').toJSON() ?? [];
 

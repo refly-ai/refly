@@ -150,15 +150,18 @@ export default () => ({
       requireInvitationCode: process.env.AUTH_REQUIRE_INVITATION_CODE === 'true' || false,
       inviterCreditAmount: Number.parseInt(process.env.INVITATION_INVITER_CREDIT_AMOUNT) || 500,
       inviteeCreditAmount: Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_AMOUNT) || 500,
-      inviterCreditExpiresInMonths:
-        Number.parseInt(process.env.INVITATION_INVITER_CREDIT_EXPIRES_IN_MONTHS) || 3,
-      inviteeCreditExpiresInMonths:
-        Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_EXPIRES_IN_MONTHS) || 3,
+      inviterCreditExpiresInDays:
+        Number.parseInt(process.env.INVITATION_INVITER_CREDIT_EXPIRES_IN_DAYS) || 7,
+      inviteeCreditExpiresInDays:
+        Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_EXPIRES_IN_DAYS) || 7,
     },
     registration: {
-      bonusCreditAmount: Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_AMOUNT) || 3000,
-      bonusCreditExpiresInMonths:
-        Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_EXPIRES_IN_MONTHS) || 3,
+      bonusCreditAmount: Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_AMOUNT) || 500,
+      bonusCreditExpiresInDays:
+        Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_EXPIRES_IN_DAYS) || 7,
+    },
+    onboarding: {
+      enabled: process.env.ONBOARDING_ENABLED === 'true' || false,
     },
   },
   tools: {
@@ -242,6 +245,14 @@ export default () => ({
     // Expiration time in minutes (default: 7 days = 10080 minutes)
     // For testing, use smaller values like 7 (7 minutes)
     expirationMinutes: Number(process.env.VOUCHER_EXPIRATION_MINUTES) || 10080,
+    // Default discount percentage for vouchers (default: 80% off)
+    defaultDiscountPercent: Number(process.env.VOUCHER_DEFAULT_DISCOUNT_PERCENT) || 80,
+  },
+  ptc: {
+    mode: process.env.PTC_MODE || 'off',
+    userAllowlist: process.env.PTC_USER_ALLOWLIST || '',
+    toolsetAllowlist: process.env.PTC_TOOLSET_ALLOWLIST || '',
+    toolsetBlocklist: process.env.PTC_TOOLSET_BLOCKLIST || '',
   },
   schedule: {
     // Rate limiting - controls global and per-user concurrency
@@ -277,7 +288,7 @@ export default () => ({
   },
 
   lambda: {
-    enabled: process.env.LAMBDA_ENABLED === 'true', // Set LAMBDA_ENABLED=true to enable Lambda
+    enabled: process.env.LAMBDA_ENABLED !== 'false', // Lambda enabled by default, set LAMBDA_ENABLED=false to disable
     region: process.env.AWS_REGION || 'us-east-1',
     functions: {
       documentIngest: process.env.LAMBDA_DOC_PARSER_ARN,
@@ -315,8 +326,66 @@ export default () => ({
     parseTimeoutMs: Number.parseInt(process.env.LAMBDA_PARSE_TIMEOUT_MS) || 3 * 60 * 1000, // 3 minutes
   },
 
+  workflow: {
+    // Interval between polling checks for workflow status (default: 1.5 seconds)
+    pollIntervalMs: Number.parseInt(process.env.WORKFLOW_POLL_INTERVAL_MS) || 1500,
+    // Maximum time allowed for entire workflow execution (default: 30 minutes)
+    executionTimeoutMs:
+      Number.parseInt(process.env.WORKFLOW_EXECUTION_TIMEOUT_MS) || 30 * 60 * 1000,
+    // Maximum time allowed for a single node execution (default: 30 minutes)
+    nodeExecutionTimeoutMs:
+      Number.parseInt(process.env.WORKFLOW_NODE_EXECUTION_TIMEOUT_MS) || 30 * 60 * 1000,
+    // TTL for distributed lock during polling (default: 5 seconds)
+    pollLockTtlMs: Number.parseInt(process.env.WORKFLOW_POLL_LOCK_TTL_MS) || 5000,
+  },
+
   sandbox: {
-    timeout: process.env.SANDBOX_TIMEOUT,
+    url: process.env.SANDBOX_URL,
+    timeout: process.env.SANDBOX_TIMEOUT_MS,
+    whiteList: process.env.SANDBOX_WHITELIST, // 'uid,uid'
+    blackList: process.env.SANDBOX_BLACKLIST, // 'uid,uid'
+    randomRate: process.env.SANDBOX_RANDOM_RATE, // '20'
+    s3Lib: {
+      enabled: process.env.SANDBOX_S3LIB_ENABLED,
+      pathPrefix: process.env.SANDBOX_S3LIB_PATH_PREFIX,
+      hash: process.env.SANDBOX_S3LIB_HASH,
+      cache: process.env.SANDBOX_S3LIB_CACHE,
+      reset: process.env.SANDBOX_S3LIB_RESET,
+    },
+    s3: {
+      overlap: {
+        enabled: process.env.SANDBOX_S3_OVERLAP_ENABLED,
+        endpoint: process.env.SANDBOX_S3_OVERLAP_ENDPOINT,
+        port: process.env.SANDBOX_S3_OVERLAP_PORT,
+      },
+    },
+    scalebox: {
+      apiKey: process.env.SCALEBOX_API_KEY,
+      // Wrapper
+      wrapperType: process.env.SCALEBOX_WRAPPER_TYPE, // 'executor' | 'interpreter'
+      templateName: process.env.SCALEBOX_TEMPLATE_NAME,
+      codeSizeThreshold: process.env.SCALEBOX_CODE_SIZE_THRESHOLD,
+      // Sandbox
+      sandboxTimeoutMs: process.env.SCALEBOX_SANDBOX_TIMEOUT_MS,
+      // Pool
+      maxSandboxes: process.env.SCALEBOX_MAX_SANDBOXES,
+      maxQueueSize: process.env.SCALEBOX_MAX_QUEUE_SIZE,
+      autoPauseDelayMs: process.env.SCALEBOX_AUTO_PAUSE_DELAY_MS,
+      // Lock
+      runCodeTimeoutSec: process.env.SCALEBOX_RUN_CODE_TIMEOUT_SEC,
+      lockWaitTimeoutSec: process.env.SCALEBOX_LOCK_WAIT_TIMEOUT_SEC,
+      lockPollIntervalMs: process.env.SCALEBOX_LOCK_POLL_INTERVAL_MS,
+      lockInitialTtlSec: process.env.SCALEBOX_LOCK_INITIAL_TTL_SEC,
+      lockRenewalIntervalMs: process.env.SCALEBOX_LOCK_RENEWAL_INTERVAL_MS,
+      // Executor limits
+      limits: {
+        maxFileSize: process.env.SCALEBOX_LIMITS_MAX_FILE_SIZE,
+        maxTotalWrite: process.env.SCALEBOX_LIMITS_MAX_TOTAL_WRITE,
+        maxFiles: process.env.SCALEBOX_LIMITS_MAX_FILES,
+        maxProcesses: process.env.SCALEBOX_LIMITS_MAX_PROCESSES,
+      },
+    },
+
     truncate: {
       output: process.env.SANDBOX_TRUNCATE_OUTPUT,
     },

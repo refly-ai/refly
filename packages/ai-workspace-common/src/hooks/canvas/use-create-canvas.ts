@@ -4,12 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { logEvent } from '@refly/telemetry-web';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
-import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import { useCanvasResourcesPanelStoreShallow, useCopilotStoreShallow } from '@refly/stores';
 
 interface CreateCanvasOptions {
   isPilotActivated?: boolean;
   isMediaGeneration?: boolean;
   isAsk?: boolean;
+  initialPrompt?: string;
 }
 
 export const useCreateCanvas = ({
@@ -25,6 +26,9 @@ export const useCreateCanvas = ({
       setWideScreenVisible: state.setWideScreenVisible,
     }),
   );
+  const { setPendingPrompt } = useCopilotStoreShallow((state) => ({
+    setPendingPrompt: state.setPendingPrompt,
+  }));
 
   const createCanvas = async (canvasTitle: string) => {
     setIsCreating(true);
@@ -90,6 +94,10 @@ export const useCreateCanvas = ({
         });
       }
 
+      if (options?.initialPrompt) {
+        setPendingPrompt(canvasId, options.initialPrompt);
+      }
+
       if (!options?.isPilotActivated && !options?.isMediaGeneration && !options?.isAsk) {
         logEvent('canvas::create_canvas_from_home', Date.now(), {});
       }
@@ -100,7 +108,7 @@ export const useCreateCanvas = ({
         navigate(`/project/${projectId}?${queryParams.toString()}`);
       } else {
         navigate(
-          `/canvas/${canvasId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`,
+          `/workflow/${canvasId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`,
         );
       }
 

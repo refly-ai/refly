@@ -7,7 +7,6 @@ import {
   SubmitFormRequest,
   GetFormDefinitionResponse,
   SubmitFormResponse,
-  HasFilledFormResponse,
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils';
 
@@ -30,12 +29,5 @@ export class FormController {
   ): Promise<SubmitFormResponse> {
     await this.formService.submitForm(user.uid, body.formSubmission);
     return buildSuccessResponse();
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('/hasFilledForm')
-  async hasFilledForm(@LoginedUser() user: User): Promise<HasFilledFormResponse> {
-    const hasFilledForm = await this.formService.hasFilledForm(user.uid);
-    return buildSuccessResponse({ hasFilledForm });
   }
 }

@@ -14,7 +14,7 @@ import type {
   AuthorizeComposioConnectionResponse,
   ComposioConnectionStatusResponse,
   ComposioRevokeResponse,
-} from '@refly-packages/ai-workspace-common/requests';
+} from '@refly/openapi-schema';
 
 type ComposioOAuthStatusResponse =
   | ComposioConnectionStatusResponse

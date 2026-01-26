@@ -3,12 +3,18 @@ import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { delay } from '@refly-packages/ai-workspace-common/utils/delay';
 import { genCanvasID } from '@refly/utils';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
 import { useWorkflowExecutionPolling } from './use-workflow-execution-polling';
-import { useCanvasStoreShallow } from '@refly/stores';
-import { InitializeWorkflowRequest } from '@refly/openapi-schema';
+import {
+  useCanvasResourcesPanelStoreShallow,
+  useCanvasStoreShallow,
+  useSubscriptionStoreShallow,
+} from '@refly/stores';
+import { GetWorkflowDetailResponse, InitializeWorkflowRequest } from '@refly/openapi-schema';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useUserMembership } from '@refly-packages/ai-workspace-common/hooks/use-user-membership';
 import { guessModelProviderError, ModelUsageQuotaExceeded } from '@refly/errors';
 
 export const useInitializeWorkflow = (
@@ -20,6 +26,13 @@ export const useInitializeWorkflow = (
   const [loading, setLoading] = useState(false);
   const [newModeLoading, setNewModeLoading] = useState(false);
   const { getCanvasList } = useHandleSiderData();
+  const { showEarnedVoucherPopup } = useSubscriptionStoreShallow((state) => ({
+    showEarnedVoucherPopup: state.showEarnedVoucherPopup,
+  }));
+  const { setHasFirstExecutionToday } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setHasFirstExecutionToday: state.setHasFirstExecutionToday,
+  }));
+  const { planType } = useUserMembership();
 
   const { executionId, setCanvasExecutionId } = useCanvasStoreShallow((state) => ({
     executionId: state.canvasExecutionId[canvasId],
@@ -29,7 +42,7 @@ export const useInitializeWorkflow = (
 
   // Memoize callbacks to avoid recreating them on every render
   const handleComplete = useMemo(
-    () => (status: string, data: any) => {
+    () => async (status: string, data: GetWorkflowDetailResponse) => {
       if (status === 'finish') {
         message.success(
           t('canvas.workflow.run.completed') || 'Workflow execution completed successfully',
@@ -51,7 +64,7 @@ export const useInitializeWorkflow = (
         }
       }
     },
-    [t],
+    [t, canvasId],
   );
 
   const handleError = useMemo(
@@ -84,6 +97,23 @@ export const useInitializeWorkflow = (
         setLoading(true);
         await forceSyncState({ syncRemote: true });
 
+        // If current workflow execution is the first successful execution today, trigger voucher popup
+        let shouldTriggerVoucherPopup = false;
+        if (planType === 'free') {
+          const startOfToday = new Date();
+          startOfToday.setHours(0, 0, 0, 0);
+          const { data: listWorkflowExecutionsData, error: listWorkflowExecutionsError } =
+            await getClient().listWorkflowExecutions({
+              query: {
+                after: startOfToday.getTime(),
+                order: 'creationAsc',
+                pageSize: 1,
+              },
+            });
+          const firstExecutionToday = listWorkflowExecutionsData?.data?.[0];
+          shouldTriggerVoucherPopup = !listWorkflowExecutionsError && !firstExecutionToday;
+        }
+
         const { data, error } = await getClient().initializeWorkflow({
           body: {
             variables: workflowVariables,
@@ -100,6 +130,27 @@ export const useInitializeWorkflow = (
           setCanvasExecutionId(canvasId, data.data.workflowExecutionId);
         }
 
+        if (shouldTriggerVoucherPopup) {
+          setHasFirstExecutionToday(true);
+          // Poll for available vouchers if not immediately found
+          // This handles cases where the voucher might be generated with a slight delay after execution completion
+          for (let attempts = 0; attempts < 10; attempts++) {
+            const { data: voucherData } = await getClient().getAvailableVouchers();
+            const bestVoucher = voucherData?.data?.bestVoucher ?? voucherData?.data?.vouchers?.[0];
+            if (bestVoucher) {
+              showEarnedVoucherPopup({
+                voucher: bestVoucher,
+                score: bestVoucher.llmScore,
+                triggerLimitReached: false,
+              });
+              break;
+            }
+            if (attempts < 9) {
+              await delay(2000);
+            }
+          }
+        }
+
         message.success({
           content: t('canvas.workflow.run.startRunning') || 'Your workflow starts running',
           duration: 5,
@@ -113,7 +164,7 @@ export const useInitializeWorkflow = (
         setLoading(false);
       }
     },
-    [t, canvasId, setCanvasExecutionId, forceSyncState, workflowVariables],
+    [t, canvasId, setCanvasExecutionId, forceSyncState, workflowVariables, showEarnedVoucherPopup],
   );
 
   const initializeWorkflowInNewCanvas = useCallback(
@@ -146,7 +197,7 @@ export const useInitializeWorkflow = (
 
         // Wait for 2 seconds before navigating to the new canvas
         await new Promise((resolve) => setTimeout(resolve, 125));
-        navigate(`/canvas/${newCanvasId}`);
+        navigate(`/workflow/${newCanvasId}`);
         return true;
       } catch (err) {
         console.error('Error initializing workflow in new canvas:', err);

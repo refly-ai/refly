@@ -64,6 +64,13 @@ export const buildFinalRequestMessages = ({
   images: string[];
   modelInfo?: LLMModelConfig;
 }) => {
+  // Validate userPrompt is not empty - AWS Bedrock Converse API requires non-empty human message content
+  if (!userPrompt || userPrompt.trim() === '') {
+    throw new Error(
+      'Empty user prompt. Please provide a question or instruction for the AI to respond to.',
+    );
+  }
+
   // Prepare the final user message (with or without images)
   const finalUserMessage = images?.length
     ? createHumanMessageWithContent([

@@ -51,6 +51,7 @@ export * from './use-node-execution-focus';
 
 // Workflow hooks
 export * from './use-workflow-incomplete-nodes';
+export * from './use-first-success-execution-today';
 
 // Resource operations
 export * from './use-download-file';

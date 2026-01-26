@@ -624,7 +624,7 @@ export const PriceContent = memo((props: { source: PriceSource; entryPoint?: str
           planType,
           interval: interval,
           currentPlan,
-          source: 'Pricing',
+          source: 'pricing',
         };
 
         // Validate voucher before creating checkout session (only for monthly subscriptions)

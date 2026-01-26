@@ -252,221 +252,7 @@ export type ValidateMcpServerResponse = BaseResponse & {
   data?: Array<McpServerTool>;
 };
 
-export type DeleteMcpServerResponse = BaseResponse & {
-  data?: null;
-};
-
-export type Page = {
-  /**
-   * Page ID
-   */
-  pageId: string;
-  /**
-   * Page title
-   */
-  title: string;
-  /**
-   * Page description
-   */
-  description?: string;
-  /**
-   * Page status
-   */
-  status?: 'draft' | 'published';
-  /**
-   * Canvas ID associated with this page
-   */
-  canvasId?: string;
-  /**
-   * Page cover URL
-   */
-  coverUrl?: string;
-  /**
-   * Page creation time
-   */
-  createdAt: string;
-  /**
-   * Page last update time
-   */
-  updatedAt: string;
-};
-
-/**
- * Page status
- */
-export type status = 'draft' | 'published';
-
-export type PageNodeRelation = {
-  /**
-   * Relation ID
-   */
-  relationId: string;
-  /**
-   * Page ID
-   */
-  pageId?: string;
-  /**
-   * Node ID
-   */
-  nodeId: string;
-  /**
-   * Node type
-   */
-  nodeType: string;
-  /**
-   * Entity ID
-   */
-  entityId: string;
-  /**
-   * Order index
-   */
-  orderIndex: number;
-  /**
-   * Node data
-   */
-  nodeData?: CanvasNodeData;
-};
-
-export type PageDetail = Page & {
-  /**
-   * List of node relations
-   */
-  nodeRelations?: Array<PageNodeRelation>;
-  /**
-   * Page configuration
-   */
-  pageConfig?: {
-    [key: string]: unknown;
-  };
-};
-
-export type UpdatePageRequest = {
-  /**
-   * Page title
-   */
-  title?: string;
-  /**
-   * Page description
-   */
-  description?: string;
-  /**
-   * List of node relations with updated order
-   */
-  nodeRelations?: Array<{
-    /**
-     * Node ID
-     */
-    nodeId?: string;
-    /**
-     * New order index
-     */
-    orderIndex?: number;
-  }>;
-};
-
-export type UpdatePageResponse = BaseResponse & {
-  data?: Page & {
-    /**
-     * List of node relations
-     */
-    nodeRelations?: Array<PageNodeRelation>;
-  };
-};
-
-export type DeletePageResponse = BaseResponse & {
-  data?: {
-    /**
-     * ID of the deleted page
-     */
-    pageId?: string;
-    /**
-     * Canvas ID associated with the deleted page
-     */
-    canvasId?: string;
-  };
-};
-
-export type SharePageResponse = BaseResponse & {
-  data?: {
-    /**
-     * Page ID
-     */
-    pageId?: string;
-    /**
-     * Canvas ID associated with the page
-     */
-    canvasId?: string;
-    /**
-     * Share ID
-     */
-    shareId?: string;
-    /**
-     * Share URL
-     */
-    shareUrl?: string;
-  };
-};
-
-export type DeletePageNodeResponse = BaseResponse & {
-  data?: {
-    /**
-     * Page ID
-     */
-    pageId?: string;
-    /**
-     * Canvas ID associated with the page
-     */
-    canvasId?: string;
-    /**
-     * ID of the deleted node
-     */
-    nodeId?: string;
-  };
-};
-
-export type ListPagesResponse = BaseResponse & {
-  data?: {
-    /**
-     * Total number of pages
-     */
-    total?: number;
-    /**
-     * List of pages
-     */
-    pages?: Array<Page>;
-  };
-};
-
-export type PageDetailResponse = BaseResponse & {
-  data?: PageDetail;
-};
-
-export type AddPageNodesRequest = {
-  /**
-   * List of node IDs to add to the page
-   */
-  nodeIds: Array<string>;
-};
-
-export type AddPageNodesResponse = BaseResponse & {
-  data?: {
-    page?: Page;
-    /**
-     * List of node relations
-     */
-    nodeRelations?: Array<PageNodeRelation>;
-  };
-};
-
-export type CanvasPageResponse = BaseResponse & {
-  data?: {
-    page?: Page;
-    /**
-     * List of node relations
-     */
-    nodeRelations?: Array<PageNodeRelation>;
-  };
-};
+export type DeleteMcpServerResponse = BaseResponse;
 
 /**
  * Refly user, used as JWT payload
@@ -926,7 +712,7 @@ export type WorkflowScheduleRecord = {
 /**
  * Execution status
  */
-export type status2 =
+export type status =
   | 'scheduled'
   | 'pending'
   | 'processing'
@@ -1005,7 +791,7 @@ export type ListAllScheduleRecordsRequest = {
 /**
  * Filter by execution status
  */
-export type status3 = 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
+export type status2 = 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
 
 export type ListAllScheduleRecordsResponse = {
   /**
@@ -1443,122 +1229,6 @@ export type Entity = {
 };
 
 /**
- * Project source
- */
-export type ProjectSource = {
-  /**
-   * Entity ID
-   */
-  entityId?: string;
-  /**
-   * Entity type
-   */
-  entityType?: EntityType;
-  /**
-   * Project title
-   */
-  title?: string;
-  /**
-   * Project creation time
-   */
-  createdAt?: string;
-  /**
-   * Project update time
-   */
-  updatedAt?: string;
-};
-
-/**
- * Project
- */
-export type Project = {
-  /**
-   * Project ID
-   */
-  projectId: string;
-  /**
-   * Project name
-   */
-  name: string;
-  /**
-   * Project description
-   */
-  description?: string;
-  /**
-   * Project cover URL
-   */
-  coverUrl?: string;
-  /**
-   * Custom instructions for the project
-   */
-  customInstructions?: string;
-  /**
-   * Project creation time
-   */
-  createdAt?: string;
-  /**
-   * Project update time
-   */
-  updatedAt?: string;
-};
-
-/**
- * Label class
- */
-export type LabelClass = {
-  /**
-   * Label class ID
-   */
-  labelClassId: string;
-  /**
-   * Label class name
-   */
-  name: string;
-  /**
-   * Label class display name
-   */
-  displayName: string;
-  /**
-   * Label icon
-   */
-  icon?: Icon;
-  /**
-   * Label creation instruction prompt
-   */
-  prompt?: string;
-  /**
-   * Label class creation time
-   */
-  createdAt: string;
-  /**
-   * Label class update time
-   */
-  updatedAt: string;
-};
-
-/**
- * Label instances related to entities
- */
-export type LabelInstance = {
-  /**
-   * Label instance ID
-   */
-  labelId: string;
-  /**
-   * Label class ID
-   */
-  labelClassId: string;
-  /**
-   * Label class
-   */
-  labelClass?: LabelClass;
-  /**
-   * Label value
-   */
-  value: string;
-};
-
-/**
  * Data input mode
  */
 export type InputMode =
@@ -1717,125 +1387,6 @@ export type Icon = {
 };
 
 /**
- * Skill
- */
-export type Skill = {
-  /**
-   * Skill name
-   */
-  name: string;
-  /**
-   * Skill description
-   */
-  description?: string;
-  /**
-   * Skill icon
-   */
-  icon?: Icon;
-  /**
-   * Skill config schema
-   */
-  configSchema?: SkillTemplateConfigDefinition;
-  /**
-   * Skill template config
-   */
-  tplConfig?: SkillTemplateConfig;
-};
-
-/**
- * Skill trigger type
- */
-export type SkillTriggerType = 'timer' | 'simpleEvent';
-
-/**
- * Simple event name
- */
-export type SimpleEventName = 'onResourceReady';
-
-export type SimpleEvent = {
-  /**
-   * Simple event name
-   */
-  name: SimpleEventName;
-  /**
-   * Simple event display name (key is locale, value is display name)
-   */
-  displayName: {
-    [key: string]: unknown;
-  };
-};
-
-/**
- * Timer interval
- */
-export type TimerInterval = 'hour' | 'day' | 'week' | 'month' | 'year';
-
-export type TimerTriggerConfig = {
-  /**
-   * Time to run
-   */
-  datetime: string;
-  /**
-   * Repeat interval
-   */
-  repeatInterval?: TimerInterval;
-};
-
-/**
- * Skill triggers
- */
-export type SkillTrigger = {
-  /**
-   * Skill ID
-   */
-  skillId: string;
-  /**
-   * Trigger display name
-   */
-  displayName: string;
-  /**
-   * Trigger ID
-   */
-  triggerId: string;
-  /**
-   * Trigger type
-   */
-  triggerType: SkillTriggerType;
-  /**
-   * Simple event name (only required when trigger type is `simpleEvent`)
-   */
-  simpleEventName?: SimpleEventName;
-  /**
-   * Timer config (only required when trigger type is `timer`)
-   */
-  timerConfig?: TimerTriggerConfig;
-  /**
-   * Skill input
-   */
-  input?: SkillInput;
-  /**
-   * Skill context
-   */
-  context?: SkillContext;
-  /**
-   * Skill template config
-   */
-  tplConfig?: SkillTemplateConfig;
-  /**
-   * Trigger enabled
-   */
-  enabled: boolean;
-  /**
-   * Trigger creation time
-   */
-  createdAt: string;
-  /**
-   * Trigger update time
-   */
-  updatedAt: string;
-};
-
-/**
  * Skill metadata
  */
 export type SkillMeta = {
@@ -1893,40 +1444,6 @@ export type SkillTemplateConfig = {
  */
 export type ActionConfig = {
   [key: string]: DynamicConfigValue;
-};
-
-/**
- * Skill
- */
-export type SkillInstance = SkillMeta & {
-  /**
-   * Skill instance description
-   */
-  description?: string;
-  /**
-   * Skill instance prompt hint
-   */
-  promptHint?: string;
-  /**
-   * Skill template config
-   */
-  tplConfig?: SkillTemplateConfig;
-  /**
-   * Skill template config schema
-   */
-  tplConfigSchema?: SkillTemplateConfigDefinition;
-  /**
-   * Skill pinned time
-   */
-  pinnedAt?: string;
-  /**
-   * Skill creation time
-   */
-  createdAt: string;
-  /**
-   * Skill update time
-   */
-  updatedAt: string;
 };
 
 /**
@@ -2805,9 +2322,21 @@ export type UserPreferences = {
    */
   hasBeenInvited?: boolean;
   /**
+   * Whether the user has filled the survey form
+   */
+  hasFilledForm?: boolean;
+  /**
+   * User identity in survey form
+   */
+  identity?: string;
+  /**
    * Whether to require invitation code
    */
   requireInvitationCode?: boolean;
+  /**
+   * Whether this user needs onboarding
+   */
+  needOnboarding?: boolean;
   /**
    * Web search config
    */
@@ -2892,7 +2421,14 @@ export type UserSettings = {
    */
   preferences?: UserPreferences;
   /**
+   * User attributes
+   */
+  attributes?: {
+    [key: string]: unknown;
+  };
+  /**
    * Onboarding config
+   * @deprecated
    */
   onboarding?: OnboardingConfig;
 };
@@ -3101,7 +2637,7 @@ export type BaseResponseV2 = {
 /**
  * Response status
  */
-export type status4 = 'success' | 'failed';
+export type status3 = 'success' | 'failed';
 
 export type ListCanvasResponse = BaseResponse & {
   /**
@@ -3768,82 +3304,6 @@ export type AbortActionRequest = {
   version?: number;
 };
 
-export type ListProjectResponse = BaseResponse & {
-  /**
-   * Project list
-   */
-  data?: Array<Project>;
-};
-
-export type GetProjectDetailResponse = BaseResponse & {
-  data?: Project;
-};
-
-export type UpsertProjectRequest = {
-  /**
-   * Project ID (only used for update)
-   */
-  projectId?: string;
-  /**
-   * Project name
-   */
-  name?: string;
-  /**
-   * Project description
-   */
-  description?: string;
-  /**
-   * Project cover storage key
-   */
-  coverStorageKey?: string;
-  /**
-   * Custom instructions
-   */
-  customInstructions?: string;
-};
-
-export type UpsertProjectResponse = BaseResponse & {
-  data?: Project;
-};
-
-export type UpdateProjectItemsRequest = {
-  /**
-   * Project ID
-   */
-  projectId?: string;
-  /**
-   * Operation type
-   */
-  operation?: 'add' | 'remove';
-  /**
-   * Item list
-   */
-  items?: Array<Entity>;
-};
-
-/**
- * Operation type
- */
-export type operation = 'add' | 'remove';
-
-export type DeleteProjectRequest = {
-  /**
-   * Project ID to delete
-   */
-  projectId: string;
-};
-
-export type DeleteProjectItemsRequest = {
-  /**
-   * Project ID
-   */
-  projectId: string;
-  /**
-   * Item list
-   */
-  items: Array<Entity>;
-};
-
 /**
  * Skill event type
  */
@@ -4229,244 +3689,6 @@ export type DuplicateShareResponse = BaseResponse & {
   data?: Entity;
 };
 
-export type ListLabelClassesResponse = BaseResponse & {
-  /**
-   * Label class list
-   */
-  data?: Array<LabelClass>;
-};
-
-export type CreateLabelClassRequest = {
-  /**
-   * Label class name
-   */
-  name: string;
-  /**
-   * Label display name
-   */
-  displayName: string;
-  /**
-   * Label icon
-   */
-  icon?: Icon;
-  /**
-   * Label creation instruction prompt
-   */
-  prompt: string;
-};
-
-export type UpdateLabelClassRequest = {
-  /**
-   * Label class ID
-   */
-  labelClassId: string;
-  /**
-   * Label class name
-   */
-  name?: string;
-  /**
-   * Label display name
-   */
-  displayName?: string;
-  /**
-   * Label icon
-   */
-  icon?: Icon;
-  /**
-   * Label creation instruction prompt
-   */
-  prompt?: string;
-};
-
-export type UpsertLabelClassResponse = BaseResponse & {
-  /**
-   * Label class upserted
-   */
-  data?: LabelClass;
-};
-
-export type DeleteLabelClassRequest = {
-  /**
-   * Label class ID to delete
-   */
-  labelClassId: string;
-};
-
-export type ListLabelInstancesResponse = BaseResponse & {
-  /**
-   * Label list
-   */
-  data?: Array<LabelInstance>;
-};
-
-export type CreateLabelInstanceRequest = {
-  /**
-   * Label class ID
-   */
-  labelClassId: string;
-  /**
-   * Label value list
-   */
-  valueList: Array<string>;
-  /**
-   * Label entity type
-   */
-  entityType: EntityType;
-  /**
-   * Label entity ID
-   */
-  entityId: string;
-};
-
-export type UpdateLabelInstanceRequest = {
-  /**
-   * Label ID to update
-   */
-  labelId?: string;
-  /**
-   * Updated label value
-   */
-  value?: string;
-};
-
-export type UpsertLabelInstanceResponse = BaseResponse & {
-  /**
-   * Label instance upserted
-   */
-  data?: Array<LabelInstance>;
-};
-
-export type DeleteLabelInstanceRequest = {
-  /**
-   * Label ID to delete
-   */
-  labelId: string;
-};
-
-export type Action = {
-  /**
-   * Action type
-   */
-  actionType: ActionType;
-  /**
-   * Action name
-   */
-  actionName: string;
-  /**
-   * Action icon
-   */
-  icon?: Icon;
-};
-
-export type ListActionResponse = BaseResponse & {
-  /**
-   * Action list
-   */
-  data?: Array<Action>;
-};
-
-export type ListSkillResponse = BaseResponse & {
-  /**
-   * Skill list
-   */
-  data?: Array<Skill>;
-};
-
-export type ListSkillInstanceResponse = BaseResponse & {
-  /**
-   * Skill list
-   */
-  data?: Array<SkillInstance>;
-};
-
-export type SkillInstanceCreateParam = {
-  /**
-   * Skill template name
-   */
-  tplName?: string;
-  /**
-   * Skill display name
-   */
-  displayName: string;
-  /**
-   * Skill description
-   */
-  description?: string;
-  /**
-   * Skill instance icon
-   */
-  icon?: Icon;
-  /**
-   * Skill template config
-   */
-  tplConfig?: SkillTemplateConfig;
-};
-
-export type CreateSkillInstanceRequest = {
-  /**
-   * Skill instances to upsert
-   */
-  instanceList: Array<SkillInstanceCreateParam>;
-};
-
-export type CreateSkillInstanceResponse = BaseResponse & {
-  /**
-   * Skill instance list
-   */
-  data?: Array<SkillInstance>;
-};
-
-export type UpdateSkillInstanceRequest = {
-  /**
-   * Skill ID
-   */
-  skillId: string;
-  /**
-   * Skill display name
-   */
-  displayName?: string;
-  /**
-   * Skill description
-   */
-  description?: string;
-  /**
-   * Skill instance icon
-   */
-  icon?: Icon;
-  /**
-   * Skill template config
-   */
-  tplConfig?: SkillTemplateConfig;
-};
-
-export type UpdateSkillInstanceResponse = BaseResponse & {
-  /**
-   * Skill instance list
-   */
-  data?: SkillInstance;
-};
-
-export type PinSkillInstanceRequest = {
-  /**
-   * Skill ID to pin
-   */
-  skillId: string;
-};
-
-export type UnpinSkillInstanceRequest = {
-  /**
-   * Skill ID to unpin
-   */
-  skillId: string;
-};
-
-export type DeleteSkillInstanceRequest = {
-  /**
-   * Skill ID to delete
-   */
-  skillId: string;
-};
-
 /**
  * Skill input
  */
@@ -4748,10 +3970,6 @@ export type InvokeSkillRequest = {
    */
   target?: Entity;
   /**
-   * Project ID
-   */
-  projectId?: string;
-  /**
    * Result ID associated with this invocation.
    * 1) If not provided, a new resultId will be generated.
    * 2) If there is no existing result with this resultId, it will be created and run.
@@ -4812,87 +4030,6 @@ export type InvokeSkillResponse = BaseResponse & {
    * Skill result ID
    */
   resultId?: string;
-};
-
-export type ListSkillTriggerResponse = BaseResponse & {
-  /**
-   * Skill trigger list
-   */
-  data?: Array<SkillTrigger>;
-};
-
-export type SkillTriggerCreateParam = {
-  /**
-   * Skill ID
-   */
-  skillId: string;
-  /**
-   * Trigger display name
-   */
-  displayName: string;
-  /**
-   * Trigger type
-   */
-  triggerType: SkillTriggerType;
-  /**
-   * Simple event name (only required when trigger type is `simpleEvent`)
-   */
-  simpleEventName?: SimpleEventName;
-  /**
-   * Timer config (only required when trigger type is `timer`)
-   */
-  timerConfig?: TimerTriggerConfig;
-  /**
-   * Skill input
-   */
-  input?: SkillInput;
-  /**
-   * Skill invocation context
-   */
-  context?: SkillContext;
-  /**
-   * Skill template config
-   */
-  tplConfig?: SkillTemplateConfig;
-  /**
-   * Whether this trigger is enabled
-   */
-  enabled?: boolean;
-};
-
-export type CreateSkillTriggerRequest = {
-  /**
-   * Skill triggers to upsert
-   */
-  triggerList: Array<SkillTriggerCreateParam>;
-};
-
-export type CreateSkillTriggerResponse = BaseResponse & {
-  /**
-   * Skill trigger list
-   */
-  data?: Array<SkillTrigger>;
-};
-
-export type UpdateSkillTriggerRequest = SkillTriggerCreateParam & {
-  /**
-   * Trigger ID
-   */
-  triggerId: string;
-};
-
-export type UpdateSkillTriggerResponse = BaseResponse & {
-  /**
-   * Updated skill trigger
-   */
-  data?: SkillTrigger;
-};
-
-export type DeleteSkillTriggerRequest = {
-  /**
-   * Trigger ID to delete
-   */
-  triggerId: string;
 };
 
 /**
@@ -5302,7 +4439,7 @@ export type HeyGenGenerateVideoResponse = BaseResponseV2 & {
 /**
  * Video generation status
  */
-export type status5 = 'pending' | 'processing' | 'completed' | 'failed';
+export type status4 = 'pending' | 'processing' | 'completed' | 'failed';
 
 export type SandboxExecuteParams = {
   /**
@@ -5349,6 +4486,16 @@ export type SandboxExecuteContext = {
    * Result version for file registration
    */
   version?: number;
+  /**
+   * Whether PTC (Programmatic Tool Calling) is enabled
+   */
+  ptcEnabled?: boolean;
+  /**
+   * Environment variables for execution
+   */
+  env?: {
+    [key: string]: string;
+  };
 };
 
 export type SandboxExecuteRequest = {
@@ -5389,174 +4536,6 @@ export type SandboxExecuteResponse = BaseResponseV2 & {
      */
     warnings?: Array<string>;
   };
-};
-
-export type PilotStepStatus = 'init' | 'executing' | 'finish' | 'failed';
-
-export type PilotStep = {
-  /**
-   * Pilot step ID
-   */
-  stepId?: string;
-  /**
-   * Pilot step name
-   */
-  name?: string;
-  /**
-   * Pilot step epoch
-   */
-  epoch?: number;
-  /**
-   * Pilot step entity ID
-   */
-  entityId?: string;
-  /**
-   * Pilot step entity type
-   */
-  entityType?: string;
-  /**
-   * Pilot step status
-   */
-  status?: PilotStepStatus;
-  /**
-   * Pilot step raw output
-   */
-  rawOutput?: string;
-  /**
-   * Pilot step action result
-   */
-  actionResult?: ActionResult;
-  /**
-   * Pilot step created at
-   */
-  createdAt?: string;
-  /**
-   * Pilot step updated at
-   */
-  updatedAt?: string;
-};
-
-export type PilotSessionStatus = 'init' | 'executing' | 'waiting' | 'finish' | 'failed';
-
-export type PilotSession = {
-  /**
-   * Pilot session ID
-   */
-  sessionId: string;
-  /**
-   * Pilot session title
-   */
-  title: string;
-  /**
-   * Pilot session input
-   */
-  input: SkillInput;
-  /**
-   * Pilot session status
-   */
-  status: PilotSessionStatus;
-  /**
-   * Pilot session target type
-   */
-  targetType: EntityType;
-  /**
-   * Pilot session target ID
-   */
-  targetId: string;
-  /**
-   * Pilot session current epoch
-   */
-  currentEpoch: number;
-  /**
-   * Pilot session max epoch
-   */
-  maxEpoch: number;
-  /**
-   * Pilot steps
-   */
-  steps?: Array<PilotStep>;
-  /**
-   * Pilot session created at
-   */
-  createdAt?: string;
-  /**
-   * Pilot session updated at
-   */
-  updatedAt?: string;
-};
-
-export type CreatePilotSessionRequest = {
-  /**
-   * Pilot session target ID
-   */
-  targetId: string;
-  /**
-   * Pilot session target type
-   */
-  targetType: EntityType;
-  /**
-   * Pilot session max epoch
-   */
-  maxEpoch?: number;
-  /**
-   * Pilot session title
-   */
-  title?: string;
-  /**
-   * Pilot session input
-   */
-  input: SkillInput;
-  /**
-   * Pilot session provider item ID
-   */
-  providerItemId?: string;
-};
-
-export type UpdatePilotSessionRequest = {
-  /**
-   * Pilot session ID
-   */
-  sessionId: string;
-  /**
-   * Pilot session input
-   */
-  input?: SkillInput;
-  /**
-   * Pilot session max epoch
-   */
-  maxEpoch?: number;
-};
-
-export type RecoverPilotSessionRequest = {
-  /**
-   * Pilot session ID to recover
-   */
-  sessionId: string;
-  /**
-   * Optional array of specific step IDs to recover. If not provided, recovers all failed steps in the current epoch.
-   */
-  stepIds?: Array<string>;
-};
-
-export type UpsertPilotSessionResponse = BaseResponse & {
-  /**
-   * Upserted pilot session
-   */
-  data?: PilotSession;
-};
-
-export type ListPilotSessionsResponse = BaseResponse & {
-  /**
-   * Pilot session list
-   */
-  data?: Array<PilotSession>;
-};
-
-export type GetPilotSessionDetailResponse = BaseResponse & {
-  /**
-   * Pilot session detail
-   */
-  data?: PilotSession;
 };
 
 export type CopilotSession = {
@@ -5741,18 +4720,6 @@ export type GetFormDefinitionResponse = BaseResponse & {
   data?: FormDefinition;
 };
 
-export type HasFilledFormResponse = BaseResponse & {
-  /**
-   * Has filled form data
-   */
-  data?: {
-    /**
-     * Whether the user has filled the form
-     */
-    hasFilledForm?: boolean;
-  };
-};
-
 export type GetCreditRechargeResponse = BaseResponse & {
   /**
    * Credit recharge data with pagination
@@ -5928,18 +4895,6 @@ export type ListInvitationCodesResponse = BaseResponse & {
    * Invitation code list
    */
   data?: Array<InvitationCode>;
-};
-
-export type HasBeenInvitedResponse = BaseResponse & {
-  /**
-   * Has been invited data
-   */
-  data?: {
-    /**
-     * Whether user has been invited
-     */
-    hasBeenInvited?: boolean;
-  };
 };
 
 export type SubscriptionPlan = {
@@ -6312,6 +5267,25 @@ export type ConvertResponse = BaseResponse & {
      */
     content?: string;
   };
+};
+
+/**
+ * Prompt suggestion
+ */
+export type PromptSuggestion = {
+  /**
+   * Prompt (JSON map, key is language code, value is prompt)
+   */
+  prompt: {
+    [key: string]: string;
+  };
+};
+
+export type GetPromptSuggestionsResponse = BaseResponse & {
+  /**
+   * Prompt suggestions
+   */
+  data?: Array<PromptSuggestion>;
 };
 
 export type MediaGenerationModelCapabilities = {
@@ -7052,7 +6026,7 @@ export type ProviderTestResult = {
 /**
  * Test result status
  */
-export type status6 = 'success' | 'failed' | 'unknown';
+export type status5 = 'success' | 'failed' | 'unknown';
 
 export type TestProviderConnectionResponse = BaseResponse & {
   data?: ProviderTestResult;
@@ -7615,6 +6589,69 @@ export type DeleteToolsetRequest = {
   toolsetId: string;
 };
 
+export type ExecuteToolRequest = {
+  /**
+   * Toolset key
+   */
+  toolsetKey: string;
+  /**
+   * Tool method name to execute
+   */
+  toolName: string;
+  /**
+   * Tool arguments
+   */
+  arguments: {
+    [key: string]: unknown;
+  };
+};
+
+export type ExecuteToolResponse = BaseResponse & {
+  /**
+   * Tool execution result data
+   */
+  data?: {
+    [key: string]: unknown;
+  };
+};
+
+export type ExportToolsetDefinitionsResponse = BaseResponse & {
+  data?: Array<ToolsetExportDefinition>;
+};
+
+export type ToolsetExportDefinition = {
+  /**
+   * Toolset unique key
+   */
+  key?: string;
+  /**
+   * Toolset display name
+   */
+  name?: string;
+  /**
+   * Toolset description
+   */
+  description?: string;
+  tools?: Array<ToolExportDefinition>;
+};
+
+export type ToolExportDefinition = {
+  /**
+   * Tool method name
+   */
+  name?: string;
+  /**
+   * Tool description
+   */
+  description?: string;
+  /**
+   * JSON Schema format input parameter definition
+   */
+  inputSchema?: {
+    [key: string]: unknown;
+  };
+};
+
 export type GetToolCallResultResponse = BaseResponse & {
   data?: {
     result?: ToolCallResult;
@@ -7903,6 +6940,13 @@ export type WorkflowExecution = {
    * Workflow update timestamp
    */
   updatedAt?: string;
+};
+
+export type ListWorkflowExecutionsResponse = BaseResponse & {
+  /**
+   * List of workflow executions
+   */
+  data?: Array<WorkflowExecution>;
 };
 
 export type WorkflowTask = {
@@ -8630,7 +7674,7 @@ export type FormDefinition = {
 /**
  * Form status
  */
-export type status7 = 'draft' | 'published' | 'archived';
+export type status6 = 'draft' | 'published' | 'archived';
 
 export type FormSubmission = {
   /**
@@ -8666,7 +7710,7 @@ export type FormSubmission = {
 /**
  * Submission status
  */
-export type status8 = 'draft' | 'submitted' | 'reviewed';
+export type status7 = 'draft' | 'submitted' | 'reviewed';
 
 /**
  * RJSF compatible field schema definition
@@ -9870,7 +8914,7 @@ export type VoucherStatus = 'unused' | 'used' | 'expired' | 'invalid';
 /**
  * Voucher source
  */
-export type VoucherSource = 'template_publish' | 'invitation_claim';
+export type VoucherSource = 'template_publish' | 'invitation_claim' | 'run_workflow';
 
 /**
  * Invitation status
@@ -10199,120 +9243,6 @@ export type ValidateMcpServerData = {
 export type ValidateMcpServerResponse2 = ValidateMcpServerResponse;
 
 export type ValidateMcpServerError = unknown;
-
-export type ListPagesData = {
-  query?: {
-    /**
-     * Page number
-     */
-    page?: number;
-    /**
-     * Page size
-     */
-    pageSize?: number;
-  };
-};
-
-export type ListPagesResponse2 = ListPagesResponse;
-
-export type ListPagesError = unknown;
-
-export type GetPageDetailData = {
-  path: {
-    /**
-     * Page ID
-     */
-    pageId: string;
-  };
-};
-
-export type GetPageDetailResponse = PageDetailResponse;
-
-export type GetPageDetailError = unknown;
-
-export type UpdatePageData = {
-  body: UpdatePageRequest;
-  path: {
-    /**
-     * Page ID
-     */
-    pageId: string;
-  };
-};
-
-export type UpdatePageResponse2 = UpdatePageResponse;
-
-export type UpdatePageError = unknown;
-
-export type DeletePageData = {
-  path: {
-    /**
-     * Page ID
-     */
-    pageId: string;
-  };
-};
-
-export type DeletePageResponse2 = DeletePageResponse;
-
-export type DeletePageError = unknown;
-
-export type SharePageData = {
-  path: {
-    /**
-     * Page ID
-     */
-    pageId: string;
-  };
-};
-
-export type SharePageResponse2 = SharePageResponse;
-
-export type SharePageError = unknown;
-
-export type DeletePageNodeData = {
-  path: {
-    /**
-     * Node ID
-     */
-    nodeId: string;
-    /**
-     * Page ID
-     */
-    pageId: string;
-  };
-};
-
-export type DeletePageNodeResponse2 = DeletePageNodeResponse;
-
-export type DeletePageNodeError = unknown;
-
-export type GetPageByCanvasIdData = {
-  path: {
-    /**
-     * Canvas ID
-     */
-    canvasId: string;
-  };
-};
-
-export type GetPageByCanvasIdResponse = CanvasPageResponse;
-
-export type GetPageByCanvasIdError = unknown;
-
-export type AddNodesToCanvasPageData = {
-  body: AddPageNodesRequest;
-  path: {
-    /**
-     * Canvas ID
-     */
-    canvasId: string;
-  };
-};
-
-export type AddNodesToCanvasPageResponse = AddPageNodesResponse;
-
-export type AddNodesToCanvasPageError = unknown;
 
 export type GetAuthConfigResponse = AuthConfigResponse;
 
@@ -10983,80 +9913,6 @@ export type BatchUpdateDocumentResponse = BaseResponse;
 
 export type BatchUpdateDocumentError = unknown;
 
-export type ListProjectsData = {
-  query?: {
-    /**
-     * Order by
-     */
-    order?: ListOrder;
-    /**
-     * Page number
-     */
-    page?: number;
-    /**
-     * Page size
-     */
-    pageSize?: number;
-  };
-};
-
-export type ListProjectsResponse = ListProjectResponse;
-
-export type ListProjectsError = unknown;
-
-export type GetProjectDetailData = {
-  query: {
-    /**
-     * Project ID
-     */
-    projectId: string;
-  };
-};
-
-export type GetProjectDetailResponse2 = GetProjectDetailResponse;
-
-export type GetProjectDetailError = unknown;
-
-export type CreateProjectData = {
-  body: UpsertProjectRequest;
-};
-
-export type CreateProjectResponse = UpsertProjectResponse;
-
-export type CreateProjectError = unknown;
-
-export type UpdateProjectData = {
-  body: UpsertProjectRequest;
-};
-
-export type UpdateProjectResponse = UpsertProjectResponse;
-
-export type UpdateProjectError = unknown;
-
-export type UpdateProjectItemsData = {
-  body: UpdateProjectItemsRequest;
-};
-
-export type UpdateProjectItemsResponse = BaseResponse;
-
-export type UpdateProjectItemsError = unknown;
-
-export type DeleteProjectData = {
-  body: DeleteProjectRequest;
-};
-
-export type DeleteProjectResponse = BaseResponse;
-
-export type DeleteProjectError = unknown;
-
-export type DeleteProjectItemsData = {
-  body: DeleteProjectItemsRequest;
-};
-
-export type DeleteProjectItemsResponse = BaseResponse;
-
-export type DeleteProjectItemsError = unknown;
-
 export type ListCodeArtifactsData = {
   query?: {
     /**
@@ -11164,120 +10020,6 @@ export type DuplicateShareResponse2 = DuplicateShareResponse;
 
 export type DuplicateShareError = unknown;
 
-export type ListLabelClassesData = {
-  query?: {
-    /**
-     * Page number
-     */
-    page?: number;
-    /**
-     * Page size
-     */
-    pageSize?: number;
-  };
-};
-
-export type ListLabelClassesResponse2 = ListLabelClassesResponse;
-
-export type ListLabelClassesError = unknown;
-
-export type CreateLabelClassData = {
-  /**
-   * Label class creation request
-   */
-  body: CreateLabelClassRequest;
-};
-
-export type CreateLabelClassResponse = UpsertLabelClassResponse;
-
-export type CreateLabelClassError = unknown;
-
-export type UpdateLabelClassData = {
-  /**
-   * Label class update request
-   */
-  body: UpdateLabelClassRequest;
-};
-
-export type UpdateLabelClassResponse = UpsertLabelClassResponse;
-
-export type UpdateLabelClassError = unknown;
-
-export type DeleteLabelClassData = {
-  body: DeleteLabelClassRequest;
-};
-
-export type DeleteLabelClassResponse = BaseResponse;
-
-export type DeleteLabelClassError = unknown;
-
-export type ListLabelInstancesData = {
-  query?: {
-    /**
-     * Label class ID
-     */
-    classId?: string;
-    /**
-     * Entity type to retrieve
-     */
-    entityId?: string;
-    /**
-     * Entity type to retrieve
-     */
-    entityType?: EntityType;
-    /**
-     * Page number
-     */
-    page?: number;
-    /**
-     * Page size
-     */
-    pageSize?: number;
-    /**
-     * Label value
-     */
-    value?: string;
-  };
-};
-
-export type ListLabelInstancesResponse2 = ListLabelInstancesResponse;
-
-export type ListLabelInstancesError = unknown;
-
-export type CreateLabelInstanceData = {
-  /**
-   * Label instance creation request
-   */
-  body: CreateLabelInstanceRequest;
-};
-
-export type CreateLabelInstanceResponse = UpsertLabelInstanceResponse;
-
-export type CreateLabelInstanceError = unknown;
-
-export type UpdateLabelInstanceData = {
-  /**
-   * Label update request
-   */
-  body: UpdateLabelInstanceRequest;
-};
-
-export type UpdateLabelInstanceResponse = UpsertLabelInstanceResponse;
-
-export type UpdateLabelInstanceError = unknown;
-
-export type DeleteLabelInstanceData = {
-  body: DeleteLabelInstanceRequest;
-};
-
-export type DeleteLabelInstanceResponse = BaseResponse;
-
-export type DeleteLabelInstanceError = unknown;
-
-export type ListActionsResponse = ListActionResponse;
-
-export type ListActionsError = unknown;
-
 export type GetActionResultData = {
   query: {
     /**
@@ -11306,10 +10048,6 @@ export type AbortActionResponse = BaseResponse;
 
 export type AbortActionError = unknown;
 
-export type ListSkillsResponse = ListSkillResponse;
-
-export type ListSkillsError = unknown;
-
 export type InvokeSkillData = {
   /**
    * Skill invocation request
@@ -11332,128 +10070,6 @@ export type StreamInvokeSkillResponse = string;
 
 export type StreamInvokeSkillError = unknown;
 
-export type ListSkillInstancesData = {
-  query?: {
-    /**
-     * Page number
-     */
-    page?: number;
-    /**
-     * Page size
-     */
-    pageSize?: number;
-    /**
-     * Skill ID
-     */
-    skillId?: string;
-    /**
-     * Whether to sort by pinned skill instances
-     */
-    sortByPin?: boolean;
-  };
-};
-
-export type ListSkillInstancesResponse = ListSkillInstanceResponse;
-
-export type ListSkillInstancesError = unknown;
-
-export type CreateSkillInstanceData = {
-  /**
-   * Skill creation request
-   */
-  body: CreateSkillInstanceRequest;
-};
-
-export type CreateSkillInstanceResponse2 = CreateSkillInstanceResponse;
-
-export type CreateSkillInstanceError = unknown;
-
-export type UpdateSkillInstanceData = {
-  /**
-   * Skill update request
-   */
-  body: UpdateSkillInstanceRequest;
-};
-
-export type UpdateSkillInstanceResponse2 = UpdateSkillInstanceResponse;
-
-export type UpdateSkillInstanceError = unknown;
-
-export type PinSkillInstanceData = {
-  body: PinSkillInstanceRequest;
-};
-
-export type PinSkillInstanceResponse = BaseResponse;
-
-export type PinSkillInstanceError = unknown;
-
-export type UnpinSkillInstanceData = {
-  body: UnpinSkillInstanceRequest;
-};
-
-export type UnpinSkillInstanceResponse = BaseResponse;
-
-export type UnpinSkillInstanceError = unknown;
-
-export type DeleteSkillInstanceData = {
-  body: DeleteSkillInstanceRequest;
-};
-
-export type DeleteSkillInstanceResponse = BaseResponse;
-
-export type DeleteSkillInstanceError = unknown;
-
-export type ListSkillTriggersData = {
-  query?: {
-    /**
-     * Page number
-     */
-    page?: number;
-    /**
-     * Page size
-     */
-    pageSize?: number;
-    /**
-     * Skill ID
-     */
-    skillId?: string;
-  };
-};
-
-export type ListSkillTriggersResponse = ListSkillTriggerResponse;
-
-export type ListSkillTriggersError = unknown;
-
-export type CreateSkillTriggerData = {
-  /**
-   * Skill trigger creation request
-   */
-  body: CreateSkillTriggerRequest;
-};
-
-export type CreateSkillTriggerResponse2 = CreateSkillTriggerResponse;
-
-export type CreateSkillTriggerError = unknown;
-
-export type UpdateSkillTriggerData = {
-  /**
-   * Skill trigger update request
-   */
-  body: UpdateSkillTriggerRequest;
-};
-
-export type UpdateSkillTriggerResponse2 = UpdateSkillTriggerResponse;
-
-export type UpdateSkillTriggerError = unknown;
-
-export type DeleteSkillTriggerData = {
-  body: DeleteSkillTriggerRequest;
-};
-
-export type DeleteSkillTriggerResponse = BaseResponse;
-
-export type DeleteSkillTriggerError = unknown;
-
 export type GenerateMediaData = {
   body: MediaGenerateRequest;
 };
@@ -11461,68 +10077,6 @@ export type GenerateMediaData = {
 export type GenerateMediaResponse = MediaGenerateResponse;
 
 export type GenerateMediaError = unknown;
-
-export type CreatePilotSessionData = {
-  body: CreatePilotSessionRequest;
-};
-
-export type CreatePilotSessionResponse = UpsertPilotSessionResponse;
-
-export type CreatePilotSessionError = unknown;
-
-export type UpdatePilotSessionData = {
-  body: UpdatePilotSessionRequest;
-};
-
-export type UpdatePilotSessionResponse = UpsertPilotSessionResponse;
-
-export type UpdatePilotSessionError = unknown;
-
-export type ListPilotSessionsData = {
-  query?: {
-    /**
-     * Page number
-     */
-    page?: number;
-    /**
-     * Page size
-     */
-    pageSize?: number;
-    /**
-     * Target ID
-     */
-    targetId?: string;
-    /**
-     * Target type
-     */
-    targetType?: EntityType;
-  };
-};
-
-export type ListPilotSessionsResponse2 = ListPilotSessionsResponse;
-
-export type ListPilotSessionsError = unknown;
-
-export type GetPilotSessionDetailData = {
-  query: {
-    /**
-     * Pilot session ID
-     */
-    sessionId: string;
-  };
-};
-
-export type GetPilotSessionDetailResponse2 = GetPilotSessionDetailResponse;
-
-export type GetPilotSessionDetailError = unknown;
-
-export type RecoverPilotSessionData = {
-  body: RecoverPilotSessionRequest;
-};
-
-export type RecoverPilotSessionResponse = BaseResponse;
-
-export type RecoverPilotSessionError = unknown;
 
 export type ListCopilotSessionsData = {
   query?: {
@@ -11565,6 +10119,39 @@ export type AbortWorkflowData = {
 export type AbortWorkflowResponse = BaseResponse;
 
 export type AbortWorkflowError = unknown;
+
+export type ListWorkflowExecutionsData = {
+  query?: {
+    /**
+     * Creation time after filter (unix timestamp in milliseconds)
+     */
+    after?: number;
+    /**
+     * Canvas ID
+     */
+    canvasId?: string;
+    /**
+     * List order
+     */
+    order?: ListOrder;
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+    /**
+     * Execution status
+     */
+    status?: WorkflowExecutionStatus;
+  };
+};
+
+export type ListWorkflowExecutionsResponse2 = ListWorkflowExecutionsResponse;
+
+export type ListWorkflowExecutionsError = unknown;
 
 export type GetWorkflowDetailData = {
   query: {
@@ -11808,10 +10395,6 @@ export type SubmitFormResponse = BaseResponse;
 
 export type SubmitFormError = unknown;
 
-export type HasFilledFormResponse2 = HasFilledFormResponse;
-
-export type HasFilledFormError = unknown;
-
 export type GetCreditRechargeData = {
   query?: {
     /**
@@ -11917,10 +10500,6 @@ export type ActivateInvitationCodeData = {
 export type ActivateInvitationCodeResponse = BaseResponse;
 
 export type ActivateInvitationCodeError = unknown;
-
-export type HasBeenInvitedResponse2 = HasBeenInvitedResponse;
-
-export type HasBeenInvitedError = unknown;
 
 export type GetSubscriptionPlansResponse2 = GetSubscriptionPlansResponse;
 
@@ -12171,6 +10750,27 @@ export type DeleteToolsetResponse = BaseResponse;
 
 export type DeleteToolsetError = unknown;
 
+export type ExportToolsetDefinitionsData = {
+  query?: {
+    /**
+     * Toolset key(s) to export, comma-separated for multiple toolsets. If not provided, exports all supported toolsets.
+     */
+    toolsetKey?: string;
+  };
+};
+
+export type ExportToolsetDefinitionsResponse2 = ExportToolsetDefinitionsResponse;
+
+export type ExportToolsetDefinitionsError = unknown;
+
+export type ExecuteToolData = {
+  body: ExecuteToolRequest;
+};
+
+export type ExecuteToolResponse2 = ExecuteToolResponse;
+
+export type ExecuteToolError = unknown;
+
 export type GetToolCallResultData = {
   query: {
     /**
@@ -12250,6 +10850,10 @@ export type ConvertData = {
 export type ConvertResponse2 = ConvertResponse;
 
 export type ConvertError = unknown;
+
+export type GetPromptSuggestionsResponse2 = GetPromptSuggestionsResponse;
+
+export type GetPromptSuggestionsError = unknown;
 
 export type GetAvailableVouchersResponse2 = GetAvailableVouchersResponse;
 

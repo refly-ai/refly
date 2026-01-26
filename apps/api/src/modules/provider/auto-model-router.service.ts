@@ -21,7 +21,7 @@ import { PrismaService } from '../common/prisma.service';
  * All defined conditions must be satisfied simultaneously (AND logic)
  * Note: Scene matching is done via the rule's `scene` column, not in conditions
  */
-export interface RuleCondition {
+interface RuleCondition {
   /**
    * Toolset inventory keys list.
    * If any toolset in the request has an inventory key matching any in this list, matches.
@@ -52,7 +52,7 @@ export enum RoutingStrategy {
  * 2. Random routing (models field) - used when model is empty
  * 3. Weighted routing (weights field) - used when both model and models are empty
  */
-export interface RoutingTarget {
+interface RoutingTarget {
   // Priority 1: Fixed routing to a single model
   model?: string;
 

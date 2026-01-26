@@ -1,15 +1,12 @@
-import React, { memo, useCallback, useEffect, useState, useMemo } from 'react';
+import React, { memo, useCallback, useEffect, useState, useMemo, lazy, Suspense } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
-import { TemplateList } from '@refly-packages/ai-workspace-common/components/canvas-template/template-list';
 import { TemplateCardSkeleton } from '@refly-packages/ai-workspace-common/components/canvas-template/template-card-skeleton';
 import { canvasTemplateEnabled } from '@refly/ui-kit';
 import { useSiderStoreShallow } from '@refly/stores';
 import cn from 'classnames';
-import { DocAdd, ArrowRight, Knowledge } from 'refly-icons';
-import { RecentWorkflow } from './recent-workflow';
 import { useListCanvasTemplateCategories } from '@refly-packages/ai-workspace-common/queries/queries';
-import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
@@ -20,8 +17,28 @@ import { useSubscriptionUsage } from '@refly-packages/ai-workspace-common/hooks/
 import { SiderMenuSettingList } from '../../sider-menu-setting-list';
 import { Subscription, Account } from 'refly-icons';
 import { Avatar, Divider } from 'antd';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
-import { logEvent } from '@refly/telemetry-web';
+import defaultAvatar from '../../../assets/refly_default_avatar_v2.webp';
+
+// ========== Lazy load large components ==========
+// Advantage: These components are not immediately needed on first screen, lazy loading significantly reduces initial bundle size
+// PureCopilot - AI Copilot component (~300-500KB)
+const PureCopilot = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/pure-copilot').then((m) => ({
+    default: m.PureCopilot,
+  })),
+);
+
+// TemplateList - Template list component (~200-300KB) - Only loaded when canvasTemplateEnabled
+const TemplateList = lazy(() =>
+  import('@refly-packages/ai-workspace-common/components/canvas-template/template-list').then(
+    (m) => ({ default: m.TemplateList }),
+  ),
+);
+
+// RecentWorkflow - Recent workflows (may include Canvas components)
+const RecentWorkflow = lazy(() =>
+  import('./recent-workflow').then((m) => ({ default: m.RecentWorkflow })),
+);
 
 // User avatar component for displaying user profile
 const UserAvatar = React.memo(
@@ -217,13 +234,19 @@ const ModuleContainer = ({
   className?: string;
   handleTitleClick?: () => void;
 }) => {
+  const { t } = useTranslation();
   return (
     <div className={cn('flex flex-col gap-4 mb-10', className)}>
-      <div className="text-[18px] leading-7 font-semibold text-refly-text-1 flex items-center gap-2 justify-between">
+      <div className="text-[18px] leading-7 font-semibold text-refly-text-0 flex items-center gap-2 justify-between">
         {title}
         {handleTitleClick && (
-          <Button className="!h-8 !w-8 p-0" type="text" size="small" onClick={handleTitleClick}>
-            <ArrowRight size={20} />
+          <Button
+            className="!h-8 !min-w-8 py-0 px-1 text-refly-text-2"
+            type="text"
+            size="small"
+            onClick={handleTitleClick}
+          >
+            {t('common.more')}
           </Button>
         )}
       </div>
@@ -236,14 +259,12 @@ export const FrontPage = memo(() => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { getCanvasList } = useHandleSiderData();
+  const [isCopilotFloating, setIsCopilotFloating] = useState(false);
 
-  const { canvasList, setIsManualCollapse } = useSiderStoreShallow((state) => ({
+  const { canvasList } = useSiderStoreShallow((state) => ({
     canvasList: state.canvasList,
-    setIsManualCollapse: state.setIsManualCollapse,
   }));
-  const canvases = canvasList?.slice(0, 4);
-
-  const { debouncedCreateCanvas, isCreating: createCanvasLoading } = useCreateCanvas({});
+  const canvases = canvasList?.slice(0, 3);
 
   const { data, isLoading: isLoadingCategories } = useListCanvasTemplateCategories({}, undefined, {
     enabled: true,
@@ -344,12 +365,6 @@ export const FrontPage = memo(() => {
     }
   }, [templateCategories, templateCategoryId, isLoadingCategories]);
 
-  const handleNewWorkflow = useCallback(() => {
-    logEvent('new_workflow', Date.now(), {});
-    setIsManualCollapse(false);
-    debouncedCreateCanvas();
-  }, [debouncedCreateCanvas, setIsManualCollapse, logEvent]);
-
   const handleTemplateCategoryClick = useCallback(
     (categoryId: string) => {
       if (categoryId === templateCategoryId) return;
@@ -366,23 +381,35 @@ export const FrontPage = memo(() => {
     window.open('/workflow-marketplace', '_blank');
   }, []);
 
-  const handleViewKnowledgeBase = useCallback(() => {
-    const isChinese = i18n.language?.startsWith('zh');
-    const url = isChinese
-      ? 'https://powerformer.feishu.cn/wiki/KrI1wxCKiisumTkOLJbcLeY7nec?fromScene=spaceOverview'
-      : 'https://reflydoc.notion.site/how-to-use-refly';
-    window.open(url, '_blank');
-  }, [i18n.language]);
-
   useEffect(() => {
     getCanvasList();
-  }, []);
+  }, [getCanvasList]);
+
+  useEffect(() => {
+    if (isCopilotFloating) {
+      const scrollableDiv = document.getElementById('front-page-scrollable-div');
+      if (scrollableDiv) {
+        scrollableDiv.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }, [isCopilotFloating]);
+
+  useEffect(() => {
+    if (isCopilotFloating) {
+      const scrollableDiv = document.getElementById('front-page-scrollable-div');
+      if (scrollableDiv) {
+        scrollableDiv.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }, [isCopilotFloating]);
 
   return (
     <div
       className={cn(
-        'w-full h-full bg-refly-bg-content-z2 overflow-y-auto p-5 rounded-xl border border-solid border-refly-Card-Border relative',
+        'w-full h-full bg-refly-bg-content-z2 p-5 rounded-xl border border-solid border-refly-Card-Border relative',
+        isCopilotFloating ? 'overflow-hidden' : 'overflow-y-auto',
       )}
+      style={{ scrollbarGutter: 'stable' }}
       id="front-page-scrollable-div"
     >
       <Helmet>
@@ -393,56 +420,50 @@ export const FrontPage = memo(() => {
         <SettingItem showName={false} avatarAlign={'right'} />
       </div>
 
-      <ModuleContainer title={t('frontPage.newWorkflow.title')} className="mt-[120px]">
-        <div className="flex gap-4">
-          <Button
-            className="w-fit h-fit flex items-center gap-2  border-[1px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover transition-colors"
-            onClick={handleNewWorkflow}
-            loading={createCanvasLoading}
-          >
-            <DocAdd size={42} color="var(--refly-primary-default)" />
-            <div className="flex flex-col gap-1 w-[184px]">
-              <div className="text-left text-base leading-[26px] font-semibold text-refly-text-0">
-                {t('frontPage.newWorkflow.buttonText')}
-              </div>
-              <div className="text-left text-xs text-refly-text-3 leading-4 font-normal">
-                {t('frontPage.newWorkflow.buttonDescription')}
-              </div>
-            </div>
-          </Button>
-          <Button
-            className="w-fit h-fit flex items-center gap-2  border-[1px] border-solid border-refly-Card-Border rounded-xl p-3 cursor-pointer bg-transparent hover:bg-refly-fill-hover transition-colors"
-            onClick={handleViewKnowledgeBase}
-          >
-            <Knowledge size={42} color="var(--refly-primary-default)" />
-            <div className="flex flex-col gap-1 w-[184px]">
-              <div className="text-left text-base leading-[26px] font-semibold text-refly-text-0">
-                {t('frontPage.tutorial.buttonText')}
-              </div>
-              <div className="text-left text-xs text-refly-text-3 leading-4 font-normal">
-                {t('frontPage.tutorial.buttonDescription')}
-              </div>
-            </div>
-          </Button>
-        </div>
-      </ModuleContainer>
+      <Suspense fallback={<div className="mt-[120px] h-20" />}>
+        <PureCopilot
+          source="frontPage"
+          classnames={cn('mt-[120px] relative z-10', isCopilotFloating && 'z-20')}
+          onFloatingChange={setIsCopilotFloating}
+        />
+      </Suspense>
 
-      {canvases?.length > 0 && (
-        <ModuleContainer
-          title={t('frontPage.recentWorkflows.title')}
-          handleTitleClick={handleViewAllWorkflows}
+      <AnimatePresence>
+        {isCopilotFloating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 z-[5] bg-white/60 dark:bg-black/60 backdrop-blur-[15px] rounded-xl transition-colors"
+          />
+        )}
+      </AnimatePresence>
+
+      <ModuleContainer
+        className="mt-[50px]"
+        title={t('frontPage.recentWorkflows.title')}
+        handleTitleClick={handleViewAllWorkflows}
+      >
+        <Suspense
+          fallback={
+            <div className="h-40 flex items-center justify-center text-refly-text-2">
+              {t('common.loading')}
+            </div>
+          }
         >
           <RecentWorkflow canvases={canvases} />
-        </ModuleContainer>
-      )}
+        </Suspense>
+      </ModuleContainer>
 
       {canvasTemplateEnabled && (
         <ModuleContainer
+          className="mt-[50px]"
           title={t('frontPage.template.title')}
           handleTitleClick={handleViewMarketplace}
         >
           {templateCategories.length > 1 && (
-            <div className="flex items-center gap-2 flex-wrap mb-3">
+            <div className="flex items-center justify-start gap-2 flex-wrap mb-3">
               {templateCategories.map((category) => (
                 <div
                   key={category.categoryId}
@@ -494,13 +515,23 @@ export const FrontPage = memo(() => {
               </div>
             ) : templateCategoryId && templateCategoryId.trim().length > 0 ? (
               // Show template list when category is selected and valid
-              <TemplateList
-                source="front-page"
-                scrollableTargetId="front-page-scrollable-div"
-                language={currentLanguage}
-                categoryId={templateCategoryId}
-                className="!bg-transparent !px-0 !pt-0"
-              />
+              <Suspense
+                fallback={
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <TemplateCardSkeleton key={index} />
+                    ))}
+                  </div>
+                }
+              >
+                <TemplateList
+                  source="front-page"
+                  scrollableTargetId="front-page-scrollable-div"
+                  language={currentLanguage}
+                  categoryId={templateCategoryId}
+                  className="!bg-transparent !px-0 !pt-0"
+                />
+              </Suspense>
             ) : (
               // Fallback: show loading skeleton if categoryId is invalid
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

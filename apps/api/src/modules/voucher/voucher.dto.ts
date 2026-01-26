@@ -1,22 +1,6 @@
 import { VoucherStatusType, VoucherSourceType, InvitationStatusType } from './voucher.constants';
 
 /**
- * Template Scoring Result
- */
-export interface TemplateScoringBreakdown {
-  structure: number; // 0-30
-  inputDesign: number; // 0-25
-  promptQuality: number; // 0-25
-  reusability: number; // 0-20
-}
-
-export interface TemplateScoringResult {
-  score: number; // 0-100
-  breakdown?: TemplateScoringBreakdown;
-  feedback?: string;
-}
-
-/**
  * Voucher DTO
  */
 export interface VoucherDTO {
@@ -45,6 +29,17 @@ export interface CreateVoucherInput {
   source: VoucherSourceType;
   sourceId?: string;
   expiresAt: Date;
+}
+
+/**
+ * Update Voucher Input
+ */
+export interface UpdateVoucherInput {
+  discountPercent?: number;
+  llmScore?: number;
+  expiresAt?: Date;
+  sourceId?: string;
+  status?: VoucherStatusType;
 }
 
 /**
@@ -109,40 +104,12 @@ export interface ClaimInvitationResult {
 }
 
 /**
- * Voucher Popup Log Entry
- */
-export interface VoucherPopupLogDTO {
-  uid: string;
-  templateId: string;
-  popupDate: string;
-  voucherId?: string;
-  createdAt: string;
-}
-
-/**
- * Scoring Input from Canvas
- */
-export interface CanvasScoringInput {
-  canvasId: string;
-  title?: string;
-  description?: string;
-}
-
-/**
  * Voucher Available Check Result
  */
 export interface VoucherAvailableResult {
   hasAvailableVoucher: boolean;
   vouchers: VoucherDTO[];
   bestVoucher?: VoucherDTO;
-}
-
-/**
- * Voucher Validate Request
- */
-export interface VoucherValidateRequest {
-  voucherId: string;
-  planType?: string;
 }
 
 /**

@@ -372,387 +372,6 @@ export const DeleteMcpServerResponseSchema = {
     {
       $ref: '#/components/schemas/BaseResponse',
     },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'null',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const PageSchema = {
-  type: 'object',
-  required: ['pageId', 'title', 'createdAt', 'updatedAt'],
-  properties: {
-    pageId: {
-      type: 'string',
-      description: 'Page ID',
-      example: 'pg-g30e1b80b5g1itbemc0g5jj3',
-    },
-    title: {
-      type: 'string',
-      description: 'Page title',
-      example: 'My Page',
-    },
-    description: {
-      type: 'string',
-      description: 'Page description',
-    },
-    status: {
-      type: 'string',
-      description: 'Page status',
-      enum: ['draft', 'published'],
-    },
-    canvasId: {
-      type: 'string',
-      description: 'Canvas ID associated with this page',
-      example: 'cv-g30e1b80b5g1itbemc0g5jj3',
-    },
-    coverUrl: {
-      type: 'string',
-      description: 'Page cover URL',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Page creation time',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Page last update time',
-    },
-  },
-} as const;
-
-export const PageNodeRelationSchema = {
-  type: 'object',
-  required: ['relationId', 'nodeId', 'nodeType', 'entityId', 'orderIndex'],
-  properties: {
-    relationId: {
-      type: 'string',
-      description: 'Relation ID',
-    },
-    pageId: {
-      type: 'string',
-      description: 'Page ID',
-    },
-    nodeId: {
-      type: 'string',
-      description: 'Node ID',
-    },
-    nodeType: {
-      type: 'string',
-      description: 'Node type',
-    },
-    entityId: {
-      type: 'string',
-      description: 'Entity ID',
-    },
-    orderIndex: {
-      type: 'integer',
-      description: 'Order index',
-    },
-    nodeData: {
-      description: 'Node data',
-      $ref: '#/components/schemas/CanvasNodeData',
-    },
-  },
-} as const;
-
-export const PageDetailSchema = {
-  type: 'object',
-  allOf: [
-    {
-      $ref: '#/components/schemas/Page',
-    },
-    {
-      type: 'object',
-      properties: {
-        nodeRelations: {
-          type: 'array',
-          description: 'List of node relations',
-          items: {
-            $ref: '#/components/schemas/PageNodeRelation',
-          },
-        },
-        pageConfig: {
-          type: 'object',
-          description: 'Page configuration',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpdatePageRequestSchema = {
-  type: 'object',
-  properties: {
-    title: {
-      type: 'string',
-      description: 'Page title',
-    },
-    description: {
-      type: 'string',
-      description: 'Page description',
-    },
-    nodeRelations: {
-      type: 'array',
-      description: 'List of node relations with updated order',
-      items: {
-        type: 'object',
-        properties: {
-          nodeId: {
-            type: 'string',
-            description: 'Node ID',
-          },
-          orderIndex: {
-            type: 'integer',
-            description: 'New order index',
-          },
-        },
-      },
-    },
-  },
-} as const;
-
-export const UpdatePageResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          allOf: [
-            {
-              $ref: '#/components/schemas/Page',
-            },
-            {
-              type: 'object',
-              properties: {
-                nodeRelations: {
-                  type: 'array',
-                  description: 'List of node relations',
-                  items: {
-                    $ref: '#/components/schemas/PageNodeRelation',
-                  },
-                },
-              },
-            },
-          ],
-        },
-      },
-    },
-  ],
-} as const;
-
-export const DeletePageResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            pageId: {
-              type: 'string',
-              description: 'ID of the deleted page',
-            },
-            canvasId: {
-              type: 'string',
-              description: 'Canvas ID associated with the deleted page',
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const SharePageResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            pageId: {
-              type: 'string',
-              description: 'Page ID',
-            },
-            canvasId: {
-              type: 'string',
-              description: 'Canvas ID associated with the page',
-            },
-            shareId: {
-              type: 'string',
-              description: 'Share ID',
-            },
-            shareUrl: {
-              type: 'string',
-              description: 'Share URL',
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const DeletePageNodeResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            pageId: {
-              type: 'string',
-              description: 'Page ID',
-            },
-            canvasId: {
-              type: 'string',
-              description: 'Canvas ID associated with the page',
-            },
-            nodeId: {
-              type: 'string',
-              description: 'ID of the deleted node',
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const ListPagesResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            total: {
-              type: 'integer',
-              description: 'Total number of pages',
-            },
-            pages: {
-              type: 'array',
-              description: 'List of pages',
-              items: {
-                $ref: '#/components/schemas/Page',
-              },
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const PageDetailResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          $ref: '#/components/schemas/PageDetail',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const AddPageNodesRequestSchema = {
-  type: 'object',
-  required: ['nodeIds'],
-  properties: {
-    nodeIds: {
-      type: 'array',
-      description: 'List of node IDs to add to the page',
-      items: {
-        type: 'string',
-      },
-    },
-  },
-} as const;
-
-export const AddPageNodesResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            page: {
-              $ref: '#/components/schemas/Page',
-            },
-            nodeRelations: {
-              type: 'array',
-              description: 'List of node relations',
-              items: {
-                $ref: '#/components/schemas/PageNodeRelation',
-              },
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const CanvasPageResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            page: {
-              $ref: '#/components/schemas/Page',
-            },
-            nodeRelations: {
-              type: 'array',
-              description: 'List of node relations',
-              items: {
-                $ref: '#/components/schemas/PageNodeRelation',
-              },
-            },
-          },
-        },
-      },
-    },
   ],
 } as const;
 
@@ -1955,142 +1574,6 @@ export const EntitySchema = {
   },
 } as const;
 
-export const ProjectSourceSchema = {
-  type: 'object',
-  description: 'Project source',
-  properties: {
-    entityId: {
-      type: 'string',
-      description: 'Entity ID',
-    },
-    entityType: {
-      description: 'Entity type',
-      $ref: '#/components/schemas/EntityType',
-    },
-    title: {
-      type: 'string',
-      description: 'Project title',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Project creation time',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Project update time',
-    },
-  },
-} as const;
-
-export const ProjectSchema = {
-  type: 'object',
-  description: 'Project',
-  required: ['projectId', 'name'],
-  properties: {
-    projectId: {
-      type: 'string',
-      description: 'Project ID',
-    },
-    name: {
-      type: 'string',
-      description: 'Project name',
-    },
-    description: {
-      type: 'string',
-      description: 'Project description',
-    },
-    coverUrl: {
-      type: 'string',
-      description: 'Project cover URL',
-    },
-    customInstructions: {
-      type: 'string',
-      description: 'Custom instructions for the project',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Project creation time',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Project update time',
-    },
-  },
-} as const;
-
-export const LabelClassSchema = {
-  type: 'object',
-  description: 'Label class',
-  required: ['labelClassId', 'name', 'displayName', 'createdAt', 'updatedAt'],
-  properties: {
-    labelClassId: {
-      type: 'string',
-      description: 'Label class ID',
-      example: 'lc-g30e1b80b5g1itbemc0g5jj3',
-    },
-    name: {
-      type: 'string',
-      description: 'Label class name',
-      example: 'Related Dataset',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Label class display name',
-      example: 'Label display name',
-    },
-    icon: {
-      description: 'Label icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    prompt: {
-      type: 'string',
-      description: 'Label creation instruction prompt',
-      example: 'Extract labels for the tech-related keywords',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Label class creation time',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Label class update time',
-    },
-  },
-} as const;
-
-export const LabelInstanceSchema = {
-  type: 'object',
-  description: 'Label instances related to entities',
-  required: ['labelId', 'labelClassId', 'value'],
-  properties: {
-    labelId: {
-      type: 'string',
-      description: 'Label instance ID',
-      example: 'lb-g30e1b80b5g1itbemc0g5jj3',
-    },
-    labelClassId: {
-      type: 'string',
-      description: 'Label class ID',
-      example: 'lc-g30e1b80b5g1itbemc0g5jj3',
-    },
-    labelClass: {
-      description: 'Label class',
-      $ref: '#/components/schemas/LabelClass',
-    },
-    value: {
-      type: 'string',
-      description: 'Label value',
-      example: 'HotPotQA',
-    },
-  },
-} as const;
-
 export const InputModeSchema = {
   type: 'string',
   description: 'Data input mode',
@@ -2299,153 +1782,6 @@ export const IconSchema = {
   },
 } as const;
 
-export const SkillSchema = {
-  type: 'object',
-  description: 'Skill',
-  required: ['name'],
-  properties: {
-    name: {
-      type: 'string',
-      description: 'Skill name',
-    },
-    description: {
-      type: 'string',
-      description: 'Skill description',
-    },
-    icon: {
-      description: 'Skill icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    configSchema: {
-      description: 'Skill config schema',
-      $ref: '#/components/schemas/SkillTemplateConfigDefinition',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-  },
-} as const;
-
-export const SkillTriggerTypeSchema = {
-  type: 'string',
-  description: 'Skill trigger type',
-  enum: ['timer', 'simpleEvent'],
-} as const;
-
-export const SimpleEventNameSchema = {
-  type: 'string',
-  description: 'Simple event name',
-  enum: ['onResourceReady'],
-} as const;
-
-export const SimpleEventSchema = {
-  type: 'object',
-  required: ['name', 'displayName'],
-  properties: {
-    name: {
-      description: 'Simple event name',
-      $ref: '#/components/schemas/SimpleEventName',
-    },
-    displayName: {
-      type: 'object',
-      description: 'Simple event display name (key is locale, value is display name)',
-    },
-  },
-} as const;
-
-export const TimerIntervalSchema = {
-  type: 'string',
-  description: 'Timer interval',
-  enum: ['hour', 'day', 'week', 'month', 'year'],
-} as const;
-
-export const TimerTriggerConfigSchema = {
-  type: 'object',
-  required: ['datetime'],
-  properties: {
-    datetime: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Time to run',
-    },
-    repeatInterval: {
-      type: 'string',
-      description: 'Repeat interval',
-      $ref: '#/components/schemas/TimerInterval',
-    },
-  },
-} as const;
-
-export const SkillTriggerSchema = {
-  type: 'object',
-  description: 'Skill triggers',
-  required: [
-    'skillId',
-    'displayName',
-    'triggerId',
-    'triggerType',
-    'enabled',
-    'createdAt',
-    'updatedAt',
-  ],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID',
-      example: 'sk-g30e1b80b5g1itbemc0g5jj3',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Trigger display name',
-      example: 'My trigger',
-    },
-    triggerId: {
-      type: 'string',
-      description: 'Trigger ID',
-      example: 'tr-g30e1b80b5g1itbemc0g5jj3',
-    },
-    triggerType: {
-      description: 'Trigger type',
-      $ref: '#/components/schemas/SkillTriggerType',
-    },
-    simpleEventName: {
-      description: 'Simple event name (only required when trigger type is `simpleEvent`)',
-      $ref: '#/components/schemas/SimpleEventName',
-    },
-    timerConfig: {
-      description: 'Timer config (only required when trigger type is `timer`)',
-      $ref: '#/components/schemas/TimerTriggerConfig',
-    },
-    input: {
-      description: 'Skill input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    context: {
-      description: 'Skill context',
-      $ref: '#/components/schemas/SkillContext',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-    enabled: {
-      type: 'boolean',
-      description: 'Trigger enabled',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Trigger creation time',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Trigger update time',
-    },
-  },
-} as const;
-
 export const SkillMetaSchema = {
   type: 'object',
   description: 'Skill metadata',
@@ -2514,53 +1850,6 @@ export const ActionConfigSchema = {
     description: 'Skill template config value',
     $ref: '#/components/schemas/DynamicConfigValue',
   },
-} as const;
-
-export const SkillInstanceSchema = {
-  type: 'object',
-  description: 'Skill',
-  allOf: [
-    {
-      $ref: '#/components/schemas/SkillMeta',
-    },
-    {
-      type: 'object',
-      required: ['createdAt', 'updatedAt', 'invocationConfig'],
-      properties: {
-        description: {
-          type: 'string',
-          description: 'Skill instance description',
-        },
-        promptHint: {
-          type: 'string',
-          description: 'Skill instance prompt hint',
-        },
-        tplConfig: {
-          description: 'Skill template config',
-          $ref: '#/components/schemas/SkillTemplateConfig',
-        },
-        tplConfigSchema: {
-          description: 'Skill template config schema',
-          $ref: '#/components/schemas/SkillTemplateConfigDefinition',
-        },
-        pinnedAt: {
-          type: 'string',
-          format: 'date-time',
-          description: 'Skill pinned time',
-        },
-        createdAt: {
-          type: 'string',
-          format: 'date-time',
-          description: 'Skill creation time',
-        },
-        updatedAt: {
-          type: 'string',
-          format: 'date-time',
-          description: 'Skill update time',
-        },
-      },
-    },
-  ],
 } as const;
 
 export const SourceMetaSchema = {
@@ -3571,9 +2860,21 @@ export const UserPreferencesSchema = {
       description: 'Whether the user has been invited',
       default: false,
     },
+    hasFilledForm: {
+      type: 'boolean',
+      description: 'Whether the user has filled the survey form',
+    },
+    identity: {
+      type: 'string',
+      description: 'User identity in survey form',
+    },
     requireInvitationCode: {
       type: 'boolean',
       description: 'Whether to require invitation code',
+    },
+    needOnboarding: {
+      type: 'boolean',
+      description: 'Whether this user needs onboarding',
     },
     webSearch: {
       description: 'Web search config',
@@ -3675,7 +2976,13 @@ export const UserSettingsSchema = {
       description: 'User preferences',
       $ref: '#/components/schemas/UserPreferences',
     },
+    attributes: {
+      type: 'object',
+      description: 'User attributes',
+      additionalProperties: true,
+    },
     onboarding: {
+      deprecated: true,
       description: 'Onboarding config',
       $ref: '#/components/schemas/OnboardingConfig',
     },
@@ -5127,136 +4434,6 @@ export const AbortActionRequestSchema = {
   },
 } as const;
 
-export const ListProjectResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Project list',
-          items: {
-            $ref: '#/components/schemas/Project',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const GetProjectDetailResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          $ref: '#/components/schemas/Project',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpsertProjectRequestSchema = {
-  type: 'object',
-  properties: {
-    projectId: {
-      type: 'string',
-      description: 'Project ID (only used for update)',
-    },
-    name: {
-      type: 'string',
-      description: 'Project name',
-    },
-    description: {
-      type: 'string',
-      description: 'Project description',
-    },
-    coverStorageKey: {
-      type: 'string',
-      description: 'Project cover storage key',
-    },
-    customInstructions: {
-      type: 'string',
-      description: 'Custom instructions',
-    },
-  },
-} as const;
-
-export const UpsertProjectResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          $ref: '#/components/schemas/Project',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpdateProjectItemsRequestSchema = {
-  type: 'object',
-  properties: {
-    projectId: {
-      type: 'string',
-      description: 'Project ID',
-    },
-    operation: {
-      type: 'string',
-      description: 'Operation type',
-      enum: ['add', 'remove'],
-    },
-    items: {
-      type: 'array',
-      description: 'Item list',
-      items: {
-        $ref: '#/components/schemas/Entity',
-      },
-    },
-  },
-} as const;
-
-export const DeleteProjectRequestSchema = {
-  type: 'object',
-  required: ['projectId'],
-  properties: {
-    projectId: {
-      type: 'string',
-      description: 'Project ID to delete',
-      example: 'p-g30e1b80b5g1itbemc0g5jj3',
-    },
-  },
-} as const;
-
-export const DeleteProjectItemsRequestSchema = {
-  type: 'object',
-  required: ['projectId', 'items'],
-  properties: {
-    projectId: {
-      type: 'string',
-      description: 'Project ID',
-    },
-    items: {
-      type: 'array',
-      description: 'Item list',
-      items: {
-        $ref: '#/components/schemas/Entity',
-      },
-    },
-  },
-} as const;
-
 export const SkillEventTypeSchema = {
   type: 'string',
   description: 'Skill event type',
@@ -5756,427 +4933,6 @@ export const DuplicateShareResponseSchema = {
   ],
 } as const;
 
-export const ListLabelClassesResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Label class list',
-          items: {
-            $ref: '#/components/schemas/LabelClass',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const CreateLabelClassRequestSchema = {
-  type: 'object',
-  required: ['name', 'displayName', 'prompt'],
-  properties: {
-    name: {
-      type: 'string',
-      description: 'Label class name',
-      example: 'my_class',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Label display name',
-      example: 'My Class',
-    },
-    icon: {
-      description: 'Label icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    prompt: {
-      type: 'string',
-      description: 'Label creation instruction prompt',
-      example: 'Extract labels for the tech-related keywords',
-    },
-  },
-} as const;
-
-export const UpdateLabelClassRequestSchema = {
-  type: 'object',
-  required: ['labelClassId'],
-  properties: {
-    labelClassId: {
-      type: 'string',
-      description: 'Label class ID',
-    },
-    name: {
-      type: 'string',
-      description: 'Label class name',
-      example: 'My Class',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Label display name',
-      example: 'My Class',
-    },
-    icon: {
-      description: 'Label icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    prompt: {
-      type: 'string',
-      description: 'Label creation instruction prompt',
-      example: 'Extract labels for the tech-related keywords',
-    },
-  },
-} as const;
-
-export const UpsertLabelClassResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          description: 'Label class upserted',
-          $ref: '#/components/schemas/LabelClass',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const DeleteLabelClassRequestSchema = {
-  type: 'object',
-  required: ['labelClassId'],
-  properties: {
-    labelClassId: {
-      type: 'string',
-      description: 'Label class ID to delete',
-      example: 'lc-g30e1b80b5g1itbemc0g5jj3',
-    },
-  },
-} as const;
-
-export const ListLabelInstancesResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Label list',
-          items: {
-            $ref: '#/components/schemas/LabelInstance',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const CreateLabelInstanceRequestSchema = {
-  type: 'object',
-  required: ['labelClassId', 'valueList', 'entityType', 'entityId'],
-  properties: {
-    labelClassId: {
-      type: 'string',
-      description: 'Label class ID',
-      example: 'lc-g30e1b80b5g1itbemc0g5jj3',
-    },
-    valueList: {
-      type: 'array',
-      description: 'Label value list',
-      items: {
-        type: 'string',
-        example: 'label-1',
-      },
-    },
-    entityType: {
-      description: 'Label entity type',
-      $ref: '#/components/schemas/EntityType',
-    },
-    entityId: {
-      description: 'Label entity ID',
-      type: 'string',
-    },
-  },
-} as const;
-
-export const UpdateLabelInstanceRequestSchema = {
-  type: 'object',
-  properties: {
-    labelId: {
-      type: 'string',
-      description: 'Label ID to update',
-    },
-    value: {
-      type: 'string',
-      description: 'Updated label value',
-    },
-  },
-} as const;
-
-export const UpsertLabelInstanceResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Label instance upserted',
-          items: {
-            $ref: '#/components/schemas/LabelInstance',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const DeleteLabelInstanceRequestSchema = {
-  type: 'object',
-  required: ['labelId'],
-  properties: {
-    labelId: {
-      type: 'string',
-      description: 'Label ID to delete',
-      example: 'lb-g30e1b80b5g1itbemc0g5jj3',
-    },
-  },
-} as const;
-
-export const ActionSchema = {
-  type: 'object',
-  required: ['actionType', 'actionName'],
-  properties: {
-    actionType: {
-      type: 'string',
-      description: 'Action type',
-      $ref: '#/components/schemas/ActionType',
-    },
-    actionName: {
-      type: 'string',
-      description: 'Action name',
-    },
-    icon: {
-      description: 'Action icon',
-      $ref: '#/components/schemas/Icon',
-    },
-  },
-} as const;
-
-export const ListActionResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Action list',
-          items: {
-            $ref: '#/components/schemas/Action',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const ListSkillResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill list',
-          items: {
-            $ref: '#/components/schemas/Skill',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const ListSkillInstanceResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill list',
-          items: {
-            $ref: '#/components/schemas/SkillInstance',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const SkillInstanceCreateParamSchema = {
-  type: 'object',
-  required: ['displayName'],
-  properties: {
-    tplName: {
-      type: 'string',
-      description: 'Skill template name',
-      example: 'online-search',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Skill display name',
-      example: 'My Custom Skill',
-    },
-    description: {
-      type: 'string',
-      description: 'Skill description',
-    },
-    icon: {
-      description: 'Skill instance icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-  },
-} as const;
-
-export const CreateSkillInstanceRequestSchema = {
-  type: 'object',
-  required: ['instanceList'],
-  properties: {
-    instanceList: {
-      type: 'array',
-      description: 'Skill instances to upsert',
-      items: {
-        $ref: '#/components/schemas/SkillInstanceCreateParam',
-      },
-    },
-  },
-} as const;
-
-export const CreateSkillInstanceResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill instance list',
-          items: {
-            $ref: '#/components/schemas/SkillInstance',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpdateSkillInstanceRequestSchema = {
-  type: 'object',
-  required: ['skillId'],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID',
-      example: 's-g30e1b80b5g1itbemc0g5jj3',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Skill display name',
-      example: 'My Custom Skill',
-    },
-    description: {
-      type: 'string',
-      description: 'Skill description',
-    },
-    icon: {
-      description: 'Skill instance icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-  },
-} as const;
-
-export const UpdateSkillInstanceResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          description: 'Skill instance list',
-          $ref: '#/components/schemas/SkillInstance',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const PinSkillInstanceRequestSchema = {
-  type: 'object',
-  required: ['skillId'],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID to pin',
-    },
-  },
-} as const;
-
-export const UnpinSkillInstanceRequestSchema = {
-  type: 'object',
-  required: ['skillId'],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID to unpin',
-    },
-  },
-} as const;
-
-export const DeleteSkillInstanceRequestSchema = {
-  type: 'object',
-  required: ['skillId'],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID to delete',
-    },
-  },
-} as const;
-
 export const SkillInputSchema = {
   type: 'object',
   description: 'Skill input',
@@ -6502,10 +5258,6 @@ export const InvokeSkillRequestSchema = {
       description: 'Skill invocation target',
       $ref: '#/components/schemas/Entity',
     },
-    projectId: {
-      type: 'string',
-      description: 'Project ID',
-    },
     resultId: {
       type: 'string',
       description: `Result ID associated with this invocation.
@@ -6585,152 +5337,6 @@ export const InvokeSkillResponseSchema = {
       },
     },
   ],
-} as const;
-
-export const ListSkillTriggerResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill trigger list',
-          items: {
-            $ref: '#/components/schemas/SkillTrigger',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const SkillTriggerCreateParamSchema = {
-  type: 'object',
-  required: ['skillId', 'displayName', 'triggerType'],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID',
-      example: 'sk-g30e1b80b5g1itbemc0g5jj3',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Trigger display name',
-      example: 'My trigger',
-    },
-    triggerType: {
-      description: 'Trigger type',
-      $ref: '#/components/schemas/SkillTriggerType',
-    },
-    simpleEventName: {
-      description: 'Simple event name (only required when trigger type is `simpleEvent`)',
-      $ref: '#/components/schemas/SimpleEventName',
-    },
-    timerConfig: {
-      description: 'Timer config (only required when trigger type is `timer`)',
-      $ref: '#/components/schemas/TimerTriggerConfig',
-    },
-    input: {
-      description: 'Skill input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    context: {
-      description: 'Skill invocation context',
-      $ref: '#/components/schemas/SkillContext',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-    enabled: {
-      type: 'boolean',
-      description: 'Whether this trigger is enabled',
-    },
-  },
-} as const;
-
-export const CreateSkillTriggerRequestSchema = {
-  type: 'object',
-  required: ['triggerList'],
-  properties: {
-    triggerList: {
-      type: 'array',
-      description: 'Skill triggers to upsert',
-      items: {
-        $ref: '#/components/schemas/SkillTriggerCreateParam',
-      },
-    },
-  },
-} as const;
-
-export const CreateSkillTriggerResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill trigger list',
-          items: {
-            $ref: '#/components/schemas/SkillTrigger',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpdateSkillTriggerRequestSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/SkillTriggerCreateParam',
-    },
-    {
-      type: 'object',
-      required: ['triggerId'],
-      properties: {
-        triggerId: {
-          type: 'string',
-          description: 'Trigger ID',
-          example: 'tr-g30e1b80b5g1itbemc0g5jj3',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpdateSkillTriggerResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          description: 'Updated skill trigger',
-          $ref: '#/components/schemas/SkillTrigger',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const DeleteSkillTriggerRequestSchema = {
-  type: 'object',
-  required: ['triggerId'],
-  properties: {
-    triggerId: {
-      type: 'string',
-      description: 'Trigger ID to delete',
-    },
-  },
 } as const;
 
 export const MediaTypeSchema = {
@@ -7367,6 +5973,17 @@ export const SandboxExecuteContextSchema = {
       type: 'number',
       description: 'Result version for file registration',
     },
+    ptcEnabled: {
+      type: 'boolean',
+      description: 'Whether PTC (Programmatic Tool Calling) is enabled',
+    },
+    env: {
+      type: 'object',
+      additionalProperties: {
+        type: 'string',
+      },
+      description: 'Environment variables for execution',
+    },
   },
 } as const;
 
@@ -7432,250 +6049,6 @@ export const SandboxExecuteResponseSchema = {
               },
             },
           },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const PilotStepStatusSchema = {
-  type: 'string',
-  enum: ['init', 'executing', 'finish', 'failed'],
-} as const;
-
-export const PilotStepSchema = {
-  type: 'object',
-  properties: {
-    stepId: {
-      type: 'string',
-      description: 'Pilot step ID',
-    },
-    name: {
-      type: 'string',
-      description: 'Pilot step name',
-    },
-    epoch: {
-      type: 'number',
-      description: 'Pilot step epoch',
-    },
-    entityId: {
-      type: 'string',
-      description: 'Pilot step entity ID',
-    },
-    entityType: {
-      type: 'string',
-      description: 'Pilot step entity type',
-    },
-    status: {
-      description: 'Pilot step status',
-      $ref: '#/components/schemas/PilotStepStatus',
-    },
-    rawOutput: {
-      type: 'string',
-      description: 'Pilot step raw output',
-    },
-    actionResult: {
-      description: 'Pilot step action result',
-      $ref: '#/components/schemas/ActionResult',
-    },
-    createdAt: {
-      type: 'string',
-      description: 'Pilot step created at',
-    },
-    updatedAt: {
-      type: 'string',
-      description: 'Pilot step updated at',
-    },
-  },
-} as const;
-
-export const PilotSessionStatusSchema = {
-  type: 'string',
-  enum: ['init', 'executing', 'waiting', 'finish', 'failed'],
-} as const;
-
-export const PilotSessionSchema = {
-  type: 'object',
-  required: [
-    'sessionId',
-    'status',
-    'targetType',
-    'targetId',
-    'title',
-    'input',
-    'currentEpoch',
-    'maxEpoch',
-  ],
-  properties: {
-    sessionId: {
-      type: 'string',
-      description: 'Pilot session ID',
-    },
-    title: {
-      type: 'string',
-      description: 'Pilot session title',
-    },
-    input: {
-      description: 'Pilot session input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    status: {
-      description: 'Pilot session status',
-      $ref: '#/components/schemas/PilotSessionStatus',
-    },
-    targetType: {
-      description: 'Pilot session target type',
-      $ref: '#/components/schemas/EntityType',
-    },
-    targetId: {
-      type: 'string',
-      description: 'Pilot session target ID',
-    },
-    currentEpoch: {
-      type: 'number',
-      description: 'Pilot session current epoch',
-    },
-    maxEpoch: {
-      type: 'number',
-      description: 'Pilot session max epoch',
-    },
-    steps: {
-      type: 'array',
-      description: 'Pilot steps',
-      items: {
-        $ref: '#/components/schemas/PilotStep',
-      },
-    },
-    createdAt: {
-      type: 'string',
-      description: 'Pilot session created at',
-    },
-    updatedAt: {
-      type: 'string',
-      description: 'Pilot session updated at',
-    },
-  },
-} as const;
-
-export const CreatePilotSessionRequestSchema = {
-  type: 'object',
-  required: ['targetId', 'targetType', 'input'],
-  properties: {
-    targetId: {
-      type: 'string',
-      description: 'Pilot session target ID',
-    },
-    targetType: {
-      description: 'Pilot session target type',
-      $ref: '#/components/schemas/EntityType',
-    },
-    maxEpoch: {
-      type: 'number',
-      description: 'Pilot session max epoch',
-      default: 2,
-    },
-    title: {
-      type: 'string',
-      description: 'Pilot session title',
-    },
-    input: {
-      description: 'Pilot session input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    providerItemId: {
-      type: 'string',
-      description: 'Pilot session provider item ID',
-    },
-  },
-} as const;
-
-export const UpdatePilotSessionRequestSchema = {
-  type: 'object',
-  required: ['sessionId'],
-  properties: {
-    sessionId: {
-      type: 'string',
-      description: 'Pilot session ID',
-    },
-    input: {
-      description: 'Pilot session input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    maxEpoch: {
-      type: 'number',
-      description: 'Pilot session max epoch',
-      default: 2,
-    },
-  },
-} as const;
-
-export const RecoverPilotSessionRequestSchema = {
-  type: 'object',
-  required: ['sessionId'],
-  properties: {
-    sessionId: {
-      type: 'string',
-      description: 'Pilot session ID to recover',
-    },
-    stepIds: {
-      type: 'array',
-      description:
-        'Optional array of specific step IDs to recover. If not provided, recovers all failed steps in the current epoch.',
-      items: {
-        type: 'string',
-      },
-    },
-  },
-} as const;
-
-export const UpsertPilotSessionResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          description: 'Upserted pilot session',
-          $ref: '#/components/schemas/PilotSession',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const ListPilotSessionsResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Pilot session list',
-          items: {
-            $ref: '#/components/schemas/PilotSession',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const GetPilotSessionDetailResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          description: 'Pilot session detail',
-          $ref: '#/components/schemas/PilotSession',
         },
       },
     },
@@ -7954,30 +6327,6 @@ export const GetFormDefinitionResponseSchema = {
           type: 'object',
           description: 'Form definition',
           $ref: '#/components/schemas/FormDefinition',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const HasFilledFormResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          description: 'Has filled form data',
-          properties: {
-            hasFilledForm: {
-              type: 'boolean',
-              description: 'Whether the user has filled the form',
-              default: false,
-            },
-          },
         },
       },
     },
@@ -8267,30 +6616,6 @@ export const ListInvitationCodesResponseSchema = {
           description: 'Invitation code list',
           items: {
             $ref: '#/components/schemas/InvitationCode',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const HasBeenInvitedResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          description: 'Has been invited data',
-          properties: {
-            hasBeenInvited: {
-              type: 'boolean',
-              description: 'Whether user has been invited',
-              default: false,
-            },
           },
         },
       },
@@ -8861,6 +7186,41 @@ export const ConvertResponseSchema = {
               type: 'string',
               description: 'Converted markdown content',
             },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const PromptSuggestionSchema = {
+  type: 'object',
+  description: 'Prompt suggestion',
+  required: ['prompt'],
+  properties: {
+    prompt: {
+      type: 'object',
+      description: 'Prompt (JSON map, key is language code, value is prompt)',
+      additionalProperties: {
+        type: 'string',
+      },
+    },
+  },
+} as const;
+
+export const GetPromptSuggestionsResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Prompt suggestions',
+          items: {
+            $ref: '#/components/schemas/PromptSuggestion',
           },
         },
       },
@@ -10600,6 +8960,106 @@ export const DeleteToolsetRequestSchema = {
   },
 } as const;
 
+export const ExecuteToolRequestSchema = {
+  type: 'object',
+  required: ['toolsetKey', 'toolName', 'arguments'],
+  properties: {
+    toolsetKey: {
+      type: 'string',
+      description: 'Toolset key',
+    },
+    toolName: {
+      type: 'string',
+      description: 'Tool method name to execute',
+    },
+    arguments: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Tool arguments',
+    },
+  },
+} as const;
+
+export const ExecuteToolResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Tool execution result data',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ExportToolsetDefinitionsResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            $ref: '#/components/schemas/ToolsetExportDefinition',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ToolsetExportDefinitionSchema = {
+  type: 'object',
+  properties: {
+    key: {
+      type: 'string',
+      description: 'Toolset unique key',
+    },
+    name: {
+      type: 'string',
+      description: 'Toolset display name',
+    },
+    description: {
+      type: 'string',
+      description: 'Toolset description',
+    },
+    tools: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/ToolExportDefinition',
+      },
+    },
+  },
+} as const;
+
+export const ToolExportDefinitionSchema = {
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Tool method name',
+    },
+    description: {
+      type: 'string',
+      description: 'Tool description',
+    },
+    inputSchema: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'JSON Schema format input parameter definition',
+    },
+  },
+} as const;
+
 export const GetToolCallResultResponseSchema = {
   allOf: [
     {
@@ -10986,6 +9446,26 @@ export const WorkflowExecutionSchema = {
       description: 'Workflow update timestamp',
     },
   },
+} as const;
+
+export const ListWorkflowExecutionsResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'List of workflow executions',
+          items: {
+            $ref: '#/components/schemas/WorkflowExecution',
+          },
+        },
+      },
+    },
+  ],
 } as const;
 
 export const WorkflowTaskSchema = {
@@ -13582,7 +12062,7 @@ export const VoucherStatusSchema = {
 
 export const VoucherSourceSchema = {
   type: 'string',
-  enum: ['template_publish', 'invitation_claim'],
+  enum: ['template_publish', 'invitation_claim', 'run_workflow'],
   description: 'Voucher source',
 } as const;
 

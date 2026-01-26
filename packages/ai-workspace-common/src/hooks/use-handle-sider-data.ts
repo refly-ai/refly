@@ -1,34 +1,25 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useSiderStoreShallow } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useUserStore } from '@refly/stores';
 
 export const DATA_NUM = 100;
 
 export const useHandleSiderData = (initData?: boolean) => {
-  const {
-    canvasList,
-    updateCanvasList,
-    sourceList,
-    updateSourceList,
-    projectsList,
-    updateProjectsList,
-  } = useSiderStoreShallow((state) => ({
-    canvasList: state.canvasList,
-    updateCanvasList: state.setCanvasList,
-    sourceList: state.sourceList,
-    updateSourceList: state.setSourceList,
-    projectsList: state.projectsList,
-    updateProjectsList: state.setProjectsList,
-  }));
+  const { canvasList, updateCanvasList, sourceList, updateSourceList } = useSiderStoreShallow(
+    (state) => ({
+      canvasList: state.canvasList,
+      updateCanvasList: state.setCanvasList,
+      sourceList: state.sourceList,
+      updateSourceList: state.setSourceList,
+    }),
+  );
 
   const [isLoadingCanvas, setIsLoadingCanvas] = useState(false);
   const [isLoadingResource, setIsLoadingResource] = useState(false);
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
-  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const hasInitialized = useRef(false);
 
-  const requestCanvasList = async () => {
+  const requestCanvasList = useCallback(async () => {
     const { data: res, error } = await getClient().listCanvases({
       query: { page: 1, pageSize: DATA_NUM },
     });
@@ -37,63 +28,31 @@ export const useHandleSiderData = (initData?: boolean) => {
       return [];
     }
     return res?.data || [];
-  };
+  }, []);
 
-  const getCanvasList = async (setLoading?: boolean) => {
-    setLoading && setIsLoadingCanvas(true);
+  const getCanvasList = useCallback(
+    async (setLoading?: boolean) => {
+      setLoading && setIsLoadingCanvas(true);
 
-    const canvases = await requestCanvasList();
-    setLoading && setIsLoadingCanvas(false);
-    const formattedCanvases = canvases.map((canvas) => ({
-      id: canvas.canvasId,
-      name: canvas.title,
-      createdAt: canvas.createdAt,
-      updatedAt: canvas.updatedAt,
-      type: 'canvas' as const,
-      owner: canvas.owner,
-      usedToolsets: canvas.usedToolsets,
-      shareRecord: canvas.shareRecord,
-    }));
-    updateCanvasList(formattedCanvases);
-    return formattedCanvases;
-  };
+      const canvases = await requestCanvasList();
+      setLoading && setIsLoadingCanvas(false);
+      const formattedCanvases = canvases.map((canvas) => ({
+        id: canvas.canvasId,
+        name: canvas.title,
+        createdAt: canvas.createdAt,
+        updatedAt: canvas.updatedAt,
+        type: 'canvas' as const,
+        owner: canvas.owner,
+        usedToolsets: canvas.usedToolsets,
+        shareRecord: canvas.shareRecord,
+      }));
+      updateCanvasList(formattedCanvases);
+      return formattedCanvases;
+    },
+    [requestCanvasList, updateCanvasList],
+  );
 
-  const requestProjectsList = async () => {
-    const { isLogin } = useUserStore.getState();
-    if (!isLogin) return;
-
-    const { data: res, error } = await getClient().listProjects({
-      query: { page: 1, pageSize: DATA_NUM },
-    });
-    if (error) {
-      console.error('getProjectsList error', error);
-      return [];
-    }
-    return res?.data || [];
-  };
-
-  const getProjectsList = async (setLoading?: boolean) => {
-    setLoading && setIsLoadingProjects(true);
-
-    const projects = await requestProjectsList();
-
-    if (!projects) return [];
-
-    setLoading && setIsLoadingProjects(false);
-    const formattedProjects = projects.map((project) => ({
-      id: project.projectId,
-      name: project.name,
-      description: project.description,
-      createdAt: project.createdAt ?? '',
-      updatedAt: project.updatedAt ?? '',
-      coverUrl: project.coverUrl,
-      type: 'project' as const,
-    }));
-    updateProjectsList(formattedProjects);
-    return formattedProjects;
-  };
-
-  const getResourceList = async () => {
+  const getResourceList = useCallback(async () => {
     if (isLoadingResource) return;
     setIsLoadingResource(true);
     const { data: res, error } = await getClient().listResources({
@@ -105,9 +64,9 @@ export const useHandleSiderData = (initData?: boolean) => {
       return [];
     }
     return res?.data || [];
-  };
+  }, [isLoadingResource]);
 
-  const getDocumentList = async () => {
+  const getDocumentList = useCallback(async () => {
     if (isLoadingDocument) return;
     setIsLoadingDocument(true);
     const { data: res, error } = await getClient().listDocuments({
@@ -119,9 +78,9 @@ export const useHandleSiderData = (initData?: boolean) => {
       return [];
     }
     return res?.data || [];
-  };
+  }, [isLoadingDocument]);
 
-  const getSourceList = async () => {
+  const getSourceList = useCallback(async () => {
     const resources = await getResourceList();
     const documents = await getDocumentList();
 
@@ -144,7 +103,7 @@ export const useHandleSiderData = (initData?: boolean) => {
       return dateB - dateA;
     });
     updateSourceList(sorted as any);
-  };
+  }, [getResourceList, getDocumentList, updateSourceList]);
 
   const loadingSource = useMemo(
     () => isLoadingResource || isLoadingDocument,
@@ -153,7 +112,6 @@ export const useHandleSiderData = (initData?: boolean) => {
 
   const loadSiderData = async (setLoading?: boolean) => {
     getCanvasList(setLoading);
-    getProjectsList(setLoading);
   };
 
   useEffect(() => {
@@ -169,10 +127,6 @@ export const useHandleSiderData = (initData?: boolean) => {
     canvasList,
     isLoadingCanvas,
     updateCanvasList,
-    getProjectsList,
-    projectsList,
-    isLoadingProjects,
-    updateProjectsList,
     sourceList,
     loadingSource,
     getSourceList,

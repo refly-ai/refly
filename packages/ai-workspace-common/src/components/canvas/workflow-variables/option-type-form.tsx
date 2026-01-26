@@ -3,7 +3,12 @@ import { Form, Input, Button, Radio, Tooltip, Select, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Add, Delete } from 'refly-icons';
 import { MdOutlineDragIndicator } from 'react-icons/md';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import {
+  LazyDnDContext as DragDropContext,
+  LazyDroppable as Droppable,
+  LazyDraggable as Draggable,
+  type DropResult,
+} from '@refly-packages/ai-workspace-common/components/common/lazy-dnd';
 import cn from 'classnames';
 import { MAX_OPTIONS } from './constants';
 

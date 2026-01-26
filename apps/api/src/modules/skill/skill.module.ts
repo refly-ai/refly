@@ -13,10 +13,8 @@ import {
   QUEUE_CHECK_STUCK_ACTIONS,
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_AUTO_NAME_CANVAS,
-  QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_TOKEN_CREDIT_USAGE,
 } from '../../utils';
-import { LabelModule } from '../label/label.module';
 import { SkillProcessor, CheckStuckActionsProcessor } from '../skill/skill.processor';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { CreditModule } from '../credit/credit.module';
@@ -35,13 +33,13 @@ import { ToolCallModule } from '../tool-call/tool-call.module';
 import { DriveModule } from '../drive/drive.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
 import { WorkflowPlanModule } from '../workflow/workflow-plan.module';
+import { SandboxModule } from '../sandbox/sandbox.module';
 
 @Module({
   imports: [
     CommonModule,
     StepModule,
     forwardRef(() => ActionModule),
-    LabelModule,
     SearchModule,
     KnowledgeModule,
     RAGModule,
@@ -57,6 +55,7 @@ import { WorkflowPlanModule } from '../workflow/workflow-plan.module';
     MediaGeneratorModule,
     CanvasSyncModule,
     WorkflowPlanModule,
+    SandboxModule,
     ...(isDesktop()
       ? []
       : [
@@ -66,7 +65,6 @@ import { WorkflowPlanModule } from '../workflow/workflow-plan.module';
           BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_CREDIT_USAGE }),
           BullModule.registerQueue({ name: QUEUE_SYNC_REQUEST_USAGE }),
           BullModule.registerQueue({ name: QUEUE_AUTO_NAME_CANVAS }),
-          BullModule.registerQueue({ name: QUEUE_SYNC_PILOT_STEP }),
         ]),
   ],
   providers: [

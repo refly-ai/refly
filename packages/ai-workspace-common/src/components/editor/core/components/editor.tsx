@@ -8,11 +8,6 @@ import { EditorCommandTunnelContext } from './editor-command';
 import type { FC, ReactNode } from 'react';
 import type { EditorProviderProps, JSONContent } from '@tiptap/react';
 
-export interface EditorProps {
-  readonly children: ReactNode;
-  readonly className?: string;
-}
-
 interface EditorRootProps {
   readonly children: ReactNode;
 }

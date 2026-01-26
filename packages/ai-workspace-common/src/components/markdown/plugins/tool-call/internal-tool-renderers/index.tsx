@@ -2,6 +2,8 @@ import React from 'react';
 import { InternalToolRendererProps, InternalToolRendererMainProps } from './types';
 import { ReadFileRenderer } from './read-file-renderer';
 import { ListFilesRenderer } from './list-files-renderer';
+import { ReadAgentResultRenderer } from './read-agent-result-renderer';
+import { ReadToolResultRenderer } from './read-tool-result-renderer';
 import { DefaultInternalRenderer } from './default-renderer';
 import './index.scss';
 
@@ -12,6 +14,8 @@ import './index.scss';
 const internalToolRenderers: Record<string, React.FC<InternalToolRendererProps>> = {
   read_file: ReadFileRenderer,
   list_files: ListFilesRenderer,
+  read_agent_result: ReadAgentResultRenderer,
+  read_tool_result: ReadToolResultRenderer,
 };
 
 /**
@@ -29,5 +33,3 @@ export const InternalToolRenderer: React.FC<InternalToolRendererMainProps> = (pr
   // Fallback for unknown internal tools
   return <DefaultInternalRenderer toolsetKey={toolsetKey} toolsetName={toolsetName} {...rest} />;
 };
-
-export type { InternalToolRendererProps, InternalToolRendererMainProps } from './types';

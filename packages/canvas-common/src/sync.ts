@@ -6,6 +6,7 @@ import {
   CanvasData,
   ModelInfo,
 } from '@refly/openapi-schema';
+import { LOCALE } from '@refly/common-types';
 import {
   genCanvasVersionId,
   genStartID,
@@ -19,9 +20,22 @@ import { MAX_STATE_TX_COUNT, MAX_VERSION_AGE } from './constants';
 export interface InitEmptyCanvasOptions {
   /** Default model info for the initial skillResponse node */
   defaultModelInfo?: ModelInfo;
+  /** Locale for the initial skillResponse node query */
+  locale?: string;
 }
 
 export const initEmptyCanvasState = (options?: InitEmptyCanvasOptions): CanvasState => {
+  const isZh =
+    options?.locale === LOCALE.ZH_CN ||
+    options?.locale?.toLowerCase().includes('zh') ||
+    options?.locale?.toLowerCase().includes('hans');
+
+  const defaultQuery = isZh
+    ? '生成一份 Refly.ai 的产品介绍，并使用发送邮件工具通过邮件发送给我'
+    : 'Generate a product introduction for Refly.ai and send it to me via email using the send email tool';
+
+  const toolsetName = isZh ? '发送邮件' : 'Send Email';
+
   // Create a start node for the initial canvas
   const startNode: CanvasNode = {
     id: genNodeID(),
@@ -46,6 +60,21 @@ export const initEmptyCanvasState = (options?: InitEmptyCanvasOptions): CanvasSt
       metadata: {
         status: 'init',
         modelInfo: options?.defaultModelInfo,
+        query: defaultQuery,
+        untouched: true, // This is a flag to indicate that this agent node was never edited by the user
+        selectedToolsets: [
+          {
+            builtin: true,
+            id: 'send_email',
+            name: toolsetName,
+            type: 'regular',
+            toolset: {
+              key: 'send_email',
+              name: toolsetName,
+              toolsetId: 'builtin',
+            },
+          },
+        ],
       },
     },
     selected: false,

@@ -2,7 +2,6 @@ import { Input } from 'antd';
 import { memo, useRef, useState, useCallback, forwardRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
-import { useSearchStoreShallow } from '@refly/stores';
 import { cn } from '@refly/utils/cn';
 import { useUserStoreShallow } from '@refly/stores';
 
@@ -20,6 +19,8 @@ interface ChatInputProps {
   onUploadImage?: (file: File) => Promise<void>;
   onUploadMultipleImages?: (files: File[]) => Promise<void>;
   onFocus?: () => void;
+  onBlur?: () => void;
+  autoFocus?: boolean;
 }
 
 const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
@@ -36,6 +37,8 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
       onUploadImage,
       onUploadMultipleImages,
       onFocus,
+      onBlur,
+      autoFocus = true,
     },
     ref,
   ) => {
@@ -45,10 +48,6 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
 
     const inputRef = useRef<TextAreaRef>(null);
     const [isFocused, setIsFocused] = useState(false);
-
-    const searchStore = useSearchStoreShallow((state) => ({
-      setIsSearchOpen: state.setIsSearchOpen,
-    }));
 
     const defaultPlaceholder = useMemo(() => {
       return placeholder || t('canvas.richChatInput.defaultPlaceholder');
@@ -94,12 +93,6 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           return;
         }
 
-        // Handle Ctrl+K or Cmd+K to open search
-        if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          searchStore.setIsSearchOpen(true);
-        }
-
         // Handle the Enter key
         if (e.keyCode === 13) {
           // Shift + Enter creates a new line (let default behavior handle it)
@@ -133,7 +126,7 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
           }
         }
       },
-      [query, readonly, handleSendMessage, searchStore, isLogin],
+      [query, readonly, handleSendMessage, isLogin],
     );
 
     const handleInputChange = useCallback(
@@ -213,11 +206,12 @@ const ChatInputComponent = forwardRef<HTMLDivElement, ChatInputProps>(
         <TextArea
           ref={inputRef}
           style={{ paddingLeft: 0, paddingRight: 0, paddingTop: '4px', paddingBottom: '4px' }}
-          autoFocus={!readonly}
+          autoFocus={autoFocus && !readonly}
           disabled={readonly}
           onFocus={handleFocus}
           onBlur={() => {
             setIsFocused(false);
+            onBlur?.();
           }}
           value={query ?? ''}
           onChange={handleInputChange}

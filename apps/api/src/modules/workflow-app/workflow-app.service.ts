@@ -28,7 +28,6 @@ import { ShareCreationService } from '../share/share-creation.service';
 import { ShareNotFoundError, WorkflowAppNotFoundError } from '@refly/errors';
 import type { ShareExtraData } from '../share/share.dto';
 import { ToolService } from '../tool/tool.service';
-import { VariableExtractionService } from '../variable-extraction/variable-extraction.service';
 import { ResponseNodeMeta } from '@refly/canvas-common';
 import { CreditService } from '../credit/credit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -40,7 +39,6 @@ import {
 import type { GenerateWorkflowAppTemplateJobData } from './workflow-app.dto';
 import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
 import type { Queue } from 'bullmq';
-import { VoucherService } from '../voucher/voucher.service';
 
 /**
  * Structure of shared workflow app data
@@ -69,11 +67,9 @@ export class WorkflowAppService {
     private readonly shareCommonService: ShareCommonService,
     private readonly shareCreationService: ShareCreationService,
     private readonly toolService: ToolService,
-    private readonly variableExtractionService: VariableExtractionService,
     private readonly creditService: CreditService,
     private readonly notificationService: NotificationService,
     private readonly configService: ConfigService,
-    private readonly voucherService: VoucherService,
     @Optional()
     @InjectQueue(QUEUE_WORKFLOW_APP_TEMPLATE)
     private readonly templateQueue?: Queue<GenerateWorkflowAppTemplateJobData>,
@@ -340,14 +336,6 @@ export class WorkflowAppService {
       : isTemplateContentValid
         ? undefined // Keep existing status
         : 'pending';
-    // Start voucher scoring in parallel with DB operations
-    // This promise will be awaited later after all DB operations complete
-    const voucherPromise = this.voucherService
-      .handleTemplatePublish({ uid: user.uid } as any, canvasData, variables, appId, description)
-      .catch((error) => {
-        this.logger.error(`Failed to trigger voucher for workflow app ${appId}: ${error?.stack}`);
-        return null;
-      });
 
     if (existingWorkflowApp) {
       await this.prisma.workflowApp.update({
@@ -500,15 +488,7 @@ export class WorkflowAppService {
       where: { uid: user.uid },
     });
 
-    // Wait for voucher scoring to complete (was started in parallel earlier)
-    const voucherTriggerResult = await voucherPromise;
-    if (voucherTriggerResult) {
-      this.logger.log(
-        `Voucher triggered for workflow app ${appId}: ${voucherTriggerResult.voucher.voucherId} (${voucherTriggerResult.voucher.discountPercent}% off)`,
-      );
-    }
-
-    return { ...workflowApp, owner: userPo, voucherTriggerResult };
+    return { ...workflowApp, owner: userPo };
   }
 
   async getWorkflowAppDetail(user: User, appId: string) {

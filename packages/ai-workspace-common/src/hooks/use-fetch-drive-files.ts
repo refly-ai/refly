@@ -41,7 +41,7 @@ export const useFetchDriveFiles = (params?: Partial<ListDriveFilesData['query']>
         ...params,
       },
     },
-    [],
+    undefined,
     { enabled: fetchRemoteEnabled },
   );
 

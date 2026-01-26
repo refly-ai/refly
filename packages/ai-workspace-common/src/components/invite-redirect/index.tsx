@@ -50,5 +50,3 @@ export const InviteRedirect = () => {
 
   return <LightLoading />;
 };
-
-export default InviteRedirect;

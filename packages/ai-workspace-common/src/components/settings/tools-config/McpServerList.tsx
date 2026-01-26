@@ -24,7 +24,6 @@ import {
 } from '@refly-packages/ai-workspace-common/queries';
 import { useListMcpServers } from '@refly-packages/ai-workspace-common/queries';
 import { McpServerForm } from './McpServerForm';
-import { preloadMonacoEditor } from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/monaco-editor/monacoPreloader';
 import { useToolStoreShallow, useUserStoreShallow } from '@refly/stores';
 import { Edit, Delete, More, Mcp } from 'refly-icons';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
@@ -277,10 +276,6 @@ export const McpServerList: React.FC<McpServerListProps> = ({ visible }) => {
   const { t } = useTranslation();
 
   const [serverTools, setServerTools] = useState<Record<string, any[]>>({});
-
-  useEffect(() => {
-    preloadMonacoEditor();
-  }, []);
 
   // Fetch MCP servers
   const { data, refetch, isLoading, isRefetching } = useListMcpServers({}, [], {

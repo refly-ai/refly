@@ -27,7 +27,7 @@ const ShortcutKey = ({ children }: { children: string }): JSX.Element => {
   return <kbd className={className}>{children}</kbd>;
 };
 
-export const Tooltip = ({
+const Tooltip = ({
   children,
   enabled = true,
   title,

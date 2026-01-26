@@ -7,14 +7,13 @@ export interface VoucherEmailData {
   discountPercent: number;
   discountValue: string; // e.g., "$8" for 40% off of $20/month
   discountedPrice: string; // e.g., "$12"
-  inviteLink: string;
   expirationDays: number;
 }
 
 /**
  * Generate English email content for voucher notification
  */
-export function generateVoucherEmailEN(data: VoucherEmailData): { subject: string; html: string } {
+function generateVoucherEmailEN(data: VoucherEmailData): { subject: string; html: string } {
   const subject = "🎉 You've Earned an Exclusive Refly Discount!";
 
   const html = `<!DOCTYPE html>
@@ -126,34 +125,6 @@ export function generateVoucherEmailEN(data: VoucherEmailData): { subject: strin
                 </tr>
               </table>
 
-              <!-- Share Section -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, rgba(14,159,119,0.1) 0%, rgba(14,159,119,0.05) 100%); border-radius: 16px; border: 1px solid rgba(14,159,119,0.2); margin-bottom: 32px;">
-                <tr>
-                  <td style="padding: 24px;">
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                      <tr>
-                        <td width="56" valign="top">
-                          <div style="background-color: rgba(14,159,119,0.2); border-radius: 12px; padding: 12px; display: inline-block;">
-                            <span style="font-size: 24px;">👥</span>
-                          </div>
-                        </td>
-                        <td style="padding-left: 16px;">
-                          <h3 style="margin: 0 0 4px; font-size: 16px; font-weight: 600; color: #1a1a1a;">Share the Love</h3>
-                          <p style="margin: 0 0 12px; font-size: 14px; color: #666666;">Your friends can also enjoy this discount!</p>
-                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb;">
-                            <tr>
-                              <td style="padding: 12px 16px;">
-                                <a href="${data.inviteLink}" style="color: #0E9F77; font-size: 14px; font-weight: 500; text-decoration: none; word-break: break-all;">${data.inviteLink}</a>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
               <!-- Community Section -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-top: 1px solid #e5e7eb;">
                 <tr>
@@ -248,7 +219,7 @@ export function generateVoucherEmailEN(data: VoucherEmailData): { subject: strin
 /**
  * Generate Chinese email content for voucher notification
  */
-export function generateVoucherEmailZH(data: VoucherEmailData): { subject: string; html: string } {
+function generateVoucherEmailZH(data: VoucherEmailData): { subject: string; html: string } {
   const subject = '🎉 恭喜！您获得了 Refly.ai 专属折扣';
 
   const html = `<!DOCTYPE html>
@@ -356,34 +327,6 @@ export function generateVoucherEmailZH(data: VoucherEmailData): { subject: strin
                     <p style="margin: 24px 0 0; font-size: 14px; color: #666666;">
                       折扣将在 Stripe 结账时自动应用 — 仅需 <span style="font-weight: 700; color: #0E9F77;">${data.discountedPrice}/月</span> 即可获得完整功能
                     </p>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Share Section -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, rgba(14,159,119,0.1) 0%, rgba(14,159,119,0.05) 100%); border-radius: 16px; border: 1px solid rgba(14,159,119,0.2); margin-bottom: 32px;">
-                <tr>
-                  <td style="padding: 24px;">
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                      <tr>
-                        <td width="56" valign="top">
-                          <div style="background-color: rgba(14,159,119,0.2); border-radius: 12px; padding: 12px; display: inline-block;">
-                            <span style="font-size: 24px;">👥</span>
-                          </div>
-                        </td>
-                        <td style="padding-left: 16px;">
-                          <h3 style="margin: 0 0 4px; font-size: 16px; font-weight: 600; color: #1a1a1a;">分享给朋友</h3>
-                          <p style="margin: 0 0 12px; font-size: 14px; color: #666666;">您的朋友也可以享受这个折扣！</p>
-                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb;">
-                            <tr>
-                              <td style="padding: 12px 16px;">
-                                <a href="${data.inviteLink}" style="color: #0E9F77; font-size: 14px; font-weight: 500; text-decoration: none; word-break: break-all;">${data.inviteLink}</a>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
                   </td>
                 </tr>
               </table>

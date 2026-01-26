@@ -10,8 +10,13 @@ import {
   Param,
   Res,
   Req,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guard/optional-jwt-auth.guard';
 import { DriveService } from './drive.service';
@@ -82,6 +87,29 @@ export class DriveController {
   ): Promise<BatchCreateDriveFilesResponse> {
     const driveFiles = await this.driveService.batchCreateDriveFiles(user, request);
     return buildSuccessResponse(driveFiles);
+  }
+
+  @Post('file/upload')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+    }),
+  )
+  @ApiOperation({ summary: 'Upload file to canvas' })
+  @ApiConsumes('multipart/form-data')
+  async uploadFile(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new MaxFileSizeValidator({ maxSize: 50 * 1024 * 1024 })],
+      }),
+    )
+    file: Express.Multer.File,
+    @Body('canvasId') canvasId: string,
+    @LoginedUser() user: User,
+  ): Promise<UpsertDriveFileResponse> {
+    const result = await this.driveService.uploadAndCreateFile(user, file, canvasId);
+    return buildSuccessResponse(result);
   }
 
   @Post('file/update')

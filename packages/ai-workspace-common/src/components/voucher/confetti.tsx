@@ -106,5 +106,3 @@ export function Confetti({ isActive = true }: { isActive?: boolean }) {
     </div>
   );
 }
-
-export default Confetti;

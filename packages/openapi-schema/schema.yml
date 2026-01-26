@@ -16,18 +16,12 @@ tags:
     description: Canvas management endpoints
   - name: knowledge
     description: Knowledge base management endpoints
-  - name: project
-    description: Project management endpoints
   - name: share
     description: Share management endpoints
-  - name: label
-    description: Label management endpoints
   - name: action
     description: Action management endpoints
   - name: skill
     description: Skill management endpoints
-  - name: pilot
-    description: Pilot management endpoints
   - name: copilot
     description: Copilot management endpoints
   - name: drive
@@ -277,203 +271,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ValidateMcpServerResponse'
-
-  /pages:
-    get:
-      tags:
-        - pages
-      summary: List user pages
-      description: List all pages for a user
-      operationId: listPages
-      parameters:
-        - name: page
-          in: query
-          description: Page number
-          schema:
-            type: number
-            default: 1
-        - name: pageSize
-          in: query
-          description: Page size
-          schema:
-            type: number
-            default: 20
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListPagesResponse'
-
-  /pages/{pageId}:
-    get:
-      tags:
-        - pages
-      summary: Get page detail
-      description: Get detail of a specific page
-      operationId: getPageDetail
-      parameters:
-        - name: pageId
-          in: path
-          required: true
-          description: Page ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PageDetailResponse'
-    put:
-      tags:
-        - pages
-      summary: Update a page
-      description: Update a specific page
-      operationId: updatePage
-      parameters:
-        - name: pageId
-          in: path
-          required: true
-          description: Page ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdatePageRequest'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpdatePageResponse'
-    delete:
-      tags:
-        - pages
-      summary: Delete a page
-      description: Delete a specific page
-      operationId: deletePage
-      parameters:
-        - name: pageId
-          in: path
-          required: true
-          description: Page ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeletePageResponse'
-
-  /pages/{pageId}/share:
-    post:
-      tags:
-        - pages
-      summary: Share a page
-      description: Create a share link for a specific page
-      operationId: sharePage
-      parameters:
-        - name: pageId
-          in: path
-          required: true
-          description: Page ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SharePageResponse'
-
-  /pages/{pageId}/nodes/{nodeId}:
-    delete:
-      tags:
-        - pages
-      summary: Delete a node from a page
-      description: Remove a specific node from a page
-      operationId: deletePageNode
-      parameters:
-        - name: pageId
-          in: path
-          required: true
-          description: Page ID
-          schema:
-            type: string
-        - name: nodeId
-          in: path
-          required: true
-          description: Node ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeletePageNodeResponse'
-
-  /pages/canvas/{canvasId}:
-    get:
-      tags:
-        - pages
-      summary: Get page by canvas ID
-      description: Retrieve the page associated with a specific canvas
-      operationId: getPageByCanvasId
-      parameters:
-        - name: canvasId
-          in: path
-          required: true
-          description: Canvas ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CanvasPageResponse'
-
-  /pages/canvas/{canvasId}/nodes:
-    post:
-      tags:
-        - pages
-      summary: Add nodes to canvas page
-      description: Add nodes to a page associated with a specific canvas. If no page exists, a new one will be created.
-      operationId: addNodesToCanvasPage
-      parameters:
-        - name: canvasId
-          in: path
-          required: true
-          description: Canvas ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AddPageNodesRequest'
-      responses:
-        '201':
-          description: Nodes added to canvas page successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AddPageNodesResponse'
-
 
   /auth/config:
     get:
@@ -1812,162 +1609,6 @@ paths:
                 $ref: '#/components/schemas/BaseResponse'
       security:
         - api_key: []
-  /project/list:
-    get:
-      tags:
-        - project
-      summary: List projects
-      description: List all projects
-      operationId: listProjects
-      parameters:
-        - name: page
-          in: query
-          description: Page number
-          required: false
-          schema:
-            type: number
-            default: 1
-        - name: pageSize
-          in: query
-          description: Page size
-          required: false
-          schema:
-            type: number
-            default: 10
-        - name: order
-          in: query
-          description: Order by
-          required: false
-          schema:
-            $ref: '#/components/schemas/ListOrder'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListProjectResponse'
-  /project/detail:
-    get:
-      tags:
-        - project
-      summary: Get project detail
-      description: Get project detail by project ID
-      operationId: getProjectDetail
-      parameters:
-        - name: projectId
-          in: query
-          description: Project ID
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetProjectDetailResponse'
-  /project/new:
-    post:
-      tags:
-        - project
-      summary: Create new project
-      description: Create a new project
-      operationId: createProject
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpsertProjectRequest'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpsertProjectResponse'
-  /project/update:
-    post:
-      tags:
-        - project
-      summary: Update project
-      description: Update an existing project
-      operationId: updateProject
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpsertProjectRequest'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpsertProjectResponse'
-  /project/updateItems:
-    post:
-      tags:
-        - project
-      summary: Update items in project
-      description: Update items in a project
-      operationId: updateProjectItems
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateProjectItemsRequest'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseResponse'
-  /project/delete:
-    post:
-      tags:
-        - project
-      summary: Delete project
-      description: Delete an existing project
-      operationId: deleteProject
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeleteProjectRequest'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseResponse'
-  /project/deleteItems:
-    post:
-      tags:
-        - project
-      summary: Delete items in project
-      description: Delete items in a project
-      operationId: deleteProjectItems
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeleteProjectItemsRequest'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseResponse'
   /codeArtifact/list:
     get:
       tags:
@@ -2167,224 +1808,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DuplicateShareResponse'
-  /label/class/list:
-    get:
-      tags:
-        - label
-      summary: List label classes
-      description: List all label classes
-      operationId: listLabelClasses
-      parameters:
-        - name: page
-          in: query
-          description: Page number
-          schema:
-            type: number
-            default: 1
-        - name: pageSize
-          in: query
-          description: Page size
-          schema:
-            type: number
-            default: 10
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListLabelClassesResponse'
-      security:
-        - api_key: []
-  /label/class/new:
-    post:
-      tags:
-        - label
-      summary: Create new label class
-      description: Create a new label class
-      operationId: createLabelClass
-      requestBody:
-        description: Label class creation request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateLabelClassRequest'
-        required: true
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpsertLabelClassResponse'
-  /label/class/update:
-    post:
-      tags:
-        - label
-      summary: Update label class
-      description: Update an existing label class
-      operationId: updateLabelClass
-      requestBody:
-        description: Label class update request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateLabelClassRequest'
-        required: true
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpsertLabelClassResponse'
-  /label/class/delete:
-    post:
-      tags:
-        - label
-      summary: Delete label class
-      description: Delete an existing label class
-      operationId: deleteLabelClass
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeleteLabelClassRequest'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseResponse'
-  /label/instance/list:
-    get:
-      tags:
-        - label
-      summary: List labels
-      description: List all label instances
-      operationId: listLabelInstances
-      parameters:
-        - name: entityType
-          in: query
-          description: Entity type to retrieve
-          schema:
-            description: Label entity type
-            $ref: '#/components/schemas/EntityType'
-        - name: entityId
-          in: query
-          description: Entity type to retrieve
-          schema:
-            type: string
-            example: cl-g30e1b80b5g1itbemc0g5jj3
-        - name: classId
-          in: query
-          description: Label class ID
-          schema:
-            type: string
-            example: lc-g30e1b80b5g1itbemc0g5jj3
-        - name: value
-          in: query
-          description: Label value
-          schema:
-            type: string
-            example: HotPotQA
-        - name: page
-          in: query
-          description: Page number
-          schema:
-            type: number
-            default: 1
-        - name: pageSize
-          in: query
-          description: Page size
-          schema:
-            type: number
-            default: 10
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListLabelInstancesResponse'
-  /label/instance/new:
-    post:
-      tags:
-        - label
-      summary: Create new label instance
-      description: Create new label instance
-      operationId: createLabelInstance
-      requestBody:
-        description: Label instance creation request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateLabelInstanceRequest'
-        required: true
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpsertLabelInstanceResponse'
-  /label/instance/update:
-    post:
-      tags:
-        - label
-      summary: Update label
-      description: Update an existing label instance
-      operationId: updateLabelInstance
-      requestBody:
-        description: Label update request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateLabelInstanceRequest'
-        required: true
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpsertLabelInstanceResponse'
-  /label/instance/delete:
-    post:
-      tags:
-        - label
-      summary: Delete label
-      description: Delete an existing label
-      operationId: deleteLabelInstance
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeleteLabelInstanceRequest'
-      responses:
-        '200':
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseResponse'
-  /action/list:
-    get:
-      tags:
-        - action
-      summary: List actions
-      description: List all actions
-      operationId: listActions
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListActionResponse'
   /action/result:
     get:
       tags:
@@ -2433,20 +1856,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
-  /skill/list:
-    get:
-      tags:
-        - skill
-      summary: List skills
-      description: List all skills
-      operationId: listSkills
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListSkillResponse'
   /skill/invoke:
     post:
       tags:
@@ -2489,245 +1898,6 @@ paths:
             text/event-stream:
               schema:
                 type: string
-  /skill/instance/list:
-    get:
-      tags:
-        - skill
-      summary: List skill instances
-      description: List skill instances for a user
-      operationId: listSkillInstances
-      parameters:
-        - name: skillId
-          in: query
-          description: Skill ID
-          schema:
-            type: string
-        - name: sortByPin
-          in: query
-          description: Whether to sort by pinned skill instances
-          schema:
-            type: boolean
-            default: false
-        - name: page
-          in: query
-          description: Page number
-          schema:
-            type: number
-            default: 1
-        - name: pageSize
-          in: query
-          description: Page size
-          schema:
-            type: number
-            default: 10
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListSkillInstanceResponse'
-  /skill/instance/new:
-    post:
-      tags:
-        - skill
-      summary: Create new skill instance
-      description: Create a new skill instance for user
-      operationId: createSkillInstance
-      requestBody:
-        description: Skill creation request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateSkillInstanceRequest'
-        required: true
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateSkillInstanceResponse'
-  /skill/instance/update:
-    post:
-      tags:
-        - skill
-      summary: Update skill instance
-      description: Update an existing skill instance
-      operationId: updateSkillInstance
-      requestBody:
-        description: Skill update request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateSkillInstanceRequest'
-        required: true
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpdateSkillInstanceResponse'
-  /skill/instance/pin:
-    post:
-      tags:
-        - skill
-      summary: Pin skill instance
-      description: Pin an existing skill instance
-      operationId: pinSkillInstance
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PinSkillInstanceRequest'
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseResponse'
-  /skill/instance/unpin:
-    post:
-      tags:
-        - skill
-      summary: Unpin skill instance
-      description: Unpin an existing skill instance
-      operationId: unpinSkillInstance
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UnpinSkillInstanceRequest'
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseResponse'
-  /skill/instance/delete:
-    post:
-      tags:
-        - skill
-      summary: Delete skill instance
-      description: Delete an existing skill instance
-      operationId: deleteSkillInstance
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeleteSkillInstanceRequest'
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseResponse'
-      security:
-        - api_key: []
-  /skill/trigger/list:
-    get:
-      tags:
-        - skill
-      summary: List skill triggers
-      description: List all skill triggers
-      operationId: listSkillTriggers
-      parameters:
-        - name: skillId
-          in: query
-          description: Skill ID
-          schema:
-            type: string
-            example: sk-g30e1b80b5g1itbemc0g5jj3
-        - name: page
-          in: query
-          description: Page number
-          schema:
-            type: number
-            default: 1
-        - name: pageSize
-          in: query
-          description: Page size
-          schema:
-            type: number
-            default: 10
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListSkillTriggerResponse'
-  /skill/trigger/new:
-    post:
-      tags:
-        - skill
-      summary: Create new trigger
-      description: Create a new trigger
-      operationId: createSkillTrigger
-      requestBody:
-        description: Skill trigger creation request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateSkillTriggerRequest'
-        required: true
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CreateSkillTriggerResponse'
-  /skill/trigger/update:
-    post:
-      tags:
-        - skill
-      summary: Update trigger
-      description: Update an existing trigger
-      operationId: updateSkillTrigger
-      requestBody:
-        description: Skill trigger update request
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateSkillTriggerRequest'
-        required: true
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpdateSkillTriggerResponse'
-  /skill/trigger/delete:
-    post:
-      tags:
-        - skill
-      summary: Delete trigger
-      description: Delete an existing trigger
-      operationId: deleteSkillTrigger
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeleteSkillTriggerRequest'
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseResponse'
-      security:
-        - api_key: []
   /media/generate:
       post:
         summary: Generate multimedia content
@@ -2746,124 +1916,6 @@ paths:
               application/json:
                 schema:
                   $ref: '#/components/schemas/MediaGenerateResponse'
-  /pilot/session/new:
-    post:
-      tags:
-        - pilot
-      summary: Create new pilot session
-      description: Create a new pilot session
-      operationId: createPilotSession
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreatePilotSessionRequest'
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpsertPilotSessionResponse'
-  /pilot/session/update:
-    post:
-      tags:
-        - pilot
-      summary: Update pilot session
-      description: Update an existing pilot session
-      operationId: updatePilotSession
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdatePilotSessionRequest'
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpsertPilotSessionResponse'
-  /pilot/session/list:
-    get:
-      tags:
-        - pilot
-      summary: List pilot sessions
-      description: List all pilot sessions
-      operationId: listPilotSessions
-      parameters:
-        - name: targetId
-          in: query
-          description: Target ID
-          schema:
-            type: string
-        - name: targetType
-          in: query
-          description: Target type
-          schema:
-            $ref: '#/components/schemas/EntityType'
-        - name: page
-          in: query
-          description: Page number
-          schema:
-            type: number
-            default: 1
-        - name: pageSize
-          in: query
-          description: Page size
-          schema:
-            type: number
-            default: 10
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListPilotSessionsResponse'
-  /pilot/session/detail:
-    get:
-      tags:
-        - pilot
-      summary: Get pilot session detail
-      description: Get detail for a pilot session
-      operationId: getPilotSessionDetail
-      parameters:
-        - name: sessionId
-          in: query
-          description: Pilot session ID
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetPilotSessionDetailResponse'
-  /pilot/session/recover:
-    post:
-      tags:
-        - pilot
-      summary: Recover pilot session
-      description: Recover a failed pilot session by retrying failed steps. Can recover all failed steps or specific steps.
-      operationId: recoverPilotSession
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RecoverPilotSessionRequest'
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BaseResponse'
   /copilot/session/list:
     get:
       tags:
@@ -2945,6 +1997,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /workflow/list:
+    get:
+      tags:
+        - workflow
+      summary: List workflow executions
+      description: List all workflow executions
+      operationId: listWorkflowExecutions
+      parameters:
+        - name: canvasId
+          in: query
+          description: Canvas ID
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Execution status
+          schema:
+            $ref: '#/components/schemas/WorkflowExecutionStatus'
+        - name: after
+          in: query
+          description: Creation time after filter (unix timestamp in milliseconds)
+          schema:
+            type: number
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: number
+            default: 1
+        - name: pageSize
+          in: query
+          description: Page size
+          schema:
+            type: number
+            default: 10
+        - name: order
+          in: query
+          description: List order
+          schema:
+            $ref: '#/components/schemas/ListOrder'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWorkflowExecutionsResponse'
   /workflow/detail:
     get:
       tags:
@@ -3576,20 +2675,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
-  /form/hasFilledForm:
-    get:
-      tags:
-        - form
-      summary: Check if user has filled the form
-      description: Check if user has filled the form
-      operationId: hasFilledForm
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HasFilledFormResponse'
   /credit/recharge:
     get:
       tags:
@@ -3793,20 +2878,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
-  /invitation/invited:
-    get:
-      tags:
-        - invitation
-      summary: Check if user has been invited
-      description: Check if user has been invited
-      operationId: hasBeenInvited
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HasBeenInvitedResponse'
   /subscription/plans:
     get:
       tags:
@@ -4352,6 +3423,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
+  /tool/toolset/exportDefinitions:
+    get:
+      tags:
+        - tool
+      summary: Export toolset definitions
+      description: Export tool schemas for specified toolsets. Used for generating Python SDK.
+      operationId: exportToolsetDefinitions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: toolsetKey
+          in: query
+          required: false
+          description: Toolset key(s) to export, comma-separated for multiple toolsets. If not provided, exports all supported toolsets.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportToolsetDefinitionsResponse'
+  /tool/execute:
+    post:
+      tags:
+        - tool
+      summary: Execute tool
+      description: Execute a tool by toolset key and tool name.
+      operationId: executeTool
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteToolRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteToolResponse'
   /tool/call/result:
     get:
       tags:
@@ -4508,7 +3624,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ConvertResponse'
-
+  /misc/promptSuggestions:
+    get:
+      tags:
+        - misc
+      summary: Get prompt suggestions
+      description: Get prompt suggestions for a given user
+      operationId: getPromptSuggestions
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPromptSuggestionsResponse'
   # Voucher endpoints
   /voucher/available:
     get:
@@ -4951,257 +4080,6 @@ components:
     DeleteMcpServerResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: 'null'
-
-    Page:
-      type: object
-      required:
-        - pageId
-        - title
-        - createdAt
-        - updatedAt
-      properties:
-        pageId:
-          type: string
-          description: Page ID
-          example: pg-g30e1b80b5g1itbemc0g5jj3
-        title:
-          type: string
-          description: Page title
-          example: My Page
-        description:
-          type: string
-          description: Page description
-        status:
-          type: string
-          description: Page status
-          enum:
-            - draft
-            - published
-        canvasId:
-          type: string
-          description: Canvas ID associated with this page
-          example: cv-g30e1b80b5g1itbemc0g5jj3
-        coverUrl:
-          type: string
-          description: Page cover URL
-        createdAt:
-          type: string
-          format: date-time
-          description: Page creation time
-        updatedAt:
-          type: string
-          format: date-time
-          description: Page last update time
-
-    PageNodeRelation:
-      type: object
-      required:
-        - relationId
-        - nodeId
-        - nodeType
-        - entityId
-        - orderIndex
-      properties:
-        relationId:
-          type: string
-          description: Relation ID
-        pageId:
-          type: string
-          description: Page ID
-        nodeId:
-          type: string
-          description: Node ID
-        nodeType:
-          type: string
-          description: Node type
-        entityId:
-          type: string
-          description: Entity ID
-        orderIndex:
-          type: integer
-          description: Order index
-        nodeData:
-          description: Node data
-          $ref: '#/components/schemas/CanvasNodeData'
-
-    PageDetail:
-      type: object
-      allOf:
-        - $ref: '#/components/schemas/Page'
-        - type: object
-          properties:
-            nodeRelations:
-              type: array
-              description: List of node relations
-              items:
-                $ref: '#/components/schemas/PageNodeRelation'
-            pageConfig:
-              type: object
-              description: Page configuration
-
-    UpdatePageRequest:
-      type: object
-      properties:
-        title:
-          type: string
-          description: Page title
-        description:
-          type: string
-          description: Page description
-        nodeRelations:
-          type: array
-          description: List of node relations with updated order
-          items:
-            type: object
-            properties:
-              nodeId:
-                type: string
-                description: Node ID
-              orderIndex:
-                type: integer
-                description: New order index
-
-    UpdatePageResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              allOf:
-                - $ref: '#/components/schemas/Page'
-                - type: object
-                  properties:
-                    nodeRelations:
-                      type: array
-                      description: List of node relations
-                      items:
-                        $ref: '#/components/schemas/PageNodeRelation'
-
-    DeletePageResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                pageId:
-                  type: string
-                  description: ID of the deleted page
-                canvasId:
-                  type: string
-                  description: Canvas ID associated with the deleted page
-
-    SharePageResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                pageId:
-                  type: string
-                  description: Page ID
-                canvasId:
-                  type: string
-                  description: Canvas ID associated with the page
-                shareId:
-                  type: string
-                  description: Share ID
-                shareUrl:
-                  type: string
-                  description: Share URL
-
-    DeletePageNodeResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                pageId:
-                  type: string
-                  description: Page ID
-                canvasId:
-                  type: string
-                  description: Canvas ID associated with the page
-                nodeId:
-                  type: string
-                  description: ID of the deleted node
-
-    ListPagesResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                total:
-                  type: integer
-                  description: Total number of pages
-                pages:
-                  type: array
-                  description: List of pages
-                  items:
-                    $ref: '#/components/schemas/Page'
-
-    PageDetailResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              $ref: '#/components/schemas/PageDetail'
-
-    AddPageNodesRequest:
-      type: object
-      required:
-        - nodeIds
-      properties:
-        nodeIds:
-          type: array
-          description: List of node IDs to add to the page
-          items:
-            type: string
-
-    AddPageNodesResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                page:
-                  $ref: '#/components/schemas/Page'
-                nodeRelations:
-                  type: array
-                  description: List of node relations
-                  items:
-                    $ref: '#/components/schemas/PageNodeRelation'
-
-    CanvasPageResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              properties:
-                page:
-                  $ref: '#/components/schemas/Page'
-                nodeRelations:
-                  type: array
-                  description: List of node relations
-                  items:
-                    $ref: '#/components/schemas/PageNodeRelation'
 
     User:
       type: object
@@ -6126,117 +5004,6 @@ components:
         entityType:
           description: Entity type
           $ref: '#/components/schemas/EntityType'
-    ProjectSource:
-      type: object
-      description: Project source
-      properties:
-        entityId:
-          type: string
-          description: Entity ID
-        entityType:
-          description: Entity type
-          $ref: '#/components/schemas/EntityType'
-        title:
-          type: string
-          description: Project title
-        createdAt:
-          type: string
-          format: date-time
-          description: Project creation time
-        updatedAt:
-          type: string
-          format: date-time
-          description: Project update time
-    Project:
-      type: object
-      description: Project
-      required:
-        - projectId
-        - name
-      properties:
-        projectId:
-          type: string
-          description: Project ID
-        name:
-          type: string
-          description: Project name
-        description:
-          type: string
-          description: Project description
-        coverUrl:
-          type: string
-          description: Project cover URL
-        customInstructions:
-          type: string
-          description: Custom instructions for the project
-        createdAt:
-          type: string
-          format: date-time
-          description: Project creation time
-        updatedAt:
-          type: string
-          format: date-time
-          description: Project update time
-    LabelClass:
-      type: object
-      description: Label class
-      required:
-        - labelClassId
-        - name
-        - displayName
-        - createdAt
-        - updatedAt
-      properties:
-        labelClassId:
-          type: string
-          description: Label class ID
-          example: lc-g30e1b80b5g1itbemc0g5jj3
-        name:
-          type: string
-          description: Label class name
-          example: Related Dataset
-        displayName:
-          type: string
-          description: Label class display name
-          example: Label display name
-        icon:
-          description: Label icon
-          $ref: '#/components/schemas/Icon'
-        prompt:
-          type: string
-          description: Label creation instruction prompt
-          example: Extract labels for the tech-related keywords
-        createdAt:
-          type: string
-          format: date-time
-          description: Label class creation time
-        updatedAt:
-          type: string
-          format: date-time
-          description: Label class update time
-    LabelInstance:
-      type: object
-      description: Label instances related to entities
-      required:
-        - labelId
-        - labelClassId
-        - value
-      properties:
-        labelId:
-          type: string
-          description: Label instance ID
-          example: lb-g30e1b80b5g1itbemc0g5jj3
-        labelClassId:
-          type: string
-          description: Label class ID
-          example: lc-g30e1b80b5g1itbemc0g5jj3
-        labelClass:
-          description: Label class
-          $ref: '#/components/schemas/LabelClass'
-        value:
-          type: string
-          description: Label value
-          example: HotPotQA
     InputMode:
       type: string
       description: Data input mode
@@ -6392,125 +5159,6 @@ components:
         value:
           type: string
           description: Icon value
-    Skill:
-      type: object
-      description: Skill
-      required:
-        - name
-      properties:
-        name:
-          type: string
-          description: Skill name
-        description:
-          type: string
-          description: Skill description
-        icon:
-          description: Skill icon
-          $ref: '#/components/schemas/Icon'
-        configSchema:
-          description: Skill config schema
-          $ref: '#/components/schemas/SkillTemplateConfigDefinition'
-        tplConfig:
-          description: Skill template config
-          $ref: '#/components/schemas/SkillTemplateConfig'
-    SkillTriggerType:
-      type: string
-      description: Skill trigger type
-      enum:
-        - timer
-        - simpleEvent
-    SimpleEventName:
-      type: string
-      description: Simple event name
-      enum:
-        - onResourceReady
-    SimpleEvent:
-      type: object
-      required:
-        - name
-        - displayName
-      properties:
-        name:
-          description: Simple event name
-          $ref: '#/components/schemas/SimpleEventName'
-        displayName:
-          type: object
-          description: Simple event display name (key is locale, value is display name)
-    TimerInterval:
-      type: string
-      description: Timer interval
-      enum:
-        - hour
-        - day
-        - week
-        - month
-        - year
-    TimerTriggerConfig:
-      type: object
-      required:
-        - datetime
-      properties:
-        datetime:
-          type: string
-          format: date-time
-          description: Time to run
-        repeatInterval:
-          type: string
-          description: Repeat interval
-          $ref: '#/components/schemas/TimerInterval'
-    SkillTrigger:
-      type: object
-      description: Skill triggers
-      required:
-        - skillId
-        - displayName
-        - triggerId
-        - triggerType
-        - enabled
-        - createdAt
-        - updatedAt
-      properties:
-        skillId:
-          type: string
-          description: Skill ID
-          example: sk-g30e1b80b5g1itbemc0g5jj3
-        displayName:
-          type: string
-          description: Trigger display name
-          example: My trigger
-        triggerId:
-          type: string
-          description: Trigger ID
-          example: tr-g30e1b80b5g1itbemc0g5jj3
-        triggerType:
-          description: Trigger type
-          $ref: '#/components/schemas/SkillTriggerType'
-        simpleEventName:
-          description: Simple event name (only required when trigger type is `simpleEvent`)
-          $ref: '#/components/schemas/SimpleEventName'
-        timerConfig:
-          description: Timer config (only required when trigger type is `timer`)
-          $ref: '#/components/schemas/TimerTriggerConfig'
-        input:
-          description: Skill input
-          $ref: '#/components/schemas/SkillInput'
-        context:
-          description: Skill context
-          $ref: '#/components/schemas/SkillContext'
-        tplConfig:
-          description: Skill template config
-          $ref: '#/components/schemas/SkillTemplateConfig'
-        enabled:
-          type: boolean
-          description: Trigger enabled
-        createdAt:
-          type: string
-          format: date-time
-          description: Trigger creation time
-        updatedAt:
-          type: string
-          format: date-time
-          description: Trigger update time
     SkillMeta:
       type: object
       description: Skill metadata
@@ -6561,41 +5209,6 @@ components:
       additionalProperties:
         description: Skill template config value
         $ref: '#/components/schemas/DynamicConfigValue'
-    SkillInstance:
-      type: object
-      description: Skill
-      allOf:
-        - $ref: '#/components/schemas/SkillMeta'
-        - type: object
-          required:
-            - createdAt
-            - updatedAt
-            - invocationConfig
-          properties:
-            description:
-              type: string
-              description: Skill instance description
-            promptHint:
-              type: string
-              description: Skill instance prompt hint
-            tplConfig:
-              description: Skill template config
-              $ref: '#/components/schemas/SkillTemplateConfig'
-            tplConfigSchema:
-              description: Skill template config schema
-              $ref: '#/components/schemas/SkillTemplateConfigDefinition'
-            pinnedAt:
-              type: string
-              format: date-time
-              description: Skill pinned time
-            createdAt:
-              type: string
-              format: date-time
-              description: Skill creation time
-            updatedAt:
-              type: string
-              format: date-time
-              description: Skill update time
     SourceMeta:
       type: object
       description: Source metadata
@@ -7423,9 +6036,18 @@ components:
           type: boolean
           description: Whether the user has been invited
           default: false
+        hasFilledForm:
+          type: boolean
+          description: Whether the user has filled the survey form
+        identity:
+          type: string
+          description: User identity in survey form
         requireInvitationCode:
           type: boolean
           description: Whether to require invitation code
+        needOnboarding:
+          type: boolean
+          description: Whether this user needs onboarding
         webSearch:
           description: Web search config
           $ref: '#/components/schemas/ProviderConfig'
@@ -7507,7 +6129,12 @@ components:
         preferences:
           description: User preferences
           $ref: '#/components/schemas/UserPreferences'
+        attributes:
+          type: object
+          description: User attributes
+          additionalProperties: true
         onboarding:
+          deprecated: true
           description: Onboarding config
           $ref: '#/components/schemas/OnboardingConfig'
     AuthProvider:
@@ -8467,88 +7094,6 @@ components:
         version:
           type: integer
           description: Action result version
-    ListProjectResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Project list
-              items:
-                $ref: '#/components/schemas/Project'
-    GetProjectDetailResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              $ref: '#/components/schemas/Project'
-    UpsertProjectRequest:
-      type: object
-      properties:
-        projectId:
-          type: string
-          description: Project ID (only used for update)
-        name:
-          type: string
-          description: Project name
-        description:
-          type: string
-          description: Project description
-        coverStorageKey:
-          type: string
-          description: Project cover storage key
-        customInstructions:
-          type: string
-          description: Custom instructions
-    UpsertProjectResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              $ref: '#/components/schemas/Project'
-    UpdateProjectItemsRequest:
-      type: object
-      properties:
-        projectId:
-          type: string
-          description: Project ID
-        operation:
-          type: string
-          description: Operation type
-          enum:
-            - add
-            - remove
-        items:
-          type: array
-          description: Item list
-          items:
-            $ref: '#/components/schemas/Entity'
-    DeleteProjectRequest:
-      type: object
-      required:
-        - projectId
-      properties:
-        projectId:
-          type: string
-          description: Project ID to delete
-          example: p-g30e1b80b5g1itbemc0g5jj3
-    DeleteProjectItemsRequest:
-      type: object
-      required:
-        - projectId
-        - items
-      properties:
-        projectId:
-          type: string
-          description: Project ID
-        items:
-          type: array
-          description: Item list
-          items:
-            $ref: '#/components/schemas/Entity'
     SkillEventType:
       type: string
       description: Skill event type
@@ -8896,282 +7441,6 @@ components:
             data:
               description: Duplicated entity
               $ref: '#/components/schemas/Entity'
-    ListLabelClassesResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Label class list
-              items:
-                $ref: '#/components/schemas/LabelClass'
-    CreateLabelClassRequest:
-      type: object
-      required:
-        - name
-        - displayName
-        - prompt
-      properties:
-        name:
-          type: string
-          description: Label class name
-          example: my_class
-        displayName:
-          type: string
-          description: Label display name
-          example: My Class
-        icon:
-          description: Label icon
-          $ref: '#/components/schemas/Icon'
-        prompt:
-          type: string
-          description: Label creation instruction prompt
-          example: Extract labels for the tech-related keywords
-    UpdateLabelClassRequest:
-      type: object
-      required:
-        - labelClassId
-      properties:
-        labelClassId:
-          type: string
-          description: Label class ID
-        name:
-          type: string
-          description: Label class name
-          example: My Class
-        displayName:
-          type: string
-          description: Label display name
-          example: My Class
-        icon:
-          description: Label icon
-          $ref: '#/components/schemas/Icon'
-        prompt:
-          type: string
-          description: Label creation instruction prompt
-          example: Extract labels for the tech-related keywords
-    UpsertLabelClassResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              description: Label class upserted
-              $ref: '#/components/schemas/LabelClass'
-    DeleteLabelClassRequest:
-      type: object
-      required:
-        - labelClassId
-      properties:
-        labelClassId:
-          type: string
-          description: Label class ID to delete
-          example: lc-g30e1b80b5g1itbemc0g5jj3
-    ListLabelInstancesResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Label list
-              items:
-                $ref: '#/components/schemas/LabelInstance'
-    CreateLabelInstanceRequest:
-      type: object
-      required:
-        - labelClassId
-        - valueList
-        - entityType
-        - entityId
-      properties:
-        labelClassId:
-          type: string
-          description: Label class ID
-          example: lc-g30e1b80b5g1itbemc0g5jj3
-        valueList:
-          type: array
-          description: Label value list
-          items:
-            type: string
-            example: label-1
-        entityType:
-          description: Label entity type
-          $ref: '#/components/schemas/EntityType'
-        entityId:
-          description: Label entity ID
-          type: string
-    UpdateLabelInstanceRequest:
-      type: object
-      properties:
-        labelId:
-          type: string
-          description: Label ID to update
-        value:
-          type: string
-          description: Updated label value
-    UpsertLabelInstanceResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Label instance upserted
-              items:
-                $ref: '#/components/schemas/LabelInstance'
-    DeleteLabelInstanceRequest:
-      type: object
-      required:
-        - labelId
-      properties:
-        labelId:
-          type: string
-          description: Label ID to delete
-          example: lb-g30e1b80b5g1itbemc0g5jj3
-    Action:
-      type: object
-      required:
-        - actionType
-        - actionName
-      properties:
-        actionType:
-          type: string
-          description: Action type
-          $ref: '#/components/schemas/ActionType'
-        actionName:
-          type: string
-          description: Action name
-        icon:
-          description: Action icon
-          $ref: '#/components/schemas/Icon'
-    ListActionResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Action list
-              items:
-                $ref: '#/components/schemas/Action'
-    ListSkillResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Skill list
-              items:
-                $ref: '#/components/schemas/Skill'
-    ListSkillInstanceResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Skill list
-              items:
-                $ref: '#/components/schemas/SkillInstance'
-    SkillInstanceCreateParam:
-      type: object
-      required:
-        - displayName
-      properties:
-        tplName:
-          type: string
-          description: Skill template name
-          example: online-search
-        displayName:
-          type: string
-          description: Skill display name
-          example: My Custom Skill
-        description:
-          type: string
-          description: Skill description
-        icon:
-          description: Skill instance icon
-          $ref: '#/components/schemas/Icon'
-        tplConfig:
-          description: Skill template config
-          $ref: '#/components/schemas/SkillTemplateConfig'
-    CreateSkillInstanceRequest:
-      type: object
-      required:
-        - instanceList
-      properties:
-        instanceList:
-          type: array
-          description: Skill instances to upsert
-          items:
-            $ref: '#/components/schemas/SkillInstanceCreateParam'
-    CreateSkillInstanceResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Skill instance list
-              items:
-                $ref: '#/components/schemas/SkillInstance'
-    UpdateSkillInstanceRequest:
-      type: object
-      required:
-        - skillId
-      properties:
-        skillId:
-          type: string
-          description: Skill ID
-          example: s-g30e1b80b5g1itbemc0g5jj3
-        displayName:
-          type: string
-          description: Skill display name
-          example: My Custom Skill
-        description:
-          type: string
-          description: Skill description
-        icon:
-          description: Skill instance icon
-          $ref: '#/components/schemas/Icon'
-        tplConfig:
-          description: Skill template config
-          $ref: '#/components/schemas/SkillTemplateConfig'
-    UpdateSkillInstanceResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              description: Skill instance list
-              $ref: '#/components/schemas/SkillInstance'
-    PinSkillInstanceRequest:
-      type: object
-      required:
-        - skillId
-      properties:
-        skillId:
-          type: string
-          description: Skill ID to pin
-    UnpinSkillInstanceRequest:
-      type: object
-      required:
-        - skillId
-      properties:
-        skillId:
-          type: string
-          description: Skill ID to unpin
-    DeleteSkillInstanceRequest:
-      type: object
-      required:
-        - skillId
-      properties:
-        skillId:
-          type: string
-          description: Skill ID to delete
     SkillInput:
       type: object
       description: Skill input
@@ -9416,9 +7685,6 @@ components:
         target:
           description: Skill invocation target
           $ref: '#/components/schemas/Entity'
-        projectId:
-          type: string
-          description: Project ID
         resultId:
           type: string
           description: |
@@ -9474,99 +7740,6 @@ components:
             resultId:
               type: string
               description: Skill result ID
-    ListSkillTriggerResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Skill trigger list
-              items:
-                $ref: '#/components/schemas/SkillTrigger'
-    SkillTriggerCreateParam:
-      type: object
-      required:
-        - skillId
-        - displayName
-        - triggerType
-      properties:
-        skillId:
-          type: string
-          description: Skill ID
-          example: sk-g30e1b80b5g1itbemc0g5jj3
-        displayName:
-          type: string
-          description: Trigger display name
-          example: My trigger
-        triggerType:
-          description: Trigger type
-          $ref: '#/components/schemas/SkillTriggerType'
-        simpleEventName:
-          description: Simple event name (only required when trigger type is `simpleEvent`)
-          $ref: '#/components/schemas/SimpleEventName'
-        timerConfig:
-          description: Timer config (only required when trigger type is `timer`)
-          $ref: '#/components/schemas/TimerTriggerConfig'
-        input:
-          description: Skill input
-          $ref: '#/components/schemas/SkillInput'
-        context:
-          description: Skill invocation context
-          $ref: '#/components/schemas/SkillContext'
-        tplConfig:
-          description: Skill template config
-          $ref: '#/components/schemas/SkillTemplateConfig'
-        enabled:
-          type: boolean
-          description: Whether this trigger is enabled
-    CreateSkillTriggerRequest:
-      type: object
-      required:
-        - triggerList
-      properties:
-        triggerList:
-          type: array
-          description: Skill triggers to upsert
-          items:
-            $ref: '#/components/schemas/SkillTriggerCreateParam'
-    CreateSkillTriggerResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Skill trigger list
-              items:
-                $ref: '#/components/schemas/SkillTrigger'
-    UpdateSkillTriggerRequest:
-      allOf:
-        - $ref: '#/components/schemas/SkillTriggerCreateParam'
-        - type: object
-          required:
-            - triggerId
-          properties:
-            triggerId:
-              type: string
-              description: Trigger ID
-              example: tr-g30e1b80b5g1itbemc0g5jj3
-    UpdateSkillTriggerResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              description: Updated skill trigger
-              $ref: '#/components/schemas/SkillTrigger'
-    DeleteSkillTriggerRequest:
-      type: object
-      required:
-        - triggerId
-      properties:
-        triggerId:
-          type: string
-          description: Trigger ID to delete
     MediaType:
       type: string
       description: media type
@@ -10042,6 +8215,14 @@ components:
         version:
           type: number
           description: Result version for file registration
+        ptcEnabled:
+          type: boolean
+          description: Whether PTC (Programmatic Tool Calling) is enabled
+        env:
+          type: object
+          additionalProperties:
+            type: string
+          description: Environment variables for execution
 
     SandboxExecuteRequest:
       type: object
@@ -10087,182 +8268,6 @@ components:
                   description: System warnings from sandbox (e.g., file rename due to conflict, temporary directory creation)
                   items:
                     type: string
-
-    PilotStepStatus:
-      type: string
-      enum:
-        - init
-        - executing
-        - finish
-        - failed
-    PilotStep:
-      type: object
-      properties:
-        stepId:
-          type: string
-          description: Pilot step ID
-        name:
-          type: string
-          description: Pilot step name
-        epoch:
-          type: number
-          description: Pilot step epoch
-        entityId:
-          type: string
-          description: Pilot step entity ID
-        entityType:
-          type: string
-          description: Pilot step entity type
-        status:
-          description: Pilot step status
-          $ref: '#/components/schemas/PilotStepStatus'
-        rawOutput:
-          type: string
-          description: Pilot step raw output
-        actionResult:
-          description: Pilot step action result
-          $ref: '#/components/schemas/ActionResult'
-        createdAt:
-          type: string
-          description: Pilot step created at
-        updatedAt:
-          type: string
-          description: Pilot step updated at
-    PilotSessionStatus:
-      type: string
-      enum:
-        - init
-        - executing
-        - waiting
-        - finish
-        - failed
-    PilotSession:
-      type: object
-      required:
-        - sessionId
-        - status
-        - targetType
-        - targetId
-        - title
-        - input
-        - currentEpoch
-        - maxEpoch
-      properties:
-        sessionId:
-          type: string
-          description: Pilot session ID
-        title:
-          type: string
-          description: Pilot session title
-        input:
-          description: Pilot session input
-          $ref: '#/components/schemas/SkillInput'
-        status:
-          description: Pilot session status
-          $ref: '#/components/schemas/PilotSessionStatus'
-        targetType:
-          description: Pilot session target type
-          $ref: '#/components/schemas/EntityType'
-        targetId:
-          type: string
-          description: Pilot session target ID
-        currentEpoch:
-          type: number
-          description: Pilot session current epoch
-        maxEpoch:
-          type: number
-          description: Pilot session max epoch
-        steps:
-          type: array
-          description: Pilot steps
-          items:
-            $ref: '#/components/schemas/PilotStep'
-        createdAt:
-          type: string
-          description: Pilot session created at
-        updatedAt:
-          type: string
-          description: Pilot session updated at
-    CreatePilotSessionRequest:
-      type: object
-      required:
-        - targetId
-        - targetType
-        - input
-      properties:
-        targetId:
-          type: string
-          description: Pilot session target ID
-        targetType:
-          description: Pilot session target type
-          $ref: '#/components/schemas/EntityType'
-        maxEpoch:
-          type: number
-          description: Pilot session max epoch
-          default: 2
-        title:
-          type: string
-          description: Pilot session title
-        input:
-          description: Pilot session input
-          $ref: '#/components/schemas/SkillInput'
-        providerItemId:
-          type: string
-          description: Pilot session provider item ID
-    UpdatePilotSessionRequest:
-      type: object
-      required:
-        - sessionId
-      properties:
-        sessionId:
-          type: string
-          description: Pilot session ID
-        input:
-          description: Pilot session input
-          $ref: '#/components/schemas/SkillInput'
-        maxEpoch:
-          type: number
-          description: Pilot session max epoch
-          default: 2
-    RecoverPilotSessionRequest:
-      type: object
-      required:
-        - sessionId
-      properties:
-        sessionId:
-          type: string
-          description: Pilot session ID to recover
-        stepIds:
-          type: array
-          description: Optional array of specific step IDs to recover. If not provided, recovers all failed steps in the current epoch.
-          items:
-            type: string
-    UpsertPilotSessionResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              description: Upserted pilot session
-              $ref: '#/components/schemas/PilotSession'
-    ListPilotSessionsResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: array
-              description: Pilot session list
-              items:
-                $ref: '#/components/schemas/PilotSession'
-    GetPilotSessionDetailResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              description: Pilot session detail
-              $ref: '#/components/schemas/PilotSession'
     CopilotSession:
       type: object
       properties:
@@ -10440,19 +8445,6 @@ components:
               type: object
               description: Form definition
               $ref: '#/components/schemas/FormDefinition'
-    HasFilledFormResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              description: Has filled form data
-              properties:
-                hasFilledForm:
-                  type: boolean
-                  description: Whether the user has filled the form
-                  default: false
     GetCreditRechargeResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -10625,19 +8617,6 @@ components:
               description: Invitation code list
               items:
                 $ref: '#/components/schemas/InvitationCode'
-    HasBeenInvitedResponse:
-      allOf:
-        - $ref: '#/components/schemas/BaseResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              description: Has been invited data
-              properties:
-                hasBeenInvited:
-                  type: boolean
-                  description: Whether user has been invited
-                  default: false
     SubscriptionPlan:
       type: object
       properties:
@@ -11022,6 +9001,27 @@ components:
                 content:
                   type: string
                   description: Converted markdown content
+    PromptSuggestion:
+      type: object
+      description: Prompt suggestion
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: object
+          description: Prompt (JSON map, key is language code, value is prompt)
+          additionalProperties:
+            type: string
+    GetPromptSuggestionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Prompt suggestions
+              items:
+                $ref: '#/components/schemas/PromptSuggestion'
     MediaGenerationModelCapabilities:
       type: object
       properties:
@@ -12289,6 +10289,70 @@ components:
         toolsetId:
           type: string
           description: Toolset ID
+    ExecuteToolRequest:
+      type: object
+      required:
+        - toolsetKey
+        - toolName
+        - arguments
+      properties:
+        toolsetKey:
+          type: string
+          description: Toolset key
+        toolName:
+          type: string
+          description: Tool method name to execute
+        arguments:
+          type: object
+          additionalProperties: true
+          description: Tool arguments
+    ExecuteToolResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              additionalProperties: true
+              description: Tool execution result data
+    ExportToolsetDefinitionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ToolsetExportDefinition'
+    ToolsetExportDefinition:
+      type: object
+      properties:
+        key:
+          type: string
+          description: Toolset unique key
+        name:
+          type: string
+          description: Toolset display name
+        description:
+          type: string
+          description: Toolset description
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToolExportDefinition'
+    ToolExportDefinition:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Tool method name
+        description:
+          type: string
+          description: Tool description
+        inputSchema:
+          type: object
+          additionalProperties: true
+          description: JSON Schema format input parameter definition
     GetToolCallResultResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -12580,6 +10644,16 @@ components:
           type: string
           format: date-time
           description: Workflow update timestamp
+    ListWorkflowExecutionsResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: List of workflow executions
+              items:
+                $ref: '#/components/schemas/WorkflowExecution'
     WorkflowTask:
       type: object
       required:
@@ -14616,6 +12690,7 @@ components:
       enum:
         - template_publish
         - invitation_claim
+        - run_workflow
       description: Voucher source
 
     InvitationStatus:

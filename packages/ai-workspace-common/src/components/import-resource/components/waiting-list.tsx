@@ -1,13 +1,12 @@
 import { memo } from 'react';
 import { Button, Spin, Avatar } from 'antd';
-import mime from 'mime/lite';
 import { Delete } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
 import { useImportResourceStoreShallow } from '@refly/stores';
 import type { WaitingListItem } from '@refly/stores/src/stores/import-resource';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { safeParseURL } from '@refly/utils';
-import { ResourceIcon } from '@refly-packages/ai-workspace-common/components/common/resourceIcon';
+import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 
 const WaitingList = memo(() => {
   const { t } = useTranslation();
@@ -58,32 +57,15 @@ const WaitingList = memo(() => {
       <div className="file-item-container flex items-center gap-2 flex-1 min-w-0">
         <Spin spinning={isLoading} size="small">
           {item.file?.type === 'image' && item.file.url ? (
-            <img
-              src={item.file.url}
-              alt={item.file.url}
-              className="w-5 h-5 rounded-md object-cover"
-            />
-          ) : item.file?.type === 'video' && item.file.url ? (
-            <div className="w-5 h-5 rounded-md bg-gray-100 flex items-center justify-center">
-              <svg className="w-3 h-3 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 6a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                <path d="M8 11l3-2-3-2v4z" />
-              </svg>
-            </div>
-          ) : item.file?.type === 'audio' && item.file.url ? (
-            <div className="w-5 h-5 rounded-md bg-gray-100 flex items-center justify-center">
-              <svg className="w-3 h-3 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 6a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                <path d="M9 12l2-2-2-2v4z" />
-              </svg>
+            <div className="w-5 h-5 flex items-center justify-center">
+              <img
+                src={item.file.url}
+                alt={item.file?.title}
+                className="w-4 h-4 rounded-md object-cover"
+              />
             </div>
           ) : (
-            <ResourceIcon
-              url=""
-              resourceType="file"
-              resourceMeta={{ contentType: mime.getType(item.file.extension) }}
-              size={16}
-            />
+            <NodeIcon type="file" filename={item.file?.title} filled={false} small />
           )}
         </Spin>
         <div className="flex-1 min-w-0">

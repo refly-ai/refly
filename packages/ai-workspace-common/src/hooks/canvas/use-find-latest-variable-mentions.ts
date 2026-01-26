@@ -21,7 +21,15 @@ export const useFindLatestVariableMetions = (variableMentions?: MentionCommonDat
     [shareData?.variables, variables],
   );
 
-  return useMemo(() => {
+  const sourceVariables = useMemo(() => {
+    if (!variableMentions || variableMentions.length === 0) return [];
+    const latestVariables = workflowVariables.filter((v) => {
+      return variableMentions.some((m) => m.id === v.variableId);
+    });
+    return latestVariables;
+  }, [workflowVariables, variableMentions]);
+
+  const latestVariables = useMemo(() => {
     if (!variableMentions || variableMentions.length === 0) return [];
     const latestVariables = variableMentions.map((v) => {
       const variable = workflowVariables.find((variable) => variable.variableId === v.id);
@@ -29,4 +37,6 @@ export const useFindLatestVariableMetions = (variableMentions?: MentionCommonDat
     });
     return latestVariables;
   }, [workflowVariables, variableMentions]);
+
+  return { latestVariables, sourceVariables };
 };

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeState {
   // Theme mode
@@ -34,6 +34,10 @@ const applyDarkMode = (isDark: boolean) => {
   }
 };
 
+// Track last init time to prevent excessive calls
+let lastInitTime = 0;
+const INIT_DEBOUNCE_MS = 100; // Only allow initTheme once per 100ms
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
@@ -57,12 +61,23 @@ export const useThemeStore = create<ThemeState>()(
       },
 
       setLoggedIn: (status: boolean) => {
-        set({ isLoggedIn: status });
-        // Re-initialize theme when login status changes
-        setTimeout(() => get().initTheme(), 0);
+        const currentStatus = get().isLoggedIn;
+        // Only update and re-initialize if status actually changed
+        if (currentStatus !== status) {
+          set({ isLoggedIn: status });
+          // Re-initialize theme when login status changes
+          setTimeout(() => get().initTheme(), 0);
+        }
       },
 
       initTheme: () => {
+        // Debounce to prevent excessive calls
+        const now = Date.now();
+        if (now - lastInitTime < INIT_DEBOUNCE_MS) {
+          return;
+        }
+        lastInitTime = now;
+
         const { themeMode, isLoggedIn } = get();
 
         // If not logged in, default to light mode
@@ -73,7 +88,6 @@ export const useThemeStore = create<ThemeState>()(
         }
 
         // If logged in, follow stored theme settings
-        console.log('initTheme themeMode', themeMode);
 
         // Initialize based on current theme mode
         let isDark = false;

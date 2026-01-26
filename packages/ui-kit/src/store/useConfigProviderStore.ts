@@ -2,7 +2,7 @@ import { type ThemeConfig, theme } from 'antd';
 import { create } from 'zustand';
 import { deepmerge } from '@refly/utils';
 
-export interface ConfigProviderState {
+interface ConfigProviderState {
   theme: ThemeConfig;
   updateTheme: (config: Partial<ThemeConfig>) => void;
 }

@@ -1,0 +1,45 @@
+@property --gradient-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 66deg;
+}
+
+.pure-copilot-glow-effect {
+  position: relative;
+  overflow: visible;
+  transition: box-shadow 0.3s ease-in-out;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    padding: 8px;
+    pointer-events: none;
+    z-index: 2;
+    border-radius: 20px;
+    background: var(
+      --Test-AI-primary-color,
+      linear-gradient(var(--gradient-angle), #8eefb6 -11.25%, #00b2ad 110.31%)
+    );
+    animation: rotateGradient 4s linear infinite;
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+  }
+}
+
+@keyframes rotateGradient {
+  0% {
+    --gradient-angle: 0deg;
+  }
+  100% {
+    --gradient-angle: 360deg;
+  }
+}

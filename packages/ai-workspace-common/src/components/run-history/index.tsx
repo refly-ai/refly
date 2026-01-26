@@ -7,7 +7,7 @@ import { Empty, Typography, Table, Tooltip, message } from 'antd';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 import { LOCALE } from '@refly/common-types';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { RunHistoryFilters, RunStatusFilter, RunTypeFilter } from './run-history-filters';
 import { UsedTools } from './used-tools';
 import { client } from '@refly/openapi-schema';
@@ -79,7 +79,7 @@ const ActionCell = memo(
             break;
           case 'fixWorkflow':
             if (record.sourceCanvasId) {
-              navigate(`/canvas/${record.sourceCanvasId}`);
+              navigate(`/workflow/${record.sourceCanvasId}`);
             } else {
               message.warning(t('runDetail.failureActions.workflowDeleted'));
             }

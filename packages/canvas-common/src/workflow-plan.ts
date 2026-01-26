@@ -12,6 +12,15 @@ import { genNodeEntityId, genUniqueId } from '@refly/utils';
 import { CanvasNodeFilter } from './types';
 import { prepareAddNode } from './utils';
 
+const replaceTaskAgentMentions = (prompt: string, taskEntityIdMap: Map<string, string>): string => {
+  if (!prompt || taskEntityIdMap.size === 0) return prompt;
+  return prompt.replace(/@\{type=agent,id=([^,}]+),name=([^}]+)\}/g, (match, taskId, name) => {
+    const mappedId = taskEntityIdMap.get(taskId);
+    if (!mappedId) return match;
+    return `@{type=agent,id=${mappedId},name=${name}}`;
+  });
+};
+
 // Task schema for workflow plan
 export const workflowTaskSchema = z.object({
   id: z.string().describe('Unique ID for the task'),
@@ -516,6 +525,9 @@ export const generateCanvasDataFromWorkflowPlan = (
 
       // Create the node data for prepareAddNode
       const taskEntityId = genNodeEntityId('skillResponse');
+      taskIdToEntityId.set(taskId, taskEntityId);
+
+      const normalizedPrompt = replaceTaskAgentMentions(taskPrompt, taskIdToEntityId);
 
       // Calculate default position for non-auto-layout mode
       const defaultPosition = autoLayout
@@ -536,7 +548,7 @@ export const generateCanvasDataFromWorkflowPlan = (
           entityId: taskEntityId,
           contentPreview: '',
           metadata: {
-            query: taskPrompt,
+            query: normalizedPrompt,
             selectedToolsets,
             contextItems: [],
             status: 'init',
@@ -556,7 +568,6 @@ export const generateCanvasDataFromWorkflowPlan = (
 
       nodes.push(newNode);
       taskIdToNodeId.set(taskId, newNode.id);
-      taskIdToEntityId.set(taskId, taskEntityId);
     }
 
     // Phase 2: Create dependency edges

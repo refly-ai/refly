@@ -1,7 +1,7 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { NewConversation, Mcp, ArrowRight, ArrowDown } from 'refly-icons';
-import { InputParameterRow } from '@refly-packages/ai-workspace-common/components/canvas/nodes/start';
+import { InputParameterRow } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/input-parameter-row';
 import { LabelWrapper } from './label-wrapper';
 import { useTranslation } from 'react-i18next';
 import { Typography, Dropdown, Divider } from 'antd';
@@ -170,7 +170,7 @@ const isPlanDataEmpty = (data: WorkflowPlanRecord) => {
 export const CopilotWorkflowPlan = memo(
   ({ data, status, error, toolName }: CopilotWorkflowPlanProps) => {
     const { t } = useTranslation();
-    const { data: toolsData } = useListTools({ query: { enabled: true } });
+    const { data: toolsData } = useListTools({ query: { includeUnauthorized: true } });
     const [isErrorExpanded, setIsErrorExpanded] = useState(false);
 
     const isEmpty = isPlanDataEmpty(data);
@@ -236,8 +236,8 @@ export const CopilotWorkflowPlan = memo(
     const { tasks = [], variables = [] } = displayData ?? {};
 
     return (
-      <div className="flex flex-col gap-3 pt-2">
-        <div className="flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas">
+      <div className="flex flex-col items-end gap-3 pt-2">
+        <div className="w-[360px] flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas">
           <div className="flex items-center gap-1.5">
             <NodeIcon type="start" small />
             <div className="text-refly-text-caption font-medium leading-5 flex-1 truncate text-sm">
@@ -250,10 +250,9 @@ export const CopilotWorkflowPlan = memo(
               {variables?.map((variable) => (
                 <InputParameterRow
                   key={variable.name}
-                  variableType={variable.variableType as 'string' | 'option' | 'resource'}
-                  label={variable.name}
-                  isRequired={true}
-                  isSingle={true}
+                  variable={variable}
+                  readonly={true}
+                  isHighlighted={false}
                 />
               ))}
             </div>
@@ -262,7 +261,7 @@ export const CopilotWorkflowPlan = memo(
 
         {tasks.map((task) => (
           <div
-            className="flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas"
+            className="w-[360px] flex flex-col gap-3 p-4 rounded-xl border-solid border-[1px] border-refly-Card-Border bg-refly-bg-canvas"
             key={task.id}
           >
             <div className="flex items-center gap-1.5">

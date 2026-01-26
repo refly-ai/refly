@@ -6,6 +6,7 @@ import { useListCopilotSessions } from '@refly-packages/ai-workspace-common/quer
 import cn from 'classnames';
 import { useCopilotStoreShallow } from '@refly/stores';
 import { ReflyAssistant } from './refly-assistant';
+import { useSearchParams } from 'react-router-dom';
 
 interface CopilotHeaderProps {
   canvasId: string;
@@ -18,6 +19,10 @@ export const CopilotHeader = memo(
   ({ canvasId, sessionId, copilotWidth, setCopilotWidth }: CopilotHeaderProps) => {
     const { t } = useTranslation();
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+    const [searchParams] = useSearchParams();
+    const source = useMemo(() => searchParams.get('source'), [searchParams]);
+    const isOnboarding = ['onboarding', 'frontPage'].includes(source ?? '');
 
     const { setCurrentSessionId, historyTemplateSessions, removeHistoryTemplateSession } =
       useCopilotStoreShallow((state) => ({
@@ -32,7 +37,7 @@ export const CopilotHeader = memo(
           canvasId,
         },
       },
-      [],
+      undefined,
       { enabled: !!canvasId },
     );
 
@@ -100,10 +105,22 @@ export const CopilotHeader = memo(
     }, [sessionHistory, handleSessionClick]);
 
     return (
-      <div className="h-[46px] px-4 py-3 flex items-center gap-3 justify-between">
-        <ReflyAssistant />
+      <div
+        className={cn(
+          'absolute right-0 left-0 h-[46px] px-4 py-3 flex items-center gap-3 z-[2]',
+          isOnboarding ? 'top-[10px] justify-end' : 'justify-between bg-refly-bg-body',
+        )}
+      >
+        {!isOnboarding && <ReflyAssistant />}
 
-        <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            'flex items-center gap-3',
+            isOnboarding
+              ? 'h-8 bg-refly-bg-content-z2 rounded-2xl shadow-[0_2px_20px_4px_rgba(0,0,0,0.10)] px-4'
+              : '',
+          )}
+        >
           {sessionHistory.length > 0 && (
             <Tooltip title={t('copilot.header.history')}>
               <Popover
@@ -135,17 +152,19 @@ export const CopilotHeader = memo(
             </Tooltip>
           )}
 
-          {showDivider && (
+          {showDivider && !isOnboarding && (
             <Divider type="vertical" className="m-0 h-4 bg-refly-Card-Border translate-y-[1px]" />
           )}
 
-          <Tooltip title={t('copilot.header.close')}>
-            <SideLeft
-              size={20}
-              className="text-refly-text-0 hover:bg-refly-tertiary-hover cursor-pointer rounded-md"
-              onClick={handleClose}
-            />
-          </Tooltip>
+          {!isOnboarding && (
+            <Tooltip title={t('copilot.header.close')}>
+              <SideLeft
+                size={20}
+                className="text-refly-text-0 hover:bg-refly-tertiary-hover cursor-pointer rounded-md"
+                onClick={handleClose}
+              />
+            </Tooltip>
+          )}
         </div>
       </div>
     );

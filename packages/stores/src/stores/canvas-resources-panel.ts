@@ -5,8 +5,6 @@ import { persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { DriveFile } from '@refly/openapi-schema';
 
-export type CanvasResourcesPanelMode = 'wide' | 'normal' | 'hidden';
-
 export type CanvasResourcesParentType = 'stepsRecord' | 'resultsRecord' | 'myUpload';
 
 interface CanvasResourcesPanelState {
@@ -21,6 +19,7 @@ interface CanvasResourcesPanelState {
   showWorkflowRun: boolean;
   toolsDependencyOpen: Record<string, boolean>;
   toolsDependencyHighlight: Record<string, boolean>;
+  hasFirstExecutionToday: boolean;
 
   // Methods
   setCurrentResource: (resource: CanvasNode | null) => void;
@@ -36,6 +35,7 @@ interface CanvasResourcesPanelState {
   setToolsDependencyOpen: (canvasId: string, open: boolean) => void;
   setToolsDependencyHighlight: (canvasId: string, highlight: boolean) => void;
   resetToolsDependency: (canvasId: string) => void;
+  setHasFirstExecutionToday: (has: boolean) => void;
   resetState: () => void;
 }
 
@@ -46,6 +46,7 @@ const defaultState = {
   wideScreenVisible: false,
   searchKeyword: '',
   showWorkflowRun: false,
+  hasFirstExecutionToday: false,
 };
 
 export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
@@ -102,6 +103,7 @@ export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
             toolsDependencyHighlight: restHighlight,
           };
         }),
+      setHasFirstExecutionToday: (has: boolean) => set({ hasFirstExecutionToday: has }),
       resetState: () => set(defaultState),
     }),
     {

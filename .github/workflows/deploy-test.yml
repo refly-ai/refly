@@ -6,11 +6,11 @@ on:
     branches:
       - main
     paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
+      - "apps/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
 
 permissions:
   id-token: write
@@ -129,11 +129,8 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
           REPOSITORY="${REGISTRY}/refly-${{ matrix.app }}"
-          IMAGE_TAG="${{ github.sha }}"
+          IMAGE_TAG="nightly-${{ github.sha }}"
           TAGS="${REPOSITORY}:${IMAGE_TAG}"
-          if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "stable" ]]; then
-            TAGS="${TAGS},${REPOSITORY}:nightly"
-          fi
           echo "registry=$REGISTRY" >> "$GITHUB_OUTPUT"
           echo "repository=$REPOSITORY" >> "$GITHUB_OUTPUT"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
@@ -180,18 +177,18 @@ jobs:
           cache-to: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache,mode=max
 
       - name: Update kubeconfig for EKS cluster
-        if: github.ref_name == 'main' || github.ref_name == 'stable'
+        if: github.ref_name == 'main'
         run: |
           aws eks update-kubeconfig --name ${{ vars.AWS_EKS_CLUSTER_TEST }} --region ${{ vars.AWS_REGION }}
 
       - name: Update API deployment image on EKS
-        if: matrix.app == 'api' && (github.ref_name == 'main' || github.ref_name == 'stable')
+        if: matrix.app == 'api' && github.ref_name == 'main'
         run: |
           kubectl set image deployment/refly-api refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
           kubectl rollout status deployment/refly-api -n refly-app --timeout=300s
 
       - name: Update Web deployment image on EKS
-        if: matrix.app == 'web' && (github.ref_name == 'main' || github.ref_name == 'stable')
+        if: matrix.app == 'web' && github.ref_name == 'main'
         run: |
           kubectl set image deployment/refly-web refly-web=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
           kubectl rollout status deployment/refly-web -n refly-app --timeout=300s

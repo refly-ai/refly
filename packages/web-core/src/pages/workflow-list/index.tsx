@@ -4,7 +4,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { Helmet } from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 
-export const WorkflowListPage = memo(() => {
+const WorkflowListPage = memo(() => {
   const { t } = useTranslation();
   useEffect(() => {
     logEvent('enter_publish_page');

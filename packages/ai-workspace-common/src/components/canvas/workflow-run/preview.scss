@@ -1,0 +1,47 @@
+.workflow-run-preview-collapse {
+  .ant-collapse-item {
+    border: none !important;
+    margin-bottom: 0 !important;
+  }
+
+  .ant-collapse-item + .ant-collapse-item {
+    margin-top: 12px !important;
+  }
+
+  .ant-collapse-item:first-child .ant-collapse-header {
+    border-radius: 6px 6px 6px 6px !important;
+  }
+
+  .ant-collapse-header {
+    background-color: #e6e8ea !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: #1c1f23 !important;
+    font-weight: 500 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .ant-collapse-expand-icon {
+    padding-right: 10px !important;
+    padding-left: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+  }
+
+  .ant-collapse-content {
+    background-color: #ffffff !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  .ant-collapse-content-box {
+    padding: 0 !important;
+  }
+}

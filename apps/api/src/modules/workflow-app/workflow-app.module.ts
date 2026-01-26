@@ -12,7 +12,6 @@ import { ToolModule } from '../tool/tool.module';
 import { VariableExtractionModule } from '../variable-extraction/variable-extraction.module';
 import { CreditModule } from '../credit/credit.module';
 import { NotificationModule } from '../notification/notification.module';
-import { VoucherModule } from '../voucher/voucher.module';
 import { isDesktop } from '../../utils/runtime';
 import { QUEUE_WORKFLOW_APP_TEMPLATE } from '../../utils/const';
 import { WorkflowAppTemplateProcessor } from './workflow-app.processor';
@@ -28,7 +27,6 @@ import { WorkflowAppTemplateProcessor } from './workflow-app.processor';
     VariableExtractionModule,
     CreditModule,
     NotificationModule,
-    VoucherModule,
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_WORKFLOW_APP_TEMPLATE })]),
   ],
   controllers: [WorkflowAppController],
