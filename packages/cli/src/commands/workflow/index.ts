@@ -27,6 +27,8 @@ import { workflowNodeUpdateCommand } from './node-update.js';
 import { workflowNodeDeleteCommand } from './node-delete.js';
 import { workflowNodeOutputCommand } from './node-output.js';
 import { workflowEditCommand } from './edit.js';
+import { workflowVariablesCommand } from './variables.js';
+import { workflowResultCommand } from './result.js';
 
 export const workflowCommand = new Command('workflow')
   .description('Manage and run workflows')
@@ -53,4 +55,8 @@ export const workflowCommand = new Command('workflow')
   .addCommand(workflowNodeDeleteCommand)
   .addCommand(workflowNodeOutputCommand)
   // Workflow plan operations
-  .addCommand(workflowEditCommand);
+  .addCommand(workflowEditCommand)
+  // Workflow variables
+  .addCommand(workflowVariablesCommand)
+  // Action result
+  .addCommand(workflowResultCommand);

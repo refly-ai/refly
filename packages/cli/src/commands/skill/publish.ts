@@ -96,8 +96,6 @@ export const skillPublishCommand = new Command('publish')
         version: result.version,
         status: result.status,
         isPublic: result.isPublic,
-        shareId: result.shareId,
-        shareUrl: result.shareId ? `https://refly.ai/skill/${result.shareId}` : undefined,
         githubPrUrl: result.githubPrUrl,
         githubPrNumber: result.githubPrNumber,
         localPath: skillMdPath,

@@ -6,10 +6,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Command } from 'commander';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
-import { apiRequest } from '../../api/client.js';
+import { apiRequest, apiGetWorkflow } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
 import { parseReflySkillMd } from '../../skill/symlink.js';
 import { getReflyDomainSkillDir, getReflySkillsDir } from '../../config/paths.js';
+import { checkRequiredVariables, buildMissingVariablesError } from '../../utils/variable-check.js';
 
 interface SkillExecutionResult {
   executionId: string;
@@ -31,6 +32,7 @@ export const skillRunCommand = new Command('run')
   .option('--input <json>', 'Input JSON for the skill')
   .option('--workflow <skillWorkflowId>', 'Run specific workflow only')
   .option('--async', 'Run asynchronously')
+  .option('--no-prompt', 'Disable interactive prompts (fail if required variables are missing)')
   .action(async (options) => {
     try {
       const skillsDir = getReflySkillsDir();
@@ -46,11 +48,12 @@ export const skillRunCommand = new Command('run')
       let installationId: string;
       let name: string | undefined;
       let skillId: string | undefined;
+      let workflowId: string | undefined;
 
       // If --name is provided, read installationId from local SKILL.md
       if (options.name) {
         name = options.name;
-        const skillDir = getReflyDomainSkillDir(name);
+        const skillDir = getReflyDomainSkillDir(options.name);
         const skillMdPath = path.join(skillDir, 'SKILL.md');
 
         if (!fs.existsSync(skillMdPath)) {
@@ -64,6 +67,7 @@ export const skillRunCommand = new Command('run')
         try {
           const { meta } = parseReflySkillMd(skillContent);
           skillId = meta.skillId;
+          workflowId = meta.workflowId;
 
           if (options.id) {
             // --id can override
@@ -117,6 +121,34 @@ export const skillRunCommand = new Command('run')
             },
           });
           return;
+        }
+      }
+
+      // Check required variables when noPrompt is true (for agent/script usage)
+      // Uses the skill's primary workflow to get variable definitions
+      if (options.noPrompt && workflowId) {
+        try {
+          const workflow = await apiGetWorkflow(workflowId);
+          if (workflow?.variables) {
+            const checkResult = checkRequiredVariables(workflow.variables, input);
+
+            if (!checkResult.valid) {
+              const errorPayload = buildMissingVariablesError(
+                'skill',
+                name || installationId,
+                name,
+                checkResult,
+              );
+              fail(ErrorCodes.MISSING_VARIABLES, errorPayload.message, {
+                details: errorPayload.details,
+                hint: errorPayload.hint,
+                suggestedFix: errorPayload.suggestedFix,
+                recoverable: errorPayload.recoverable,
+              });
+            }
+          }
+        } catch {
+          // If we can't fetch workflow, continue and let backend validate
         }
       }
 

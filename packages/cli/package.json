@@ -1,6 +1,6 @@
 {
   "name": "@powerformer/refly-cli",
-  "version": "0.1.14",
+  "version": "0.1.17",
   "description": "Refly CLI - Command-line interface for Refly workflow orchestration",
   "bin": {
     "refly": "./dist/bin/refly.js"

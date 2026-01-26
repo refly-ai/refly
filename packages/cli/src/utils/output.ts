@@ -281,6 +281,9 @@ export const ErrorCodes = {
   PERMISSION_DENIED: 'PERMISSION_DENIED',
   INVALID_INPUT: 'INVALID_INPUT',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+
+  // Variables
+  MISSING_VARIABLES: 'MISSING_VARIABLES',
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];

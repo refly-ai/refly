@@ -36,11 +36,13 @@ export const skillInstallCommand = new Command('install')
   .option('--version <version>', 'Specific version to install')
   .option('--share-id <shareId>', 'Share ID for private skills')
   .option('--config <json>', 'Installation config JSON')
+  .option('--force', 'Force reinstall if already installed')
   .action(async (skillId, options) => {
     try {
       const body: Record<string, unknown> = { skillId };
       if (options.version) body.version = options.version;
       if (options.shareId) body.shareId = options.shareId;
+      if (options.force) body.force = true;
 
       if (options.config) {
         try {
@@ -91,7 +93,9 @@ export const skillInstallCommand = new Command('install')
           });
 
           // Create skill directory and symlink
-          const symlinkResult = createReflySkillWithSymlink(skillName, skillMdContent);
+          const symlinkResult = createReflySkillWithSymlink(skillName, skillMdContent, {
+            force: options.force,
+          });
 
           if (symlinkResult.success) {
             localPath = symlinkResult.reflyPath;

@@ -117,6 +117,7 @@ export interface DownloadSkillDto {
 export interface InstallSkillDto {
   skillId: string;
   shareId?: string;
+  force?: boolean; // Force reinstall if already installed
 }
 
 export interface InstallationFilterDto {

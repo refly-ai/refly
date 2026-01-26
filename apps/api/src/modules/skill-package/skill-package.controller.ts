@@ -259,6 +259,21 @@ export class SkillInstallationController {
   ): Promise<SkillExecutionResult> {
     return this.skillInstallationService.runInstalledSkill(req.user, installationId, input);
   }
+
+  @Post(':installationId/stop')
+  async stopSkill(
+    @Req() req: any,
+    @Param('installationId') installationId: string,
+  ): Promise<{
+    message: string;
+    installationId: string;
+    stoppedExecutions: Array<{
+      executionId: string;
+      workflowsAborted: number;
+    }>;
+  }> {
+    return this.skillInstallationService.stopRunningExecutions(req.user, installationId);
+  }
 }
 
 /**

@@ -11,6 +11,7 @@ import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import {
   apiRequest,
   apiGetWorkflow,
+  apiGetWorkflowVariables,
   apiUploadDriveFile,
   type WorkflowVariable,
   type WorkflowInfo,
@@ -19,6 +20,11 @@ import { CLIError } from '../../utils/errors.js';
 import { getWebUrl } from '../../config/config.js';
 import { promptForFilePath, isInteractive } from '../../utils/prompt.js';
 import { determineFileType } from '../../utils/file-type.js';
+import {
+  checkRequiredVariables,
+  buildMissingVariablesError,
+  variablesToObject,
+} from '../../utils/variable-check.js';
 
 interface RunResult {
   runId: string;
@@ -191,7 +197,15 @@ async function collectFileVariables(
     return [];
   }
 
-  // 2. Find required resource variables
+  // 2. Fetch saved variable values from backend
+  let savedVariables: WorkflowVariable[] = [];
+  try {
+    savedVariables = await apiGetWorkflowVariables(workflowId);
+  } catch (_error) {
+    // Continue without saved values
+  }
+
+  // 3. Find required resource variables
   const resourceVars = (workflow.variables ?? []).filter(
     (v) => v.variableType === 'resource' && v.required === true,
   );
@@ -200,46 +214,52 @@ async function collectFileVariables(
     return [];
   }
 
-  // 3. Filter out variables already provided in --input with valid values
+  // 4. Filter out variables already provided in --input OR saved in backend with valid values
   // Also track variables with invalid format for better error messages
   const invalidFormatVars: Array<{ name: string; reason: string }> = [];
 
+  // Helper to check if a variable has valid file value
+  const hasValidFileValue = (variable: WorkflowVariable | undefined): boolean => {
+    if (!variable) return false;
+    const values = variable.value;
+    if (!Array.isArray(values) || values.length === 0) return false;
+    return values.some((val: any) => {
+      const fileId = val?.resource?.fileId || val?.fileId;
+      return typeof fileId === 'string' && fileId.length > 0;
+    });
+  };
+
   const missingVars = resourceVars.filter((v) => {
-    // Find if this variable was provided in input
-    const provided = existingInput.find(
+    // Find if this variable was provided in --input
+    const providedInInput = existingInput.find(
       (input) =>
         (v.variableId && input.variableId === v.variableId) || (v.name && input.name === v.name),
     );
 
-    if (!provided) {
-      return true; // Not provided at all
-    }
+    // Find if this variable has saved value in backend
+    const savedValue = savedVariables.find(
+      (saved) =>
+        (v.variableId && saved.variableId === v.variableId) || (v.name && saved.name === v.name),
+    );
 
-    // Check if the value format is valid for file variables
-    const values = provided.value;
-    if (!Array.isArray(values) || values.length === 0) {
+    // Check --input first (takes precedence)
+    if (providedInInput) {
+      if (hasValidFileValue(providedInInput)) {
+        return false; // Valid value in --input
+      }
       invalidFormatVars.push({
         name: v.name,
-        reason: 'value must be an array with at least one file',
+        reason: 'invalid format in --input',
       });
-      return true;
+      // Continue to check saved value
     }
 
-    // Check if values have valid fileId
-    const hasValidFileId = values.some((val: any) => {
-      const fileId = val?.resource?.fileId || val?.fileId;
-      return typeof fileId === 'string' && fileId.length > 0;
-    });
-
-    if (!hasValidFileId) {
-      invalidFormatVars.push({
-        name: v.name,
-        reason: 'no valid fileId found in value',
-      });
-      return true;
+    // Check saved value from backend
+    if (hasValidFileValue(savedValue)) {
+      return false; // Valid value saved in backend
     }
 
-    return false; // Valid value provided
+    return true; // No valid value found
   });
 
   if (missingVars.length === 0) {
@@ -453,6 +473,28 @@ async function runWorkflow(workflowId: string, options: any): Promise<void> {
       },
     });
     return; // TypeScript flow control
+  }
+
+  // Check required variables when noPrompt is true (for agent/script usage)
+  // This provides a recoverable error with all missing variables info
+  if (options?.noPrompt && workflow?.variables) {
+    const inputObject = variablesToObject(inputVars);
+    const checkResult = checkRequiredVariables(workflow.variables, inputObject);
+
+    if (!checkResult.valid) {
+      const errorPayload = buildMissingVariablesError(
+        'workflow',
+        workflowId,
+        workflow.name,
+        checkResult,
+      );
+      fail(ErrorCodes.MISSING_VARIABLES, errorPayload.message, {
+        details: errorPayload.details,
+        hint: errorPayload.hint,
+        suggestedFix: errorPayload.suggestedFix,
+        recoverable: errorPayload.recoverable,
+      });
+    }
   }
 
   // Collect file variables interactively (if needed)

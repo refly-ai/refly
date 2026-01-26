@@ -21,6 +21,8 @@ import {
   GenerateWorkflowResponse,
   GenerateWorkflowCliRequest,
   GenerateWorkflowCliResponse,
+  EditWorkflowCliRequest,
+  EditWorkflowCliResponse,
 } from './copilot-autogen.dto';
 import {
   GenerateWorkflowAsyncResponse,
@@ -354,6 +356,122 @@ export class CopilotAutogenService {
       resultId,
       nodesCount: finalNodes.length,
       edgesCount: edges.length,
+    };
+  }
+
+  /**
+   * Edit workflow for CLI - Uses natural language to edit an existing workflow
+   * Supports both generate_workflow and patch_workflow tool outputs from Copilot.
+   */
+  async editWorkflowForCli(
+    user: User,
+    request: EditWorkflowCliRequest,
+  ): Promise<EditWorkflowCliResponse> {
+    const {
+      canvasId,
+      query,
+      locale,
+      modelItemId,
+      timeout = 60000,
+      sessionId: providedSessionId,
+    } = request;
+
+    this.logger.log(`[Autogen Edit] Starting workflow edit for canvas ${canvasId}`);
+    this.logger.log(`[Autogen Edit] Query: ${query}`);
+
+    // 1. Validate canvas exists and belongs to user
+    const canvas = await this.prisma.canvas.findFirst({
+      where: { canvasId, uid: user.uid, deletedAt: null },
+    });
+    if (!canvas) {
+      this.logger.error(`[Autogen Edit] Canvas ${canvasId} not found or access denied`);
+      throw new Error(`Canvas ${canvasId} not found or access denied`);
+    }
+
+    // 2. Determine copilot session ID for context continuity
+    // Priority: provided sessionId > existing session for canvas > create new
+    let copilotSessionId: string | undefined = providedSessionId;
+
+    if (!copilotSessionId) {
+      // First try: find session by exact canvasId match
+      let session = await this.prisma.copilotSession.findFirst({
+        where: { canvasId, uid: user.uid },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      // Fallback: if no session found for this canvas, check actionResult table
+      // which stores the actual copilotSessionId used for this canvas
+      if (!session) {
+        this.logger.log('[Autogen Edit] No session found by canvasId, checking actionResult...');
+        const actionResult = await this.prisma.actionResult.findFirst({
+          where: {
+            uid: user.uid,
+            targetId: canvasId,
+            copilotSessionId: { not: null },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (actionResult?.copilotSessionId) {
+          session = await this.prisma.copilotSession.findFirst({
+            where: { sessionId: actionResult.copilotSessionId },
+          });
+        }
+      }
+
+      copilotSessionId = session?.sessionId;
+      this.logger.log(
+        `[Autogen Edit] Found existing session: ${copilotSessionId ?? 'none (will create new)'}`,
+      );
+    } else {
+      this.logger.log(`[Autogen Edit] Using provided session: ${copilotSessionId}`);
+    }
+
+    // 3. Invoke Copilot Agent
+    const invokeRequest: InvokeSkillRequest = {
+      input: { query },
+      mode: 'copilot_agent',
+      target: { entityId: canvasId, entityType: 'canvas' },
+      locale,
+      modelItemId,
+      copilotSessionId,
+    };
+
+    const { resultId } = await this.skillService.sendInvokeSkillTask(user, invokeRequest);
+    this.logger.log(`[Autogen Edit] Copilot invoked, resultId: ${resultId}`);
+
+    // 4. Wait for Copilot completion
+    this.logger.log(`[Autogen Edit] Waiting for Copilot completion (timeout: ${timeout}ms)...`);
+    const actionResult = await this.waitForActionCompletion(user, resultId, timeout);
+    this.logger.log(`[Autogen Edit] Copilot completed with status: ${actionResult.status}`);
+
+    // 5. Extract result (supports both generate_workflow and patch_workflow)
+    const { planRef, toolUsed, reason } = this.extractWorkflowEditResult(actionResult);
+    if (!planRef) {
+      this.logger.error(`[Autogen Edit] Failed to extract workflow edit result: ${reason}`);
+      throw new Error(reason || 'Failed to edit workflow');
+    }
+    this.logger.log(
+      `[Autogen Edit] Extracted result: planId=${planRef.planId}, version=${planRef.version}, toolUsed=${toolUsed}`,
+    );
+
+    // 6. Fetch full plan from database
+    const plan = await this.workflowPlanService.getWorkflowPlanDetail(user, {
+      planId: planRef.planId,
+      version: planRef.version,
+    });
+    if (!plan) {
+      this.logger.error(`[Autogen Edit] Failed to fetch workflow plan: ${planRef.planId}`);
+      throw new Error(`Failed to fetch workflow plan with ID: ${planRef.planId}`);
+    }
+    this.logger.log(`[Autogen Edit] Fetched workflow plan with ${plan.tasks?.length ?? 0} tasks`);
+
+    return {
+      canvasId,
+      planId: planRef.planId,
+      version: planRef.version,
+      toolUsed: toolUsed!,
+      plan,
     };
   }
 
@@ -823,6 +941,87 @@ export class CopilotAutogenService {
       `[Autogen CLI] Successfully extracted workflow plan reference: ${planRef.planId}`,
     );
     return { planRef };
+  }
+
+  /**
+   * Extract Workflow Edit Result from ActionResult
+   * Supports both generate_workflow and patch_workflow tool outputs.
+   * Used by editWorkflowForCli method.
+   */
+  private extractWorkflowEditResult(actionResult: ActionDetail): {
+    planRef: WorkflowPlanRef | null;
+    toolUsed: 'generate_workflow' | 'patch_workflow' | null;
+    reason?: string;
+  } {
+    const steps = actionResult.steps ?? [];
+    if (steps.length === 0) {
+      this.logger.warn('[Autogen Edit] No steps found in action result');
+      return { planRef: null, toolUsed: null, reason: 'No steps in response' };
+    }
+
+    const toolCalls = steps[0]?.toolCalls ?? [];
+
+    // Check if Copilot is asking questions instead of calling workflow tools
+    const firstStepContent = steps[0]?.content;
+    if (toolCalls.length === 0 && firstStepContent) {
+      this.logger.warn('[Autogen Edit] Copilot did not call any tools, possibly asking questions');
+      return {
+        planRef: null,
+        toolUsed: null,
+        reason:
+          'Copilot did not call workflow tools. It may be asking for clarification. Please refine your edit instruction.',
+      };
+    }
+
+    // Check for patch_workflow first (more likely in edit scenario)
+    let toolCall = toolCalls.find((c) => c.toolName === 'patch_workflow');
+    let toolUsed: 'patch_workflow' | 'generate_workflow' | null = toolCall
+      ? 'patch_workflow'
+      : null;
+
+    // Fallback to generate_workflow
+    if (!toolCall) {
+      toolCall = toolCalls.find((c) => c.toolName === 'generate_workflow');
+      toolUsed = toolCall ? 'generate_workflow' : null;
+    }
+
+    if (!toolCall) {
+      const availableTools = toolCalls.map((c) => c.toolName).join(', ');
+      this.logger.warn(
+        `[Autogen Edit] No workflow tool call found. Available tools: ${availableTools}`,
+      );
+      return {
+        planRef: null,
+        toolUsed: null,
+        reason: `Copilot did not call workflow tools. Called: ${availableTools || 'none'}`,
+      };
+    }
+
+    if (!toolCall.output) {
+      this.logger.warn(`[Autogen Edit] ${toolUsed} tool call has no output`);
+      return { planRef: null, toolUsed: null, reason: 'Tool call has no output' };
+    }
+
+    const output =
+      typeof toolCall.output === 'string' ? safeParseJSON(toolCall.output) : toolCall.output;
+
+    // Extract planId and version from tool output
+    // Both tools return: { status: 'success', data: { planId, version } }
+    const data = (output as { data?: { planId?: string; version?: number } })?.data;
+    if (!data?.planId) {
+      this.logger.warn('[Autogen Edit] Missing planId in tool output');
+      return { planRef: null, toolUsed: null, reason: 'Missing planId in tool output' };
+    }
+
+    const planRef: WorkflowPlanRef = {
+      planId: data.planId,
+      version: data.version ?? 0,
+    };
+
+    this.logger.log(
+      `[Autogen Edit] Successfully extracted result: planId=${planRef.planId}, toolUsed=${toolUsed}`,
+    );
+    return { planRef, toolUsed };
   }
 
   /**

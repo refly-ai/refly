@@ -4,10 +4,12 @@
 
 import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
+import { RedisService } from '../common/redis.service';
 import { SkillPackageService } from './skill-package.service';
 import { CanvasService } from '../canvas/canvas.service';
-import { User } from '@refly/openapi-schema';
-import { genSkillPackageInstallationID } from '@refly/utils';
+import { WorkflowService } from '../workflow/workflow.service';
+import { User, WorkflowVariable } from '@refly/openapi-schema';
+import { genSkillPackageInstallationID, safeParseJSON } from '@refly/utils';
 import {
   InstallSkillDto,
   InstallationFilterDto,
@@ -31,96 +33,132 @@ export class SkillInstallationService {
     private readonly canvasService: CanvasService,
     @Inject(forwardRef(() => SkillPackageExecutorService))
     private readonly executorService: SkillPackageExecutorService,
+    @Inject(forwardRef(() => WorkflowService))
+    private readonly workflowService: WorkflowService,
+    private readonly redisService: RedisService,
   ) {}
 
   // ===== Installation Lifecycle =====
 
   /**
    * Download a skill package - creates installation record without initializing.
+   * Uses Redis distributed lock to prevent concurrent downloads of the same skill by the same user.
    */
   async downloadSkill(
     user: User,
     skillId: string,
     shareId?: string,
+    force?: boolean,
   ): Promise<SkillInstallationResponse> {
-    // Verify skill exists and is accessible
-    const skillPackage = await this.skillPackageService.getSkillPackage(skillId, {
-      includeWorkflows: true,
-      userId: user.uid,
-      shareId,
+    // Acquire distributed lock to prevent concurrent downloads
+    const lockKey = `skill:download:${user.uid}:${skillId}`;
+    const releaseLock = await this.redisService.waitLock(lockKey, {
+      ttlSeconds: 30,
+      maxRetries: 3,
+      initialDelay: 100,
+      noThrow: true,
     });
 
-    if (!skillPackage) {
-      throw new Error(`Skill package not found or access denied: ${skillId}`);
+    if (!releaseLock) {
+      throw new Error(
+        `Failed to acquire lock for skill download: skillId=${skillId}, uid=${user.uid}. Another download operation may be in progress. Please retry after a few seconds.`,
+      );
     }
 
-    // Check if already installed (including soft-deleted)
-    const existing = await this.prisma.skillInstallation.findFirst({
-      where: {
-        skillId,
-        uid: user.uid,
-      },
-    });
+    try {
+      // Verify skill exists and is accessible
+      const skillPackage = await this.skillPackageService.getSkillPackage(skillId, {
+        includeWorkflows: true,
+        userId: user.uid,
+        shareId,
+      });
 
-    // Initialize workflow mapping with pending status
-    const workflowMapping: WorkflowMappingRecord = {};
-    if (skillPackage.workflows) {
-      for (const workflow of skillPackage.workflows) {
-        workflowMapping[workflow.skillWorkflowId] = {
-          workflowId: null,
-          status: 'pending',
-        };
+      if (!skillPackage) {
+        throw new Error(`Skill package not found or access denied: ${skillId}`);
       }
-    }
 
-    let installation: SkillInstallation;
-    if (existing) {
-      if (existing.deletedAt) {
-        // Restore soft-deleted installation instead of hard deleting
-        // This avoids foreign key constraint issues with skill_executions
-        installation = await this.prisma.skillInstallation.update({
-          where: { installationId: existing.installationId },
+      // Check if already installed (including soft-deleted)
+      const existing = await this.prisma.skillInstallation.findFirst({
+        where: {
+          skillId,
+          uid: user.uid,
+        },
+      });
+
+      // Initialize workflow mapping with pending status
+      const workflowMapping: WorkflowMappingRecord = {};
+      if (skillPackage.workflows) {
+        for (const workflow of skillPackage.workflows) {
+          workflowMapping[workflow.skillWorkflowId] = {
+            workflowId: null,
+            status: 'pending',
+          };
+        }
+      }
+
+      let installation: SkillInstallation;
+      if (existing) {
+        if (existing.deletedAt) {
+          // Restore soft-deleted installation instead of hard deleting
+          // This avoids foreign key constraint issues with skill_executions
+          installation = await this.prisma.skillInstallation.update({
+            where: { installationId: existing.installationId },
+            data: {
+              deletedAt: null,
+              status: 'downloaded',
+              workflowMapping: JSON.stringify(workflowMapping),
+              installedVersion: skillPackage.version,
+            },
+          });
+          this.logger.log(`Restored soft-deleted installation: ${existing.installationId}`);
+        } else if (force) {
+          // Force reinstall: reset the existing installation
+          installation = await this.prisma.skillInstallation.update({
+            where: { installationId: existing.installationId },
+            data: {
+              status: 'downloaded',
+              workflowMapping: JSON.stringify(workflowMapping),
+              installedVersion: skillPackage.version,
+              errorMessage: null,
+            },
+          });
+          this.logger.log(`Force reinstalled skill: ${existing.installationId}`);
+        } else {
+          throw new Error(`Skill already installed: ${skillId}. Use --force to reinstall.`);
+        }
+      } else {
+        const installationId = genSkillPackageInstallationID();
+        installation = await this.prisma.skillInstallation.create({
           data: {
-            deletedAt: null,
+            installationId,
+            skillId,
+            uid: user.uid,
             status: 'downloaded',
             workflowMapping: JSON.stringify(workflowMapping),
             installedVersion: skillPackage.version,
           },
         });
-        this.logger.log(`Restored soft-deleted installation: ${existing.installationId}`);
-      } else {
-        throw new Error(`Skill already installed: ${skillId}`);
       }
-    } else {
-      const installationId = genSkillPackageInstallationID();
-      installation = await this.prisma.skillInstallation.create({
-        data: {
-          installationId,
-          skillId,
-          uid: user.uid,
-          status: 'downloaded',
-          workflowMapping: JSON.stringify(workflowMapping),
-          installedVersion: skillPackage.version,
-        },
+
+      // Increment download count
+      await this.prisma.skillPackage.update({
+        where: { skillId },
+        data: { downloadCount: { increment: 1 } },
       });
+
+      this.logger.log(`Downloaded skill ${skillId} for user ${user.uid}`);
+      return this.toInstallationResponse(installation, skillPackage);
+    } finally {
+      await releaseLock();
     }
-
-    // Increment download count
-    await this.prisma.skillPackage.update({
-      where: { skillId },
-      data: { downloadCount: { increment: 1 } },
-    });
-
-    this.logger.log(`Downloaded skill ${skillId} for user ${user.uid}`);
-    return this.toInstallationResponse(installation, skillPackage);
   }
 
   /**
    * Install a skill package - download + initialize as a single operation.
    */
   async installSkill(user: User, input: InstallSkillDto): Promise<SkillInstallationResponse> {
-    // Download first
-    const installation = await this.downloadSkill(user, input.skillId, input.shareId);
+    // Download first (pass force option to allow reinstall)
+    const installation = await this.downloadSkill(user, input.skillId, input.shareId, input.force);
 
     // Then initialize
     return this.initializeSkill(user, installation.installationId);
@@ -128,102 +166,146 @@ export class SkillInstallationService {
 
   /**
    * Initialize an installed skill - clones workflows to user's account.
+   * Uses Redis distributed lock to prevent concurrent initialization which could create duplicate workflows.
    */
   async initializeSkill(user: User, installationId: string): Promise<SkillInstallationResponse> {
-    const installation = await this.getInstallationOrThrow(installationId, user.uid);
-
-    // Fetch skill package early so we can include it in all responses
-    const skillPackage = await this.skillPackageService.getSkillPackage(installation.skillId, {
-      includeWorkflows: true,
-      userId: user.uid,
+    // Acquire distributed lock to prevent concurrent initialization
+    const lockKey = `skill:init:${installationId}`;
+    const releaseLock = await this.redisService.waitLock(lockKey, {
+      ttlSeconds: 60,
+      maxRetries: 5,
+      initialDelay: 200,
+      maxLifetimeSeconds: 300,
+      noThrow: true,
     });
 
-    // Allow initializing from: downloaded, partial_failed, failed, or initializing (for upgrade flow)
-    if (!['downloaded', 'partial_failed', 'failed', 'initializing'].includes(installation.status)) {
-      if (installation.status === 'ready') {
-        return this.toInstallationResponse(installation, skillPackage);
-      }
-      throw new Error(`Cannot initialize skill in status: ${installation.status}`);
+    if (!releaseLock) {
+      throw new Error(
+        `Failed to acquire lock for skill initialization: installationId=${installationId}. Another initialization may be in progress. Please retry after a few seconds.`,
+      );
     }
 
-    // Update status to initializing
-    await this.prisma.skillInstallation.update({
-      where: { installationId },
-      data: { status: 'initializing' },
-    });
+    try {
+      const installation = await this.getInstallationOrThrow(installationId, user.uid);
 
-    if (!skillPackage?.workflows) {
-      throw new Error('Skill package has no workflows');
-    }
+      // Fetch skill package early so we can include it in all responses
+      const skillPackage = await this.skillPackageService.getSkillPackage(installation.skillId, {
+        includeWorkflows: true,
+        userId: user.uid,
+      });
 
-    // Get current workflow mapping
-    const workflowMapping: WorkflowMappingRecord = installation.workflowMapping
-      ? JSON.parse(installation.workflowMapping)
-      : {};
-
-    // Get topologically sorted workflows
-    const sortedWorkflows = this.topologicalSort(skillPackage.workflows);
-
-    // Clone each workflow (skip already ready ones)
-    let failedCount = 0;
-    let readyCount = 0;
-
-    for (const workflow of sortedWorkflows) {
-      const existing = workflowMapping[workflow.skillWorkflowId];
-      if (existing?.status === 'ready') {
-        readyCount++;
-        continue;
+      // Allow initializing from: downloaded, partial_failed, failed, or initializing (for upgrade flow)
+      if (
+        !['downloaded', 'partial_failed', 'failed', 'initializing'].includes(installation.status)
+      ) {
+        if (installation.status === 'ready') {
+          return this.toInstallationResponse(installation, skillPackage);
+        }
+        throw new Error(`Cannot initialize skill in status: ${installation.status}`);
       }
 
-      try {
-        // Clone the workflow directly from source canvas
-        const generatedWorkflowId = await this.cloneWorkflowCanvas(
-          user,
-          workflow.sourceCanvasId,
-          workflow.name,
-        );
+      // Update status to initializing
+      await this.prisma.skillInstallation.update({
+        where: { installationId },
+        data: { status: 'initializing' },
+      });
 
-        workflowMapping[workflow.skillWorkflowId] = {
-          workflowId: generatedWorkflowId,
-          status: 'ready',
-        };
-        readyCount++;
-
-        this.logger.log(`Generated workflow ${workflow.skillWorkflowId} -> ${generatedWorkflowId}`);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        workflowMapping[workflow.skillWorkflowId] = {
-          workflowId: null,
-          status: 'failed',
-          error: errorMessage,
-        };
-        failedCount++;
-
-        this.logger.error(`Failed to clone workflow ${workflow.skillWorkflowId}: ${errorMessage}`);
+      if (!skillPackage?.workflows) {
+        throw new Error('Skill package has no workflows');
       }
+
+      // Get current workflow mapping
+      const workflowMapping: WorkflowMappingRecord = installation.workflowMapping
+        ? JSON.parse(installation.workflowMapping)
+        : {};
+
+      // Get topologically sorted workflows
+      const sortedWorkflows = this.topologicalSort(skillPackage.workflows);
+
+      // Clone each workflow (skip already ready ones)
+      let failedCount = 0;
+      let readyCount = 0;
+
+      for (const workflow of sortedWorkflows) {
+        const existing = workflowMapping[workflow.skillWorkflowId];
+        if (existing?.status === 'ready') {
+          readyCount++;
+          continue;
+        }
+
+        try {
+          // Check if user owns the source workflow
+          const sourceCanvas = await this.prisma.canvas.findFirst({
+            where: { canvasId: workflow.sourceCanvasId, deletedAt: null },
+            select: { uid: true },
+          });
+
+          const isOwner = sourceCanvas?.uid === user.uid;
+          let generatedWorkflowId: string;
+
+          if (isOwner) {
+            // Owner: use source workflow directly, no cloning
+            generatedWorkflowId = workflow.sourceCanvasId!;
+            this.logger.log(
+              `User owns workflow ${workflow.skillWorkflowId}, using source directly: ${generatedWorkflowId}`,
+            );
+          } else {
+            // Not owner: clone the workflow
+            generatedWorkflowId = await this.cloneWorkflowCanvas(
+              user,
+              workflow.sourceCanvasId,
+              workflow.name,
+            );
+          }
+
+          workflowMapping[workflow.skillWorkflowId] = {
+            workflowId: generatedWorkflowId,
+            status: 'ready',
+          };
+          readyCount++;
+
+          this.logger.log(
+            `Generated workflow ${workflow.skillWorkflowId} -> ${generatedWorkflowId}`,
+          );
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          workflowMapping[workflow.skillWorkflowId] = {
+            workflowId: null,
+            status: 'failed',
+            error: errorMessage,
+          };
+          failedCount++;
+
+          this.logger.error(
+            `Failed to clone workflow ${workflow.skillWorkflowId}: ${errorMessage}`,
+          );
+        }
+      }
+
+      // Determine final status
+      let finalStatus: string;
+      if (failedCount === 0) {
+        finalStatus = 'ready';
+      } else if (readyCount === 0) {
+        finalStatus = 'failed';
+      } else {
+        finalStatus = 'partial_failed';
+      }
+
+      // Update installation
+      const updated = await this.prisma.skillInstallation.update({
+        where: { installationId },
+        data: {
+          status: finalStatus,
+          workflowMapping: JSON.stringify(workflowMapping),
+        },
+      });
+
+      this.logger.log(`Initialized skill ${installation.skillId}: ${finalStatus}`);
+      return this.toInstallationResponse(updated, skillPackage);
+    } finally {
+      await releaseLock();
     }
-
-    // Determine final status
-    let finalStatus: string;
-    if (failedCount === 0) {
-      finalStatus = 'ready';
-    } else if (readyCount === 0) {
-      finalStatus = 'failed';
-    } else {
-      finalStatus = 'partial_failed';
-    }
-
-    // Update installation
-    const updated = await this.prisma.skillInstallation.update({
-      where: { installationId },
-      data: {
-        status: finalStatus,
-        workflowMapping: JSON.stringify(workflowMapping),
-      },
-    });
-
-    this.logger.log(`Initialized skill ${installation.skillId}: ${finalStatus}`);
-    return this.toInstallationResponse(updated, skillPackage);
   }
 
   /**
@@ -529,6 +611,113 @@ export class SkillInstallationService {
     };
   }
 
+  /**
+   * Stop all running executions for a skill installation.
+   * Aborts all running workflows and marks executions as cancelled.
+   */
+  async stopRunningExecutions(
+    user: User,
+    installationId: string,
+  ): Promise<{
+    message: string;
+    installationId: string;
+    stoppedExecutions: Array<{
+      executionId: string;
+      workflowsAborted: number;
+    }>;
+  }> {
+    // Verify installation belongs to user
+    await this.getInstallationOrThrow(installationId, user.uid);
+
+    // Find all running or pending executions for this installation
+    const runningExecutions = await this.prisma.skillExecution.findMany({
+      where: {
+        installationId,
+        uid: user.uid,
+        status: { in: ['pending', 'running'] },
+      },
+      include: {
+        workflowExecutions: {
+          where: {
+            status: { in: ['pending', 'queued', 'running'] },
+          },
+        },
+      },
+    });
+
+    if (runningExecutions.length === 0) {
+      throw new Error('No running executions for this installation');
+    }
+
+    const stoppedExecutions: Array<{
+      executionId: string;
+      workflowsAborted: number;
+    }> = [];
+
+    // Abort each execution
+    for (const execution of runningExecutions) {
+      let workflowsAborted = 0;
+
+      // Abort each running workflow
+      for (const workflowExecution of execution.workflowExecutions) {
+        try {
+          // Find the workflow execution ID from WorkflowExecution table
+          const wfExecution = await this.prisma.workflowExecution.findFirst({
+            where: {
+              canvasId: workflowExecution.workflowId,
+              uid: user.uid,
+              status: { in: ['pending', 'executing'] },
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          if (wfExecution) {
+            await this.workflowService.abortWorkflow(user, wfExecution.executionId);
+            workflowsAborted++;
+          }
+
+          // Update skill execution workflow status
+          await this.prisma.skillExecutionWorkflow.update({
+            where: { executionWorkflowId: workflowExecution.executionWorkflowId },
+            data: {
+              status: 'failed',
+              errorMessage: 'Cancelled by user',
+              completedAt: new Date(),
+            },
+          });
+        } catch (error) {
+          this.logger.warn(
+            `Failed to abort workflow ${workflowExecution.workflowId}: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      // Update skill execution status to cancelled
+      await this.prisma.skillExecution.update({
+        where: { executionId: execution.executionId },
+        data: {
+          status: 'cancelled',
+          errorMessage: 'Cancelled by user',
+          completedAt: new Date(),
+        },
+      });
+
+      stoppedExecutions.push({
+        executionId: execution.executionId,
+        workflowsAborted,
+      });
+    }
+
+    const totalStopped = stoppedExecutions.length;
+    this.logger.log(`Stopped ${totalStopped} execution(s) for installation ${installationId}`);
+
+    return {
+      message: `Stopped ${totalStopped} execution(s)`,
+      installationId,
+      stoppedExecutions,
+    };
+  }
+
   // ===== Helper Methods =====
 
   private async getInstallationOrThrow(
@@ -578,7 +767,20 @@ export class SkillInstallationService {
     }
 
     try {
-      // Use canvasService.duplicateCanvas to clone the canvas for the user
+      // Step 1: Fetch source canvas workflow variables directly (bypassing uid check)
+      // This is needed because duplicateCanvas.getWorkflowVariables requires uid match
+      const sourceCanvas = await this.prisma.canvas.findFirst({
+        where: { canvasId: sourceCanvasId, deletedAt: null },
+        select: { workflow: true },
+      });
+
+      let sourceVariables: WorkflowVariable[] = [];
+      if (sourceCanvas?.workflow) {
+        const workflowData = safeParseJSON(sourceCanvas.workflow);
+        sourceVariables = workflowData?.variables ?? [];
+      }
+
+      // Step 2: Use canvasService.duplicateCanvas to clone the canvas for the user
       // checkOwnership: false allows cloning from another user's canvas (skill author)
       const clonedCanvas = await this.canvasService.duplicateCanvas(
         user,
@@ -589,6 +791,31 @@ export class SkillInstallationService {
         },
         { checkOwnership: false },
       );
+
+      // Step 3: If source has workflow variables, update the cloned canvas
+      // Clear resource entity references since they point to source canvas entities
+      if (sourceVariables.length > 0) {
+        const cleanedVariables = sourceVariables.map((variable) => {
+          if (variable.variableType !== 'resource') {
+            return variable;
+          }
+          // Clear resource values - user will provide their own resources
+          return {
+            ...variable,
+            value: [],
+          };
+        });
+
+        await this.canvasService.updateWorkflowVariables(user, {
+          canvasId: clonedCanvas.canvasId,
+          variables: cleanedVariables,
+          duplicateDriveFile: false,
+        });
+
+        this.logger.log(
+          `Updated workflow variables for cloned canvas ${clonedCanvas.canvasId} (${cleanedVariables.length} variables)`,
+        );
+      }
 
       return clonedCanvas.canvasId;
     } catch (error) {
