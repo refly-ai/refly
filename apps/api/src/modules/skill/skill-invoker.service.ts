@@ -1245,16 +1245,36 @@ export class SkillInvokerService {
                     const parsedInput = safeParseJSON(ptcCall.input || '{}') ?? {};
                     const parsedOutput = safeParseJSON(ptcCall.output || '{}') ?? {};
 
-                    // Use writeSSEResponse with ptc flag (cast to bypass SkillEvent type restriction)
-                    writeSSEResponse(res, {
+                    // Create toolCallMeta for PTC call (similar format to agent calls)
+                    const ptcToolCallMeta: ToolCallMeta = {
+                      toolName: ptcCall.toolName,
+                      toolsetId: ptcCall.toolsetId,
+                      toolsetKey: ptcCall.toolsetId, // Use toolsetId as toolsetKey
+                      toolCallId: ptcCall.callId,
+                      status: ptcCall.status === 'failed' ? 'failed' : 'completed',
+                      startTs: ptcCall.createdAt.getTime(),
+                      endTs: ptcCall.updatedAt.getTime(),
+                    };
+
+                    // Add PTC tool message to messageAggregator for persistence
+                    const ptcMessageId = messageAggregator.addToolMessage({
+                      toolCallId: ptcCall.callId,
+                      toolCallMeta: ptcToolCallMeta,
+                    });
+
+                    const ssePayload = {
                       event: ptcCall.status === 'failed' ? 'tool_call_error' : 'tool_call_end',
-                      ptc: true, // Marks this as a PTC internal tool call
+                      isPtc: true, // Marks this as a PTC internal tool call
                       resultId,
                       version,
+                      step: runMeta?.step, // Add step info for consistency with agent calls
+                      messageId: ptcMessageId, // Include messageId for frontend
+                      toolCallMeta: ptcToolCallMeta, // Add toolCallMeta for frontend display
                       toolCallResult: {
                         callId: ptcCall.callId,
                         toolsetId: ptcCall.toolsetId,
                         toolName: ptcCall.toolName,
+                        stepName: ptcCall.stepName, // Include stepName from DB
                         input: parsedInput,
                         output: parsedOutput,
                         status: ptcCall.status === 'failed' ? 'failed' : 'completed',
@@ -1262,7 +1282,9 @@ export class SkillInvokerService {
                         createdAt: ptcCall.createdAt.getTime(),
                         updatedAt: ptcCall.updatedAt.getTime(),
                       },
-                    } as Parameters<typeof writeSSEResponse>[1]);
+                    };
+                    // Use writeSSEResponse with isPtc flag (cast to bypass SkillEvent type restriction)
+                    writeSSEResponse(res, ssePayload as Parameters<typeof writeSSEResponse>[1]);
                   }
                   if (ptcToolCalls.length > 0) {
                     this.logger.debug(

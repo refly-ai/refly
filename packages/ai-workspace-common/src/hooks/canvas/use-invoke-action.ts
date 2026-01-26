@@ -610,6 +610,7 @@ export const useInvokeAction = (params?: { source?: string }) => {
       step,
       content = '',
       artifact,
+      isPtc,
     } = skillEvent;
     const status = getActionStatus(resultId);
 
@@ -625,7 +626,41 @@ export const useInvokeAction = (params?: { source?: string }) => {
       status,
     };
 
-    // Update messages with completed status
+    // Handle PTC (Programmatic Tool Calling) internal tool calls
+    // PTC events have isPtc: true and toolCallResult, but no messageId and toolCallMeta
+    if (isPtc && toolCallResult) {
+      const currentMessages = getLatestMessages(resultId);
+      // Use messageId from SSE if available, otherwise generate one
+      const ptcMessageId = messageId ?? `ptc-${toolCallResult.callId}`;
+      // Use toolCallMeta from SSE if available, otherwise construct one from toolCallResult
+      const effectiveToolCallMeta = toolCallMeta ?? {
+        toolName: toolCallResult.toolName,
+        toolsetId: toolCallResult.toolsetId,
+        toolsetKey: toolCallResult.toolsetId, // Use toolsetId as fallback for toolsetKey
+        toolCallId: toolCallResult.callId,
+        status: toolCallResult.status === 'failed' ? ('failed' as const) : ('completed' as const),
+        startTs: toolCallResult.createdAt,
+        endTs: toolCallResult.updatedAt,
+      };
+      const ptcMessage: ActionMessage = {
+        messageId: ptcMessageId,
+        type: 'tool',
+        isPtc: true,
+        toolCallId: toolCallResult.callId,
+        toolCallMeta: effectiveToolCallMeta,
+        toolCallResult,
+        createdAt: new Date(toolCallResult.createdAt ?? Date.now()).toISOString(),
+        updatedAt: new Date(toolCallResult.updatedAt ?? Date.now()).toISOString(),
+      };
+
+      const mergedMessages = getUpdatedMessages(currentMessages, ptcMessage);
+      setLatestMessages(resultId, mergedMessages);
+      payload.messages = mergedMessages;
+      onUpdateResult(resultId, payload, skillEvent);
+      return;
+    }
+
+    // Update messages with completed status (standard tool call)
     if (messageId && toolCallMeta) {
       const currentMessages = getLatestMessages(resultId);
       const updatedMessage = findOrCreateMessage(currentMessages, messageId, 'tool');
@@ -673,7 +708,15 @@ export const useInvokeAction = (params?: { source?: string }) => {
 
   // Handle tool_call_error event - update tool message status to failed
   const onToolCallError = (skillEvent: SkillEvent) => {
-    const { resultId, messageId, toolCallMeta, toolCallResult, step, content = '' } = skillEvent;
+    const {
+      resultId,
+      messageId,
+      toolCallMeta,
+      toolCallResult,
+      step,
+      content = '',
+      isPtc,
+    } = skillEvent;
     const status = getActionStatus(resultId);
 
     if (!status) return;
@@ -688,7 +731,39 @@ export const useInvokeAction = (params?: { source?: string }) => {
       status,
     };
 
-    // Update messages with failed status
+    // Handle PTC (Programmatic Tool Calling) internal tool call errors
+    // PTC events have isPtc: true and toolCallResult, but no messageId and toolCallMeta
+    if (isPtc && toolCallResult) {
+      const currentMessages = getLatestMessages(resultId);
+      // Generate a unique message ID for PTC call using the tool call ID
+      const ptcMessageId = `ptc-${toolCallResult.callId}`;
+      const ptcMessage: ActionMessage = {
+        messageId: ptcMessageId,
+        type: 'tool',
+        isPtc: true,
+        toolCallId: toolCallResult.callId,
+        toolCallMeta: {
+          toolName: toolCallResult.toolName,
+          toolsetId: toolCallResult.toolsetId,
+          toolCallId: toolCallResult.callId,
+          status: 'failed',
+          startTs: toolCallResult.createdAt,
+          endTs: toolCallResult.updatedAt,
+          error: toolCallResult.error,
+        },
+        toolCallResult,
+        createdAt: new Date(toolCallResult.createdAt ?? Date.now()).toISOString(),
+        updatedAt: new Date(toolCallResult.updatedAt ?? Date.now()).toISOString(),
+      };
+
+      const mergedMessages = getUpdatedMessages(currentMessages, ptcMessage);
+      setLatestMessages(resultId, mergedMessages);
+      payload.messages = mergedMessages;
+      onUpdateResult(resultId, payload, skillEvent);
+      return;
+    }
+
+    // Update messages with failed status (standard tool call)
     if (messageId && toolCallMeta) {
       const currentMessages = getLatestMessages(resultId);
       const updatedMessage = findOrCreateMessage(currentMessages, messageId, 'tool');

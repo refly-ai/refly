@@ -75,6 +75,22 @@ export class ToolExecutionService {
     // Get resultId/version from HTTP headers (ptcContext)
     const { resultId, version } = ptcContext ?? {};
 
+    // For PTC mode, fetch stepName from parent execute_code call
+    let stepName: string | undefined;
+    if (hasPtcContext && ptcContext?.ptcCallId) {
+      try {
+        const parentCall = await this.prisma.toolCallResult.findUnique({
+          where: { callId: ptcContext.ptcCallId },
+          select: { stepName: true },
+        });
+        stepName = parentCall?.stepName ?? undefined;
+      } catch (error) {
+        this.logger.warn(
+          `Failed to fetch stepName for ptcCallId ${ptcContext.ptcCallId}: ${error}`,
+        );
+      }
+    }
+
     // Generate a unique call ID for this execution
     const callId = this.generateCallId(callType, toolsetKey, toolName, ptcContext?.ptcCallId);
     const startTime = Date.now();
@@ -95,6 +111,7 @@ export class ToolExecutionService {
       resultId: resultId ?? 'non-result-id',
       version: version ?? 0,
       createdAt: startTime,
+      stepName, // Pass stepName for PTC calls
     });
 
     // 2. Execute tool and capture result
@@ -188,6 +205,7 @@ export class ToolExecutionService {
     resultId: string;
     version: number;
     createdAt: number;
+    stepName?: string;
   }): Promise<void> {
     const {
       callId,
@@ -200,6 +218,7 @@ export class ToolExecutionService {
       resultId,
       version,
       createdAt,
+      stepName,
     } = params;
 
     await this.prisma.toolCallResult.create({
@@ -217,6 +236,7 @@ export class ToolExecutionService {
         version,
         createdAt: new Date(createdAt),
         updatedAt: new Date(createdAt),
+        stepName: stepName ?? null,
       },
     });
   }
