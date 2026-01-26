@@ -317,26 +317,6 @@ export interface GenerateStatusResponse {
   result?: GenerateWorkflowCliResponse;
 }
 
-// ============================================================================
-// Error Response DTOs
-// ============================================================================
-
-export interface CliErrorResponse {
-  ok: false;
-  type: 'error';
-  version: string;
-  error: {
-    code: string;
-    message: string;
-    hint?: string;
-    suggestedFix?: {
-      field?: string;
-      format?: string;
-      example?: string;
-    };
-  };
-}
-
 export const CLI_ERROR_CODES = {
   AUTH_REQUIRED: 'AUTH_REQUIRED',
   NOT_FOUND: 'NOT_FOUND',
