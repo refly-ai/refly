@@ -1259,10 +1259,10 @@ export class SkillInvokerService {
                     const parsedInput = safeParseJSON(ptcCall.input || '{}') ?? {};
                     const parsedOutput = safeParseJSON(ptcCall.output || '{}') ?? {};
 
-                    // Use writeSSEResponse with ptc flag (cast to bypass SkillEvent type restriction)
+                    // Use writeSSEResponse with isPtc flag (cast to bypass SkillEvent type restriction)
                     writeSSEResponse(res, {
                       event: ptcCall.status === 'failed' ? 'tool_call_error' : 'tool_call_end',
-                      ptc: true, // Marks this as a PTC internal tool call
+                      isPtc: true, // Marks this as a PTC internal tool call
                       resultId,
                       version,
                       toolCallResult: {

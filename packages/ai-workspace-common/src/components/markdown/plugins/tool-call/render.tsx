@@ -45,6 +45,7 @@ interface ToolCallProps {
   'data-tool-video-name'?: string;
   'data-tool-video-format'?: string;
   'data-tool-error'?: string;
+  'data-tool-is-ptc'?: string;
   id?: string;
   mode?: MarkdownMode;
 }

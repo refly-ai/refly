@@ -3045,6 +3045,10 @@ export const ActionMessageSchema = {
       $ref: '#/components/schemas/ToolCallResult',
       description: 'Tool call result',
     },
+    isPtc: {
+      type: 'boolean',
+      description: 'Whether this is a PTC (Programmatic Tool Calling) internal tool call',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -5368,6 +5372,11 @@ export const SkillEventSchema = {
     toolCallResult: {
       description: 'Tool call result data.',
       $ref: '#/components/schemas/ToolCallResult',
+    },
+    isPtc: {
+      type: 'boolean',
+      description:
+        'Whether this is a PTC (Programmatic Tool Calling) internal tool call. Only present when `event` is `tool_call_end` or `tool_call_error` for PTC internal calls.',
     },
   },
 } as const;
