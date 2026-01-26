@@ -191,6 +191,15 @@ export class CopilotAutogenService {
     await this.updateCanvasState(canvasId, finalNodes, edges, variables, user);
     this.logger.log(`[Autogen] Canvas ${canvasId} updated successfully`);
 
+    // 9. Update canvas title with workflow plan title (if new canvas was created)
+    if (!request.canvasId && workflowPlan.title) {
+      await this.canvasService.updateCanvas(user, {
+        canvasId,
+        title: workflowPlan.title,
+      });
+      this.logger.log(`[Autogen] Canvas title updated to: ${workflowPlan.title}`);
+    }
+
     return {
       canvasId,
       workflowPlan,
@@ -331,6 +340,15 @@ export class CopilotAutogenService {
     // 8. Update Canvas state (reuse CanvasSyncService)
     await this.updateCanvasState(canvasId, finalNodes, edges, variables, user);
     this.logger.log(`[Autogen CLI] Canvas ${canvasId} updated successfully`);
+
+    // 9. Update canvas title with workflow plan title (if new canvas was created)
+    if (!request.canvasId && workflowPlan.title) {
+      await this.canvasService.updateCanvas(user, {
+        canvasId,
+        title: workflowPlan.title,
+      });
+      this.logger.log(`[Autogen CLI] Canvas title updated to: ${workflowPlan.title}`);
+    }
 
     return {
       canvasId,
@@ -602,6 +620,15 @@ export class CopilotAutogenService {
 
     // Update canvas state
     await this.updateCanvasState(finalCanvasId, finalNodes, edges, variables, user);
+
+    // Update canvas title with workflow plan title (if new canvas was created)
+    if (!canvasId && workflowPlan.title) {
+      await this.canvasService.updateCanvas(user, {
+        canvasId: finalCanvasId,
+        title: workflowPlan.title,
+      });
+      this.logger.log(`[Autogen Async] Canvas title updated to: ${workflowPlan.title}`);
+    }
 
     return {
       workflowId: finalCanvasId, // workflowId is same as canvasId

@@ -1,173 +1,249 @@
 /**
- * refly workflow edit - Edit an existing workflow
+ * refly workflow edit - Edit a workflow plan using semantic operations
+ *
+ * Operates on semantic WorkflowPlan (tasks, variables).
  */
 
 import { Command } from 'commander';
+import * as fs from 'node:fs';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import { apiRequest } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
 
-interface UpdateWorkflowBody {
-  name?: string;
-  variables?: Array<{ name: string; value: unknown }>;
-  operations?: Array<{
-    type: 'add_node' | 'remove_node' | 'update_node' | 'add_edge' | 'remove_edge';
-    [key: string]: unknown;
+interface WorkflowPatchOperation {
+  op:
+    | 'updateTitle'
+    | 'createTask'
+    | 'updateTask'
+    | 'deleteTask'
+    | 'createVariable'
+    | 'updateVariable'
+    | 'deleteVariable';
+  title?: string;
+  taskId?: string;
+  task?: {
+    id: string;
+    title: string;
+    prompt: string;
+    dependentTasks?: string[];
+    toolsets: string[];
+  };
+  variableId?: string;
+  variable?: {
+    variableId: string;
+    variableType?: 'string' | 'resource';
+    name: string;
+    description: string;
+    required?: boolean;
+    value?: Array<{ type?: string; text?: string }>;
+  };
+  data?: {
+    title?: string;
+    prompt?: string;
+    dependentTasks?: string[];
+    toolsets?: string[];
+    variableType?: 'string' | 'resource';
+    name?: string;
+    description?: string;
+    required?: boolean;
+    value?: Array<{ type?: string; text?: string }>;
+  };
+}
+
+interface PatchWorkflowPlanRequest {
+  planId: string;
+  operations: WorkflowPatchOperation[];
+}
+
+interface WorkflowPlan {
+  title: string;
+  tasks: Array<{
+    id: string;
+    title: string;
+    prompt: string;
+    dependentTasks?: string[];
+    toolsets: string[];
+  }>;
+  variables: Array<{
+    variableId: string;
+    variableType?: string;
+    name: string;
+    description: string;
+    required?: boolean;
+    value?: unknown[];
   }>;
 }
 
-/**
- * Transform CLI operation format to backend format
- * CLI uses: { op: "add", node: {...} }
- * Backend expects: { type: "add_node", node: {...} }
- */
-function transformOperations(
-  ops: Array<{ op: string; [key: string]: unknown }>,
-): UpdateWorkflowBody['operations'] {
-  const opMapping: Record<string, string> = {
-    add: 'add_node',
-    remove: 'remove_node',
-    update: 'update_node',
-    addEdge: 'add_edge',
-    removeEdge: 'remove_edge',
-    // Also support direct backend format
-    add_node: 'add_node',
-    remove_node: 'remove_node',
-    update_node: 'update_node',
-    add_edge: 'add_edge',
-    remove_edge: 'remove_edge',
-  };
-
-  return ops.map((op) => {
-    const { op: opType, ...rest } = op;
-    const backendType = opMapping[opType];
-    if (!backendType) {
-      throw new Error(`Unknown operation type: ${opType}`);
-    }
-    return {
-      type: backendType as 'add_node' | 'remove_node' | 'update_node' | 'add_edge' | 'remove_edge',
-      ...rest,
-    };
-  });
+interface PatchWorkflowPlanResponse {
+  success: boolean;
+  data: WorkflowPlan;
 }
 
 export const workflowEditCommand = new Command('edit')
-  .description('Edit an existing workflow')
-  .argument('<workflowId>', 'Workflow ID or URL')
-  .option('--name <name>', 'New workflow name')
-  .option('--ops <json>', 'Node/edge operations as JSON array')
-  .option('--variables <json>', 'Workflow variables as JSON array')
-  .option('--toolsets <keys>', 'Toolset inventory keys (comma-separated, e.g., "tavily,fal_audio")')
-  .option('--auto-layout', 'Enable auto-layout to prevent node overlapping')
-  .action(async (workflowIdOrUrl, options) => {
+  .description('Edit a workflow plan using semantic operations')
+  .argument('<planId>', 'Workflow Plan ID')
+  .option('--ops <json>', 'Operations array as JSON')
+  .option('--ops-file <path>', 'Read operations from file')
+  .option('--update-title <title>', 'Shortcut: update workflow title')
+  .option('--delete-task <taskId>', 'Shortcut: delete a task')
+  .option('--delete-variable <variableId>', 'Shortcut: delete a variable')
+  .action(async (planId, options) => {
     try {
-      // Extract workflowId from URL if needed
-      let workflowId = workflowIdOrUrl;
-      if (workflowIdOrUrl.includes('/workflow/')) {
-        const match = workflowIdOrUrl.match(/\/workflow\/(c-[a-z0-9]+)/);
-        if (match) {
-          workflowId = match[1];
-        }
-      }
+      // Build operations array from options
+      const operations: WorkflowPatchOperation[] = [];
 
-      // Build request body
-      const body: UpdateWorkflowBody = {};
+      // Operations format hint for error messages
+      const opsFormatHint =
+        'Operations format: \'[{"op": "updateTitle", "title": "New Title"}]\'\n' +
+        'Available ops: updateTitle, createTask, updateTask, deleteTask, createVariable, updateVariable, deleteVariable\n' +
+        'Examples:\n' +
+        '  - Update title: {"op": "updateTitle", "title": "New Title"}\n' +
+        '  - Delete task: {"op": "deleteTask", "taskId": "task-id"}\n' +
+        '  - Update task: {"op": "updateTask", "taskId": "task-id", "data": {"prompt": "new prompt"}}';
 
-      if (options.name) {
-        body.name = options.name;
-      }
-
-      // Parse toolset keys if provided
-      let toolsetKeys: string[] | undefined;
-      if (options.toolsets) {
-        toolsetKeys = options.toolsets
-          .split(',')
-          .map((k: string) => k.trim())
-          .filter((k: string) => k.length > 0);
-      }
-
-      if (options.ops) {
+      // Handle --ops-file
+      if (options.opsFile) {
         try {
-          const rawOps = JSON.parse(options.ops);
-          body.operations = transformOperations(rawOps);
-
-          // Inject toolsetKeys into add_node operations if --toolsets is provided
-          if (toolsetKeys && toolsetKeys.length > 0 && body.operations) {
-            body.operations = body.operations.map((op) => {
-              if (op.type === 'add_node' && op.node) {
-                const node = op.node as Record<string, unknown>;
-                const data = (node.data as Record<string, unknown>) || {};
-                const metadata = (data.metadata as Record<string, unknown>) || {};
-                return {
-                  ...op,
-                  node: {
-                    ...node,
-                    data: {
-                      ...data,
-                      metadata: {
-                        ...metadata,
-                        toolsetKeys,
-                      },
-                    },
-                  },
-                };
-              }
-              return op;
+          const filePath = options.opsFile;
+          if (!fs.existsSync(filePath)) {
+            fail(ErrorCodes.NOT_FOUND, `Operations file not found: ${filePath}`);
+          }
+          const fileContent = fs.readFileSync(filePath, 'utf-8');
+          const fileOps = JSON.parse(fileContent);
+          if (Array.isArray(fileOps)) {
+            operations.push(...fileOps);
+          } else {
+            fail(ErrorCodes.INVALID_INPUT, 'Operations file must contain a JSON array', {
+              hint: opsFormatHint,
+              suggestedFix: {
+                field: '--ops-file',
+                format: 'json-array',
+                example: '[{"op": "updateTitle", "title": "New Title"}]',
+              },
             });
           }
         } catch (error) {
-          fail(ErrorCodes.INVALID_INPUT, `Invalid operations: ${(error as Error).message}`, {
-            hint: 'Ensure the operations are a valid JSON array with correct op types',
-          });
+          if (error instanceof CLIError) throw error;
+          fail(
+            ErrorCodes.INVALID_INPUT,
+            `Failed to parse operations file: ${(error as Error).message}`,
+            {
+              hint: opsFormatHint,
+              suggestedFix: {
+                field: '--ops-file',
+                format: 'json-array',
+                example: '[{"op": "updateTitle", "title": "New Title"}]',
+              },
+            },
+          );
         }
       }
 
-      if (options.variables) {
+      // Handle --ops
+      if (options.ops) {
         try {
-          body.variables = JSON.parse(options.variables);
-        } catch {
-          fail(ErrorCodes.INVALID_INPUT, 'Invalid JSON in --variables', {
-            hint: 'Ensure the variables are a valid JSON array',
+          const jsonOps = JSON.parse(options.ops);
+          if (Array.isArray(jsonOps)) {
+            operations.push(...jsonOps);
+          } else {
+            fail(ErrorCodes.INVALID_INPUT, '--ops must be a JSON array', {
+              hint: opsFormatHint,
+              suggestedFix: {
+                field: '--ops',
+                format: 'json-array',
+                example: '[{"op": "updateTitle", "title": "New Title"}]',
+              },
+            });
+          }
+        } catch (error) {
+          fail(ErrorCodes.INVALID_INPUT, `Invalid JSON in --ops: ${(error as Error).message}`, {
+            hint: opsFormatHint,
+            suggestedFix: {
+              field: '--ops',
+              format: 'json-array',
+              example: '[{"op": "updateTitle", "title": "New Title"}]',
+            },
           });
         }
       }
 
-      // Check if any update option was provided
-      if (!options.name && !options.ops && !options.variables) {
-        fail(ErrorCodes.INVALID_INPUT, 'No update options provided', {
-          hint: 'Use --name, --ops, --variables, or --toolsets to specify what to update',
+      // Handle shortcut options
+      if (options.updateTitle) {
+        operations.push({
+          op: 'updateTitle',
+          title: options.updateTitle,
         });
       }
 
-      // Build API endpoint with query parameters
-      let endpoint = `/v1/cli/workflow/${workflowId}`;
-      const queryParams: string[] = [];
-      if (toolsetKeys && toolsetKeys.length > 0) {
-        queryParams.push('resolveToolsetKeys=true');
-      }
-      if (options.autoLayout) {
-        queryParams.push('autoLayout=true');
-      }
-      if (queryParams.length > 0) {
-        endpoint += `?${queryParams.join('&')}`;
+      if (options.deleteTask) {
+        operations.push({
+          op: 'deleteTask',
+          taskId: options.deleteTask,
+        });
       }
 
-      await apiRequest<{ success: boolean }>(endpoint, {
-        method: 'PATCH',
+      if (options.deleteVariable) {
+        operations.push({
+          op: 'deleteVariable',
+          variableId: options.deleteVariable,
+        });
+      }
+
+      // Validate at least one operation
+      if (operations.length === 0) {
+        fail(ErrorCodes.INVALID_INPUT, 'No operations provided', {
+          hint: 'Use --ops, --ops-file, or shortcut options (--update-title, --delete-task, --delete-variable)',
+          suggestedFix: {
+            field: '--ops',
+            format: 'json-array',
+            example: '[{"op": "updateTitle", "title": "New Title"}]',
+          },
+        });
+      }
+
+      // Call API
+      const body: PatchWorkflowPlanRequest = {
+        planId,
+        operations,
+      };
+
+      const response = await apiRequest<PatchWorkflowPlanResponse>('/v1/cli/workflow-plan/patch', {
+        method: 'POST',
         body,
       });
 
+      // Extract plan from response (API returns { success: true, data: plan })
+      const plan = response.data ?? response;
+
       ok('workflow.edit', {
-        message: 'Workflow updated successfully',
-        workflowId,
+        planId,
+        operationsApplied: operations.length,
+        plan: {
+          title: plan.title,
+          taskCount: plan.tasks?.length ?? 0,
+          variableCount: plan.variables?.length ?? 0,
+          tasks: plan.tasks?.map((t) => ({
+            id: t.id,
+            title: t.title,
+          })),
+          variables: plan.variables?.map((v) => ({
+            variableId: v.variableId,
+            name: v.name,
+          })),
+        },
       });
     } catch (error) {
       if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
+        fail(error.code, error.message, {
+          details: error.details,
+          hint: error.hint,
+          suggestedFix: error.suggestedFix,
+        });
+        return;
       }
       fail(
         ErrorCodes.INTERNAL_ERROR,
-        error instanceof Error ? error.message : 'Failed to edit workflow',
+        error instanceof Error ? error.message : 'Failed to edit workflow plan',
       );
     }
   });

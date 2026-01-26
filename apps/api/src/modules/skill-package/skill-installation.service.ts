@@ -6,8 +6,7 @@ import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { SkillPackageService } from './skill-package.service';
 import { CanvasService } from '../canvas/canvas.service';
-import { CopilotAutogenService } from '../copilot-autogen/copilot-autogen.service';
-import { User, WorkflowVariable } from '@refly/openapi-schema';
+import { User } from '@refly/openapi-schema';
 import { genSkillPackageInstallationID } from '@refly/utils';
 import {
   InstallSkillDto,
@@ -17,6 +16,7 @@ import {
   SkillInstallationResponse,
   SkillExecutionResult,
   WorkflowMappingRecord,
+  UpdateInstallationDto,
 } from './skill-package.dto';
 import { Prisma, SkillInstallation } from '@prisma/client';
 import { SkillPackageExecutorService } from './skill-package-executor.service';
@@ -29,8 +29,6 @@ export class SkillInstallationService {
     private readonly prisma: PrismaService,
     private readonly skillPackageService: SkillPackageService,
     private readonly canvasService: CanvasService,
-    @Inject(forwardRef(() => CopilotAutogenService))
-    private readonly copilotAutogenService: CopilotAutogenService,
     @Inject(forwardRef(() => SkillPackageExecutorService))
     private readonly executorService: SkillPackageExecutorService,
   ) {}
@@ -114,7 +112,7 @@ export class SkillInstallationService {
     });
 
     this.logger.log(`Downloaded skill ${skillId} for user ${user.uid}`);
-    return this.toInstallationResponse(installation);
+    return this.toInstallationResponse(installation, skillPackage);
   }
 
   /**
@@ -134,10 +132,16 @@ export class SkillInstallationService {
   async initializeSkill(user: User, installationId: string): Promise<SkillInstallationResponse> {
     const installation = await this.getInstallationOrThrow(installationId, user.uid);
 
+    // Fetch skill package early so we can include it in all responses
+    const skillPackage = await this.skillPackageService.getSkillPackage(installation.skillId, {
+      includeWorkflows: true,
+      userId: user.uid,
+    });
+
     // Allow initializing from: downloaded, partial_failed, failed, or initializing (for upgrade flow)
     if (!['downloaded', 'partial_failed', 'failed', 'initializing'].includes(installation.status)) {
       if (installation.status === 'ready') {
-        return this.toInstallationResponse(installation);
+        return this.toInstallationResponse(installation, skillPackage);
       }
       throw new Error(`Cannot initialize skill in status: ${installation.status}`);
     }
@@ -146,11 +150,6 @@ export class SkillInstallationService {
     await this.prisma.skillInstallation.update({
       where: { installationId },
       data: { status: 'initializing' },
-    });
-
-    const skillPackage = await this.skillPackageService.getSkillPackage(installation.skillId, {
-      includeWorkflows: true,
-      userId: user.uid,
     });
 
     if (!skillPackage?.workflows) {
@@ -177,12 +176,11 @@ export class SkillInstallationService {
       }
 
       try {
-        // Generate a new workflow from the source using Copilot
-        const generatedWorkflowId = await this.generateWorkflowFromSource(
+        // Clone the workflow directly from source canvas
+        const generatedWorkflowId = await this.cloneWorkflowCanvas(
           user,
           workflow.sourceCanvasId,
           workflow.name,
-          workflow.description,
         );
 
         workflowMapping[workflow.skillWorkflowId] = {
@@ -225,7 +223,7 @@ export class SkillInstallationService {
     });
 
     this.logger.log(`Initialized skill ${installation.skillId}: ${finalStatus}`);
-    return this.toInstallationResponse(updated);
+    return this.toInstallationResponse(updated, skillPackage);
   }
 
   /**
@@ -334,6 +332,66 @@ export class SkillInstallationService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Update an installation's metadata (name, description, triggers, tags, version).
+   * Note: skillId and installationId cannot be modified.
+   */
+  async updateInstallation(
+    user: User,
+    installationId: string,
+    dto: UpdateInstallationDto,
+  ): Promise<SkillInstallationResponse> {
+    const installation = await this.getInstallationOrThrow(installationId, user.uid);
+
+    // Build update data for skill package - only include defined fields
+    const packageUpdateData: Record<string, unknown> = {
+      ...(dto.name !== undefined && { name: dto.name }),
+      ...(dto.description !== undefined && { description: dto.description }),
+      ...(dto.triggers !== undefined && { triggers: dto.triggers }),
+      ...(dto.tags !== undefined && { tags: dto.tags }),
+      ...(dto.version !== undefined && { version: dto.version }),
+    };
+
+    // Update skill package if user owns it and there are changes
+    if (Object.keys(packageUpdateData).length > 0) {
+      // Check ownership before updating
+      const skillPackage = await this.prisma.skillPackage.findUnique({
+        where: { skillId: installation.skillId },
+        select: { uid: true },
+      });
+
+      if (skillPackage?.uid === user.uid) {
+        await this.prisma.skillPackage.update({
+          where: { skillId: installation.skillId },
+          data: packageUpdateData,
+        });
+        this.logger.log(
+          `Updated skill package ${installation.skillId} fields: ${Object.keys(packageUpdateData).join(', ')}`,
+        );
+      }
+    }
+
+    // Update installation version if provided
+    const updated = dto.version
+      ? await this.prisma.skillInstallation.update({
+          where: { installationId },
+          data: { installedVersion: dto.version },
+        })
+      : installation;
+
+    // Fetch updated skill package for response
+    const updatedSkillPackage = await this.skillPackageService.getSkillPackage(
+      installation.skillId,
+      {
+        includeWorkflows: true,
+        userId: user.uid,
+      },
+    );
+
+    this.logger.log(`Updated installation ${installationId}`);
+    return this.toInstallationResponse(updated, updatedSkillPackage);
   }
 
   // ===== Installation Queries =====
@@ -509,8 +567,6 @@ export class SkillInstallationService {
   /**
    * Clone a workflow canvas for the installing user.
    * This duplicates the source canvas so the user has their own copy.
-   * @deprecated Use generateWorkflowFromSource instead for new workflow generation.
-   * Kept for potential future use or rollback scenarios.
    */
   private async cloneWorkflowCanvas(
     user: User,
@@ -541,72 +597,6 @@ export class SkillInstallationService {
         `Failed to clone canvas ${sourceCanvasId} for workflow ${workflowName}: ${errorMessage}`,
       );
       throw new Error(`Failed to clone workflow "${workflowName}": ${errorMessage}`);
-    }
-  }
-
-  /**
-   * Generate a new workflow from source canvas using Copilot.
-   * This queries the source workflow details (nodes, edges, variables) and uses
-   * copilotAutogenService to generate a new workflow for the installing user.
-   */
-  private async generateWorkflowFromSource(
-    user: User,
-    sourceCanvasId: string | null | undefined,
-    workflowName: string,
-    workflowDescription?: string,
-  ): Promise<string> {
-    if (!sourceCanvasId) {
-      throw new Error(`Workflow "${workflowName}" has no source canvas ID`);
-    }
-
-    try {
-      // 1. Get source canvas data (nodes, edges, variables) without ownership check
-      const rawCanvasData = await this.canvasService.getCanvasRawData(user, sourceCanvasId, {
-        checkOwnership: false,
-      });
-
-      // 2. Extract workflow variables from source canvas
-      // Phase 1: Clear all variable values - new users must provide their own values
-      // This prevents exposing the original user's variable values (including sensitive data)
-      const workflowVariables: WorkflowVariable[] = (rawCanvasData.variables ?? []).map((v) => ({
-        ...v,
-        value: [], // Clear value - user must fill in their own
-      }));
-
-      // 3. Build query/description for workflow generation
-      const query = workflowDescription || `Generate workflow: ${workflowName}`;
-
-      this.logger.log(
-        `[generateWorkflowFromSource] Source canvas: ${sourceCanvasId}, ` +
-          `nodes: ${rawCanvasData.nodes?.length ?? 0}, ` +
-          `edges: ${rawCanvasData.edges?.length ?? 0}, ` +
-          `variables: ${workflowVariables.length}`,
-      );
-
-      // 4. Use Copilot to generate a new workflow with the same variables
-      const result = await this.copilotAutogenService.generateWorkflowForCli(user, {
-        query,
-        variables: workflowVariables,
-        skipDefaultNodes: false, // Include start nodes
-        timeout: 300000, // 5 minutes timeout
-      });
-
-      if (!result.canvasId) {
-        throw new Error('Failed to generate workflow: no canvasId returned');
-      }
-
-      this.logger.log(
-        `[generateWorkflowFromSource] Generated new workflow: ${result.canvasId} ` +
-          `(planId: ${result.planId})`,
-      );
-
-      return result.canvasId;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(
-        `Failed to generate workflow from source ${sourceCanvasId} for "${workflowName}": ${errorMessage}`,
-      );
-      throw new Error(`Failed to generate workflow "${workflowName}": ${errorMessage}`);
     }
   }
 
@@ -684,6 +674,14 @@ export class SkillInstallationService {
     installation: SkillInstallation,
     skillPackage?: any,
   ): SkillInstallationResponse {
+    // Extract first workflow ID from workflow mapping if available
+    let workflowId: string | undefined;
+    if (installation.workflowMapping) {
+      const mapping = JSON.parse(installation.workflowMapping) as WorkflowMappingRecord;
+      const firstReady = Object.values(mapping).find((m) => m.status === 'ready' && m.workflowId);
+      workflowId = firstReady?.workflowId ?? undefined;
+    }
+
     return {
       installationId: installation.installationId,
       skillId: installation.skillId,
@@ -711,8 +709,23 @@ export class SkillInstallationService {
             status: skillPackage.status,
             isPublic: skillPackage.isPublic,
             downloadCount: skillPackage.downloadCount,
-            createdAt: skillPackage.createdAt.toISOString(),
-            updatedAt: skillPackage.updatedAt.toISOString(),
+            createdAt:
+              typeof skillPackage.createdAt === 'string'
+                ? skillPackage.createdAt
+                : skillPackage.createdAt.toISOString(),
+            updatedAt:
+              typeof skillPackage.updatedAt === 'string'
+                ? skillPackage.updatedAt
+                : skillPackage.updatedAt.toISOString(),
+            workflowId: workflowId || skillPackage.workflows?.[0]?.sourceCanvasId,
+            inputSchema:
+              typeof skillPackage.inputSchema === 'string'
+                ? JSON.parse(skillPackage.inputSchema)
+                : skillPackage.inputSchema,
+            outputSchema:
+              typeof skillPackage.outputSchema === 'string'
+                ? JSON.parse(skillPackage.outputSchema)
+                : skillPackage.outputSchema,
           }
         : undefined,
     };

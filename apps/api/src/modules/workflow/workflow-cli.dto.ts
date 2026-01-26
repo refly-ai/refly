@@ -366,6 +366,11 @@ export interface CliErrorResponse {
     code: string;
     message: string;
     hint?: string;
+    suggestedFix?: {
+      field?: string;
+      format?: string;
+      example?: string;
+    };
   };
 }
 

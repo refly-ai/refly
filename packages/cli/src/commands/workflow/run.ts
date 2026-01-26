@@ -200,16 +200,46 @@ async function collectFileVariables(
     return [];
   }
 
-  // 3. Filter out variables already provided in --input
-  // Check by both variableId and name for maximum compatibility
-  const providedIds = new Set(existingInput.map((v) => v.variableId).filter(Boolean));
-  const providedNames = new Set(existingInput.map((v) => v.name).filter(Boolean));
+  // 3. Filter out variables already provided in --input with valid values
+  // Also track variables with invalid format for better error messages
+  const invalidFormatVars: Array<{ name: string; reason: string }> = [];
 
   const missingVars = resourceVars.filter((v) => {
-    // Variable is provided if its ID or name matches
-    if (v.variableId && providedIds.has(v.variableId)) return false;
-    if (v.name && providedNames.has(v.name)) return false;
-    return true;
+    // Find if this variable was provided in input
+    const provided = existingInput.find(
+      (input) =>
+        (v.variableId && input.variableId === v.variableId) || (v.name && input.name === v.name),
+    );
+
+    if (!provided) {
+      return true; // Not provided at all
+    }
+
+    // Check if the value format is valid for file variables
+    const values = provided.value;
+    if (!Array.isArray(values) || values.length === 0) {
+      invalidFormatVars.push({
+        name: v.name,
+        reason: 'value must be an array with at least one file',
+      });
+      return true;
+    }
+
+    // Check if values have valid fileId
+    const hasValidFileId = values.some((val: any) => {
+      const fileId = val?.resource?.fileId || val?.fileId;
+      return typeof fileId === 'string' && fileId.length > 0;
+    });
+
+    if (!hasValidFileId) {
+      invalidFormatVars.push({
+        name: v.name,
+        reason: 'no valid fileId found in value',
+      });
+      return true;
+    }
+
+    return false; // Valid value provided
   });
 
   if (missingVars.length === 0) {
@@ -218,13 +248,30 @@ async function collectFileVariables(
 
   // 4. Check if we can prompt
   if (noPrompt || !isInteractive()) {
-    const names = missingVars.map((v) => v.name).join(', ');
-    throw new CLIError(
-      ErrorCodes.INVALID_INPUT,
-      `Missing required file variables: ${names}`,
-      undefined,
-      'Provide files via --input or run interactively without --no-prompt',
-    );
+    // Build helpful error message
+    const missingNames = missingVars.map((v) => v.name);
+    const formatIssues = invalidFormatVars.filter((f) => missingNames.includes(f.name));
+
+    let message: string;
+    let hint: string;
+
+    if (formatIssues.length > 0) {
+      // User provided values but format was wrong
+      const details = formatIssues.map((f) => `  - ${f.name}: ${f.reason}`).join('\n');
+      message = `Invalid format for file variables:\n${details}`;
+      hint =
+        'For file variables, use format: \'{"varName": "df-fileId"}\' or \'{"varName": [{"fileId": "df-xxx"}]}\'';
+    } else {
+      // Variables were not provided at all
+      message = `Missing required file variables: ${missingNames.join(', ')}`;
+      hint = 'Provide files via --input or run interactively without --no-prompt';
+    }
+
+    throw new CLIError(ErrorCodes.INVALID_INPUT, message, undefined, hint, {
+      field: '--input',
+      format: 'json-object',
+      example: '{"fileVar": "df-fileId"}',
+    });
   }
 
   // 5. Prompt for each variable
@@ -288,22 +335,122 @@ async function collectFileVariables(
 }
 
 /**
+ * Convert simple key-value input format to WorkflowVariable array.
+ * Supports:
+ *   - {"varName": "stringValue"} -> string variable
+ *   - {"varName": "df-xxx"} -> file variable (auto-detect by fileId prefix)
+ *   - {"varName": [{"fileId": "df-xxx"}]} -> file variable
+ *   - {"varName": [{"type": "file", "fileId": "df-xxx"}]} -> file variable
+ */
+function convertKeyValueToVariables(
+  obj: Record<string, unknown>,
+  workflow?: WorkflowInfo,
+): WorkflowVariable[] {
+  const variables: WorkflowVariable[] = [];
+
+  for (const [name, rawValue] of Object.entries(obj)) {
+    // Find variable definition from workflow if available
+    const varDef = workflow?.variables?.find((v) => v.name === name || v.variableId === name);
+    const isResourceVar = varDef?.variableType === 'resource';
+
+    // Determine if this looks like a file value
+    const looksLikeFileId = typeof rawValue === 'string' && rawValue.startsWith('df-');
+    const looksLikeFileArray =
+      Array.isArray(rawValue) &&
+      rawValue.length > 0 &&
+      typeof rawValue[0] === 'object' &&
+      rawValue[0] !== null &&
+      ('fileId' in rawValue[0] || 'type' in rawValue[0]);
+
+    if (isResourceVar || looksLikeFileId || looksLikeFileArray) {
+      // Handle as file/resource variable
+      let fileValues: Array<{ type: string; resource: { fileId: string } }> = [];
+
+      if (typeof rawValue === 'string') {
+        // Simple fileId string: "df-xxx"
+        fileValues = [
+          {
+            type: 'resource',
+            resource: { fileId: rawValue },
+          },
+        ];
+      } else if (Array.isArray(rawValue)) {
+        // Array format: [{"fileId": "df-xxx"}] or [{"type": "file", "fileId": "df-xxx"}]
+        fileValues = rawValue.map((item: any) => ({
+          type: 'resource',
+          resource: { fileId: item.fileId || item.resource?.fileId || '' },
+        }));
+      }
+
+      variables.push({
+        variableId: varDef?.variableId,
+        name,
+        variableType: 'resource',
+        value: fileValues,
+        required: varDef?.required,
+      });
+    } else {
+      // Handle as string variable
+      let value: Array<{ type: string; text?: string }> = [];
+
+      if (typeof rawValue === 'string') {
+        value = [{ type: 'text', text: rawValue }];
+      } else if (Array.isArray(rawValue)) {
+        value = rawValue;
+      }
+
+      variables.push({
+        variableId: varDef?.variableId,
+        name,
+        variableType: 'string',
+        value,
+        required: varDef?.required,
+      });
+    }
+  }
+
+  return variables;
+}
+
+/**
  * Main workflow execution logic
  */
 async function runWorkflow(workflowId: string, options: any): Promise<void> {
+  // Fetch workflow info early for variable type detection
+  let workflow: WorkflowInfo | undefined;
+  try {
+    workflow = await apiGetWorkflow(workflowId);
+  } catch {
+    // Continue without workflow info, validation will happen on server
+  }
+
   // Parse input JSON to extract variables
   let inputVars: WorkflowVariable[] = [];
   try {
     const parsed = JSON.parse(options?.input ?? '{}');
-    // Support both { variables: [...] } and raw array format
+    // Support multiple formats:
+    // 1. Array format: [{variableId, name, value}, ...]
+    // 2. Object with variables: {variables: [...]}
+    // 3. Simple key-value: {"varName": "value", "fileVar": "df-xxx"}
     if (Array.isArray(parsed)) {
       inputVars = parsed;
     } else if (parsed.variables && Array.isArray(parsed.variables)) {
       inputVars = parsed.variables;
+    } else if (typeof parsed === 'object' && parsed !== null && Object.keys(parsed).length > 0) {
+      // Simple key-value format - convert to WorkflowVariable array
+      inputVars = convertKeyValueToVariables(parsed, workflow);
     }
   } catch {
     fail(ErrorCodes.INVALID_INPUT, 'Invalid JSON in --input', {
-      hint: 'Ensure the input is valid JSON, e.g., {"variables":[...]}',
+      hint:
+        'Ensure the input is valid JSON. Supported formats:\n' +
+        '  - Simple: \'{"varName": "value", "fileVar": "df-xxx"}\'\n' +
+        '  - Array: \'[{"name": "varName", "value": [...]}]\'',
+      suggestedFix: {
+        field: '--input',
+        format: 'json-object | json-array',
+        example: '{"varName": "value", "fileVar": "df-xxx"}',
+      },
     });
     return; // TypeScript flow control
   }
@@ -431,7 +578,11 @@ export const workflowRunCommand = new Command('run')
       await runWorkflow(workflowId, options);
     } catch (error) {
       if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
+        fail(error.code, error.message, {
+          details: error.details,
+          hint: error.hint,
+          suggestedFix: error.suggestedFix,
+        });
       }
       fail(
         ErrorCodes.INTERNAL_ERROR,

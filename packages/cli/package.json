@@ -9,6 +9,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup",
+    "build:dev": "REFLY_BUILD_ENV=dev tsup",
     "build:test": "REFLY_BUILD_ENV=test tsup",
     "build:staging": "REFLY_BUILD_ENV=staging tsup",
     "build:prod": "REFLY_BUILD_ENV=production tsup",

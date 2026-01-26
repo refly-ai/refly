@@ -150,7 +150,15 @@ export const workflowCreateCommand = new Command('create')
         spec = Array.isArray(parsed) ? { nodes: parsed } : parsed;
       } catch {
         fail(ErrorCodes.INVALID_INPUT, 'Invalid JSON in --spec', {
-          hint: 'Ensure the spec is valid JSON',
+          hint:
+            'Spec format: \'[{"id": "node1", "type": "skill", "query": "task description", "toolsetKeys": ["web_search"]}]\'\n' +
+            'Or full format: \'{"nodes": [...], "edges": [...]}\'',
+          suggestedFix: {
+            field: '--spec',
+            format: 'json-array | json-object',
+            example:
+              '[{"id": "node1", "type": "skill", "query": "task description", "toolsetKeys": ["web_search"]}]',
+          },
         });
         return;
       }
@@ -160,6 +168,12 @@ export const workflowCreateCommand = new Command('create')
       if (validationError) {
         fail(ErrorCodes.INVALID_INPUT, validationError, {
           hint: 'Use simplified format: [{"id":"node1","type":"skill","query":"...","toolsetKeys":["tool_name"],"dependsOn":["other_node"]}]',
+          suggestedFix: {
+            field: '--spec',
+            format: 'json-array',
+            example:
+              '[{"id":"node1","type":"skill","query":"...","toolsetKeys":["tool_name"],"dependsOn":["other_node"]}]',
+          },
         });
         return;
       }
@@ -186,7 +200,11 @@ export const workflowCreateCommand = new Command('create')
       });
     } catch (error) {
       if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
+        fail(error.code, error.message, {
+          details: error.details,
+          hint: error.hint,
+          suggestedFix: error.suggestedFix,
+        });
         return;
       }
       fail(

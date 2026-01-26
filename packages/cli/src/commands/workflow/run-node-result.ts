@@ -135,7 +135,11 @@ export const workflowRunNodeResultCommand = new Command('node-result')
       ok('workflow.run.node-result', output);
     } catch (error) {
       if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
+        fail(error.code, error.message, {
+          details: error.details,
+          hint: error.hint,
+          suggestedFix: error.suggestedFix,
+        });
       }
       fail(
         ErrorCodes.INTERNAL_ERROR,

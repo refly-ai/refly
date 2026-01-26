@@ -41,6 +41,8 @@ export interface CreateSkillPackageCliResponse {
     name?: string;
     description?: string;
   }>;
+  inputSchema?: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
 }
 
 export interface UpdateSkillPackageDto {
@@ -127,6 +129,15 @@ export interface UninstallOptionsDto {
   deleteWorkflows?: boolean;
 }
 
+export interface UpdateInstallationDto {
+  name?: string;
+  description?: string;
+  workflowId?: string;
+  triggers?: string[];
+  tags?: string[];
+  version?: string;
+}
+
 // ===== Execution DTOs =====
 
 export interface RunSkillDto {
@@ -164,6 +175,11 @@ export interface SkillPackageResponse {
   createdAt: string;
   updatedAt: string;
   workflows?: SkillWorkflowResponse[];
+  workflowId?: string; // Primary workflow ID for CLI usage
+  // GitHub Registry fields
+  githubPrNumber?: number;
+  githubPrUrl?: string;
+  githubSubmittedAt?: string;
 }
 
 export interface SkillWorkflowResponse {
@@ -227,4 +243,22 @@ export interface WorkflowExecutionInfo {
   status: 'pending' | 'running' | 'completed' | 'failed';
   result?: unknown;
   error?: string;
+}
+
+// ===== Publish DTOs =====
+
+export interface PublishSkillDto {
+  skillContent: string;
+}
+
+export interface ReflySkillMeta {
+  name: string;
+  displayName?: string;
+  description: string;
+  skillId: string;
+  workflowId: string;
+  installationId?: string;
+  triggers?: string[];
+  tags?: string[];
+  version?: string;
 }

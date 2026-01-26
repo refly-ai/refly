@@ -24,6 +24,11 @@ export const workflowRunStartCommand = new Command('start')
     if (!workflowId.startsWith('c-')) {
       fail(ErrorCodes.INVALID_INPUT, `Invalid workflow ID: ${workflowId}`, {
         hint: 'Workflow ID should start with "c-"',
+        suggestedFix: {
+          field: '<workflowId>',
+          format: 'c-<id>',
+          example: 'c-123456',
+        },
       });
       return;
     }
@@ -35,7 +40,14 @@ export const workflowRunStartCommand = new Command('start')
         input = JSON.parse(options.input);
       } catch {
         fail(ErrorCodes.INVALID_INPUT, 'Invalid JSON in --input', {
-          hint: 'Ensure the input is valid JSON',
+          hint:
+            'Input format: \'{"varName": "value", "fileVar": "df-fileId"}\'\n' +
+            'For file variables, use the fileId (starts with "df-")',
+          suggestedFix: {
+            field: '--input',
+            format: 'json-object',
+            example: '{"varName": "value", "fileVar": "df-fileId"}',
+          },
         });
         return;
       }
@@ -67,7 +79,11 @@ export const workflowRunStartCommand = new Command('start')
       });
     } catch (error) {
       if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
+        fail(error.code, error.message, {
+          details: error.details,
+          hint: error.hint,
+          suggestedFix: error.suggestedFix,
+        });
         return;
       }
       fail(

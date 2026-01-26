@@ -3,12 +3,17 @@
  */
 
 import { Command } from 'commander';
+import * as fs from 'node:fs';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import { apiRequest } from '../../api/client.js';
 import { getWebUrl } from '../../config/config.js';
 import { CLIError } from '../../utils/errors.js';
-import { syncCloudSkillToLocal, skillExists } from '../../skill/storage.js';
-import { addSkill, findSkill } from '../../skill/registry.js';
+import {
+  createReflySkillWithSymlink,
+  generateReflySkillMd,
+  isSkillSymlinkValid,
+} from '../../skill/symlink.js';
+import { getReflyDomainSkillDir } from '../../config/paths.js';
 import { logger } from '../../utils/logger.js';
 
 interface CreateSkillPayload {
@@ -23,6 +28,8 @@ interface CreateSkillPayload {
     name?: string;
     description?: string;
   }>;
+  inputSchema?: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
 }
 
 interface CreateSkillResponse {
@@ -98,8 +105,10 @@ export const skillCreateCommand = new Command('create')
       // Extract payload from wrapped CLI response
       const result = response.payload;
 
-      // Sync to local domain skill if workflow was created
-      let localSkillPath: string | undefined;
+      // Create local domain skill with symlink if workflow was created
+      let localPath: string | undefined;
+      let symlinkPath: string | undefined;
+
       if (result.workflowId) {
         try {
           // Normalize skill name for local file system (lowercase, hyphens)
@@ -109,24 +118,36 @@ export const skillCreateCommand = new Command('create')
             .replace(/^-|-$/g, '');
 
           // Check if local skill already exists
-          if (findSkill(localName) || skillExists(localName)) {
+          const skillDir = getReflyDomainSkillDir(localName);
+          const symlinkStatus = isSkillSymlinkValid(localName);
+
+          if (fs.existsSync(skillDir) || symlinkStatus.exists) {
             logger.debug(`Local skill '${localName}' already exists, skipping sync`);
           } else {
-            // Create local skill.md and registry entry
-            const { filePath, registryEntry } = syncCloudSkillToLocal({
+            // Generate SKILL.md content
+            const skillMdContent = generateReflySkillMd({
               name: localName,
+              displayName: options.name,
               description: (input.description as string) || `Skill: ${options.name}`,
+              skillId: result.skillId,
               workflowId: result.workflowId,
               triggers: input.triggers as string[] | undefined,
               tags: input.tags as string[] | undefined,
               version: options.version,
-              skillId: result.skillId,
+              inputSchema: result.inputSchema,
+              outputSchema: result.outputSchema,
             });
 
-            // Add to registry
-            addSkill(registryEntry);
-            localSkillPath = filePath;
-            logger.info(`Created local domain skill: ${localName}`);
+            // Create skill directory and symlink
+            const symlinkResult = createReflySkillWithSymlink(localName, skillMdContent);
+
+            if (symlinkResult.success) {
+              localPath = symlinkResult.reflyPath;
+              symlinkPath = symlinkResult.claudePath;
+              logger.info(`Created local domain skill: ${localName}`);
+            } else {
+              logger.warn(`Failed to create local skill: ${symlinkResult.error}`);
+            }
           }
         } catch (syncError) {
           // Log but don't fail - cloud skill was created successfully
@@ -143,8 +164,9 @@ export const skillCreateCommand = new Command('create')
         url: `${getWebUrl()}/skill/${result.skillId}`,
       };
 
-      if (localSkillPath) {
-        payload.localSkillPath = localSkillPath;
+      if (localPath) {
+        payload.localPath = localPath;
+        payload.symlinkPath = symlinkPath;
       }
 
       if (options.verbose) {
@@ -155,7 +177,11 @@ export const skillCreateCommand = new Command('create')
       ok('skill.create', payload);
     } catch (error) {
       if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
+        fail(error.code, error.message, {
+          details: error.details,
+          hint: error.hint,
+          suggestedFix: error.suggestedFix,
+        });
         return;
       }
       fail(

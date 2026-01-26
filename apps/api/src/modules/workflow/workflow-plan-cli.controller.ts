@@ -107,13 +107,18 @@ function throwCliError(
   message: string,
   hint?: string,
   status: number = HttpStatus.BAD_REQUEST,
+  suggestedFix?: {
+    field?: string;
+    format?: string;
+    example?: string;
+  },
 ): never {
   throw new HttpException(
     {
       ok: false,
       type: 'error',
       version: '1.0.0',
-      error: { code, message, hint },
+      error: { code, message, hint, ...(suggestedFix && { suggestedFix }) },
     },
     status,
   );

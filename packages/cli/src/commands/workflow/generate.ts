@@ -139,7 +139,15 @@ export const workflowGenerateCommand = new Command('generate')
           variables = JSON.parse(options.variables);
         } catch {
           fail(ErrorCodes.INVALID_INPUT, 'Invalid JSON in --variables', {
-            hint: 'Ensure the variables parameter is valid JSON',
+            hint:
+              'Variables format: \'[{"name": "varName", "variableType": "string", "description": "desc", "required": true}]\'\n' +
+              'Variable types: "string" (text input) or "resource" (file input)',
+            suggestedFix: {
+              field: '--variables',
+              format: 'json-array',
+              example:
+                '[{"name": "varName", "variableType": "string", "description": "desc", "required": true}]',
+            },
           });
         }
       }
@@ -201,6 +209,7 @@ export const workflowGenerateCommand = new Command('generate')
         fail(error.code, error.message, {
           details: { ...error.details, cleanedUp: cleanupResult?.deleted },
           hint: error.hint,
+          suggestedFix: error.suggestedFix,
         });
       }
       fail(

@@ -27,7 +27,7 @@ export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatB
         canvasId,
       },
     },
-    [],
+    undefined,
     { enabled: false },
   );
 

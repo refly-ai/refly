@@ -8,7 +8,7 @@ import { Command } from 'commander';
 import { skillListCommand } from './list.js';
 import { skillGetCommand } from './get.js';
 import { skillCreateCommand } from './create.js';
-import { skillDeleteCommand } from './delete.js';
+import { skillUpdateCommand } from './update.js';
 import { skillPublishCommand } from './publish.js';
 import { skillUnpublishCommand } from './unpublish.js';
 import { skillRunCommand } from './run.js';
@@ -25,7 +25,7 @@ export const skillCommand = new Command('skill')
   .addCommand(skillListCommand)
   .addCommand(skillGetCommand)
   .addCommand(skillCreateCommand)
-  .addCommand(skillDeleteCommand)
+  .addCommand(skillUpdateCommand)
   .addCommand(skillPublishCommand)
   .addCommand(skillUnpublishCommand)
   // Skill discovery

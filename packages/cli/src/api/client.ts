@@ -234,12 +234,18 @@ async function refreshAccessToken(): Promise<string> {
 function mapAPIError(status: number, response: APIResponse): CLIError {
   // Handle CLI error format: { ok: false, type: 'error', error: { code, message, hint } }
   if (response.error && typeof response.error === 'object') {
-    const cliError = response.error as { code?: string; message?: string; hint?: string };
+    const cliError = response.error as {
+      code?: string;
+      message?: string;
+      hint?: string;
+      suggestedFix?: { field?: string; format?: string; example?: string };
+    };
     return new CLIError(
       (cliError.code || 'UNKNOWN') as ErrorCode,
       cliError.message || 'Unknown error',
       undefined,
       cliError.hint,
+      cliError.suggestedFix,
     );
   }
 

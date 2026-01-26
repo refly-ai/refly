@@ -109,7 +109,11 @@ export const workflowRunNodeDetailCommand = new Command('node-detail')
       });
     } catch (error) {
       if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
+        fail(error.code, error.message, {
+          details: error.details,
+          hint: error.hint,
+          suggestedFix: error.suggestedFix,
+        });
       }
       fail(
         ErrorCodes.INTERNAL_ERROR,

@@ -90,6 +90,7 @@ export function getConfigPath(): string {
 
 /**
  * Get the skills directory (~/.refly/skills)
+ * @deprecated Use getReflySkillDir() instead
  */
 export function getSkillsDir(): string {
   return path.join(getReflyDir(), 'skills');
@@ -97,10 +98,73 @@ export function getSkillsDir(): string {
 
 /**
  * Ensure the skills directory exists
+ * @deprecated Use ensureReflySkillDir() instead
  */
 export async function ensureSkillsDir(): Promise<void> {
   const dir = getSkillsDir();
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  }
+}
+
+// ============================================================================
+// New Symlink-based Skill Architecture
+// ============================================================================
+
+/**
+ * Get the Refly skills storage directory (~/.refly/skills)
+ * This is where actual skill files are stored.
+ */
+export function getReflySkillsDir(): string {
+  return path.join(getReflyDir(), 'skills');
+}
+
+/**
+ * Get the base skill directory (~/.refly/skills/base)
+ * Contains the main SKILL.md and rules for CLI routing.
+ */
+export function getReflyBaseSkillDir(): string {
+  return path.join(getReflySkillsDir(), 'base');
+}
+
+/**
+ * Get a domain skill directory (~/.refly/skills/<name>)
+ */
+export function getReflyDomainSkillDir(skillName: string): string {
+  return path.join(getReflySkillsDir(), skillName);
+}
+
+/**
+ * Get the Claude skills directory (~/.claude/skills)
+ * Symlinks are created here pointing to ~/.refly/skill/<name>
+ */
+export function getClaudeSkillsDir(): string {
+  return path.join(os.homedir(), '.claude', 'skills');
+}
+
+/**
+ * Get a Claude skill symlink path (~/.claude/skills/<name>)
+ */
+export function getClaudeSkillSymlinkPath(skillName: string): string {
+  return path.join(getClaudeSkillsDir(), skillName);
+}
+
+/**
+ * Ensure the Refly skills directory exists
+ */
+export function ensureReflySkillsDir(): void {
+  const dir = getReflySkillsDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  }
+}
+
+/**
+ * Ensure the Claude skills directory exists
+ */
+export function ensureClaudeSkillsDir(): void {
+  const dir = getClaudeSkillsDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
   }
 }

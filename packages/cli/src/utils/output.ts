@@ -12,9 +12,10 @@ import {
   getFormatter,
   type FormatterOptions,
   type SuccessPayload,
+  type SuggestedFix,
 } from './formatter.js';
 
-export type { OutputFormat, FormatterOptions, SuccessPayload };
+export type { OutputFormat, FormatterOptions, SuccessPayload, SuggestedFix };
 export { OutputFormatter, resolveFormat, initFormatter, getFormatter };
 
 export interface SuccessResponse<T = unknown> {
@@ -29,6 +30,13 @@ export interface ErrorDetail {
   message: string;
   details?: Record<string, unknown>;
   hint?: string;
+  suggestedFix?: SuggestedFix;
+  /**
+   * Indicates if the error can be fixed by adjusting parameters.
+   * - true: Fix the parameters (see suggestedFix) and retry the SAME command
+   * - false: The approach may not work, consider alternatives
+   */
+  recoverable?: boolean;
 }
 
 export interface ErrorResponse {
@@ -107,6 +115,25 @@ export function print<T>(type: string, payload: T): void {
 }
 
 /**
+ * Determine if an error is recoverable (can be fixed by adjusting parameters)
+ */
+function isRecoverableError(code: string, hasSuggestedFix: boolean): boolean {
+  // Errors that are recoverable (fix parameters and retry)
+  const recoverableCodes = [
+    'INVALID_INPUT',
+    'VALIDATION_ERROR',
+    'INVALID_NODE_INPUT',
+    'TIMEOUT', // Can retry
+    'RATE_LIMIT', // Can retry after waiting
+  ];
+
+  // If there's a suggestedFix, it's likely recoverable
+  if (hasSuggestedFix) return true;
+
+  return recoverableCodes.includes(code);
+}
+
+/**
  * Output an error response and exit with appropriate code
  */
 export function fail(
@@ -116,14 +143,20 @@ export function fail(
     details?: Record<string, unknown>;
     hint?: string;
     exitCode?: number;
+    suggestedFix?: SuggestedFix;
+    recoverable?: boolean;
   },
 ): never {
   const formatter = getFormatter();
+  const recoverable = options?.recoverable ?? isRecoverableError(code, !!options?.suggestedFix);
+
   formatter.error({
     code,
     message,
     details: options?.details,
     hint: options?.hint,
+    suggestedFix: options?.suggestedFix,
+    recoverable,
   });
   process.exit(options?.exitCode ?? getExitCode(code));
 }
@@ -137,6 +170,7 @@ export function printError(
   options?: {
     details?: Record<string, unknown>;
     hint?: string;
+    suggestedFix?: SuggestedFix;
   },
 ): void {
   const formatter = getFormatter();
@@ -145,6 +179,7 @@ export function printError(
     message,
     details: options?.details,
     hint: options?.hint,
+    suggestedFix: options?.suggestedFix,
   });
 }
 
@@ -172,6 +207,7 @@ export function failJson(
     details?: Record<string, unknown>;
     hint?: string;
     exitCode?: number;
+    suggestedFix?: SuggestedFix;
   },
 ): never {
   const response: ErrorResponse = {
@@ -183,6 +219,7 @@ export function failJson(
       message,
       ...(options?.details && { details: options.details }),
       ...(options?.hint && { hint: options.hint }),
+      ...(options?.suggestedFix && { suggestedFix: options.suggestedFix }),
     },
   };
   console.log(JSON.stringify(response, null, 2));
