@@ -1236,6 +1236,46 @@ export class SkillInvokerService {
                 this.metrics.tool.success({ toolName, toolsetKey });
               }
 
+              // Forward PTC tool call events for execute_code tool
+              if (toolName === 'execute_code' && res) {
+                try {
+                  const ptcToolCalls = await this.toolCallService.fetchPtcToolCalls(toolCallId);
+                  for (const ptcCall of ptcToolCalls) {
+                    // Parse input/output from DB (stored as JSON strings)
+                    const parsedInput = safeParseJSON(ptcCall.input || '{}') ?? {};
+                    const parsedOutput = safeParseJSON(ptcCall.output || '{}') ?? {};
+
+                    // Use writeSSEResponse with ptc flag (cast to bypass SkillEvent type restriction)
+                    writeSSEResponse(res, {
+                      event: ptcCall.status === 'failed' ? 'tool_call_error' : 'tool_call_end',
+                      ptc: true, // Marks this as a PTC internal tool call
+                      resultId,
+                      version,
+                      toolCallResult: {
+                        callId: ptcCall.callId,
+                        toolsetId: ptcCall.toolsetId,
+                        toolName: ptcCall.toolName,
+                        input: parsedInput,
+                        output: parsedOutput,
+                        status: ptcCall.status === 'failed' ? 'failed' : 'completed',
+                        ...(ptcCall.error ? { error: ptcCall.error } : {}),
+                        createdAt: ptcCall.createdAt.getTime(),
+                        updatedAt: ptcCall.updatedAt.getTime(),
+                      },
+                    } as Parameters<typeof writeSSEResponse>[1]);
+                  }
+                  if (ptcToolCalls.length > 0) {
+                    this.logger.debug(
+                      `Forwarded ${ptcToolCalls.length} PTC tool call events for execute_code ${toolCallId}`,
+                    );
+                  }
+                } catch (error) {
+                  this.logger.error(
+                    `Failed to fetch/forward PTC tool calls for ${toolCallId}: ${error?.message}`,
+                  );
+                }
+              }
+
               break;
             }
             break;
