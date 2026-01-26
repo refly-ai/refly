@@ -453,6 +453,14 @@ export const generateCanvasDataFromWorkflowPlan = (
   const rowStepY = 240;
 
   if (Array.isArray(workflowPlan.tasks) && workflowPlan.tasks.length > 0) {
+    // Phase 0: Pre-generate entity IDs for all tasks to enable complete ID replacement
+    // This ensures that when we replace agent mentions in prompts, we have all task-to-entity mappings available
+    for (const task of workflowPlan.tasks) {
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
+      const taskEntityId = genNodeEntityId('skillResponse');
+      taskIdToEntityId.set(taskId, taskEntityId);
+    }
+
     // Phase 1: Process tasks in dependency order
     // First, identify tasks with no dependencies (roots)
     const taskMap = new Map<string, (typeof workflowPlan.tasks)[0]>();
@@ -523,10 +531,11 @@ export const generateCanvasDataFromWorkflowPlan = (
         }
       }
 
-      // Create the node data for prepareAddNode
-      const taskEntityId = genNodeEntityId('skillResponse');
-      taskIdToEntityId.set(taskId, taskEntityId);
+      // Get the pre-generated entity ID for this task
+      const taskEntityId = taskIdToEntityId.get(taskId)!;
 
+      // Replace agent mentions in prompt with real entity IDs
+      // Now taskIdToEntityId contains all tasks, so all references will be replaced correctly
       const normalizedPrompt = replaceTaskAgentMentions(taskPrompt, taskIdToEntityId);
 
       // Calculate default position for non-auto-layout mode

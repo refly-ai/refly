@@ -170,7 +170,11 @@ registerRoute(
 // === Strategy 2: HTML (non-home) - StaleWhileRevalidate with version check ===
 registerRoute(
   ({ request, url }) =>
-    request.destination === 'document' && url.pathname !== '/' && !isSsrPath(url.pathname),
+    request.destination === 'document' &&
+    url.pathname !== '/' &&
+    !isSsrPath(url.pathname) &&
+    // Exclude static assets to prevent caching HTML content for CSS/JS files
+    !url.pathname.startsWith('/static/'),
   new StaleWhileRevalidate({
     cacheName: CACHE_NAME,
     plugins: [
@@ -220,9 +224,15 @@ registerRoute(
                 changed: newVersion !== oldVersion,
               });
 
-              // If version changed, notify the client
+              // If version changed, update cache immediately and notify the client
               if (newVersion && oldVersion && newVersion !== oldVersion) {
-                console.log('[SW] New version detected! Notifying client:', clientId);
+                console.log(
+                  '[SW] New version detected! Updating cache and notifying client:',
+                  clientId,
+                );
+
+                // Immediately cache the new HTML to ensure reload gets fresh version
+                await cache.put(normalizedKey, response.clone());
 
                 const client = clientId ? await self.clients.get(clientId) : null;
                 if (client) {

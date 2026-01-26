@@ -11,6 +11,13 @@ import type { Serialized } from '@langchain/core/load/serializable';
 import type { ChainValues } from '@langchain/core/utils/types';
 import type { BaseMessage } from '@langchain/core/messages';
 
+type Metadata = Record<string, unknown>;
+
+type ToolInputData = {
+  toolInput?: string;
+  toolParameters?: unknown;
+};
+
 // Metadata keys to filter out
 const FILTERED_METADATA_KEYS = new Set([
   // LangGraph internal state (not useful for trace analysis)
@@ -30,26 +37,45 @@ const FILTERED_METADATA_KEYS = new Set([
   'ls_max_tokens',
 ]);
 
-/**
- * Filter internal metadata keys from LangChain/LangGraph
- */
-function filterMetadata(metadata?: Record<string, unknown>): Record<string, unknown> | undefined {
-  if (!metadata) return undefined;
-
-  const filtered: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(metadata)) {
-    if (!FILTERED_METADATA_KEYS.has(key)) {
-      filtered[key] = value;
-    }
-  }
-
-  return Object.keys(filtered).length > 0 ? filtered : undefined;
+function isRecord(value: unknown): value is Metadata {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function compactMetadata(metadata?: Record<string, unknown>): Record<string, unknown> | undefined {
+function readString(record: Metadata | undefined, key: string): string | undefined {
+  const value = record?.[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function readNumberLike(record: Metadata | undefined, key: string): number | undefined {
+  const value = record?.[key];
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function readRecord(record: Metadata | undefined, key: string): Metadata | undefined {
+  const value = record?.[key];
+  return isRecord(value) ? value : undefined;
+}
+
+function pickFirstString(...values: Array<string | undefined>): string | undefined {
+  for (const value of values) {
+    if (value !== undefined && value !== '') {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function compactMetadata(metadata?: Metadata): Metadata | undefined {
   if (!metadata) return undefined;
 
-  const compact: Record<string, unknown> = {};
+  const compact: Metadata = {};
   for (const [key, value] of Object.entries(metadata)) {
     if (value !== undefined) {
       compact[key] = value;
@@ -59,13 +85,10 @@ function compactMetadata(metadata?: Record<string, unknown>): Record<string, unk
   return Object.keys(compact).length > 0 ? compact : undefined;
 }
 
-function mergeMetadata(
-  base?: Record<string, unknown>,
-  extra?: Record<string, unknown>,
-): Record<string, unknown> | undefined {
+function mergeMetadata(base?: Metadata, extra?: Metadata): Metadata | undefined {
   if (!base && !extra) return undefined;
 
-  const merged: Record<string, unknown> = {};
+  const merged: Metadata = {};
   if (base) {
     for (const [key, value] of Object.entries(base)) {
       if (value !== undefined) {
@@ -92,7 +115,7 @@ function safeJsonParse(input: string): unknown | undefined {
   }
 }
 
-function extractToolInput(input?: string): { toolInput?: string; toolParameters?: unknown } {
+function extractToolInput(input?: string): ToolInputData {
   const toolInput = input?.trim() ? input : undefined;
   if (!toolInput) {
     return {};
@@ -109,26 +132,48 @@ function extractToolInput(input?: string): { toolInput?: string; toolParameters?
   return { toolInput };
 }
 
+/**
+ * Filter internal metadata keys from LangChain/LangGraph
+ */
+function filterMetadata(metadata?: Metadata): Metadata | undefined {
+  if (!metadata) return undefined;
+
+  const filtered: Metadata = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    if (!FILTERED_METADATA_KEYS.has(key)) {
+      filtered[key] = value;
+    }
+  }
+
+  return Object.keys(filtered).length > 0 ? filtered : undefined;
+}
+
 function buildChainMetadata(
   inputs: ChainValues,
   runId: string,
   parentRunId?: string,
-  metadata?: Record<string, unknown>,
+  metadata?: Metadata,
   runType?: string,
-): Record<string, unknown> {
+): Metadata {
   const meta = metadata ?? {};
-  const inputRecord = inputs as Record<string, unknown>;
-  const queryFromInputs = (inputRecord as any)?.query ?? (inputRecord as any)?.input?.query;
-  const originalQueryFromInputs =
-    (inputRecord as any)?.originalQuery ?? (inputRecord as any)?.input?.originalQuery;
+  const inputRecord = isRecord(inputs) ? inputs : undefined;
+  const inputNested = readRecord(inputRecord, 'input');
+  const queryFromInputs = pickFirstString(
+    readString(inputRecord, 'query'),
+    readString(inputNested, 'query'),
+  );
+  const originalQueryFromInputs = pickFirstString(
+    readString(inputRecord, 'originalQuery'),
+    readString(inputNested, 'originalQuery'),
+  );
 
   return (
     compactMetadata({
       runId,
       parentRunId,
-      runType: runType ?? (meta as any).runType ?? (meta as any).run_type,
-      query: queryFromInputs ?? (meta as any).query,
-      originalQuery: originalQueryFromInputs ?? (meta as any).originalQuery,
+      runType: pickFirstString(runType, readString(meta, 'runType'), readString(meta, 'run_type')),
+      query: pickFirstString(queryFromInputs, readString(meta, 'query')),
+      originalQuery: pickFirstString(originalQueryFromInputs, readString(meta, 'originalQuery')),
     }) ?? {}
   );
 }
@@ -138,54 +183,96 @@ function buildToolMetadata(
   input: string,
   runId: string,
   parentRunId?: string,
-  metadata?: Record<string, unknown>,
+  metadata?: Metadata,
   name?: string,
-): Record<string, unknown> {
-  const toolRecord = tool as unknown as Record<string, unknown>;
+): Metadata {
+  const toolRecord = isRecord(tool) ? tool : undefined;
   const meta = metadata ?? {};
   const { toolInput, toolParameters } = extractToolInput(input);
 
-  const toolName = (meta as any).toolName ?? (meta as any).name ?? (toolRecord as any).name ?? name;
-  const toolsetKey =
-    (meta as any).toolsetKey ?? (meta as any).toolsetId ?? (meta as any).toolset?.key;
-  const toolsetName = (meta as any).toolsetName ?? (meta as any).toolset?.name;
-  const skillName =
-    (meta as any).skillName ?? (meta as any).currentSkill?.name ?? (meta as any).skill?.name;
-  const nodeType = (meta as any).nodeType ?? (meta as any).node_type;
-  const workflowType = (meta as any).workflowType ?? (meta as any).workflow_type;
-  const query = (meta as any).query;
-  const originalQuery = (meta as any).originalQuery ?? (meta as any).original_query;
-  const locale = (meta as any).locale ?? (meta as any).uiLocale;
-  const modelName =
-    (meta as any).modelName ??
-    (meta as any).model?.name ??
-    (meta as any).model ??
-    (meta as any).modelInfo?.name;
-  const modelItemId =
-    (meta as any).modelItemId ??
-    (meta as any).providerItemId ??
-    (meta as any).modelInfo?.providerItemId;
-  const providerKey =
-    (meta as any).providerKey ?? (meta as any).provider ?? (meta as any).modelInfo?.provider;
-  const providerId = (meta as any).providerId;
-  const promptVersion = (meta as any).promptVersion ?? (meta as any).prompt_version;
-  const schemaVersion =
-    (meta as any).schemaVersion ??
-    (meta as any).schema_version ??
-    (toolRecord as any).schemaVersion ??
-    (toolRecord as any).schema?.version;
-  const traceId = (meta as any).traceId ?? (meta as any).trace_id;
+  const toolsetMeta = readRecord(meta, 'toolset');
+  const currentSkillMeta = readRecord(meta, 'currentSkill');
+  const skillMeta = readRecord(meta, 'skill');
+  const modelInfoMeta = readRecord(meta, 'modelInfo');
+  const modelMeta = readRecord(meta, 'model');
+
+  const toolName = pickFirstString(
+    readString(meta, 'toolName'),
+    readString(meta, 'name'),
+    readString(toolRecord, 'name'),
+    name,
+  );
+  const toolsetKey = pickFirstString(
+    readString(meta, 'toolsetKey'),
+    readString(meta, 'toolsetId'),
+    readString(toolsetMeta, 'key'),
+  );
+  const toolsetName = pickFirstString(
+    readString(meta, 'toolsetName'),
+    readString(toolsetMeta, 'name'),
+  );
+  const skillName = pickFirstString(
+    readString(meta, 'skillName'),
+    readString(currentSkillMeta, 'name'),
+    readString(skillMeta, 'name'),
+  );
+  const nodeType = pickFirstString(readString(meta, 'nodeType'), readString(meta, 'node_type'));
+  const workflowType = pickFirstString(
+    readString(meta, 'workflowType'),
+    readString(meta, 'workflow_type'),
+  );
+  const query = pickFirstString(readString(meta, 'query'));
+  const originalQuery = pickFirstString(
+    readString(meta, 'originalQuery'),
+    readString(meta, 'original_query'),
+  );
+  const locale = pickFirstString(readString(meta, 'locale'), readString(meta, 'uiLocale'));
+
+  const modelName = pickFirstString(
+    readString(meta, 'modelName'),
+    readString(modelMeta, 'name'),
+    readString(meta, 'model'),
+    readString(modelInfoMeta, 'name'),
+  );
+  const modelItemId = pickFirstString(
+    readString(meta, 'modelItemId'),
+    readString(meta, 'providerItemId'),
+    readString(modelInfoMeta, 'providerItemId'),
+  );
+  const providerKey = pickFirstString(
+    readString(meta, 'providerKey'),
+    readString(meta, 'provider'),
+    readString(modelInfoMeta, 'provider'),
+  );
+  const providerId = pickFirstString(readString(meta, 'providerId'));
+  const promptVersion = pickFirstString(
+    readString(meta, 'promptVersion'),
+    readString(meta, 'prompt_version'),
+  );
+  const schemaVersion = pickFirstString(
+    readString(meta, 'schemaVersion'),
+    readString(meta, 'schema_version'),
+    readString(toolRecord, 'schemaVersion'),
+    readString(readRecord(toolRecord, 'schema'), 'version'),
+  );
+  const traceId = pickFirstString(readString(meta, 'traceId'), readString(meta, 'trace_id'));
   const runType = 'tool';
-  const status = (meta as any).status;
-  const errorType = (meta as any).errorType ?? (meta as any).error_type;
-  const retryCount = (meta as any).retryCount ?? (meta as any).retry_count;
+  const status = pickFirstString(readString(meta, 'status'));
+  const errorType = pickFirstString(readString(meta, 'errorType'), readString(meta, 'error_type'));
+  const retryCount = pickFirstString(
+    readNumberLike(meta, 'retryCount')?.toString(),
+    readNumberLike(meta, 'retry_count')?.toString(),
+  );
   const startTime = new Date().toISOString();
 
-  const resultId = (meta as any).resultId ?? (meta as any).result_id;
-  const resultVersion =
-    (meta as any).resultVersion ?? (meta as any).version ?? (meta as any).result_version;
-  const callId = (meta as any).callId ?? (meta as any).toolCallId ?? runId;
-  const toolCallId = (meta as any).toolCallId ?? callId;
+  const resultId = pickFirstString(readString(meta, 'resultId'), readString(meta, 'result_id'));
+  const resultVersion = pickFirstString(
+    readString(meta, 'resultVersion'),
+    readString(meta, 'version'),
+    readString(meta, 'result_version'),
+  );
+  const callId = pickFirstString(readString(meta, 'callId'), readString(meta, 'toolCallId'), runId);
+  const toolCallId = pickFirstString(readString(meta, 'toolCallId'), callId);
 
   return (
     compactMetadata({
@@ -236,7 +323,7 @@ export class FilteredLangfuseCallbackHandler extends CallbackHandler {
     runId: string,
     parentRunId?: string,
     tags?: string[],
-    metadata?: Record<string, unknown>,
+    metadata?: Metadata,
     runType?: string,
     name?: string,
   ): Promise<void> {
@@ -264,9 +351,9 @@ export class FilteredLangfuseCallbackHandler extends CallbackHandler {
     messages: any[],
     runId: string,
     parentRunId?: string,
-    extraParams?: Record<string, unknown>,
+    extraParams?: Metadata,
     tags?: string[],
-    metadata?: Record<string, unknown>,
+    metadata?: Metadata,
     name?: string,
   ): Promise<void> {
     return super.handleGenerationStart(
@@ -287,9 +374,9 @@ export class FilteredLangfuseCallbackHandler extends CallbackHandler {
     messages: BaseMessage[][],
     runId: string,
     parentRunId?: string,
-    extraParams?: Record<string, unknown>,
+    extraParams?: Metadata,
     tags?: string[],
-    metadata?: Record<string, unknown>,
+    metadata?: Metadata,
     name?: string,
   ): Promise<void> {
     return super.handleChatModelStart(
@@ -310,9 +397,9 @@ export class FilteredLangfuseCallbackHandler extends CallbackHandler {
     prompts: string[],
     runId: string,
     parentRunId?: string,
-    extraParams?: Record<string, unknown>,
+    extraParams?: Metadata,
     tags?: string[],
-    metadata?: Record<string, unknown>,
+    metadata?: Metadata,
     name?: string,
   ): Promise<void> {
     return super.handleLLMStart(
@@ -334,7 +421,7 @@ export class FilteredLangfuseCallbackHandler extends CallbackHandler {
     runId: string,
     parentRunId?: string,
     tags?: string[],
-    metadata?: Record<string, unknown>,
+    metadata?: Metadata,
     name?: string,
   ): Promise<void> {
     const filteredMetadata = filterMetadata(metadata);
@@ -353,7 +440,7 @@ export class FilteredLangfuseCallbackHandler extends CallbackHandler {
     runId: string,
     parentRunId?: string,
     tags?: string[],
-    metadata?: Record<string, unknown>,
+    metadata?: Metadata,
     name?: string,
   ): Promise<void> {
     return super.handleRetrieverStart(

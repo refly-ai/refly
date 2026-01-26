@@ -343,12 +343,18 @@ export class SkillInvokerService {
 
     const modelInfo = data.result?.modelInfo;
     const providerInfo = providerItem?.provider ?? provider;
-    const providerConfig = providerItem?.config as any;
+    const providerConfig = providerItem?.config;
     const traceparent =
       typeof data.traceCarrier?.traceparent === 'string'
         ? data.traceCarrier?.traceparent
         : undefined;
     const traceId = traceparent?.split('-')[1];
+    const modelNameFromConfig =
+      providerConfig &&
+      'modelName' in providerConfig &&
+      typeof providerConfig.modelName === 'string'
+        ? providerConfig.modelName
+        : undefined;
 
     setMetadata('runType', 'skill');
     setMetadata('traceId', traceId);
@@ -362,7 +368,7 @@ export class SkillInvokerService {
     setMetadata('resultVersion', data.result?.version);
     setMetadata('status', data.result?.status);
     setMetadata('errorType', data.result?.errorType);
-    setMetadata('modelName', modelInfo?.name ?? providerConfig?.modelName ?? data.modelName);
+    setMetadata('modelName', modelInfo?.name ?? modelNameFromConfig ?? data.modelName);
     setMetadata(
       'modelItemId',
       data.modelItemId ?? modelInfo?.providerItemId ?? data.result?.actualProviderItemId,
