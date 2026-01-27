@@ -1405,10 +1405,22 @@ export class CanvasService {
         driveFile = await this.driveService.duplicateDriveFile(user, driveFile, canvasId);
       }
 
+      // Map DriveFile category to VariableResourceType (handle 'others' -> 'document')
+      const fileType =
+        resource.fileType ||
+        (driveFile.category === 'others' ? 'document' : driveFile.category) ||
+        'document';
+
       return {
         ...value,
         resource: {
           ...resource,
+          // Fill in missing fields from DriveFile for CLI compatibility
+          // When CLI passes only fileId (e.g., --input '{"fileVar": "df-xxx"}'),
+          // we need to populate name, storageKey, fileType from the DriveFile record
+          name: resource.name || driveFile.name,
+          storageKey: resource.storageKey || driveFile.storageKey,
+          fileType,
           fileId: driveFile.fileId,
         },
       };

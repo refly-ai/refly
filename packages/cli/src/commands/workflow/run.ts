@@ -19,7 +19,7 @@ import {
 import { CLIError } from '../../utils/errors.js';
 import { getWebUrl } from '../../config/config.js';
 import { promptForFilePath, isInteractive } from '../../utils/prompt.js';
-import { determineFileType } from '../../utils/file-type.js';
+import { getFileCategoryByName } from '../../utils/file-type.js';
 import {
   checkRequiredVariables,
   buildMissingVariablesError,
@@ -324,7 +324,7 @@ async function collectFileVariables(
         type: 'resource',
         resource: {
           name: uploadResult.name,
-          fileType: determineFileType(filePath, uploadResult.type),
+          fileType: getFileCategoryByName(filePath, uploadResult.type),
           fileId: uploadResult.fileId,
           storageKey: uploadResult.storageKey,
         },
@@ -404,7 +404,7 @@ function convertKeyValueToVariables(
 
       variables.push({
         variableId: varDef?.variableId,
-        name,
+        name: varDef?.name || name,
         variableType: 'resource',
         value: fileValues,
         required: varDef?.required,
@@ -421,7 +421,7 @@ function convertKeyValueToVariables(
 
       variables.push({
         variableId: varDef?.variableId,
-        name,
+        name: varDef?.name || name,
         variableType: 'string',
         value,
         required: varDef?.required,

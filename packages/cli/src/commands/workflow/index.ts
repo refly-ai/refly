@@ -20,12 +20,7 @@ import { workflowDetailCommand } from './detail.js';
 import { workflowToolcallsCommand } from './toolcalls.js';
 import { workflowToolsetKeysCommand } from './toolset-keys.js';
 import { workflowLayoutCommand } from './layout.js';
-import { workflowNodesCommand } from './nodes.js';
-import { workflowNodeGetCommand } from './node-get.js';
-import { workflowNodeAddCommand } from './node-add.js';
-import { workflowNodeUpdateCommand } from './node-update.js';
-import { workflowNodeDeleteCommand } from './node-delete.js';
-import { workflowNodeOutputCommand } from './node-output.js';
+import { workflowNodeCommand } from './node/index.js';
 import { workflowEditCommand } from './edit.js';
 import { workflowVariablesCommand } from './variables.js';
 import { workflowResultCommand } from './result.js';
@@ -49,12 +44,8 @@ export const workflowCommand = new Command('workflow')
   // Workflow utilities
   .addCommand(workflowToolsetKeysCommand)
   .addCommand(workflowLayoutCommand)
-  .addCommand(workflowNodesCommand)
-  .addCommand(workflowNodeGetCommand)
-  .addCommand(workflowNodeAddCommand)
-  .addCommand(workflowNodeUpdateCommand)
-  .addCommand(workflowNodeDeleteCommand)
-  .addCommand(workflowNodeOutputCommand)
+  // Node management (subcommand group)
+  .addCommand(workflowNodeCommand)
   // Workflow plan operations
   .addCommand(workflowEditCommand)
   // Workflow variables

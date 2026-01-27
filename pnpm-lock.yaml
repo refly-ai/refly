@@ -964,12 +964,6 @@ importers:
         specifier: ^5
         version: 5.4.19(@types/node@24.3.0)(less@4.3.0)(sass-embedded@1.89.2)(sass@1.71.1)(terser@5.43.1)
 
-  packages/canvas:
-    devDependencies:
-      '@refly/tsconfig':
-        specifier: workspace:*
-        version: link:../tsconfig
-
   packages/canvas-common:
     dependencies:
       '@dagrejs/dagre':
@@ -997,6 +991,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@refly/utils':
+        specifier: workspace:*
+        version: link:../utils
       commander:
         specifier: ^12.1.0
         version: 12.1.0

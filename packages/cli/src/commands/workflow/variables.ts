@@ -14,6 +14,7 @@ import {
   type WorkflowVariable,
 } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
+import { getFileCategoryByMimeType } from '../../utils/file-type.js';
 
 /**
  * File metadata returned from drive API
@@ -24,21 +25,6 @@ interface FileMetadata {
   type: string;
   size?: number;
   storageKey?: string;
-}
-
-/**
- * Determine fileType category from MIME type
- */
-function getFileTypeCategory(mimeType: string): string {
-  if (mimeType.startsWith('image/')) return 'image';
-  if (mimeType.startsWith('video/')) return 'video';
-  if (mimeType.startsWith('audio/')) return 'audio';
-  if (mimeType === 'application/pdf') return 'document';
-  if (mimeType.includes('word') || mimeType.includes('document')) return 'document';
-  if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'document';
-  if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return 'document';
-  if (mimeType.startsWith('text/')) return 'document';
-  return 'document';
 }
 
 /**
@@ -270,7 +256,7 @@ const variablesSetCommand = new Command('set')
                       resource: {
                         fileId: newValue,
                         name: metadata?.name || '',
-                        fileType: metadata ? getFileTypeCategory(metadata.type) : 'document',
+                        fileType: metadata ? getFileCategoryByMimeType(metadata.type) : 'document',
                         storageKey: metadata?.storageKey || '',
                       },
                     },

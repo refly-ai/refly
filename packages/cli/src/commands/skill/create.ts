@@ -30,6 +30,8 @@ interface CreateSkillPayload {
   }>;
   inputSchema?: Record<string, unknown>;
   outputSchema?: Record<string, unknown>;
+  /** Auto-created installation ID (creator is auto-installed) */
+  installationId?: string;
 }
 
 interface CreateSkillResponse {
@@ -158,6 +160,7 @@ export const skillCreateCommand = new Command('create')
       const webUrl = getWebUrl();
       const payload: Record<string, unknown> = {
         skillId: result.skillId,
+        installationId: result.installationId,
         name: result.name,
         status: result.status,
         createdAt: result.createdAt,

@@ -67,7 +67,7 @@ export const workflowRunNodeStartCommand = new Command('node-start')
         nextSteps: [
           `Check status: \`refly workflow status ${workflowId}\``,
           `Get details: \`refly workflow detail ${workflowId}\``,
-          `Get node output: \`refly workflow node-output ${workflowId} ${nodeId}\``,
+          `Get node output: \`refly workflow node output ${workflowId} ${nodeId}\``,
         ],
       });
     } catch (error) {

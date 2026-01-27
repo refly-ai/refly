@@ -1,5 +1,7 @@
 /**
  * refly workflow create - Create a workflow directly
+ *
+ * TODO: This command needs reimplementation. Currently not exposed in documentation.
  */
 
 import { Command } from 'commander';

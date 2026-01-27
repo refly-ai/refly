@@ -882,6 +882,15 @@ export class WorkflowCliController {
   ): Promise<{ success: boolean; data: WorkflowInfo }> {
     this.logger.log(`Getting workflow ${workflowId} for user ${user.uid}`);
 
+    // Validate workflow ID format (should start with 'c-')
+    if (!workflowId.startsWith('c-')) {
+      throwCliError(
+        CLI_ERROR_CODES.VALIDATION_ERROR,
+        `Invalid workflow ID: "${workflowId}". Workflow IDs should start with "c-"`,
+        'Usage: refly workflow get <workflowId>. Example: refly workflow get c-xxx',
+      );
+    }
+
     try {
       const rawData = await this.canvasService.getCanvasRawData(user, workflowId, {
         checkOwnership: true,
@@ -1363,6 +1372,15 @@ export class WorkflowCliController {
     @Body() body: RunWorkflowRequest,
   ): Promise<{ success: boolean; data: RunWorkflowResponse }> {
     this.logger.log(`Running workflow ${workflowId} for user ${user.uid}`);
+
+    // Validate workflow ID format (should start with 'c-')
+    if (!workflowId.startsWith('c-')) {
+      throwCliError(
+        CLI_ERROR_CODES.VALIDATION_ERROR,
+        `Invalid workflow ID: "${workflowId}". Workflow IDs should start with "c-"`,
+        'Usage: refly workflow run <workflowId> [--input <json>]. Example: refly workflow run c-xxx --input \'{"var": "value"}\'',
+      );
+    }
 
     try {
       // Get existing workflow variables and merge with runtime variables

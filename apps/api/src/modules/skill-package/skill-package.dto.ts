@@ -43,6 +43,8 @@ export interface CreateSkillPackageCliResponse {
   }>;
   inputSchema?: Record<string, unknown>;
   outputSchema?: Record<string, unknown>;
+  /** Auto-created installation ID (creator is auto-installed) */
+  installationId?: string;
 }
 
 export interface UpdateSkillPackageDto {
