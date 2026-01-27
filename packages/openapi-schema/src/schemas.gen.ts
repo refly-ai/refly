@@ -3195,6 +3195,139 @@ export const EmailLoginResponseSchema = {
   ],
 } as const;
 
+export const CreateCliApiKeyRequestSchema = {
+  type: 'object',
+  description: 'Create CLI API key request',
+  required: ['name'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+    expiresInDays: {
+      type: 'integer',
+      description: 'API key expiration in days',
+    },
+  },
+} as const;
+
+export const UpdateCliApiKeyRequestSchema = {
+  type: 'object',
+  description: 'Update CLI API key request',
+  required: ['name'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+  },
+} as const;
+
+export const CliApiKeyInfoSchema = {
+  type: 'object',
+  required: ['keyId', 'name', 'keyPrefix', 'createdAt'],
+  properties: {
+    keyId: {
+      type: 'string',
+      description: 'API key ID',
+    },
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+    keyPrefix: {
+      type: 'string',
+      description: 'API key prefix',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'API key creation time',
+    },
+    lastUsedAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description: 'API key last used time',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description: 'API key expiration time',
+    },
+  },
+} as const;
+
+export const CreateCliApiKeyDataSchema = {
+  type: 'object',
+  required: ['keyId', 'apiKey', 'name', 'keyPrefix', 'createdAt'],
+  properties: {
+    keyId: {
+      type: 'string',
+      description: 'API key ID',
+    },
+    apiKey: {
+      type: 'string',
+      description: 'API key value',
+    },
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+    keyPrefix: {
+      type: 'string',
+      description: 'API key prefix',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'API key creation time',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description: 'API key expiration time',
+    },
+  },
+} as const;
+
+export const CreateCliApiKeyResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/CreateCliApiKeyData',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ListCliApiKeysResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            $ref: '#/components/schemas/CliApiKeyInfo',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const GetUserSettingsResponseSchema = {
   allOf: [
     {
@@ -12490,6 +12623,262 @@ export const TriggerVoucherResponseSchema = {
       properties: {
         data: {
           $ref: '#/components/schemas/VoucherTriggerResult',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const EnableWebhookRequestSchema = {
+  type: 'object',
+  required: ['canvasId'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID to enable webhook for',
+    },
+    resultNodeIds: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'Optional array of result node IDs',
+    },
+    timeout: {
+      type: 'integer',
+      default: 30,
+      description: 'Timeout in seconds',
+    },
+  },
+} as const;
+
+export const EnableWebhookResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            apiId: {
+              type: 'string',
+              description: 'Webhook ID',
+            },
+            webhookUrl: {
+              type: 'string',
+              description: 'Webhook URL',
+            },
+            isEnabled: {
+              type: 'boolean',
+              description: 'Whether webhook is enabled',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const DisableWebhookRequestSchema = {
+  type: 'object',
+  required: ['webhookId'],
+  properties: {
+    webhookId: {
+      type: 'string',
+      description: 'Webhook ID to disable',
+    },
+  },
+} as const;
+
+export const ResetWebhookRequestSchema = {
+  type: 'object',
+  required: ['webhookId'],
+  properties: {
+    webhookId: {
+      type: 'string',
+      description: 'Webhook ID to reset',
+    },
+  },
+} as const;
+
+export const ResetWebhookResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            apiId: {
+              type: 'string',
+              description: 'New webhook ID',
+            },
+            webhookUrl: {
+              type: 'string',
+              description: 'New webhook URL',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetWebhookConfigResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            apiId: {
+              type: 'string',
+              description: 'Webhook ID',
+            },
+            isEnabled: {
+              type: 'boolean',
+              description: 'Whether webhook is enabled',
+            },
+            resultNodeIds: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+              description: 'Result node IDs',
+            },
+            timeout: {
+              type: 'integer',
+              description: 'Timeout in seconds',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetWebhookHistoryResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            records: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/WebhookCallRecord',
+              },
+            },
+            total: {
+              type: 'integer',
+              description: 'Total number of records',
+            },
+            page: {
+              type: 'integer',
+              description: 'Current page number',
+            },
+            pageSize: {
+              type: 'integer',
+              description: 'Page size',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const WebhookCallRecordSchema = {
+  type: 'object',
+  properties: {
+    recordId: {
+      type: 'string',
+      description: 'Record ID',
+    },
+    apiId: {
+      type: 'string',
+      description: 'Webhook ID',
+    },
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    workflowExecutionId: {
+      type: 'string',
+      description: 'Workflow execution ID',
+    },
+    requestUrl: {
+      type: 'string',
+      description: 'Request URL',
+    },
+    requestMethod: {
+      type: 'string',
+      description: 'Request method',
+    },
+    httpStatus: {
+      type: 'integer',
+      description: 'HTTP status code',
+    },
+    responseTime: {
+      type: 'integer',
+      description: 'Response time in milliseconds',
+    },
+    status: {
+      type: 'string',
+      description: 'Execution status',
+    },
+    failureReason: {
+      type: 'string',
+      description: 'Failure reason if failed',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Created timestamp',
+    },
+    completedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Completed timestamp',
+    },
+  },
+} as const;
+
+export const RunWorkflowApiResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            executionId: {
+              type: 'string',
+              description: 'Workflow execution ID for tracking status',
+            },
+            status: {
+              type: 'string',
+              description: 'Initial execution status (usually "running")',
+            },
+          },
         },
       },
     },

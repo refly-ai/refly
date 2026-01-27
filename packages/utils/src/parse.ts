@@ -13,7 +13,7 @@ export const safeParseJSON = (value: any, errorCallback?: (e: unknown) => any): 
 
 export const safeStringifyJSON = (value: any, errorCallback?: (e: unknown) => string): string => {
   try {
-    return JSON.stringify(value);
+    return JSON.stringify(value, (_key, val) => (typeof val === 'bigint' ? val.toString() : val));
   } catch (e) {
     if (errorCallback) {
       return errorCallback(e);

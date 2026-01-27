@@ -177,6 +177,33 @@ export class ApiKeyService {
   }
 
   /**
+   * Update API key name
+   * @param uid User ID (for ownership verification)
+   * @param keyId Key ID to update
+   * @param name New name
+   * @returns true if updated, false if not found or not owned
+   */
+  async updateApiKey(uid: string, keyId: string, name: string): Promise<boolean> {
+    const result = await this.prisma.userApiKey.updateMany({
+      where: {
+        keyId,
+        uid,
+        revokedAt: null,
+      },
+      data: {
+        name,
+      },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`[API_KEY_UPDATED] uid=${uid} keyId=${keyId} name=${name}`);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
    * Generate a secure API key
    * Format: rf_<32 random chars in base62>
    */

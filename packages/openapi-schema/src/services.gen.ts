@@ -55,6 +55,17 @@ import type {
   CheckToolOauthStatusData,
   CheckToolOauthStatusError,
   CheckToolOauthStatusResponse,
+  CreateCliApiKeyData2,
+  CreateCliApiKeyError,
+  CreateCliApiKeyResponse2,
+  ListCliApiKeysError,
+  ListCliApiKeysResponse2,
+  RevokeCliApiKeyData,
+  RevokeCliApiKeyError,
+  RevokeCliApiKeyResponse,
+  UpdateCliApiKeyData,
+  UpdateCliApiKeyError,
+  UpdateCliApiKeyResponse,
   GetCollabTokenError,
   GetCollabTokenResponse2,
   ListCanvasesData,
@@ -301,6 +312,24 @@ import type {
   RetryScheduleRecordData,
   RetryScheduleRecordError,
   RetryScheduleRecordResponse2,
+  EnableWebhookData,
+  EnableWebhookError,
+  EnableWebhookResponse2,
+  DisableWebhookData,
+  DisableWebhookError,
+  DisableWebhookResponse,
+  ResetWebhookData,
+  ResetWebhookError,
+  ResetWebhookResponse2,
+  GetWebhookConfigData,
+  GetWebhookConfigError,
+  GetWebhookConfigResponse2,
+  GetWebhookHistoryData,
+  GetWebhookHistoryError,
+  GetWebhookHistoryResponse2,
+  RunWorkflowViaApiData,
+  RunWorkflowViaApiError,
+  RunWorkflowViaApiResponse,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -739,6 +768,74 @@ export const checkToolOauthStatus = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/auth/tool-oauth/status',
+  });
+};
+
+/**
+ * Create CLI API key
+ * Create a new API key for CLI authentication
+ */
+export const createCliApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCliApiKeyData2, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateCliApiKeyResponse2,
+    CreateCliApiKeyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key',
+  });
+};
+
+/**
+ * List CLI API keys
+ * List API keys for current user
+ */
+export const listCliApiKeys = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListCliApiKeysResponse2,
+    ListCliApiKeysError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key',
+  });
+};
+
+/**
+ * Revoke CLI API key
+ * Revoke API key by ID
+ */
+export const revokeCliApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<RevokeCliApiKeyData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).delete<
+    RevokeCliApiKeyResponse,
+    RevokeCliApiKeyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key/{keyId}',
+  });
+};
+
+/**
+ * Update CLI API key
+ * Update API key name
+ */
+export const updateCliApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateCliApiKeyData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).patch<
+    UpdateCliApiKeyResponse,
+    UpdateCliApiKeyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key/{keyId}',
   });
 };
 
@@ -2092,6 +2189,105 @@ export const retryScheduleRecord = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/schedule/record/retry',
+  });
+};
+
+/**
+ * Enable webhook for a canvas
+ * Enable webhook API for a canvas to allow external triggers
+ */
+export const enableWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<EnableWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<EnableWebhookResponse2, EnableWebhookError, ThrowOnError>(
+    {
+      ...options,
+      url: '/webhook/enable',
+    },
+  );
+};
+
+/**
+ * Disable webhook
+ * Disable webhook API for a canvas
+ */
+export const disableWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<DisableWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DisableWebhookResponse,
+    DisableWebhookError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/webhook/disable',
+  });
+};
+
+/**
+ * Reset webhook (generate new ID)
+ * Reset webhook by generating a new webhook ID
+ */
+export const resetWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<ResetWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<ResetWebhookResponse2, ResetWebhookError, ThrowOnError>({
+    ...options,
+    url: '/webhook/reset',
+  });
+};
+
+/**
+ * Get webhook configuration for a canvas
+ * Get webhook configuration including webhook ID and status
+ */
+export const getWebhookConfig = <ThrowOnError extends boolean = false>(
+  options: Options<GetWebhookConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWebhookConfigResponse2,
+    GetWebhookConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/webhook/config',
+  });
+};
+
+/**
+ * Get call history for a webhook
+ * Get webhook call history with pagination
+ */
+export const getWebhookHistory = <ThrowOnError extends boolean = false>(
+  options: Options<GetWebhookHistoryData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWebhookHistoryResponse2,
+    GetWebhookHistoryError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/webhook/history',
+  });
+};
+
+/**
+ * Run workflow via API (returns execution ID)
+ * Execute a workflow via authenticated API call.
+ * Unlike webhook triggers, this endpoint requires API Key authentication
+ * and returns an execution ID that can be used to track workflow status.
+ *
+ */
+export const runWorkflowViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<RunWorkflowViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    RunWorkflowViaApiResponse,
+    RunWorkflowViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{canvasId}/run',
   });
 };
 
