@@ -1,0 +1,58 @@
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Request } from 'express';
+import { ApiKeyService } from '../../auth/api-key.service';
+import { PrismaService } from '../../common/prisma.service';
+
+/**
+ * Guard for OpenAPI Key authentication
+ * Validates X-Refly-Api-Key header for OpenAPI endpoints
+ */
+@Injectable()
+export class ApiKeyAuthGuard implements CanActivate {
+  constructor(
+    private apiKeyService: ApiKeyService,
+    private prismaService: PrismaService,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request: Request = context.switchToHttp().getRequest();
+
+    // Extract API key from X-Refly-Api-Key header
+    const apiKey = this.extractApiKeyFromRequest(request);
+    if (!apiKey) {
+      throw new UnauthorizedException('Missing X-Refly-Api-Key header');
+    }
+
+    // Validate API key
+    const uid = await this.apiKeyService.validateApiKey(apiKey);
+    if (!uid) {
+      throw new UnauthorizedException('Invalid API key');
+    }
+
+    // Fetch user info from database
+    const user = await this.prismaService.user.findUnique({
+      where: { uid },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Attach user to request
+    request.user = { uid: user.uid, email: user.email, name: user.name };
+
+    return true;
+  }
+
+  /**
+   * Extract API key from request
+   * Supports: X-Refly-Api-Key header
+   */
+  private extractApiKeyFromRequest(request: Request): string | undefined {
+    const apiKeyHeader = request.headers?.['x-refly-api-key'];
+    if (apiKeyHeader && typeof apiKeyHeader === 'string' && apiKeyHeader.startsWith('rf_')) {
+      return apiKeyHeader;
+    }
+    return undefined;
+  }
+}

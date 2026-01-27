@@ -84,17 +84,6 @@ export class CopilotAutogenService {
   /**
    * Generate workflow - Original method for web/frontend usage
    * This method maintains compatibility with the original API contract
-   *
-   * @deprecated This method has a bug: it uses extractWorkflowPlan() which expects
-   * the full WorkflowPlan in tool output.data. However, the generate_workflow tool
-   * now returns only { planId, version } reference, NOT the full plan.
-   *
-   * The correct approach (used in generateWorkflowForCli):
-   * 1. Use extractWorkflowPlanRef() to get { planId, version }
-   * 2. Fetch full plan from DB via WorkflowPlanService.getWorkflowPlanDetail()
-   *
-   * TODO: Fix this method to use the same approach as generateWorkflowForCli()
-   * or remove it entirely and consolidate into a single method.
    */
   async generateWorkflow(
     user: User,
@@ -143,16 +132,34 @@ export class CopilotAutogenService {
     const actionResult = await this.waitForActionCompletion(user, resultId);
     this.logger.log(`[Autogen] Copilot completed with status: ${actionResult.status}`);
 
-    // 5. Extract Workflow Plan
-    const { plan: workflowPlan, reason } = this.extractWorkflowPlan(actionResult);
-    if (!workflowPlan) {
-      this.logger.error(`[Autogen] Failed to extract workflow plan: ${reason}`);
+    // 5. Extract Workflow Plan Reference (planId + version)
+    const { planRef, reason } = this.extractWorkflowPlanRef(actionResult);
+    if (!planRef) {
+      this.logger.error(`[Autogen] Failed to extract workflow plan reference: ${reason}`);
       throw new Error(
         `Failed to extract workflow plan from Copilot response. ${reason ?? 'Unknown reason'}`,
       );
     }
     this.logger.log(
-      `[Autogen] Extracted workflow plan with ${workflowPlan.tasks?.length ?? 0} tasks`,
+      `[Autogen] Extracted workflow plan reference: planId=${planRef.planId}, version=${planRef.version}`,
+    );
+
+    // 5.1 Fetch full workflow plan from database
+    const workflowPlanRecord = await this.workflowPlanService.getWorkflowPlanDetail(user, {
+      planId: planRef.planId,
+      version: planRef.version,
+    });
+    if (!workflowPlanRecord) {
+      this.logger.error(`[Autogen] Failed to fetch workflow plan: ${planRef.planId}`);
+      throw new Error(`Failed to fetch workflow plan with ID: ${planRef.planId}`);
+    }
+    const workflowPlan: WorkflowPlan = {
+      title: workflowPlanRecord.title,
+      tasks: workflowPlanRecord.tasks,
+      variables: workflowPlanRecord.variables,
+    };
+    this.logger.log(
+      `[Autogen] Fetched workflow plan with ${workflowPlan.tasks?.length ?? 0} tasks`,
     );
 
     // 6. Get tools list and default model (reuse ToolService and ProviderService)
@@ -177,10 +184,11 @@ export class CopilotAutogenService {
 
     // Merge preserved start nodes with generated workflow nodes
     const startNodeIds = new Set(startNodes.map((node) => node.id));
-    const finalNodes = [
+    const mergedNodes = [
       ...startNodes,
       ...generatedNodes.filter((node) => !startNodeIds.has(node.id)),
     ];
+    const finalNodes = ensureStartNode(mergedNodes as CanvasNode[]);
     this.logger.log(
       `[Autogen] Generated ${finalNodes.length} nodes (including ${startNodes.length} start nodes) and ${edges.length} edges`,
     );

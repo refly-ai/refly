@@ -229,6 +229,7 @@ const RunHistoryList = memo(() => {
             page,
             pageSize,
             status: statusFilter !== 'all' ? statusFilter : undefined,
+            type: typeFilter !== 'all' ? typeFilter : undefined,
             keyword: titleFilter || undefined,
             canvasId: canvasIdFilter || undefined,
             tools: selectedTools.length > 0 ? selectedTools : undefined,
@@ -248,14 +249,14 @@ const RunHistoryList = memo(() => {
         return { success: false, data: [] };
       }
     },
-    [statusFilter, titleFilter, canvasIdFilter, selectedTools],
+    [statusFilter, typeFilter, titleFilter, canvasIdFilter, selectedTools],
   );
 
   const { dataList, isRequesting, reload, loadMore, hasMore } =
     useFetchDataList<ScheduleRecordItem>({
       fetchData: fetchScheduleRecords,
       pageSize: 20,
-      dependencies: [statusFilter, titleFilter, canvasIdFilter, selectedTools],
+      dependencies: [statusFilter, typeFilter, titleFilter, canvasIdFilter, selectedTools],
     });
 
   // Initial load

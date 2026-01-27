@@ -2681,3 +2681,75 @@ model SkillExecutionWorkflow {
   @@index([executionLevel])
   @@map("skill_execution_workflows")
 }
+
+/// Webhook configuration for workflows
+model WorkflowApi {
+  /// Primary key
+  pk            BigInt    @id @default(autoincrement())
+  /// API ID (webhookId: wh_{32 random chars})
+  apiId         String    @unique @map("api_id")
+  /// User ID
+  uid           String    @map("uid")
+  /// Canvas ID
+  canvasId      String    @map("canvas_id")
+  /// Result node IDs (JSON array of node IDs marked as output)
+  resultNodeIds String?   @map("result_node_ids")
+  /// Whether the webhook is enabled
+  isEnabled     Boolean   @default(false) @map("is_enabled")
+  /// Timeout in seconds
+  timeout       Int       @default(30) @map("timeout")
+  /// Create timestamp
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@unique([canvasId, uid])
+  @@index([apiId], map: "idx_workflow_apis_api_id")
+  @@index([uid])
+  @@map("workflow_apis")
+}
+
+/// API call records for webhooks
+model ApiCallRecord {
+  /// Primary key
+  pk                  BigInt    @id @default(autoincrement())
+  /// Record ID
+  recordId            String    @unique @map("record_id")
+  /// User ID
+  uid                 String    @map("uid")
+  /// API ID (webhookId if triggered by webhook)
+  apiId               String?   @map("api_id")
+  /// Canvas ID
+  canvasId            String    @map("canvas_id")
+  /// Workflow execution ID
+  workflowExecutionId String?   @map("workflow_execution_id")
+  /// Request URL
+  requestUrl          String?   @map("request_url")
+  /// Request method
+  requestMethod       String?   @map("request_method")
+  /// Request headers (JSON)
+  requestHeaders      String?   @map("request_headers")
+  /// Request body (JSON)
+  requestBody         String?   @map("request_body")
+  /// Response body (JSON)
+  responseBody        String?   @map("response_body")
+  /// HTTP status code
+  httpStatus          Int?      @map("http_status")
+  /// Response time in milliseconds
+  responseTime        Int?      @map("response_time")
+  /// Status: pending/success/failed
+  status              String    @map("status")
+  /// Failure reason
+  failureReason       String?   @map("failure_reason")
+  /// Create timestamp
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Completed timestamp
+  completedAt         DateTime? @map("completed_at") @db.Timestamptz()
+
+  @@index([uid])
+  @@index([apiId])
+  @@index([createdAt(sort: Desc)])
+  @@map("api_call_records")
+}
