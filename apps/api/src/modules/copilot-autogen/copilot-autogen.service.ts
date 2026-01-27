@@ -466,6 +466,53 @@ export class CopilotAutogenService {
     }
     this.logger.log(`[Autogen Edit] Fetched workflow plan with ${plan.tasks?.length ?? 0} tasks`);
 
+    // 7. Auto-approve: Apply workflow plan to canvas
+    // Get canvas raw data and preserve start nodes
+    const rawCanvas = await this.canvasService.getCanvasRawData(user, canvasId, {
+      checkOwnership: true,
+    });
+    const startNodes = (rawCanvas.nodes ?? []).filter((node) => node.type === 'start');
+    this.logger.log(`[Autogen Edit] Found ${startNodes.length} start nodes in canvas`);
+
+    // Get tools list and default model
+    const toolsData = await this.toolService.listAllToolsForCopilot(user);
+    const defaultModel = await this.providerService.findDefaultProviderItem(
+      user,
+      'agent' as ModelScene,
+    );
+    this.logger.log(`[Autogen Edit] Using ${toolsData?.length ?? 0} available tools`);
+
+    // Convert workflow plan to canvas data
+    const workflowPlan: WorkflowPlan = {
+      title: plan.title,
+      tasks: plan.tasks,
+      variables: plan.variables,
+    };
+    const {
+      nodes: generatedNodes,
+      edges,
+      variables,
+    } = generateCanvasDataFromWorkflowPlan(workflowPlan, toolsData ?? [], {
+      autoLayout: true,
+      defaultModel: defaultModel ? providerItem2ModelInfo(defaultModel as any) : undefined,
+      startNodes,
+    });
+
+    // Merge preserved start nodes with generated workflow nodes
+    const startNodeIds = new Set(startNodes.map((node) => node.id));
+    const mergedNodes = [
+      ...startNodes,
+      ...generatedNodes.filter((node) => !startNodeIds.has(node.id)),
+    ];
+    const finalNodes = ensureStartNode(mergedNodes as CanvasNode[]);
+    this.logger.log(
+      `[Autogen Edit] Generated ${finalNodes.length} nodes and ${edges.length} edges`,
+    );
+
+    // Update canvas state
+    await this.updateCanvasState(canvasId, finalNodes, edges, variables, user);
+    this.logger.log(`[Autogen Edit] Canvas ${canvasId} updated successfully (auto-approved)`);
+
     return {
       canvasId,
       planId: planRef.planId,

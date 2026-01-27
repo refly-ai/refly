@@ -89,7 +89,7 @@ export default defineConfig({
   banner: {
     js: '#!/usr/bin/env node',
   },
-  noExternal: ['commander', 'zod', 'open', '@refly/utils'],
+  noExternal: ['commander', 'zod', 'open'],
   // Inject build-time constants
   define: {
     'process.env.REFLY_BUILD_DEFAULT_ENDPOINT': JSON.stringify(defaultEndpoint),
