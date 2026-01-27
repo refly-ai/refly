@@ -36,6 +36,28 @@ export const S3LibConfigSchema = z.object({
 
 export type S3LibConfig = z.infer<typeof S3LibConfigSchema>;
 
+export const SkillConfigSchema = z.object({
+  key: z.string(),
+  args: z.unknown().optional(),
+});
+
+export type SkillConfig = z.infer<typeof SkillConfigSchema>;
+
+export const SkillLibConfigSchema = z.object({
+  endpoint: z.string(),
+  bucket: z.string(),
+  region: z.string(),
+  path: z.string(),
+  hash: z.string(),
+  accessKey: z.string().optional(),
+  secretKey: z.string().optional(),
+  ak_enc: z.string().optional(),
+  sk_enc: z.string().optional(),
+  reset: z.boolean().optional(),
+});
+
+export type SkillLibConfig = z.infer<typeof SkillLibConfigSchema>;
+
 /**
  * Resource limits for code execution
  */
@@ -57,6 +79,8 @@ const ExecuteConfigSchema = z
     codeSizeThreshold: z.number().int().positive().optional(),
     templateName: z.string().optional(),
     autoPauseDelay: z.number().int().positive().optional(),
+    skill: SkillConfigSchema.optional(),
+    skillLibConfig: SkillLibConfigSchema.optional(),
   })
   .passthrough();
 

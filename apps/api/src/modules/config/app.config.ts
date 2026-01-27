@@ -350,6 +350,10 @@ export default () => ({
       cache: process.env.SANDBOX_S3LIB_CACHE,
       reset: process.env.SANDBOX_S3LIB_RESET,
     },
+    skillLib: {
+      pathPrefix: process.env.SANDBOX_SKILL_LIB_PATH_PREFIX,
+      hash: process.env.SANDBOX_SKILL_LIB_HASH,
+    },
     s3: {
       overlap: {
         enabled: process.env.SANDBOX_S3_OVERLAP_ENABLED,

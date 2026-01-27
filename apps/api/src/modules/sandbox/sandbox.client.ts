@@ -17,6 +17,12 @@ export class SandboxClient {
   @Config.string('sandbox.url', SANDBOX_HTTP.DEFAULT_URL)
   private readonly sandboxUrl: string;
 
+  @Config.string('sandbox.skillLib.pathPrefix', '')
+  private readonly skillLibPathPrefix: string;
+
+  @Config.string('sandbox.skillLib.hash', '')
+  private readonly skillLibHash: string;
+
   constructor(
     private readonly config: ConfigService,
     private readonly logger: PinoLogger,
@@ -33,21 +39,25 @@ export class SandboxClient {
     const requestId = uuidv4();
     const timeoutMs = timeout || SANDBOX_TIMEOUTS.DEFAULT;
     const startTime = performance.now();
+    const { normalizedParams, skillLibConfig } = this.transformSkillRequestIfNeeded(
+      params,
+      context,
+    );
 
     this.logger.info({
       requestId,
-      language: params.language,
+      language: normalizedParams.language,
       canvasId: context.canvasId,
       uid: context.uid,
-      codeLength: params.code?.length,
+      codeLength: normalizedParams.code?.length,
       envKeys: context.env ? Object.keys(context.env) : [],
     });
 
     const request: WorkerExecuteRequest = {
       requestId,
-      code: params.code,
-      language: params.language,
-      provider: params.provider,
+      code: normalizedParams.code,
+      language: normalizedParams.language,
+      provider: normalizedParams.provider,
       config: {
         s3: context.s3Config,
         s3DrivePath: context.s3DrivePath,
@@ -55,6 +65,12 @@ export class SandboxClient {
         env: context.env,
         timeout: context.timeout || timeoutMs,
         limits: context.limits,
+        ...(skillLibConfig
+          ? {
+              skill: { key: skillLibConfig.skillKey },
+              skillLibConfig: skillLibConfig.config,
+            }
+          : {}),
       },
       metadata: {
         uid: context.uid,
@@ -107,5 +123,91 @@ export class SandboxClient {
       }
       throw error;
     }
+  }
+
+  private transformSkillRequestIfNeeded(
+    params: SandboxExecuteParams,
+    context: SandboxExecutionContext,
+  ): {
+    normalizedParams: SandboxExecuteParams;
+    skillLibConfig?: { skillKey: string; config: Record<string, unknown> };
+  } {
+    if (params.language !== 'shell') {
+      return { normalizedParams: params };
+    }
+
+    const rawCode = params.code?.trim() || '';
+    const prefix = 'cc-skill ';
+    if (!rawCode.startsWith(prefix)) {
+      return { normalizedParams: params };
+    }
+
+    const skillKey = rawCode.slice(prefix.length).trim();
+    if (!skillKey) {
+      throw new Error('cc-skill requires a skill key');
+    }
+
+    const skillLibConfig = this.buildSkillLibConfig(context);
+
+    return {
+      normalizedParams: {
+        ...params,
+        code: "echo 'Skill taken over'",
+      },
+      skillLibConfig: { skillKey, config: skillLibConfig },
+    };
+  }
+
+  private buildSkillLibConfig(context: SandboxExecutionContext): Record<string, unknown> {
+    if (!context.s3LibConfig) {
+      throw new Error('cc-skill requires s3LibConfig to build skillLibConfig');
+    }
+
+    const normalizedPrefix = this.skillLibPathPrefix
+      ? this.skillLibPathPrefix.replace(/\/+$/, '')
+      : '';
+    const path = normalizedPrefix
+      ? `${normalizedPrefix}/${this.skillLibHash}`
+      : context.s3LibConfig.path;
+    const hash = this.skillLibHash || context.s3LibConfig.hash;
+
+    if (!path || !hash) {
+      throw new Error('cc-skill requires skillLibConfig path/hash');
+    }
+
+    const endpoint = this.normalizeEndpoint(context.s3Config);
+    if (!endpoint) {
+      throw new Error('cc-skill requires a valid s3 endpoint for skillLibConfig');
+    }
+
+    return {
+      endpoint,
+      bucket: context.s3LibConfig.bucket,
+      region: context.s3LibConfig.region,
+      path,
+      hash,
+      accessKey: context.s3LibConfig.accessKey,
+      secretKey: context.s3LibConfig.secretKey,
+      reset: context.s3LibConfig.reset,
+    };
+  }
+
+  private normalizeEndpoint(s3Config: { endPoint: string; port: number; useSSL: boolean }): string {
+    if (!s3Config.endPoint) return '';
+    if (s3Config.endPoint.startsWith('http://') || s3Config.endPoint.startsWith('https://')) {
+      return s3Config.endPoint;
+    }
+
+    const scheme = s3Config.useSSL ? 'https' : 'http';
+    const port = s3Config.port;
+    const includePort =
+      port &&
+      !Number.isNaN(port) &&
+      !(scheme === 'http' && port === 80) &&
+      !(scheme === 'https' && port === 443);
+
+    return includePort
+      ? `${scheme}://${s3Config.endPoint}:${port}`
+      : `${scheme}://${s3Config.endPoint}`;
   }
 }
