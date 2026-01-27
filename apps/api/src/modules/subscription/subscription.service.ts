@@ -240,6 +240,9 @@ export class SubscriptionService implements OnModuleInit {
     const price = prices.data[0];
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
+      ...(interval === 'yearly' && {
+        payment_method_types: ['card', 'cashapp', 'klarna'],
+      }),
       line_items: [{ price: price.id, quantity: 1 }],
       success_url: this.config.get('stripe.sessionSuccessUrl'),
       cancel_url: this.config.get('stripe.sessionCancelUrl'),
