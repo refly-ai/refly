@@ -1030,6 +1030,11 @@ export const ListAllScheduleRecordsRequestSchema = {
       enum: ['scheduled', 'pending', 'processing', 'running', 'success', 'failed'],
       description: 'Filter by execution status',
     },
+    type: {
+      type: 'string',
+      enum: ['schedule', 'webhook', 'api'],
+      description: 'Filter by trigger type',
+    },
     keyword: {
       type: 'string',
       description: 'Search keyword for workflow title',

@@ -229,6 +229,7 @@ const RunHistoryList = memo(() => {
             page,
             pageSize,
             status: statusFilter !== 'all' ? statusFilter : undefined,
+            type: typeFilter !== 'all' ? typeFilter : undefined,
             keyword: titleFilter || undefined,
             canvasId: canvasIdFilter || undefined,
             tools: selectedTools.length > 0 ? selectedTools : undefined,

@@ -4371,6 +4371,8 @@ const translations = {
       workflow: '工作流运行',
       template: '模版运行',
       schedule: '定时任务运行',
+      webhook: 'Webhook 触发',
+      api: 'API 触发',
     },
     status: {
       all: '所有状态',
@@ -4387,6 +4389,8 @@ const translations = {
       typeWorkflow: '工作流运行',
       typeTemplate: '模版运行',
       typeSchedule: '定时运行',
+      typeWebhook: 'Webhook 触发',
+      typeApi: 'API 触发',
       tools: '工具',
       state: '状态',
       allTools: '所有工具',

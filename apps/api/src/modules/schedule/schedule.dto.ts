@@ -31,6 +31,7 @@ export interface ListAllScheduleRecordsDto {
   page?: number;
   pageSize?: number;
   status?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
+  type?: 'schedule' | 'webhook' | 'api';
   keyword?: string;
   tools?: string[];
   canvasId?: string;

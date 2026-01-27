@@ -8,6 +8,8 @@ import { DebounceGuard } from './guards/debounce.guard';
 import { CommonModule } from '../common/common.module';
 import { AuthModule } from '../auth/auth.module';
 import { WorkflowModule } from '../workflow/workflow.module';
+import { WorkflowAppModule } from '../workflow-app/workflow-app.module';
+import { CanvasModule } from '../canvas/canvas.module';
 
 /**
  * Webhook Module
@@ -15,7 +17,13 @@ import { WorkflowModule } from '../workflow/workflow.module';
  * Webhook ID acts as the secret for triggering workflows
  */
 @Module({
-  imports: [CommonModule, forwardRef(() => AuthModule), forwardRef(() => WorkflowModule)],
+  imports: [
+    CommonModule,
+    forwardRef(() => AuthModule),
+    forwardRef(() => WorkflowModule),
+    WorkflowAppModule,
+    CanvasModule,
+  ],
   controllers: [WebhookController, WebhookManagementController],
   providers: [WebhookService, WebhookAuthGuard, RateLimitGuard, DebounceGuard],
   exports: [WebhookService],

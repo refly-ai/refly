@@ -4340,6 +4340,8 @@ const translations = {
       workflow: 'Workflow Run',
       template: 'Template Run',
       schedule: 'Schedule Run',
+      webhook: 'Webhook Run',
+      api: 'API Run',
     },
     status: {
       all: 'All Status',
@@ -4356,6 +4358,8 @@ const translations = {
       typeWorkflow: 'Workflow run',
       typeTemplate: 'Template run',
       typeSchedule: 'Schedule run',
+      typeWebhook: 'Webhook run',
+      typeApi: 'API run',
       tools: 'Tools',
       state: 'State',
       allTools: 'All Tools',

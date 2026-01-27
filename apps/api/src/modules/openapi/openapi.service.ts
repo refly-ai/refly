@@ -1,9 +1,11 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
-import { WorkflowService } from '../workflow/workflow.service';
+import { WorkflowAppService } from '../workflow-app/workflow-app.service';
+import { CanvasService } from '../canvas/canvas.service';
 import { createId } from '@paralleldrive/cuid2';
-import { safeStringifyJSON } from '@refly/utils';
-import type { VariableValue, WorkflowVariable } from '@refly/openapi-schema';
+import { genScheduleRecordId, safeStringifyJSON } from '@refly/utils';
+import { extractToolsetsWithNodes } from '@refly/canvas-common';
+import type { RawCanvasData, VariableValue, WorkflowVariable } from '@refly/openapi-schema';
 
 enum ApiCallStatus {
   SUCCESS = 'success',
@@ -17,7 +19,8 @@ export class OpenapiService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly workflowService: WorkflowService,
+    private readonly workflowAppService: WorkflowAppService,
+    private readonly canvasService: CanvasService,
   ) {}
 
   /**
@@ -31,6 +34,9 @@ export class OpenapiService {
   ): Promise<{ executionId: string; status: string }> {
     const startTime = Date.now();
     const recordId = `rec_${createId()}`;
+    const scheduleRecordId = genScheduleRecordId();
+    const scheduledAt = new Date();
+    let recordCreated = false;
 
     try {
       // Get workflow API config
@@ -57,16 +63,48 @@ export class OpenapiService {
 
       // Convert variables to workflow format
       const workflowVariables = this.buildWorkflowVariables(variables);
+      const canvasData = await this.createSnapshotFromCanvas({ uid }, canvasId);
+      const toolsetsWithNodes = extractToolsetsWithNodes(canvasData?.nodes ?? []);
+      const usedToolIds = toolsetsWithNodes.map((t) => t.toolset?.toolset?.key).filter(Boolean);
+      const scheduleId = `api:${config.apiId}`;
+
+      await this.prisma.workflowScheduleRecord.create({
+        data: {
+          scheduleRecordId,
+          scheduleId,
+          uid,
+          sourceCanvasId: canvasId,
+          canvasId: '',
+          workflowTitle: canvasData?.title || 'Untitled',
+          status: 'running',
+          scheduledAt,
+          triggeredAt: scheduledAt,
+          priority: 5,
+          usedTools: JSON.stringify(usedToolIds),
+        },
+      });
+      recordCreated = true;
 
       // Initialize workflow execution (synchronous)
-      const executionId = await this.workflowService.initializeWorkflowExecution(
-        user,
-        canvasId,
-        workflowVariables,
-        {
-          triggerType: 'api',
+      const { executionId, canvasId: executionCanvasId } =
+        await this.workflowAppService.executeFromCanvasData(
+          { uid },
+          canvasData,
+          workflowVariables,
+          {
+            scheduleId,
+            scheduleRecordId,
+            triggerType: 'api',
+          },
+        );
+
+      await this.prisma.workflowScheduleRecord.update({
+        where: { scheduleRecordId },
+        data: {
+          canvasId: executionCanvasId,
+          workflowExecutionId: executionId,
         },
-      );
+      });
 
       const responseTime = Date.now() - startTime;
 
@@ -106,6 +144,22 @@ export class OpenapiService {
         status: ApiCallStatus.FAILED,
         failureReason: error.message,
       });
+
+      if (recordCreated) {
+        await this.prisma.workflowScheduleRecord.update({
+          where: { scheduleRecordId },
+          data: {
+            status: 'failed',
+            failureReason: error.message,
+            errorDetails: safeStringifyJSON({
+              message: error.message,
+              name: error.name,
+              stack: error.stack,
+            }),
+            completedAt: new Date(),
+          },
+        });
+      }
 
       throw error;
     }
@@ -213,5 +267,71 @@ export class OpenapiService {
     } catch {
       return String(value);
     }
+  }
+
+  private async createSnapshotFromCanvas(
+    user: { uid: string },
+    canvasId: string,
+  ): Promise<RawCanvasData> {
+    const rawData = await this.canvasService.getCanvasRawData(user as any, canvasId);
+
+    const driveFiles = await this.prisma.driveFile.findMany({
+      where: {
+        uid: user.uid,
+        canvasId,
+        scope: 'present',
+        deletedAt: null,
+      },
+    });
+
+    const files = driveFiles.map((file) => ({
+      fileId: file.fileId,
+      canvasId: file.canvasId,
+      name: file.name,
+      type: file.type,
+      category: file.category,
+      size: Number(file.size),
+      source: file.source,
+      scope: file.scope,
+      summary: file.summary ?? undefined,
+      variableId: file.variableId ?? undefined,
+      resultId: file.resultId ?? undefined,
+      resultVersion: file.resultVersion ?? undefined,
+      storageKey: file.storageKey ?? undefined,
+      createdAt: file.createdAt.toJSON(),
+      updatedAt: file.updatedAt.toJSON(),
+    }));
+
+    const resources = await this.prisma.resource.findMany({
+      where: {
+        uid: user.uid,
+        canvasId,
+        deletedAt: null,
+      },
+      select: {
+        resourceId: true,
+        title: true,
+        resourceType: true,
+        storageKey: true,
+        storageSize: true,
+        contentPreview: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return {
+      title: rawData.title,
+      nodes: rawData.nodes ?? [],
+      edges: rawData.edges ?? [],
+      variables: rawData.variables ?? [],
+      files,
+      resources: resources.map((resource) => ({
+        ...resource,
+        storageSize: Number(resource.storageSize || 0),
+        createdAt: resource.createdAt.toJSON(),
+        updatedAt: resource.updatedAt.toJSON(),
+      })),
+    } as RawCanvasData;
   }
 }

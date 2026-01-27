@@ -835,6 +835,10 @@ export type ListAllScheduleRecordsRequest = {
    */
   status?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
   /**
+   * Filter by trigger type
+   */
+  type?: 'schedule' | 'webhook' | 'api';
+  /**
    * Search keyword for workflow title
    */
   keyword?: string;
@@ -863,6 +867,20 @@ export const status2 = {
   RUNNING: 'running',
   SUCCESS: 'success',
   FAILED: 'failed',
+} as const;
+
+/**
+ * Filter by trigger type
+ */
+export type type = 'schedule' | 'webhook' | 'api';
+
+/**
+ * Filter by trigger type
+ */
+export const type = {
+  SCHEDULE: 'schedule',
+  WEBHOOK: 'webhook',
+  API: 'api',
 } as const;
 
 export type ListAllScheduleRecordsResponse = {
@@ -1171,12 +1189,12 @@ export type IndexError = {
 /**
  * Error type
  */
-export type type = 'pageLimitExceeded' | 'unknownError';
+export type type2 = 'pageLimitExceeded' | 'unknownError';
 
 /**
  * Error type
  */
-export const type = {
+export const type2 = {
   PAGE_LIMIT_EXCEEDED: 'pageLimitExceeded',
   UNKNOWN_ERROR: 'unknownError',
 } as const;
@@ -1666,12 +1684,12 @@ export type SourceSelection = {
 /**
  * Selection type
  */
-export type type2 = 'text' | 'table' | 'link' | 'image' | 'video' | 'audio';
+export type type3 = 'text' | 'table' | 'link' | 'image' | 'video' | 'audio';
 
 /**
  * Selection type
  */
-export const type2 = {
+export const type3 = {
   TEXT: 'text',
   TABLE: 'table',
   LINK: 'link',
@@ -3403,12 +3421,12 @@ export type CanvasTransactionSource = {
 /**
  * Source type
  */
-export type type3 = 'user' | 'system';
+export type type4 = 'user' | 'system';
 
 /**
  * Source type
  */
-export const type3 = {
+export const type4 = {
   USER: 'user',
   SYSTEM: 'system',
 } as const;
@@ -6082,12 +6100,12 @@ export type MediaModelParameter = {
 /**
  * Parameter type
  */
-export type type4 = 'url' | 'text' | 'option';
+export type type5 = 'url' | 'text' | 'option';
 
 /**
  * Parameter type
  */
-export const type4 = {
+export const type5 = {
   URL: 'url',
   TEXT: 'text',
   OPTION: 'option',
@@ -8536,12 +8554,12 @@ export type FormFieldSchema = {
 /**
  * Field type
  */
-export type type5 = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array';
+export type type6 = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array';
 
 /**
  * Field type
  */
-export const type5 = {
+export const type6 = {
   STRING: 'string',
   NUMBER: 'number',
   INTEGER: 'integer',
@@ -8810,12 +8828,12 @@ export type JsonSchema = {
 /**
  * Schema type
  */
-export type type6 = 'object';
+export type type7 = 'object';
 
 /**
  * Schema type
  */
-export const type6 = {
+export const type7 = {
   OBJECT: 'object',
 } as const;
 
@@ -9583,12 +9601,12 @@ export type ToolMetadataBilling = {
 /**
  * Billing type
  */
-export type type7 = 'per_call' | 'per_quantity';
+export type type8 = 'per_call' | 'per_quantity';
 
 /**
  * Billing type
  */
-export const type7 = {
+export const type8 = {
   PER_CALL: 'per_call',
   PER_QUANTITY: 'per_quantity',
 } as const;

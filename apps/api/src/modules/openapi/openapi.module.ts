@@ -10,6 +10,8 @@ import { CommonModule } from '../common/common.module';
 import { AuthModule } from '../auth/auth.module';
 import { WorkflowModule } from '../workflow/workflow.module';
 import { DriveModule } from '../drive/drive.module';
+import { WorkflowAppModule } from '../workflow-app/workflow-app.module';
+import { CanvasModule } from '../canvas/canvas.module';
 
 /**
  * OpenAPI Module
@@ -32,6 +34,8 @@ import { DriveModule } from '../drive/drive.module';
     forwardRef(() => AuthModule),
     forwardRef(() => WorkflowModule),
     forwardRef(() => DriveModule),
+    WorkflowAppModule,
+    CanvasModule,
   ],
   controllers: [
     WorkflowApiController,

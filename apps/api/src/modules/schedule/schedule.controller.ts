@@ -77,6 +77,7 @@ export class ScheduleController {
       dto.page,
       dto.pageSize,
       dto.status,
+      dto.type,
       dto.keyword,
       dto.tools,
       dto.canvasId,

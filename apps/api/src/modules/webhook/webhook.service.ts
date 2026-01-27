@@ -1,7 +1,8 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
-import { WorkflowService } from '../workflow/workflow.service';
+import { WorkflowAppService } from '../workflow-app/workflow-app.service';
+import { CanvasService } from '../canvas/canvas.service';
 import { createId } from '@paralleldrive/cuid2';
 import {
   WEBHOOK_ID_PREFIX,
@@ -11,8 +12,9 @@ import {
   ApiCallStatus,
 } from './webhook.constants';
 import * as crypto from 'node:crypto';
-import { safeStringifyJSON } from '@refly/utils';
-import type { VariableValue, WorkflowVariable } from '@refly/openapi-schema';
+import { genScheduleRecordId, safeStringifyJSON } from '@refly/utils';
+import { extractToolsetsWithNodes } from '@refly/canvas-common';
+import type { RawCanvasData, VariableValue, WorkflowVariable } from '@refly/openapi-schema';
 
 export interface WebhookConfig {
   apiId: string;
@@ -36,7 +38,8 @@ export class WebhookService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly workflowService: WorkflowService,
+    private readonly workflowAppService: WorkflowAppService,
+    private readonly canvasService: CanvasService,
   ) {}
 
   /**
@@ -247,6 +250,8 @@ export class WebhookService {
   ): Promise<{ received: boolean }> {
     const startTime = Date.now();
     const recordId = `rec_${createId()}`;
+    const scheduleRecordId = genScheduleRecordId();
+    const scheduledAt = new Date();
 
     try {
       // Get webhook config (with cache)
@@ -271,17 +276,40 @@ export class WebhookService {
 
       // Convert variables to workflow format
       const workflowVariables = this.buildWorkflowVariables(variables);
+      const canvasData = await this.createSnapshotFromCanvas({ uid: config.uid }, config.canvasId);
+      const toolsetsWithNodes = extractToolsetsWithNodes(canvasData?.nodes ?? []);
+      const usedToolIds = toolsetsWithNodes.map((t) => t.toolset?.toolset?.key).filter(Boolean);
+      const scheduleId = `webhook:${webhookId}`;
+
+      await this.prisma.workflowScheduleRecord.create({
+        data: {
+          scheduleRecordId,
+          scheduleId,
+          uid: config.uid,
+          sourceCanvasId: config.canvasId,
+          canvasId: '',
+          workflowTitle: canvasData?.title || 'Untitled',
+          status: 'running',
+          scheduledAt,
+          triggeredAt: scheduledAt,
+          priority: 5,
+          usedTools: JSON.stringify(usedToolIds),
+        },
+      });
 
       // Execute workflow asynchronously (fire-and-forget)
       // Don't await - let it run in background
       this.executeWorkflowAsync(
-        user,
+        { uid: config.uid },
         config,
         workflowVariables,
         recordId,
         startTime,
         webhookId,
         variables,
+        canvasData,
+        scheduleId,
+        scheduleRecordId,
       ).catch((error) => {
         this.logger.error(
           `[WEBHOOK_ASYNC_ERROR] uid=${config.uid} webhookId=${webhookId} error=${error.message}`,
@@ -325,17 +353,26 @@ export class WebhookService {
     startTime: number,
     webhookId: string,
     variables: Record<string, any>,
+    canvasData: RawCanvasData,
+    scheduleId: string,
+    scheduleRecordId: string,
   ): Promise<void> {
     try {
       // Initialize workflow execution
-      const executionId = await this.workflowService.initializeWorkflowExecution(
-        user,
-        config.canvasId,
-        workflowVariables,
-        {
+      const { executionId, canvasId: executionCanvasId } =
+        await this.workflowAppService.executeFromCanvasData(user, canvasData, workflowVariables, {
+          scheduleId,
+          scheduleRecordId,
           triggerType: 'webhook',
+        });
+
+      await this.prisma.workflowScheduleRecord.update({
+        where: { scheduleRecordId },
+        data: {
+          canvasId: executionCanvasId,
+          workflowExecutionId: executionId,
         },
-      );
+      });
 
       const responseTime = Date.now() - startTime;
 
@@ -369,6 +406,20 @@ export class WebhookService {
         responseTime,
         status: ApiCallStatus.FAILED,
         failureReason: error.message,
+      });
+
+      await this.prisma.workflowScheduleRecord.update({
+        where: { scheduleRecordId },
+        data: {
+          status: 'failed',
+          failureReason: error.message,
+          errorDetails: safeStringifyJSON({
+            message: error.message,
+            name: error.name,
+            stack: error.stack,
+          }),
+          completedAt: new Date(),
+        },
       });
 
       throw error;
@@ -440,6 +491,72 @@ export class WebhookService {
     } catch {
       return String(value);
     }
+  }
+
+  private async createSnapshotFromCanvas(
+    user: { uid: string },
+    canvasId: string,
+  ): Promise<RawCanvasData> {
+    const rawData = await this.canvasService.getCanvasRawData(user as any, canvasId);
+
+    const driveFiles = await this.prisma.driveFile.findMany({
+      where: {
+        uid: user.uid,
+        canvasId,
+        scope: 'present',
+        deletedAt: null,
+      },
+    });
+
+    const files = driveFiles.map((file) => ({
+      fileId: file.fileId,
+      canvasId: file.canvasId,
+      name: file.name,
+      type: file.type,
+      category: file.category,
+      size: Number(file.size),
+      source: file.source,
+      scope: file.scope,
+      summary: file.summary ?? undefined,
+      variableId: file.variableId ?? undefined,
+      resultId: file.resultId ?? undefined,
+      resultVersion: file.resultVersion ?? undefined,
+      storageKey: file.storageKey ?? undefined,
+      createdAt: file.createdAt.toJSON(),
+      updatedAt: file.updatedAt.toJSON(),
+    }));
+
+    const resources = await this.prisma.resource.findMany({
+      where: {
+        uid: user.uid,
+        canvasId,
+        deletedAt: null,
+      },
+      select: {
+        resourceId: true,
+        title: true,
+        resourceType: true,
+        storageKey: true,
+        storageSize: true,
+        contentPreview: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return {
+      title: rawData.title,
+      nodes: rawData.nodes ?? [],
+      edges: rawData.edges ?? [],
+      variables: rawData.variables ?? [],
+      files,
+      resources: resources.map((resource) => ({
+        ...resource,
+        storageSize: Number(resource.storageSize || 0),
+        createdAt: resource.createdAt.toJSON(),
+        updatedAt: resource.updatedAt.toJSON(),
+      })),
+    } as RawCanvasData;
   }
 
   /**
