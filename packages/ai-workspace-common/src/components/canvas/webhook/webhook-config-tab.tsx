@@ -145,12 +145,12 @@ print(response.json())`
     : '';
 
   if (loading) {
-    return <div className="p-4">{t('common.loading')}</div>;
+    return <div className="py-6">{t('common.loading')}</div>;
   }
 
   if (!config) {
     return (
-      <div className="p-4 space-y-4">
+      <div className="py-6 space-y-4">
         <Text>{t('webhook.notEnabled')}</Text>
         <Button type="primary" loading={enabling} onClick={handleEnable}>
           {t('webhook.enable')}
@@ -160,9 +160,9 @@ print(response.json())`
   }
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="space-y-6">
       {/* Status and Controls */}
-      <div className="space-y-4">
+      <section id="webhook-status" className="space-y-4 scroll-mt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Text strong>{t('webhook.status')}</Text>
@@ -183,12 +183,12 @@ print(response.json())`
         <Text type="secondary" className="text-sm">
           {t('webhook.resetWarning')}
         </Text>
-      </div>
+      </section>
 
       <Divider />
 
       {/* Webhook URL */}
-      <div className="space-y-2">
+      <section id="webhook-url" className="space-y-2 scroll-mt-4">
         <Text strong>{t('webhook.url')}</Text>
         <div className="flex gap-2">
           <Input value={config.webhookUrl} readOnly className="flex-1" />
@@ -196,12 +196,12 @@ print(response.json())`
             {t('common.copy')}
           </Button>
         </div>
-      </div>
+      </section>
 
       <Divider />
 
       {/* Code Examples */}
-      <div className="space-y-4">
+      <section id="webhook-examples" className="space-y-4 scroll-mt-4">
         <Text strong>{t('webhook.examples')}</Text>
         <Tabs
           items={[
@@ -267,19 +267,19 @@ print(response.json())`
             },
           ]}
         />
-      </div>
+      </section>
 
       <Divider />
 
       {/* Usage Instructions */}
-      <div className="space-y-2">
+      <section id="webhook-instructions" className="space-y-2 scroll-mt-4">
         <Text strong>{t('webhook.instructions')}</Text>
         <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
           <li>{t('webhook.instruction1')}</li>
           <li>{t('webhook.instruction2')}</li>
           <li>{t('webhook.instruction3')}</li>
         </ul>
-      </div>
+      </section>
     </div>
   );
 });

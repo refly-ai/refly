@@ -169,7 +169,7 @@ export const ApiKeyManagementTab = memo(() => {
   ];
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4">
       <div className="flex justify-between items-center">
         <Text strong>{t('webhook.apiKey.title')}</Text>
         <Button type="primary" icon={<FiPlus size={16} />} onClick={() => setCreateModalOpen(true)}>
