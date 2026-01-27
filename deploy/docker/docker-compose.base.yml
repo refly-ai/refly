@@ -1,0 +1,101 @@
+services:
+  db:
+    container_name: ${REFLY_CONTAINER_NAME_PREFIX:-refly}_db
+    image: postgres:16-alpine
+    restart: always
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=refly
+      - POSTGRES_USER=refly
+      - POSTGRES_PASSWORD=test
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U refly']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - refly_network
+
+  minio:
+    container_name: ${REFLY_CONTAINER_NAME_PREFIX:-refly}_minio
+    image: minio/minio:RELEASE.2025-01-20T14-49-07Z
+    command: server /data --console-address ":9001"
+    restart: always
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - refly_network
+
+  redis:
+    container_name: ${REFLY_CONTAINER_NAME_PREFIX:-refly}_redis
+    image: redis/redis-stack:latest
+    restart: always
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - refly_network
+
+  qdrant:
+    container_name: ${REFLY_CONTAINER_NAME_PREFIX:-refly}_qdrant
+    image: reflyai/qdrant:v1.13.1
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', "curl -s http://localhost:6333/healthz | grep -q 'healthz check passed' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - refly_network
+
+  searxng:
+    container_name: ${REFLY_CONTAINER_NAME_PREFIX:-refly}_searxng
+    image: docker.io/searxng/searxng:latest
+    restart: unless-stopped
+    volumes:
+      - ./searxng:/etc/searxng
+    environment:
+      - SEARXNG_BASE_URL=https://${SEARXNG_HOSTNAME:-localhost}/
+      - UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS:-4}
+      - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS:-4}
+    networks:
+      - refly_network
+
+  sandbox:
+    container_name: ${REFLY_CONTAINER_NAME_PREFIX:-refly}_sandbox
+    image: ghcr.io/refly-ai/refly-executor-slim:latest
+    restart: unless-stopped
+    privileged: true
+    networks:
+      - refly_network
+
+networks:
+  refly_network:
+    driver: bridge
+
+volumes:
+  db_data:
+  minio_data:
+  redis_data:
+  qdrant_data:
+  elasticsearch_data:
+  searxng_data:
