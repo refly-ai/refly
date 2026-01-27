@@ -60,17 +60,18 @@ export class WebhookService {
       throw new NotFoundException('Canvas not found or access denied');
     }
 
-    // Check if webhook already exists
+    // Check if webhook already exists (including soft-deleted records due to unique constraint)
     const existing = await this.prisma.workflowApi.findFirst({
-      where: { canvasId, uid, deletedAt: null },
+      where: { canvasId, uid },
     });
 
     if (existing) {
-      // Update existing webhook
+      // Update existing webhook (reactivate if soft-deleted)
       const updated = await this.prisma.workflowApi.update({
         where: { pk: existing.pk },
         data: {
           isEnabled: true,
+          deletedAt: null,
           resultNodeIds: resultNodeIds ? JSON.stringify(resultNodeIds) : null,
           timeout,
           updatedAt: new Date(),
