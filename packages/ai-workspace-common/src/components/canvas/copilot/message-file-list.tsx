@@ -4,73 +4,27 @@ import { cn } from '@refly/utils/cn';
 import { FileIcon } from '@refly-packages/ai-workspace-common/components/common/resource-icon';
 import { serverOrigin } from '@refly/ui-kit';
 import { Image as ImageIcon } from 'refly-icons';
+import { getFileTypeConfig, isImageFile, formatFileSize, getFileExtension } from './file-utils';
 
-// ChevronRight icon component
-const ChevronRightIcon = ({
-  size = 14,
-  color = 'currentColor',
-}: { size?: number; color?: string }) => (
+// ChevronRight icon component (no equivalent in refly-icons)
+const ChevronRightIcon = ({ size = 14, className }: { size?: number; className?: string }) => (
   <svg
     width={size}
     height={size}
     viewBox="0 0 14 14"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
+    className={className}
   >
     <path
       d="M5.25 3.5L8.75 7L5.25 10.5"
-      stroke={color}
+      stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
   </svg>
 );
-
-// File type configurations
-const FILE_TYPE_CONFIG: Record<string, { color: string; type?: string }> = {
-  // Documents - Blue
-  txt: { color: '#0062D6', type: 'document' },
-  doc: { color: '#2C5898', type: 'document' },
-  docx: { color: '#2C5898', type: 'document' },
-  pdf: { color: '#D93831', type: 'acrobat' },
-  // Markdown - Green
-  md: { color: '#00A870', type: 'document' },
-  // Spreadsheets - Green
-  csv: { color: '#00A870', type: 'spreadsheet' },
-  xls: { color: '#207245', type: 'spreadsheet' },
-  xlsx: { color: '#207245', type: 'spreadsheet' },
-  // Code - Purple
-  js: { color: '#7C3AED', type: 'code' },
-  ts: { color: '#7C3AED', type: 'code' },
-  tsx: { color: '#7C3AED', type: 'code' },
-  jsx: { color: '#7C3AED', type: 'code' },
-  py: { color: '#7C3AED', type: 'code' },
-  json: { color: '#7C3AED', type: 'code' },
-  // Default
-  default: { color: '#0062D6', type: 'document' },
-};
-
-const getFileTypeConfig = (ext: string) => {
-  return FILE_TYPE_CONFIG[ext.toLowerCase()] || FILE_TYPE_CONFIG.default;
-};
-
-// Check if file is an image type
-const isImageFile = (mimeType?: string, ext?: string): boolean => {
-  if (mimeType?.startsWith('image/')) return true;
-  if (ext) {
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff'].includes(ext.toLowerCase());
-  }
-  return false;
-};
-
-// Format file size for display
-const formatFileSize = (bytes?: number): string => {
-  if (!bytes) return '';
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
-};
 
 interface MessageFileListProps {
   contextItems: IContextItem[];
@@ -97,15 +51,12 @@ const ImageThumbnail = memo(({ item }: { item: IContextItem }) => {
   }, [item.entityId, item.metadata?.thumbnailUrl, item.metadata?.previewUrl, item.metadata?.url]);
 
   return (
-    <div
-      className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden bg-[#D9D9D9]"
-      style={{ border: '0.5px solid rgba(28, 31, 35, 0.1)' }}
-    >
+    <div className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden bg-gray-300 border border-gray-200">
       {thumbnailUrl && !hasError ? (
         <>
           {/* Loading skeleton animation */}
           {isLoading && (
-            <div className="w-full h-full animate-pulse bg-gradient-to-r from-[#E5E5E5] via-[#F0F0F0] to-[#E5E5E5] bg-[length:200%_100%]" />
+            <div className="w-full h-full animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%]" />
           )}
           <img
             src={thumbnailUrl}
@@ -121,7 +72,7 @@ const ImageThumbnail = memo(({ item }: { item: IContextItem }) => {
       ) : (
         // No URL or load failed - show image icon placeholder
         <div className="w-full h-full flex items-center justify-center">
-          <ImageIcon size={20} color="rgba(28, 31, 35, 0.35)" />
+          <ImageIcon size={20} className="text-gray-400" />
         </div>
       )}
     </div>
@@ -132,13 +83,13 @@ ImageThumbnail.displayName = 'ImageThumbnail';
 
 // File card component - matches Figma design
 const MessageFileCard = memo(({ item }: { item: IContextItem }) => {
-  const extension = item.title?.split('.').pop()?.toLowerCase() || '';
+  const extension = getFileExtension(item.title);
   const fileSize = formatFileSize(item.metadata?.size);
   const fileConfig = getFileTypeConfig(extension);
 
   return (
     <div
-      className="flex items-center gap-1 p-1 rounded-lg bg-[#F6F6F6] flex-shrink-0"
+      className="flex items-center gap-1 p-1 rounded-lg bg-gray-100 flex-shrink-0"
       style={{ width: '166px', height: '48px' }}
     >
       {/* File icon area - 26x40px */}
@@ -156,28 +107,15 @@ const MessageFileCard = memo(({ item }: { item: IContextItem }) => {
       {/* File info area */}
       <div className="flex-1 min-w-0 flex flex-col gap-0.5" style={{ width: '120px' }}>
         {/* File name - 12px, truncate */}
-        <div
-          className="text-xs font-normal truncate text-[#1C1F23]"
-          style={{ lineHeight: '1.5em' }}
-        >
+        <div className="text-xs font-normal truncate text-gray-900 leading-normal">
           {item.title}
         </div>
         {/* Meta info row - 10px */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
-            <span
-              className="text-[10px]"
-              style={{ color: 'rgba(28, 31, 35, 0.35)', lineHeight: '1.4em' }}
-            >
-              {extension}
-            </span>
+            <span className="text-[10px] text-gray-400 leading-tight">{extension}</span>
             {fileSize && (
-              <span
-                className="text-[10px]"
-                style={{ color: 'rgba(28, 31, 35, 0.35)', lineHeight: '1.4em' }}
-              >
-                {fileSize}
-              </span>
+              <span className="text-[10px] text-gray-400 leading-tight">{fileSize}</span>
             )}
           </div>
         </div>
@@ -223,14 +161,9 @@ export const MessageFileList = memo(({ contextItems, className }: MessageFileLis
   return (
     <div className={cn('relative', className)}>
       {/* Scrollable container - gap 8px per Figma */}
-      <div
-        ref={scrollRef}
-        className="flex gap-2 overflow-x-auto message-file-list-scroll"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        <style>{'.message-file-list-scroll::-webkit-scrollbar { display: none; }'}</style>
+      <div ref={scrollRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
         {fileItems.map((item) => {
-          const extension = item.title?.split('.').pop()?.toLowerCase() || '';
+          const extension = getFileExtension(item.title);
           const isImage = isImageFile(item.metadata?.mimeType, extension);
 
           return isImage ? (
@@ -252,14 +185,10 @@ export const MessageFileList = memo(({ contextItems, className }: MessageFileLis
           }}
         >
           <div
-            className="w-6 h-6 rounded-full flex items-center justify-center bg-white cursor-pointer pointer-events-auto mr-1"
-            style={{
-              boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.08)',
-              border: '1px solid rgba(28, 31, 35, 0.1)',
-            }}
+            className="w-6 h-6 rounded-full flex items-center justify-center bg-white cursor-pointer pointer-events-auto mr-1 shadow-sm border border-gray-200"
             onClick={handleScrollRight}
           >
-            <ChevronRightIcon size={14} color="rgba(28, 31, 35, 0.8)" />
+            <ChevronRightIcon size={14} className="text-gray-700" />
           </div>
         </div>
       )}

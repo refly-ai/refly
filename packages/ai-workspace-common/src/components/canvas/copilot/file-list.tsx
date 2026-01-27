@@ -4,21 +4,19 @@ import type { UploadProgress } from '@refly/stores';
 import { FileCard } from './file-card';
 import { cn } from '@refly/utils/cn';
 
-// ChevronRight icon component (inline SVG to avoid external dependency)
-const ChevronRightIcon = ({
-  size = 16,
-  color = 'currentColor',
-}: { size?: number; color?: string }) => (
+// ChevronRight icon component (no equivalent in refly-icons)
+const ChevronRightIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
   <svg
     width={size}
     height={size}
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
+    className={className}
   >
     <path
       d="M9 18L15 12L9 6"
-      stroke={color}
+      stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -74,12 +72,7 @@ export const FileList = memo(
     return (
       <div className={cn('relative', className)}>
         {/* Scrollable file cards container - pt-2 to prevent close button clipping */}
-        <div
-          ref={scrollRef}
-          className="flex gap-2 overflow-x-auto pt-2 pb-1 file-list-scroll"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          <style>{'.file-list-scroll::-webkit-scrollbar { display: none; }'}</style>
+        <div ref={scrollRef} className="flex gap-2 overflow-x-auto pt-2 pb-1 scrollbar-hide">
           {fileItems.map((item) => (
             <FileCard
               key={item.entityId}
@@ -104,8 +97,8 @@ export const FileList = memo(
             }}
             onClick={handleScrollRight}
           >
-            <div className="w-7 h-7 rounded-full border border-[rgba(28,31,35,0.1)] flex items-center justify-center bg-white shadow-sm hover:shadow transition-shadow mr-1">
-              <ChevronRightIcon size={16} color="rgba(28,31,35,0.8)" />
+            <div className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center bg-white shadow-sm hover:shadow transition-shadow mr-1">
+              <ChevronRightIcon size={16} className="text-gray-700" />
             </div>
           </div>
         )}
