@@ -302,6 +302,70 @@ export class CanvasService {
     };
   }
 
+  async createSnapshotFromCanvas(user: { uid: string }, canvasId: string): Promise<RawCanvasData> {
+    const rawData = await this.getCanvasRawData(user as User, canvasId);
+
+    const driveFiles = await this.prisma.driveFile.findMany({
+      where: {
+        uid: user.uid,
+        canvasId,
+        scope: 'present',
+        deletedAt: null,
+      },
+    });
+
+    const files = driveFiles.map((file) => ({
+      fileId: file.fileId,
+      canvasId: file.canvasId,
+      name: file.name,
+      type: file.type,
+      category: file.category,
+      size: Number(file.size),
+      source: file.source,
+      scope: file.scope,
+      summary: file.summary ?? undefined,
+      variableId: file.variableId ?? undefined,
+      resultId: file.resultId ?? undefined,
+      resultVersion: file.resultVersion ?? undefined,
+      storageKey: file.storageKey ?? undefined,
+      createdAt: file.createdAt.toJSON(),
+      updatedAt: file.updatedAt.toJSON(),
+    }));
+
+    const resources = await this.prisma.resource.findMany({
+      where: {
+        uid: user.uid,
+        canvasId,
+        deletedAt: null,
+      },
+      select: {
+        resourceId: true,
+        title: true,
+        resourceType: true,
+        storageKey: true,
+        storageSize: true,
+        contentPreview: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return {
+      title: rawData.title,
+      canvasId,
+      nodes: rawData.nodes ?? [],
+      edges: rawData.edges ?? [],
+      variables: rawData.variables ?? [],
+      files,
+      resources: resources.map((resource) => ({
+        ...resource,
+        storageSize: Number(resource.storageSize || 0),
+        createdAt: resource.createdAt.toJSON(),
+        updatedAt: resource.updatedAt.toJSON(),
+      })),
+    } as RawCanvasData;
+  }
+
   async duplicateCanvas(
     user: User,
     param: DuplicateCanvasRequest,

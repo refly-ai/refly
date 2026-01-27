@@ -5,7 +5,7 @@ import { CanvasService } from '../canvas/canvas.service';
 import { createId } from '@paralleldrive/cuid2';
 import { genScheduleRecordId, safeStringifyJSON } from '@refly/utils';
 import { extractToolsetsWithNodes } from '@refly/canvas-common';
-import type { RawCanvasData, VariableValue, WorkflowVariable } from '@refly/openapi-schema';
+import type { VariableValue, WorkflowVariable } from '@refly/openapi-schema';
 
 enum ApiCallStatus {
   SUCCESS = 'success',
@@ -63,7 +63,7 @@ export class OpenapiService {
 
       // Convert variables to workflow format
       const workflowVariables = this.buildWorkflowVariables(variables);
-      const canvasData = await this.createSnapshotFromCanvas({ uid }, canvasId);
+      const canvasData = await this.canvasService.createSnapshotFromCanvas({ uid }, canvasId);
       const toolsetsWithNodes = extractToolsetsWithNodes(canvasData?.nodes ?? []);
       const usedToolIds = toolsetsWithNodes.map((t) => t.toolset?.toolset?.key).filter(Boolean);
       const scheduleId = `api:${config.apiId}`;
@@ -267,71 +267,5 @@ export class OpenapiService {
     } catch {
       return String(value);
     }
-  }
-
-  private async createSnapshotFromCanvas(
-    user: { uid: string },
-    canvasId: string,
-  ): Promise<RawCanvasData> {
-    const rawData = await this.canvasService.getCanvasRawData(user as any, canvasId);
-
-    const driveFiles = await this.prisma.driveFile.findMany({
-      where: {
-        uid: user.uid,
-        canvasId,
-        scope: 'present',
-        deletedAt: null,
-      },
-    });
-
-    const files = driveFiles.map((file) => ({
-      fileId: file.fileId,
-      canvasId: file.canvasId,
-      name: file.name,
-      type: file.type,
-      category: file.category,
-      size: Number(file.size),
-      source: file.source,
-      scope: file.scope,
-      summary: file.summary ?? undefined,
-      variableId: file.variableId ?? undefined,
-      resultId: file.resultId ?? undefined,
-      resultVersion: file.resultVersion ?? undefined,
-      storageKey: file.storageKey ?? undefined,
-      createdAt: file.createdAt.toJSON(),
-      updatedAt: file.updatedAt.toJSON(),
-    }));
-
-    const resources = await this.prisma.resource.findMany({
-      where: {
-        uid: user.uid,
-        canvasId,
-        deletedAt: null,
-      },
-      select: {
-        resourceId: true,
-        title: true,
-        resourceType: true,
-        storageKey: true,
-        storageSize: true,
-        contentPreview: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    return {
-      title: rawData.title,
-      nodes: rawData.nodes ?? [],
-      edges: rawData.edges ?? [],
-      variables: rawData.variables ?? [],
-      files,
-      resources: resources.map((resource) => ({
-        ...resource,
-        storageSize: Number(resource.storageSize || 0),
-        createdAt: resource.createdAt.toJSON(),
-        updatedAt: resource.updatedAt.toJSON(),
-      })),
-    } as RawCanvasData;
   }
 }
