@@ -36,7 +36,13 @@ import {
   SkillRunnableMeta,
   createSkillInventory,
 } from '@refly/skill-template';
-import { genImageID, getWholeParsedContent, safeParseJSON, genTransactionId } from '@refly/utils';
+import {
+  genImageID,
+  getWholeParsedContent,
+  safeParseJSON,
+  genTransactionId,
+  isKnownVisionModel,
+} from '@refly/utils';
 import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
@@ -112,6 +118,15 @@ export class SkillInvokerService {
     this.logger.info({ count: this.skillInventory.length }, 'Skill inventory initialized');
   }
 
+  /**
+   * Check if a model has vision capability, either through explicit config or by matching known vision-capable models.
+   * Known vision-capable models are auto-enabled even if not explicitly configured in the database.
+   */
+  private hasModelVisionCapability(providerItem: ProviderItem | undefined): boolean {
+    const modelConfig = providerItem?.config as LLMModelConfig;
+    return modelConfig?.capabilities?.vision || isKnownVisionModel(modelConfig?.modelId);
+  }
+
   private async buildLangchainMessages(
     user: User,
     providerItem: ProviderItem,
@@ -119,9 +134,9 @@ export class SkillInvokerService {
   ): Promise<BaseMessage[]> {
     const query = result.input?.query || result.title;
 
-    // Only create content array if images exist
+    // Only create content array if images exist and model has vision capability
     let messageContent: string | MessageContentComplex[] = query;
-    if (result.input?.images?.length > 0 && (providerItem?.config as any)?.capabilities?.vision) {
+    if (result.input?.images?.length > 0 && this.hasModelVisionCapability(providerItem)) {
       const imageUrls = await this.miscService.generateImageUrls(user, result.input.images);
       messageContent = [
         { type: 'text', text: query },
@@ -599,8 +614,35 @@ export class SkillInvokerService {
       ctx?.files
         ?.filter((item) => item.file?.category === 'image' || item.file?.type.startsWith('image/'))
         ?.map((item) => item.file) ?? [];
-    const hasVisionCapability =
-      (data.providerItem?.config as LLMModelConfig)?.capabilities?.vision ?? false;
+
+    const hasVisionCapability = this.hasModelVisionCapability(data.providerItem);
+    const modelConfig = data.providerItem?.config as LLMModelConfig;
+    const modelId = modelConfig?.modelId ?? '';
+
+    // Debug logging for vision capability detection
+    this.logger.info(
+      {
+        filesCount: ctx?.files?.length ?? 0,
+        imageFilesCount: imageFiles.length,
+        hasVisionCapability,
+        explicitVisionConfig: modelConfig?.capabilities?.vision,
+        providerItemId: data.providerItem?.itemId,
+        modelId,
+      },
+      '[Vision Debug] Image processing check',
+    );
+
+    if (imageFiles.length > 0 && !hasVisionCapability) {
+      this.logger.warn(
+        {
+          modelId,
+          imageCount: imageFiles.length,
+          capabilities: modelConfig?.capabilities,
+        },
+        '[Vision Warning] Images found but model does not have vision capability - images will be ignored',
+      );
+    }
+
     const providerWithKey = data.provider as { key?: string } | undefined;
     const providerKey = providerWithKey?.key ?? data.provider?.providerKey ?? '';
     const forceBase64ForImages = providerKey === 'bedrock' || providerKey === 'vertex';

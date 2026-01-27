@@ -4,6 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useListTools, useUpdateSettings } from '@refly-packages/ai-workspace-common/queries';
 import { useCanvasResourcesPanelStoreShallow, useUserStoreShallow } from '@refly/stores';
 import { ActionResult, WorkflowPlanRecord } from '@refly/openapi-schema';
+import type { IContextItem } from '@refly/common-types';
+import { MessageFileList } from './message-file-list';
 import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { safeParseJSON } from '@refly/utils';
@@ -33,8 +35,25 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
   const [searchParams, setSearchParams] = useSearchParams();
   const source = useMemo(() => searchParams.get('source'), [searchParams]);
 
-  const { resultId, input, steps, status } = result;
+  const { resultId, input, steps, status, context } = result;
   const query = useMemo(() => input?.query ?? '', [input]);
+
+  // Extract file context items from result.context for display
+  const fileContextItems = useMemo((): IContextItem[] => {
+    const contextFiles = context?.files ?? [];
+    if (!contextFiles.length) return [];
+
+    return contextFiles.map((fileItem) => ({
+      type: 'file' as const,
+      entityId: fileItem.fileId,
+      title: fileItem.file?.name ?? 'File',
+      metadata: {
+        size: fileItem.file?.size,
+        mimeType: fileItem.file?.type,
+        url: fileItem.file?.url,
+      },
+    }));
+  }, [context?.files]);
 
   const [loading, setLoading] = useState(false);
 
@@ -262,11 +281,18 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
 
   return (
     <div className="flex flex-col gap-2">
-      {/* User query - right aligned blue bubble */}
-      <div className="flex justify-end pl-5">
-        <div className="rounded-xl bg-refly-node-fill-1 text-refly-text-0 px-4 py-3 text-[15px] break-all">
-          {input?.query}
-        </div>
+      {/* User message - right aligned */}
+      <div className="flex flex-col items-end gap-2 pl-5">
+        {/* Files attached to this message */}
+        {fileContextItems.length > 0 && (
+          <MessageFileList contextItems={fileContextItems} className="max-w-full" />
+        )}
+        {/* Text query bubble */}
+        {input?.query && (
+          <div className="rounded-xl bg-refly-node-fill-1 text-refly-text-0 px-4 py-3 text-[15px] break-all">
+            {input.query}
+          </div>
+        )}
       </div>
       {/* AI response - left aligned */}
       <MessageList result={result} stepStatus="finish" handleRetry={handleRetry} />
