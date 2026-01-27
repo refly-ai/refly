@@ -4449,13 +4449,13 @@ export type SandboxExecuteParams = {
   /**
    * Programming language for code execution
    */
-  language: 'python' | 'javascript' | 'shell';
+  language: 'python' | 'javascript' | 'shell' | 'skill';
 };
 
 /**
  * Programming language for code execution
  */
-export type language = 'python' | 'javascript' | 'shell';
+export type language = 'python' | 'javascript' | 'shell' | 'skill';
 
 export type SandboxExecuteContext = {
   /**

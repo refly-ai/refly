@@ -16,7 +16,7 @@ export class BuiltinExecuteCode extends AgentBaseTool<BuiltinSandboxParams> {
   schema = z.object({
     code: z.string().describe('The code to execute'),
     language: z
-      .enum(['python', 'javascript', 'shell'])
+      .enum(['python', 'javascript', 'shell', 'skill'])
       .describe('Programming language for code execution'),
   });
 

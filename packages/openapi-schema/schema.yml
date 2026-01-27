@@ -8189,6 +8189,7 @@ components:
             - python
             - javascript
             - shell
+            - skill
           example: "python"
 
     SandboxExecuteContext:

@@ -23,6 +23,21 @@ export class SandboxClient {
   @Config.string('sandbox.skillLib.hash', '')
   private readonly skillLibHash: string;
 
+  @Config.string('sandbox.skillLib.endpoint', '')
+  private readonly skillLibEndpoint: string;
+
+  @Config.string('sandbox.skillLib.bucket', '')
+  private readonly skillLibBucket: string;
+
+  @Config.string('sandbox.skillLib.region', '')
+  private readonly skillLibRegion: string;
+
+  @Config.string('sandbox.skillLib.accessKey', '')
+  private readonly skillLibAccessKey: string;
+
+  @Config.string('sandbox.skillLib.secretKey', '')
+  private readonly skillLibSecretKey: string;
+
   constructor(
     private readonly config: ConfigService,
     private readonly logger: PinoLogger,
@@ -65,12 +80,7 @@ export class SandboxClient {
         env: context.env,
         timeout: context.timeout || timeoutMs,
         limits: context.limits,
-        ...(skillLibConfig
-          ? {
-              skill: { key: skillLibConfig.skillKey },
-              skillLibConfig: skillLibConfig.config,
-            }
-          : {}),
+        ...(skillLibConfig ? { skillLibConfig: skillLibConfig.config } : {}),
       },
       metadata: {
         uid: context.uid,
@@ -83,6 +93,8 @@ export class SandboxClient {
         version: context.version,
       },
     };
+
+    this.logger.info({ request }, 'Sandbox request payload');
 
     try {
       const controller = new AbortController();
@@ -130,72 +142,76 @@ export class SandboxClient {
     context: SandboxExecutionContext,
   ): {
     normalizedParams: SandboxExecuteParams;
-    skillLibConfig?: { skillKey: string; config: Record<string, unknown> };
+    skillLibConfig?: { config: Record<string, unknown> };
   } {
-    if (params.language !== 'shell') {
+    if (params.language !== 'skill') {
       return { normalizedParams: params };
-    }
-
-    const rawCode = params.code?.trim() || '';
-    const prefix = 'cc-skill ';
-    if (!rawCode.startsWith(prefix)) {
-      return { normalizedParams: params };
-    }
-
-    const skillKey = rawCode.slice(prefix.length).trim();
-    if (!skillKey) {
-      throw new Error('cc-skill requires a skill key');
     }
 
     const skillLibConfig = this.buildSkillLibConfig(context);
 
     return {
-      normalizedParams: {
-        ...params,
-        code: "echo 'Skill taken over'",
-      },
-      skillLibConfig: { skillKey, config: skillLibConfig },
+      normalizedParams: params,
+      skillLibConfig: { config: skillLibConfig },
     };
   }
 
   private buildSkillLibConfig(context: SandboxExecutionContext): Record<string, unknown> {
-    if (!context.s3LibConfig) {
-      throw new Error('cc-skill requires s3LibConfig to build skillLibConfig');
-    }
-
+    this.logger.info({ skillLibEndpoint: this.skillLibEndpoint }, 'Skill lib endpoint override');
     const normalizedPrefix = this.skillLibPathPrefix
       ? this.skillLibPathPrefix.replace(/\/+$/, '')
       : '';
-    const path = normalizedPrefix
-      ? `${normalizedPrefix}/${this.skillLibHash}`
-      : context.s3LibConfig.path;
-    const hash = this.skillLibHash || context.s3LibConfig.hash;
 
-    if (!path || !hash) {
+    let path = '';
+    let hash = '';
+    if (normalizedPrefix || this.skillLibHash) {
+      if (!normalizedPrefix || !this.skillLibHash) {
+        throw new Error('cc-skill requires skillLibConfig path/hash');
+      }
+      path = `${normalizedPrefix}/${this.skillLibHash}`;
+      hash = this.skillLibHash;
+    } else if (context.s3LibConfig?.path && context.s3LibConfig?.hash) {
+      path = context.s3LibConfig.path;
+      hash = context.s3LibConfig.hash;
+    } else {
       throw new Error('cc-skill requires skillLibConfig path/hash');
     }
 
-    const endpoint = this.normalizeEndpoint(context.s3Config);
+    const endpoint = this.skillLibEndpoint || this.normalizeEndpoint(context.s3Config);
     if (!endpoint) {
       throw new Error('cc-skill requires a valid s3 endpoint for skillLibConfig');
     }
 
+    const bucket = this.skillLibBucket || context.s3LibConfig?.bucket || context.s3Config.bucket;
+    const region = this.skillLibRegion || context.s3LibConfig?.region || context.s3Config.region;
+    if (!bucket || !region) {
+      throw new Error('cc-skill requires skillLibConfig bucket/region');
+    }
+
+    const accessKey =
+      this.skillLibAccessKey || context.s3LibConfig?.accessKey || context.s3Config.accessKey;
+    const secretKey =
+      this.skillLibSecretKey || context.s3LibConfig?.secretKey || context.s3Config.secretKey;
+
     return {
       endpoint,
-      bucket: context.s3LibConfig.bucket,
-      region: context.s3LibConfig.region,
+      bucket,
+      region,
       path,
       hash,
-      accessKey: context.s3LibConfig.accessKey,
-      secretKey: context.s3LibConfig.secretKey,
-      reset: context.s3LibConfig.reset,
+      ...(accessKey ? { accessKey } : {}),
+      ...(secretKey ? { secretKey } : {}),
+      ...(context.s3LibConfig?.reset !== undefined ? { reset: context.s3LibConfig.reset } : {}),
     };
   }
 
-  private normalizeEndpoint(s3Config: { endPoint: string; port: number; useSSL: boolean }): string {
-    if (!s3Config.endPoint) return '';
-    if (s3Config.endPoint.startsWith('http://') || s3Config.endPoint.startsWith('https://')) {
-      return s3Config.endPoint;
+  private normalizeEndpoint(
+    s3Config: Partial<{ endPoint: string; port: number; useSSL: boolean }>,
+  ): string {
+    const endPoint = s3Config.endPoint;
+    if (!endPoint) return '';
+    if (endPoint.startsWith('http://') || endPoint.startsWith('https://')) {
+      return endPoint;
     }
 
     const scheme = s3Config.useSSL ? 'https' : 'http';
@@ -206,8 +222,6 @@ export class SandboxClient {
       !(scheme === 'http' && port === 80) &&
       !(scheme === 'https' && port === 443);
 
-    return includePort
-      ? `${scheme}://${s3Config.endPoint}:${port}`
-      : `${scheme}://${s3Config.endPoint}`;
+    return includePort ? `${scheme}://${endPoint}:${port}` : `${scheme}://${endPoint}`;
   }
 }

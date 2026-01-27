@@ -343,6 +343,11 @@ export default () => ({
     whiteList: process.env.SANDBOX_WHITELIST, // 'uid,uid'
     blackList: process.env.SANDBOX_BLACKLIST, // 'uid,uid'
     randomRate: process.env.SANDBOX_RANDOM_RATE, // '20'
+    anthropic: {
+      authToken: process.env.SANDBOX_SKILL_CLAUDE_ANTHROPIC_AUTH_TOKEN,
+      apiKey: process.env.SANDBOX_SKILL_CLAUDE_ANTHROPIC_API_KEY,
+      baseUrl: process.env.SANDBOX_SKILL_CLAUDE_ANTHROPIC_BASE_URL,
+    },
     s3Lib: {
       enabled: process.env.SANDBOX_S3LIB_ENABLED,
       pathPrefix: process.env.SANDBOX_S3LIB_PATH_PREFIX,
@@ -351,6 +356,11 @@ export default () => ({
       reset: process.env.SANDBOX_S3LIB_RESET,
     },
     skillLib: {
+      endpoint: process.env.SANDBOX_SKILL_LIB_ENDPOINT,
+      bucket: process.env.SANDBOX_SKILL_LIB_BUCKET,
+      region: process.env.SANDBOX_SKILL_LIB_REGION,
+      accessKey: process.env.SANDBOX_SKILL_LIB_ACCESS_KEY,
+      secretKey: process.env.SANDBOX_SKILL_LIB_SECRET_KEY,
       pathPrefix: process.env.SANDBOX_SKILL_LIB_PATH_PREFIX,
       hash: process.env.SANDBOX_SKILL_LIB_HASH,
     },
