@@ -472,6 +472,7 @@ export class CopilotAutogenService {
       version: planRef.version,
       toolUsed: toolUsed!,
       plan,
+      sessionId: copilotSessionId,
     };
   }
 

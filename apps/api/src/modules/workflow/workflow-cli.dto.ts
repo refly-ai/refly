@@ -40,6 +40,7 @@ export interface WorkflowInfo {
   variables: WorkflowVariable[];
   createdAt: string;
   updatedAt: string;
+  sessionId?: string; // Latest copilot session ID for context continuity
 }
 
 export interface ListWorkflowsResponse {
@@ -397,6 +398,8 @@ export interface EditWorkflowCliResponse {
   toolUsed: 'generate_workflow' | 'patch_workflow';
   /** The resulting workflow plan */
   plan: WorkflowPlan;
+  /** Copilot session ID for context continuity */
+  sessionId?: string;
 }
 
 export const CLI_ERROR_CODES = {

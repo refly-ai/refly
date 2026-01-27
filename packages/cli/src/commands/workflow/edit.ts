@@ -15,6 +15,7 @@ interface EditWorkflowCliResponse {
   planId: string;
   version: number;
   toolUsed: 'generate_workflow' | 'patch_workflow';
+  sessionId?: string;
   plan: {
     title: string;
     tasks: Array<{
@@ -92,6 +93,7 @@ export const workflowEditCommand = new Command('edit')
         planId: result.planId,
         version: result.version,
         toolUsed: result.toolUsed,
+        sessionId: result.sessionId,
         plan: {
           title: result.plan.title,
           taskCount: result.plan.tasks?.length ?? 0,

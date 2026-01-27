@@ -2,7 +2,7 @@
  * Skill Installation Service - manages skill installation lifecycle.
  */
 
-import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
+import { Injectable, Logger, forwardRef, Inject, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { SkillPackageService } from './skill-package.service';
@@ -22,6 +22,7 @@ import {
 } from './skill-package.dto';
 import { Prisma, SkillInstallation } from '@prisma/client';
 import { SkillPackageExecutorService } from './skill-package-executor.service';
+import { SKILL_CLI_ERROR_CODES, throwCliError } from './skill-package.errors';
 
 @Injectable()
 export class SkillInstallationService {
@@ -124,7 +125,12 @@ export class SkillInstallationService {
           });
           this.logger.log(`Force reinstalled skill: ${existing.installationId}`);
         } else {
-          throw new Error(`Skill already installed: ${skillId}. Use --force to reinstall.`);
+          throwCliError(
+            SKILL_CLI_ERROR_CODES.ALREADY_INSTALLED,
+            `Skill already installed: ${skillId}`,
+            'Use --force to reinstall',
+            HttpStatus.CONFLICT,
+          );
         }
       } else {
         const installationId = genSkillPackageInstallationID();

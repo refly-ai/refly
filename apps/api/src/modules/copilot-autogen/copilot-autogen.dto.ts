@@ -71,4 +71,5 @@ export interface EditWorkflowCliResponse {
   version: number; // Plan version
   toolUsed: 'generate_workflow' | 'patch_workflow'; // Which tool Copilot used
   plan: WorkflowPlan; // The resulting workflow plan
+  sessionId?: string; // Copilot session ID for context continuity
 }

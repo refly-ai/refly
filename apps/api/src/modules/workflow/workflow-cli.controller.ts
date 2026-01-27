@@ -887,6 +887,13 @@ export class WorkflowCliController {
         checkOwnership: true,
       });
 
+      // Get the latest copilot session for this workflow
+      const latestSession = await this.prisma.copilotSession.findFirst({
+        where: { canvasId: workflowId, uid: user.uid },
+        orderBy: { createdAt: 'desc' },
+        select: { sessionId: true },
+      });
+
       return buildCliSuccessResponse({
         workflowId,
         name: rawData.title ?? 'Untitled',
@@ -895,9 +902,60 @@ export class WorkflowCliController {
         variables: rawData.variables ?? [],
         createdAt: rawData.owner?.createdAt ?? new Date().toJSON(),
         updatedAt: new Date().toJSON(), // Canvas doesn't expose updatedAt directly
+        sessionId: latestSession?.sessionId,
       });
     } catch (error) {
       this.logger.error(`Failed to get workflow ${workflowId}: ${getErrorMessage(error)}`);
+      throwCliError(
+        CLI_ERROR_CODES.WORKFLOW_NOT_FOUND,
+        `Workflow ${workflowId} not found`,
+        'Check the workflow ID and try again',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Get workflow session info
+   * GET /v1/cli/workflow/:id/session
+   *
+   * Returns the latest copilot session for this workflow, useful for
+   * maintaining context continuity in workflow edit operations.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/session')
+  async getSession(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+  ): Promise<{
+    success: boolean;
+    data: { workflowId: string; sessionId?: string; createdAt?: string; lastUsedAt?: string };
+  }> {
+    this.logger.log(`Getting session for workflow ${workflowId}, user ${user.uid}`);
+
+    try {
+      // Verify workflow exists and belongs to user
+      await this.canvasService.getCanvasRawData(user, workflowId, {
+        checkOwnership: true,
+      });
+
+      // Get the latest copilot session for this workflow
+      const latestSession = await this.prisma.copilotSession.findFirst({
+        where: { canvasId: workflowId, uid: user.uid },
+        orderBy: { createdAt: 'desc' },
+        select: { sessionId: true, createdAt: true, updatedAt: true },
+      });
+
+      return buildCliSuccessResponse({
+        workflowId,
+        sessionId: latestSession?.sessionId,
+        createdAt: latestSession?.createdAt?.toISOString(),
+        lastUsedAt: latestSession?.updatedAt?.toISOString(),
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to get session for workflow ${workflowId}: ${getErrorMessage(error)}`,
+      );
       throwCliError(
         CLI_ERROR_CODES.WORKFLOW_NOT_FOUND,
         `Workflow ${workflowId} not found`,
