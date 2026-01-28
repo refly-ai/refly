@@ -172,6 +172,10 @@ export type UpsertMcpServerRequest = {
    * MCP server name
    */
   name: string;
+  /**
+   * Original MCP server name for update
+   */
+  originalName?: string;
   type: McpServerType;
   /**
    * MCP server URL (required for sse and streamable types)

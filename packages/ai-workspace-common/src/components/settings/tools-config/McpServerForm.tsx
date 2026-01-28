@@ -26,7 +26,7 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { McpServerType } from '@refly/openapi-schema';
+import type { McpServerType, UpsertMcpServerRequest } from '@refly/openapi-schema';
 import { McpServerFormProps, McpServerFormData } from './types';
 import { McpServerJsonEditor } from './McpServerJsonEditor';
 import {
@@ -142,7 +142,7 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
       const processedValues = processFormDataForSubmission({ ...currentValues, enabled: true });
 
       if (formMode === 'edit') {
-        updateMutation.mutate({ body: processedValues });
+        updateMutation.mutate({ body: buildUpdatePayload(processedValues) });
       } else {
         createMutation.mutate({ body: processedValues });
       }
@@ -180,6 +180,14 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
       headers: submitValues.headers || {},
       reconnect: submitValues.reconnect || { enabled: false },
       config: submitValues.config || {},
+    };
+  };
+
+  const buildUpdatePayload = (values: McpServerFormData): UpsertMcpServerRequest => {
+    const originalName = initialData?.name ?? values.name;
+    return {
+      ...values,
+      originalName,
     };
   };
 
@@ -374,7 +382,7 @@ export const McpServerForm: React.FC<McpServerFormProps> = ({
 
     // Proceed with save operation
     if (formMode === 'edit') {
-      updateMutation.mutate({ body: submitValues });
+      updateMutation.mutate({ body: buildUpdatePayload(submitValues) });
     } else {
       createMutation.mutate({ body: submitValues });
     }
