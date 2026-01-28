@@ -2352,6 +2352,66 @@ export const ActionMessageSchema = {
   },
 } as const;
 
+export const ToolCallResultViaApiSchema = {
+  type: 'object',
+  description: 'Simplified tool call result for API',
+  properties: {
+    toolName: {
+      type: 'string',
+      description: 'Tool name',
+    },
+    input: {
+      type: 'object',
+      description: 'Tool input',
+    },
+    output: {
+      type: 'object',
+      description: 'Tool output',
+    },
+    error: {
+      type: 'string',
+      description: 'Tool execution error',
+    },
+    status: {
+      type: 'string',
+      enum: ['executing', 'completed', 'failed'],
+      description: 'Tool execution status',
+    },
+    createdAt: {
+      type: 'number',
+      description: 'Tool call creation timestamp',
+    },
+  },
+} as const;
+
+export const ActionMessageViaApiSchema = {
+  type: 'object',
+  description: 'Simplified action message for API',
+  required: ['messageId', 'type'],
+  properties: {
+    messageId: {
+      type: 'string',
+      description: 'Action message ID',
+    },
+    content: {
+      type: 'string',
+      description: 'Action message content',
+    },
+    reasoningContent: {
+      type: 'string',
+      description: 'Action message reasoning content',
+    },
+    type: {
+      $ref: '#/components/schemas/ActionMessageType',
+      description: 'Action message type',
+    },
+    toolCallResult: {
+      $ref: '#/components/schemas/ToolCallResultViaApi',
+      description: 'Tool call result (if applicable)',
+    },
+  },
+} as const;
+
 export const ActionResultSchema = {
   type: 'object',
   description: 'Action result',
@@ -9533,6 +9593,39 @@ export const WorkflowNodeExecutionSchema = {
   },
 } as const;
 
+export const WorkflowNodeExecutionViaApiSchema = {
+  type: 'object',
+  required: ['nodeId'],
+  properties: {
+    nodeId: {
+      type: 'string',
+      description: 'Node ID',
+    },
+    title: {
+      type: 'string',
+      description: 'Node title',
+    },
+    status: {
+      description: 'Node status',
+      $ref: '#/components/schemas/ActionStatus',
+    },
+    errorMessage: {
+      type: 'string',
+      description: 'Node error message',
+    },
+    startTime: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Node execution start time',
+    },
+    endTime: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Node execution end time',
+    },
+  },
+} as const;
+
 export const WorkflowExecutionStatusSchema = {
   type: 'string',
   enum: ['init', 'executing', 'finish', 'failed'],
@@ -12912,6 +13005,42 @@ export const WebhookCallRecordSchema = {
   },
 } as const;
 
+export const DriveFileViaApiSchema = {
+  type: 'object',
+  required: ['fileId', 'canvasId', 'name', 'type'],
+  properties: {
+    fileId: {
+      type: 'string',
+      description: 'Drive file ID',
+    },
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    name: {
+      type: 'string',
+      description: 'Drive file name',
+    },
+    type: {
+      type: 'string',
+      description: 'Drive file type',
+    },
+    size: {
+      type: 'number',
+      description: 'Drive file size',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Drive file creation timestamp',
+    },
+    url: {
+      type: 'string',
+      description: 'Access URL for the file',
+    },
+  },
+} as const;
+
 export const RunWorkflowApiResponseSchema = {
   allOf: [
     {
@@ -12930,6 +13059,91 @@ export const RunWorkflowApiResponseSchema = {
             status: {
               type: 'string',
               description: 'Initial execution status (usually "running")',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetWorkflowDetailViaApiResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            executionId: {
+              type: 'string',
+            },
+            canvasId: {
+              type: 'string',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              $ref: '#/components/schemas/WorkflowExecutionStatus',
+            },
+            nodeExecutions: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/WorkflowNodeExecutionViaApi',
+              },
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetWorkflowOutputResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            products: {
+              type: 'array',
+              items: {
+                allOf: [
+                  {
+                    $ref: '#/components/schemas/WorkflowNodeExecutionViaApi',
+                  },
+                  {
+                    type: 'object',
+                    properties: {
+                      messages: {
+                        type: 'array',
+                        items: {
+                          $ref: '#/components/schemas/ActionMessageViaApi',
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+            driveFiles: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/DriveFileViaApi',
+              },
             },
           },
         },

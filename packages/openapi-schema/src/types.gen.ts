@@ -2141,6 +2141,80 @@ export type ActionMessage = {
 };
 
 /**
+ * Simplified tool call result for API
+ */
+export type ToolCallResultViaApi = {
+  /**
+   * Tool name
+   */
+  toolName?: string;
+  /**
+   * Tool input
+   */
+  input?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Tool output
+   */
+  output?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Tool execution error
+   */
+  error?: string;
+  /**
+   * Tool execution status
+   */
+  status?: 'executing' | 'completed' | 'failed';
+  /**
+   * Tool call creation timestamp
+   */
+  createdAt?: number;
+};
+
+/**
+ * Tool execution status
+ */
+export type status3 = 'executing' | 'completed' | 'failed';
+
+/**
+ * Tool execution status
+ */
+export const status3 = {
+  EXECUTING: 'executing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+} as const;
+
+/**
+ * Simplified action message for API
+ */
+export type ActionMessageViaApi = {
+  /**
+   * Action message ID
+   */
+  messageId: string;
+  /**
+   * Action message content
+   */
+  content?: string;
+  /**
+   * Action message reasoning content
+   */
+  reasoningContent?: string;
+  /**
+   * Action message type
+   */
+  type: ActionMessageType;
+  /**
+   * Tool call result (if applicable)
+   */
+  toolCallResult?: ToolCallResultViaApi;
+};
+
+/**
  * Action result
  */
 export type ActionResult = {
@@ -3070,12 +3144,12 @@ export type BaseResponseV2 = {
 /**
  * Response status
  */
-export type status3 = 'success' | 'failed';
+export type status4 = 'success' | 'failed';
 
 /**
  * Response status
  */
-export const status3 = {
+export const status4 = {
   SUCCESS: 'success',
   FAILED: 'failed',
 } as const;
@@ -4974,12 +5048,12 @@ export type HeyGenGenerateVideoResponse = BaseResponseV2 & {
 /**
  * Video generation status
  */
-export type status4 = 'pending' | 'processing' | 'completed' | 'failed';
+export type status5 = 'pending' | 'processing' | 'completed' | 'failed';
 
 /**
  * Video generation status
  */
-export const status4 = {
+export const status5 = {
   PENDING: 'pending',
   PROCESSING: 'processing',
   COMPLETED: 'completed',
@@ -6640,12 +6714,12 @@ export type ProviderTestResult = {
 /**
  * Test result status
  */
-export type status5 = 'success' | 'failed' | 'unknown';
+export type status6 = 'success' | 'failed' | 'unknown';
 
 /**
  * Test result status
  */
-export const status5 = {
+export const status6 = {
   SUCCESS: 'success',
   FAILED: 'failed',
   UNKNOWN: 'unknown',
@@ -7583,6 +7657,33 @@ export type WorkflowNodeExecution = {
   updatedAt?: string;
 };
 
+export type WorkflowNodeExecutionViaApi = {
+  /**
+   * Node ID
+   */
+  nodeId: string;
+  /**
+   * Node title
+   */
+  title?: string;
+  /**
+   * Node status
+   */
+  status?: ActionStatus;
+  /**
+   * Node error message
+   */
+  errorMessage?: string;
+  /**
+   * Node execution start time
+   */
+  startTime?: string;
+  /**
+   * Node execution end time
+   */
+  endTime?: string;
+};
+
 export type WorkflowExecutionStatus = 'init' | 'executing' | 'finish' | 'failed';
 
 export const WorkflowExecutionStatus = {
@@ -8441,12 +8542,12 @@ export type FormDefinition = {
 /**
  * Form status
  */
-export type status6 = 'draft' | 'published' | 'archived';
+export type status7 = 'draft' | 'published' | 'archived';
 
 /**
  * Form status
  */
-export const status6 = {
+export const status7 = {
   DRAFT: 'draft',
   PUBLISHED: 'published',
   ARCHIVED: 'archived',
@@ -8486,12 +8587,12 @@ export type FormSubmission = {
 /**
  * Submission status
  */
-export type status7 = 'draft' | 'submitted' | 'reviewed';
+export type status8 = 'draft' | 'submitted' | 'reviewed';
 
 /**
  * Submission status
  */
-export const status7 = {
+export const status8 = {
   DRAFT: 'draft',
   SUBMITTED: 'submitted',
   REVIEWED: 'reviewed',
@@ -10312,6 +10413,37 @@ export type WebhookCallRecord = {
   completedAt?: string;
 };
 
+export type DriveFileViaApi = {
+  /**
+   * Drive file ID
+   */
+  fileId: string;
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * Drive file name
+   */
+  name: string;
+  /**
+   * Drive file type
+   */
+  type: string;
+  /**
+   * Drive file size
+   */
+  size?: number;
+  /**
+   * Drive file creation timestamp
+   */
+  createdAt?: string;
+  /**
+   * Access URL for the file
+   */
+  url?: string;
+};
+
 export type RunWorkflowApiResponse = BaseResponse & {
   data?: {
     /**
@@ -10322,6 +10454,28 @@ export type RunWorkflowApiResponse = BaseResponse & {
      * Initial execution status (usually "running")
      */
     status?: string;
+  };
+};
+
+export type GetWorkflowDetailViaApiResponse = BaseResponse & {
+  data?: {
+    executionId?: string;
+    canvasId?: string;
+    title?: string;
+    status?: WorkflowExecutionStatus;
+    nodeExecutions?: Array<WorkflowNodeExecutionViaApi>;
+    createdAt?: string;
+  };
+};
+
+export type GetWorkflowOutputResponse = BaseResponse & {
+  data?: {
+    products?: Array<
+      WorkflowNodeExecutionViaApi & {
+        messages?: Array<ActionMessageViaApi>;
+      }
+    >;
+    driveFiles?: Array<DriveFileViaApi>;
   };
 };
 
@@ -11624,6 +11778,32 @@ export type RunWorkflowViaApiData = {
 export type RunWorkflowViaApiResponse = RunWorkflowApiResponse;
 
 export type RunWorkflowViaApiError = unknown;
+
+export type GetWorkflowDetailViaApiData = {
+  path: {
+    /**
+     * Workflow execution ID
+     */
+    executionId: string;
+  };
+};
+
+export type GetWorkflowDetailViaApiResponse2 = GetWorkflowDetailViaApiResponse;
+
+export type GetWorkflowDetailViaApiError = unknown;
+
+export type GetWorkflowOutputData = {
+  path: {
+    /**
+     * Workflow execution ID
+     */
+    executionId: string;
+  };
+};
+
+export type GetWorkflowOutputResponse2 = GetWorkflowOutputResponse;
+
+export type GetWorkflowOutputError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 

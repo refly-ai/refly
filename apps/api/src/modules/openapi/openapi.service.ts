@@ -1,11 +1,21 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { WorkflowAppService } from '../workflow-app/workflow-app.service';
 import { CanvasService } from '../canvas/canvas.service';
+import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { createId } from '@paralleldrive/cuid2';
-import { genScheduleRecordId, safeStringifyJSON } from '@refly/utils';
-import { extractToolsetsWithNodes } from '@refly/canvas-common';
-import type { VariableValue, WorkflowVariable } from '@refly/openapi-schema';
+import { genScheduleRecordId, safeStringifyJSON, safeParseJSON } from '@refly/utils';
+import { extractToolsetsWithNodes, sortNodeExecutionsByExecutionOrder } from '@refly/canvas-common';
+import type { DriveFileViaApi, User, VariableValue, WorkflowVariable } from '@refly/openapi-schema';
+import { WorkflowExecutionNotFoundError } from '@refly/errors';
+import {
+  actionMessagePO2DTO,
+  driveFilePO2DTO,
+  workflowNodeExecutionPO2DTO,
+} from './types/request.types';
+import { sanitizeToolOutput } from '../action/action.dto';
+import { ToolCallResult as ToolCallResultModel } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 
 enum ApiCallStatus {
   SUCCESS = 'success',
@@ -16,11 +26,16 @@ enum ApiCallStatus {
 @Injectable()
 export class OpenapiService {
   private readonly logger = new Logger(OpenapiService.name);
+  private readonly config: ConfigService;
+  private get endpoint(): string | undefined {
+    return this.config.get<string>('endpoint');
+  }
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly workflowAppService: WorkflowAppService,
     private readonly canvasService: CanvasService,
+    @Inject(OSS_INTERNAL) private readonly objectStorage: ObjectStorageService,
   ) {}
 
   /**
@@ -165,6 +180,156 @@ export class OpenapiService {
     }
   }
 
+  /**
+   * Get workflow execution detail with node executions
+   * @param user - The user requesting the workflow detail
+   * @param executionId - The workflow execution ID
+   * @returns Promise<WorkflowExecution> - The workflow execution detail
+   */
+  async getWorkflowDetail(user: User, executionId: string) {
+    // Get workflow execution
+    const workflowExecution = await this.prisma.workflowExecution.findUnique({
+      where: { executionId, uid: user.uid },
+    });
+
+    if (!workflowExecution) {
+      throw new WorkflowExecutionNotFoundError(`Workflow execution ${executionId} not found`);
+    }
+
+    // Get node executions
+    const nodeExecutions = await this.prisma.workflowNodeExecution.findMany({
+      where: { executionId },
+    });
+
+    // Sort node executions by execution order (topological sort based on parent-child relationships)
+    const sortedNodeExecutions = sortNodeExecutionsByExecutionOrder(nodeExecutions);
+
+    // Return workflow execution detail
+    return { ...workflowExecution, nodeExecutions: sortedNodeExecutions };
+  }
+
+  async getWorkflowOutput(user: User, executionId: string) {
+    const workflowExecutionDTO = await this.getWorkflowDetail(user, executionId);
+
+    // Sort node executions by execution order (topological sort based on parent-child relationships)
+    const sortedNodeExecutions = workflowExecutionDTO.nodeExecutions;
+
+    // Filter nodes that are considered "products"
+    const productNodes = sortedNodeExecutions.filter(
+      (node) => node.nodeType === 'skillResponse' && node.status === 'finish',
+    );
+
+    // Collect result IDs for skillResponse nodes
+    const skillResultIds = productNodes.map((node) => node.entityId);
+
+    const actionDetailsMap = new Map<string, any>();
+
+    if (skillResultIds.length > 0) {
+      const actionResults = await this.prisma.actionResult.findMany({
+        where: {
+          resultId: { in: skillResultIds as string[] },
+          uid: user.uid,
+        },
+      });
+
+      // Fetch Messages
+      const messages = await this.prisma.actionMessage.findMany({
+        where: {
+          resultId: { in: skillResultIds as string[] },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      // Fetch ToolCalls
+      const toolCalls = await this.prisma.toolCallResult.findMany({
+        where: {
+          resultId: { in: skillResultIds as string[] },
+          deletedAt: null,
+        },
+      });
+
+      const toolCallResultMap = new Map<string, ToolCallResultModel>();
+      for (const tc of toolCalls) {
+        toolCallResultMap.set(tc.callId, tc);
+      }
+
+      const resultsByUniqueId = new Map<string, any>(); // key: resultId, value: result
+
+      for (const result of actionResults) {
+        const current = resultsByUniqueId.get(result.resultId);
+        if (!current || result.version > current.version) {
+          resultsByUniqueId.set(result.resultId, result);
+        }
+      }
+
+      for (const result of Array.from(resultsByUniqueId.values())) {
+        const resultMessages = messages
+          .filter((m) => m.resultId === result.resultId && m.version === result.version)
+          .map((message) => {
+            const dto = actionMessagePO2DTO(message);
+
+            // Enrich with tool call result
+            if (message.type === 'tool' && message.toolCallId) {
+              const toolCallResult = toolCallResultMap.get(message.toolCallId);
+              if (toolCallResult) {
+                const rawOutput = safeParseJSON(toolCallResult.output || '{}') ?? {
+                  rawOutput: toolCallResult.output,
+                };
+                const output = sanitizeToolOutput(toolCallResult.toolName, rawOutput);
+
+                // Attach the tool call result to the message
+                dto.toolCallResult = {
+                  toolName: toolCallResult.toolName,
+                  input: safeParseJSON(toolCallResult.input || '{}') ?? {},
+                  output,
+                  error: toolCallResult.error || '',
+                  status: toolCallResult.status as 'executing' | 'completed' | 'failed',
+                  createdAt: toolCallResult.createdAt.getTime(),
+                };
+              }
+            }
+            return dto;
+          });
+
+        actionDetailsMap.set(result.resultId, {
+          messages: resultMessages,
+        });
+      }
+    }
+
+    // Enhance productNodes with action details
+    const products = productNodes.map((node) => {
+      if (node.nodeType === 'skillResponse' && node.entityId) {
+        const detail = actionDetailsMap.get(node.entityId);
+        if (detail) {
+          return {
+            ...workflowNodeExecutionPO2DTO(node),
+            messages: detail.messages,
+          };
+        }
+      }
+      return node;
+    });
+
+    // Fetch Drive Files linked to these results
+    let driveFiles: DriveFileViaApi[] = [];
+    if (skillResultIds.length > 0) {
+      const dbDriveFiles = await this.prisma.driveFile.findMany({
+        where: {
+          resultId: { in: skillResultIds as string[] },
+          deletedAt: null,
+          scope: 'present',
+          source: 'agent',
+        },
+      });
+      driveFiles = dbDriveFiles.map((file) => driveFilePO2DTO(file, this.endpoint));
+    }
+
+    return {
+      products,
+      driveFiles,
+    };
+  }
   /**
    * Record API call to database
    */

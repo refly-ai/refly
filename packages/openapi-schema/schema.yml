@@ -2902,6 +2902,66 @@ paths:
       security:
         - api_key: []
 
+  /openapi/workflow/{executionId}/detail:
+    get:
+      tags:
+        - workflow
+      summary: Get workflow execution detail via API
+      description: |
+        Get workflow execution detail with node executions via authenticated API call.
+        Requires API Key authentication.
+      operationId: getWorkflowDetailViaApi
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Workflow execution ID
+      responses:
+        '200':
+          description: Workflow execution detail retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowDetailViaApiResponse'
+        '401':
+          description: Unauthorized - invalid or missing API key
+        '404':
+          description: Workflow execution not found
+      security:
+        - api_key: []
+
+  /openapi/workflow/{executionId}/output:
+    get:
+      tags:
+        - workflow
+      summary: Get workflow execution output via API
+      description: |
+        Get workflow execution output (products and drive files) via authenticated API call.
+        Requires API Key authentication.
+      operationId: getWorkflowOutput
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Workflow execution ID
+      responses:
+        '200':
+          description: Workflow execution output retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWorkflowOutputResponse'
+        '401':
+          description: Unauthorized - invalid or missing API key
+        '404':
+          description: Workflow execution not found
+      security:
+        - api_key: []
+
   /user/settings:
     get:
       tags:
@@ -5949,6 +6009,57 @@ components:
           type: string
           format: date-time
           description: Action message update time
+
+    ToolCallResultViaApi:
+      type: object
+      description: Simplified tool call result for API
+      properties:
+        toolName:
+          type: string
+          description: Tool name
+        input:
+          type: object
+          description: Tool input
+        output:
+          type: object
+          description: Tool output
+        error:
+          type: string
+          description: Tool execution error
+        status:
+          type: string
+          enum:
+            - executing
+            - completed
+            - failed
+          description: Tool execution status
+        createdAt:
+          type: number
+          description: Tool call creation timestamp
+
+    ActionMessageViaApi:
+      type: object
+      description: Simplified action message for API
+      required:
+        - messageId
+        - type
+      properties:
+        messageId:
+          type: string
+          description: Action message ID
+        content:
+          type: string
+          description: Action message content
+        reasoningContent:
+          type: string
+          description: Action message reasoning content
+        type:
+          $ref: '#/components/schemas/ActionMessageType'
+          description: Action message type
+        toolCallResult:
+          $ref: '#/components/schemas/ToolCallResultViaApi'
+          description: Tool call result (if applicable)
+
     ActionResult:
       type: object
       description: Action result
@@ -11031,6 +11142,31 @@ components:
           type: string
           format: date-time
           description: Node update timestamp
+    WorkflowNodeExecutionViaApi:
+      type: object
+      required:
+        - nodeId
+      properties:
+        nodeId:
+          type: string
+          description: Node ID
+        title:
+          type: string
+          description: Node title
+        status:
+          description: Node status
+          $ref: '#/components/schemas/ActionStatus'
+        errorMessage:
+          type: string
+          description: Node error message
+        startTime:
+          type: string
+          format: date-time
+          description: Node execution start time
+        endTime:
+          type: string
+          format: date-time
+          description: Node execution end time
     WorkflowExecutionStatus:
       type: string
       enum:
@@ -13627,6 +13763,37 @@ components:
           format: date-time
           description: Completed timestamp
 
+    DriveFileViaApi:
+      type: object
+      required:
+        - fileId
+        - canvasId
+        - name
+        - type
+      properties:
+        fileId:
+          type: string
+          description: Drive file ID
+        canvasId:
+          type: string
+          description: Canvas ID
+        name:
+          type: string
+          description: Drive file name
+        type:
+          type: string
+          description: Drive file type
+        size:
+          type: number
+          description: Drive file size
+        createdAt:
+          type: string
+          format: date-time
+          description: Drive file creation timestamp
+        url:
+          type: string
+          description: Access URL for the file
+
     RunWorkflowApiResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
@@ -13641,6 +13808,54 @@ components:
                 status:
                   type: string
                   description: Initial execution status (usually "running")
+
+    GetWorkflowDetailViaApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                executionId:
+                  type: string
+                canvasId:
+                  type: string
+                title:
+                  type: string
+                status:
+                  $ref: '#/components/schemas/WorkflowExecutionStatus'
+                nodeExecutions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/WorkflowNodeExecutionViaApi'
+                createdAt:
+                  type: string
+                  format: date-time
+
+    GetWorkflowOutputResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                products:
+                  type: array
+                  items:
+                    allOf:
+                      - $ref: '#/components/schemas/WorkflowNodeExecutionViaApi'
+                      - type: object
+                        properties:
+                          messages:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ActionMessageViaApi'
+                driveFiles:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DriveFileViaApi'
 
   securitySchemes:
     api_key:

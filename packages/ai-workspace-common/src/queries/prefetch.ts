@@ -37,14 +37,19 @@ import {
   getSubscriptionUsage,
   getTemplateGenerationStatus,
   getToolCallResult,
+  getWebhookConfig,
+  getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowDetailViaApi,
+  getWorkflowOutput,
   getWorkflowPlanDetail,
   getWorkflowVariables,
   listAccounts,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
+  listCliApiKeys,
   listCodeArtifacts,
   listCopilotSessions,
   listDocuments,
@@ -93,8 +98,12 @@ import {
   GetResourceDetailData,
   GetTemplateGenerationStatusData,
   GetToolCallResultData,
+  GetWebhookConfigData,
+  GetWebhookHistoryData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
+  GetWorkflowDetailViaApiData,
+  GetWorkflowOutputData,
   GetWorkflowPlanDetailData,
   GetWorkflowVariablesData,
   ListAccountsData,
@@ -148,6 +157,14 @@ export const prefetchUseCheckToolOauthStatus = (
   queryClient.prefetchQuery({
     queryKey: Common.UseCheckToolOauthStatusKeyFn(clientOptions),
     queryFn: () => checkToolOauthStatus({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListCliApiKeys = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListCliApiKeysKeyFn(clientOptions),
+    queryFn: () => listCliApiKeys({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetCollabToken = (
   queryClient: QueryClient,
@@ -390,6 +407,38 @@ export const prefetchUseGetTemplateGenerationStatus = (
     queryKey: Common.UseGetTemplateGenerationStatusKeyFn(clientOptions),
     queryFn: () =>
       getTemplateGenerationStatus({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWebhookConfig = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWebhookConfigData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWebhookConfigKeyFn(clientOptions),
+    queryFn: () => getWebhookConfig({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWebhookHistory = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWebhookHistoryData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions),
+    queryFn: () => getWebhookHistory({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWorkflowDetailViaApi = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowDetailViaApiData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWorkflowDetailViaApiKeyFn(clientOptions),
+    queryFn: () => getWorkflowDetailViaApi({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWorkflowOutput = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowOutputData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWorkflowOutputKeyFn(clientOptions),
+    queryFn: () => getWorkflowOutput({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetSettings = (
   queryClient: QueryClient,

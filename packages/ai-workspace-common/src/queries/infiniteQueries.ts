@@ -5,6 +5,7 @@ import { InfiniteData, useInfiniteQuery, UseInfiniteQueryOptions } from '@tansta
 import {
   getCreditRecharge,
   getCreditUsage,
+  getWebhookHistory,
   listCanvases,
   listCanvasTemplates,
   listCodeArtifacts,
@@ -19,6 +20,8 @@ import {
   GetCreditRechargeError,
   GetCreditUsageData,
   GetCreditUsageError,
+  GetWebhookHistoryData,
+  GetWebhookHistoryError,
   ListCanvasesData,
   ListCanvasesError,
   ListCanvasTemplatesData,
@@ -225,6 +228,31 @@ export const useListWorkflowAppsInfinite = <
     queryKey: Common.UseListWorkflowAppsKeyFn(clientOptions, queryKey),
     queryFn: ({ pageParam }) =>
       listWorkflowApps({
+        ...clientOptions,
+        query: { ...clientOptions.query, page: pageParam as number },
+      }).then((response) => response.data as TData) as TData,
+    initialPageParam: '1',
+    getNextPageParam: (response) =>
+      (
+        response as {
+          nextPage: number;
+        }
+      ).nextPage,
+    ...options,
+  });
+export const useGetWebhookHistoryInfinite = <
+  TData = InfiniteData<Common.GetWebhookHistoryDefaultResponse>,
+  TError = GetWebhookHistoryError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWebhookHistoryData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useInfiniteQuery({
+    queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions, queryKey),
+    queryFn: ({ pageParam }) =>
+      getWebhookHistory({
         ...clientOptions,
         query: { ...clientOptions.query, page: pageParam as number },
       }).then((response) => response.data as TData) as TData,
