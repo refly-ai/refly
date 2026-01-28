@@ -182,13 +182,13 @@ export const IntegrationDocsModal = memo(
               </div>
             </aside>
 
-            {/* Main content area */}
-            <main className="integration-docs-main">
+            {/* Right content area with toolbar, main content, and toc */}
+            <div className="integration-docs-right-wrapper">
               {/* Toolbar */}
               <div className="integration-docs-toolbar">
                 <div className="integration-docs-toolbar-left">
                   {activeIntegration === 'api' ? (
-                    <Button onClick={() => setApiKeyModalOpen(true)}>
+                    <Button type="primary" onClick={() => setApiKeyModalOpen(true)}>
                       {t('integration.manageApiKeys')}
                     </Button>
                   ) : null}
@@ -199,30 +199,36 @@ export const IntegrationDocsModal = memo(
                 </div>
               </div>
 
-              {/* Scrollable content */}
-              <div ref={contentRef} className="integration-docs-content">
-                {renderContent()}
-              </div>
-            </main>
+              {/* Content area with main and toc */}
+              <div className="integration-docs-body-wrapper">
+                {/* Main content area */}
+                <main className="integration-docs-main">
+                  {/* Scrollable content */}
+                  <div ref={contentRef} className="integration-docs-content">
+                    {renderContent()}
+                  </div>
+                </main>
 
-            {/* Right sidebar - Table of contents */}
-            <aside className="integration-docs-toc">
-              <div className="integration-docs-toc-title">{t('integration.contents')}</div>
-              <nav className="integration-docs-toc-list">
-                {sections.map((section) => (
-                  <button
-                    key={section.id}
-                    type="button"
-                    onClick={() => handleSectionSelect(section.id)}
-                    className={`integration-docs-toc-item ${
-                      activeSection === section.id ? 'is-active' : ''
-                    }`}
-                  >
-                    {section.label}
-                  </button>
-                ))}
-              </nav>
-            </aside>
+                {/* Right sidebar - Table of contents */}
+                <aside className="integration-docs-toc">
+                  <div className="integration-docs-toc-title">{t('integration.contents')}</div>
+                  <nav className="integration-docs-toc-list">
+                    {sections.map((section) => (
+                      <button
+                        key={section.id}
+                        type="button"
+                        onClick={() => handleSectionSelect(section.id)}
+                        className={`integration-docs-toc-item ${
+                          activeSection === section.id ? 'is-active' : ''
+                        }`}
+                      >
+                        {section.label}
+                      </button>
+                    ))}
+                  </nav>
+                </aside>
+              </div>
+            </div>
           </div>
         </Modal>
 

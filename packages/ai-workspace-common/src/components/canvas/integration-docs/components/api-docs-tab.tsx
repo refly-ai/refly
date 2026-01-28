@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { Select, Tabs } from 'antd';
+import { Tabs } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { apiDocsData } from '../data/api-docs.generated';
 import { useApiKeys } from '../hooks/use-api-keys';
@@ -11,10 +11,6 @@ import type { ApiEndpoint } from '../types';
 interface ApiDocsTabProps {
   canvasId: string;
 }
-
-const formatKeyLabel = (name: string, keyPrefix: string) => {
-  return `${name} (${keyPrefix}...)`;
-};
 
 const renderParameters = (endpoint: ApiEndpoint, t: (key: string) => string) => {
   if (!endpoint.parameters?.length) {
@@ -93,20 +89,23 @@ const renderResponses = (endpoint: ApiEndpoint, t: (key: string) => string) => {
   );
 };
 
-export const ApiDocsTab = memo(({ canvasId: _canvasId }: ApiDocsTabProps) => {
+export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
   const { t } = useTranslation();
-  const { apiKeys, loading } = useApiKeys();
-  const { selectedKey, setSelectedKey, hasKeys } = useSelectedApiKey(apiKeys);
+  const { apiKeys } = useApiKeys();
+  const { selectedKey } = useSelectedApiKey(apiKeys);
 
   const baseUrl = useMemo(() => getApiBaseUrl(apiDocsData.baseUrl), []);
   const displayKey = selectedKey ? `${selectedKey.keyPrefix}****` : 'YOUR_API_KEY';
+  const pathParams = useMemo(() => ({ canvasId }), [canvasId]);
 
-  const handleKeyChange = (keyId: string) => {
-    const key = apiKeys.find((item) => item.keyId === keyId);
-    if (key) {
-      setSelectedKey({ keyId: key.keyId, name: key.name, keyPrefix: key.keyPrefix });
-    }
-  };
+  // Filter out internal endpoints and webhook endpoints, only show API endpoints
+  const publicEndpoints = useMemo(
+    () =>
+      apiDocsData.endpoints.filter(
+        (endpoint) => endpoint.path.startsWith('/openapi/') && !endpoint.path.includes('/webhook/'),
+      ),
+    [],
+  );
 
   return (
     <div className="integration-docs-body">
@@ -120,40 +119,13 @@ export const ApiDocsTab = memo(({ canvasId: _canvasId }: ApiDocsTabProps) => {
         <p className="integration-docs-section-desc">{t('integration.api.overviewDescription')}</p>
       </section>
 
-      <section id="api-authentication" className="integration-docs-section">
-        <h3 className="integration-docs-section-title">{t('integration.api.authTitle')}</h3>
-        <p className="integration-docs-section-desc">{t('integration.api.authDescription')}</p>
-
-        <div className="api-auth-panel">
-          <div className="api-auth-label">{t('integration.api.keyLabel')}</div>
-          <Select
-            className="api-auth-select"
-            placeholder={t('integration.api.keyPlaceholder')}
-            value={selectedKey?.keyId}
-            loading={loading}
-            disabled={!hasKeys}
-            onChange={handleKeyChange}
-            options={apiKeys.map((key) => ({
-              value: key.keyId,
-              label: formatKeyLabel(key.name, key.keyPrefix),
-            }))}
-          />
-        </div>
-        <div className="api-auth-helper">
-          {hasKeys ? t('integration.api.keyHelper') : t('integration.api.keyEmpty')}
-        </div>
-        <div className="api-auth-header">
-          <code>{t('integration.api.authHeader')}</code>
-        </div>
-      </section>
-
       <section id="api-endpoints" className="integration-docs-section">
         <h3 className="integration-docs-section-title">{t('integration.api.endpointsTitle')}</h3>
         <p className="integration-docs-section-desc">{t('integration.api.endpointsDescription')}</p>
 
-        {apiDocsData.endpoints.map((endpoint) => {
-          const displayExamples = generateCodeExamples(endpoint, baseUrl, displayKey);
-          const copyExamples = generateCodeExamples(endpoint, baseUrl, 'YOUR_API_KEY');
+        {publicEndpoints.map((endpoint) => {
+          const displayExamples = generateCodeExamples(endpoint, baseUrl, displayKey, pathParams);
+          const copyExamples = generateCodeExamples(endpoint, baseUrl, 'YOUR_API_KEY', pathParams);
           const requestExample =
             endpoint.requestBody?.example ??
             generateExampleFromSchema(endpoint.requestBody?.schema);

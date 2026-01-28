@@ -1,9 +1,9 @@
 import { memo, useState } from 'react';
-import { Modal, Button, Input, Table, Popconfirm, message, Space } from 'antd';
+import { Modal, Button, Input, message } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, CopyOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useApiKeys } from '../hooks/use-api-keys';
-import dayjs from 'dayjs';
+import './api-key-modal.scss';
 
 interface ApiKeyModalProps {
   open: boolean;
@@ -12,11 +12,11 @@ interface ApiKeyModalProps {
 
 export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
   const { t } = useTranslation();
-  const { apiKeys, loading, createApiKey, renameApiKey, deleteApiKey } = useApiKeys();
+  const { apiKeys, loading, createApiKey, deleteApiKey } = useApiKeys();
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [renameModalOpen, setRenameModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [keyToDelete, setKeyToDelete] = useState<{ keyId: string; name: string } | null>(null);
   const [newKeyName, setNewKeyName] = useState('');
-  const [renamingKey, setRenamingKey] = useState<{ keyId: string; name: string } | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
 
   const handleCreate = async () => {
@@ -35,165 +35,185 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
     }
   };
 
-  const handleRename = async () => {
-    if (!renamingKey || !renamingKey.name.trim()) {
-      message.error(t('webhook.apiKey.nameRequired'));
-      return;
-    }
-
-    try {
-      await renameApiKey(renamingKey.keyId, renamingKey.name.trim());
-      setRenameModalOpen(false);
-      setRenamingKey(null);
-      message.success(t('webhook.apiKey.renameSuccess'));
-    } catch (_error) {
-      message.error(t('webhook.apiKey.renameFailed'));
-    }
+  const handleCopyKey = (key: string) => {
+    navigator.clipboard.writeText(key);
+    message.success(t('common.copied'));
   };
 
-  const handleDelete = async (keyId: string) => {
+  const handleDeleteClick = (keyId: string, name: string) => {
+    setKeyToDelete({ keyId, name });
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!keyToDelete) return;
+
     try {
-      await deleteApiKey(keyId);
+      await deleteApiKey(keyToDelete.keyId);
       message.success(t('webhook.apiKey.deleteSuccess'));
+      setDeleteModalOpen(false);
+      setKeyToDelete(null);
     } catch (_error) {
       message.error(t('webhook.apiKey.deleteFailed'));
     }
   };
 
-  const columns = [
-    {
-      title: t('webhook.apiKey.name'),
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: t('webhook.apiKey.prefix'),
-      dataIndex: 'keyPrefix',
-      key: 'keyPrefix',
-      render: (prefix: string) => <code>{prefix}...</code>,
-    },
-    {
-      title: t('webhook.apiKey.createdAt'),
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
-    },
-    {
-      title: t('webhook.apiKey.lastUsedAt'),
-      dataIndex: 'lastUsedAt',
-      key: 'lastUsedAt',
-      render: (date: string | null) => (date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'),
-    },
-    {
-      title: t('common.actions'),
-      key: 'actions',
-      render: (_: any, record: any) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => {
-              setRenamingKey({ keyId: record.keyId, name: record.name });
-              setRenameModalOpen(true);
-            }}
-          >
-            {t('webhook.apiKey.rename')}
-          </Button>
-          <Popconfirm
-            title={t('webhook.apiKey.deleteConfirm')}
-            onConfirm={() => handleDelete(record.keyId)}
-            okText={t('common.confirm')}
-            cancelText={t('common.cancel')}
-          >
-            <Button size="small" danger icon={<DeleteOutlined />}>
-              {t('common.delete')}
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false);
+    setKeyToDelete(null);
+  };
+
+  const handleCloseCreateModal = () => {
+    setCreateModalOpen(false);
+    setNewKeyName('');
+    setCreatedKey(null);
+  };
 
   return (
     <>
+      {/* Main API Key Management Modal */}
       <Modal
-        title={t('webhook.apiKey.title')}
         open={open}
         onCancel={onClose}
         footer={null}
-        width={900}
+        title={t('webhook.apiKey.title')}
+        width={550}
         destroyOnClose
+        className="api-key-management-modal"
       >
-        <div style={{ marginBottom: 16 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalOpen(true)}>
+        <div className="api-key-modal-content">
+          <p className="api-key-modal-description">{t('webhook.apiKey.description')}</p>
+
+          {/* API Keys List */}
+          {apiKeys.length > 0 && (
+            <div className="api-key-list">
+              {/* List Header */}
+              <div className="api-key-list-header">
+                <span className="api-key-header-name">{t('webhook.apiKey.name')}</span>
+                <span className="api-key-header-key">{t('webhook.apiKey.listHeader')}</span>
+              </div>
+
+              {/* List Items */}
+              {apiKeys.map((apiKey, index) => (
+                <div
+                  key={apiKey.keyId}
+                  className={`api-key-list-item ${index < apiKeys.length - 1 ? 'has-border' : ''}`}
+                >
+                  <div className="api-key-info">
+                    <span className="api-key-name">{apiKey.name}</span>
+                    <span className="api-key-value">{apiKey.keyPrefix}...</span>
+                  </div>
+                  <div className="api-key-actions">
+                    <Button
+                      type="text"
+                      icon={<CopyOutlined />}
+                      onClick={() => handleCopyKey(apiKey.keyPrefix)}
+                      className="api-key-action-btn"
+                    />
+                    <Button
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleDeleteClick(apiKey.keyId, apiKey.name)}
+                      className="api-key-action-btn"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Create Button */}
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setCreateModalOpen(true)}
+            loading={loading}
+            className="api-key-create-btn"
+          >
             {t('webhook.apiKey.create')}
           </Button>
         </div>
-
-        <Table
-          columns={columns}
-          dataSource={apiKeys}
-          loading={loading}
-          rowKey="keyId"
-          pagination={{ pageSize: 10 }}
-        />
       </Modal>
 
       {/* Create API Key Modal */}
       <Modal
-        title={t('webhook.apiKey.create')}
         open={createModalOpen}
-        onOk={handleCreate}
-        onCancel={() => {
-          setCreateModalOpen(false);
-          setNewKeyName('');
-          setCreatedKey(null);
-        }}
-        okText={createdKey ? t('common.close') : t('common.create')}
-        cancelButtonProps={{ style: { display: createdKey ? 'none' : 'inline-block' } }}
+        onCancel={handleCloseCreateModal}
+        footer={null}
+        title={createdKey ? t('webhook.apiKey.keyCreated') : t('webhook.apiKey.create')}
+        width={480}
+        destroyOnClose
+        className="api-key-create-modal"
       >
-        {createdKey ? (
-          <div>
-            <p style={{ color: 'var(--refly-func-warning-default)', marginBottom: 12 }}>
-              {t('webhook.apiKey.copyWarning')}
-            </p>
-            <Input.TextArea
-              value={createdKey}
-              readOnly
-              autoSize={{ minRows: 3, maxRows: 3 }}
-              style={{ fontFamily: 'monospace' }}
-            />
-          </div>
-        ) : (
-          <Input
-            placeholder={t('webhook.apiKey.namePlaceholder')}
-            value={newKeyName}
-            onChange={(e) => setNewKeyName(e.target.value)}
-            onPressEnter={handleCreate}
-          />
-        )}
+        <div className="api-key-modal-content">
+          {createdKey ? (
+            <>
+              <div className="api-key-display">
+                <span className="api-key-display-value">{createdKey}</span>
+                <Button
+                  type="text"
+                  icon={<CopyOutlined />}
+                  onClick={() => handleCopyKey(createdKey)}
+                  className="api-key-display-copy"
+                />
+              </div>
+              <div className="api-key-modal-footer">
+                <Button type="primary" onClick={handleCloseCreateModal}>
+                  {t('common.close')}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="api-key-form-field">
+                <label className="api-key-form-label">{t('webhook.apiKey.name')}</label>
+                <Input
+                  placeholder={t('webhook.apiKey.namePlaceholder')}
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  onPressEnter={handleCreate}
+                  className="api-key-input"
+                />
+              </div>
+              <div className="api-key-modal-footer">
+                <Button onClick={handleCloseCreateModal}>{t('common.cancel')}</Button>
+                <Button type="primary" onClick={handleCreate} loading={loading}>
+                  {t('common.create')}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </Modal>
 
-      {/* Rename API Key Modal */}
+      {/* Delete Confirmation Modal */}
       <Modal
-        title={t('webhook.apiKey.rename')}
-        open={renameModalOpen}
-        onOk={handleRename}
-        onCancel={() => {
-          setRenameModalOpen(false);
-          setRenamingKey(null);
-        }}
-        okText={t('common.confirm')}
-        cancelText={t('common.cancel')}
+        open={deleteModalOpen}
+        onCancel={handleDeleteCancel}
+        footer={null}
+        title={t('webhook.apiKey.deleteTitle')}
+        width={480}
+        destroyOnClose
+        className="api-key-delete-modal"
       >
-        <Input
-          placeholder={t('webhook.apiKey.namePlaceholder')}
-          value={renamingKey?.name || ''}
-          onChange={(e) =>
-            setRenamingKey(renamingKey ? { ...renamingKey, name: e.target.value } : null)
-          }
-          onPressEnter={handleRename}
-        />
+        <div className="api-key-delete-content">
+          <p className="api-key-delete-description">{t('webhook.apiKey.deleteDescription')}</p>
+        </div>
+
+        <div className="api-key-delete-footer">
+          <Button onClick={handleDeleteCancel} className="api-key-delete-cancel-btn">
+            {t('common.cancel')}
+          </Button>
+          <Button
+            danger
+            type="primary"
+            onClick={handleDeleteConfirm}
+            loading={loading}
+            className="api-key-delete-confirm-btn"
+          >
+            {t('common.delete')}
+          </Button>
+        </div>
       </Modal>
     </>
   );

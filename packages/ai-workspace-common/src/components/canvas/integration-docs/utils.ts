@@ -14,8 +14,13 @@ export const getApiBaseUrl = (baseUrl: string) => {
   return `${origin}${baseUrl.startsWith('/') ? baseUrl : `/${baseUrl}`}`;
 };
 
-export const formatPathWithPlaceholders = (path: string) => {
-  return path.replace(/\{([^}]+)\}/g, (_match, name) => `YOUR_${toUpperSnake(name)}`);
+export const formatPathWithPlaceholders = (path: string, params?: Record<string, string>) => {
+  return path.replace(/\{([^}]+)\}/g, (_match, name) => {
+    if (params?.[name]) {
+      return params[name];
+    }
+    return `YOUR_${toUpperSnake(name)}`;
+  });
 };
 
 export const generateExampleFromSchema = (schema?: SchemaObject | null): unknown => {
@@ -67,8 +72,9 @@ export const generateCodeExamples = (
   endpoint: ApiEndpoint,
   baseUrl: string,
   apiKey?: string,
+  pathParams?: Record<string, string>,
 ): CodeExamples => {
-  const url = `${baseUrl}${formatPathWithPlaceholders(endpoint.path)}`;
+  const url = `${baseUrl}${formatPathWithPlaceholders(endpoint.path, pathParams)}`;
   const bodyExample =
     endpoint.requestBody?.example ?? generateExampleFromSchema(endpoint.requestBody?.schema);
   const hasBody = endpoint.method !== 'GET' && bodyExample !== null && bodyExample !== undefined;

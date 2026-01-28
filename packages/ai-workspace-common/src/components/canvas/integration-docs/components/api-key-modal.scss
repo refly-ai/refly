@@ -1,0 +1,310 @@
+// API Key Management Modal
+.api-key-management-modal,
+.api-key-create-modal,
+.api-key-delete-modal {
+  .ant-modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+  }
+
+  .ant-modal-header {
+    height: 34px;
+  }
+
+  .ant-modal-body {
+    border-top: 1px solid var(--refly-line);
+    padding: 16px 0px;
+  }
+
+  // Override primary button styles
+  .ant-btn-primary {
+    background: var(--refly-text-0) !important;
+    border-color: var(--refly-text-0) !important;
+    color: var(--refly-bg-content-z2) !important;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+
+    &:hover {
+      background: var(--refly-text-1) !important;
+      border-color: var(--refly-text-1) !important;
+      color: var(--refly-bg-content-z2) !important;
+    }
+
+    &:active {
+      background: var(--refly-text-0) !important;
+      border-color: var(--refly-text-0) !important;
+      color: var(--refly-bg-content-z2) !important;
+    }
+
+    &:disabled {
+      background: var(--refly-text-3) !important;
+      border-color: var(--refly-text-3) !important;
+      color: var(--refly-bg-content-z2) !important;
+      opacity: 0.5;
+    }
+  }
+}
+
+.api-key-modal-description {
+  font-size: 14px;
+  color: var(--refly-text-2);
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+// API Keys List
+.api-key-list {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: var(--refly-bg-control-z0);
+  overflow: hidden;
+}
+
+.api-key-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--refly-line);
+    opacity: 0.3;
+  }
+
+  .api-key-header-name {
+    flex: 1;
+    font-size: 14px;
+    color: var(--refly-text-2);
+  }
+
+  .api-key-header-key {
+    flex: 1;
+    font-size: 14px;
+    color: var(--refly-text-2);
+  }
+}
+
+.api-key-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  position: relative;
+
+  &.has-border::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--refly-line);
+    opacity: 0.3;
+  }
+}
+
+.api-key-info {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+}
+
+.api-key-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--refly-text-0);
+}
+
+.api-key-value {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--refly-text-0);
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.api-key-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.api-key-action-btn {
+  color: var(--refly-text-1);
+  padding: 4px;
+
+  &:hover {
+    color: var(--refly-text-0);
+    background: transparent;
+  }
+
+  .anticon {
+    font-size: 18px;
+  }
+}
+
+// Create Button
+.api-key-create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  .anticon {
+    font-size: 14px;
+  }
+}
+
+// Create Modal Specific Styles
+.api-key-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--refly-bg-control-z1);
+  border: 1px solid var(--refly-line);
+  margin-bottom: 16px;
+}
+
+.api-key-display-value {
+  flex: 1;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  color: var(--refly-text-0);
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+.api-key-display-copy {
+  flex-shrink: 0;
+  color: var(--refly-text-1);
+  padding: 4px;
+
+  &:hover {
+    color: var(--refly-text-0);
+    background: transparent;
+  }
+
+  .anticon {
+    font-size: 16px;
+  }
+}
+
+.api-key-form-field {
+  margin-bottom: 16px;
+}
+
+.api-key-form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--refly-text-0);
+  margin-bottom: 8px;
+}
+
+.api-key-input {
+  &.ant-input {
+    height: 40px;
+    border-radius: 8px;
+    background: var(--refly-bg-content-z1);
+    border-color: var(--refly-line);
+    color: var(--refly-text-0);
+
+    &:focus,
+    &:hover {
+      border-color: var(--refly-text-0);
+    }
+
+    &::placeholder {
+      color: var(--refly-text-3);
+    }
+  }
+}
+
+.api-key-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+
+  .ant-btn {
+    height: 40px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0 20px;
+  }
+
+  .ant-btn:not(.ant-btn-primary) {
+    background: var(--refly-bg-content-z1);
+    border-color: var(--refly-line);
+    color: var(--refly-text-0);
+
+    &:hover {
+      background: var(--refly-bg-content-z0);
+      border-color: var(--refly-text-0);
+    }
+  }
+}
+
+// Delete Modal Specific Styles
+.api-key-delete-content {
+  margin: 0 0 24px 0;
+}
+
+.api-key-delete-description {
+  font-size: 14px;
+  color: var(--refly-text-2);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.api-key-delete-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.api-key-delete-cancel-btn,
+.api-key-delete-confirm-btn {
+  height: 32px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 20px;
+}
+
+.api-key-delete-cancel-btn {
+  background: var(--refly-bg-content-z1);
+  border: 1px solid var(--refly-line);
+  color: var(--refly-text-0);
+
+  &:hover {
+    background: var(--refly-bg-content-z0);
+    border-color: var(--refly-text-0);
+  }
+}
+
+.api-key-delete-confirm-btn {
+  background: var(--refly-func-error-default);
+  border-color: var(--refly-func-error-default);
+
+  &:hover {
+    background: var(--refly-func-error-hover);
+    border-color: var(--refly-func-error-hover);
+  }
+}

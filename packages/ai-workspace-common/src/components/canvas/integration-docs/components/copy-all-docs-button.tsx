@@ -25,6 +25,7 @@ const buildEndpointMarkdown = (
   endpoint: ApiEndpoint,
   baseUrl: string,
   t: (key: string) => string,
+  pathParams?: Record<string, string>,
 ) => {
   const lines: string[] = [];
   lines.push(`### ${endpoint.summary || endpoint.operationId}`);
@@ -101,7 +102,7 @@ const buildEndpointMarkdown = (
 
   lines.push('');
   lines.push(`#### ${t('integration.api.codeExamplesTitle')}`);
-  const examples = generateCodeExamples(endpoint, baseUrl, 'YOUR_API_KEY');
+  const examples = generateCodeExamples(endpoint, baseUrl, 'YOUR_API_KEY', pathParams);
   lines.push('```bash');
   lines.push(examples.curl);
   lines.push('```');
@@ -115,9 +116,15 @@ const buildEndpointMarkdown = (
   return lines.join('\n');
 };
 
-const buildApiDocsMarkdown = (t: (key: string) => string) => {
+const buildApiDocsMarkdown = (t: (key: string) => string, canvasId: string) => {
   const lines: string[] = [];
   const baseUrl = getApiBaseUrl(apiDocsData.baseUrl);
+  const pathParams = { canvasId };
+
+  // Filter out internal endpoints and webhook endpoints, only show API endpoints
+  const publicEndpoints = apiDocsData.endpoints.filter(
+    (endpoint) => endpoint.path.startsWith('/openapi/') && !endpoint.path.includes('/webhook/'),
+  );
 
   lines.push(`# ${t('integration.api.title')}`);
   lines.push('');
@@ -126,17 +133,11 @@ const buildApiDocsMarkdown = (t: (key: string) => string) => {
   lines.push(`## ${t('integration.api.overviewTitle')}`);
   lines.push(t('integration.api.overviewDescription'));
   lines.push('');
-  lines.push(`## ${t('integration.api.authTitle')}`);
-  lines.push(t('integration.api.authDescription'));
-  lines.push('```text');
-  lines.push(t('integration.api.authHeader'));
-  lines.push('```');
-  lines.push('');
   lines.push(`## ${t('integration.api.endpointsTitle')}`);
 
-  apiDocsData.endpoints.forEach((endpoint) => {
+  publicEndpoints.forEach((endpoint) => {
     lines.push('');
-    lines.push(buildEndpointMarkdown(endpoint, baseUrl, t));
+    lines.push(buildEndpointMarkdown(endpoint, baseUrl, t, pathParams));
   });
 
   lines.push('');
@@ -228,7 +229,7 @@ export const CopyAllDocsButton = memo(({ activeIntegration, canvasId }: CopyAllD
     try {
       let markdown = '';
       if (activeIntegration === 'api') {
-        markdown = buildApiDocsMarkdown(t);
+        markdown = buildApiDocsMarkdown(t, canvasId);
       } else if (activeIntegration === 'webhook') {
         markdown = await buildWebhookDocsMarkdown(canvasId, t);
       } else {

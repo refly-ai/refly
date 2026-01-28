@@ -1,6 +1,7 @@
 .integration-docs-modal-wrap {
   position: absolute;
   inset: 0;
+  height: 100vh;
 }
 
 .integration-docs-modal {
@@ -35,9 +36,10 @@
   top: 0;
   padding: 0;
   max-width: none;
+  height: 100vh;
 
   .ant-modal-content {
-    height: 100%;
+    height: 100vh;
     width: 100%;
     padding: 0;
     border-radius: 0;
@@ -46,19 +48,48 @@
   }
 
   .ant-modal-body {
-    height: 100%;
+    height: 100vh;
     padding: 0;
+    overflow: hidden;
+  }
+
+  // Override primary button styles
+  .ant-btn-primary {
+    background: var(--refly-text-0) !important;
+    border-color: var(--refly-text-0) !important;
+    color: var(--refly-bg-content-z2) !important;
+
+    &:hover {
+      background: var(--refly-text-1) !important;
+      border-color: var(--refly-text-1) !important;
+      color: var(--refly-bg-content-z2) !important;
+    }
+
+    &:active {
+      background: var(--refly-text-0) !important;
+      border-color: var(--refly-text-0) !important;
+      color: var(--refly-bg-content-z2) !important;
+    }
+
+    &:disabled {
+      background: var(--refly-text-3) !important;
+      border-color: var(--refly-text-3) !important;
+      color: var(--refly-bg-content-z2) !important;
+      opacity: 0.5;
+    }
   }
 }
 
 .integration-docs-layout {
   display: flex;
+  flex-direction: row;
   height: 100%;
   width: 100%;
   background: var(--integration-docs-bg);
+  overflow: hidden;
 }
 
-// Left navigation sidebar
+// Left navigation sidebar - full height
 .integration-docs-nav {
   width: 220px;
   padding: 20px 16px;
@@ -67,6 +98,50 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+// Right wrapper - contains toolbar and content area
+.integration-docs-right-wrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// Toolbar - spans right area width
+.integration-docs-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--integration-docs-border);
+  background: var(--integration-docs-toolbar-bg);
+  backdrop-filter: blur(8px);
+  flex-shrink: 0;
+  z-index: 3;
+}
+
+.integration-docs-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.integration-docs-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+// Body wrapper - contains main content and right toc
+.integration-docs-body-wrapper {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .integration-docs-nav-title {
@@ -106,8 +181,8 @@
   }
 
   &.is-active {
-    background: var(--integration-docs-primary-bg);
-    color: var(--integration-docs-primary-text);
+    background: var(--refly-tertiary-hover);
+    color: var(--integration-docs-text-1);
     font-weight: 500;
   }
 
@@ -122,6 +197,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   background: linear-gradient(
     180deg,
     var(--integration-docs-bg) 0%,
@@ -129,34 +206,11 @@
   );
 }
 
-.integration-docs-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 24px;
-  border-bottom: 1px solid var(--integration-docs-border);
-  background: var(--integration-docs-toolbar-bg);
-  backdrop-filter: blur(8px);
-  position: sticky;
-  top: 0;
-  z-index: 3;
-}
-
-.integration-docs-toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.integration-docs-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .integration-docs-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   scroll-behavior: smooth;
 }
 
@@ -191,11 +245,8 @@
   border-left: 1px solid var(--integration-docs-border);
   background: var(--integration-docs-bg);
   flex-shrink: 0;
-  position: sticky;
-  top: 12px;
-  align-self: flex-start;
-  max-height: calc(100vh - 24px);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .integration-docs-toc-title {
@@ -302,10 +353,12 @@
     overflow-x: auto;
     font-size: 13px;
     line-height: 1.6;
+    background: transparent;
 
     code {
       color: var(--integration-docs-code-text);
       font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      background: transparent;
     }
   }
 }

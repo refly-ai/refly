@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-01-27T15:05:34.116Z',
+  generatedAt: '2026-01-28T03:54:12.420Z',
   baseUrl: '/v1',
   endpoints: [
     {
