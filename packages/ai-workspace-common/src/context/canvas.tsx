@@ -281,6 +281,16 @@ export const CanvasProvider = ({
     (canvasId: string, conflict: VersionConflict): Promise<'local' | 'remote'> => {
       const { localState, remoteState } = conflict;
 
+      // Check if local has unsynced changes (transactions that haven't been synced to server)
+      const localTransactions = localState.transactions ?? [];
+      const hasLocalChanges = localTransactions.length > 0;
+
+      // If no local changes, automatically use remote version (e.g., CLI updated the canvas)
+      if (!hasLocalChanges) {
+        return Promise.resolve('remote');
+      }
+
+      // Local has changes, show conflict dialog for user to choose
       const localModifiedTs = getLastTransaction(localState)?.createdAt ?? localState.updatedAt;
       const remoteModifiedTs = getLastTransaction(remoteState)?.createdAt ?? remoteState.updatedAt;
 
