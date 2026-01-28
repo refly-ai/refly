@@ -998,7 +998,7 @@ export class SkillPackageService {
       );
     }
 
-    const wordCount = description.trim().split(/\s+/).length;
+    const wordCount = this.countWords(description);
     if (wordCount < MIN_WORD_COUNT) {
       const example = this.generateDescriptionExample(skillName, workflowQuery);
       throwCliError(
@@ -1029,6 +1029,34 @@ export class SkillPackageService {
     }
 
     return `${baseName} automation and processing. Use when Claude needs to: (1) [describe primary use case], (2) [describe secondary use case], or [general catch-all scenario].`;
+  }
+
+  /**
+   * Count words in a string, handling both CJK (Chinese/Japanese/Korean) and Western text.
+   * CJK characters are counted individually (each character = 1 word unit).
+   * Western words are counted by splitting on whitespace.
+   */
+  private countWords(text: string): number {
+    if (!text || !text.trim()) {
+      return 0;
+    }
+
+    const trimmed = text.trim();
+
+    // CJK character ranges: Chinese, Japanese Hiragana/Katakana, Korean Hangul
+    const cjkRegex =
+      /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g;
+
+    // Count CJK characters (each character = 1 word unit)
+    const cjkMatches = trimmed.match(cjkRegex);
+    const cjkCount = cjkMatches ? cjkMatches.length : 0;
+
+    // Remove CJK characters and count remaining words by whitespace
+    const nonCjkText = trimmed.replace(cjkRegex, ' ').trim();
+    const nonCjkWords = nonCjkText.split(/\s+/).filter((word) => word.length > 0);
+    const nonCjkCount = nonCjkWords.length;
+
+    return cjkCount + nonCjkCount;
   }
 
   /**
