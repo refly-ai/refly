@@ -56,15 +56,6 @@ export class SandboxService {
   @Config.integer('sandbox.s3.overlap.port', 0)
   private readonly s3OverlapPort: number;
 
-  @Config.string('sandbox.anthropic.authToken', '')
-  private readonly anthropicAuthToken: string;
-
-  @Config.string('sandbox.anthropic.apiKey', '')
-  private readonly anthropicApiKey: string;
-
-  @Config.string('sandbox.anthropic.baseUrl', '')
-  private readonly anthropicBaseUrl: string;
-
   constructor(
     private readonly config: ConfigService,
     private readonly client: SandboxClient,
@@ -85,16 +76,10 @@ export class SandboxService {
 
       const storagePath = this.driveService.buildS3DrivePath(user.uid, canvasId);
       const s3Config = this.buildS3Config();
-      const s3LibConfig = this.buildS3LibConfig(s3Config);
+      const s3LibConfig = this.buildS3LibConfig();
       const requestEnv = (request.context as { env?: Record<string, string> } | undefined)?.env;
-      const fixedEnv = {
-        ...(this.anthropicAuthToken ? { ANTHROPIC_AUTH_TOKEN: this.anthropicAuthToken } : {}),
-        ...(this.anthropicApiKey ? { ANTHROPIC_API_KEY: this.anthropicApiKey } : {}),
-        ...(this.anthropicBaseUrl ? { ANTHROPIC_BASE_URL: this.anthropicBaseUrl } : {}),
-      };
       const env = {
         ...requestEnv,
-        ...fixedEnv,
         REFLY_EXECUTOR_SLIM_INVOKER: 'refly-api',
       };
 
@@ -143,18 +128,16 @@ export class SandboxService {
     }
   }
 
-  private buildS3LibConfig(s3Config: S3Config): S3LibConfig | undefined {
+  private buildS3LibConfig(): S3LibConfig | undefined {
     if (!this.s3LibEnabled || !this.s3LibPathPrefix || !this.s3LibHash) return undefined;
 
     const normalizedPrefix = this.s3LibPathPrefix.replace(/\/+$/, '');
-    const endpoint = this.buildS3Endpoint(s3Config);
 
     return {
-      ...(endpoint ? { endpoint } : {}),
-      accessKey: s3Config.accessKey,
-      secretKey: s3Config.secretKey,
-      bucket: s3Config.bucket,
-      region: s3Config.region,
+      accessKey: this.s3Config.accessKey,
+      secretKey: this.s3Config.secretKey,
+      bucket: this.s3Config.bucket,
+      region: this.s3Config.region,
       path: `${normalizedPrefix}/${this.s3LibHash}`,
       hash: this.s3LibHash,
       cache: this.s3LibCache,
@@ -177,26 +160,6 @@ export class SandboxService {
       ...(this.s3OverlapEndpoint ? { endPoint: this.s3OverlapEndpoint } : {}),
       ...(this.s3OverlapPort ? { port: this.s3OverlapPort } : {}),
     };
-  }
-
-  private buildS3Endpoint(
-    s3Config: Partial<{ endPoint: string; port: number; useSSL: boolean }>,
-  ): string {
-    const endPoint = s3Config.endPoint;
-    if (!endPoint) return '';
-    if (endPoint.startsWith('http://') || endPoint.startsWith('https://')) {
-      return endPoint;
-    }
-
-    const scheme = s3Config.useSSL ? 'https' : 'http';
-    const port = s3Config.port;
-    const includePort =
-      port &&
-      !Number.isNaN(port) &&
-      !(scheme === 'http' && port === 80) &&
-      !(scheme === 'https' && port === 443);
-
-    return includePort ? `${scheme}://${endPoint}:${port}` : `${scheme}://${endPoint}`;
   }
 
   private async registerFiles(

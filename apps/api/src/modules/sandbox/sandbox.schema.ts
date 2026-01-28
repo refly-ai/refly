@@ -24,7 +24,6 @@ export const S3ConfigSchema = z.object({
 export type S3Config = z.infer<typeof S3ConfigSchema>;
 
 export const S3LibConfigSchema = z.object({
-  endpoint: z.string().optional(),
   accessKey: z.string().optional(),
   secretKey: z.string().optional(),
   bucket: z.string(),
@@ -36,19 +35,6 @@ export const S3LibConfigSchema = z.object({
 });
 
 export type S3LibConfig = z.infer<typeof S3LibConfigSchema>;
-
-const SkillLibConfigSchema = z.object({
-  endpoint: z.string(),
-  bucket: z.string(),
-  region: z.string(),
-  path: z.string(),
-  hash: z.string(),
-  accessKey: z.string().optional(),
-  secretKey: z.string().optional(),
-  ak_enc: z.string().optional(),
-  sk_enc: z.string().optional(),
-  reset: z.boolean().optional(),
-});
 
 /**
  * Resource limits for code execution
@@ -71,7 +57,6 @@ const ExecuteConfigSchema = z
     codeSizeThreshold: z.number().int().positive().optional(),
     templateName: z.string().optional(),
     autoPauseDelay: z.number().int().positive().optional(),
-    skillLibConfig: SkillLibConfigSchema.optional(),
   })
   .passthrough();
 
@@ -82,7 +67,7 @@ const ExecuteMetadataSchema = z
   })
   .passthrough();
 
-const LanguageSchema = z.enum(['python', 'javascript', 'shell', 'skill']);
+const LanguageSchema = z.enum(['python', 'javascript', 'shell']);
 
 /**
  * Worker execution request - sent to sandbox-execute-request queue

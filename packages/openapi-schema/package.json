@@ -6,7 +6,7 @@
   "types": "src/index.ts",
   "scripts": {
     "dev": "nodemon",
-    "codegen": "openapi-ts --input ./schema.yml --output ./src --client @hey-api/client-fetch && tsc --build --verbose",
+    "codegen": "openapi-ts && tsc --build --verbose",
     "clean": "rimraf dist && rimraf tsconfig.tsbuildinfo",
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "tsc --build --verbose"
