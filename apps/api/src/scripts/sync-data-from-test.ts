@@ -27,6 +27,7 @@ interface SyncConfig {
   table: string; // Database table name (e.g., 'toolsets')
   where: any;
   encryptedFields?: string[]; // Optional: list of fields that need decryption and re-encryption
+  labelField?: string; // Field used as human-readable label in debug logs (e.g., 'name', 'key')
 }
 
 const SYNC_CONFIGS: SyncConfig[] = [
@@ -34,11 +35,13 @@ const SYNC_CONFIGS: SyncConfig[] = [
     table: 'toolsets', // Database table name
     where: { key: 'perplexity' },
     encryptedFields: ['authData'],
+    labelField: 'key',
   },
   {
     table: 'providers', // Global providers
     where: { isGlobal: true },
     encryptedFields: ['apiKey'],
+    labelField: 'providerId',
   },
   {
     table: 'provider_items', // Provider items for global providers
@@ -47,6 +50,7 @@ const SYNC_CONFIGS: SyncConfig[] = [
         isGlobal: true,
       },
     },
+    labelField: 'name',
   },
 ];
 
@@ -390,8 +394,9 @@ async function syncData() {
         for (const record of sourceData) {
           try {
             // Get a unique identifier for logging (try common fields)
-            const _recordId =
-              record.toolsetId || record.id || record.uuid || record.key || record.pk;
+            const recordLabel = config.labelField
+              ? record[config.labelField]
+              : record.name || record.key || record.id;
 
             // Create a copy of the record for transformation
             const transformedRecord = { ...record };
@@ -407,6 +412,11 @@ async function syncData() {
                   logger.warn(`     ⚠️  Failed to decrypt field: ${field}, skipping re-encryption`);
                   continue;
                 }
+
+                // [TEMP DEBUG] Print decrypted value to terminal
+                logger.log(
+                  `     🔑 [${config.table}] ${recordLabel} | ${field} (decrypted): ${decrypted}`,
+                );
 
                 // Re-encrypt using target key
                 const reencrypted = targetEncryption.encrypt(decrypted);
