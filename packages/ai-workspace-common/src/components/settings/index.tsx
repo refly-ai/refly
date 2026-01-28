@@ -7,6 +7,8 @@ import { AccountSetting } from '@refly-packages/ai-workspace-common/components/s
 import { LanguageSetting } from '@refly-packages/ai-workspace-common/components/settings/language-setting';
 import { AppearanceSetting } from '@refly-packages/ai-workspace-common/components/settings/appearance-setting';
 import { Subscription } from '@refly-packages/ai-workspace-common/components/settings/subscription';
+import { ModelConfig } from '@refly-packages/ai-workspace-common/components/settings/model-config';
+import { ModelProviders } from '@refly-packages/ai-workspace-common/components/settings/model-providers';
 
 import './index.scss';
 import {
@@ -15,6 +17,8 @@ import {
   Account,
   Language,
   InterfaceLight,
+  AIModel,
+  Provider,
 } from 'refly-icons';
 
 import { subscriptionEnabled } from '@refly/ui-kit';
@@ -128,33 +132,26 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
 
   const tabs = useMemo(
     () => [
-      // {
-      //   key: 'modelConfig',
-      //   label: t('settings.tabs.modelConfig'),
-      //   icon: <AIModel size={18} color="var(--refly-text-0)" />,
-      //   children: <ModelConfig visible={localActiveTab === SettingsModalActiveTab.ModelConfig} />,
-      // },
-      // ...(providerMode === 'custom'
-      //   ? [
-      //       {
-      //         key: 'modelProviders',
-      //         label: t('settings.tabs.providers'),
-      //         icon: <Provider size={18} color="var(--refly-text-0)" />,
-      //         children: (
-      //           <ModelProviders
-      //             visible={localActiveTab === SettingsModalActiveTab.ModelProviders}
-      //           />
-      //         ),
-      //       },
-      //     ]
-      //   : []),
-      // {
-      //   key: 'parserConfig',
-      //   label: t('settings.tabs.parserConfig'),
-      //   icon: <Parse size={18} color="var(--refly-text-0)" />,
-      //   children: <ParserConfig visible={localActiveTab === SettingsModalActiveTab.ParserConfig} />,
-      // },
-
+      {
+        key: 'modelConfig',
+        label: t('settings.tabs.modelConfig'),
+        icon: <AIModel size={18} color="var(--refly-text-0)" />,
+        children: <ModelConfig visible={localActiveTab === SettingsModalActiveTab.ModelConfig} />,
+      },
+      ...(providerMode === 'custom'
+        ? [
+            {
+              key: 'modelProviders',
+              label: t('settings.tabs.providers'),
+              icon: <Provider size={18} color="var(--refly-text-0)" />,
+              children: (
+                <ModelProviders
+                  visible={localActiveTab === SettingsModalActiveTab.ModelProviders}
+                />
+              ),
+            },
+          ]
+        : []),
       {
         key: 'account',
         label: t('settings.tabs.account'),
