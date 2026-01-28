@@ -37,7 +37,7 @@ export const S3LibConfigSchema = z.object({
 
 export type S3LibConfig = z.infer<typeof S3LibConfigSchema>;
 
-export const SkillLibConfigSchema = z.object({
+const SkillLibConfigSchema = z.object({
   endpoint: z.string(),
   bucket: z.string(),
   region: z.string(),
@@ -49,8 +49,6 @@ export const SkillLibConfigSchema = z.object({
   sk_enc: z.string().optional(),
   reset: z.boolean().optional(),
 });
-
-export type SkillLibConfig = z.infer<typeof SkillLibConfigSchema>;
 
 /**
  * Resource limits for code execution

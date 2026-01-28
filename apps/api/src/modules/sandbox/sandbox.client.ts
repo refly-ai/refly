@@ -94,8 +94,6 @@ export class SandboxClient {
       },
     };
 
-    this.logger.info({ request }, 'Sandbox request payload');
-
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
