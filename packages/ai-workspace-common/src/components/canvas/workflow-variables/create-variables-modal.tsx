@@ -47,6 +47,8 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
 
     // Watch the required field to pass to ResourceTypeForm
     const isRequired = Form.useWatch('required', form) ?? true;
+    // Watch the isSingle field to pass to ResourceTypeForm (default: false = multiple files)
+    const isSingle = Form.useWatch('isSingle', form) ?? false;
 
     const title = useMemo(() => {
       if (disableChangeVariableType) {
@@ -83,7 +85,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       uploading,
       handleFileUpload: uploadFile,
       handleRefreshFile: refreshFile,
-    } = useFileUpload();
+    } = useFileUpload(10); // Support up to 10 files
 
     const {
       options,
@@ -163,7 +165,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
               selectedValue: selectedValue,
               description: defaultValue.description || '',
               required: defaultValue.required ?? true,
-              isSingle: defaultValue.isSingle ?? true,
+              isSingle: defaultValue.isSingle ?? false,
               options: defaultValue.options || [],
             };
 
@@ -295,13 +297,15 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
             url: result.storageKey, // Store storageKey in url field
           };
 
-          const newFileList = [...fileList, newFile];
+          // For single file mode, replace the file list; for multi-file mode, append
+          const currentIsSingle = form.getFieldValue('isSingle') ?? false;
+          const newFileList = currentIsSingle ? [newFile] : [...fileList, newFile];
           handleFileListChange(newFileList);
           return false; // Prevent default upload behavior
         }
         return false;
       },
-      [fileList, handleFileListChange, uploadFile],
+      [fileList, handleFileListChange, uploadFile, form],
     );
 
     const handleFileRemove = useCallback(
@@ -540,7 +544,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
           required: values.required,
           ...(variableType === 'resource' && {
             resourceTypes: values.resourceTypes || RESOURCE_TYPE,
-            isSingle: true,
+            isSingle: values.isSingle ?? false,
             options: [],
           }),
           ...(variableType === 'option' && {
@@ -608,6 +612,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
               form={form}
               showError={showFileUploadError && fileList.length === 0}
               isRequired={isRequired}
+              isSingle={isSingle}
             />
           );
         case 'option':
@@ -700,7 +705,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
               onValuesChange={handleFormValuesChange}
               initialValues={{
                 required: true,
-                isSingle: true,
+                isSingle: false,
                 value: [{ type: 'text', text: '' }],
                 currentOption: '',
                 resourceTypes: RESOURCE_TYPE,
@@ -755,6 +760,20 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
                   </span>
                 </Checkbox>
               </Form.Item>
+              {variableType === 'resource' && (
+                <Form.Item
+                  name="isSingle"
+                  valuePropName="checked"
+                  getValueFromEvent={(checked) => !checked}
+                  getValueProps={(value) => ({ checked: !value })}
+                >
+                  <Checkbox className="required-checkbox">
+                    <span className="text-refly-text-0 text-sm font-semibold">
+                      {t('canvas.workflow.variables.allowMultipleFiles') || 'Allow multiple files'}
+                    </span>
+                  </Checkbox>
+                </Form.Item>
+              )}
             </Form>
           </div>
 

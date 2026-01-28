@@ -187,7 +187,9 @@ function processMention(
         if (variable.variableType === 'resource') {
           // Check if the resource variable has a value
           const hasValue =
-            variable.value && variable.value.length > 0 && variable.value[0]?.resource;
+            variable.value &&
+            variable.value.length > 0 &&
+            variable.value.some((v) => v.type === 'resource' && v.resource);
 
           if (!hasValue) {
             // Resource variable has no value - check if it's optional
@@ -292,12 +294,16 @@ function processMention(
         }
 
         // Update the updatedQuery with the correct resource name
-        const variableResourceName = matchingVariable.value[0]?.resource?.name ?? '';
+        const firstResource = matchingVariable.value.find(
+          (v) => v.type === 'resource' && v.resource,
+        );
+        const variableResourceName = firstResource?.resource?.name ?? '';
         const updatedMention = `@{type=resource,id=${id},name=${variableResourceName}}`;
         updatedQuery = updatedQuery.replace(match, updatedMention);
       }
 
-      const variableResourceName = matchingVariable.value[0]?.resource?.name ?? '';
+      const firstResource = matchingVariable.value.find((v) => v.type === 'resource' && v.resource);
+      const variableResourceName = firstResource?.resource?.name ?? '';
       return {
         replacement: formatMention({ type: 'file', name: variableResourceName, id }, mode),
         updatedQuery,
@@ -494,14 +500,20 @@ export const replaceResourceMentionsInQuery = (
     );
 
     // If a matching variable is found, update both entityId and name
-    if (matchingVariable?.value?.[0]?.resource) {
-      const resource = matchingVariable.value[0].resource;
-      // Use entityIdMap to get new entityId, fallback to resource's entityId
-      const newEntityId = entityIdMap[id] ?? resource.entityId;
-      // Use the resource's current name from the variable
-      const newName = resource.name;
+    if (matchingVariable) {
+      const matchingResource = matchingVariable.value?.find(
+        (v) => v.type === 'resource' && v.resource?.entityId === id,
+      );
 
-      return `@{type=resource,id=${newEntityId},name=${newName}}`;
+      if (matchingResource?.resource) {
+        const resource = matchingResource.resource;
+        // Use entityIdMap to get new entityId, fallback to resource's entityId
+        const newEntityId = entityIdMap[id] ?? resource.entityId;
+        // Use the resource's current name from the variable
+        const newName = resource.name;
+
+        return `@{type=resource,id=${newEntityId},name=${newName}}`;
+      }
     }
 
     // If no matching variable found, try to update only the entityId using entityIdMap
