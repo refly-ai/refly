@@ -19,12 +19,11 @@ interface WebhookDocsTabProps {
   toggling: boolean;
 }
 
-export const WebhookDocsTab = memo(
-  ({ canvasId, webhookConfig, onToggleWebhook, toggling }: WebhookDocsTabProps) => {
-    const { t } = useTranslation();
-    const apiOrigin = serverOrigin || window.location.origin;
-    const webhookUrl =
-      webhookConfig?.webhookUrl || `${apiOrigin}/v1/openapi/webhook/YOUR_WEBHOOK_ID/run`;
+export const WebhookDocsTab = memo(({ webhookConfig }: WebhookDocsTabProps) => {
+  const { t } = useTranslation();
+  const apiOrigin = serverOrigin || window.location.origin;
+  const webhookUrl =
+    webhookConfig?.webhookUrl || `${apiOrigin}/v1/openapi/webhook/YOUR_WEBHOOK_ID/run`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -101,89 +100,89 @@ print(response.json())`;
             <div className="flex gap-2">
               <Input value={webhookUrl} readOnly className="flex-1" />
               <Button icon={<Copy size={14} />} onClick={() => copyToClipboard(webhookUrl)}>
-                {t('common.copy')}
+                {t('common.copy.title')}
               </Button>
             </div>
           </section>
 
-      {/* Code Examples */}
-      <section id="webhook-examples" className="integration-docs-section">
-        <h3 className="integration-docs-section-title">{t('webhook.examples')}</h3>
-        <Tabs
-          items={[
-            {
-              key: 'curl',
-              label: 'cURL',
-              children: (
-                <div className="relative">
-                  <TextArea
-                    value={curlExample}
-                    readOnly
-                    autoSize={{ minRows: 3, maxRows: 6 }}
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    size="small"
-                    icon={<Copy size={12} />}
-                    className="absolute top-2 right-2"
-                    onClick={() => copyToClipboard(curlExample)}
-                  />
-                </div>
-              ),
-            },
-            {
-              key: 'python',
-              label: 'Python',
-              children: (
-                <div className="relative">
-                  <TextArea
-                    value={pythonExample}
-                    readOnly
-                    autoSize={{ minRows: 5, maxRows: 8 }}
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    size="small"
-                    icon={<Copy size={12} />}
-                    className="absolute top-2 right-2"
-                    onClick={() => copyToClipboard(pythonExample)}
-                  />
-                </div>
-              ),
-            },
-            {
-              key: 'javascript',
-              label: 'JavaScript',
-              children: (
-                <div className="relative">
-                  <TextArea
-                    value={javascriptExample}
-                    readOnly
-                    autoSize={{ minRows: 5, maxRows: 8 }}
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    size="small"
-                    icon={<Copy size={12} />}
-                    className="absolute top-2 right-2"
-                    onClick={() => copyToClipboard(javascriptExample)}
-                  />
-                </div>
-              ),
-            },
-          ]}
-        />
-      </section>
+          {/* Code Examples */}
+          <section id="webhook-examples" className="integration-docs-section">
+            <h3 className="integration-docs-section-title">{t('webhook.examples')}</h3>
+            <Tabs
+              items={[
+                {
+                  key: 'curl',
+                  label: 'cURL',
+                  children: (
+                    <div className="relative">
+                      <TextArea
+                        value={curlExample}
+                        readOnly
+                        autoSize={{ minRows: 3, maxRows: 6 }}
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        size="small"
+                        icon={<Copy size={12} />}
+                        className="absolute top-2 right-2"
+                        onClick={() => copyToClipboard(curlExample)}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  key: 'python',
+                  label: 'Python',
+                  children: (
+                    <div className="relative">
+                      <TextArea
+                        value={pythonExample}
+                        readOnly
+                        autoSize={{ minRows: 5, maxRows: 8 }}
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        size="small"
+                        icon={<Copy size={12} />}
+                        className="absolute top-2 right-2"
+                        onClick={() => copyToClipboard(pythonExample)}
+                      />
+                    </div>
+                  ),
+                },
+                {
+                  key: 'javascript',
+                  label: 'JavaScript',
+                  children: (
+                    <div className="relative">
+                      <TextArea
+                        value={javascriptExample}
+                        readOnly
+                        autoSize={{ minRows: 5, maxRows: 8 }}
+                        className="font-mono text-xs"
+                      />
+                      <Button
+                        size="small"
+                        icon={<Copy size={12} />}
+                        className="absolute top-2 right-2"
+                        onClick={() => copyToClipboard(javascriptExample)}
+                      />
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          </section>
 
-      {/* Usage Instructions */}
-      <section id="webhook-instructions" className="integration-docs-section">
-        <h3 className="integration-docs-section-title">{t('webhook.instructions')}</h3>
-        <ul className="list-disc list-inside space-y-2 text-sm text-gray-600">
-          <li>{t('webhook.instruction1')}</li>
-          <li>{t('webhook.instruction2')}</li>
-          <li>{t('webhook.instruction3')}</li>
-        </ul>
-      </section>
+          {/* Usage Instructions */}
+          <section id="webhook-instructions" className="integration-docs-section">
+            <h3 className="integration-docs-section-title">{t('webhook.instructions')}</h3>
+            <ul className="list-disc list-inside space-y-2 text-sm text-gray-600">
+              <li>{t('webhook.instruction1')}</li>
+              <li>{t('webhook.instruction2')}</li>
+              <li>{t('webhook.instruction3')}</li>
+            </ul>
+          </section>
         </>
       )}
     </div>

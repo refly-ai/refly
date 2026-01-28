@@ -79,6 +79,21 @@
       opacity: 0.5;
     }
   }
+
+  // Override Switch styles to match primary button color
+  .ant-switch {
+    &.ant-switch-checked {
+      background: var(--refly-text-0) !important;
+
+      &:hover:not(.ant-switch-disabled) {
+        background: var(--refly-text-1) !important;
+      }
+    }
+
+    &.ant-switch-loading {
+      opacity: 0.7;
+    }
+  }
 }
 
 .integration-docs-layout {
