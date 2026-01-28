@@ -1,40 +1,64 @@
-# Build stage
+# syntax=docker/dockerfile:1.4
+# NOTE: This Dockerfile requires Docker BuildKit (default since Docker 23.0)
+# For older Docker versions, build with: DOCKER_BUILDKIT=1 docker build ...
+# Or use: docker buildx build ...
+
+################################################################################
+# CACHE OPTIMIZATION STRATEGY:
+# 1. turbo prune: Automatically extracts only needed packages (no manual COPY!)
+# 2. pnpm fetch: Downloads packages using ONLY lockfile (most cacheable)
+# 3. pnpm install --offline: Instant since packages already fetched
+# 4. Prisma generate: Separate layer, changes rarely
+# 5. Build with turbo cache: Incremental builds via cache mount
+################################################################################
+
+# Stage 1: Pruner - extracts only the packages needed for @refly/api
+FROM node:20.19.1-alpine3.20 AS pruner
+RUN npm install -g turbo
+WORKDIR /app
+COPY . .
+RUN turbo prune @refly/api --docker
+
+# Stage 2: Builder - installs dependencies and builds
 FROM node:20.19.1-alpine3.20 AS builder
 WORKDIR /app
 
 # Install pnpm globally
 RUN npm install -g pnpm
 
-# Set environment variables to skip gyp-related installations
+# Set environment variables
 ENV npm_config_gyp_ignore=true
 ENV CYPRESS_INSTALL_BINARY=0
-
-# Set node options to increase memory limit
 ENV NODE_OPTIONS='--max_old_space_size=8192'
 
-# Copy all necessary files in one layer
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json turbo.json ./
-COPY apps/api/package.json ./apps/api/
+# Step 1: Fetch dependencies using ONLY the pruned lockfile
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm fetch
+
+# Step 2: Copy pruned package.json files (auto-generated, no manual list!)
+COPY --from=pruner /app/out/json/ .
+
+# Step 3: Install from cache (--offline makes this instant)
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --offline --ignore-scripts
+
+# Step 4: Copy full source code (pruned to only what's needed)
+COPY --from=pruner /app/out/full/ .
+
+# Step 5: Copy prisma schema and generate client
 COPY apps/api/prisma ./apps/api/prisma
-COPY packages/ ./packages/
+RUN cd apps/api && pnpm exec prisma generate
 
-# Install dependencies with workspace support
-RUN pnpm install --ignore-scripts
+# Step 6: Build with turbo cache mount
+COPY turbo.json ./
+RUN --mount=type=cache,id=turbo,target=/app/.turbo \
+    pnpm build:api
 
-# Copy remaining source code
-COPY . .
-
-# Build packages in correct order
-RUN pnpm build:api
-
-# # Clean up development dependencies
-# RUN rm -rf node_modules
-# RUN pnpm install --prod --frozen-lockfile --ignore-scripts
-
-# wkhtmltopdf stage
+# Stage 3: wkhtmltopdf binary
 FROM surnet/alpine-wkhtmltopdf:3.20.3-0.12.6-small AS wkhtmltopdf
 
-# Production stage
+# Stage 4: Production
 FROM node:20.19.1-alpine3.20 AS production
 WORKDIR /app
 
