@@ -16,7 +16,8 @@
   --integration-docs-text-2: var(--refly-text-2);
   --integration-docs-text-3: var(--refly-text-3);
   --integration-docs-code-bg: var(--refly-bg-control-z1);
-  --integration-docs-code-header-bg: var(--refly-bg-control-z0);
+  --integration-docs-code-header-bg: var(--refly-bg-control-z1);
+  --integration-docs-code-content-bg: var(--refly-bg-control-z0);
   --integration-docs-code-border: var(--refly-Card-Border);
   --integration-docs-code-text: var(--refly-text-0);
   --integration-docs-code-muted: var(--refly-text-3);
@@ -128,6 +129,18 @@
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.webhook-toolbar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.webhook-toolbar-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--integration-docs-text-1);
 }
 
 .integration-docs-toolbar-right {
@@ -353,7 +366,7 @@
     overflow-x: auto;
     font-size: 13px;
     line-height: 1.6;
-    background: transparent;
+    background: var(--integration-docs-code-content-bg);
 
     code {
       color: var(--integration-docs-code-text);
@@ -564,6 +577,70 @@
     font-size: 14px;
     max-width: 300px;
   }
+}
+
+// Webhook toggle styles
+.webhook-toggle-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--integration-docs-border);
+  background: var(--integration-docs-bg-subtle);
+}
+
+.webhook-toggle-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.webhook-toggle-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--integration-docs-text-1);
+}
+
+.webhook-toggle-desc {
+  font-size: 13px;
+  color: var(--integration-docs-text-3);
+}
+
+// Webhook empty state
+.webhook-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 40px;
+  text-align: center;
+}
+
+.webhook-empty-icon {
+  width: 88px;
+  height: 88px;
+  margin-bottom: 24px;
+  color: var(--integration-docs-text-1);
+}
+
+.webhook-empty-title {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  color: var(--refly-text-0);
+  margin: 0 0 8px 0;
+}
+
+.webhook-empty-description {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--refly-text-2);
+  margin: 0;
+  max-width: 400px;
 }
 
 // Responsive styles

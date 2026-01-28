@@ -1,7 +1,9 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Button } from 'antd';
+import { Modal, Button, Switch, message } from 'antd';
 import { AppstoreOutlined, BranchesOutlined, CodeOutlined, CloseOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import { serverOrigin } from '@refly/ui-kit';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { WebhookDocsTab } from './components/webhook-docs-tab';
 import { ApiDocsTab } from './components/api-docs-tab';
 import { SkillDocsTab } from './components/skill-docs-tab';
@@ -9,6 +11,12 @@ import { ApiKeyModal } from './components/api-key-modal';
 import { CopyAllDocsButton } from './components/copy-all-docs-button';
 import type { IntegrationType } from './types';
 import './integration-docs-modal.scss';
+
+interface WebhookConfig {
+  webhookId: string;
+  webhookUrl: string;
+  isEnabled: boolean;
+}
 
 interface IntegrationDocsModalProps {
   canvasId: string;
@@ -27,6 +35,9 @@ export const IntegrationDocsModal = memo(
     const [activeIntegration, setActiveIntegration] = useState<IntegrationType>('webhook');
     const [activeSection, setActiveSection] = useState('');
     const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+    const [webhookConfig, setWebhookConfig] = useState<WebhookConfig | null>(null);
+    const [webhookLoading, setWebhookLoading] = useState(false);
+    const [webhookToggling, setWebhookToggling] = useState(false);
     const contentRef = useRef<HTMLDivElement>(null);
 
     // Table of contents sections based on active integration
@@ -34,7 +45,6 @@ export const IntegrationDocsModal = memo(
       switch (activeIntegration) {
         case 'webhook':
           return [
-            { id: 'webhook-status', label: t('integration.sections.status') },
             { id: 'webhook-url', label: t('integration.sections.url') },
             { id: 'webhook-examples', label: t('integration.sections.examples') },
             { id: 'webhook-instructions', label: t('integration.sections.instructions') },
@@ -42,7 +52,6 @@ export const IntegrationDocsModal = memo(
         case 'api':
           return [
             { id: 'api-overview', label: t('integration.sections.overview') },
-            { id: 'api-authentication', label: t('integration.sections.authentication') },
             { id: 'api-endpoints', label: t('integration.sections.endpoints') },
             { id: 'api-errors', label: t('integration.sections.errors') },
           ];
@@ -52,6 +61,60 @@ export const IntegrationDocsModal = memo(
           return [];
       }
     }, [activeIntegration, t]);
+
+    // Fetch webhook config when switching to webhook tab
+    useEffect(() => {
+      if (open && activeIntegration === 'webhook') {
+        fetchWebhookConfig();
+      }
+    }, [open, activeIntegration, canvasId]);
+
+    const fetchWebhookConfig = async () => {
+      try {
+        setWebhookLoading(true);
+        const response = await getClient().getWebhookConfig({
+          query: { canvasId },
+        });
+        const result = response.data;
+        if (result?.success && result.data) {
+          const { apiId, isEnabled } = result.data;
+          const apiOrigin = serverOrigin || window.location.origin;
+          setWebhookConfig({
+            webhookId: apiId,
+            webhookUrl: `${apiOrigin}/v1/openapi/webhook/${apiId}/run`,
+            isEnabled,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch webhook config:', error);
+      } finally {
+        setWebhookLoading(false);
+      }
+    };
+
+    const handleToggleWebhook = async (enabled: boolean) => {
+      if (!webhookConfig) return;
+
+      setWebhookToggling(true);
+      try {
+        const response = enabled
+          ? await getClient().enableWebhook({ body: { canvasId } })
+          : await getClient().disableWebhook({ body: { webhookId: webhookConfig.webhookId } });
+
+        const result = response.data;
+        if (result?.success) {
+          setWebhookConfig({ ...webhookConfig, isEnabled: enabled });
+          message.success(enabled ? t('webhook.enableSuccess') : t('webhook.disableSuccess'));
+        } else {
+          message.error(enabled ? t('webhook.enableFailed') : t('webhook.disableFailed'));
+        }
+      } catch (error) {
+        console.error('Failed to toggle webhook:', error);
+        message.error(enabled ? t('webhook.enableFailed') : t('webhook.disableFailed'));
+      } finally {
+        setWebhookToggling(false);
+      }
+    };
 
     // Reset state when modal closes
     useEffect(() => {
@@ -121,7 +184,14 @@ export const IntegrationDocsModal = memo(
     const renderContent = () => {
       switch (activeIntegration) {
         case 'webhook':
-          return <WebhookDocsTab canvasId={canvasId} />;
+          return (
+            <WebhookDocsTab
+              canvasId={canvasId}
+              webhookConfig={webhookConfig}
+              onToggleWebhook={handleToggleWebhook}
+              toggling={webhookToggling}
+            />
+          );
         case 'api':
           return <ApiDocsTab canvasId={canvasId} />;
         case 'skill':
@@ -191,6 +261,16 @@ export const IntegrationDocsModal = memo(
                     <Button type="primary" onClick={() => setApiKeyModalOpen(true)}>
                       {t('integration.manageApiKeys')}
                     </Button>
+                  ) : activeIntegration === 'webhook' ? (
+                    <div className="webhook-toolbar-toggle">
+                      <span className="webhook-toolbar-label">{t('webhook.enableWebhook')}</span>
+                      <Switch
+                        checked={webhookConfig?.isEnabled || false}
+                        loading={webhookToggling}
+                        onChange={handleToggleWebhook}
+                        disabled={!webhookConfig || webhookLoading}
+                      />
+                    </div>
                   ) : null}
                 </div>
                 <div className="integration-docs-toolbar-right">
