@@ -84,26 +84,40 @@ export const IntegrationDocsModal = memo(
             webhookUrl: `${apiOrigin}/v1/openapi/webhook/${apiId}/run`,
             isEnabled,
           });
+        } else {
+          // No webhook config yet, set default state
+          setWebhookConfig({
+            webhookId: '',
+            webhookUrl: '',
+            isEnabled: false,
+          });
         }
       } catch (error) {
         console.error('Failed to fetch webhook config:', error);
+        // Set default state on error
+        setWebhookConfig({
+          webhookId: '',
+          webhookUrl: '',
+          isEnabled: false,
+        });
       } finally {
         setWebhookLoading(false);
       }
     };
 
     const handleToggleWebhook = async (enabled: boolean) => {
-      if (!webhookConfig) return;
-
       setWebhookToggling(true);
       try {
         const response = enabled
           ? await getClient().enableWebhook({ body: { canvasId } })
-          : await getClient().disableWebhook({ body: { webhookId: webhookConfig.webhookId } });
+          : await getClient().disableWebhook({
+              body: { webhookId: webhookConfig?.webhookId || '' },
+            });
 
         const result = response.data;
         if (result?.success) {
-          setWebhookConfig({ ...webhookConfig, isEnabled: enabled });
+          // Refetch config to get updated webhook ID and URL
+          await fetchWebhookConfig();
           message.success(enabled ? t('webhook.enableSuccess') : t('webhook.disableSuccess'));
         } else {
           message.error(enabled ? t('webhook.enableFailed') : t('webhook.disableFailed'));
@@ -268,7 +282,7 @@ export const IntegrationDocsModal = memo(
                         checked={webhookConfig?.isEnabled || false}
                         loading={webhookToggling}
                         onChange={handleToggleWebhook}
-                        disabled={!webhookConfig || webhookLoading}
+                        disabled={webhookLoading}
                       />
                     </div>
                   ) : null}

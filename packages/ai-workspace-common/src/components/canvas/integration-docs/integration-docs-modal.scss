@@ -296,8 +296,8 @@
   }
 
   &.is-active {
-    background: var(--integration-docs-primary-bg);
-    color: var(--integration-docs-primary-text);
+    background: var(--refly-tertiary-hover);
+    color: var(--integration-docs-text-1);
     font-weight: 500;
   }
 }
