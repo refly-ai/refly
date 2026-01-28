@@ -10,7 +10,7 @@ import { CanvasTitle, ReadonlyCanvasTitle, type CanvasTitleMode } from './canvas
 // import ShareSettings from './share-settings';
 import PublishTemplateButton from './publish-template-button';
 import ScheduleButton from './schedule-button';
-import { WebhookButton } from '../webhook';
+import { IntegrationDocsButton } from '../integration-docs';
 import { useUserStoreShallow } from '@refly/stores';
 import './index.scss';
 import { IconLink } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -152,7 +152,7 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, hideLogoButton,
           ) : (
             <>
               {/* <ShareSettings canvasId={canvasId} canvasTitle={canvasTitle} /> */}
-              <WebhookButton canvasId={canvasId} />
+              <IntegrationDocsButton canvasId={canvasId} />
               <ScheduleButton canvasId={canvasId} />
               <PublishTemplateButton canvasId={canvasId} canvasTitle={canvasTitle} />
             </>

@@ -10110,6 +10110,59 @@ export type TriggerVoucherResponse = BaseResponse & {
   data?: VoucherTriggerResult;
 };
 
+/**
+ * Workflow variables as key-value pairs
+ */
+export type WebhookRunRequest = {
+  [key: string]: unknown;
+};
+
+export type WebhookRunResponse = BaseResponse & {
+  data?: {
+    /**
+     * Whether the webhook request was accepted
+     */
+    received?: boolean;
+  };
+};
+
+/**
+ * Webhook error codes:
+ * - WEBHOOK_NOT_FOUND: Webhook does not exist or has been deleted
+ * - WEBHOOK_DISABLED: Webhook is disabled
+ * - WEBHOOK_RATE_LIMITED: Request rate exceeds the limit
+ * - INVALID_REQUEST_BODY: Request body format is invalid
+ * - CANVAS_NOT_FOUND: Associated canvas cannot be found
+ * - INSUFFICIENT_CREDITS: Insufficient credits
+ *
+ */
+export type WebhookErrorCode =
+  | 'WEBHOOK_NOT_FOUND'
+  | 'WEBHOOK_DISABLED'
+  | 'WEBHOOK_RATE_LIMITED'
+  | 'INVALID_REQUEST_BODY'
+  | 'CANVAS_NOT_FOUND'
+  | 'INSUFFICIENT_CREDITS';
+
+/**
+ * Webhook error codes:
+ * - WEBHOOK_NOT_FOUND: Webhook does not exist or has been deleted
+ * - WEBHOOK_DISABLED: Webhook is disabled
+ * - WEBHOOK_RATE_LIMITED: Request rate exceeds the limit
+ * - INVALID_REQUEST_BODY: Request body format is invalid
+ * - CANVAS_NOT_FOUND: Associated canvas cannot be found
+ * - INSUFFICIENT_CREDITS: Insufficient credits
+ *
+ */
+export const WebhookErrorCode = {
+  WEBHOOK_NOT_FOUND: 'WEBHOOK_NOT_FOUND',
+  WEBHOOK_DISABLED: 'WEBHOOK_DISABLED',
+  WEBHOOK_RATE_LIMITED: 'WEBHOOK_RATE_LIMITED',
+  INVALID_REQUEST_BODY: 'INVALID_REQUEST_BODY',
+  CANVAS_NOT_FOUND: 'CANVAS_NOT_FOUND',
+  INSUFFICIENT_CREDITS: 'INSUFFICIENT_CREDITS',
+} as const;
+
 export type EnableWebhookRequest = {
   /**
    * Canvas ID to enable webhook for
@@ -11541,6 +11594,20 @@ export type GetWebhookHistoryData = {
 export type GetWebhookHistoryResponse2 = GetWebhookHistoryResponse;
 
 export type GetWebhookHistoryError = unknown;
+
+export type RunWebhookData = {
+  body: WebhookRunRequest;
+  path: {
+    /**
+     * Webhook ID
+     */
+    webhookId: string;
+  };
+};
+
+export type RunWebhookResponse = WebhookRunResponse;
+
+export type RunWebhookError = unknown;
 
 export type RunWorkflowViaApiData = {
   body: {

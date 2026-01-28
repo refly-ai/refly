@@ -23,6 +23,7 @@
     "copy-env": "turbo run copy-env",
     "copy-env:develop": "turbo run copy-env:develop",
     "codegen": "turbo run codegen",
+    "generate:docs": "pnpm --filter @refly/openapi-schema run generate:docs",
     "clean": "turbo run clean",
     "clean:node-modules": "node scripts/cleanup-node-modules.js",
     "cy:open": "cypress open",

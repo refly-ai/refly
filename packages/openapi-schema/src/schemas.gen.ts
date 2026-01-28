@@ -12634,6 +12634,54 @@ export const TriggerVoucherResponseSchema = {
   ],
 } as const;
 
+export const WebhookRunRequestSchema = {
+  type: 'object',
+  description: 'Workflow variables as key-value pairs',
+  additionalProperties: true,
+} as const;
+
+export const WebhookRunResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            received: {
+              type: 'boolean',
+              description: 'Whether the webhook request was accepted',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const WebhookErrorCodeSchema = {
+  type: 'string',
+  enum: [
+    'WEBHOOK_NOT_FOUND',
+    'WEBHOOK_DISABLED',
+    'WEBHOOK_RATE_LIMITED',
+    'INVALID_REQUEST_BODY',
+    'CANVAS_NOT_FOUND',
+    'INSUFFICIENT_CREDITS',
+  ],
+  description: `Webhook error codes:
+- WEBHOOK_NOT_FOUND: Webhook does not exist or has been deleted
+- WEBHOOK_DISABLED: Webhook is disabled
+- WEBHOOK_RATE_LIMITED: Request rate exceeds the limit
+- INVALID_REQUEST_BODY: Request body format is invalid
+- CANVAS_NOT_FOUND: Associated canvas cannot be found
+- INSUFFICIENT_CREDITS: Insufficient credits
+`,
+} as const;
+
 export const EnableWebhookRequestSchema = {
   type: 'object',
   required: ['canvasId'],

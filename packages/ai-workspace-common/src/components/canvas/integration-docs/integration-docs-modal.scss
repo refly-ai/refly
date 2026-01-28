@@ -1,0 +1,540 @@
+.integration-docs-modal-wrap {
+  position: absolute;
+  inset: 0;
+}
+
+.integration-docs-modal {
+  --integration-docs-bg: var(--refly-bg-content-z2);
+  --integration-docs-bg-subtle: var(--refly-bg-content-z1, var(--refly-bg-content-z2));
+  --integration-docs-toolbar-bg: var(--refly-bg-content-z2);
+  --integration-docs-border: var(--refly-Card-Border);
+  --integration-docs-hover-bg: var(--refly-fill-hover);
+  --integration-docs-primary-bg: var(--ant-color-primary-bg, var(--refly-tertiary-hover));
+  --integration-docs-primary-text: var(--ant-color-primary, var(--refly-primary-default));
+  --integration-docs-text-1: var(--refly-text-1);
+  --integration-docs-text-2: var(--refly-text-2);
+  --integration-docs-text-3: var(--refly-text-3);
+  --integration-docs-code-bg: var(--refly-bg-control-z1);
+  --integration-docs-code-header-bg: var(--refly-bg-control-z0);
+  --integration-docs-code-border: var(--refly-Card-Border);
+  --integration-docs-code-text: var(--refly-text-0);
+  --integration-docs-code-muted: var(--refly-text-3);
+  --integration-docs-code-action: var(--refly-text-2);
+  --integration-docs-inline-code-bg: var(--refly-bg-control-z1);
+  --integration-docs-inline-code-text: var(--refly-text-0);
+  --integration-docs-card-shadow: 0 1px 3px var(--refly-line, var(--refly-Card-Border));
+  --integration-docs-method-get-bg: var(--ant-color-success-bg, var(--integration-docs-primary-bg));
+  --integration-docs-method-get-text: var(--ant-color-success, var(--integration-docs-primary-text));
+  --integration-docs-method-post-bg: var(--ant-color-info-bg, var(--integration-docs-primary-bg));
+  --integration-docs-method-post-text: var(--ant-color-info, var(--integration-docs-primary-text));
+  --integration-docs-method-put-bg: var(--ant-color-warning-bg, var(--integration-docs-primary-bg));
+  --integration-docs-method-put-text: var(--ant-color-warning, var(--integration-docs-primary-text));
+  --integration-docs-method-delete-bg: var(--ant-color-error-bg, var(--integration-docs-primary-bg));
+  --integration-docs-method-delete-text: var(--ant-color-error, var(--integration-docs-primary-text));
+
+  top: 0;
+  padding: 0;
+  max-width: none;
+
+  .ant-modal-content {
+    height: 100%;
+    width: 100%;
+    padding: 0;
+    border-radius: 0;
+    overflow: hidden;
+    box-shadow: none;
+  }
+
+  .ant-modal-body {
+    height: 100%;
+    padding: 0;
+  }
+}
+
+.integration-docs-layout {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  background: var(--integration-docs-bg);
+}
+
+// Left navigation sidebar
+.integration-docs-nav {
+  width: 220px;
+  padding: 20px 16px;
+  border-right: 1px solid var(--integration-docs-border);
+  background: var(--integration-docs-bg-subtle);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.integration-docs-nav-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--integration-docs-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  padding: 0 10px;
+}
+
+.integration-docs-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.integration-docs-nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--integration-docs-text-2);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+
+  &:hover {
+    background: var(--integration-docs-hover-bg);
+    color: var(--integration-docs-text-1);
+  }
+
+  &.is-active {
+    background: var(--integration-docs-primary-bg);
+    color: var(--integration-docs-primary-text);
+    font-weight: 500;
+  }
+
+  .anticon {
+    font-size: 16px;
+  }
+}
+
+// Main content area
+.integration-docs-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    var(--integration-docs-bg) 0%,
+    var(--integration-docs-bg-subtle) 100%
+  );
+}
+
+.integration-docs-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--integration-docs-border);
+  background: var(--integration-docs-toolbar-bg);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.integration-docs-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.integration-docs-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.integration-docs-content {
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.integration-docs-body {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 40px 64px;
+}
+
+.integration-docs-header {
+  margin-bottom: 32px;
+
+  h2 {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--integration-docs-text-1);
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 15px;
+    color: var(--integration-docs-text-2);
+    margin: 0;
+    line-height: 1.6;
+  }
+}
+
+// Right TOC sidebar
+.integration-docs-toc {
+  width: 200px;
+  padding: 20px 16px;
+  border-left: 1px solid var(--integration-docs-border);
+  background: var(--integration-docs-bg);
+  flex-shrink: 0;
+  position: sticky;
+  top: 12px;
+  align-self: flex-start;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
+
+.integration-docs-toc-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--integration-docs-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  padding: 0 10px;
+}
+
+.integration-docs-toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.integration-docs-toc-item {
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--integration-docs-text-2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+
+  &:hover {
+    background: var(--integration-docs-hover-bg);
+    color: var(--integration-docs-text-1);
+  }
+
+  &.is-active {
+    background: var(--integration-docs-primary-bg);
+    color: var(--integration-docs-primary-text);
+    font-weight: 500;
+  }
+}
+
+// Section styles
+.integration-docs-section {
+  margin-bottom: 40px;
+  scroll-margin-top: 24px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.integration-docs-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--integration-docs-text-1);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--integration-docs-border);
+}
+
+.integration-docs-section-desc {
+  margin-top: -4px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--integration-docs-text-2);
+  line-height: 1.6;
+}
+
+// Code block styles
+.integration-docs-code-block {
+  position: relative;
+  margin: 16px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--integration-docs-code-bg);
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--integration-docs-code-header-bg);
+    border-bottom: 1px solid var(--integration-docs-code-border);
+  }
+
+  .code-lang {
+    font-size: 12px;
+    color: var(--integration-docs-code-muted);
+    font-weight: 500;
+  }
+
+  .code-copy-btn {
+    color: var(--integration-docs-code-action);
+
+    &:hover {
+      color: var(--integration-docs-code-text);
+    }
+  }
+
+  pre {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+
+    code {
+      color: var(--integration-docs-code-text);
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+  }
+}
+
+// Endpoint card styles
+.api-endpoint-card {
+  border: 1px solid var(--integration-docs-border);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  background: var(--integration-docs-bg);
+  box-shadow: var(--integration-docs-card-shadow);
+
+  .endpoint-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--integration-docs-bg-subtle);
+    border-bottom: 1px solid var(--integration-docs-border);
+  }
+
+  .endpoint-method {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+
+    &.get {
+      background: var(--integration-docs-method-get-bg);
+      color: var(--integration-docs-method-get-text);
+    }
+    &.post {
+      background: var(--integration-docs-method-post-bg);
+      color: var(--integration-docs-method-post-text);
+    }
+    &.put {
+      background: var(--integration-docs-method-put-bg);
+      color: var(--integration-docs-method-put-text);
+    }
+    &.delete {
+      background: var(--integration-docs-method-delete-bg);
+      color: var(--integration-docs-method-delete-text);
+    }
+  }
+
+  .endpoint-path {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 14px;
+    color: var(--integration-docs-text-1);
+  }
+
+  .endpoint-body {
+    padding: 20px;
+  }
+
+  .endpoint-summary {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--integration-docs-text-1);
+    margin-bottom: 8px;
+  }
+
+  .endpoint-description {
+    font-size: 14px;
+    color: var(--integration-docs-text-2);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .endpoint-section {
+    margin-top: 20px;
+
+    h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--integration-docs-text-1);
+      margin-bottom: 8px;
+    }
+  }
+}
+
+.api-auth-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--integration-docs-border);
+  background: var(--integration-docs-bg-subtle);
+}
+
+.api-auth-label {
+  font-size: 13px;
+  color: var(--integration-docs-text-2);
+  font-weight: 500;
+}
+
+.api-auth-select {
+  flex: 1;
+  min-width: 220px;
+}
+
+.api-auth-helper {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--integration-docs-text-3);
+}
+
+.api-auth-header {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--integration-docs-text-2);
+
+  code {
+    background: var(--integration-docs-inline-code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--integration-docs-inline-code-text);
+  }
+}
+
+// Table styles
+.api-docs-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--integration-docs-border);
+  }
+
+  th {
+    background: var(--integration-docs-bg-subtle);
+    font-weight: 500;
+    color: var(--integration-docs-text-1);
+  }
+
+  td {
+    color: var(--integration-docs-text-2);
+  }
+
+  code {
+    background: var(--integration-docs-inline-code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--integration-docs-inline-code-text);
+  }
+}
+
+.api-docs-empty {
+  font-size: 13px;
+  color: var(--integration-docs-text-3);
+  padding: 6px 0;
+}
+
+.api-response-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.api-response-example {
+  margin-top: 12px;
+}
+
+.api-response-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--integration-docs-text-2);
+  margin-bottom: 6px;
+}
+
+// Coming soon placeholder
+.integration-coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  color: var(--integration-docs-text-3);
+
+  .coming-soon-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--integration-docs-text-2);
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 14px;
+    max-width: 300px;
+  }
+}
+
+// Responsive styles
+@media (max-width: 1024px) {
+  .integration-docs-nav,
+  .integration-docs-toc {
+    display: none;
+  }
+
+  .integration-docs-body {
+    padding: 24px 20px 48px;
+  }
+}
+
+@media (max-width: 768px) {
+  .integration-docs-toolbar {
+    padding: 12px 16px;
+  }
+
+  .integration-docs-body {
+    padding: 20px 16px 40px;
+  }
+
+  .integration-docs-header h2 {
+    font-size: 22px;
+  }
+}

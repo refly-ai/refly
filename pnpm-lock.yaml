@@ -1106,6 +1106,12 @@ importers:
       '@hey-api/openapi-ts':
         specifier: 0.53.8
         version: 0.53.8(magicast@0.3.5)(typescript@5.8.3)
+      tsx:
+        specifier: ^4.19.4
+        version: 4.20.6
+      yaml:
+        specifier: ^2.6.1
+        version: 2.8.0
 
   packages/providers:
     dependencies:

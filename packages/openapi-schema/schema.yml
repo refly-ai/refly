@@ -2813,6 +2813,52 @@ paths:
       security:
         - api_key: []
 
+  /openapi/webhook/{webhookId}/run:
+    post:
+      tags:
+        - webhook
+      summary: Run workflow via webhook
+      description: Trigger a webhook to run the linked workflow without authentication
+      operationId: runWebhook
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Webhook ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookRunRequest'
+            examples:
+              basic:
+                summary: Basic call
+                value:
+                  variable1: "Hello World"
+              with_resource:
+                summary: With resource reference
+                value:
+                  variable1: "Process this document"
+                  resource:
+                    type: "resource"
+                    resourceId: "res_xxx"
+      responses:
+        '200':
+          description: Webhook triggered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookRunResponse'
+        '400':
+          description: Invalid request body
+        '403':
+          description: Webhook disabled
+        '404':
+          description: Webhook not found
+
   /openapi/workflow/{canvasId}/run:
     post:
       tags:
@@ -13389,6 +13435,41 @@ components:
           properties:
             data:
               $ref: '#/components/schemas/VoucherTriggerResult'
+
+    WebhookRunRequest:
+      type: object
+      description: Workflow variables as key-value pairs
+      additionalProperties: true
+
+    WebhookRunResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                received:
+                  type: boolean
+                  description: Whether the webhook request was accepted
+
+    WebhookErrorCode:
+      type: string
+      enum:
+        - WEBHOOK_NOT_FOUND
+        - WEBHOOK_DISABLED
+        - WEBHOOK_RATE_LIMITED
+        - INVALID_REQUEST_BODY
+        - CANVAS_NOT_FOUND
+        - INSUFFICIENT_CREDITS
+      description: |
+        Webhook error codes:
+        - WEBHOOK_NOT_FOUND: Webhook does not exist or has been deleted
+        - WEBHOOK_DISABLED: Webhook is disabled
+        - WEBHOOK_RATE_LIMITED: Request rate exceeds the limit
+        - INVALID_REQUEST_BODY: Request body format is invalid
+        - CANVAS_NOT_FOUND: Associated canvas cannot be found
+        - INSUFFICIENT_CREDITS: Insufficient credits
 
     EnableWebhookRequest:
       type: object

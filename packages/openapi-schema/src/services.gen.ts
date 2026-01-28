@@ -327,6 +327,9 @@ import type {
   GetWebhookHistoryData,
   GetWebhookHistoryError,
   GetWebhookHistoryResponse2,
+  RunWebhookData,
+  RunWebhookError,
+  RunWebhookResponse,
   RunWorkflowViaApiData,
   RunWorkflowViaApiError,
   RunWorkflowViaApiResponse,
@@ -2268,6 +2271,19 @@ export const getWebhookHistory = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/webhook/history',
+  });
+};
+
+/**
+ * Run workflow via webhook
+ * Trigger a webhook to run the linked workflow without authentication
+ */
+export const runWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<RunWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<RunWebhookResponse, RunWebhookError, ThrowOnError>({
+    ...options,
+    url: '/openapi/webhook/{webhookId}/run',
   });
 };
 
