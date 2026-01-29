@@ -3,10 +3,13 @@ import { createMock } from '@golevelup/ts-jest';
 import { ConfigService } from '@nestjs/config';
 import { ToolService } from './tool.service';
 import { PrismaService } from '../common/prisma.service';
-import { SkillService } from '../skill/skill.service';
-import { ToolExecutionService } from './tool-execution/tool-execution.service';
-import { SandboxService } from './sandbox/sandbox.service';
-import { ResourceService } from './resource.service';
+import { EncryptionService } from '../common/encryption.service';
+import { McpServerService } from '../mcp-server/mcp-server.service';
+import { ComposioService } from './composio/composio.service';
+import { CreditService } from '../credit/credit.service';
+import { ToolFactory } from './dynamic-tooling/factory.service';
+import { ToolInventoryService } from './inventory/inventory.service';
+import { ToolWrapperFactoryService } from './tool-execution/wrapper/wrapper.service';
 import type { User } from '@refly/openapi-schema';
 
 describe('ToolService', () => {
@@ -14,10 +17,13 @@ describe('ToolService', () => {
 
   const configService = createMock<ConfigService>();
   const prismaService = createMock<PrismaService>();
-  const skillService = createMock<SkillService>();
-  const toolExecutionService = createMock<ToolExecutionService>();
-  const sandboxService = createMock<SandboxService>();
-  const resourceService = createMock<ResourceService>();
+  const encryptionService = createMock<EncryptionService>();
+  const mcpServerService = createMock<McpServerService>();
+  const composioService = createMock<ComposioService>();
+  const creditService = createMock<CreditService>();
+  const toolFactory = createMock<ToolFactory>();
+  const inventoryService = createMock<ToolInventoryService>();
+  const toolWrapperFactory = createMock<ToolWrapperFactoryService>();
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,10 +31,13 @@ describe('ToolService', () => {
         ToolService,
         { provide: ConfigService, useValue: configService },
         { provide: PrismaService, useValue: prismaService },
-        { provide: SkillService, useValue: skillService },
-        { provide: ToolExecutionService, useValue: toolExecutionService },
-        { provide: SandboxService, useValue: sandboxService },
-        { provide: ResourceService, useValue: resourceService },
+        { provide: EncryptionService, useValue: encryptionService },
+        { provide: McpServerService, useValue: mcpServerService },
+        { provide: ComposioService, useValue: composioService },
+        { provide: CreditService, useValue: creditService },
+        { provide: ToolFactory, useValue: toolFactory },
+        { provide: ToolInventoryService, useValue: inventoryService },
+        { provide: ToolWrapperFactoryService, useValue: toolWrapperFactory },
       ],
     }).compile();
 
