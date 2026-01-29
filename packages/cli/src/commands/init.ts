@@ -109,6 +109,7 @@ export const initCommand = new Command('init')
           apiEndpoint: apiEndpoint,
           skillInstalled: installResult.skillInstalled,
           skillPath: installResult.skillPath,
+          symlinkPath: installResult.symlinkPath,
           commandsInstalled: installResult.commandsInstalled,
           commandsPath: installResult.commandsPath,
           version: installResult.version,
@@ -171,7 +172,10 @@ export const initCommand = new Command('init')
           configDir: getReflyDir(),
           apiEndpoint: apiEndpoint,
           skillInstalled: installResult.skillInstalled,
+          skillPath: installResult.skillPath,
+          symlinkPath: installResult.symlinkPath,
           commandsInstalled: installResult.commandsInstalled,
+          commandsPath: installResult.commandsPath,
           version: installResult.version,
           authenticated: !!(getAccessToken() || getApiKey()),
         });

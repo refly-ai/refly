@@ -19,6 +19,7 @@ export const CopilotHeader = memo(
   ({ canvasId, sessionId, copilotWidth, setCopilotWidth }: CopilotHeaderProps) => {
     const { t } = useTranslation();
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
     const [searchParams] = useSearchParams();
     const source = useMemo(() => searchParams.get('source'), [searchParams]);
     const isOnboarding = ['onboarding', 'frontPage'].includes(source ?? '');
@@ -36,7 +37,7 @@ export const CopilotHeader = memo(
           canvasId,
         },
       },
-      [],
+      undefined,
       { enabled: !!canvasId },
     );
 

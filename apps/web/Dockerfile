@@ -1,3 +1,31 @@
+# Build stage
+FROM node:20.19.1-alpine3.20 AS builder
+WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Set environment variables to skip gyp-related installations
+ENV npm_config_gyp_ignore=true
+ENV CYPRESS_INSTALL_BINARY=0
+
+# Set node options to increase memory limit
+ENV NODE_OPTIONS='--max_old_space_size=8192'
+
+# Copy all necessary files in one layer
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json turbo.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/ ./packages/
+
+# Install dependencies with workspace support
+RUN pnpm install --ignore-scripts
+
+# Copy remaining source code
+COPY . .
+
+# Build packages in correct order
+RUN pnpm build:web
+
 # Nginx stage
 FROM nginx:1.27.3-alpine
 
@@ -7,9 +35,9 @@ RUN apk add --no-cache bash
 # Copy nginx configuration
 COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy static files
+# Copy static files from builder
 WORKDIR /usr/share/nginx/html
-COPY apps/web/dist .
+COPY --from=builder /app/apps/web/dist .
 
 # Create config.js template (will be processed by envsubst at container startup)
 RUN cat << 'EOF' > /usr/share/nginx/html/config.template.js

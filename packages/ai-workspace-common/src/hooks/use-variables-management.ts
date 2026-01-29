@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { useGetWorkflowVariables } from '@refly-packages/ai-workspace-common/queries';
 import { useCanvasStoreShallow, useUserStoreShallow } from '@refly/stores';
@@ -17,7 +17,6 @@ export const useVariablesManagement = (canvasId: string) => {
     data: workflowVariables,
     isLoading,
     refetch,
-    dataUpdatedAt,
   } = useGetWorkflowVariables(
     {
       query: {
@@ -27,8 +26,6 @@ export const useVariablesManagement = (canvasId: string) => {
     undefined,
     {
       enabled: !!canvasId && isLogin && !isSharePage,
-      // Refetch when window regains focus to sync external changes (e.g., CLI uploads)
-      refetchOnWindowFocus: true,
     },
   );
   const remoteVariables = workflowVariables?.data;
@@ -39,23 +36,12 @@ export const useVariablesManagement = (canvasId: string) => {
       setCanvasVariables: state.setCanvasVariables,
     }));
 
-  // Track the last remote data update time to detect server-side changes
-  const lastRemoteUpdateRef = useRef<number | undefined>(undefined);
-
-  // Sync local state with server data when:
-  // 1. Local state is undefined (initial load)
-  // 2. Remote data has been updated (dataUpdatedAt changed) - handles external changes like CLI uploads
+  // Sync local state with server data when it changes
   useEffect(() => {
-    if (!remoteVariables) return;
-
-    const isInitialLoad = localVariables === undefined;
-    const isRemoteUpdate = dataUpdatedAt !== lastRemoteUpdateRef.current;
-
-    if (isInitialLoad || isRemoteUpdate) {
+    if (remoteVariables && localVariables === undefined) {
       setLocalVariables(canvasId, remoteVariables);
-      lastRemoteUpdateRef.current = dataUpdatedAt;
     }
-  }, [canvasId, remoteVariables, localVariables, setLocalVariables, dataUpdatedAt]);
+  }, [canvasId, remoteVariables, localVariables, setLocalVariables]);
 
   // Debounced function to update server
   const debouncedUpdateVariables = useDebouncedCallback(

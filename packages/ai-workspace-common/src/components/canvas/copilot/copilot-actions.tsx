@@ -30,6 +30,9 @@ export const CopilotActions = memo(
 
     const uploadDisabled = fileCount >= maxFileCount;
     const canSend = query?.trim() || fileCount > 0;
+    const acceptExtensions = ACCEPT_FILE_EXTENSIONS ?? [];
+    const acceptValue =
+      acceptExtensions?.length > 0 ? acceptExtensions.map((ext) => `.${ext}`).join(',') : undefined;
 
     const handleFileChange = useCallback(
       async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,7 +88,7 @@ export const CopilotActions = memo(
             ref={uploadRef}
             type="file"
             multiple
-            accept={ACCEPT_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',')}
+            accept={acceptValue}
             onChange={handleFileChange}
             className="hidden"
           />

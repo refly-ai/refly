@@ -11,7 +11,6 @@ import { workflowCreateCommand } from './create.js';
 import { workflowGenerateCommand } from './generate.js';
 import { workflowListCommand } from './list.js';
 import { workflowGetCommand } from './get.js';
-import { workflowEditCommand } from './edit.js';
 import { workflowDeleteCommand } from './delete.js';
 import { workflowRunCommand } from './run.js';
 import { workflowRunsCommand } from './runs.js';
@@ -21,10 +20,11 @@ import { workflowDetailCommand } from './detail.js';
 import { workflowToolcallsCommand } from './toolcalls.js';
 import { workflowToolsetKeysCommand } from './toolset-keys.js';
 import { workflowLayoutCommand } from './layout.js';
-import { workflowNodesCommand } from './nodes.js';
-import { workflowNodeGetCommand } from './node-get.js';
-import { workflowNodeOutputCommand } from './node-output.js';
-import { workflowPatchCommand } from './patch.js';
+import { workflowNodeCommand } from './node/index.js';
+import { workflowEditCommand } from './edit.js';
+import { workflowVariablesCommand } from './variables.js';
+import { workflowResultCommand } from './result.js';
+import { workflowSessionCommand } from './session.js';
 
 export const workflowCommand = new Command('workflow')
   .description('Manage and run workflows')
@@ -33,7 +33,6 @@ export const workflowCommand = new Command('workflow')
   .addCommand(workflowGenerateCommand)
   .addCommand(workflowListCommand)
   .addCommand(workflowGetCommand)
-  .addCommand(workflowEditCommand)
   .addCommand(workflowDeleteCommand)
   // Workflow execution
   .addCommand(workflowRunCommand)
@@ -45,8 +44,13 @@ export const workflowCommand = new Command('workflow')
   // Workflow utilities
   .addCommand(workflowToolsetKeysCommand)
   .addCommand(workflowLayoutCommand)
-  .addCommand(workflowNodesCommand)
-  .addCommand(workflowNodeGetCommand)
-  .addCommand(workflowNodeOutputCommand)
+  // Node management (subcommand group)
+  .addCommand(workflowNodeCommand)
   // Workflow plan operations
-  .addCommand(workflowPatchCommand);
+  .addCommand(workflowEditCommand)
+  // Workflow variables
+  .addCommand(workflowVariablesCommand)
+  // Workflow session
+  .addCommand(workflowSessionCommand)
+  // Action result
+  .addCommand(workflowResultCommand);

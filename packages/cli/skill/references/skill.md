@@ -200,70 +200,34 @@ CLI will return `skill.create.needs_workflow` with suggested options and example
 ## Directory Structure
 
 ```
-~/.claude/skills/refly/
-|-- SKILL.md                    # Base skill
-|-- registry.json               # Skill index
-|-- references/                 # Core CLI docs
-|   |-- workflow.md
-|   |-- node.md
-|   |-- file.md
-|   `-- skill.md
-`-- domain-skills/              # Domain skills (one directory per skill)
-    `-- <skill-name>/
-        |-- skill.md            # Entry file
-        |-- REFERENCE.md        # API reference (optional)
-        `-- EXAMPLES.md         # Examples (optional)
+~/.refly/skills/
+├── base/                       # Base skill files (symlink target for 'refly')
+│   ├── SKILL.md
+│   └── rules/
+│       ├── workflow.md
+│       ├── node.md
+│       ├── file.md
+│       └── skill.md
+└── <skill-name>/               # Domain skill directories
+    └── SKILL.md
+
+~/.claude/skills/
+├── refly → ~/.refly/skills/base/           # Base skill symlink
+└── <skill-name> → ~/.refly/skills/<name>/  # Domain skill symlinks
 ```
 
----
+### How Symlinks Work
 
-## Registry Schema
+- **Base skill**: `~/.claude/skills/refly` → `~/.refly/skills/base/`
+- **Domain skills**: `~/.claude/skills/<name>` → `~/.refly/skills/<name>/`
 
-```json
-{
-  "version": 1,
-  "updatedAt": "2025-01-14T00:00:00Z",
-  "skills": [
-    {
-      "name": "pdf-processing",
-      "description": "Extract text/tables from PDF, fill forms, merge documents.",
-      "workflowId": "c-abc123xyz",
-      "triggers": ["pdf extract", "process pdf", "fill pdf form"],
-      "path": "domain-skills/pdf-processing",
-      "createdAt": "2025-01-14T00:00:00Z",
-      "updatedAt": "2025-01-14T00:00:00Z",
-      "source": "local",
-      "tags": ["pdf", "document"],
-      "author": "team-refly",
-      "version": "1.0.0",
-      "skillId": "skp-abc123"
-    }
-  ]
-}
-```
-
-### Registry Fields
-
-| Field | Type | Required | Description |
-|------|------|----------|-------------|
-| name | string | Yes | Unique skill identifier (lowercase, hyphens) |
-| description | string | Yes | One-line summary for matching |
-| workflowId | string | Yes | Bound workflow ID in Refly backend |
-| triggers | string[] | Yes | Phrases that trigger this skill |
-| path | string | Yes | Relative path to skill directory |
-| createdAt | string | Yes | ISO 8601 timestamp |
-| source | string | Yes | `local` or `refly-cloud` |
-| updatedAt | string | No | ISO 8601 timestamp |
-| tags | string[] | No | Categorization tags |
-| author | string | No | Skill author |
-| version | string | No | Semantic version |
-| skillId | string | No | Cloud skill ID (if available) |
+Claude Code discovers skills via symlinks in `~/.claude/skills/`. Each skill is a symlink pointing to the actual skill directory in `~/.refly/skills/`.
 
 ---
 
 ## Domain Skill Template
 
-Location: `~/.claude/skills/refly/domain-skills/<skill-name>/skill.md`
+Location: `~/.refly/skills/<skill-name>/SKILL.md` (accessed via `~/.claude/skills/<skill-name>/SKILL.md`)
 
 ````markdown
 ---
@@ -323,14 +287,14 @@ refly skill run <installationId> --input '<json>'
 
 | Type | Location | Management | Use Case |
 |------|----------|------------|----------|
-| Local | `~/.claude/skills/refly/domain-skills/` | `registry.json` | Fast iteration |
+| Local | `~/.refly/skills/<name>/` | Symlinks | Fast iteration |
 | Cloud | Backend `SkillPackage` | API | Distribution & versioning |
 
 Integration flow:
-1. Write local `skill.md` -> run `refly skill sync` -> updates `registry.json`
-2. Create cloud skill -> `refly skill create` (bind workflow) -> `refly skill publish`
-3. Install to run -> `refly skill install` -> `refly skill run <installationId>`
-4. Cloud skills can still match locally via `source: refly-cloud`
+1. Create cloud skill -> `refly skill create` (generates workflow + local symlink)
+2. Publish skill -> `refly skill publish` -> makes skill discoverable
+3. Install to run -> `refly skill install` -> creates local SKILL.md + symlink
+4. Run skill -> `refly skill run <installationId>`
 
 ---
 
@@ -419,10 +383,11 @@ Integration flow:
 ## Skill Sync Details
 
 `refly skill sync` will:
-- Scan local `domain-skills/` directories
-- Load frontmatter from each `skill.md`
-- Update `registry.json` with added/updated entries
-- Optionally prune orphan entries with `--prune`
+- Validate existing symlinks in `~/.claude/skills/`
+- Check for broken symlinks (pointing to non-existent directories)
+- Check for orphan directories (directories without symlinks)
+- With `--fix`: recreate broken symlinks
+- With `--prune`: remove broken symlinks
 
 ---
 

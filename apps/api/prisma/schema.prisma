@@ -2465,6 +2465,13 @@ model SkillPackage {
   /// Soft delete timestamp
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz()
 
+  /// GitHub Registry - PR number
+  githubPrNumber    Int?      @map("github_pr_number")
+  /// GitHub Registry - PR URL
+  githubPrUrl       String?   @map("github_pr_url")
+  /// GitHub Registry - submission timestamp
+  githubSubmittedAt DateTime? @map("github_submitted_at") @db.Timestamptz()
+
   /// Relation to workflows
   workflows     SkillWorkflow[]
   /// Relation to installations

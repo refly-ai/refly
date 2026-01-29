@@ -227,27 +227,34 @@ export function replaceHtmlAttrFileIds(content: string, urlMap: Map<string, stri
 
 /**
  * Combined pattern for single-pass markdown replacement
- * Matches: file-content://df-xxx | file://df-xxx | ](df-xxx)
+ * Matches: file-content://df-xxx | file://df-xxx | ](df-xxx) | JS string file IDs
+ *
+ * Groups:
+ * 1: file-content://df-xxx
+ * 2: file://df-xxx
+ * 3: ](df-xxx) markdown link/image
+ * 4-6: "df-xxx" or 'df-xxx' in JavaScript strings (for fileId: "df-xxx" patterns)
  */
 const MARKDOWN_COMBINED_PATTERN =
-  /file-content:\/\/(df-[a-z0-9]+)|(?<!file-content:)file:\/\/(df-[a-z0-9]+)|\]\((df-[a-z0-9]+)\)/gi;
+  /file-content:\/\/(df-[a-z0-9]+)|(?<!file-content:)file:\/\/(df-[a-z0-9]+)|\]\((df-[a-z0-9]+)\)|(["'])(df-[a-z0-9]+)(["'])/gi;
 
 /**
  * Combined pattern for single-pass HTML replacement
- * Matches: attr with file URIs | file-content://df-xxx | file://df-xxx | bare file IDs in attributes
+ * Matches: attr with file URIs | file-content://df-xxx | file://df-xxx | bare file IDs in attributes | JS string file IDs
  *
  * Groups:
  * 1-3: (src|href)="file-content://..." or (src|href)="file://..." (attribute with URI)
  * 4: standalone file-content://df-xxx
  * 5: standalone file://df-xxx
  * 6-8: src="df-xxx" or href="df-xxx" (bare IDs in attributes)
+ * 9-11: "df-xxx" or 'df-xxx' in JavaScript strings (for fileId: "df-xxx" patterns)
  */
 const HTML_COMBINED_PATTERN =
-  /((?:src|href)=["'])(?:file-content:\/\/|file:\/\/)(df-[a-z0-9]+)(["'])|file-content:\/\/(df-[a-z0-9]+)|(?<!file-content:)file:\/\/(df-[a-z0-9]+)|((?:src|href)=["'])(df-[a-z0-9]+)(["'])/gi;
+  /((?:src|href)=["'])(?:file-content:\/\/|file:\/\/)(df-[a-z0-9]+)(["'])|file-content:\/\/(df-[a-z0-9]+)|(?<!file-content:)file:\/\/(df-[a-z0-9]+)|((?:src|href)=["'])(df-[a-z0-9]+)(["'])|(["'])(df-[a-z0-9]+)(["'])/gi;
 
 /**
  * Replace all file ID patterns in markdown content with URLs (optimized single-pass)
- * Handles: file-content://, file://, and bare file IDs in ](df-xxx)
+ * Handles: file-content://, file://, bare file IDs in ](df-xxx), and JS string file IDs
  *
  * URL selection: All patterns use contentUrl for direct file access
  *
@@ -283,7 +290,15 @@ export function replaceAllMarkdownFileIds(
   // Single-pass replacement
   return content.replace(
     MARKDOWN_COMBINED_PATTERN,
-    (match, fileContentId?: string, fileShareId?: string, markdownId?: string) => {
+    (
+      match,
+      fileContentId?: string,
+      fileShareId?: string,
+      markdownId?: string,
+      jsStringQuoteStart?: string,
+      jsStringFileId?: string,
+      jsStringQuoteEnd?: string,
+    ) => {
       // file-content://df-xxx → contentUrl
       if (fileContentId) {
         return contentUrlMap.get(fileContentId) ?? shareUrlMap.get(fileContentId) ?? match;
@@ -297,6 +312,11 @@ export function replaceAllMarkdownFileIds(
         const url = contentUrlMap.get(markdownId) ?? shareUrlMap.get(markdownId);
         return url ? `](${url})` : match;
       }
+      // "df-xxx" or 'df-xxx' → quoted contentUrl (for JS string contexts)
+      if (jsStringFileId && jsStringQuoteStart && jsStringQuoteEnd) {
+        const url = contentUrlMap.get(jsStringFileId) ?? shareUrlMap.get(jsStringFileId);
+        return url ? `${jsStringQuoteStart}${url}${jsStringQuoteEnd}` : match;
+      }
       return match;
     },
   );
@@ -304,11 +324,11 @@ export function replaceAllMarkdownFileIds(
 
 /**
  * Replace all file ID patterns in HTML content with URLs (optimized single-pass)
- * Handles: file-content://, file://, and bare file IDs in src/href attributes
+ * Handles: file-content://, file://, bare file IDs in src/href attributes, and JS string file IDs
  *
  * URL selection logic:
  * - href attributes: always use shareUrl (for navigation to share page)
- * - everything else (src, standalone URIs): use contentUrl (for direct access)
+ * - everything else (src, standalone URIs, JS strings): use contentUrl (for direct access)
  *
  * @param content - HTML content to process
  * @param contentUrlMap - Map of fileId to content URL (for src attributes, media playback)
@@ -344,6 +364,9 @@ export function replaceAllHtmlFileIds(
       bareAttrPrefix?: string,
       bareAttrFileId?: string,
       bareAttrSuffix?: string,
+      jsStringQuoteStart?: string,
+      jsStringFileId?: string,
+      jsStringQuoteEnd?: string,
     ) => {
       // Pattern 1: Attribute with URI (src="file://..." or href="file://...")
       if (attrWithUriFileId && attrWithUriPrefix && attrWithUriSuffix) {
@@ -368,6 +391,13 @@ export function replaceAllHtmlFileIds(
       if (standaloneId) {
         const url = contentUrlMap.get(standaloneId) ?? shareUrlMap.get(standaloneId);
         return url ?? match;
+      }
+
+      // Pattern 5: JS string file ID ("df-xxx" or 'df-xxx') → quoted contentUrl
+      // This handles patterns like: fileId: "df-xxx" in JavaScript code
+      if (jsStringFileId && jsStringQuoteStart && jsStringQuoteEnd) {
+        const url = contentUrlMap.get(jsStringFileId) ?? shareUrlMap.get(jsStringFileId);
+        return url ? `${jsStringQuoteStart}${url}${jsStringQuoteEnd}` : match;
       }
 
       return match;

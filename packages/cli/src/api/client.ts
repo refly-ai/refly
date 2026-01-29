@@ -234,12 +234,18 @@ async function refreshAccessToken(): Promise<string> {
 function mapAPIError(status: number, response: APIResponse): CLIError {
   // Handle CLI error format: { ok: false, type: 'error', error: { code, message, hint } }
   if (response.error && typeof response.error === 'object') {
-    const cliError = response.error as { code?: string; message?: string; hint?: string };
+    const cliError = response.error as {
+      code?: string;
+      message?: string;
+      hint?: string;
+      suggestedFix?: { field?: string; format?: string; example?: string };
+    };
     return new CLIError(
       (cliError.code || 'UNKNOWN') as ErrorCode,
       cliError.message || 'Unknown error',
       undefined,
       cliError.hint,
+      cliError.suggestedFix,
     );
   }
 
@@ -595,6 +601,8 @@ export interface WorkflowVariable {
   required?: boolean;
   isSingle?: boolean;
   resourceTypes?: string[];
+  default?: unknown;
+  description?: string;
 }
 
 /**
@@ -664,4 +672,105 @@ export async function apiUploadDriveFile(
     logger.error('Failed to confirm upload:', error);
     throw error;
   }
+}
+
+/**
+ * Get workflow variables with current values
+ * @param canvasId - The canvas/workflow ID
+ * @returns Array of workflow variables with values
+ */
+export async function apiGetWorkflowVariables(canvasId: string): Promise<WorkflowVariable[]> {
+  return apiRequest<WorkflowVariable[]>('/v1/canvas/workflow/variables', {
+    query: { canvasId },
+  });
+}
+
+/**
+ * Update workflow variables (set values)
+ * @param canvasId - The canvas/workflow ID
+ * @param variables - Variables with values to set
+ * @returns Updated variables
+ */
+export async function apiUpdateWorkflowVariables(
+  canvasId: string,
+  variables: WorkflowVariable[],
+): Promise<WorkflowVariable[]> {
+  return apiRequest<WorkflowVariable[]>('/v1/canvas/workflow/variables', {
+    method: 'POST',
+    body: { canvasId, variables },
+  });
+}
+
+/**
+ * Action result response from the API
+ */
+export interface ActionResultResponse {
+  resultId: string;
+  version?: number;
+  title?: string;
+  type?: string;
+  status?: string;
+  targetId?: string;
+  targetType?: string;
+  workflowExecutionId?: string;
+  workflowNodeExecutionId?: string;
+  input?: Record<string, unknown>;
+  actionMeta?: Record<string, unknown>;
+  context?: Record<string, unknown>;
+  errors?: Array<{ type: string; message: string }>;
+  errorType?: string;
+  outputUrl?: string;
+  storageKey?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  steps?: Array<{
+    name?: string;
+    content?: string;
+    reasoningContent?: string;
+    logs?: unknown[];
+    artifacts?: unknown[];
+    structuredData?: Record<string, unknown>;
+    tokenUsage?: unknown[];
+    toolCalls?: Array<{
+      callId: string;
+      toolsetId: string;
+      toolName: string;
+      input?: Record<string, unknown>;
+      output?: Record<string, unknown>;
+      error?: string;
+      status: 'executing' | 'completed' | 'failed';
+      createdAt?: number;
+      updatedAt?: number;
+    }>;
+  }>;
+  messages?: Array<{
+    messageId: string;
+    type: string;
+    content?: string;
+    reasoningContent?: string;
+    toolCallId?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  }>;
+  files?: Array<{
+    fileId: string;
+    name: string;
+    type: string;
+    size: number;
+  }>;
+  modelInfo?: {
+    provider?: string;
+    modelId?: string;
+  };
+}
+
+/**
+ * Get action result by resultId
+ * @param resultId - The action result ID (ar-xxx)
+ * @returns Action result details
+ */
+export async function apiGetActionResult(resultId: string): Promise<ActionResultResponse> {
+  return apiRequest<ActionResultResponse>('/v1/cli/action/result', {
+    query: { resultId },
+  });
 }

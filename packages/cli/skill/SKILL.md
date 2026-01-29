@@ -2,7 +2,7 @@
 name: refly
 description: |
   Base skill for Refly ecosystem: creates, discovers, and runs domain-specific skills bound to workflows.
-  Routes user intent to matching domain skills via local registry, delegates execution to Refly backend.
+  Routes user intent to matching domain skills via symlinks in ~/.claude/skills/, delegates execution to Refly backend.
   Use when user asks to: create skills, run workflows, automate multi-step tasks, or manage pipelines.
   Triggers: refly, skill, workflow, run skill, create skill, automation, pipeline.
   Requires: @refly/cli installed and authenticated.
@@ -33,28 +33,30 @@ Tip: Get `installationId` from `refly skill installations` after installing a sk
 ## Directory Structure
 
 ```
-~/.claude/skills/refly/
-|-- SKILL.md                    # Base skill (this file)
-|-- registry.json               # Routing registry
-|-- references/                 # Core CLI docs
-|   |-- workflow.md
-|   |-- node.md
-|   |-- file.md
-|   `-- skill.md
-`-- domain-skills/              # Domain skills (one directory per skill)
-    `-- <skill-name>/
-        |-- skill.md            # Entry file
-        `-- ...                 # Additional docs
+~/.refly/skills/
+├── base/                       # Base skill files (this symlink target)
+│   ├── SKILL.md
+│   └── rules/
+│       ├── workflow.md
+│       ├── node.md
+│       ├── file.md
+│       └── skill.md
+└── <skill-name>/               # Domain skill directories
+    └── SKILL.md
+
+~/.claude/skills/
+├── refly → ~/.refly/skills/base/           # Base skill symlink
+└── <skill-name> → ~/.refly/skills/<name>/  # Domain skill symlinks
 ```
 
 ## Routing
 
-User intent -> match domain skill (name/trigger/description) -> read domain skill `.md`
--> execute via `refly skill run` -> return CLI-verified result.
+User intent -> match domain skill (name/trigger) in `~/.claude/skills/`
+-> read domain skill `SKILL.md` -> execute via `refly skill run` -> return CLI-verified result.
 
 ## References
 
-- `references/workflow.md` - Workflow command reference
-- `references/node.md` - Node command reference
-- `references/file.md` - File command reference
-- `references/skill.md` - Customized Skill command reference
+- `rules/workflow.md` - Workflow command reference
+- `rules/node.md` - Node command reference
+- `rules/file.md` - File command reference
+- `rules/skill.md` - Customized Skill command reference

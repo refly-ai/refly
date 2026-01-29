@@ -103,7 +103,7 @@ export const InputParameterRow = memo(
       >
         <div
           className={cn(
-            'group relative flex gap-2 items-center justify-between py-1.5 px-3 cursor-pointer hover:bg-refly-tertiary-hover transition-colors',
+            'group relative flex gap-2 items-center justify-between py-1.5 px-3 cursor-pointer hover:bg-refly-fill-hover transition-colors',
             isPreview
               ? 'h-[37px] border-solid border-[1px] border-refly-Card-Border rounded-xl'
               : 'h-[30px] bg-refly-bg-control-z0 rounded-[4px]',
@@ -139,8 +139,10 @@ export const InputParameterRow = memo(
             {!readonly && (
               <div
                 className={cn(
-                  'absolute right-0 top-0 bottom-0 items-center gap-1 px-2 rounded-r-xl bg-refly-fill-hover',
-                  isPopconfirmOpen ? 'flex' : 'hidden group-hover:flex',
+                  'absolute right-0 top-0 bottom-0 items-center gap-1 px-2 rounded-r-xl ',
+                  isPopconfirmOpen
+                    ? 'flex'
+                    : 'hidden group-hover:flex group-hover:bg-refly-fill-hover',
                 )}
               >
                 <Button

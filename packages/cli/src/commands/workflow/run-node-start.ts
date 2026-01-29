@@ -67,12 +67,16 @@ export const workflowRunNodeStartCommand = new Command('node-start')
         nextSteps: [
           `Check status: \`refly workflow status ${workflowId}\``,
           `Get details: \`refly workflow detail ${workflowId}\``,
-          `Get node output: \`refly workflow node-output ${workflowId} ${nodeId}\``,
+          `Get node output: \`refly workflow node output ${workflowId} ${nodeId}\``,
         ],
       });
     } catch (error) {
       if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
+        fail(error.code, error.message, {
+          details: error.details,
+          hint: error.hint,
+          suggestedFix: error.suggestedFix,
+        });
       }
       fail(
         ErrorCodes.INTERNAL_ERROR,

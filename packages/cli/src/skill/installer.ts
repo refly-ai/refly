@@ -1,12 +1,57 @@
 /**
- * Skill installer - copies SKILL.md and references to Claude Code directories.
+ * Skill installer - copies SKILL.md and rules to Refly skill directory,
+ * then creates symlink from Claude Code directory.
+ *
+ * Target structure:
+ * ~/.refly/skills/base/
+ * ├── SKILL.md
+ * └── rules/
+ *     ├── workflow.md
+ *     ├── node.md
+ *     ├── file.md
+ *     └── skill.md
+ *
+ * Symlink:
+ * ~/.claude/skills/refly → ~/.refly/skills/base/
  */
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { getClaudeSkillDir, getClaudeCommandsDir, ensureDir } from '../config/paths.js';
+import {
+  getReflyBaseSkillDir,
+  getClaudeCommandsDir,
+  getClaudeSkillSymlinkPath,
+  ensureDir,
+  ensureReflySkillsDir,
+} from '../config/paths.js';
 import { updateSkillInfo } from '../config/config.js';
 import { logger } from '../utils/logger.js';
+import { createSkillSymlink } from './symlink.js';
+
+/**
+ * Remove old skill directory if it exists (not a symlink)
+ */
+function removeOldSkillDirectory(): void {
+  const claudeSkillPath = getClaudeSkillSymlinkPath('refly');
+
+  if (!fs.existsSync(claudeSkillPath)) {
+    return;
+  }
+
+  try {
+    const stat = fs.lstatSync(claudeSkillPath);
+    if (stat.isSymbolicLink()) {
+      // Already a symlink, remove it so we can recreate
+      fs.unlinkSync(claudeSkillPath);
+    } else if (stat.isDirectory()) {
+      // Old directory structure, remove it
+      fs.rmSync(claudeSkillPath, { recursive: true, force: true });
+      logger.info('Removed old skill directory');
+    }
+  } catch (err) {
+    logger.warn('Failed to remove old directory:', err);
+  }
+}
 
 // Get the skill files from the package
 function getPackageSkillDir(): string {
@@ -35,18 +80,20 @@ function getPackageSkillDir(): string {
 export interface InstallResult {
   skillInstalled: boolean;
   skillPath: string | null;
+  symlinkPath: string | null;
   commandsInstalled: boolean;
   commandsPath: string | null;
   version: string;
 }
 
 /**
- * Install skill files to Claude Code directories
+ * Install skill files to Refly directory and create symlink to Claude Code
  */
 export function installSkill(): InstallResult {
   const result: InstallResult = {
     skillInstalled: false,
     skillPath: null,
+    symlinkPath: null,
     commandsInstalled: false,
     commandsPath: null,
     version: getSkillVersion(),
@@ -55,14 +102,14 @@ export function installSkill(): InstallResult {
   const sourceDir = getPackageSkillDir();
   logger.debug('Source skill directory:', sourceDir);
 
-  // Install SKILL.md and references
-  // Always try to create skills directory
-  const targetDir = getClaudeSkillDir();
+  // Install SKILL.md and rules to ~/.refly/skills/base/
+  ensureReflySkillsDir();
+  const targetDir = getReflyBaseSkillDir();
   logger.debug('Target skill directory:', targetDir);
 
   try {
     ensureDir(targetDir);
-    ensureDir(path.join(targetDir, 'references'));
+    ensureDir(path.join(targetDir, 'rules'));
     logger.debug('Created target directories');
   } catch (err) {
     logger.error('Failed to create target directories:', err);
@@ -82,19 +129,28 @@ export function installSkill(): InstallResult {
     logger.warn('SKILL.md source not found:', skillSource);
   }
 
-  // Copy references
+  // Copy references to rules folder
   const refsSource = path.join(sourceDir, 'references');
-  const refsTarget = path.join(targetDir, 'references');
+  const rulesTarget = path.join(targetDir, 'rules');
   if (fs.existsSync(refsSource)) {
     const files = fs.readdirSync(refsSource);
-    logger.debug(`Copying ${files.length} reference files`);
+    logger.debug(`Copying ${files.length} rule files`);
     for (const file of files) {
-      fs.copyFileSync(path.join(refsSource, file), path.join(refsTarget, file));
+      fs.copyFileSync(path.join(refsSource, file), path.join(rulesTarget, file));
     }
   }
 
+  // Remove old directory if exists, then create symlink
+  removeOldSkillDirectory();
+  const symlinkResult = createSkillSymlink('refly');
+  if (symlinkResult.success) {
+    result.symlinkPath = symlinkResult.claudePath;
+    logger.info(`Created symlink: ${symlinkResult.claudePath} -> ${symlinkResult.reflyPath}`);
+  } else {
+    logger.warn(`Failed to create symlink: ${symlinkResult.error}`);
+  }
+
   // Install slash commands
-  // Always try to create commands directory (same as skills directory)
   const commandsDir = getClaudeCommandsDir();
   logger.debug('Commands directory:', commandsDir);
   ensureDir(commandsDir);
@@ -109,6 +165,7 @@ export function installSkill(): InstallResult {
 
   logger.info('Skill installation complete:', {
     skillInstalled: result.skillInstalled,
+    symlinkPath: result.symlinkPath,
     commandsInstalled: result.commandsInstalled,
   });
 
@@ -170,20 +227,24 @@ export function isSkillInstalled(): {
   installed: boolean;
   upToDate: boolean;
   currentVersion?: string;
+  symlinkValid?: boolean;
 } {
-  const skillPath = path.join(getClaudeSkillDir(), 'SKILL.md');
+  const skillPath = path.join(getReflyBaseSkillDir(), 'SKILL.md');
 
   if (!fs.existsSync(skillPath)) {
     return { installed: false, upToDate: false };
   }
 
   const currentVersion = getSkillVersion();
-  // For now, consider it up to date if it exists
-  // Future: parse version from installed SKILL.md and compare
+
+  // Check if symlink is valid
+  const { isSkillSymlinkValid } = require('./symlink.js');
+  const symlinkStatus = isSkillSymlinkValid('refly');
 
   return {
     installed: true,
     upToDate: true,
     currentVersion,
+    symlinkValid: symlinkStatus.isValid,
   };
 }

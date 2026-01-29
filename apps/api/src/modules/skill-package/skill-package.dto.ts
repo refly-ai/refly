@@ -41,6 +41,10 @@ export interface CreateSkillPackageCliResponse {
     name?: string;
     description?: string;
   }>;
+  inputSchema?: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
+  /** Auto-created installation ID (creator is auto-installed) */
+  installationId?: string;
 }
 
 export interface UpdateSkillPackageDto {
@@ -115,6 +119,7 @@ export interface DownloadSkillDto {
 export interface InstallSkillDto {
   skillId: string;
   shareId?: string;
+  force?: boolean; // Force reinstall if already installed
 }
 
 export interface InstallationFilterDto {
@@ -125,6 +130,15 @@ export interface InstallationFilterDto {
 
 export interface UninstallOptionsDto {
   deleteWorkflows?: boolean;
+}
+
+export interface UpdateInstallationDto {
+  name?: string;
+  description?: string;
+  workflowId?: string;
+  triggers?: string[];
+  tags?: string[];
+  version?: string;
 }
 
 // ===== Execution DTOs =====
@@ -164,6 +178,11 @@ export interface SkillPackageResponse {
   createdAt: string;
   updatedAt: string;
   workflows?: SkillWorkflowResponse[];
+  workflowId?: string; // Primary workflow ID for CLI usage
+  // GitHub Registry fields
+  githubPrNumber?: number;
+  githubPrUrl?: string;
+  githubSubmittedAt?: string;
 }
 
 export interface SkillWorkflowResponse {
@@ -227,4 +246,22 @@ export interface WorkflowExecutionInfo {
   status: 'pending' | 'running' | 'completed' | 'failed';
   result?: unknown;
   error?: string;
+}
+
+// ===== Publish DTOs =====
+
+export interface PublishSkillDto {
+  skillContent: string;
+}
+
+export interface ReflySkillMeta {
+  name: string;
+  displayName?: string;
+  description: string;
+  skillId: string;
+  workflowId: string;
+  installationId?: string;
+  triggers?: string[];
+  tags?: string[];
+  version?: string;
 }
