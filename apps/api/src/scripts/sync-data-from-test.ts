@@ -32,10 +32,21 @@ interface SyncConfig {
 
 const SYNC_CONFIGS: SyncConfig[] = [
   {
-    table: 'toolsets', // Database table name
-    where: { key: 'perplexity' },
+    table: 'toolset_inventory', // Toolset inventory with encrypted API keys
+    where: {},
+    encryptedFields: ['apiKey'],
+    labelField: 'id',
+  },
+  {
+    table: 'toolsets', // Global toolsets
+    where: { isGlobal: true },
     encryptedFields: ['authData'],
     labelField: 'key',
+  },
+  {
+    table: 'tool_methods', // Tool methods (no encryption)
+    where: {},
+    labelField: 'name',
   },
   {
     table: 'providers', // Global providers
@@ -64,6 +75,8 @@ function getModelNameFromTable(tableName: string): string {
     accounts: 'account',
     users: 'user',
     toolsets: 'toolset',
+    toolset_inventory: 'toolsetInventory',
+    tool_methods: 'toolMethod',
     providers: 'provider',
     provider_items: 'providerItem',
     // Add more special cases as needed
