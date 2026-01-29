@@ -5,8 +5,8 @@ import type { IContextItem } from '@refly/common-types';
 import { cn } from '@refly/utils/cn';
 import type { UploadProgress } from '@refly/stores';
 import { useTranslation } from 'react-i18next';
-import { FileIcon } from '@refly-packages/ai-workspace-common/components/common/resource-icon';
-import { getFileTypeConfig, isImageFile, formatFileSize, getFileExtension } from './file-utils';
+import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
+import { isImageFile, formatFileSize, getFileExtension } from './file-utils';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import type { DriveFile } from '@refly/openapi-schema';
 import { Progress } from 'antd';
@@ -38,10 +38,12 @@ export const FileCard = memo(
     }));
 
     const extension = useMemo(() => getFileExtension(item.title), [item.title]);
-    const isImage = useMemo(() => isImageFile(extension), [extension]);
+    const isImage = useMemo(
+      () => isImageFile(item.metadata?.mimeType, extension),
+      [extension, item.metadata?.mimeType],
+    );
     const fileSize = formatFileSize(item.metadata?.size);
     const thumbnailUrl = item.metadata?.thumbnailUrl || item.metadata?.previewUrl;
-    const fileConfig = getFileTypeConfig(extension);
 
     const isUploading = uploadProgress?.status === 'uploading';
     const hasError = uploadProgress?.status === 'error';
@@ -100,19 +102,14 @@ export const FileCard = memo(
           onClick={handleCardClick}
         >
           {/* Thumbnail */}
-          <div className="w-full h-full flex items-center justify-center bg-white">
-            {isImage && thumbnailUrl ? (
-              <img src={thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
-            ) : (
-              <FileIcon
-                color={fileConfig.color}
-                type={fileConfig.type as any}
-                fold={false}
-                height={32}
-                width="24"
-                glyphColor="white"
-              />
-            )}
+          <div className="w-full h-full flex items-center justify-center">
+            <NodeIcon
+              type="file"
+              filename={item.title}
+              url={isImage ? thumbnailUrl : undefined}
+              small={false}
+              className="!w-9 !h-9"
+            />
           </div>
 
           {/* Uploading Stage - Dark overlay + Centered Progress Ring (对应截图1: 上传 loading) */}
@@ -194,20 +191,15 @@ export const FileCard = memo(
       >
         {/* Thumbnail/Icon area */}
         <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
-          {isImage && thumbnailUrl ? (
-            <div className="w-10 h-10 rounded overflow-hidden bg-white">
-              <img src={thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
-            </div>
-          ) : (
-            <FileIcon
-              color={fileConfig.color}
-              type={fileConfig.type as any}
-              fold={false}
-              height={40}
-              width="26"
-              glyphColor="white"
-            />
-          )}
+          <NodeIcon
+            type="file"
+            filename={item.title}
+            url={isImage ? thumbnailUrl : undefined}
+            small={false}
+            className="!w-9 !h-9"
+            iconSize={20}
+            filled={false}
+          />
         </div>
 
         {/* File info area */}

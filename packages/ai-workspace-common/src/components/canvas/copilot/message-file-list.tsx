@@ -1,10 +1,9 @@
 import { memo, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import type { IContextItem } from '@refly/common-types';
 import { cn } from '@refly/utils/cn';
-import { FileIcon } from '@refly-packages/ai-workspace-common/components/common/resource-icon';
+import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { serverOrigin } from '@refly/ui-kit';
-import { Image as ImageIcon } from 'refly-icons';
-import { getFileTypeConfig, isImageFile, formatFileSize, getFileExtension } from './file-utils';
+import { isImageFile, formatFileSize, getFileExtension } from './file-utils';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import type { DriveFile } from '@refly/openapi-schema';
 
@@ -36,8 +35,6 @@ interface MessageFileListProps {
 
 // Image thumbnail component - 48x48px with loading skeleton
 const ImageThumbnail = memo(({ item, canvasId }: { item: IContextItem; canvasId: string }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
   const { setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
     setCurrentFile: state.setCurrentFile,
   }));
@@ -71,32 +68,15 @@ const ImageThumbnail = memo(({ item, canvasId }: { item: IContextItem; canvasId:
 
   return (
     <div
-      className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden bg-gray-300 border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+      className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
       onClick={handleClick}
     >
-      {thumbnailUrl && !hasError ? (
-        <>
-          {/* Loading skeleton animation */}
-          {isLoading && (
-            <div className="w-full h-full animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%]" />
-          )}
-          <img
-            src={thumbnailUrl}
-            alt={item.title}
-            className={cn('w-full h-full object-cover', isLoading && 'hidden')}
-            onLoad={() => setIsLoading(false)}
-            onError={() => {
-              setIsLoading(false);
-              setHasError(true);
-            }}
-          />
-        </>
-      ) : (
-        // No URL or load failed - show image icon placeholder
-        <div className="w-full h-full flex items-center justify-center">
-          <ImageIcon size={20} className="text-gray-400" />
-        </div>
-      )}
+      <NodeIcon
+        type="image"
+        url={thumbnailUrl ?? undefined}
+        small={false}
+        className="!w-full !h-full !rounded-xl"
+      />
     </div>
   );
 });
@@ -107,7 +87,6 @@ ImageThumbnail.displayName = 'ImageThumbnail';
 const MessageFileCard = memo(({ item, canvasId }: { item: IContextItem; canvasId: string }) => {
   const extension = getFileExtension(item.title);
   const fileSize = formatFileSize(item.metadata?.size);
-  const fileConfig = getFileTypeConfig(extension);
   const { setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
     setCurrentFile: state.setCurrentFile,
   }));
@@ -127,24 +106,23 @@ const MessageFileCard = memo(({ item, canvasId }: { item: IContextItem; canvasId
 
   return (
     <div
-      className="flex items-center gap-1 p-1 rounded-lg bg-gray-100 flex-shrink-0 cursor-pointer hover:bg-gray-200 transition-colors"
+      className="flex items-center gap-2 p-1 rounded-lg bg-[#F6F6F6] flex-shrink-0 cursor-pointer hover:bg-gray-200 transition-colors"
       style={{ width: '166px', height: '48px' }}
       onClick={handleClick}
     >
-      {/* File icon area - 26x40px */}
-      <div className="w-[26px] h-10 flex items-center justify-end flex-shrink-0">
-        <FileIcon
-          color={fileConfig.color}
-          type={fileConfig.type as any}
-          fold={true}
-          height={32}
-          width="20"
-          glyphColor="rgba(255,255,255,0.4)"
+      {/* File icon area - 36x40px */}
+      <div className="w-9 h-10 flex items-center justify-center flex-shrink-0">
+        <NodeIcon
+          type="file"
+          filename={item.title}
+          small={false}
+          className="!w-9 !h-9"
+          iconSize={20}
         />
       </div>
 
       {/* File info area */}
-      <div className="flex-1 min-w-0 flex flex-col gap-0.5" style={{ width: '120px' }}>
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
         {/* File name - 12px, truncate */}
         <div className="text-xs font-normal truncate text-gray-900 leading-normal">
           {item.title}
