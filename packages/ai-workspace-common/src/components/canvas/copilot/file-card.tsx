@@ -197,7 +197,7 @@ export const FileCard = memo(
             url={isImage ? thumbnailUrl : undefined}
             small={false}
             className="!w-9 !h-9"
-            iconSize={20}
+            iconSize={24}
             filled={false}
           />
         </div>
