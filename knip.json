@@ -8,13 +8,15 @@
     "apps/web/src/service-worker-sw.ts",
     "apps/api/load-tests/**",
     "docs/.vitepress/**",
-    "packages/cli/**"
+    "packages/cli/**",
+    "packages/openapi-schema/openapi-ts.config.ts"
   ],
   "workspaces": {
     ".": {},
     "apps/api": {
       "entry": ["src/scripts/preload.ts"],
       "project": ["src/**/*.{ts,tsx,js,jsx}"],
+      "ignoreDependencies": ["pino-pretty"],
       "paths": {
         "@refly-packages/ai-workspace-common": ["../../packages/ai-workspace-common/src/index.ts"],
         "@refly-packages/ai-workspace-common/*": ["../../packages/ai-workspace-common/src/*"]

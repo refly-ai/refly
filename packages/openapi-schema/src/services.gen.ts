@@ -333,6 +333,12 @@ import type {
   RunWorkflowViaApiData,
   RunWorkflowViaApiError,
   RunWorkflowViaApiResponse,
+  GetWorkflowDetailViaApiData,
+  GetWorkflowDetailViaApiError,
+  GetWorkflowDetailViaApiResponse2,
+  GetWorkflowOutputData,
+  GetWorkflowOutputError,
+  GetWorkflowOutputResponse2,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -2304,6 +2310,44 @@ export const runWorkflowViaApi = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/openapi/workflow/{canvasId}/run',
+  });
+};
+
+/**
+ * Get workflow execution detail via API
+ * Get workflow execution detail with node executions via authenticated API call.
+ * Requires API Key authentication.
+ *
+ */
+export const getWorkflowDetailViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowDetailViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowDetailViaApiResponse2,
+    GetWorkflowDetailViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{executionId}/detail',
+  });
+};
+
+/**
+ * Get workflow execution output via API
+ * Get workflow execution output (products and drive files) via authenticated API call.
+ * Requires API Key authentication.
+ *
+ */
+export const getWorkflowOutput = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowOutputData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowOutputResponse2,
+    GetWorkflowOutputError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{executionId}/output',
   });
 };
 

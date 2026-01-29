@@ -22,6 +22,7 @@ import {
   createCanvasTemplate,
   createCanvasVersion,
   createCheckoutSession,
+  createCliApiKey,
   createCodeArtifact,
   createCreditPackCheckoutSession,
   createDocument,
@@ -49,11 +50,13 @@ import {
   deleteShare,
   deleteToolset,
   deleteWorkflowApp,
+  disableWebhook,
   downloadExportJobResult,
   duplicateCanvas,
   duplicateShare,
   emailLogin,
   emailSignup,
+  enableWebhook,
   executeTool,
   executeWorkflowApp,
   exportCanvas,
@@ -95,8 +98,12 @@ import {
   getSubscriptionUsage,
   getTemplateGenerationStatus,
   getToolCallResult,
+  getWebhookConfig,
+  getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowDetailViaApi,
+  getWorkflowOutput,
   getWorkflowPlanDetail,
   getWorkflowVariables,
   importCanvas,
@@ -107,6 +114,7 @@ import {
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
+  listCliApiKeys,
   listCodeArtifacts,
   listCopilotSessions,
   listDocuments,
@@ -132,8 +140,12 @@ import {
   refreshToken,
   reindexResource,
   resendVerification,
+  resetWebhook,
   retryScheduleRecord,
+  revokeCliApiKey,
   revokeComposioConnection,
+  runWebhook,
+  runWorkflowViaApi,
   scrape,
   search,
   serveStatic,
@@ -147,6 +159,7 @@ import {
   triggerVoucher,
   updateCanvas,
   updateCanvasTemplate,
+  updateCliApiKey,
   updateCodeArtifact,
   updateDocument,
   updateDriveFile,
@@ -205,6 +218,16 @@ export const UseCheckToolOauthStatusKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useCheckToolOauthStatusKey, ...(queryKey ?? [clientOptions])];
+export type ListCliApiKeysDefaultResponse = Awaited<ReturnType<typeof listCliApiKeys>>['data'];
+export type ListCliApiKeysQueryResult<
+  TData = ListCliApiKeysDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListCliApiKeysKey = 'ListCliApiKeys';
+export const UseListCliApiKeysKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListCliApiKeysKey, ...(queryKey ?? [clientOptions])];
 export type GetCollabTokenDefaultResponse = Awaited<ReturnType<typeof getCollabToken>>['data'];
 export type GetCollabTokenQueryResult<
   TData = GetCollabTokenDefaultResponse,
@@ -539,6 +562,52 @@ export const UseGetTemplateGenerationStatusKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetTemplateGenerationStatusKey, ...(queryKey ?? [clientOptions])];
+export type GetWebhookConfigDefaultResponse = Awaited<ReturnType<typeof getWebhookConfig>>['data'];
+export type GetWebhookConfigQueryResult<
+  TData = GetWebhookConfigDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWebhookConfigKey = 'GetWebhookConfig';
+export const UseGetWebhookConfigKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWebhookConfigKey, ...(queryKey ?? [clientOptions])];
+export type GetWebhookHistoryDefaultResponse = Awaited<
+  ReturnType<typeof getWebhookHistory>
+>['data'];
+export type GetWebhookHistoryQueryResult<
+  TData = GetWebhookHistoryDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWebhookHistoryKey = 'GetWebhookHistory';
+export const UseGetWebhookHistoryKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWebhookHistoryKey, ...(queryKey ?? [clientOptions])];
+export type GetWorkflowDetailViaApiDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowDetailViaApi>
+>['data'];
+export type GetWorkflowDetailViaApiQueryResult<
+  TData = GetWorkflowDetailViaApiDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWorkflowDetailViaApiKey = 'GetWorkflowDetailViaApi';
+export const UseGetWorkflowDetailViaApiKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWorkflowDetailViaApiKey, ...(queryKey ?? [clientOptions])];
+export type GetWorkflowOutputDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowOutput>
+>['data'];
+export type GetWorkflowOutputQueryResult<
+  TData = GetWorkflowOutputDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWorkflowOutputKey = 'GetWorkflowOutput';
+export const UseGetWorkflowOutputKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWorkflowOutputKey, ...(queryKey ?? [clientOptions])];
 export type GetSettingsDefaultResponse = Awaited<ReturnType<typeof getSettings>>['data'];
 export type GetSettingsQueryResult<
   TData = GetSettingsDefaultResponse,
@@ -945,6 +1014,12 @@ export const UseLogoutKeyFn = (mutationKey?: Array<unknown>) => [
   useLogoutKey,
   ...(mutationKey ?? []),
 ];
+export type CreateCliApiKeyMutationResult = Awaited<ReturnType<typeof createCliApiKey>>;
+export const useCreateCliApiKeyKey = 'CreateCliApiKey';
+export const UseCreateCliApiKeyKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateCliApiKeyKey,
+  ...(mutationKey ?? []),
+];
 export type ImportCanvasMutationResult = Awaited<ReturnType<typeof importCanvas>>;
 export const useImportCanvasKey = 'ImportCanvas';
 export const UseImportCanvasKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1273,6 +1348,36 @@ export const UseRetryScheduleRecordKeyFn = (mutationKey?: Array<unknown>) => [
   useRetryScheduleRecordKey,
   ...(mutationKey ?? []),
 ];
+export type EnableWebhookMutationResult = Awaited<ReturnType<typeof enableWebhook>>;
+export const useEnableWebhookKey = 'EnableWebhook';
+export const UseEnableWebhookKeyFn = (mutationKey?: Array<unknown>) => [
+  useEnableWebhookKey,
+  ...(mutationKey ?? []),
+];
+export type DisableWebhookMutationResult = Awaited<ReturnType<typeof disableWebhook>>;
+export const useDisableWebhookKey = 'DisableWebhook';
+export const UseDisableWebhookKeyFn = (mutationKey?: Array<unknown>) => [
+  useDisableWebhookKey,
+  ...(mutationKey ?? []),
+];
+export type ResetWebhookMutationResult = Awaited<ReturnType<typeof resetWebhook>>;
+export const useResetWebhookKey = 'ResetWebhook';
+export const UseResetWebhookKeyFn = (mutationKey?: Array<unknown>) => [
+  useResetWebhookKey,
+  ...(mutationKey ?? []),
+];
+export type RunWebhookMutationResult = Awaited<ReturnType<typeof runWebhook>>;
+export const useRunWebhookKey = 'RunWebhook';
+export const UseRunWebhookKeyFn = (mutationKey?: Array<unknown>) => [
+  useRunWebhookKey,
+  ...(mutationKey ?? []),
+];
+export type RunWorkflowViaApiMutationResult = Awaited<ReturnType<typeof runWorkflowViaApi>>;
+export const useRunWorkflowViaApiKey = 'RunWorkflowViaApi';
+export const UseRunWorkflowViaApiKeyFn = (mutationKey?: Array<unknown>) => [
+  useRunWorkflowViaApiKey,
+  ...(mutationKey ?? []),
+];
 export type SubmitFormMutationResult = Awaited<ReturnType<typeof submitForm>>;
 export const useSubmitFormKey = 'SubmitForm';
 export const UseSubmitFormKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1469,5 +1574,17 @@ export type UpdateSettingsMutationResult = Awaited<ReturnType<typeof updateSetti
 export const useUpdateSettingsKey = 'UpdateSettings';
 export const UseUpdateSettingsKeyFn = (mutationKey?: Array<unknown>) => [
   useUpdateSettingsKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateCliApiKeyMutationResult = Awaited<ReturnType<typeof updateCliApiKey>>;
+export const useUpdateCliApiKeyKey = 'UpdateCliApiKey';
+export const UseUpdateCliApiKeyKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateCliApiKeyKey,
+  ...(mutationKey ?? []),
+];
+export type RevokeCliApiKeyMutationResult = Awaited<ReturnType<typeof revokeCliApiKey>>;
+export const useRevokeCliApiKeyKey = 'RevokeCliApiKey';
+export const UseRevokeCliApiKeyKeyFn = (mutationKey?: Array<unknown>) => [
+  useRevokeCliApiKeyKey,
   ...(mutationKey ?? []),
 ];

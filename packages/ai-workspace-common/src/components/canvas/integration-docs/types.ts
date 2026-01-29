@@ -76,11 +76,3 @@ export interface CodeExamples {
   python: string;
   javascript: string;
 }
-
-export interface ApiKeyInfo {
-  keyId: string;
-  name: string;
-  keyPrefix: string;
-  createdAt: string;
-  lastUsedAt?: string | null;
-}

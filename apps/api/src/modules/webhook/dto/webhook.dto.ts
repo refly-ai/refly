@@ -43,10 +43,3 @@ export interface GetCallHistoryDto {
   page?: number;
   pageSize?: number;
 }
-
-/**
- * DTO for updating API key
- */
-export interface UpdateApiKeyDto {
-  name: string;
-}

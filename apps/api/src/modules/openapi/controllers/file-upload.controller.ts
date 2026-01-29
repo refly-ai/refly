@@ -12,12 +12,10 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { FileUploadService } from '../file-upload.service';
 import { ApiKeyAuthGuard } from '../guards/api-key-auth.guard';
 import { RateLimitGuard } from '../guards/rate-limit.guard';
+import { MAX_FILE_SIZE, MAX_FILES_PER_REQUEST } from '../openapi.constants';
 import { LoginedUser } from '../../../utils/decorators/user.decorator';
 import { User } from '@prisma/client';
 import { buildSuccessResponse } from '../../../utils/response';
-
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_FILES_PER_REQUEST = 10;
 
 /**
  * Controller for file upload endpoints (requires API Key)

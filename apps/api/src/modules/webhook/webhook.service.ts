@@ -25,12 +25,6 @@ export interface WebhookConfig {
   timeout: number;
 }
 
-export interface WebhookCallResult {
-  executionId: string;
-  workflowId: string;
-  status: string;
-}
-
 @Injectable()
 export class WebhookService {
   private readonly logger = new Logger(WebhookService.name);
