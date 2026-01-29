@@ -6,7 +6,7 @@ import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/
 import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
 import { DriveFile, ResourceType, EntityType } from '@refly/openapi-schema';
 import cn from 'classnames';
-import { useActionResultStoreShallow } from '@refly/stores';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { TbArrowBackUp } from 'react-icons/tb';
 import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/canvas/use-download-file';
 import { useTranslation } from 'react-i18next';
@@ -98,7 +98,7 @@ export const ProductCard = memo(
     onAddToFileLibrary,
     isAddingToFileLibrary = false,
   }: ProductCardProps) => {
-    const { setCurrentFile } = useActionResultStoreShallow((state) => ({
+    const { setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
       setCurrentFile: state.setCurrentFile,
     }));
     const inheritedUsePublicFileUrl = usePublicFileUrlContext();

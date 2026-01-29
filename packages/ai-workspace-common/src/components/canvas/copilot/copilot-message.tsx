@@ -285,7 +285,11 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       <div className="flex flex-col items-end gap-2 pl-5">
         {/* Files attached to this message */}
         {fileContextItems.length > 0 && (
-          <MessageFileList contextItems={fileContextItems} className="max-w-full" />
+          <MessageFileList
+            contextItems={fileContextItems}
+            canvasId={canvasId}
+            className="max-w-full"
+          />
         )}
         {/* Text query bubble */}
         {input?.query && (

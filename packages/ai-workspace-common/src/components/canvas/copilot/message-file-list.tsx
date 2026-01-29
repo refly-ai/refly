@@ -5,6 +5,8 @@ import { FileIcon } from '@refly-packages/ai-workspace-common/components/common/
 import { serverOrigin } from '@refly/ui-kit';
 import { Image as ImageIcon } from 'refly-icons';
 import { getFileTypeConfig, isImageFile, formatFileSize, getFileExtension } from './file-utils';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import type { DriveFile } from '@refly/openapi-schema';
 
 // ChevronRight icon component (no equivalent in refly-icons)
 const ChevronRightIcon = ({ size = 14, className }: { size?: number; className?: string }) => (
@@ -28,13 +30,17 @@ const ChevronRightIcon = ({ size = 14, className }: { size?: number; className?:
 
 interface MessageFileListProps {
   contextItems: IContextItem[];
+  canvasId: string;
   className?: string;
 }
 
 // Image thumbnail component - 48x48px with loading skeleton
-const ImageThumbnail = memo(({ item }: { item: IContextItem }) => {
+const ImageThumbnail = memo(({ item, canvasId }: { item: IContextItem; canvasId: string }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const { setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setCurrentFile: state.setCurrentFile,
+  }));
 
   // Generate URL from fileId if no direct URL is available
   const thumbnailUrl = useMemo(() => {
@@ -50,8 +56,24 @@ const ImageThumbnail = memo(({ item }: { item: IContextItem }) => {
     return null;
   }, [item.entityId, item.metadata?.thumbnailUrl, item.metadata?.previewUrl, item.metadata?.url]);
 
+  const handleClick = useCallback(() => {
+    // Convert IContextItem to DriveFile format
+    const driveFile: DriveFile = {
+      fileId: item.entityId,
+      canvasId,
+      name: item.title,
+      type: item.metadata?.mimeType || 'image/*',
+      size: item.metadata?.size,
+      category: 'image',
+    };
+    setCurrentFile(driveFile);
+  }, [item, canvasId, setCurrentFile]);
+
   return (
-    <div className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden bg-gray-300 border border-gray-200">
+    <div
+      className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden bg-gray-300 border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+      onClick={handleClick}
+    >
       {thumbnailUrl && !hasError ? (
         <>
           {/* Loading skeleton animation */}
@@ -82,15 +104,32 @@ const ImageThumbnail = memo(({ item }: { item: IContextItem }) => {
 ImageThumbnail.displayName = 'ImageThumbnail';
 
 // File card component - matches Figma design
-const MessageFileCard = memo(({ item }: { item: IContextItem }) => {
+const MessageFileCard = memo(({ item, canvasId }: { item: IContextItem; canvasId: string }) => {
   const extension = getFileExtension(item.title);
   const fileSize = formatFileSize(item.metadata?.size);
   const fileConfig = getFileTypeConfig(extension);
+  const { setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
+    setCurrentFile: state.setCurrentFile,
+  }));
+
+  const handleClick = useCallback(() => {
+    // Convert IContextItem to DriveFile format
+    const driveFile: DriveFile = {
+      fileId: item.entityId,
+      canvasId,
+      name: item.title,
+      type: item.metadata?.mimeType || 'text/plain',
+      size: item.metadata?.size,
+      category: 'document',
+    };
+    setCurrentFile(driveFile);
+  }, [item, canvasId, setCurrentFile]);
 
   return (
     <div
-      className="flex items-center gap-1 p-1 rounded-lg bg-gray-100 flex-shrink-0"
+      className="flex items-center gap-1 p-1 rounded-lg bg-gray-100 flex-shrink-0 cursor-pointer hover:bg-gray-200 transition-colors"
       style={{ width: '166px', height: '48px' }}
+      onClick={handleClick}
     >
       {/* File icon area - 26x40px */}
       <div className="w-[26px] h-10 flex items-center justify-end flex-shrink-0">
@@ -126,74 +165,76 @@ const MessageFileCard = memo(({ item }: { item: IContextItem }) => {
 
 MessageFileCard.displayName = 'MessageFileCard';
 
-export const MessageFileList = memo(({ contextItems, className }: MessageFileListProps) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [showRightArrow, setShowRightArrow] = useState(false);
+export const MessageFileList = memo(
+  ({ contextItems, canvasId, className }: MessageFileListProps) => {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [showRightArrow, setShowRightArrow] = useState(false);
 
-  const fileItems = contextItems.filter((item) => item.type === 'file');
+    const fileItems = contextItems.filter((item) => item.type === 'file');
 
-  // Check if right arrow should be shown
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const hasOverflow = el.scrollWidth > el.clientWidth;
-    const notAtEnd = el.scrollLeft < el.scrollWidth - el.clientWidth - 10;
-    setShowRightArrow(hasOverflow && notAtEnd);
-  }, []);
+    // Check if right arrow should be shown
+    const checkScroll = useCallback(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const hasOverflow = el.scrollWidth > el.clientWidth;
+      const notAtEnd = el.scrollLeft < el.scrollWidth - el.clientWidth - 10;
+      setShowRightArrow(hasOverflow && notAtEnd);
+    }, []);
 
-  useEffect(() => {
-    checkScroll();
-    const el = scrollRef.current;
-    el?.addEventListener('scroll', checkScroll);
-    window.addEventListener('resize', checkScroll);
-    return () => {
-      el?.removeEventListener('scroll', checkScroll);
-      window.removeEventListener('resize', checkScroll);
+    useEffect(() => {
+      checkScroll();
+      const el = scrollRef.current;
+      el?.addEventListener('scroll', checkScroll);
+      window.addEventListener('resize', checkScroll);
+      return () => {
+        el?.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+      };
+    }, [fileItems.length, checkScroll]);
+
+    if (fileItems.length === 0) return null;
+
+    const handleScrollRight = () => {
+      scrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' });
     };
-  }, [fileItems.length, checkScroll]);
 
-  if (fileItems.length === 0) return null;
+    return (
+      <div className={cn('relative', className)}>
+        {/* Scrollable container - gap 8px per Figma */}
+        <div ref={scrollRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
+          {fileItems.map((item) => {
+            const extension = getFileExtension(item.title);
+            const isImage = isImageFile(item.metadata?.mimeType, extension);
 
-  const handleScrollRight = () => {
-    scrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' });
-  };
-
-  return (
-    <div className={cn('relative', className)}>
-      {/* Scrollable container - gap 8px per Figma */}
-      <div ref={scrollRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
-        {fileItems.map((item) => {
-          const extension = getFileExtension(item.title);
-          const isImage = isImageFile(item.metadata?.mimeType, extension);
-
-          return isImage ? (
-            <ImageThumbnail key={item.entityId} item={item} />
-          ) : (
-            <MessageFileCard key={item.entityId} item={item} />
-          );
-        })}
-      </div>
-
-      {/* Right gradient mask + circular arrow button - per Figma specs */}
-      {showRightArrow && (
-        <div
-          className="absolute right-0 top-0 h-full flex items-center justify-end pointer-events-none"
-          style={{
-            width: '40px',
-            background:
-              'linear-gradient(270deg, rgba(255, 255, 255, 1) 58%, rgba(255, 255, 255, 0) 100%)',
-          }}
-        >
-          <div
-            className="w-6 h-6 rounded-full flex items-center justify-center bg-white cursor-pointer pointer-events-auto mr-1 shadow-sm border border-gray-200"
-            onClick={handleScrollRight}
-          >
-            <ChevronRightIcon size={14} className="text-gray-700" />
-          </div>
+            return isImage ? (
+              <ImageThumbnail key={item.entityId} item={item} canvasId={canvasId} />
+            ) : (
+              <MessageFileCard key={item.entityId} item={item} canvasId={canvasId} />
+            );
+          })}
         </div>
-      )}
-    </div>
-  );
-});
+
+        {/* Right gradient mask + circular arrow button - per Figma specs */}
+        {showRightArrow && (
+          <div
+            className="absolute right-0 top-0 h-full flex items-center justify-end pointer-events-none"
+            style={{
+              width: '40px',
+              background:
+                'linear-gradient(270deg, rgba(255, 255, 255, 1) 58%, rgba(255, 255, 255, 0) 100%)',
+            }}
+          >
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center bg-white cursor-pointer pointer-events-auto mr-1 shadow-sm border border-gray-200"
+              onClick={handleScrollRight}
+            >
+              <ChevronRightIcon size={14} className="text-gray-700" />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  },
+);
 
 MessageFileList.displayName = 'MessageFileList';

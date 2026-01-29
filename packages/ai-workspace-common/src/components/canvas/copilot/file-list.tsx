@@ -26,6 +26,7 @@ const ChevronRightIcon = ({ size = 16, className }: { size?: number; className?:
 
 interface FileListProps {
   contextItems: IContextItem[];
+  canvasId: string;
   onRemove: (entityId: string) => void;
   onRetry?: (entityId: string) => void;
   disabled?: boolean;
@@ -34,7 +35,15 @@ interface FileListProps {
 }
 
 export const FileList = memo(
-  ({ contextItems, onRemove, onRetry, disabled, className, uploads = [] }: FileListProps) => {
+  ({
+    contextItems,
+    canvasId,
+    onRemove,
+    onRetry,
+    disabled,
+    className,
+    uploads = [],
+  }: FileListProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [showRightArrow, setShowRightArrow] = useState(false);
 
@@ -77,6 +86,7 @@ export const FileList = memo(
             <FileCard
               key={item.entityId}
               item={item}
+              canvasId={canvasId}
               onRemove={onRemove}
               onRetry={onRetry}
               disabled={disabled}

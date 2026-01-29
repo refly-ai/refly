@@ -501,6 +501,7 @@ export const ChatBox = memo(
         {fileCount > 0 && (
           <FileList
             contextItems={contextItems}
+            canvasId={canvasId}
             onRemove={handleRemoveFile}
             onRetry={handleRetryFile}
             uploads={relevantUploads}

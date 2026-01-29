@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useEffect } from 'react';
+import { memo, useMemo, useState, useEffect, useCallback } from 'react';
 import { Close, Refresh } from 'refly-icons';
 import type { IContextItem } from '@refly/common-types';
 import { cn } from '@refly/utils/cn';
@@ -6,9 +6,12 @@ import type { UploadProgress } from '@refly/stores';
 import { useTranslation } from 'react-i18next';
 import { FileIcon } from '@refly-packages/ai-workspace-common/components/common/resource-icon';
 import { getFileTypeConfig, isImageFile, formatFileSize, getFileExtension } from './file-utils';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
+import type { DriveFile } from '@refly/openapi-schema';
 
 interface FileCardProps {
   item: IContextItem;
+  canvasId: string;
   onRemove: (entityId: string) => void;
   onRetry?: (entityId: string) => void;
   disabled?: boolean;
@@ -16,9 +19,12 @@ interface FileCardProps {
 }
 
 export const FileCard = memo(
-  ({ item, onRemove, onRetry, disabled, uploadProgress }: FileCardProps) => {
+  ({ item, canvasId, onRemove, onRetry, disabled, uploadProgress }: FileCardProps) => {
     const { t } = useTranslation();
     const [isShaking, setIsShaking] = useState(false);
+    const { setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
+      setCurrentFile: state.setCurrentFile,
+    }));
 
     const extension = useMemo(() => getFileExtension(item.title), [item.title]);
     const isImage = useMemo(() => isImageFile(extension), [extension]);
@@ -64,14 +70,34 @@ export const FileCard = memo(
       onRetry?.(item.entityId);
     };
 
+    const handleCardClick = useCallback(() => {
+      // Don't open preview if uploading or has error
+      if (isUploading || hasError) {
+        return;
+      }
+
+      // Convert IContextItem to DriveFile format
+      const driveFile: DriveFile = {
+        fileId: item.entityId,
+        canvasId,
+        name: item.title,
+        type: item.metadata?.mimeType || 'text/plain',
+        size: item.metadata?.size,
+        category: isImage ? 'image' : 'document',
+      };
+      setCurrentFile(driveFile);
+    }, [item, canvasId, isUploading, hasError, isImage, setCurrentFile]);
+
     return (
       <div
         className={cn(
-          'relative flex items-center gap-2 p-2 rounded-lg bg-gray-100 flex-shrink-0',
+          'relative flex items-center gap-2 p-2 rounded-lg bg-gray-100',
           hasError && 'bg-red-50',
           isShaking && 'animate-shake',
+          !isUploading && !hasError && 'cursor-pointer hover:bg-gray-200 transition-colors',
         )}
-        style={{ minWidth: '160px', maxWidth: '200px' }}
+        style={{ width: '200px', minWidth: '200px', maxWidth: '200px' }}
+        onClick={handleCardClick}
       >
         {/* Thumbnail/Icon area - 48x48px */}
         <div className="w-12 h-12 flex-shrink-0 rounded overflow-hidden flex items-center justify-center">
@@ -94,7 +120,7 @@ export const FileCard = memo(
         </div>
 
         {/* File info area */}
-        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <div className="flex-1 min-w-0 max-w-[120px] flex flex-col gap-0.5">
           {/* File name - 13px, truncate */}
           <div className="text-[13px] font-medium truncate leading-5 text-gray-900">
             {item.title}
