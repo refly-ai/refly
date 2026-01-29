@@ -1,5 +1,6 @@
 import { memo, useMemo, useState, useEffect, useCallback } from 'react';
 import { Close, Refresh, Resource } from 'refly-icons';
+import { LoadingOutlined } from '@ant-design/icons';
 import type { IContextItem } from '@refly/common-types';
 import { cn } from '@refly/utils/cn';
 import type { UploadProgress } from '@refly/stores';
@@ -60,8 +61,8 @@ export const FileCard = memo(
     const isSuccess = !isUploading && !hasError;
 
     // Determine phase for UI display
-    const isUploadPhase = isUploading && progress < 100;
-    const isProcessingPhase = isUploading && progress === 100;
+    const isUploadPhase = isUploading && !item.metadata?.storageKey;
+    const isProcessingPhase = isUploading && !!item.metadata?.storageKey;
 
     const handleRetryClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -135,16 +136,7 @@ export const FileCard = memo(
           {/* Processing or Success Phase - Bottom right 16x16 indicator (对应截图2: 入库进度/成功) */}
           {isProcessingPhase && (
             <div className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-[#1C1F23]/80 flex items-center justify-center">
-              <Progress
-                type="circle"
-                percent={60}
-                width={13}
-                strokeWidth={15}
-                showInfo={false}
-                strokeColor="white"
-                trailColor="transparent"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              />
+              <LoadingOutlined className="text-white text-[10px]" />
             </div>
           )}
 
@@ -233,8 +225,8 @@ export const FileCard = memo(
                 // Upload phase: "Uploading X%..."
                 <span className="truncate">{t('copilot.uploading', { progress })}</span>
               ) : isProcessingPhase ? (
-                // Library entry phase: Percentage
-                <span className="truncate">{progress}%</span>
+                // Library entry phase: "Processing..."
+                <span className="truncate">{t('copilot.processing')}</span>
               ) : hasError && errorType === 'upload' ? (
                 // Upload failed: "Failed" in red
                 <span className="text-[#D52515] font-medium">

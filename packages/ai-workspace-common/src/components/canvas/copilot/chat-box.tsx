@@ -12,6 +12,7 @@ import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas
 import { useTranslation } from 'react-i18next';
 import { useListCopilotSessions } from '@refly-packages/ai-workspace-common/queries';
 import { logEvent } from '@refly/telemetry-web';
+import { isDesktop, serverOrigin } from '@refly/ui-kit';
 import type { IContextItem } from '@refly/common-types';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
@@ -232,20 +233,66 @@ export const ChatBox = memo(
         }
 
         try {
-          // Upload file
-          const response = await getClient().upload({
-            body: {
-              file,
-              entityId: canvasId,
-              entityType: 'canvas',
-            },
+          // Upload file with real progress tracking
+          const uploadResult = await new Promise<{
+            data?: { data?: { storageKey: string }; success: boolean };
+          }>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('entityId', canvasId);
+            formData.append('entityType', 'canvas');
+
+            xhr.upload.addEventListener('progress', (e) => {
+              if (e.lengthComputable) {
+                const percent = Math.round((e.loaded * 100) / e.total);
+                // Keep it at 99% until we get the response
+                updateProgress(uploadId, Math.min(percent, 99));
+              }
+            });
+
+            xhr.onreadystatechange = () => {
+              if (xhr.readyState === 4) {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                  try {
+                    const res = JSON.parse(xhr.responseText);
+                    resolve({ data: res });
+                  } catch (e) {
+                    reject(e);
+                  }
+                } else {
+                  reject(new Error(`Upload failed with status ${xhr.status}`));
+                }
+              }
+            };
+
+            xhr.onerror = () => reject(new Error('Network error during upload'));
+
+            xhr.open('POST', `${serverOrigin}/v1/misc/upload`);
+            xhr.withCredentials = !isDesktop();
+            xhr.send(formData);
           });
 
           updateProgress(uploadId, 100);
 
-          const { data, success } = response?.data ?? {};
+          const { data, success } = uploadResult?.data ?? {};
 
           if (success && data) {
+            // Update item metadata with storageKey to transition to processing phase
+            setContextItems((prev) =>
+              prev.map((item) =>
+                item.entityId === tempEntityId
+                  ? {
+                      ...item,
+                      metadata: { ...item.metadata, storageKey: data.storageKey },
+                    }
+                  : item,
+              ),
+            );
+
+            // Start a fake progress for the processing phase (100% -> 100% but feels active)
+            // Or just keep it at 100. For now, let's just use the real upload progress.
+
             // Create drive file
             try {
               const { data: createResult } = await getClient().batchCreateDriveFiles({
