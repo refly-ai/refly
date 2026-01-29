@@ -9,28 +9,28 @@ export const FILE_TYPE_CONFIG: Record<string, { color: string; type?: string }> 
   doc: { color: '#2C5898', type: 'document' },
   docx: { color: '#2C5898', type: 'document' },
   pdf: { color: '#D93831', type: 'acrobat' },
-  // Markdown - Green
-  md: { color: '#00A870', type: 'document' },
+  // Markdown - Cyan (uses code icon in design)
+  md: { color: '#18C0E6', type: 'code' },
   // Spreadsheets - Green
-  csv: { color: '#00A870', type: 'spreadsheet' },
-  xls: { color: '#207245', type: 'spreadsheet' },
-  xlsx: { color: '#207245', type: 'spreadsheet' },
-  // Video - Red/Coral (matches Error color)
-  mp4: { color: '#F04438', type: 'video' },
-  mov: { color: '#F04438', type: 'video' },
-  avi: { color: '#F04438', type: 'video' },
-  mkv: { color: '#F04438', type: 'video' },
-  webm: { color: '#F04438', type: 'video' },
-  // Audio - Orange (matches Warning color)
+  csv: { color: '#0E9F77', type: 'spreadsheet' },
+  xls: { color: '#0E9F77', type: 'spreadsheet' },
+  xlsx: { color: '#0E9F77', type: 'spreadsheet' },
+  // Video - Red (uses audio/spectrum icon in design)
+  mp4: { color: '#F93920', type: 'audio' },
+  mov: { color: '#F93920', type: 'audio' },
+  avi: { color: '#F93920', type: 'audio' },
+  mkv: { color: '#F93920', type: 'audio' },
+  webm: { color: '#F93920', type: 'audio' },
+  // Audio - Orange
   mp3: { color: '#F79009', type: 'audio' },
   wav: { color: '#F79009', type: 'audio' },
-  // Code - Purple
-  js: { color: '#7C3AED', type: 'code' },
-  ts: { color: '#7C3AED', type: 'code' },
-  tsx: { color: '#7C3AED', type: 'code' },
-  jsx: { color: '#7C3AED', type: 'code' },
-  py: { color: '#7C3AED', type: 'code' },
-  json: { color: '#7C3AED', type: 'code' },
+  // Code - Cyan
+  js: { color: '#18C0E6', type: 'code' },
+  ts: { color: '#18C0E6', type: 'code' },
+  tsx: { color: '#18C0E6', type: 'code' },
+  jsx: { color: '#18C0E6', type: 'code' },
+  py: { color: '#18C0E6', type: 'code' },
+  json: { color: '#18C0E6', type: 'code' },
   // Default
   default: { color: '#0062D6', type: 'document' },
 };

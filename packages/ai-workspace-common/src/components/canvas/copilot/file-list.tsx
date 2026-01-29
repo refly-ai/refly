@@ -75,26 +75,29 @@ export const FileList = memo(
     if (fileItems.length === 0) return null;
 
     const handleScrollRight = () => {
-      scrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' });
+      scrollRef.current?.scrollBy({ left: 174, behavior: 'smooth' });
     };
 
     return (
       <div className={cn('relative', className)}>
         {/* Scrollable file cards container - pt-2 to prevent close button clipping */}
         <div ref={scrollRef} className="flex gap-2 overflow-x-auto pt-2 pb-1 scrollbar-hide">
-          {fileItems.map((item) => (
-            <FileCard
-              key={item.entityId}
-              item={item}
-              canvasId={canvasId}
-              onRemove={onRemove}
-              onRetry={onRetry}
-              disabled={disabled}
-              uploadProgress={
-                item.metadata?.uploadId ? uploadMap.get(item.metadata.uploadId) : undefined
-              }
-            />
-          ))}
+          {fileItems
+            .slice()
+            .reverse()
+            .map((item) => (
+              <FileCard
+                key={item.entityId}
+                item={item}
+                canvasId={canvasId}
+                onRemove={onRemove}
+                onRetry={onRetry}
+                disabled={disabled}
+                uploadProgress={
+                  item.metadata?.uploadId ? uploadMap.get(item.metadata.uploadId) : undefined
+                }
+              />
+            ))}
         </div>
 
         {/* Right gradient mask + circular arrow button */}

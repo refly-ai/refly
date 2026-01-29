@@ -35,6 +35,7 @@ export const FileCard = memo(
     const isUploading = uploadProgress?.status === 'uploading';
     const hasError = uploadProgress?.status === 'error';
     const errorType = item.metadata?.errorType as 'upload' | 'addToFile' | undefined;
+    const progress = uploadProgress?.progress ?? 0;
 
     // Shake animation when error occurs
     useEffect(() => {
@@ -45,25 +46,9 @@ export const FileCard = memo(
       }
     }, [hasError]);
 
-    // Get status text based on upload progress
-    const getStatusText = () => {
-      if (isUploading) {
-        const progress = uploadProgress?.progress ?? 0;
-        if (progress < 100) {
-          return t('copilot.uploading', { progress });
-        }
-        return t('copilot.processing');
-      }
-      if (hasError) {
-        if (errorType === 'addToFile') {
-          return t('copilot.addToFileFailed');
-        }
-        return t('copilot.uploadFailed');
-      }
-      return null;
-    };
-
-    const statusText = getStatusText();
+    // Phase determination
+    const isUploadPhase = isUploading && progress < 100;
+    const isSuccess = !isUploading && !hasError;
 
     const handleRetryClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -91,64 +76,86 @@ export const FileCard = memo(
     return (
       <div
         className={cn(
-          'relative flex items-center gap-2 p-2 rounded-lg bg-gray-100',
+          'relative flex items-center gap-2 p-1 rounded-lg bg-[#F6F6F6]',
           hasError && 'bg-red-50',
           isShaking && 'animate-shake',
-          !isUploading && !hasError && 'cursor-pointer hover:bg-gray-200 transition-colors',
+          isSuccess && 'cursor-pointer hover:bg-gray-200 transition-colors',
         )}
-        style={{ width: '200px', minWidth: '200px', maxWidth: '200px' }}
+        style={{ width: '166px', minWidth: '166px', maxWidth: '166px', height: '48px' }}
         onClick={handleCardClick}
       >
-        {/* Thumbnail/Icon area - 48x48px */}
-        <div className="w-12 h-12 flex-shrink-0 rounded overflow-hidden flex items-center justify-center">
+        {/* Thumbnail/Icon area */}
+        <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center">
           {isImage && thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt={item.title}
-              className="w-full h-full object-cover rounded"
-            />
+            <div className="w-10 h-10 rounded overflow-hidden bg-white">
+              <img src={thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
+            </div>
           ) : (
             <FileIcon
               color={fileConfig.color}
               type={fileConfig.type as any}
-              fold={true}
-              height={36}
-              width="28"
-              glyphColor="rgba(255,255,255,0.4)"
+              fold={false}
+              height={40}
+              width="26"
+              glyphColor="white"
             />
           )}
         </div>
 
         {/* File info area */}
-        <div className="flex-1 min-w-0 max-w-[120px] flex flex-col gap-0.5">
-          {/* File name - 13px, truncate */}
-          <div className="text-[13px] font-medium truncate leading-5 text-gray-900">
+        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          {/* File name - 12px, truncate */}
+          <div className="text-[12px] font-medium truncate leading-tight text-[#1C1F23]">
             {item.title}
           </div>
-          {/* Meta info row - 12px */}
-          <div className="flex items-center gap-1.5 text-xs">
-            {statusText ? (
-              <span className={cn(hasError ? 'text-red-500' : 'text-gray-400')}>{statusText}</span>
-            ) : (
-              <>
-                <span className="text-gray-400">{extension}</span>
-                {fileSize && <span className="text-gray-400">{fileSize}</span>}
-              </>
-            )}
-            {/* Retry button for error state */}
-            {hasError && onRetry && (
-              <button
-                type="button"
-                onClick={handleRetryClick}
-                className="p-0.5 hover:bg-gray-200 rounded transition-colors border-none outline-none cursor-pointer bg-transparent"
-              >
-                <Refresh size={14} className="text-red-500" />
-              </button>
-            )}
+
+          {/* Meta info row */}
+          <div className="flex items-center justify-between min-w-0">
+            {/* Left: Type/Size or Status */}
+            <div className="flex items-center gap-1.5 text-[10px] text-[rgba(28,31,35,0.35)] truncate">
+              {isUploadPhase ? (
+                <span className="text-[rgba(28,31,35,0.35)]">
+                  {t('copilot.uploading', { progress })}
+                </span>
+              ) : hasError && errorType === 'upload' ? (
+                <span className="text-[#D52515]">{t('copilot.uploadFailed')}</span>
+              ) : (
+                <div className="flex items-center gap-1 truncate leading-none">
+                  <span className="truncate">{extension}</span>
+                  {fileSize && <span>{fileSize}</span>}
+                </div>
+              )}
+            </div>
+
+            {/* Right: Retry only */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {hasError && (
+                <button
+                  type="button"
+                  onClick={handleRetryClick}
+                  className="flex items-center gap-0.5 p-0 hover:bg-black/5 rounded transition-colors border-none outline-none cursor-pointer bg-transparent text-[10px]"
+                >
+                  <Refresh
+                    size={10}
+                    className={cn(errorType === 'addToFile' ? 'text-[#1C1F23]' : 'text-[#D52515]')}
+                  />
+                  <span
+                    className={cn(
+                      'font-medium',
+                      errorType === 'addToFile' ? 'text-[#1C1F23]' : 'text-[#D52515]',
+                    )}
+                  >
+                    {errorType === 'addToFile'
+                      ? t('common.sync') || 'Sync'
+                      : t('common.retry') || 'Retry'}
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Close button - 18x18px, top right corner */}
+        {/* Close button - 16x16px, top right corner */}
         {!disabled && !isUploading && (
           <button
             type="button"
@@ -157,12 +164,12 @@ export const FileCard = memo(
               onRemove(item.entityId);
             }}
             className={cn(
-              'absolute -top-1.5 -right-1.5 w-[18px] h-[18px] rounded-full',
+              'absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full',
               'bg-black/40 hover:bg-black/60 flex items-center justify-center',
               'cursor-pointer transition-colors border-none outline-none',
             )}
           >
-            <Close size={10} color="#FFFFFF" />
+            <Close size={8} color="#FFFFFF" />
           </button>
         )}
       </div>

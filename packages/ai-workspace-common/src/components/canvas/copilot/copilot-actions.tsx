@@ -58,9 +58,9 @@ export const CopilotActions = memo(
           'bg-black/[0.08] hover:bg-black/[0.12] transition-colors',
           'border-none outline-none focus:outline-none focus-visible:outline-none',
           '[&:focus]:ring-0 [&:focus]:ring-offset-0',
-          uploadDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+          'cursor-pointer',
+          uploadDisabled && 'opacity-50',
         )}
-        disabled={uploadDisabled}
         onClick={handleAttachmentClick}
       >
         <Attachment size={18} color="#1C1F23" />
@@ -71,13 +71,14 @@ export const CopilotActions = memo(
       <div className="flex items-center justify-between mt-2">
         {/* Left side: Attachment button - direct upload */}
         <div className="flex items-center">
-          {uploadDisabled ? (
-            <Tooltip title={t('copilot.maxFilesPerTask')} placement="top">
-              {attachmentButton}
-            </Tooltip>
-          ) : (
-            attachmentButton
-          )}
+          <Tooltip
+            title={uploadDisabled ? t('copilot.maxFilesPerTask') : t('copilot.uploadFile')}
+            placement="top"
+            overlayInnerStyle={{ borderRadius: '8px' }}
+            color="#000"
+          >
+            <div className="flex items-center justify-center">{attachmentButton}</div>
+          </Tooltip>
 
           {/* Hidden file upload input */}
           <input
