@@ -35,7 +35,7 @@ const SYNC_CONFIGS: SyncConfig[] = [
     table: 'toolset_inventory', // Toolset inventory with encrypted API keys
     where: {},
     encryptedFields: ['apiKey'],
-    labelField: 'id',
+    labelField: 'name',
   },
   {
     table: 'toolsets', // Global toolsets
@@ -197,6 +197,27 @@ class EncryptionService {
       console.warn(`⚠️  Error decrypting data: ${error.message}`);
       return null; // Return null for failed decryption
     }
+  }
+
+  /**
+   * Checks if a string appears to be encrypted data
+   * @param text The text to check
+   * @returns true if the text appears to be encrypted (hex format with minimum length)
+   */
+  isEncrypted(text: string | null | undefined): boolean {
+    if (!text || text === '') {
+      return false;
+    }
+
+    // Encrypted data should be hex string (IV + AuthTag + Data)
+    // Minimum length: (16 + 16) * 2 = 64 hex characters
+    const minEncryptedLength = (this.ivLength + this.authTagLength) * 2;
+
+    // Check if it's a valid hex string of sufficient length
+    const isHex = /^[0-9a-fA-F]+$/.test(text);
+    const hasMinLength = text.length >= minEncryptedLength;
+
+    return isHex && hasMinLength;
   }
 }
 
@@ -418,22 +439,40 @@ async function syncData() {
             const encryptedFields = config.encryptedFields ?? [];
             for (const field of encryptedFields) {
               if (transformedRecord[field]) {
-                // Decrypt using source key
-                const decrypted = sourceEncryption.decrypt(transformedRecord[field]);
+                const fieldValue = transformedRecord[field];
 
-                if (decrypted === null) {
-                  logger.warn(`     ⚠️  Failed to decrypt field: ${field}, skipping re-encryption`);
-                  continue;
+                // Check if the field is already encrypted
+                if (sourceEncryption.isEncrypted(fieldValue)) {
+                  // Data is encrypted - decrypt using source key
+                  const decrypted = sourceEncryption.decrypt(fieldValue);
+
+                  if (decrypted === null) {
+                    logger.warn(
+                      `     ⚠️  Failed to decrypt field: ${field}, skipping re-encryption`,
+                    );
+                    continue;
+                  }
+
+                  // [TEMP DEBUG] Print decrypted value to terminal
+                  logger.log(
+                    `     🔑 [${config.table}] ${recordLabel} | ${field} (decrypted): ${decrypted}`,
+                  );
+
+                  // Re-encrypt using target key
+                  const reEncrypted = targetEncryption.encrypt(decrypted);
+                  transformedRecord[field] = reEncrypted;
+                } else {
+                  // Data is plaintext - encrypt directly with target key
+                  // logger.log(
+                  //   `     📝 [${config.table}] ${recordLabel} | ${field} is plaintext, encrypting directly`,
+                  // );
+                  logger.log(
+                    `     🔑 [${config.table}] ${recordLabel} | ${field} (plaintext): ${fieldValue}`,
+                  );
+
+                  const encrypted = targetEncryption.encrypt(fieldValue);
+                  transformedRecord[field] = encrypted;
                 }
-
-                // [TEMP DEBUG] Print decrypted value to terminal
-                logger.log(
-                  `     🔑 [${config.table}] ${recordLabel} | ${field} (decrypted): ${decrypted}`,
-                );
-
-                // Re-encrypt using target key
-                const reencrypted = targetEncryption.encrypt(decrypted);
-                transformedRecord[field] = reencrypted;
               }
             }
 
