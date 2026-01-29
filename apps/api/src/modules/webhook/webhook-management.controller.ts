@@ -115,11 +115,22 @@ export class WebhookManagementController {
   async getCallHistory(@Query() query: GetCallHistoryDto, @LoginedUser() user: User) {
     this.logger.log(`[WEBHOOK_GET_HISTORY] uid=${user.uid} webhookId=${query.webhookId}`);
 
+    const page = normalizePositiveInt(query.page, 1);
+    const pageSize = normalizePositiveInt(query.pageSize, 20);
+
     const result = await this.webhookService.getCallHistory(query.webhookId, user.uid, {
-      page: query.page || 1,
-      pageSize: query.pageSize || 20,
+      page,
+      pageSize,
     });
 
     return buildSuccessResponse(result);
   }
 }
+
+const normalizePositiveInt = (value: unknown, fallback: number) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.floor(parsed);
+};

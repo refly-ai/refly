@@ -26,7 +26,6 @@ enum ApiCallStatus {
 @Injectable()
 export class OpenapiService {
   private readonly logger = new Logger(OpenapiService.name);
-  private readonly config: ConfigService;
   private get endpoint(): string | undefined {
     return this.config.get<string>('endpoint');
   }
@@ -36,6 +35,7 @@ export class OpenapiService {
     private readonly workflowAppService: WorkflowAppService,
     private readonly canvasService: CanvasService,
     @Inject(OSS_INTERNAL) private readonly objectStorage: ObjectStorageService,
+    private readonly config: ConfigService,
   ) {}
 
   /**
