@@ -126,5 +126,5 @@ export const useCreateCanvas = ({
     { leading: true },
   );
 
-  return { debouncedCreateCanvas, isCreating };
+  return { debouncedCreateCanvas, createCanvas, isCreating };
 };

@@ -101,15 +101,21 @@ export const FileCard = memo(
           style={{ width: '48px', minWidth: '48px', maxWidth: '48px', height: '48px' }}
           onClick={handleCardClick}
         >
-          {/* Thumbnail */}
-          <div className="w-full h-full flex items-center justify-center">
-            <NodeIcon
-              type="file"
-              filename={item.title}
-              url={isImage ? thumbnailUrl : undefined}
-              small={false}
-              className="!w-9 !h-9"
-            />
+          {/* Thumbnail: image full-bleed or file-type icon */}
+          <div className="w-full h-full flex items-center justify-center bg-white">
+            {isImage && thumbnailUrl ? (
+              <img src={thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
+            ) : (
+              <NodeIcon
+                type="file"
+                filename={item.title}
+                fileType={item.metadata?.mimeType}
+                filled={false}
+                small={false}
+                iconSize={32}
+                className="!w-full !h-full"
+              />
+            )}
           </div>
 
           {/* Uploading Stage - Dark overlay + Centered Progress Ring (对应截图1: 上传 loading) */}

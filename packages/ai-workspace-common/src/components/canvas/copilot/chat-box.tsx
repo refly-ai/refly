@@ -1,26 +1,18 @@
-import { memo, useMemo, useEffect, useCallback, useRef, useState } from 'react';
+import { memo, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Modal, message } from 'antd';
 
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
-import { genActionResultID, genCopilotSessionID, genUniqueId } from '@refly/utils/id';
-import {
-  useActionResultStoreShallow,
-  useCopilotStoreShallow,
-  useImageUploadStore,
-} from '@refly/stores';
+import { genActionResultID, genCopilotSessionID } from '@refly/utils/id';
+import { useActionResultStoreShallow, useCopilotStoreShallow } from '@refly/stores';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
 import { useTranslation } from 'react-i18next';
 import { useListCopilotSessions } from '@refly-packages/ai-workspace-common/queries';
 import { logEvent } from '@refly/telemetry-web';
-import { isDesktop, serverOrigin } from '@refly/ui-kit';
-import type { IContextItem } from '@refly/common-types';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import { FileList } from './file-list';
 import { CopilotActions } from './copilot-actions';
+import { useFileUpload } from '@refly-packages/ai-workspace-common/hooks/use-file-upload';
 
 const MAX_FILE_COUNT = 10;
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
 
 interface ChatBoxProps {
   canvasId: string;
@@ -29,12 +21,6 @@ interface ChatBoxProps {
   onSendMessage?: () => void;
   onRegisterFileUploadHandler?: (handler: (files: File[]) => Promise<void>) => void;
   onUploadDisabledChange?: (disabled: boolean) => void;
-}
-
-// Store file data for retry
-interface PendingFileData {
-  file: File;
-  previewUrl?: string;
 }
 
 export const ChatBox = memo(
@@ -49,58 +35,25 @@ export const ChatBox = memo(
     const { t } = useTranslation();
     const initialPromptProcessed = useRef(false);
 
-    // File attachment state
-    const [contextItems, setContextItems] = useState<IContextItem[]>([]);
-    // Store original file data for retry functionality
-    const pendingFilesRef = useRef<Map<string, PendingFileData>>(new Map());
-    // Track file count for parallel uploads (ref updates synchronously)
-    const fileCountRef = useRef(0);
-    const { refetch: refetchFiles } = useFetchDriveFiles();
+    const {
+      contextItems,
+      fileCount,
+      hasUploadingFiles,
+      completedFileItems,
+      relevantUploads,
+      handleFileUpload,
+      handleRetryFile,
+      handleRemoveFile,
+      clearFiles,
+    } = useFileUpload({
+      canvasId,
+      maxFileCount: MAX_FILE_COUNT,
+      maxFileSize: 50 * 1024 * 1024,
+    });
 
-    // Upload progress tracking
-    const { uploads, startUpload, updateProgress, setUploadSuccess, setUploadError, removeUpload } =
-      useImageUploadStore();
-
-    // Filter uploads related to current context items
-    const relevantUploads = useMemo(() => {
-      const uploadIds = new Set(
-        contextItems.map((item) => item.metadata?.uploadId).filter(Boolean),
-      );
-      return uploads.filter((u) => uploadIds.has(u.id));
-    }, [uploads, contextItems]);
-
-    const fileCount = useMemo(
-      () => contextItems.filter((item) => item.type === 'file').length,
-      [contextItems],
-    );
-
-    // Sync fileCountRef with actual file count
-    useEffect(() => {
-      fileCountRef.current = fileCount;
-    }, [fileCount]);
-
-    // Report upload disabled status to parent (for dropzone styling)
     useEffect(() => {
       onUploadDisabledChange?.(fileCount >= MAX_FILE_COUNT);
     }, [fileCount, onUploadDisabledChange]);
-
-    // Check if any uploads are in progress
-    const hasUploadingFiles = useMemo(
-      () => relevantUploads.some((u) => u.status === 'uploading'),
-      [relevantUploads],
-    );
-
-    // Get completed file items only (not pending and no errors)
-    const completedFileItems = useMemo(
-      () =>
-        contextItems.filter((item) => {
-          if (item.type !== 'file') return false;
-          if (item.entityId.startsWith('pending_')) return false;
-          if (item.metadata?.errorType) return false;
-          return true;
-        }),
-      [contextItems],
-    );
 
     const { refetch: refetchHistorySessions } = useListCopilotSessions(
       {
@@ -120,7 +73,9 @@ export const ChatBox = memo(
       sessionResultIds,
       addHistoryTemplateSession,
       pendingPrompt,
+      pendingFiles,
       setPendingPrompt,
+      setPendingFiles,
     } = useCopilotStoreShallow((state) => ({
       currentSessionId: state.currentSessionId[canvasId],
       setCurrentSessionId: state.setCurrentSessionId,
@@ -129,7 +84,9 @@ export const ChatBox = memo(
       sessionResultIds: state.sessionResultIds[state.currentSessionId?.[canvasId]],
       addHistoryTemplateSession: state.addHistoryTemplateSession,
       pendingPrompt: state.pendingPrompt[canvasId],
+      pendingFiles: state.pendingFiles[canvasId],
       setPendingPrompt: state.setPendingPrompt,
+      setPendingFiles: state.setPendingFiles,
     }));
 
     const { resultMap } = useActionResultStoreShallow((state) => ({
@@ -159,255 +116,6 @@ export const ChatBox = memo(
     }, [firstResult?.status, refetchHistorySessions]);
 
     const { invokeAction, abortAction } = useInvokeAction();
-
-    // Handle file upload with progress tracking
-    const handleFileUpload = useCallback(
-      async (file: File, existingUploadId?: string, existingEntityId?: string) => {
-        // Check file count limit (use ref for parallel upload support)
-        if (!existingUploadId) {
-          if (fileCountRef.current >= MAX_FILE_COUNT) {
-            message.warning(t('copilot.fileLimit.reached'));
-            return;
-          }
-          // Increment ref immediately for parallel upload tracking
-          fileCountRef.current += 1;
-        }
-
-        // Check file size limit (50MB)
-        if (file.size > MAX_FILE_SIZE) {
-          // Decrement ref if we're rejecting this file
-          if (!existingUploadId) {
-            fileCountRef.current -= 1;
-          }
-          message.error(t('copilot.fileSizeLimit'));
-          return;
-        }
-
-        // Generate or reuse IDs
-        const uploadId = existingUploadId || genUniqueId();
-        const tempEntityId = existingEntityId || `pending_${uploadId}`;
-
-        // Start/restart upload tracking
-        startUpload([
-          {
-            id: uploadId,
-            fileName: file.name,
-            progress: 0,
-            status: 'uploading',
-          },
-        ]);
-
-        // Create preview URL for image files (only for new uploads)
-        const isImageFile = file.type.startsWith('image/');
-        let previewUrl = pendingFilesRef.current.get(uploadId)?.previewUrl;
-        if (!previewUrl && isImageFile) {
-          previewUrl = URL.createObjectURL(file);
-        }
-
-        // Store file data for potential retry
-        pendingFilesRef.current.set(uploadId, { file, previewUrl });
-
-        // Add pending item immediately to show in UI (only for new uploads)
-        if (!existingEntityId) {
-          setContextItems((prev) => [
-            ...prev,
-            {
-              type: 'file',
-              entityId: tempEntityId,
-              title: file.name,
-              metadata: { size: file.size, mimeType: file.type, uploadId, previewUrl },
-            } as IContextItem,
-          ]);
-        } else {
-          // Clear error state for retry
-          setContextItems((prev) =>
-            prev.map((item) =>
-              item.entityId === existingEntityId
-                ? {
-                    ...item,
-                    metadata: { ...item.metadata, errorType: undefined },
-                  }
-                : item,
-            ),
-          );
-        }
-
-        try {
-          // Upload file with real progress tracking
-          const uploadResult = await new Promise<{
-            data?: { data?: { storageKey: string }; success: boolean };
-          }>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('entityId', canvasId);
-            formData.append('entityType', 'canvas');
-
-            xhr.upload.addEventListener('progress', (e) => {
-              if (e.lengthComputable) {
-                const percent = Math.round((e.loaded * 100) / e.total);
-                // Keep it at 99% until we get the response
-                updateProgress(uploadId, Math.min(percent, 99));
-              }
-            });
-
-            xhr.onreadystatechange = () => {
-              if (xhr.readyState === 4) {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                  try {
-                    const res = JSON.parse(xhr.responseText);
-                    resolve({ data: res });
-                  } catch (e) {
-                    reject(e);
-                  }
-                } else {
-                  reject(new Error(`Upload failed with status ${xhr.status}`));
-                }
-              }
-            };
-
-            xhr.onerror = () => reject(new Error('Network error during upload'));
-
-            xhr.open('POST', `${serverOrigin}/v1/misc/upload`);
-            xhr.withCredentials = !isDesktop();
-            xhr.send(formData);
-          });
-
-          updateProgress(uploadId, 100);
-
-          const { data, success } = uploadResult?.data ?? {};
-
-          if (success && data) {
-            // Update item metadata with storageKey to transition to processing phase
-            setContextItems((prev) =>
-              prev.map((item) =>
-                item.entityId === tempEntityId
-                  ? {
-                      ...item,
-                      metadata: { ...item.metadata, storageKey: data.storageKey },
-                    }
-                  : item,
-              ),
-            );
-
-            // Start a fake progress for the processing phase (100% -> 100% but feels active)
-            // Or just keep it at 100. For now, let's just use the real upload progress.
-
-            // Create drive file
-            try {
-              const { data: createResult } = await getClient().batchCreateDriveFiles({
-                body: {
-                  canvasId,
-                  files: [
-                    {
-                      name: file.name,
-                      canvasId,
-                      storageKey: data.storageKey,
-                      type: file.type || 'application/octet-stream',
-                    },
-                  ],
-                },
-              });
-
-              if (createResult?.success && createResult.data?.[0]) {
-                const driveFile = createResult.data[0];
-                setUploadSuccess(uploadId);
-
-                // Replace pending item with actual file
-                setContextItems((prev) =>
-                  prev.map((item) =>
-                    item.entityId === tempEntityId
-                      ? {
-                          ...item,
-                          entityId: driveFile.fileId,
-                          title: driveFile.name,
-                          metadata: { ...item.metadata, uploadId, errorType: undefined },
-                        }
-                      : item,
-                  ),
-                );
-
-                // Clean up pending file data on success
-                pendingFilesRef.current.delete(uploadId);
-
-                await refetchFiles();
-              } else {
-                throw new Error('addToFile');
-              }
-            } catch {
-              // Add to file failed
-              setUploadError(uploadId, t('copilot.addToFileFailed'));
-              setContextItems((prev) =>
-                prev.map((item) =>
-                  item.entityId === tempEntityId
-                    ? {
-                        ...item,
-                        metadata: { ...item.metadata, errorType: 'addToFile' },
-                      }
-                    : item,
-                ),
-              );
-            }
-          } else {
-            throw new Error('upload');
-          }
-        } catch {
-          // Upload failed
-          setUploadError(uploadId, t('copilot.uploadFailed'));
-          setContextItems((prev) =>
-            prev.map((item) =>
-              item.entityId === tempEntityId
-                ? {
-                    ...item,
-                    metadata: { ...item.metadata, errorType: 'upload' },
-                  }
-                : item,
-            ),
-          );
-        }
-      },
-      [canvasId, t, startUpload, updateProgress, setUploadSuccess, setUploadError, refetchFiles],
-    );
-
-    // Handle file retry
-    const handleRetryFile = useCallback(
-      (entityId: string) => {
-        const item = contextItems.find((i) => i.entityId === entityId);
-        if (!item?.metadata?.uploadId) return;
-
-        const uploadId = item.metadata.uploadId;
-        const pendingData = pendingFilesRef.current.get(uploadId);
-
-        if (pendingData?.file) {
-          // Retry with existing IDs
-          handleFileUpload(pendingData.file, uploadId, entityId);
-        }
-      },
-      [contextItems, handleFileUpload],
-    );
-
-    // Handle file removal
-    const handleRemoveFile = useCallback(
-      (entityId: string) => {
-        // Find the item to get its uploadId and previewUrl
-        const item = contextItems.find((i) => i.entityId === entityId);
-        if (item?.metadata?.uploadId) {
-          removeUpload(item.metadata.uploadId);
-          // Clean up pending file data
-          const pendingData = pendingFilesRef.current.get(item.metadata.uploadId);
-          if (pendingData?.previewUrl) {
-            URL.revokeObjectURL(pendingData.previewUrl);
-          }
-          pendingFilesRef.current.delete(item.metadata.uploadId);
-        }
-        // Revoke blob URL to prevent memory leak
-        if (item?.metadata?.previewUrl) {
-          URL.revokeObjectURL(item.metadata.previewUrl);
-        }
-        setContextItems((prev) => prev.filter((i) => i.entityId !== entityId));
-      },
-      [contextItems, removeUpload],
-    );
 
     // Register file upload handler for drag-and-drop from parent
     useEffect(() => {
@@ -464,17 +172,8 @@ export const ChatBox = memo(
         if (!customQuery) {
           setQuery('');
         }
-        // Revoke blob URLs before clearing files to prevent memory leak
-        for (const item of contextItems) {
-          if (item.metadata?.previewUrl) {
-            URL.revokeObjectURL(item.metadata.previewUrl);
-          }
-          if (item.metadata?.uploadId) {
-            pendingFilesRef.current.delete(item.metadata.uploadId);
-          }
-        }
         // Clear files after sending
-        setContextItems([]);
+        clearFiles();
 
         setCurrentSessionId(canvasId, sessionId);
         appendSessionResultId(sessionId, resultId);
@@ -492,10 +191,10 @@ export const ChatBox = memo(
         currentSessionId,
         query,
         completedFileItems,
-        contextItems,
         canvasId,
         invokeAction,
         setQuery,
+        clearFiles,
         setCurrentSessionId,
         appendSessionResultId,
         setCreatedCopilotSessionId,
@@ -508,12 +207,68 @@ export const ChatBox = memo(
     useEffect(() => {
       if (pendingPrompt && !initialPromptProcessed.current) {
         initialPromptProcessed.current = true;
-        handleSendMessage('button_click_send', pendingPrompt);
+
+        // Merge pending files with current context items
+        const filesToSend = pendingFiles ?? [];
+
+        // Generate IDs for the message
+        const resultId = genActionResultID();
+        let sessionId = currentSessionId;
+
+        if (!sessionId) {
+          sessionId = genCopilotSessionID();
+        }
+
+        onSendMessage?.();
+        logEvent('copilot_prompt_sent', Date.now(), {
+          source: 'pending_prompt',
+        });
+
+        // Send message with pending prompt and files
+        invokeAction(
+          {
+            query: pendingPrompt,
+            resultId,
+            modelInfo: null,
+            agentMode: 'copilot_agent',
+            copilotSessionId: sessionId,
+            contextItems: filesToSend,
+          },
+          {
+            entityId: canvasId,
+            entityType: 'canvas',
+          },
+        );
+
+        setCurrentSessionId(canvasId, sessionId);
+        appendSessionResultId(sessionId, resultId);
+        setCreatedCopilotSessionId(sessionId);
+        addHistoryTemplateSession(canvasId, {
+          sessionId,
+          title: pendingPrompt || t('copilot.fileAttachment'),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
 
         // Clean up store
         setPendingPrompt(canvasId, null);
+        setPendingFiles(canvasId, null);
       }
-    }, [pendingPrompt, handleSendMessage, setPendingPrompt, canvasId]);
+    }, [
+      pendingPrompt,
+      pendingFiles,
+      currentSessionId,
+      canvasId,
+      invokeAction,
+      setCurrentSessionId,
+      appendSessionResultId,
+      setCreatedCopilotSessionId,
+      addHistoryTemplateSession,
+      setPendingPrompt,
+      setPendingFiles,
+      onSendMessage,
+      t,
+    ]);
 
     const handleAbort = useCallback(() => {
       if (!currentExecutingResult) {

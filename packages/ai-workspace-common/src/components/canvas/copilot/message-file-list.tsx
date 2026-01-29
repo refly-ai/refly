@@ -3,7 +3,7 @@ import type { IContextItem } from '@refly/common-types';
 import { cn } from '@refly/utils/cn';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { serverOrigin } from '@refly/ui-kit';
-import { isImageFile, formatFileSize, getFileExtension } from './file-utils';
+import { isImageFile, isDocumentFile, formatFileSize, getFileExtension } from './file-utils';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import type { DriveFile } from '@refly/openapi-schema';
 
@@ -71,12 +71,22 @@ const ImageThumbnail = memo(({ item, canvasId }: { item: IContextItem; canvasId:
       className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
       onClick={handleClick}
     >
-      <NodeIcon
-        type="image"
-        url={thumbnailUrl ?? undefined}
-        small={false}
-        className="!w-full !h-full !rounded-xl"
-      />
+      {/* Thumbnail: image full-bleed or file-type icon (same as file-card compact) */}
+      <div className="w-full h-full flex items-center justify-center bg-white">
+        {thumbnailUrl ? (
+          <img src={thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
+        ) : (
+          <NodeIcon
+            type="file"
+            filename={item.title}
+            fileType={item.metadata?.mimeType}
+            filled={false}
+            small={false}
+            iconSize={32}
+            className="!w-full !h-full"
+          />
+        )}
+      </div>
     </div>
   );
 });
@@ -116,8 +126,9 @@ const MessageFileCard = memo(({ item, canvasId }: { item: IContextItem; canvasId
           type="file"
           filename={item.title}
           small={false}
-          className="!w-9 !h-9"
-          iconSize={20}
+          filled={false}
+          className="!w-[24px] !h-[24px]"
+          iconSize={24}
         />
       </div>
 
@@ -182,7 +193,17 @@ export const MessageFileList = memo(
         <div ref={scrollRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
           {fileItems.map((item) => {
             const extension = getFileExtension(item.title);
-            const isImage = isImageFile(item.metadata?.mimeType, extension);
+            const mimeType = item.metadata?.mimeType;
+            const hasPreviewUrl =
+              !!item.metadata?.thumbnailUrl ||
+              !!item.metadata?.previewUrl ||
+              !!item.metadata?.url ||
+              (!!item.entityId && !item.entityId.startsWith('pending_'));
+            // Show as image when: clearly image, or we have a content URL and it's not clearly a document
+            // (handles cases where API omits mimeType or filename has no extension)
+            const isImage =
+              isImageFile(mimeType, extension) ||
+              (hasPreviewUrl && !isDocumentFile(mimeType, extension));
 
             return isImage ? (
               <ImageThumbnail key={item.entityId} item={item} canvasId={canvasId} />

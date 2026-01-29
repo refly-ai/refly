@@ -8,6 +8,36 @@
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff'];
 
 /**
+ * Document extensions / MIME prefixes that are definitely not images.
+ * Used to avoid showing image thumbnail for known document types when type is ambiguous.
+ */
+const DOCUMENT_EXTENSIONS = new Set([
+  'csv',
+  'xls',
+  'xlsx',
+  'txt',
+  'md',
+  'markdown',
+  'pdf',
+  'html',
+  'docx',
+  'epub',
+  'json',
+  'yaml',
+  'yml',
+  'xml',
+  'ts',
+  'tsx',
+  'js',
+  'jsx',
+  'py',
+  'java',
+  'c',
+  'cpp',
+]);
+const DOCUMENT_MIME_PREFIXES = ['text/', 'application/pdf', 'application/vnd.', 'application/json'];
+
+/**
  * Check if file is an image type based on extension or MIME type
  */
 export const isImageFile = (extOrMimeType?: string, ext?: string): boolean => {
@@ -17,6 +47,22 @@ export const isImageFile = (extOrMimeType?: string, ext?: string): boolean => {
   const extension = ext ?? extOrMimeType;
   if (extension) {
     return IMAGE_EXTENSIONS.includes(extension.toLowerCase());
+  }
+  return false;
+};
+
+/**
+ * Check if file is a known document type (not image) by extension or MIME type.
+ * Used when we have a content URL but no clear image signal — if it's not a document, we try image thumbnail.
+ */
+export const isDocumentFile = (mimeType?: string, extension?: string): boolean => {
+  if (mimeType) {
+    const lower = mimeType.toLowerCase();
+    if (lower.startsWith('image/')) return false;
+    if (DOCUMENT_MIME_PREFIXES.some((p) => lower.startsWith(p))) return true;
+  }
+  if (extension) {
+    return DOCUMENT_EXTENSIONS.has(extension.toLowerCase());
   }
   return false;
 };

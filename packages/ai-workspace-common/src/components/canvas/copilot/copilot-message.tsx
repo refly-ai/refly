@@ -41,12 +41,18 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
   // Extract file context items from result.context for display
   const fileContextItems = useMemo((): IContextItem[] => {
     const contextFiles = context?.files ?? [];
+
+    // Debug log to help diagnose the issue
+    if (contextFiles.length > 0) {
+      console.log('[CopilotMessage] context.files:', contextFiles);
+    }
+
     if (!contextFiles.length) return [];
 
     return contextFiles.map((fileItem) => ({
       type: 'file' as const,
       entityId: fileItem.fileId,
-      title: fileItem.file?.name ?? 'File',
+      title: fileItem.file?.name ?? fileItem.variableName ?? 'File',
       metadata: {
         size: fileItem.file?.size,
         mimeType: fileItem.file?.type,
