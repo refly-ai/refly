@@ -18,10 +18,6 @@ export const WEBHOOK_CONFIG_CACHE_TTL = 300; // 5 minutes
 export const WEBHOOK_ID_PREFIX = 'wh_';
 export const WEBHOOK_ID_LENGTH = 32;
 
-// File upload
-export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-export const MAX_FILES_PER_REQUEST = 10;
-
 // API call record status
 export enum ApiCallStatus {
   PENDING = 'pending',

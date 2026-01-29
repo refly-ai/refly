@@ -14,7 +14,7 @@ export const getApiBaseUrl = (baseUrl: string) => {
   return `${origin}${baseUrl.startsWith('/') ? baseUrl : `/${baseUrl}`}`;
 };
 
-export const formatPathWithPlaceholders = (path: string, params?: Record<string, string>) => {
+const formatPathWithPlaceholders = (path: string, params?: Record<string, string>) => {
   return path.replace(/\{([^}]+)\}/g, (_match, name) => {
     if (params?.[name]) {
       return params[name];
@@ -55,7 +55,7 @@ export const generateExampleFromSchema = (schema?: SchemaObject | null): unknown
   }
 };
 
-export const buildHeaders = (endpoint: ApiEndpoint, apiKey?: string, hasBody?: boolean) => {
+const buildHeaders = (endpoint: ApiEndpoint, apiKey?: string, hasBody?: boolean) => {
   const headers: Record<string, string> = {};
   const requiresAuth =
     endpoint.security?.includes('api_key') || endpoint.security?.includes('bearerAuth');
