@@ -22,6 +22,7 @@ import {
   genSkillPackageExecutionID,
   genSkillPackageWorkflowExecID,
   genVariableID,
+  safeParseJSON,
 } from '@refly/utils';
 import { User } from '@refly/openapi-schema';
 
@@ -379,15 +380,33 @@ export class SkillPackageExecutorService {
 
       // Initialize and run workflow
       // Note: This creates a WorkflowExecution record and queues the workflow for execution
+
+      // Get existing canvas variables to preserve variableId mapping
+      // This ensures that variable references in node queries (e.g., @{type=var,id=var-xxx,...})
+      // can be correctly matched with the variables passed at runtime
+      const canvas = await this.prisma.canvas.findFirst({
+        where: { canvasId: workflowId, deletedAt: null },
+        select: { workflow: true },
+      });
+      const existingVariables = canvas?.workflow
+        ? (safeParseJSON(canvas.workflow)?.variables ?? [])
+        : [];
+
+      // Create variables with existing IDs when available (match by name)
+      const runtimeVariables = Object.entries(input).map(([name, value]) => {
+        const existingVar = existingVariables.find((v: any) => v.name === name);
+        return {
+          variableId: existingVar?.variableId ?? genVariableID(),
+          name,
+          variableType: 'string' as const,
+          value: [{ type: 'text' as const, text: String(value) }],
+        };
+      });
+
       const workflowExecutionId = await this.workflowService.initializeWorkflowExecution(
         { uid: execution.uid } as User,
         workflowId,
-        Object.entries(input).map(([name, value]) => ({
-          variableId: genVariableID(),
-          name,
-          variableType: 'string' as const,
-          value: [{ type: 'text', content: String(value) }],
-        })),
+        runtimeVariables,
         { checkCanvasOwnership: false },
       );
 
