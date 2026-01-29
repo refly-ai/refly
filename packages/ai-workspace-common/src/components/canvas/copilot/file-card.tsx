@@ -1,5 +1,5 @@
 import { memo, useMemo, useState, useEffect, useCallback } from 'react';
-import { Close, Refresh } from 'refly-icons';
+import { Close, Refresh, Resource } from 'refly-icons';
 import type { IContextItem } from '@refly/common-types';
 import { cn } from '@refly/utils/cn';
 import type { UploadProgress } from '@refly/stores';
@@ -8,6 +8,7 @@ import { FileIcon } from '@refly-packages/ai-workspace-common/components/common/
 import { getFileTypeConfig, isImageFile, formatFileSize, getFileExtension } from './file-utils';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import type { DriveFile } from '@refly/openapi-schema';
+import { Progress } from 'antd';
 
 interface FileCardProps {
   item: IContextItem;
@@ -16,10 +17,19 @@ interface FileCardProps {
   onRetry?: (entityId: string) => void;
   disabled?: boolean;
   uploadProgress?: UploadProgress;
+  mode?: 'large' | 'compact';
 }
 
 export const FileCard = memo(
-  ({ item, canvasId, onRemove, onRetry, disabled, uploadProgress }: FileCardProps) => {
+  ({
+    item,
+    canvasId,
+    onRemove,
+    onRetry,
+    disabled,
+    uploadProgress,
+    mode = 'large',
+  }: FileCardProps) => {
     const { t } = useTranslation();
     const [isShaking, setIsShaking] = useState(false);
     const { setCurrentFile } = useCanvasResourcesPanelStoreShallow((state) => ({
@@ -47,8 +57,11 @@ export const FileCard = memo(
     }, [hasError]);
 
     // Phase determination
-    const isUploadPhase = isUploading && progress < 100;
     const isSuccess = !isUploading && !hasError;
+
+    // Determine phase for UI display
+    const isUploadPhase = isUploading && progress < 100;
+    const isProcessingPhase = isUploading && progress === 100;
 
     const handleRetryClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -73,10 +86,113 @@ export const FileCard = memo(
       setCurrentFile(driveFile);
     }, [item, canvasId, isUploading, hasError, isImage, setCurrentFile]);
 
+    if (mode === 'compact') {
+      return (
+        <div
+          className={cn(
+            'relative group rounded-lg overflow-hidden bg-[#F6F6F6]',
+            hasError && 'bg-red-50 ring-1 ring-red-200',
+            isShaking && 'animate-shake',
+            isSuccess && 'cursor-pointer',
+          )}
+          style={{ width: '48px', minWidth: '48px', maxWidth: '48px', height: '48px' }}
+          onClick={handleCardClick}
+        >
+          {/* Thumbnail */}
+          <div className="w-full h-full flex items-center justify-center bg-white">
+            {isImage && thumbnailUrl ? (
+              <img src={thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
+            ) : (
+              <FileIcon
+                color={fileConfig.color}
+                type={fileConfig.type as any}
+                fold={false}
+                height={32}
+                width="24"
+                glyphColor="white"
+              />
+            )}
+          </div>
+
+          {/* Uploading Stage - Dark overlay + Centered Progress Ring (对应截图1: 上传 loading) */}
+          {isUploadPhase && (
+            <>
+              <div className="absolute inset-0 bg-[#1C1F23]/60 transition-opacity" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Progress
+                  type="circle"
+                  percent={progress}
+                  width={20}
+                  strokeWidth={15}
+                  showInfo={false}
+                  strokeColor="white"
+                  trailColor="rgba(255,255,255,0.2)"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Processing or Success Phase - Bottom right 16x16 indicator (对应截图2: 入库进度/成功) */}
+          {isProcessingPhase && (
+            <div className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-[#1C1F23]/80 flex items-center justify-center">
+              <Progress
+                type="circle"
+                percent={60}
+                width={13}
+                strokeWidth={15}
+                showInfo={false}
+                strokeColor="white"
+                trailColor="transparent"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              />
+            </div>
+          )}
+
+          {/* Success Phase - Bottom right 16x16 indicator with icon only */}
+          {isSuccess && (
+            <div className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-[#1C1F23]/80 flex items-center justify-center">
+              <Resource size={10} className="!text-white" />
+            </div>
+          )}
+
+          {/* Close button - Only show on hover for compact mode */}
+          {!disabled && !isUploading && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(item.entityId);
+              }}
+              className={cn(
+                'absolute top-0.5 right-0.5 w-4 h-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity',
+                'bg-black/40 hover:bg-black/60 flex items-center justify-center',
+                'cursor-pointer border-none outline-none',
+              )}
+            >
+              <Close size={8} color="#FFFFFF" />
+            </button>
+          )}
+
+          {/* Error Retry - Show on top of thumbnail if error */}
+          {hasError && (
+            <div className="absolute inset-0 bg-red-50/80 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={handleRetryClick}
+                className="p-1 rounded-full bg-white shadow-sm hover:bg-gray-100 transition-colors border-none outline-none cursor-pointer"
+              >
+                <Refresh size={14} className="text-[#D52515]" />
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div
         className={cn(
-          'relative flex items-center gap-2 p-1 rounded-lg bg-[#F6F6F6]',
+          'relative group flex items-center gap-2 p-1 rounded-lg bg-[#F6F6F6]',
           hasError && 'bg-red-50',
           isShaking && 'animate-shake',
           isSuccess && 'cursor-pointer hover:bg-gray-200 transition-colors',
@@ -112,14 +228,20 @@ export const FileCard = memo(
           {/* Meta info row */}
           <div className="flex items-center justify-between min-w-0">
             {/* Left: Type/Size or Status */}
-            <div className="flex items-center gap-1.5 text-[10px] text-[rgba(28,31,35,0.35)] truncate">
+            <div className="flex items-center gap-1.5 text-[10px] text-[rgba(28,31,35,0.35)] truncate flex-1">
               {isUploadPhase ? (
-                <span className="text-[rgba(28,31,35,0.35)]">
-                  {t('copilot.uploading', { progress })}
-                </span>
+                // Upload phase: "Uploading X%..."
+                <span className="truncate">{t('copilot.uploading', { progress })}</span>
+              ) : isProcessingPhase ? (
+                // Library entry phase: Percentage
+                <span className="truncate">{progress}%</span>
               ) : hasError && errorType === 'upload' ? (
-                <span className="text-[#D52515]">{t('copilot.uploadFailed')}</span>
+                // Upload failed: "Failed" in red
+                <span className="text-[#D52515] font-medium">
+                  {t('copilot.uploadFailed') ?? 'Failed'}
+                </span>
               ) : (
+                // Default success state: Extension + Size
                 <div className="flex items-center gap-1 truncate leading-none">
                   <span className="truncate">{extension}</span>
                   {fileSize && <span>{fileSize}</span>}
@@ -127,29 +249,29 @@ export const FileCard = memo(
               )}
             </div>
 
-            {/* Right: Retry only */}
+            {/* Right: Action button (Retry/Sync) or Resource Icon */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              {hasError && (
+              {hasError ? (
                 <button
                   type="button"
                   onClick={handleRetryClick}
-                  className="flex items-center gap-0.5 p-0 hover:bg-black/5 rounded transition-colors border-none outline-none cursor-pointer bg-transparent text-[10px]"
+                  className={cn(
+                    'flex items-center gap-0.5 p-0 hover:bg-black/5 rounded transition-colors border-none outline-none cursor-pointer bg-transparent text-[10px] font-medium',
+                    errorType === 'addToFile' ? 'text-[#1C1F23]' : 'text-[#D52515]',
+                  )}
                 >
-                  <Refresh
-                    size={10}
-                    className={cn(errorType === 'addToFile' ? 'text-[#1C1F23]' : 'text-[#D52515]')}
-                  />
-                  <span
-                    className={cn(
-                      'font-medium',
-                      errorType === 'addToFile' ? 'text-[#1C1F23]' : 'text-[#D52515]',
-                    )}
-                  >
+                  <Refresh size={10} />
+                  <span>
                     {errorType === 'addToFile'
                       ? t('common.sync') || 'Sync'
                       : t('common.retry') || 'Retry'}
                   </span>
                 </button>
+              ) : (
+                // Resource icon shown during processing or success
+                (isProcessingPhase || isSuccess) && (
+                  <Resource size={10} className="!text-[rgba(28,31,35,0.35)]" />
+                )
               )}
             </div>
           </div>
@@ -164,9 +286,9 @@ export const FileCard = memo(
               onRemove(item.entityId);
             }}
             className={cn(
-              'absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full',
+              'absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity',
               'bg-black/40 hover:bg-black/60 flex items-center justify-center',
-              'cursor-pointer transition-colors border-none outline-none',
+              'cursor-pointer border-none outline-none',
             )}
           >
             <Close size={8} color="#FFFFFF" />

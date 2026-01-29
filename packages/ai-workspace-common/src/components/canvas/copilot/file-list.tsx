@@ -1,8 +1,9 @@
-import { memo, useRef, useState, useEffect, useCallback } from 'react';
+import { memo, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import type { IContextItem } from '@refly/common-types';
 import type { UploadProgress } from '@refly/stores';
 import { FileCard } from './file-card';
 import { cn } from '@refly/utils/cn';
+import { isImageFile, getFileExtension } from './file-utils';
 
 // ChevronRight icon component (no equivalent in refly-icons)
 const ChevronRightIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
@@ -49,6 +50,16 @@ export const FileList = memo(
 
     const fileItems = contextItems.filter((item) => item.type === 'file');
 
+    const isPureImages = useMemo(() => {
+      if (fileItems.length === 0) return false;
+      return fileItems.every((item) => {
+        const ext = getFileExtension(item.title);
+        return isImageFile(item.metadata?.mimeType, ext);
+      });
+    }, [fileItems]);
+
+    const mode = isPureImages ? 'compact' : 'large';
+
     // Create a map of uploadId -> UploadProgress for quick lookup
     const uploadMap = new Map(uploads.map((u) => [u.id, u]));
 
@@ -81,7 +92,7 @@ export const FileList = memo(
     return (
       <div className={cn('relative', className)}>
         {/* Scrollable file cards container - pt-2 to prevent close button clipping */}
-        <div ref={scrollRef} className="flex gap-2 overflow-x-auto pt-2 pb-1 scrollbar-hide">
+        <div ref={scrollRef} className="flex gap-2 overflow-x-auto p-2 scrollbar-hide -m-2">
           {fileItems
             .slice()
             .reverse()
@@ -93,6 +104,7 @@ export const FileList = memo(
                 onRemove={onRemove}
                 onRetry={onRetry}
                 disabled={disabled}
+                mode={mode}
                 uploadProgress={
                   item.metadata?.uploadId ? uploadMap.get(item.metadata.uploadId) : undefined
                 }
