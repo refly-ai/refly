@@ -93,19 +93,33 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
     setSettingsModalActiveTab: state.setSettingsModalActiveTab,
   }));
 
-  const [localActiveTab, setLocalActiveTab] = useState<SettingsModalActiveTab>(() => {
-    return settingsModalActiveTab ?? SettingsModalActiveTab.ModelConfig;
-  });
-
   const { userProfile } = useUserStoreShallow((state) => ({
     userProfile: state.userProfile,
   }));
   const providerMode = userProfile?.preferences?.providerMode;
 
-  // Guard against invalid active tab when providers are hidden
+  const getDefaultTab = useCallback(() => {
+    return providerMode === 'custom'
+      ? SettingsModalActiveTab.ModelConfig
+      : SettingsModalActiveTab.Account;
+  }, [providerMode]);
+
+  const [localActiveTab, setLocalActiveTab] = useState<SettingsModalActiveTab>(() => {
+    const defaultTab =
+      providerMode === 'custom'
+        ? SettingsModalActiveTab.ModelConfig
+        : SettingsModalActiveTab.Account;
+    return settingsModalActiveTab ?? defaultTab;
+  });
+
+  // Guard against invalid active tab when model config tabs are hidden
   useEffect(() => {
-    if (localActiveTab === SettingsModalActiveTab.ModelProviders && providerMode !== 'custom') {
-      const fallback = SettingsModalActiveTab.ModelConfig;
+    if (
+      (localActiveTab === SettingsModalActiveTab.ModelConfig ||
+        localActiveTab === SettingsModalActiveTab.ModelProviders) &&
+      providerMode !== 'custom'
+    ) {
+      const fallback = SettingsModalActiveTab.Account;
       setLocalActiveTab(fallback);
       setSettingsModalActiveTab(fallback);
     }
@@ -114,12 +128,9 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
   // Update local active tab when prop changes or when modal becomes visible
   useEffect(() => {
     if (!visible) return;
-    const fallback =
-      providerMode === 'custom'
-        ? SettingsModalActiveTab.ModelProviders
-        : SettingsModalActiveTab.ModelConfig;
+    const fallback = getDefaultTab();
     setLocalActiveTab(settingsModalActiveTab ?? fallback);
-  }, [visible, settingsModalActiveTab, providerMode]);
+  }, [visible, settingsModalActiveTab, getDefaultTab]);
 
   // Handle tab change
   const handleTabChange = useCallback(
@@ -132,14 +143,16 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
 
   const tabs = useMemo(
     () => [
-      {
-        key: 'modelConfig',
-        label: t('settings.tabs.modelConfig'),
-        icon: <AIModel size={18} color="var(--refly-text-0)" />,
-        children: <ModelConfig visible={localActiveTab === SettingsModalActiveTab.ModelConfig} />,
-      },
       ...(providerMode === 'custom'
         ? [
+            {
+              key: 'modelConfig',
+              label: t('settings.tabs.modelConfig'),
+              icon: <AIModel size={18} color="var(--refly-text-0)" />,
+              children: (
+                <ModelConfig visible={localActiveTab === SettingsModalActiveTab.ModelConfig} />
+              ),
+            },
             {
               key: 'modelProviders',
               label: t('settings.tabs.providers'),
