@@ -1,106 +1,138 @@
-![refly-cover](https://static.refly.ai/landing/refly-cover-new.webp)
+<img width="1280" height="731" alt="image" src="https://github.com/user-attachments/assets/9ee376d9-946d-4c11-96c5-740533b4b124" />
 
-<div align="center">
+# Refly — The First Open-Source Agent Skills Builder Powered by Vibe Workflow
 
-<h1 align="center" style="border-bottom: none">
-    <b>
-        <a href="https://refly.ai">Refly.AI</a><br>
-    </b>
-    ⭐️ The World's First Vibe Workflow Platform for Non-technical Creators ⭐️ <br>
-</h1>
+Ships as APIs for Lovable · Webhooks for Slack · Skills for Claude Code · SOP playbooks in Refly
 
-</div>
+Skills are not prompts. They are durable infrastructure.
 
-Refly.AI is the world's first vibe workflow platform that empowers non-technical creators to build, share and monetize powerful AI automation workflows through simple prompts and a visual canvas - no coding required.
+Refly is the first open-source platform for building stable, atomic, and versioned agent skills. Skills are deterministic agent capabilities—reusable across workflows, teams, and runtimes.
 
-- N8N for non-technical: Build workflows as easily as assembling Lego bricks. Refly.ai empowers non-technical creators to eliminate repetitive tasks without technical barriers.
-- Canva for workflow: Just as Canva democratized design, Refly.ai democratizes workflow creation—making it simple for everyone to build and share automations.
+TL;DR: Refly compiles your enterprise SOPs into executable agent skills. Built in 3 minutes. Shipped anywhere.
 
-<div align="center">
+## Why Refly?
 
-[🚀 Refly.ai v1.0.0 Released! A milestone launch bringing the first full Vibe Workflow experience. 🚀](https://refly.ai/)
+Most AI Agents fail in production because they rely on "Vibe-coded" scripts and fragile, black-box logic. As the ecosystem moves toward agentic frameworks like Claude Code, AutoGen, and MCP, the bottleneck is no longer the LLM—it’s the lack of standardized, reliable actions.
 
-[Refly Cloud](https://refly.ai/) · [Self-hosting](https://docs.refly.ai/community-version/self-deploy) · [Forum](https://github.com/refly-ai/refly/discussions) · [Discord](https://discord.gg/YVuYFjFvRC) · [Twitter](https://x.com/reflyai) · [Documentation](https://docs.refly.ai/)
+Refly bridges the gap between raw APIs and intelligent agents. We allow you to codify messy business logic into structured, version-controlled Agent skills that any Any agent can invoke with 100% reliability.
 
-<p align="center">
-    <a href="https://refly.ai" target="_blank">
-        <img alt="Static Badge" src="https://img.shields.io/badge/Product-F04438"></a>
-    <a href="https://refly.ai/pricing" target="_blank">
-        <img alt="Static Badge" src="https://img.shields.io/badge/free-pricing?logo=free&color=%20%23155EEF&label=pricing&labelColor=%20%23528bff"></a>
-    <a href="https://discord.gg/YVuYFjFvRC" target="_blank">
-        <img alt="Discord Chat" src="https://img.shields.io/discord/1323513432686989362?label=chat&logo=discord&logoColor=white&style=flat&color=5865F2"></a>
-    <a href="https://x.com/reflyai" target="_blank">
-        <img alt="Static Badge" src="https://img.shields.io/twitter/follow/reflyai"></a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-        <img alt="TypeScript-version-icon" src="https://img.shields.io/badge/TypeScript-^5.3.3-blue"></a>
-</p>
+Stop hard-coding tools. Build modular skills once in Refly's visual IDE and deploy them as MCP servers, standard APIs, or portable SDKs to any agent framework.
 
-[<img src="https://raw.githubusercontent.com/ClawCloud/Run-Template/refs/heads/main/Run-on-ClawCloud.svg" alt="SVG" style="height:45px; vertical-align:middle;">](https://template.run.claw.cloud/?openapp=system-fastdeploy%3FtemplateName%3Drefly)
-[![Deploy on Sealos](https://sealos.io/Deploy-on-Sealos.svg)](https://template.sealos.io/deploy?templateName=refly)
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/refly-ai/refly)
-[![Deploy on Hostinger](https://assets.hostinger.com/vps/deploy.svg)](https://www.hostinger.com/vps/docker-hosting?compose_url=https://github.com/refly-ai/refly)
+## Core Infrastructure
 
-</div>
+Refly is the first open-source agent skills builder for creating production-ready, deterministic skills — not just one-off workflows.
 
-## ✨ Key Features
+By transforming natural language intent into a governed capability layer, Refly allows teams to ship reliable agentic infrastructure in minutes.
 
-### Intervenable Agent: Eliminates unpredictable "black box" executions
+### Construct with Vibe (Copilot-led Builder)
 
-- **Visualized Execution**: Every step of the workflow is clearly visible on the canvas. Allows for easy review, understanding, and debugging of the automation process.
-- **Real-time Intervention**: Users can pause, review, modify, or restart the Agent at any point during execution. Eliminates the frustration of unstable, irreversible, or unoptimizable "black box" executions.
+Describe your business logic in natural language, and Refly’s Model-Native DSL compiles your intent into a high-performance skill.
 
-### Minimalist Workflow Tool:  Orchestrate not nodes, but pre-packaged & powerful Agents
+- Intent-Driven Construction: Describe the work once; Refly turns intent into deterministic, reusable, and composable skills.
+- Efficiency at Scale: Our streamlined DSL is optimized for LLMs, ensuring fast execution and significantly lower token costs compared to legacy tools.
+- 3-Minute Deployment: Transition from a static enterprise SOP to a production-ready, compiled agent skill in under 3 minutes.
+### Execute with Control (Intervenable Runtime)
 
-- Forget tedious configuration. In Refly.ai, every node is a powerful, ready-to-use Agent. All you need to do is assign tasks and connect. Refly.ai does in minutes with two nodes what n8n takes hours and ten or more nodes to complete.
+Break the "black box" of AI execution with a stateful runtime designed for deterministic reliability and limitless connectivity.
 
-### Workflow Copilot: Turn your words into complex automations
+- Intervenable Runtime: Unlike trigger-only tools, Refly allows you to pause, audit, and re-steer agent logic mid-run to ensure 100% operational compliance.
+- Deterministic Guarantees: Enforce strict business rules within a governed execution layer that minimizes hallucinations and handles failure recovery.
+### Ship to Production (Unified Agent Stack)
 
-- Describe a task, and the Refly copilot instantly crafts, modifies, and debugs complex automations directly in your canvas. Even multi-step workflows can be built in seconds.
+Unify MCP integrations, tools, models, and reusable skills into a single execution layer that ships to any platform.
 
-### Workflow Marketplace: One-Click Publishing,Monetize your expertise
+- Universal Delivery: Export your skills as authenticated, stateful APIs for Lovable, intelligent webhooks for Slack, or native tools for Claude Code and Cursor.
+- Stable Scheduling: Run workflows reliably on schedule with managed execution and predictable behavior for long-running automations.
+### Govern as Assets (Skill Registry)
 
-- **One-click publishing**: Users can easily turn their workflows into shareable AI Apps and publish them to the workflow marketplace.
-- **Monetize your expertise**: Creators get paid every time users run their workflows, making your experience and creations more valuable than ever.
+Transform fragile scripts and manual playbooks into governed, shared infrastructure across your organization.
 
-## How to Use?
+- Central Skill Registry: Securely manage, version, and share agent capabilities as reusable corporate assets.
+- Team Workspace Collaboration: Build together and share SOP playbooks in a centralized environment with native version control and audit logs.
+## Ecosystem
 
-- **Cloud**
-  - We've deployed a Refly Cloud version that allows zero-configuration usage, offering all capabilities of the self-hosted version, including free access to the latest models. Visit [https://refly.ai/](https://refly.ai/) to get started.
-- **Self-hosting Refly Community Edition**
-  - Get started quickly with our [Getting Started Guide](./CONTRIBUTING.md) to run Refly in your environment. For more detailed references and in-depth instructions, please refer to our documentation.
-- **Refly for enterprise / organizations**
-  - Please contact us at [support@refly.ai](mailto:support@refly.ai) for private deployment solutions.
+Refly is designed to be the universal bridge between your existing enterprise toolchain and the next generation of agentic runtimes.
 
-## Stay Updated
+### Tooling & Protocols (Inputs)
 
-Star Refly on GitHub to receive instant notifications about new version releases.
+Bring your own data and logic into Refly with zero friction.
 
-![stay-tuned](https://github.com/user-attachments/assets/877dfeb7-1088-41f1-9176-468d877ded0a)
+- 3,000+ Native Tools: Seamlessly integrate with industrial APIs like Stripe, Slack, Salesforce, GitHub and etc.
+A full list of supported model and tools providers can be found here。（可以跳转至站内，展示我们有多少plugin，并添加一个工具集合如下图）
 
-## Contributing Guidelines
+<img width="1280" height="272" alt="image" src="https://github.com/user-attachments/assets/30475454-1bb7-41bd-b6d8-6f799bb30f79" />
 
-| Bug Reports                                                              | Feature Requests                                                  | Issues/Discussions                                                       | ReflyAI Community                                                     |
-| ------------------------------------------------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| [Create Bug Report](https://github.com/refly-ai/refly/issues/new/choose) | [Submit Feature Request](https://github.com/refly-ai/refly/pulls) | [View GitHub Discussions](https://github.com/refly-ai/refly/discussions) | [Visit ReflyAI Community](https://docs.refly.ai/community/contact-us) |
-| Something isn't working as expected                                      | Ideas for new features or improvements                            | Discuss and raise questions                                              | A place to ask questions, learn, and connect with others              |
 
-Calling all developers, testers, tech writers and more! Contributions of all types are more than welcome, please check our [CONTRIBUTING.md](./CONTRIBUTING.md) and feel free to browse our [GitHub issues](https://github.com/refly-ai/refly/issues) to show us what you can do.
+- MCP Support: Full native compatibility with any Model Context Protocol server to extend agent capabilities beyond standard APIs.
+- Private Skill Connectors：Securely run and manage thousands of internal skills — connected to your databases, scripts, and systems through Refly’s runtime.
+### Agent Runtimes & Platforms (Outputs)
 
-For bug reports, feature requests, and other suggestions, you can also [create a new issue](https://github.com/refly-ai/refly/issues/new/choose) and choose the most appropriate template to provide feedback.
+Export your deterministic skills to any environment where work happens.
 
-If you have any questions, feel free to reach out to us. One of the best places to get more information and learn is the [ReflyAI Community](https://docs.refly.ai/community/contact-us), where you can connect with other like-minded individuals.
+<img width="1280" height="853" alt="image" src="https://github.com/user-attachments/assets/93053319-8903-4908-b2d0-4ae283ecc295" />
 
-## Community and Contact
 
-- [GitHub Discussion](https://github.com/refly-ai/refly/discussions): Best for sharing feedback and asking questions.
-- [GitHub Issues](https://github.com/refly-ai/refly/issues): Best for reporting bugs and suggesting features when using ReflyAI. Please refer to our contribution guidelines.
-- [Discord](https://discord.gg/YVuYFjFvRC): Best for sharing your applications and interacting with the community.
-- [X(Twitter)](https://x.com/reflyai): Best for sharing your applications and staying connected with the community.
+- AI Coding Tools: Native export for Claude Code and Cursor, allowing agents to use your versioned skills as standardized tools.
+- App Builders: Power the logic of Lovable or custom frontend apps via stateful, authenticated APIs.
+- Automation Hubs: Deploy as intelligent webhooks to trigger complex SOPs from Slack or Microsoft Teams.
+- Agent Frameworks: Directly compatible with AutoGen, Manus, and custom LangChain/Python stacks.
+## Why Teams Choose Refly
 
-## Security Issues
+### For Builders: From Vibe to Production
 
-To protect your privacy, please avoid posting security-related issues on GitHub. Instead, send your questions to [support@refly.ai](mailto:support@refly.ai), and we will provide you with a more detailed response.
+Most agent tooling today falls into two categories:
+
+- Workflow builders (n8n, Dify): Great for orchestration, but workflows are fragile, trigger-only "black boxes," and hard to reuse.
+- Agent frameworks (LangChain): Powerful primitives, but require heavy engineering, manual boilerplate, and high maintenance to keep running.
+Refly eliminates the friction of manual configuration, giving you the fastest path from a "vibe" to a usable agent tool. By using our Streamlined DSL, you get the speed of a GUI with the precision of code.
+
+### For Enterprise: Scalable Skills Governance
+
+Workflow tools like n8n are great for basic connectivity, and frameworks like LangChain offer powerful primitives — but neither provides the governed, production-ready capability layer required for enterprise agent infrastructure.
+
+Refly acts as the Agent skills builder, providing the governance and reliability infrastructure required to deploy AI across the entire organization.
+
+## Quick Start
+
+此处需要展示一个案例
+
+
+## Documentation
+
+- **[📖 Self-Deployment Guide (SOP)](/docs/Self-Deploy.md)**  
+  *Recommended for Developers)* Step-by-step guide to deploying Refly on your own server using Docker.
+
+- **[🌐 Official Documentation (docs.refly.ai)](https://docs.refly.ai)**  
+  Full references including User Manuals, API References, and Plugin Development guides.
+
+
+## Everything we built so far
+
+如果没有整合我们的历程，这一段也可以不要
+
+## Contributing
+
+For those who'd like to contribute code, see our [Contribution Guide](https://github.com/langgenius/dify/blob/main/CONTRIBUTING.md). At the same time, please consider supporting Refly by sharing it on social media and at events and conferences.
+
+> We are looking for contributors to help translate Refly into languages other than Mandarin or English. If you are interested in helping, please see the <u><mark style="background: yellow">xxx</mark></u> for more information.
+
+## Community
 
 ## License
 
-This repository is licensed under the [ReflyAI Open Source License](./LICENSE), which is essentially the Apache 2.0 License with some additional restrictions.
+This repository is licensed under the [ReflyAI Open Source License](https://github.com/refly-ai/refly/blob/main/LICENSE), which is essentially the Apache 2.0 License with some additional restrictions.
+
+Enterprise License Needed
+
+1. Open Core (Best for Enterprise Sales)
+2. Source-Available Protective License
+Apache 2.0 (core) + Commercial Enterprise License (advanced features)
+
+3. AGPLv3 (Hard Enforcement Open Source)
+
+<img width="1280" height="430" alt="image" src="https://github.com/user-attachments/assets/bea6fffc-4025-4042-9f05-5c0671ad72aa" />
+
+## 可参考内容
+
+<img width="1280" height="592" alt="image" src="https://github.com/user-attachments/assets/f20c8ca9-ad6e-4859-bd71-4485feb64fb6" />
+
