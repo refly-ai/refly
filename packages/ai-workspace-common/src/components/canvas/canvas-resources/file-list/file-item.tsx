@@ -34,13 +34,13 @@ export const FileItem = memo(({ file, isActive, onSelect }: FileItemProps) => {
       onClick={() => onSelect(file, beforeParsed)}
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        {file.category === 'image' && file.url ? (
-          <div className="w-5 h-5 flex items-center justify-center">
-            <img src={file.url} alt={file.name} className="w-4 h-4 rounded-md object-cover" />
-          </div>
-        ) : (
-          <NodeIcon type="file" filename={file.name} filled={false} small />
-        )}
+        <NodeIcon
+          type="file"
+          filename={file.name}
+          url={file.category === 'image' ? file.url : undefined}
+          filled={false}
+          small
+        />
 
         <Text
           ellipsis={{ tooltip: { placement: 'left' } }}

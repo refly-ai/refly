@@ -30,6 +30,7 @@ import {
   runModuleInitWithTimeoutAndRetry,
   AUTO_MODEL_ID,
   getModelSceneFromMode,
+  isKnownVisionModel,
 } from '@refly/utils';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService, LockReleaseFn } from '../common/redis.service';
@@ -66,6 +67,29 @@ const FIXED_BUILTIN_TOOLSETS: GenericToolset[] = [
   { type: 'regular', id: 'read_agent_result', name: 'read_agent_result', builtin: true },
   { type: 'regular', id: 'read_tool_result', name: 'read_tool_result', builtin: true },
 ];
+
+/**
+ * Ensures vision capability is set for known vision-capable models.
+ * If the model is known to support vision but capabilities.vision is not set,
+ * this function will add it automatically.
+ */
+function ensureVisionCapability(config: LLMModelConfig | undefined): LLMModelConfig | undefined {
+  if (!config) return undefined;
+
+  // If already has vision capability or not a known vision model, return as-is
+  if (config.capabilities?.vision || !isKnownVisionModel(config.modelId)) {
+    return config;
+  }
+
+  // Auto-enable vision for known vision-capable models
+  return {
+    ...config,
+    capabilities: {
+      ...config.capabilities,
+      vision: true,
+    },
+  };
+}
 
 @Injectable()
 export class SkillService implements OnModuleInit {
@@ -409,11 +433,13 @@ export class SkillService implements OnModuleInit {
     }
 
     const modelConfigMap = {
-      chat: safeParseJSON(modelProviderMap.chat.config) as LLMModelConfig,
-      copilot: modelProviderMap.copilot
-        ? (safeParseJSON(modelProviderMap.copilot.config) as LLMModelConfig)
-        : undefined,
-      agent: safeParseJSON(modelProviderMap.agent.config) as LLMModelConfig,
+      chat: ensureVisionCapability(safeParseJSON(modelProviderMap.chat.config) as LLMModelConfig),
+      copilot: ensureVisionCapability(
+        modelProviderMap.copilot
+          ? (safeParseJSON(modelProviderMap.copilot.config) as LLMModelConfig)
+          : undefined,
+      ),
+      agent: ensureVisionCapability(safeParseJSON(modelProviderMap.agent.config) as LLMModelConfig),
       titleGeneration: safeParseJSON(modelProviderMap.titleGeneration.config) as LLMModelConfig,
       queryAnalysis: safeParseJSON(modelProviderMap.queryAnalysis.config) as LLMModelConfig,
       image: modelProviderMap.image
