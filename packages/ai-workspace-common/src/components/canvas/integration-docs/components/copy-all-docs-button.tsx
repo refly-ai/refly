@@ -135,10 +135,10 @@ const buildApiDocsMarkdown = (t: (key: string) => string, canvasId: string) => {
   lines.push('');
   lines.push(`## ${t('integration.api.endpointsTitle')}`);
 
-  publicEndpoints.forEach((endpoint) => {
+  for (const endpoint of publicEndpoints) {
     lines.push('');
     lines.push(buildEndpointMarkdown(endpoint, baseUrl, t, pathParams));
-  });
+  }
 
   lines.push('');
   lines.push(`## ${t('integration.api.errorsTitle')}`);

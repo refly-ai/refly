@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useId, useState } from 'react';
 import { Modal, Button, Input, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { PlusOutlined, CopyOutlined, DeleteOutlined } from '@ant-design/icons';
@@ -18,6 +18,7 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
   const [keyToDelete, setKeyToDelete] = useState<{ keyId: string; name: string } | null>(null);
   const [newKeyName, setNewKeyName] = useState('');
   const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const apiKeyNameInputId = useId();
 
   const handleCreate = async () => {
     if (!newKeyName.trim()) {
@@ -166,8 +167,11 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
           ) : (
             <>
               <div className="api-key-form-field">
-                <label className="api-key-form-label">{t('webhook.apiKey.name')}</label>
+                <label className="api-key-form-label" htmlFor={apiKeyNameInputId}>
+                  {t('webhook.apiKey.name')}
+                </label>
                 <Input
+                  id={apiKeyNameInputId}
                   placeholder={t('webhook.apiKey.namePlaceholder')}
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}

@@ -4469,7 +4469,8 @@ const translations = {
     enableWebhook: 'Enable the webhook',
     enableWebhookDesc: 'Allow external services to trigger this workflow',
     emptyTitle: 'Enable Webhook to generate a URL',
-    emptyDescription: 'Turn this workflow into an API Endpoint. Allow external systems to send data and trigger runs instantly.',
+    emptyDescription:
+      'Turn this workflow into an API Endpoint. Allow external systems to send data and trigger runs instantly.',
     enableSuccess: 'Webhook enabled',
     enableFailed: 'Failed to enable webhook',
     disableSuccess: 'Webhook disabled',
