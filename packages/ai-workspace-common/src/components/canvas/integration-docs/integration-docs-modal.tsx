@@ -273,7 +273,7 @@ export const IntegrationDocsModal = memo(
           getContainer={getModalContainer}
           style={{ top: 0, padding: 0 }}
           styles={{
-            body: { height: '100%', padding: 0 },
+            body: { height: 'calc(100vh - 50px)', padding: 0 },
             mask: {
               background: 'var(--refly-modal-mask)',
               top: 50,
