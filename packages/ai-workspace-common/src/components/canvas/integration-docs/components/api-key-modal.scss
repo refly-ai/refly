@@ -1,7 +1,8 @@
 // API Key Management Modal
 .api-key-management-modal,
 .api-key-create-modal,
-.api-key-delete-modal {
+.api-key-delete-modal,
+.api-output-modal {
   .ant-modal-content {
     border-radius: 20px;
     border: none;
@@ -177,6 +178,13 @@
   background: var(--refly-bg-control-z1);
   border: 1px solid var(--refly-line);
   margin-bottom: 16px;
+}
+
+.api-key-warning {
+  font-size: 12px;
+  color: var(--refly-func-error-default, var(--ant-color-error, #ff4d4f));
+  margin: -8px 0 16px;
+  line-height: 1.5;
 }
 
 .api-key-display-value {

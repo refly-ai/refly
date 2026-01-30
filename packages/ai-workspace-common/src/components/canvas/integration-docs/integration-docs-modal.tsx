@@ -1,6 +1,12 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Button, Switch, message } from 'antd';
-import { AppstoreOutlined, BranchesOutlined, CodeOutlined, CloseOutlined } from '@ant-design/icons';
+import {
+  AppstoreOutlined,
+  BranchesOutlined,
+  CodeOutlined,
+  CloseOutlined,
+  SlidersOutlined,
+} from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { serverOrigin } from '@refly/ui-kit';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -8,6 +14,7 @@ import { WebhookDocsTab } from './components/webhook-docs-tab';
 import { ApiDocsTab } from './components/api-docs-tab';
 import { SkillDocsTab } from './components/skill-docs-tab';
 import { ApiKeyModal } from './components/api-key-modal';
+import { ApiOutputModal } from './components/api-output-modal';
 import { CopyAllDocsButton } from './components/copy-all-docs-button';
 import { apiDocsData } from './data/api-docs.generated';
 import type { IntegrationType } from './types';
@@ -37,6 +44,7 @@ export const IntegrationDocsModal = memo(
     const [activeIntegration, setActiveIntegration] = useState<IntegrationType>('webhook');
     const [activeSection, setActiveSection] = useState('');
     const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+    const [outputModalOpen, setOutputModalOpen] = useState(false);
     const [webhookConfig, setWebhookConfig] = useState<WebhookConfig | null>(null);
     const [webhookLoading, setWebhookLoading] = useState(false);
     const [webhookToggling, setWebhookToggling] = useState(false);
@@ -168,6 +176,7 @@ export const IntegrationDocsModal = memo(
         setActiveIntegration('webhook');
         setActiveSection('');
         setApiKeyModalOpen(false);
+        setOutputModalOpen(false);
       }
     }, [open]);
 
@@ -221,6 +230,9 @@ export const IntegrationDocsModal = memo(
     const handleIntegrationChange = (type: IntegrationType) => {
       setActiveIntegration(type);
       setActiveSection('');
+      if (type !== 'api') {
+        setOutputModalOpen(false);
+      }
     };
 
     const getModalContainer = (): HTMLElement => {
@@ -305,9 +317,14 @@ export const IntegrationDocsModal = memo(
               <div className="integration-docs-toolbar">
                 <div className="integration-docs-toolbar-left">
                   {activeIntegration === 'api' ? (
-                    <Button type="primary" onClick={() => setApiKeyModalOpen(true)}>
-                      {t('integration.manageApiKeys')}
-                    </Button>
+                    <>
+                      <Button type="primary" onClick={() => setApiKeyModalOpen(true)}>
+                        {t('integration.manageApiKeys')}
+                      </Button>
+                      <Button icon={<SlidersOutlined />} onClick={() => setOutputModalOpen(true)}>
+                        {t('integration.outputModal.button')}
+                      </Button>
+                    </>
                   ) : activeIntegration === 'webhook' ? (
                     <div className="webhook-toolbar-toggle">
                       <span className="webhook-toolbar-label">{t('webhook.enableWebhook')}</span>
@@ -383,6 +400,11 @@ export const IntegrationDocsModal = memo(
 
         {/* API Key Management Modal */}
         <ApiKeyModal open={apiKeyModalOpen} onClose={() => setApiKeyModalOpen(false)} />
+        <ApiOutputModal
+          open={outputModalOpen}
+          onClose={() => setOutputModalOpen(false)}
+          canvasId={canvasId}
+        />
       </>
     );
   },

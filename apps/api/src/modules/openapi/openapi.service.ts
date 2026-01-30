@@ -224,9 +224,37 @@ export class OpenapiService {
     // Sort node executions by execution order (topological sort based on parent-child relationships)
     const sortedNodeExecutions = sortNodeExecutionsByExecutionOrder(nodeExecutions);
 
+    let resultNodeIds: string[] | null = null;
+    try {
+      if (workflowExecution.scheduleId?.startsWith('api:')) {
+        const apiId = workflowExecution.scheduleId.replace('api:', '');
+        const workflowApi = await this.prisma.workflowApi.findFirst({
+          where: { apiId, uid: user.uid, deletedAt: null },
+          select: { resultNodeIds: true },
+        });
+        resultNodeIds = workflowApi?.resultNodeIds ? JSON.parse(workflowApi.resultNodeIds) : null;
+      } else {
+        const workflowApi = await this.prisma.workflowApi.findFirst({
+          where: { canvasId: workflowExecution.canvasId, uid: user.uid, deletedAt: null },
+          select: { resultNodeIds: true },
+        });
+        resultNodeIds = workflowApi?.resultNodeIds ? JSON.parse(workflowApi.resultNodeIds) : null;
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to parse resultNodeIds for execution ${executionId}: ${error?.message}`,
+      );
+    }
+
+    const allowedNodeIds =
+      Array.isArray(resultNodeIds) && resultNodeIds.length > 0 ? new Set(resultNodeIds) : null;
+
     // Filter nodes that are considered "products"
     const productNodes = sortedNodeExecutions.filter(
-      (node) => node.nodeType === 'skillResponse' && node.status === 'finish',
+      (node) =>
+        node.nodeType === 'skillResponse' &&
+        node.status === 'finish' &&
+        (!allowedNodeIds || allowedNodeIds.has(node.nodeId)),
     );
 
     // Collect result IDs for skillResponse nodes

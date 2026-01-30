@@ -192,6 +192,7 @@ print(response.json())`;
             <section id="webhook-examples" className="integration-docs-section">
               <h3 className="integration-docs-section-title">{t('webhook.examples')}</h3>
               <Tabs
+                defaultActiveKey="javascript"
                 items={[
                   {
                     key: 'curl',

@@ -10359,6 +10359,25 @@ export type ResetWebhookResponse = BaseResponse & {
   };
 };
 
+export type UpdateWebhookRequest = {
+  /**
+   * Webhook ID to update
+   */
+  webhookId: string;
+  /**
+   * Whether webhook is enabled
+   */
+  isEnabled?: boolean;
+  /**
+   * Optional array of result node IDs
+   */
+  resultNodeIds?: Array<string>;
+  /**
+   * Timeout in seconds
+   */
+  timeout?: number;
+};
+
 export type GetWebhookConfigResponse = BaseResponse & {
   data?: {
     /**
@@ -11753,6 +11772,14 @@ export type ResetWebhookData = {
 export type ResetWebhookResponse2 = ResetWebhookResponse;
 
 export type ResetWebhookError = unknown;
+
+export type UpdateWebhookData = {
+  body: UpdateWebhookRequest;
+};
+
+export type UpdateWebhookResponse = BaseResponse;
+
+export type UpdateWebhookError = unknown;
 
 export type GetWebhookConfigData = {
   query: {

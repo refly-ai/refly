@@ -101,6 +101,45 @@ export const buildMultipartFormExample = (schema?: SchemaObject | null): string 
   return lines.join('\n');
 };
 
+type MultipartField = {
+  name: string;
+  value: string;
+  isFile: boolean;
+};
+
+const sampleFilePaths = ['/path/to/file1.pdf', '/path/to/file2.txt'];
+
+const buildMultipartFields = (schema?: SchemaObject | null): MultipartField[] => {
+  if (!schema || schema.type !== 'object') {
+    return [{ name: 'files', value: sampleFilePaths[0], isFile: true }];
+  }
+
+  const fields: MultipartField[] = [];
+  const properties = schema.properties ?? {};
+  for (const [key, value] of Object.entries(properties)) {
+    const prop = value as SchemaObject;
+    if (prop.type === 'array' && (prop.items as SchemaObject | undefined)?.format === 'binary') {
+      for (const filePath of sampleFilePaths) {
+        fields.push({ name: key, value: filePath, isFile: true });
+      }
+      continue;
+    }
+    if (prop.format === 'binary') {
+      fields.push({ name: key, value: sampleFilePaths[0], isFile: true });
+      continue;
+    }
+    const rawValue = buildMultipartSampleValue(prop);
+    const cleanedValue = rawValue.startsWith('@') ? rawValue.slice(1) : rawValue;
+    fields.push({ name: key, value: cleanedValue, isFile: false });
+  }
+
+  if (!fields.length && schema.additionalProperties) {
+    fields.push({ name: 'field', value: 'value', isFile: false });
+  }
+
+  return fields;
+};
+
 const formatSchemaType = (schema?: SchemaObject): string => {
   if (!schema) return 'unknown';
   if (schema.type === 'array') {
@@ -244,6 +283,70 @@ const buildHeaders = (endpoint: ApiEndpoint, apiKey?: string, hasBody?: boolean)
   return headers;
 };
 
+const generateMultipartCodeExamples = (
+  endpoint: ApiEndpoint,
+  url: string,
+  apiKey?: string,
+): CodeExamples => {
+  const headers = buildHeaders(endpoint, apiKey, false);
+  const fields = buildMultipartFields(endpoint.requestBody?.schema);
+  const dataFields = fields.filter((field) => !field.isFile);
+  const fileFields = fields.filter((field) => field.isFile);
+
+  let curl = `curl -X ${endpoint.method} ${url}`;
+  for (const [key, value] of Object.entries(headers)) {
+    curl += ` \\\n  -H "${key}: ${value}"`;
+  }
+  for (const field of dataFields) {
+    curl += ` \\\n  -F "${field.name}=${field.value}"`;
+  }
+  for (const field of fileFields) {
+    curl += ` \\\n  -F "${field.name}=@${field.value}"`;
+  }
+
+  const pythonHeaders = Object.keys(headers).length
+    ? JSON.stringify(headers, null, 2).replace(/"/g, "'")
+    : '{}';
+  const pythonFiles = fileFields.length
+    ? `[\n${fileFields
+        .map((field) => `    ("${field.name}", open("${field.value}", "rb"))`)
+        .join(',\n')}\n]`
+    : '[]';
+  const pythonData = dataFields.length
+    ? `{\n${dataFields.map((field) => `    "${field.name}": "${field.value}"`).join(',\n')}\n}`
+    : '{}';
+
+  const python = `import requests\n\nurl = "${url}"\nheaders = ${pythonHeaders}\nfiles = ${pythonFiles}\ndata = ${pythonData}\nresponse = requests.${endpoint.method.toLowerCase()}(url, headers=headers, files=files, data=data)\nprint(response.json())`;
+
+  const jsFileAppends = fileFields
+    .map((field) => `form.append("${field.name}", fs.createReadStream("${field.value}"));`)
+    .join('\n');
+  const jsDataAppends = dataFields
+    .map((field) => `form.append("${field.name}", "${field.value}");`)
+    .join('\n');
+  const headerPairs = Object.entries(headers)
+    .map(([key, value]) => `"${key}": "${value}"`)
+    .join(', ');
+  const jsHeaders = headerPairs
+    ? `const headers = { ...form.getHeaders(), ${headerPairs} };`
+    : 'const headers = form.getHeaders();';
+
+  const javascript = `import fs from "node:fs";
+import FormData from "form-data";
+
+const url = "${url}";
+const form = new FormData();
+${jsFileAppends}
+${jsDataAppends}
+${jsHeaders}
+
+const response = await fetch(url, { method: "${endpoint.method}", headers, body: form });
+const data = await response.json();
+console.log(data);`;
+
+  return { curl, python, javascript };
+};
+
 export const generateCodeExamples = (
   endpoint: ApiEndpoint,
   baseUrl: string,
@@ -252,6 +355,10 @@ export const generateCodeExamples = (
   bodyExampleOverride?: unknown,
 ): CodeExamples => {
   const url = `${baseUrl}${formatPathWithPlaceholders(endpoint.path, pathParams)}`;
+  const isMultipart = endpoint.requestBody?.contentType?.startsWith('multipart/');
+  if (isMultipart) {
+    return generateMultipartCodeExamples(endpoint, url, apiKey);
+  }
   const bodyExample =
     bodyExampleOverride ??
     endpoint.requestBody?.example ??

@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-01-30T05:04:35.198Z',
+  generatedAt: '2026-01-30T06:48:04.927Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -1095,6 +1095,88 @@ export const apiDocsData: ApiDocsData = {
               },
             },
             required: ['success'],
+          },
+        },
+        '400': {
+          description: 'Invalid request parameters',
+        },
+        '401': {
+          description: 'Unauthorized',
+        },
+        '404': {
+          description: 'Webhook not found',
+        },
+      },
+    },
+    {
+      id: 'post-webhook-update',
+      method: 'POST',
+      path: '/webhook/update',
+      operationId: 'updateWebhook',
+      summary: 'Update webhook configuration',
+      description: 'Update webhook configuration',
+      tags: ['webhook'],
+      security: ['api_key'],
+      requestBody: {
+        required: true,
+        contentType: 'application/json',
+        schema: {
+          type: 'object',
+          required: ['webhookId'],
+          properties: {
+            webhookId: {
+              type: 'string',
+              description: 'Webhook ID to update',
+            },
+            isEnabled: {
+              type: 'boolean',
+              description: 'Whether webhook is enabled',
+            },
+            resultNodeIds: {
+              type: 'array',
+              description: 'Optional array of result node IDs',
+              items: {
+                type: 'string',
+              },
+            },
+            timeout: {
+              type: 'integer',
+              description: 'Timeout in seconds',
+            },
+          },
+        },
+        example: null,
+      },
+      responses: {
+        '200': {
+          description: 'Webhook updated successfully',
+          schema: {
+            type: 'object',
+            required: ['success'],
+            properties: {
+              success: {
+                type: 'boolean',
+                description: 'Whether the operation was successful',
+                example: true,
+              },
+              errCode: {
+                type: 'string',
+                description: 'Error code',
+              },
+              errMsg: {
+                type: 'string',
+                description: 'Error message',
+                example: 'Operation failed',
+              },
+              traceId: {
+                type: 'string',
+                description: 'Trace ID',
+              },
+              stack: {
+                type: 'string',
+                description: 'Error stack (only returned in development environment)',
+              },
+            },
           },
         },
         '400': {

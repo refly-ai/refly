@@ -1,0 +1,84 @@
+.api-output-modal-content {
+  padding: 0 24px 12px;
+}
+
+.api-output-modal-description {
+  font-size: 14px;
+  color: var(--refly-text-2);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.api-output-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.api-output-node-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.api-output-node-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--refly-line);
+  background: var(--refly-bg-control-z0);
+  cursor: pointer;
+}
+
+.api-output-node-title {
+  font-size: 14px;
+  color: var(--refly-text-0);
+}
+
+.api-output-modal-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--refly-text-0);
+}
+
+.api-output-modal-hint {
+  font-size: 12px;
+  color: var(--refly-text-3);
+}
+
+.api-output-modal-empty {
+  font-size: 13px;
+  color: var(--refly-text-3);
+  background: var(--refly-bg-control-z0);
+  border: 1px dashed var(--refly-line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.api-output-modal-warning {
+  font-size: 12px;
+  color: var(--refly-func-error-default, var(--ant-color-error, #ff4d4f));
+  margin: 0 0 12px;
+}
+
+.api-output-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.api-output-modal {
+  .ant-checkbox-checked .ant-checkbox-inner {
+    background-color: var(--refly-text-0);
+    border-color: var(--refly-text-0);
+  }
+
+  .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+  .ant-checkbox:hover .ant-checkbox-inner,
+  .ant-checkbox-input:focus + .ant-checkbox-inner {
+    border-color: var(--refly-text-0);
+  }
+}

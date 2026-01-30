@@ -285,6 +285,7 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
             {t('integration.api.bestPracticesExamplesTitle')}
           </h4>
           <Tabs
+            defaultActiveKey="javascript"
             items={[
               {
                 key: 'curl',
@@ -431,6 +432,7 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                     {t('integration.api.codeExamplesTitle')}
                   </h4>
                   <Tabs
+                    defaultActiveKey="javascript"
                     items={[
                       {
                         key: 'curl',

@@ -321,6 +321,9 @@ import type {
   ResetWebhookData,
   ResetWebhookError,
   ResetWebhookResponse2,
+  UpdateWebhookData,
+  UpdateWebhookError,
+  UpdateWebhookResponse,
   GetWebhookConfigData,
   GetWebhookConfigError,
   GetWebhookConfigResponse2,
@@ -2249,6 +2252,19 @@ export const resetWebhook = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<ResetWebhookResponse2, ResetWebhookError, ThrowOnError>({
     ...options,
     url: '/webhook/reset',
+  });
+};
+
+/**
+ * Update webhook configuration
+ * Update webhook configuration
+ */
+export const updateWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<UpdateWebhookResponse, UpdateWebhookError, ThrowOnError>({
+    ...options,
+    url: '/webhook/update',
   });
 };
 

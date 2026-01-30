@@ -18,7 +18,6 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
   const [keyToDelete, setKeyToDelete] = useState<{ keyId: string; name: string } | null>(null);
   const [newKeyName, setNewKeyName] = useState('');
   const [createdKey, setCreatedKey] = useState<string | null>(null);
-  const [createdKeyMap, setCreatedKeyMap] = useState<Record<string, string>>({});
   const apiKeyNameInputId = useId();
 
   const handleCreate = async () => {
@@ -30,7 +29,6 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
     try {
       const result = await createApiKey(newKeyName.trim());
       setCreatedKey(result.apiKey);
-      setCreatedKeyMap((prev) => ({ ...prev, [result.keyId]: result.apiKey }));
       setNewKeyName('');
       message.success(t('webhook.apiKey.createSuccess'));
     } catch (_error) {
@@ -41,16 +39,6 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
   const handleCopyKey = (key: string) => {
     navigator.clipboard.writeText(key);
     message.success(t('common.copied'));
-  };
-
-  const handleCopyKeyFromList = (keyId: string, keyPrefix: string) => {
-    const fullKey = createdKeyMap[keyId];
-    if (fullKey) {
-      handleCopyKey(fullKey);
-      return;
-    }
-    navigator.clipboard.writeText(keyPrefix);
-    message.success(t('webhook.apiKey.copyPrefixSuccess'));
   };
 
   const handleDeleteClick = (keyId: string, name: string) => {
@@ -119,12 +107,6 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
                   <div className="api-key-actions">
                     <Button
                       type="text"
-                      icon={<CopyOutlined />}
-                      onClick={() => handleCopyKeyFromList(apiKey.keyId, apiKey.keyPrefix)}
-                      className="api-key-action-btn"
-                    />
-                    <Button
-                      type="text"
                       icon={<DeleteOutlined />}
                       onClick={() => handleDeleteClick(apiKey.keyId, apiKey.name)}
                       className="api-key-action-btn"
@@ -161,6 +143,7 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
         <div className="api-key-modal-content">
           {createdKey ? (
             <>
+              <div className="api-key-warning">{t('webhook.apiKey.copyWarning')}</div>
               <div className="api-key-display">
                 <span className="api-key-display-value">{createdKey}</span>
                 <Button

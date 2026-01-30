@@ -2739,6 +2739,35 @@ paths:
       security:
         - api_key: []
 
+  /webhook/update:
+    post:
+      tags:
+        - webhook
+      summary: Update webhook configuration
+      description: Update webhook configuration
+      operationId: updateWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWebhookRequest'
+      responses:
+        '200':
+          description: Webhook updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+        '404':
+          description: Webhook not found
+      security:
+        - api_key: []
+
   /webhook/config:
     get:
       tags:
@@ -13842,6 +13871,27 @@ components:
                 webhookUrl:
                   type: string
                   description: New webhook URL
+
+    UpdateWebhookRequest:
+      type: object
+      required:
+        - webhookId
+      properties:
+        webhookId:
+          type: string
+          description: Webhook ID to update
+        isEnabled:
+          type: boolean
+          description: Whether webhook is enabled
+        resultNodeIds:
+          type: array
+          items:
+            type: string
+          description: Optional array of result node IDs
+        timeout:
+          type: integer
+          default: 30
+          description: Timeout in seconds
 
     GetWebhookConfigResponse:
       allOf:

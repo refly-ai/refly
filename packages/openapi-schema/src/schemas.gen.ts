@@ -12940,6 +12940,33 @@ export const ResetWebhookResponseSchema = {
   ],
 } as const;
 
+export const UpdateWebhookRequestSchema = {
+  type: 'object',
+  required: ['webhookId'],
+  properties: {
+    webhookId: {
+      type: 'string',
+      description: 'Webhook ID to update',
+    },
+    isEnabled: {
+      type: 'boolean',
+      description: 'Whether webhook is enabled',
+    },
+    resultNodeIds: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'Optional array of result node IDs',
+    },
+    timeout: {
+      type: 'integer',
+      default: 30,
+      description: 'Timeout in seconds',
+    },
+  },
+} as const;
+
 export const GetWebhookConfigResponseSchema = {
   allOf: [
     {
