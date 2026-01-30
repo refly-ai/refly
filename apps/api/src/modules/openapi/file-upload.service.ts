@@ -8,11 +8,6 @@ import { buildOpenapiStorageKey, generateOpenapiFileKey } from '../../utils/open
 export interface UploadedFileInfo {
   fileKey: string;
   fileName: string;
-  fileSize: number;
-  contentType: string;
-  fileType: 'document' | 'image' | 'video' | 'audio';
-  expiresAt: Date;
-  deduped: boolean;
 }
 
 @Injectable()
@@ -63,16 +58,9 @@ export class FileUploadService {
             },
           });
 
-          const fileType = mapContentTypeToFileType(contentType);
-
           return {
             fileKey,
             fileName: file.originalname,
-            fileSize: file.size || 0,
-            contentType,
-            fileType,
-            expiresAt,
-            deduped: true,
           };
         }
 
@@ -82,19 +70,11 @@ export class FileUploadService {
           data: { expiredAt: expiresAt },
         });
 
-        const contentType = file.mimetype || 'application/octet-stream';
-        const fileType = mapContentTypeToFileType(contentType);
-
         // Return only file metadata, NOT the public URL
         // This prevents the API from being abused as a free file hosting service
         return {
           fileKey,
           fileName: file.originalname,
-          fileSize: file.size || 0,
-          contentType,
-          fileType,
-          expiresAt,
-          deduped: false,
         };
       } catch (error) {
         this.logger.error(`Failed to upload file ${file.originalname}: ${error.message}`);
@@ -111,13 +91,3 @@ export class FileUploadService {
     return results;
   }
 }
-
-const mapContentTypeToFileType = (
-  contentType?: string,
-): 'document' | 'image' | 'video' | 'audio' => {
-  if (!contentType) return 'document';
-  if (contentType.startsWith('image/')) return 'image';
-  if (contentType.startsWith('video/')) return 'video';
-  if (contentType.startsWith('audio/')) return 'audio';
-  return 'document';
-};

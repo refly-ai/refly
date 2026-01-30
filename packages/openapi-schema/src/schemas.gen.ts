@@ -12755,6 +12755,46 @@ export const WebhookRunResponseSchema = {
   ],
 } as const;
 
+export const OpenapiUploadedFileSchema = {
+  type: 'object',
+  required: ['fileKey', 'fileName'],
+  properties: {
+    fileKey: {
+      type: 'string',
+      description: 'File key used as workflow variable value',
+    },
+    fileName: {
+      type: 'string',
+      description: 'Original file name',
+    },
+  },
+} as const;
+
+export const OpenapiFileUploadResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          required: ['files'],
+          properties: {
+            files: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/OpenapiUploadedFile',
+              },
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const WebhookErrorCodeSchema = {
   type: 'string',
   enum: [

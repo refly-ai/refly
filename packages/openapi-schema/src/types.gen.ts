@@ -10227,6 +10227,23 @@ export type WebhookRunResponse = BaseResponse & {
   };
 };
 
+export type OpenapiUploadedFile = {
+  /**
+   * File key used as workflow variable value
+   */
+  fileKey: string;
+  /**
+   * Original file name
+   */
+  fileName: string;
+};
+
+export type OpenapiFileUploadResponse = BaseResponse & {
+  data?: {
+    files: Array<OpenapiUploadedFile>;
+  };
+};
+
 /**
  * Webhook error codes:
  * - WEBHOOK_NOT_FOUND: Webhook does not exist or has been deleted
@@ -11762,6 +11779,19 @@ export type RunWebhookData = {
 export type RunWebhookResponse = WebhookRunResponse;
 
 export type RunWebhookError = unknown;
+
+export type UploadOpenapiFilesData = {
+  body: {
+    /**
+     * Files to upload
+     */
+    files: Array<Blob | File>;
+  };
+};
+
+export type UploadOpenapiFilesResponse = OpenapiFileUploadResponse;
+
+export type UploadOpenapiFilesError = unknown;
 
 export type RunWorkflowViaApiData = {
   body: {

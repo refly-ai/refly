@@ -330,6 +330,9 @@ import type {
   RunWebhookData,
   RunWebhookError,
   RunWebhookResponse,
+  UploadOpenapiFilesData,
+  UploadOpenapiFilesError,
+  UploadOpenapiFilesResponse,
   RunWorkflowViaApiData,
   RunWorkflowViaApiError,
   RunWorkflowViaApiResponse,
@@ -2290,6 +2293,28 @@ export const runWebhook = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<RunWebhookResponse, RunWebhookError, ThrowOnError>({
     ...options,
     url: '/openapi/webhook/{webhookId}/run',
+  });
+};
+
+/**
+ * Upload files for OpenAPI workflow variables
+ * Upload files and get fileKey values for workflow variables. Unused files are cleaned up after about 24 hours.
+ */
+export const uploadOpenapiFiles = <ThrowOnError extends boolean = false>(
+  options: Options<UploadOpenapiFilesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UploadOpenapiFilesResponse,
+    UploadOpenapiFilesError,
+    ThrowOnError
+  >({
+    ...options,
+    ...formDataBodySerializer,
+    headers: {
+      'Content-Type': null,
+      ...options?.headers,
+    },
+    url: '/openapi/files/upload',
   });
 };
 

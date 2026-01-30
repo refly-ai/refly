@@ -2859,6 +2859,42 @@ paths:
         '404':
           description: Webhook not found
 
+  /openapi/files/upload:
+    post:
+      tags:
+        - workflow
+      summary: Upload files for OpenAPI workflow variables
+      description: Upload files and get fileKey values for workflow variables. Unused files are cleaned up after about 24 hours.
+      operationId: uploadOpenapiFiles
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Files to upload
+      responses:
+        '200':
+          description: Files uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenapiFileUploadResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized - invalid or missing API key
+      security:
+        - api_key: []
+
   /openapi/workflow/{canvasId}/run:
     post:
       tags:
@@ -13588,6 +13624,34 @@ components:
                 received:
                   type: boolean
                   description: Whether the webhook request was accepted
+
+    OpenapiUploadedFile:
+      type: object
+      required:
+        - fileKey
+        - fileName
+      properties:
+        fileKey:
+          type: string
+          description: File key used as workflow variable value
+        fileName:
+          type: string
+          description: Original file name
+
+    OpenapiFileUploadResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OpenapiUploadedFile'
 
     WebhookErrorCode:
       type: string
