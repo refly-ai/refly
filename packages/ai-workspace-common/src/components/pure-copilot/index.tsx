@@ -56,6 +56,10 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
   const canvasCreationInProgress = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Drag-and-drop state (align with canvas/copilot)
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
+
   const { setHidePureCopilotModal, showOnboardingFormModal } = useUserStoreShallow((state) => ({
     setHidePureCopilotModal: state.setHidePureCopilotModal,
     showOnboardingFormModal: state.showOnboardingFormModal,
@@ -203,6 +207,55 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     [handleFileUpload],
   );
 
+  const isUploadDisabled = fileCount >= 10;
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    if (e.dataTransfer?.types?.includes('Files')) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Ensure the copy cursor is shown
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current = 0;
+      setIsDragging(false);
+
+      if (isUploadDisabled) return;
+
+      const files = Array.from(e.dataTransfer?.files ?? []);
+      if (files.length === 0) return;
+
+      const remainingSlots = 10 - fileCount;
+      const filesToUpload = files.slice(0, remainingSlots);
+      await Promise.all(filesToUpload.map((file) => handleFileUpload(file)));
+    },
+    [handleFileUpload, fileCount, isUploadDisabled],
+  );
+
   const handlePromptClick = useCallback((prompt: string) => {
     setQuery(prompt);
   }, []);
@@ -304,7 +357,13 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
         </div>
       </div>
 
-      <div className="w-full relative">
+      <div
+        className="w-full relative"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         <div
           className={cn(
             'w-full px-4 py-3 rounded-[12px] border-[1px] border-solid bg-refly-bg-content-z2 transition-all duration-300 relative z-20',
@@ -377,6 +436,37 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
             />
           </div>
         </div>
+
+        {/* Dropzone overlay: Figma 20776-18504 (active) / 20776-18912 (limit) */}
+        {isDragging && (
+          <div
+            className={cn(
+              'absolute inset-0 z-50 rounded-[12px] border-2 border-dashed',
+              'flex flex-col items-center justify-center gap-2',
+              isUploadDisabled
+                ? 'border-[#C7CACD] bg-[rgba(28,31,35,0.1)] backdrop-blur-[25px]'
+                : 'border-[#0E9F77] bg-[rgba(14,159,119,0.25)] backdrop-blur-[25px]',
+            )}
+          >
+            <Attachment size={32} color={isUploadDisabled ? '#1C1F23' : '#0E9F77'} />
+            <div
+              className={cn(
+                'text-sm font-medium text-center',
+                isUploadDisabled ? 'text-[#1C1F23] opacity-50' : 'text-[#1C1F23]',
+              )}
+            >
+              {t('copilot.dropFilesToUpload')}
+            </div>
+            <div
+              className={cn(
+                'text-[10px]',
+                isUploadDisabled ? 'text-[#1C1F23]/35' : 'text-[rgba(28,31,35,0.6)]',
+              )}
+            >
+              {t('copilot.maxUploadSize')}
+            </div>
+          </div>
+        )}
 
         <AnimatePresence>
           {source === 'frontPage' && isFocused && !query.trim() && (

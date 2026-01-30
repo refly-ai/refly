@@ -60,7 +60,8 @@ export const Copilot = memo(({ copilotWidth, setCopilotWidth }: CopilotProps) =>
     e.preventDefault();
     e.stopPropagation();
     dragCounterRef.current -= 1;
-    if (dragCounterRef.current === 0) {
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
       setIsDragging(false);
     }
   }, []);
@@ -68,6 +69,9 @@ export const Copilot = memo(({ copilotWidth, setCopilotWidth }: CopilotProps) =>
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
   }, []);
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
@@ -140,7 +144,6 @@ export const Copilot = memo(({ copilotWidth, setCopilotWidth }: CopilotProps) =>
             'absolute inset-3 z-50 rounded-xl',
             'border-2 border-dashed',
             'flex flex-col items-center justify-center gap-3',
-            'pointer-events-none',
             isUploadDisabled
               ? 'border-[#C7CACD] bg-[rgba(28,31,35,0.1)] backdrop-blur-[25px]'
               : 'border-[#00A870] bg-[#00A870]/10 backdrop-blur-sm',
