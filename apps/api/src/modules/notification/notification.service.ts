@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Attachment, ErrorResponse, Resend } from 'resend';
 import { SendEmailRequest, User } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
-import { ParamsError } from '@refly/errors';
+import { ParamsError, EmailSendError } from '@refly/errors';
 import { MiscService } from '../misc/misc.service';
 import { guard, extractFileId, generateFilenameWithExtension } from '@refly/utils';
 
@@ -104,7 +104,7 @@ export class NotificationService {
         this.logger.error(
           `Failed to send email after ${this.maxRetries} retries: ${error.message}`,
         );
-        return new Error(`Failed to send email: ${error.message}`);
+        return new EmailSendError(error.message);
       });
   }
 
@@ -302,13 +302,18 @@ export class NotificationService {
       );
     }
 
-    await this.sendEmailWithRetry({
-      from: sender,
-      to: receiver,
-      subject,
-      html,
-      attachments,
-    });
+    try {
+      await this.sendEmailWithRetry({
+        from: sender,
+        to: receiver,
+        subject,
+        html,
+        attachments,
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new EmailSendError(detail);
+    }
 
     this.logger.log(
       `Email sent successfully to ${receiver} in ${new Date().getTime() - now.getTime()}ms`,
