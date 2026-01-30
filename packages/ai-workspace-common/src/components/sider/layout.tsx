@@ -7,6 +7,7 @@ import {
 } from '@refly-packages/ai-workspace-common/utils/router';
 
 import cn from 'classnames';
+import { subscriptionEnabled } from '@refly/ui-kit';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 // components - Lazy load Modal components to reduce initial bundle size
 import { useTranslation } from 'react-i18next';
@@ -573,7 +574,7 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
 
           {/* Promotion entry - show above invitation */}
           <div className="flex flex-col gap-2">
-            {!isCollapsed && (
+            {subscriptionEnabled && !isCollapsed && (
               <PromotionItem
                 collapsed={isCollapsed}
                 promotionUrl={`${window.location.origin}/activities`}

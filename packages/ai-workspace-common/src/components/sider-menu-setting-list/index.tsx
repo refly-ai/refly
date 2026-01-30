@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Button, Dropdown, Divider, Avatar } from 'antd';
 import { useUserStore } from '@refly/stores';
+import { subscriptionEnabled } from '@refly/ui-kit';
 import { useSiderStoreShallow } from '@refly/stores';
 import { useLogout } from '@refly-packages/ai-workspace-common/hooks/use-logout';
 import { useThemeStoreShallow } from '@refly/stores';
@@ -147,13 +148,15 @@ const UserInfo = React.memo(
             </div>
           </div>
         </div>
-        <SubscriptionCard
-          planType={planType}
-          creditBalance={creditBalance}
-          t={t}
-          setOpen={setOpen}
-          handleSubscriptionClick={handleSubscriptionClick}
-        />
+        {subscriptionEnabled && (
+          <SubscriptionCard
+            planType={planType}
+            creditBalance={creditBalance}
+            t={t}
+            setOpen={setOpen}
+            handleSubscriptionClick={handleSubscriptionClick}
+          />
+        )}
       </div>
     );
   },
