@@ -4625,7 +4625,8 @@ const translations = {
         },
         workflowOutput: {
           summary: '获取工作流执行输出',
-          description: '通过认证 API 获取工作流执行输出（产出节点与云盘文件）。需要 API Key。',
+          description:
+            '通过认证 API 获取工作流执行输出（产出节点与云盘文件）。需要 API Key。执行中或失败的节点也可能返回部分消息；文件仅在节点完成后返回。',
           paramExecutionId: '工作流执行 ID',
           response200: '已获取工作流执行输出',
           response401: '未授权或 API Key 缺失/无效',

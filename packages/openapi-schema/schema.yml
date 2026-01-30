@@ -3240,6 +3240,7 @@ paths:
       description: |
         Get workflow execution output (output nodes and drive files) via authenticated API call.
         Requires API Key authentication.
+        Messages may include partial content while nodes are executing or failed. Files are returned only after nodes finish.
       x-i18n-description: integration.api.openapi.workflowOutput.description
       operationId: getWorkflowOutput
       parameters:

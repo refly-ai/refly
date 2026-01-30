@@ -261,19 +261,23 @@ export class OpenapiService {
       : sortedNodeExecutions.filter(
           (node) =>
             node.nodeType === 'skillResponse' &&
-            node.status === 'finish' &&
             (!allowedNodeIds || allowedNodeIds.has(node.nodeId)),
         );
 
+    const isResultReady = (status?: string | null) =>
+      status && status !== 'init' && status !== 'waiting';
+    const messageEligibleNodes = productNodes.filter((node) => isResultReady(node.status));
     // Collect result IDs for skillResponse nodes
-    const skillResultIds = productNodes.map((node) => node.entityId);
+    const skillResultIds = messageEligibleNodes
+      .map((node) => node.entityId)
+      .filter(Boolean) as string[];
 
     const actionDetailsMap = new Map<string, any>();
 
     if (skillResultIds.length > 0) {
       const actionResults = await this.prisma.actionResult.findMany({
         where: {
-          resultId: { in: skillResultIds as string[] },
+          resultId: { in: skillResultIds },
           uid: user.uid,
         },
       });
@@ -281,30 +285,47 @@ export class OpenapiService {
       // Fetch Messages
       const messages = await this.prisma.actionMessage.findMany({
         where: {
-          resultId: { in: skillResultIds as string[] },
+          resultId: { in: skillResultIds },
         },
         orderBy: { createdAt: 'asc' },
       });
 
-      const resultsByUniqueId = new Map<string, any>(); // key: resultId, value: result
-
-      for (const result of actionResults) {
-        const current = resultsByUniqueId.get(result.resultId);
-        if (!current || result.version > current.version) {
-          resultsByUniqueId.set(result.resultId, result);
+      const latestMessageVersion = new Map<string, number>();
+      for (const message of messages) {
+        const current = latestMessageVersion.get(message.resultId);
+        if (current === undefined || message.version > current) {
+          latestMessageVersion.set(message.resultId, message.version);
         }
       }
 
-      for (const result of Array.from(resultsByUniqueId.values())) {
+      const latestResultVersion = new Map<string, number>();
+      for (const result of actionResults) {
+        const current = latestResultVersion.get(result.resultId);
+        if (current === undefined || result.version > current) {
+          latestResultVersion.set(result.resultId, result.version);
+        }
+      }
+
+      const versionByResultId = new Map<string, number>();
+      for (const resultId of new Set([
+        ...latestMessageVersion.keys(),
+        ...latestResultVersion.keys(),
+      ])) {
+        const version =
+          latestMessageVersion.get(resultId) ?? latestResultVersion.get(resultId) ?? 0;
+        versionByResultId.set(resultId, version);
+      }
+
+      for (const [resultId, version] of versionByResultId.entries()) {
         const resultMessages = messages
-          .filter((m) => m.resultId === result.resultId && m.version === result.version)
+          .filter((m) => m.resultId === resultId && m.version === version)
           .filter(
             (message) =>
               isNonEmptyText(message.content) || isNonEmptyText(message.reasoningContent),
           )
           .map((message) => actionMessagePO2DTO(message));
 
-        actionDetailsMap.set(result.resultId, {
+        actionDetailsMap.set(resultId, {
           messages: resultMessages,
         });
       }
@@ -312,24 +333,29 @@ export class OpenapiService {
 
     // Enhance productNodes with action details
     const output = productNodes.map((node) => {
-      if (node.nodeType === 'skillResponse' && node.entityId) {
-        const detail = actionDetailsMap.get(node.entityId);
-        if (detail) {
-          return {
-            ...workflowNodeExecutionPO2DTO(node),
-            messages: detail.messages,
-          };
-        }
+      if (!isResultReady(node.status)) {
+        return {
+          ...workflowNodeExecutionPO2DTO(node),
+          messages: [],
+        };
       }
-      return node;
+      const detail = node.entityId ? actionDetailsMap.get(node.entityId) : undefined;
+      return {
+        ...workflowNodeExecutionPO2DTO(node),
+        messages: detail?.messages ?? [],
+      };
     });
 
     // Fetch Drive Files linked to these results
     let files: DriveFileViaApi[] = [];
-    if (skillResultIds.length > 0) {
+    const fileEligibleResultIds = productNodes
+      .filter((node) => node.status === 'finish')
+      .map((node) => node.entityId)
+      .filter(Boolean) as string[];
+    if (fileEligibleResultIds.length > 0) {
       const dbDriveFiles = await this.prisma.driveFile.findMany({
         where: {
-          resultId: { in: skillResultIds as string[] },
+          resultId: { in: fileEligibleResultIds },
           deletedAt: null,
           scope: 'present',
           source: 'agent',

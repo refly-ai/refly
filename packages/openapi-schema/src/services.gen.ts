@@ -2482,6 +2482,7 @@ export const getWorkflowStatusViaApi = <ThrowOnError extends boolean = false>(
  * Get workflow execution output via API
  * Get workflow execution output (output nodes and drive files) via authenticated API call.
  * Requires API Key authentication.
+ * Messages may include partial content while nodes are executing or failed. Files are returned only after nodes finish.
  *
  */
 export const getWorkflowOutput = <ThrowOnError extends boolean = false>(

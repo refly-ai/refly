@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-01-30T16:25:25.423Z',
+  generatedAt: '2026-01-30T17:14:07.464Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -611,7 +611,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Get workflow execution output via API',
       summaryKey: 'integration.api.openapi.workflowOutput.summary',
       description:
-        'Get workflow execution output (output nodes and drive files) via authenticated API call.\nRequires API Key authentication.\n',
+        'Get workflow execution output (output nodes and drive files) via authenticated API call.\nRequires API Key authentication.\nMessages may include partial content while nodes are executing or failed. Files are returned only after nodes finish.\n',
       descriptionKey: 'integration.api.openapi.workflowOutput.description',
       tags: ['workflow'],
       security: ['api_key'],

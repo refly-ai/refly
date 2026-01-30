@@ -4602,7 +4602,7 @@ const translations = {
         workflowOutput: {
           summary: 'Get workflow execution output',
           description:
-            'Get workflow execution output (output nodes and drive files) via authenticated API call. Requires API Key authentication.',
+            'Get workflow execution output (output nodes and drive files) via authenticated API call. Requires API Key authentication. Messages may include partial content while nodes are executing or failed. Files are returned only after nodes finish.',
           paramExecutionId: 'Workflow execution ID',
           response200: 'Workflow execution output retrieved successfully',
           response401: 'Unauthorized - invalid or missing API key',
