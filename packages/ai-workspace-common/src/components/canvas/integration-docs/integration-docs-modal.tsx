@@ -204,6 +204,7 @@ export const IntegrationDocsModal = memo(
               webhookConfig={webhookConfig}
               onToggleWebhook={handleToggleWebhook}
               toggling={webhookToggling}
+              onWebhookReset={fetchWebhookConfig}
             />
           );
         case 'api':

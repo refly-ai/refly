@@ -1,8 +1,9 @@
-import { memo } from 'react';
-import { Button, Input, message, Tabs } from 'antd';
+import { memo, useState } from 'react';
+import { Button, Input, message, Tabs, Popconfirm } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { Copy } from 'refly-icons';
+import { Copy, Refresh } from 'refly-icons';
 import { serverOrigin } from '@refly/ui-kit';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 
 const { TextArea } = Input;
 
@@ -17,10 +18,12 @@ interface WebhookDocsTabProps {
   webhookConfig: WebhookConfig | null;
   onToggleWebhook: (enabled: boolean) => Promise<void>;
   toggling: boolean;
+  onWebhookReset?: () => Promise<void>;
 }
 
-export const WebhookDocsTab = memo(({ webhookConfig }: WebhookDocsTabProps) => {
+export const WebhookDocsTab = memo(({ webhookConfig, onWebhookReset }: WebhookDocsTabProps) => {
   const { t } = useTranslation();
+  const [resetting, setResetting] = useState(false);
   const apiOrigin = serverOrigin || window.location.origin;
   const webhookUrl =
     webhookConfig?.webhookUrl || `${apiOrigin}/v1/openapi/webhook/YOUR_WEBHOOK_ID/run`;
@@ -28,6 +31,33 @@ export const WebhookDocsTab = memo(({ webhookConfig }: WebhookDocsTabProps) => {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     message.success(t('common.copied'));
+  };
+
+  const handleResetWebhook = async () => {
+    if (!webhookConfig?.webhookId) {
+      message.error(t('webhook.resetFailed'));
+      return;
+    }
+
+    setResetting(true);
+    try {
+      const response = await getClient().resetWebhook({
+        body: { webhookId: webhookConfig.webhookId },
+      });
+
+      if (response.data?.success) {
+        message.success(t('webhook.resetSuccess'));
+        // Call parent callback to refresh webhook config
+        await onWebhookReset?.();
+      } else {
+        message.error(t('webhook.resetFailed'));
+      }
+    } catch (error) {
+      console.error('Failed to reset webhook:', error);
+      message.error(t('webhook.resetFailed'));
+    } finally {
+      setResetting(false);
+    }
   };
 
   const curlExample = `curl -X POST ${webhookUrl} \\
@@ -102,6 +132,18 @@ print(response.json())`;
               <Button icon={<Copy size={14} />} onClick={() => copyToClipboard(webhookUrl)}>
                 {t('common.copy.title')}
               </Button>
+              <Popconfirm
+                title={t('webhook.reset')}
+                description={t('webhook.resetWarning')}
+                onConfirm={handleResetWebhook}
+                okText={t('common.confirm')}
+                cancelText={t('common.cancel')}
+                okButtonProps={{ loading: resetting }}
+              >
+                <Button icon={<Refresh size={14} />} loading={resetting} disabled={resetting}>
+                  {t('webhook.reset')}
+                </Button>
+              </Popconfirm>
             </div>
           </section>
 

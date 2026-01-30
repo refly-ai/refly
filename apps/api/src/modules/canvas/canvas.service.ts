@@ -1480,10 +1480,24 @@ export class CanvasService {
 
     // If only storageKey exists (no fileId), create a new DriveFile from the storageKey
     if (resource.storageKey) {
+      let resolvedName = resource.name;
+      let resolvedFileType = resource.fileType;
+      if (resource.storageKey.startsWith('openapi/')) {
+        const staticFile = await this.prisma.staticFile.findFirst({
+          where: { storageKey: resource.storageKey, deletedAt: null },
+        });
+        if (staticFile?.originalName && !resolvedName) {
+          resolvedName = staticFile.originalName;
+        }
+        if (staticFile?.contentType && !resolvedFileType) {
+          resolvedFileType = mapContentTypeToFileType(staticFile.contentType);
+        }
+      }
+
       try {
         const driveFile = await this.driveService.createDriveFile(user, {
           canvasId,
-          name: resource.name || 'uploaded_file',
+          name: resolvedName || 'uploaded_file',
           storageKey: resource.storageKey,
           source: 'variable',
         });
@@ -1493,6 +1507,8 @@ export class CanvasService {
           resource: {
             ...resource,
             fileId: driveFile.fileId,
+            name: resolvedName ?? resource.name,
+            fileType: resolvedFileType ?? resource.fileType,
           },
         };
       } catch (error) {
@@ -1650,3 +1666,13 @@ export class CanvasService {
     return workflowObj.variables;
   }
 }
+
+const mapContentTypeToFileType = (
+  contentType?: string,
+): 'document' | 'image' | 'video' | 'audio' => {
+  if (!contentType) return 'document';
+  if (contentType.startsWith('image/')) return 'image';
+  if (contentType.startsWith('video/')) return 'video';
+  if (contentType.startsWith('audio/')) return 'audio';
+  return 'document';
+};

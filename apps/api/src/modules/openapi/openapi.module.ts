@@ -12,6 +12,7 @@ import { WorkflowModule } from '../workflow/workflow.module';
 import { DriveModule } from '../drive/drive.module';
 import { WorkflowAppModule } from '../workflow-app/workflow-app.module';
 import { CanvasModule } from '../canvas/canvas.module';
+import { MiscModule } from '../misc/misc.module';
 
 /**
  * OpenAPI Module
@@ -34,6 +35,7 @@ import { CanvasModule } from '../canvas/canvas.module';
     forwardRef(() => AuthModule),
     forwardRef(() => WorkflowModule),
     forwardRef(() => DriveModule),
+    MiscModule,
     WorkflowAppModule,
     CanvasModule,
   ],

@@ -11,6 +11,9 @@ export const OPENAPI_RATE_LIMIT_DAILY_TTL = 86400; // 24 hours in seconds
 // Debounce
 export const OPENAPI_DEBOUNCE_TTL = 1; // 1 second
 
+// Temporary file retention (seconds)
+export const OPENAPI_UPLOAD_TTL_SECONDS = 24 * 60 * 60; // 24 hours
+
 // Redis keys
 export const REDIS_KEY_OPENAPI_RATE_LIMIT_RPM = 'openapi:rate_limit:rpm';
 export const REDIS_KEY_OPENAPI_RATE_LIMIT_DAILY = 'openapi:rate_limit:daily';

@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-01-28T03:54:12.420Z',
+  generatedAt: '2026-01-29T15:29:33.447Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -172,6 +172,313 @@ export const apiDocsData: ApiDocsData = {
         },
         '404': {
           description: 'Workflow not found',
+        },
+      },
+    },
+    {
+      id: 'get-openapi-workflow-executionid-detail',
+      method: 'GET',
+      path: '/openapi/workflow/{executionId}/detail',
+      operationId: 'getWorkflowDetailViaApi',
+      summary: 'Get workflow execution detail via API',
+      description:
+        'Get workflow execution detail with node executions via authenticated API call.\nRequires API Key authentication.\n',
+      tags: ['workflow'],
+      security: ['api_key'],
+      parameters: [
+        {
+          name: 'executionId',
+          in: 'path',
+          required: true,
+          type: 'string',
+          description: 'Workflow execution ID',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Workflow execution detail retrieved successfully',
+          schema: {
+            type: 'object',
+            properties: {
+              success: {
+                type: 'boolean',
+                description: 'Whether the operation was successful',
+                example: true,
+              },
+              errCode: {
+                type: 'string',
+                description: 'Error code',
+              },
+              errMsg: {
+                type: 'string',
+                description: 'Error message',
+                example: 'Operation failed',
+              },
+              traceId: {
+                type: 'string',
+                description: 'Trace ID',
+              },
+              stack: {
+                type: 'string',
+                description: 'Error stack (only returned in development environment)',
+              },
+              data: {
+                type: 'object',
+                properties: {
+                  executionId: {
+                    type: 'string',
+                  },
+                  canvasId: {
+                    type: 'string',
+                  },
+                  title: {
+                    type: 'string',
+                  },
+                  status: {
+                    type: 'string',
+                    enum: ['init', 'executing', 'finish', 'failed'],
+                  },
+                  nodeExecutions: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      required: ['nodeId'],
+                      properties: {
+                        nodeId: {
+                          type: 'string',
+                          description: 'Node ID',
+                        },
+                        title: {
+                          type: 'string',
+                          description: 'Node title',
+                        },
+                        status: {
+                          type: 'string',
+                          description: 'Action status',
+                          enum: ['init', 'waiting', 'executing', 'finish', 'failed'],
+                        },
+                        errorMessage: {
+                          type: 'string',
+                          description: 'Node error message',
+                        },
+                        startTime: {
+                          type: 'string',
+                          description: 'Node execution start time',
+                        },
+                        endTime: {
+                          type: 'string',
+                          description: 'Node execution end time',
+                        },
+                      },
+                    },
+                  },
+                  createdAt: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+            required: ['success'],
+          },
+        },
+        '401': {
+          description: 'Unauthorized - invalid or missing API key',
+        },
+        '404': {
+          description: 'Workflow execution not found',
+        },
+      },
+    },
+    {
+      id: 'get-openapi-workflow-executionid-output',
+      method: 'GET',
+      path: '/openapi/workflow/{executionId}/output',
+      operationId: 'getWorkflowOutput',
+      summary: 'Get workflow execution output via API',
+      description:
+        'Get workflow execution output (products and drive files) via authenticated API call.\nRequires API Key authentication.\n',
+      tags: ['workflow'],
+      security: ['api_key'],
+      parameters: [
+        {
+          name: 'executionId',
+          in: 'path',
+          required: true,
+          type: 'string',
+          description: 'Workflow execution ID',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Workflow execution output retrieved successfully',
+          schema: {
+            type: 'object',
+            properties: {
+              success: {
+                type: 'boolean',
+                description: 'Whether the operation was successful',
+                example: true,
+              },
+              errCode: {
+                type: 'string',
+                description: 'Error code',
+              },
+              errMsg: {
+                type: 'string',
+                description: 'Error message',
+                example: 'Operation failed',
+              },
+              traceId: {
+                type: 'string',
+                description: 'Trace ID',
+              },
+              stack: {
+                type: 'string',
+                description: 'Error stack (only returned in development environment)',
+              },
+              data: {
+                type: 'object',
+                properties: {
+                  products: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        nodeId: {
+                          type: 'string',
+                          description: 'Node ID',
+                        },
+                        title: {
+                          type: 'string',
+                          description: 'Node title',
+                        },
+                        status: {
+                          type: 'string',
+                          description: 'Action status',
+                          enum: ['init', 'waiting', 'executing', 'finish', 'failed'],
+                        },
+                        errorMessage: {
+                          type: 'string',
+                          description: 'Node error message',
+                        },
+                        startTime: {
+                          type: 'string',
+                          description: 'Node execution start time',
+                        },
+                        endTime: {
+                          type: 'string',
+                          description: 'Node execution end time',
+                        },
+                        messages: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            description: 'Simplified action message for API',
+                            required: ['messageId', 'type'],
+                            properties: {
+                              messageId: {
+                                type: 'string',
+                                description: 'Action message ID',
+                              },
+                              content: {
+                                type: 'string',
+                                description: 'Action message content',
+                              },
+                              reasoningContent: {
+                                type: 'string',
+                                description: 'Action message reasoning content',
+                              },
+                              type: {
+                                type: 'string',
+                                description: 'Action message type',
+                                enum: ['ai', 'tool'],
+                              },
+                              toolCallResult: {
+                                type: 'object',
+                                description: 'Simplified tool call result for API',
+                                properties: {
+                                  toolName: {
+                                    type: 'string',
+                                    description: 'Tool name',
+                                  },
+                                  input: {
+                                    type: 'object',
+                                    description: 'Tool input',
+                                  },
+                                  output: {
+                                    type: 'object',
+                                    description: 'Tool output',
+                                  },
+                                  error: {
+                                    type: 'string',
+                                    description: 'Tool execution error',
+                                  },
+                                  status: {
+                                    type: 'string',
+                                    description: 'Tool execution status',
+                                    enum: ['executing', 'completed', 'failed'],
+                                  },
+                                  createdAt: {
+                                    type: 'number',
+                                    description: 'Tool call creation timestamp',
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                      required: ['nodeId'],
+                    },
+                  },
+                  driveFiles: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      required: ['fileId', 'canvasId', 'name', 'type'],
+                      properties: {
+                        fileId: {
+                          type: 'string',
+                          description: 'Drive file ID',
+                        },
+                        canvasId: {
+                          type: 'string',
+                          description: 'Canvas ID',
+                        },
+                        name: {
+                          type: 'string',
+                          description: 'Drive file name',
+                        },
+                        type: {
+                          type: 'string',
+                          description: 'Drive file type',
+                        },
+                        size: {
+                          type: 'number',
+                          description: 'Drive file size',
+                        },
+                        createdAt: {
+                          type: 'string',
+                          description: 'Drive file creation timestamp',
+                        },
+                        url: {
+                          type: 'string',
+                          description: 'Access URL for the file',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            required: ['success'],
+          },
+        },
+        '401': {
+          description: 'Unauthorized - invalid or missing API key',
+        },
+        '404': {
+          description: 'Workflow execution not found',
         },
       },
     },

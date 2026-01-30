@@ -299,13 +299,36 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
 
           // For single file mode, replace the file list; for multi-file mode, append
           const currentIsSingle = form.getFieldValue('isSingle') ?? false;
-          const newFileList = currentIsSingle ? [newFile] : [...fileList, newFile];
-          handleFileListChange(newFileList);
+          // Use functional update to get the latest fileList state
+          setFileList((prevFileList) => {
+            const newFileList = currentIsSingle ? [newFile] : [...prevFileList, newFile];
+
+            // Update resource form data with current file list
+            if (variableType === 'resource') {
+              const resourceValues: VariableValue[] = newFileList.map((f) => ({
+                type: 'resource',
+                resource: {
+                  name: f.name || '',
+                  storageKey: f.url || '',
+                  fileType: getFileType(f.name, f.type),
+                },
+              }));
+
+              updateResourceFormData({
+                value: resourceValues,
+              });
+
+              // Update form values to sync with the form
+              form.setFieldValue('value', resourceValues);
+            }
+
+            return newFileList;
+          });
           return false; // Prevent default upload behavior
         }
         return false;
       },
-      [fileList, handleFileListChange, uploadFile, form],
+      [uploadFile, form, variableType, updateResourceFormData, fileList],
     );
 
     const handleFileRemove = useCallback(
@@ -760,20 +783,6 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
                   </span>
                 </Checkbox>
               </Form.Item>
-              {variableType === 'resource' && (
-                <Form.Item
-                  name="isSingle"
-                  valuePropName="checked"
-                  getValueFromEvent={(checked) => !checked}
-                  getValueProps={(value) => ({ checked: !value })}
-                >
-                  <Checkbox className="required-checkbox">
-                    <span className="text-refly-text-0 text-sm font-semibold">
-                      {t('canvas.workflow.variables.allowMultipleFiles') || 'Allow multiple files'}
-                    </span>
-                  </Checkbox>
-                </Form.Item>
-              )}
             </Form>
           </div>
 

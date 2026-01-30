@@ -15,6 +15,9 @@ import * as crypto from 'node:crypto';
 import { genScheduleRecordId, safeStringifyJSON } from '@refly/utils';
 import { extractToolsetsWithNodes } from '@refly/canvas-common';
 import type { RawCanvasData, VariableValue, WorkflowVariable } from '@refly/openapi-schema';
+import { normalizeOpenapiStorageKey } from '../../utils/openapi-file-key';
+
+type ResourceFileType = 'document' | 'image' | 'video' | 'audio';
 
 export interface WebhookConfig {
   apiId: string;
@@ -270,7 +273,7 @@ export class WebhookService {
       }
 
       // Convert variables to workflow format
-      const workflowVariables = this.buildWorkflowVariables(variables);
+      const workflowVariables = await this.buildWorkflowVariables(config.uid, variables);
       const canvasData = await this.canvasService.createSnapshotFromCanvas(
         { uid: config.uid },
         config.canvasId,
@@ -424,13 +427,27 @@ export class WebhookService {
     }
   }
 
-  private buildWorkflowVariables(variables: Record<string, any>): WorkflowVariable[] {
+  private async buildWorkflowVariables(
+    uid: string,
+    variables: Record<string, any>,
+  ): Promise<WorkflowVariable[]> {
     if (!variables || typeof variables !== 'object') {
       return [];
     }
 
-    return Object.entries(variables).map(([key, rawValue]) => {
-      const value = this.normalizeVariableValue(rawValue);
+    const entries = Object.entries(variables);
+    const storageKeys = new Set<string>();
+    for (const [, rawValue] of entries) {
+      const keys = this.extractOpenapiStorageKeys(uid, rawValue);
+      for (const key of keys) {
+        storageKeys.add(key);
+      }
+    }
+
+    const openapiFileMeta = await this.fetchOpenapiFileMeta(uid, Array.from(storageKeys));
+
+    return entries.map(([key, rawValue]) => {
+      const value = this.normalizeVariableValue(rawValue, uid, openapiFileMeta);
       const variableType = value.some((item) => item.type === 'resource') ? 'resource' : 'string';
 
       return {
@@ -442,7 +459,16 @@ export class WebhookService {
     });
   }
 
-  private normalizeVariableValue(rawValue: unknown): VariableValue[] {
+  private normalizeVariableValue(
+    rawValue: unknown,
+    uid: string,
+    openapiFileMeta: Map<string, { name?: string; fileType?: ResourceFileType }>,
+  ): VariableValue[] {
+    const openapiValues = this.normalizeOpenapiFileKeyValues(rawValue, uid, openapiFileMeta);
+    if (openapiValues) {
+      return openapiValues;
+    }
+
     if (Array.isArray(rawValue)) {
       if (
         rawValue.length > 0 &&
@@ -450,7 +476,9 @@ export class WebhookService {
         rawValue[0] !== null &&
         'type' in rawValue[0]
       ) {
-        return rawValue as VariableValue[];
+        return (rawValue as VariableValue[]).map((item) =>
+          this.normalizeResourceValue(item, uid, openapiFileMeta),
+        );
       }
       return rawValue.map((item) => ({
         type: 'text' as const,
@@ -463,7 +491,7 @@ export class WebhookService {
       typeof rawValue === 'object' &&
       'type' in (rawValue as Record<string, unknown>)
     ) {
-      return [rawValue as VariableValue];
+      return [this.normalizeResourceValue(rawValue as VariableValue, uid, openapiFileMeta)];
     }
 
     return [
@@ -472,6 +500,162 @@ export class WebhookService {
         text: this.stringifyVariableValue(rawValue),
       },
     ];
+  }
+
+  private normalizeOpenapiFileKeyValues(
+    rawValue: unknown,
+    uid: string,
+    openapiFileMeta: Map<string, { name?: string; fileType?: ResourceFileType }>,
+  ): VariableValue[] | null {
+    if (typeof rawValue === 'string') {
+      const storageKey = normalizeOpenapiStorageKey(uid, rawValue);
+      if (!storageKey?.startsWith('openapi/')) {
+        return null;
+      }
+      const meta = openapiFileMeta.get(storageKey);
+      return [
+        {
+          type: 'resource',
+          resource: {
+            name: meta?.name ?? 'uploaded_file',
+            fileType: meta?.fileType ?? 'document',
+            storageKey,
+          },
+        },
+      ];
+    }
+
+    if (Array.isArray(rawValue) && rawValue.length > 0) {
+      if (!rawValue.every((item) => typeof item === 'string')) {
+        return null;
+      }
+      const storageKeys = rawValue
+        .map((item) => normalizeOpenapiStorageKey(uid, item as string))
+        .filter((item) => item?.startsWith('openapi/')) as string[];
+
+      if (storageKeys.length !== rawValue.length) {
+        return null;
+      }
+
+      return storageKeys.map((storageKey) => {
+        const meta = openapiFileMeta.get(storageKey);
+        return {
+          type: 'resource',
+          resource: {
+            name: meta?.name ?? 'uploaded_file',
+            fileType: meta?.fileType ?? 'document',
+            storageKey,
+          },
+        };
+      });
+    }
+
+    return null;
+  }
+
+  private normalizeResourceValue(
+    value: VariableValue,
+    uid: string,
+    openapiFileMeta: Map<string, { name?: string; fileType?: ResourceFileType }>,
+  ): VariableValue {
+    if (value.type !== 'resource' || !value.resource) {
+      return value;
+    }
+
+    const resource = value.resource as Record<string, any>;
+    const storageKey = normalizeOpenapiStorageKey(uid, resource.storageKey ?? resource.fileKey);
+    if (!storageKey) {
+      return value;
+    }
+
+    const meta = openapiFileMeta.get(storageKey);
+    const name = resource.name ?? meta?.name ?? 'uploaded_file';
+    const fileType = resource.fileType ?? meta?.fileType ?? 'document';
+
+    return {
+      ...value,
+      resource: {
+        ...resource,
+        name,
+        fileType,
+        storageKey,
+      },
+    };
+  }
+
+  private extractOpenapiStorageKeys(uid: string, rawValue: unknown): string[] {
+    if (!rawValue) return [];
+    const storageKeys: string[] = [];
+
+    const addKey = (value: unknown) => {
+      if (typeof value !== 'string') return;
+      const storageKey = normalizeOpenapiStorageKey(uid, value);
+      if (storageKey?.startsWith('openapi/')) {
+        storageKeys.push(storageKey);
+      }
+    };
+
+    if (typeof rawValue === 'string') {
+      addKey(rawValue);
+      return storageKeys;
+    }
+
+    if (Array.isArray(rawValue)) {
+      for (const item of rawValue) {
+        if (typeof item === 'string') {
+          addKey(item);
+          continue;
+        }
+        if (item && typeof item === 'object' && 'type' in (item as Record<string, unknown>)) {
+          const resource = (item as any).resource;
+          addKey(resource?.storageKey ?? resource?.fileKey);
+        }
+      }
+      return storageKeys;
+    }
+
+    if (
+      rawValue &&
+      typeof rawValue === 'object' &&
+      'type' in (rawValue as Record<string, unknown>)
+    ) {
+      const resource = (rawValue as any).resource;
+      addKey(resource?.storageKey ?? resource?.fileKey);
+    }
+
+    return storageKeys;
+  }
+
+  private async fetchOpenapiFileMeta(
+    uid: string,
+    storageKeys: string[],
+  ): Promise<Map<string, { name?: string; fileType?: ResourceFileType }>> {
+    if (storageKeys.length === 0) {
+      return new Map();
+    }
+
+    const files = await this.prisma.staticFile.findMany({
+      where: {
+        uid,
+        storageKey: { in: storageKeys },
+        deletedAt: null,
+      },
+      select: {
+        storageKey: true,
+        originalName: true,
+        contentType: true,
+      },
+    });
+
+    const map = new Map<string, { name?: string; fileType?: ResourceFileType }>();
+    for (const file of files) {
+      map.set(file.storageKey, {
+        name: file.originalName ?? undefined,
+        fileType: mapContentTypeToFileType(file.contentType),
+      });
+    }
+
+    return map;
   }
 
   private stringifyVariableValue(value: unknown): string {
@@ -641,3 +825,11 @@ export class WebhookService {
     return `https://api.refly.ai/v1/openapi/webhook/${webhookId}/run`;
   }
 }
+
+const mapContentTypeToFileType = (contentType?: string): ResourceFileType => {
+  if (!contentType) return 'document';
+  if (contentType.startsWith('image/')) return 'image';
+  if (contentType.startsWith('video/')) return 'video';
+  if (contentType.startsWith('audio/')) return 'audio';
+  return 'document';
+};

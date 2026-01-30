@@ -477,6 +477,8 @@ model StaticFile {
   storageSize       BigInt    @default(0) @map("storage_size")
   /// Content type
   contentType       String    @default("") @map("content_type")
+  /// Original file name
+  originalName      String?   @map("original_name")
   /// Processed image storage key (only applicable to images)
   processedImageKey String?   @map("processed_image_key")
   /// Entity id

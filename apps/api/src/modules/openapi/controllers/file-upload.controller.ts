@@ -39,7 +39,11 @@ export class FileUploadController {
       limits: { fileSize: MAX_FILE_SIZE },
     }),
   )
-  @ApiOperation({ summary: 'Upload files for workflow API use' })
+  @ApiOperation({
+    summary: '上传文件并返回 fileKey',
+    description:
+      'fileKey 可直接作为 run 的变量值（字符串或字符串数组）传入。未使用的临时文件约 24 小时后清理。',
+  })
   @ApiConsumes('multipart/form-data')
   async uploadFiles(@UploadedFiles() files: Express.Multer.File[], @LoginedUser() user: User) {
     this.logger.log(`[FILE_UPLOAD_REQUEST] uid=${user.uid} fileCount=${files?.length || 0}`);
