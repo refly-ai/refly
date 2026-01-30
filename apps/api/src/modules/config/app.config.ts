@@ -165,6 +165,7 @@ export default () => ({
     },
   },
   tools: {
+    webSearchEnabled: process.env.WEB_SEARCH_ENABLED === 'true',
     supportedToolsets: process.env.SUPPORTED_TOOLSETS || '', // comma separated list of toolset keys
     google: {
       clientId: process.env.GOOGLE_TOOLS_CLIENT_ID,
