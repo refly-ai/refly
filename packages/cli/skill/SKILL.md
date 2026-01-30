@@ -33,8 +33,40 @@ description: "Base skill for Refly ecosystem: creates, discovers, and runs domai
 - ~~`refly skill status`~~ - Use `refly status` instead
 - ~~`refly skill create`~~ - Skills are created via refly.ai web UI
 - ~~`refly run`~~ - Use `refly skill run --id <installationId>` instead
+- ~~`refly result get`~~ - Results are in `refly workflow detail` output
+- ~~`refly workflow list`~~ - Not needed; use the runId from `skill run`
+- ~~`refly file list --limit`~~ - No `--limit` flag exists
 
 **Tip**: Get `installationId` from `refly skill installations` after installing a skill on refly.ai.
+
+## Execution Workflow (Minimal Steps)
+
+**IMPORTANT: Follow this exact pattern. Do NOT add extra API calls.**
+
+```bash
+# Step 1: Run skill and capture runId (single command)
+RESULT=$(refly skill run --id <installationId> --input '<json>')
+RUN_ID=$(echo "$RESULT" | jq -r '.payload.workflowExecutions[0].id')
+
+# Step 2: Wait for completion (single command with --watch)
+refly workflow status "$RUN_ID" --watch --interval 30000
+
+# Step 3: Get results and download files (if any)
+DETAIL=$(refly workflow detail "$RUN_ID")
+FILE_ID=$(echo "$DETAIL" | jq -r '.payload.nodes[].data.metadata.files[0].fileId // empty' | head -1)
+
+if [ -n "$FILE_ID" ]; then
+  # Download to scratchpad directory (NEVER use ./downloads in project)
+  refly file download "$FILE_ID" -o "/tmp/refly-output/${FILE_ID}"
+fi
+```
+
+**Key points:**
+- Only 3-4 commands total: `skill run` → `workflow status --watch` → `workflow detail` → `file download`
+- Do NOT call `workflow list` - you already have the runId from `skill run`
+- Do NOT call `workflow node output` separately - `workflow detail` contains all outputs
+- Do NOT download to `./downloads` - use `/tmp/refly-output/` or user-specified path
+- The `--watch` flag waits for completion, no polling loop needed
 
 ## Directory Structure
 
