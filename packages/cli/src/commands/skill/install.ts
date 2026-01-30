@@ -6,7 +6,7 @@ import { Command } from 'commander';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import { apiRequest } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
-import { createReflySkillWithSymlink, generateReflySkillMd } from '../../skill/symlink.js';
+import { createMultiPlatformSkill, generateReflySkillMd } from '../../skill/symlink.js';
 import { logger } from '../../utils/logger.js';
 
 interface SkillInstallationResponse {
@@ -68,9 +68,9 @@ export const skillInstallCommand = new Command('install')
         },
       );
 
-      // Create local skill directory and symlink
+      // Create local skill directory and deploy to all platforms
       let localPath: string | undefined;
-      let symlinkPath: string | undefined;
+      const platformResults: Array<{ agent: string; success: boolean; path?: string }> = [];
 
       const skillName = result.skillPackage?.name;
       const workflowId = result.skillPackage?.workflowId;
@@ -92,17 +92,27 @@ export const skillInstallCommand = new Command('install')
             outputSchema: result.skillPackage?.outputSchema,
           });
 
-          // Create skill directory and symlink
-          const symlinkResult = createReflySkillWithSymlink(skillName, skillMdContent, {
+          // Create skill directory and deploy to all platforms
+          const deployResult = await createMultiPlatformSkill(skillName, skillMdContent, {
             force: options.force,
           });
 
-          if (symlinkResult.success) {
-            localPath = symlinkResult.reflyPath;
-            symlinkPath = symlinkResult.claudePath;
-            logger.info(`Created local skill: ${localPath}`);
+          localPath = deployResult.sourcePath;
+
+          for (const [agentName, agentResult] of deployResult.results) {
+            platformResults.push({
+              agent: agentName,
+              success: agentResult.success,
+              path: agentResult.deployedPath || undefined,
+            });
+          }
+
+          if (deployResult.successCount > 0) {
+            logger.info(
+              `Created local skill: ${localPath}, deployed to ${deployResult.successCount} platform(s)`,
+            );
           } else {
-            logger.warn(`Failed to create local skill: ${symlinkResult.error}`);
+            logger.warn('Failed to deploy skill to any platform');
           }
         } catch (err) {
           // Log but don't fail - cloud installation was successful
@@ -119,7 +129,7 @@ export const skillInstallCommand = new Command('install')
         config: result.userConfig,
         installedAt: result.createdAt,
         localPath,
-        symlinkPath,
+        platforms: platformResults.length > 0 ? platformResults : undefined,
       });
     } catch (error) {
       if (error instanceof CLIError) {

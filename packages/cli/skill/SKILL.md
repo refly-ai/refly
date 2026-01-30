@@ -1,11 +1,6 @@
 ---
 name: refly
-description: |
-  Base skill for Refly ecosystem: creates, discovers, and runs domain-specific skills bound to workflows.
-  Routes user intent to matching domain skills via symlinks in ~/.claude/skills/, delegates execution to Refly backend.
-  Use when user asks to: create skills, run workflows, automate multi-step tasks, or manage pipelines.
-  Triggers: refly, skill, workflow, run skill, create skill, automation, pipeline.
-  Requires: @refly/cli installed and authenticated.
+description: "Base skill for Refly ecosystem: creates, discovers, and runs domain-specific skills bound to workflows. Routes user intent to matching domain skills via symlinks, delegates execution to Refly backend. Use when user asks to: create skills, run workflows, automate multi-step tasks, or manage pipelines. Triggers: refly, skill, workflow, run skill, create skill, automation, pipeline. Requires: @refly/cli installed and authenticated."
 ---
 
 # Refly
@@ -18,17 +13,28 @@ description: |
 4. **No tokens** - Never print or request auth tokens.
 5. **Stop on error** - If `ok=false`, stop and show `hint`.
 
-## Quick Commands
+## Available Commands
 
-```bash
-refly status
-refly login
-refly skill list
-refly skill installations
-refly skill run <installationId> --input '<json>'
-```
+**IMPORTANT: Only use the commands listed below. Do NOT invent or guess commands.**
 
-Tip: Get `installationId` from `refly skill installations` after installing a skill.
+| Command | Description |
+|---------|-------------|
+| `refly status` | Check authentication and connection status |
+| `refly login` | Authenticate with Refly |
+| `refly skill list` | List all available skills in the marketplace |
+| `refly skill installations` | List your installed skills (get installationId here) |
+| `refly skill run --id <installationId> --input '<json>'` | Run an installed skill |
+| `refly workflow status <runId> --watch` | Watch workflow execution status |
+| `refly workflow detail <runId>` | Get workflow run details and node outputs |
+| `refly file list` | List files in your Refly account |
+| `refly file download <fileId> -o <path>` | Download a file |
+
+**Commands that do NOT exist** (never use these):
+- ~~`refly skill status`~~ - Use `refly status` instead
+- ~~`refly skill create`~~ - Skills are created via refly.ai web UI
+- ~~`refly run`~~ - Use `refly skill run --id <installationId>` instead
+
+**Tip**: Get `installationId` from `refly skill installations` after installing a skill on refly.ai.
 
 ## Directory Structure
 
