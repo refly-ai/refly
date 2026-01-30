@@ -96,11 +96,10 @@ Refly acts as the Agent skills builder, providing the governance and reliability
 
 此处需要展示一个案例
 
-
 ## Documentation
 
-- **[📖 Self-Deployment Guide (SOP)](/docs/Self-Deploy.md)**  
-  *Recommended for Developers)* Step-by-step guide to deploying Refly on your own server using Docker.
+- **[📖 Self-Deployment Guide](/docs/self-deploy.md)**  
+  *(Recommended for Developers)* Step-by-step guide to deploying Refly on your own server using Docker.
 
 - **[🌐 Official Documentation (docs.refly.ai)](https://docs.refly.ai)**  
   Full references including User Manuals, API References, and Plugin Development guides.

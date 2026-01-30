@@ -1,18 +1,4 @@
-# Self-Deploy
-
-**Version:** v2.0 (Updated based on PR #2141)  
-**Last Updated:** January 29, 2026
-
----
-
-## What's New in v2.0
-
-- Production environment variables: `NODE_ENV=production`, `PROVIDER_DEFAULT_MODE=custom`
-- Separate deployment config: New `deploy/docker/env.example` isolated from local development
-- Unlocked model provider configuration: Full control over AI model selection
-- Fixed frontend caching and onboarding issues
-
----
+# Self Deploy
 
 ## Prerequisites
 
@@ -26,36 +12,28 @@
 
 - **Docker:** Version 24.0+
 - **Docker Compose:** Version 2.20+
-- **Git**
 
-Verify installation:
+## Steps
 
-```bash
-docker --version
-docker compose version
-```
-
----
-
-## Quick Start
-
-### Step 1: Clone Repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/refly-ai/refly.git
 cd refly
 ```
 
-### Step 2: Configure Environment
+Tip: You can add `--depth 1` to the `clone` command to save disk space and download time.
+
+### 2. Prepare the configuration via `.env` file
 
 ```bash
-# Use production template (NEW in v2.0)
-cp deploy/docker/env.example .env
+cd deploy/docker
+cp env.example .env
 ```
 
 Edit `.env` with required settings.
 
-#### 2.1: Add Resend API Key (Optional)
+#### 2.1. Add Resend API Key (Optional)
 
 If you need to send emails, please get your own key from https://resend.com/ and fill it in `.env`:
 
@@ -63,7 +41,7 @@ If you need to send emails, please get your own key from https://resend.com/ and
 RESEND_API_KEY=your_resend_api_key
 ```
 
-#### 2.2: Add Fal API Key (Optional)
+#### 2.2. Add Fal API Key (Optional)
 
 If you need to generate image/audio/video, please get your own key from https://fal.ai/ and fill it in `.env`:
 
@@ -71,85 +49,65 @@ If you need to generate image/audio/video, please get your own key from https://
 TOOLSET_FAL_API_KEY=your_fal_api_key
 ```
 
-### Step 3: Start Services
+### 3. Start the application via docker compose
 
 ```bash
-cd deploy/docker
 docker compose up -d
 ```
 
-First-time startup takes 5–10 minutes for image downloads.
-
-Check status:
+You can run `docker ps` to check the status of the containers. The expected status for each container should be `Up` and `healthy`. An example output is shown below:
 
 ```bash
-docker compose ps
+CONTAINER ID   IMAGE                                      COMMAND                  STATUS                 PORTS                          NAMES
+71681217973e   reflyai/refly-api:latest                   "docker-entrypoint.s…"   Up 5 hours (healthy)   3000/tcp, 5800-5801/tcp        refly_api
+462d7e1181ca   reflyai/qdrant:v1.13.1                     "./entrypoint.sh"        Up 5 hours (healthy)   6333-6334/tcp                  refly_qdrant
+fd287fa0a04e   redis/redis-stack:6.2.6-v18                "/entrypoint.sh"         Up 5 hours (healthy)   6379/tcp, 8001/tcp             refly_redis
+16321d38fc34   reflyai/refly-web:latest                   "/docker-entrypoint.…"   Up 5 hours             0.0.0.0:5700->80/tcp           refly_web
+d3809f344fed   searxng/searxng:latest                     "/usr/local/searxng/…"   Up 5 hours (healthy)   8080/tcp                       refly_searxng
+a13f349fe35b   minio/minio:RELEASE.2025-01-20T14-49-07Z   "/usr/bin/docker-ent…"   Up 5 hours (healthy)   9000-9001/tcp                  refly_minio
+e7b398dbd02b   postgres:16-alpine                         "docker-entrypoint.s…"   Up 5 hours (healthy)   5432/tcp                       refly_db
 ```
 
-All containers should show **Up** or **Healthy**.
-
----
-
-## Verify Deployment
-
-1. Open browser: **http://localhost:5800**
-2. Complete first-time setup to create admin account
-3. Check **Settings → System Status** for green indicators
-
----
+You can access the Refly application in `http://localhost:5700`.
 
 ## Start Using Refly
 
 To start using the self-deployed version of Refly, first register an account with your email and password.
 
-<!-- Image placeholders - replace with your screenshots -->
+![Register](images/register.jpg)
 
-![Register step 1](path/to/register-1.png)
+After entrance, you can configure the providers and models you want to use. Click on the account icon in the left bottom corner and select `Settings`.
 
-![Register step 2](path/to/register-2.png)
-
-After signing in, configure providers and models. Click the account icon in the bottom-left corner and select **Settings**.
-
-![Settings](path/to/settings.png)
+![Settings](images/settings.jpg)
 
 Add your first provider:
 
-![Settings - Provider](path/to/settings-provider.png)
+![Add provider](images/add-provider-1.jpg)
 
-![Settings - Provider modal](path/to/settings-provider-modal.png)
+![Add provider modal](images/add-provider-2.jpg)
 
 Add your first chat model:
 
-![Add model](path/to/add-model.png)
+![Add model](images/add-model-1.jpg)
 
-![Add model modal](path/to/add-model-modal.png)
+![Add model modal](images/add-model-2.jpg)
 
-Configure embedding and reranker models:
+Configure your default model:
 
-![Other models](path/to/other-models.png)
+![Configure default model](images/default-model-config.jpg)
 
 Happy chatting!
 
-![Start chat](path/to/start-chat.png)
-
----
+![Start chat](images/start-chat.jpg)
 
 ## Troubleshooting
 
-### Port Already in Use
+If the application fails to function properly, you can try the following steps:
 
-**Error:** `port 5700 already allocated`
+1. Check if the port `5700` is already in use. If so, you can change the port in the `docker-compose.yml` file.
+2. Run `docker ps --filter name=refly_ | grep -v 'healthy'` to identify **unhealthy** containers (whose status is not `healthy`).
+3. Run `docker logs <container_id>` to get more information about the unhealthy container.
+4. If the unhealthy container is `refly_api`, you can first try to run `docker restart refly_api` to restart the container.
+5. For others issues, you can search for the cause of error messages in the container's logs.
 
-**Solution:** Change port in `docker-compose.yml`:
-
-```yaml
-services:
-  web:
-    ports:
-      - 5700:80
-```
-
-### Support
-
-- **GitHub Issues:** https://github.com/refly-ai/refly/issues
-- **API Reference:** https://docs.refly.ai/api
+If the issue persists, you can raise an issue in our [GitHub repository](https://github.com/refly-ai/refly/issues).
