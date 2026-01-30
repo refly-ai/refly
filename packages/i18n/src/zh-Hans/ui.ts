@@ -4477,6 +4477,13 @@ const translations = {
       keyHelper: '示例中已脱敏，调用时请替换为你的 API Key。',
       endpointsTitle: '接口列表',
       endpointsDescription: '以下接口可用于集成。',
+      endpointGroups: {
+        workflow: '工作流',
+        files: '文件',
+        webhook: 'Webhook',
+        copilot: 'Copilot',
+        other: '其他',
+      },
       parametersTitle: '参数',
       requestBodyTitle: '请求体',
       requestBodyFieldsTitle: '请求体字段',

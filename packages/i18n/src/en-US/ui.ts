@@ -4449,6 +4449,13 @@ const translations = {
       keyHelper: 'API Key is masked in examples. Replace with your own when calling.',
       endpointsTitle: 'Endpoints',
       endpointsDescription: 'The following endpoints are available for integration.',
+      endpointGroups: {
+        workflow: 'Workflow',
+        files: 'Files',
+        webhook: 'Webhook',
+        copilot: 'Copilot',
+        other: 'Other',
+      },
       parametersTitle: 'Parameters',
       requestBodyTitle: 'Request Body',
       requestBodyFieldsTitle: 'Request Body Fields',

@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Button, Switch, message } from 'antd';
 import { AppstoreOutlined, BranchesOutlined, CodeOutlined, CloseOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { ApiOutputModal } from './components/api-output-modal';
 import { CopyAllDocsButton } from './components/copy-all-docs-button';
 import { apiDocsData } from './data/api-docs.generated';
 import type { IntegrationType } from './types';
+import { groupApiEndpoints } from './utils';
 import ApiKeyIcon from '../../../assets/key-01.svg';
 import OutputIcon from '../../../assets/target-04.svg';
 import './integration-docs-modal.scss';
@@ -45,22 +46,29 @@ export const IntegrationDocsModal = memo(
     const [webhookLoading, setWebhookLoading] = useState(false);
     const [webhookToggling, setWebhookToggling] = useState(false);
     const contentRef = useRef<HTMLDivElement>(null);
+    const pendingSectionRef = useRef<string | null>(null);
+    const programmaticScrollRef = useRef(false);
+    const scrollEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Table of contents sections based on active integration
     const apiEndpointSections = useMemo(() => {
-      return apiDocsData.endpoints
-        .filter(
-          (endpoint) =>
-            endpoint.path.startsWith('/openapi/') &&
-            !endpoint.path.includes('/webhook/') &&
-            !endpoint.path.startsWith('/openapi/config'),
-        )
-        .map((endpoint) => ({
+      const publicEndpoints = apiDocsData.endpoints.filter(
+        (endpoint) =>
+          endpoint.path.startsWith('/openapi/') &&
+          !endpoint.path.includes('/webhook/') &&
+          !endpoint.path.startsWith('/openapi/config'),
+      );
+      const grouped = groupApiEndpoints(publicEndpoints);
+      return grouped.map((group) => ({
+        id: `api-endpoints-${group.key}`,
+        label: t(`integration.api.endpointGroups.${group.key}`),
+        children: group.endpoints.map((endpoint) => ({
           id: `api-endpoint-${endpoint.operationId || endpoint.id}`,
           label: endpoint.summaryKey
             ? t(endpoint.summaryKey)
             : endpoint.summary || endpoint.operationId,
-        }));
+        })),
+      }));
     }, [t]);
 
     const sections = useMemo((): TocSection[] => {
@@ -91,14 +99,52 @@ export const IntegrationDocsModal = memo(
 
     const flatSections = useMemo(() => {
       const flattened: TocSection[] = [];
-      for (const section of sections) {
-        flattened.push(section);
-        if (section.children?.length) {
-          flattened.push(...section.children);
+      const walk = (items: TocSection[]) => {
+        for (const item of items) {
+          flattened.push(item);
+          if (item.children?.length) {
+            walk(item.children);
+          }
         }
-      }
+      };
+      walk(sections);
       return flattened;
     }, [sections]);
+
+    const getListClassName = (level: number) => {
+      if (level === 0) return 'integration-docs-toc-list';
+      if (level === 1) return 'integration-docs-toc-sublist';
+      return 'integration-docs-toc-subsublist';
+    };
+
+    const getItemClassName = (level: number) => {
+      if (level === 0) return 'integration-docs-toc-item';
+      if (level === 1) return 'integration-docs-toc-subitem';
+      return 'integration-docs-toc-subsubitem';
+    };
+
+    const getGroupClassName = (level: number) =>
+      level === 0 ? 'integration-docs-toc-group' : 'integration-docs-toc-subgroup';
+
+    const renderTocList = (items: TocSection[], level = 0) => (
+      <div className={getListClassName(level)}>
+        {items.map((section) => {
+          const isActive = section.id === activeSection;
+          return (
+            <div key={section.id} className={getGroupClassName(level)}>
+              <button
+                type="button"
+                onClick={() => handleSectionSelect(section.id)}
+                className={`${getItemClassName(level)} ${isActive ? 'is-active' : ''}`}
+              >
+                {section.label}
+              </button>
+              {section.children?.length ? renderTocList(section.children, level + 1) : null}
+            </div>
+          );
+        })}
+      </div>
+    );
 
     // Fetch webhook config when switching to webhook tab
     useEffect(() => {
@@ -106,6 +152,21 @@ export const IntegrationDocsModal = memo(
         fetchWebhookConfig();
       }
     }, [open, activeIntegration, canvasId]);
+
+    const clearScrollTimer = useCallback(() => {
+      if (scrollEndTimeoutRef.current) {
+        clearTimeout(scrollEndTimeoutRef.current);
+        scrollEndTimeoutRef.current = null;
+      }
+    }, []);
+
+    const finalizeProgrammaticScroll = useCallback(() => {
+      programmaticScrollRef.current = false;
+      if (pendingSectionRef.current) {
+        setActiveSection(pendingSectionRef.current);
+        pendingSectionRef.current = null;
+      }
+    }, []);
 
     const fetchWebhookConfig = async () => {
       try {
@@ -200,6 +261,9 @@ export const IntegrationDocsModal = memo(
           const visible = entries
             .filter((entry) => entry.isIntersecting)
             .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+          if (programmaticScrollRef.current) {
+            return;
+          }
           if (visible[0]?.target instanceof HTMLElement) {
             setActiveSection(visible[0].target.id);
           }
@@ -217,11 +281,38 @@ export const IntegrationDocsModal = memo(
       return () => observer.disconnect();
     }, [open, flatSections]);
 
+    useEffect(() => {
+      const container = contentRef.current;
+      if (!container) return;
+
+      const handleScroll = () => {
+        if (!programmaticScrollRef.current) return;
+        clearScrollTimer();
+        scrollEndTimeoutRef.current = setTimeout(() => {
+          finalizeProgrammaticScroll();
+          clearScrollTimer();
+        }, 150);
+      };
+
+      container.addEventListener('scroll', handleScroll, { passive: true });
+      return () => {
+        container.removeEventListener('scroll', handleScroll);
+        clearScrollTimer();
+      };
+    }, [clearScrollTimer, finalizeProgrammaticScroll]);
+
     const handleSectionSelect = (sectionId: string) => {
       const element = document.getElementById(sectionId);
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        pendingSectionRef.current = sectionId;
+        programmaticScrollRef.current = true;
+        clearScrollTimer();
         setActiveSection(sectionId);
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        scrollEndTimeoutRef.current = setTimeout(() => {
+          finalizeProgrammaticScroll();
+          clearScrollTimer();
+        }, 150);
       }
     };
 
@@ -368,42 +459,7 @@ export const IntegrationDocsModal = memo(
                 {/* Right sidebar - Table of contents */}
                 <aside className="integration-docs-toc">
                   <div className="integration-docs-toc-title">{t('integration.contents')}</div>
-                  <nav className="integration-docs-toc-list">
-                    {sections.map((section) => {
-                      const childActive = section.children?.some(
-                        (child) => child.id === activeSection,
-                      );
-                      return (
-                        <div key={section.id} className="integration-docs-toc-group">
-                          <button
-                            type="button"
-                            onClick={() => handleSectionSelect(section.id)}
-                            className={`integration-docs-toc-item ${
-                              activeSection === section.id || childActive ? 'is-active' : ''
-                            }`}
-                          >
-                            {section.label}
-                          </button>
-                          {section.children?.length ? (
-                            <div className="integration-docs-toc-sublist">
-                              {section.children.map((child) => (
-                                <button
-                                  key={child.id}
-                                  type="button"
-                                  onClick={() => handleSectionSelect(child.id)}
-                                  className={`integration-docs-toc-subitem ${
-                                    activeSection === child.id ? 'is-active' : ''
-                                  }`}
-                                >
-                                  {child.label}
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </nav>
+                  <nav>{renderTocList(sections)}</nav>
                 </aside>
               </div>
             </div>

@@ -18,6 +18,7 @@ import {
   generateCodeExamples,
   generateExampleFromSchema,
   getApiBaseUrl,
+  groupApiEndpoints,
 } from '../utils';
 import type { ApiEndpoint } from '../types';
 
@@ -253,6 +254,7 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
       ),
     [],
   );
+  const groupedEndpoints = useMemo(() => groupApiEndpoints(publicEndpoints), [publicEndpoints]);
 
   const resolveText = (fallback: string, i18nMap?: Record<string, string>) => {
     if (!i18nMap) return fallback;
@@ -332,151 +334,180 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
         <h3 className="integration-docs-section-title">{t('integration.api.endpointsTitle')}</h3>
         <p className="integration-docs-section-desc">{t('integration.api.endpointsDescription')}</p>
 
-        {publicEndpoints.map((endpoint) => {
-          const endpointAnchorId = `api-endpoint-${endpoint.operationId || endpoint.id}`;
-          const isRunEndpoint =
-            endpoint.operationId === 'runWorkflowViaApi' ||
-            endpoint.path === '/openapi/workflow/{canvasId}/run';
-          const displayExamples = generateCodeExamples(endpoint, baseUrl, displayKey, pathParams);
-          const copyExamples = generateCodeExamples(endpoint, baseUrl, 'YOUR_API_KEY', pathParams);
-          const requestExample =
-            (isRunEndpoint && runRequestExample) ||
-            endpoint.requestBody?.example ||
-            generateExampleFromSchema(endpoint.requestBody?.schema);
-          const isMultipart = endpoint.requestBody?.contentType?.startsWith('multipart/');
-          const requestDisplay = isMultipart
-            ? buildMultipartFormExample(endpoint.requestBody?.schema)
-            : requestExample !== null && requestExample !== undefined
-              ? JSON.stringify(requestExample, null, 2)
-              : '';
-          const resolvedDisplayExamples = isRunEndpoint
-            ? generateCodeExamples(endpoint, baseUrl, displayKey, pathParams, requestExample)
-            : displayExamples;
-          const resolvedCopyExamples = isRunEndpoint
-            ? generateCodeExamples(endpoint, baseUrl, 'YOUR_API_KEY', pathParams, requestExample)
-            : copyExamples;
+        {groupedEndpoints.map((group) => (
+          <div key={group.key} id={`api-endpoints-${group.key}`} className="api-endpoint-group">
+            <h4 className="api-endpoint-group-title">
+              {t(`integration.api.endpointGroups.${group.key}`)}
+            </h4>
+            {group.endpoints.map((endpoint) => {
+              const endpointAnchorId = `api-endpoint-${endpoint.operationId || endpoint.id}`;
+              const isRunEndpoint =
+                endpoint.operationId === 'runWorkflowViaApi' ||
+                endpoint.path === '/openapi/workflow/{canvasId}/run';
+              const displayExamples = generateCodeExamples(
+                endpoint,
+                baseUrl,
+                displayKey,
+                pathParams,
+              );
+              const copyExamples = generateCodeExamples(
+                endpoint,
+                baseUrl,
+                'YOUR_API_KEY',
+                pathParams,
+              );
+              const requestExample =
+                (isRunEndpoint && runRequestExample) ||
+                endpoint.requestBody?.example ||
+                generateExampleFromSchema(endpoint.requestBody?.schema);
+              const isMultipart = endpoint.requestBody?.contentType?.startsWith('multipart/');
+              const requestDisplay = isMultipart
+                ? buildMultipartFormExample(endpoint.requestBody?.schema)
+                : requestExample !== null && requestExample !== undefined
+                  ? JSON.stringify(requestExample, null, 2)
+                  : '';
+              const resolvedDisplayExamples = isRunEndpoint
+                ? generateCodeExamples(endpoint, baseUrl, displayKey, pathParams, requestExample)
+                : displayExamples;
+              const resolvedCopyExamples = isRunEndpoint
+                ? generateCodeExamples(
+                    endpoint,
+                    baseUrl,
+                    'YOUR_API_KEY',
+                    pathParams,
+                    requestExample,
+                  )
+                : copyExamples;
 
-          return (
-            <article key={endpoint.id} id={endpointAnchorId} className="api-endpoint-card">
-              <div className="endpoint-header">
-                <span className={`endpoint-method ${endpoint.method.toLowerCase()}`}>
-                  {endpoint.method}
-                </span>
-                <span className="endpoint-path">{endpoint.path}</span>
-              </div>
-              <div className="endpoint-body">
-                <div className="endpoint-summary">
-                  {endpoint.summaryKey ? t(endpoint.summaryKey) : endpoint.summary}
-                </div>
-                {(() => {
-                  const text = endpoint.descriptionKey
-                    ? t(endpoint.descriptionKey)
-                    : endpoint.description;
-                  return text ? (
-                    <div className="endpoint-description">
-                      <MarkdownText content={text} />
+              return (
+                <article key={endpoint.id} id={endpointAnchorId} className="api-endpoint-card">
+                  <div className="endpoint-header">
+                    <span className={`endpoint-method ${endpoint.method.toLowerCase()}`}>
+                      {endpoint.method}
+                    </span>
+                    <span className="endpoint-path">{endpoint.path}</span>
+                  </div>
+                  <div className="endpoint-body">
+                    <div className="endpoint-summary">
+                      {endpoint.summaryKey ? t(endpoint.summaryKey) : endpoint.summary}
                     </div>
-                  ) : null;
-                })()}
+                    {(() => {
+                      const text = endpoint.descriptionKey
+                        ? t(endpoint.descriptionKey)
+                        : endpoint.description;
+                      return text ? (
+                        <div className="endpoint-description">
+                          <MarkdownText content={text} />
+                        </div>
+                      ) : null;
+                    })()}
 
-                <div className="endpoint-section">
-                  <h4 className="endpoint-section-title">{t('integration.api.parametersTitle')}</h4>
-                  {renderParameters(endpoint, t)}
-                </div>
+                    <div className="endpoint-section">
+                      <h4 className="endpoint-section-title">
+                        {t('integration.api.parametersTitle')}
+                      </h4>
+                      {renderParameters(endpoint, t)}
+                    </div>
 
-                <div className="endpoint-section">
-                  <h4 className="endpoint-section-title">
-                    {t('integration.api.requestBodyTitle')}
-                  </h4>
-                  {endpoint.requestBody ? (
-                    <>
-                      {(() => {
-                        const text = endpoint.requestBody.schema?.descriptionKey
-                          ? t(endpoint.requestBody.schema.descriptionKey)
-                          : endpoint.requestBody.schema?.description;
-                        return text ? (
-                          <div className="api-docs-section-desc">
-                            <MarkdownText content={text} />
+                    <div className="endpoint-section">
+                      <h4 className="endpoint-section-title">
+                        {t('integration.api.requestBodyTitle')}
+                      </h4>
+                      {endpoint.requestBody ? (
+                        <>
+                          {(() => {
+                            const text = endpoint.requestBody.schema?.descriptionKey
+                              ? t(endpoint.requestBody.schema.descriptionKey)
+                              : endpoint.requestBody.schema?.description;
+                            return text ? (
+                              <div className="api-docs-section-desc">
+                                <MarkdownText content={text} />
+                              </div>
+                            ) : null;
+                          })()}
+                          <div className="endpoint-subsection">
+                            <h5 className="endpoint-subsection-title">
+                              {t('integration.api.requestBodyFieldsTitle')}
+                            </h5>
+                            {renderRequestBodyFields(endpoint, t)}
                           </div>
-                        ) : null;
-                      })()}
-                      <div className="endpoint-subsection">
-                        <h5 className="endpoint-subsection-title">
-                          {t('integration.api.requestBodyFieldsTitle')}
-                        </h5>
-                        {renderRequestBodyFields(endpoint, t)}
-                      </div>
-                      <div className="endpoint-subsection">
-                        <h5 className="endpoint-subsection-title">
-                          {t('integration.api.requestBodyExampleTitle')}
-                        </h5>
-                        {requestDisplay ? (
-                          <CodeExample
-                            language={isMultipart ? 'text' : 'json'}
-                            code={requestDisplay}
-                          />
-                        ) : (
-                          <div className="api-docs-empty">{t('integration.api.noRequestBody')}</div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="api-docs-empty">{t('integration.api.noRequestBody')}</div>
-                  )}
-                </div>
+                          <div className="endpoint-subsection">
+                            <h5 className="endpoint-subsection-title">
+                              {t('integration.api.requestBodyExampleTitle')}
+                            </h5>
+                            {requestDisplay ? (
+                              <CodeExample
+                                language={isMultipart ? 'text' : 'json'}
+                                code={requestDisplay}
+                              />
+                            ) : (
+                              <div className="api-docs-empty">
+                                {t('integration.api.noRequestBody')}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="api-docs-empty">{t('integration.api.noRequestBody')}</div>
+                      )}
+                    </div>
 
-                <div className="endpoint-section">
-                  <h4 className="endpoint-section-title">{t('integration.api.responsesTitle')}</h4>
-                  {renderResponses(endpoint, t)}
-                </div>
+                    <div className="endpoint-section">
+                      <h4 className="endpoint-section-title">
+                        {t('integration.api.responsesTitle')}
+                      </h4>
+                      {renderResponses(endpoint, t)}
+                    </div>
 
-                <div className="endpoint-section">
-                  <h4 className="endpoint-section-title">
-                    {t('integration.api.codeExamplesTitle')}
-                  </h4>
-                  <Tabs
-                    defaultActiveKey="javascript"
-                    items={[
-                      {
-                        key: 'curl',
-                        label: 'cURL',
-                        children: (
-                          <CodeExample
-                            language="bash"
-                            code={resolvedDisplayExamples.curl}
-                            copyText={resolvedCopyExamples.curl}
-                          />
-                        ),
-                      },
-                      {
-                        key: 'python',
-                        label: 'Python',
-                        children: (
-                          <CodeExample
-                            language="python"
-                            code={resolvedDisplayExamples.python}
-                            copyText={resolvedCopyExamples.python}
-                          />
-                        ),
-                      },
-                      {
-                        key: 'javascript',
-                        label: 'JavaScript',
-                        children: (
-                          <CodeExample
-                            language="javascript"
-                            code={resolvedDisplayExamples.javascript}
-                            copyText={resolvedCopyExamples.javascript}
-                          />
-                        ),
-                      },
-                    ]}
-                  />
-                </div>
-              </div>
-            </article>
-          );
-        })}
+                    <div className="endpoint-section">
+                      <h4 className="endpoint-section-title">
+                        {t('integration.api.codeExamplesTitle')}
+                      </h4>
+                      <Tabs
+                        defaultActiveKey="javascript"
+                        items={[
+                          {
+                            key: 'curl',
+                            label: 'cURL',
+                            children: (
+                              <CodeExample
+                                language="bash"
+                                code={resolvedDisplayExamples.curl}
+                                copyText={resolvedCopyExamples.curl}
+                              />
+                            ),
+                          },
+                          {
+                            key: 'python',
+                            label: 'Python',
+                            children: (
+                              <CodeExample
+                                language="python"
+                                code={resolvedDisplayExamples.python}
+                                copyText={resolvedCopyExamples.python}
+                              />
+                            ),
+                          },
+                          {
+                            key: 'javascript',
+                            label: 'JavaScript',
+                            children: (
+                              <CodeExample
+                                language="javascript"
+                                code={resolvedDisplayExamples.javascript}
+                                copyText={resolvedCopyExamples.javascript}
+                              />
+                            ),
+                          },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ))}
       </section>
 
       <section id="api-errors" className="integration-docs-section">

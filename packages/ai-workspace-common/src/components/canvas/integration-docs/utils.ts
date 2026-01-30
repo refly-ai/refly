@@ -2,6 +2,51 @@ import { serverOrigin } from '@refly/ui-kit';
 import type { WorkflowVariable, VariableValue } from '@refly/openapi-schema';
 import type { ApiEndpoint, CodeExamples, SchemaObject } from './types';
 
+const endpointCategoryOrder = ['workflow', 'files', 'webhook', 'copilot', 'other'];
+
+export const getEndpointCategoryKey = (endpoint: ApiEndpoint): string => {
+  const path = endpoint.path || '';
+  if (path.startsWith('/openapi/workflow/') || path.startsWith('/openapi/workflows')) {
+    return 'workflow';
+  }
+  if (path.startsWith('/openapi/files')) {
+    return 'files';
+  }
+  if (path.startsWith('/openapi/webhook/')) {
+    return 'webhook';
+  }
+  if (path.startsWith('/openapi/copilot/')) {
+    return 'copilot';
+  }
+  return 'other';
+};
+
+export const groupApiEndpoints = (endpoints: ApiEndpoint[]) => {
+  const groups = new Map<string, ApiEndpoint[]>();
+  for (const endpoint of endpoints) {
+    const key = getEndpointCategoryKey(endpoint);
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)?.push(endpoint);
+  }
+
+  const ordered: Array<{ key: string; endpoints: ApiEndpoint[] }> = [];
+  for (const key of endpointCategoryOrder) {
+    const items = groups.get(key);
+    if (items && items.length > 0) {
+      ordered.push({ key, endpoints: items });
+      groups.delete(key);
+    }
+  }
+
+  for (const [key, items] of groups.entries()) {
+    ordered.push({ key, endpoints: items });
+  }
+
+  return ordered;
+};
+
 export type SchemaField = {
   name: string;
   type: string;
