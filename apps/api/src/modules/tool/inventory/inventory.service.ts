@@ -339,10 +339,12 @@ export class ToolInventoryService implements OnModuleInit {
       undefined as Record<string, unknown> | undefined,
     );
 
+    const resolvedApiKey = inventory.apiKey || this.resolveApiKeyFromEnv(inventory.key);
+
     const credentials =
-      inventory.apiKey || authConfigFromAdapter
+      resolvedApiKey || authConfigFromAdapter
         ? {
-            ...(inventory.apiKey ? { apiKey: inventory.apiKey } : {}),
+            ...(resolvedApiKey ? { apiKey: resolvedApiKey } : {}),
             ...(apiKeyHeaderFromAdapter ? { apiKeyHeader: apiKeyHeaderFromAdapter } : {}),
             ...(authConfigFromAdapter ? { auth: authConfigFromAdapter } : {}),
           }
@@ -355,6 +357,23 @@ export class ToolInventoryService implements OnModuleInit {
       credentials,
       methods: parsedMethods,
     };
+  }
+
+  /**
+   * Resolve API key from environment variable when database value is null.
+   * Convention: TOOLSET_<KEY_UPPERCASE>_API_KEY
+   * FAL tools (fal_audio, fal_image, fal_video) share TOOLSET_FAL_API_KEY as fallback.
+   */
+  private resolveApiKeyFromEnv(key: string): string | undefined {
+    const envKey = `TOOLSET_${key.toUpperCase()}_API_KEY`;
+    const value = process.env[envKey];
+    if (value) return value;
+
+    if (key.startsWith('fal_')) {
+      return process.env.TOOLSET_FAL_API_KEY;
+    }
+
+    return undefined;
   }
 
   /**

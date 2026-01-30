@@ -71,15 +71,15 @@ export const staticPrivateEndpoint =
 
 export const subscriptionEnabled =
   getBrowserValue(() => Boolean(window.ENV?.SUBSCRIPTION_ENABLED), false) ||
-  Boolean(process.env.VITE_SUBSCRIPTION_ENABLED);
+  process.env.VITE_SUBSCRIPTION_ENABLED === 'true';
 
 export const canvasTemplateEnabled =
   getBrowserValue(() => Boolean(window.ENV?.CANVAS_TEMPLATE_ENABLED), false) ||
-  Boolean(process.env.VITE_CANVAS_TEMPLATE_ENABLED);
+  process.env.VITE_CANVAS_TEMPLATE_ENABLED === 'true';
 
 export const sentryEnabled =
   getBrowserValue(() => Boolean(window.ENV?.SENTRY_ENABLED), false) ||
-  Boolean(process.env.VITE_SENTRY_ENABLED);
+  process.env.VITE_SENTRY_ENABLED === 'true';
 
 export const envTag = getBrowserValue(() => window.ENV?.ENV_TAG, '') || process.env.VITE_ENV_TAG;
 console.log('envTag', envTag);
