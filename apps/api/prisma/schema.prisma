@@ -2685,32 +2685,50 @@ model SkillExecutionWorkflow {
 }
 
 /// Webhook configuration for workflows
-model WorkflowApi {
+model WorkflowWebhook {
   /// Primary key
-  pk            BigInt    @id @default(autoincrement())
-  /// API ID (webhookId: wh_{32 random chars})
-  apiId         String    @unique @map("api_id")
+  pk        BigInt    @id @default(autoincrement())
+  /// Webhook ID (wh_{32 random chars})
+  apiId     String    @unique @map("webhook_id")
   /// User ID
-  uid           String    @map("uid")
+  uid       String    @map("uid")
   /// Canvas ID
-  canvasId      String    @map("canvas_id")
-  /// Result node IDs (JSON array of node IDs marked as output)
-  resultNodeIds String?   @map("result_node_ids")
+  canvasId  String    @map("canvas_id")
   /// Whether the webhook is enabled
-  isEnabled     Boolean   @default(false) @map("is_enabled")
+  isEnabled Boolean   @default(false) @map("is_enabled")
   /// Timeout in seconds
-  timeout       Int       @default(30) @map("timeout")
+  timeout   Int       @default(30) @map("timeout")
   /// Create timestamp
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
-  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
   /// Soft delete timestamp
-  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz()
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
 
   @@unique([canvasId, uid])
-  @@index([apiId], map: "idx_workflow_apis_api_id")
+  @@index([apiId], map: "idx_workflow_webhooks_api_id")
   @@index([uid])
-  @@map("workflow_apis")
+  @@map("workflow_webhooks")
+}
+
+/// OpenAPI configuration for workflows
+model WorkflowOpenapiConfig {
+  /// Primary key
+  pk            BigInt   @id @default(autoincrement())
+  /// User ID
+  uid           String   @map("uid")
+  /// Canvas ID
+  canvasId      String   @map("canvas_id")
+  /// Result node IDs (JSON array of node IDs marked as output)
+  resultNodeIds String?  @map("result_node_ids")
+  /// Create timestamp
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([canvasId, uid])
+  @@index([uid])
+  @@map("workflow_openapi_configs")
 }
 
 /// API call records for webhooks

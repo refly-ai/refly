@@ -10306,10 +10306,6 @@ export type EnableWebhookRequest = {
    */
   canvasId: string;
   /**
-   * Optional array of result node IDs
-   */
-  resultNodeIds?: Array<string>;
-  /**
    * Timeout in seconds
    */
   timeout?: number;
@@ -10359,6 +10355,30 @@ export type ResetWebhookResponse = BaseResponse & {
   };
 };
 
+export type UpdateOpenapiConfigRequest = {
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * Output node IDs
+   */
+  resultNodeIds?: Array<string> | null;
+};
+
+export type OpenapiConfigResponse = BaseResponse & {
+  data?: {
+    /**
+     * Canvas ID
+     */
+    canvasId?: string;
+    /**
+     * Output node IDs
+     */
+    resultNodeIds?: Array<string> | null;
+  };
+};
+
 export type UpdateWebhookRequest = {
   /**
    * Webhook ID to update
@@ -10368,10 +10388,6 @@ export type UpdateWebhookRequest = {
    * Whether webhook is enabled
    */
   isEnabled?: boolean;
-  /**
-   * Optional array of result node IDs
-   */
-  resultNodeIds?: Array<string>;
   /**
    * Timeout in seconds
    */
@@ -10388,10 +10404,6 @@ export type GetWebhookConfigResponse = BaseResponse & {
      * Whether webhook is enabled
      */
     isEnabled?: boolean;
-    /**
-     * Result node IDs
-     */
-    resultNodeIds?: Array<string>;
     /**
      * Timeout in seconds
      */
@@ -11828,6 +11840,27 @@ export type RunWebhookData = {
 export type RunWebhookResponse = WebhookRunResponse;
 
 export type RunWebhookError = unknown;
+
+export type GetOpenapiConfigData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+  };
+};
+
+export type GetOpenapiConfigResponse = OpenapiConfigResponse;
+
+export type GetOpenapiConfigError = unknown;
+
+export type UpdateOpenapiConfigData = {
+  body: UpdateOpenapiConfigRequest;
+};
+
+export type UpdateOpenapiConfigResponse = OpenapiConfigResponse;
+
+export type UpdateOpenapiConfigError = unknown;
 
 export type UploadOpenapiFilesData = {
   body: {

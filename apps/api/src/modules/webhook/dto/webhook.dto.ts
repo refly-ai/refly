@@ -8,7 +8,6 @@
  */
 export interface EnableWebhookDto {
   canvasId: string;
-  resultNodeIds?: string[];
   timeout?: number;
 }
 
@@ -31,7 +30,6 @@ export interface ResetWebhookDto {
  */
 export interface UpdateWebhookDto {
   isEnabled?: boolean;
-  resultNodeIds?: string[];
   timeout?: number;
 }
 

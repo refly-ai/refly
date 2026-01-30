@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Checkbox, Modal, message } from 'antd';
+import { Checkbox, Modal, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useRealtimeCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/use-realtime-canvas-data';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -13,7 +13,6 @@ interface ApiOutputModalProps {
 }
 
 interface OutputConfig {
-  webhookId: string;
   resultNodeIds?: string[] | null;
 }
 
@@ -33,11 +32,10 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
   const fetchConfig = async () => {
     setLoading(true);
     try {
-      const response = await getClient().getWebhookConfig({ query: { canvasId } });
+      const response = await getClient().getOpenapiConfig({ query: { canvasId } });
       const result = response.data;
       if (result?.success && result.data) {
         setConfig({
-          webhookId: result.data.apiId,
           resultNodeIds: result.data.resultNodeIds ?? null,
         });
       } else {
@@ -65,10 +63,13 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
   useEffect(() => {
     if (!open || loading || hasTouchedRef.current) return;
     const allNodeIds = agentNodes.map((node) => node.id).filter(Boolean);
-    const savedNodeIds = Array.isArray(config?.resultNodeIds)
-      ? config?.resultNodeIds.filter((id) => allNodeIds.includes(id))
-      : [];
-    setSelectedNodeIds(savedNodeIds.length > 0 ? savedNodeIds : allNodeIds);
+    let selectedIds: string[] = [];
+    if (Array.isArray(config?.resultNodeIds)) {
+      selectedIds = config.resultNodeIds.filter((id) => allNodeIds.includes(id));
+    } else {
+      selectedIds = allNodeIds;
+    }
+    setSelectedNodeIds(selectedIds);
   }, [open, loading, agentNodes, config?.resultNodeIds]);
 
   const handleSelectionChange = (ids: string[]) => {
@@ -77,21 +78,22 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
   };
 
   const saveSelection = async (nextSelected: string[], rollbackSelection: string[]) => {
-    if (!config?.webhookId) {
-      message.error(t('integration.outputModal.requireWebhook'));
-      return;
-    }
     const allNodeIds = agentNodes.map((node) => node.id).filter(Boolean);
     const normalizedIds = nextSelected.filter((id) => allNodeIds.includes(id));
-    const resultNodeIds = normalizedIds.length >= allNodeIds.length ? [] : normalizedIds;
+    const resultNodeIds =
+      normalizedIds.length === 0
+        ? []
+        : normalizedIds.length >= allNodeIds.length
+          ? null
+          : normalizedIds;
     setSaving(true);
     try {
-      const response = await getClient().updateWebhook({
-        body: { webhookId: config.webhookId, resultNodeIds },
+      const response = await getClient().updateOpenapiConfig({
+        body: { canvasId, resultNodeIds },
       });
       if (response.data?.success) {
         message.success(t('integration.outputModal.saveSuccess'));
-        setConfig((prev) => (prev ? { ...prev, resultNodeIds } : prev));
+        setConfig({ resultNodeIds });
       } else {
         throw new Error('updateWebhook failed');
       }
@@ -104,9 +106,8 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
     }
   };
 
-  const hasConfig = Boolean(config?.webhookId);
   const hasAgents = agentNodes.length > 0;
-  const controlsDisabled = !hasConfig || !hasAgents || loading || saving;
+  const controlsDisabled = !hasAgents || loading || saving;
 
   return (
     <Modal
@@ -121,47 +122,34 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
       <div className="api-output-modal-content">
         <p className="api-output-modal-description">{t('integration.outputModal.description')}</p>
 
-        {!hasConfig && !loading && (
-          <div className="api-output-modal-warning">
-            {t('integration.outputModal.requireWebhook')}
+        {hasAgents ? (
+          <div className="api-output-node-list">
+            {agentNodes.map((node) => {
+              const title = node.data?.title || t('common.agent', { defaultValue: 'Agent' });
+              const checked = selectedNodeIds.includes(node.id);
+              return (
+                <label key={node.id} className="api-output-node-item" htmlFor={node.id}>
+                  <Checkbox
+                    id={node.id}
+                    checked={checked}
+                    disabled={controlsDisabled}
+                    onChange={() => {
+                      const nextSelected = checked
+                        ? selectedNodeIds.filter((id) => id !== node.id)
+                        : [...selectedNodeIds, node.id];
+                      handleSelectionChange(nextSelected);
+                      saveSelection(nextSelected, selectedNodeIds);
+                    }}
+                  />
+                  <span className="api-output-node-title">{title}</span>
+                </label>
+              );
+            })}
           </div>
+        ) : (
+          <div className="api-output-modal-empty">{t('integration.outputModal.empty')}</div>
         )}
-
-        <div className="api-output-modal-section">
-          <div className="api-output-modal-label">{t('integration.outputModal.selectorLabel')}</div>
-          {hasAgents ? (
-            <div className="api-output-node-list">
-              {agentNodes.map((node) => {
-                const title = node.data?.title || t('common.agent', { defaultValue: 'Agent' });
-                const checked = selectedNodeIds.includes(node.id);
-                return (
-                  <label key={node.id} className="api-output-node-item" htmlFor={node.id}>
-                    <Checkbox
-                      id={node.id}
-                      checked={checked}
-                      disabled={controlsDisabled}
-                      onChange={() => {
-                        const nextSelected = checked
-                          ? selectedNodeIds.filter((id) => id !== node.id)
-                          : [...selectedNodeIds, node.id];
-                        handleSelectionChange(nextSelected);
-                        saveSelection(nextSelected, selectedNodeIds);
-                      }}
-                    />
-                    <span className="api-output-node-title">{title}</span>
-                  </label>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="api-output-modal-empty">{t('integration.outputModal.empty')}</div>
-          )}
-          <div className="api-output-modal-hint">{t('integration.outputModal.hint')}</div>
-        </div>
-
-        <div className="api-output-modal-footer">
-          <Button onClick={onClose}>{t('common.close')}</Button>
-        </div>
+        <div className="api-output-modal-hint">{t('integration.outputModal.hint')}</div>
       </div>
     </Modal>
   );

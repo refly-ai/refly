@@ -30,6 +30,7 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
+  getOpenapiConfig,
   getPromptSuggestions,
   getResourceDetail,
   getSettings,
@@ -122,6 +123,8 @@ import {
   GetExportJobStatusData,
   GetExportJobStatusError,
   GetFormDefinitionError,
+  GetOpenapiConfigData,
+  GetOpenapiConfigError,
   GetPromptSuggestionsError,
   GetResourceDetailData,
   GetResourceDetailError,
@@ -769,6 +772,21 @@ export const useGetWebhookHistorySuspense = <
     queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getWebhookHistory({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetOpenapiConfigSuspense = <
+  TData = Common.GetOpenapiConfigDefaultResponse,
+  TError = GetOpenapiConfigError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetOpenapiConfigData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetOpenapiConfigKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getOpenapiConfig({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetWorkflowStatusViaApiSuspense = <

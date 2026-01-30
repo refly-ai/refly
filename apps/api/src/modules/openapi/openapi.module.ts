@@ -3,6 +3,7 @@ import { OpenapiService } from './openapi.service';
 import { FileUploadService } from './file-upload.service';
 import { WorkflowApiController } from './controllers/workflow-api.controller';
 import { FileUploadController } from './controllers/file-upload.controller';
+import { OpenapiConfigController } from './controllers/openapi-config.controller';
 import { ApiKeyAuthGuard } from './guards/api-key-auth.guard';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { DebounceGuard } from './guards/debounce.guard';
@@ -42,6 +43,7 @@ import { MiscModule } from '../misc/misc.module';
   controllers: [
     WorkflowApiController,
     FileUploadController,
+    OpenapiConfigController,
     // Future: AccountApiController,
     // Future: StorageApiController,
     // Future: KnowledgeApiController,

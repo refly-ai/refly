@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { WorkflowAppService } from '../workflow-app/workflow-app.service';
 import { CanvasService } from '../canvas/canvas.service';
@@ -58,19 +58,6 @@ export class OpenapiService {
     let recordCreated = false;
 
     try {
-      // Get workflow API config
-      const config = await this.prisma.workflowApi.findFirst({
-        where: { canvasId, uid, deletedAt: null },
-      });
-
-      if (!config) {
-        throw new NotFoundException('Workflow API not found for this canvas');
-      }
-
-      if (!config.isEnabled) {
-        throw new ForbiddenException('Workflow API is disabled');
-      }
-
       // Get user
       const user = await this.prisma.user.findUnique({
         where: { uid },
@@ -85,7 +72,7 @@ export class OpenapiService {
       const canvasData = await this.canvasService.createSnapshotFromCanvas({ uid }, canvasId);
       const toolsetsWithNodes = extractToolsetsWithNodes(canvasData?.nodes ?? []);
       const usedToolIds = toolsetsWithNodes.map((t) => t.toolset?.toolset?.key).filter(Boolean);
-      const scheduleId = `api:${config.apiId}`;
+      const scheduleId = `api:${canvasId}`;
 
       await this.prisma.workflowScheduleRecord.create({
         data: {
@@ -131,7 +118,7 @@ export class OpenapiService {
       await this.recordApiCall({
         recordId,
         uid,
-        apiId: config.apiId,
+        apiId: null,
         canvasId,
         workflowExecutionId: executionId,
         requestBody: variables,
@@ -155,7 +142,7 @@ export class OpenapiService {
       await this.recordApiCall({
         recordId,
         uid,
-        apiId: 'unknown',
+        apiId: null,
         canvasId,
         requestBody: variables,
         httpStatus: error.status || 500,
@@ -225,37 +212,49 @@ export class OpenapiService {
     const sortedNodeExecutions = sortNodeExecutionsByExecutionOrder(nodeExecutions);
 
     let resultNodeIds: string[] | null = null;
-    try {
-      if (workflowExecution.scheduleId?.startsWith('api:')) {
-        const apiId = workflowExecution.scheduleId.replace('api:', '');
-        const workflowApi = await this.prisma.workflowApi.findFirst({
-          where: { apiId, uid: user.uid, deletedAt: null },
-          select: { resultNodeIds: true },
-        });
-        resultNodeIds = workflowApi?.resultNodeIds ? JSON.parse(workflowApi.resultNodeIds) : null;
-      } else {
-        const workflowApi = await this.prisma.workflowApi.findFirst({
-          where: { canvasId: workflowExecution.canvasId, uid: user.uid, deletedAt: null },
-          select: { resultNodeIds: true },
-        });
-        resultNodeIds = workflowApi?.resultNodeIds ? JSON.parse(workflowApi.resultNodeIds) : null;
+    let sourceCanvasId = workflowExecution.canvasId;
+
+    if (workflowExecution.scheduleRecordId) {
+      const scheduleRecord = await this.prisma.workflowScheduleRecord.findUnique({
+        where: { scheduleRecordId: workflowExecution.scheduleRecordId },
+        select: { sourceCanvasId: true },
+      });
+      if (scheduleRecord?.sourceCanvasId) {
+        sourceCanvasId = scheduleRecord.sourceCanvasId;
       }
+    }
+
+    try {
+      const openapiConfig = await this.prisma.workflowOpenapiConfig.findFirst({
+        where: { canvasId: sourceCanvasId, uid: user.uid },
+        select: { resultNodeIds: true },
+      });
+      resultNodeIds = openapiConfig?.resultNodeIds ? JSON.parse(openapiConfig.resultNodeIds) : null;
     } catch (error) {
       this.logger.warn(
         `Failed to parse resultNodeIds for execution ${executionId}: ${error?.message}`,
       );
     }
 
-    const allowedNodeIds =
-      Array.isArray(resultNodeIds) && resultNodeIds.length > 0 ? new Set(resultNodeIds) : null;
+    let allowedNodeIds: Set<string> | null = null;
+    let forceEmptyOutput = false;
+    if (Array.isArray(resultNodeIds)) {
+      if (resultNodeIds.length === 0) {
+        forceEmptyOutput = true;
+      } else {
+        allowedNodeIds = new Set(resultNodeIds);
+      }
+    }
 
     // Filter nodes that are considered "products"
-    const productNodes = sortedNodeExecutions.filter(
-      (node) =>
-        node.nodeType === 'skillResponse' &&
-        node.status === 'finish' &&
-        (!allowedNodeIds || allowedNodeIds.has(node.nodeId)),
-    );
+    const productNodes = forceEmptyOutput
+      ? []
+      : sortedNodeExecutions.filter(
+          (node) =>
+            node.nodeType === 'skillResponse' &&
+            node.status === 'finish' &&
+            (!allowedNodeIds || allowedNodeIds.has(node.nodeId)),
+        );
 
     // Collect result IDs for skillResponse nodes
     const skillResultIds = productNodes.map((node) => node.entityId);
@@ -339,13 +338,67 @@ export class OpenapiService {
   async abortWorkflow(user: PrismaUser, executionId: string): Promise<void> {
     await this.workflowService.abortWorkflow(user, executionId);
   }
+
+  async getOpenapiConfig(
+    uid: string,
+    canvasId: string,
+  ): Promise<{ canvasId: string; resultNodeIds: string[] | null } | null> {
+    const config = await this.prisma.workflowOpenapiConfig.findFirst({
+      where: { canvasId, uid },
+    });
+
+    if (!config) {
+      return null;
+    }
+
+    let resultNodeIds: string[] | null = null;
+    try {
+      resultNodeIds = config.resultNodeIds ? JSON.parse(config.resultNodeIds) : null;
+    } catch (error) {
+      this.logger.warn(`Failed to parse resultNodeIds for canvas ${canvasId}: ${error?.message}`);
+    }
+
+    return { canvasId: config.canvasId, resultNodeIds };
+  }
+
+  async upsertOpenapiConfig(
+    uid: string,
+    canvasId: string,
+    resultNodeIds?: string[] | null,
+  ): Promise<{ canvasId: string; resultNodeIds: string[] | null }> {
+    const normalizedResultNodeIds = resultNodeIds ?? null;
+    const storedResultNodeIds =
+      normalizedResultNodeIds === null ? null : JSON.stringify(normalizedResultNodeIds);
+
+    const config = await this.prisma.workflowOpenapiConfig.upsert({
+      where: {
+        canvasId_uid: {
+          canvasId,
+          uid,
+        },
+      },
+      create: {
+        canvasId,
+        uid,
+        resultNodeIds: storedResultNodeIds,
+      },
+      update: {
+        resultNodeIds: storedResultNodeIds,
+      },
+    });
+
+    return {
+      canvasId: config.canvasId,
+      resultNodeIds: normalizedResultNodeIds,
+    };
+  }
   /**
    * Record API call to database
    */
   private async recordApiCall(data: {
     recordId: string;
     uid: string;
-    apiId: string;
+    apiId: string | null;
     canvasId: string;
     workflowExecutionId?: string;
     requestBody: any;
@@ -359,7 +412,7 @@ export class OpenapiService {
         data: {
           recordId: data.recordId,
           uid: data.uid,
-          apiId: data.apiId,
+          apiId: data.apiId ?? null,
           canvasId: data.canvasId,
           workflowExecutionId: data.workflowExecutionId,
           requestBody: safeStringifyJSON(data.requestBody),

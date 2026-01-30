@@ -4492,7 +4492,7 @@ const translations = {
           response401: 'Unauthorized - invalid or missing API key',
         },
         workflowRun: {
-          summary: 'Run workflow via API (returns execution ID)',
+          summary: 'Run workflow',
           description:
             'Execute a workflow via authenticated API call. Unlike webhook triggers, this endpoint requires API Key authentication and returns an execution ID that can be used to track workflow status.',
           paramCanvasId: 'Canvas/Workflow ID (from the canvas URL in the browser address bar)',
@@ -4507,7 +4507,7 @@ const translations = {
           response404: 'Workflow not found',
         },
         workflowStatus: {
-          summary: 'Get workflow execution status via API',
+          summary: 'Get workflow execution status',
           description:
             'Get workflow execution status via authenticated API call. Requires API Key authentication.',
           paramExecutionId: 'Workflow execution ID',
@@ -4516,7 +4516,7 @@ const translations = {
           response404: 'Workflow execution not found',
         },
         workflowOutput: {
-          summary: 'Get workflow execution output via API',
+          summary: 'Get workflow execution output',
           description:
             'Get workflow execution output (output nodes and drive files) via authenticated API call. Requires API Key authentication.',
           paramExecutionId: 'Workflow execution ID',

@@ -333,6 +333,12 @@ import type {
   RunWebhookData,
   RunWebhookError,
   RunWebhookResponse,
+  GetOpenapiConfigData,
+  GetOpenapiConfigError,
+  GetOpenapiConfigResponse,
+  UpdateOpenapiConfigData,
+  UpdateOpenapiConfigError,
+  UpdateOpenapiConfigResponse,
   UploadOpenapiFilesData,
   UploadOpenapiFilesError,
   UploadOpenapiFilesResponse,
@@ -2312,6 +2318,40 @@ export const runWebhook = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<RunWebhookResponse, RunWebhookError, ThrowOnError>({
     ...options,
     url: '/openapi/webhook/{webhookId}/run',
+  });
+};
+
+/**
+ * Get OpenAPI configuration for a canvas
+ * Get OpenAPI configuration including output node settings
+ */
+export const getOpenapiConfig = <ThrowOnError extends boolean = false>(
+  options: Options<GetOpenapiConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetOpenapiConfigResponse,
+    GetOpenapiConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/config',
+  });
+};
+
+/**
+ * Update OpenAPI configuration for a canvas
+ * Update OpenAPI configuration including output node settings
+ */
+export const updateOpenapiConfig = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateOpenapiConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateOpenapiConfigResponse,
+    UpdateOpenapiConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/config',
   });
 };
 

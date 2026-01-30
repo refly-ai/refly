@@ -246,7 +246,10 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
   const publicEndpoints = useMemo(
     () =>
       apiDocsData.endpoints.filter(
-        (endpoint) => endpoint.path.startsWith('/openapi/') && !endpoint.path.includes('/webhook/'),
+        (endpoint) =>
+          endpoint.path.startsWith('/openapi/') &&
+          !endpoint.path.includes('/webhook/') &&
+          !endpoint.path.startsWith('/openapi/config'),
       ),
     [],
   );

@@ -23,7 +23,6 @@ export interface WebhookConfig {
   apiId: string;
   uid: string;
   canvasId: string;
-  resultNodeIds: string[] | null;
   isEnabled: boolean;
   timeout: number;
 }
@@ -45,7 +44,6 @@ export class WebhookService {
   async enableWebhook(
     canvasId: string,
     uid: string,
-    resultNodeIds?: string[],
     timeout = 30,
   ): Promise<{ webhookId: string; webhookUrl: string }> {
     // Check canvas ownership
@@ -58,18 +56,17 @@ export class WebhookService {
     }
 
     // Check if webhook already exists (including soft-deleted records due to unique constraint)
-    const existing = await this.prisma.workflowApi.findFirst({
+    const existing = await this.prisma.workflowWebhook.findFirst({
       where: { canvasId, uid },
     });
 
     if (existing) {
       // Update existing webhook (reactivate if soft-deleted)
-      const updated = await this.prisma.workflowApi.update({
+      const updated = await this.prisma.workflowWebhook.update({
         where: { pk: existing.pk },
         data: {
           isEnabled: true,
           deletedAt: null,
-          resultNodeIds: resultNodeIds ? JSON.stringify(resultNodeIds) : null,
           timeout,
           updatedAt: new Date(),
         },
@@ -92,12 +89,11 @@ export class WebhookService {
     const webhookId = this.generateWebhookId();
 
     // Create new webhook
-    const webhook = await this.prisma.workflowApi.create({
+    const webhook = await this.prisma.workflowWebhook.create({
       data: {
         apiId: webhookId,
         uid,
         canvasId,
-        resultNodeIds: resultNodeIds ? JSON.stringify(resultNodeIds) : null,
         isEnabled: true,
         timeout,
       },
@@ -115,7 +111,7 @@ export class WebhookService {
    * Disable webhook
    */
   async disableWebhook(webhookId: string, uid: string): Promise<void> {
-    const webhook = await this.prisma.workflowApi.findFirst({
+    const webhook = await this.prisma.workflowWebhook.findFirst({
       where: { apiId: webhookId, uid, deletedAt: null },
     });
 
@@ -124,7 +120,7 @@ export class WebhookService {
     }
 
     // Soft delete
-    await this.prisma.workflowApi.update({
+    await this.prisma.workflowWebhook.update({
       where: { pk: webhook.pk },
       data: {
         deletedAt: new Date(),
@@ -145,7 +141,7 @@ export class WebhookService {
     webhookId: string,
     uid: string,
   ): Promise<{ webhookId: string; webhookUrl: string }> {
-    const webhook = await this.prisma.workflowApi.findFirst({
+    const webhook = await this.prisma.workflowWebhook.findFirst({
       where: { apiId: webhookId, uid, deletedAt: null },
     });
 
@@ -157,7 +153,7 @@ export class WebhookService {
     const newWebhookId = this.generateWebhookId();
 
     // Update webhook
-    const updated = await this.prisma.workflowApi.update({
+    const updated = await this.prisma.workflowWebhook.update({
       where: { pk: webhook.pk },
       data: {
         apiId: newWebhookId,
@@ -186,11 +182,10 @@ export class WebhookService {
     uid: string,
     updates: {
       isEnabled?: boolean;
-      resultNodeIds?: string[];
       timeout?: number;
     },
   ): Promise<void> {
-    const webhook = await this.prisma.workflowApi.findFirst({
+    const webhook = await this.prisma.workflowWebhook.findFirst({
       where: { apiId: webhookId, uid, deletedAt: null },
     });
 
@@ -198,13 +193,10 @@ export class WebhookService {
       throw new NotFoundException('Webhook not found or access denied');
     }
 
-    await this.prisma.workflowApi.update({
+    await this.prisma.workflowWebhook.update({
       where: { pk: webhook.pk },
       data: {
         ...(updates.isEnabled !== undefined && { isEnabled: updates.isEnabled }),
-        ...(updates.resultNodeIds !== undefined && {
-          resultNodeIds: JSON.stringify(updates.resultNodeIds),
-        }),
         ...(updates.timeout !== undefined && { timeout: updates.timeout }),
         updatedAt: new Date(),
       },
@@ -220,7 +212,7 @@ export class WebhookService {
    * Get webhook configuration
    */
   async getWebhookConfig(canvasId: string, uid: string): Promise<WebhookConfig | null> {
-    const webhook = await this.prisma.workflowApi.findFirst({
+    const webhook = await this.prisma.workflowWebhook.findFirst({
       where: { canvasId, uid, deletedAt: null },
     });
 
@@ -232,7 +224,6 @@ export class WebhookService {
       apiId: webhook.apiId,
       uid: webhook.uid,
       canvasId: webhook.canvasId,
-      resultNodeIds: webhook.resultNodeIds ? JSON.parse(webhook.resultNodeIds) : null,
       isEnabled: webhook.isEnabled,
       timeout: webhook.timeout,
     };
@@ -689,7 +680,7 @@ export class WebhookService {
     pageSize: number;
   }> {
     // Verify ownership
-    const webhook = await this.prisma.workflowApi.findFirst({
+    const webhook = await this.prisma.workflowWebhook.findFirst({
       where: { apiId: webhookId, uid, deletedAt: null },
     });
 
@@ -741,7 +732,7 @@ export class WebhookService {
     }
 
     // Query database
-    const webhook = await this.prisma.workflowApi.findFirst({
+    const webhook = await this.prisma.workflowWebhook.findFirst({
       where: { apiId: webhookId, deletedAt: null },
     });
 
@@ -753,7 +744,6 @@ export class WebhookService {
       apiId: webhook.apiId,
       uid: webhook.uid,
       canvasId: webhook.canvasId,
-      resultNodeIds: webhook.resultNodeIds ? JSON.parse(webhook.resultNodeIds) : null,
       isEnabled: webhook.isEnabled,
       timeout: webhook.timeout,
     };

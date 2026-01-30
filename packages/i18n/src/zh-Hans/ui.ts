@@ -4421,9 +4421,9 @@ const translations = {
     navSkill: 'Skill',
     navApi: 'API',
     navWebhook: 'Webhook',
-    manageApiKeys: '管理 API Key',
+    manageApiKeys: 'API Key',
     outputModal: {
-      button: '输出设置',
+      button: '选择输出',
       title: '输出节点设置',
       description: '选择哪些 Agent 节点的结果会出现在 /openapi/workflow/{executionId}/output。',
       selectorLabel: '输出节点',
@@ -4519,7 +4519,7 @@ const translations = {
           response401: '未授权或 API Key 缺失/无效',
         },
         workflowRun: {
-          summary: '通过 API 触发工作流（返回 executionId）',
+          summary: '通过 API 触发工作流',
           description:
             '通过认证 API 调用执行工作流。与 webhook 不同，该接口需要 API Key，并返回用于跟踪状态的 executionId。',
           paramCanvasId: '画布/工作流 ID（从浏览器地址栏的画布 URL 获取）',
@@ -4534,7 +4534,7 @@ const translations = {
           response404: '工作流不存在',
         },
         workflowStatus: {
-          summary: '获取工作流执行状态（API）',
+          summary: '获取工作流执行状态',
           description: '通过认证 API 获取工作流执行状态。需要 API Key。',
           paramExecutionId: '工作流执行 ID',
           response200: '已获取工作流执行状态',
@@ -4542,7 +4542,7 @@ const translations = {
           response404: '工作流执行不存在',
         },
         workflowOutput: {
-          summary: '获取工作流执行输出（API）',
+          summary: '获取工作流执行输出',
           description: '通过认证 API 获取工作流执行输出（产出节点与云盘文件）。需要 API Key。',
           paramExecutionId: '工作流执行 ID',
           response200: '已获取工作流执行输出',

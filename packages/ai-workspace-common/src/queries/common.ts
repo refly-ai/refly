@@ -88,6 +88,7 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
+  getOpenapiConfig,
   getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
@@ -165,12 +166,14 @@ import {
   updateDocument,
   updateDriveFile,
   updateMcpServer,
+  updateOpenapiConfig,
   updateProvider,
   updateProviderItem,
   updateResource,
   updateSchedule,
   updateSettings,
   updateToolset,
+  updateWebhook,
   updateWorkflowVariables,
   upload,
   uploadOpenapiFiles,
@@ -586,6 +589,16 @@ export const UseGetWebhookHistoryKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetWebhookHistoryKey, ...(queryKey ?? [clientOptions])];
+export type GetOpenapiConfigDefaultResponse = Awaited<ReturnType<typeof getOpenapiConfig>>['data'];
+export type GetOpenapiConfigQueryResult<
+  TData = GetOpenapiConfigDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetOpenapiConfigKey = 'GetOpenapiConfig';
+export const UseGetOpenapiConfigKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetOpenapiConfigKey, ...(queryKey ?? [clientOptions])];
 export type GetWorkflowStatusViaApiDefaultResponse = Awaited<
   ReturnType<typeof getWorkflowStatusViaApi>
 >['data'];
@@ -1368,10 +1381,22 @@ export const UseResetWebhookKeyFn = (mutationKey?: Array<unknown>) => [
   useResetWebhookKey,
   ...(mutationKey ?? []),
 ];
+export type UpdateWebhookMutationResult = Awaited<ReturnType<typeof updateWebhook>>;
+export const useUpdateWebhookKey = 'UpdateWebhook';
+export const UseUpdateWebhookKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateWebhookKey,
+  ...(mutationKey ?? []),
+];
 export type RunWebhookMutationResult = Awaited<ReturnType<typeof runWebhook>>;
 export const useRunWebhookKey = 'RunWebhook';
 export const UseRunWebhookKeyFn = (mutationKey?: Array<unknown>) => [
   useRunWebhookKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateOpenapiConfigMutationResult = Awaited<ReturnType<typeof updateOpenapiConfig>>;
+export const useUpdateOpenapiConfigKey = 'UpdateOpenapiConfig';
+export const UseUpdateOpenapiConfigKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateOpenapiConfigKey,
   ...(mutationKey ?? []),
 ];
 export type UploadOpenapiFilesMutationResult = Awaited<ReturnType<typeof uploadOpenapiFiles>>;

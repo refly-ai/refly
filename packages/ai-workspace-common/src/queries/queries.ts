@@ -89,6 +89,7 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
+  getOpenapiConfig,
   getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
@@ -166,12 +167,14 @@ import {
   updateDocument,
   updateDriveFile,
   updateMcpServer,
+  updateOpenapiConfig,
   updateProvider,
   updateProviderItem,
   updateResource,
   updateSchedule,
   updateSettings,
   updateToolset,
+  updateWebhook,
   updateWorkflowVariables,
   upload,
   uploadOpenapiFiles,
@@ -343,6 +346,8 @@ import {
   GetExportJobStatusData,
   GetExportJobStatusError,
   GetFormDefinitionError,
+  GetOpenapiConfigData,
+  GetOpenapiConfigError,
   GetPromptSuggestionsError,
   GetRecordSnapshotData,
   GetRecordSnapshotError,
@@ -483,6 +488,8 @@ import {
   UpdateDriveFileError,
   UpdateMcpServerData,
   UpdateMcpServerError,
+  UpdateOpenapiConfigData,
+  UpdateOpenapiConfigError,
   UpdateProviderData,
   UpdateProviderError,
   UpdateProviderItemData,
@@ -495,6 +502,8 @@ import {
   UpdateSettingsError,
   UpdateToolsetData,
   UpdateToolsetError,
+  UpdateWebhookData,
+  UpdateWebhookError,
   UpdateWorkflowVariablesData,
   UpdateWorkflowVariablesError,
   UploadData,
@@ -1084,6 +1093,21 @@ export const useGetWebhookHistory = <
     queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getWebhookHistory({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetOpenapiConfig = <
+  TData = Common.GetOpenapiConfigDefaultResponse,
+  TError = GetOpenapiConfigError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetOpenapiConfigData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetOpenapiConfigKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getOpenapiConfig({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetWorkflowStatusViaApi = <
@@ -2775,6 +2799,23 @@ export const useResetWebhook = <
     mutationFn: (clientOptions) => resetWebhook(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
+export const useUpdateWebhook = <
+  TData = Common.UpdateWebhookMutationResult,
+  TError = UpdateWebhookError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UpdateWebhookData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UpdateWebhookData, true>, TContext>({
+    mutationKey: Common.UseUpdateWebhookKeyFn(mutationKey),
+    mutationFn: (clientOptions) => updateWebhook(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
 export const useRunWebhook = <
   TData = Common.RunWebhookMutationResult,
   TError = RunWebhookError,
@@ -2790,6 +2831,23 @@ export const useRunWebhook = <
   useMutation<TData, TError, Options<RunWebhookData, true>, TContext>({
     mutationKey: Common.UseRunWebhookKeyFn(mutationKey),
     mutationFn: (clientOptions) => runWebhook(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useUpdateOpenapiConfig = <
+  TData = Common.UpdateOpenapiConfigMutationResult,
+  TError = UpdateOpenapiConfigError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UpdateOpenapiConfigData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UpdateOpenapiConfigData, true>, TContext>({
+    mutationKey: Common.UseUpdateOpenapiConfigKeyFn(mutationKey),
+    mutationFn: (clientOptions) => updateOpenapiConfig(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useUploadOpenapiFiles = <

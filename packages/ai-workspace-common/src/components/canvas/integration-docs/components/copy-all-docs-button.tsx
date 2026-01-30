@@ -242,7 +242,10 @@ const buildApiDocsMarkdown = (t: (key: string) => string, locale: string, canvas
 
   // Filter out internal endpoints and webhook endpoints, only show API endpoints
   const publicEndpoints = apiDocsData.endpoints.filter(
-    (endpoint) => endpoint.path.startsWith('/openapi/') && !endpoint.path.includes('/webhook/'),
+    (endpoint) =>
+      endpoint.path.startsWith('/openapi/') &&
+      !endpoint.path.includes('/webhook/') &&
+      !endpoint.path.startsWith('/openapi/config'),
   );
 
   lines.push(`# ${t('integration.api.title')}`);

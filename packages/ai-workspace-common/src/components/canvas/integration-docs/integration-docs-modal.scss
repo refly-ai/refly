@@ -164,6 +164,14 @@
   gap: 12px;
 }
 
+.integration-docs-toolbar-button-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
 // Body wrapper - contains main content and right toc
 .integration-docs-body-wrapper {
   display: flex;

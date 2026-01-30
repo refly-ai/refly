@@ -1,12 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Button, Switch, message } from 'antd';
-import {
-  AppstoreOutlined,
-  BranchesOutlined,
-  CodeOutlined,
-  CloseOutlined,
-  SlidersOutlined,
-} from '@ant-design/icons';
+import { AppstoreOutlined, BranchesOutlined, CodeOutlined, CloseOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { serverOrigin } from '@refly/ui-kit';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -18,6 +12,8 @@ import { ApiOutputModal } from './components/api-output-modal';
 import { CopyAllDocsButton } from './components/copy-all-docs-button';
 import { apiDocsData } from './data/api-docs.generated';
 import type { IntegrationType } from './types';
+import ApiKeyIcon from '../../../assets/key-01.svg';
+import OutputIcon from '../../../assets/target-04.svg';
 import './integration-docs-modal.scss';
 
 interface WebhookConfig {
@@ -55,7 +51,9 @@ export const IntegrationDocsModal = memo(
       return apiDocsData.endpoints
         .filter(
           (endpoint) =>
-            endpoint.path.startsWith('/openapi/') && !endpoint.path.includes('/webhook/'),
+            endpoint.path.startsWith('/openapi/') &&
+            !endpoint.path.includes('/webhook/') &&
+            !endpoint.path.startsWith('/openapi/config'),
         )
         .map((endpoint) => ({
           id: `api-endpoint-${endpoint.operationId || endpoint.id}`,
@@ -319,9 +317,19 @@ export const IntegrationDocsModal = memo(
                   {activeIntegration === 'api' ? (
                     <>
                       <Button type="primary" onClick={() => setApiKeyModalOpen(true)}>
+                        <img
+                          src={ApiKeyIcon}
+                          alt=""
+                          className="integration-docs-toolbar-button-icon"
+                        />
                         {t('integration.manageApiKeys')}
                       </Button>
-                      <Button icon={<SlidersOutlined />} onClick={() => setOutputModalOpen(true)}>
+                      <Button onClick={() => setOutputModalOpen(true)}>
+                        <img
+                          src={OutputIcon}
+                          alt=""
+                          className="integration-docs-toolbar-button-icon"
+                        />
                         {t('integration.outputModal.button')}
                       </Button>
                     </>

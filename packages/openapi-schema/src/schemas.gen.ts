@@ -12847,13 +12847,6 @@ export const EnableWebhookRequestSchema = {
       type: 'string',
       description: 'Canvas ID to enable webhook for',
     },
-    resultNodeIds: {
-      type: 'array',
-      items: {
-        type: 'string',
-      },
-      description: 'Optional array of result node IDs',
-    },
     timeout: {
       type: 'integer',
       default: 30,
@@ -12940,6 +12933,55 @@ export const ResetWebhookResponseSchema = {
   ],
 } as const;
 
+export const UpdateOpenapiConfigRequestSchema = {
+  type: 'object',
+  required: ['canvasId'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    resultNodeIds: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      nullable: true,
+      description: 'Output node IDs',
+    },
+  },
+} as const;
+
+export const OpenapiConfigResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            canvasId: {
+              type: 'string',
+              description: 'Canvas ID',
+            },
+            resultNodeIds: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+              nullable: true,
+              description: 'Output node IDs',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const UpdateWebhookRequestSchema = {
   type: 'object',
   required: ['webhookId'],
@@ -12951,13 +12993,6 @@ export const UpdateWebhookRequestSchema = {
     isEnabled: {
       type: 'boolean',
       description: 'Whether webhook is enabled',
-    },
-    resultNodeIds: {
-      type: 'array',
-      items: {
-        type: 'string',
-      },
-      description: 'Optional array of result node IDs',
     },
     timeout: {
       type: 'integer',
@@ -12985,13 +13020,6 @@ export const GetWebhookConfigResponseSchema = {
             isEnabled: {
               type: 'boolean',
               description: 'Whether webhook is enabled',
-            },
-            resultNodeIds: {
-              type: 'array',
-              items: {
-                type: 'string',
-              },
-              description: 'Result node IDs',
             },
             timeout: {
               type: 'integer',

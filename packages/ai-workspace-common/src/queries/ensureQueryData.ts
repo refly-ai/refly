@@ -30,6 +30,7 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
+  getOpenapiConfig,
   getPromptSuggestions,
   getResourceDetail,
   getSettings,
@@ -95,6 +96,7 @@ import {
   GetCreditUsageData,
   GetDocumentDetailData,
   GetExportJobStatusData,
+  GetOpenapiConfigData,
   GetResourceDetailData,
   GetTemplateGenerationStatusData,
   GetToolCallResultData,
@@ -423,6 +425,14 @@ export const ensureUseGetWebhookHistoryData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions),
     queryFn: () => getWebhookHistory({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetOpenapiConfigData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetOpenapiConfigData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetOpenapiConfigKeyFn(clientOptions),
+    queryFn: () => getOpenapiConfig({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetWorkflowStatusViaApiData = (
   queryClient: QueryClient,

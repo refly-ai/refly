@@ -5,7 +5,7 @@ import { PrismaService } from '../../common/prisma.service';
 
 /**
  * Guard for webhook API Key authentication
- * Validates X-Refly-Api-Key header
+ * Prefer Authorization: Bearer <API_KEY>; keep X-Refly-Api-Key for compatibility.
  */
 @Injectable()
 export class WebhookAuthGuard implements CanActivate {
@@ -17,10 +17,10 @@ export class WebhookAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request: Request = context.switchToHttp().getRequest();
 
-    // Extract API key from X-Refly-Api-Key header
+    // Extract API key from supported headers
     const apiKey = this.extractApiKeyFromRequest(request);
     if (!apiKey) {
-      throw new UnauthorizedException('Missing X-Refly-Api-Key header');
+      throw new UnauthorizedException('Missing API key (use Authorization: Bearer <API_KEY>)');
     }
 
     // Validate API key
@@ -46,12 +46,19 @@ export class WebhookAuthGuard implements CanActivate {
 
   /**
    * Extract API key from request
-   * Supports: X-Refly-Api-Key header
+   * Supports: Authorization: Bearer <API_KEY> or X-Refly-Api-Key
    */
   private extractApiKeyFromRequest(request: Request): string | undefined {
     const apiKeyHeader = request.headers?.['x-refly-api-key'];
     if (apiKeyHeader && typeof apiKeyHeader === 'string' && apiKeyHeader.startsWith('rf_')) {
       return apiKeyHeader;
+    }
+    const authHeader = request.headers?.authorization;
+    if (authHeader && typeof authHeader === 'string') {
+      const [scheme, token] = authHeader.split(' ');
+      if (scheme?.toLowerCase() === 'bearer' && token?.startsWith('rf_')) {
+        return token;
+      }
     }
     return undefined;
   }

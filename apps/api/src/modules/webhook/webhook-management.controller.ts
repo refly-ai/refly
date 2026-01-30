@@ -33,12 +33,7 @@ export class WebhookManagementController {
   async enableWebhook(@Body() dto: EnableWebhookDto, @LoginedUser() user: User) {
     this.logger.log(`[WEBHOOK_ENABLE] uid=${user.uid} canvasId=${dto.canvasId}`);
 
-    const result = await this.webhookService.enableWebhook(
-      dto.canvasId,
-      user.uid,
-      dto.resultNodeIds,
-      dto.timeout,
-    );
+    const result = await this.webhookService.enableWebhook(dto.canvasId, user.uid, dto.timeout);
 
     return buildSuccessResponse(result);
   }
@@ -85,7 +80,6 @@ export class WebhookManagementController {
 
     await this.webhookService.updateWebhook(dto.webhookId, user.uid, {
       isEnabled: dto.isEnabled,
-      resultNodeIds: dto.resultNodeIds,
       timeout: dto.timeout,
     });
 

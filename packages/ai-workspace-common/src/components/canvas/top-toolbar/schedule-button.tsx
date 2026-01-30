@@ -75,9 +75,10 @@ const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): bo
 
 interface ScheduleButtonProps {
   canvasId: string;
+  className?: string;
 }
 
-const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
+const ScheduleButton = memo(({ canvasId, className }: ScheduleButtonProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -722,16 +723,20 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
           }
           placement="top"
         >
-          <div className="flex items-center gap-2">
+          <Button
+            type="text"
+            disabled={disabled}
+            className={cn('schedule-toolbar-button', className)}
+            onClick={handleButtonClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
             <div className="relative">
               <div
                 className={cn(
                   'rounded-lg p-1.5 transition-colors flex items-center justify-center',
-                  disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-refly-tertiary-hover',
+                  disabled ? 'cursor-not-allowed' : 'cursor-pointer',
                 )}
-                onClick={handleButtonClick}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
               >
                 <LuAlarmClock
                   className={cn(
@@ -757,7 +762,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
                 </div>
               )}
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+            <span className="schedule-toolbar-text">
               {!hasLoadedInitially && isLoadingScheduleCount ? (
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
@@ -765,10 +770,10 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
                   <div className="w-2 h-3 bg-gray-300 dark:bg-gray-600 rounded" />
                 </div>
               ) : (
-                `${totalEnabledSchedules}/${scheduleQuota}`
+                `${t('schedule.title') || 'Schedule'} ${totalEnabledSchedules}/${scheduleQuota}`
               )}
             </span>
-          </div>
+          </Button>
         </Tooltip>
       </Popover>
 

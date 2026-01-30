@@ -48,6 +48,8 @@ tags:
     description: Workflow schedule management endpoints
   - name: webhook
     description: Webhook management endpoints
+  - name: openapi
+    description: OpenAPI configuration endpoints
 
 paths:
   /variable-extraction/extract:
@@ -2889,6 +2891,59 @@ paths:
           description: Webhook disabled
         '404':
           description: Webhook not found
+
+  /openapi/config:
+    get:
+      tags:
+        - openapi
+      summary: Get OpenAPI configuration for a canvas
+      description: Get OpenAPI configuration including output node settings
+      operationId: getOpenapiConfig
+      parameters:
+        - name: canvasId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Canvas ID
+      responses:
+        '200':
+          description: OpenAPI configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenapiConfigResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+      security:
+        - api_key: []
+    post:
+      tags:
+        - openapi
+      summary: Update OpenAPI configuration for a canvas
+      description: Update OpenAPI configuration including output node settings
+      operationId: updateOpenapiConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOpenapiConfigRequest'
+      responses:
+        '200':
+          description: OpenAPI configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenapiConfigResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Unauthorized
+      security:
+        - api_key: []
 
   /openapi/files/upload:
     post:
@@ -13811,11 +13866,6 @@ components:
         canvasId:
           type: string
           description: Canvas ID to enable webhook for
-        resultNodeIds:
-          type: array
-          items:
-            type: string
-          description: Optional array of result node IDs
         timeout:
           type: integer
           default: 30
@@ -13872,6 +13922,39 @@ components:
                   type: string
                   description: New webhook URL
 
+    UpdateOpenapiConfigRequest:
+      type: object
+      required:
+        - canvasId
+      properties:
+        canvasId:
+          type: string
+          description: Canvas ID
+        resultNodeIds:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Output node IDs
+
+    OpenapiConfigResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                canvasId:
+                  type: string
+                  description: Canvas ID
+                resultNodeIds:
+                  type: array
+                  items:
+                    type: string
+                  nullable: true
+                  description: Output node IDs
+
     UpdateWebhookRequest:
       type: object
       required:
@@ -13883,11 +13966,6 @@ components:
         isEnabled:
           type: boolean
           description: Whether webhook is enabled
-        resultNodeIds:
-          type: array
-          items:
-            type: string
-          description: Optional array of result node IDs
         timeout:
           type: integer
           default: 30
@@ -13907,11 +13985,6 @@ components:
                 isEnabled:
                   type: boolean
                   description: Whether webhook is enabled
-                resultNodeIds:
-                  type: array
-                  items:
-                    type: string
-                  description: Result node IDs
                 timeout:
                   type: integer
                   description: Timeout in seconds

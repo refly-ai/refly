@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-01-30T06:48:04.927Z',
+  generatedAt: '2026-01-30T08:35:33.709Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -691,13 +691,6 @@ export const apiDocsData: ApiDocsData = {
                     type: 'boolean',
                     description: 'Whether webhook is enabled',
                   },
-                  resultNodeIds: {
-                    type: 'array',
-                    description: 'Result node IDs',
-                    items: {
-                      type: 'string',
-                    },
-                  },
                   timeout: {
                     type: 'integer',
                     description: 'Timeout in seconds',
@@ -805,13 +798,6 @@ export const apiDocsData: ApiDocsData = {
             canvasId: {
               type: 'string',
               description: 'Canvas ID to enable webhook for',
-            },
-            resultNodeIds: {
-              type: 'array',
-              description: 'Optional array of result node IDs',
-              items: {
-                type: 'string',
-              },
             },
             timeout: {
               type: 'integer',
@@ -1131,13 +1117,6 @@ export const apiDocsData: ApiDocsData = {
             isEnabled: {
               type: 'boolean',
               description: 'Whether webhook is enabled',
-            },
-            resultNodeIds: {
-              type: 'array',
-              description: 'Optional array of result node IDs',
-              items: {
-                type: 'string',
-              },
             },
             timeout: {
               type: 'integer',
