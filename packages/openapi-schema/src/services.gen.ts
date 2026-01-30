@@ -345,6 +345,9 @@ import type {
   RunWorkflowViaApiData,
   RunWorkflowViaApiError,
   RunWorkflowViaApiResponse,
+  GenerateWorkflowViaCopilotData,
+  GenerateWorkflowViaCopilotError,
+  GenerateWorkflowViaCopilotResponse,
   GetWorkflowStatusViaApiData,
   GetWorkflowStatusViaApiError,
   GetWorkflowStatusViaApiResponse2,
@@ -2394,6 +2397,25 @@ export const runWorkflowViaApi = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/openapi/workflow/{canvasId}/run',
+  });
+};
+
+/**
+ * Generate workflow via Copilot
+ * Generate a workflow plan from a natural language prompt.
+ * If `canvasId` is provided, the workflow on that canvas will be overwritten and cannot be undone.
+ *
+ */
+export const generateWorkflowViaCopilot = <ThrowOnError extends boolean = false>(
+  options: Options<GenerateWorkflowViaCopilotData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GenerateWorkflowViaCopilotResponse,
+    GenerateWorkflowViaCopilotError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/copilot/workflow/generate',
   });
 };
 

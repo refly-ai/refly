@@ -10259,6 +10259,9 @@ export type OpenapiUploadedFile = {
 
 export type OpenapiFileUploadResponse = BaseResponse & {
   data?: {
+    /**
+     * Uploaded files
+     */
     files: Array<OpenapiUploadedFile>;
   };
 };
@@ -10529,22 +10532,108 @@ export type OpenapiWorkflowRunRequest = {
   [key: string]: unknown;
 };
 
+/**
+ * Copilot workflow generation request.
+ */
+export type OpenapiCopilotGenerateRequest = {
+  /**
+   * Natural language prompt describing the desired workflow (supports multiple languages).
+   */
+  query: string;
+  /**
+   * Optional canvas ID to overwrite. This will replace the existing workflow and cannot be undone.
+   */
+  canvasId?: string;
+  /**
+   * Output locale. Supported: en, zh-CN, ja, zh-Hant, fr, de-DE, ko, hi, es, ru, de, it, tr, pt, vi, id, th, ar, mn, fa.
+   */
+  locale?: string;
+};
+
+export type OpenapiCopilotGenerateResponse = BaseResponse & {
+  data?: {
+    /**
+     * Canvas/Workflow ID
+     */
+    canvasId?: string;
+    workflowPlan?: OpenapiWorkflowPlan;
+  };
+};
+
+export type OpenapiWorkflowPlan = {
+  /**
+   * Title of the workflow plan
+   */
+  title: string;
+  /**
+   * Array of workflow tasks to be executed
+   */
+  tasks: Array<WorkflowTask>;
+  /**
+   * Array of variables (aka User inputs) defined for the workflow plan
+   */
+  variables?: Array<OpenapiWorkflowVariable>;
+};
+
+/**
+ * Workflow variable definition (public fields)
+ */
+export type OpenapiWorkflowVariable = {
+  /**
+   * Variable name used in the workflow
+   */
+  name: string;
+  /**
+   * Variable type
+   */
+  variableType?: 'string' | 'option' | 'resource';
+  /**
+   * Whether the variable is required. Defaults to false.
+   */
+  required?: boolean;
+  /**
+   * Array of options (only valid when variable type is `option`)
+   */
+  options?: Array<string>;
+};
+
 export type GetWorkflowStatusViaApiResponse = BaseResponse & {
   data?: {
+    /**
+     * Workflow execution ID
+     */
     executionId?: string;
+    /**
+     * Workflow execution status
+     */
     status?: WorkflowExecutionStatus;
+    /**
+     * Node execution status list
+     */
     nodeExecutions?: Array<WorkflowNodeExecutionStatusViaApi>;
+    /**
+     * Workflow execution created time
+     */
     createdAt?: string;
   };
 };
 
 export type GetWorkflowOutputResponse = BaseResponse & {
   data?: {
+    /**
+     * Output node results
+     */
     output?: Array<
       WorkflowNodeExecutionViaApi & {
+        /**
+         * Output messages
+         */
         messages?: Array<ActionMessageViaApi>;
       }
     >;
+    /**
+     * Output files
+     */
     files?: Array<DriveFileViaApi>;
   };
 };
@@ -11888,6 +11977,14 @@ export type RunWorkflowViaApiData = {
 export type RunWorkflowViaApiResponse = RunWorkflowApiResponse;
 
 export type RunWorkflowViaApiError = unknown;
+
+export type GenerateWorkflowViaCopilotData = {
+  body: OpenapiCopilotGenerateRequest;
+};
+
+export type GenerateWorkflowViaCopilotResponse = OpenapiCopilotGenerateResponse;
+
+export type GenerateWorkflowViaCopilotError = unknown;
 
 export type GetWorkflowStatusViaApiData = {
   path: {

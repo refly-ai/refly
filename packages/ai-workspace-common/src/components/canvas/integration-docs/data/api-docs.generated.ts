@@ -2,9 +2,210 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-01-30T08:35:33.709Z',
+  generatedAt: '2026-01-30T15:17:54.377Z',
   baseUrl: '/v1',
   endpoints: [
+    {
+      id: 'post-openapi-copilot-workflow-generate',
+      method: 'POST',
+      path: '/openapi/copilot/workflow/generate',
+      operationId: 'generateWorkflowViaCopilot',
+      summary: 'Generate workflow via Copilot',
+      summaryKey: 'integration.api.openapi.copilotGenerate.summary',
+      description:
+        'Generate a workflow plan from a natural language prompt.\nIf `canvasId` is provided, the workflow on that canvas will be overwritten and cannot be undone.\n',
+      descriptionKey: 'integration.api.openapi.copilotGenerate.description',
+      tags: ['copilot'],
+      security: ['api_key'],
+      requestBody: {
+        required: true,
+        contentType: 'application/json',
+        schema: {
+          type: 'object',
+          description: 'Copilot workflow generation request.',
+          descriptionKey: 'integration.api.openapi.copilotGenerate.bodyDescription',
+          required: ['query'],
+          properties: {
+            query: {
+              type: 'string',
+              description:
+                'Natural language prompt describing the desired workflow (supports multiple languages).',
+              descriptionKey: 'integration.api.openapi.copilotGenerate.queryDescription',
+            },
+            canvasId: {
+              type: 'string',
+              description:
+                'Optional canvas ID to overwrite. This will replace the existing workflow and cannot be undone.',
+              descriptionKey: 'integration.api.openapi.copilotGenerate.canvasIdDescription',
+            },
+            locale: {
+              type: 'string',
+              description:
+                'Output locale. Supported: en, zh-CN, ja, zh-Hant, fr, de-DE, ko, hi, es, ru, de, it, tr, pt, vi, id, th, ar, mn, fa.',
+              descriptionKey: 'integration.api.openapi.copilotGenerate.localeDescription',
+            },
+          },
+        },
+        example: {
+          query: '生成一个客户反馈分析工作流',
+          locale: 'zh-CN',
+        },
+      },
+      responses: {
+        '200': {
+          description: 'Workflow generated successfully',
+          descriptionKey: 'integration.api.openapi.copilotGenerate.response200',
+          schema: {
+            type: 'object',
+            properties: {
+              success: {
+                type: 'boolean',
+                description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
+                example: true,
+              },
+              errCode: {
+                type: 'string',
+                description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
+              },
+              errMsg: {
+                type: 'string',
+                description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
+                example: 'Operation failed',
+              },
+              traceId: {
+                type: 'string',
+                description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
+              },
+              stack: {
+                type: 'string',
+                description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
+              },
+              data: {
+                type: 'object',
+                properties: {
+                  canvasId: {
+                    type: 'string',
+                    description: 'Canvas/Workflow ID',
+                    descriptionKey: 'integration.api.schema.canvasId',
+                  },
+                  workflowPlan: {
+                    type: 'object',
+                    required: ['title', 'tasks'],
+                    properties: {
+                      title: {
+                        type: 'string',
+                        description: 'Title of the workflow plan',
+                        descriptionKey: 'integration.api.schema.workflowPlanTitle',
+                      },
+                      tasks: {
+                        type: 'array',
+                        description: 'Array of workflow tasks to be executed',
+                        descriptionKey: 'integration.api.schema.workflowPlanTasks',
+                        items: {
+                          type: 'object',
+                          required: ['id', 'title', 'prompt', 'toolsets'],
+                          properties: {
+                            id: {
+                              type: 'string',
+                              description: 'Unique ID for the task',
+                              descriptionKey: 'integration.api.schema.workflowTaskId',
+                            },
+                            title: {
+                              type: 'string',
+                              description: 'Display title for the task',
+                              descriptionKey: 'integration.api.schema.workflowTaskTitle',
+                            },
+                            prompt: {
+                              type: 'string',
+                              description: 'The prompt or instruction for this task',
+                              descriptionKey: 'integration.api.schema.workflowTaskPrompt',
+                            },
+                            toolsets: {
+                              type: 'array',
+                              description: 'Toolsets selected for this task',
+                              descriptionKey: 'integration.api.schema.workflowTaskToolsets',
+                              items: {
+                                type: 'string',
+                                description: 'Toolset ID',
+                              },
+                            },
+                            dependentTasks: {
+                              type: 'array',
+                              description: 'Tasks that must be executed before this task',
+                              descriptionKey: 'integration.api.schema.workflowTaskDependentTasks',
+                              items: {
+                                type: 'string',
+                                description: 'Task ID',
+                              },
+                            },
+                          },
+                        },
+                      },
+                      variables: {
+                        type: 'array',
+                        description:
+                          'Array of variables (aka User inputs) defined for the workflow plan',
+                        descriptionKey: 'integration.api.schema.workflowPlanVariables',
+                        items: {
+                          type: 'object',
+                          description: 'Workflow variable definition (public fields)',
+                          required: ['name'],
+                          properties: {
+                            name: {
+                              type: 'string',
+                              description: 'Variable name used in the workflow',
+                              descriptionKey: 'integration.api.schema.workflowVariableName',
+                            },
+                            variableType: {
+                              type: 'string',
+                              description: 'Variable type',
+                              descriptionKey: 'integration.api.schema.workflowVariableType',
+                              enum: ['string', 'option', 'resource'],
+                            },
+                            required: {
+                              type: 'boolean',
+                              description: 'Whether the variable is required. Defaults to false.',
+                              descriptionKey: 'integration.api.schema.workflowVariableRequired',
+                            },
+                            options: {
+                              type: 'array',
+                              description:
+                                'Array of options (only valid when variable type is `option`)',
+                              descriptionKey: 'integration.api.schema.workflowVariableOptions',
+                              items: {
+                                type: 'string',
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            required: ['success'],
+          },
+        },
+        '400': {
+          description: 'Invalid request parameters',
+          descriptionKey: 'integration.api.openapi.copilotGenerate.response400',
+        },
+        '401': {
+          description: 'Unauthorized - invalid or missing API key',
+          descriptionKey: 'integration.api.openapi.copilotGenerate.response401',
+        },
+        '404': {
+          description: 'Canvas not found',
+          descriptionKey: 'integration.api.openapi.copilotGenerate.response404',
+        },
+      },
+    },
     {
       id: 'post-openapi-files-upload',
       method: 'POST',
@@ -49,24 +250,29 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
               data: {
                 type: 'object',
@@ -74,6 +280,8 @@ export const apiDocsData: ApiDocsData = {
                 properties: {
                   files: {
                     type: 'array',
+                    description: 'Uploaded files',
+                    descriptionKey: 'integration.api.schema.uploadedFiles',
                     items: {
                       type: 'object',
                       required: ['fileKey', 'fileName'],
@@ -81,10 +289,12 @@ export const apiDocsData: ApiDocsData = {
                         fileKey: {
                           type: 'string',
                           description: 'File key used as workflow variable value',
+                          descriptionKey: 'integration.api.schema.fileKey',
                         },
                         fileName: {
                           type: 'string',
                           description: 'Original file name',
+                          descriptionKey: 'integration.api.schema.fileName',
                         },
                       },
                     },
@@ -130,10 +340,12 @@ export const apiDocsData: ApiDocsData = {
           type: 'object',
           description:
             'Workflow variables as key-value pairs.\nYou can pass variables directly at the top level or wrap them under the "variables" field.\n',
+          descriptionKey: 'integration.api.schema.webhookRunBody',
           properties: {
             variables: {
               type: 'object',
               description: 'Workflow variables as key-value pairs.',
+              descriptionKey: 'integration.api.schema.webhookRunVariables',
               additionalProperties: true,
             },
           },
@@ -154,24 +366,29 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
               data: {
                 type: 'object',
@@ -179,6 +396,7 @@ export const apiDocsData: ApiDocsData = {
                   received: {
                     type: 'boolean',
                     description: 'Whether the webhook request was accepted',
+                    descriptionKey: 'integration.api.schema.webhookReceived',
                   },
                 },
               },
@@ -254,24 +472,29 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
               data: {
                 type: 'object',
@@ -279,10 +502,12 @@ export const apiDocsData: ApiDocsData = {
                   executionId: {
                     type: 'string',
                     description: 'Workflow execution ID for tracking status',
+                    descriptionKey: 'integration.api.schema.executionId',
                   },
                   status: {
                     type: 'string',
                     description: 'Initial execution status (usually "running")',
+                    descriptionKey: 'integration.api.schema.executionStatus',
                   },
                 },
               },
@@ -341,24 +566,29 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
             },
           },
@@ -405,40 +635,49 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
               data: {
                 type: 'object',
                 properties: {
                   output: {
                     type: 'array',
+                    description: 'Output node results',
+                    descriptionKey: 'integration.api.schema.output',
                     items: {
                       type: 'object',
                       properties: {
                         nodeId: {
                           type: 'string',
                           description: 'Node ID',
+                          descriptionKey: 'integration.api.schema.nodeId',
                         },
                         title: {
                           type: 'string',
                           description: 'Node title',
+                          descriptionKey: 'integration.api.schema.nodeTitle',
                         },
                         status: {
                           type: 'string',
@@ -448,19 +687,24 @@ export const apiDocsData: ApiDocsData = {
                         errorMessage: {
                           type: 'string',
                           description: 'Node error message',
+                          descriptionKey: 'integration.api.schema.nodeErrorMessage',
                         },
                         startTime: {
                           type: 'string',
                           description: 'Node execution start time',
                           format: 'date-time',
+                          descriptionKey: 'integration.api.schema.nodeStartTime',
                         },
                         endTime: {
                           type: 'string',
                           description: 'Node execution end time',
                           format: 'date-time',
+                          descriptionKey: 'integration.api.schema.nodeEndTime',
                         },
                         messages: {
                           type: 'array',
+                          description: 'Output messages',
+                          descriptionKey: 'integration.api.schema.messages',
                           items: {
                             type: 'object',
                             description: 'Simplified action message for API',
@@ -469,14 +713,17 @@ export const apiDocsData: ApiDocsData = {
                               messageId: {
                                 type: 'string',
                                 description: 'Action message ID',
+                                descriptionKey: 'integration.api.schema.messageId',
                               },
                               content: {
                                 type: 'string',
                                 description: 'Action message content',
+                                descriptionKey: 'integration.api.schema.messageContent',
                               },
                               reasoningContent: {
                                 type: 'string',
                                 description: 'Action message reasoning content',
+                                descriptionKey: 'integration.api.schema.messageReasoningContent',
                               },
                               type: {
                                 type: 'string',
@@ -492,6 +739,8 @@ export const apiDocsData: ApiDocsData = {
                   },
                   files: {
                     type: 'array',
+                    description: 'Output files',
+                    descriptionKey: 'integration.api.schema.files',
                     items: {
                       type: 'object',
                       required: ['name', 'type'],
@@ -499,18 +748,22 @@ export const apiDocsData: ApiDocsData = {
                         name: {
                           type: 'string',
                           description: 'Drive file name',
+                          descriptionKey: 'integration.api.schema.fileName',
                         },
                         type: {
                           type: 'string',
                           description: 'Drive file type',
+                          descriptionKey: 'integration.api.schema.fileType',
                         },
                         size: {
                           type: 'number',
                           description: 'Drive file size',
+                          descriptionKey: 'integration.api.schema.fileSize',
                         },
                         url: {
                           type: 'string',
                           description: 'Access URL for the file',
+                          descriptionKey: 'integration.api.schema.fileUrl',
                         },
                       },
                     },
@@ -563,30 +816,37 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
               data: {
                 type: 'object',
                 properties: {
                   executionId: {
                     type: 'string',
+                    description: 'Workflow execution ID',
+                    descriptionKey: 'integration.api.schema.executionId',
                   },
                   status: {
                     type: 'string',
@@ -594,6 +854,8 @@ export const apiDocsData: ApiDocsData = {
                   },
                   nodeExecutions: {
                     type: 'array',
+                    description: 'Node execution status list',
+                    descriptionKey: 'integration.api.schema.nodeExecutions',
                     items: {
                       type: 'object',
                       required: ['nodeId'],
@@ -601,6 +863,7 @@ export const apiDocsData: ApiDocsData = {
                         nodeId: {
                           type: 'string',
                           description: 'Node ID',
+                          descriptionKey: 'integration.api.schema.nodeId',
                         },
                         status: {
                           type: 'string',
@@ -610,13 +873,16 @@ export const apiDocsData: ApiDocsData = {
                         title: {
                           type: 'string',
                           description: 'Node title',
+                          descriptionKey: 'integration.api.schema.nodeTitle',
                         },
                       },
                     },
                   },
                   createdAt: {
                     type: 'string',
+                    description: 'Workflow execution created time',
                     format: 'date-time',
+                    descriptionKey: 'integration.api.schema.createdAt',
                   },
                 },
               },
@@ -661,24 +927,29 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
               data: {
                 type: 'object',
@@ -746,24 +1017,29 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
             },
           },
@@ -816,24 +1092,29 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
               data: {
                 type: 'object',
@@ -905,24 +1186,29 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
               data: {
                 type: 'object',
@@ -1047,24 +1333,29 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
               data: {
                 type: 'object',
@@ -1136,24 +1427,29 @@ export const apiDocsData: ApiDocsData = {
               success: {
                 type: 'boolean',
                 description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
                 example: true,
               },
               errCode: {
                 type: 'string',
                 description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
               },
               errMsg: {
                 type: 'string',
                 description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
                 example: 'Operation failed',
               },
               traceId: {
                 type: 'string',
                 description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
               },
               stack: {
                 type: 'string',
                 description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
               },
             },
           },

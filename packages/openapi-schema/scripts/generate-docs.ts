@@ -8,7 +8,13 @@ const outputPath = path.resolve(
   '../../ai-workspace-common/src/components/canvas/integration-docs/data/api-docs.generated.ts',
 );
 
-const supportedPrefixes = ['/openapi/workflow', '/openapi/webhook', '/openapi/files', '/webhook'];
+const supportedPrefixes = [
+  '/openapi/workflow',
+  '/openapi/webhook',
+  '/openapi/files',
+  '/openapi/copilot',
+  '/webhook',
+];
 const allowedMethods = new Set(['get', 'post', 'put', 'delete', 'patch']);
 
 const readSchema = () => {

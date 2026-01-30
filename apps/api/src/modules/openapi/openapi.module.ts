@@ -4,6 +4,7 @@ import { FileUploadService } from './file-upload.service';
 import { WorkflowApiController } from './controllers/workflow-api.controller';
 import { FileUploadController } from './controllers/file-upload.controller';
 import { OpenapiConfigController } from './controllers/openapi-config.controller';
+import { OpenapiCopilotController } from './controllers/openapi-copilot.controller';
 import { ApiKeyAuthGuard } from './guards/api-key-auth.guard';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { DebounceGuard } from './guards/debounce.guard';
@@ -14,6 +15,7 @@ import { DriveModule } from '../drive/drive.module';
 import { WorkflowAppModule } from '../workflow-app/workflow-app.module';
 import { CanvasModule } from '../canvas/canvas.module';
 import { MiscModule } from '../misc/misc.module';
+import { CopilotAutogenModule } from '../copilot-autogen/copilot-autogen.module';
 
 /**
  * OpenAPI Module
@@ -39,11 +41,13 @@ import { MiscModule } from '../misc/misc.module';
     MiscModule,
     WorkflowAppModule,
     CanvasModule,
+    CopilotAutogenModule,
   ],
   controllers: [
     WorkflowApiController,
     FileUploadController,
     OpenapiConfigController,
+    OpenapiCopilotController,
     // Future: AccountApiController,
     // Future: StorageApiController,
     // Future: KnowledgeApiController,

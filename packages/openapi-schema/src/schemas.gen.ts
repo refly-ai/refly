@@ -2392,18 +2392,22 @@ export const ActionMessageViaApiSchema = {
     messageId: {
       type: 'string',
       description: 'Action message ID',
+      'x-i18n-description': 'integration.api.schema.messageId',
     },
     content: {
       type: 'string',
       description: 'Action message content',
+      'x-i18n-description': 'integration.api.schema.messageContent',
     },
     reasoningContent: {
       type: 'string',
       description: 'Action message reasoning content',
+      'x-i18n-description': 'integration.api.schema.messageReasoningContent',
     },
     type: {
       $ref: '#/components/schemas/ActionMessageType',
       description: 'Action message type',
+      'x-i18n-description': 'integration.api.schema.messageType',
     },
   },
 } as const;
@@ -3443,24 +3447,29 @@ export const BaseResponseSchema = {
     success: {
       type: 'boolean',
       description: 'Whether the operation was successful',
+      'x-i18n-description': 'integration.api.baseResponse.success',
       example: true,
     },
     errCode: {
       type: 'string',
       description: 'Error code',
+      'x-i18n-description': 'integration.api.baseResponse.errCode',
     },
     errMsg: {
       type: 'string',
       description: 'Error message',
+      'x-i18n-description': 'integration.api.baseResponse.errMsg',
       example: 'Operation failed',
     },
     traceId: {
       type: 'string',
       description: 'Trace ID',
+      'x-i18n-description': 'integration.api.baseResponse.traceId',
     },
     stack: {
       type: 'string',
       description: 'Error stack (only returned in development environment)',
+      'x-i18n-description': 'integration.api.baseResponse.stack',
     },
   },
 } as const;
@@ -9596,28 +9605,34 @@ export const WorkflowNodeExecutionViaApiSchema = {
     nodeId: {
       type: 'string',
       description: 'Node ID',
+      'x-i18n-description': 'integration.api.schema.nodeId',
     },
     title: {
       type: 'string',
       description: 'Node title',
+      'x-i18n-description': 'integration.api.schema.nodeTitle',
     },
     status: {
       description: 'Node status',
+      'x-i18n-description': 'integration.api.schema.nodeStatus',
       $ref: '#/components/schemas/ActionStatus',
     },
     errorMessage: {
       type: 'string',
       description: 'Node error message',
+      'x-i18n-description': 'integration.api.schema.nodeErrorMessage',
     },
     startTime: {
       type: 'string',
       format: 'date-time',
       description: 'Node execution start time',
+      'x-i18n-description': 'integration.api.schema.nodeStartTime',
     },
     endTime: {
       type: 'string',
       format: 'date-time',
       description: 'Node execution end time',
+      'x-i18n-description': 'integration.api.schema.nodeEndTime',
     },
   },
 } as const;
@@ -9629,14 +9644,17 @@ export const WorkflowNodeExecutionStatusViaApiSchema = {
     nodeId: {
       type: 'string',
       description: 'Node ID',
+      'x-i18n-description': 'integration.api.schema.nodeId',
     },
     status: {
       description: 'Node status',
+      'x-i18n-description': 'integration.api.schema.nodeStatus',
       $ref: '#/components/schemas/ActionStatus',
     },
     title: {
       type: 'string',
       description: 'Node title',
+      'x-i18n-description': 'integration.api.schema.nodeTitle',
     },
   },
 } as const;
@@ -9721,18 +9739,22 @@ export const WorkflowTaskSchema = {
     id: {
       type: 'string',
       description: 'Unique ID for the task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskId',
     },
     title: {
       type: 'string',
       description: 'Display title for the task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskTitle',
     },
     prompt: {
       type: 'string',
       description: 'The prompt or instruction for this task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskPrompt',
     },
     toolsets: {
       type: 'array',
       description: 'Toolsets selected for this task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskToolsets',
       items: {
         type: 'string',
         description: 'Toolset ID',
@@ -9741,6 +9763,7 @@ export const WorkflowTaskSchema = {
     dependentTasks: {
       type: 'array',
       description: 'Tasks that must be executed before this task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskDependentTasks',
       items: {
         type: 'string',
         description: 'Task ID',
@@ -12747,10 +12770,12 @@ export const WebhookRunRequestSchema = {
   description: `Workflow variables as key-value pairs.
 You can pass variables directly at the top level or wrap them under the "variables" field.
 `,
+  'x-i18n-description': 'integration.api.schema.webhookRunBody',
   properties: {
     variables: {
       type: 'object',
       description: 'Workflow variables as key-value pairs.',
+      'x-i18n-description': 'integration.api.schema.webhookRunVariables',
       additionalProperties: true,
     },
   },
@@ -12771,6 +12796,7 @@ export const WebhookRunResponseSchema = {
             received: {
               type: 'boolean',
               description: 'Whether the webhook request was accepted',
+              'x-i18n-description': 'integration.api.schema.webhookReceived',
             },
           },
         },
@@ -12786,10 +12812,12 @@ export const OpenapiUploadedFileSchema = {
     fileKey: {
       type: 'string',
       description: 'File key used as workflow variable value',
+      'x-i18n-description': 'integration.api.schema.fileKey',
     },
     fileName: {
       type: 'string',
       description: 'Original file name',
+      'x-i18n-description': 'integration.api.schema.fileName',
     },
   },
 } as const;
@@ -12808,6 +12836,8 @@ export const OpenapiFileUploadResponseSchema = {
           properties: {
             files: {
               type: 'array',
+              description: 'Uploaded files',
+              'x-i18n-description': 'integration.api.schema.uploadedFiles',
               items: {
                 $ref: '#/components/schemas/OpenapiUploadedFile',
               },
@@ -13131,18 +13161,22 @@ export const DriveFileViaApiSchema = {
     name: {
       type: 'string',
       description: 'Drive file name',
+      'x-i18n-description': 'integration.api.schema.fileName',
     },
     type: {
       type: 'string',
       description: 'Drive file type',
+      'x-i18n-description': 'integration.api.schema.fileType',
     },
     size: {
       type: 'number',
       description: 'Drive file size',
+      'x-i18n-description': 'integration.api.schema.fileSize',
     },
     url: {
       type: 'string',
       description: 'Access URL for the file',
+      'x-i18n-description': 'integration.api.schema.fileUrl',
     },
   },
 } as const;
@@ -13161,10 +13195,12 @@ export const RunWorkflowApiResponseSchema = {
             executionId: {
               type: 'string',
               description: 'Workflow execution ID for tracking status',
+              'x-i18n-description': 'integration.api.schema.executionId',
             },
             status: {
               type: 'string',
               description: 'Initial execution status (usually "running")',
+              'x-i18n-description': 'integration.api.schema.executionStatus',
             },
           },
         },
@@ -13192,6 +13228,119 @@ For backward compatibility, you may also pass variables as top-level fields, but
   additionalProperties: true,
 } as const;
 
+export const OpenapiCopilotGenerateRequestSchema = {
+  type: 'object',
+  required: ['query'],
+  description: 'Copilot workflow generation request.',
+  'x-i18n-description': 'integration.api.openapi.copilotGenerate.bodyDescription',
+  properties: {
+    query: {
+      type: 'string',
+      description:
+        'Natural language prompt describing the desired workflow (supports multiple languages).',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.queryDescription',
+    },
+    canvasId: {
+      type: 'string',
+      description:
+        'Optional canvas ID to overwrite. This will replace the existing workflow and cannot be undone.',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.canvasIdDescription',
+    },
+    locale: {
+      type: 'string',
+      description:
+        'Output locale. Supported: en, zh-CN, ja, zh-Hant, fr, de-DE, ko, hi, es, ru, de, it, tr, pt, vi, id, th, ar, mn, fa.',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.localeDescription',
+    },
+  },
+} as const;
+
+export const OpenapiCopilotGenerateResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            canvasId: {
+              type: 'string',
+              description: 'Canvas/Workflow ID',
+              'x-i18n-description': 'integration.api.schema.canvasId',
+            },
+            workflowPlan: {
+              $ref: '#/components/schemas/OpenapiWorkflowPlan',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiWorkflowPlanSchema = {
+  type: 'object',
+  required: ['title', 'tasks'],
+  properties: {
+    title: {
+      type: 'string',
+      description: 'Title of the workflow plan',
+      'x-i18n-description': 'integration.api.schema.workflowPlanTitle',
+    },
+    tasks: {
+      type: 'array',
+      description: 'Array of workflow tasks to be executed',
+      'x-i18n-description': 'integration.api.schema.workflowPlanTasks',
+      items: {
+        $ref: '#/components/schemas/WorkflowTask',
+      },
+    },
+    variables: {
+      type: 'array',
+      description: 'Array of variables (aka User inputs) defined for the workflow plan',
+      'x-i18n-description': 'integration.api.schema.workflowPlanVariables',
+      items: {
+        $ref: '#/components/schemas/OpenapiWorkflowVariable',
+      },
+    },
+  },
+} as const;
+
+export const OpenapiWorkflowVariableSchema = {
+  type: 'object',
+  description: 'Workflow variable definition (public fields)',
+  required: ['name'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Variable name used in the workflow',
+      'x-i18n-description': 'integration.api.schema.workflowVariableName',
+    },
+    variableType: {
+      type: 'string',
+      description: 'Variable type',
+      'x-i18n-description': 'integration.api.schema.workflowVariableType',
+      enum: ['string', 'option', 'resource'],
+    },
+    required: {
+      type: 'boolean',
+      description: 'Whether the variable is required. Defaults to false.',
+      'x-i18n-description': 'integration.api.schema.workflowVariableRequired',
+    },
+    options: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'Array of options (only valid when variable type is `option`)',
+      'x-i18n-description': 'integration.api.schema.workflowVariableOptions',
+    },
+  },
+} as const;
+
 export const GetWorkflowStatusViaApiResponseSchema = {
   allOf: [
     {
@@ -13205,12 +13354,18 @@ export const GetWorkflowStatusViaApiResponseSchema = {
           properties: {
             executionId: {
               type: 'string',
+              description: 'Workflow execution ID',
+              'x-i18n-description': 'integration.api.schema.executionId',
             },
             status: {
               $ref: '#/components/schemas/WorkflowExecutionStatus',
+              description: 'Workflow execution status',
+              'x-i18n-description': 'integration.api.schema.executionStatus',
             },
             nodeExecutions: {
               type: 'array',
+              description: 'Node execution status list',
+              'x-i18n-description': 'integration.api.schema.nodeExecutions',
               items: {
                 $ref: '#/components/schemas/WorkflowNodeExecutionStatusViaApi',
               },
@@ -13218,6 +13373,8 @@ export const GetWorkflowStatusViaApiResponseSchema = {
             createdAt: {
               type: 'string',
               format: 'date-time',
+              description: 'Workflow execution created time',
+              'x-i18n-description': 'integration.api.schema.createdAt',
             },
           },
         },
@@ -13239,6 +13396,8 @@ export const GetWorkflowOutputResponseSchema = {
           properties: {
             output: {
               type: 'array',
+              description: 'Output node results',
+              'x-i18n-description': 'integration.api.schema.output',
               items: {
                 allOf: [
                   {
@@ -13249,6 +13408,8 @@ export const GetWorkflowOutputResponseSchema = {
                     properties: {
                       messages: {
                         type: 'array',
+                        description: 'Output messages',
+                        'x-i18n-description': 'integration.api.schema.messages',
                         items: {
                           $ref: '#/components/schemas/ActionMessageViaApi',
                         },
@@ -13260,6 +13421,8 @@ export const GetWorkflowOutputResponseSchema = {
             },
             files: {
               type: 'array',
+              description: 'Output files',
+              'x-i18n-description': 'integration.api.schema.files',
               items: {
                 $ref: '#/components/schemas/DriveFileViaApi',
               },
