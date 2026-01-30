@@ -153,11 +153,14 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, hideLogoButton,
             <>
               {/* <ShareSettings canvasId={canvasId} canvasTitle={canvasTitle} /> */}
               <div className="top-toolbar-button-group">
-                <ScheduleButton canvasId={canvasId} className="top-toolbar-group-button" />
+                <ScheduleButton
+                  canvasId={canvasId}
+                  className="top-toolbar-group-button top-toolbar-group-button-schedule"
+                />
                 <span className="top-toolbar-button-divider" />
                 <IntegrationDocsButton
                   canvasId={canvasId}
-                  buttonClassName="top-toolbar-group-button"
+                  buttonClassName="top-toolbar-group-button top-toolbar-group-button-integration"
                   buttonType="text"
                 />
               </div>

@@ -158,6 +158,14 @@
   cursor: pointer;
 }
 
+.top-toolbar-group-button-schedule {
+  flex: 1.2;
+}
+
+.top-toolbar-group-button-integration {
+  flex: 0.8;
+}
+
 .top-toolbar-group-button.ant-btn {
   border-radius: 0;
 }
@@ -165,6 +173,23 @@
 .schedule-toolbar-text {
   color: inherit;
   font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-toolbar-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.schedule-toolbar-icon {
+  width: 14px;
+  height: 14px;
+  color: currentColor;
 }
 
 .top-toolbar-button-divider {
@@ -183,7 +208,7 @@
 }
 
 .integration-docs-button-icon {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   display: inline-block;
 }
