@@ -7,7 +7,7 @@ import { DebounceGuard } from '../guards/debounce.guard';
 import { LoginedUser } from '../../../utils/decorators/user.decorator';
 import { User } from '@prisma/client';
 import { buildSuccessResponse } from '../../../utils/response';
-import { workflowExecutionPO2DTO } from '../types/request.types';
+import { workflowExecutionStatusPO2DTO } from '../types/request.types';
 
 /**
  * Controller for Workflow API endpoints
@@ -36,29 +36,35 @@ export class WorkflowApiController {
   ) {
     this.logger.log(`[API_TRIGGER] uid=${user.uid} canvasId=${canvasId}`);
 
-    const result = await this.openapiService.runWorkflow(canvasId, user.uid, body);
+    const payload =
+      body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, any>) : {};
+    const variables =
+      payload.variables &&
+      typeof payload.variables === 'object' &&
+      !Array.isArray(payload.variables)
+        ? (payload.variables as Record<string, any>)
+        : payload;
+    const result = await this.openapiService.runWorkflow(canvasId, user.uid, variables);
 
     return buildSuccessResponse(result);
   }
 
   /**
-   * Get workflow execution detail via API (requires API Key authentication)
-   * GET /v1/openapi/workflow/:executionId/detail
-   *
-   * Returns workflow execution detail with node executions
+   * Get workflow execution status via API (requires API Key authentication)
+   * GET /v1/openapi/workflow/:executionId/status
    */
-  @Get(':executionId/detail')
+  @Get(':executionId/status')
   @UseGuards(ApiKeyAuthGuard, RateLimitGuard)
-  @ApiOperation({ summary: 'Get workflow execution detail via API' })
-  async getWorkflowDetail(@Param('executionId') executionId: string, @LoginedUser() user: User) {
-    this.logger.log(`[API_GET_DETAIL] uid=${user.uid} executionId=${executionId}`);
+  @ApiOperation({ summary: 'Get workflow execution status via API' })
+  async getWorkflowStatus(@Param('executionId') executionId: string, @LoginedUser() user: User) {
+    this.logger.log(`[API_GET_STATUS] uid=${user.uid} executionId=${executionId}`);
 
-    const workflowDetail = await this.openapiService.getWorkflowDetail(
+    const workflowStatus = await this.openapiService.getWorkflowStatus(
       { uid: user.uid },
       executionId,
     );
 
-    return buildSuccessResponse(workflowExecutionPO2DTO(workflowDetail));
+    return buildSuccessResponse(workflowExecutionStatusPO2DTO(workflowStatus));
   }
 
   @Get(':executionId/output')
@@ -70,5 +76,16 @@ export class WorkflowApiController {
     const output = await this.openapiService.getWorkflowOutput({ uid: user.uid }, executionId);
 
     return buildSuccessResponse(output);
+  }
+
+  @Post(':executionId/abort')
+  @UseGuards(ApiKeyAuthGuard, RateLimitGuard)
+  @ApiOperation({ summary: 'Abort workflow execution via API' })
+  async abortWorkflow(@Param('executionId') executionId: string, @LoginedUser() user: User) {
+    this.logger.log(`[API_ABORT] uid=${user.uid} executionId=${executionId}`);
+
+    await this.openapiService.abortWorkflow(user, executionId);
+
+    return buildSuccessResponse(null);
   }
 }

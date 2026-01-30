@@ -5,7 +5,16 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { Copy } from 'refly-icons';
 import { apiDocsData } from '../data/api-docs.generated';
 import type { ApiEndpoint, IntegrationType } from '../types';
-import { generateCodeExamples, generateExampleFromSchema, getApiBaseUrl } from '../utils';
+import {
+  extractRequestBodyFields,
+  extractSchemaFields,
+  buildWorkflowVariablesExample,
+  buildMultipartFormExample,
+  generateBestPracticesExamples,
+  generateCodeExamples,
+  generateExampleFromSchema,
+  getApiBaseUrl,
+} from '../utils';
 
 interface CopyAllDocsButtonProps {
   activeIntegration: IntegrationType;
@@ -21,6 +30,23 @@ const toMarkdownTable = (headers: string[], rows: string[][]) => {
   return [headerLine, divider, ...rowLines].join('\n');
 };
 
+const toPythonLiteral = (value: unknown): string => {
+  if (value === null || value === undefined) return 'None';
+  if (typeof value === 'string') return `'${value.replace(/'/g, "\\'")}'`;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return value ? 'True' : 'False';
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => toPythonLiteral(item)).join(', ')}]`;
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).map(
+      ([key, item]) => `${toPythonLiteral(key)}: ${toPythonLiteral(item)}`,
+    );
+    return `{${entries.join(', ')}}`;
+  }
+  return `'${String(value).replace(/'/g, "\\'")}'`;
+};
+
 const buildEndpointMarkdown = (
   endpoint: ApiEndpoint,
   baseUrl: string,
@@ -28,11 +54,16 @@ const buildEndpointMarkdown = (
   pathParams?: Record<string, string>,
 ) => {
   const lines: string[] = [];
-  lines.push(`### ${endpoint.summary || endpoint.operationId}`);
+  lines.push(
+    `### ${endpoint.summaryKey ? t(endpoint.summaryKey) : endpoint.summary || endpoint.operationId}`,
+  );
   lines.push(`**${endpoint.method}** \`${endpoint.path}\``);
-  if (endpoint.description) {
+  const endpointDescription = endpoint.descriptionKey
+    ? t(endpoint.descriptionKey)
+    : endpoint.description;
+  if (endpointDescription) {
     lines.push('');
-    lines.push(endpoint.description);
+    lines.push(endpointDescription);
   }
 
   lines.push('');
@@ -43,7 +74,7 @@ const buildEndpointMarkdown = (
       param.in,
       param.type,
       param.required ? t('common.yes') : t('common.no'),
-      param.description || '-',
+      param.descriptionKey ? t(param.descriptionKey) : param.description || '-',
     ]);
     lines.push(
       toMarkdownTable(
@@ -63,12 +94,63 @@ const buildEndpointMarkdown = (
 
   lines.push('');
   lines.push(`#### ${t('integration.api.requestBodyTitle')}`);
-  const requestExample =
-    endpoint.requestBody?.example ?? generateExampleFromSchema(endpoint.requestBody?.schema);
-  if (requestExample !== null && requestExample !== undefined) {
-    lines.push('```json');
-    lines.push(JSON.stringify(requestExample, null, 2));
-    lines.push('```');
+  if (endpoint.requestBody) {
+    const bodyDescription = endpoint.requestBody.schema?.descriptionKey
+      ? t(endpoint.requestBody.schema.descriptionKey)
+      : endpoint.requestBody.schema?.description;
+    if (bodyDescription) {
+      lines.push(bodyDescription);
+      lines.push('');
+    }
+    const requestFields = extractRequestBodyFields(endpoint.requestBody.schema, {
+      wildcard: {
+        name: t('integration.api.requestBodyWildcardName'),
+        type: t('integration.api.requestBodyWildcardType'),
+        description: t('integration.api.requestBodyWildcardDescription'),
+      },
+    });
+    lines.push(`##### ${t('integration.api.requestBodyFieldsTitle')}`);
+    if (requestFields.length) {
+      lines.push(
+        toMarkdownTable(
+          [
+            t('integration.api.paramName'),
+            t('integration.api.paramType'),
+            t('integration.api.paramRequired'),
+            t('integration.api.paramDescription'),
+          ],
+          requestFields.map((field) => [
+            `\`${field.name}\``,
+            field.type,
+            field.required ? t('common.yes') : t('common.no'),
+            field.descriptionKey ? t(field.descriptionKey) : field.description || '-',
+          ]),
+        ),
+      );
+    } else {
+      lines.push(t('integration.api.noRequestBodyFields'));
+    }
+    lines.push('');
+    lines.push(`##### ${t('integration.api.requestBodyExampleTitle')}`);
+    const requestExample =
+      endpoint.requestBody?.example ?? generateExampleFromSchema(endpoint.requestBody?.schema);
+    const isMultipart = endpoint.requestBody?.contentType?.startsWith('multipart/');
+    if (isMultipart) {
+      const multipartExample = buildMultipartFormExample(endpoint.requestBody?.schema);
+      if (multipartExample) {
+        lines.push('```text');
+        lines.push(multipartExample);
+        lines.push('```');
+      } else {
+        lines.push(t('integration.api.noRequestBody'));
+      }
+    } else if (requestExample !== null && requestExample !== undefined) {
+      lines.push('```json');
+      lines.push(JSON.stringify(requestExample, null, 2));
+      lines.push('```');
+    } else {
+      lines.push(t('integration.api.noRequestBody'));
+    }
   } else {
     lines.push(t('integration.api.noRequestBody'));
   }
@@ -77,7 +159,7 @@ const buildEndpointMarkdown = (
   lines.push(`#### ${t('integration.api.responsesTitle')}`);
   const responseRows = Object.entries(endpoint.responses || {}).map(([status, response]) => [
     `\`${status}\``,
-    response.description || '-',
+    response.descriptionKey ? t(response.descriptionKey) : response.description || '-',
   ]);
   if (responseRows.length) {
     lines.push(
@@ -88,6 +170,37 @@ const buildEndpointMarkdown = (
     );
   } else {
     lines.push(t('integration.api.noResponses'));
+  }
+
+  const responseFieldLines = Object.entries(endpoint.responses || {}).map(([status, response]) => {
+    const fields = extractSchemaFields(response.schema);
+    if (!fields.length) return null;
+    const rows = fields.map((field) => [
+      `\`${field.name}\``,
+      field.type,
+      field.required ? t('common.yes') : t('common.no'),
+      field.descriptionKey ? t(field.descriptionKey) : field.description || '-',
+    ]);
+    return [
+      '',
+      `##### ${t('integration.api.responseFieldsTitle')} (${status})`,
+      toMarkdownTable(
+        [
+          t('integration.api.paramName'),
+          t('integration.api.paramType'),
+          t('integration.api.paramRequired'),
+          t('integration.api.paramDescription'),
+        ],
+        rows,
+      ),
+    ].join('\n');
+  });
+
+  if (responseFieldLines.some(Boolean)) {
+    lines.push(...responseFieldLines.filter(Boolean));
+  } else {
+    lines.push('');
+    lines.push(t('integration.api.noResponseFields'));
   }
 
   for (const [status, response] of Object.entries(endpoint.responses || {})) {
@@ -116,10 +229,16 @@ const buildEndpointMarkdown = (
   return lines.join('\n');
 };
 
-const buildApiDocsMarkdown = (t: (key: string) => string, canvasId: string) => {
+const buildApiDocsMarkdown = (t: (key: string) => string, locale: string, canvasId: string) => {
   const lines: string[] = [];
   const baseUrl = getApiBaseUrl(apiDocsData.baseUrl);
   const pathParams = { canvasId };
+  const resolveText = (fallback: string, i18nMap?: Record<string, string>) => {
+    if (!i18nMap) return fallback;
+    const normalized =
+      locale.startsWith('zh') && i18nMap['zh-Hans'] ? 'zh-Hans' : locale.split('-')[0];
+    return i18nMap[locale] ?? i18nMap[normalized] ?? fallback;
+  };
 
   // Filter out internal endpoints and webhook endpoints, only show API endpoints
   const publicEndpoints = apiDocsData.endpoints.filter(
@@ -132,6 +251,26 @@ const buildApiDocsMarkdown = (t: (key: string) => string, canvasId: string) => {
   lines.push('');
   lines.push(`## ${t('integration.api.overviewTitle')}`);
   lines.push(t('integration.api.overviewDescription'));
+  lines.push('');
+  lines.push(`## ${t('integration.api.bestPracticesTitle')}`);
+  lines.push(t('integration.api.bestPracticesDescription'));
+  lines.push('');
+  lines.push(`### ${t('integration.api.bestPracticesExamplesTitle')}`);
+  const bestPracticeExamples = generateBestPracticesExamples(baseUrl, canvasId, 'YOUR_API_KEY', {
+    upload: t('integration.api.bestPracticesCommentUpload'),
+    run: t('integration.api.bestPracticesCommentRun'),
+    poll: t('integration.api.bestPracticesCommentPoll'),
+    output: t('integration.api.bestPracticesCommentOutput'),
+  });
+  lines.push('```bash');
+  lines.push(bestPracticeExamples.curl);
+  lines.push('```');
+  lines.push('```python');
+  lines.push(bestPracticeExamples.python);
+  lines.push('```');
+  lines.push('```javascript');
+  lines.push(bestPracticeExamples.javascript);
+  lines.push('```');
   lines.push('');
   lines.push(`## ${t('integration.api.endpointsTitle')}`);
 
@@ -154,9 +293,9 @@ const buildApiDocsMarkdown = (t: (key: string) => string, canvasId: string) => {
       ],
       apiDocsData.errorCodes.map((error) => [
         `\`${error.code}\``,
-        String(error.httpStatus),
-        error.message,
-        error.description,
+        error.httpStatus === null ? '-' : String(error.httpStatus),
+        resolveText(error.message, error.messageI18n),
+        resolveText(error.description, error.descriptionI18n),
       ]),
     ),
   );
@@ -168,6 +307,7 @@ const buildWebhookDocsMarkdown = async (canvasId: string, t: (key: string) => st
   const lines: string[] = [];
   let webhookUrl = 'https://api.refly.ai/v1/openapi/webhook/YOUR_WEBHOOK_ID/run';
   let isEnabled = false;
+  let variableExample: Record<string, unknown> = { variable1: 'value1', variable2: 'value2' };
 
   try {
     const response = await getClient().getWebhookConfig({ query: { canvasId } });
@@ -179,6 +319,16 @@ const buildWebhookDocsMarkdown = async (canvasId: string, t: (key: string) => st
     }
   } catch (error) {
     console.error('Failed to fetch webhook config:', error);
+  }
+
+  try {
+    const variablesResponse = await getClient().getWorkflowVariables({ query: { canvasId } });
+    const variables = variablesResponse.data?.data;
+    if (Array.isArray(variables) && variables.length) {
+      variableExample = buildWorkflowVariablesExample(variables);
+    }
+  } catch (error) {
+    console.error('Failed to fetch webhook variables:', error);
   }
 
   lines.push(`# ${t('webhook.docsTitle')}`);
@@ -193,9 +343,11 @@ const buildWebhookDocsMarkdown = async (canvasId: string, t: (key: string) => st
   lines.push('');
   lines.push(`## ${t('webhook.examples')}`);
 
-  const curlExample = `curl -X POST ${webhookUrl} \\\n  -H "Content-Type: application/json" \\\n  -d '{"variable1": "value1", "variable2": "value2"}'`;
-  const pythonExample = `import requests\n\nurl = "${webhookUrl}"\ndata = {"variable1": "value1", "variable2": "value2"}\nresponse = requests.post(url, json=data)\nprint(response.json())`;
-  const javascriptExample = `fetch('${webhookUrl}', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify({ variable1: 'value1', variable2: 'value2' })\n})\n.then(res => res.json())\n.then(data => console.log(data));`;
+  const payload = { variables: variableExample };
+  const payloadJson = JSON.stringify(payload, null, 2);
+  const curlExample = `curl -X POST ${webhookUrl} \\\n  -H "Content-Type: application/json" \\\n  -d '${payloadJson.replace(/'/g, "\\'")}'`;
+  const pythonExample = `import requests\n\nurl = "${webhookUrl}"\ndata = ${toPythonLiteral(payload)}\nresponse = requests.post(url, json=data)\nprint(response.json())`;
+  const javascriptExample = `fetch('${webhookUrl}', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify(${payloadJson})\n})\n.then(res => res.json())\n.then(data => console.log(data));`;
 
   lines.push('```bash');
   lines.push(curlExample);
@@ -221,7 +373,7 @@ const buildSkillDocsMarkdown = (t: (key: string) => string) => {
 };
 
 export const CopyAllDocsButton = memo(({ activeIntegration, canvasId }: CopyAllDocsButtonProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const handleCopy = async () => {
@@ -229,7 +381,7 @@ export const CopyAllDocsButton = memo(({ activeIntegration, canvasId }: CopyAllD
     try {
       let markdown = '';
       if (activeIntegration === 'api') {
-        markdown = buildApiDocsMarkdown(t, canvasId);
+        markdown = buildApiDocsMarkdown(t, i18n.language, canvasId);
       } else if (activeIntegration === 'webhook') {
         markdown = await buildWebhookDocsMarkdown(canvasId, t);
       } else {

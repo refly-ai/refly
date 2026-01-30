@@ -2208,10 +2208,6 @@ export type ActionMessageViaApi = {
    * Action message type
    */
   type: ActionMessageType;
-  /**
-   * Tool call result (if applicable)
-   */
-  toolCallResult?: ToolCallResultViaApi;
 };
 
 /**
@@ -7684,6 +7680,21 @@ export type WorkflowNodeExecutionViaApi = {
   endTime?: string;
 };
 
+export type WorkflowNodeExecutionStatusViaApi = {
+  /**
+   * Node ID
+   */
+  nodeId: string;
+  /**
+   * Node status
+   */
+  status?: ActionStatus;
+  /**
+   * Node title
+   */
+  title?: string;
+};
+
 export type WorkflowExecutionStatus = 'init' | 'executing' | 'finish' | 'failed';
 
 export const WorkflowExecutionStatus = {
@@ -10212,9 +10223,17 @@ export type TriggerVoucherResponse = BaseResponse & {
 };
 
 /**
- * Workflow variables as key-value pairs
+ * Workflow variables as key-value pairs.
+ * You can pass variables directly at the top level or wrap them under the "variables" field.
+ *
  */
 export type WebhookRunRequest = {
+  /**
+   * Workflow variables as key-value pairs.
+   */
+  variables?: {
+    [key: string]: unknown;
+  };
   [key: string]: unknown;
 };
 
@@ -10432,14 +10451,6 @@ export type WebhookCallRecord = {
 
 export type DriveFileViaApi = {
   /**
-   * Drive file ID
-   */
-  fileId: string;
-  /**
-   * Canvas ID
-   */
-  canvasId: string;
-  /**
    * Drive file name
    */
   name: string;
@@ -10451,10 +10462,6 @@ export type DriveFileViaApi = {
    * Drive file size
    */
   size?: number;
-  /**
-   * Drive file creation timestamp
-   */
-  createdAt?: string;
   /**
    * Access URL for the file
    */
@@ -10474,25 +10481,40 @@ export type RunWorkflowApiResponse = BaseResponse & {
   };
 };
 
-export type GetWorkflowDetailViaApiResponse = BaseResponse & {
+/**
+ * Wrap workflow variables under the "variables" field.
+ * Each key in variables is a workflow variable name. Values can be strings, numbers, booleans, objects, or arrays.
+ * For file variables, pass fileKey (or an array of fileKey) returned by /openapi/files/upload.
+ * For backward compatibility, you may also pass variables as top-level fields, but "variables" is recommended.
+ *
+ */
+export type OpenapiWorkflowRunRequest = {
+  /**
+   * Workflow variables as key-value pairs.
+   */
+  variables?: {
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+export type GetWorkflowStatusViaApiResponse = BaseResponse & {
   data?: {
     executionId?: string;
-    canvasId?: string;
-    title?: string;
     status?: WorkflowExecutionStatus;
-    nodeExecutions?: Array<WorkflowNodeExecutionViaApi>;
+    nodeExecutions?: Array<WorkflowNodeExecutionStatusViaApi>;
     createdAt?: string;
   };
 };
 
 export type GetWorkflowOutputResponse = BaseResponse & {
   data?: {
-    products?: Array<
+    output?: Array<
       WorkflowNodeExecutionViaApi & {
         messages?: Array<ActionMessageViaApi>;
       }
     >;
-    driveFiles?: Array<DriveFileViaApi>;
+    files?: Array<DriveFileViaApi>;
   };
 };
 
@@ -11794,9 +11816,7 @@ export type UploadOpenapiFilesResponse = OpenapiFileUploadResponse;
 export type UploadOpenapiFilesError = unknown;
 
 export type RunWorkflowViaApiData = {
-  body: {
-    [key: string]: unknown;
-  };
+  body: OpenapiWorkflowRunRequest;
   path: {
     /**
      * Canvas/Workflow ID
@@ -11809,7 +11829,7 @@ export type RunWorkflowViaApiResponse = RunWorkflowApiResponse;
 
 export type RunWorkflowViaApiError = unknown;
 
-export type GetWorkflowDetailViaApiData = {
+export type GetWorkflowStatusViaApiData = {
   path: {
     /**
      * Workflow execution ID
@@ -11818,9 +11838,9 @@ export type GetWorkflowDetailViaApiData = {
   };
 };
 
-export type GetWorkflowDetailViaApiResponse2 = GetWorkflowDetailViaApiResponse;
+export type GetWorkflowStatusViaApiResponse2 = GetWorkflowStatusViaApiResponse;
 
-export type GetWorkflowDetailViaApiError = unknown;
+export type GetWorkflowStatusViaApiError = unknown;
 
 export type GetWorkflowOutputData = {
   path: {
@@ -11834,6 +11854,19 @@ export type GetWorkflowOutputData = {
 export type GetWorkflowOutputResponse2 = GetWorkflowOutputResponse;
 
 export type GetWorkflowOutputError = unknown;
+
+export type AbortWorkflowViaApiData = {
+  path: {
+    /**
+     * Workflow execution ID
+     */
+    executionId: string;
+  };
+};
+
+export type AbortWorkflowViaApiResponse = BaseResponse;
+
+export type AbortWorkflowViaApiError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 

@@ -8,7 +8,7 @@ const outputPath = path.resolve(
   '../../ai-workspace-common/src/components/canvas/integration-docs/data/api-docs.generated.ts',
 );
 
-const supportedPrefixes = ['/openapi/workflow', '/openapi/webhook', '/webhook'];
+const supportedPrefixes = ['/openapi/workflow', '/openapi/webhook', '/openapi/files', '/webhook'];
 const allowedMethods = new Set(['get', 'post', 'put', 'delete', 'patch']);
 
 const readSchema = () => {
@@ -42,6 +42,9 @@ const mergeSchemas = (schemas: any[]) => {
     if (schema?.description && !merged.description) {
       merged.description = schema.description;
     }
+    if (schema?.descriptionKey && !merged.descriptionKey) {
+      merged.descriptionKey = schema.descriptionKey;
+    }
     if (schema?.example && !merged.example) {
       merged.example = schema.example;
     }
@@ -72,6 +75,9 @@ const derefSchema = (schemaNode: any, schema: Record<string, any>): any => {
   };
 
   if (schemaNode.description) normalized.description = schemaNode.description;
+  if (schemaNode.format) normalized.format = schemaNode.format;
+  if (schemaNode['x-i18n-description'])
+    normalized.descriptionKey = schemaNode['x-i18n-description'];
   if (schemaNode.example !== undefined) normalized.example = schemaNode.example;
   if (schemaNode.enum) normalized.enum = schemaNode.enum;
   if (schemaNode.required) normalized.required = schemaNode.required;
@@ -127,12 +133,14 @@ const buildDocs = (schema: Record<string, any>) => {
       ];
       const normalizedParams = parameters.map((param) => {
         const paramSchema = derefSchema(param.schema || {}, schema) || {};
+        const descriptionKey = param['x-i18n-description'] || paramSchema.descriptionKey;
         return {
           name: param.name,
           in: param.in,
           required: !!param.required,
           type: paramSchema.type || 'string',
           description: param.description || '',
+          ...(descriptionKey ? { descriptionKey } : {}),
           example: param.example ?? paramSchema.example,
         };
       });
@@ -168,8 +176,10 @@ const buildDocs = (schema: Record<string, any>) => {
             )
           : null;
         const responseExample = responseContent ? extractExample(responseContent) : null;
+        const responseDescriptionKey = (response as any)['x-i18n-description'];
         responses[status] = {
           description: (response as any).description || '',
+          ...(responseDescriptionKey ? { descriptionKey: responseDescriptionKey } : {}),
           ...(responseSchema ? { schema: responseSchema } : {}),
           ...(responseExample !== null ? { example: responseExample } : {}),
         };
@@ -185,7 +195,9 @@ const buildDocs = (schema: Record<string, any>) => {
         path: endpointPath,
         operationId: op.operationId || '',
         summary: op.summary || '',
+        ...(op['x-i18n-summary'] ? { summaryKey: op['x-i18n-summary'] } : {}),
         description: op.description || '',
+        ...(op['x-i18n-description'] ? { descriptionKey: op['x-i18n-description'] } : {}),
         tags: op.tags || [],
         security,
         ...(normalizedParams.length ? { parameters: normalizedParams } : {}),
@@ -197,46 +209,140 @@ const buildDocs = (schema: Record<string, any>) => {
 
   endpoints.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
 
-  const errorCodes = [
+  const webhookErrorCodes = [
     {
       code: 'WEBHOOK_NOT_FOUND',
       httpStatus: 404,
       message: 'Webhook not found',
+      messageI18n: { 'zh-Hans': 'Webhook 不存在' },
       description: 'Webhook does not exist or has been deleted.',
+      descriptionI18n: { 'zh-Hans': 'Webhook 不存在或已被删除。' },
     },
     {
       code: 'WEBHOOK_DISABLED',
       httpStatus: 403,
       message: 'Webhook disabled',
+      messageI18n: { 'zh-Hans': 'Webhook 已停用' },
       description: 'Webhook is disabled and cannot be triggered.',
+      descriptionI18n: { 'zh-Hans': 'Webhook 已停用，无法触发执行。' },
     },
     {
       code: 'WEBHOOK_RATE_LIMITED',
       httpStatus: 429,
       message: 'Webhook rate limited',
+      messageI18n: { 'zh-Hans': 'Webhook 请求限流' },
       description: 'Request rate exceeds the limit.',
+      descriptionI18n: { 'zh-Hans': '请求速率超过限制。' },
     },
     {
       code: 'INVALID_REQUEST_BODY',
       httpStatus: 400,
       message: 'Invalid request body',
+      messageI18n: { 'zh-Hans': '请求体非法' },
       description: 'Request body format is invalid.',
+      descriptionI18n: { 'zh-Hans': '请求体格式不正确。' },
     },
     {
       code: 'CANVAS_NOT_FOUND',
       httpStatus: 404,
       message: 'Canvas not found',
+      messageI18n: { 'zh-Hans': '画布不存在' },
       description: 'Associated canvas cannot be found.',
+      descriptionI18n: { 'zh-Hans': '关联画布不存在。' },
     },
     {
       code: 'INSUFFICIENT_CREDITS',
       httpStatus: 402,
       message: 'Insufficient credits',
+      messageI18n: { 'zh-Hans': '积分不足' },
       description: 'Insufficient credits for this operation.',
+      descriptionI18n: { 'zh-Hans': '当前操作所需积分不足。' },
     },
   ];
 
+  const errorCodes = mergeErrorCodes(webhookErrorCodes, loadErrorCodes());
+
   return { endpoints, errorCodes };
+};
+
+const loadErrorCodes = () => {
+  const errorFilePath = path.resolve(__dirname, '../../errors/src/errors.ts');
+  if (!fs.existsSync(errorFilePath)) {
+    return [];
+  }
+
+  const content = fs.readFileSync(errorFilePath, 'utf8');
+  const classRegex = /export class\s+\w+\s+extends\s+BaseError\s*{([\s\S]*?)^}/gm;
+  const results: Array<{
+    code: string;
+    httpStatus: number | null;
+    message: string;
+    messageI18n?: Record<string, string>;
+    description: string;
+    descriptionI18n?: Record<string, string>;
+  }> = [];
+
+  let match: RegExpExecArray | null;
+  while ((match = classRegex.exec(content)) !== null) {
+    const body = match[1];
+    const codeMatch = body.match(/code\s*=\s*['"]([^'"]+)['"]/);
+    if (!codeMatch) continue;
+    const code = codeMatch[1];
+    const dictMatch = body.match(/messageDict\s*=\s*{([\s\S]*?)}/);
+    if (!dictMatch) continue;
+    const dictBody = dictMatch[1];
+    const enMatch = dictBody.match(/en\s*:\s*['"]([^'"]+)['"]/);
+    const zhMatch = dictBody.match(/['"]zh-CN['"]\s*:\s*['"]([^'"]+)['"]/);
+    const message = enMatch?.[1] ?? '';
+    const zhMessage = zhMatch?.[1] ?? '';
+    results.push({
+      code,
+      httpStatus: null,
+      message,
+      messageI18n: zhMessage ? { 'zh-Hans': zhMessage } : undefined,
+      description: message,
+      descriptionI18n: zhMessage ? { 'zh-Hans': zhMessage } : undefined,
+    });
+  }
+
+  return results;
+};
+
+const mergeErrorCodes = (
+  base: Array<{
+    code: string;
+    httpStatus: number | null;
+    message: string;
+    messageI18n?: Record<string, string>;
+    description: string;
+    descriptionI18n?: Record<string, string>;
+  }>,
+  extra: Array<{
+    code: string;
+    httpStatus: number | null;
+    message: string;
+    messageI18n?: Record<string, string>;
+    description: string;
+    descriptionI18n?: Record<string, string>;
+  }>,
+) => {
+  const map = new Map<
+    string,
+    {
+      code: string;
+      httpStatus: number | null;
+      message: string;
+      messageI18n?: Record<string, string>;
+      description: string;
+      descriptionI18n?: Record<string, string>;
+    }
+  >();
+  for (const item of [...base, ...extra]) {
+    if (!map.has(item.code)) {
+      map.set(item.code, item);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code));
 };
 
 const main = () => {

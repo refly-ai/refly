@@ -2405,10 +2405,6 @@ export const ActionMessageViaApiSchema = {
       $ref: '#/components/schemas/ActionMessageType',
       description: 'Action message type',
     },
-    toolCallResult: {
-      $ref: '#/components/schemas/ToolCallResultViaApi',
-      description: 'Tool call result (if applicable)',
-    },
   },
 } as const;
 
@@ -9626,6 +9622,25 @@ export const WorkflowNodeExecutionViaApiSchema = {
   },
 } as const;
 
+export const WorkflowNodeExecutionStatusViaApiSchema = {
+  type: 'object',
+  required: ['nodeId'],
+  properties: {
+    nodeId: {
+      type: 'string',
+      description: 'Node ID',
+    },
+    status: {
+      description: 'Node status',
+      $ref: '#/components/schemas/ActionStatus',
+    },
+    title: {
+      type: 'string',
+      description: 'Node title',
+    },
+  },
+} as const;
+
 export const WorkflowExecutionStatusSchema = {
   type: 'string',
   enum: ['init', 'executing', 'finish', 'failed'],
@@ -12729,7 +12744,16 @@ export const TriggerVoucherResponseSchema = {
 
 export const WebhookRunRequestSchema = {
   type: 'object',
-  description: 'Workflow variables as key-value pairs',
+  description: `Workflow variables as key-value pairs.
+You can pass variables directly at the top level or wrap them under the "variables" field.
+`,
+  properties: {
+    variables: {
+      type: 'object',
+      description: 'Workflow variables as key-value pairs.',
+      additionalProperties: true,
+    },
+  },
   additionalProperties: true,
 } as const;
 
@@ -13047,16 +13071,8 @@ export const WebhookCallRecordSchema = {
 
 export const DriveFileViaApiSchema = {
   type: 'object',
-  required: ['fileId', 'canvasId', 'name', 'type'],
+  required: ['name', 'type'],
   properties: {
-    fileId: {
-      type: 'string',
-      description: 'Drive file ID',
-    },
-    canvasId: {
-      type: 'string',
-      description: 'Canvas ID',
-    },
     name: {
       type: 'string',
       description: 'Drive file name',
@@ -13068,11 +13084,6 @@ export const DriveFileViaApiSchema = {
     size: {
       type: 'number',
       description: 'Drive file size',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Drive file creation timestamp',
     },
     url: {
       type: 'string',
@@ -13107,7 +13118,26 @@ export const RunWorkflowApiResponseSchema = {
   ],
 } as const;
 
-export const GetWorkflowDetailViaApiResponseSchema = {
+export const OpenapiWorkflowRunRequestSchema = {
+  type: 'object',
+  description: `Wrap workflow variables under the "variables" field.
+Each key in variables is a workflow variable name. Values can be strings, numbers, booleans, objects, or arrays.
+For file variables, pass fileKey (or an array of fileKey) returned by /openapi/files/upload.
+For backward compatibility, you may also pass variables as top-level fields, but "variables" is recommended.
+`,
+  'x-i18n-description': 'integration.api.openapi.workflowRun.bodyDescription',
+  properties: {
+    variables: {
+      type: 'object',
+      description: 'Workflow variables as key-value pairs.',
+      'x-i18n-description': 'integration.api.openapi.workflowRun.variablesDescription',
+      additionalProperties: true,
+    },
+  },
+  additionalProperties: true,
+} as const;
+
+export const GetWorkflowStatusViaApiResponseSchema = {
   allOf: [
     {
       $ref: '#/components/schemas/BaseResponse',
@@ -13121,19 +13151,13 @@ export const GetWorkflowDetailViaApiResponseSchema = {
             executionId: {
               type: 'string',
             },
-            canvasId: {
-              type: 'string',
-            },
-            title: {
-              type: 'string',
-            },
             status: {
               $ref: '#/components/schemas/WorkflowExecutionStatus',
             },
             nodeExecutions: {
               type: 'array',
               items: {
-                $ref: '#/components/schemas/WorkflowNodeExecutionViaApi',
+                $ref: '#/components/schemas/WorkflowNodeExecutionStatusViaApi',
               },
             },
             createdAt: {
@@ -13158,7 +13182,7 @@ export const GetWorkflowOutputResponseSchema = {
         data: {
           type: 'object',
           properties: {
-            products: {
+            output: {
               type: 'array',
               items: {
                 allOf: [
@@ -13179,7 +13203,7 @@ export const GetWorkflowOutputResponseSchema = {
                 ],
               },
             },
-            driveFiles: {
+            files: {
               type: 'array',
               items: {
                 $ref: '#/components/schemas/DriveFileViaApi',

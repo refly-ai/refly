@@ -6,6 +6,7 @@ import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from '@tan
 import {
   abortAction,
   abortWorkflow,
+  abortWorkflowViaApi,
   activateInvitationCode,
   authorizeComposioConnection,
   autoNameCanvas,
@@ -103,9 +104,9 @@ import {
   getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
-  getWorkflowDetailViaApi,
   getWorkflowOutput,
   getWorkflowPlanDetail,
+  getWorkflowStatusViaApi,
   getWorkflowVariables,
   importCanvas,
   initializeWorkflow,
@@ -173,6 +174,7 @@ import {
   updateToolset,
   updateWorkflowVariables,
   upload,
+  uploadOpenapiFiles,
   validateMcpServer,
   validateVoucher,
   verifyVoucherInvitation,
@@ -182,6 +184,8 @@ import {
   AbortActionError,
   AbortWorkflowData,
   AbortWorkflowError,
+  AbortWorkflowViaApiData,
+  AbortWorkflowViaApiError,
   ActivateInvitationCodeData,
   ActivateInvitationCodeError,
   AuthorizeComposioConnectionData,
@@ -365,12 +369,12 @@ import {
   GetWorkflowAppDetailError,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
-  GetWorkflowDetailViaApiData,
-  GetWorkflowDetailViaApiError,
   GetWorkflowOutputData,
   GetWorkflowOutputError,
   GetWorkflowPlanDetailData,
   GetWorkflowPlanDetailError,
+  GetWorkflowStatusViaApiData,
+  GetWorkflowStatusViaApiError,
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
   ImportCanvasData,
@@ -495,6 +499,8 @@ import {
   UpdateWorkflowVariablesError,
   UploadData,
   UploadError,
+  UploadOpenapiFilesData,
+  UploadOpenapiFilesError,
   ValidateMcpServerData,
   ValidateMcpServerError,
   ValidateVoucherData,
@@ -1080,19 +1086,19 @@ export const useGetWebhookHistory = <
       getWebhookHistory({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
-export const useGetWorkflowDetailViaApi = <
-  TData = Common.GetWorkflowDetailViaApiDefaultResponse,
-  TError = GetWorkflowDetailViaApiError,
+export const useGetWorkflowStatusViaApi = <
+  TData = Common.GetWorkflowStatusViaApiDefaultResponse,
+  TError = GetWorkflowStatusViaApiError,
   TQueryKey extends Array<unknown> = unknown[],
 >(
-  clientOptions: Options<GetWorkflowDetailViaApiData, true>,
+  clientOptions: Options<GetWorkflowStatusViaApiData, true>,
   queryKey?: TQueryKey,
   options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
 ) =>
   useQuery<TData, TError>({
-    queryKey: Common.UseGetWorkflowDetailViaApiKeyFn(clientOptions, queryKey),
+    queryKey: Common.UseGetWorkflowStatusViaApiKeyFn(clientOptions, queryKey),
     queryFn: () =>
-      getWorkflowDetailViaApi({ ...clientOptions }).then(
+      getWorkflowStatusViaApi({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
     ...options,
@@ -2786,6 +2792,23 @@ export const useRunWebhook = <
     mutationFn: (clientOptions) => runWebhook(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
+export const useUploadOpenapiFiles = <
+  TData = Common.UploadOpenapiFilesMutationResult,
+  TError = UploadOpenapiFilesError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UploadOpenapiFilesData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UploadOpenapiFilesData, true>, TContext>({
+    mutationKey: Common.UseUploadOpenapiFilesKeyFn(mutationKey),
+    mutationFn: (clientOptions) => uploadOpenapiFiles(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
 export const useRunWorkflowViaApi = <
   TData = Common.RunWorkflowViaApiMutationResult,
   TError = RunWorkflowViaApiError,
@@ -2801,6 +2824,23 @@ export const useRunWorkflowViaApi = <
   useMutation<TData, TError, Options<RunWorkflowViaApiData, true>, TContext>({
     mutationKey: Common.UseRunWorkflowViaApiKeyFn(mutationKey),
     mutationFn: (clientOptions) => runWorkflowViaApi(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useAbortWorkflowViaApi = <
+  TData = Common.AbortWorkflowViaApiMutationResult,
+  TError = AbortWorkflowViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<AbortWorkflowViaApiData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<AbortWorkflowViaApiData, true>, TContext>({
+    mutationKey: Common.UseAbortWorkflowViaApiKeyFn(mutationKey),
+    mutationFn: (clientOptions) => abortWorkflowViaApi(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useSubmitForm = <

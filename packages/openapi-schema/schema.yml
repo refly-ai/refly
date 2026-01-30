@@ -2837,14 +2837,16 @@ paths:
               basic:
                 summary: Basic call
                 value:
-                  variable1: "Hello World"
+                  variables:
+                    variable1: "Hello World"
               with_resource:
                 summary: With resource reference
                 value:
-                  variable1: "Process this document"
-                  resource:
-                    type: "resource"
-                    resourceId: "res_xxx"
+                  variables:
+                    variable1: "Process this document"
+                    resource:
+                      type: "resource"
+                      resourceId: "res_xxx"
       responses:
         '200':
           description: Webhook triggered successfully
@@ -2864,7 +2866,9 @@ paths:
       tags:
         - workflow
       summary: Upload files for OpenAPI workflow variables
+      x-i18n-summary: integration.api.openapi.filesUpload.summary
       description: Upload files and get fileKey values for workflow variables. Unused files are cleaned up after about 24 hours.
+      x-i18n-description: integration.api.openapi.filesUpload.description
       operationId: uploadOpenapiFiles
       requestBody:
         required: true
@@ -2872,6 +2876,8 @@ paths:
           multipart/form-data:
             schema:
               type: object
+              description: Files to upload for workflow variables.
+              x-i18n-description: integration.api.openapi.filesUpload.bodyDescription
               required:
                 - files
               properties:
@@ -2881,17 +2887,21 @@ paths:
                     type: string
                     format: binary
                   description: Files to upload
+                  x-i18n-description: integration.api.openapi.filesUpload.filesDescription
       responses:
         '200':
           description: Files uploaded successfully
+          x-i18n-description: integration.api.openapi.filesUpload.response200
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OpenapiFileUploadResponse'
         '400':
           description: Invalid request parameters
+          x-i18n-description: integration.api.openapi.filesUpload.response400
         '401':
           description: Unauthorized - invalid or missing API key
+          x-i18n-description: integration.api.openapi.filesUpload.response401
       security:
         - api_key: []
 
@@ -2900,10 +2910,12 @@ paths:
       tags:
         - workflow
       summary: Run workflow via API (returns execution ID)
+      x-i18n-summary: integration.api.openapi.workflowRun.summary
       description: |
         Execute a workflow via authenticated API call.
         Unlike webhook triggers, this endpoint requires API Key authentication
         and returns an execution ID that can be used to track workflow status.
+      x-i18n-description: integration.api.openapi.workflowRun.description
       operationId: runWorkflowViaApi
       parameters:
         - name: canvasId
@@ -2912,41 +2924,68 @@ paths:
           schema:
             type: string
           description: Canvas/Workflow ID
+          x-i18n-description: integration.api.openapi.workflowRun.paramCanvasId
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: true
-              description: Workflow variables as key-value pairs
+              $ref: '#/components/schemas/OpenapiWorkflowRunRequest'
+            example:
+              variables:
+                input: "Hello workflow"
+                files:
+                  - "of_xxx"
+                  - "of_yyy"
+            examples:
+              with_files:
+                summary: File variables via fileKey
+                value:
+                  variables:
+                    input: "Summarize these files"
+                    files:
+                      - "of_xxx"
+                      - "of_yyy"
+              text_only:
+                summary: Text variables
+                value:
+                  variables:
+                    input: "Hello workflow"
+                    userId: "u_123"
       responses:
         '200':
           description: Workflow execution started successfully
+          x-i18n-description: integration.api.openapi.workflowRun.response200
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RunWorkflowApiResponse'
         '400':
           description: Invalid request parameters
+          x-i18n-description: integration.api.openapi.workflowRun.response400
         '401':
           description: Unauthorized - invalid or missing API key
+          x-i18n-description: integration.api.openapi.workflowRun.response401
         '403':
           description: Workflow API is disabled
+          x-i18n-description: integration.api.openapi.workflowRun.response403
         '404':
           description: Workflow not found
+          x-i18n-description: integration.api.openapi.workflowRun.response404
       security:
         - api_key: []
 
-  /openapi/workflow/{executionId}/detail:
+  /openapi/workflow/{executionId}/status:
     get:
       tags:
         - workflow
-      summary: Get workflow execution detail via API
+      summary: Get workflow execution status via API
+      x-i18n-summary: integration.api.openapi.workflowStatus.summary
       description: |
-        Get workflow execution detail with node executions via authenticated API call.
+        Get workflow execution status via authenticated API call.
         Requires API Key authentication.
-      operationId: getWorkflowDetailViaApi
+      x-i18n-description: integration.api.openapi.workflowStatus.description
+      operationId: getWorkflowStatusViaApi
       parameters:
         - name: executionId
           in: path
@@ -2954,17 +2993,21 @@ paths:
           schema:
             type: string
           description: Workflow execution ID
+          x-i18n-description: integration.api.openapi.workflowStatus.paramExecutionId
       responses:
         '200':
-          description: Workflow execution detail retrieved successfully
+          description: Workflow execution status retrieved successfully
+          x-i18n-description: integration.api.openapi.workflowStatus.response200
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetWorkflowDetailViaApiResponse'
+                $ref: '#/components/schemas/GetWorkflowStatusViaApiResponse'
         '401':
           description: Unauthorized - invalid or missing API key
+          x-i18n-description: integration.api.openapi.workflowStatus.response401
         '404':
           description: Workflow execution not found
+          x-i18n-description: integration.api.openapi.workflowStatus.response404
       security:
         - api_key: []
 
@@ -2973,9 +3016,11 @@ paths:
       tags:
         - workflow
       summary: Get workflow execution output via API
+      x-i18n-summary: integration.api.openapi.workflowOutput.summary
       description: |
-        Get workflow execution output (products and drive files) via authenticated API call.
+        Get workflow execution output (output nodes and drive files) via authenticated API call.
         Requires API Key authentication.
+      x-i18n-description: integration.api.openapi.workflowOutput.description
       operationId: getWorkflowOutput
       parameters:
         - name: executionId
@@ -2984,17 +3029,57 @@ paths:
           schema:
             type: string
           description: Workflow execution ID
+          x-i18n-description: integration.api.openapi.workflowOutput.paramExecutionId
       responses:
         '200':
           description: Workflow execution output retrieved successfully
+          x-i18n-description: integration.api.openapi.workflowOutput.response200
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetWorkflowOutputResponse'
         '401':
           description: Unauthorized - invalid or missing API key
+          x-i18n-description: integration.api.openapi.workflowOutput.response401
         '404':
           description: Workflow execution not found
+          x-i18n-description: integration.api.openapi.workflowOutput.response404
+      security:
+        - api_key: []
+
+  /openapi/workflow/{executionId}/abort:
+    post:
+      tags:
+        - workflow
+      summary: Abort workflow execution via API
+      x-i18n-summary: integration.api.openapi.workflowAbort.summary
+      description: |
+        Abort a running workflow execution via authenticated API call.
+        Requires API Key authentication.
+      x-i18n-description: integration.api.openapi.workflowAbort.description
+      operationId: abortWorkflowViaApi
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Workflow execution ID
+          x-i18n-description: integration.api.openapi.workflowAbort.paramExecutionId
+      responses:
+        '200':
+          description: Workflow abort request accepted
+          x-i18n-description: integration.api.openapi.workflowAbort.response200
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '401':
+          description: Unauthorized - invalid or missing API key
+          x-i18n-description: integration.api.openapi.workflowAbort.response401
+        '404':
+          description: Workflow execution not found
+          x-i18n-description: integration.api.openapi.workflowAbort.response404
       security:
         - api_key: []
 
@@ -6092,9 +6177,6 @@ components:
         type:
           $ref: '#/components/schemas/ActionMessageType'
           description: Action message type
-        toolCallResult:
-          $ref: '#/components/schemas/ToolCallResultViaApi'
-          description: Tool call result (if applicable)
 
     ActionResult:
       type: object
@@ -11203,6 +11285,20 @@ components:
           type: string
           format: date-time
           description: Node execution end time
+    WorkflowNodeExecutionStatusViaApi:
+      type: object
+      required:
+        - nodeId
+      properties:
+        nodeId:
+          type: string
+          description: Node ID
+        status:
+          description: Node status
+          $ref: '#/components/schemas/ActionStatus'
+        title:
+          type: string
+          description: Node title
     WorkflowExecutionStatus:
       type: string
       enum:
@@ -13610,7 +13706,14 @@ components:
 
     WebhookRunRequest:
       type: object
-      description: Workflow variables as key-value pairs
+      description: |
+        Workflow variables as key-value pairs.
+        You can pass variables directly at the top level or wrap them under the "variables" field.
+      properties:
+        variables:
+          type: object
+          description: Workflow variables as key-value pairs.
+          additionalProperties: true
       additionalProperties: true
 
     WebhookRunResponse:
@@ -13830,17 +13933,9 @@ components:
     DriveFileViaApi:
       type: object
       required:
-        - fileId
-        - canvasId
         - name
         - type
       properties:
-        fileId:
-          type: string
-          description: Drive file ID
-        canvasId:
-          type: string
-          description: Canvas ID
         name:
           type: string
           description: Drive file name
@@ -13850,10 +13945,6 @@ components:
         size:
           type: number
           description: Drive file size
-        createdAt:
-          type: string
-          format: date-time
-          description: Drive file creation timestamp
         url:
           type: string
           description: Access URL for the file
@@ -13873,7 +13964,23 @@ components:
                   type: string
                   description: Initial execution status (usually "running")
 
-    GetWorkflowDetailViaApiResponse:
+    OpenapiWorkflowRunRequest:
+      type: object
+      description: |
+        Wrap workflow variables under the "variables" field.
+        Each key in variables is a workflow variable name. Values can be strings, numbers, booleans, objects, or arrays.
+        For file variables, pass fileKey (or an array of fileKey) returned by /openapi/files/upload.
+        For backward compatibility, you may also pass variables as top-level fields, but "variables" is recommended.
+      x-i18n-description: integration.api.openapi.workflowRun.bodyDescription
+      properties:
+        variables:
+          type: object
+          description: Workflow variables as key-value pairs.
+          x-i18n-description: integration.api.openapi.workflowRun.variablesDescription
+          additionalProperties: true
+      additionalProperties: true
+
+    GetWorkflowStatusViaApiResponse:
       allOf:
         - $ref: '#/components/schemas/BaseResponse'
         - type: object
@@ -13883,16 +13990,12 @@ components:
               properties:
                 executionId:
                   type: string
-                canvasId:
-                  type: string
-                title:
-                  type: string
                 status:
                   $ref: '#/components/schemas/WorkflowExecutionStatus'
                 nodeExecutions:
                   type: array
                   items:
-                    $ref: '#/components/schemas/WorkflowNodeExecutionViaApi'
+                    $ref: '#/components/schemas/WorkflowNodeExecutionStatusViaApi'
                 createdAt:
                   type: string
                   format: date-time
@@ -13905,7 +14008,7 @@ components:
             data:
               type: object
               properties:
-                products:
+                output:
                   type: array
                   items:
                     allOf:
@@ -13916,7 +14019,7 @@ components:
                             type: array
                             items:
                               $ref: '#/components/schemas/ActionMessageViaApi'
-                driveFiles:
+                files:
                   type: array
                   items:
                     $ref: '#/components/schemas/DriveFileViaApi'

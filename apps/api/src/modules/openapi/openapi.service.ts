@@ -4,19 +4,19 @@ import { WorkflowAppService } from '../workflow-app/workflow-app.service';
 import { CanvasService } from '../canvas/canvas.service';
 import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { createId } from '@paralleldrive/cuid2';
-import { genScheduleRecordId, safeStringifyJSON, safeParseJSON } from '@refly/utils';
+import { genScheduleRecordId, safeStringifyJSON } from '@refly/utils';
 import { extractToolsetsWithNodes, sortNodeExecutionsByExecutionOrder } from '@refly/canvas-common';
 import type { DriveFileViaApi, User, VariableValue, WorkflowVariable } from '@refly/openapi-schema';
+import type { User as PrismaUser } from '@prisma/client';
 import { WorkflowExecutionNotFoundError } from '@refly/errors';
 import {
   actionMessagePO2DTO,
   driveFilePO2DTO,
   workflowNodeExecutionPO2DTO,
 } from './types/request.types';
-import { sanitizeToolOutput } from '../action/action.dto';
-import { ToolCallResult as ToolCallResultModel } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { normalizeOpenapiStorageKey } from '../../utils/openapi-file-key';
+import { WorkflowService } from '../workflow/workflow.service';
 
 enum ApiCallStatus {
   SUCCESS = 'success',
@@ -37,6 +37,7 @@ export class OpenapiService {
     private readonly prisma: PrismaService,
     private readonly workflowAppService: WorkflowAppService,
     private readonly canvasService: CanvasService,
+    private readonly workflowService: WorkflowService,
     @Inject(OSS_INTERNAL) private readonly objectStorage: ObjectStorageService,
     private readonly config: ConfigService,
   ) {}
@@ -184,13 +185,12 @@ export class OpenapiService {
   }
 
   /**
-   * Get workflow execution detail with node executions
-   * @param user - The user requesting the workflow detail
+   * Get workflow execution status (minimal fields)
+   * @param user - The user requesting the workflow status
    * @param executionId - The workflow execution ID
-   * @returns Promise<WorkflowExecution> - The workflow execution detail
+   * @returns Promise<WorkflowExecution> - The workflow execution status
    */
-  async getWorkflowDetail(user: User, executionId: string) {
-    // Get workflow execution
+  async getWorkflowStatus(user: User, executionId: string) {
     const workflowExecution = await this.prisma.workflowExecution.findUnique({
       where: { executionId, uid: user.uid },
     });
@@ -199,23 +199,30 @@ export class OpenapiService {
       throw new WorkflowExecutionNotFoundError(`Workflow execution ${executionId} not found`);
     }
 
-    // Get node executions
+    const nodeExecutions = await this.prisma.workflowNodeExecution.findMany({
+      where: { executionId },
+    });
+
+    const sortedNodeExecutions = sortNodeExecutionsByExecutionOrder(nodeExecutions);
+
+    return { ...workflowExecution, nodeExecutions: sortedNodeExecutions };
+  }
+
+  async getWorkflowOutput(user: User, executionId: string) {
+    const workflowExecution = await this.prisma.workflowExecution.findUnique({
+      where: { executionId, uid: user.uid },
+    });
+
+    if (!workflowExecution) {
+      throw new WorkflowExecutionNotFoundError(`Workflow execution ${executionId} not found`);
+    }
+
     const nodeExecutions = await this.prisma.workflowNodeExecution.findMany({
       where: { executionId },
     });
 
     // Sort node executions by execution order (topological sort based on parent-child relationships)
     const sortedNodeExecutions = sortNodeExecutionsByExecutionOrder(nodeExecutions);
-
-    // Return workflow execution detail
-    return { ...workflowExecution, nodeExecutions: sortedNodeExecutions };
-  }
-
-  async getWorkflowOutput(user: User, executionId: string) {
-    const workflowExecutionDTO = await this.getWorkflowDetail(user, executionId);
-
-    // Sort node executions by execution order (topological sort based on parent-child relationships)
-    const sortedNodeExecutions = workflowExecutionDTO.nodeExecutions;
 
     // Filter nodes that are considered "products"
     const productNodes = sortedNodeExecutions.filter(
@@ -243,19 +250,6 @@ export class OpenapiService {
         orderBy: { createdAt: 'asc' },
       });
 
-      // Fetch ToolCalls
-      const toolCalls = await this.prisma.toolCallResult.findMany({
-        where: {
-          resultId: { in: skillResultIds as string[] },
-          deletedAt: null,
-        },
-      });
-
-      const toolCallResultMap = new Map<string, ToolCallResultModel>();
-      for (const tc of toolCalls) {
-        toolCallResultMap.set(tc.callId, tc);
-      }
-
       const resultsByUniqueId = new Map<string, any>(); // key: resultId, value: result
 
       for (const result of actionResults) {
@@ -268,31 +262,11 @@ export class OpenapiService {
       for (const result of Array.from(resultsByUniqueId.values())) {
         const resultMessages = messages
           .filter((m) => m.resultId === result.resultId && m.version === result.version)
-          .map((message) => {
-            const dto = actionMessagePO2DTO(message);
-
-            // Enrich with tool call result
-            if (message.type === 'tool' && message.toolCallId) {
-              const toolCallResult = toolCallResultMap.get(message.toolCallId);
-              if (toolCallResult) {
-                const rawOutput = safeParseJSON(toolCallResult.output || '{}') ?? {
-                  rawOutput: toolCallResult.output,
-                };
-                const output = sanitizeToolOutput(toolCallResult.toolName, rawOutput);
-
-                // Attach the tool call result to the message
-                dto.toolCallResult = {
-                  toolName: toolCallResult.toolName,
-                  input: safeParseJSON(toolCallResult.input || '{}') ?? {},
-                  output,
-                  error: toolCallResult.error || '',
-                  status: toolCallResult.status as 'executing' | 'completed' | 'failed',
-                  createdAt: toolCallResult.createdAt.getTime(),
-                };
-              }
-            }
-            return dto;
-          });
+          .filter(
+            (message) =>
+              isNonEmptyText(message.content) && isNonEmptyText(message.reasoningContent),
+          )
+          .map((message) => actionMessagePO2DTO(message));
 
         actionDetailsMap.set(result.resultId, {
           messages: resultMessages,
@@ -301,7 +275,7 @@ export class OpenapiService {
     }
 
     // Enhance productNodes with action details
-    const products = productNodes.map((node) => {
+    const output = productNodes.map((node) => {
       if (node.nodeType === 'skillResponse' && node.entityId) {
         const detail = actionDetailsMap.get(node.entityId);
         if (detail) {
@@ -315,7 +289,7 @@ export class OpenapiService {
     });
 
     // Fetch Drive Files linked to these results
-    let driveFiles: DriveFileViaApi[] = [];
+    let files: DriveFileViaApi[] = [];
     if (skillResultIds.length > 0) {
       const dbDriveFiles = await this.prisma.driveFile.findMany({
         where: {
@@ -325,13 +299,17 @@ export class OpenapiService {
           source: 'agent',
         },
       });
-      driveFiles = dbDriveFiles.map((file) => driveFilePO2DTO(file, this.endpoint));
+      files = dbDriveFiles.map((file) => driveFilePO2DTO(file, this.endpoint));
     }
 
     return {
-      products,
-      driveFiles,
+      output,
+      files,
     };
+  }
+
+  async abortWorkflow(user: PrismaUser, executionId: string): Promise<void> {
+    await this.workflowService.abortWorkflow(user, executionId);
   }
   /**
    * Record API call to database
@@ -626,3 +604,6 @@ const mapContentTypeToFileType = (contentType?: string): ResourceFileType => {
   if (contentType.startsWith('audio/')) return 'audio';
   return 'document';
 };
+
+const isNonEmptyText = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;

@@ -41,9 +41,9 @@ import {
   getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
-  getWorkflowDetailViaApi,
   getWorkflowOutput,
   getWorkflowPlanDetail,
+  getWorkflowStatusViaApi,
   getWorkflowVariables,
   listAccounts,
   listCanvases,
@@ -102,9 +102,9 @@ import {
   GetWebhookHistoryData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
-  GetWorkflowDetailViaApiData,
   GetWorkflowOutputData,
   GetWorkflowPlanDetailData,
+  GetWorkflowStatusViaApiData,
   GetWorkflowVariablesData,
   ListAccountsData,
   ListCanvasesData,
@@ -424,13 +424,13 @@ export const prefetchUseGetWebhookHistory = (
     queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions),
     queryFn: () => getWebhookHistory({ ...clientOptions }).then((response) => response.data),
   });
-export const prefetchUseGetWorkflowDetailViaApi = (
+export const prefetchUseGetWorkflowStatusViaApi = (
   queryClient: QueryClient,
-  clientOptions: Options<GetWorkflowDetailViaApiData, true>,
+  clientOptions: Options<GetWorkflowStatusViaApiData, true>,
 ) =>
   queryClient.prefetchQuery({
-    queryKey: Common.UseGetWorkflowDetailViaApiKeyFn(clientOptions),
-    queryFn: () => getWorkflowDetailViaApi({ ...clientOptions }).then((response) => response.data),
+    queryKey: Common.UseGetWorkflowStatusViaApiKeyFn(clientOptions),
+    queryFn: () => getWorkflowStatusViaApi({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetWorkflowOutput = (
   queryClient: QueryClient,

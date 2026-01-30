@@ -4402,6 +4402,7 @@ const translations = {
       examples: 'Examples',
       instructions: 'Instructions',
       overview: 'Overview',
+      bestPractices: 'Best Practices',
       authentication: 'Authentication',
       endpoints: 'Endpoints',
       errors: 'Error Codes',
@@ -4414,10 +4415,19 @@ const translations = {
     },
     api: {
       title: 'API Integration',
-      description: 'Use API endpoints to trigger workflows and manage webhooks.',
+      description:
+        'Access Refly open capabilities via API, such as running workflows and fetching status/output.',
       overviewTitle: 'Overview',
       overviewDescription:
-        'This API lets you trigger workflows and manage webhook integrations programmatically.',
+        'These APIs let you programmatically access Refly capabilities and integrate with workflows.',
+      bestPracticesTitle: 'Best Practices',
+      bestPracticesDescription:
+        'Below is a ready-to-use flow example (upload files, run workflow, poll status, fetch output).',
+      bestPracticesExamplesTitle: 'Example Code',
+      bestPracticesCommentUpload: '1) Upload files (optional)',
+      bestPracticesCommentRun: '2) Run workflow',
+      bestPracticesCommentPoll: '3) Poll status until done',
+      bestPracticesCommentOutput: '4) Fetch output',
       authTitle: 'Authentication',
       authDescription: 'Include your API Key in every request header.',
       authHeader: 'Authorization: Bearer YOUR_API_KEY',
@@ -4429,10 +4439,16 @@ const translations = {
       endpointsDescription: 'The following endpoints are available for integration.',
       parametersTitle: 'Parameters',
       requestBodyTitle: 'Request Body',
+      requestBodyFieldsTitle: 'Request Body Fields',
+      requestBodyExampleTitle: 'Request Body Example',
       responsesTitle: 'Responses',
+      responseStatusTitle: 'Response Status',
+      responseFieldsTitle: 'Response Fields',
       codeExamplesTitle: 'Code Examples',
       noParameters: 'No parameters.',
       noRequestBody: 'No request body.',
+      noRequestBodyFields: 'No request body field details.',
+      noResponseFields: 'No response field details.',
       noResponses: 'No response schema.',
       paramName: 'Name',
       paramIn: 'In',
@@ -4448,6 +4464,64 @@ const translations = {
       errorStatus: 'HTTP Status',
       errorMessage: 'Message',
       errorDescription: 'Description',
+      requestBodyWildcardName: 'Variable name (any)',
+      requestBodyWildcardType: 'string | number | boolean | object | array | fileKey | fileKey[]',
+      requestBodyWildcardDescription:
+        'Variable names are user-defined. Use fileKey or fileKey[] as variable values after uploading files.',
+      openapi: {
+        filesUpload: {
+          summary: 'Upload files for workflow variables',
+          description:
+            'Upload files and return fileKey values. Unused files are cleaned up after about 24 hours.',
+          bodyDescription: 'Files to upload for workflow variables.',
+          filesDescription: 'Files to upload',
+          response200: 'Files uploaded successfully',
+          response400: 'Invalid request parameters',
+          response401: 'Unauthorized - invalid or missing API key',
+        },
+        workflowRun: {
+          summary: 'Run workflow via API (returns execution ID)',
+          description:
+            'Execute a workflow via authenticated API call. Unlike webhook triggers, this endpoint requires API Key authentication and returns an execution ID that can be used to track workflow status.',
+          paramCanvasId: 'Canvas/Workflow ID (from the canvas URL in the browser address bar)',
+          bodyDescription:
+            'Wrap workflow variables under the `variables` field.\n\nEach key in variables is a workflow variable name. Values can be strings, numbers, booleans, objects, or arrays.\n\nFor file variables, pass `fileKey` (or an array of `fileKey`) returned by `/openapi/files/upload`.\n\nFor backward compatibility, you may also pass variables as top-level fields, but `variables` is recommended.',
+          variablesDescription:
+            'Workflow variables as key-value pairs. Each key is a workflow variable name. Values can be strings, numbers, booleans, objects, or arrays. For file variables, pass fileKey (or an array of fileKey) returned by /openapi/files/upload.',
+          response200: 'Workflow execution started successfully',
+          response400: 'Invalid request parameters',
+          response401: 'Unauthorized - invalid or missing API key',
+          response403: 'Workflow API is disabled',
+          response404: 'Workflow not found',
+        },
+        workflowStatus: {
+          summary: 'Get workflow execution status via API',
+          description:
+            'Get workflow execution status via authenticated API call. Requires API Key authentication.',
+          paramExecutionId: 'Workflow execution ID',
+          response200: 'Workflow execution status retrieved successfully',
+          response401: 'Unauthorized - invalid or missing API key',
+          response404: 'Workflow execution not found',
+        },
+        workflowOutput: {
+          summary: 'Get workflow execution output via API',
+          description:
+            'Get workflow execution output (output nodes and drive files) via authenticated API call. Requires API Key authentication.',
+          paramExecutionId: 'Workflow execution ID',
+          response200: 'Workflow execution output retrieved successfully',
+          response401: 'Unauthorized - invalid or missing API key',
+          response404: 'Workflow execution not found',
+        },
+        workflowAbort: {
+          summary: 'Abort workflow execution',
+          description:
+            'Abort a running workflow execution via authenticated API call. Requires API Key authentication.',
+          paramExecutionId: 'Workflow execution ID (from run response or status endpoint)',
+          response200: 'Workflow abort request accepted',
+          response401: 'Unauthorized - invalid or missing API key',
+          response404: 'Workflow execution not found',
+        },
+      },
     },
   },
   webhook: {
@@ -4481,13 +4555,14 @@ const translations = {
     status: 'Status',
     enabled: 'Enabled',
     disabled: 'Disabled',
-    reset: 'Reset Webhook',
+    reset: 'Reset',
     resetWarning: 'Resetting will invalidate the previous webhook URL. Update your integrations.',
     url: 'Webhook URL',
     examples: 'Examples',
     instructions: 'Instructions',
     instruction1: 'Send an HTTP POST request to the Webhook URL.',
-    instruction2: 'Request body is JSON; fields map to workflow variables.',
+    instruction2:
+      'Request body is JSON. You can pass variables directly or wrap them under variables.',
     instruction3: 'Requests return immediately; check Run History for results.',
     apiKey: {
       title: 'API Key',
@@ -4512,6 +4587,7 @@ const translations = {
       deleteSuccess: 'API Key deleted',
       deleteFailed: 'Failed to delete API Key',
       copyWarning: 'This key is shown only once. Save it now.',
+      copyPrefixSuccess: 'Copied key prefix (full key is shown only once).',
       namePlaceholder: 'Enter name',
     },
   },

@@ -5,6 +5,7 @@ import { UseQueryResult } from '@tanstack/react-query';
 import {
   abortAction,
   abortWorkflow,
+  abortWorkflowViaApi,
   activateInvitationCode,
   authorizeComposioConnection,
   autoNameCanvas,
@@ -102,9 +103,9 @@ import {
   getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
-  getWorkflowDetailViaApi,
   getWorkflowOutput,
   getWorkflowPlanDetail,
+  getWorkflowStatusViaApi,
   getWorkflowVariables,
   importCanvas,
   initializeWorkflow,
@@ -172,6 +173,7 @@ import {
   updateToolset,
   updateWorkflowVariables,
   upload,
+  uploadOpenapiFiles,
   validateMcpServer,
   validateVoucher,
   verifyVoucherInvitation,
@@ -584,18 +586,18 @@ export const UseGetWebhookHistoryKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetWebhookHistoryKey, ...(queryKey ?? [clientOptions])];
-export type GetWorkflowDetailViaApiDefaultResponse = Awaited<
-  ReturnType<typeof getWorkflowDetailViaApi>
+export type GetWorkflowStatusViaApiDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowStatusViaApi>
 >['data'];
-export type GetWorkflowDetailViaApiQueryResult<
-  TData = GetWorkflowDetailViaApiDefaultResponse,
+export type GetWorkflowStatusViaApiQueryResult<
+  TData = GetWorkflowStatusViaApiDefaultResponse,
   TError = unknown,
 > = UseQueryResult<TData, TError>;
-export const useGetWorkflowDetailViaApiKey = 'GetWorkflowDetailViaApi';
-export const UseGetWorkflowDetailViaApiKeyFn = (
+export const useGetWorkflowStatusViaApiKey = 'GetWorkflowStatusViaApi';
+export const UseGetWorkflowStatusViaApiKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
-) => [useGetWorkflowDetailViaApiKey, ...(queryKey ?? [clientOptions])];
+) => [useGetWorkflowStatusViaApiKey, ...(queryKey ?? [clientOptions])];
 export type GetWorkflowOutputDefaultResponse = Awaited<
   ReturnType<typeof getWorkflowOutput>
 >['data'];
@@ -1372,10 +1374,22 @@ export const UseRunWebhookKeyFn = (mutationKey?: Array<unknown>) => [
   useRunWebhookKey,
   ...(mutationKey ?? []),
 ];
+export type UploadOpenapiFilesMutationResult = Awaited<ReturnType<typeof uploadOpenapiFiles>>;
+export const useUploadOpenapiFilesKey = 'UploadOpenapiFiles';
+export const UseUploadOpenapiFilesKeyFn = (mutationKey?: Array<unknown>) => [
+  useUploadOpenapiFilesKey,
+  ...(mutationKey ?? []),
+];
 export type RunWorkflowViaApiMutationResult = Awaited<ReturnType<typeof runWorkflowViaApi>>;
 export const useRunWorkflowViaApiKey = 'RunWorkflowViaApi';
 export const UseRunWorkflowViaApiKeyFn = (mutationKey?: Array<unknown>) => [
   useRunWorkflowViaApiKey,
+  ...(mutationKey ?? []),
+];
+export type AbortWorkflowViaApiMutationResult = Awaited<ReturnType<typeof abortWorkflowViaApi>>;
+export const useAbortWorkflowViaApiKey = 'AbortWorkflowViaApi';
+export const UseAbortWorkflowViaApiKeyFn = (mutationKey?: Array<unknown>) => [
+  useAbortWorkflowViaApiKey,
   ...(mutationKey ?? []),
 ];
 export type SubmitFormMutationResult = Awaited<ReturnType<typeof submitForm>>;

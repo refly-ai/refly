@@ -35,7 +35,15 @@ export class WebhookController {
       request.uid = config.uid;
     }
 
-    const result = await this.webhookService.runWorkflow(webhookId, body);
+    const payload =
+      body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, any>) : {};
+    const variables =
+      payload.variables &&
+      typeof payload.variables === 'object' &&
+      !Array.isArray(payload.variables)
+        ? (payload.variables as Record<string, any>)
+        : payload;
+    const result = await this.webhookService.runWorkflow(webhookId, variables);
     return buildSuccessResponse(result);
   }
 }

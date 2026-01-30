@@ -2,7 +2,6 @@ import { Request } from 'express';
 import type {
   ActionStatus,
   WorkflowExecutionStatus,
-  WorkflowExecution,
   WorkflowNodeExecution,
   ActionMessageType,
   DriveFileViaApi,
@@ -36,6 +35,12 @@ type WorkflowNodeExecutionWithTime = WorkflowNodeExecution & {
   endTime?: string;
 };
 
+type WorkflowNodeExecutionStatusViaApi = {
+  nodeId: string;
+  status: ActionStatus;
+  title?: string;
+};
+
 export const workflowNodeExecutionPO2DTO = (
   nodeExecution: WorkflowNodeExecutionPO,
 ): WorkflowNodeExecutionWithTime => {
@@ -47,14 +52,31 @@ export const workflowNodeExecutionPO2DTO = (
   };
 };
 
-export const workflowExecutionPO2DTO = (
-  execution: WorkflowExecutionPO & { nodeExecutions?: WorkflowNodeExecutionPO[] },
-): WorkflowExecution => {
+export type WorkflowExecutionStatusViaApi = {
+  executionId: string;
+  status: WorkflowExecutionStatus;
+  createdAt: string;
+  nodeExecutions?: WorkflowNodeExecutionStatusViaApi[];
+};
+
+export const workflowNodeExecutionStatusPO2DTO = (
+  nodeExecution: WorkflowNodeExecutionPO,
+): WorkflowNodeExecutionStatusViaApi => {
   return {
-    ...pick(execution, ['executionId', 'canvasId', 'title']),
+    nodeId: nodeExecution.nodeId,
+    status: nodeExecution.status as ActionStatus,
+    title: nodeExecution.title ?? undefined,
+  };
+};
+
+export const workflowExecutionStatusPO2DTO = (
+  execution: WorkflowExecutionPO & { nodeExecutions?: WorkflowNodeExecutionPO[] },
+): WorkflowExecutionStatusViaApi => {
+  return {
+    ...pick(execution, ['executionId']),
     status: execution.status as WorkflowExecutionStatus,
-    nodeExecutions: execution.nodeExecutions?.map(workflowNodeExecutionPO2DTO),
     createdAt: execution.createdAt.toJSON(),
+    nodeExecutions: execution.nodeExecutions?.map(workflowNodeExecutionStatusPO2DTO),
   };
 };
 
@@ -72,9 +94,8 @@ export function actionMessagePO2DTO(message: ActionMessageModel): ActionMessageV
  */
 export function driveFilePO2DTO(driveFile: DriveFileModel, endpoint?: string): DriveFileViaApi {
   return {
-    ...pick(driveFile, ['canvasId', 'fileId', 'name', 'type']),
+    ...pick(driveFile, ['name', 'type']),
     size: Number(driveFile.size),
-    createdAt: driveFile.createdAt.toJSON(),
     url: endpoint ? `${endpoint}/v1/drive/file/content/${driveFile.fileId}` : undefined,
   };
 }

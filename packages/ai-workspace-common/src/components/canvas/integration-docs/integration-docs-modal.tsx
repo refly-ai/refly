@@ -9,6 +9,7 @@ import { ApiDocsTab } from './components/api-docs-tab';
 import { SkillDocsTab } from './components/skill-docs-tab';
 import { ApiKeyModal } from './components/api-key-modal';
 import { CopyAllDocsButton } from './components/copy-all-docs-button';
+import { apiDocsData } from './data/api-docs.generated';
 import type { IntegrationType } from './types';
 import './integration-docs-modal.scss';
 
@@ -27,6 +28,7 @@ interface IntegrationDocsModalProps {
 interface TocSection {
   id: string;
   label: string;
+  children?: TocSection[];
 }
 
 export const IntegrationDocsModal = memo(
@@ -41,6 +43,20 @@ export const IntegrationDocsModal = memo(
     const contentRef = useRef<HTMLDivElement>(null);
 
     // Table of contents sections based on active integration
+    const apiEndpointSections = useMemo(() => {
+      return apiDocsData.endpoints
+        .filter(
+          (endpoint) =>
+            endpoint.path.startsWith('/openapi/') && !endpoint.path.includes('/webhook/'),
+        )
+        .map((endpoint) => ({
+          id: `api-endpoint-${endpoint.operationId || endpoint.id}`,
+          label: endpoint.summaryKey
+            ? t(endpoint.summaryKey)
+            : endpoint.summary || endpoint.operationId,
+        }));
+    }, [t]);
+
     const sections = useMemo((): TocSection[] => {
       switch (activeIntegration) {
         case 'webhook':
@@ -52,7 +68,12 @@ export const IntegrationDocsModal = memo(
         case 'api':
           return [
             { id: 'api-overview', label: t('integration.sections.overview') },
-            { id: 'api-endpoints', label: t('integration.sections.endpoints') },
+            { id: 'api-best-practices', label: t('integration.sections.bestPractices') },
+            {
+              id: 'api-endpoints',
+              label: t('integration.sections.endpoints'),
+              children: apiEndpointSections,
+            },
             { id: 'api-errors', label: t('integration.sections.errors') },
           ];
         case 'skill':
@@ -60,7 +81,18 @@ export const IntegrationDocsModal = memo(
         default:
           return [];
       }
-    }, [activeIntegration, t]);
+    }, [activeIntegration, t, apiEndpointSections]);
+
+    const flatSections = useMemo(() => {
+      const flattened: TocSection[] = [];
+      for (const section of sections) {
+        flattened.push(section);
+        if (section.children?.length) {
+          flattened.push(...section.children);
+        }
+      }
+      return flattened;
+    }, [sections]);
 
     // Fetch webhook config when switching to webhook tab
     useEffect(() => {
@@ -141,16 +173,16 @@ export const IntegrationDocsModal = memo(
 
     // Set initial active section
     useEffect(() => {
-      if (sections.length > 0 && !activeSection) {
-        setActiveSection(sections[0].id);
+      if (flatSections.length > 0 && !activeSection) {
+        setActiveSection(flatSections[0].id);
       }
-    }, [sections, activeSection]);
+    }, [flatSections, activeSection]);
 
     // IntersectionObserver for TOC highlighting
     useEffect(() => {
       if (!open || !contentRef.current) return;
 
-      const elements = sections
+      const elements = flatSections
         .map((section) => document.getElementById(section.id))
         .filter(Boolean) as HTMLElement[];
 
@@ -176,7 +208,7 @@ export const IntegrationDocsModal = memo(
         observer.observe(element);
       }
       return () => observer.disconnect();
-    }, [open, sections]);
+    }, [open, flatSections]);
 
     const handleSectionSelect = (sectionId: string) => {
       const element = document.getElementById(sectionId);
@@ -308,18 +340,40 @@ export const IntegrationDocsModal = memo(
                 <aside className="integration-docs-toc">
                   <div className="integration-docs-toc-title">{t('integration.contents')}</div>
                   <nav className="integration-docs-toc-list">
-                    {sections.map((section) => (
-                      <button
-                        key={section.id}
-                        type="button"
-                        onClick={() => handleSectionSelect(section.id)}
-                        className={`integration-docs-toc-item ${
-                          activeSection === section.id ? 'is-active' : ''
-                        }`}
-                      >
-                        {section.label}
-                      </button>
-                    ))}
+                    {sections.map((section) => {
+                      const childActive = section.children?.some(
+                        (child) => child.id === activeSection,
+                      );
+                      return (
+                        <div key={section.id} className="integration-docs-toc-group">
+                          <button
+                            type="button"
+                            onClick={() => handleSectionSelect(section.id)}
+                            className={`integration-docs-toc-item ${
+                              activeSection === section.id || childActive ? 'is-active' : ''
+                            }`}
+                          >
+                            {section.label}
+                          </button>
+                          {section.children?.length ? (
+                            <div className="integration-docs-toc-sublist">
+                              {section.children.map((child) => (
+                                <button
+                                  key={child.id}
+                                  type="button"
+                                  onClick={() => handleSectionSelect(child.id)}
+                                  className={`integration-docs-toc-subitem ${
+                                    activeSection === child.id ? 'is-active' : ''
+                                  }`}
+                                >
+                                  {child.label}
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
                   </nav>
                 </aside>
               </div>

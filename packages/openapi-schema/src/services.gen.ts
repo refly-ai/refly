@@ -336,12 +336,15 @@ import type {
   RunWorkflowViaApiData,
   RunWorkflowViaApiError,
   RunWorkflowViaApiResponse,
-  GetWorkflowDetailViaApiData,
-  GetWorkflowDetailViaApiError,
-  GetWorkflowDetailViaApiResponse2,
+  GetWorkflowStatusViaApiData,
+  GetWorkflowStatusViaApiError,
+  GetWorkflowStatusViaApiResponse2,
   GetWorkflowOutputData,
   GetWorkflowOutputError,
   GetWorkflowOutputResponse2,
+  AbortWorkflowViaApiData,
+  AbortWorkflowViaApiError,
+  AbortWorkflowViaApiResponse,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -2339,27 +2342,27 @@ export const runWorkflowViaApi = <ThrowOnError extends boolean = false>(
 };
 
 /**
- * Get workflow execution detail via API
- * Get workflow execution detail with node executions via authenticated API call.
+ * Get workflow execution status via API
+ * Get workflow execution status via authenticated API call.
  * Requires API Key authentication.
  *
  */
-export const getWorkflowDetailViaApi = <ThrowOnError extends boolean = false>(
-  options: Options<GetWorkflowDetailViaApiData, ThrowOnError>,
+export const getWorkflowStatusViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowStatusViaApiData, ThrowOnError>,
 ) => {
   return (options?.client ?? client).get<
-    GetWorkflowDetailViaApiResponse2,
-    GetWorkflowDetailViaApiError,
+    GetWorkflowStatusViaApiResponse2,
+    GetWorkflowStatusViaApiError,
     ThrowOnError
   >({
     ...options,
-    url: '/openapi/workflow/{executionId}/detail',
+    url: '/openapi/workflow/{executionId}/status',
   });
 };
 
 /**
  * Get workflow execution output via API
- * Get workflow execution output (products and drive files) via authenticated API call.
+ * Get workflow execution output (output nodes and drive files) via authenticated API call.
  * Requires API Key authentication.
  *
  */
@@ -2373,6 +2376,25 @@ export const getWorkflowOutput = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/openapi/workflow/{executionId}/output',
+  });
+};
+
+/**
+ * Abort workflow execution via API
+ * Abort a running workflow execution via authenticated API call.
+ * Requires API Key authentication.
+ *
+ */
+export const abortWorkflowViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<AbortWorkflowViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    AbortWorkflowViaApiResponse,
+    AbortWorkflowViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{executionId}/abort',
   });
 };
 

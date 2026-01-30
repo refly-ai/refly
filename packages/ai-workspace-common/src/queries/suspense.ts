@@ -41,9 +41,9 @@ import {
   getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
-  getWorkflowDetailViaApi,
   getWorkflowOutput,
   getWorkflowPlanDetail,
+  getWorkflowStatusViaApi,
   getWorkflowVariables,
   listAccounts,
   listCanvases,
@@ -140,12 +140,12 @@ import {
   GetWorkflowAppDetailError,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
-  GetWorkflowDetailViaApiData,
-  GetWorkflowDetailViaApiError,
   GetWorkflowOutputData,
   GetWorkflowOutputError,
   GetWorkflowPlanDetailData,
   GetWorkflowPlanDetailError,
+  GetWorkflowStatusViaApiData,
+  GetWorkflowStatusViaApiError,
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
   ListAccountsData,
@@ -771,19 +771,19 @@ export const useGetWebhookHistorySuspense = <
       getWebhookHistory({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
-export const useGetWorkflowDetailViaApiSuspense = <
-  TData = Common.GetWorkflowDetailViaApiDefaultResponse,
-  TError = GetWorkflowDetailViaApiError,
+export const useGetWorkflowStatusViaApiSuspense = <
+  TData = Common.GetWorkflowStatusViaApiDefaultResponse,
+  TError = GetWorkflowStatusViaApiError,
   TQueryKey extends Array<unknown> = unknown[],
 >(
-  clientOptions: Options<GetWorkflowDetailViaApiData, true>,
+  clientOptions: Options<GetWorkflowStatusViaApiData, true>,
   queryKey?: TQueryKey,
   options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
 ) =>
   useSuspenseQuery<TData, TError>({
-    queryKey: Common.UseGetWorkflowDetailViaApiKeyFn(clientOptions, queryKey),
+    queryKey: Common.UseGetWorkflowStatusViaApiKeyFn(clientOptions, queryKey),
     queryFn: () =>
-      getWorkflowDetailViaApi({ ...clientOptions }).then(
+      getWorkflowStatusViaApi({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
     ...options,

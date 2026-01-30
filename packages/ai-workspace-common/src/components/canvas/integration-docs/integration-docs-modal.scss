@@ -293,6 +293,12 @@
   gap: 2px;
 }
 
+.integration-docs-toc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .integration-docs-toc-item {
   text-align: left;
   border: none;
@@ -301,6 +307,38 @@
   border-radius: 6px;
   font-size: 13px;
   color: var(--integration-docs-text-2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+
+  &:hover {
+    background: var(--integration-docs-hover-bg);
+    color: var(--integration-docs-text-1);
+  }
+
+  &.is-active {
+    background: var(--refly-tertiary-hover);
+    color: var(--integration-docs-text-1);
+    font-weight: 500;
+  }
+}
+
+.integration-docs-toc-sublist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 10px;
+  border-left: 1px solid var(--integration-docs-border);
+}
+
+.integration-docs-toc-subitem {
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--integration-docs-text-3);
   cursor: pointer;
   transition: all 0.15s ease;
   line-height: 1.4;
@@ -460,13 +498,34 @@
 
   .endpoint-section {
     margin-top: 20px;
+    padding-top: 4px;
 
-    h4 {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--integration-docs-text-1);
-      margin-bottom: 8px;
+    & + .endpoint-section {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px dashed var(--integration-docs-border);
     }
+  }
+
+  .endpoint-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--integration-docs-text-1);
+    margin-bottom: 8px;
+  }
+
+  .endpoint-subsection {
+    margin-top: 12px;
+    padding-left: 12px;
+    border-left: 2px solid var(--integration-docs-border);
+  }
+
+  .endpoint-subsection-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--integration-docs-text-2);
+    letter-spacing: 0.2px;
+    margin: 0 0 6px 0;
   }
 }
 
@@ -546,6 +605,38 @@
   font-size: 13px;
   color: var(--integration-docs-text-3);
   padding: 6px 0;
+}
+
+.api-docs-section-desc {
+  margin: 8px 0 16px;
+  color: var(--integration-docs-text-2);
+  line-height: 1.6;
+}
+
+.api-best-practices-examples {
+  margin-top: 12px;
+}
+
+.api-docs-markdown {
+  font-size: 14px;
+  color: var(--integration-docs-text-2);
+  line-height: 1.6;
+
+  p {
+    margin: 0 0 12px;
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+
+  code {
+    background: var(--integration-docs-inline-code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--integration-docs-inline-code-text);
+  }
 }
 
 .api-response-list {
