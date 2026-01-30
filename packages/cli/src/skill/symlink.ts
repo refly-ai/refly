@@ -442,14 +442,6 @@ ${JSON.stringify(outputSchema, null, 2)}
 
 ${description}
 
-## Usage
-
-This skill is executed via Refly CLI:
-
-\`\`\`bash
-${runCommand}
-\`\`\`
-
 ## Input
 
 Provide input as JSON:
@@ -458,16 +450,36 @@ Provide input as JSON:
 ${inputExample}
 \`\`\`
 
+## Execution
+
+**Run this skill with exactly these steps (no extra commands):**
+
+\`\`\`bash
+# Step 1: Run and capture runId
+RESULT=$(${runCommand})
+RUN_ID=$(echo "$RESULT" | jq -r '.payload.workflowExecutions[0].id')
+
+# Step 2: Wait for completion
+refly workflow status "$RUN_ID" --watch --interval 30000
+
+# Step 3: Get results (includes all node outputs)
+DETAIL=$(refly workflow detail "$RUN_ID")
+
+# Step 4: Download files if any (to /tmp/refly-output/, NOT ./downloads)
+FILE_ID=$(echo "$DETAIL" | jq -r '.payload.nodes[].data.metadata.files[0].fileId // empty' | head -1)
+[ -n "$FILE_ID" ] && refly file download "$FILE_ID" -o "/tmp/refly-output/$FILE_ID"
+\`\`\`
+
 ## Output
 
 ${outputSection}
 
 ## Rules
 
-For workflow operations, refer to the base skill rules:
-- Workflow: \`~/.claude/skills/refly/rules/workflow.md\`
-- Node: \`~/.claude/skills/refly/rules/node.md\`
-- File: \`~/.claude/skills/refly/rules/file.md\`
+**IMPORTANT: Follow the base skill execution workflow exactly. Do NOT add extra commands.**
+
+For workflow operations, refer to the base skill:
+- Base skill: \`~/.claude/skills/refly/SKILL.md\` (contains minimal execution workflow)
 `;
 
   return frontmatterLines.join('\n') + content;
