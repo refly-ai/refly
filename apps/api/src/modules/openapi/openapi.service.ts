@@ -6,8 +6,17 @@ import { ObjectStorageService, OSS_INTERNAL } from '../common/object-storage';
 import { createId } from '@paralleldrive/cuid2';
 import { genScheduleRecordId, safeStringifyJSON } from '@refly/utils';
 import { extractToolsetsWithNodes, sortNodeExecutionsByExecutionOrder } from '@refly/canvas-common';
-import type { DriveFileViaApi, User, VariableValue, WorkflowVariable } from '@refly/openapi-schema';
-import type { User as PrismaUser } from '@prisma/client';
+import type {
+  CanvasEdge,
+  CanvasNode,
+  DriveFileViaApi,
+  ListOrder,
+  User,
+  VariableValue,
+  WorkflowTask,
+  WorkflowVariable,
+} from '@refly/openapi-schema';
+import type { Prisma, User as PrismaUser } from '@prisma/client';
 import { WorkflowExecutionNotFoundError } from '@refly/errors';
 import {
   actionMessagePO2DTO,
@@ -291,7 +300,7 @@ export class OpenapiService {
           .filter((m) => m.resultId === result.resultId && m.version === result.version)
           .filter(
             (message) =>
-              isNonEmptyText(message.content) && isNonEmptyText(message.reasoningContent),
+              isNonEmptyText(message.content) || isNonEmptyText(message.reasoningContent),
           )
           .map((message) => actionMessagePO2DTO(message));
 
@@ -337,6 +346,90 @@ export class OpenapiService {
 
   async abortWorkflow(user: PrismaUser, executionId: string): Promise<void> {
     await this.workflowService.abortWorkflow(user, executionId);
+  }
+
+  async searchWorkflows(
+    user: User,
+    query: {
+      keyword?: string;
+      order?: ListOrder;
+      page?: number;
+      pageSize?: number;
+    },
+  ): Promise<Array<{ canvasId: string; title: string }>> {
+    const keyword = typeof query.keyword === 'string' ? query.keyword.trim() : '';
+    const order = this.normalizeListOrder(query.order);
+    const page = query.page && Number.isFinite(query.page) && query.page > 0 ? query.page : 1;
+    const pageSize =
+      query.pageSize && Number.isFinite(query.pageSize) && query.pageSize > 0
+        ? Math.min(query.pageSize, 100)
+        : 20;
+
+    const orderBy: Prisma.CanvasOrderByWithRelationInput = (() => {
+      switch (order) {
+        case 'creationAsc':
+          return { createdAt: 'asc' };
+        case 'creationDesc':
+          return { createdAt: 'desc' };
+        case 'updationAsc':
+          return { updatedAt: 'asc' };
+        default:
+          return { updatedAt: 'desc' };
+      }
+    })();
+
+    const where: Prisma.CanvasWhereInput = {
+      uid: user.uid,
+      deletedAt: null,
+      visibility: true,
+    };
+
+    if (keyword) {
+      where.title = { contains: keyword, mode: 'insensitive' };
+    }
+
+    const canvases = await this.prisma.canvas.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        canvasId: true,
+        title: true,
+      },
+    });
+
+    return canvases.map((canvas) => ({
+      canvasId: canvas.canvasId,
+      title: canvas.title || 'Untitled',
+    }));
+  }
+
+  async getWorkflowPlan(
+    user: User,
+    canvasId: string,
+  ): Promise<{
+    title: string;
+    tasks: WorkflowTask[];
+    variables: Array<{
+      name: string;
+      variableType?: string;
+      required?: boolean;
+      options?: string[];
+    }>;
+  }> {
+    const rawData = await this.canvasService.getCanvasRawData(user, canvasId, {
+      checkOwnership: true,
+    });
+
+    const tasks = this.buildWorkflowTasks(rawData.nodes ?? [], rawData.edges ?? []);
+    const variables = this.sanitizeWorkflowVariables(rawData.variables ?? []);
+
+    return {
+      title: rawData.title || 'Untitled',
+      tasks,
+      variables,
+    };
   }
 
   async getOpenapiConfig(
@@ -658,6 +751,106 @@ export class OpenapiService {
     }
 
     return map;
+  }
+
+  private normalizeListOrder(order?: ListOrder): ListOrder {
+    switch (order) {
+      case 'creationAsc':
+      case 'creationDesc':
+      case 'updationAsc':
+      case 'updationDesc':
+        return order;
+      default:
+        return 'updationDesc';
+    }
+  }
+
+  private sanitizeWorkflowVariables(rawVariables: WorkflowVariable[] | undefined): Array<{
+    name: string;
+    variableType?: string;
+    required?: boolean;
+    options?: string[];
+  }> {
+    if (!Array.isArray(rawVariables)) {
+      return [];
+    }
+
+    return rawVariables
+      .map((variable) => {
+        if (!variable?.name) {
+          return null;
+        }
+        const options = Array.isArray(variable.options)
+          ? variable.options.filter((option) => typeof option === 'string')
+          : undefined;
+        return {
+          name: variable.name,
+          variableType: variable.variableType,
+          required: variable.required ?? false,
+          ...(options && options.length > 0 ? { options } : {}),
+        };
+      })
+      .filter((variable): variable is NonNullable<typeof variable> => Boolean(variable));
+  }
+
+  private buildWorkflowTasks(nodes: CanvasNode[], edges: CanvasEdge[]): WorkflowTask[] {
+    if (!Array.isArray(nodes)) {
+      return [];
+    }
+
+    const skillNodes = nodes.filter((node) => node?.type === 'skillResponse');
+    const skillNodeIds = new Set(skillNodes.map((node) => node.id).filter(Boolean));
+
+    const dependencyMap = new Map<string, Set<string>>();
+    if (Array.isArray(edges)) {
+      for (const edge of edges) {
+        const sourceId = edge?.source;
+        const targetId = edge?.target;
+        if (!sourceId || !targetId) continue;
+        if (!skillNodeIds.has(sourceId) || !skillNodeIds.has(targetId)) continue;
+        if (!dependencyMap.has(targetId)) {
+          dependencyMap.set(targetId, new Set());
+        }
+        dependencyMap.get(targetId)!.add(sourceId);
+      }
+    }
+
+    return skillNodes.map((node) => {
+      const metadata = (node.data?.metadata ?? {}) as Record<string, any>;
+      const prompt =
+        typeof metadata.query === 'string'
+          ? metadata.query
+          : typeof metadata?.structuredData?.query === 'string'
+            ? metadata.structuredData.query
+            : '';
+
+      const selectedToolsets = Array.isArray(metadata.selectedToolsets)
+        ? metadata.selectedToolsets
+        : [];
+      const toolsets = Array.from(
+        new Set(
+          selectedToolsets
+            .map((toolset: any) => toolset?.toolset?.key ?? toolset?.id)
+            .filter(
+              (value: unknown): value is string => typeof value === 'string' && value.length > 0,
+            ),
+        ),
+      );
+
+      const task: WorkflowTask = {
+        id: node.id,
+        title: node.data?.editedTitle || node.data?.title || 'Untitled',
+        prompt,
+        toolsets,
+      };
+
+      const dependencies = dependencyMap.get(node.id);
+      if (dependencies && dependencies.size > 0) {
+        task.dependentTasks = Array.from(dependencies);
+      }
+
+      return task;
+    });
   }
 
   private stringifyVariableValue(value: unknown): string {

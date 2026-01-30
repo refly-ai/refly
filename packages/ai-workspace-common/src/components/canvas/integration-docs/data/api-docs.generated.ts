@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-01-30T15:17:54.377Z',
+  generatedAt: '2026-01-30T16:25:25.423Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -897,6 +897,278 @@ export const apiDocsData: ApiDocsData = {
         '404': {
           description: 'Workflow execution not found',
           descriptionKey: 'integration.api.openapi.workflowStatus.response404',
+        },
+      },
+    },
+    {
+      id: 'get-openapi-workflows',
+      method: 'GET',
+      path: '/openapi/workflows',
+      operationId: 'searchWorkflowsViaApi',
+      summary: 'Search workflows via API',
+      summaryKey: 'integration.api.openapi.workflowSearch.summary',
+      description: 'Search workflows accessible by this API key.',
+      descriptionKey: 'integration.api.openapi.workflowSearch.description',
+      tags: ['workflow'],
+      security: ['api_key'],
+      parameters: [
+        {
+          name: 'keyword',
+          in: 'query',
+          required: false,
+          type: 'string',
+          description: 'Keyword to search in workflow titles',
+          descriptionKey: 'integration.api.openapi.workflowSearch.paramKeyword',
+        },
+        {
+          name: 'order',
+          in: 'query',
+          required: false,
+          type: 'string',
+          description: 'Sort order',
+          descriptionKey: 'integration.api.openapi.workflowSearch.paramOrder',
+        },
+        {
+          name: 'page',
+          in: 'query',
+          required: false,
+          type: 'number',
+          description: 'Page number (1-based)',
+          descriptionKey: 'integration.api.openapi.workflowSearch.paramPage',
+        },
+        {
+          name: 'pageSize',
+          in: 'query',
+          required: false,
+          type: 'number',
+          description: 'Number of items per page',
+          descriptionKey: 'integration.api.openapi.workflowSearch.paramPageSize',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Workflow list retrieved successfully',
+          descriptionKey: 'integration.api.openapi.workflowSearch.response200',
+          schema: {
+            type: 'object',
+            properties: {
+              success: {
+                type: 'boolean',
+                description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
+                example: true,
+              },
+              errCode: {
+                type: 'string',
+                description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
+              },
+              errMsg: {
+                type: 'string',
+                description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
+                example: 'Operation failed',
+              },
+              traceId: {
+                type: 'string',
+                description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
+              },
+              stack: {
+                type: 'string',
+                description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
+              },
+              data: {
+                type: 'array',
+                description: 'Workflow search results',
+                descriptionKey: 'integration.api.schema.workflowSearchData',
+                items: {
+                  type: 'object',
+                  required: ['canvasId', 'title'],
+                  properties: {
+                    canvasId: {
+                      type: 'string',
+                      description: 'Canvas/Workflow ID',
+                      descriptionKey: 'integration.api.schema.canvasId',
+                    },
+                    title: {
+                      type: 'string',
+                      description: 'Workflow title',
+                      descriptionKey: 'integration.api.schema.workflowTitle',
+                    },
+                  },
+                },
+              },
+            },
+            required: ['success'],
+          },
+        },
+        '401': {
+          description: 'Unauthorized - invalid or missing API key',
+          descriptionKey: 'integration.api.openapi.workflowSearch.response401',
+        },
+      },
+    },
+    {
+      id: 'get-openapi-workflows-canvasid',
+      method: 'GET',
+      path: '/openapi/workflows/{canvasId}',
+      operationId: 'getWorkflowDetailViaApi',
+      summary: 'Get workflow detail via API',
+      summaryKey: 'integration.api.openapi.workflowDetail.summary',
+      description: 'Get workflow details and workflow plan by canvas ID.',
+      descriptionKey: 'integration.api.openapi.workflowDetail.description',
+      tags: ['workflow'],
+      security: ['api_key'],
+      parameters: [
+        {
+          name: 'canvasId',
+          in: 'path',
+          required: true,
+          type: 'string',
+          description: 'Canvas/Workflow ID',
+          descriptionKey: 'integration.api.openapi.workflowDetail.paramCanvasId',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Workflow detail retrieved successfully',
+          descriptionKey: 'integration.api.openapi.workflowDetail.response200',
+          schema: {
+            type: 'object',
+            properties: {
+              success: {
+                type: 'boolean',
+                description: 'Whether the operation was successful',
+                descriptionKey: 'integration.api.baseResponse.success',
+                example: true,
+              },
+              errCode: {
+                type: 'string',
+                description: 'Error code',
+                descriptionKey: 'integration.api.baseResponse.errCode',
+              },
+              errMsg: {
+                type: 'string',
+                description: 'Error message',
+                descriptionKey: 'integration.api.baseResponse.errMsg',
+                example: 'Operation failed',
+              },
+              traceId: {
+                type: 'string',
+                description: 'Trace ID',
+                descriptionKey: 'integration.api.baseResponse.traceId',
+              },
+              stack: {
+                type: 'string',
+                description: 'Error stack (only returned in development environment)',
+                descriptionKey: 'integration.api.baseResponse.stack',
+              },
+              data: {
+                type: 'object',
+                required: ['title', 'tasks'],
+                properties: {
+                  title: {
+                    type: 'string',
+                    description: 'Title of the workflow plan',
+                    descriptionKey: 'integration.api.schema.workflowPlanTitle',
+                  },
+                  tasks: {
+                    type: 'array',
+                    description: 'Array of workflow tasks to be executed',
+                    descriptionKey: 'integration.api.schema.workflowPlanTasks',
+                    items: {
+                      type: 'object',
+                      required: ['id', 'title', 'prompt', 'toolsets'],
+                      properties: {
+                        id: {
+                          type: 'string',
+                          description: 'Unique ID for the task',
+                          descriptionKey: 'integration.api.schema.workflowTaskId',
+                        },
+                        title: {
+                          type: 'string',
+                          description: 'Display title for the task',
+                          descriptionKey: 'integration.api.schema.workflowTaskTitle',
+                        },
+                        prompt: {
+                          type: 'string',
+                          description: 'The prompt or instruction for this task',
+                          descriptionKey: 'integration.api.schema.workflowTaskPrompt',
+                        },
+                        toolsets: {
+                          type: 'array',
+                          description: 'Toolsets selected for this task',
+                          descriptionKey: 'integration.api.schema.workflowTaskToolsets',
+                          items: {
+                            type: 'string',
+                            description: 'Toolset ID',
+                          },
+                        },
+                        dependentTasks: {
+                          type: 'array',
+                          description: 'Tasks that must be executed before this task',
+                          descriptionKey: 'integration.api.schema.workflowTaskDependentTasks',
+                          items: {
+                            type: 'string',
+                            description: 'Task ID',
+                          },
+                        },
+                      },
+                    },
+                  },
+                  variables: {
+                    type: 'array',
+                    description:
+                      'Array of variables (aka User inputs) defined for the workflow plan',
+                    descriptionKey: 'integration.api.schema.workflowPlanVariables',
+                    items: {
+                      type: 'object',
+                      description: 'Workflow variable definition (public fields)',
+                      required: ['name'],
+                      properties: {
+                        name: {
+                          type: 'string',
+                          description: 'Variable name used in the workflow',
+                          descriptionKey: 'integration.api.schema.workflowVariableName',
+                        },
+                        variableType: {
+                          type: 'string',
+                          description: 'Variable type',
+                          descriptionKey: 'integration.api.schema.workflowVariableType',
+                          enum: ['string', 'option', 'resource'],
+                        },
+                        required: {
+                          type: 'boolean',
+                          description: 'Whether the variable is required. Defaults to false.',
+                          descriptionKey: 'integration.api.schema.workflowVariableRequired',
+                        },
+                        options: {
+                          type: 'array',
+                          description:
+                            'Array of options (only valid when variable type is `option`)',
+                          descriptionKey: 'integration.api.schema.workflowVariableOptions',
+                          items: {
+                            type: 'string',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            required: ['success'],
+          },
+        },
+        '401': {
+          description: 'Unauthorized - invalid or missing API key',
+          descriptionKey: 'integration.api.openapi.workflowDetail.response401',
+        },
+        '404': {
+          description: 'Workflow not found',
+          descriptionKey: 'integration.api.openapi.workflowDetail.response404',
         },
       },
     },

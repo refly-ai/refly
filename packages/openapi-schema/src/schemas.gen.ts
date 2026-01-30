@@ -13281,6 +13281,60 @@ export const OpenapiCopilotGenerateResponseSchema = {
   ],
 } as const;
 
+export const OpenapiWorkflowSummarySchema = {
+  type: 'object',
+  required: ['canvasId', 'title'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas/Workflow ID',
+      'x-i18n-description': 'integration.api.schema.canvasId',
+    },
+    title: {
+      type: 'string',
+      description: 'Workflow title',
+      'x-i18n-description': 'integration.api.schema.workflowTitle',
+    },
+  },
+} as const;
+
+export const OpenapiWorkflowSearchResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Workflow search results',
+          'x-i18n-description': 'integration.api.schema.workflowSearchData',
+          items: {
+            $ref: '#/components/schemas/OpenapiWorkflowSummary',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiWorkflowDetailResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/OpenapiWorkflowPlan',
+        },
+      },
+    },
+  ],
+} as const;
+
 export const OpenapiWorkflowPlanSchema = {
   type: 'object',
   required: ['title', 'tasks'],

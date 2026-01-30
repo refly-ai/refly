@@ -10560,6 +10560,28 @@ export type OpenapiCopilotGenerateResponse = BaseResponse & {
   };
 };
 
+export type OpenapiWorkflowSummary = {
+  /**
+   * Canvas/Workflow ID
+   */
+  canvasId: string;
+  /**
+   * Workflow title
+   */
+  title: string;
+};
+
+export type OpenapiWorkflowSearchResponse = BaseResponse & {
+  /**
+   * Workflow search results
+   */
+  data?: Array<OpenapiWorkflowSummary>;
+};
+
+export type OpenapiWorkflowDetailResponse = BaseResponse & {
+  data?: OpenapiWorkflowPlan;
+};
+
 export type OpenapiWorkflowPlan = {
   /**
    * Title of the workflow plan
@@ -11963,6 +11985,44 @@ export type UploadOpenapiFilesData = {
 export type UploadOpenapiFilesResponse = OpenapiFileUploadResponse;
 
 export type UploadOpenapiFilesError = unknown;
+
+export type SearchWorkflowsViaApiData = {
+  query?: {
+    /**
+     * Keyword to search in workflow titles
+     */
+    keyword?: string;
+    /**
+     * Sort order
+     */
+    order?: ListOrder;
+    /**
+     * Page number (1-based)
+     */
+    page?: number;
+    /**
+     * Number of items per page
+     */
+    pageSize?: number;
+  };
+};
+
+export type SearchWorkflowsViaApiResponse = OpenapiWorkflowSearchResponse;
+
+export type SearchWorkflowsViaApiError = unknown;
+
+export type GetWorkflowDetailViaApiData = {
+  path: {
+    /**
+     * Canvas/Workflow ID
+     */
+    canvasId: string;
+  };
+};
+
+export type GetWorkflowDetailViaApiResponse = OpenapiWorkflowDetailResponse;
+
+export type GetWorkflowDetailViaApiError = unknown;
 
 export type RunWorkflowViaApiData = {
   body: OpenapiWorkflowRunRequest;

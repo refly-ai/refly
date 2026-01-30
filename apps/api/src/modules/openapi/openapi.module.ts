@@ -5,6 +5,7 @@ import { WorkflowApiController } from './controllers/workflow-api.controller';
 import { FileUploadController } from './controllers/file-upload.controller';
 import { OpenapiConfigController } from './controllers/openapi-config.controller';
 import { OpenapiCopilotController } from './controllers/openapi-copilot.controller';
+import { OpenapiWorkflowsController } from './controllers/openapi-workflows.controller';
 import { ApiKeyAuthGuard } from './guards/api-key-auth.guard';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { DebounceGuard } from './guards/debounce.guard';
@@ -45,6 +46,7 @@ import { CopilotAutogenModule } from '../copilot-autogen/copilot-autogen.module'
   ],
   controllers: [
     WorkflowApiController,
+    OpenapiWorkflowsController,
     FileUploadController,
     OpenapiConfigController,
     OpenapiCopilotController,

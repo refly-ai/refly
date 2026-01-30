@@ -342,6 +342,12 @@ import type {
   UploadOpenapiFilesData,
   UploadOpenapiFilesError,
   UploadOpenapiFilesResponse,
+  SearchWorkflowsViaApiData,
+  SearchWorkflowsViaApiError,
+  SearchWorkflowsViaApiResponse,
+  GetWorkflowDetailViaApiData,
+  GetWorkflowDetailViaApiError,
+  GetWorkflowDetailViaApiResponse,
   RunWorkflowViaApiData,
   RunWorkflowViaApiError,
   RunWorkflowViaApiResponse,
@@ -2377,6 +2383,40 @@ export const uploadOpenapiFiles = <ThrowOnError extends boolean = false>(
       ...options?.headers,
     },
     url: '/openapi/files/upload',
+  });
+};
+
+/**
+ * Search workflows via API
+ * Search workflows accessible by this API key.
+ */
+export const searchWorkflowsViaApi = <ThrowOnError extends boolean = false>(
+  options?: Options<SearchWorkflowsViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    SearchWorkflowsViaApiResponse,
+    SearchWorkflowsViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflows',
+  });
+};
+
+/**
+ * Get workflow detail via API
+ * Get workflow details and workflow plan by canvas ID.
+ */
+export const getWorkflowDetailViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowDetailViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowDetailViaApiResponse,
+    GetWorkflowDetailViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflows/{canvasId}',
   });
 };
 

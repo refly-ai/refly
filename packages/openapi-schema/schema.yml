@@ -2989,6 +2989,94 @@ paths:
       security:
         - api_key: []
 
+  /openapi/workflows:
+    get:
+      tags:
+        - workflow
+      summary: Search workflows via API
+      x-i18n-summary: integration.api.openapi.workflowSearch.summary
+      description: Search workflows accessible by this API key.
+      x-i18n-description: integration.api.openapi.workflowSearch.description
+      operationId: searchWorkflowsViaApi
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Keyword to search in workflow titles
+          x-i18n-description: integration.api.openapi.workflowSearch.paramKeyword
+        - name: order
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ListOrder'
+          description: Sort order
+          x-i18n-description: integration.api.openapi.workflowSearch.paramOrder
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: number
+            default: 1
+          description: Page number (1-based)
+          x-i18n-description: integration.api.openapi.workflowSearch.paramPage
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: number
+            default: 20
+          description: Number of items per page
+          x-i18n-description: integration.api.openapi.workflowSearch.paramPageSize
+      responses:
+        '200':
+          description: Workflow list retrieved successfully
+          x-i18n-description: integration.api.openapi.workflowSearch.response200
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenapiWorkflowSearchResponse'
+        '401':
+          description: Unauthorized - invalid or missing API key
+          x-i18n-description: integration.api.openapi.workflowSearch.response401
+      security:
+        - api_key: []
+
+  /openapi/workflows/{canvasId}:
+    get:
+      tags:
+        - workflow
+      summary: Get workflow detail via API
+      x-i18n-summary: integration.api.openapi.workflowDetail.summary
+      description: Get workflow details and workflow plan by canvas ID.
+      x-i18n-description: integration.api.openapi.workflowDetail.description
+      operationId: getWorkflowDetailViaApi
+      parameters:
+        - name: canvasId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Canvas/Workflow ID
+          x-i18n-description: integration.api.openapi.workflowDetail.paramCanvasId
+      responses:
+        '200':
+          description: Workflow detail retrieved successfully
+          x-i18n-description: integration.api.openapi.workflowDetail.response200
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenapiWorkflowDetailResponse'
+        '401':
+          description: Unauthorized - invalid or missing API key
+          x-i18n-description: integration.api.openapi.workflowDetail.response401
+        '404':
+          description: Workflow not found
+          x-i18n-description: integration.api.openapi.workflowDetail.response404
+      security:
+        - api_key: []
+
   /openapi/workflow/{canvasId}/run:
     post:
       tags:
@@ -14221,6 +14309,41 @@ components:
                   x-i18n-description: integration.api.schema.canvasId
                 workflowPlan:
                   $ref: '#/components/schemas/OpenapiWorkflowPlan'
+
+    OpenapiWorkflowSummary:
+      type: object
+      required:
+        - canvasId
+        - title
+      properties:
+        canvasId:
+          type: string
+          description: Canvas/Workflow ID
+          x-i18n-description: integration.api.schema.canvasId
+        title:
+          type: string
+          description: Workflow title
+          x-i18n-description: integration.api.schema.workflowTitle
+
+    OpenapiWorkflowSearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              description: Workflow search results
+              x-i18n-description: integration.api.schema.workflowSearchData
+              items:
+                $ref: '#/components/schemas/OpenapiWorkflowSummary'
+
+    OpenapiWorkflowDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/OpenapiWorkflowPlan'
 
     OpenapiWorkflowPlan:
       type: object
