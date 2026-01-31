@@ -17,8 +17,31 @@ import { extractToolsetsWithNodes } from '@refly/canvas-common';
 import type { RawCanvasData, VariableValue, WorkflowVariable } from '@refly/openapi-schema';
 import { normalizeOpenapiStorageKey } from '../../utils/openapi-file-key';
 import { mergeVariablesWithCanvas } from '../../utils/workflow-variables';
+import { redactApiCallRecord } from '../../utils/data-redaction';
 
 type ResourceFileType = 'document' | 'image' | 'video' | 'audio';
+
+/**
+ * Normalize unknown error into a safe shape with defined properties
+ */
+function normalizeError(error: unknown): {
+  message: string;
+  status: number;
+  name: string;
+} {
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      status: (error as any).status ?? 500,
+      name: error.name,
+    };
+  }
+  return {
+    message: String(error),
+    status: 500,
+    name: 'UnknownError',
+  };
+}
 
 export interface WebhookConfig {
   apiId: string;
@@ -285,7 +308,7 @@ export class WebhookService {
           uid: config.uid,
           sourceCanvasId: config.canvasId,
           canvasId: '',
-          workflowTitle: canvasData?.title || 'Untitled',
+          workflowTitle: canvasData?.title ?? 'Untitled',
           status: 'running',
           scheduledAt,
           triggeredAt: scheduledAt,
@@ -308,8 +331,9 @@ export class WebhookService {
         scheduleId,
         scheduleRecordId,
       ).catch((error) => {
+        const normalizedError = normalizeError(error);
         this.logger.error(
-          `[WEBHOOK_ASYNC_ERROR] uid=${config.uid} webhookId=${webhookId} error=${error.message}`,
+          `[WEBHOOK_ASYNC_ERROR] uid=${config.uid} webhookId=${webhookId} error=${normalizedError.message}`,
         );
       });
 
@@ -321,6 +345,7 @@ export class WebhookService {
       return { received: true };
     } catch (error) {
       const responseTime = Date.now() - startTime;
+      const normalizedError = normalizeError(error);
 
       // Record failed API call
       await this.recordApiCall({
@@ -329,10 +354,10 @@ export class WebhookService {
         apiId: webhookId,
         canvasId: 'unknown',
         requestBody: variables,
-        httpStatus: error.status || 500,
+        httpStatus: normalizedError.status,
         responseTime,
         status: ApiCallStatus.FAILED,
-        failureReason: error.message,
+        failureReason: normalizedError.message,
       });
 
       throw error;
@@ -783,6 +808,13 @@ export class WebhookService {
     failureReason?: string;
   }): Promise<void> {
     try {
+      // Redact sensitive data before persisting
+      const redacted = redactApiCallRecord({
+        requestBody: data.requestBody ? safeStringifyJSON(data.requestBody) : null,
+        requestHeaders: null,
+        responseBody: null,
+      });
+
       await this.prisma.apiCallRecord.create({
         data: {
           recordId: data.recordId,
@@ -790,7 +822,7 @@ export class WebhookService {
           apiId: data.apiId,
           canvasId: data.canvasId,
           workflowExecutionId: data.workflowExecutionId,
-          requestBody: data.requestBody ? safeStringifyJSON(data.requestBody) : null,
+          requestBody: redacted.requestBody,
           httpStatus: data.httpStatus,
           responseTime: data.responseTime,
           status: data.status,
@@ -799,7 +831,8 @@ export class WebhookService {
         },
       });
     } catch (error) {
-      this.logger.error(`Failed to record API call: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to record API call: ${errorMessage}`);
     }
   }
 

@@ -320,10 +320,11 @@ const buildHeaders = (endpoint: ApiEndpoint, apiKey?: string, hasBody?: boolean)
   const requiresAuth =
     endpoint.security?.includes('api_key') || endpoint.security?.includes('bearerAuth');
   if (requiresAuth) {
-    headers.Authorization = `Bearer ${apiKey || 'YOUR_API_KEY'}`;
+    headers.Authorization = `Bearer ${apiKey ?? 'YOUR_API_KEY'}`;
   }
   if (hasBody) {
-    headers['Content-Type'] = 'application/json';
+    // Derive Content-Type from endpoint.requestBody?.contentType, fallback to 'application/json'
+    headers['Content-Type'] = endpoint.requestBody?.contentType ?? 'application/json';
   }
   return headers;
 };

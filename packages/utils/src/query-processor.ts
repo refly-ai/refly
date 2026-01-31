@@ -295,14 +295,16 @@ function processMention(
 
         // Update the updatedQuery with the correct resource name
         const firstResource = matchingVariable.value.find(
-          (v) => v.type === 'resource' && v.resource,
+          (v) => v.type === 'resource' && v.resource?.entityId === id,
         );
         const variableResourceName = firstResource?.resource?.name ?? '';
         const updatedMention = `@{type=resource,id=${id},name=${variableResourceName}}`;
         updatedQuery = updatedQuery.replace(match, updatedMention);
       }
 
-      const firstResource = matchingVariable.value.find((v) => v.type === 'resource' && v.resource);
+      const firstResource = matchingVariable.value.find(
+        (v) => v.type === 'resource' && v.resource?.entityId === id,
+      );
       const variableResourceName = firstResource?.resource?.name ?? '';
       return {
         replacement: formatMention({ type: 'file', name: variableResourceName, id }, mode),

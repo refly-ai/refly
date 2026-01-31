@@ -321,7 +321,9 @@ export const apiDocsData: ApiDocsData = {
       path: '/openapi/webhook/{webhookId}/run',
       operationId: 'runWebhook',
       summary: 'Run workflow via webhook',
+      summaryKey: 'integration.api.openapi.webhookRun.summary',
       description: 'Trigger a webhook to run the linked workflow without authentication',
+      descriptionKey: 'integration.api.openapi.webhookRun.description',
       tags: ['webhook'],
       security: [],
       parameters: [

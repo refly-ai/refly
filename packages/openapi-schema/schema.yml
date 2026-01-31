@@ -471,6 +471,8 @@ paths:
       summary: Create CLI API key
       description: Create a new API key for CLI authentication
       operationId: createCliApiKey
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -490,6 +492,8 @@ paths:
       summary: List CLI API keys
       description: List API keys for current user
       operationId: listCliApiKeys
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Successful operation
@@ -504,6 +508,8 @@ paths:
       summary: Revoke CLI API key
       description: Revoke API key by ID
       operationId: revokeCliApiKey
+      security:
+        - bearerAuth: []
       parameters:
         - name: keyId
           in: path
@@ -523,6 +529,8 @@ paths:
       summary: Update CLI API key
       description: Update API key name
       operationId: updateCliApiKey
+      security:
+        - bearerAuth: []
       parameters:
         - name: keyId
           in: path
@@ -2849,7 +2857,13 @@ paths:
       tags:
         - webhook
       summary: Run workflow via webhook
-      description: Trigger a webhook to run the linked workflow without authentication
+      description: |-
+        Trigger a webhook to run the linked workflow without authentication.
+
+        **Request Body Rules**:
+        - If the workflow requires no variables, send an empty body `{}` or `{ "variables": {} }`
+        - If passing variables, they MUST be wrapped in a "variables" field
+        - Do NOT pass variables directly at the top level
       operationId: runWebhook
       parameters:
         - name: webhookId
@@ -2865,8 +2879,11 @@ paths:
             schema:
               $ref: '#/components/schemas/WebhookRunRequest'
             examples:
+              no_variables:
+                summary: Workflow without variables
+                value: {}
               basic:
-                summary: Basic call
+                summary: Basic variables
                 value:
                   variables:
                     variable1: "Hello World"
@@ -2918,6 +2935,7 @@ paths:
         '401':
           description: Unauthorized
       security:
+        - bearerAuth: []
         - api_key: []
     post:
       tags:
@@ -2943,6 +2961,7 @@ paths:
         '401':
           description: Unauthorized
       security:
+        - bearerAuth: []
         - api_key: []
 
   /openapi/files/upload:
@@ -2987,6 +3006,7 @@ paths:
           description: Unauthorized - invalid or missing API key
           x-i18n-description: integration.api.openapi.filesUpload.response401
       security:
+        - bearerAuth: []
         - api_key: []
 
   /openapi/workflows:
@@ -3041,6 +3061,7 @@ paths:
           description: Unauthorized - invalid or missing API key
           x-i18n-description: integration.api.openapi.workflowSearch.response401
       security:
+        - bearerAuth: []
         - api_key: []
 
   /openapi/workflows/{canvasId}:
@@ -3075,6 +3096,7 @@ paths:
           description: Workflow not found
           x-i18n-description: integration.api.openapi.workflowDetail.response404
       security:
+        - bearerAuth: []
         - api_key: []
 
   /openapi/workflow/{canvasId}/run:
@@ -3087,6 +3109,11 @@ paths:
         Execute a workflow via authenticated API call.
         Unlike webhook triggers, this endpoint requires API Key authentication
         and returns an execution ID that can be used to track workflow status.
+
+        **Request Body Rules**:
+        - If the workflow requires no variables, send an empty body `{}` or `{ "variables": {} }`
+        - If passing variables, they MUST be wrapped in a "variables" field
+        - Do NOT pass variables directly at the top level
       x-i18n-description: integration.api.openapi.workflowRun.description
       operationId: runWorkflowViaApi
       parameters:
@@ -3103,13 +3130,10 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/OpenapiWorkflowRunRequest'
-            example:
-              variables:
-                input: "Hello workflow"
-                files:
-                  - "of_xxx"
-                  - "of_yyy"
             examples:
+              no_variables:
+                summary: Workflow without variables
+                value: {}
               with_files:
                 summary: File variables via fileKey
                 value:
@@ -3145,6 +3169,7 @@ paths:
           description: Workflow not found
           x-i18n-description: integration.api.openapi.workflowRun.response404
       security:
+        - bearerAuth: []
         - api_key: []
 
   /openapi/copilot/workflow/generate:
@@ -3193,6 +3218,7 @@ paths:
           description: Canvas not found
           x-i18n-description: integration.api.openapi.copilotGenerate.response404
       security:
+        - bearerAuth: []
         - api_key: []
 
   /openapi/workflow/{executionId}/status:
@@ -3229,6 +3255,7 @@ paths:
           description: Workflow execution not found
           x-i18n-description: integration.api.openapi.workflowStatus.response404
       security:
+        - bearerAuth: []
         - api_key: []
 
   /openapi/workflow/{executionId}/output:
@@ -3266,6 +3293,7 @@ paths:
           description: Workflow execution not found
           x-i18n-description: integration.api.openapi.workflowOutput.response404
       security:
+        - bearerAuth: []
         - api_key: []
 
   /openapi/workflow/{executionId}/abort:
@@ -3302,6 +3330,7 @@ paths:
           description: Workflow execution not found
           x-i18n-description: integration.api.openapi.workflowAbort.response404
       security:
+        - bearerAuth: []
         - api_key: []
 
   /user/settings:
@@ -3319,6 +3348,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/GetUserSettingsResponse'
       security:
+        - bearerAuth: []
         - api_key: []
     put:
       tags:
@@ -3340,6 +3370,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/BaseResponse'
       security:
+        - bearerAuth: []
         - api_key: []
   /user/checkSettingsField:
     get:
@@ -13951,16 +13982,25 @@ components:
     WebhookRunRequest:
       type: object
       description: |
-        Workflow variables as key-value pairs.
-        You can pass variables directly at the top level or wrap them under the "variables" field.
+        Request body for webhook trigger.
+
+        **IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+        Do NOT pass variables directly at the top level.
+
+        Valid examples:
+        - Empty body (for workflows without variables): {}
+        - With variables: { "variables": { "input": "value", "count": 10 } }
+
+        Invalid example:
+        - { "input": "value" } ❌ (variables not wrapped)
       x-i18n-description: integration.api.schema.webhookRunBody
       properties:
         variables:
           type: object
-          description: Workflow variables as key-value pairs.
+          description: Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.
           x-i18n-description: integration.api.schema.webhookRunVariables
           additionalProperties: true
-      additionalProperties: true
+      additionalProperties: false
 
     WebhookRunResponse:
       allOf:
@@ -14263,18 +14303,29 @@ components:
     OpenapiWorkflowRunRequest:
       type: object
       description: |
-        Wrap workflow variables under the "variables" field.
-        Each key in variables is a workflow variable name. Values can be strings, numbers, booleans, objects, or arrays.
-        For file variables, pass fileKey (or an array of fileKey) returned by /openapi/files/upload.
-        For backward compatibility, you may also pass variables as top-level fields, but "variables" is recommended.
+        Request body for running a workflow via API.
+
+        **IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+        Do NOT pass variables directly at the top level.
+
+        Each key in variables is a workflow variable name. Values can be:
+        - Strings, numbers, booleans, objects, or arrays
+        - For file variables: pass fileKey (string) or array of fileKey returned by /openapi/files/upload
+
+        Valid examples:
+        - Empty body (for workflows without variables): {}
+        - With variables: { "variables": { "input": "Hello", "files": ["of_xxx", "of_yyy"] } }
+
+        Invalid example:
+        - { "input": "Hello" } ❌ (variables not wrapped)
       x-i18n-description: integration.api.openapi.workflowRun.bodyDescription
       properties:
         variables:
           type: object
-          description: Workflow variables as key-value pairs.
+          description: Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.
           x-i18n-description: integration.api.openapi.workflowRun.variablesDescription
           additionalProperties: true
-      additionalProperties: true
+      additionalProperties: false
 
     OpenapiCopilotGenerateRequest:
       type: object
@@ -14461,3 +14512,8 @@ components:
       type: apiKey
       name: api_key
       in: header
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from authentication endpoints

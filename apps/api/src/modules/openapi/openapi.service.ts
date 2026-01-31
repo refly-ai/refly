@@ -27,6 +27,7 @@ import { ConfigService } from '@nestjs/config';
 import { normalizeOpenapiStorageKey } from '../../utils/openapi-file-key';
 import { mergeVariablesWithCanvas } from '../../utils/workflow-variables';
 import { WorkflowService } from '../workflow/workflow.service';
+import { redactApiCallRecord } from '../../utils/data-redaction';
 
 enum ApiCallStatus {
   SUCCESS = 'success',
@@ -152,6 +153,18 @@ export class OpenapiService {
     } catch (error) {
       const responseTime = Date.now() - startTime;
 
+      // Normalize error to extract safe values
+      const httpStatus =
+        error && typeof error === 'object' && 'status' in error ? (error as any).status : 500;
+      const errorMessage =
+        error && typeof error === 'object' && 'message' in error
+          ? (error as any).message
+          : String(error);
+      const errorName =
+        error && typeof error === 'object' && 'name' in error ? (error as any).name : undefined;
+      const errorStack =
+        error && typeof error === 'object' && 'stack' in error ? (error as any).stack : undefined;
+
       // Record failed API call
       await this.recordApiCall({
         recordId,
@@ -159,10 +172,10 @@ export class OpenapiService {
         apiId: null,
         canvasId,
         requestBody: variables,
-        httpStatus: error.status || 500,
+        httpStatus,
         responseTime,
         status: ApiCallStatus.FAILED,
-        failureReason: error.message,
+        failureReason: errorMessage,
       });
 
       if (recordCreated) {
@@ -170,11 +183,11 @@ export class OpenapiService {
           where: { scheduleRecordId },
           data: {
             status: 'failed',
-            failureReason: error.message,
+            failureReason: errorMessage,
             errorDetails: safeStringifyJSON({
-              message: error.message,
-              name: error.name,
-              stack: error.stack,
+              message: errorMessage,
+              name: errorName,
+              stack: errorStack,
             }),
             completedAt: new Date(),
           },
@@ -532,6 +545,13 @@ export class OpenapiService {
     failureReason?: string;
   }): Promise<void> {
     try {
+      // Redact sensitive data before persisting
+      const redacted = redactApiCallRecord({
+        requestBody: safeStringifyJSON(data.requestBody),
+        requestHeaders: null,
+        responseBody: null,
+      });
+
       await this.prisma.apiCallRecord.create({
         data: {
           recordId: data.recordId,
@@ -539,7 +559,7 @@ export class OpenapiService {
           apiId: data.apiId ?? null,
           canvasId: data.canvasId,
           workflowExecutionId: data.workflowExecutionId,
-          requestBody: safeStringifyJSON(data.requestBody),
+          requestBody: redacted.requestBody,
           httpStatus: data.httpStatus,
           responseTime: data.responseTime,
           status: data.status,
@@ -549,7 +569,8 @@ export class OpenapiService {
         },
       });
     } catch (error) {
-      this.logger.error(`Failed to record API call: ${error.message}`);
+      const errorMessage = (error as Error)?.message ?? String(error);
+      this.logger.error(`Failed to record API call: ${errorMessage}`);
     }
   }
 

@@ -21,11 +21,16 @@ export class DebounceGuard implements CanActivate {
 
   constructor(private readonly redisService: RedisService) {}
 
+  /**
+   * Guard method to check if the request should be allowed
+   * @param context - Execution context
+   * @returns Promise<boolean> - true if request is allowed, throws HttpException if duplicate detected
+   */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<WebhookRequest>();
 
     // Get user ID and webhook ID
-    const uid = request.user?.uid || request.uid;
+    const uid = request.user?.uid ?? request.uid;
     const webhookId = request.params?.webhookId;
 
     if (!uid || !webhookId) {
@@ -38,10 +43,11 @@ export class DebounceGuard implements CanActivate {
       const fingerprint = this.generateFingerprint(uid, webhookId, request.body);
       const debounceKey = `${REDIS_KEY_WEBHOOK_DEBOUNCE}:${fingerprint}`;
 
-      // Check if this request was recently made
-      const exists = await this.redisService.get(debounceKey);
+      // Atomically try to set the debounce key
+      // Returns true if key was set (first request), false if key already exists (duplicate)
+      const wasSet = await this.redisService.setIfNotExists(debounceKey, '1', WEBHOOK_DEBOUNCE_TTL);
 
-      if (exists) {
+      if (!wasSet) {
         this.logger.warn(
           `Duplicate request detected for uid=${uid}, webhookId=${webhookId}. Fingerprint: ${fingerprint}`,
         );
@@ -55,9 +61,6 @@ export class DebounceGuard implements CanActivate {
         );
       }
 
-      // Set debounce key with TTL
-      await this.redisService.setex(debounceKey, WEBHOOK_DEBOUNCE_TTL, '1');
-
       this.logger.log(
         `Debounce check passed for uid=${uid}, webhookId=${webhookId}. Fingerprint: ${fingerprint}`,
       );
@@ -70,16 +73,21 @@ export class DebounceGuard implements CanActivate {
       }
 
       // In case of Redis error, allow the operation to avoid blocking legitimate users
-      this.logger.error(`Debounce check failed for uid=${uid}: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Debounce check failed for uid=${uid}: ${errorMessage}`);
       return true;
     }
   }
 
   /**
    * Generate MD5 fingerprint from uid, webhookId, and request body
+   * @param uid - User ID
+   * @param webhookId - Webhook ID
+   * @param body - Request body
+   * @returns string - MD5 hash fingerprint
    */
-  private generateFingerprint(uid: string, webhookId: string, body: any): string {
-    const data = `${uid}:${webhookId}:${JSON.stringify(body || {})}`;
+  private generateFingerprint(uid: string, webhookId: string, body: unknown): string {
+    const data = `${uid}:${webhookId}:${JSON.stringify(body ?? {})}`;
     return crypto.createHash('md5').update(data).digest('hex');
   }
 }

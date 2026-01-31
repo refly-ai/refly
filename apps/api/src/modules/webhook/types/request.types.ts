@@ -1,12 +1,5 @@
 import { Request } from 'express';
-
-/**
- * Extended user object with uid
- */
-export interface AuthenticatedUser {
-  uid: string;
-  [key: string]: any;
-}
+import { AuthenticatedUser } from '../../../types/auth.types';
 
 /**
  * Extended Express Request for webhook endpoints

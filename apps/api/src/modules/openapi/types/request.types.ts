@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { AuthenticatedUser } from '../../../types/auth.types';
 import type {
   ActionStatus,
   WorkflowExecutionStatus,
@@ -14,13 +15,6 @@ import {
 } from '@prisma/client';
 import { pick } from '@refly/utils';
 import { ActionMessage as ActionMessageModel } from '@prisma/client';
-/**
- * Extended user object with uid
- */
-export interface AuthenticatedUser {
-  uid: string;
-  [key: string]: any;
-}
 
 /**
  * Extended Express Request with custom properties

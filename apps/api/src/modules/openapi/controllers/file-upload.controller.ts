@@ -16,6 +16,7 @@ import { MAX_FILE_SIZE, MAX_FILES_PER_REQUEST } from '../openapi.constants';
 import { LoginedUser } from '../../../utils/decorators/user.decorator';
 import { User } from '@prisma/client';
 import { buildSuccessResponse } from '../../../utils/response';
+import { OpenapiFileUploadResponse } from '@refly/openapi-schema';
 
 /**
  * Controller for file upload endpoints (requires API Key)
@@ -45,7 +46,10 @@ export class FileUploadController {
       'fileKey 可直接作为 run 的变量值（字符串或字符串数组）传入。未使用的临时文件约 24 小时后清理。',
   })
   @ApiConsumes('multipart/form-data')
-  async uploadFiles(@UploadedFiles() files: Express.Multer.File[], @LoginedUser() user: User) {
+  async uploadFiles(
+    @UploadedFiles() files: Express.Multer.File[],
+    @LoginedUser() user: User,
+  ): Promise<OpenapiFileUploadResponse> {
     this.logger.log(`[FILE_UPLOAD_REQUEST] uid=${user.uid} fileCount=${files?.length || 0}`);
 
     if (!files || files.length === 0) {

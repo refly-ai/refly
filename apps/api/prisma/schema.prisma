@@ -2732,6 +2732,12 @@ model WorkflowOpenapiConfig {
 }
 
 /// API call records for webhooks
+/// SECURITY NOTE: requestHeaders, requestBody, and responseBody may contain sensitive data.
+/// Before persisting, implement redaction/encryption:
+/// 1. Redact known secrets (API keys, Authorization headers, PII)
+/// 2. Or encrypt full payload using application KMS
+/// 3. Replace redacted values with safe placeholders or deterministic hashes
+/// 4. Add retention policy based on completedAt to purge old records
 model ApiCallRecord {
   /// Primary key
   pk                  BigInt    @id @default(autoincrement())
@@ -2749,11 +2755,11 @@ model ApiCallRecord {
   requestUrl          String?   @map("request_url")
   /// Request method
   requestMethod       String?   @map("request_method")
-  /// Request headers (JSON)
+  /// Request headers (JSON) - SHOULD BE REDACTED/ENCRYPTED
   requestHeaders      String?   @map("request_headers")
-  /// Request body (JSON)
+  /// Request body (JSON) - SHOULD BE REDACTED/ENCRYPTED
   requestBody         String?   @map("request_body")
-  /// Response body (JSON)
+  /// Response body (JSON) - SHOULD BE REDACTED/ENCRYPTED
   responseBody        String?   @map("response_body")
   /// HTTP status code
   httpStatus          Int?      @map("http_status")

@@ -53,7 +53,7 @@ export const InputParameterRow = memo(
       }
       if (variableType === 'resource') {
         // Display all file names, separated by commas
-        const fileNames = value?.map((v) => v.resource?.name).filter(Boolean) ?? [];
+        const fileNames = (value ?? []).map((v) => v.resource?.name).filter(Boolean);
         return fileNames.join(', ');
       }
       return value?.[0]?.text ?? '';

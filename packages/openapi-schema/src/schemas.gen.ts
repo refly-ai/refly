@@ -12767,19 +12767,29 @@ export const TriggerVoucherResponseSchema = {
 
 export const WebhookRunRequestSchema = {
   type: 'object',
-  description: `Workflow variables as key-value pairs.
-You can pass variables directly at the top level or wrap them under the "variables" field.
+  description: `Request body for webhook trigger.
+
+**IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+Do NOT pass variables directly at the top level.
+
+Valid examples:
+- Empty body (for workflows without variables): {}
+- With variables: { "variables": { "input": "value", "count": 10 } }
+
+Invalid example:
+- { "input": "value" } ❌ (variables not wrapped)
 `,
   'x-i18n-description': 'integration.api.schema.webhookRunBody',
   properties: {
     variables: {
       type: 'object',
-      description: 'Workflow variables as key-value pairs.',
+      description:
+        'Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.',
       'x-i18n-description': 'integration.api.schema.webhookRunVariables',
       additionalProperties: true,
     },
   },
-  additionalProperties: true,
+  additionalProperties: false,
 } as const;
 
 export const WebhookRunResponseSchema = {
@@ -13211,21 +13221,33 @@ export const RunWorkflowApiResponseSchema = {
 
 export const OpenapiWorkflowRunRequestSchema = {
   type: 'object',
-  description: `Wrap workflow variables under the "variables" field.
-Each key in variables is a workflow variable name. Values can be strings, numbers, booleans, objects, or arrays.
-For file variables, pass fileKey (or an array of fileKey) returned by /openapi/files/upload.
-For backward compatibility, you may also pass variables as top-level fields, but "variables" is recommended.
+  description: `Request body for running a workflow via API.
+
+**IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+Do NOT pass variables directly at the top level.
+
+Each key in variables is a workflow variable name. Values can be:
+- Strings, numbers, booleans, objects, or arrays
+- For file variables: pass fileKey (string) or array of fileKey returned by /openapi/files/upload
+
+Valid examples:
+- Empty body (for workflows without variables): {}
+- With variables: { "variables": { "input": "Hello", "files": ["of_xxx", "of_yyy"] } }
+
+Invalid example:
+- { "input": "Hello" } ❌ (variables not wrapped)
 `,
   'x-i18n-description': 'integration.api.openapi.workflowRun.bodyDescription',
   properties: {
     variables: {
       type: 'object',
-      description: 'Workflow variables as key-value pairs.',
+      description:
+        'Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.',
       'x-i18n-description': 'integration.api.openapi.workflowRun.variablesDescription',
       additionalProperties: true,
     },
   },
-  additionalProperties: true,
+  additionalProperties: false,
 } as const;
 
 export const OpenapiCopilotGenerateRequestSchema = {

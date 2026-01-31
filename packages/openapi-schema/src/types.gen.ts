@@ -10223,18 +10223,26 @@ export type TriggerVoucherResponse = BaseResponse & {
 };
 
 /**
- * Workflow variables as key-value pairs.
- * You can pass variables directly at the top level or wrap them under the "variables" field.
+ * Request body for webhook trigger.
+ *
+ * **IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+ * Do NOT pass variables directly at the top level.
+ *
+ * Valid examples:
+ * - Empty body (for workflows without variables): {}
+ * - With variables: { "variables": { "input": "value", "count": 10 } }
+ *
+ * Invalid example:
+ * - { "input": "value" } ❌ (variables not wrapped)
  *
  */
 export type WebhookRunRequest = {
   /**
-   * Workflow variables as key-value pairs.
+   * Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.
    */
   variables?: {
     [key: string]: unknown;
   };
-  [key: string]: unknown;
 };
 
 export type WebhookRunResponse = BaseResponse & {
@@ -10516,20 +10524,30 @@ export type RunWorkflowApiResponse = BaseResponse & {
 };
 
 /**
- * Wrap workflow variables under the "variables" field.
- * Each key in variables is a workflow variable name. Values can be strings, numbers, booleans, objects, or arrays.
- * For file variables, pass fileKey (or an array of fileKey) returned by /openapi/files/upload.
- * For backward compatibility, you may also pass variables as top-level fields, but "variables" is recommended.
+ * Request body for running a workflow via API.
+ *
+ * **IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+ * Do NOT pass variables directly at the top level.
+ *
+ * Each key in variables is a workflow variable name. Values can be:
+ * - Strings, numbers, booleans, objects, or arrays
+ * - For file variables: pass fileKey (string) or array of fileKey returned by /openapi/files/upload
+ *
+ * Valid examples:
+ * - Empty body (for workflows without variables): {}
+ * - With variables: { "variables": { "input": "Hello", "files": ["of_xxx", "of_yyy"] } }
+ *
+ * Invalid example:
+ * - { "input": "Hello" } ❌ (variables not wrapped)
  *
  */
 export type OpenapiWorkflowRunRequest = {
   /**
-   * Workflow variables as key-value pairs.
+   * Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.
    */
   variables?: {
     [key: string]: unknown;
   };
-  [key: string]: unknown;
 };
 
 /**

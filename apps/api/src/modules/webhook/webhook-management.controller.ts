@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { WebhookService } from './webhook.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
-import { User } from '@prisma/client';
+import { User } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils/response';
 import {
   EnableWebhookDto,

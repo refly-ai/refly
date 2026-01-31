@@ -5,18 +5,19 @@ export const mergeVariablesWithCanvas = (
   runtimeVariables: WorkflowVariable[] = [],
 ): WorkflowVariable[] => {
   if (!canvasVariables.length) {
-    return runtimeVariables;
+    // Filter out unnamed runtime variables before returning
+    return runtimeVariables.filter((v) => v?.name);
   }
 
   const canvasByName = new Map(
     canvasVariables
-      .filter((variable) => variable.name)
-      .map((variable) => [variable.name, variable]),
+      .filter((variable) => variable?.name)
+      .map((variable) => [variable.name!, variable]),
   );
   const mergedByName = new Map<string, WorkflowVariable>();
 
   for (const runtimeVar of runtimeVariables) {
-    if (!runtimeVar.name) continue;
+    if (!runtimeVar?.name) continue;
     const existing = canvasByName.get(runtimeVar.name);
     if (existing) {
       mergedByName.set(runtimeVar.name, {
@@ -31,7 +32,7 @@ export const mergeVariablesWithCanvas = (
   }
 
   for (const existing of canvasVariables) {
-    if (!existing.name) continue;
+    if (!existing?.name) continue;
     if (!mergedByName.has(existing.name)) {
       mergedByName.set(existing.name, existing);
     }

@@ -2319,7 +2319,12 @@ export const getWebhookHistory = <ThrowOnError extends boolean = false>(
 
 /**
  * Run workflow via webhook
- * Trigger a webhook to run the linked workflow without authentication
+ * Trigger a webhook to run the linked workflow without authentication.
+ *
+ * **Request Body Rules**:
+ * - If the workflow requires no variables, send an empty body `{}` or `{ "variables": {} }`
+ * - If passing variables, they MUST be wrapped in a "variables" field
+ * - Do NOT pass variables directly at the top level
  */
 export const runWebhook = <ThrowOnError extends boolean = false>(
   options: Options<RunWebhookData, ThrowOnError>,
@@ -2425,6 +2430,11 @@ export const getWorkflowDetailViaApi = <ThrowOnError extends boolean = false>(
  * Execute a workflow via authenticated API call.
  * Unlike webhook triggers, this endpoint requires API Key authentication
  * and returns an execution ID that can be used to track workflow status.
+ *
+ * **Request Body Rules**:
+ * - If the workflow requires no variables, send an empty body `{}` or `{ "variables": {} }`
+ * - If passing variables, they MUST be wrapped in a "variables" field
+ * - Do NOT pass variables directly at the top level
  *
  */
 export const runWorkflowViaApi = <ThrowOnError extends boolean = false>(

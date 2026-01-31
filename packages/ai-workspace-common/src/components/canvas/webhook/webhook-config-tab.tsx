@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Copy, Refresh } from 'refly-icons';
 import { serverOrigin } from '@refly/ui-kit';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -114,9 +115,13 @@ export const WebhookConfigTab = memo(({ canvasId }: WebhookConfigTabProps) => {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    message.success(t('common.copied'));
+  const handleCopy = async (text: string) => {
+    const success = await copyToClipboard(text);
+    if (success) {
+      message.success(t('common.copied'));
+    } else {
+      message.error(t('common.copyFailed'));
+    }
   };
 
   const curlExample = config
@@ -192,7 +197,7 @@ print(response.json())`
         <Text strong>{t('webhook.url')}</Text>
         <div className="flex gap-2">
           <Input value={config.webhookUrl} readOnly className="flex-1" />
-          <Button icon={<Copy size={14} />} onClick={() => copyToClipboard(config.webhookUrl)}>
+          <Button icon={<Copy size={14} />} onClick={() => handleCopy(config.webhookUrl)}>
             {t('common.copy')}
           </Button>
         </div>
@@ -220,7 +225,7 @@ print(response.json())`
                     size="small"
                     icon={<Copy size={12} />}
                     className="absolute top-2 right-2"
-                    onClick={() => copyToClipboard(curlExample)}
+                    onClick={() => handleCopy(curlExample)}
                   />
                 </div>
               ),
@@ -240,7 +245,7 @@ print(response.json())`
                     size="small"
                     icon={<Copy size={12} />}
                     className="absolute top-2 right-2"
-                    onClick={() => copyToClipboard(pythonExample)}
+                    onClick={() => handleCopy(pythonExample)}
                   />
                 </div>
               ),
@@ -260,7 +265,7 @@ print(response.json())`
                     size="small"
                     icon={<Copy size={12} />}
                     className="absolute top-2 right-2"
-                    onClick={() => copyToClipboard(javascriptExample)}
+                    onClick={() => handleCopy(javascriptExample)}
                   />
                 </div>
               ),
