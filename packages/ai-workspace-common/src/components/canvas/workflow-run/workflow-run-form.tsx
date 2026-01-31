@@ -420,17 +420,23 @@ export const WorkflowRunForm = ({
           ...(fileId && { response: { fileId } }), // Store fileId in response for later retrieval
         };
 
-        // For single file mode, replace the file list; for multi-file mode, append
-        const newFileList = variable?.isSingle === true ? [newFile] : [...currentFileList, newFile];
-        handleValueChange(variableName, newFileList);
-        form.setFieldsValue({
-          [variableName]: newFileList,
+        setVariableValues((prev) => {
+          const prevFileList = prev[variableName] || [];
+          // For single file mode, replace the file list; for multi-file mode, append
+          const nextFileList = variable?.isSingle === true ? [newFile] : [...prevFileList, newFile];
+          form.setFieldsValue({
+            [variableName]: nextFileList,
+          });
+          return {
+            ...prev,
+            [variableName]: nextFileList,
+          };
         });
         return false; // Prevent default upload behavior
       }
       return false;
     },
-    [uploadFile, variableValues, canvasId, workflowVariables, handleValueChange, form, t],
+    [uploadFile, variableValues, canvasId, workflowVariables, form, t],
   );
 
   // Handle file removal for resource type variables
