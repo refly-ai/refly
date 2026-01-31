@@ -680,6 +680,42 @@ export class CopilotAutogenService {
     throw new Error('Timeout waiting for Copilot to complete');
   }
 
+  private getModelResponseSnippet(actionResult: ActionDetail, maxLength = 500): string | null {
+    const steps = actionResult.steps ?? [];
+    const stepContent = steps.find(
+      (step) => typeof step?.content === 'string' && step.content.trim(),
+    )?.content;
+    const messageContent = actionResult.messages?.find(
+      (message) => typeof message?.content === 'string' && message.content.trim(),
+    )?.content;
+    const rawContent = stepContent ?? messageContent;
+    if (!rawContent) {
+      return null;
+    }
+    const normalized = rawContent.replace(/\s+/g, ' ').trim();
+    if (!normalized) {
+      return null;
+    }
+    if (normalized.length > maxLength) {
+      return `${normalized.slice(0, maxLength)}...`;
+    }
+    return normalized;
+  }
+
+  private appendModelResponse(
+    reason: string | undefined,
+    actionResult: ActionDetail,
+  ): string | undefined {
+    const snippet = this.getModelResponseSnippet(actionResult);
+    if (!snippet) {
+      return reason;
+    }
+    if (!reason) {
+      return `Model response: ${snippet}`;
+    }
+    return `${reason} Model response: ${snippet}`;
+  }
+
   /**
    * Extract Workflow Plan from ActionResult (for original generateWorkflow method)
    * Reference frontend logic (session-detail.tsx)
@@ -693,7 +729,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen] No steps found in action result');
       return {
         plan: null,
-        reason: 'No steps found in Copilot response. The action result may be incomplete.',
+        reason: this.appendModelResponse(
+          'No steps found in Copilot response. The action result may be incomplete.',
+          actionResult,
+        ),
       };
     }
 
@@ -706,8 +745,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen] Copilot did not call any tools, possibly asking questions');
       return {
         plan: null,
-        reason:
+        reason: this.appendModelResponse(
           'Copilot did not generate a workflow. It may be asking for clarification or more information. Please refine your input query to be more specific and complete.',
+          actionResult,
+        ),
       };
     }
 
@@ -719,7 +760,10 @@ export class CopilotAutogenService {
       );
       return {
         plan: null,
-        reason: `Copilot called other tools (${availableTools}) but not 'generate_workflow'. Please adjust your query to explicitly request workflow generation.`,
+        reason: this.appendModelResponse(
+          `Copilot called other tools (${availableTools}) but not 'generate_workflow'. Please adjust your query to explicitly request workflow generation.`,
+          actionResult,
+        ),
       };
     }
 
@@ -727,8 +771,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen] generate_workflow tool call has no output');
       return {
         plan: null,
-        reason:
+        reason: this.appendModelResponse(
           'generate_workflow tool was called but returned no output. This may indicate an internal error.',
+          actionResult,
+        ),
       };
     }
 
@@ -746,7 +792,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen] Workflow plan data field is missing');
       return {
         plan: null,
-        reason: 'Workflow plan data field is missing from generate_workflow tool output.',
+        reason: this.appendModelResponse(
+          'Workflow plan data field is missing from generate_workflow tool output.',
+          actionResult,
+        ),
       };
     }
   }
@@ -765,7 +814,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen CLI] No steps found in action result');
       return {
         planRef: null,
-        reason: 'No steps found in Copilot response. The action result may be incomplete.',
+        reason: this.appendModelResponse(
+          'No steps found in Copilot response. The action result may be incomplete.',
+          actionResult,
+        ),
       };
     }
 
@@ -778,8 +830,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen CLI] Copilot did not call any tools, possibly asking questions');
       return {
         planRef: null,
-        reason:
+        reason: this.appendModelResponse(
           'Copilot did not generate a workflow. It may be asking for clarification or more information. Please refine your input query to be more specific and complete.',
+          actionResult,
+        ),
       };
     }
 
@@ -791,7 +845,10 @@ export class CopilotAutogenService {
       );
       return {
         planRef: null,
-        reason: `Copilot called other tools (${availableTools}) but not 'generate_workflow'. Please adjust your query to explicitly request workflow generation.`,
+        reason: this.appendModelResponse(
+          `Copilot called other tools (${availableTools}) but not 'generate_workflow'. Please adjust your query to explicitly request workflow generation.`,
+          actionResult,
+        ),
       };
     }
 
@@ -799,8 +856,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen CLI] generate_workflow tool call has no output');
       return {
         planRef: null,
-        reason:
+        reason: this.appendModelResponse(
           'generate_workflow tool was called but returned no output. This may indicate an internal error.',
+          actionResult,
+        ),
       };
     }
 
@@ -818,7 +877,10 @@ export class CopilotAutogenService {
       );
       return {
         planRef: null,
-        reason: 'Workflow plan reference (planId) is missing from generate_workflow tool output.',
+        reason: this.appendModelResponse(
+          'Workflow plan reference (planId) is missing from generate_workflow tool output.',
+          actionResult,
+        ),
       };
     }
 
