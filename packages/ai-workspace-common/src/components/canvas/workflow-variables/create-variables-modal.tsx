@@ -47,6 +47,8 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
 
     // Watch the required field to pass to ResourceTypeForm
     const isRequired = Form.useWatch('required', form) ?? true;
+    // Watch the isSingle field to pass to ResourceTypeForm (default: false = multiple files)
+    const isSingle = Form.useWatch('isSingle', form) ?? false;
 
     const title = useMemo(() => {
       if (disableChangeVariableType) {
@@ -295,14 +297,38 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
             url: result.storageKey, // Store storageKey in url field
           };
 
-          // Always append files (multi-file mode)
-          const newFileList = [...fileList, newFile];
-          handleFileListChange(newFileList);
+          // For single file mode, replace the file list; for multi-file mode, append
+          const currentIsSingle = form.getFieldValue('isSingle') ?? false;
+          // Use functional update to get the latest fileList state
+          setFileList((prevFileList) => {
+            const newFileList = currentIsSingle ? [newFile] : [...prevFileList, newFile];
+
+            // Update resource form data with current file list
+            if (variableType === 'resource') {
+              const resourceValues: VariableValue[] = newFileList.map((f) => ({
+                type: 'resource',
+                resource: {
+                  name: f.name || '',
+                  storageKey: f.url || '',
+                  fileType: getFileType(f.name, f.type),
+                },
+              }));
+
+              updateResourceFormData({
+                value: resourceValues,
+              });
+
+              // Update form values to sync with the form
+              form.setFieldValue('value', resourceValues);
+            }
+
+            return newFileList;
+          });
           return false; // Prevent default upload behavior
         }
         return false;
       },
-      [fileList, handleFileListChange, uploadFile],
+      [uploadFile, form, variableType, updateResourceFormData, fileList],
     );
 
     const handleFileRemove = useCallback(
@@ -609,7 +635,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
               form={form}
               showError={showFileUploadError && fileList.length === 0}
               isRequired={isRequired}
-              isSingle={false}
+              isSingle={isSingle}
             />
           );
         case 'option':
