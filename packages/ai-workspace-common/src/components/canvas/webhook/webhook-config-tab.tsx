@@ -38,11 +38,11 @@ export const WebhookConfigTab = memo(({ canvasId }: WebhookConfigTabProps) => {
       });
       const result = response.data;
       if (result?.success && result.data) {
-        const { apiId, isEnabled } = result.data;
+        const { webhookId, isEnabled } = result.data;
         const apiOrigin = serverOrigin || window.location.origin;
         setConfig({
-          webhookId: apiId,
-          webhookUrl: `${apiOrigin}/v1/openapi/webhook/${apiId}/run`,
+          webhookId,
+          webhookUrl: `${apiOrigin}/v1/openapi/webhook/${webhookId}/run`,
           isEnabled,
         });
       }

@@ -317,7 +317,7 @@ const buildWebhookDocsMarkdown = async (canvasId: string, t: (key: string) => st
     const result = response.data;
     if (result?.success && result.data) {
       const apiOrigin = getApiBaseUrl('/v1');
-      webhookUrl = `${apiOrigin}/openapi/webhook/${result.data.apiId}/run`;
+      webhookUrl = `${apiOrigin}/openapi/webhook/${result.data.webhookId}/run`;
       isEnabled = !!result.data.isEnabled;
     }
   } catch (error) {

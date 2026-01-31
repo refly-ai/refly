@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-01-30T17:14:07.464Z',
+  generatedAt: '2026-01-31T10:44:21.533Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -16,7 +16,7 @@ export const apiDocsData: ApiDocsData = {
         'Generate a workflow plan from a natural language prompt.\nIf `canvasId` is provided, the workflow on that canvas will be overwritten and cannot be undone.\n',
       descriptionKey: 'integration.api.openapi.copilotGenerate.description',
       tags: ['copilot'],
-      security: ['api_key'],
+      security: ['bearerAuth', 'api_key'],
       requestBody: {
         required: true,
         contentType: 'application/json',
@@ -217,7 +217,7 @@ export const apiDocsData: ApiDocsData = {
         'Upload files and get fileKey values for workflow variables. Unused files are cleaned up after about 24 hours.',
       descriptionKey: 'integration.api.openapi.filesUpload.description',
       tags: ['workflow'],
-      security: ['api_key'],
+      security: ['bearerAuth', 'api_key'],
       requestBody: {
         required: true,
         contentType: 'multipart/form-data',
@@ -321,9 +321,8 @@ export const apiDocsData: ApiDocsData = {
       path: '/openapi/webhook/{webhookId}/run',
       operationId: 'runWebhook',
       summary: 'Run workflow via webhook',
-      summaryKey: 'integration.api.openapi.webhookRun.summary',
-      description: 'Trigger a webhook to run the linked workflow without authentication',
-      descriptionKey: 'integration.api.openapi.webhookRun.description',
+      description:
+        'Trigger a webhook to run the linked workflow without authentication.\n\n**Request Body Rules**:\n- If the workflow requires no variables, send an empty body `{}` or `{ "variables": {} }`\n- If passing variables, they MUST be wrapped in a "variables" field\n- Do NOT pass variables directly at the top level',
       tags: ['webhook'],
       security: [],
       parameters: [
@@ -341,23 +340,20 @@ export const apiDocsData: ApiDocsData = {
         schema: {
           type: 'object',
           description:
-            'Workflow variables as key-value pairs.\nYou can pass variables directly at the top level or wrap them under the "variables" field.\n',
+            'Request body for webhook trigger.\n\n**IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.\nDo NOT pass variables directly at the top level.\n\nValid examples:\n- Empty body (for workflows without variables): {}\n- With variables: { "variables": { "input": "value", "count": 10 } }\n\nInvalid example:\n- { "input": "value" } ❌ (variables not wrapped)\n',
           descriptionKey: 'integration.api.schema.webhookRunBody',
           properties: {
             variables: {
               type: 'object',
-              description: 'Workflow variables as key-value pairs.',
+              description:
+                'Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.',
               descriptionKey: 'integration.api.schema.webhookRunVariables',
               additionalProperties: true,
             },
           },
-          additionalProperties: true,
+          additionalProperties: null,
         },
-        example: {
-          variables: {
-            variable1: 'Hello World',
-          },
-        },
+        example: {},
       },
       responses: {
         '200': {
@@ -425,10 +421,10 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Run workflow via API (returns execution ID)',
       summaryKey: 'integration.api.openapi.workflowRun.summary',
       description:
-        'Execute a workflow via authenticated API call.\nUnlike webhook triggers, this endpoint requires API Key authentication\nand returns an execution ID that can be used to track workflow status.\n',
+        'Execute a workflow via authenticated API call.\nUnlike webhook triggers, this endpoint requires API Key authentication\nand returns an execution ID that can be used to track workflow status.\n\n**Request Body Rules**:\n- If the workflow requires no variables, send an empty body `{}` or `{ "variables": {} }`\n- If passing variables, they MUST be wrapped in a "variables" field\n- Do NOT pass variables directly at the top level\n',
       descriptionKey: 'integration.api.openapi.workflowRun.description',
       tags: ['workflow'],
-      security: ['api_key'],
+      security: ['bearerAuth', 'api_key'],
       parameters: [
         {
           name: 'canvasId',
@@ -445,24 +441,20 @@ export const apiDocsData: ApiDocsData = {
         schema: {
           type: 'object',
           description:
-            'Wrap workflow variables under the "variables" field.\nEach key in variables is a workflow variable name. Values can be strings, numbers, booleans, objects, or arrays.\nFor file variables, pass fileKey (or an array of fileKey) returned by /openapi/files/upload.\nFor backward compatibility, you may also pass variables as top-level fields, but "variables" is recommended.\n',
+            'Request body for running a workflow via API.\n\n**IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.\nDo NOT pass variables directly at the top level.\n\nEach key in variables is a workflow variable name. Values can be:\n- Strings, numbers, booleans, objects, or arrays\n- For file variables: pass fileKey (string) or array of fileKey returned by /openapi/files/upload\n\nValid examples:\n- Empty body (for workflows without variables): {}\n- With variables: { "variables": { "input": "Hello", "files": ["of_xxx", "of_yyy"] } }\n\nInvalid example:\n- { "input": "Hello" } ❌ (variables not wrapped)\n',
           descriptionKey: 'integration.api.openapi.workflowRun.bodyDescription',
           properties: {
             variables: {
               type: 'object',
-              description: 'Workflow variables as key-value pairs.',
+              description:
+                'Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.',
               descriptionKey: 'integration.api.openapi.workflowRun.variablesDescription',
               additionalProperties: true,
             },
           },
-          additionalProperties: true,
+          additionalProperties: null,
         },
-        example: {
-          variables: {
-            input: 'Hello workflow',
-            files: ['of_xxx', 'of_yyy'],
-          },
-        },
+        example: {},
       },
       responses: {
         '200': {
@@ -508,8 +500,7 @@ export const apiDocsData: ApiDocsData = {
                   },
                   status: {
                     type: 'string',
-                    description: 'Initial execution status (usually "running")',
-                    descriptionKey: 'integration.api.schema.executionStatus',
+                    enum: ['init', 'executing', 'finish', 'failed'],
                   },
                 },
               },
@@ -546,7 +537,7 @@ export const apiDocsData: ApiDocsData = {
         'Abort a running workflow execution via authenticated API call.\nRequires API Key authentication.\n',
       descriptionKey: 'integration.api.openapi.workflowAbort.description',
       tags: ['workflow'],
-      security: ['api_key'],
+      security: ['bearerAuth', 'api_key'],
       parameters: [
         {
           name: 'executionId',
@@ -616,7 +607,7 @@ export const apiDocsData: ApiDocsData = {
         'Get workflow execution output (output nodes and drive files) via authenticated API call.\nRequires API Key authentication.\nMessages may include partial content while nodes are executing or failed. Files are returned only after nodes finish.\n',
       descriptionKey: 'integration.api.openapi.workflowOutput.description',
       tags: ['workflow'],
-      security: ['api_key'],
+      security: ['bearerAuth', 'api_key'],
       parameters: [
         {
           name: 'executionId',
@@ -797,7 +788,7 @@ export const apiDocsData: ApiDocsData = {
         'Get workflow execution status via authenticated API call.\nRequires API Key authentication.\n',
       descriptionKey: 'integration.api.openapi.workflowStatus.description',
       tags: ['workflow'],
-      security: ['api_key'],
+      security: ['bearerAuth', 'api_key'],
       parameters: [
         {
           name: 'executionId',
@@ -912,7 +903,7 @@ export const apiDocsData: ApiDocsData = {
       description: 'Search workflows accessible by this API key.',
       descriptionKey: 'integration.api.openapi.workflowSearch.description',
       tags: ['workflow'],
-      security: ['api_key'],
+      security: ['bearerAuth', 'api_key'],
       parameters: [
         {
           name: 'keyword',
@@ -1022,7 +1013,7 @@ export const apiDocsData: ApiDocsData = {
       description: 'Get workflow details and workflow plan by canvas ID.',
       descriptionKey: 'integration.api.openapi.workflowDetail.description',
       tags: ['workflow'],
-      security: ['api_key'],
+      security: ['bearerAuth', 'api_key'],
       parameters: [
         {
           name: 'canvasId',
@@ -1228,7 +1219,7 @@ export const apiDocsData: ApiDocsData = {
               data: {
                 type: 'object',
                 properties: {
-                  apiId: {
+                  webhookId: {
                     type: 'string',
                     description: 'Webhook ID',
                   },
@@ -1393,7 +1384,7 @@ export const apiDocsData: ApiDocsData = {
               data: {
                 type: 'object',
                 properties: {
-                  apiId: {
+                  webhookId: {
                     type: 'string',
                     description: 'Webhook ID',
                   },
@@ -1634,7 +1625,7 @@ export const apiDocsData: ApiDocsData = {
               data: {
                 type: 'object',
                 properties: {
-                  apiId: {
+                  webhookId: {
                     type: 'string',
                     description: 'New webhook ID',
                   },
