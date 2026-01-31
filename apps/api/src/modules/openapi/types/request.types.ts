@@ -33,6 +33,7 @@ type WorkflowNodeExecutionStatusViaApi = {
   nodeId: string;
   status: ActionStatus;
   title?: string;
+  errorMessage?: string;
 };
 
 export const workflowNodeExecutionPO2DTO = (
@@ -60,6 +61,7 @@ export const workflowNodeExecutionStatusPO2DTO = (
     nodeId: nodeExecution.nodeId,
     status: nodeExecution.status as ActionStatus,
     title: nodeExecution.title ?? undefined,
+    errorMessage: nodeExecution.errorMessage ?? undefined,
   };
 };
 

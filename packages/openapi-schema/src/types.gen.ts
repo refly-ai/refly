@@ -7693,6 +7693,10 @@ export type WorkflowNodeExecutionStatusViaApi = {
    * Node title
    */
   title?: string;
+  /**
+   * Node error message
+   */
+  errorMessage?: string;
 };
 
 export type WorkflowExecutionStatus = 'init' | 'executing' | 'finish' | 'failed';

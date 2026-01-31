@@ -9656,6 +9656,11 @@ export const WorkflowNodeExecutionStatusViaApiSchema = {
       description: 'Node title',
       'x-i18n-description': 'integration.api.schema.nodeTitle',
     },
+    errorMessage: {
+      type: 'string',
+      description: 'Node error message',
+      'x-i18n-description': 'integration.api.schema.nodeErrorMessage',
+    },
   },
 } as const;
 

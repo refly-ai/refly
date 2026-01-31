@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-01-31T10:44:21.533Z',
+  generatedAt: '2026-01-31T15:11:12.142Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -867,6 +867,11 @@ export const apiDocsData: ApiDocsData = {
                           type: 'string',
                           description: 'Node title',
                           descriptionKey: 'integration.api.schema.nodeTitle',
+                        },
+                        errorMessage: {
+                          type: 'string',
+                          description: 'Node error message',
+                          descriptionKey: 'integration.api.schema.nodeErrorMessage',
                         },
                       },
                     },
