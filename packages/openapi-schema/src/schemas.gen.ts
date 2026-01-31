@@ -12906,7 +12906,7 @@ export const EnableWebhookResponseSchema = {
         data: {
           type: 'object',
           properties: {
-            apiId: {
+            webhookId: {
               type: 'string',
               description: 'Webhook ID',
             },
@@ -12958,7 +12958,7 @@ export const ResetWebhookResponseSchema = {
         data: {
           type: 'object',
           properties: {
-            apiId: {
+            webhookId: {
               type: 'string',
               description: 'New webhook ID',
             },
@@ -13053,7 +13053,7 @@ export const GetWebhookConfigResponseSchema = {
         data: {
           type: 'object',
           properties: {
-            apiId: {
+            webhookId: {
               type: 'string',
               description: 'Webhook ID',
             },
@@ -13208,8 +13208,8 @@ export const RunWorkflowApiResponseSchema = {
               'x-i18n-description': 'integration.api.schema.executionId',
             },
             status: {
-              type: 'string',
-              description: 'Initial execution status (usually "running")',
+              $ref: '#/components/schemas/WorkflowExecutionStatus',
+              description: 'Initial execution status (usually "executing")',
               'x-i18n-description': 'integration.api.schema.executionStatus',
             },
           },

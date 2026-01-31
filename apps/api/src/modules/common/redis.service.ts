@@ -139,6 +139,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
    * @returns true if the key was set, false if it already existed
    */
   async setIfNotExists(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    if (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0) {
+      throw new RangeError(`ttlSeconds must be a positive integer, received ${ttlSeconds}`);
+    }
+
     if (this.client) {
       try {
         // SET key value EX ttl NX returns 'OK' if set, null if key already exists
