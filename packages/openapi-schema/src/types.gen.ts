@@ -10327,7 +10327,7 @@ export type EnableWebhookResponse = BaseResponse & {
     /**
      * Webhook ID
      */
-    apiId?: string;
+    webhookId?: string;
     /**
      * Webhook URL
      */
@@ -10358,7 +10358,7 @@ export type ResetWebhookResponse = BaseResponse & {
     /**
      * New webhook ID
      */
-    apiId?: string;
+    webhookId?: string;
     /**
      * New webhook URL
      */
@@ -10410,7 +10410,7 @@ export type GetWebhookConfigResponse = BaseResponse & {
     /**
      * Webhook ID
      */
-    apiId?: string;
+    webhookId?: string;
     /**
      * Whether webhook is enabled
      */
@@ -10517,9 +10517,9 @@ export type RunWorkflowApiResponse = BaseResponse & {
      */
     executionId?: string;
     /**
-     * Initial execution status (usually "running")
+     * Initial execution status (usually "executing")
      */
-    status?: string;
+    status?: WorkflowExecutionStatus;
   };
 };
 

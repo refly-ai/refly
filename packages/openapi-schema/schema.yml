@@ -14086,7 +14086,7 @@ components:
             data:
               type: object
               properties:
-                apiId:
+                webhookId:
                   type: string
                   description: Webhook ID
                 webhookUrl:
@@ -14122,7 +14122,7 @@ components:
             data:
               type: object
               properties:
-                apiId:
+                webhookId:
                   type: string
                   description: New webhook ID
                 webhookUrl:
@@ -14186,7 +14186,7 @@ components:
             data:
               type: object
               properties:
-                apiId:
+                webhookId:
                   type: string
                   description: Webhook ID
                 isEnabled:
@@ -14296,8 +14296,8 @@ components:
                   description: Workflow execution ID for tracking status
                   x-i18n-description: integration.api.schema.executionId
                 status:
-                  type: string
-                  description: Initial execution status (usually "running")
+                  $ref: '#/components/schemas/WorkflowExecutionStatus'
+                  description: Initial execution status (usually "executing")
                   x-i18n-description: integration.api.schema.executionStatus
 
     OpenapiWorkflowRunRequest:
