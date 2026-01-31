@@ -25,6 +25,7 @@ import {
 } from './types/request.types';
 import { ConfigService } from '@nestjs/config';
 import { normalizeOpenapiStorageKey } from '../../utils/openapi-file-key';
+import { mergeVariablesWithCanvas } from '../../utils/workflow-variables';
 import { WorkflowService } from '../workflow/workflow.service';
 
 enum ApiCallStatus {
@@ -76,9 +77,13 @@ export class OpenapiService {
         throw new NotFoundException('User not found');
       }
 
-      // Convert variables to workflow format
-      const workflowVariables = await this.buildWorkflowVariables(uid, variables);
       const canvasData = await this.canvasService.createSnapshotFromCanvas({ uid }, canvasId);
+      // Convert variables to workflow format and align with canvas variable IDs
+      const runtimeVariables = await this.buildWorkflowVariables(uid, variables);
+      const workflowVariables = mergeVariablesWithCanvas(
+        canvasData?.variables ?? [],
+        runtimeVariables,
+      );
       const toolsetsWithNodes = extractToolsetsWithNodes(canvasData?.nodes ?? []);
       const usedToolIds = toolsetsWithNodes.map((t) => t.toolset?.toolset?.key).filter(Boolean);
       const scheduleId = `api:${canvasId}`;

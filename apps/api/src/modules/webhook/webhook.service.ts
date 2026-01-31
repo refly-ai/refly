@@ -16,6 +16,7 @@ import { genScheduleRecordId, safeStringifyJSON } from '@refly/utils';
 import { extractToolsetsWithNodes } from '@refly/canvas-common';
 import type { RawCanvasData, VariableValue, WorkflowVariable } from '@refly/openapi-schema';
 import { normalizeOpenapiStorageKey } from '../../utils/openapi-file-key';
+import { mergeVariablesWithCanvas } from '../../utils/workflow-variables';
 
 type ResourceFileType = 'document' | 'image' | 'video' | 'audio';
 
@@ -263,11 +264,15 @@ export class WebhookService {
         throw new NotFoundException('User not found');
       }
 
-      // Convert variables to workflow format
-      const workflowVariables = await this.buildWorkflowVariables(config.uid, variables);
       const canvasData = await this.canvasService.createSnapshotFromCanvas(
         { uid: config.uid },
         config.canvasId,
+      );
+      // Convert variables to workflow format and align with canvas variable IDs
+      const runtimeVariables = await this.buildWorkflowVariables(config.uid, variables);
+      const workflowVariables = mergeVariablesWithCanvas(
+        canvasData?.variables ?? [],
+        runtimeVariables,
       );
       const toolsetsWithNodes = extractToolsetsWithNodes(canvasData?.nodes ?? []);
       const usedToolIds = toolsetsWithNodes.map((t) => t.toolset?.toolset?.key).filter(Boolean);
