@@ -99,6 +99,14 @@ Workflow tools like n8n are great for basic connectivity, and frameworks like La
 
 Refly acts as the Agent skills builder, providing the governance and reliability infrastructure required to deploy AI across the entire organization.
 
+| Enterprise Requirement | Legacy Tools <br><sub>(Workflow-first)</sub> | SDKs <br><sub>(Code-first)</sub> | **Refly (Skill OS)** |
+| :--- | :--- | :--- | :--- |
+| **Governance & Reuse** | Templates are copied and<br><sub>reconfigured per instance</sub> | No native registry<br><sub>for sharing logic</sub> | **Central skill registry**<br><sub>Versioned, shareable capability assets</sub> |
+| **Operational Reliability** | Trigger-based<br><sub>limited recovery</sub> | Custom handling required | **Stateful runtime**<br><sub>With validation + failure recovery</sub> |
+| **SOP Enforcement** | Workflows drift<br><sub>across copies</sub> | Depends on manual<br><sub>engineering discipline</sub> | **SOP-grade deterministic skills**<br><sub>With controlled execution</sub> |
+| **Deployment** | Instance-bound workflows | Code maintained manually<br><sub>per team</sub> | **Local-first, on-prem ready**<br><sub>Open-source infrastructure</sub> |
+| **Total Cost (TCO)** | Overhead grows with<br><sub>workflow complexity</sub> | High engineering<br><sub>maintenance costs</sub> | **Minimal DSL**<br><sub>Reduces token spend</sub> |
+
 ## Quick Start
 
 https://github.com/refly-ai/refly/tree/main/docs/en/guide/api
