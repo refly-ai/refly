@@ -830,14 +830,8 @@ export type ListAllScheduleRecordsRequest = {
    * Number of items per page
    */
   pageSize?: number;
-  /**
-   * Filter by execution status
-   */
-  status?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
-  /**
-   * Filter by trigger type
-   */
-  type?: 'schedule' | 'webhook' | 'api';
+  executionStatus?: ScheduleRecordExecutionStatus;
+  triggerType?: ScheduleRecordTriggerType;
   /**
    * Search keyword for workflow title
    */
@@ -855,12 +849,18 @@ export type ListAllScheduleRecordsRequest = {
 /**
  * Filter by execution status
  */
-export type status2 = 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
+export type ScheduleRecordExecutionStatus =
+  | 'scheduled'
+  | 'pending'
+  | 'processing'
+  | 'running'
+  | 'success'
+  | 'failed';
 
 /**
  * Filter by execution status
  */
-export const status2 = {
+export const ScheduleRecordExecutionStatus = {
   SCHEDULED: 'scheduled',
   PENDING: 'pending',
   PROCESSING: 'processing',
@@ -872,12 +872,12 @@ export const status2 = {
 /**
  * Filter by trigger type
  */
-export type type = 'schedule' | 'webhook' | 'api';
+export type ScheduleRecordTriggerType = 'schedule' | 'webhook' | 'api';
 
 /**
  * Filter by trigger type
  */
-export const type = {
+export const ScheduleRecordTriggerType = {
   SCHEDULE: 'schedule',
   WEBHOOK: 'webhook',
   API: 'api',
@@ -1189,12 +1189,12 @@ export type IndexError = {
 /**
  * Error type
  */
-export type type2 = 'pageLimitExceeded' | 'unknownError';
+export type type = 'pageLimitExceeded' | 'unknownError';
 
 /**
  * Error type
  */
-export const type2 = {
+export const type = {
   PAGE_LIMIT_EXCEEDED: 'pageLimitExceeded',
   UNKNOWN_ERROR: 'unknownError',
 } as const;
@@ -1684,12 +1684,12 @@ export type SourceSelection = {
 /**
  * Selection type
  */
-export type type3 = 'text' | 'table' | 'link' | 'image' | 'video' | 'audio';
+export type type2 = 'text' | 'table' | 'link' | 'image' | 'video' | 'audio';
 
 /**
  * Selection type
  */
-export const type3 = {
+export const type2 = {
   TEXT: 'text',
   TABLE: 'table',
   LINK: 'link',
@@ -2177,12 +2177,12 @@ export type ToolCallResultViaApi = {
 /**
  * Tool execution status
  */
-export type status3 = 'executing' | 'completed' | 'failed';
+export type status2 = 'executing' | 'completed' | 'failed';
 
 /**
  * Tool execution status
  */
-export const status3 = {
+export const status2 = {
   EXECUTING: 'executing',
   COMPLETED: 'completed',
   FAILED: 'failed',
@@ -3140,12 +3140,12 @@ export type BaseResponseV2 = {
 /**
  * Response status
  */
-export type status4 = 'success' | 'failed';
+export type status3 = 'success' | 'failed';
 
 /**
  * Response status
  */
-export const status4 = {
+export const status3 = {
   SUCCESS: 'success',
   FAILED: 'failed',
 } as const;
@@ -3491,12 +3491,12 @@ export type CanvasTransactionSource = {
 /**
  * Source type
  */
-export type type4 = 'user' | 'system';
+export type type3 = 'user' | 'system';
 
 /**
  * Source type
  */
-export const type4 = {
+export const type3 = {
   USER: 'user',
   SYSTEM: 'system',
 } as const;
@@ -5044,12 +5044,12 @@ export type HeyGenGenerateVideoResponse = BaseResponseV2 & {
 /**
  * Video generation status
  */
-export type status5 = 'pending' | 'processing' | 'completed' | 'failed';
+export type status4 = 'pending' | 'processing' | 'completed' | 'failed';
 
 /**
  * Video generation status
  */
-export const status5 = {
+export const status4 = {
   PENDING: 'pending',
   PROCESSING: 'processing',
   COMPLETED: 'completed',
@@ -6170,12 +6170,12 @@ export type MediaModelParameter = {
 /**
  * Parameter type
  */
-export type type5 = 'url' | 'text' | 'option';
+export type type4 = 'url' | 'text' | 'option';
 
 /**
  * Parameter type
  */
-export const type5 = {
+export const type4 = {
   URL: 'url',
   TEXT: 'text',
   OPTION: 'option',
@@ -6710,12 +6710,12 @@ export type ProviderTestResult = {
 /**
  * Test result status
  */
-export type status6 = 'success' | 'failed' | 'unknown';
+export type status5 = 'success' | 'failed' | 'unknown';
 
 /**
  * Test result status
  */
-export const status6 = {
+export const status5 = {
   SUCCESS: 'success',
   FAILED: 'failed',
   UNKNOWN: 'unknown',
@@ -8557,12 +8557,12 @@ export type FormDefinition = {
 /**
  * Form status
  */
-export type status7 = 'draft' | 'published' | 'archived';
+export type status6 = 'draft' | 'published' | 'archived';
 
 /**
  * Form status
  */
-export const status7 = {
+export const status6 = {
   DRAFT: 'draft',
   PUBLISHED: 'published',
   ARCHIVED: 'archived',
@@ -8602,12 +8602,12 @@ export type FormSubmission = {
 /**
  * Submission status
  */
-export type status8 = 'draft' | 'submitted' | 'reviewed';
+export type status7 = 'draft' | 'submitted' | 'reviewed';
 
 /**
  * Submission status
  */
-export const status8 = {
+export const status7 = {
   DRAFT: 'draft',
   SUBMITTED: 'submitted',
   REVIEWED: 'reviewed',
@@ -8670,12 +8670,12 @@ export type FormFieldSchema = {
 /**
  * Field type
  */
-export type type6 = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array';
+export type type5 = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array';
 
 /**
  * Field type
  */
-export const type6 = {
+export const type5 = {
   STRING: 'string',
   NUMBER: 'number',
   INTEGER: 'integer',
@@ -8944,12 +8944,12 @@ export type JsonSchema = {
 /**
  * Schema type
  */
-export type type7 = 'object';
+export type type6 = 'object';
 
 /**
  * Schema type
  */
-export const type7 = {
+export const type6 = {
   OBJECT: 'object',
 } as const;
 
@@ -9717,12 +9717,12 @@ export type ToolMetadataBilling = {
 /**
  * Billing type
  */
-export type type8 = 'per_call' | 'per_quantity';
+export type type7 = 'per_call' | 'per_quantity';
 
 /**
  * Billing type
  */
-export const type8 = {
+export const type7 = {
   PER_CALL: 'per_call',
   PER_QUANTITY: 'per_quantity',
 } as const;
@@ -10452,7 +10452,7 @@ export type WebhookCallRecord = {
   /**
    * Webhook ID
    */
-  apiId?: string;
+  webhookId?: string;
   /**
    * Canvas ID
    */

@@ -660,6 +660,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       }
     }, [
       variableType,
+      handleInputBlur,
       fileList,
       uploading,
       handleFileUpload,
@@ -667,6 +668,7 @@ export const CreateVariablesModal: React.FC<CreateVariablesModalProps> = React.m
       handleRefreshFile,
       showFileUploadError,
       isRequired,
+      isSingle,
       options,
       editingIndex,
       currentOption,

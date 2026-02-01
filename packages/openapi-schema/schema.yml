@@ -5343,14 +5343,10 @@ components:
           type: integer
           description: Number of items per page
           default: 10
-        status:
-          type: string
-          enum: [scheduled, pending, processing, running, success, failed]
-          description: Filter by execution status
-        type:
-          type: string
-          enum: [schedule, webhook, api]
-          description: Filter by trigger type
+        executionStatus:
+          $ref: '#/components/schemas/ScheduleRecordExecutionStatus'
+        triggerType:
+          $ref: '#/components/schemas/ScheduleRecordTriggerType'
         keyword:
           type: string
           description: Search keyword for workflow title
@@ -5362,6 +5358,16 @@ components:
         canvasId:
           type: string
           description: Filter by canvas ID
+
+    ScheduleRecordExecutionStatus:
+      type: string
+      enum: [scheduled, pending, processing, running, success, failed]
+      description: Filter by execution status
+
+    ScheduleRecordTriggerType:
+      type: string
+      enum: [schedule, webhook, api]
+      description: Filter by trigger type
 
     ListAllScheduleRecordsResponse:
       type: object

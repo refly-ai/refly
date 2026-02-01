@@ -1025,15 +1025,11 @@ export const ListAllScheduleRecordsRequestSchema = {
       description: 'Number of items per page',
       default: 10,
     },
-    status: {
-      type: 'string',
-      enum: ['scheduled', 'pending', 'processing', 'running', 'success', 'failed'],
-      description: 'Filter by execution status',
+    executionStatus: {
+      $ref: '#/components/schemas/ScheduleRecordExecutionStatus',
     },
-    type: {
-      type: 'string',
-      enum: ['schedule', 'webhook', 'api'],
-      description: 'Filter by trigger type',
+    triggerType: {
+      $ref: '#/components/schemas/ScheduleRecordTriggerType',
     },
     keyword: {
       type: 'string',
@@ -1051,6 +1047,18 @@ export const ListAllScheduleRecordsRequestSchema = {
       description: 'Filter by canvas ID',
     },
   },
+} as const;
+
+export const ScheduleRecordExecutionStatusSchema = {
+  type: 'string',
+  enum: ['scheduled', 'pending', 'processing', 'running', 'success', 'failed'],
+  description: 'Filter by execution status',
+} as const;
+
+export const ScheduleRecordTriggerTypeSchema = {
+  type: 'string',
+  enum: ['schedule', 'webhook', 'api'],
+  description: 'Filter by trigger type',
 } as const;
 
 export const ListAllScheduleRecordsResponseSchema = {

@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-01-31T15:11:12.142Z',
+  generatedAt: '2026-02-01T03:01:28.400Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -351,7 +351,7 @@ export const apiDocsData: ApiDocsData = {
               additionalProperties: true,
             },
           },
-          additionalProperties: null,
+          additionalProperties: false,
         },
         example: {},
       },
@@ -452,7 +452,7 @@ export const apiDocsData: ApiDocsData = {
               additionalProperties: true,
             },
           },
-          additionalProperties: null,
+          additionalProperties: false,
         },
         example: {},
       },
@@ -1178,7 +1178,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Get webhook configuration for a canvas',
       description: 'Get webhook configuration including webhook ID and status',
       tags: ['webhook'],
-      security: ['api_key'],
+      security: ['api_key', 'bearerAuth'],
       parameters: [
         {
           name: 'canvasId',
@@ -1261,7 +1261,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Disable webhook',
       description: 'Disable webhook API for a canvas',
       tags: ['webhook'],
-      security: ['api_key'],
+      security: ['api_key', 'bearerAuth'],
       requestBody: {
         required: true,
         contentType: 'application/json',
@@ -1333,7 +1333,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Enable webhook for a canvas',
       description: 'Enable webhook API for a canvas to allow external triggers',
       tags: ['webhook'],
-      security: ['api_key'],
+      security: ['api_key', 'bearerAuth'],
       requestBody: {
         required: true,
         contentType: 'application/json',
@@ -1423,7 +1423,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Get call history for a webhook',
       description: 'Get webhook call history with pagination',
       tags: ['webhook'],
-      security: ['api_key'],
+      security: ['api_key', 'bearerAuth'],
       parameters: [
         {
           name: 'webhookId',
@@ -1578,7 +1578,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Reset webhook (generate new ID)',
       description: 'Reset webhook by generating a new webhook ID',
       tags: ['webhook'],
-      security: ['api_key'],
+      security: ['api_key', 'bearerAuth'],
       requestBody: {
         required: true,
         contentType: 'application/json',
@@ -1663,7 +1663,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Update webhook configuration',
       description: 'Update webhook configuration',
       tags: ['webhook'],
-      security: ['api_key'],
+      security: ['api_key', 'bearerAuth'],
       requestBody: {
         required: true,
         contentType: 'application/json',

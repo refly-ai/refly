@@ -317,13 +317,30 @@ export const WorkflowRunForm = ({
 
         if (fileValues.length > 0) {
           const resourceValues = fileValues.map((v) => {
-            const entityId = variable?.value?.find((val) => val.resource?.name === v.name)?.resource
-              ?.entityId;
-            const existingFileId = variable?.value?.find((val) => val.resource?.name === v.name)
-              ?.resource?.fileId;
-
             // Extract fileId from upload response if available
             const uploadedFileId = v.response?.fileId || v.uid;
+
+            // Match by uploadedFileId first, then storageKey, then name as fallback
+            const matchedResource = variable?.value?.find((val) => {
+              // First try to match by fileId
+              if (uploadedFileId && val.resource?.fileId === uploadedFileId) {
+                return true;
+              }
+              // Then try to match by entityId (uid)
+              if (v.uid && val.resource?.entityId === v.uid) {
+                return true;
+              }
+              // Then try to match by storageKey (url)
+              if (v.url && val.resource?.storageKey === v.url) {
+                return true;
+              }
+              // Finally fall back to name matching
+              return val.resource?.name === v.name;
+            });
+
+            const entityId = matchedResource?.resource?.entityId;
+            const existingFileId = matchedResource?.resource?.fileId;
+
             // Use uploaded fileId if it looks like a fileId (starts with 'df-'),
             // otherwise use existing fileId from variable
             const fileId = uploadedFileId?.startsWith?.('df-') ? uploadedFileId : existingFileId;
