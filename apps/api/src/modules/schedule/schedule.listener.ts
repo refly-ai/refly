@@ -56,6 +56,7 @@ export class ScheduleEventListener {
     const eventType = status === 'success' ? 'workflow.completed' : 'workflow.failed';
     let record: { uid: string } | null = null;
     let counterDecremented = false;
+    const isScheduledTrigger = event.triggerType === 'scheduled';
 
     try {
       this.logger.log(`Processing ${eventType} event for schedule record ${event.scheduleId}`);
@@ -67,8 +68,10 @@ export class ScheduleEventListener {
         return;
       }
 
-      // 2. Decrement Redis counter
-      counterDecremented = await this.decrementRedisCounter(record.uid);
+      // 2. Decrement Redis counter (only for scheduled runs)
+      if (isScheduledTrigger) {
+        counterDecremented = await this.decrementRedisCounter(record.uid);
+      }
 
       // 3. Calculate credit usage
       const creditUsed = await this.calculateCreditUsage(record.uid, event.executionId);
@@ -92,13 +95,15 @@ export class ScheduleEventListener {
       // 5. Update database
       await this.updateScheduleRecord(event.scheduleId!, updateData);
 
-      // 6. Send notification email
-      await this.sendEmail(event, status);
+      // 6. Send notification email (only for scheduled runs)
+      if (isScheduledTrigger) {
+        await this.sendEmail(event, status);
+      }
     } catch (error: any) {
       this.logger.error(`Failed to process ${eventType} event: ${error.message}`);
 
       // Ensure Redis counter is decremented in error case
-      if (record?.uid && !counterDecremented) {
+      if (isScheduledTrigger && record?.uid && !counterDecremented) {
         await this.decrementRedisCounter(record.uid, true);
       }
     }

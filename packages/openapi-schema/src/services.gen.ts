@@ -55,6 +55,17 @@ import type {
   CheckToolOauthStatusData,
   CheckToolOauthStatusError,
   CheckToolOauthStatusResponse,
+  CreateCliApiKeyData2,
+  CreateCliApiKeyError,
+  CreateCliApiKeyResponse2,
+  ListCliApiKeysError,
+  ListCliApiKeysResponse2,
+  RevokeCliApiKeyData,
+  RevokeCliApiKeyError,
+  RevokeCliApiKeyResponse,
+  UpdateCliApiKeyData,
+  UpdateCliApiKeyError,
+  UpdateCliApiKeyResponse,
   GetCollabTokenError,
   GetCollabTokenResponse2,
   ListCanvasesData,
@@ -301,6 +312,57 @@ import type {
   RetryScheduleRecordData,
   RetryScheduleRecordError,
   RetryScheduleRecordResponse2,
+  EnableWebhookData,
+  EnableWebhookError,
+  EnableWebhookResponse2,
+  DisableWebhookData,
+  DisableWebhookError,
+  DisableWebhookResponse,
+  ResetWebhookData,
+  ResetWebhookError,
+  ResetWebhookResponse2,
+  UpdateWebhookData,
+  UpdateWebhookError,
+  UpdateWebhookResponse,
+  GetWebhookConfigData,
+  GetWebhookConfigError,
+  GetWebhookConfigResponse2,
+  GetWebhookHistoryData,
+  GetWebhookHistoryError,
+  GetWebhookHistoryResponse2,
+  RunWebhookData,
+  RunWebhookError,
+  RunWebhookResponse,
+  GetOpenapiConfigData,
+  GetOpenapiConfigError,
+  GetOpenapiConfigResponse,
+  UpdateOpenapiConfigData,
+  UpdateOpenapiConfigError,
+  UpdateOpenapiConfigResponse,
+  UploadOpenapiFilesData,
+  UploadOpenapiFilesError,
+  UploadOpenapiFilesResponse,
+  SearchWorkflowsViaApiData,
+  SearchWorkflowsViaApiError,
+  SearchWorkflowsViaApiResponse,
+  GetWorkflowDetailViaApiData,
+  GetWorkflowDetailViaApiError,
+  GetWorkflowDetailViaApiResponse,
+  RunWorkflowViaApiData,
+  RunWorkflowViaApiError,
+  RunWorkflowViaApiResponse,
+  GenerateWorkflowViaCopilotData,
+  GenerateWorkflowViaCopilotError,
+  GenerateWorkflowViaCopilotResponse,
+  GetWorkflowStatusViaApiData,
+  GetWorkflowStatusViaApiError,
+  GetWorkflowStatusViaApiResponse2,
+  GetWorkflowOutputData,
+  GetWorkflowOutputError,
+  GetWorkflowOutputResponse2,
+  AbortWorkflowViaApiData,
+  AbortWorkflowViaApiError,
+  AbortWorkflowViaApiResponse,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -741,6 +803,74 @@ export const checkToolOauthStatus = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/auth/tool-oauth/status',
+  });
+};
+
+/**
+ * Create CLI API key
+ * Create a new API key for CLI authentication
+ */
+export const createCliApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCliApiKeyData2, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateCliApiKeyResponse2,
+    CreateCliApiKeyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key',
+  });
+};
+
+/**
+ * List CLI API keys
+ * List API keys for current user
+ */
+export const listCliApiKeys = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListCliApiKeysResponse2,
+    ListCliApiKeysError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key',
+  });
+};
+
+/**
+ * Revoke CLI API key
+ * Revoke API key by ID
+ */
+export const revokeCliApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<RevokeCliApiKeyData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).delete<
+    RevokeCliApiKeyResponse,
+    RevokeCliApiKeyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key/{keyId}',
+  });
+};
+
+/**
+ * Update CLI API key
+ * Update API key name
+ */
+export const updateCliApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateCliApiKeyData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).patch<
+    UpdateCliApiKeyResponse,
+    UpdateCliApiKeyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key/{keyId}',
   });
 };
 
@@ -2094,6 +2224,308 @@ export const retryScheduleRecord = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/schedule/record/retry',
+  });
+};
+
+/**
+ * Enable webhook for a canvas
+ * Enable webhook API for a canvas to allow external triggers
+ */
+export const enableWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<EnableWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<EnableWebhookResponse2, EnableWebhookError, ThrowOnError>(
+    {
+      ...options,
+      url: '/webhook/enable',
+    },
+  );
+};
+
+/**
+ * Disable webhook
+ * Disable webhook API for a canvas
+ */
+export const disableWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<DisableWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DisableWebhookResponse,
+    DisableWebhookError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/webhook/disable',
+  });
+};
+
+/**
+ * Reset webhook (generate new ID)
+ * Reset webhook by generating a new webhook ID
+ */
+export const resetWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<ResetWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<ResetWebhookResponse2, ResetWebhookError, ThrowOnError>({
+    ...options,
+    url: '/webhook/reset',
+  });
+};
+
+/**
+ * Update webhook configuration
+ * Update webhook configuration
+ */
+export const updateWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<UpdateWebhookResponse, UpdateWebhookError, ThrowOnError>({
+    ...options,
+    url: '/webhook/update',
+  });
+};
+
+/**
+ * Get webhook configuration for a canvas
+ * Get webhook configuration including webhook ID and status
+ */
+export const getWebhookConfig = <ThrowOnError extends boolean = false>(
+  options: Options<GetWebhookConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWebhookConfigResponse2,
+    GetWebhookConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/webhook/config',
+  });
+};
+
+/**
+ * Get call history for a webhook
+ * Get webhook call history with pagination
+ */
+export const getWebhookHistory = <ThrowOnError extends boolean = false>(
+  options: Options<GetWebhookHistoryData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWebhookHistoryResponse2,
+    GetWebhookHistoryError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/webhook/history',
+  });
+};
+
+/**
+ * Run workflow via webhook
+ * Trigger a webhook to run the linked workflow without authentication.
+ *
+ * **Request Body Rules**:
+ * - If the workflow requires no variables, send an empty body `{}` or `{ "variables": {} }`
+ * - If passing variables, they MUST be wrapped in a "variables" field
+ * - Do NOT pass variables directly at the top level
+ */
+export const runWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<RunWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<RunWebhookResponse, RunWebhookError, ThrowOnError>({
+    ...options,
+    url: '/openapi/webhook/{webhookId}/run',
+  });
+};
+
+/**
+ * Get OpenAPI configuration for a canvas
+ * Get OpenAPI configuration including output node settings
+ */
+export const getOpenapiConfig = <ThrowOnError extends boolean = false>(
+  options: Options<GetOpenapiConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetOpenapiConfigResponse,
+    GetOpenapiConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/config',
+  });
+};
+
+/**
+ * Update OpenAPI configuration for a canvas
+ * Update OpenAPI configuration including output node settings
+ */
+export const updateOpenapiConfig = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateOpenapiConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateOpenapiConfigResponse,
+    UpdateOpenapiConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/config',
+  });
+};
+
+/**
+ * Upload files for OpenAPI workflow variables
+ * Upload files and get fileKey values for workflow variables. Unused files are cleaned up after about 24 hours.
+ */
+export const uploadOpenapiFiles = <ThrowOnError extends boolean = false>(
+  options: Options<UploadOpenapiFilesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UploadOpenapiFilesResponse,
+    UploadOpenapiFilesError,
+    ThrowOnError
+  >({
+    ...options,
+    ...formDataBodySerializer,
+    headers: {
+      'Content-Type': null,
+      ...options?.headers,
+    },
+    url: '/openapi/files/upload',
+  });
+};
+
+/**
+ * Search workflows via API
+ * Search workflows accessible by this API key.
+ */
+export const searchWorkflowsViaApi = <ThrowOnError extends boolean = false>(
+  options?: Options<SearchWorkflowsViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    SearchWorkflowsViaApiResponse,
+    SearchWorkflowsViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflows',
+  });
+};
+
+/**
+ * Get workflow detail via API
+ * Get workflow details and workflow plan by canvas ID.
+ */
+export const getWorkflowDetailViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowDetailViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowDetailViaApiResponse,
+    GetWorkflowDetailViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflows/{canvasId}',
+  });
+};
+
+/**
+ * Run workflow via API (returns execution ID)
+ * Execute a workflow via authenticated API call.
+ * Unlike webhook triggers, this endpoint requires API Key authentication
+ * and returns an execution ID that can be used to track workflow status.
+ *
+ * **Request Body Rules**:
+ * - If the workflow requires no variables, send an empty body `{}` or `{ "variables": {} }`
+ * - If passing variables, they MUST be wrapped in a "variables" field
+ * - Do NOT pass variables directly at the top level
+ *
+ */
+export const runWorkflowViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<RunWorkflowViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    RunWorkflowViaApiResponse,
+    RunWorkflowViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{canvasId}/run',
+  });
+};
+
+/**
+ * Generate workflow via Copilot
+ * Generate a workflow plan from a natural language prompt.
+ * If `canvasId` is provided, the workflow on that canvas will be overwritten and cannot be undone.
+ *
+ */
+export const generateWorkflowViaCopilot = <ThrowOnError extends boolean = false>(
+  options: Options<GenerateWorkflowViaCopilotData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GenerateWorkflowViaCopilotResponse,
+    GenerateWorkflowViaCopilotError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/copilot/workflow/generate',
+  });
+};
+
+/**
+ * Get workflow execution status via API
+ * Get workflow execution status via authenticated API call.
+ * Requires API Key authentication.
+ *
+ */
+export const getWorkflowStatusViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowStatusViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowStatusViaApiResponse2,
+    GetWorkflowStatusViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{executionId}/status',
+  });
+};
+
+/**
+ * Get workflow execution output via API
+ * Get workflow execution output (output nodes and drive files) via authenticated API call.
+ * Requires API Key authentication.
+ * Messages may include partial content while nodes are executing or failed. Files are returned only after nodes finish.
+ *
+ */
+export const getWorkflowOutput = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowOutputData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowOutputResponse2,
+    GetWorkflowOutputError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{executionId}/output',
+  });
+};
+
+/**
+ * Abort workflow execution via API
+ * Abort a running workflow execution via authenticated API call.
+ * Requires API Key authentication.
+ *
+ */
+export const abortWorkflowViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<AbortWorkflowViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    AbortWorkflowViaApiResponse,
+    AbortWorkflowViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{executionId}/abort',
   });
 };
 

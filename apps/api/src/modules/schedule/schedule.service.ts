@@ -456,7 +456,8 @@ export class ScheduleService {
     uid: string,
     page = 1,
     pageSize = 10,
-    status?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed',
+    executionStatus?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed',
+    triggerType?: 'schedule' | 'webhook' | 'api',
     keyword?: string,
     tools?: string[],
     canvasId?: string,
@@ -469,11 +470,22 @@ export class ScheduleService {
     }
 
     // Filter by status - only show completed records (success/failed) by default
-    if (status) {
-      where.status = status;
+    if (executionStatus) {
+      where.status = executionStatus;
     } else {
       // Default: only show success or failed records
       where.status = { in: ['success', 'failed'] };
+    }
+
+    if (triggerType === 'webhook') {
+      where.scheduleId = { startsWith: 'webhook:' };
+    } else if (triggerType === 'api') {
+      where.scheduleId = { startsWith: 'api:' };
+    } else if (triggerType === 'schedule') {
+      where.NOT = [
+        { scheduleId: { startsWith: 'webhook:' } },
+        { scheduleId: { startsWith: 'api:' } },
+      ];
     }
 
     // Filter by keyword (search in workflowTitle)

@@ -30,6 +30,7 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
+  getOpenapiConfig,
   getPromptSuggestions,
   getResourceDetail,
   getSettings,
@@ -37,14 +38,20 @@ import {
   getSubscriptionUsage,
   getTemplateGenerationStatus,
   getToolCallResult,
+  getWebhookConfig,
+  getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowDetailViaApi,
+  getWorkflowOutput,
   getWorkflowPlanDetail,
+  getWorkflowStatusViaApi,
   getWorkflowVariables,
   listAccounts,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
+  listCliApiKeys,
   listCodeArtifacts,
   listCopilotSessions,
   listDocuments,
@@ -64,6 +71,7 @@ import {
   listUserVouchers,
   listWorkflowApps,
   listWorkflowExecutions,
+  searchWorkflowsViaApi,
   serveStatic,
   verifyVoucherInvitation,
 } from '@refly/openapi-schema';
@@ -117,6 +125,8 @@ import {
   GetExportJobStatusData,
   GetExportJobStatusError,
   GetFormDefinitionError,
+  GetOpenapiConfigData,
+  GetOpenapiConfigError,
   GetPromptSuggestionsError,
   GetResourceDetailData,
   GetResourceDetailError,
@@ -127,12 +137,22 @@ import {
   GetTemplateGenerationStatusError,
   GetToolCallResultData,
   GetToolCallResultError,
+  GetWebhookConfigData,
+  GetWebhookConfigError,
+  GetWebhookHistoryData,
+  GetWebhookHistoryError,
   GetWorkflowAppDetailData,
   GetWorkflowAppDetailError,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
+  GetWorkflowDetailViaApiData,
+  GetWorkflowDetailViaApiError,
+  GetWorkflowOutputData,
+  GetWorkflowOutputError,
   GetWorkflowPlanDetailData,
   GetWorkflowPlanDetailError,
+  GetWorkflowStatusViaApiData,
+  GetWorkflowStatusViaApiError,
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
   ListAccountsData,
@@ -142,6 +162,7 @@ import {
   ListCanvasTemplateCategoriesError,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
+  ListCliApiKeysError,
   ListCodeArtifactsData,
   ListCodeArtifactsError,
   ListCopilotSessionsData,
@@ -175,6 +196,8 @@ import {
   ListWorkflowAppsError,
   ListWorkflowExecutionsData,
   ListWorkflowExecutionsError,
+  SearchWorkflowsViaApiData,
+  SearchWorkflowsViaApiError,
   ServeStaticError,
   VerifyVoucherInvitationData,
   VerifyVoucherInvitationError,
@@ -240,6 +263,21 @@ export const useCheckToolOauthStatusSuspense = <
       checkToolOauthStatus({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
+    ...options,
+  });
+export const useListCliApiKeysSuspense = <
+  TData = Common.ListCliApiKeysDefaultResponse,
+  TError = ListCliApiKeysError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseListCliApiKeysKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listCliApiKeys({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetCollabTokenSuspense = <
@@ -710,6 +748,117 @@ export const useGetTemplateGenerationStatusSuspense = <
       getTemplateGenerationStatus({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
+    ...options,
+  });
+export const useGetWebhookConfigSuspense = <
+  TData = Common.GetWebhookConfigDefaultResponse,
+  TError = GetWebhookConfigError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWebhookConfigData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetWebhookConfigKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWebhookConfig({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetWebhookHistorySuspense = <
+  TData = Common.GetWebhookHistoryDefaultResponse,
+  TError = GetWebhookHistoryError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWebhookHistoryData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWebhookHistory({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetOpenapiConfigSuspense = <
+  TData = Common.GetOpenapiConfigDefaultResponse,
+  TError = GetOpenapiConfigError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetOpenapiConfigData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetOpenapiConfigKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getOpenapiConfig({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useSearchWorkflowsViaApiSuspense = <
+  TData = Common.SearchWorkflowsViaApiDefaultResponse,
+  TError = SearchWorkflowsViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<SearchWorkflowsViaApiData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseSearchWorkflowsViaApiKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      searchWorkflowsViaApi({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useGetWorkflowDetailViaApiSuspense = <
+  TData = Common.GetWorkflowDetailViaApiDefaultResponse,
+  TError = GetWorkflowDetailViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowDetailViaApiData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowDetailViaApiKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowDetailViaApi({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useGetWorkflowStatusViaApiSuspense = <
+  TData = Common.GetWorkflowStatusViaApiDefaultResponse,
+  TError = GetWorkflowStatusViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowStatusViaApiData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowStatusViaApiKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowStatusViaApi({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useGetWorkflowOutputSuspense = <
+  TData = Common.GetWorkflowOutputDefaultResponse,
+  TError = GetWorkflowOutputError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowOutputData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowOutputKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowOutput({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetSettingsSuspense = <

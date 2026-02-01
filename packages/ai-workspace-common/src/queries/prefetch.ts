@@ -30,6 +30,7 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
+  getOpenapiConfig,
   getPromptSuggestions,
   getResourceDetail,
   getSettings,
@@ -37,14 +38,20 @@ import {
   getSubscriptionUsage,
   getTemplateGenerationStatus,
   getToolCallResult,
+  getWebhookConfig,
+  getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowDetailViaApi,
+  getWorkflowOutput,
   getWorkflowPlanDetail,
+  getWorkflowStatusViaApi,
   getWorkflowVariables,
   listAccounts,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
+  listCliApiKeys,
   listCodeArtifacts,
   listCopilotSessions,
   listDocuments,
@@ -64,6 +71,7 @@ import {
   listUserVouchers,
   listWorkflowApps,
   listWorkflowExecutions,
+  searchWorkflowsViaApi,
   serveStatic,
   verifyVoucherInvitation,
 } from '@refly/openapi-schema';
@@ -90,12 +98,18 @@ import {
   GetCreditUsageData,
   GetDocumentDetailData,
   GetExportJobStatusData,
+  GetOpenapiConfigData,
   GetResourceDetailData,
   GetTemplateGenerationStatusData,
   GetToolCallResultData,
+  GetWebhookConfigData,
+  GetWebhookHistoryData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
+  GetWorkflowDetailViaApiData,
+  GetWorkflowOutputData,
   GetWorkflowPlanDetailData,
+  GetWorkflowStatusViaApiData,
   GetWorkflowVariablesData,
   ListAccountsData,
   ListCanvasesData,
@@ -114,6 +128,7 @@ import {
   ListToolsetsData,
   ListWorkflowAppsData,
   ListWorkflowExecutionsData,
+  SearchWorkflowsViaApiData,
   VerifyVoucherInvitationData,
 } from '@refly/openapi-schema';
 import * as Common from './common';
@@ -148,6 +163,14 @@ export const prefetchUseCheckToolOauthStatus = (
   queryClient.prefetchQuery({
     queryKey: Common.UseCheckToolOauthStatusKeyFn(clientOptions),
     queryFn: () => checkToolOauthStatus({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseListCliApiKeys = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseListCliApiKeysKeyFn(clientOptions),
+    queryFn: () => listCliApiKeys({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetCollabToken = (
   queryClient: QueryClient,
@@ -390,6 +413,62 @@ export const prefetchUseGetTemplateGenerationStatus = (
     queryKey: Common.UseGetTemplateGenerationStatusKeyFn(clientOptions),
     queryFn: () =>
       getTemplateGenerationStatus({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWebhookConfig = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWebhookConfigData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWebhookConfigKeyFn(clientOptions),
+    queryFn: () => getWebhookConfig({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWebhookHistory = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWebhookHistoryData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions),
+    queryFn: () => getWebhookHistory({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetOpenapiConfig = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetOpenapiConfigData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetOpenapiConfigKeyFn(clientOptions),
+    queryFn: () => getOpenapiConfig({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseSearchWorkflowsViaApi = (
+  queryClient: QueryClient,
+  clientOptions: Options<SearchWorkflowsViaApiData, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseSearchWorkflowsViaApiKeyFn(clientOptions),
+    queryFn: () => searchWorkflowsViaApi({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWorkflowDetailViaApi = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowDetailViaApiData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWorkflowDetailViaApiKeyFn(clientOptions),
+    queryFn: () => getWorkflowDetailViaApi({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWorkflowStatusViaApi = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowStatusViaApiData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWorkflowStatusViaApiKeyFn(clientOptions),
+    queryFn: () => getWorkflowStatusViaApi({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWorkflowOutput = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowOutputData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWorkflowOutputKeyFn(clientOptions),
+    queryFn: () => getWorkflowOutput({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetSettings = (
   queryClient: QueryClient,

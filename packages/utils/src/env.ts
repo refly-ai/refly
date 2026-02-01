@@ -51,6 +51,7 @@ declare global {
       CANVAS_TEMPLATE_ENABLED?: boolean;
       SENTRY_ENABLED?: boolean;
       ENV_TAG?: string;
+      DEPLOY_TYPE?: string;
     };
 
     ipcRenderer?: {

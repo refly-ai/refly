@@ -1,0 +1,173 @@
+// API Key Management Modal - Only keep Ant Design overrides and complex styles
+.api-key-management-modal,
+.api-key-create-modal,
+.api-key-delete-modal,
+.api-output-modal {
+  .ant-modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+  }
+
+  .ant-modal-header {
+    height: 34px;
+  }
+
+  .ant-modal-body {
+    border-top: 1px solid var(--refly-line);
+    padding: 16px 0px;
+  }
+
+  // Override primary button styles
+  .ant-btn-primary {
+    background: var(--refly-text-0) !important;
+    border-color: var(--refly-text-0) !important;
+    color: var(--refly-bg-content-z2) !important;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+
+    &:hover {
+      background: var(--refly-text-1) !important;
+      border-color: var(--refly-text-1) !important;
+      color: var(--refly-bg-content-z2) !important;
+    }
+
+    &:active {
+      background: var(--refly-text-0) !important;
+      border-color: var(--refly-text-0) !important;
+      color: var(--refly-bg-content-z2) !important;
+    }
+
+    &:disabled {
+      background: var(--refly-text-3) !important;
+      border-color: var(--refly-text-3) !important;
+      color: var(--refly-bg-content-z2) !important;
+      opacity: 0.5;
+    }
+  }
+}
+
+// List header with pseudo-element border
+.api-key-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--refly-line);
+    opacity: 0.3;
+  }
+}
+
+// List item with conditional border
+.api-key-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  position: relative;
+
+  &.has-border::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--refly-line);
+    opacity: 0.3;
+  }
+}
+
+// Action button with hover state
+.api-key-action-btn {
+  color: var(--refly-text-1);
+  padding: 4px;
+
+  &:hover {
+    color: var(--refly-text-0);
+    background: transparent;
+  }
+
+  .anticon {
+    font-size: 18px;
+  }
+}
+
+// Display copy button with hover state
+.api-key-display-copy {
+  flex-shrink: 0;
+  color: var(--refly-text-1);
+  padding: 4px;
+
+  &:hover {
+    color: var(--refly-text-0);
+    background: transparent;
+  }
+
+  .anticon {
+    font-size: 16px;
+  }
+}
+
+// Ant Design Input overrides
+.api-key-input {
+  &.ant-input {
+    height: 40px;
+    border-radius: 8px;
+    background: var(--refly-bg-content-z1);
+    border-color: var(--refly-line);
+    color: var(--refly-text-0);
+
+    &:focus,
+    &:hover {
+      border-color: var(--refly-text-0);
+    }
+
+    &::placeholder {
+      color: var(--refly-text-3);
+    }
+  }
+}
+
+// Delete modal button styles
+.api-key-delete-cancel-btn,
+.api-key-delete-confirm-btn {
+  height: 32px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 20px;
+}
+
+.api-key-delete-cancel-btn {
+  background: var(--refly-bg-content-z1);
+  border: 1px solid var(--refly-line);
+  color: var(--refly-text-0);
+
+  &:hover {
+    background: var(--refly-bg-content-z0);
+    border-color: var(--refly-text-0);
+  }
+}
+
+.api-key-delete-confirm-btn {
+  background: var(--refly-func-error-default);
+  border-color: var(--refly-func-error-default);
+
+  &:hover {
+    background: var(--refly-func-error-hover);
+    border-color: var(--refly-func-error-hover);
+  }
+}

@@ -11,6 +11,7 @@ declare global {
       CANVAS_TEMPLATE_ENABLED?: boolean;
       SENTRY_ENABLED?: boolean;
       ENV_TAG?: string;
+      DEPLOY_TYPE?: string;
     };
 
     ipcRenderer?: {
@@ -83,6 +84,12 @@ export const sentryEnabled =
 
 export const envTag = getBrowserValue(() => window.ENV?.ENV_TAG, '') || process.env.VITE_ENV_TAG;
 console.log('envTag', envTag);
+
+const DEPLOY_TYPE_SELF_HOSTED = 'self-hosted';
+
+export const isSelfHosted =
+  getBrowserValue(() => window.ENV?.DEPLOY_TYPE, '') === DEPLOY_TYPE_SELF_HOSTED ||
+  process.env.VITE_DEPLOY_TYPE === DEPLOY_TYPE_SELF_HOSTED;
 
 export const runtime = process.env.VITE_RUNTIME as IRuntime;
 

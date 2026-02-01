@@ -477,6 +477,8 @@ model StaticFile {
   storageSize       BigInt    @default(0) @map("storage_size")
   /// Content type
   contentType       String    @default("") @map("content_type")
+  /// Original file name
+  originalName      String?   @map("original_name")
   /// Processed image storage key (only applicable to images)
   processedImageKey String?   @map("processed_image_key")
   /// Entity id
@@ -2680,4 +2682,100 @@ model SkillExecutionWorkflow {
   @@index([executionId, status])
   @@index([executionLevel])
   @@map("skill_execution_workflows")
+}
+
+/// Webhook configuration for workflows
+model WorkflowWebhook {
+  /// Primary key
+  pk        BigInt    @id @default(autoincrement())
+  /// Webhook ID (wh_{32 random chars})
+  apiId     String    @unique @map("webhook_id")
+  /// User ID
+  uid       String    @map("uid")
+  /// Canvas ID
+  canvasId  String    @map("canvas_id")
+  /// Whether the webhook is enabled
+  isEnabled Boolean   @default(false) @map("is_enabled")
+  /// Timeout in seconds
+  timeout   Int       @default(30) @map("timeout")
+  /// Create timestamp
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  /// Soft delete timestamp
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz()
+
+  @@unique([canvasId, uid])
+  @@index([apiId], map: "idx_workflow_webhooks_api_id")
+  @@index([uid])
+  @@map("workflow_webhooks")
+}
+
+/// OpenAPI configuration for workflows
+model WorkflowOpenapiConfig {
+  /// Primary key
+  pk            BigInt   @id @default(autoincrement())
+  /// User ID
+  uid           String   @map("uid")
+  /// Canvas ID
+  canvasId      String   @map("canvas_id")
+  /// Result node IDs (JSON array of node IDs marked as output)
+  resultNodeIds String?  @map("result_node_ids")
+  /// Create timestamp
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([canvasId, uid])
+  @@index([uid])
+  @@map("workflow_openapi_configs")
+}
+
+/// API call records for webhooks
+/// SECURITY NOTE: requestHeaders, requestBody, and responseBody may contain sensitive data.
+/// Before persisting, implement redaction/encryption:
+/// 1. Redact known secrets (API keys, Authorization headers, PII)
+/// 2. Or encrypt full payload using application KMS
+/// 3. Replace redacted values with safe placeholders or deterministic hashes
+/// 4. Add retention policy based on completedAt to purge old records
+model ApiCallRecord {
+  /// Primary key
+  pk                  BigInt    @id @default(autoincrement())
+  /// Record ID
+  recordId            String    @unique @map("record_id")
+  /// User ID
+  uid                 String    @map("uid")
+  /// API ID (webhookId if triggered by webhook)
+  apiId               String?   @map("api_id")
+  /// Canvas ID
+  canvasId            String    @map("canvas_id")
+  /// Workflow execution ID
+  workflowExecutionId String?   @map("workflow_execution_id")
+  /// Request URL
+  requestUrl          String?   @map("request_url")
+  /// Request method
+  requestMethod       String?   @map("request_method")
+  /// Request headers (JSON) - SHOULD BE REDACTED/ENCRYPTED
+  requestHeaders      String?   @map("request_headers")
+  /// Request body (JSON) - SHOULD BE REDACTED/ENCRYPTED
+  requestBody         String?   @map("request_body")
+  /// Response body (JSON) - SHOULD BE REDACTED/ENCRYPTED
+  responseBody        String?   @map("response_body")
+  /// HTTP status code
+  httpStatus          Int?      @map("http_status")
+  /// Response time in milliseconds
+  responseTime        Int?      @map("response_time")
+  /// Status: pending/success/failed
+  status              String    @map("status")
+  /// Failure reason
+  failureReason       String?   @map("failure_reason")
+  /// Create timestamp
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  /// Completed timestamp
+  completedAt         DateTime? @map("completed_at") @db.Timestamptz()
+
+  @@index([uid])
+  @@index([apiId])
+  @@index([createdAt(sort: Desc)])
+  @@map("api_call_records")
 }

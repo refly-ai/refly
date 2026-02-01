@@ -834,10 +834,8 @@ export type ListAllScheduleRecordsRequest = {
    * Number of items per page
    */
   pageSize?: number;
-  /**
-   * Filter by execution status
-   */
-  status?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
+  executionStatus?: ScheduleRecordExecutionStatus;
+  triggerType?: ScheduleRecordTriggerType;
   /**
    * Search keyword for workflow title
    */
@@ -855,18 +853,38 @@ export type ListAllScheduleRecordsRequest = {
 /**
  * Filter by execution status
  */
-export type status2 = 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
+export type ScheduleRecordExecutionStatus =
+  | 'scheduled'
+  | 'pending'
+  | 'processing'
+  | 'running'
+  | 'success'
+  | 'failed';
 
 /**
  * Filter by execution status
  */
-export const status2 = {
+export const ScheduleRecordExecutionStatus = {
   SCHEDULED: 'scheduled',
   PENDING: 'pending',
   PROCESSING: 'processing',
   RUNNING: 'running',
   SUCCESS: 'success',
   FAILED: 'failed',
+} as const;
+
+/**
+ * Filter by trigger type
+ */
+export type ScheduleRecordTriggerType = 'schedule' | 'webhook' | 'api';
+
+/**
+ * Filter by trigger type
+ */
+export const ScheduleRecordTriggerType = {
+  SCHEDULE: 'schedule',
+  WEBHOOK: 'webhook',
+  API: 'api',
 } as const;
 
 export type ListAllScheduleRecordsResponse = {
@@ -2127,6 +2145,76 @@ export type ActionMessage = {
 };
 
 /**
+ * Simplified tool call result for API
+ */
+export type ToolCallResultViaApi = {
+  /**
+   * Tool name
+   */
+  toolName?: string;
+  /**
+   * Tool input
+   */
+  input?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Tool output
+   */
+  output?: {
+    [key: string]: unknown;
+  };
+  /**
+   * Tool execution error
+   */
+  error?: string;
+  /**
+   * Tool execution status
+   */
+  status?: 'executing' | 'completed' | 'failed';
+  /**
+   * Tool call creation timestamp
+   */
+  createdAt?: number;
+};
+
+/**
+ * Tool execution status
+ */
+export type status2 = 'executing' | 'completed' | 'failed';
+
+/**
+ * Tool execution status
+ */
+export const status2 = {
+  EXECUTING: 'executing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+} as const;
+
+/**
+ * Simplified action message for API
+ */
+export type ActionMessageViaApi = {
+  /**
+   * Action message ID
+   */
+  messageId: string;
+  /**
+   * Action message content
+   */
+  content?: string;
+  /**
+   * Action message reasoning content
+   */
+  reasoningContent?: string;
+  /**
+   * Action message type
+   */
+  type: ActionMessageType;
+};
+
+/**
  * Action result
  */
 export type ActionResult = {
@@ -2907,6 +2995,92 @@ export type EmailLoginData = {
 
 export type EmailLoginResponse = BaseResponse & {
   data?: EmailLoginData;
+};
+
+/**
+ * Create CLI API key request
+ */
+export type CreateCliApiKeyRequest = {
+  /**
+   * API key name
+   */
+  name: string;
+  /**
+   * API key expiration in days
+   */
+  expiresInDays?: number;
+};
+
+/**
+ * Update CLI API key request
+ */
+export type UpdateCliApiKeyRequest = {
+  /**
+   * API key name
+   */
+  name: string;
+};
+
+export type CliApiKeyInfo = {
+  /**
+   * API key ID
+   */
+  keyId: string;
+  /**
+   * API key name
+   */
+  name: string;
+  /**
+   * API key prefix
+   */
+  keyPrefix: string;
+  /**
+   * API key creation time
+   */
+  createdAt: string;
+  /**
+   * API key last used time
+   */
+  lastUsedAt?: string | null;
+  /**
+   * API key expiration time
+   */
+  expiresAt?: string | null;
+};
+
+export type CreateCliApiKeyData = {
+  /**
+   * API key ID
+   */
+  keyId: string;
+  /**
+   * API key value
+   */
+  apiKey: string;
+  /**
+   * API key name
+   */
+  name: string;
+  /**
+   * API key prefix
+   */
+  keyPrefix: string;
+  /**
+   * API key creation time
+   */
+  createdAt: string;
+  /**
+   * API key expiration time
+   */
+  expiresAt?: string | null;
+};
+
+export type CreateCliApiKeyResponse = BaseResponse & {
+  data?: CreateCliApiKeyData;
+};
+
+export type ListCliApiKeysResponse = BaseResponse & {
+  data?: Array<CliApiKeyInfo>;
 };
 
 export type GetUserSettingsResponse = BaseResponse & {
@@ -7495,6 +7669,52 @@ export type WorkflowNodeExecution = {
   updatedAt?: string;
 };
 
+export type WorkflowNodeExecutionViaApi = {
+  /**
+   * Node ID
+   */
+  nodeId: string;
+  /**
+   * Node title
+   */
+  title?: string;
+  /**
+   * Node status
+   */
+  status?: ActionStatus;
+  /**
+   * Node error message
+   */
+  errorMessage?: string;
+  /**
+   * Node execution start time
+   */
+  startTime?: string;
+  /**
+   * Node execution end time
+   */
+  endTime?: string;
+};
+
+export type WorkflowNodeExecutionStatusViaApi = {
+  /**
+   * Node ID
+   */
+  nodeId: string;
+  /**
+   * Node status
+   */
+  status?: ActionStatus;
+  /**
+   * Node title
+   */
+  title?: string;
+  /**
+   * Node error message
+   */
+  errorMessage?: string;
+};
+
 export type WorkflowExecutionStatus = 'init' | 'executing' | 'finish' | 'failed';
 
 export const WorkflowExecutionStatus = {
@@ -10022,6 +10242,462 @@ export type TriggerVoucherResponse = BaseResponse & {
   data?: VoucherTriggerResult;
 };
 
+/**
+ * Request body for webhook trigger.
+ *
+ * **IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+ * Do NOT pass variables directly at the top level.
+ *
+ * Valid examples:
+ * - Empty body (for workflows without variables): {}
+ * - With variables: { "variables": { "input": "value", "count": 10 } }
+ *
+ * Invalid example:
+ * - { "input": "value" } ❌ (variables not wrapped)
+ *
+ */
+export type WebhookRunRequest = {
+  /**
+   * Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.
+   */
+  variables?: {
+    [key: string]: unknown;
+  };
+};
+
+export type WebhookRunResponse = BaseResponse & {
+  data?: {
+    /**
+     * Whether the webhook request was accepted
+     */
+    received?: boolean;
+  };
+};
+
+export type OpenapiUploadedFile = {
+  /**
+   * File key used as workflow variable value
+   */
+  fileKey: string;
+  /**
+   * Original file name
+   */
+  fileName: string;
+};
+
+export type OpenapiFileUploadResponse = BaseResponse & {
+  data?: {
+    /**
+     * Uploaded files
+     */
+    files: Array<OpenapiUploadedFile>;
+  };
+};
+
+/**
+ * Webhook error codes:
+ * - WEBHOOK_NOT_FOUND: Webhook does not exist or has been deleted
+ * - WEBHOOK_DISABLED: Webhook is disabled
+ * - WEBHOOK_RATE_LIMITED: Request rate exceeds the limit
+ * - INVALID_REQUEST_BODY: Request body format is invalid
+ * - CANVAS_NOT_FOUND: Associated canvas cannot be found
+ * - INSUFFICIENT_CREDITS: Insufficient credits
+ *
+ */
+export type WebhookErrorCode =
+  | 'WEBHOOK_NOT_FOUND'
+  | 'WEBHOOK_DISABLED'
+  | 'WEBHOOK_RATE_LIMITED'
+  | 'INVALID_REQUEST_BODY'
+  | 'CANVAS_NOT_FOUND'
+  | 'INSUFFICIENT_CREDITS';
+
+/**
+ * Webhook error codes:
+ * - WEBHOOK_NOT_FOUND: Webhook does not exist or has been deleted
+ * - WEBHOOK_DISABLED: Webhook is disabled
+ * - WEBHOOK_RATE_LIMITED: Request rate exceeds the limit
+ * - INVALID_REQUEST_BODY: Request body format is invalid
+ * - CANVAS_NOT_FOUND: Associated canvas cannot be found
+ * - INSUFFICIENT_CREDITS: Insufficient credits
+ *
+ */
+export const WebhookErrorCode = {
+  WEBHOOK_NOT_FOUND: 'WEBHOOK_NOT_FOUND',
+  WEBHOOK_DISABLED: 'WEBHOOK_DISABLED',
+  WEBHOOK_RATE_LIMITED: 'WEBHOOK_RATE_LIMITED',
+  INVALID_REQUEST_BODY: 'INVALID_REQUEST_BODY',
+  CANVAS_NOT_FOUND: 'CANVAS_NOT_FOUND',
+  INSUFFICIENT_CREDITS: 'INSUFFICIENT_CREDITS',
+} as const;
+
+export type EnableWebhookRequest = {
+  /**
+   * Canvas ID to enable webhook for
+   */
+  canvasId: string;
+  /**
+   * Timeout in seconds
+   */
+  timeout?: number;
+};
+
+export type EnableWebhookResponse = BaseResponse & {
+  data?: {
+    /**
+     * Webhook ID
+     */
+    webhookId?: string;
+    /**
+     * Webhook URL
+     */
+    webhookUrl?: string;
+    /**
+     * Whether webhook is enabled
+     */
+    isEnabled?: boolean;
+  };
+};
+
+export type DisableWebhookRequest = {
+  /**
+   * Webhook ID to disable
+   */
+  webhookId: string;
+};
+
+export type ResetWebhookRequest = {
+  /**
+   * Webhook ID to reset
+   */
+  webhookId: string;
+};
+
+export type ResetWebhookResponse = BaseResponse & {
+  data?: {
+    /**
+     * New webhook ID
+     */
+    webhookId?: string;
+    /**
+     * New webhook URL
+     */
+    webhookUrl?: string;
+  };
+};
+
+export type UpdateOpenapiConfigRequest = {
+  /**
+   * Canvas ID
+   */
+  canvasId: string;
+  /**
+   * Output node IDs
+   */
+  resultNodeIds?: Array<string> | null;
+};
+
+export type OpenapiConfigResponse = BaseResponse & {
+  data?: {
+    /**
+     * Canvas ID
+     */
+    canvasId?: string;
+    /**
+     * Output node IDs
+     */
+    resultNodeIds?: Array<string> | null;
+  };
+};
+
+export type UpdateWebhookRequest = {
+  /**
+   * Webhook ID to update
+   */
+  webhookId: string;
+  /**
+   * Whether webhook is enabled
+   */
+  isEnabled?: boolean;
+  /**
+   * Timeout in seconds
+   */
+  timeout?: number;
+};
+
+export type GetWebhookConfigResponse = BaseResponse & {
+  data?: {
+    /**
+     * Webhook ID
+     */
+    webhookId?: string;
+    /**
+     * Whether webhook is enabled
+     */
+    isEnabled?: boolean;
+    /**
+     * Timeout in seconds
+     */
+    timeout?: number;
+  };
+};
+
+export type GetWebhookHistoryResponse = BaseResponse & {
+  data?: {
+    records?: Array<WebhookCallRecord>;
+    /**
+     * Total number of records
+     */
+    total?: number;
+    /**
+     * Current page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+  };
+};
+
+export type WebhookCallRecord = {
+  /**
+   * Record ID
+   */
+  recordId?: string;
+  /**
+   * Webhook ID
+   */
+  apiId?: string;
+  /**
+   * Canvas ID
+   */
+  canvasId?: string;
+  /**
+   * Workflow execution ID
+   */
+  workflowExecutionId?: string;
+  /**
+   * Request URL
+   */
+  requestUrl?: string;
+  /**
+   * Request method
+   */
+  requestMethod?: string;
+  /**
+   * HTTP status code
+   */
+  httpStatus?: number;
+  /**
+   * Response time in milliseconds
+   */
+  responseTime?: number;
+  /**
+   * Execution status
+   */
+  status?: string;
+  /**
+   * Failure reason if failed
+   */
+  failureReason?: string;
+  /**
+   * Created timestamp
+   */
+  createdAt?: string;
+  /**
+   * Completed timestamp
+   */
+  completedAt?: string;
+};
+
+export type DriveFileViaApi = {
+  /**
+   * Drive file name
+   */
+  name: string;
+  /**
+   * Drive file type
+   */
+  type: string;
+  /**
+   * Drive file size
+   */
+  size?: number;
+  /**
+   * Access URL for the file
+   */
+  url?: string;
+};
+
+export type RunWorkflowApiResponse = BaseResponse & {
+  data?: {
+    /**
+     * Workflow execution ID for tracking status
+     */
+    executionId?: string;
+    /**
+     * Initial execution status (usually "executing")
+     */
+    status?: WorkflowExecutionStatus;
+  };
+};
+
+/**
+ * Request body for running a workflow via API.
+ *
+ * **IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+ * Do NOT pass variables directly at the top level.
+ *
+ * Each key in variables is a workflow variable name. Values can be:
+ * - Strings, numbers, booleans, objects, or arrays
+ * - For file variables: pass fileKey (string) or array of fileKey returned by /openapi/files/upload
+ *
+ * Valid examples:
+ * - Empty body (for workflows without variables): {}
+ * - With variables: { "variables": { "input": "Hello", "files": ["of_xxx", "of_yyy"] } }
+ *
+ * Invalid example:
+ * - { "input": "Hello" } ❌ (variables not wrapped)
+ *
+ */
+export type OpenapiWorkflowRunRequest = {
+  /**
+   * Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.
+   */
+  variables?: {
+    [key: string]: unknown;
+  };
+};
+
+/**
+ * Copilot workflow generation request.
+ */
+export type OpenapiCopilotGenerateRequest = {
+  /**
+   * Natural language prompt describing the desired workflow (supports multiple languages).
+   */
+  query: string;
+  /**
+   * Optional canvas ID to overwrite. This will replace the existing workflow and cannot be undone.
+   */
+  canvasId?: string;
+  /**
+   * Output locale. Supported: en, zh-CN, ja, zh-Hant, fr, de-DE, ko, hi, es, ru, de, it, tr, pt, vi, id, th, ar, mn, fa.
+   */
+  locale?: string;
+};
+
+export type OpenapiCopilotGenerateResponse = BaseResponse & {
+  data?: {
+    /**
+     * Canvas/Workflow ID
+     */
+    canvasId?: string;
+    workflowPlan?: OpenapiWorkflowPlan;
+  };
+};
+
+export type OpenapiWorkflowSummary = {
+  /**
+   * Canvas/Workflow ID
+   */
+  canvasId: string;
+  /**
+   * Workflow title
+   */
+  title: string;
+};
+
+export type OpenapiWorkflowSearchResponse = BaseResponse & {
+  /**
+   * Workflow search results
+   */
+  data?: Array<OpenapiWorkflowSummary>;
+};
+
+export type OpenapiWorkflowDetailResponse = BaseResponse & {
+  data?: OpenapiWorkflowPlan;
+};
+
+export type OpenapiWorkflowPlan = {
+  /**
+   * Title of the workflow plan
+   */
+  title: string;
+  /**
+   * Array of workflow tasks to be executed
+   */
+  tasks: Array<WorkflowTask>;
+  /**
+   * Array of variables (aka User inputs) defined for the workflow plan
+   */
+  variables?: Array<OpenapiWorkflowVariable>;
+};
+
+/**
+ * Workflow variable definition (public fields)
+ */
+export type OpenapiWorkflowVariable = {
+  /**
+   * Variable name used in the workflow
+   */
+  name: string;
+  /**
+   * Variable type
+   */
+  variableType?: 'string' | 'option' | 'resource';
+  /**
+   * Whether the variable is required. Defaults to false.
+   */
+  required?: boolean;
+  /**
+   * Array of options (only valid when variable type is `option`)
+   */
+  options?: Array<string>;
+};
+
+export type GetWorkflowStatusViaApiResponse = BaseResponse & {
+  data?: {
+    /**
+     * Workflow execution ID
+     */
+    executionId?: string;
+    /**
+     * Workflow execution status
+     */
+    status?: WorkflowExecutionStatus;
+    /**
+     * Node execution status list
+     */
+    nodeExecutions?: Array<WorkflowNodeExecutionStatusViaApi>;
+    /**
+     * Workflow execution created time
+     */
+    createdAt?: string;
+  };
+};
+
+export type GetWorkflowOutputResponse = BaseResponse & {
+  data?: {
+    /**
+     * Output node results
+     */
+    output?: Array<
+      WorkflowNodeExecutionViaApi & {
+        /**
+         * Output messages
+         */
+        messages?: Array<ActionMessageViaApi>;
+      }
+    >;
+    /**
+     * Output files
+     */
+    files?: Array<DriveFileViaApi>;
+  };
+};
+
 export type ExtractVariablesData = {
   body: ExtractVariablesRequest;
 };
@@ -10176,6 +10852,39 @@ export type CheckToolOauthStatusData = {
 export type CheckToolOauthStatusResponse = CheckToolOAuthStatusResponse;
 
 export type CheckToolOauthStatusError = unknown;
+
+export type CreateCliApiKeyData2 = {
+  body: CreateCliApiKeyRequest;
+};
+
+export type CreateCliApiKeyResponse2 = CreateCliApiKeyResponse;
+
+export type CreateCliApiKeyError = unknown;
+
+export type ListCliApiKeysResponse2 = ListCliApiKeysResponse;
+
+export type ListCliApiKeysError = unknown;
+
+export type RevokeCliApiKeyData = {
+  path: {
+    keyId: string;
+  };
+};
+
+export type RevokeCliApiKeyResponse = BaseResponse;
+
+export type RevokeCliApiKeyError = unknown;
+
+export type UpdateCliApiKeyData = {
+  body: UpdateCliApiKeyRequest;
+  path: {
+    keyId: string;
+  };
+};
+
+export type UpdateCliApiKeyResponse = BaseResponse;
+
+export type UpdateCliApiKeyError = unknown;
 
 export type GetCollabTokenResponse2 = GetCollabTokenResponse;
 
@@ -11200,6 +11909,219 @@ export type RetryScheduleRecordData = {
 export type RetryScheduleRecordResponse2 = RetryScheduleRecordResponse;
 
 export type RetryScheduleRecordError = unknown;
+
+export type EnableWebhookData = {
+  body: EnableWebhookRequest;
+};
+
+export type EnableWebhookResponse2 = EnableWebhookResponse;
+
+export type EnableWebhookError = unknown;
+
+export type DisableWebhookData = {
+  body: DisableWebhookRequest;
+};
+
+export type DisableWebhookResponse = BaseResponse;
+
+export type DisableWebhookError = unknown;
+
+export type ResetWebhookData = {
+  body: ResetWebhookRequest;
+};
+
+export type ResetWebhookResponse2 = ResetWebhookResponse;
+
+export type ResetWebhookError = unknown;
+
+export type UpdateWebhookData = {
+  body: UpdateWebhookRequest;
+};
+
+export type UpdateWebhookResponse = BaseResponse;
+
+export type UpdateWebhookError = unknown;
+
+export type GetWebhookConfigData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+  };
+};
+
+export type GetWebhookConfigResponse2 = GetWebhookConfigResponse;
+
+export type GetWebhookConfigError = unknown;
+
+export type GetWebhookHistoryData = {
+  query: {
+    /**
+     * Page number
+     */
+    page?: number;
+    /**
+     * Page size
+     */
+    pageSize?: number;
+    /**
+     * Webhook ID
+     */
+    webhookId: string;
+  };
+};
+
+export type GetWebhookHistoryResponse2 = GetWebhookHistoryResponse;
+
+export type GetWebhookHistoryError = unknown;
+
+export type RunWebhookData = {
+  body: WebhookRunRequest;
+  path: {
+    /**
+     * Webhook ID
+     */
+    webhookId: string;
+  };
+};
+
+export type RunWebhookResponse = WebhookRunResponse;
+
+export type RunWebhookError = unknown;
+
+export type GetOpenapiConfigData = {
+  query: {
+    /**
+     * Canvas ID
+     */
+    canvasId: string;
+  };
+};
+
+export type GetOpenapiConfigResponse = OpenapiConfigResponse;
+
+export type GetOpenapiConfigError = unknown;
+
+export type UpdateOpenapiConfigData = {
+  body: UpdateOpenapiConfigRequest;
+};
+
+export type UpdateOpenapiConfigResponse = OpenapiConfigResponse;
+
+export type UpdateOpenapiConfigError = unknown;
+
+export type UploadOpenapiFilesData = {
+  body: {
+    /**
+     * Files to upload
+     */
+    files: Array<Blob | File>;
+  };
+};
+
+export type UploadOpenapiFilesResponse = OpenapiFileUploadResponse;
+
+export type UploadOpenapiFilesError = unknown;
+
+export type SearchWorkflowsViaApiData = {
+  query?: {
+    /**
+     * Keyword to search in workflow titles
+     */
+    keyword?: string;
+    /**
+     * Sort order
+     */
+    order?: ListOrder;
+    /**
+     * Page number (1-based)
+     */
+    page?: number;
+    /**
+     * Number of items per page
+     */
+    pageSize?: number;
+  };
+};
+
+export type SearchWorkflowsViaApiResponse = OpenapiWorkflowSearchResponse;
+
+export type SearchWorkflowsViaApiError = unknown;
+
+export type GetWorkflowDetailViaApiData = {
+  path: {
+    /**
+     * Canvas/Workflow ID
+     */
+    canvasId: string;
+  };
+};
+
+export type GetWorkflowDetailViaApiResponse = OpenapiWorkflowDetailResponse;
+
+export type GetWorkflowDetailViaApiError = unknown;
+
+export type RunWorkflowViaApiData = {
+  body: OpenapiWorkflowRunRequest;
+  path: {
+    /**
+     * Canvas/Workflow ID
+     */
+    canvasId: string;
+  };
+};
+
+export type RunWorkflowViaApiResponse = RunWorkflowApiResponse;
+
+export type RunWorkflowViaApiError = unknown;
+
+export type GenerateWorkflowViaCopilotData = {
+  body: OpenapiCopilotGenerateRequest;
+};
+
+export type GenerateWorkflowViaCopilotResponse = OpenapiCopilotGenerateResponse;
+
+export type GenerateWorkflowViaCopilotError = unknown;
+
+export type GetWorkflowStatusViaApiData = {
+  path: {
+    /**
+     * Workflow execution ID
+     */
+    executionId: string;
+  };
+};
+
+export type GetWorkflowStatusViaApiResponse2 = GetWorkflowStatusViaApiResponse;
+
+export type GetWorkflowStatusViaApiError = unknown;
+
+export type GetWorkflowOutputData = {
+  path: {
+    /**
+     * Workflow execution ID
+     */
+    executionId: string;
+  };
+};
+
+export type GetWorkflowOutputResponse2 = GetWorkflowOutputResponse;
+
+export type GetWorkflowOutputError = unknown;
+
+export type AbortWorkflowViaApiData = {
+  path: {
+    /**
+     * Workflow execution ID
+     */
+    executionId: string;
+  };
+};
+
+export type AbortWorkflowViaApiResponse = BaseResponse;
+
+export type AbortWorkflowViaApiError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 

@@ -1029,10 +1029,11 @@ export const ListAllScheduleRecordsRequestSchema = {
       description: 'Number of items per page',
       default: 10,
     },
-    status: {
-      type: 'string',
-      enum: ['scheduled', 'pending', 'processing', 'running', 'success', 'failed'],
-      description: 'Filter by execution status',
+    executionStatus: {
+      $ref: '#/components/schemas/ScheduleRecordExecutionStatus',
+    },
+    triggerType: {
+      $ref: '#/components/schemas/ScheduleRecordTriggerType',
     },
     keyword: {
       type: 'string',
@@ -1050,6 +1051,18 @@ export const ListAllScheduleRecordsRequestSchema = {
       description: 'Filter by canvas ID',
     },
   },
+} as const;
+
+export const ScheduleRecordExecutionStatusSchema = {
+  type: 'string',
+  enum: ['scheduled', 'pending', 'processing', 'running', 'success', 'failed'],
+  description: 'Filter by execution status',
+} as const;
+
+export const ScheduleRecordTriggerTypeSchema = {
+  type: 'string',
+  enum: ['schedule', 'webhook', 'api'],
+  description: 'Filter by trigger type',
 } as const;
 
 export const ListAllScheduleRecordsResponseSchema = {
@@ -2351,6 +2364,66 @@ export const ActionMessageSchema = {
   },
 } as const;
 
+export const ToolCallResultViaApiSchema = {
+  type: 'object',
+  description: 'Simplified tool call result for API',
+  properties: {
+    toolName: {
+      type: 'string',
+      description: 'Tool name',
+    },
+    input: {
+      type: 'object',
+      description: 'Tool input',
+    },
+    output: {
+      type: 'object',
+      description: 'Tool output',
+    },
+    error: {
+      type: 'string',
+      description: 'Tool execution error',
+    },
+    status: {
+      type: 'string',
+      enum: ['executing', 'completed', 'failed'],
+      description: 'Tool execution status',
+    },
+    createdAt: {
+      type: 'number',
+      description: 'Tool call creation timestamp',
+    },
+  },
+} as const;
+
+export const ActionMessageViaApiSchema = {
+  type: 'object',
+  description: 'Simplified action message for API',
+  required: ['messageId', 'type'],
+  properties: {
+    messageId: {
+      type: 'string',
+      description: 'Action message ID',
+      'x-i18n-description': 'integration.api.schema.messageId',
+    },
+    content: {
+      type: 'string',
+      description: 'Action message content',
+      'x-i18n-description': 'integration.api.schema.messageContent',
+    },
+    reasoningContent: {
+      type: 'string',
+      description: 'Action message reasoning content',
+      'x-i18n-description': 'integration.api.schema.messageReasoningContent',
+    },
+    type: {
+      $ref: '#/components/schemas/ActionMessageType',
+      description: 'Action message type',
+      'x-i18n-description': 'integration.api.schema.messageType',
+    },
+  },
+} as const;
+
 export const ActionResultSchema = {
   type: 'object',
   description: 'Action result',
@@ -3211,6 +3284,139 @@ export const EmailLoginResponseSchema = {
   ],
 } as const;
 
+export const CreateCliApiKeyRequestSchema = {
+  type: 'object',
+  description: 'Create CLI API key request',
+  required: ['name'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+    expiresInDays: {
+      type: 'integer',
+      description: 'API key expiration in days',
+    },
+  },
+} as const;
+
+export const UpdateCliApiKeyRequestSchema = {
+  type: 'object',
+  description: 'Update CLI API key request',
+  required: ['name'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+  },
+} as const;
+
+export const CliApiKeyInfoSchema = {
+  type: 'object',
+  required: ['keyId', 'name', 'keyPrefix', 'createdAt'],
+  properties: {
+    keyId: {
+      type: 'string',
+      description: 'API key ID',
+    },
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+    keyPrefix: {
+      type: 'string',
+      description: 'API key prefix',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'API key creation time',
+    },
+    lastUsedAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description: 'API key last used time',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description: 'API key expiration time',
+    },
+  },
+} as const;
+
+export const CreateCliApiKeyDataSchema = {
+  type: 'object',
+  required: ['keyId', 'apiKey', 'name', 'keyPrefix', 'createdAt'],
+  properties: {
+    keyId: {
+      type: 'string',
+      description: 'API key ID',
+    },
+    apiKey: {
+      type: 'string',
+      description: 'API key value',
+    },
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+    keyPrefix: {
+      type: 'string',
+      description: 'API key prefix',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'API key creation time',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description: 'API key expiration time',
+    },
+  },
+} as const;
+
+export const CreateCliApiKeyResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/CreateCliApiKeyData',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ListCliApiKeysResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            $ref: '#/components/schemas/CliApiKeyInfo',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const GetUserSettingsResponseSchema = {
   allOf: [
     {
@@ -3265,24 +3471,29 @@ export const BaseResponseSchema = {
     success: {
       type: 'boolean',
       description: 'Whether the operation was successful',
+      'x-i18n-description': 'integration.api.baseResponse.success',
       example: true,
     },
     errCode: {
       type: 'string',
       description: 'Error code',
+      'x-i18n-description': 'integration.api.baseResponse.errCode',
     },
     errMsg: {
       type: 'string',
       description: 'Error message',
+      'x-i18n-description': 'integration.api.baseResponse.errMsg',
       example: 'Operation failed',
     },
     traceId: {
       type: 'string',
       description: 'Trace ID',
+      'x-i18n-description': 'integration.api.baseResponse.traceId',
     },
     stack: {
       type: 'string',
       description: 'Error stack (only returned in development environment)',
+      'x-i18n-description': 'integration.api.baseResponse.stack',
     },
   },
 } as const;
@@ -9411,6 +9622,72 @@ export const WorkflowNodeExecutionSchema = {
   },
 } as const;
 
+export const WorkflowNodeExecutionViaApiSchema = {
+  type: 'object',
+  required: ['nodeId'],
+  properties: {
+    nodeId: {
+      type: 'string',
+      description: 'Node ID',
+      'x-i18n-description': 'integration.api.schema.nodeId',
+    },
+    title: {
+      type: 'string',
+      description: 'Node title',
+      'x-i18n-description': 'integration.api.schema.nodeTitle',
+    },
+    status: {
+      description: 'Node status',
+      'x-i18n-description': 'integration.api.schema.nodeStatus',
+      $ref: '#/components/schemas/ActionStatus',
+    },
+    errorMessage: {
+      type: 'string',
+      description: 'Node error message',
+      'x-i18n-description': 'integration.api.schema.nodeErrorMessage',
+    },
+    startTime: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Node execution start time',
+      'x-i18n-description': 'integration.api.schema.nodeStartTime',
+    },
+    endTime: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Node execution end time',
+      'x-i18n-description': 'integration.api.schema.nodeEndTime',
+    },
+  },
+} as const;
+
+export const WorkflowNodeExecutionStatusViaApiSchema = {
+  type: 'object',
+  required: ['nodeId'],
+  properties: {
+    nodeId: {
+      type: 'string',
+      description: 'Node ID',
+      'x-i18n-description': 'integration.api.schema.nodeId',
+    },
+    status: {
+      description: 'Node status',
+      'x-i18n-description': 'integration.api.schema.nodeStatus',
+      $ref: '#/components/schemas/ActionStatus',
+    },
+    title: {
+      type: 'string',
+      description: 'Node title',
+      'x-i18n-description': 'integration.api.schema.nodeTitle',
+    },
+    errorMessage: {
+      type: 'string',
+      description: 'Node error message',
+      'x-i18n-description': 'integration.api.schema.nodeErrorMessage',
+    },
+  },
+} as const;
+
 export const WorkflowExecutionStatusSchema = {
   type: 'string',
   enum: ['init', 'executing', 'finish', 'failed'],
@@ -9491,18 +9768,22 @@ export const WorkflowTaskSchema = {
     id: {
       type: 'string',
       description: 'Unique ID for the task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskId',
     },
     title: {
       type: 'string',
       description: 'Display title for the task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskTitle',
     },
     prompt: {
       type: 'string',
       description: 'The prompt or instruction for this task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskPrompt',
     },
     toolsets: {
       type: 'array',
       description: 'Toolsets selected for this task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskToolsets',
       items: {
         type: 'string',
         description: 'Toolset ID',
@@ -9511,6 +9792,7 @@ export const WorkflowTaskSchema = {
     dependentTasks: {
       type: 'array',
       description: 'Tasks that must be executed before this task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskDependentTasks',
       items: {
         type: 'string',
         description: 'Task ID',
@@ -12506,6 +12788,751 @@ export const TriggerVoucherResponseSchema = {
       properties: {
         data: {
           $ref: '#/components/schemas/VoucherTriggerResult',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const WebhookRunRequestSchema = {
+  type: 'object',
+  description: `Request body for webhook trigger.
+
+**IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+Do NOT pass variables directly at the top level.
+
+Valid examples:
+- Empty body (for workflows without variables): {}
+- With variables: { "variables": { "input": "value", "count": 10 } }
+
+Invalid example:
+- { "input": "value" } ❌ (variables not wrapped)
+`,
+  'x-i18n-description': 'integration.api.schema.webhookRunBody',
+  properties: {
+    variables: {
+      type: 'object',
+      description:
+        'Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.',
+      'x-i18n-description': 'integration.api.schema.webhookRunVariables',
+      additionalProperties: true,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const WebhookRunResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            received: {
+              type: 'boolean',
+              description: 'Whether the webhook request was accepted',
+              'x-i18n-description': 'integration.api.schema.webhookReceived',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiUploadedFileSchema = {
+  type: 'object',
+  required: ['fileKey', 'fileName'],
+  properties: {
+    fileKey: {
+      type: 'string',
+      description: 'File key used as workflow variable value',
+      'x-i18n-description': 'integration.api.schema.fileKey',
+    },
+    fileName: {
+      type: 'string',
+      description: 'Original file name',
+      'x-i18n-description': 'integration.api.schema.fileName',
+    },
+  },
+} as const;
+
+export const OpenapiFileUploadResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          required: ['files'],
+          properties: {
+            files: {
+              type: 'array',
+              description: 'Uploaded files',
+              'x-i18n-description': 'integration.api.schema.uploadedFiles',
+              items: {
+                $ref: '#/components/schemas/OpenapiUploadedFile',
+              },
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const WebhookErrorCodeSchema = {
+  type: 'string',
+  enum: [
+    'WEBHOOK_NOT_FOUND',
+    'WEBHOOK_DISABLED',
+    'WEBHOOK_RATE_LIMITED',
+    'INVALID_REQUEST_BODY',
+    'CANVAS_NOT_FOUND',
+    'INSUFFICIENT_CREDITS',
+  ],
+  description: `Webhook error codes:
+- WEBHOOK_NOT_FOUND: Webhook does not exist or has been deleted
+- WEBHOOK_DISABLED: Webhook is disabled
+- WEBHOOK_RATE_LIMITED: Request rate exceeds the limit
+- INVALID_REQUEST_BODY: Request body format is invalid
+- CANVAS_NOT_FOUND: Associated canvas cannot be found
+- INSUFFICIENT_CREDITS: Insufficient credits
+`,
+} as const;
+
+export const EnableWebhookRequestSchema = {
+  type: 'object',
+  required: ['canvasId'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID to enable webhook for',
+    },
+    timeout: {
+      type: 'integer',
+      default: 30,
+      description: 'Timeout in seconds',
+    },
+  },
+} as const;
+
+export const EnableWebhookResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            webhookId: {
+              type: 'string',
+              description: 'Webhook ID',
+            },
+            webhookUrl: {
+              type: 'string',
+              description: 'Webhook URL',
+            },
+            isEnabled: {
+              type: 'boolean',
+              description: 'Whether webhook is enabled',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const DisableWebhookRequestSchema = {
+  type: 'object',
+  required: ['webhookId'],
+  properties: {
+    webhookId: {
+      type: 'string',
+      description: 'Webhook ID to disable',
+    },
+  },
+} as const;
+
+export const ResetWebhookRequestSchema = {
+  type: 'object',
+  required: ['webhookId'],
+  properties: {
+    webhookId: {
+      type: 'string',
+      description: 'Webhook ID to reset',
+    },
+  },
+} as const;
+
+export const ResetWebhookResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            webhookId: {
+              type: 'string',
+              description: 'New webhook ID',
+            },
+            webhookUrl: {
+              type: 'string',
+              description: 'New webhook URL',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const UpdateOpenapiConfigRequestSchema = {
+  type: 'object',
+  required: ['canvasId'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    resultNodeIds: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      nullable: true,
+      description: 'Output node IDs',
+    },
+  },
+} as const;
+
+export const OpenapiConfigResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            canvasId: {
+              type: 'string',
+              description: 'Canvas ID',
+            },
+            resultNodeIds: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+              nullable: true,
+              description: 'Output node IDs',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const UpdateWebhookRequestSchema = {
+  type: 'object',
+  required: ['webhookId'],
+  properties: {
+    webhookId: {
+      type: 'string',
+      description: 'Webhook ID to update',
+    },
+    isEnabled: {
+      type: 'boolean',
+      description: 'Whether webhook is enabled',
+    },
+    timeout: {
+      type: 'integer',
+      default: 30,
+      description: 'Timeout in seconds',
+    },
+  },
+} as const;
+
+export const GetWebhookConfigResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            webhookId: {
+              type: 'string',
+              description: 'Webhook ID',
+            },
+            isEnabled: {
+              type: 'boolean',
+              description: 'Whether webhook is enabled',
+            },
+            timeout: {
+              type: 'integer',
+              description: 'Timeout in seconds',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetWebhookHistoryResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            records: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/WebhookCallRecord',
+              },
+            },
+            total: {
+              type: 'integer',
+              description: 'Total number of records',
+            },
+            page: {
+              type: 'integer',
+              description: 'Current page number',
+            },
+            pageSize: {
+              type: 'integer',
+              description: 'Page size',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const WebhookCallRecordSchema = {
+  type: 'object',
+  properties: {
+    recordId: {
+      type: 'string',
+      description: 'Record ID',
+    },
+    apiId: {
+      type: 'string',
+      description: 'Webhook ID',
+    },
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    workflowExecutionId: {
+      type: 'string',
+      description: 'Workflow execution ID',
+    },
+    requestUrl: {
+      type: 'string',
+      description: 'Request URL',
+    },
+    requestMethod: {
+      type: 'string',
+      description: 'Request method',
+    },
+    httpStatus: {
+      type: 'integer',
+      description: 'HTTP status code',
+    },
+    responseTime: {
+      type: 'integer',
+      description: 'Response time in milliseconds',
+    },
+    status: {
+      type: 'string',
+      description: 'Execution status',
+    },
+    failureReason: {
+      type: 'string',
+      description: 'Failure reason if failed',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Created timestamp',
+    },
+    completedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Completed timestamp',
+    },
+  },
+} as const;
+
+export const DriveFileViaApiSchema = {
+  type: 'object',
+  required: ['name', 'type'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Drive file name',
+      'x-i18n-description': 'integration.api.schema.fileName',
+    },
+    type: {
+      type: 'string',
+      description: 'Drive file type',
+      'x-i18n-description': 'integration.api.schema.fileType',
+    },
+    size: {
+      type: 'number',
+      description: 'Drive file size',
+      'x-i18n-description': 'integration.api.schema.fileSize',
+    },
+    url: {
+      type: 'string',
+      description: 'Access URL for the file',
+      'x-i18n-description': 'integration.api.schema.fileUrl',
+    },
+  },
+} as const;
+
+export const RunWorkflowApiResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            executionId: {
+              type: 'string',
+              description: 'Workflow execution ID for tracking status',
+              'x-i18n-description': 'integration.api.schema.executionId',
+            },
+            status: {
+              $ref: '#/components/schemas/WorkflowExecutionStatus',
+              description: 'Initial execution status (usually "executing")',
+              'x-i18n-description': 'integration.api.schema.executionStatus',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiWorkflowRunRequestSchema = {
+  type: 'object',
+  description: `Request body for running a workflow via API.
+
+**IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+Do NOT pass variables directly at the top level.
+
+Each key in variables is a workflow variable name. Values can be:
+- Strings, numbers, booleans, objects, or arrays
+- For file variables: pass fileKey (string) or array of fileKey returned by /openapi/files/upload
+
+Valid examples:
+- Empty body (for workflows without variables): {}
+- With variables: { "variables": { "input": "Hello", "files": ["of_xxx", "of_yyy"] } }
+
+Invalid example:
+- { "input": "Hello" } ❌ (variables not wrapped)
+`,
+  'x-i18n-description': 'integration.api.openapi.workflowRun.bodyDescription',
+  properties: {
+    variables: {
+      type: 'object',
+      description:
+        'Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.',
+      'x-i18n-description': 'integration.api.openapi.workflowRun.variablesDescription',
+      additionalProperties: true,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const OpenapiCopilotGenerateRequestSchema = {
+  type: 'object',
+  required: ['query'],
+  description: 'Copilot workflow generation request.',
+  'x-i18n-description': 'integration.api.openapi.copilotGenerate.bodyDescription',
+  properties: {
+    query: {
+      type: 'string',
+      description:
+        'Natural language prompt describing the desired workflow (supports multiple languages).',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.queryDescription',
+    },
+    canvasId: {
+      type: 'string',
+      description:
+        'Optional canvas ID to overwrite. This will replace the existing workflow and cannot be undone.',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.canvasIdDescription',
+    },
+    locale: {
+      type: 'string',
+      description:
+        'Output locale. Supported: en, zh-CN, ja, zh-Hant, fr, de-DE, ko, hi, es, ru, de, it, tr, pt, vi, id, th, ar, mn, fa.',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.localeDescription',
+    },
+  },
+} as const;
+
+export const OpenapiCopilotGenerateResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            canvasId: {
+              type: 'string',
+              description: 'Canvas/Workflow ID',
+              'x-i18n-description': 'integration.api.schema.canvasId',
+            },
+            workflowPlan: {
+              $ref: '#/components/schemas/OpenapiWorkflowPlan',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiWorkflowSummarySchema = {
+  type: 'object',
+  required: ['canvasId', 'title'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas/Workflow ID',
+      'x-i18n-description': 'integration.api.schema.canvasId',
+    },
+    title: {
+      type: 'string',
+      description: 'Workflow title',
+      'x-i18n-description': 'integration.api.schema.workflowTitle',
+    },
+  },
+} as const;
+
+export const OpenapiWorkflowSearchResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Workflow search results',
+          'x-i18n-description': 'integration.api.schema.workflowSearchData',
+          items: {
+            $ref: '#/components/schemas/OpenapiWorkflowSummary',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiWorkflowDetailResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/OpenapiWorkflowPlan',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiWorkflowPlanSchema = {
+  type: 'object',
+  required: ['title', 'tasks'],
+  properties: {
+    title: {
+      type: 'string',
+      description: 'Title of the workflow plan',
+      'x-i18n-description': 'integration.api.schema.workflowPlanTitle',
+    },
+    tasks: {
+      type: 'array',
+      description: 'Array of workflow tasks to be executed',
+      'x-i18n-description': 'integration.api.schema.workflowPlanTasks',
+      items: {
+        $ref: '#/components/schemas/WorkflowTask',
+      },
+    },
+    variables: {
+      type: 'array',
+      description: 'Array of variables (aka User inputs) defined for the workflow plan',
+      'x-i18n-description': 'integration.api.schema.workflowPlanVariables',
+      items: {
+        $ref: '#/components/schemas/OpenapiWorkflowVariable',
+      },
+    },
+  },
+} as const;
+
+export const OpenapiWorkflowVariableSchema = {
+  type: 'object',
+  description: 'Workflow variable definition (public fields)',
+  required: ['name'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Variable name used in the workflow',
+      'x-i18n-description': 'integration.api.schema.workflowVariableName',
+    },
+    variableType: {
+      type: 'string',
+      description: 'Variable type',
+      'x-i18n-description': 'integration.api.schema.workflowVariableType',
+      enum: ['string', 'option', 'resource'],
+    },
+    required: {
+      type: 'boolean',
+      description: 'Whether the variable is required. Defaults to false.',
+      'x-i18n-description': 'integration.api.schema.workflowVariableRequired',
+    },
+    options: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'Array of options (only valid when variable type is `option`)',
+      'x-i18n-description': 'integration.api.schema.workflowVariableOptions',
+    },
+  },
+} as const;
+
+export const GetWorkflowStatusViaApiResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            executionId: {
+              type: 'string',
+              description: 'Workflow execution ID',
+              'x-i18n-description': 'integration.api.schema.executionId',
+            },
+            status: {
+              $ref: '#/components/schemas/WorkflowExecutionStatus',
+              description: 'Workflow execution status',
+              'x-i18n-description': 'integration.api.schema.executionStatus',
+            },
+            nodeExecutions: {
+              type: 'array',
+              description: 'Node execution status list',
+              'x-i18n-description': 'integration.api.schema.nodeExecutions',
+              items: {
+                $ref: '#/components/schemas/WorkflowNodeExecutionStatusViaApi',
+              },
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Workflow execution created time',
+              'x-i18n-description': 'integration.api.schema.createdAt',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetWorkflowOutputResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            output: {
+              type: 'array',
+              description: 'Output node results',
+              'x-i18n-description': 'integration.api.schema.output',
+              items: {
+                allOf: [
+                  {
+                    $ref: '#/components/schemas/WorkflowNodeExecutionViaApi',
+                  },
+                  {
+                    type: 'object',
+                    properties: {
+                      messages: {
+                        type: 'array',
+                        description: 'Output messages',
+                        'x-i18n-description': 'integration.api.schema.messages',
+                        items: {
+                          $ref: '#/components/schemas/ActionMessageViaApi',
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+            files: {
+              type: 'array',
+              description: 'Output files',
+              'x-i18n-description': 'integration.api.schema.files',
+              items: {
+                $ref: '#/components/schemas/DriveFileViaApi',
+              },
+            },
+          },
         },
       },
     },

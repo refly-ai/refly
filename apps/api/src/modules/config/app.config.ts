@@ -320,6 +320,8 @@ export default () => ({
       maxDuration: Number.parseInt(process.env.VIDEO_MAX_DURATION) || 600, // 10 minutes
     },
     s3: {
+      inputBucket:
+        process.env.LAMBDA_INPUT_S3_BUCKET || process.env.MINIO_INTERNAL_BUCKET || 'refly-weblink',
       bucket: process.env.LAMBDA_S3_BUCKET || process.env.MINIO_INTERNAL_BUCKET || 'refly-weblink',
       outputPrefix: process.env.LAMBDA_OUTPUT_PREFIX || 'lambda-output',
     },

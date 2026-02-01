@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { getFileCategoryAndLimit } from '../utils';
 
-export const useFileUpload = () => {
+export const useFileUpload = (maxCount = 1) => {
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
 
@@ -87,11 +87,10 @@ export const useFileUpload = () => {
 
   const handleFileUpload = useCallback(
     async (file: File, fileList: UploadFile[]) => {
-      const maxFileCount = 1;
-      if (fileList.length >= maxFileCount) {
+      if (fileList.length >= maxCount) {
         message.error(
-          t('canvas.workflow.variables.tooManyFiles', { max: maxFileCount }) ||
-            `Maximum ${maxFileCount} files allowed`,
+          t('canvas.workflow.variables.tooManyFiles', { max: maxCount }) ||
+            `Maximum ${maxCount} files allowed`,
         );
         return false;
       }
@@ -115,7 +114,7 @@ export const useFileUpload = () => {
       }
       return false;
     },
-    [t, validateFileSize, processFileUpload],
+    [t, validateFileSize, processFileUpload, maxCount],
   );
 
   const handleRefreshFile = useCallback(

@@ -76,7 +76,7 @@ const PublishTemplateButton = React.memo(
         }
         // For resource type, check if the resource value exists
         if (variable.variableType === 'resource') {
-          return !variable.value[0]?.resource;
+          return !variable.value.some((v) => v.type === 'resource' && v.resource);
         }
         // For string type, check if text value is empty
 
