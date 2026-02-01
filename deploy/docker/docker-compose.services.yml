@@ -31,6 +31,7 @@ services:
       - ENDPOINT=/api
       - STATIC_PUBLIC_ENDPOINT=/api/v1/misc/public
       - STATIC_PRIVATE_ENDPOINT=/api/v1/misc
+      - DEPLOY_TYPE=self-hosted
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5800"]
       interval: 30s
@@ -50,6 +51,7 @@ services:
       - STATIC_PUBLIC_ENDPOINT=/api/v1/misc/public
       - STATIC_PRIVATE_ENDPOINT=/api/v1/misc
       - VITE_SUBSCRIPTION_ENABLED=false
+      - DEPLOY_TYPE=self-hosted
     volumes:
       - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:

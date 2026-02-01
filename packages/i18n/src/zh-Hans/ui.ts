@@ -419,7 +419,7 @@ const translations = {
       subtitle: '首次发布AI工作流',
       description: '解锁Nano banana pro、Gemini 3.0等全平台顶级模型',
       tag1: '100%获奖',
-      tag2: '3000积分',
+      tag2: '500积分',
       button: '立即参与',
     },
     dismiss: '关闭',
