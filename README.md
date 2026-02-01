@@ -94,7 +94,7 @@ Refly acts as the Agent skills builder, providing the governance and reliability
 
 ## Quick Start
 
-此处需要展示一个案例
+https://github.com/refly-ai/refly/tree/main/docs/en/guide/api
 
 ## Documentation
 
@@ -125,16 +125,5 @@ Connect with the Refly community:
 This repository is licensed under the [ReflyAI Open Source License](https://github.com/refly-ai/refly/blob/main/LICENSE), which is essentially the Apache 2.0 License with some additional restrictions.
 
 Enterprise License Needed
-
-1. Open Core (Best for Enterprise Sales)
-2. Source-Available Protective License
-Apache 2.0 (core) + Commercial Enterprise License (advanced features)
-
-3. AGPLv3 (Hard Enforcement Open Source)
-
-<img width="1280" height="430" alt="image" src="https://github.com/user-attachments/assets/bea6fffc-4025-4042-9f05-5c0671ad72aa" />
-
-## 可参考内容
-
-<img width="1280" height="592" alt="image" src="https://github.com/user-attachments/assets/f20c8ca9-ad6e-4859-bd71-4485feb64fb6" />
+Apache License 2.0
 
