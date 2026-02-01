@@ -173,11 +173,6 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, hideLogoButton,
               )}
             </>
           )}
-          {!isRunDetail && (
-            <div className="group relative">
-              <SettingItem showName={false} avatarAlign={'right'} />
-            </div>
-          )}
         </div>
       </div>
     </>
