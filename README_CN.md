@@ -6,7 +6,7 @@
 
 </div>
 
-# Refly — 首个基于 Vibe Workflow 的开源 Agent 技能构建器
+# Refly — 首个基于 Vibe Workflow 的开源 Agent Skills 构建器
 
 可作为 Lovable 的 API · Slack 的 Webhook · Claude Code 的 Skills · Refly 中的 SOP 手册
 
