@@ -428,6 +428,8 @@ export class SkillInvokerService {
       });
     }
 
+    config.configurable.webSearchEnabled = this.config.get<boolean>('tools.webSearchEnabled');
+
     if (eventListener) {
       const emitter = new EventEmitter<SkillEventMap>();
 

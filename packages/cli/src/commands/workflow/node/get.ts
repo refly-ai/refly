@@ -1,5 +1,5 @@
 /**
- * refly workflow node - Get single node information from a workflow
+ * refly workflow node get - Get single node information from a workflow
  *
  * Supports both workflowId (c-xxx) and runId (we-xxx).
  * - workflowId: gets node definition from workflow
@@ -7,10 +7,10 @@
  */
 
 import { Command } from 'commander';
-import { ok, fail, ErrorCodes } from '../../utils/output.js';
-import { apiRequest } from '../../api/client.js';
-import { CLIError } from '../../utils/errors.js';
-import { detectIdType } from './utils.js';
+import { ok, fail, ErrorCodes } from '../../../utils/output.js';
+import { apiRequest } from '../../../api/client.js';
+import { CLIError } from '../../../utils/errors.js';
+import { detectIdType } from '../utils.js';
 
 interface NodeData {
   id: string;
@@ -38,7 +38,7 @@ interface WorkflowData {
   edges: EdgeData[];
 }
 
-export const workflowNodeGetCommand = new Command('node')
+export const nodeGetCommand = new Command('get')
   .description('Get single node information from a workflow')
   .argument('<id>', 'Workflow ID (c-xxx) or Run ID (we-xxx)')
   .argument('<nodeId>', 'Node ID')
@@ -63,7 +63,7 @@ export const workflowNodeGetCommand = new Command('node')
 
       if (!node) {
         fail(ErrorCodes.NODE_NOT_FOUND, `Node ${nodeId} not found in workflow ${workflowId}`, {
-          hint: `Use 'refly workflow nodes ${id}' to list all nodes`,
+          hint: `Use 'refly workflow node list ${id}' to list all nodes`,
         });
       }
 
@@ -109,12 +109,17 @@ export const workflowNodeGetCommand = new Command('node')
         };
       }
 
-      ok('workflow.node', output);
+      ok('workflow.node.get', output);
     } catch (error) {
       if (error instanceof CLIError) {
+        // Replace placeholders with actual values in hint
+        const hint = error.hint
+          ?.replace(/<workflowId>/g, id)
+          .replace(/<id>/g, id)
+          .replace(/<nodeId>/g, nodeId);
         fail(error.code, error.message, {
           details: error.details,
-          hint: error.hint,
+          hint,
           suggestedFix: error.suggestedFix,
         });
       }

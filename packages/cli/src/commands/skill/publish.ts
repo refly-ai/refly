@@ -30,19 +30,10 @@ interface SkillPackageResponse {
 
 export const skillPublishCommand = new Command('publish')
   .description('Publish a skill package using local SKILL.md')
-  .option('--id <skillId>', 'Skill ID (skp-xxx) - overrides ID from SKILL.md')
-  .option('--name <name>', 'Local skill name (directory in ~/.refly/skills/)')
+  .requiredOption('--name <name>', 'Local skill name (directory in ~/.refly/skills/)')
   .action(async (options) => {
     try {
       const skillsDir = getReflySkillsDir();
-
-      // Validate: --name is required for publish (we need the SKILL.md content)
-      if (!options.name) {
-        fail(ErrorCodes.INVALID_INPUT, 'Missing required option: --name', {
-          hint: `The publish command requires --name to locate the local SKILL.md.\n\nUsage:\n  refly skill publish --name <name>\n  refly skill publish --name <name> --id <skillId>  # override skillId\n\nTo find your skill name:\n  refly skill list\n  ls ${skillsDir}/`,
-        });
-        return;
-      }
 
       const name = options.name;
 
@@ -64,20 +55,24 @@ export const skillPublishCommand = new Command('publish')
       try {
         parsedSkill = parseReflySkillMd(skillContent);
       } catch (parseError) {
-        fail(
-          ErrorCodes.INVALID_INPUT,
-          `Failed to parse SKILL.md: ${(parseError as Error).message}`,
-          {
-            hint: 'Make sure SKILL.md has valid frontmatter with required fields: name, description, skillId, workflowId',
-          },
-        );
+        const errorMessage = (parseError as Error).message;
+
+        // Check if skillId is missing - provide specific hint
+        if (errorMessage.includes('skillId')) {
+          fail(ErrorCodes.INVALID_INPUT, 'SKILL.md is missing skillId', {
+            hint: `The skill "${name}" has no skillId. This may happen if the skill was created manually.\n\nTo fix this:\n  1. Reinstall the skill: refly skill install <skillId> --force\n  2. Or create a new skill: refly skill create --name "${name}" --workflow <workflowId>\n\nTo find available skills: refly skill list`,
+          });
+          return;
+        }
+
+        fail(ErrorCodes.INVALID_INPUT, `Failed to parse SKILL.md: ${errorMessage}`, {
+          hint: 'Make sure SKILL.md has valid frontmatter with required fields: name, description, skillId, workflowId',
+        });
         return;
       }
 
       const { meta } = parsedSkill;
-
-      // Use --id if provided, otherwise use skillId from SKILL.md
-      const skillId = options.id || meta.skillId;
+      const skillId = meta.skillId;
 
       // 4. Call API to publish with skillContent
       const result = await apiRequest<SkillPackageResponse>(
@@ -96,8 +91,6 @@ export const skillPublishCommand = new Command('publish')
         version: result.version,
         status: result.status,
         isPublic: result.isPublic,
-        shareId: result.shareId,
-        shareUrl: result.shareId ? `https://refly.ai/skill/${result.shareId}` : undefined,
         githubPrUrl: result.githubPrUrl,
         githubPrNumber: result.githubPrNumber,
         localPath: skillMdPath,

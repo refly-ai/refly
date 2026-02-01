@@ -242,6 +242,10 @@ export const UpsertMcpServerRequestSchema = {
       type: 'string',
       description: 'MCP server name',
     },
+    originalName: {
+      type: 'string',
+      description: 'Original MCP server name for update',
+    },
     type: {
       $ref: '#/components/schemas/McpServerType',
     },

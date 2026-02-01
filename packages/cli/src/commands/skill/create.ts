@@ -30,6 +30,8 @@ interface CreateSkillPayload {
   }>;
   inputSchema?: Record<string, unknown>;
   outputSchema?: Record<string, unknown>;
+  /** Auto-created installation ID (creator is auto-installed) */
+  installationId?: string;
 }
 
 interface CreateSkillResponse {
@@ -107,7 +109,7 @@ export const skillCreateCommand = new Command('create')
 
       // Create local domain skill with symlink if workflow was created
       let localPath: string | undefined;
-      let symlinkPath: string | undefined;
+      let _symlinkPath: string | undefined;
 
       if (result.workflowId) {
         try {
@@ -143,7 +145,7 @@ export const skillCreateCommand = new Command('create')
 
             if (symlinkResult.success) {
               localPath = symlinkResult.reflyPath;
-              symlinkPath = symlinkResult.claudePath;
+              _symlinkPath = symlinkResult.claudePath;
               logger.info(`Created local domain skill: ${localName}`);
             } else {
               logger.warn(`Failed to create local skill: ${symlinkResult.error}`);
@@ -155,19 +157,17 @@ export const skillCreateCommand = new Command('create')
         }
       }
 
+      const webUrl = getWebUrl();
       const payload: Record<string, unknown> = {
         skillId: result.skillId,
+        installationId: result.installationId,
         name: result.name,
         status: result.status,
         createdAt: result.createdAt,
         workflowId: result.workflowId,
-        url: `${getWebUrl()}/skill/${result.skillId}`,
+        workflowUrl: result.workflowId ? `${webUrl}/workflow/${result.workflowId}` : undefined,
+        localPath: localPath,
       };
-
-      if (localPath) {
-        payload.localPath = localPath;
-        payload.symlinkPath = symlinkPath;
-      }
 
       if (options.verbose) {
         payload.workflowIds = result.workflowIds;

@@ -12,6 +12,7 @@ import { skillUpdateCommand } from './update.js';
 import { skillPublishCommand } from './publish.js';
 import { skillUnpublishCommand } from './unpublish.js';
 import { skillRunCommand } from './run.js';
+import { skillStopCommand } from './stop.js';
 import { skillSearchCommand } from './search.js';
 import { skillInstallCommand } from './install.js';
 import { skillUninstallCommand } from './uninstall.js';
@@ -36,6 +37,7 @@ export const skillCommand = new Command('skill')
   .addCommand(skillInstallationsCommand)
   // Skill execution
   .addCommand(skillRunCommand)
+  .addCommand(skillStopCommand)
   // Skill validation (local skills)
   .addCommand(skillValidateCommand)
   // Skill registry sync

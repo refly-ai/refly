@@ -43,6 +43,8 @@ export interface CreateSkillPackageCliResponse {
   }>;
   inputSchema?: Record<string, unknown>;
   outputSchema?: Record<string, unknown>;
+  /** Auto-created installation ID (creator is auto-installed) */
+  installationId?: string;
 }
 
 export interface UpdateSkillPackageDto {
@@ -117,6 +119,7 @@ export interface DownloadSkillDto {
 export interface InstallSkillDto {
   skillId: string;
   shareId?: string;
+  force?: boolean; // Force reinstall if already installed
 }
 
 export interface InstallationFilterDto {

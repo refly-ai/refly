@@ -27,6 +27,7 @@ export const SKILL_CLI_ERROR_CODES = {
   // Conflict errors
   DUPLICATE_NAME: 'DUPLICATE_NAME',
   ALREADY_EXISTS: 'ALREADY_EXISTS',
+  ALREADY_INSTALLED: 'ALREADY_INSTALLED',
 
   // Internal errors
   INTERNAL_ERROR: 'INTERNAL_ERROR',
@@ -137,6 +138,14 @@ export function mapErrorToCliCode(error: Error): {
       code: SKILL_CLI_ERROR_CODES.ACCESS_DENIED,
       status: HttpStatus.FORBIDDEN,
       hint: 'You do not have permission to access this resource',
+    };
+  }
+
+  if (message.includes('already installed')) {
+    return {
+      code: SKILL_CLI_ERROR_CODES.ALREADY_INSTALLED,
+      status: HttpStatus.CONFLICT,
+      hint: 'Use --force to reinstall',
     };
   }
 

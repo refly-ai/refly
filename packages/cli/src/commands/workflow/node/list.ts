@@ -1,11 +1,11 @@
 /**
- * refly workflow nodes - List all nodes in a workflow
+ * refly workflow node list - List all nodes in a workflow
  */
 
 import { Command } from 'commander';
-import { ok, fail, ErrorCodes } from '../../utils/output.js';
-import { apiRequest } from '../../api/client.js';
-import { CLIError } from '../../utils/errors.js';
+import { ok, fail, ErrorCodes } from '../../../utils/output.js';
+import { apiRequest } from '../../../api/client.js';
+import { CLIError } from '../../../utils/errors.js';
 
 interface NodeData {
   id: string;
@@ -33,7 +33,7 @@ interface WorkflowData {
   edges: EdgeData[];
 }
 
-export const workflowNodesCommand = new Command('nodes')
+export const nodeListCommand = new Command('list')
   .description('List all nodes in a workflow')
   .argument('<workflowId>', 'Workflow ID')
   .option('--include-edges', 'Include edge/connection information')
@@ -80,12 +80,14 @@ export const workflowNodesCommand = new Command('nodes')
         output.edgeCount = result.edges.length;
       }
 
-      ok('workflow.nodes', output);
+      ok('workflow.node.list', output);
     } catch (error) {
       if (error instanceof CLIError) {
+        // Replace placeholders with actual values in hint
+        const hint = error.hint?.replace(/<workflowId>/g, workflowId);
         fail(error.code, error.message, {
           details: error.details,
-          hint: error.hint,
+          hint,
           suggestedFix: error.suggestedFix,
         });
       }

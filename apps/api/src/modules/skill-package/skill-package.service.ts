@@ -5,7 +5,12 @@
 import { Injectable, Logger, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { User } from '@refly/openapi-schema';
-import { genSkillPackageID, genSkillPackageWorkflowID, genInviteCode } from '@refly/utils';
+import {
+  genSkillPackageID,
+  genSkillPackageWorkflowID,
+  genSkillPackageInstallationID,
+  genInviteCode,
+} from '@refly/utils';
 import {
   CreateSkillPackageDto,
   CreateSkillPackageCliDto,
@@ -20,6 +25,7 @@ import {
   SkillWorkflowResponse,
   PublishSkillDto,
   ReflySkillMeta,
+  WorkflowMappingRecord,
 } from './skill-package.dto';
 import { SkillPackage, SkillWorkflow, Prisma } from '@prisma/client';
 import { SKILL_CLI_ERROR_CODES, throwCliError } from './skill-package.errors';
@@ -217,11 +223,16 @@ export class SkillPackageService {
           },
         });
 
+        // Track skillWorkflowIds for installation mapping
+        const skillWorkflowIds: string[] = [];
+
         if (!input.noWorkflow) {
           for (const workflow of workflowBindings) {
+            const skillWorkflowId = genSkillPackageWorkflowID();
+            skillWorkflowIds.push(skillWorkflowId);
             await tx.skillWorkflow.create({
               data: {
-                skillWorkflowId: genSkillPackageWorkflowID(),
+                skillWorkflowId,
                 skillId,
                 name: workflow.name,
                 description: workflow.description,
@@ -233,22 +244,48 @@ export class SkillPackageService {
           }
         }
 
-        return skillPackage;
+        // Auto-create installation for the skill creator
+        // Creator uses source workflows directly (no cloning needed)
+        const installationId = genSkillPackageInstallationID();
+        const workflowMapping: WorkflowMappingRecord = {};
+
+        for (let i = 0; i < skillWorkflowIds.length; i++) {
+          workflowMapping[skillWorkflowIds[i]] = {
+            workflowId: workflowBindings[i].workflowId,
+            status: 'ready',
+          };
+        }
+
+        await tx.skillInstallation.create({
+          data: {
+            installationId,
+            skillId,
+            uid: user.uid,
+            status: 'ready', // Creator is auto-ready (owns the workflows)
+            workflowMapping: JSON.stringify(workflowMapping),
+            installedVersion: input.version,
+          },
+        });
+
+        return { skillPackage, installationId };
       });
 
-      this.logger.log(`Created skill package: ${skillId} by user ${user.uid}`);
+      this.logger.log(
+        `Created skill package: ${skillId} with installation ${result.installationId} by user ${user.uid}`,
+      );
 
       const workflowIds = workflowBindings.map((w) => w.workflowId);
       return {
-        skillId: result.skillId,
-        name: result.name,
-        status: result.status,
-        createdAt: result.createdAt.toJSON(),
+        skillId: result.skillPackage.skillId,
+        name: result.skillPackage.name,
+        status: result.skillPackage.status,
+        createdAt: result.skillPackage.createdAt.toJSON(),
         workflowId: workflowIds[0],
         workflowIds,
         workflows: workflowBindings.length > 0 ? workflowBindings : undefined,
         inputSchema: finalInputSchema,
         outputSchema: input.outputSchema,
+        installationId: result.installationId,
       };
     } catch (error) {
       // Compensation: Clean up orphan workflows created during failed skill creation
@@ -961,7 +998,7 @@ export class SkillPackageService {
       );
     }
 
-    const wordCount = description.trim().split(/\s+/).length;
+    const wordCount = this.countWords(description);
     if (wordCount < MIN_WORD_COUNT) {
       const example = this.generateDescriptionExample(skillName, workflowQuery);
       throwCliError(
@@ -992,6 +1029,34 @@ export class SkillPackageService {
     }
 
     return `${baseName} automation and processing. Use when Claude needs to: (1) [describe primary use case], (2) [describe secondary use case], or [general catch-all scenario].`;
+  }
+
+  /**
+   * Count words in a string, handling both CJK (Chinese/Japanese/Korean) and Western text.
+   * CJK characters are counted individually (each character = 1 word unit).
+   * Western words are counted by splitting on whitespace.
+   */
+  private countWords(text: string): number {
+    if (!text || !text.trim()) {
+      return 0;
+    }
+
+    const trimmed = text.trim();
+
+    // CJK character ranges: Chinese, Japanese Hiragana/Katakana, Korean Hangul
+    const cjkRegex =
+      /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g;
+
+    // Count CJK characters (each character = 1 word unit)
+    const cjkMatches = trimmed.match(cjkRegex);
+    const cjkCount = cjkMatches ? cjkMatches.length : 0;
+
+    // Remove CJK characters and count remaining words by whitespace
+    const nonCjkText = trimmed.replace(cjkRegex, ' ').trim();
+    const nonCjkWords = nonCjkText.split(/\s+/).filter((word) => word.length > 0);
+    const nonCjkCount = nonCjkWords.length;
+
+    return cjkCount + nonCjkCount;
   }
 
   /**

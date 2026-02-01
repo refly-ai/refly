@@ -29,6 +29,7 @@ import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
 import GiftIcon from '@refly-packages/ai-workspace-common/assets/gift.png';
 import { useFirstSuccessExecutionToday } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useUserMembership } from '@refly-packages/ai-workspace-common/hooks/use-user-membership';
+import { subscriptionEnabled } from '@refly/ui-kit';
 import { WorkflowInputFormCollapse } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/workflow-input-form-collapse';
 import './user-input-collapse.scss';
 
@@ -897,7 +898,7 @@ export const WorkflowRunForm = ({
             )}
             <Tooltip
               title={
-                !workflowIsRunning && !hasFirstSuccessExecutionToday
+                subscriptionEnabled && !workflowIsRunning && !hasFirstSuccessExecutionToday
                   ? t('canvas.workflow.run.runTooltip')
                   : undefined
               }
@@ -924,13 +925,16 @@ export const WorkflowRunForm = ({
                   ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
                   : t('canvas.workflow.run.run') || 'Run'}
 
-                {!workflowIsRunning && !hasFirstSuccessExecutionToday && planType === 'free' && (
-                  <img
-                    src={GiftIcon}
-                    alt="gift"
-                    className="w-[18px] h-[18px] group-hover:animate-shake"
-                  />
-                )}
+                {subscriptionEnabled &&
+                  !workflowIsRunning &&
+                  !hasFirstSuccessExecutionToday &&
+                  planType === 'free' && (
+                    <img
+                      src={GiftIcon}
+                      alt="gift"
+                      className="w-[18px] h-[18px] group-hover:animate-shake"
+                    />
+                  )}
               </Button>
             </Tooltip>
           </div>

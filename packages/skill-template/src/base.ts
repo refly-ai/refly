@@ -337,6 +337,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     preprocessResult?: PreprocessResult;
     ptcEnabled?: boolean;
     ptcContext?: PtcContext;
+    webSearchEnabled?: boolean;
   };
   metadata?: SkillRunnableMeta;
 }

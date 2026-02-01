@@ -1,13 +1,13 @@
 /**
- * refly workflow node-update - Update a node in a workflow
+ * refly workflow node update - Update a node in a workflow
  *
  * Updates node data such as query, toolsetKeys, title, etc.
  */
 
 import { Command } from 'commander';
-import { ok, fail, ErrorCodes } from '../../utils/output.js';
-import { apiRequest } from '../../api/client.js';
-import { CLIError } from '../../utils/errors.js';
+import { ok, fail, ErrorCodes } from '../../../utils/output.js';
+import { apiRequest } from '../../../api/client.js';
+import { CLIError } from '../../../utils/errors.js';
 
 interface UpdateNodeOperation {
   type: 'update_node';
@@ -19,7 +19,7 @@ interface UpdateWorkflowRequest {
   operations: UpdateNodeOperation[];
 }
 
-export const workflowNodeUpdateCommand = new Command('node-update')
+export const nodeUpdateCommand = new Command('update')
   .description('Update a node in a workflow')
   .argument('<workflowId>', 'Workflow ID (c-xxx)')
   .argument('<nodeId>', 'Node ID to update')
@@ -141,15 +141,17 @@ export const workflowNodeUpdateCommand = new Command('node-update')
           ...(options.data && { data: 'custom data applied' }),
         },
         nextSteps: [
-          `View updated node: \`refly workflow node ${workflowId} ${nodeId}\``,
-          `List all nodes: \`refly workflow nodes ${workflowId}\``,
+          `View updated node: \`refly workflow node get ${workflowId} ${nodeId}\``,
+          `List all nodes: \`refly workflow node list ${workflowId}\``,
         ],
       });
     } catch (error) {
       if (error instanceof CLIError) {
+        // Replace placeholders with actual values in hint
+        const hint = error.hint?.replace(/<workflowId>/g, workflowId).replace(/<nodeId>/g, nodeId);
         fail(error.code, error.message, {
           details: error.details,
-          hint: error.hint,
+          hint,
           suggestedFix: error.suggestedFix,
         });
         return;

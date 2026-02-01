@@ -1,13 +1,13 @@
 /**
- * refly workflow node-delete - Delete a node from a workflow
+ * refly workflow node delete - Delete a node from a workflow
  *
  * Removes a node and its connected edges from a workflow.
  */
 
 import { Command } from 'commander';
-import { ok, fail, ErrorCodes } from '../../utils/output.js';
-import { apiRequest } from '../../api/client.js';
-import { CLIError } from '../../utils/errors.js';
+import { ok, fail, ErrorCodes } from '../../../utils/output.js';
+import { apiRequest } from '../../../api/client.js';
+import { CLIError } from '../../../utils/errors.js';
 
 interface RemoveNodeOperation {
   type: 'remove_node';
@@ -18,7 +18,7 @@ interface UpdateWorkflowRequest {
   operations: RemoveNodeOperation[];
 }
 
-export const workflowNodeDeleteCommand = new Command('node-delete')
+export const nodeDeleteCommand = new Command('delete')
   .description('Delete a node from a workflow')
   .argument('<workflowId>', 'Workflow ID (c-xxx)')
   .argument('<nodeId>', 'Node ID to delete')
@@ -57,13 +57,15 @@ export const workflowNodeDeleteCommand = new Command('node-delete')
         workflowId,
         nodeId,
         note: 'Connected edges were also removed',
-        nextSteps: [`List remaining nodes: \`refly workflow nodes ${workflowId}\``],
+        nextSteps: [`List remaining nodes: \`refly workflow node list ${workflowId}\``],
       });
     } catch (error) {
       if (error instanceof CLIError) {
+        // Replace placeholders with actual values in hint
+        const hint = error.hint?.replace(/<workflowId>/g, workflowId).replace(/<nodeId>/g, nodeId);
         fail(error.code, error.message, {
           details: error.details,
-          hint: error.hint,
+          hint,
           suggestedFix: error.suggestedFix,
         });
         return;

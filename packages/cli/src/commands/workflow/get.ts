@@ -23,6 +23,7 @@ interface WorkflowDetail {
   };
   createdAt: string;
   updatedAt: string;
+  sessionId?: string;
 }
 
 export const workflowGetCommand = new Command('get')
