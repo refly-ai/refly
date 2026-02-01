@@ -1,11 +1,12 @@
 <img width="1280" height="731" alt="image" src="https://github.com/user-attachments/assets/9ee376d9-946d-4c11-96c5-740533b4b124" />
 
-<div align="center">
+<div align="right">
 
-[**English**](./README.md) | **中文**
+**[English](README.md) | 中文**
 
 </div>
-Refly — 首个基于 Vibe Workflow 的开源 Agent Skills 构建器
+
+# Refly — 首个基于 Vibe Workflow 的开源 Agent 技能构建器
 
 可作为 Lovable 的 API · Slack 的 Webhook · Claude Code 的 Skills · Refly 中的 SOP 手册
 
