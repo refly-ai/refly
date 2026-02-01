@@ -64,63 +64,72 @@ export class InvitationService {
   async listInvitationCodes(uid: string): Promise<InvitationCode[]> {
     const maxCodesPerUser = this.configService.get<number>('auth.invitation.maxCodesPerUser') ?? 20;
 
-    // Use distributed lock to prevent concurrent generation of invitation codes
-    const lockKey = `lock:invitation:generate:${uid}`;
-    const releaseLock = await this.redis.acquireLock(lockKey, 10);
+    let invitationCodes = await this.prisma.invitationCode.findMany({
+      where: { inviterUid: uid },
+      orderBy: { createdAt: 'asc' },
+    });
 
-    if (!releaseLock) {
-      // If lock acquisition fails, wait and retry once
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      const retryReleaseLock = await this.redis.acquireLock(lockKey, 10);
-      if (!retryReleaseLock) {
-        // If still can't acquire lock, just return existing codes
-        const existingCodes = await this.prisma.invitationCode.findMany({
+    // If fewer than maxCodesPerUser invitation codes exist, generate new ones until there are maxCodesPerUser
+    if (!invitationCodes || invitationCodes.length < maxCodesPerUser) {
+      // Use distributed lock to prevent concurrent generation of invitation codes
+      const lockKey = `lock:invitation:generate:${uid}`;
+      let releaseLock = await this.redis.acquireLock(lockKey, 10);
+
+      if (!releaseLock) {
+        // If lock acquisition fails, wait and retry once
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        releaseLock = await this.redis.acquireLock(lockKey, 10);
+        if (!releaseLock) {
+          // If still can't acquire lock, just return existing codes
+          const existingCodes = await this.prisma.invitationCode.findMany({
+            where: { inviterUid: uid },
+            orderBy: { createdAt: 'asc' },
+            take: maxCodesPerUser,
+          });
+          return this.formatInvitationCodes(existingCodes);
+        }
+      }
+
+      try {
+        // Re-check the count after acquiring lock to avoid duplicate generation
+        invitationCodes = await this.prisma.invitationCode.findMany({
           where: { inviterUid: uid },
           orderBy: { createdAt: 'asc' },
-          take: maxCodesPerUser,
         });
-        return this.formatInvitationCodes(existingCodes);
-      }
-    }
 
-    try {
-      let invitationCodes = await this.prisma.invitationCode.findMany({
-        where: { inviterUid: uid },
-        orderBy: { createdAt: 'asc' },
-      });
+        // Double-check if we still need to generate codes
+        if (invitationCodes.length < maxCodesPerUser) {
+          const currentCount = invitationCodes.length;
+          const neededCount = maxCodesPerUser - currentCount;
+          const codes: string[] = [];
+          for (let i = 0; i < neededCount; i++) {
+            const code = await this.generateUniqueCode();
+            codes.push(code);
+          }
 
-      // If fewer than maxCodesPerUser invitation codes exist, generate new ones until there are maxCodesPerUser
-      if (!invitationCodes || invitationCodes.length < maxCodesPerUser) {
-        const currentCount = invitationCodes?.length ?? 0;
-        const neededCount = maxCodesPerUser - currentCount;
-        const codes: string[] = [];
-        for (let i = 0; i < neededCount; i++) {
-          const code = await this.generateUniqueCode();
-          codes.push(code);
+          // create the new invitation codes in batch
+          const newInvitationCodes = await Promise.all(
+            codes.map((code) =>
+              this.prisma.invitationCode.create({
+                data: {
+                  code,
+                  inviterUid: uid,
+                  status: 'pending',
+                },
+              }),
+            ),
+          );
+          invitationCodes = [...invitationCodes, ...newInvitationCodes];
         }
-
-        // create the new invitation codes in batch
-        const newInvitationCodes = await Promise.all(
-          codes.map((code) =>
-            this.prisma.invitationCode.create({
-              data: {
-                code,
-                inviterUid: uid,
-                status: 'pending',
-              },
-            }),
-          ),
-        );
-        invitationCodes = [...invitationCodes, ...newInvitationCodes];
+      } finally {
+        await releaseLock();
       }
-
-      // Always return the first maxCodesPerUser codes (by creation time)
-      const codesToReturn = invitationCodes.slice(0, maxCodesPerUser);
-
-      return this.formatInvitationCodes(codesToReturn);
-    } finally {
-      await releaseLock();
     }
+
+    // Always return the first maxCodesPerUser codes (by creation time)
+    const codesToReturn = invitationCodes.slice(0, maxCodesPerUser);
+
+    return this.formatInvitationCodes(codesToReturn);
   }
 
   /**
