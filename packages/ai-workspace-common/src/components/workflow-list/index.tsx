@@ -24,7 +24,6 @@ import defaultAvatar from '../../assets/refly_default_avatar_v2.webp';
 import { useDebouncedCallback } from 'use-debounce';
 import { useSiderStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
-import { isSelfHosted } from '@refly/ui-kit';
 
 const WorkflowList = memo(() => {
   const { t, i18n } = useTranslation();
@@ -330,12 +329,10 @@ const WorkflowList = memo(() => {
         />
 
         {/* Schedule Filter */}
-        {!isSelfHosted && (
-          <WorkflowFilters
-            hasScheduleFilter={hasScheduleFilter}
-            onHasScheduleFilterChange={setHasScheduleFilter}
-          />
-        )}
+        <WorkflowFilters
+          hasScheduleFilter={hasScheduleFilter}
+          onHasScheduleFilterChange={setHasScheduleFilter}
+        />
 
         {/* Sort Button */}
         <Button
