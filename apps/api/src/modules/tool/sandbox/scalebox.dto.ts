@@ -157,11 +157,6 @@ export interface SandboxKillJobData {
  */
 export type OnLifecycleFailed = (sandboxId: string, error: Error) => void;
 
-/**
- * Union type for all sandbox job types
- */
-export type SandboxJobData = SandboxExecuteJobData | SandboxPauseJobData;
-
 // ==================== Execution Result ====================
 
 /**

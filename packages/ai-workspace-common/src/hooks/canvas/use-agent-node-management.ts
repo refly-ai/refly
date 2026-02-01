@@ -8,7 +8,30 @@ import { useRealtimeCanvasData } from './use-realtime-canvas-data';
 // Hook for batch updating toolsetId across all canvas nodes
 export const useCanvasToolsetUpdater = () => {
   const { nodes } = useRealtimeCanvasData();
-  const { setNodeData } = useNodeData();
+  const { setNodeData: _setNodeData } = useNodeData();
+
+  const setNodeData = useCallback(
+    <T = any>(
+      id: string,
+      data: Partial<CanvasNodeData<T>> | ((prev: CanvasNodeData<T>) => Partial<CanvasNodeData<T>>),
+    ) => {
+      _setNodeData<T>(id, (prev) => {
+        const next = typeof data === 'function' ? data(prev) : data;
+        const metadata = (next.metadata ?? prev.metadata ?? {}) as any;
+        if (metadata.untouched) {
+          return {
+            ...next,
+            metadata: {
+              ...metadata,
+              untouched: false,
+            },
+          };
+        }
+        return next;
+      });
+    },
+    [_setNodeData],
+  );
 
   const updateToolsetIdForAllNodes = useCallback(
     (toolsetKey: string, newToolsetId: string) => {
@@ -82,7 +105,30 @@ export const useAgentNodeManagement = (nodeId: string) => {
 
   const { query, modelInfo, contextItems, selectedToolsets } = metadata;
 
-  const { setNodeData } = useNodeData();
+  const { setNodeData: _setNodeData } = useNodeData();
+
+  const setNodeData = useCallback(
+    <T = any>(
+      id: string,
+      data: Partial<CanvasNodeData<T>> | ((prev: CanvasNodeData<T>) => Partial<CanvasNodeData<T>>),
+    ) => {
+      _setNodeData<T>(id, (prev) => {
+        const next = typeof data === 'function' ? data(prev) : data;
+        const metadata = (next.metadata ?? prev.metadata ?? {}) as any;
+        if ((prev.metadata as ResponseNodeMeta)?.untouched) {
+          return {
+            ...next,
+            metadata: {
+              ...metadata,
+              untouched: false,
+            },
+          };
+        }
+        return next;
+      });
+    },
+    [_setNodeData],
+  );
 
   const setQuery = useCallback(
     (updatedQuery: string | ((prevQuery: string) => string)) => {

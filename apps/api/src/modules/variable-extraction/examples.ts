@@ -334,6 +334,3 @@ export const APP_PUBLISH_EXAMPLES = `## APP Publishing Template Reference Exampl
 - [ ] No technical jargon or complex terminology
 - [ ] Clear indication of what the workflow will accomplish
 - [ ] Professional yet approachable tone`;
-
-// Legacy export for backward compatibility
-export const PROMPT_EXAMPLES = APP_PUBLISH_EXAMPLES;

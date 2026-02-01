@@ -3,7 +3,13 @@
  * These work with the canvas-based workflow system
  */
 
-import { CanvasNode, CanvasEdge, WorkflowVariable, WorkflowPlan } from '@refly/openapi-schema';
+import {
+  CanvasNode,
+  CanvasEdge,
+  WorkflowVariable,
+  WorkflowPlan,
+  GenericToolset,
+} from '@refly/openapi-schema';
 import { WorkflowPatchOperation } from '@refly/canvas-common';
 
 // ============================================================================
@@ -34,6 +40,7 @@ export interface WorkflowInfo {
   variables: WorkflowVariable[];
   createdAt: string;
   updatedAt: string;
+  sessionId?: string; // Latest copilot session ID for context continuity
 }
 
 export interface ListWorkflowsResponse {
@@ -79,6 +86,29 @@ export interface RunWorkflowResponse {
   workflowId: string;
   status: WorkflowExecutionStatus;
   startedAt: string;
+  unauthorizedTools?: Array<{
+    toolset: GenericToolset;
+    referencedNodes: Array<{
+      id: string;
+      entityId: string;
+      title: string;
+      type: string;
+    }>;
+  }>;
+  installToolsUrl?: string;
+}
+
+export interface WorkflowToolsStatusResponse {
+  authorized: boolean;
+  unauthorizedTools: Array<{
+    toolset: GenericToolset;
+    referencedNodes: Array<{
+      id: string;
+      entityId: string;
+      title: string;
+      type: string;
+    }>;
+  }>;
 }
 
 export type WorkflowExecutionStatus = 'init' | 'executing' | 'finish' | 'failed';
@@ -195,9 +225,9 @@ export interface PatchWorkflowPlanRequest {
   operations: WorkflowPatchOperation[];
 }
 
-export interface GetWorkflowPlanRequest {
-  planId: string;
-  version?: number;
+export interface PatchWorkflowPlanByCanvasRequest {
+  canvasId: string;
+  operations: WorkflowPatchOperation[];
 }
 
 // ============================================================================
@@ -252,38 +282,6 @@ export interface GenerateWorkflowCliResponse {
   edgesCount: number;
 }
 
-/**
- * Request to refine an existing workflow using AI
- */
-export interface RefineWorkflowCliRequest {
-  /** Refinement instruction */
-  instruction: string;
-  /** Optional model to use for refinement */
-  modelItemId?: string;
-  /** Output language locale */
-  locale?: string;
-}
-
-/**
- * Response from workflow refinement
- */
-export interface RefineWorkflowCliResponse {
-  /** Workflow/Canvas ID */
-  workflowId: string;
-  /** Copilot session ID */
-  sessionId: string;
-  /** Action result ID */
-  resultId: string;
-  /** Updated workflow plan ID */
-  planId: string;
-  /** Number of operations applied */
-  operationsCount: number;
-  /** Number of nodes after refinement */
-  nodesCount: number;
-  /** Number of edges after refinement */
-  edgesCount: number;
-}
-
 // ============================================================================
 // Async Generation DTOs (Polling-based streaming simulation)
 // ============================================================================
@@ -326,18 +324,82 @@ export interface GenerateStatusResponse {
 }
 
 // ============================================================================
-// Error Response DTOs
+// Node Output DTOs
 // ============================================================================
 
-export interface CliErrorResponse {
-  ok: false;
-  type: 'error';
-  version: string;
-  error: {
-    code: string;
+/**
+ * Tool call summary for node output
+ */
+export interface NodeOutputToolCall {
+  callId: string;
+  toolName: string;
+  status: string;
+  output?: unknown;
+}
+
+/**
+ * Response for node output endpoint
+ */
+export interface NodeOutputResponse {
+  runId: string;
+  workflowId: string;
+  nodeId: string;
+  nodeTitle: string;
+  nodeType: string;
+  status: 'waiting' | 'executing' | 'finish' | 'failed';
+  content?: string;
+  contentType?: string;
+  outputTokens?: number;
+  toolCalls?: NodeOutputToolCall[];
+  error?: {
+    type: string;
     message: string;
-    hint?: string;
   };
+  timing?: {
+    startTime?: string;
+    endTime?: string;
+    durationMs?: number;
+  };
+}
+
+// ============================================================================
+// Edit Workflow with Natural Language DTOs
+// ============================================================================
+
+/**
+ * Request to edit a workflow using natural language
+ */
+export interface EditWorkflowCliRequest {
+  /** Canvas ID (c-xxx) */
+  canvasId: string;
+  /** Natural language description of the edit */
+  query: string;
+  /** Output language locale */
+  locale?: string;
+  /** Optional model to use for generation */
+  modelItemId?: string;
+  /** Timeout in milliseconds for waiting Copilot completion */
+  timeout?: number;
+  /** Optional session ID to use for context continuity */
+  sessionId?: string;
+}
+
+/**
+ * Response from natural language workflow editing
+ */
+export interface EditWorkflowCliResponse {
+  /** Canvas ID */
+  canvasId: string;
+  /** Workflow plan ID */
+  planId: string;
+  /** Plan version */
+  version: number;
+  /** Which tool Copilot used: generate_workflow or patch_workflow */
+  toolUsed: 'generate_workflow' | 'patch_workflow';
+  /** The resulting workflow plan */
+  plan: WorkflowPlan;
+  /** Copilot session ID for context continuity */
+  sessionId?: string;
 }
 
 export const CLI_ERROR_CODES = {
@@ -346,6 +408,7 @@ export const CLI_ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   EXECUTION_FAILED: 'EXECUTION_FAILED',
   WORKFLOW_NOT_FOUND: 'WORKFLOW_NOT_FOUND',
+  NODE_NOT_FOUND: 'NODE_NOT_FOUND',
   NODE_TYPE_NOT_FOUND: 'NODE_TYPE_NOT_FOUND',
   INSUFFICIENT_CREDITS: 'INSUFFICIENT_CREDITS',
   RATE_LIMITED: 'RATE_LIMITED',

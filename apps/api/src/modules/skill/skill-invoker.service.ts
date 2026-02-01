@@ -14,11 +14,7 @@ import { FilteredLangfuseCallbackHandler, Trace, getTracer } from '@refly/observ
 import { propagation, context, SpanStatusCode } from '@opentelemetry/api';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
-import {
-  ModelUsageQuotaExceeded,
-  ProjectNotFoundError,
-  WorkflowExecutionNotFoundError,
-} from '@refly/errors';
+import { ModelUsageQuotaExceeded, WorkflowExecutionNotFoundError } from '@refly/errors';
 import {
   ActionMessage,
   ActionResult,
@@ -48,7 +44,6 @@ import * as Y from 'yjs';
 import { countToken } from '@refly/utils/token';
 import {
   QUEUE_AUTO_NAME_CANVAS,
-  QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_SYNC_TOKEN_USAGE,
 } from '../../utils/const';
@@ -58,19 +53,19 @@ import { writeSSEResponse } from '../../utils/response';
 import { ResultAggregator } from '../../utils/result';
 import { MessageAggregator } from '../../utils/message-aggregator';
 import { ActionService } from '../action/action.service';
+import { ABORT_MESSAGES, ABORT_LOG_LABELS } from './skill.constants';
 import { AutoNameCanvasJobData } from '../canvas/canvas.dto';
 import { PrismaService } from '../common/prisma.service';
 import { CreditUsageStep, SyncBatchTokenCreditUsageJobData } from '../credit/credit.dto';
 import { CreditService } from '../credit/credit.service';
 import { MiscService } from '../misc/misc.service';
-import { SyncPilotStepJobData } from '../pilot/pilot.processor';
-import { projectPO2DTO } from '../project/project.dto';
 import { ProviderService } from '../provider/provider.service';
 import { SkillEngineService } from '../skill/skill-engine.service';
 import { StepService } from '../step/step.service';
 import { SyncRequestUsageJobData, SyncTokenUsageJobData } from '../subscription/subscription.dto';
 import { ToolCallService, ToolCallStatus } from '../tool-call/tool-call.service';
 import { ToolService } from '../tool/tool.service';
+import { getPtcConfig, isPtcEnabledForToolsets, PtcSdkService } from '../tool/ptc';
 import { InvokeSkillJobData } from './skill.dto';
 import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
@@ -100,6 +95,7 @@ export class SkillInvokerService {
     private readonly creditService: CreditService,
     private readonly canvasSyncService: CanvasSyncService,
     private readonly metrics: SkillInvokeMetrics,
+    private readonly ptcSdkService: PtcSdkService,
     @Optional()
     @InjectQueue(QUEUE_SYNC_REQUEST_USAGE)
     private requestUsageQueue?: Queue<SyncRequestUsageJobData>,
@@ -109,9 +105,6 @@ export class SkillInvokerService {
     @Optional()
     @InjectQueue(QUEUE_AUTO_NAME_CANVAS)
     private autoNameCanvasQueue?: Queue<AutoNameCanvasJobData>,
-    @Optional()
-    @InjectQueue(QUEUE_SYNC_PILOT_STEP)
-    private pilotStepQueue?: Queue<SyncPilotStepJobData>,
   ) {
     this.logger.setContext(SkillInvokerService.name);
     this.skillEngine = this.skillEngineService.getEngine();
@@ -265,7 +258,6 @@ export class SkillInvokerService {
       modelConfigMap,
       provider,
       resultHistory,
-      projectId,
       eventListener,
       toolsets,
     } = data;
@@ -337,19 +329,61 @@ export class SkillInvokerService {
       },
     };
 
-    if (data.copilotSessionId) {
-      config.configurable.copilotSessionId = data.copilotSessionId;
+    const skillMetaName = data.skillName ?? data.result?.actionMeta?.name ?? 'unknown';
+    const metadata: SkillRunnableMeta = { name: skillMetaName };
+    const setMetadata = (key: string, value: unknown) => {
+      if (value !== undefined) {
+        metadata[key] = value;
+      }
+    };
+
+    if (data.result?.actionMeta?.icon) {
+      metadata.icon = data.result.actionMeta.icon;
     }
 
-    // Add project info if projectId is provided
-    if (projectId) {
-      const project = await this.prisma.project.findUnique({
-        where: { projectId, uid: user.uid, deletedAt: null },
-      });
-      if (!project) {
-        throw new ProjectNotFoundError(`project ${projectId} not found`);
-      }
-      config.configurable.project = projectPO2DTO(project);
+    const modelInfo = data.result?.modelInfo;
+    const providerInfo = providerItem?.provider ?? provider;
+    const providerConfig = providerItem?.config;
+    const traceparent =
+      typeof data.traceCarrier?.traceparent === 'string'
+        ? data.traceCarrier?.traceparent
+        : undefined;
+    const traceId = traceparent?.split('-')[1];
+    const modelNameFromConfig =
+      providerConfig &&
+      'modelName' in providerConfig &&
+      typeof providerConfig.modelName === 'string'
+        ? providerConfig.modelName
+        : undefined;
+
+    setMetadata('runType', 'skill');
+    setMetadata('traceId', traceId);
+    setMetadata('skillName', data.skillName ?? data.result?.actionMeta?.name);
+    setMetadata('query', data.input?.query);
+    setMetadata('originalQuery', data.input?.originalQuery);
+    setMetadata('locale', outputLocale);
+    setMetadata('uiLocale', userPo?.uiLocale);
+    setMetadata('mode', data.mode);
+    setMetadata('resultId', data.result?.resultId);
+    setMetadata('resultVersion', data.result?.version);
+    setMetadata('status', data.result?.status);
+    setMetadata('errorType', data.result?.errorType);
+    setMetadata('modelName', modelInfo?.name ?? modelNameFromConfig ?? data.modelName);
+    setMetadata(
+      'modelItemId',
+      data.modelItemId ?? modelInfo?.providerItemId ?? data.result?.actualProviderItemId,
+    );
+    setMetadata('providerKey', modelInfo?.provider ?? providerInfo?.providerKey);
+    setMetadata('providerId', providerInfo?.providerId ?? providerItem?.providerId);
+    setMetadata('workflowExecutionId', data.workflowExecutionId);
+    setMetadata('workflowNodeExecutionId', data.workflowNodeExecutionId);
+
+    if (Object.keys(metadata).length > 0) {
+      config.metadata = metadata;
+    }
+
+    if (data.copilotSessionId) {
+      config.configurable.copilotSessionId = data.copilotSessionId;
     }
 
     if (resultHistory?.length > 0) {
@@ -362,12 +396,39 @@ export class SkillInvokerService {
       const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine, {
         context,
       });
-      config.configurable.selectedTools = tools as any;
+
+      // Inject categorized tools and toolsets into config
+      config.configurable.selectedTools = tools.all as any;
+      config.configurable.builtInTools = tools.builtIn as any;
+      config.configurable.nonBuiltInTools = tools.nonBuiltIn as any;
+      (config.configurable as any).builtInToolsets = tools.builtInToolsets;
+      (config.configurable as any).nonBuiltInToolsets = tools.nonBuiltInToolsets;
+
+      // Calculate PTC status based on user and toolsets
+      const ptcConfig = getPtcConfig(this.config);
+      const toolsetKeys = toolsets.map((t) => t.id);
+      const ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
+
+      config.configurable.ptcEnabled = ptcEnabled;
+
+      if (ptcEnabled && tools.nonBuiltInToolsets.length > 0) {
+        const ptcContext = await this.ptcSdkService.buildPtcContext(tools.nonBuiltInToolsets);
+        config.configurable.ptcContext = ptcContext;
+      }
     }
 
-    config.configurable.installedToolsets = await this.toolService.listTools(user, {
-      enabled: true,
-    });
+    // For copilot_agent mode, include all tools (authorized and unauthorized)
+    // This allows Copilot to generate workflows with tools that require authorization
+    if (data.mode === 'copilot_agent') {
+      config.configurable.installedToolsets = await this.toolService.listAllToolsForCopilot(user);
+    } else {
+      // For other modes, only include authorized/installed tools
+      config.configurable.installedToolsets = await this.toolService.listTools(user, {
+        enabled: true,
+      });
+    }
+
+    config.configurable.webSearchEnabled = this.config.get<boolean>('tools.webSearchEnabled');
 
     if (eventListener) {
       const emitter = new EventEmitter<SkillEventMap>();
@@ -606,9 +667,10 @@ export class SkillInvokerService {
             const shouldAbort = await this.actionService.isAbortRequested(resultId, version);
             if (shouldAbort) {
               this.logger.info(
-                `[WORKFLOW_ABORT][POLL] resultId=${resultId} version=${version} phase=cross_pod_abort_detected`,
+                `[${ABORT_LOG_LABELS.USER_POLLING_DETECTION}] ` +
+                  `resultId=${resultId} version=${version} phase=cross_pod_abort_detected`,
               );
-              abortController.abort('Aborted by user');
+              abortController.abort(ABORT_MESSAGES.USER_ABORT);
               clearInterval(abortCheckInterval);
             }
           } catch (error) {
@@ -648,9 +710,8 @@ export class SkillInvokerService {
 
     // Helper function for timeout message generation
     const getTimeoutMessage = () => {
-      return hasAnyOutput
-        ? `Execution timeout - no output received within ${streamIdleTimeout / 1000} seconds`
-        : `Execution timeout - skill failed to produce any output within ${streamIdleTimeout / 1000} seconds`;
+      // Use unified timeout message constant
+      return ABORT_MESSAGES.STREAM_TIMEOUT;
     };
 
     const startTimeoutCheck = () => {
@@ -846,11 +907,14 @@ export class SkillInvokerService {
       // Check if already aborted before starting execution (handles queued aborts)
       const isAlreadyAborted = await this.actionService.isAbortRequested(resultId, version);
       if (isAlreadyAborted) {
-        this.logger.warn(`Action ${resultId} already marked for abort before execution, skipping`);
-        abortController.abort('Action was aborted before execution started');
+        this.logger.warn(
+          `[${ABORT_LOG_LABELS.USER_BEFORE_EXECUTION}] ` +
+            `Action ${resultId} already marked for abort before execution, skipping`,
+        );
+        abortController.abort(ABORT_MESSAGES.USER_ABORT);
         result.status = 'failed';
         result.errorType = 'userAbort';
-        throw new Error('Action was aborted before execution started');
+        throw new Error(ABORT_MESSAGES.USER_ABORT);
       }
 
       // tool callId, now we use first time returned run_id as tool call id
@@ -923,7 +987,8 @@ export class SkillInvokerService {
               const input = data.input;
               const output = data.output;
               const errorMessage = String(data.errorMessage ?? '');
-              const createdAt = startTs;
+              // Use the actual tool call start time, not the skill invocation start time
+              const createdAt = toolCallStartTimes.get(toolCallId) ?? Date.now();
               const updatedAt = Date.now();
               await this.toolCallService.persistToolCallResult(
                 res,
@@ -991,7 +1056,7 @@ export class SkillInvokerService {
                       stepName,
                       input: event.data?.input,
                       status: 'executing',
-                      createdAt: startTs,
+                      createdAt: toolStartTs,
                       updatedAt: Date.now(),
                     },
                   });
@@ -1361,9 +1426,43 @@ export class SkillInvokerService {
       // Record OpenTelemetry metrics: LLM invocation error
       this.metrics.llm.fail(String(runMeta?.ls_model_name || 'unknown'));
 
-      const errorInfo = this.categorizeError(err);
       const errorMessage = err.message || 'Unknown error';
       const errorType = err.name || 'Error';
+
+      // Detect LangGraph abort errors (which lose the original reason)
+      const isLangGraphAbort =
+        errorMessage === 'Abort' && err.stack?.includes('langgraph/dist/pregel/runner');
+
+      // For LangGraph aborts, query database to get the correct errorType and errors
+      // This prevents overwriting the errorType that was already set by abortActionFromReq
+      let dbErrorType: string | null = null;
+      let dbErrors: string[] | null = null;
+
+      if (isLangGraphAbort) {
+        try {
+          const dbResult = await this.prisma.actionResult.findFirst({
+            where: { resultId, version },
+            select: { errorType: true, errors: true, status: true },
+          });
+
+          if (dbResult && dbResult.status === 'failed') {
+            // Database already marked as failed, use its errorType and errors
+            dbErrorType = dbResult.errorType;
+            dbErrors = dbResult.errors ? JSON.parse(dbResult.errors as string) : null;
+
+            this.logger.info(
+              `[ABORT] LangGraph abort detected. Using database values: errorType=${dbErrorType}, errors=${JSON.stringify(dbErrors)}`,
+            );
+          }
+        } catch (dbError) {
+          this.logger.error(
+            `[ABORT] Failed to query database for errorType: ${dbError?.message}. Will fall back to categorization.`,
+          );
+          // Continue execution, don't interrupt the error handling flow
+        }
+      }
+
+      const errorInfo = this.categorizeError(err);
 
       // Log error based on categorization
       if (errorInfo.isGeneralTimeout) {
@@ -1372,6 +1471,12 @@ export class SkillInvokerService {
         this.logger.error(`🌐 Network error for action: ${resultId} - ${errorMessage}`);
       } else if (errorInfo.isAbortError) {
         this.logger.warn(`⏹️  Request aborted for action: ${resultId} - ${errorMessage}`);
+      } else if (isLangGraphAbort && dbErrorType) {
+        // LangGraph abort with database info available
+        const logPrefix = dbErrorType === 'userAbort' ? '⏹️  User abort' : '⏱️  System abort';
+        this.logger.warn(
+          `${logPrefix} (LangGraph) for action: ${resultId} - ${dbErrors?.[0] || errorMessage}`,
+        );
       } else {
         this.logger.error(
           `❌ Skill execution error for action: ${resultId} - ${errorType}: ${errorMessage}`,
@@ -1426,23 +1531,45 @@ export class SkillInvokerService {
       //   : null;
 
       // Normal error handling - send error SSE (triggers popup) and set failed status
+
+      // Determine final errorType and error message
+      // Priority: database values (for LangGraph aborts) > categorization > result.errorType > default
+      let finalErrorType: 'systemError' | 'userAbort';
+      let finalErrorMessage: string;
+
+      if (isLangGraphAbort && dbErrorType && dbErrors) {
+        // Case 1: LangGraph abort with database values available (highest priority)
+        finalErrorType = (dbErrorType as 'systemError' | 'userAbort') || 'systemError';
+        finalErrorMessage = dbErrors[0] || errorInfo.userFriendlyMessage;
+
+        this.logger.info(
+          `[ABORT] Using database errorType for LangGraph abort: errorType=${finalErrorType}, message="${finalErrorMessage}"`,
+        );
+      } else if (errorInfo.isAbortError) {
+        // Case 2: categorizeError detected it as abort error
+        finalErrorType = 'userAbort';
+        finalErrorMessage = errorInfo.userFriendlyMessage;
+      } else {
+        // Case 3: Other errors (use existing result.errorType if set, otherwise systemError)
+        finalErrorType = (result.errorType as 'systemError' | 'userAbort') || 'systemError';
+        finalErrorMessage = errorInfo.userFriendlyMessage;
+      }
+
+      // Send SSE error response
       if (res) {
         writeSSEResponse(res, {
           event: 'error',
           resultId,
           version,
-          error: genBaseRespDataFromError(new Error(errorInfo.userFriendlyMessage)),
+          error: genBaseRespDataFromError(new Error(finalErrorMessage)),
           originError: err.message,
         });
       }
-      if (errorInfo.isAbortError) {
-        result.status = 'failed';
-        result.errorType = 'userAbort';
-      } else {
-        result.status = 'failed';
-        result.errorType = result.errorType ?? 'systemError';
-      }
-      result.errors.push(errorInfo.userFriendlyMessage);
+
+      // Set final status and errorType
+      result.status = 'failed';
+      result.errorType = finalErrorType;
+      result.errors.push(finalErrorMessage);
     } finally {
       // Cleanup all timers and resources to prevent memory leaks
       // Note: consolidated abort signal listener handles cleanup for early abort scenarios
@@ -1483,14 +1610,6 @@ export class SkillInvokerService {
         ...(messages.length > 0
           ? [this.prisma.actionMessage.createMany({ data: messages, skipDuplicates: true })]
           : []),
-        ...(result.pilotStepId
-          ? [
-              this.prisma.pilotStep.updateMany({
-                where: { stepId: result.pilotStepId },
-                data: { status },
-              }),
-            ]
-          : []),
         ...(result.workflowNodeExecutionId
           ? [
               this.prisma.workflowNodeExecution.updateMany({
@@ -1503,7 +1622,9 @@ export class SkillInvokerService {
           where: { resultId, version },
           data: {
             status,
-            errorType: status === 'failed' ? (result.errorType ?? 'systemError') : null,
+            // Use || instead of ?? to ensure errorType is never empty string
+            // If status is failed, use result.errorType (which should always be set now), fallback to 'systemError'
+            errorType: status === 'failed' ? result.errorType || 'systemError' : null,
             errors: JSON.stringify(result.errors),
           },
         }),
@@ -1583,17 +1704,6 @@ export class SkillInvokerService {
           });
         }
         // In desktop mode, we could handle usage tracking differently if needed
-      }
-
-      // Sync pilot step if needed
-      if (result.pilotStepId && this.pilotStepQueue) {
-        this.logger.info(
-          `Sync pilot step for result ${resultId}, pilotStepId: ${result.pilotStepId}`,
-        );
-        await this.pilotStepQueue.add('syncPilotStep', {
-          user: { uid: user.uid },
-          stepId: result.pilotStepId,
-        });
       }
 
       await resultAggregator.clearCache();

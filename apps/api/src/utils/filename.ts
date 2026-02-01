@@ -5,7 +5,7 @@
  * @param filename - The original filename
  * @returns Object containing asciiFilename and encodedFilename for Content-Disposition header
  */
-export function sanitizeFilename(filename?: string | null): {
+function sanitizeFilename(filename?: string | null): {
   asciiFilename: string;
   encodedFilename: string;
 } {

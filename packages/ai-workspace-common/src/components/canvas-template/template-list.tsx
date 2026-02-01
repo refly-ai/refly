@@ -1,8 +1,7 @@
 import { useEffect, useCallback, useMemo, memo, useState, useRef } from 'react';
 import { Empty, Button } from 'antd';
 import { useTranslation } from 'react-i18next';
-import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { useListCanvasTemplates } from '@refly-packages/ai-workspace-common/queries';
 import { useCanvasTemplateModal } from '@refly/stores';
 import { TemplateCard } from './template-card';
 import { TemplateCardSkeleton } from './template-card-skeleton';
@@ -73,22 +72,25 @@ export const TemplateList = ({
   const [isFading, setIsFading] = useState(false);
   const prevCategoryIdRef = useRef(categoryId);
 
-  const { dataList, reload, isRequesting, setDataList, hasMore } = useFetchDataList({
-    fetchData: async (queryPayload) => {
-      const res = await getClient().listCanvasTemplates({
-        query: {
-          language,
-          categoryId: categoryId === 'my-templates' ? undefined : categoryId,
-          scope: categoryId === 'my-templates' ? 'private' : 'public',
-          searchQuery,
-          ...queryPayload,
-        },
-      });
-      return res?.data ?? { success: true, data: [] };
+  const { data, isLoading, isFetching } = useListCanvasTemplates(
+    {
+      query: {
+        language,
+        categoryId: categoryId === 'my-templates' ? undefined : categoryId,
+        scope: categoryId === 'my-templates' ? 'private' : 'public',
+        searchQuery,
+        pageSize: 20,
+      },
     },
-    pageSize: 20,
-    dependencies: [language, categoryId, searchQuery],
-  });
+    undefined,
+    {
+      enabled: source === 'front-page' || visible,
+    },
+  );
+
+  const dataList = useMemo(() => data?.data ?? [], [data]);
+  const isRequesting = isLoading || (isFetching && dataList.length === 0);
+  const hasMore = dataList.length >= 20;
 
   // Handle smooth transition when category changes
   useEffect(() => {
@@ -126,8 +128,10 @@ export const TemplateList = ({
 
   useEffect(() => {
     if (source === 'front-page') return;
-    visible ? reload() : setDataList([]);
-  }, [visible]);
+    if (!visible) {
+      setDisplayDataList([]);
+    }
+  }, [visible, source]);
 
   // Limit display to MAX_DISPLAY_COUNT templates
   const displayedTemplates = useMemo(() => {
@@ -174,7 +178,7 @@ export const TemplateList = ({
       id={source === 'front-page' ? scrollableTargetId : undefined}
       className={cn('w-full h-full overflow-y-auto bg-gray-100 p-4 dark:bg-gray-700', className)}
     >
-      {isRequesting && displayDataList.length === 0 ? (
+      {isRequesting ? (
         <div className={cn('grid', gridClassName)}>
           {Array.from({ length: 20 }).map((_, index) => (
             <TemplateCardSkeleton key={index} />
@@ -183,10 +187,7 @@ export const TemplateList = ({
       ) : displayDataList.length > 0 ? (
         <div
           id={source === 'template-library' ? scrollableTargetId : undefined}
-          className={cn(
-            'w-full h-full overflow-y-auto transition-opacity duration-1 ease-in-out',
-            isFading ? 'opacity-0' : 'opacity-100',
-          )}
+          className={cn('w-full h-full overflow-y-auto', isFading ? 'opacity-0' : 'opacity-100')}
         >
           <div className={cn('grid', gridClassName)}>{templateCards}</div>
           {!hasMore && displayDataList.length > 0 && <EndMessage />}

@@ -191,7 +191,7 @@ function simplifyUnionTypesForGemini(schema: JsonSchema | SchemaProperty): void 
  * Simplify union types in JSON schema
  * Creates a deep clone and applies type simplification for model compatibility
  */
-export function simplifySchemaUnionTypes(schema: JsonSchema): JsonSchema {
+function simplifySchemaUnionTypes(schema: JsonSchema): JsonSchema {
   // Clone to avoid mutation
   const cloned = JSON.parse(JSON.stringify(schema)) as JsonSchema;
 

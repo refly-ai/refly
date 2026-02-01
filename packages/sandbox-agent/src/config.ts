@@ -7,7 +7,7 @@ config();
 /**
  * CodeInterpreter API Settings
  */
-export interface CodeInterpreterAPISettings {
+interface CodeInterpreterAPISettings {
   DEBUG: boolean;
 
   // Models

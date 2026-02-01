@@ -25,6 +25,13 @@ import {
   RegularToolPostHandlerService,
   ToolWrapperFactoryService,
 } from './tool-execution';
+import {
+  ToolExecutionService,
+  ToolIdentifyService,
+  ToolDefinitionService,
+  PtcSdkService,
+  PtcEnvService,
+} from './ptc';
 import { ToolController } from './tool.controller';
 import { ToolService } from './tool.service';
 
@@ -48,6 +55,16 @@ import { ToolService } from './tool.service';
   controllers: [ToolController],
   providers: [
     ToolService,
+    // Tool identify service for determining tool type
+    ToolIdentifyService,
+    // Tool execution service for API-based tool execution
+    ToolExecutionService,
+    // Tool definition service for schema export
+    ToolDefinitionService,
+    // PTC SDK service for loading SDK definitions
+    PtcSdkService,
+    // PTC env service for sandbox environment variables
+    PtcEnvService,
 
     SyncToolCreditUsageProcessor,
     // Tool inventory service (loads from database)
@@ -62,6 +79,6 @@ import { ToolService } from './tool.service';
     ComposioToolPostHandlerService,
     ToolWrapperFactoryService,
   ],
-  exports: [ToolService, ToolInventoryService, ToolFactory],
+  exports: [ToolService, ToolInventoryService, ToolFactory, PtcSdkService, PtcEnvService],
 })
 export class ToolModule {}

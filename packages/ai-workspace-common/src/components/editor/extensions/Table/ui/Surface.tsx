@@ -1,7 +1,7 @@
 import { cn } from '../../../../../utils/cn';
 import { HTMLProps, forwardRef } from 'react';
 
-export type SurfaceProps = HTMLProps<HTMLDivElement> & {
+type SurfaceProps = HTMLProps<HTMLDivElement> & {
   withShadow?: boolean;
   withBorder?: boolean;
 };

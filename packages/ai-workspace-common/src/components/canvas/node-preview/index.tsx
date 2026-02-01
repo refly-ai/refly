@@ -2,7 +2,6 @@ import { CanvasNode } from '@refly/canvas-common';
 import { DocumentNodePreview } from './document';
 import { StartNodePreview } from './start';
 import { useMemo, memo } from 'react';
-import { CodeArtifactNodePreview } from './code-artifact';
 import { SkillResponseNodePreview } from './skill-response';
 
 export const PreviewComponent = memo(
@@ -22,8 +21,6 @@ export const PreviewComponent = memo(
               resultId={node.data?.entityId}
             />
           );
-        case 'codeArtifact':
-          return <CodeArtifactNodePreview nodeId={node.id} purePreview={purePreview} />;
         case 'start':
           return <StartNodePreview />;
         default:

@@ -88,7 +88,7 @@ interface ImportResourceState {
   setExtensionModalVisible: (visible: boolean) => void;
 }
 
-export const defaultState = {
+const defaultState = {
   copiedTextPayload: { content: '', title: '', url: '' },
   scrapeLinks: [],
   fileList: [],

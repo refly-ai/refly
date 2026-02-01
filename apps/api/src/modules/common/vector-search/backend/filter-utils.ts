@@ -16,7 +16,7 @@ import {
 /**
  * Check if a filter is a Qdrant-style structured filter
  */
-export function isQdrantFilter(filter: VectorFilter): filter is QdrantFilter {
+function isQdrantFilter(filter: VectorFilter): filter is QdrantFilter {
   if (typeof filter !== 'object' || filter === null) {
     return false;
   }
@@ -32,14 +32,14 @@ export function isQdrantFilter(filter: VectorFilter): filter is QdrantFilter {
 /**
  * Check if a filter is a LanceDB-style SQL string filter
  */
-export function isLanceDBFilter(filter: VectorFilter): filter is LanceDBFilter {
+function isLanceDBFilter(filter: VectorFilter): filter is LanceDBFilter {
   return typeof filter === 'string';
 }
 
 /**
  * Check if a filter is a simple key-value filter
  */
-export function isSimpleFilter(filter: VectorFilter): filter is SimpleFilter {
+function isSimpleFilter(filter: VectorFilter): filter is SimpleFilter {
   if (typeof filter !== 'object' || filter === null) {
     return false;
   }
@@ -341,79 +341,4 @@ function formatSqlValue(value: FilterValue): string {
     return value ? 'TRUE' : 'FALSE';
   }
   return String(value);
-}
-
-/**
- * Validate filter structure
- */
-export function validateFilter(filter: VectorFilter): boolean {
-  try {
-    if (!filter) {
-      return true;
-    }
-
-    if (isLanceDBFilter(filter)) {
-      return typeof filter === 'string';
-    }
-
-    if (isQdrantFilter(filter)) {
-      return validateQdrantFilter(filter);
-    }
-
-    if (isSimpleFilter(filter)) {
-      return validateSimpleFilter(filter);
-    }
-
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Validate Qdrant filter structure
- */
-function validateQdrantFilter(filter: QdrantFilter): boolean {
-  const validateConditions = (conditions: FilterCondition[]): boolean => {
-    return conditions.every((condition) => {
-      if (!condition.key) return false;
-
-      const hasValidCondition = !!(
-        condition.match ||
-        condition.range ||
-        condition.geo_bounding_box ||
-        condition.geo_radius ||
-        condition.values_count ||
-        condition.is_empty ||
-        condition.is_null ||
-        condition.has_id
-      );
-
-      return hasValidCondition;
-    });
-  };
-
-  if (filter.must && !validateConditions(filter.must)) return false;
-  if (filter.should && !validateConditions(filter.should)) return false;
-  if (filter.must_not && !validateConditions(filter.must_not)) return false;
-
-  return true;
-}
-
-/**
- * Validate simple filter structure
- */
-function validateSimpleFilter(filter: SimpleFilter): boolean {
-  return Object.values(filter).every(
-    (value) =>
-      typeof value === 'string' ||
-      typeof value === 'number' ||
-      typeof value === 'boolean' ||
-      value === null ||
-      (Array.isArray(value) &&
-        (value as FilterValue[]).every(
-          (v) =>
-            typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null,
-        )),
-  );
 }

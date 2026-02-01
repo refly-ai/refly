@@ -6,7 +6,7 @@ import { Link as LucideLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { InputRef } from 'antd';
 
-export function isValidUrl(url: string) {
+function isValidUrl(url: string) {
   try {
     new URL(url);
     return true;
@@ -14,7 +14,7 @@ export function isValidUrl(url: string) {
     return false;
   }
 }
-export function getUrlFromString(str: string) {
+function getUrlFromString(str: string) {
   if (isValidUrl(str)) return str;
   try {
     if (str.includes('.') && !str.includes(' ')) {

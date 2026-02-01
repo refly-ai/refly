@@ -1,35 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { createHighlighter } from 'shiki/bundle/web';
-
-const SUPPORTED_LANGUAGES = new Set([
-  'html',
-  'css',
-  'js',
-  'graphql',
-  'javascript',
-  'json',
-  'jsx',
-  'markdown',
-  'md',
-  'mdx',
-  'plaintext',
-  'py',
-  'python',
-  'sh',
-  'shell',
-  'sql',
-  'text',
-  'ts',
-  'tsx',
-  'txt',
-  'typescript',
-  'zsh',
-]);
-
-const highlighterPromise = createHighlighter({
-  langs: Array.from(SUPPORTED_LANGUAGES),
-  themes: ['github-light-default'],
-});
+import {
+  getHighlighter,
+  isLanguageSupported,
+} from '@refly-packages/ai-workspace-common/utils/lazy-loader';
 
 export default function SyntaxHighlighter({
   code,
@@ -47,10 +20,10 @@ export default function SyntaxHighlighter({
 
     async function highlight() {
       try {
-        const highlighter = await highlighterPromise;
+        const highlighter = await getHighlighter();
         if (isMounted) {
           // Fall back to plaintext for unsupported languages
-          const lang = SUPPORTED_LANGUAGES.has(language) ? language : 'plaintext';
+          const lang = isLanguageSupported(language) ? language : 'plaintext';
           const highlightedHtml = highlighter.codeToHtml(code, {
             lang,
             theme: 'github-light-default',

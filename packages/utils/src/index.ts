@@ -10,6 +10,7 @@ export * from './scrape-weblink';
 export * from './models';
 export * from './event-emitter/editor';
 export * from './event-emitter/model';
+export * from './event-emitter/canvas';
 export * from './file';
 export * from './timeTracker';
 export * from './search-source-converter';
@@ -28,6 +29,8 @@ export * from './validator';
 export * from './query-processor';
 export * from './drive-file-mapper';
 export * from './guard';
+export * from './variable-helpers';
 // Note: token.ts uses tiktoken (WASM) which is not compatible with frontend bundlers
 // Backend should import directly: import { countToken } from '@refly/utils/src/token'
 export * from './on-module-init';
+export * from './file-id';

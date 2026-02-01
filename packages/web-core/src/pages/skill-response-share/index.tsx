@@ -57,17 +57,6 @@ const SkillResponseSharePage = () => {
       {/* Main content */}
       <div className="flex h-full w-full grow bg-white overflow-auto dark:bg-gray-900">
         <div className="flex flex-col space-y-4 p-4 h-full max-w-[1024px] mx-auto w-full">
-          {/* {title && (
-            <PreviewChatInput
-              enabled={true}
-              readonly={true}
-              contextItems={[]}
-              query={title}
-              actionMeta={actionMeta}
-              setEditMode={() => {}}
-            />
-          )} */}
-
           <div className="flex-grow">
             {steps.map((step: ActionStep, index: number) => (
               <SimpleStepCard key={step.name} step={step} index={index + 1} />

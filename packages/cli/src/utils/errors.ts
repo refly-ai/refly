@@ -2,7 +2,7 @@
  * Custom error classes for CLI operations
  */
 
-import { ErrorCode, ErrorCodes } from './output.js';
+import { ErrorCode, ErrorCodes, type SuggestedFix } from './output.js';
 
 export class CLIError extends Error {
   constructor(
@@ -10,6 +10,7 @@ export class CLIError extends Error {
     message: string,
     public readonly details?: Record<string, unknown>,
     public readonly hint?: string,
+    public readonly suggestedFix?: SuggestedFix,
   ) {
     super(message);
     this.name = 'CLIError';
@@ -21,8 +22,6 @@ export class AuthError extends CLIError {
     super(ErrorCodes.AUTH_REQUIRED, message, undefined, hint ?? 'refly login');
   }
 }
-
-export class BuilderError extends CLIError {}
 
 export class ValidationError extends CLIError {
   constructor(message: string, details?: Record<string, unknown>) {

@@ -148,23 +148,25 @@ export default () => ({
     },
     invitation: {
       requireInvitationCode: process.env.AUTH_REQUIRE_INVITATION_CODE === 'true' || false,
+      maxCodesPerUser: Number.parseInt(process.env.INVITATION_MAX_CODES_PER_USER) || 20,
       inviterCreditAmount: Number.parseInt(process.env.INVITATION_INVITER_CREDIT_AMOUNT) || 500,
       inviteeCreditAmount: Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_AMOUNT) || 500,
-      inviterCreditExpiresInMonths:
-        Number.parseInt(process.env.INVITATION_INVITER_CREDIT_EXPIRES_IN_MONTHS) || 3,
-      inviteeCreditExpiresInMonths:
-        Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_EXPIRES_IN_MONTHS) || 3,
+      inviterCreditExpiresInDays:
+        Number.parseInt(process.env.INVITATION_INVITER_CREDIT_EXPIRES_IN_DAYS) || 7,
+      inviteeCreditExpiresInDays:
+        Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_EXPIRES_IN_DAYS) || 7,
     },
     registration: {
-      bonusCreditAmount: Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_AMOUNT) || 3000,
-      bonusCreditExpiresInMonths:
-        Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_EXPIRES_IN_MONTHS) || 3,
+      bonusCreditAmount: Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_AMOUNT) || 500,
+      bonusCreditExpiresInDays:
+        Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_EXPIRES_IN_DAYS) || 7,
     },
     onboarding: {
       enabled: process.env.ONBOARDING_ENABLED === 'true' || false,
     },
   },
   tools: {
+    webSearchEnabled: process.env.WEB_SEARCH_ENABLED === 'true',
     supportedToolsets: process.env.SUPPORTED_TOOLSETS || '', // comma separated list of toolset keys
     google: {
       clientId: process.env.GOOGLE_TOOLS_CLIENT_ID,
@@ -245,6 +247,14 @@ export default () => ({
     // Expiration time in minutes (default: 7 days = 10080 minutes)
     // For testing, use smaller values like 7 (7 minutes)
     expirationMinutes: Number(process.env.VOUCHER_EXPIRATION_MINUTES) || 10080,
+    // Default discount percentage for vouchers (default: 80% off)
+    defaultDiscountPercent: Number(process.env.VOUCHER_DEFAULT_DISCOUNT_PERCENT) || 80,
+  },
+  ptc: {
+    mode: process.env.PTC_MODE || 'off',
+    userAllowlist: process.env.PTC_USER_ALLOWLIST || '',
+    toolsetAllowlist: process.env.PTC_TOOLSET_ALLOWLIST || '',
+    toolsetBlocklist: process.env.PTC_TOOLSET_BLOCKLIST || '',
   },
   schedule: {
     // Rate limiting - controls global and per-user concurrency
@@ -306,6 +316,8 @@ export default () => ({
       maxDuration: Number.parseInt(process.env.VIDEO_MAX_DURATION) || 600, // 10 minutes
     },
     s3: {
+      inputBucket:
+        process.env.LAMBDA_INPUT_S3_BUCKET || process.env.MINIO_INTERNAL_BUCKET || 'refly-weblink',
       bucket: process.env.LAMBDA_S3_BUCKET || process.env.MINIO_INTERNAL_BUCKET || 'refly-weblink',
       outputPrefix: process.env.LAMBDA_OUTPUT_PREFIX || 'lambda-output',
     },
@@ -335,6 +347,20 @@ export default () => ({
     whiteList: process.env.SANDBOX_WHITELIST, // 'uid,uid'
     blackList: process.env.SANDBOX_BLACKLIST, // 'uid,uid'
     randomRate: process.env.SANDBOX_RANDOM_RATE, // '20'
+    s3Lib: {
+      enabled: process.env.SANDBOX_S3LIB_ENABLED,
+      pathPrefix: process.env.SANDBOX_S3LIB_PATH_PREFIX,
+      hash: process.env.SANDBOX_S3LIB_HASH,
+      cache: process.env.SANDBOX_S3LIB_CACHE,
+      reset: process.env.SANDBOX_S3LIB_RESET,
+    },
+    s3: {
+      overlap: {
+        enabled: process.env.SANDBOX_S3_OVERLAP_ENABLED,
+        endpoint: process.env.SANDBOX_S3_OVERLAP_ENDPOINT,
+        port: process.env.SANDBOX_S3_OVERLAP_PORT,
+      },
+    },
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,
       // Wrapper

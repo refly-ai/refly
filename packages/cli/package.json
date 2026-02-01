@@ -1,6 +1,6 @@
 {
   "name": "@powerformer/refly-cli",
-  "version": "0.1.8",
+  "version": "0.1.22",
   "description": "Refly CLI - Command-line interface for Refly workflow orchestration",
   "bin": {
     "refly": "./dist/bin/refly.js"
@@ -9,6 +9,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup",
+    "build:dev": "REFLY_BUILD_ENV=dev tsup",
     "build:test": "REFLY_BUILD_ENV=test tsup",
     "build:staging": "REFLY_BUILD_ENV=staging tsup",
     "build:prod": "REFLY_BUILD_ENV=production tsup",
@@ -23,6 +24,9 @@
   "license": "MIT",
   "dependencies": {
     "commander": "^12.1.0",
+    "form-data": "^4.0.1",
+    "gray-matter": "^4.0.3",
+    "mime": "^4.0.4",
     "zod": "^3.23.8",
     "open": "^10.1.0"
   },

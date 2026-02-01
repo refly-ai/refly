@@ -77,7 +77,7 @@ export interface GeoRadiusCondition {
   radius: number;
 }
 
-export interface GeoPoint {
+interface GeoPoint {
   lat: number;
   lon: number;
 }

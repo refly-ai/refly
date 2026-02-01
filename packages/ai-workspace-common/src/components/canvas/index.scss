@@ -138,6 +138,8 @@
 
 // Make Spin component fill parent container
 .canvas-container {
+  position: relative;
+
   .ant-spin-nested-loading,
   .ant-spin-container {
     height: 100%;

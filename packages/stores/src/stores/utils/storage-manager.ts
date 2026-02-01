@@ -19,7 +19,7 @@ function isCacheInfo(obj: any): obj is CacheInfo {
 /**
  * Options for configuring the ZustandStorageManager
  */
-export interface AutoEvictionStorageManagerOptions {
+interface AutoEvictionStorageManagerOptions {
   /** Maximum age in milliseconds before item is considered stale (default: 1 day) */
   maxAge?: number;
   /** Maximum number of items to keep per state field (default: 50) */

@@ -30,7 +30,8 @@ export interface GetScheduleRecordsDto {
 export interface ListAllScheduleRecordsDto {
   page?: number;
   pageSize?: number;
-  status?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
+  executionStatus?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed';
+  triggerType?: 'schedule' | 'webhook' | 'api';
   keyword?: string;
   tools?: string[];
   canvasId?: string;

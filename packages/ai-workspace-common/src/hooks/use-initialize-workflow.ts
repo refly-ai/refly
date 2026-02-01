@@ -14,6 +14,7 @@ import {
 } from '@refly/stores';
 import { GetWorkflowDetailResponse, InitializeWorkflowRequest } from '@refly/openapi-schema';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useUserMembership } from '@refly-packages/ai-workspace-common/hooks/use-user-membership';
 import { guessModelProviderError, ModelUsageQuotaExceeded } from '@refly/errors';
 
 export const useInitializeWorkflow = (
@@ -31,6 +32,7 @@ export const useInitializeWorkflow = (
   const { setHasFirstExecutionToday } = useCanvasResourcesPanelStoreShallow((state) => ({
     setHasFirstExecutionToday: state.setHasFirstExecutionToday,
   }));
+  const { planType } = useUserMembership();
 
   const { executionId, setCanvasExecutionId } = useCanvasStoreShallow((state) => ({
     executionId: state.canvasExecutionId[canvasId],
@@ -62,7 +64,7 @@ export const useInitializeWorkflow = (
         }
       }
     },
-    [t, canvasId, showEarnedVoucherPopup],
+    [t, canvasId],
   );
 
   const handleError = useMemo(
@@ -96,18 +98,21 @@ export const useInitializeWorkflow = (
         await forceSyncState({ syncRemote: true });
 
         // If current workflow execution is the first successful execution today, trigger voucher popup
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        const { data: listWorkflowExecutionsData, error: listWorkflowExecutionsError } =
-          await getClient().listWorkflowExecutions({
-            query: {
-              after: startOfToday.getTime(),
-              order: 'creationAsc',
-              pageSize: 1,
-            },
-          });
-        const firstExecutionToday = listWorkflowExecutionsData?.data?.[0];
-        const shouldTriggerVoucherPopup = !listWorkflowExecutionsError && !firstExecutionToday;
+        let shouldTriggerVoucherPopup = false;
+        if (planType === 'free') {
+          const startOfToday = new Date();
+          startOfToday.setHours(0, 0, 0, 0);
+          const { data: listWorkflowExecutionsData, error: listWorkflowExecutionsError } =
+            await getClient().listWorkflowExecutions({
+              query: {
+                after: startOfToday.getTime(),
+                order: 'creationAsc',
+                pageSize: 1,
+              },
+            });
+          const firstExecutionToday = listWorkflowExecutionsData?.data?.[0];
+          shouldTriggerVoucherPopup = !listWorkflowExecutionsError && !firstExecutionToday;
+        }
 
         const { data, error } = await getClient().initializeWorkflow({
           body: {
@@ -131,7 +136,7 @@ export const useInitializeWorkflow = (
           // This handles cases where the voucher might be generated with a slight delay after execution completion
           for (let attempts = 0; attempts < 10; attempts++) {
             const { data: voucherData } = await getClient().getAvailableVouchers();
-            const bestVoucher = voucherData?.data?.bestVoucher;
+            const bestVoucher = voucherData?.data?.bestVoucher ?? voucherData?.data?.vouchers?.[0];
             if (bestVoucher) {
               showEarnedVoucherPopup({
                 voucher: bestVoucher,
@@ -192,7 +197,7 @@ export const useInitializeWorkflow = (
 
         // Wait for 2 seconds before navigating to the new canvas
         await new Promise((resolve) => setTimeout(resolve, 125));
-        navigate(`/canvas/${newCanvasId}`);
+        navigate(`/workflow/${newCanvasId}`);
         return true;
       } catch (err) {
         console.error('Error initializing workflow in new canvas:', err);

@@ -72,11 +72,17 @@ export class ScheduleController {
 
   @Post('records/list')
   async listAllScheduleRecords(@LoginedUser() user: User, @Body() dto: ListAllScheduleRecordsDto) {
+    const executionStatus =
+      dto.executionStatus ??
+      (dto as { status?: ListAllScheduleRecordsDto['executionStatus'] }).status;
+    const triggerType =
+      dto.triggerType ?? (dto as { type?: ListAllScheduleRecordsDto['triggerType'] }).type;
     const result = await this.scheduleService.listAllScheduleRecords(
       user.uid,
       dto.page,
       dto.pageSize,
-      dto.status,
+      executionStatus,
+      triggerType,
       dto.keyword,
       dto.tools,
       dto.canvasId,

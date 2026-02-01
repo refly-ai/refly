@@ -8,9 +8,9 @@ import type { MenuProps } from 'antd';
 import './index.scss';
 
 export type RunStatusFilter = 'all' | 'success' | 'failed';
-export type RunTypeFilter = 'all' | 'workflow' | 'template' | 'schedule';
+export type RunTypeFilter = 'all' | 'workflow' | 'template' | 'schedule' | 'webhook' | 'api';
 
-export interface RunHistoryFiltersProps {
+interface RunHistoryFiltersProps {
   // Search by title
   titleFilter: string;
   onTitleChange: (value: string) => void;
@@ -77,6 +77,8 @@ export const RunHistoryFilters = memo(
       // { value: 'workflow', label: t('runHistory.filters.typeWorkflow') },
       // { value: 'template', label: t('runHistory.filters.typeTemplate') },
       { value: 'schedule', label: t('runHistory.filters.typeSchedule') },
+      { value: 'webhook', label: t('runHistory.filters.typeWebhook') },
+      { value: 'api', label: t('runHistory.filters.typeApi') },
     ];
 
     // Status options

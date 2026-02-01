@@ -126,6 +126,29 @@ jobs:
       ref: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
     secrets: inherit
 
+  release-docker-images:
+    name: Trigger Release Docker Images
+    runs-on: ubuntu-latest
+    needs: [prepare-prod-deploy, deploy-api-prod, deploy-web-prod]
+    if: success() && needs.prepare-prod-deploy.outputs.should_deploy == 'true'
+    continue-on-error: true
+    steps:
+      - name: Trigger release-image workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_BRANCH: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
+        run: |
+          # Convert release/2026-01-28 to release-2026-01-28
+          VERSION=$(echo "$RELEASE_BRANCH" | sed 's|/|-|g')
+          echo "Triggering Release Docker Images with version: $VERSION on ref: $RELEASE_BRANCH"
+
+          gh workflow run release-image.yml \
+            --repo "${{ github.repository }}" \
+            --ref "$RELEASE_BRANCH" \
+            -f version="$VERSION"
+
+          echo "Release Docker Images workflow triggered (async)"
+
   update-project-status:
     name: Update Project Status to Done
     runs-on: ubuntu-latest

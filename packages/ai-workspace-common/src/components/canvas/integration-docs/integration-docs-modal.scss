@@ -1,0 +1,74 @@
+// Integration Docs Modal - keep CSS variables and Ant Design overrides only
+
+.integration-docs-modal-wrap {
+  --integration-docs-bg: var(--refly-bg-content-z2);
+  --integration-docs-bg-subtle: var(--refly-bg-content-z1, var(--refly-bg-content-z2));
+  --integration-docs-toolbar-bg: var(--refly-bg-content-z2);
+  --integration-docs-border: var(--refly-Card-Border, var(--refly-line, rgba(0, 0, 0, 0.12)));
+  --integration-docs-hover-bg: var(--refly-fill-hover, rgba(0, 0, 0, 0.06));
+  --integration-docs-primary-bg: var(--ant-color-primary-bg, var(--refly-tertiary-hover));
+  --integration-docs-primary-text: var(--ant-color-primary, var(--refly-primary-default));
+  --integration-docs-text-1: var(--refly-text-1);
+  --integration-docs-text-2: var(--refly-text-2);
+  --integration-docs-text-3: var(--refly-text-3);
+  --integration-docs-code-bg: var(--refly-bg-control-z1);
+  --integration-docs-code-header-bg: var(--refly-bg-control-z1);
+  --integration-docs-code-content-bg: var(--refly-bg-control-z0);
+  --integration-docs-code-border: var(--refly-Card-Border);
+  --integration-docs-code-text: var(--refly-text-0);
+  --integration-docs-code-muted: var(--refly-text-3);
+  --integration-docs-code-action: var(--refly-text-2);
+  --integration-docs-inline-code-bg: var(--refly-bg-control-z1);
+  --integration-docs-inline-code-text: var(--refly-text-0);
+  --integration-docs-card-shadow: 0 1px 3px var(--refly-line, var(--refly-Card-Border));
+  --integration-docs-method-get-bg: var(--ant-color-success-bg, var(--integration-docs-primary-bg));
+  --integration-docs-method-get-text: var(--ant-color-success, var(--integration-docs-primary-text));
+  --integration-docs-method-post-bg: var(--ant-color-info-bg, var(--integration-docs-primary-bg));
+  --integration-docs-method-post-text: var(--ant-color-info, var(--integration-docs-primary-text));
+  --integration-docs-method-put-bg: var(--ant-color-warning-bg, var(--integration-docs-primary-bg));
+  --integration-docs-method-put-text: var(--ant-color-warning, var(--integration-docs-primary-text));
+  --integration-docs-method-delete-bg: var(--ant-color-error-bg, var(--integration-docs-primary-bg));
+  --integration-docs-method-delete-text: var(--ant-color-error, var(--integration-docs-primary-text));
+}
+
+.integration-docs-modal {
+
+  .ant-btn-primary {
+    background: var(--refly-text-0) !important;
+    border-color: var(--refly-text-0) !important;
+    color: var(--refly-bg-content-z2) !important;
+
+    &:hover {
+      background: var(--refly-text-1) !important;
+      border-color: var(--refly-text-1) !important;
+      color: var(--refly-bg-content-z2) !important;
+    }
+
+    &:active {
+      background: var(--refly-text-0) !important;
+      border-color: var(--refly-text-0) !important;
+      color: var(--refly-bg-content-z2) !important;
+    }
+
+    &:disabled {
+      background: var(--refly-text-3) !important;
+      border-color: var(--refly-text-3) !important;
+      color: var(--refly-bg-content-z2) !important;
+      opacity: 0.5;
+    }
+  }
+
+  .ant-switch {
+    &.ant-switch-checked {
+      background: var(--refly-text-0) !important;
+
+      &:hover:not(.ant-switch-disabled) {
+        background: var(--refly-text-1) !important;
+      }
+    }
+
+    &.ant-switch-loading {
+      opacity: 0.7;
+    }
+  }
+}

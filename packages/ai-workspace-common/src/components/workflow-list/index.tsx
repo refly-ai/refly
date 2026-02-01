@@ -12,7 +12,7 @@ import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
 import { LOCALE } from '@refly/common-types';
 import { Search, Sort, SortAsc } from 'refly-icons';
-import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.svg';
+import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import './index.scss';
 import { WorkflowActionDropdown } from '@refly-packages/ai-workspace-common/components/workflow-list/workflowActionDropdown';
 import { useCreateCanvas } from '@refly-packages/ai-workspace-common/hooks/canvas/use-create-canvas';
@@ -20,10 +20,11 @@ import { ListOrder, ShareUser, WorkflowSchedule } from '@refly/openapi-schema';
 import { UsedToolsets } from '@refly-packages/ai-workspace-common/components/workflow-list/used-toolsets';
 import { ScheduleColumn } from '@refly-packages/ai-workspace-common/components/workflow-list/schedule-column';
 import { WorkflowFilters } from '@refly-packages/ai-workspace-common/components/workflow-list/workflow-filters';
-import defaultAvatar from '@refly-packages/ai-workspace-common/assets/refly_default_avatar.png';
+import defaultAvatar from '../../assets/refly_default_avatar_v2.webp';
 import { useDebouncedCallback } from 'use-debounce';
 import { useSiderStoreShallow, useSubscriptionStoreShallow } from '@refly/stores';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
+import { isSelfHosted } from '@refly/ui-kit';
 
 const WorkflowList = memo(() => {
   const { t, i18n } = useTranslation();
@@ -114,7 +115,7 @@ const WorkflowList = memo(() => {
   const handleEdit = useCallback(
     (canvas: Canvas) => {
       setIsManualCollapse(false);
-      navigate(`/canvas/${canvas.canvasId}`);
+      navigate(`/workflow/${canvas.canvasId}`);
     },
     [navigate, setIsManualCollapse],
   );
@@ -329,10 +330,12 @@ const WorkflowList = memo(() => {
         />
 
         {/* Schedule Filter */}
-        <WorkflowFilters
-          hasScheduleFilter={hasScheduleFilter}
-          onHasScheduleFilterChange={setHasScheduleFilter}
-        />
+        {!isSelfHosted && (
+          <WorkflowFilters
+            hasScheduleFilter={hasScheduleFilter}
+            onHasScheduleFilterChange={setHasScheduleFilter}
+          />
+        )}
 
         {/* Sort Button */}
         <Button

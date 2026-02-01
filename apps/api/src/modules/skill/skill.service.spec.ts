@@ -5,7 +5,6 @@ import { PrismaService } from '../common/prisma.service';
 import { SkillService } from './skill.service';
 import { Queue } from 'bullmq';
 import { createMock } from '@golevelup/ts-jest';
-import { LabelService } from '../label/label.service';
 import { CollabService } from '../collab/collab.service';
 import { CanvasService } from '../canvas/canvas.service';
 import { RAGService } from '../rag/rag.service';
@@ -20,7 +19,6 @@ describe('SkillService', () => {
 
   const configService = createMock<ConfigService>();
   const prismaService = createMock<PrismaService>();
-  const labelService = createMock<LabelService>();
   const searchService = createMock<SearchService>();
   const documentService = createMock<DocumentService>();
   const resourceService = createMock<ResourceService>();
@@ -44,10 +42,6 @@ describe('SkillService', () => {
         {
           provide: PrismaService,
           useValue: prismaService,
-        },
-        {
-          provide: LabelService,
-          useValue: labelService,
         },
         {
           provide: SearchService,

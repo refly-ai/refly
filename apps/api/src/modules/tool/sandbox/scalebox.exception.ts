@@ -1,5 +1,3 @@
-import type { ExecutionResult } from '@scalebox/sdk';
-
 export class SandboxException extends Error {
   constructor(
     messageOrError: unknown,
@@ -90,12 +88,6 @@ export class SandboxExecutionFailedException extends SandboxException {
   }
 }
 
-export class SandboxFileListException extends SandboxException {
-  constructor(messageOrError: unknown) {
-    super(messageOrError, 'SANDBOX_FILE_LIST_FAILED');
-  }
-}
-
 export class SandboxLockTimeoutException extends SandboxException {
   constructor(
     public readonly lockKey: string,
@@ -106,31 +98,6 @@ export class SandboxLockTimeoutException extends SandboxException {
       lockKey,
       timeoutMs,
     });
-  }
-}
-
-export class SandboxExecutionBadResultException extends SandboxException {
-  constructor(public readonly result: ExecutionResult) {
-    super(
-      result.error?.message || result.stderr || 'Execution returned non-zero exit code',
-      'SANDBOX_EXECUTION_BAD_RESULT',
-      { result },
-    );
-  }
-}
-
-export class SandboxRunCodeException extends SandboxException {
-  constructor(messageOrError: unknown) {
-    super(messageOrError, 'SANDBOX_RUN_CODE_FAILED');
-  }
-}
-
-export class SandboxAcquireException extends SandboxException {
-  constructor(
-    messageOrError: unknown,
-    public readonly sandboxId?: string,
-  ) {
-    super(messageOrError, 'SANDBOX_ACQUIRE_FAILED', { sandboxId });
   }
 }
 

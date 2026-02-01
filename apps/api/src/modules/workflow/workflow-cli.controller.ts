@@ -21,8 +21,10 @@ import {
   WorkflowVariable,
   CanvasNodeType,
   InvokeSkillRequest,
+  GenericToolset,
+  UserTool,
 } from '@refly/openapi-schema';
-import { CanvasNodeFilter } from '@refly/canvas-common';
+import { CanvasNodeFilter, extractToolsetsWithNodes } from '@refly/canvas-common';
 import { CanvasService } from '../canvas/canvas.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { WorkflowService } from './workflow.service';
@@ -30,6 +32,21 @@ import { ToolService } from '../tool/tool.service';
 import { SkillService } from '../skill/skill.service';
 import { RedisService } from '../common/redis.service';
 import { genCanvasID, genNodeID, genNodeEntityId, genActionResultID } from '@refly/utils';
+import { BaseError } from '@refly/errors';
+
+/**
+ * Extract error message from various error types.
+ * Handles BaseError (which stores message in messageDict) and standard Error.
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof BaseError) {
+    return error.getMessage('en') || error.toString();
+  }
+  if (error instanceof Error) {
+    return error.message || error.toString();
+  }
+  return String(error);
+}
 import {
   CreateWorkflowRequest,
   CreateWorkflowResponse,
@@ -48,10 +65,14 @@ import {
   NodeExecutionStatus,
   NodeExecutionDetail,
   WorkflowRunDetail,
+  WorkflowToolsStatusResponse,
   GenerateWorkflowCliRequest,
   GenerateWorkflowCliResponse,
   GenerateWorkflowAsyncResponse,
   GenerateStatusResponse,
+  NodeOutputResponse,
+  EditWorkflowCliRequest,
+  EditWorkflowCliResponse,
   CLI_ERROR_CODES,
 } from './workflow-cli.dto';
 import { genCopilotSessionID } from '@refly/utils';
@@ -62,6 +83,35 @@ import { PrismaService } from '../common/prisma.service';
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * Check if a toolset is authorized/installed
+ * - MCP servers: check if exists in userTools by name
+ * - Builtin tools: always available, no installation needed
+ * - Regular tools: check if exists in userTools by key and authorized status
+ */
+const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): boolean => {
+  // MCP servers need to be checked separately
+  if (toolset.type === 'mcp') {
+    return userTools.some((t) => t.toolset?.name === toolset.name);
+  }
+
+  // Builtin tools are always available
+  if (toolset.builtin) {
+    return true;
+  }
+
+  // Find matching user tool by key
+  const matchingUserTool = userTools.find((t) => t.key === toolset.toolset?.key);
+
+  // If not in userTools list, user hasn't installed/authorized this tool
+  if (!matchingUserTool) {
+    return false;
+  }
+
+  // For external OAuth tools, check authorized status
+  return matchingUserTool.authorized ?? false;
+};
 
 /**
  * Build connectTo filters from edges to preserve connections when adding nodes.
@@ -271,29 +321,57 @@ function getDefaultTitleForNodeType(nodeType: CanvasNodeType): string {
 
 /**
  * Merge workflow variables with runtime variables.
- * Runtime variables override existing ones by name.
+ * Runtime variables override existing ones by variableId (preferred) or name (fallback).
  */
 function mergeWorkflowVariables(
   existing: WorkflowVariable[] = [],
   runtime: WorkflowVariable[] = [],
 ): WorkflowVariable[] {
-  const merged = new Map<string, WorkflowVariable>();
+  const mergedById = new Map<string, WorkflowVariable>();
+  const mergedByName = new Map<string, WorkflowVariable>();
 
-  // Add existing variables
+  // Add existing variables (index by both id and name)
   for (const v of existing) {
+    if (v.variableId) {
+      mergedById.set(v.variableId, v);
+    }
     if (v.name) {
-      merged.set(v.name, v);
+      mergedByName.set(v.name, v);
     }
   }
 
-  // Override with runtime variables
+  // Override with runtime variables (prefer variableId, fallback to name)
   for (const v of runtime) {
-    if (v.name) {
-      merged.set(v.name, v);
+    if (v.variableId && mergedById.has(v.variableId)) {
+      // Match by variableId (preferred)
+      mergedById.set(v.variableId, v);
+      // Also update name map if name exists
+      if (v.name) {
+        mergedByName.set(v.name, v);
+      }
+    } else if (v.name && mergedByName.has(v.name)) {
+      // Fallback: match by name
+      const existingVar = mergedByName.get(v.name)!;
+      mergedByName.set(v.name, v);
+      if (existingVar.variableId) {
+        mergedById.set(existingVar.variableId, v);
+      }
+    }
+    // If neither variableId nor name matches, skip (don't add new variables)
+  }
+
+  // Return deduplicated list (prefer id-based map)
+  const result = new Map<string, WorkflowVariable>();
+  for (const v of mergedById.values()) {
+    result.set(v.variableId || v.name, v);
+  }
+  for (const v of mergedByName.values()) {
+    if (!v.variableId || !result.has(v.variableId)) {
+      result.set(v.name, v);
     }
   }
 
-  return Array.from(merged.values());
+  return Array.from(result.values());
 }
 
 /**
@@ -364,13 +442,18 @@ function throwCliError(
   message: string,
   hint?: string,
   status: number = HttpStatus.BAD_REQUEST,
+  suggestedFix?: {
+    field?: string;
+    format?: string;
+    example?: string;
+  },
 ): never {
   throw new HttpException(
     {
       ok: false,
       type: 'error',
       version: '1.0.0',
-      error: { code, message, hint },
+      error: { code, message, hint, ...(suggestedFix && { suggestedFix }) },
     },
     status,
   );
@@ -560,10 +643,10 @@ export class WorkflowCliController {
         createdAt: canvas.createdAt.toJSON(),
       });
     } catch (error) {
-      this.logger.error(`Failed to create workflow: ${(error as Error).message}`);
+      this.logger.error(`Failed to create workflow: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.VALIDATION_ERROR,
-        `Failed to create workflow: ${(error as Error).message}`,
+        `Failed to create workflow: ${getErrorMessage(error)}`,
         'Check your workflow specification and try again',
       );
     }
@@ -616,7 +699,6 @@ export class WorkflowCliController {
       const result = await this.copilotAutogenService.generateWorkflowForCli(user, {
         query: body.query,
         canvasId: body.canvasId,
-        projectId: body.projectId,
         modelItemId: body.modelItemId,
         locale: body.locale,
         variables: body.variables,
@@ -635,10 +717,10 @@ export class WorkflowCliController {
         edgesCount: result.edgesCount,
       });
     } catch (error) {
-      this.logger.error(`Failed to generate workflow: ${(error as Error).message}`);
+      this.logger.error(`Failed to generate workflow: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.EXECUTION_FAILED,
-        `Failed to generate workflow: ${(error as Error).message}`,
+        `Failed to generate workflow: ${getErrorMessage(error)}`,
         'Try refining your query to be more specific about the workflow you want to create',
       );
     }
@@ -672,11 +754,58 @@ export class WorkflowCliController {
       const status = await this.copilotAutogenService.getGenerateStatus(user, sessionId, canvasId);
       return buildCliSuccessResponse(status);
     } catch (error) {
-      this.logger.error(`Failed to get generate status: ${(error as Error).message}`);
+      this.logger.error(`Failed to get generate status: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.EXECUTION_FAILED,
-        `Failed to get status: ${(error as Error).message}`,
+        `Failed to get status: ${getErrorMessage(error)}`,
         'Check if the sessionId is correct',
+      );
+    }
+  }
+
+  /**
+   * Edit a workflow using natural language
+   * POST /v1/cli/workflow/edit
+   *
+   * This endpoint uses the Copilot Agent to edit an existing workflow
+   * based on a natural language instruction. It supports both:
+   * - generate_workflow: Copilot generates a new workflow plan
+   * - patch_workflow: Copilot patches the existing workflow plan
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('edit')
+  async editWorkflow(
+    @LoginedUser() user: User,
+    @Body() body: EditWorkflowCliRequest,
+  ): Promise<{ success: boolean; data: EditWorkflowCliResponse }> {
+    this.logger.log(`[CLI] Editing workflow ${body.canvasId} with query: ${body.query}`);
+
+    // Validate input
+    if (!body.canvasId) {
+      throwCliError(
+        CLI_ERROR_CODES.VALIDATION_ERROR,
+        'canvasId is required',
+        'Provide a valid Canvas ID (c-xxx)',
+      );
+    }
+
+    if (!body.query) {
+      throwCliError(
+        CLI_ERROR_CODES.VALIDATION_ERROR,
+        'query is required',
+        'Provide a natural language description of the edit you want to make',
+      );
+    }
+
+    try {
+      const result = await this.copilotAutogenService.editWorkflowForCli(user, body);
+      return buildCliSuccessResponse(result);
+    } catch (error) {
+      this.logger.error(`Failed to edit workflow: ${getErrorMessage(error)}`);
+      throwCliError(
+        CLI_ERROR_CODES.EXECUTION_FAILED,
+        `Failed to edit workflow: ${getErrorMessage(error)}`,
+        'Try refining your edit instruction to be more specific',
       );
     }
   }
@@ -753,9 +882,25 @@ export class WorkflowCliController {
   ): Promise<{ success: boolean; data: WorkflowInfo }> {
     this.logger.log(`Getting workflow ${workflowId} for user ${user.uid}`);
 
+    // Validate workflow ID format (should start with 'c-')
+    if (!workflowId.startsWith('c-')) {
+      throwCliError(
+        CLI_ERROR_CODES.VALIDATION_ERROR,
+        `Invalid workflow ID: "${workflowId}". Workflow IDs should start with "c-"`,
+        'Usage: refly workflow get <workflowId>. Example: refly workflow get c-xxx',
+      );
+    }
+
     try {
       const rawData = await this.canvasService.getCanvasRawData(user, workflowId, {
         checkOwnership: true,
+      });
+
+      // Get the latest copilot session for this workflow
+      const latestSession = await this.prisma.copilotSession.findFirst({
+        where: { canvasId: workflowId, uid: user.uid },
+        orderBy: { createdAt: 'desc' },
+        select: { sessionId: true },
       });
 
       return buildCliSuccessResponse({
@@ -766,9 +911,60 @@ export class WorkflowCliController {
         variables: rawData.variables ?? [],
         createdAt: rawData.owner?.createdAt ?? new Date().toJSON(),
         updatedAt: new Date().toJSON(), // Canvas doesn't expose updatedAt directly
+        sessionId: latestSession?.sessionId,
       });
     } catch (error) {
-      this.logger.error(`Failed to get workflow ${workflowId}: ${(error as Error).message}`);
+      this.logger.error(`Failed to get workflow ${workflowId}: ${getErrorMessage(error)}`);
+      throwCliError(
+        CLI_ERROR_CODES.WORKFLOW_NOT_FOUND,
+        `Workflow ${workflowId} not found`,
+        'Check the workflow ID and try again',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Get workflow session info
+   * GET /v1/cli/workflow/:id/session
+   *
+   * Returns the latest copilot session for this workflow, useful for
+   * maintaining context continuity in workflow edit operations.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/session')
+  async getSession(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+  ): Promise<{
+    success: boolean;
+    data: { workflowId: string; sessionId?: string; createdAt?: string; lastUsedAt?: string };
+  }> {
+    this.logger.log(`Getting session for workflow ${workflowId}, user ${user.uid}`);
+
+    try {
+      // Verify workflow exists and belongs to user
+      await this.canvasService.getCanvasRawData(user, workflowId, {
+        checkOwnership: true,
+      });
+
+      // Get the latest copilot session for this workflow
+      const latestSession = await this.prisma.copilotSession.findFirst({
+        where: { canvasId: workflowId, uid: user.uid },
+        orderBy: { createdAt: 'desc' },
+        select: { sessionId: true, createdAt: true, updatedAt: true },
+      });
+
+      return buildCliSuccessResponse({
+        workflowId,
+        sessionId: latestSession?.sessionId,
+        createdAt: latestSession?.createdAt?.toISOString(),
+        lastUsedAt: latestSession?.updatedAt?.toISOString(),
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to get session for workflow ${workflowId}: ${getErrorMessage(error)}`,
+      );
       throwCliError(
         CLI_ERROR_CODES.WORKFLOW_NOT_FOUND,
         `Workflow ${workflowId} not found`,
@@ -967,10 +1163,10 @@ export class WorkflowCliController {
 
       return { success: true };
     } catch (error) {
-      this.logger.error(`Failed to update workflow ${workflowId}: ${(error as Error).message}`);
+      this.logger.error(`Failed to update workflow ${workflowId}: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.VALIDATION_ERROR,
-        `Failed to update workflow: ${(error as Error).message}`,
+        `Failed to update workflow: ${getErrorMessage(error)}`,
         'Check the workflow ID and operations',
       );
     }
@@ -992,7 +1188,7 @@ export class WorkflowCliController {
       await this.canvasService.deleteCanvas(user, { canvasId: workflowId });
       return { success: true };
     } catch (error) {
-      this.logger.error(`Failed to delete workflow ${workflowId}: ${(error as Error).message}`);
+      this.logger.error(`Failed to delete workflow ${workflowId}: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.WORKFLOW_NOT_FOUND,
         `Workflow ${workflowId} not found`,
@@ -1155,10 +1351,10 @@ export class WorkflowCliController {
       this.logger.log(`[layout] Updated ${nodeDiffs.length} node positions`);
       return { success: true };
     } catch (error) {
-      this.logger.error(`Failed to layout workflow ${workflowId}: ${(error as Error).message}`);
+      this.logger.error(`Failed to layout workflow ${workflowId}: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.VALIDATION_ERROR,
-        `Failed to layout workflow: ${(error as Error).message}`,
+        `Failed to layout workflow: ${getErrorMessage(error)}`,
         'Check the workflow ID and try again',
       );
     }
@@ -1177,13 +1373,47 @@ export class WorkflowCliController {
   ): Promise<{ success: boolean; data: RunWorkflowResponse }> {
     this.logger.log(`Running workflow ${workflowId} for user ${user.uid}`);
 
+    // Validate workflow ID format (should start with 'c-')
+    if (!workflowId.startsWith('c-')) {
+      throwCliError(
+        CLI_ERROR_CODES.VALIDATION_ERROR,
+        `Invalid workflow ID: "${workflowId}". Workflow IDs should start with "c-"`,
+        'Usage: refly workflow run <workflowId> [--input <json>]. Example: refly workflow run c-xxx --input \'{"var": "value"}\'',
+      );
+    }
+
     try {
       // Get existing workflow variables and merge with runtime variables
       const rawData = await this.canvasService.getCanvasRawData(user, workflowId, {
         checkOwnership: true,
       });
 
+      const toolsetsWithNodes = extractToolsetsWithNodes(rawData.nodes);
+
+      // Get user's installed tools for authorization check
+      const userTools = await this.toolService.listUserTools(user);
+
+      // Check for unauthorized tools
+      const unauthorizedTools = toolsetsWithNodes.filter((toolWithNodes) => {
+        return !isToolsetAuthorized(toolWithNodes.toolset, userTools);
+      });
+
       const mergedVariables = mergeWorkflowVariables(rawData.variables, body.variables);
+
+      // If there are unauthorized tools, return them instead of executing
+      if (unauthorizedTools.length > 0) {
+        this.logger.log(
+          `Workflow ${workflowId} has ${unauthorizedTools.length} unauthorized tools, returning tool list`,
+        );
+
+        return buildCliSuccessResponse({
+          runId: '',
+          workflowId,
+          status: 'failed',
+          startedAt: new Date().toJSON(),
+          unauthorizedTools,
+        });
+      }
 
       // Initialize workflow execution
       const executionId = await this.workflowService.initializeWorkflowExecution(
@@ -1203,10 +1433,10 @@ export class WorkflowCliController {
         startedAt: new Date().toJSON(),
       });
     } catch (error) {
-      this.logger.error(`Failed to run workflow ${workflowId}: ${(error as Error).message}`);
+      this.logger.error(`Failed to run workflow ${workflowId}: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.EXECUTION_FAILED,
-        `Failed to start workflow: ${(error as Error).message}`,
+        `Failed to start workflow: ${getErrorMessage(error)}`,
         'Check the workflow configuration and try again',
       );
     }
@@ -1262,13 +1492,59 @@ export class WorkflowCliController {
       });
     } catch (error) {
       this.logger.error(
-        `Failed to get status for workflow ${workflowId}: ${(error as Error).message}`,
+        `Failed to get status for workflow ${workflowId}: ${getErrorMessage(error)}`,
       );
       throwCliError(
         CLI_ERROR_CODES.NOT_FOUND,
         `No execution found for workflow ${workflowId}`,
         'Run the workflow first with `refly workflow run <workflowId>`',
         HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Get workflow tools authorization status by workflowId
+   * GET /v1/cli/workflow/:id/tools-status
+   *
+   * Returns the authorization status of all tools required by this workflow.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/tools-status')
+  async getToolsStatusByWorkflowId(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+  ): Promise<{ success: boolean; data: WorkflowToolsStatusResponse }> {
+    this.logger.log(`Getting tools status for workflow ${workflowId}, user ${user.uid}`);
+
+    try {
+      // Get existing workflow variables and merge with runtime variables
+      const rawData = await this.canvasService.getCanvasRawData(user, workflowId, {
+        checkOwnership: true,
+      });
+
+      const toolsetsWithNodes = extractToolsetsWithNodes(rawData.nodes);
+
+      // Get user's installed tools for authorization check
+      const userTools = await this.toolService.listUserTools(user);
+
+      // Check for unauthorized tools
+      const unauthorizedTools = toolsetsWithNodes.filter((toolWithNodes) => {
+        return !isToolsetAuthorized(toolWithNodes.toolset, userTools);
+      });
+
+      return buildCliSuccessResponse({
+        authorized: unauthorizedTools.length === 0,
+        unauthorizedTools,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to get tools status for workflow ${workflowId}: ${getErrorMessage(error)}`,
+      );
+      throwCliError(
+        CLI_ERROR_CODES.EXECUTION_FAILED,
+        `Failed to check tools status: ${getErrorMessage(error)}`,
+        'Check the workflow configuration and try again',
       );
     }
   }
@@ -1342,7 +1618,45 @@ export class WorkflowCliController {
       });
     } catch (error) {
       this.logger.error(
-        `Failed to get detail for workflow ${workflowId}: ${(error as Error).message}`,
+        `Failed to get detail for workflow ${workflowId}: ${getErrorMessage(error)}`,
+      );
+      throwCliError(
+        CLI_ERROR_CODES.NOT_FOUND,
+        `No execution found for workflow ${workflowId}`,
+        'Run the workflow first with `refly workflow run <workflowId>`',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Get node output content by workflowId
+   * GET /v1/cli/workflow/:id/node/:nodeId/output
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/node/:nodeId/output')
+  async getNodeOutputByWorkflowId(
+    @LoginedUser() user: User,
+    @Param('id') workflowId: string,
+    @Param('nodeId') nodeId: string,
+    @Query('includeToolCalls') includeToolCalls?: string,
+    @Query('raw') raw?: string,
+  ): Promise<{ success: boolean; data: NodeOutputResponse }> {
+    this.logger.log(
+      `Getting node output for workflow ${workflowId}, node ${nodeId}, user ${user.uid}`,
+    );
+
+    try {
+      const detail = await this.workflowService.getActiveOrLatestExecution(user, workflowId);
+      return this.buildNodeOutputResponse(
+        detail,
+        nodeId,
+        includeToolCalls === 'true',
+        raw === 'true',
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to get node output for workflow ${workflowId}: ${getErrorMessage(error)}`,
       );
       throwCliError(
         CLI_ERROR_CODES.NOT_FOUND,
@@ -1445,7 +1759,7 @@ export class WorkflowCliController {
       });
     } catch (error) {
       this.logger.error(
-        `Failed to get tool calls for workflow ${workflowId}: ${(error as Error).message}`,
+        `Failed to get tool calls for workflow ${workflowId}: ${getErrorMessage(error)}`,
       );
       throwCliError(
         CLI_ERROR_CODES.NOT_FOUND,
@@ -1490,10 +1804,10 @@ export class WorkflowCliController {
       });
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      this.logger.error(`Failed to abort workflow ${workflowId}: ${(error as Error).message}`);
+      this.logger.error(`Failed to abort workflow ${workflowId}: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.EXECUTION_FAILED,
-        `Failed to abort workflow: ${(error as Error).message}`,
+        `Failed to abort workflow: ${getErrorMessage(error)}`,
         'The workflow may have already completed',
       );
     }
@@ -1556,7 +1870,7 @@ export class WorkflowCliController {
       });
     } catch (error) {
       this.logger.error(
-        `Failed to list runs for workflow ${workflowId}: ${(error as Error).message}`,
+        `Failed to list runs for workflow ${workflowId}: ${getErrorMessage(error)}`,
       );
       throwCliError(
         CLI_ERROR_CODES.NOT_FOUND,
@@ -1614,7 +1928,7 @@ export class WorkflowCliController {
         updatedAt: detail.updatedAt.toJSON(),
       });
     } catch (error) {
-      this.logger.error(`Failed to get run status ${runId}: ${(error as Error).message}`);
+      this.logger.error(`Failed to get run status ${runId}: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.NOT_FOUND,
         `Workflow run ${runId} not found`,
@@ -1702,7 +2016,41 @@ export class WorkflowCliController {
         errors: errors.length > 0 ? errors : undefined,
       });
     } catch (error) {
-      this.logger.error(`Failed to get run detail ${runId}: ${(error as Error).message}`);
+      this.logger.error(`Failed to get run detail ${runId}: ${getErrorMessage(error)}`);
+      throwCliError(
+        CLI_ERROR_CODES.NOT_FOUND,
+        `Workflow run ${runId} not found`,
+        'Check the run ID and try again',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+  }
+
+  /**
+   * Get node output content by runId
+   * GET /v1/cli/workflow/run/:runId/node/:nodeId/output
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('run/:runId/node/:nodeId/output')
+  async getNodeOutputByRunId(
+    @LoginedUser() user: User,
+    @Param('runId') runId: string,
+    @Param('nodeId') nodeId: string,
+    @Query('includeToolCalls') includeToolCalls?: string,
+    @Query('raw') raw?: string,
+  ): Promise<{ success: boolean; data: NodeOutputResponse }> {
+    this.logger.log(`Getting node output for run ${runId}, node ${nodeId}, user ${user.uid}`);
+
+    try {
+      const detail = await this.workflowService.getWorkflowDetail(user, runId);
+      return this.buildNodeOutputResponse(
+        detail,
+        nodeId,
+        includeToolCalls === 'true',
+        raw === 'true',
+      );
+    } catch (error) {
+      this.logger.error(`Failed to get node output for run ${runId}: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.NOT_FOUND,
         `Workflow run ${runId} not found`,
@@ -1807,7 +2155,7 @@ export class WorkflowCliController {
         byTool,
       });
     } catch (error) {
-      this.logger.error(`Failed to get tool calls for run ${runId}: ${(error as Error).message}`);
+      this.logger.error(`Failed to get tool calls for run ${runId}: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.NOT_FOUND,
         `Workflow run ${runId} not found`,
@@ -1815,6 +2163,86 @@ export class WorkflowCliController {
         HttpStatus.NOT_FOUND,
       );
     }
+  }
+
+  /**
+   * Build node output response from workflow execution detail
+   */
+  private buildNodeOutputResponse(
+    detail: any,
+    nodeId: string,
+    includeToolCalls: boolean,
+    raw: boolean,
+  ): { success: boolean; data: NodeOutputResponse } {
+    // Find the node execution
+    const nodeExec = (detail.nodeExecutions ?? []).find((n: any) => n.nodeId === nodeId);
+
+    if (!nodeExec) {
+      throwCliError(
+        CLI_ERROR_CODES.NODE_NOT_FOUND,
+        `Node ${nodeId} not found in this workflow execution`,
+        'Check the node ID with `refly workflow detail <workflowId>`',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // Calculate timing
+    const startTime = nodeExec.startTime?.toJSON();
+    const endTime = nodeExec.endTime?.toJSON();
+    const durationMs =
+      nodeExec.startTime && nodeExec.endTime
+        ? new Date(nodeExec.endTime).getTime() - new Date(nodeExec.startTime).getTime()
+        : undefined;
+
+    // Build response
+    const response: NodeOutputResponse = {
+      runId: detail.executionId,
+      workflowId: detail.canvasId,
+      nodeId: nodeExec.nodeId,
+      nodeTitle: nodeExec.title ?? '',
+      nodeType: nodeExec.nodeType,
+      status: nodeExec.status as NodeOutputResponse['status'],
+      timing: {
+        startTime,
+        endTime,
+        durationMs,
+      },
+    };
+
+    // Add content if available (from actionResult)
+    if (nodeExec.actionResult) {
+      const content = nodeExec.actionResult.content;
+      response.content = raw ? content : this.truncateOutput(content, 10000);
+      response.contentType = 'text/plain';
+
+      // Add token usage if available
+      if (nodeExec.actionResult.tokenUsage) {
+        const tokenUsage = this.safeParseJSON(nodeExec.actionResult.tokenUsage);
+        response.outputTokens = tokenUsage?.outputTokens;
+      }
+    }
+
+    // Add error if failed
+    if (nodeExec.status === 'failed' && nodeExec.errorMessage) {
+      response.error = {
+        type: 'execution_error',
+        message: nodeExec.errorMessage,
+      };
+    }
+
+    // Add tool calls if requested
+    if (includeToolCalls && nodeExec.actionResult?.toolCalls) {
+      response.toolCalls = nodeExec.actionResult.toolCalls.map((tc: any) => ({
+        callId: tc.toolCallId,
+        toolName: tc.toolName,
+        status: tc.status,
+        output: raw
+          ? this.safeParseJSON(tc.output)
+          : this.truncateOutput(this.safeParseJSON(tc.output)),
+      }));
+    }
+
+    return { success: true, data: response };
   }
 
   private safeParseJSON(str: string | null | undefined): any {
@@ -1855,10 +2283,10 @@ export class WorkflowCliController {
       await this.workflowService.abortWorkflow(user, runId);
       return { success: true };
     } catch (error) {
-      this.logger.error(`Failed to abort workflow run ${runId}: ${(error as Error).message}`);
+      this.logger.error(`Failed to abort workflow run ${runId}: ${getErrorMessage(error)}`);
       throwCliError(
         CLI_ERROR_CODES.EXECUTION_FAILED,
-        `Failed to abort workflow: ${(error as Error).message}`,
+        `Failed to abort workflow: ${getErrorMessage(error)}`,
         'The workflow may have already completed or does not exist',
       );
     }
@@ -1958,7 +2386,7 @@ export class NodeCliController {
         });
       }
     } catch (error) {
-      this.logger.warn(`Failed to get user tools: ${(error as Error).message}`);
+      this.logger.warn(`Failed to get user tools: ${getErrorMessage(error)}`);
     }
 
     return buildCliSuccessResponse({
@@ -2138,10 +2566,10 @@ export class NodeCliController {
         throw error;
       }
 
-      this.logger.error(`Failed to run node: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(`Failed to run node: ${getErrorMessage(error)}`, (error as Error).stack);
       throwCliError(
         CLI_ERROR_CODES.EXECUTION_FAILED,
-        `Failed to execute node: ${(error as Error).message}`,
+        `Failed to execute node: ${getErrorMessage(error)}`,
         'Check the node configuration and try again',
       );
     } finally {

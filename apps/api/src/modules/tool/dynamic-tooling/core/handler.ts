@@ -24,7 +24,7 @@ import type { BillingService } from '../../billing/billing.service';
  * Base handler interface
  * Handles the complete lifecycle of a tool execution request
  */
-export interface IHandler {
+interface IHandler {
   /**
    * Execute the handler with the given request
    * @param request - Handler request containing method, params, and context
@@ -54,30 +54,10 @@ export interface IHandler {
 }
 
 /**
- * Handler factory interface
- * Creates handler instances from configuration
- */
-export interface IHandlerFactory {
-  /**
-   * Create a handler instance from configuration
-   * @param config - Handler configuration
-   * @returns Handler instance
-   */
-  createHandler(config: unknown): IHandler;
-
-  /**
-   * Check if this factory supports the given configuration
-   * @param config - Configuration to check
-   * @returns true if supported
-   */
-  supports(config: unknown): boolean;
-}
-
-/**
  * Base handler implementation
  * Handles the complete request/response lifecycle with pre/post handler support
  */
-export abstract class BaseHandler implements IHandler {
+abstract class BaseHandler implements IHandler {
   protected readonly logger: Logger;
   protected preHandler: PreHandler;
   protected postHandler: PostHandler;

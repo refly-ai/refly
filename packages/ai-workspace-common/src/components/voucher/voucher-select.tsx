@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Select, Tag, Spin } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Voucher } from '@refly/openapi-schema';
-import { getAvailableVouchers } from '../../requests/services.gen';
+import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { GiftOutlined } from '@ant-design/icons';
 
 interface VoucherSelectProps {
@@ -23,7 +23,7 @@ export const VoucherSelect = ({ value, onChange, disabled }: VoucherSelectProps)
   const loadVouchers = async () => {
     setLoading(true);
     try {
-      const response = await getAvailableVouchers();
+      const response = await getClient().getAvailableVouchers();
       if (response.data?.data?.vouchers) {
         setVouchers(response.data.data.vouchers);
       }
@@ -98,5 +98,3 @@ export const VoucherSelect = ({ value, onChange, disabled }: VoucherSelectProps)
     </div>
   );
 };
-
-export default VoucherSelect;

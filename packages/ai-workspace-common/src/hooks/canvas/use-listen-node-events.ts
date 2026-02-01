@@ -14,7 +14,7 @@ import {
 } from '@refly/canvas-common';
 import { CodeArtifactNodeMeta } from '@refly/canvas-common';
 import { useNodePreviewControl } from '@refly-packages/ai-workspace-common/hooks/canvas/use-node-preview-control';
-import { CanvasNodeType } from '@refly-packages/ai-workspace-common/requests';
+import { CanvasNodeType } from '@refly/openapi-schema';
 import { useReactFlow } from '@xyflow/react';
 import { genMediaSkillResponseID, genMediaSkillID } from '@refly/utils/id';
 import { useChatStore, useChatStoreShallow, useActionResultStore } from '@refly/stores';

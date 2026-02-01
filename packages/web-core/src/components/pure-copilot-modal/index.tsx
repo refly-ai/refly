@@ -4,25 +4,28 @@ import { Button, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly/stores';
 import { useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 
 export const PureCopilotModal = () => {
   const { t } = useTranslation();
+  const { pathname } = useLocation();
 
-  const { hidePureCopilotModal, setHidePureCopilotModal, userProfile } = useUserStoreShallow(
-    (state) => ({
+  const { hidePureCopilotModal, setHidePureCopilotModal, showInvitationCodeModal, userProfile } =
+    useUserStoreShallow((state) => ({
       hidePureCopilotModal: state.hidePureCopilotModal,
       setHidePureCopilotModal: state.setHidePureCopilotModal,
+      showInvitationCodeModal: state.showInvitationCodeModal,
       userProfile: state.userProfile,
-    }),
-  );
+    }));
 
   const needOnboarding = userProfile?.preferences?.needOnboarding;
+  const isWorkflowPage = pathname.startsWith('/workflow');
 
   const handleClose = useCallback(() => {
     setHidePureCopilotModal(true);
   }, [setHidePureCopilotModal]);
 
-  if (hidePureCopilotModal || !needOnboarding) {
+  if (showInvitationCodeModal || hidePureCopilotModal || !needOnboarding || isWorkflowPage) {
     return null;
   }
 

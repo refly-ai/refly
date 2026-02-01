@@ -11,6 +11,10 @@ export class FormService {
     private readonly configService: ConfigService,
   ) {}
 
+  private isOnboardingEnabled(): boolean {
+    return this.configService.get('auth.onboarding.enabled') ?? false;
+  }
+
   private extractRoleFromAnswers(answers: string): string | null {
     if (!answers?.trim()) {
       return null;
@@ -79,24 +83,40 @@ export class FormService {
     }
   }
 
-  async hasFilledForm(uid: string): Promise<{ hasFilledForm: boolean; identity: string | null }> {
-    const user = await this.prisma.user.findUnique({
-      where: { uid },
-      select: { preferences: true },
-    });
+  async hasFilledForm(
+    uid: string,
+    preferenceJson?: string,
+    answersJson?: string,
+  ): Promise<{ hasFilledForm: boolean; identity: string | null }> {
+    // If onboarding is disabled, skip form requirement
+    if (!this.isOnboardingEnabled()) {
+      return { hasFilledForm: true, identity: null };
+    }
 
-    const answers = await this.prisma.formSubmission.findFirst({
-      where: { uid },
-      select: { answers: true },
-    });
+    const [user, answers] = await Promise.all([
+      preferenceJson === undefined
+        ? this.prisma.user.findUnique({
+            where: { uid },
+            select: { preferences: true },
+          })
+        : Promise.resolve(null),
+      answersJson === undefined
+        ? this.prisma.formSubmission.findFirst({
+            where: { uid },
+            select: { answers: true },
+          })
+        : Promise.resolve(answersJson ? { answers: answersJson } : null),
+    ]);
 
-    const identity = this.extractRoleFromAnswers(answers?.answers);
+    const finalPreferenceJson = preferenceJson ?? user?.preferences;
+    const finalAnswersJson = answersJson ?? answers?.answers;
+    const identity = this.extractRoleFromAnswers(finalAnswersJson);
 
-    if (!user?.preferences) {
+    if (!finalPreferenceJson) {
       return { hasFilledForm: false, identity: identity ?? null };
     }
 
-    const preferences = JSON.parse(user.preferences);
+    const preferences = JSON.parse(finalPreferenceJson);
     return {
       hasFilledForm: preferences.hasFilledForm ?? true,
       identity: identity ?? null,

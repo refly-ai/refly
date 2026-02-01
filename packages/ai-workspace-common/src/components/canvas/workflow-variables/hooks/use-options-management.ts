@@ -3,7 +3,7 @@ import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { MAX_OPTIONS } from '../constants';
 import { ensureUniqueOptions } from '../utils';
-import type { DropResult } from 'react-beautiful-dnd';
+import type { DropResult } from '@refly-packages/ai-workspace-common/components/common/lazy-dnd';
 import { useThrottledCallback } from 'use-debounce';
 
 export const useOptionsManagement = (initialOptions: string[] = []) => {

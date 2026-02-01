@@ -18,11 +18,24 @@ export interface SuccessPayload {
   [key: string]: unknown;
 }
 
+export interface SuggestedFix {
+  field?: string;
+  format?: string;
+  example?: string;
+}
+
 export interface ErrorPayload {
   code: string;
   message: string;
   details?: Record<string, unknown>;
   hint?: string;
+  suggestedFix?: SuggestedFix;
+  /**
+   * Indicates if the error can be fixed by adjusting parameters.
+   * - true: Fix the parameters (see suggestedFix) and retry the SAME command
+   * - false: The approach may not work, consider alternatives
+   */
+  recoverable?: boolean;
 }
 
 const VERSION = '1.0';
@@ -295,6 +308,14 @@ export class OutputFormatter {
       console.log(UI.keyValue('Code', UI.dim(error.code)));
     }
 
+    // Show recoverable status prominently
+    if (error.recoverable !== undefined) {
+      const recoverableText = error.recoverable
+        ? '🔄 Recoverable: Fix the parameter and retry the SAME command'
+        : '❌ Not recoverable: Consider a different approach';
+      console.log(UI.dim(`  ${recoverableText}`));
+    }
+
     if (error.details && Object.keys(error.details).length > 0) {
       console.log();
       console.log(UI.indent(UI.dim('Details:')));
@@ -313,6 +334,14 @@ export class OutputFormatter {
     if (error.hint) {
       console.log();
       console.log(UI.dim(`  💡 Hint: ${error.hint}`));
+    }
+
+    if (error.suggestedFix && Object.keys(error.suggestedFix).length > 0) {
+      console.log();
+      console.log(UI.dim('  ✅ Suggested fix:'));
+      console.log(
+        UI.indent(this.formatObject(error.suggestedFix as Record<string, unknown>, 2), 4),
+      );
     }
 
     console.log();
@@ -359,7 +388,7 @@ export class OutputFormatter {
   // === CLI Status Format (Phase 1: Charm-style cards) ===
 
   private outputStatusPretty(payload: SuccessPayload): void {
-    const { cli_version, api_endpoint, auth_status, user, skill } = payload as Record<
+    const { cli_version, auth_status, user, skill, api_endpoint } = payload as Record<
       string,
       unknown
     >;
@@ -370,61 +399,52 @@ export class OutputFormatter {
     console.log(`${sym.DIAMOND} ${UI.bold('Refly CLI')} v${cli_version || '?'}`);
     console.log();
 
-    // Auth Card
+    // Auth status
     const authOk = auth_status === 'valid';
     const userObj = user as Record<string, unknown> | null;
-
-    const authLines: Array<{ text: string; indent?: boolean; muted?: boolean }> = [];
-
+    let authText = '';
     if (authOk && userObj?.email) {
-      authLines.push({ text: String(userObj.email) });
+      authText = String(userObj.email);
     } else if (auth_status === 'expired') {
-      authLines.push({ text: 'Token expired', muted: true });
+      authText = 'Token expired';
     } else {
-      authLines.push({ text: 'Not authenticated', muted: true });
+      authText = 'Not authenticated';
     }
 
-    console.log(
-      UI.card({
-        title: 'Auth',
-        status: authOk ? 'success' : 'error',
-        lines: authLines,
-        width: 45,
-      }),
-    );
-    console.log();
-
-    // Connection Card
-    const endpoint = String(api_endpoint || '—');
-    console.log(
-      UI.card({
-        title: 'Connection',
-        status: authOk ? 'success' : 'pending',
-        lines: [{ text: endpoint }],
-        width: 45,
-      }),
-    );
-    console.log();
-
-    // Skill Card
+    // Skill status
     const skillObj = skill as Record<string, unknown> | null;
     const skillInstalled = skillObj?.installed === true;
     const skillVersion = skillObj?.version ? `v${skillObj.version}` : '';
     const skillUpToDate = skillObj?.up_to_date === true;
-
-    const skillLines: Array<{ text: string; indent?: boolean; muted?: boolean }> = [];
+    let skillText = '';
     if (skillInstalled) {
-      const versionText = skillVersion + (skillUpToDate ? ' (up to date)' : ' (update available)');
-      skillLines.push({ text: versionText });
+      skillText = skillVersion + (skillUpToDate ? ' (up to date)' : ' (update available)');
     } else {
-      skillLines.push({ text: 'Not installed', muted: true });
+      skillText = 'Not installed';
     }
+
+    // Build combined status card
+    const authIcon = authOk
+      ? styled(sym.SUCCESS, Style.TEXT_SUCCESS)
+      : styled(sym.FAILURE, Style.TEXT_DANGER);
+    const connIcon = authOk
+      ? styled(sym.SUCCESS, Style.TEXT_SUCCESS)
+      : styled(sym.PENDING, Style.TEXT_DIM);
+    const skillIcon = skillInstalled
+      ? styled(sym.SUCCESS, Style.TEXT_SUCCESS)
+      : styled(sym.PENDING, Style.TEXT_DIM);
+
+    const displayEndpoint = api_endpoint ? String(api_endpoint) : 'https://refly.ai';
+    const lines: Array<{ text: string; indent?: boolean; muted?: boolean }> = [
+      { text: `${authIcon} Account    ${authOk ? authText : authText}`, muted: !authOk },
+      { text: `${connIcon} Link       ${displayEndpoint}` },
+      { text: `${skillIcon} Version    ${skillText}`, muted: !skillInstalled },
+    ];
 
     console.log(
       UI.card({
-        title: 'Skill',
-        status: skillInstalled ? 'success' : 'pending',
-        lines: skillLines,
+        title: 'Status',
+        lines,
         width: 45,
       }),
     );
@@ -622,6 +642,9 @@ export class OutputFormatter {
     if (error.hint) {
       console.log(UI.dim(`  ${error.hint}`));
     }
+    if (error.suggestedFix) {
+      console.log(UI.dim(`  fix: ${this.formatValue(error.suggestedFix)}`));
+    }
   }
 
   // === Plain Format ===
@@ -643,6 +666,9 @@ export class OutputFormatter {
     console.log(`  code: ${error.code}`);
     if (error.hint) {
       console.log(`  hint: ${error.hint}`);
+    }
+    if (error.suggestedFix) {
+      console.log(`  suggestedFix: ${this.formatValue(error.suggestedFix)}`);
     }
   }
 
@@ -672,13 +698,7 @@ export class OutputFormatter {
       return UI.dim('—');
     }
     if (typeof value === 'boolean') {
-      return value
-        ? this.useColor
-          ? styled(Symbols.SUCCESS, Style.TEXT_SUCCESS)
-          : 'yes'
-        : this.useColor
-          ? styled(Symbols.FAILURE, Style.TEXT_DANGER)
-          : 'no';
+      return this.formatBooleanValue(value);
     }
     if (typeof value === 'number') {
       return String(value);
@@ -699,6 +719,13 @@ export class OutputFormatter {
       return this.formatObject(value as Record<string, unknown>, indent);
     }
     return JSON.stringify(value);
+  }
+
+  private formatBooleanValue(value: boolean): string {
+    if (value) {
+      return this.useColor ? styled(Symbols.SUCCESS, Style.TEXT_SUCCESS) : 'yes';
+    }
+    return this.useColor ? styled(Symbols.FAILURE, Style.TEXT_DANGER) : 'no';
   }
 
   /**

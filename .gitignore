@@ -54,9 +54,11 @@ docs/.vitepress/cache/*
 *.opt
 
 .claude/*
+.zed/*
 
 .codex/*
 .ai/*
 
 apps/api/load-tests/results/*.json
 apps/api/load-tests/results/*.txt
+.playwright-mcp/*

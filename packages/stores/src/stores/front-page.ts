@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import type {
-  Skill,
   SkillTemplateConfig,
   SkillRuntimeConfig,
   MediaType,
@@ -18,7 +17,6 @@ export interface MediaQueryData {
 interface FrontPageState {
   query: string;
   canvasQueries: Record<string, string>; // Map canvasId to query
-  selectedSkill: Skill | null;
   selectedToolsets: GenericToolset[];
   tplConfig: SkillTemplateConfig | null;
   runtimeConfig: SkillRuntimeConfig | null;
@@ -26,7 +24,6 @@ interface FrontPageState {
   setQuery?: (query: string, canvasId?: string) => void;
   getQuery?: (canvasId?: string) => string;
   clearCanvasQuery?: (canvasId: string) => void;
-  setSelectedSkill?: (skill: Skill | null) => void;
   setSelectedToolsets?: (toolsets: GenericToolset[]) => void;
   setTplConfig?: (tplConfig: SkillTemplateConfig | null) => void;
   setRuntimeConfig?: (runtimeConfig: SkillRuntimeConfig | null) => void;
@@ -37,7 +34,6 @@ interface FrontPageState {
 const initialState: FrontPageState = {
   query: '',
   canvasQueries: {},
-  selectedSkill: null,
   selectedToolsets: [],
   tplConfig: null,
   runtimeConfig: { disableLinkParsing: true, enabledKnowledgeBase: false },
@@ -73,7 +69,6 @@ export const useFrontPageStore = create<FrontPageState>((set, get) => ({
       return { canvasQueries: remainingQueries };
     });
   },
-  setSelectedSkill: (selectedSkill) => set({ selectedSkill }),
   setSelectedToolsets: (selectedToolsets) => set({ selectedToolsets }),
   setTplConfig: (tplConfig) => {
     set({ tplConfig });

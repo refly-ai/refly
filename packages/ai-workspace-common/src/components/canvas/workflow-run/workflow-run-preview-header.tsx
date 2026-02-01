@@ -1,144 +1,87 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Close } from 'refly-icons';
-import { FiEye } from 'react-icons/fi';
+import { IoEyeOutline } from 'react-icons/io5';
 import { Button } from 'antd';
+import cn from 'classnames';
+import { logEvent } from '@refly/telemetry-web';
 
 interface WorkflowRunPreviewHeaderProps {
   onClose?: () => void;
   onToggleOutputsOnly?: () => void;
   outputsOnly?: boolean;
+  showOutputsOnlyButton?: boolean;
 }
 
 const WorkflowRunPreviewHeaderComponent = ({
   onClose,
   onToggleOutputsOnly,
   outputsOnly = false,
+  showOutputsOnlyButton = true,
 }: WorkflowRunPreviewHeaderProps) => {
-  // Button styles based on selected state
-  const buttonStyles = outputsOnly
-    ? {
-        // Selected state: green
-        backgroundColor: '#0E9F77',
-        border: '1px solid #0E9F77',
-        iconColor: '#FFFFFF',
-        textColor: '#FFFFFF',
-      }
-    : {
-        // Unselected state: gray
-        backgroundColor: '#F4F5F6',
-        border: '1px solid #B9C1C1',
-        iconColor: '#1C1F23',
-        textColor: '#1C1F23',
-      };
+  const { t } = useTranslation();
+
+  const handleClickOutputsOnly = useCallback(() => {
+    logEvent('only_view_result', outputsOnly ? 'off' : 'on');
+    onToggleOutputsOnly?.();
+  }, [onToggleOutputsOnly, outputsOnly]);
 
   return (
     <div className="flex flex-col bg-white">
-      <div
-        className="flex items-center"
-        style={{
-          padding: '8px 12px 8px 16px',
-          height: '64px',
-        }}
-      >
+      <div className="flex items-center px-3 py-2 pl-4 h-16">
         {/* Left side - Title */}
         <div className="flex items-center flex-1 min-w-0">
-          <div
-            className="flex items-center"
-            style={{
-              gap: '4px',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'Inter',
-                fontWeight: 600,
-                fontSize: '16px',
-                lineHeight: '1.5em',
-                color: '#1C1F23',
-              }}
-            >
-              Preview
+          <div className="flex items-center gap-1">
+            <span className="font-semibold text-base leading-6 text-gray-900">
+              {t('canvas.workflow.run.preview')}
             </span>
           </div>
         </div>
 
         {/* Right side - Actions */}
-        <div
-          className="flex items-center flex-shrink-0"
-          style={{
-            gap: '12px',
-          }}
-        >
+        <div className="flex items-center flex-shrink-0 gap-3">
           {/* Outputs only button */}
-          <button
-            type="button"
-            onClick={onToggleOutputsOnly}
-            className="flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
-            style={{
-              width: '114px',
-              height: '24px',
-              backgroundColor: buttonStyles.backgroundColor,
-              border: buttonStyles.border,
-              borderRadius: '20px',
-              gap: '6px',
-              padding: 0,
-            }}
-          >
-            <FiEye
-              size={16}
-              style={{
-                color: buttonStyles.iconColor,
-                strokeWidth: '1.5px',
-                flexShrink: 0,
-              }}
-            />
-            <span
-              style={{
-                fontFamily: 'Inter',
-                fontWeight: 400,
-                fontSize: '12px',
-                lineHeight: '18px',
-                color: buttonStyles.textColor,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Outputs only
-            </span>
-          </button>
+          {showOutputsOnlyButton && (
+            <>
+              <button
+                type="button"
+                onClick={handleClickOutputsOnly}
+                className={cn(
+                  'flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity p-0 w-[114px] h-6 rounded-[20px] gap-1.5',
+                  outputsOnly
+                    ? 'bg-green-600 border-none'
+                    : 'bg-white border border-solid border-[#D0D5DD] box-border',
+                )}
+              >
+                <IoEyeOutline
+                  size={16}
+                  className={`flex-shrink-0 ${outputsOnly ? 'text-white' : 'text-[#1C1F23]'}`}
+                />
+                <span
+                  className={`font-normal text-xs leading-[18px] whitespace-nowrap ${
+                    outputsOnly ? 'text-white' : 'text-[#1C1F23]'
+                  }`}
+                >
+                  {t('canvas.workflow.run.outputsOnly')}
+                </span>
+              </button>
 
-          {/* Divider */}
-          <div
-            style={{
-              width: '1px',
-              height: '20px',
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-            }}
-          />
+              {/* Divider */}
+              <div className="w-px h-5 bg-black/10" />
+            </>
+          )}
 
           {/* Close button */}
           <Button
             type="text"
             icon={<Close size={24} />}
             onClick={onClose}
-            style={{
-              padding: 0,
-              width: '24px',
-              height: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="flex items-center justify-center p-0 w-6 h-6"
           />
         </div>
       </div>
       {/* Bottom divider */}
-      <div
-        style={{
-          width: '100%',
-          height: '1px',
-          backgroundColor: 'rgba(0, 0, 0, 0.1)',
-        }}
-      />
+      <div className="w-full h-px bg-black/10" />
     </div>
   );
 };

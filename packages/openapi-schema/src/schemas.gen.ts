@@ -242,6 +242,10 @@ export const UpsertMcpServerRequestSchema = {
       type: 'string',
       description: 'MCP server name',
     },
+    originalName: {
+      type: 'string',
+      description: 'Original MCP server name for update',
+    },
     type: {
       $ref: '#/components/schemas/McpServerType',
     },
@@ -371,387 +375,6 @@ export const DeleteMcpServerResponseSchema = {
   allOf: [
     {
       $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'null',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const PageSchema = {
-  type: 'object',
-  required: ['pageId', 'title', 'createdAt', 'updatedAt'],
-  properties: {
-    pageId: {
-      type: 'string',
-      description: 'Page ID',
-      example: 'pg-g30e1b80b5g1itbemc0g5jj3',
-    },
-    title: {
-      type: 'string',
-      description: 'Page title',
-      example: 'My Page',
-    },
-    description: {
-      type: 'string',
-      description: 'Page description',
-    },
-    status: {
-      type: 'string',
-      description: 'Page status',
-      enum: ['draft', 'published'],
-    },
-    canvasId: {
-      type: 'string',
-      description: 'Canvas ID associated with this page',
-      example: 'cv-g30e1b80b5g1itbemc0g5jj3',
-    },
-    coverUrl: {
-      type: 'string',
-      description: 'Page cover URL',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Page creation time',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Page last update time',
-    },
-  },
-} as const;
-
-export const PageNodeRelationSchema = {
-  type: 'object',
-  required: ['relationId', 'nodeId', 'nodeType', 'entityId', 'orderIndex'],
-  properties: {
-    relationId: {
-      type: 'string',
-      description: 'Relation ID',
-    },
-    pageId: {
-      type: 'string',
-      description: 'Page ID',
-    },
-    nodeId: {
-      type: 'string',
-      description: 'Node ID',
-    },
-    nodeType: {
-      type: 'string',
-      description: 'Node type',
-    },
-    entityId: {
-      type: 'string',
-      description: 'Entity ID',
-    },
-    orderIndex: {
-      type: 'integer',
-      description: 'Order index',
-    },
-    nodeData: {
-      description: 'Node data',
-      $ref: '#/components/schemas/CanvasNodeData',
-    },
-  },
-} as const;
-
-export const PageDetailSchema = {
-  type: 'object',
-  allOf: [
-    {
-      $ref: '#/components/schemas/Page',
-    },
-    {
-      type: 'object',
-      properties: {
-        nodeRelations: {
-          type: 'array',
-          description: 'List of node relations',
-          items: {
-            $ref: '#/components/schemas/PageNodeRelation',
-          },
-        },
-        pageConfig: {
-          type: 'object',
-          description: 'Page configuration',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpdatePageRequestSchema = {
-  type: 'object',
-  properties: {
-    title: {
-      type: 'string',
-      description: 'Page title',
-    },
-    description: {
-      type: 'string',
-      description: 'Page description',
-    },
-    nodeRelations: {
-      type: 'array',
-      description: 'List of node relations with updated order',
-      items: {
-        type: 'object',
-        properties: {
-          nodeId: {
-            type: 'string',
-            description: 'Node ID',
-          },
-          orderIndex: {
-            type: 'integer',
-            description: 'New order index',
-          },
-        },
-      },
-    },
-  },
-} as const;
-
-export const UpdatePageResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          allOf: [
-            {
-              $ref: '#/components/schemas/Page',
-            },
-            {
-              type: 'object',
-              properties: {
-                nodeRelations: {
-                  type: 'array',
-                  description: 'List of node relations',
-                  items: {
-                    $ref: '#/components/schemas/PageNodeRelation',
-                  },
-                },
-              },
-            },
-          ],
-        },
-      },
-    },
-  ],
-} as const;
-
-export const DeletePageResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            pageId: {
-              type: 'string',
-              description: 'ID of the deleted page',
-            },
-            canvasId: {
-              type: 'string',
-              description: 'Canvas ID associated with the deleted page',
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const SharePageResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            pageId: {
-              type: 'string',
-              description: 'Page ID',
-            },
-            canvasId: {
-              type: 'string',
-              description: 'Canvas ID associated with the page',
-            },
-            shareId: {
-              type: 'string',
-              description: 'Share ID',
-            },
-            shareUrl: {
-              type: 'string',
-              description: 'Share URL',
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const DeletePageNodeResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            pageId: {
-              type: 'string',
-              description: 'Page ID',
-            },
-            canvasId: {
-              type: 'string',
-              description: 'Canvas ID associated with the page',
-            },
-            nodeId: {
-              type: 'string',
-              description: 'ID of the deleted node',
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const ListPagesResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            total: {
-              type: 'integer',
-              description: 'Total number of pages',
-            },
-            pages: {
-              type: 'array',
-              description: 'List of pages',
-              items: {
-                $ref: '#/components/schemas/Page',
-              },
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const PageDetailResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          $ref: '#/components/schemas/PageDetail',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const AddPageNodesRequestSchema = {
-  type: 'object',
-  required: ['nodeIds'],
-  properties: {
-    nodeIds: {
-      type: 'array',
-      description: 'List of node IDs to add to the page',
-      items: {
-        type: 'string',
-      },
-    },
-  },
-} as const;
-
-export const AddPageNodesResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            page: {
-              $ref: '#/components/schemas/Page',
-            },
-            nodeRelations: {
-              type: 'array',
-              description: 'List of node relations',
-              items: {
-                $ref: '#/components/schemas/PageNodeRelation',
-              },
-            },
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const CanvasPageResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            page: {
-              $ref: '#/components/schemas/Page',
-            },
-            nodeRelations: {
-              type: 'array',
-              description: 'List of node relations',
-              items: {
-                $ref: '#/components/schemas/PageNodeRelation',
-              },
-            },
-          },
-        },
-      },
     },
   ],
 } as const;
@@ -1406,10 +1029,11 @@ export const ListAllScheduleRecordsRequestSchema = {
       description: 'Number of items per page',
       default: 10,
     },
-    status: {
-      type: 'string',
-      enum: ['scheduled', 'pending', 'processing', 'running', 'success', 'failed'],
-      description: 'Filter by execution status',
+    executionStatus: {
+      $ref: '#/components/schemas/ScheduleRecordExecutionStatus',
+    },
+    triggerType: {
+      $ref: '#/components/schemas/ScheduleRecordTriggerType',
     },
     keyword: {
       type: 'string',
@@ -1427,6 +1051,18 @@ export const ListAllScheduleRecordsRequestSchema = {
       description: 'Filter by canvas ID',
     },
   },
+} as const;
+
+export const ScheduleRecordExecutionStatusSchema = {
+  type: 'string',
+  enum: ['scheduled', 'pending', 'processing', 'running', 'success', 'failed'],
+  description: 'Filter by execution status',
+} as const;
+
+export const ScheduleRecordTriggerTypeSchema = {
+  type: 'string',
+  enum: ['schedule', 'webhook', 'api'],
+  description: 'Filter by trigger type',
 } as const;
 
 export const ListAllScheduleRecordsResponseSchema = {
@@ -1955,142 +1591,6 @@ export const EntitySchema = {
   },
 } as const;
 
-export const ProjectSourceSchema = {
-  type: 'object',
-  description: 'Project source',
-  properties: {
-    entityId: {
-      type: 'string',
-      description: 'Entity ID',
-    },
-    entityType: {
-      description: 'Entity type',
-      $ref: '#/components/schemas/EntityType',
-    },
-    title: {
-      type: 'string',
-      description: 'Project title',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Project creation time',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Project update time',
-    },
-  },
-} as const;
-
-export const ProjectSchema = {
-  type: 'object',
-  description: 'Project',
-  required: ['projectId', 'name'],
-  properties: {
-    projectId: {
-      type: 'string',
-      description: 'Project ID',
-    },
-    name: {
-      type: 'string',
-      description: 'Project name',
-    },
-    description: {
-      type: 'string',
-      description: 'Project description',
-    },
-    coverUrl: {
-      type: 'string',
-      description: 'Project cover URL',
-    },
-    customInstructions: {
-      type: 'string',
-      description: 'Custom instructions for the project',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Project creation time',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Project update time',
-    },
-  },
-} as const;
-
-export const LabelClassSchema = {
-  type: 'object',
-  description: 'Label class',
-  required: ['labelClassId', 'name', 'displayName', 'createdAt', 'updatedAt'],
-  properties: {
-    labelClassId: {
-      type: 'string',
-      description: 'Label class ID',
-      example: 'lc-g30e1b80b5g1itbemc0g5jj3',
-    },
-    name: {
-      type: 'string',
-      description: 'Label class name',
-      example: 'Related Dataset',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Label class display name',
-      example: 'Label display name',
-    },
-    icon: {
-      description: 'Label icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    prompt: {
-      type: 'string',
-      description: 'Label creation instruction prompt',
-      example: 'Extract labels for the tech-related keywords',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Label class creation time',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Label class update time',
-    },
-  },
-} as const;
-
-export const LabelInstanceSchema = {
-  type: 'object',
-  description: 'Label instances related to entities',
-  required: ['labelId', 'labelClassId', 'value'],
-  properties: {
-    labelId: {
-      type: 'string',
-      description: 'Label instance ID',
-      example: 'lb-g30e1b80b5g1itbemc0g5jj3',
-    },
-    labelClassId: {
-      type: 'string',
-      description: 'Label class ID',
-      example: 'lc-g30e1b80b5g1itbemc0g5jj3',
-    },
-    labelClass: {
-      description: 'Label class',
-      $ref: '#/components/schemas/LabelClass',
-    },
-    value: {
-      type: 'string',
-      description: 'Label value',
-      example: 'HotPotQA',
-    },
-  },
-} as const;
-
 export const InputModeSchema = {
   type: 'string',
   description: 'Data input mode',
@@ -2299,153 +1799,6 @@ export const IconSchema = {
   },
 } as const;
 
-export const SkillSchema = {
-  type: 'object',
-  description: 'Skill',
-  required: ['name'],
-  properties: {
-    name: {
-      type: 'string',
-      description: 'Skill name',
-    },
-    description: {
-      type: 'string',
-      description: 'Skill description',
-    },
-    icon: {
-      description: 'Skill icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    configSchema: {
-      description: 'Skill config schema',
-      $ref: '#/components/schemas/SkillTemplateConfigDefinition',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-  },
-} as const;
-
-export const SkillTriggerTypeSchema = {
-  type: 'string',
-  description: 'Skill trigger type',
-  enum: ['timer', 'simpleEvent'],
-} as const;
-
-export const SimpleEventNameSchema = {
-  type: 'string',
-  description: 'Simple event name',
-  enum: ['onResourceReady'],
-} as const;
-
-export const SimpleEventSchema = {
-  type: 'object',
-  required: ['name', 'displayName'],
-  properties: {
-    name: {
-      description: 'Simple event name',
-      $ref: '#/components/schemas/SimpleEventName',
-    },
-    displayName: {
-      type: 'object',
-      description: 'Simple event display name (key is locale, value is display name)',
-    },
-  },
-} as const;
-
-export const TimerIntervalSchema = {
-  type: 'string',
-  description: 'Timer interval',
-  enum: ['hour', 'day', 'week', 'month', 'year'],
-} as const;
-
-export const TimerTriggerConfigSchema = {
-  type: 'object',
-  required: ['datetime'],
-  properties: {
-    datetime: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Time to run',
-    },
-    repeatInterval: {
-      type: 'string',
-      description: 'Repeat interval',
-      $ref: '#/components/schemas/TimerInterval',
-    },
-  },
-} as const;
-
-export const SkillTriggerSchema = {
-  type: 'object',
-  description: 'Skill triggers',
-  required: [
-    'skillId',
-    'displayName',
-    'triggerId',
-    'triggerType',
-    'enabled',
-    'createdAt',
-    'updatedAt',
-  ],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID',
-      example: 'sk-g30e1b80b5g1itbemc0g5jj3',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Trigger display name',
-      example: 'My trigger',
-    },
-    triggerId: {
-      type: 'string',
-      description: 'Trigger ID',
-      example: 'tr-g30e1b80b5g1itbemc0g5jj3',
-    },
-    triggerType: {
-      description: 'Trigger type',
-      $ref: '#/components/schemas/SkillTriggerType',
-    },
-    simpleEventName: {
-      description: 'Simple event name (only required when trigger type is `simpleEvent`)',
-      $ref: '#/components/schemas/SimpleEventName',
-    },
-    timerConfig: {
-      description: 'Timer config (only required when trigger type is `timer`)',
-      $ref: '#/components/schemas/TimerTriggerConfig',
-    },
-    input: {
-      description: 'Skill input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    context: {
-      description: 'Skill context',
-      $ref: '#/components/schemas/SkillContext',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-    enabled: {
-      type: 'boolean',
-      description: 'Trigger enabled',
-    },
-    createdAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Trigger creation time',
-    },
-    updatedAt: {
-      type: 'string',
-      format: 'date-time',
-      description: 'Trigger update time',
-    },
-  },
-} as const;
-
 export const SkillMetaSchema = {
   type: 'object',
   description: 'Skill metadata',
@@ -2514,53 +1867,6 @@ export const ActionConfigSchema = {
     description: 'Skill template config value',
     $ref: '#/components/schemas/DynamicConfigValue',
   },
-} as const;
-
-export const SkillInstanceSchema = {
-  type: 'object',
-  description: 'Skill',
-  allOf: [
-    {
-      $ref: '#/components/schemas/SkillMeta',
-    },
-    {
-      type: 'object',
-      required: ['createdAt', 'updatedAt', 'invocationConfig'],
-      properties: {
-        description: {
-          type: 'string',
-          description: 'Skill instance description',
-        },
-        promptHint: {
-          type: 'string',
-          description: 'Skill instance prompt hint',
-        },
-        tplConfig: {
-          description: 'Skill template config',
-          $ref: '#/components/schemas/SkillTemplateConfig',
-        },
-        tplConfigSchema: {
-          description: 'Skill template config schema',
-          $ref: '#/components/schemas/SkillTemplateConfigDefinition',
-        },
-        pinnedAt: {
-          type: 'string',
-          format: 'date-time',
-          description: 'Skill pinned time',
-        },
-        createdAt: {
-          type: 'string',
-          format: 'date-time',
-          description: 'Skill creation time',
-        },
-        updatedAt: {
-          type: 'string',
-          format: 'date-time',
-          description: 'Skill update time',
-        },
-      },
-    },
-  ],
 } as const;
 
 export const SourceMetaSchema = {
@@ -3054,6 +2360,66 @@ export const ActionMessageSchema = {
       type: 'string',
       format: 'date-time',
       description: 'Action message update time',
+    },
+  },
+} as const;
+
+export const ToolCallResultViaApiSchema = {
+  type: 'object',
+  description: 'Simplified tool call result for API',
+  properties: {
+    toolName: {
+      type: 'string',
+      description: 'Tool name',
+    },
+    input: {
+      type: 'object',
+      description: 'Tool input',
+    },
+    output: {
+      type: 'object',
+      description: 'Tool output',
+    },
+    error: {
+      type: 'string',
+      description: 'Tool execution error',
+    },
+    status: {
+      type: 'string',
+      enum: ['executing', 'completed', 'failed'],
+      description: 'Tool execution status',
+    },
+    createdAt: {
+      type: 'number',
+      description: 'Tool call creation timestamp',
+    },
+  },
+} as const;
+
+export const ActionMessageViaApiSchema = {
+  type: 'object',
+  description: 'Simplified action message for API',
+  required: ['messageId', 'type'],
+  properties: {
+    messageId: {
+      type: 'string',
+      description: 'Action message ID',
+      'x-i18n-description': 'integration.api.schema.messageId',
+    },
+    content: {
+      type: 'string',
+      description: 'Action message content',
+      'x-i18n-description': 'integration.api.schema.messageContent',
+    },
+    reasoningContent: {
+      type: 'string',
+      description: 'Action message reasoning content',
+      'x-i18n-description': 'integration.api.schema.messageReasoningContent',
+    },
+    type: {
+      $ref: '#/components/schemas/ActionMessageType',
+      description: 'Action message type',
+      'x-i18n-description': 'integration.api.schema.messageType',
     },
   },
 } as const;
@@ -3571,6 +2937,14 @@ export const UserPreferencesSchema = {
       description: 'Whether the user has been invited',
       default: false,
     },
+    hasFilledForm: {
+      type: 'boolean',
+      description: 'Whether the user has filled the survey form',
+    },
+    identity: {
+      type: 'string',
+      description: 'User identity in survey form',
+    },
     requireInvitationCode: {
       type: 'boolean',
       description: 'Whether to require invitation code',
@@ -3679,7 +3053,13 @@ export const UserSettingsSchema = {
       description: 'User preferences',
       $ref: '#/components/schemas/UserPreferences',
     },
+    attributes: {
+      type: 'object',
+      description: 'User attributes',
+      additionalProperties: true,
+    },
     onboarding: {
+      deprecated: true,
       description: 'Onboarding config',
       $ref: '#/components/schemas/OnboardingConfig',
     },
@@ -3892,6 +3272,139 @@ export const EmailLoginResponseSchema = {
   ],
 } as const;
 
+export const CreateCliApiKeyRequestSchema = {
+  type: 'object',
+  description: 'Create CLI API key request',
+  required: ['name'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+    expiresInDays: {
+      type: 'integer',
+      description: 'API key expiration in days',
+    },
+  },
+} as const;
+
+export const UpdateCliApiKeyRequestSchema = {
+  type: 'object',
+  description: 'Update CLI API key request',
+  required: ['name'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+  },
+} as const;
+
+export const CliApiKeyInfoSchema = {
+  type: 'object',
+  required: ['keyId', 'name', 'keyPrefix', 'createdAt'],
+  properties: {
+    keyId: {
+      type: 'string',
+      description: 'API key ID',
+    },
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+    keyPrefix: {
+      type: 'string',
+      description: 'API key prefix',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'API key creation time',
+    },
+    lastUsedAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description: 'API key last used time',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description: 'API key expiration time',
+    },
+  },
+} as const;
+
+export const CreateCliApiKeyDataSchema = {
+  type: 'object',
+  required: ['keyId', 'apiKey', 'name', 'keyPrefix', 'createdAt'],
+  properties: {
+    keyId: {
+      type: 'string',
+      description: 'API key ID',
+    },
+    apiKey: {
+      type: 'string',
+      description: 'API key value',
+    },
+    name: {
+      type: 'string',
+      description: 'API key name',
+    },
+    keyPrefix: {
+      type: 'string',
+      description: 'API key prefix',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'API key creation time',
+    },
+    expiresAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description: 'API key expiration time',
+    },
+  },
+} as const;
+
+export const CreateCliApiKeyResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/CreateCliApiKeyData',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ListCliApiKeysResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            $ref: '#/components/schemas/CliApiKeyInfo',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
 export const GetUserSettingsResponseSchema = {
   allOf: [
     {
@@ -3946,24 +3459,29 @@ export const BaseResponseSchema = {
     success: {
       type: 'boolean',
       description: 'Whether the operation was successful',
+      'x-i18n-description': 'integration.api.baseResponse.success',
       example: true,
     },
     errCode: {
       type: 'string',
       description: 'Error code',
+      'x-i18n-description': 'integration.api.baseResponse.errCode',
     },
     errMsg: {
       type: 'string',
       description: 'Error message',
+      'x-i18n-description': 'integration.api.baseResponse.errMsg',
       example: 'Operation failed',
     },
     traceId: {
       type: 'string',
       description: 'Trace ID',
+      'x-i18n-description': 'integration.api.baseResponse.traceId',
     },
     stack: {
       type: 'string',
       description: 'Error stack (only returned in development environment)',
+      'x-i18n-description': 'integration.api.baseResponse.stack',
     },
   },
 } as const;
@@ -5131,136 +4649,6 @@ export const AbortActionRequestSchema = {
   },
 } as const;
 
-export const ListProjectResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Project list',
-          items: {
-            $ref: '#/components/schemas/Project',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const GetProjectDetailResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          $ref: '#/components/schemas/Project',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpsertProjectRequestSchema = {
-  type: 'object',
-  properties: {
-    projectId: {
-      type: 'string',
-      description: 'Project ID (only used for update)',
-    },
-    name: {
-      type: 'string',
-      description: 'Project name',
-    },
-    description: {
-      type: 'string',
-      description: 'Project description',
-    },
-    coverStorageKey: {
-      type: 'string',
-      description: 'Project cover storage key',
-    },
-    customInstructions: {
-      type: 'string',
-      description: 'Custom instructions',
-    },
-  },
-} as const;
-
-export const UpsertProjectResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          $ref: '#/components/schemas/Project',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpdateProjectItemsRequestSchema = {
-  type: 'object',
-  properties: {
-    projectId: {
-      type: 'string',
-      description: 'Project ID',
-    },
-    operation: {
-      type: 'string',
-      description: 'Operation type',
-      enum: ['add', 'remove'],
-    },
-    items: {
-      type: 'array',
-      description: 'Item list',
-      items: {
-        $ref: '#/components/schemas/Entity',
-      },
-    },
-  },
-} as const;
-
-export const DeleteProjectRequestSchema = {
-  type: 'object',
-  required: ['projectId'],
-  properties: {
-    projectId: {
-      type: 'string',
-      description: 'Project ID to delete',
-      example: 'p-g30e1b80b5g1itbemc0g5jj3',
-    },
-  },
-} as const;
-
-export const DeleteProjectItemsRequestSchema = {
-  type: 'object',
-  required: ['projectId', 'items'],
-  properties: {
-    projectId: {
-      type: 'string',
-      description: 'Project ID',
-    },
-    items: {
-      type: 'array',
-      description: 'Item list',
-      items: {
-        $ref: '#/components/schemas/Entity',
-      },
-    },
-  },
-} as const;
-
 export const SkillEventTypeSchema = {
   type: 'string',
   description: 'Skill event type',
@@ -5760,427 +5148,6 @@ export const DuplicateShareResponseSchema = {
   ],
 } as const;
 
-export const ListLabelClassesResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Label class list',
-          items: {
-            $ref: '#/components/schemas/LabelClass',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const CreateLabelClassRequestSchema = {
-  type: 'object',
-  required: ['name', 'displayName', 'prompt'],
-  properties: {
-    name: {
-      type: 'string',
-      description: 'Label class name',
-      example: 'my_class',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Label display name',
-      example: 'My Class',
-    },
-    icon: {
-      description: 'Label icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    prompt: {
-      type: 'string',
-      description: 'Label creation instruction prompt',
-      example: 'Extract labels for the tech-related keywords',
-    },
-  },
-} as const;
-
-export const UpdateLabelClassRequestSchema = {
-  type: 'object',
-  required: ['labelClassId'],
-  properties: {
-    labelClassId: {
-      type: 'string',
-      description: 'Label class ID',
-    },
-    name: {
-      type: 'string',
-      description: 'Label class name',
-      example: 'My Class',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Label display name',
-      example: 'My Class',
-    },
-    icon: {
-      description: 'Label icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    prompt: {
-      type: 'string',
-      description: 'Label creation instruction prompt',
-      example: 'Extract labels for the tech-related keywords',
-    },
-  },
-} as const;
-
-export const UpsertLabelClassResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          description: 'Label class upserted',
-          $ref: '#/components/schemas/LabelClass',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const DeleteLabelClassRequestSchema = {
-  type: 'object',
-  required: ['labelClassId'],
-  properties: {
-    labelClassId: {
-      type: 'string',
-      description: 'Label class ID to delete',
-      example: 'lc-g30e1b80b5g1itbemc0g5jj3',
-    },
-  },
-} as const;
-
-export const ListLabelInstancesResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Label list',
-          items: {
-            $ref: '#/components/schemas/LabelInstance',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const CreateLabelInstanceRequestSchema = {
-  type: 'object',
-  required: ['labelClassId', 'valueList', 'entityType', 'entityId'],
-  properties: {
-    labelClassId: {
-      type: 'string',
-      description: 'Label class ID',
-      example: 'lc-g30e1b80b5g1itbemc0g5jj3',
-    },
-    valueList: {
-      type: 'array',
-      description: 'Label value list',
-      items: {
-        type: 'string',
-        example: 'label-1',
-      },
-    },
-    entityType: {
-      description: 'Label entity type',
-      $ref: '#/components/schemas/EntityType',
-    },
-    entityId: {
-      description: 'Label entity ID',
-      type: 'string',
-    },
-  },
-} as const;
-
-export const UpdateLabelInstanceRequestSchema = {
-  type: 'object',
-  properties: {
-    labelId: {
-      type: 'string',
-      description: 'Label ID to update',
-    },
-    value: {
-      type: 'string',
-      description: 'Updated label value',
-    },
-  },
-} as const;
-
-export const UpsertLabelInstanceResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Label instance upserted',
-          items: {
-            $ref: '#/components/schemas/LabelInstance',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const DeleteLabelInstanceRequestSchema = {
-  type: 'object',
-  required: ['labelId'],
-  properties: {
-    labelId: {
-      type: 'string',
-      description: 'Label ID to delete',
-      example: 'lb-g30e1b80b5g1itbemc0g5jj3',
-    },
-  },
-} as const;
-
-export const ActionSchema = {
-  type: 'object',
-  required: ['actionType', 'actionName'],
-  properties: {
-    actionType: {
-      type: 'string',
-      description: 'Action type',
-      $ref: '#/components/schemas/ActionType',
-    },
-    actionName: {
-      type: 'string',
-      description: 'Action name',
-    },
-    icon: {
-      description: 'Action icon',
-      $ref: '#/components/schemas/Icon',
-    },
-  },
-} as const;
-
-export const ListActionResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Action list',
-          items: {
-            $ref: '#/components/schemas/Action',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const ListSkillResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill list',
-          items: {
-            $ref: '#/components/schemas/Skill',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const ListSkillInstanceResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill list',
-          items: {
-            $ref: '#/components/schemas/SkillInstance',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const SkillInstanceCreateParamSchema = {
-  type: 'object',
-  required: ['displayName'],
-  properties: {
-    tplName: {
-      type: 'string',
-      description: 'Skill template name',
-      example: 'online-search',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Skill display name',
-      example: 'My Custom Skill',
-    },
-    description: {
-      type: 'string',
-      description: 'Skill description',
-    },
-    icon: {
-      description: 'Skill instance icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-  },
-} as const;
-
-export const CreateSkillInstanceRequestSchema = {
-  type: 'object',
-  required: ['instanceList'],
-  properties: {
-    instanceList: {
-      type: 'array',
-      description: 'Skill instances to upsert',
-      items: {
-        $ref: '#/components/schemas/SkillInstanceCreateParam',
-      },
-    },
-  },
-} as const;
-
-export const CreateSkillInstanceResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill instance list',
-          items: {
-            $ref: '#/components/schemas/SkillInstance',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpdateSkillInstanceRequestSchema = {
-  type: 'object',
-  required: ['skillId'],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID',
-      example: 's-g30e1b80b5g1itbemc0g5jj3',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Skill display name',
-      example: 'My Custom Skill',
-    },
-    description: {
-      type: 'string',
-      description: 'Skill description',
-    },
-    icon: {
-      description: 'Skill instance icon',
-      $ref: '#/components/schemas/Icon',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-  },
-} as const;
-
-export const UpdateSkillInstanceResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          description: 'Skill instance list',
-          $ref: '#/components/schemas/SkillInstance',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const PinSkillInstanceRequestSchema = {
-  type: 'object',
-  required: ['skillId'],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID to pin',
-    },
-  },
-} as const;
-
-export const UnpinSkillInstanceRequestSchema = {
-  type: 'object',
-  required: ['skillId'],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID to unpin',
-    },
-  },
-} as const;
-
-export const DeleteSkillInstanceRequestSchema = {
-  type: 'object',
-  required: ['skillId'],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID to delete',
-    },
-  },
-} as const;
-
 export const SkillInputSchema = {
   type: 'object',
   description: 'Skill input',
@@ -6506,10 +5473,6 @@ export const InvokeSkillRequestSchema = {
       description: 'Skill invocation target',
       $ref: '#/components/schemas/Entity',
     },
-    projectId: {
-      type: 'string',
-      description: 'Project ID',
-    },
     resultId: {
       type: 'string',
       description: `Result ID associated with this invocation.
@@ -6589,152 +5552,6 @@ export const InvokeSkillResponseSchema = {
       },
     },
   ],
-} as const;
-
-export const ListSkillTriggerResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill trigger list',
-          items: {
-            $ref: '#/components/schemas/SkillTrigger',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const SkillTriggerCreateParamSchema = {
-  type: 'object',
-  required: ['skillId', 'displayName', 'triggerType'],
-  properties: {
-    skillId: {
-      type: 'string',
-      description: 'Skill ID',
-      example: 'sk-g30e1b80b5g1itbemc0g5jj3',
-    },
-    displayName: {
-      type: 'string',
-      description: 'Trigger display name',
-      example: 'My trigger',
-    },
-    triggerType: {
-      description: 'Trigger type',
-      $ref: '#/components/schemas/SkillTriggerType',
-    },
-    simpleEventName: {
-      description: 'Simple event name (only required when trigger type is `simpleEvent`)',
-      $ref: '#/components/schemas/SimpleEventName',
-    },
-    timerConfig: {
-      description: 'Timer config (only required when trigger type is `timer`)',
-      $ref: '#/components/schemas/TimerTriggerConfig',
-    },
-    input: {
-      description: 'Skill input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    context: {
-      description: 'Skill invocation context',
-      $ref: '#/components/schemas/SkillContext',
-    },
-    tplConfig: {
-      description: 'Skill template config',
-      $ref: '#/components/schemas/SkillTemplateConfig',
-    },
-    enabled: {
-      type: 'boolean',
-      description: 'Whether this trigger is enabled',
-    },
-  },
-} as const;
-
-export const CreateSkillTriggerRequestSchema = {
-  type: 'object',
-  required: ['triggerList'],
-  properties: {
-    triggerList: {
-      type: 'array',
-      description: 'Skill triggers to upsert',
-      items: {
-        $ref: '#/components/schemas/SkillTriggerCreateParam',
-      },
-    },
-  },
-} as const;
-
-export const CreateSkillTriggerResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Skill trigger list',
-          items: {
-            $ref: '#/components/schemas/SkillTrigger',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpdateSkillTriggerRequestSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/SkillTriggerCreateParam',
-    },
-    {
-      type: 'object',
-      required: ['triggerId'],
-      properties: {
-        triggerId: {
-          type: 'string',
-          description: 'Trigger ID',
-          example: 'tr-g30e1b80b5g1itbemc0g5jj3',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const UpdateSkillTriggerResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          description: 'Updated skill trigger',
-          $ref: '#/components/schemas/SkillTrigger',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const DeleteSkillTriggerRequestSchema = {
-  type: 'object',
-  required: ['triggerId'],
-  properties: {
-    triggerId: {
-      type: 'string',
-      description: 'Trigger ID to delete',
-    },
-  },
 } as const;
 
 export const MediaTypeSchema = {
@@ -7371,6 +6188,17 @@ export const SandboxExecuteContextSchema = {
       type: 'number',
       description: 'Result version for file registration',
     },
+    ptcEnabled: {
+      type: 'boolean',
+      description: 'Whether PTC (Programmatic Tool Calling) is enabled',
+    },
+    env: {
+      type: 'object',
+      additionalProperties: {
+        type: 'string',
+      },
+      description: 'Environment variables for execution',
+    },
   },
 } as const;
 
@@ -7436,250 +6264,6 @@ export const SandboxExecuteResponseSchema = {
               },
             },
           },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const PilotStepStatusSchema = {
-  type: 'string',
-  enum: ['init', 'executing', 'finish', 'failed'],
-} as const;
-
-export const PilotStepSchema = {
-  type: 'object',
-  properties: {
-    stepId: {
-      type: 'string',
-      description: 'Pilot step ID',
-    },
-    name: {
-      type: 'string',
-      description: 'Pilot step name',
-    },
-    epoch: {
-      type: 'number',
-      description: 'Pilot step epoch',
-    },
-    entityId: {
-      type: 'string',
-      description: 'Pilot step entity ID',
-    },
-    entityType: {
-      type: 'string',
-      description: 'Pilot step entity type',
-    },
-    status: {
-      description: 'Pilot step status',
-      $ref: '#/components/schemas/PilotStepStatus',
-    },
-    rawOutput: {
-      type: 'string',
-      description: 'Pilot step raw output',
-    },
-    actionResult: {
-      description: 'Pilot step action result',
-      $ref: '#/components/schemas/ActionResult',
-    },
-    createdAt: {
-      type: 'string',
-      description: 'Pilot step created at',
-    },
-    updatedAt: {
-      type: 'string',
-      description: 'Pilot step updated at',
-    },
-  },
-} as const;
-
-export const PilotSessionStatusSchema = {
-  type: 'string',
-  enum: ['init', 'executing', 'waiting', 'finish', 'failed'],
-} as const;
-
-export const PilotSessionSchema = {
-  type: 'object',
-  required: [
-    'sessionId',
-    'status',
-    'targetType',
-    'targetId',
-    'title',
-    'input',
-    'currentEpoch',
-    'maxEpoch',
-  ],
-  properties: {
-    sessionId: {
-      type: 'string',
-      description: 'Pilot session ID',
-    },
-    title: {
-      type: 'string',
-      description: 'Pilot session title',
-    },
-    input: {
-      description: 'Pilot session input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    status: {
-      description: 'Pilot session status',
-      $ref: '#/components/schemas/PilotSessionStatus',
-    },
-    targetType: {
-      description: 'Pilot session target type',
-      $ref: '#/components/schemas/EntityType',
-    },
-    targetId: {
-      type: 'string',
-      description: 'Pilot session target ID',
-    },
-    currentEpoch: {
-      type: 'number',
-      description: 'Pilot session current epoch',
-    },
-    maxEpoch: {
-      type: 'number',
-      description: 'Pilot session max epoch',
-    },
-    steps: {
-      type: 'array',
-      description: 'Pilot steps',
-      items: {
-        $ref: '#/components/schemas/PilotStep',
-      },
-    },
-    createdAt: {
-      type: 'string',
-      description: 'Pilot session created at',
-    },
-    updatedAt: {
-      type: 'string',
-      description: 'Pilot session updated at',
-    },
-  },
-} as const;
-
-export const CreatePilotSessionRequestSchema = {
-  type: 'object',
-  required: ['targetId', 'targetType', 'input'],
-  properties: {
-    targetId: {
-      type: 'string',
-      description: 'Pilot session target ID',
-    },
-    targetType: {
-      description: 'Pilot session target type',
-      $ref: '#/components/schemas/EntityType',
-    },
-    maxEpoch: {
-      type: 'number',
-      description: 'Pilot session max epoch',
-      default: 2,
-    },
-    title: {
-      type: 'string',
-      description: 'Pilot session title',
-    },
-    input: {
-      description: 'Pilot session input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    providerItemId: {
-      type: 'string',
-      description: 'Pilot session provider item ID',
-    },
-  },
-} as const;
-
-export const UpdatePilotSessionRequestSchema = {
-  type: 'object',
-  required: ['sessionId'],
-  properties: {
-    sessionId: {
-      type: 'string',
-      description: 'Pilot session ID',
-    },
-    input: {
-      description: 'Pilot session input',
-      $ref: '#/components/schemas/SkillInput',
-    },
-    maxEpoch: {
-      type: 'number',
-      description: 'Pilot session max epoch',
-      default: 2,
-    },
-  },
-} as const;
-
-export const RecoverPilotSessionRequestSchema = {
-  type: 'object',
-  required: ['sessionId'],
-  properties: {
-    sessionId: {
-      type: 'string',
-      description: 'Pilot session ID to recover',
-    },
-    stepIds: {
-      type: 'array',
-      description:
-        'Optional array of specific step IDs to recover. If not provided, recovers all failed steps in the current epoch.',
-      items: {
-        type: 'string',
-      },
-    },
-  },
-} as const;
-
-export const UpsertPilotSessionResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          description: 'Upserted pilot session',
-          $ref: '#/components/schemas/PilotSession',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const ListPilotSessionsResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          description: 'Pilot session list',
-          items: {
-            $ref: '#/components/schemas/PilotSession',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const GetPilotSessionDetailResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          description: 'Pilot session detail',
-          $ref: '#/components/schemas/PilotSession',
         },
       },
     },
@@ -7958,34 +6542,6 @@ export const GetFormDefinitionResponseSchema = {
           type: 'object',
           description: 'Form definition',
           $ref: '#/components/schemas/FormDefinition',
-        },
-      },
-    },
-  ],
-} as const;
-
-export const HasFilledFormResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          description: 'Has filled form data',
-          properties: {
-            hasFilledForm: {
-              type: 'boolean',
-              description: 'Whether the user has filled the form',
-              default: false,
-            },
-            identity: {
-              type: 'string',
-              description: 'User identity',
-            },
-          },
         },
       },
     },
@@ -8275,30 +6831,6 @@ export const ListInvitationCodesResponseSchema = {
           description: 'Invitation code list',
           items: {
             $ref: '#/components/schemas/InvitationCode',
-          },
-        },
-      },
-    },
-  ],
-} as const;
-
-export const HasBeenInvitedResponseSchema = {
-  allOf: [
-    {
-      $ref: '#/components/schemas/BaseResponse',
-    },
-    {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          description: 'Has been invited data',
-          properties: {
-            hasBeenInvited: {
-              type: 'boolean',
-              description: 'Whether user has been invited',
-              default: false,
-            },
           },
         },
       },
@@ -10643,6 +9175,106 @@ export const DeleteToolsetRequestSchema = {
   },
 } as const;
 
+export const ExecuteToolRequestSchema = {
+  type: 'object',
+  required: ['toolsetKey', 'toolName', 'arguments'],
+  properties: {
+    toolsetKey: {
+      type: 'string',
+      description: 'Toolset key',
+    },
+    toolName: {
+      type: 'string',
+      description: 'Tool method name to execute',
+    },
+    arguments: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'Tool arguments',
+    },
+  },
+} as const;
+
+export const ExecuteToolResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Tool execution result data',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ExportToolsetDefinitionsResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            $ref: '#/components/schemas/ToolsetExportDefinition',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const ToolsetExportDefinitionSchema = {
+  type: 'object',
+  properties: {
+    key: {
+      type: 'string',
+      description: 'Toolset unique key',
+    },
+    name: {
+      type: 'string',
+      description: 'Toolset display name',
+    },
+    description: {
+      type: 'string',
+      description: 'Toolset description',
+    },
+    tools: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/ToolExportDefinition',
+      },
+    },
+  },
+} as const;
+
+export const ToolExportDefinitionSchema = {
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Tool method name',
+    },
+    description: {
+      type: 'string',
+      description: 'Tool description',
+    },
+    inputSchema: {
+      type: 'object',
+      additionalProperties: true,
+      description: 'JSON Schema format input parameter definition',
+    },
+  },
+} as const;
+
 export const GetToolCallResultResponseSchema = {
   allOf: [
     {
@@ -10978,6 +9610,72 @@ export const WorkflowNodeExecutionSchema = {
   },
 } as const;
 
+export const WorkflowNodeExecutionViaApiSchema = {
+  type: 'object',
+  required: ['nodeId'],
+  properties: {
+    nodeId: {
+      type: 'string',
+      description: 'Node ID',
+      'x-i18n-description': 'integration.api.schema.nodeId',
+    },
+    title: {
+      type: 'string',
+      description: 'Node title',
+      'x-i18n-description': 'integration.api.schema.nodeTitle',
+    },
+    status: {
+      description: 'Node status',
+      'x-i18n-description': 'integration.api.schema.nodeStatus',
+      $ref: '#/components/schemas/ActionStatus',
+    },
+    errorMessage: {
+      type: 'string',
+      description: 'Node error message',
+      'x-i18n-description': 'integration.api.schema.nodeErrorMessage',
+    },
+    startTime: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Node execution start time',
+      'x-i18n-description': 'integration.api.schema.nodeStartTime',
+    },
+    endTime: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Node execution end time',
+      'x-i18n-description': 'integration.api.schema.nodeEndTime',
+    },
+  },
+} as const;
+
+export const WorkflowNodeExecutionStatusViaApiSchema = {
+  type: 'object',
+  required: ['nodeId'],
+  properties: {
+    nodeId: {
+      type: 'string',
+      description: 'Node ID',
+      'x-i18n-description': 'integration.api.schema.nodeId',
+    },
+    status: {
+      description: 'Node status',
+      'x-i18n-description': 'integration.api.schema.nodeStatus',
+      $ref: '#/components/schemas/ActionStatus',
+    },
+    title: {
+      type: 'string',
+      description: 'Node title',
+      'x-i18n-description': 'integration.api.schema.nodeTitle',
+    },
+    errorMessage: {
+      type: 'string',
+      description: 'Node error message',
+      'x-i18n-description': 'integration.api.schema.nodeErrorMessage',
+    },
+  },
+} as const;
+
 export const WorkflowExecutionStatusSchema = {
   type: 'string',
   enum: ['init', 'executing', 'finish', 'failed'],
@@ -11058,18 +9756,22 @@ export const WorkflowTaskSchema = {
     id: {
       type: 'string',
       description: 'Unique ID for the task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskId',
     },
     title: {
       type: 'string',
       description: 'Display title for the task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskTitle',
     },
     prompt: {
       type: 'string',
       description: 'The prompt or instruction for this task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskPrompt',
     },
     toolsets: {
       type: 'array',
       description: 'Toolsets selected for this task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskToolsets',
       items: {
         type: 'string',
         description: 'Toolset ID',
@@ -11078,6 +9780,7 @@ export const WorkflowTaskSchema = {
     dependentTasks: {
       type: 'array',
       description: 'Tasks that must be executed before this task',
+      'x-i18n-description': 'integration.api.schema.workflowTaskDependentTasks',
       items: {
         type: 'string',
         description: 'Task ID',
@@ -14073,6 +12776,751 @@ export const TriggerVoucherResponseSchema = {
       properties: {
         data: {
           $ref: '#/components/schemas/VoucherTriggerResult',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const WebhookRunRequestSchema = {
+  type: 'object',
+  description: `Request body for webhook trigger.
+
+**IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+Do NOT pass variables directly at the top level.
+
+Valid examples:
+- Empty body (for workflows without variables): {}
+- With variables: { "variables": { "input": "value", "count": 10 } }
+
+Invalid example:
+- { "input": "value" } ❌ (variables not wrapped)
+`,
+  'x-i18n-description': 'integration.api.schema.webhookRunBody',
+  properties: {
+    variables: {
+      type: 'object',
+      description:
+        'Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.',
+      'x-i18n-description': 'integration.api.schema.webhookRunVariables',
+      additionalProperties: true,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const WebhookRunResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            received: {
+              type: 'boolean',
+              description: 'Whether the webhook request was accepted',
+              'x-i18n-description': 'integration.api.schema.webhookReceived',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiUploadedFileSchema = {
+  type: 'object',
+  required: ['fileKey', 'fileName'],
+  properties: {
+    fileKey: {
+      type: 'string',
+      description: 'File key used as workflow variable value',
+      'x-i18n-description': 'integration.api.schema.fileKey',
+    },
+    fileName: {
+      type: 'string',
+      description: 'Original file name',
+      'x-i18n-description': 'integration.api.schema.fileName',
+    },
+  },
+} as const;
+
+export const OpenapiFileUploadResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          required: ['files'],
+          properties: {
+            files: {
+              type: 'array',
+              description: 'Uploaded files',
+              'x-i18n-description': 'integration.api.schema.uploadedFiles',
+              items: {
+                $ref: '#/components/schemas/OpenapiUploadedFile',
+              },
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const WebhookErrorCodeSchema = {
+  type: 'string',
+  enum: [
+    'WEBHOOK_NOT_FOUND',
+    'WEBHOOK_DISABLED',
+    'WEBHOOK_RATE_LIMITED',
+    'INVALID_REQUEST_BODY',
+    'CANVAS_NOT_FOUND',
+    'INSUFFICIENT_CREDITS',
+  ],
+  description: `Webhook error codes:
+- WEBHOOK_NOT_FOUND: Webhook does not exist or has been deleted
+- WEBHOOK_DISABLED: Webhook is disabled
+- WEBHOOK_RATE_LIMITED: Request rate exceeds the limit
+- INVALID_REQUEST_BODY: Request body format is invalid
+- CANVAS_NOT_FOUND: Associated canvas cannot be found
+- INSUFFICIENT_CREDITS: Insufficient credits
+`,
+} as const;
+
+export const EnableWebhookRequestSchema = {
+  type: 'object',
+  required: ['canvasId'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID to enable webhook for',
+    },
+    timeout: {
+      type: 'integer',
+      default: 30,
+      description: 'Timeout in seconds',
+    },
+  },
+} as const;
+
+export const EnableWebhookResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            webhookId: {
+              type: 'string',
+              description: 'Webhook ID',
+            },
+            webhookUrl: {
+              type: 'string',
+              description: 'Webhook URL',
+            },
+            isEnabled: {
+              type: 'boolean',
+              description: 'Whether webhook is enabled',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const DisableWebhookRequestSchema = {
+  type: 'object',
+  required: ['webhookId'],
+  properties: {
+    webhookId: {
+      type: 'string',
+      description: 'Webhook ID to disable',
+    },
+  },
+} as const;
+
+export const ResetWebhookRequestSchema = {
+  type: 'object',
+  required: ['webhookId'],
+  properties: {
+    webhookId: {
+      type: 'string',
+      description: 'Webhook ID to reset',
+    },
+  },
+} as const;
+
+export const ResetWebhookResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            webhookId: {
+              type: 'string',
+              description: 'New webhook ID',
+            },
+            webhookUrl: {
+              type: 'string',
+              description: 'New webhook URL',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const UpdateOpenapiConfigRequestSchema = {
+  type: 'object',
+  required: ['canvasId'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    resultNodeIds: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      nullable: true,
+      description: 'Output node IDs',
+    },
+  },
+} as const;
+
+export const OpenapiConfigResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            canvasId: {
+              type: 'string',
+              description: 'Canvas ID',
+            },
+            resultNodeIds: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+              nullable: true,
+              description: 'Output node IDs',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const UpdateWebhookRequestSchema = {
+  type: 'object',
+  required: ['webhookId'],
+  properties: {
+    webhookId: {
+      type: 'string',
+      description: 'Webhook ID to update',
+    },
+    isEnabled: {
+      type: 'boolean',
+      description: 'Whether webhook is enabled',
+    },
+    timeout: {
+      type: 'integer',
+      default: 30,
+      description: 'Timeout in seconds',
+    },
+  },
+} as const;
+
+export const GetWebhookConfigResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            webhookId: {
+              type: 'string',
+              description: 'Webhook ID',
+            },
+            isEnabled: {
+              type: 'boolean',
+              description: 'Whether webhook is enabled',
+            },
+            timeout: {
+              type: 'integer',
+              description: 'Timeout in seconds',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetWebhookHistoryResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            records: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/WebhookCallRecord',
+              },
+            },
+            total: {
+              type: 'integer',
+              description: 'Total number of records',
+            },
+            page: {
+              type: 'integer',
+              description: 'Current page number',
+            },
+            pageSize: {
+              type: 'integer',
+              description: 'Page size',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const WebhookCallRecordSchema = {
+  type: 'object',
+  properties: {
+    recordId: {
+      type: 'string',
+      description: 'Record ID',
+    },
+    apiId: {
+      type: 'string',
+      description: 'Webhook ID',
+    },
+    canvasId: {
+      type: 'string',
+      description: 'Canvas ID',
+    },
+    workflowExecutionId: {
+      type: 'string',
+      description: 'Workflow execution ID',
+    },
+    requestUrl: {
+      type: 'string',
+      description: 'Request URL',
+    },
+    requestMethod: {
+      type: 'string',
+      description: 'Request method',
+    },
+    httpStatus: {
+      type: 'integer',
+      description: 'HTTP status code',
+    },
+    responseTime: {
+      type: 'integer',
+      description: 'Response time in milliseconds',
+    },
+    status: {
+      type: 'string',
+      description: 'Execution status',
+    },
+    failureReason: {
+      type: 'string',
+      description: 'Failure reason if failed',
+    },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Created timestamp',
+    },
+    completedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Completed timestamp',
+    },
+  },
+} as const;
+
+export const DriveFileViaApiSchema = {
+  type: 'object',
+  required: ['name', 'type'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Drive file name',
+      'x-i18n-description': 'integration.api.schema.fileName',
+    },
+    type: {
+      type: 'string',
+      description: 'Drive file type',
+      'x-i18n-description': 'integration.api.schema.fileType',
+    },
+    size: {
+      type: 'number',
+      description: 'Drive file size',
+      'x-i18n-description': 'integration.api.schema.fileSize',
+    },
+    url: {
+      type: 'string',
+      description: 'Access URL for the file',
+      'x-i18n-description': 'integration.api.schema.fileUrl',
+    },
+  },
+} as const;
+
+export const RunWorkflowApiResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            executionId: {
+              type: 'string',
+              description: 'Workflow execution ID for tracking status',
+              'x-i18n-description': 'integration.api.schema.executionId',
+            },
+            status: {
+              $ref: '#/components/schemas/WorkflowExecutionStatus',
+              description: 'Initial execution status (usually "executing")',
+              'x-i18n-description': 'integration.api.schema.executionStatus',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiWorkflowRunRequestSchema = {
+  type: 'object',
+  description: `Request body for running a workflow via API.
+
+**IMPORTANT**: If you need to pass workflow variables, they MUST be wrapped under the "variables" field.
+Do NOT pass variables directly at the top level.
+
+Each key in variables is a workflow variable name. Values can be:
+- Strings, numbers, booleans, objects, or arrays
+- For file variables: pass fileKey (string) or array of fileKey returned by /openapi/files/upload
+
+Valid examples:
+- Empty body (for workflows without variables): {}
+- With variables: { "variables": { "input": "Hello", "files": ["of_xxx", "of_yyy"] } }
+
+Invalid example:
+- { "input": "Hello" } ❌ (variables not wrapped)
+`,
+  'x-i18n-description': 'integration.api.openapi.workflowRun.bodyDescription',
+  properties: {
+    variables: {
+      type: 'object',
+      description:
+        'Workflow variables as key-value pairs. Each key is a variable name defined in the workflow.',
+      'x-i18n-description': 'integration.api.openapi.workflowRun.variablesDescription',
+      additionalProperties: true,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const OpenapiCopilotGenerateRequestSchema = {
+  type: 'object',
+  required: ['query'],
+  description: 'Copilot workflow generation request.',
+  'x-i18n-description': 'integration.api.openapi.copilotGenerate.bodyDescription',
+  properties: {
+    query: {
+      type: 'string',
+      description:
+        'Natural language prompt describing the desired workflow (supports multiple languages).',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.queryDescription',
+    },
+    canvasId: {
+      type: 'string',
+      description:
+        'Optional canvas ID to overwrite. This will replace the existing workflow and cannot be undone.',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.canvasIdDescription',
+    },
+    locale: {
+      type: 'string',
+      description:
+        'Output locale. Supported: en, zh-CN, ja, zh-Hant, fr, de-DE, ko, hi, es, ru, de, it, tr, pt, vi, id, th, ar, mn, fa.',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.localeDescription',
+    },
+  },
+} as const;
+
+export const OpenapiCopilotGenerateResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            canvasId: {
+              type: 'string',
+              description: 'Canvas/Workflow ID',
+              'x-i18n-description': 'integration.api.schema.canvasId',
+            },
+            workflowPlan: {
+              $ref: '#/components/schemas/OpenapiWorkflowPlan',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiWorkflowSummarySchema = {
+  type: 'object',
+  required: ['canvasId', 'title'],
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Canvas/Workflow ID',
+      'x-i18n-description': 'integration.api.schema.canvasId',
+    },
+    title: {
+      type: 'string',
+      description: 'Workflow title',
+      'x-i18n-description': 'integration.api.schema.workflowTitle',
+    },
+  },
+} as const;
+
+export const OpenapiWorkflowSearchResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Workflow search results',
+          'x-i18n-description': 'integration.api.schema.workflowSearchData',
+          items: {
+            $ref: '#/components/schemas/OpenapiWorkflowSummary',
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiWorkflowDetailResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/OpenapiWorkflowPlan',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiWorkflowPlanSchema = {
+  type: 'object',
+  required: ['title', 'tasks'],
+  properties: {
+    title: {
+      type: 'string',
+      description: 'Title of the workflow plan',
+      'x-i18n-description': 'integration.api.schema.workflowPlanTitle',
+    },
+    tasks: {
+      type: 'array',
+      description: 'Array of workflow tasks to be executed',
+      'x-i18n-description': 'integration.api.schema.workflowPlanTasks',
+      items: {
+        $ref: '#/components/schemas/WorkflowTask',
+      },
+    },
+    variables: {
+      type: 'array',
+      description: 'Array of variables (aka User inputs) defined for the workflow plan',
+      'x-i18n-description': 'integration.api.schema.workflowPlanVariables',
+      items: {
+        $ref: '#/components/schemas/OpenapiWorkflowVariable',
+      },
+    },
+  },
+} as const;
+
+export const OpenapiWorkflowVariableSchema = {
+  type: 'object',
+  description: 'Workflow variable definition (public fields)',
+  required: ['name'],
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Variable name used in the workflow',
+      'x-i18n-description': 'integration.api.schema.workflowVariableName',
+    },
+    variableType: {
+      type: 'string',
+      description: 'Variable type',
+      'x-i18n-description': 'integration.api.schema.workflowVariableType',
+      enum: ['string', 'option', 'resource'],
+    },
+    required: {
+      type: 'boolean',
+      description: 'Whether the variable is required. Defaults to false.',
+      'x-i18n-description': 'integration.api.schema.workflowVariableRequired',
+    },
+    options: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'Array of options (only valid when variable type is `option`)',
+      'x-i18n-description': 'integration.api.schema.workflowVariableOptions',
+    },
+  },
+} as const;
+
+export const GetWorkflowStatusViaApiResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            executionId: {
+              type: 'string',
+              description: 'Workflow execution ID',
+              'x-i18n-description': 'integration.api.schema.executionId',
+            },
+            status: {
+              $ref: '#/components/schemas/WorkflowExecutionStatus',
+              description: 'Workflow execution status',
+              'x-i18n-description': 'integration.api.schema.executionStatus',
+            },
+            nodeExecutions: {
+              type: 'array',
+              description: 'Node execution status list',
+              'x-i18n-description': 'integration.api.schema.nodeExecutions',
+              items: {
+                $ref: '#/components/schemas/WorkflowNodeExecutionStatusViaApi',
+              },
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Workflow execution created time',
+              'x-i18n-description': 'integration.api.schema.createdAt',
+            },
+          },
+        },
+      },
+    },
+  ],
+} as const;
+
+export const GetWorkflowOutputResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            output: {
+              type: 'array',
+              description: 'Output node results',
+              'x-i18n-description': 'integration.api.schema.output',
+              items: {
+                allOf: [
+                  {
+                    $ref: '#/components/schemas/WorkflowNodeExecutionViaApi',
+                  },
+                  {
+                    type: 'object',
+                    properties: {
+                      messages: {
+                        type: 'array',
+                        description: 'Output messages',
+                        'x-i18n-description': 'integration.api.schema.messages',
+                        items: {
+                          $ref: '#/components/schemas/ActionMessageViaApi',
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+            files: {
+              type: 'array',
+              description: 'Output files',
+              'x-i18n-description': 'integration.api.schema.files',
+              items: {
+                $ref: '#/components/schemas/DriveFileViaApi',
+              },
+            },
+          },
         },
       },
     },

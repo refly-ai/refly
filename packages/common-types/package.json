@@ -11,19 +11,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@refly/openapi-schema": "workspace:*",
-    "clsx": "^2.1.0",
-    "dayjs": "~1.11.7",
-    "js-cookie": "^3.0.5",
-    "md5": "^2.3.0",
-    "tailwind-merge": "^2.2.2",
-    "uuid": "^9.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@refly/openapi-schema": "workspace:*"
   },
   "devDependencies": {
-    "@types/chrome": "0.0.227",
-    "@types/react": "^18.2.56",
-    "@types/react-dom": "^18.2.19"
+    "react-scripts": "^5.0.1"
   }
 }

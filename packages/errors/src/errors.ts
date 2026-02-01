@@ -431,6 +431,74 @@ export class ContentFilteringError extends BaseError {
   };
 }
 
+export class PresignNotSupportedError extends BaseError {
+  code = 'E3008';
+  messageDict = {
+    en: 'Presigned uploads are not supported by this storage backend',
+    'zh-CN': '当前存储后端不支持预签名上传',
+  };
+}
+
+export class InvalidContentTypeError extends BaseError {
+  code = 'E3009';
+  messageDict = {
+    en: 'The content type is not allowed for this operation',
+    'zh-CN': '不允许使用此内容类型进行此操作',
+  };
+}
+
+export class UploadSizeMismatchError extends BaseError {
+  code = 'E3010';
+  messageDict = {
+    en: 'The uploaded file size does not match the expected size',
+    'zh-CN': '上传文件大小与预期大小不匹配',
+  };
+}
+
+export class UploadExpiredError extends BaseError {
+  code = 'E3011';
+  messageDict = {
+    en: 'The upload session has expired, please request a new presigned URL',
+    'zh-CN': '上传会话已过期，请重新获取预签名URL',
+  };
+}
+
+export class ToolCallError extends BaseError {
+  code = 'E3012';
+  messageDict = {
+    en: 'Tool call failed',
+    'zh-CN': '工具调用失败',
+  };
+
+  constructor(detail?: string) {
+    super(detail);
+    if (detail) {
+      this.messageDict = {
+        en: `Tool call failed: ${detail}`,
+        'zh-CN': `工具调用失败: ${detail}`,
+      };
+    }
+  }
+}
+
+export class EmailSendError extends BaseError {
+  code = 'E3013';
+  messageDict = {
+    en: 'Failed to send email',
+    'zh-CN': '邮件发送失败',
+  };
+
+  constructor(detail?: string) {
+    super(detail);
+    if (detail) {
+      this.messageDict = {
+        en: `Failed to send email: ${detail}`,
+        'zh-CN': `邮件发送失败: ${detail}`,
+      };
+    }
+  }
+}
+
 // Create a mapping of error codes to error classes
 const errorMap = {
   E0000: UnknownError,
@@ -486,6 +554,12 @@ const errorMap = {
   E3005: DuplicationNotAllowedError,
   E3006: FileTooLargeError,
   E3007: ContentFilteringError,
+  E3008: PresignNotSupportedError,
+  E3009: InvalidContentTypeError,
+  E3010: UploadSizeMismatchError,
+  E3011: UploadExpiredError,
+  E3012: ToolCallError,
+  E3013: EmailSendError,
 };
 
 export function getErrorMessage(code: string, locale: string): string {

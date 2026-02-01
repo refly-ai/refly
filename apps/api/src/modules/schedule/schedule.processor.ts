@@ -382,7 +382,7 @@ export class ScheduleProcessor extends WorkerHost {
         // - processCanvasForShare is designed for sharing existing content (creates ShareRecords)
         // - Schedule needs raw canvas data for execution (no ShareRecords needed)
         // - processCanvasForShare would fail if skillResponse nodes have no action results
-        canvasData = await this.createSnapshotFromCanvas(user, canvasId);
+        canvasData = await this.canvasService.createSnapshotFromCanvas(user, canvasId);
 
         // Upload snapshot to private storage
         snapshotStorageKey = `schedules/${uid}/${scheduleRecordId}/snapshot.json`;
@@ -655,76 +655,6 @@ export class ScheduleProcessor extends WorkerHost {
       visibility: 'private',
       storageKey,
     });
-  }
-
-  /**
-   * Create snapshot from canvas data with files and resources
-   * This is a simpler alternative to processCanvasForShare that doesn't create ShareRecords
-   */
-  private async createSnapshotFromCanvas(
-    user: { uid: string },
-    canvasId: string,
-  ): Promise<RawCanvasData> {
-    // 1. Get raw canvas data (nodes, edges, variables)
-    const rawData = await this.canvasService.getCanvasRawData(user as any, canvasId);
-
-    // 2. Get drive files associated with this canvas
-    const driveFiles = await this.prisma.driveFile.findMany({
-      where: {
-        uid: user.uid,
-        canvasId,
-        scope: 'present',
-        deletedAt: null,
-      },
-    });
-
-    const files = driveFiles.map((file) => ({
-      fileId: file.fileId,
-      canvasId: file.canvasId,
-      name: file.name,
-      type: file.type,
-      category: file.category,
-      size: Number(file.size),
-      source: file.source,
-      scope: file.scope,
-      summary: file.summary ?? undefined,
-      variableId: file.variableId ?? undefined,
-      resultId: file.resultId ?? undefined,
-      resultVersion: file.resultVersion ?? undefined,
-      storageKey: file.storageKey ?? undefined,
-      createdAt: file.createdAt.toJSON(),
-      updatedAt: file.updatedAt.toJSON(),
-    }));
-
-    // 3. Get resources associated with this canvas
-    const resources = await this.prisma.resource.findMany({
-      where: {
-        uid: user.uid,
-        canvasId,
-        deletedAt: null,
-      },
-      select: {
-        resourceId: true,
-        title: true,
-        resourceType: true,
-        storageKey: true,
-        storageSize: true,
-        contentPreview: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    // 4. Combine into snapshot format
-    return {
-      title: rawData.title,
-      canvasId: rawData.canvasId,
-      variables: rawData.variables || [],
-      nodes: rawData.nodes || [],
-      edges: rawData.edges || [],
-      files: files as any,
-      resources: resources as any,
-    } as RawCanvasData;
   }
 
   // classifyError moved to schedule.constants.ts as classifyScheduleError

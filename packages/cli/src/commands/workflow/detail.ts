@@ -1,11 +1,16 @@
 /**
  * refly workflow detail - Get detailed workflow execution information
+ *
+ * Supports both workflowId (c-xxx) and runId (we-xxx).
+ * - workflowId: gets detail for the latest run
+ * - runId: gets detail for the specific run
  */
 
 import { Command } from 'commander';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import { apiRequest } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
+import { buildWorkflowApiUrl, detectIdType } from './utils.js';
 
 interface ToolCallSummary {
   callId: string;
@@ -63,10 +68,10 @@ interface WorkflowDetailResponse {
 
 export const workflowDetailCommand = new Command('detail')
   .description('Get detailed workflow execution information including all node results')
-  .argument('<workflowId>', 'Workflow ID')
+  .argument('<id>', 'Workflow ID (c-xxx) or Run ID (we-xxx)')
   .option('--no-tool-calls', 'Exclude tool call summaries')
   .option('--preview-length <length>', 'Output preview length (default: 500)', '500')
-  .action(async (workflowId, options) => {
+  .action(async (id, options) => {
     try {
       const params = new URLSearchParams();
       if (options.toolCalls === false) {
@@ -76,8 +81,9 @@ export const workflowDetailCommand = new Command('detail')
         params.set('outputPreviewLength', options.previewLength);
       }
 
-      const queryString = params.toString();
-      const url = `/v1/cli/workflow/${workflowId}/detail${queryString ? `?${queryString}` : ''}`;
+      // Auto-detect ID type and build appropriate URL
+      const idType = detectIdType(id);
+      const url = buildWorkflowApiUrl(id, 'detail', params);
       const result = await apiRequest<WorkflowDetailResponse>(url);
 
       ok('workflow.detail', {
@@ -85,6 +91,7 @@ export const workflowDetailCommand = new Command('detail')
         workflowId: result.workflowId,
         title: result.title,
         status: result.status,
+        idType, // Include ID type in output for clarity
         progress: {
           total: result.totalNodes,
           executed: result.executedNodes,
@@ -100,7 +107,11 @@ export const workflowDetailCommand = new Command('detail')
       });
     } catch (error) {
       if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
+        fail(error.code, error.message, {
+          details: error.details,
+          hint: error.hint,
+          suggestedFix: error.suggestedFix,
+        });
       }
       fail(
         ErrorCodes.INTERNAL_ERROR,

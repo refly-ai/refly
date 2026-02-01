@@ -7,20 +7,18 @@ import { AccountSetting } from '@refly-packages/ai-workspace-common/components/s
 import { LanguageSetting } from '@refly-packages/ai-workspace-common/components/settings/language-setting';
 import { AppearanceSetting } from '@refly-packages/ai-workspace-common/components/settings/appearance-setting';
 import { Subscription } from '@refly-packages/ai-workspace-common/components/settings/subscription';
-// import { ModelProviders } from '@refly-packages/ai-workspace-common/components/settings/model-providers';
-// import { ModelConfig } from '@refly-packages/ai-workspace-common/components/settings/model-config';
-// import { ParserConfig } from '@refly-packages/ai-workspace-common/components/settings/parser-config';
+import { ModelConfig } from '@refly-packages/ai-workspace-common/components/settings/model-config';
+import { ModelProviders } from '@refly-packages/ai-workspace-common/components/settings/model-providers';
 
 import './index.scss';
 import {
-  // AIModel,
-  // Provider,
-  // Parse,
   Tools,
   Subscription as SubscriptionIcon,
   Account,
   Language,
   InterfaceLight,
+  AIModel,
+  Provider,
 } from 'refly-icons';
 
 import { subscriptionEnabled } from '@refly/ui-kit';
@@ -95,19 +93,33 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
     setSettingsModalActiveTab: state.setSettingsModalActiveTab,
   }));
 
-  const [localActiveTab, setLocalActiveTab] = useState<SettingsModalActiveTab>(
-    settingsModalActiveTab || SettingsModalActiveTab.ModelConfig,
-  );
-
   const { userProfile } = useUserStoreShallow((state) => ({
     userProfile: state.userProfile,
   }));
   const providerMode = userProfile?.preferences?.providerMode;
 
-  // Guard against invalid active tab when providers are hidden
+  const getDefaultTab = useCallback(() => {
+    return providerMode === 'custom'
+      ? SettingsModalActiveTab.ModelConfig
+      : SettingsModalActiveTab.Account;
+  }, [providerMode]);
+
+  const [localActiveTab, setLocalActiveTab] = useState<SettingsModalActiveTab>(() => {
+    const defaultTab =
+      providerMode === 'custom'
+        ? SettingsModalActiveTab.ModelConfig
+        : SettingsModalActiveTab.Account;
+    return settingsModalActiveTab ?? defaultTab;
+  });
+
+  // Guard against invalid active tab when model config tabs are hidden
   useEffect(() => {
-    if (localActiveTab === SettingsModalActiveTab.ModelProviders && providerMode !== 'custom') {
-      const fallback = SettingsModalActiveTab.ModelConfig;
+    if (
+      (localActiveTab === SettingsModalActiveTab.ModelConfig ||
+        localActiveTab === SettingsModalActiveTab.ModelProviders) &&
+      providerMode !== 'custom'
+    ) {
+      const fallback = SettingsModalActiveTab.Account;
       setLocalActiveTab(fallback);
       setSettingsModalActiveTab(fallback);
     }
@@ -116,12 +128,9 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
   // Update local active tab when prop changes or when modal becomes visible
   useEffect(() => {
     if (!visible) return;
-    const fallback =
-      providerMode === 'custom'
-        ? SettingsModalActiveTab.ModelProviders
-        : SettingsModalActiveTab.ModelConfig;
-    setLocalActiveTab(settingsModalActiveTab || fallback);
-  }, [visible, settingsModalActiveTab, providerMode]);
+    const fallback = getDefaultTab();
+    setLocalActiveTab(settingsModalActiveTab ?? fallback);
+  }, [visible, settingsModalActiveTab, getDefaultTab]);
 
   // Handle tab change
   const handleTabChange = useCallback(
@@ -134,33 +143,28 @@ const Settings: React.FC<SettingModalProps> = ({ visible, setVisible }) => {
 
   const tabs = useMemo(
     () => [
-      // {
-      //   key: 'modelConfig',
-      //   label: t('settings.tabs.modelConfig'),
-      //   icon: <AIModel size={18} color="var(--refly-text-0)" />,
-      //   children: <ModelConfig visible={localActiveTab === SettingsModalActiveTab.ModelConfig} />,
-      // },
-      // ...(providerMode === 'custom'
-      //   ? [
-      //       {
-      //         key: 'modelProviders',
-      //         label: t('settings.tabs.providers'),
-      //         icon: <Provider size={18} color="var(--refly-text-0)" />,
-      //         children: (
-      //           <ModelProviders
-      //             visible={localActiveTab === SettingsModalActiveTab.ModelProviders}
-      //           />
-      //         ),
-      //       },
-      //     ]
-      //   : []),
-      // {
-      //   key: 'parserConfig',
-      //   label: t('settings.tabs.parserConfig'),
-      //   icon: <Parse size={18} color="var(--refly-text-0)" />,
-      //   children: <ParserConfig visible={localActiveTab === SettingsModalActiveTab.ParserConfig} />,
-      // },
-
+      ...(providerMode === 'custom'
+        ? [
+            {
+              key: 'modelConfig',
+              label: t('settings.tabs.modelConfig'),
+              icon: <AIModel size={18} color="var(--refly-text-0)" />,
+              children: (
+                <ModelConfig visible={localActiveTab === SettingsModalActiveTab.ModelConfig} />
+              ),
+            },
+            {
+              key: 'modelProviders',
+              label: t('settings.tabs.providers'),
+              icon: <Provider size={18} color="var(--refly-text-0)" />,
+              children: (
+                <ModelProviders
+                  visible={localActiveTab === SettingsModalActiveTab.ModelProviders}
+                />
+              ),
+            },
+          ]
+        : []),
       {
         key: 'account',
         label: t('settings.tabs.account'),

@@ -2,7 +2,6 @@ import { Injectable, Logger, Inject, forwardRef, OnModuleInit, Optional } from '
 import { User, WorkflowVariable } from '@refly/openapi-schema';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
-import { TemplateScoringService, CanvasDataForScoring } from './template-scoring.service';
 import { CreditService } from '../credit/credit.service';
 import { NotificationService } from '../notification/notification.service';
 import { genVoucherID, genVoucherInvitationID, genInviteCode, getYYYYMMDD } from '@refly/utils';
@@ -46,7 +45,6 @@ export class VoucherService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-    private readonly templateScoringService: TemplateScoringService,
     private readonly configService: ConfigService,
     private readonly notificationService: NotificationService,
     @Inject(forwardRef(() => CreditService))
@@ -176,11 +174,11 @@ export class VoucherService implements OnModuleInit {
    */
   async handleCreateVoucherFromSource(
     user: User,
-    canvasData: CanvasDataForScoring,
-    variables: WorkflowVariable[],
+    _canvasData: any,
+    _variables: WorkflowVariable[],
     source: VoucherSourceType,
     sourceId?: string,
-    description?: string,
+    _description?: string,
   ): Promise<VoucherTriggerResult | null> {
     const lockKey = `voucher-create-lock:${user.uid}:${source}`;
     const releaseLock = await this.redis.waitLock(lockKey, { ttlSeconds: 10 });
@@ -214,33 +212,46 @@ export class VoucherService implements OnModuleInit {
         return null;
       }
 
-      // 2. Score the template using pre-fetched canvas data
-      const scoringResult = await this.templateScoringService.scoreTemplateWithCanvasData(
-        user,
-        canvasData,
-        variables,
-        description,
-      );
-
-      // 3. Calculate discount percentage from score
-      const discountPercent = this.templateScoringService.scoreToDiscountPercent(
-        scoringResult.score,
-      );
+      // 2. Calculate discount percentage from config
+      const discountPercent = this.configService.get('voucher.defaultDiscountPercent') ?? 80;
+      const llmScore = 100; // Default score when not using LLM scoring
 
       const VOUCHER_EXPIRATION_MINUTES = this.configService.get('voucher.expirationMinutes');
 
-      // 4. Generate voucher
+      // 3. Generate voucher
       const expiresAt = new Date();
       expiresAt.setMinutes(expiresAt.getMinutes() + VOUCHER_EXPIRATION_MINUTES);
 
       let voucher: VoucherDTO;
 
-      if (source === VoucherSource.RUN_WORKFLOW) {
+      // Check if there is an existing unused and unexpired voucher to reuse
+      const unusedVoucher = await this.prisma.voucher.findFirst({
+        where: {
+          uid: user.uid,
+          status: VoucherStatus.UNUSED,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
+      });
+
+      if (unusedVoucher) {
+        // Update existing unused voucher with latest values
+        voucher = await this.updateVoucher(unusedVoucher.voucherId, {
+          discountPercent,
+          llmScore,
+          sourceId,
+          status: VoucherStatus.UNUSED,
+        });
+        this.logger.log(
+          `Reusing existing unused voucher for user ${user.uid}: ${voucher.voucherId} (source: ${source})`,
+        );
+      } else if (source === VoucherSource.RUN_WORKFLOW) {
         // Ensure only one voucher per day for run_workflow source
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
-        const existingVoucher = await this.prisma.voucher.findFirst({
+        const existingVoucherToday = await this.prisma.voucher.findFirst({
           where: {
             uid: user.uid,
             source: VoucherSource.RUN_WORKFLOW,
@@ -250,22 +261,22 @@ export class VoucherService implements OnModuleInit {
           },
         });
 
-        if (existingVoucher) {
-          if (existingVoucher.status !== VoucherStatus.USED) {
-            // Update existing voucher with latest values
-            voucher = await this.updateVoucher(existingVoucher.voucherId, {
+        if (existingVoucherToday) {
+          if (existingVoucherToday.status !== VoucherStatus.USED) {
+            // This case is actually covered by the unusedVoucher check above,
+            // but we keep it for clarity and in case unusedVoucher check was slightly different
+            voucher = await this.updateVoucher(existingVoucherToday.voucherId, {
               discountPercent,
-              llmScore: scoringResult.score,
-              expiresAt,
+              llmScore,
               sourceId,
-              status: VoucherStatus.UNUSED, // Reset to unused if it was expired/invalid
+              status: VoucherStatus.UNUSED,
             });
             this.logger.log(
               `Updated existing workflow voucher for user ${user.uid}: ${voucher.voucherId}`,
             );
           } else {
             // Already used today, just return it
-            voucher = this.toVoucherDTO(existingVoucher);
+            voucher = this.toVoucherDTO(existingVoucherToday);
             this.logger.log(
               `Workflow voucher for user ${user.uid} already used today: ${voucher.voucherId}`,
             );
@@ -275,48 +286,48 @@ export class VoucherService implements OnModuleInit {
           voucher = await this.createVoucher({
             uid: user.uid,
             discountPercent,
-            llmScore: scoringResult.score,
+            llmScore,
             source,
             sourceId: sourceId,
             expiresAt,
           });
         }
       } else {
-        // For other sources, always create new voucher
+        // For other sources, always create new voucher if no unused one exists
         voucher = await this.createVoucher({
           uid: user.uid,
           discountPercent,
-          llmScore: scoringResult.score,
+          llmScore,
           source,
           sourceId: sourceId,
           expiresAt,
         });
       }
 
-      // 5. Record popup trigger
+      // 4. Record popup trigger
       await this.recordPopupTrigger(user.uid, sourceId, voucher.voucherId);
 
-      // 6. Track analytics event
+      // 5. Track analytics event
       this.trackEvent(AnalyticsEvents.VOUCHER_POPUP_DISPLAY, {
         uid: user.uid,
         voucherId: voucher.voucherId,
         discountPercent,
-        llmScore: scoringResult.score,
+        llmScore,
       });
 
       this.logger.log(
         `Voucher generated for user ${user.uid}: ${voucher.voucherId} (${discountPercent}% off)`,
       );
 
-      // 7. Send email notification (async, don't wait)
-      this.sendVoucherEmail(user.uid, voucher.voucherId, discountPercent).catch((err) => {
+      // 6. Send email notification (async, don't wait)
+      this.sendVoucherEmail(user.uid, discountPercent).catch((err) => {
         this.logger.error(`Failed to send voucher email for user ${user.uid}: ${err.stack}`);
       });
 
       return {
         voucher,
-        score: scoringResult.score,
-        feedback: scoringResult.feedback,
+        score: llmScore,
+        feedback: 'Thank you for using Refly!',
       };
     } catch (error) {
       this.logger.error(`Failed to handle voucher creation for user ${user.uid}: ${error.stack}`);
@@ -329,11 +340,7 @@ export class VoucherService implements OnModuleInit {
   /**
    * Send voucher notification email to user
    */
-  private async sendVoucherEmail(
-    uid: string,
-    voucherId: string,
-    discountPercent: number,
-  ): Promise<void> {
+  private async sendVoucherEmail(uid: string, discountPercent: number): Promise<void> {
     // Get user info including locale
     const userPo = await this.prisma.user.findUnique({
       where: { uid },
@@ -344,11 +351,6 @@ export class VoucherService implements OnModuleInit {
       this.logger.warn(`Cannot send voucher email: user ${uid} has no email`);
       return;
     }
-
-    // Create invitation for the share link
-    const invitation = await this.createInvitation(uid, voucherId);
-    const origin = this.configService.get('origin') || 'https://refly.ai';
-    const inviteLink = `${origin}/invite?invite=${invitation.invitation.inviteCode}`;
 
     // Calculate discount values
     const { discountValue, discountedPrice } = calculateDiscountValues(discountPercent);
@@ -364,7 +366,6 @@ export class VoucherService implements OnModuleInit {
         discountPercent,
         discountValue,
         discountedPrice,
-        inviteLink,
         expirationDays,
       },
       userPo.uiLocale || undefined,

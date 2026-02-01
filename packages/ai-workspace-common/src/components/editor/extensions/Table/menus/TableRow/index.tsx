@@ -73,5 +73,3 @@ export const TableRowMenu = React.memo(({ editor, appendTo }: MenuProps): JSX.El
 });
 
 TableRowMenu.displayName = 'TableRowMenu';
-
-export default TableRowMenu;

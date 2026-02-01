@@ -202,6 +202,77 @@ describe('generateCanvasDataFromWorkflowPlan', () => {
     expect(taskNode.data?.metadata?.selectedToolsets).toEqual([]);
   });
 
+  it('should replace agent task-id mentions with entityId', () => {
+    const task1 = createTask('task-1', 'First', 'Hello');
+    const task2 = createTask('task-2', 'Second', 'Use @{type=agent,id=task-1,name=First}', {
+      dependentTasks: ['task-1'],
+    });
+
+    const workflowPlan = createWorkflowPlan([task1, task2]);
+    const result = generateCanvasDataFromWorkflowPlan(workflowPlan, []);
+
+    const firstNode = result.nodes.find((n) => n.data?.title === 'First');
+    const secondNode = result.nodes.find((n) => n.data?.title === 'Second');
+    const firstEntityId = firstNode?.data?.entityId as string;
+    const secondQuery = (secondNode?.data?.metadata as any)?.query ?? '';
+
+    expect(firstEntityId).toBeTruthy();
+    expect(secondQuery).toContain(`@{type=agent,id=${firstEntityId},name=First}`);
+  });
+
+  it('should replace agent mentions even when referencing later tasks', () => {
+    // This tests the fix for the bug where agent mentions were not replaced
+    // if a task referenced another task that was defined later in the array
+    const task1 = createTask(
+      'task-1',
+      'First',
+      'Reference later task: @{type=agent,id=task-2,name=Second}',
+    );
+    const task2 = createTask('task-2', 'Second', 'Hello');
+
+    const workflowPlan = createWorkflowPlan([task1, task2]);
+    const result = generateCanvasDataFromWorkflowPlan(workflowPlan, []);
+
+    const firstNode = result.nodes.find((n) => n.data?.title === 'First');
+    const secondNode = result.nodes.find((n) => n.data?.title === 'Second');
+    const secondEntityId = secondNode?.data?.entityId as string;
+    const firstQuery = (firstNode?.data?.metadata as any)?.query ?? '';
+
+    expect(secondEntityId).toBeTruthy();
+    expect(firstQuery).toContain(`@{type=agent,id=${secondEntityId},name=Second}`);
+    expect(firstQuery).not.toContain('task-2'); // Should not contain temporary ID
+  });
+
+  it('should replace multiple agent mentions in a single prompt', () => {
+    const task1 = createTask('task-1', 'First', 'Hello');
+    const task2 = createTask('task-2', 'Second', 'World');
+    const task3 = createTask(
+      'task-3',
+      'Third',
+      'Combine @{type=agent,id=task-1,name=First} and @{type=agent,id=task-2,name=Second}',
+      {
+        dependentTasks: ['task-1', 'task-2'],
+      },
+    );
+
+    const workflowPlan = createWorkflowPlan([task1, task2, task3]);
+    const result = generateCanvasDataFromWorkflowPlan(workflowPlan, []);
+
+    const firstNode = result.nodes.find((n) => n.data?.title === 'First');
+    const secondNode = result.nodes.find((n) => n.data?.title === 'Second');
+    const thirdNode = result.nodes.find((n) => n.data?.title === 'Third');
+    const firstEntityId = firstNode?.data?.entityId as string;
+    const secondEntityId = secondNode?.data?.entityId as string;
+    const thirdQuery = (thirdNode?.data?.metadata as any)?.query ?? '';
+
+    expect(firstEntityId).toBeTruthy();
+    expect(secondEntityId).toBeTruthy();
+    expect(thirdQuery).toContain(`@{type=agent,id=${firstEntityId},name=First}`);
+    expect(thirdQuery).toContain(`@{type=agent,id=${secondEntityId},name=Second}`);
+    expect(thirdQuery).not.toContain('task-1'); // Should not contain temporary IDs
+    expect(thirdQuery).not.toContain('task-2');
+  });
+
   it('should create complex workflow with multiple interconnected tasks', () => {
     // Task 1
     const task1 = createTask('research', 'Research Task', 'Research prompt');

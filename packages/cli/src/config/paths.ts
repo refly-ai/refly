@@ -7,6 +7,19 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 
 /**
+ * Get CLI version from package.json
+ */
+export function getCliVersion(): string {
+  try {
+    const pkgPath = path.join(__dirname, '..', '..', 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    return pkg.version || '0.1.0';
+  } catch {
+    return '0.1.0';
+  }
+}
+
+/**
  * Get the Refly configuration directory (~/.refly)
  */
 export function getReflyDir(): string {
@@ -16,12 +29,11 @@ export function getReflyDir(): string {
 }
 
 /**
- * Get the builder data directory (~/.refly/builder)
+ * Get the legacy builder data directory (~/.refly/builder)
+ * @deprecated Builder functionality has been removed. This is only used for cleanup.
  */
-export function getBuilderDir(): string {
-  const dir = path.join(getReflyDir(), 'builder');
-  ensureDir(dir);
-  return dir;
+export function getLegacyBuilderDir(): string {
+  return path.join(getReflyDir(), 'builder');
 }
 
 /**
@@ -77,15 +89,82 @@ export function getConfigPath(): string {
 }
 
 /**
- * Get the current builder session path
+ * Get the skills directory (~/.refly/skills)
+ * @deprecated Use getReflySkillDir() instead
  */
-export function getCurrentSessionPath(): string {
-  return path.join(getBuilderDir(), 'current');
+export function getSkillsDir(): string {
+  return path.join(getReflyDir(), 'skills');
 }
 
 /**
- * Get a session file path by ID
+ * Ensure the skills directory exists
+ * @deprecated Use ensureReflySkillDir() instead
  */
-export function getSessionPath(sessionId: string): string {
-  return path.join(getBuilderDir(), `session-${sessionId}.json`);
+export async function ensureSkillsDir(): Promise<void> {
+  const dir = getSkillsDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  }
+}
+
+// ============================================================================
+// New Symlink-based Skill Architecture
+// ============================================================================
+
+/**
+ * Get the Refly skills storage directory (~/.refly/skills)
+ * This is where actual skill files are stored.
+ */
+export function getReflySkillsDir(): string {
+  return path.join(getReflyDir(), 'skills');
+}
+
+/**
+ * Get the base skill directory (~/.refly/skills/base)
+ * Contains the main SKILL.md and rules for CLI routing.
+ */
+export function getReflyBaseSkillDir(): string {
+  return path.join(getReflySkillsDir(), 'base');
+}
+
+/**
+ * Get a domain skill directory (~/.refly/skills/<name>)
+ */
+export function getReflyDomainSkillDir(skillName: string): string {
+  return path.join(getReflySkillsDir(), skillName);
+}
+
+/**
+ * Get the Claude skills directory (~/.claude/skills)
+ * Symlinks are created here pointing to ~/.refly/skill/<name>
+ */
+export function getClaudeSkillsDir(): string {
+  return path.join(os.homedir(), '.claude', 'skills');
+}
+
+/**
+ * Get a Claude skill symlink path (~/.claude/skills/<name>)
+ */
+export function getClaudeSkillSymlinkPath(skillName: string): string {
+  return path.join(getClaudeSkillsDir(), skillName);
+}
+
+/**
+ * Ensure the Refly skills directory exists
+ */
+export function ensureReflySkillsDir(): void {
+  const dir = getReflySkillsDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  }
+}
+
+/**
+ * Ensure the Claude skills directory exists
+ */
+export function ensureClaudeSkillsDir(): void {
+  const dir = getClaudeSkillsDir();
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
+  }
 }

@@ -8,7 +8,6 @@
   "types": "src/index.ts",
   "dependencies": {
     "@refly/common-types": "workspace:*",
-    "@refly/utils": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
     "@refly/canvas-common": "workspace:*",
     "zustand": "~4.5.1",

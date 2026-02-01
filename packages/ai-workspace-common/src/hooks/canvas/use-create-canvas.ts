@@ -4,7 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { logEvent } from '@refly/telemetry-web';
 import { useHandleSiderData } from '@refly-packages/ai-workspace-common/hooks/use-handle-sider-data';
-import { useCanvasResourcesPanelStoreShallow, useCopilotStoreShallow } from '@refly/stores';
+import {
+  useCanvasResourcesPanelStoreShallow,
+  useCopilotStoreShallow,
+  useSiderStoreShallow,
+} from '@refly/stores';
 
 interface CreateCanvasOptions {
   isPilotActivated?: boolean;
@@ -28,6 +32,9 @@ export const useCreateCanvas = ({
   );
   const { setPendingPrompt } = useCopilotStoreShallow((state) => ({
     setPendingPrompt: state.setPendingPrompt,
+  }));
+  const { setIsManualCollapse } = useSiderStoreShallow((state) => ({
+    setIsManualCollapse: state.setIsManualCollapse,
   }));
 
   const createCanvas = async (canvasTitle: string) => {
@@ -102,6 +109,7 @@ export const useCreateCanvas = ({
         logEvent('canvas::create_canvas_from_home', Date.now(), {});
       }
 
+      setIsManualCollapse(false);
       // Add canvasId to query params if in project view
       if (projectId) {
         queryParams.append('canvasId', canvasId);

@@ -48,7 +48,7 @@ export const UserInputItem = memo(
           <div className="text-refly-func-warning-hover truncate max-w-[100px] truncate">
             {name}
           </div>
-          <div className="max-w-[100px] truncate ml-1">{displayValue}</div>
+          <div className="text-refly-text-1 max-w-[100px] truncate ml-1">{displayValue}</div>
 
           {onClose && !readonly && (
             <Button

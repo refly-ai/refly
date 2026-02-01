@@ -69,6 +69,13 @@ export interface ProcessQueryResult {
 
 type MentionFormatMode = 'display' | 'llm_input';
 
+type VariableJsonValue = string | string[] | null;
+
+interface ReferencedVariableJsonItem {
+  name: string;
+  value: VariableJsonValue;
+}
+
 /**
  * Format mention based on type and mode
  */
@@ -86,10 +93,40 @@ function formatMention(data: MentionCommonData, mode: MentionFormatMode): string
       return toolsetKey ? `@toolset:${toolsetKey}` : `@toolset:${name}`;
     } else if (type === 'tool') {
       return toolsetKey ? `@tool:${toolsetKey}_${name}` : `@tool:${name}`;
+    } else if (type === 'agent') {
+      return `@agent:${data.id || name}`;
     } else {
       return `@${type}:${name}`;
     }
   }
+}
+
+function buildReferencedVariablesJson(
+  referencedVariables: WorkflowVariable[],
+): ReferencedVariableJsonItem[] {
+  const items: ReferencedVariableJsonItem[] = [];
+  const seen = new Set<string>();
+
+  for (const variable of referencedVariables) {
+    if (variable.variableType === 'resource') continue;
+    if (seen.has(variable.variableId)) continue;
+    seen.add(variable.variableId);
+
+    const textValues =
+      variable.value
+        ?.filter((value) => value.type === 'text')
+        .map((value) => value.text)
+        .filter((value): value is string => value !== undefined && value !== null) ?? [];
+
+    let value: VariableJsonValue = null;
+    if (textValues.length > 0) {
+      value = variable.isSingle || textValues.length === 1 ? textValues[0] : textValues;
+    }
+
+    items.push({ name: variable.name, value });
+  }
+
+  return items;
 }
 
 /**
@@ -150,7 +187,9 @@ function processMention(
         if (variable.variableType === 'resource') {
           // Check if the resource variable has a value
           const hasValue =
-            variable.value && variable.value.length > 0 && variable.value[0]?.resource;
+            variable.value &&
+            variable.value.length > 0 &&
+            variable.value.some((v) => v.type === 'resource' && v.resource);
 
           if (!hasValue) {
             // Resource variable has no value - check if it's optional
@@ -194,6 +233,10 @@ function processMention(
               ?.filter((v) => v.type === 'text' && v.text)
               .map((v) => v.text)
               .filter(Boolean) ?? [];
+
+          if (mode === 'llm_input') {
+            return { replacement: formatMention({ type, name, id }, mode), updatedQuery };
+          }
 
           const stringValue = textValues.length > 0 ? textValues.join(', ') : '';
           return { replacement: stringValue, updatedQuery };
@@ -251,12 +294,18 @@ function processMention(
         }
 
         // Update the updatedQuery with the correct resource name
-        const variableResourceName = matchingVariable.value[0]?.resource?.name ?? '';
+        const firstResource = matchingVariable.value.find(
+          (v) => v.type === 'resource' && v.resource?.entityId === id,
+        );
+        const variableResourceName = firstResource?.resource?.name ?? '';
         const updatedMention = `@{type=resource,id=${id},name=${variableResourceName}}`;
         updatedQuery = updatedQuery.replace(match, updatedMention);
       }
 
-      const variableResourceName = matchingVariable.value[0]?.resource?.name ?? '';
+      const firstResource = matchingVariable.value.find(
+        (v) => v.type === 'resource' && v.resource?.entityId === id,
+      );
+      const variableResourceName = firstResource?.resource?.name ?? '';
       return {
         replacement: formatMention({ type: 'file', name: variableResourceName, id }, mode),
         updatedQuery,
@@ -361,9 +410,15 @@ export function processQueryWithMentions(
     return result.replacement;
   });
 
+  const referencedVariablesJson = buildReferencedVariablesJson(referencedVariables);
+  const llmInputQueryWithVariables =
+    referencedVariablesJson.length > 0
+      ? `Variables:\n${JSON.stringify(referencedVariablesJson, null, 2)}\n\n${llmInputQuery}`
+      : llmInputQuery;
+
   return {
     processedQuery,
-    llmInputQuery,
+    llmInputQuery: llmInputQueryWithVariables,
     updatedQuery,
     referencedVariables,
     resourceVars,
@@ -447,14 +502,20 @@ export const replaceResourceMentionsInQuery = (
     );
 
     // If a matching variable is found, update both entityId and name
-    if (matchingVariable?.value?.[0]?.resource) {
-      const resource = matchingVariable.value[0].resource;
-      // Use entityIdMap to get new entityId, fallback to resource's entityId
-      const newEntityId = entityIdMap[id] ?? resource.entityId;
-      // Use the resource's current name from the variable
-      const newName = resource.name;
+    if (matchingVariable) {
+      const matchingResource = matchingVariable.value?.find(
+        (v) => v.type === 'resource' && v.resource?.entityId === id,
+      );
 
-      return `@{type=resource,id=${newEntityId},name=${newName}}`;
+      if (matchingResource?.resource) {
+        const resource = matchingResource.resource;
+        // Use entityIdMap to get new entityId, fallback to resource's entityId
+        const newEntityId = entityIdMap[id] ?? resource.entityId;
+        // Use the resource's current name from the variable
+        const newName = resource.name;
+
+        return `@{type=resource,id=${newEntityId},name=${newName}}`;
+      }
     }
 
     // If no matching variable found, try to update only the entityId using entityIdMap

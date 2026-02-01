@@ -1,21 +1,9 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { SourceObject, SiderData } from '../types/common';
+import { SettingsModalActiveTab, SourceObject, SiderData } from '../types/common';
 
-export enum SettingsModalActiveTab {
-  Language = 'language',
-  Subscription = 'subscription',
-  Account = 'account',
-  ModelProviders = 'modelProviders',
-  ModelConfig = 'modelConfig',
-  ParserConfig = 'parserConfig',
-  DefaultModel = 'defaultModel',
-  ToolsConfig = 'toolsConfig',
-  Appearance = 'appearance',
-}
-
-export type SiderCollapseState = 'expanded' | 'collapsed' | 'hidden';
+type SiderCollapseState = 'expanded' | 'collapsed' | 'hidden';
 
 interface SiderState {
   // state

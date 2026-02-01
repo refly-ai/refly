@@ -21,6 +21,7 @@ import getClient from '@refly-packages/ai-workspace-common/requests/proxiedReque
 import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canvas/use-invoke-action';
 import { useCanvasStoreShallow } from '@refly/stores';
 import { Spin } from '@refly-packages/ai-workspace-common/components/common/spin';
+import { BsMagic } from 'react-icons/bs';
 
 interface CopilotMessageProps {
   result: ActionResult;
@@ -83,7 +84,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
 
-  const { data: tools } = useListTools({ query: { enabled: true } }, undefined, {
+  const { data: tools } = useListTools({ query: { includeUnauthorized: true } }, undefined, {
     enabled: !!canvasId,
   });
 
@@ -107,18 +108,19 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     // Check current canvas nodes
     const currentNodes = getNodes() as CanvasNode[];
     const startNodes = currentNodes.filter((node) => node.type === 'start');
-    const skillNodes = currentNodes.filter((node) => node.type === 'skillResponse');
+    const agentNodes = currentNodes.filter((node) => node.type === 'skillResponse');
 
     const isOnboarding = Boolean(userProfile?.preferences?.needOnboarding);
 
-    // Check if canvas only contains one start node or one start node + one skill node with empty contentPreview
+    // Check if canvas only contains one start node or one start node + one agent node with empty contentPreview
     const shouldSkipConfirmation =
       isOnboarding ||
       (currentNodes.length === 1 && startNodes.length === 1) ||
       (currentNodes.length === 2 &&
         startNodes.length === 1 &&
-        skillNodes.length === 1 &&
-        !skillNodes[0]?.data?.metadata?.query);
+        agentNodes.length === 1 &&
+        agentNodes[0]?.data?.metadata?.status === 'init' &&
+        (!agentNodes[0]?.data?.metadata?.query || agentNodes[0]?.data?.metadata?.untouched));
 
     if (!shouldSkipConfirmation) {
       // Show confirmation modal
@@ -196,22 +198,21 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       updateUserSettings({
         body: {
           preferences: {
-            ...userProfile?.preferences,
             needOnboarding: false,
           },
         },
       });
     }
 
-    setTimeout(() => {
-      onLayout('LR');
-    }, 1000);
-
-    if (source === 'onboarding') {
+    if (['onboarding', 'frontPage'].includes(source ?? '')) {
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('source');
       setSearchParams(newParams);
     }
+
+    setTimeout(() => {
+      onLayout('LR');
+    }, 1000);
   }, [
     canvasId,
     workflowPlan,
@@ -263,7 +264,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     <div className="flex flex-col gap-2">
       {/* User query - right aligned blue bubble */}
       <div className="flex justify-end pl-5">
-        <div className="rounded-xl bg-[#F2FDFF] dark:bg-[#327576] text-refly-text-0 px-4 py-3 text-[15px] break-all">
+        <div className="rounded-xl bg-refly-node-fill-1 text-refly-text-0 px-4 py-3 text-[15px] break-all">
           {input?.query}
         </div>
       </div>
@@ -275,6 +276,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
             type="primary"
             className="!bg-refly-text-0 hover:!bg-refly-text-0 hover:opacity-80 text-refly-bg-canvas hover:!text-refly-bg-canvas font-bold"
             onClick={handleApprove}
+            icon={<BsMagic size={16} className="flex-shrink-0 text-refly-bg-canvas" />}
             loading={
               loading
                 ? { icon: <Spin size="small" className="!text-refly-bg-canvas" /> }

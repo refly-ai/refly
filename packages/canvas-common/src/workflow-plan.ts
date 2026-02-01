@@ -12,6 +12,15 @@ import { genNodeEntityId, genUniqueId } from '@refly/utils';
 import { CanvasNodeFilter } from './types';
 import { prepareAddNode } from './utils';
 
+const replaceTaskAgentMentions = (prompt: string, taskEntityIdMap: Map<string, string>): string => {
+  if (!prompt || taskEntityIdMap.size === 0) return prompt;
+  return prompt.replace(/@\{type=agent,id=([^,}]+),name=([^}]+)\}/g, (match, taskId, name) => {
+    const mappedId = taskEntityIdMap.get(taskId);
+    if (!mappedId) return match;
+    return `@{type=agent,id=${mappedId},name=${name}}`;
+  });
+};
+
 // Task schema for workflow plan
 export const workflowTaskSchema = z.object({
   id: z.string().describe('Unique ID for the task'),
@@ -444,6 +453,14 @@ export const generateCanvasDataFromWorkflowPlan = (
   const rowStepY = 240;
 
   if (Array.isArray(workflowPlan.tasks) && workflowPlan.tasks.length > 0) {
+    // Phase 0: Pre-generate entity IDs for all tasks to enable complete ID replacement
+    // This ensures that when we replace agent mentions in prompts, we have all task-to-entity mappings available
+    for (const task of workflowPlan.tasks) {
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
+      const taskEntityId = genNodeEntityId('skillResponse');
+      taskIdToEntityId.set(taskId, taskEntityId);
+    }
+
     // Phase 1: Process tasks in dependency order
     // First, identify tasks with no dependencies (roots)
     const taskMap = new Map<string, (typeof workflowPlan.tasks)[0]>();
@@ -514,8 +531,12 @@ export const generateCanvasDataFromWorkflowPlan = (
         }
       }
 
-      // Create the node data for prepareAddNode
-      const taskEntityId = genNodeEntityId('skillResponse');
+      // Get the pre-generated entity ID for this task
+      const taskEntityId = taskIdToEntityId.get(taskId)!;
+
+      // Replace agent mentions in prompt with real entity IDs
+      // Now taskIdToEntityId contains all tasks, so all references will be replaced correctly
+      const normalizedPrompt = replaceTaskAgentMentions(taskPrompt, taskIdToEntityId);
 
       // Calculate default position for non-auto-layout mode
       const defaultPosition = autoLayout
@@ -536,7 +557,7 @@ export const generateCanvasDataFromWorkflowPlan = (
           entityId: taskEntityId,
           contentPreview: '',
           metadata: {
-            query: taskPrompt,
+            query: normalizedPrompt,
             selectedToolsets,
             contextItems: [],
             status: 'init',
@@ -556,7 +577,6 @@ export const generateCanvasDataFromWorkflowPlan = (
 
       nodes.push(newNode);
       taskIdToNodeId.set(taskId, newNode.id);
-      taskIdToEntityId.set(taskId, taskEntityId);
     }
 
     // Phase 2: Create dependency edges

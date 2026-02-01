@@ -21,6 +21,10 @@ interface UserInputCollapseProps {
   showToolsDependency?: boolean;
   workflowApp?: { canvasData?: RawCanvasData };
   ToolsDependencyChecker?: React.ComponentType<{ canvasData?: RawCanvasData }>;
+  /**
+   * Whether the input fields are readonly.
+   */
+  readonly?: boolean;
 }
 
 export const UserInputCollapse = React.memo(function UserInputCollapse({
@@ -30,6 +34,7 @@ export const UserInputCollapse = React.memo(function UserInputCollapse({
   showToolsDependency = false,
   workflowApp,
   ToolsDependencyChecker,
+  readonly = false,
 }: UserInputCollapseProps): JSX.Element {
   const { t } = useTranslation();
 
@@ -91,7 +96,7 @@ export const UserInputCollapse = React.memo(function UserInputCollapse({
                     lineHeight: '1.5em',
                   }}
                 >
-                  {t('canvas.workflow.run.inputPanelTitle', 'User Input')}
+                  {t('canvas.workflow.run.inputPanelTitle')}
                 </span>
               </div>
             ),
@@ -104,7 +109,7 @@ export const UserInputCollapse = React.memo(function UserInputCollapse({
                       type="string"
                       variables={groupedVariables.string}
                       totalVariables={workflowVariables}
-                      readonly={true}
+                      readonly={readonly}
                       highlightedVariableId={undefined}
                     />
                   )}
@@ -115,7 +120,7 @@ export const UserInputCollapse = React.memo(function UserInputCollapse({
                       type="resource"
                       variables={groupedVariables.resource}
                       totalVariables={workflowVariables}
-                      readonly={true}
+                      readonly={readonly}
                       highlightedVariableId={undefined}
                     />
                   )}
@@ -126,7 +131,7 @@ export const UserInputCollapse = React.memo(function UserInputCollapse({
                       type="option"
                       variables={groupedVariables.option}
                       totalVariables={workflowVariables}
-                      readonly={true}
+                      readonly={readonly}
                       highlightedVariableId={undefined}
                     />
                   )}

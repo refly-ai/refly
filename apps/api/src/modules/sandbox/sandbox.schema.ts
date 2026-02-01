@@ -23,22 +23,35 @@ export const S3ConfigSchema = z.object({
 
 export type S3Config = z.infer<typeof S3ConfigSchema>;
 
+export const S3LibConfigSchema = z.object({
+  accessKey: z.string().optional(),
+  secretKey: z.string().optional(),
+  bucket: z.string(),
+  region: z.string(),
+  path: z.string(),
+  hash: z.string(),
+  cache: z.boolean().optional(),
+  reset: z.boolean().optional(),
+});
+
+export type S3LibConfig = z.infer<typeof S3LibConfigSchema>;
+
 /**
  * Resource limits for code execution
  */
-export const ExecutorLimitsSchema = z.object({
+const ExecutorLimitsSchema = z.object({
   maxFileSize: z.number().int().positive().optional(),
   maxTotalWrite: z.number().int().positive().optional(),
   maxFiles: z.number().int().positive().optional(),
   maxProcesses: z.number().int().positive().optional(),
 });
 
-export type ExecutorLimits = z.infer<typeof ExecutorLimitsSchema>;
-
-export const ExecuteConfigSchema = z
+const ExecuteConfigSchema = z
   .object({
     s3: S3ConfigSchema,
     s3DrivePath: z.string(),
+    s3LibConfig: S3LibConfigSchema.optional(),
+    env: z.record(z.string()).optional(),
     timeout: z.number().int().positive(),
     limits: ExecutorLimitsSchema.optional(),
     codeSizeThreshold: z.number().int().positive().optional(),
@@ -47,20 +60,14 @@ export const ExecuteConfigSchema = z
   })
   .passthrough();
 
-export type ExecuteConfig = z.infer<typeof ExecuteConfigSchema>;
-
-export const ExecuteMetadataSchema = z
+const ExecuteMetadataSchema = z
   .object({
     uid: z.string(),
     canvasId: z.string(),
   })
   .passthrough();
 
-export type ExecuteMetadata = z.infer<typeof ExecuteMetadataSchema>;
-
-export const LanguageSchema = z.enum(['python', 'javascript', 'shell']);
-
-export type Language = z.infer<typeof LanguageSchema>;
+const LanguageSchema = z.enum(['python', 'javascript', 'shell']);
 
 /**
  * Worker execution request - sent to sandbox-execute-request queue
@@ -77,24 +84,14 @@ export const WorkerExecuteRequestSchema = z.object({
 
 export type WorkerExecuteRequest = z.infer<typeof WorkerExecuteRequestSchema>;
 
-export const WorkerFileSchema = z.object({
+const WorkerFileSchema = z.object({
   name: z.string(),
   storageKey: z.string(),
   size: z.number().int().nonnegative().optional(),
   mimeType: z.string().optional(),
 });
 
-export type WorkerFile = z.infer<typeof WorkerFileSchema>;
-
-/** Uses ErrorDetail from @refly/openapi-schema for type safety */
-export const WorkerErrorSchema = z.object({
-  code: z.string(),
-  message: z.string(),
-});
-
-export type WorkerError = ErrorDetail;
-
-export const WorkerExecuteResponseDataSchema = z.object({
+const WorkerExecuteResponseDataSchema = z.object({
   output: z.string().optional(),
   error: z.string().optional(),
   exitCode: z.number().int().optional(),
@@ -104,14 +101,6 @@ export const WorkerExecuteResponseDataSchema = z.object({
 });
 
 export type WorkerExecuteResponseData = z.infer<typeof WorkerExecuteResponseDataSchema>;
-
-/** Sent to sandbox:execute:response:{requestId} channel */
-export const WorkerExecuteResponseSchema = z.object({
-  requestId: z.string().uuid(),
-  status: z.enum(['success', 'failed']),
-  data: WorkerExecuteResponseDataSchema.optional(),
-  errors: z.array(WorkerErrorSchema).optional(),
-});
 
 /** Manually defined to ensure ErrorDetail compatibility */
 export type WorkerExecuteResponse = {
@@ -126,6 +115,8 @@ export const SandboxExecutionContextSchema = z.object({
   canvasId: z.string(),
   s3Config: S3ConfigSchema,
   s3DrivePath: z.string(),
+  s3LibConfig: S3LibConfigSchema.optional(),
+  env: z.record(z.string()).optional(),
   timeout: z.number().int().positive().optional(),
   limits: ExecutorLimitsSchema.optional(),
   parentResultId: z.string().optional(),

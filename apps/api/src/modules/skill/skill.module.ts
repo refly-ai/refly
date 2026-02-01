@@ -13,10 +13,8 @@ import {
   QUEUE_CHECK_STUCK_ACTIONS,
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_AUTO_NAME_CANVAS,
-  QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_TOKEN_CREDIT_USAGE,
 } from '../../utils';
-import { LabelModule } from '../label/label.module';
 import { SkillProcessor, CheckStuckActionsProcessor } from '../skill/skill.processor';
 import { SubscriptionModule } from '../subscription/subscription.module';
 import { CreditModule } from '../credit/credit.module';
@@ -42,7 +40,6 @@ import { SandboxModule } from '../sandbox/sandbox.module';
     CommonModule,
     StepModule,
     forwardRef(() => ActionModule),
-    LabelModule,
     SearchModule,
     KnowledgeModule,
     RAGModule,
@@ -68,7 +65,6 @@ import { SandboxModule } from '../sandbox/sandbox.module';
           BullModule.registerQueue({ name: QUEUE_SYNC_TOKEN_CREDIT_USAGE }),
           BullModule.registerQueue({ name: QUEUE_SYNC_REQUEST_USAGE }),
           BullModule.registerQueue({ name: QUEUE_AUTO_NAME_CANVAS }),
-          BullModule.registerQueue({ name: QUEUE_SYNC_PILOT_STEP }),
         ]),
   ],
   providers: [

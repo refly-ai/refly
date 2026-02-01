@@ -1,7 +1,7 @@
 import { DriveFileCategory } from '@refly/openapi-schema';
 
 // Code and text file extensions - these should always be treated as documents
-const CODE_FILE_EXTENSIONS = [
+export const CODE_FILE_EXTENSIONS = [
   // TypeScript/JavaScript
   'ts',
   'tsx',
@@ -46,6 +46,22 @@ const CODE_FILE_EXTENSIONS = [
   'markdown',
 ];
 
+// Media file extensions for category detection
+export const IMAGE_EXTENSIONS = [
+  'jpg',
+  'jpeg',
+  'png',
+  'gif',
+  'webp',
+  'svg',
+  'bmp',
+  'ico',
+  'tiff',
+  'tif',
+];
+export const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v'];
+export const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'wma', 'opus', 'mpga'];
+
 const CONTENT_TYPE_TO_CATEGORY = {
   'application/pdf': 'document',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'document',
@@ -73,9 +89,43 @@ const CONTENT_TYPE_TO_CATEGORY = {
 };
 
 /**
+ * Map MIME type to file extension
+ */
+const MIME_TYPE_TO_EXTENSION: Record<string, string> = {
+  'text/plain': '.txt',
+  'text/html': '.html',
+  'text/css': '.css',
+  'text/javascript': '.js',
+  'text/markdown': '.md',
+  'application/json': '.json',
+  'application/pdf': '.pdf',
+  'application/xml': '.xml',
+  'application/zip': '.zip',
+  'application/epub+zip': '.epub',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/svg+xml': '.svg',
+  'image/bmp': '.bmp',
+  'audio/mpeg': '.mp3',
+  'audio/wav': '.wav',
+  'audio/ogg': '.ogg',
+  'audio/aac': '.aac',
+  'audio/webm': '.weba',
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+  'video/ogg': '.ogv',
+  'video/quicktime': '.mov',
+  'video/x-msvideo': '.avi',
+};
+
+/**
  * Get file extension from filename
  */
-const getFileExtension = (filename: string): string => {
+export const getFileExtension = (filename: string): string => {
   const lastDotIndex = filename.lastIndexOf('.');
   if (lastDotIndex === -1 || lastDotIndex === filename.length - 1) {
     return '';
@@ -148,4 +198,72 @@ export const isPlainTextMimeType = (mimeType: string): boolean => {
 
 export const getFileCategory = (contentType: string): DriveFileCategory => {
   return CONTENT_TYPE_TO_CATEGORY[contentType] || 'document';
+};
+
+/**
+ * Get file category by filename extension with MIME type fallback.
+ * Priority: Code files → Extension → MIME type → default 'document'
+ *
+ * This is the recommended method for determining file category when you have
+ * the filename available, as it handles edge cases like .ts files being
+ * incorrectly detected as video/mp2t.
+ *
+ * @param filename - The filename (with extension)
+ * @param mimeType - Optional MIME type as fallback
+ * @returns The file category
+ */
+export const getFileCategoryByName = (filename: string, mimeType?: string): DriveFileCategory => {
+  const extension = getFileExtension(filename);
+
+  // Priority 1: Code files → document (prevents .ts being detected as video)
+  if (CODE_FILE_EXTENSIONS.includes(extension)) {
+    return 'document';
+  }
+
+  // Priority 2: Check by extension
+  if (IMAGE_EXTENSIONS.includes(extension)) return 'image';
+  if (VIDEO_EXTENSIONS.includes(extension)) return 'video';
+  if (AUDIO_EXTENSIONS.includes(extension)) return 'audio';
+
+  // Priority 3: MIME type fallback (use prefix matching like frontend)
+  if (mimeType) {
+    const mimeTypePrefix = mimeType.split('/')[0].toLowerCase();
+    if (mimeTypePrefix === 'image') return 'image';
+    if (mimeTypePrefix === 'audio') return 'audio';
+    if (mimeTypePrefix === 'video') return 'video';
+  }
+
+  // Default to document
+  return 'document';
+};
+
+/**
+ * Get file extension from MIME type
+ * @param mimeType - The MIME type to convert
+ * @returns File extension with leading dot (e.g., '.txt') or empty string if not found
+ */
+export const getExtensionFromMimeType = (mimeType: string): string => {
+  if (!mimeType) return '';
+  return MIME_TYPE_TO_EXTENSION[mimeType.toLowerCase()] || '';
+};
+
+/**
+ * Generate filename with proper extension based on MIME type
+ * @param name - The base filename (may or may not have extension)
+ * @param mimeType - The MIME type of the file
+ * @returns Filename with proper extension
+ */
+export const generateFilenameWithExtension = (name: string, mimeType: string): string => {
+  const baseName = name || 'attachment';
+
+  // Check if name already has an extension (up to 10 chars like .markdown, .dockerfile)
+  const lastDotIndex = baseName.lastIndexOf('.');
+  if (lastDotIndex > 0 && lastDotIndex > baseName.length - 11) {
+    // Name already has an extension
+    return baseName;
+  }
+
+  // Add extension based on MIME type
+  const ext = getExtensionFromMimeType(mimeType);
+  return ext ? `${baseName}${ext}` : baseName;
 };

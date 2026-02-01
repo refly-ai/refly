@@ -231,7 +231,17 @@ export class McpServerService {
    * Update an existing MCP server
    */
   async updateMcpServer(user: User, param: UpsertMcpServerRequest) {
-    const { name, type, url, command, args, env, headers, reconnect, config, enabled } = param;
+    const name = param?.name;
+    const originalName = param?.originalName ?? name;
+    const type = param?.type;
+    const url = param?.url;
+    const command = param?.command;
+    const args = param?.args;
+    const env = param?.env;
+    const headers = param?.headers;
+    const reconnect = param?.reconnect;
+    const config = param?.config;
+    const enabled = param?.enabled;
 
     if (!name) {
       throw new ParamsError('Server name is required');
@@ -240,7 +250,7 @@ export class McpServerService {
     // Find server by name
     const server = await this.prisma.mcpServer.findFirst({
       where: {
-        name,
+        name: originalName,
         uid: user.uid,
         deletedAt: null,
       },
@@ -249,17 +259,17 @@ export class McpServerService {
     if (!server) {
       throw new McpServerNotFoundError();
     }
-    if (server.isGlobal) {
+    if (server?.isGlobal) {
       throw new ParamsError('Global MCP server cannot be updated');
     }
 
     // Validate required fields based on server type
     if (type) {
-      if ((type === 'sse' || type === 'streamable') && !url && !server.url) {
+      if ((type === 'sse' || type === 'streamable') && !url && !server?.url) {
         throw new ParamsError('URL is required for SSE and Streamable server types');
       }
 
-      if (type === 'stdio' && !command && !server.command && !args && !server.args) {
+      if (type === 'stdio' && !command && !server?.command && !args && !server?.args) {
         throw new ParamsError('Command and args are required for Stdio server type');
       }
     }

@@ -35,7 +35,6 @@ import {
   ParamsError,
   ActionResultNotFoundError,
   CanvasNotFoundError,
-  ProjectNotFoundError,
 } from '@refly/errors';
 import { DeleteCanvasNodesJobData } from '../canvas/canvas.dto';
 import { OSS_INTERNAL, ObjectStorageService } from '../common/object-storage';
@@ -66,7 +65,7 @@ export class DocumentService {
   ) {}
 
   async listDocuments(user: User, param: ListDocumentsData['query']) {
-    const { page = 1, pageSize = 10, order = 'creationDesc', projectId, canvasId } = param;
+    const { page = 1, pageSize = 10, order = 'creationDesc', canvasId } = param;
 
     const orderBy: Prisma.DocumentOrderByWithRelationInput = {};
     if (order === 'creationAsc') {
@@ -79,7 +78,6 @@ export class DocumentService {
       where: {
         uid: user.uid,
         deletedAt: null,
-        projectId,
         canvasId,
       },
       skip: (page - 1) * pageSize,
@@ -175,16 +173,6 @@ export class DocumentService {
       }
     }
 
-    if (param.projectId) {
-      const project = await this.prisma.project.findUnique({
-        select: { pk: true },
-        where: { projectId: param.projectId, uid: user.uid, deletedAt: null },
-      });
-      if (!project) {
-        throw new ProjectNotFoundError();
-      }
-    }
-
     const existingDoc = await this.prisma.document.findUnique({
       where: { docId: param.docId },
     });
@@ -233,7 +221,7 @@ export class DocumentService {
       where: { docId: param.docId },
       create: createInput,
       update: {
-        ...pick(param, ['title', 'readOnly', 'projectId']),
+        ...pick(param, ['title', 'readOnly']),
         contentPreview: createInput.contentPreview,
       },
     });
@@ -248,7 +236,7 @@ export class DocumentService {
 
     await this.fts.upsertDocument(user, 'document', {
       id: param.docId,
-      ...pick(doc, ['title', 'uid', 'projectId']),
+      ...pick(doc, ['title', 'uid']),
       content: param.initialContent,
       createdAt: doc.createdAt.toJSON(),
       updatedAt: doc.updatedAt.toJSON(),

@@ -1,6 +1,7 @@
 // Pure Components
 export { openModal, type OpenModalOptions } from './helpers/openModal';
 export { LightLoading } from './components/Loading';
+export { InlineLoading } from './components/InlineLoading';
 
 // Shared Provider
 export { ReflyConfigProvider } from './components/ConfigProvider';
@@ -17,6 +18,7 @@ export {
   canvasTemplateEnabled,
   sentryEnabled,
   envTag,
+  isSelfHosted,
   runtime,
   isDesktop,
 } from './utils/env';

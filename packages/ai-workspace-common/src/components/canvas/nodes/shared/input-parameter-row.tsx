@@ -1,7 +1,7 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BiText } from 'react-icons/bi';
-import { Button, message, Popconfirm, Popover, Typography } from 'antd';
+import { Button, Popconfirm, Popover, Typography } from 'antd';
 import cn from 'classnames';
 import { Attachment, List, Edit, Delete, Image, Doc2, Video, Audio } from 'refly-icons';
 import type { WorkflowVariable } from '@refly/openapi-schema';
@@ -27,6 +27,7 @@ export interface InputParameterRowProps {
   readonly?: boolean;
   onEdit?: (variable: WorkflowVariable) => void;
   onDelete?: (variable: WorkflowVariable) => void;
+  onValueChange?: (variableId: string, value: any) => void;
   isHighlighted?: boolean;
   isPreview?: boolean;
 }
@@ -37,6 +38,7 @@ export const InputParameterRow = memo(
     readonly = false,
     onEdit,
     onDelete,
+    onValueChange: _onValueChange,
     isHighlighted = false,
     isPreview = false,
   }: InputParameterRowProps) => {
@@ -50,10 +52,25 @@ export const InputParameterRow = memo(
         return options?.join(', ') ?? '';
       }
       if (variableType === 'resource') {
-        return value?.[0]?.resource?.name ?? '';
+        // Display all file names, separated by commas
+        const fileNames = (value ?? []).map((v) => v.resource?.name).filter(Boolean);
+        return fileNames.join(', ');
       }
       return value?.[0]?.text ?? '';
     }, [variableType, options, value]);
+
+    const handleDeleteVariable = useCallback(
+      async (variable: WorkflowVariable) => {
+        setIsDeleting(true);
+        try {
+          await onDelete?.(variable);
+        } finally {
+          setIsDeleting(false);
+          setIsPopconfirmOpen(false);
+        }
+      },
+      [onDelete],
+    );
 
     const VariableIcon = useMemo(() => {
       const size = isPreview ? 16 : 14;
@@ -68,21 +85,6 @@ export const InputParameterRow = memo(
       }
       return <BiText size={size} color="var(--refly-text-3)" className="flex-shrink-0" />;
     }, [variableType, value, isPreview]);
-
-    const handleDeleteVariable = async (variable: WorkflowVariable) => {
-      try {
-        setIsDeleting(true);
-        await onDelete?.(variable);
-        message.success(
-          t('canvas.workflow.variables.deleteSuccess') || 'Variable deleted successfully',
-        );
-      } catch (error) {
-        console.error('Failed to delete variable:', error);
-        message.error(t('common.deleteFailed') || 'Failed to delete');
-      } finally {
-        setIsDeleting(false);
-      }
-    };
 
     return (
       <Popover
@@ -103,7 +105,7 @@ export const InputParameterRow = memo(
       >
         <div
           className={cn(
-            'group flex gap-2 items-center justify-between py-1.5 px-3 cursor-default hover:bg-refly-tertiary-hover transition-colors cursor-pointer',
+            'group relative flex gap-2 items-center justify-between py-1.5 px-3 cursor-pointer hover:bg-refly-fill-hover transition-colors',
             isPreview
               ? 'h-[37px] border-solid border-[1px] border-refly-Card-Border rounded-xl'
               : 'h-[30px] bg-refly-bg-control-z0 rounded-[4px]',
@@ -124,7 +126,7 @@ export const InputParameterRow = memo(
               {displayValue && (
                 <div
                   className={cn(
-                    'text-refly-text-3 truncate ml-1 min-w-0 flex-grow-0 shrink-[100] basis-auto',
+                    'text-refly-text-1 truncate ml-1 min-w-0 flex-grow-0 shrink-[100] basis-auto',
                     isPreview ? 'text-sm' : 'text-xs',
                   )}
                 >
@@ -138,9 +140,12 @@ export const InputParameterRow = memo(
             {VariableIcon}
             {!readonly && (
               <div
-                className={`items-center gap-1 flex-shrink-0 ${
-                  isPopconfirmOpen ? 'flex' : 'hidden group-hover:flex'
-                }`}
+                className={cn(
+                  'absolute right-0 top-0 bottom-0 items-center gap-1 px-2 rounded-r-xl ',
+                  isPopconfirmOpen
+                    ? 'flex'
+                    : 'hidden group-hover:flex group-hover:bg-refly-fill-hover',
+                )}
               >
                 <Button
                   type="text"

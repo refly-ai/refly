@@ -1,9 +1,6 @@
 import { IRuntime } from '@refly/common-types';
 
 export enum IENV {
-  PRODUCTION = 'production',
-  STAGING = 'staging',
-  TEST = 'test',
   DEVELOPMENT = 'development',
 }
 
@@ -54,6 +51,7 @@ declare global {
       CANVAS_TEMPLATE_ENABLED?: boolean;
       SENTRY_ENABLED?: boolean;
       ENV_TAG?: string;
+      DEPLOY_TYPE?: string;
     };
 
     ipcRenderer?: {

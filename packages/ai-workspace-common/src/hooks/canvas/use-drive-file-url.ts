@@ -44,20 +44,10 @@ export const getDriveFileUrl = (
   }
 
   // Fallback to API endpoint
-  try {
-    const url = new URL(`${serverOrigin}/v1/drive/file/content/${file.fileId}`);
-    if (download) {
-      url.searchParams.set('download', '1');
-    }
-    return {
-      fileUrl: url.toString(),
-    };
-  } catch (error) {
-    console.error('Error getting drive file URL:', error);
-    return {
-      fileUrl: null,
-    };
-  }
+  const basePath = `${serverOrigin}/v1/drive/file/content/${file.fileId}`;
+  return {
+    fileUrl: download ? `${basePath}?download=1` : basePath,
+  };
 };
 
 /**

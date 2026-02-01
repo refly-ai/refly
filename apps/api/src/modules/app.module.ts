@@ -16,12 +16,9 @@ import configuration from './config/app.config';
 import { AppController } from './app.controller';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { SkillModule } from './skill/skill.module';
-import { PilotModule } from './pilot/pilot.module';
 import { CopilotModule } from './copilot/copilot.module';
 import { CopilotAutogenModule } from './copilot-autogen/copilot-autogen.module';
 import { SearchModule } from './search/search.module';
-import { LabelModule } from './label/label.module';
-import { EventModule } from './event/event.module';
 import { MiscModule } from './misc/misc.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { StripeModule } from '@golevelup/nestjs-stripe';
@@ -32,8 +29,6 @@ import { ShareModule } from './share/share.module';
 import { ProviderModule } from './provider/provider.module';
 import { TemplateModule } from './template/template.module';
 import { CodeArtifactModule } from './code-artifact/code-artifact.module';
-import { PagesModule } from './pages/pages.module';
-import { ProjectModule } from './project/project.module';
 import { McpServerModule } from './mcp-server/mcp-server.module';
 import { InternalMcpModule } from './internal-mcp/internal-mcp.module';
 import { MediaGeneratorModule } from './media-generator/media-generator.module';
@@ -48,6 +43,9 @@ import { FormModule } from './form/form.module';
 import { VoucherModule } from './voucher/voucher.module';
 import { CommonModule } from './common/common.module';
 import { ScheduleModule } from './schedule/schedule.module';
+import { SkillPackageModule } from './skill-package/skill-package.module';
+import { WebhookModule } from './webhook/webhook.module';
+import { OpenapiModule } from './openapi/openapi.module';
 import { RedisService } from './common/redis.service';
 
 import { isDesktop } from '../utils/runtime';
@@ -113,12 +111,9 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     NotificationModule,
     KnowledgeModule,
     SkillModule,
-    PilotModule,
     CopilotModule,
     CopilotAutogenModule,
     SearchModule,
-    LabelModule,
-    EventModule,
     MiscModule,
     SubscriptionModule,
     CanvasModule,
@@ -129,8 +124,6 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     ToolModule,
     TemplateModule,
     CodeArtifactModule,
-    PagesModule,
-    ProjectModule,
     McpServerModule,
     InternalMcpModule,
     MediaGeneratorModule,
@@ -143,6 +136,9 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     FormModule,
     VoucherModule,
     ScheduleModule,
+    SkillPackageModule,
+    WebhookModule,
+    OpenapiModule,
     EventEmitterModule.forRoot(),
     ...(isDesktop()
       ? []

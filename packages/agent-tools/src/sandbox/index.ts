@@ -122,6 +122,7 @@ plt.savefig('chart.png')
           parentResultId: config.configurable?.resultId,
           canvasId: config.configurable?.canvasId,
           version: config.configurable?.version,
+          ptcEnabled: config.configurable?.ptcEnabled,
         },
       };
 

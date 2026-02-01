@@ -1,4 +1,5 @@
 import { Inject, Injectable, NotFoundException, OnModuleInit, Optional } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { ModuleRef } from '@nestjs/core';
 import { PinoLogger } from 'nestjs-pino';
 import mime from 'mime';
@@ -39,12 +40,24 @@ import {
   DriveFileNotFoundError,
   DocumentNotFoundError,
   FileTooLargeError,
+  PresignNotSupportedError,
+  InvalidContentTypeError,
+  UploadSizeMismatchError,
+  UploadExpiredError,
 } from '@refly/errors';
 import { ObjectStorageService, OSS_INTERNAL, OSS_EXTERNAL } from '../common/object-storage';
 import type { ObjectInfo } from '../common/object-storage/backend/interface';
 import { streamToBuffer } from '../../utils';
 import { driveFilePO2DTO } from './drive.dto';
 import { isEmbeddableLinkFile } from './drive.utils';
+import {
+  PRESIGNED_UPLOAD_EXPIRY,
+  PENDING_UPLOAD_REDIS_TTL,
+  PENDING_UPLOAD_CLEANUP_AGE,
+  MAX_CLI_UPLOAD_SIZE,
+  PENDING_UPLOAD_REDIS_PREFIX,
+  isContentTypeAllowed,
+} from './drive.constants';
 import path from 'node:path';
 import { ProviderService } from '../provider/provider.service';
 import { ParserFactory } from '../knowledge/parsers/factory';
@@ -671,12 +684,11 @@ export class DriveService implements OnModuleInit {
     const { fileId, type: contentType } = driveFile;
     const tracer = getTracer();
 
-    // S3 input location
-    const inputBucket =
-      this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
+    // S3 input bucket (where source files are stored)
+    const inputBucket = this.config.get<string>('lambda.s3.inputBucket');
 
     // Output bucket for Lambda results
-    const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+    const outputBucket = this.config.get<string>('lambda.s3.bucket');
 
     // Dispatch to Lambda
     const lambdaJob = await this.lambdaService!.dispatchDocumentIngest({
@@ -1372,6 +1384,80 @@ export class DriveService implements OnModuleInit {
   }
 
   /**
+   * Upload a file and create a drive file record with compensating transaction.
+   * If DB creation fails, the uploaded object is deleted from storage.
+   * @param user - User performing the upload
+   * @param file - Multer file object
+   * @param canvasId - Canvas ID to associate the file with
+   * @returns Created drive file DTO
+   */
+  async uploadAndCreateFile(
+    user: User,
+    file: Express.Multer.File,
+    canvasId: string,
+  ): Promise<DriveFile> {
+    if (!canvasId) {
+      throw new ParamsError('Canvas ID is required for upload');
+    }
+
+    // Validate canvas exists and user has access
+    const canvas = await this.prisma.canvas.findFirst({
+      where: { canvasId, uid: user.uid, deletedAt: null },
+    });
+    if (!canvas) {
+      throw new DocumentNotFoundError(`Canvas not found: ${canvasId}`);
+    }
+
+    // Generate file ID and storage key
+    const fileId = genDriveFileID();
+    const storageKey = this.generateStorageKey(user, {
+      canvasId,
+      name: `${fileId}-${file.originalname}`,
+    });
+
+    // Determine content type
+    const contentType =
+      file.mimetype ||
+      getSafeMimeType(file.originalname, mime.getType(file.originalname)) ||
+      'application/octet-stream';
+
+    // Upload to object storage
+    const headers: Record<string, string> = {};
+    const formattedContentType = this.appendUtf8CharsetIfNeeded(contentType);
+    if (formattedContentType) {
+      headers['Content-Type'] = formattedContentType;
+    }
+    await this.internalOss.putObject(storageKey, file.buffer, headers);
+
+    // Create DB record with compensating delete on failure
+    try {
+      const createdFile = await this.prisma.driveFile.create({
+        data: {
+          fileId,
+          uid: user.uid,
+          canvasId,
+          name: file.originalname,
+          type: contentType,
+          size: BigInt(file.size),
+          storageKey,
+          source: 'manual',
+          scope: 'present',
+          category: getFileCategory(contentType),
+        },
+      });
+
+      return this.toDTO(createdFile);
+    } catch (dbError) {
+      // Compensating transaction: delete uploaded object
+      this.logger.error(`DB create failed, cleaning up storageKey: ${storageKey}`, dbError);
+      await this.internalOss.removeObject(storageKey).catch((cleanupErr) => {
+        this.logger.error(`Failed to cleanup orphan file: ${storageKey}`, cleanupErr);
+      });
+      throw dbError;
+    }
+  }
+
+  /**
    * Trigger async Lambda parsing for supported file types
    * Silently returns if type not supported or on error
    */
@@ -1391,9 +1477,8 @@ export class DriveService implements OnModuleInit {
     }
 
     try {
-      const inputBucket =
-        this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
-      const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+      const inputBucket = this.config.get<string>('lambda.s3.inputBucket');
+      const outputBucket = this.config.get<string>('lambda.s3.bucket');
 
       const lambdaJob = await this.lambdaService.dispatchDocumentIngest({
         uid: user.uid,
@@ -2339,9 +2424,8 @@ export class DriveService implements OnModuleInit {
     });
 
     // 2. Dispatch to Lambda
-    const inputBucket =
-      this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
-    const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+    const inputBucket = this.config.get<string>('lambda.s3.inputBucket');
+    const outputBucket = this.config.get<string>('lambda.s3.bucket');
 
     const lambdaJob = await this.lambdaService.dispatchImageTransform({
       uid: user.uid,
@@ -2396,9 +2480,8 @@ export class DriveService implements OnModuleInit {
     });
 
     // 2. Dispatch to Lambda
-    const inputBucket =
-      this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
-    const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+    const inputBucket = this.config.get<string>('lambda.s3.inputBucket');
+    const outputBucket = this.config.get<string>('lambda.s3.bucket');
 
     const lambdaJob = await this.lambdaService.dispatchDocumentRender({
       uid: user.uid,
@@ -2507,9 +2590,8 @@ export class DriveService implements OnModuleInit {
     const sourceKey = doc.storageKey;
 
     // Dispatch Lambda document render job
-    const inputBucket =
-      this.config.get<string>('objectStorage.minio.internal.bucket') || 'refly-weblink';
-    const outputBucket = this.config.get<string>('lambda.s3.bucket') || inputBucket;
+    const inputBucket = this.config.get<string>('lambda.s3.inputBucket');
+    const outputBucket = this.config.get<string>('lambda.s3.bucket');
 
     const outputName = `${doc.name?.replace(/\.[^/.]+$/, '') || 'export'}.${format}`;
 
@@ -2604,5 +2686,270 @@ export class DriveService implements OnModuleInit {
     const filename = job.name || `export.${contentType.includes('pdf') ? 'pdf' : 'docx'}`;
 
     return { data, contentType, filename };
+  }
+
+  // =====================
+  // CLI Presigned Upload Methods
+  // =====================
+
+  /**
+   * Interface for presigned upload metadata stored in Redis
+   */
+  private buildPresignedUploadRedisKey(fileId: string): string {
+    return `${PENDING_UPLOAD_REDIS_PREFIX}${fileId}`;
+  }
+
+  /**
+   * Create a presigned upload URL for CLI uploads
+   * @param user - User performing the upload
+   * @param params - Upload parameters
+   * @returns Presigned upload URL and metadata
+   */
+  async createPresignedUpload(
+    user: User,
+    params: {
+      canvasId: string;
+      filename: string;
+      size: number;
+      contentType: string;
+    },
+  ): Promise<{
+    uploadId: string;
+    presignedUrl: string;
+    expiresIn: number;
+  }> {
+    const { canvasId, filename, size, contentType } = params;
+
+    // Validate required parameters
+    if (!canvasId) {
+      throw new ParamsError('canvasId is required');
+    }
+    if (!filename) {
+      throw new ParamsError('filename is required');
+    }
+    if (size === undefined || size === null) {
+      throw new ParamsError('size is required');
+    }
+    if (!contentType) {
+      throw new ParamsError('contentType is required');
+    }
+
+    // Validate canvas exists and user has access
+    const canvas = await this.prisma.canvas.findFirst({
+      where: { canvasId, uid: user.uid, deletedAt: null },
+    });
+    if (!canvas) {
+      throw new DocumentNotFoundError(`Canvas not found: ${canvasId}`);
+    }
+
+    // Validate file size
+    if (size > MAX_CLI_UPLOAD_SIZE) {
+      throw new FileTooLargeError(
+        `File size ${size} exceeds maximum allowed size ${MAX_CLI_UPLOAD_SIZE}`,
+      );
+    }
+
+    // Validate content type
+    if (!isContentTypeAllowed(contentType)) {
+      throw new InvalidContentTypeError(
+        `Content type '${contentType}' is not allowed for CLI uploads`,
+      );
+    }
+
+    // Generate file ID and storage key with CLI-specific path
+    const fileId = genDriveFileID();
+    const prefix = this.config.get<string>('drive.storageKeyPrefix').replace(/\/$/, '');
+    const storageKey = `${prefix}/cli/${user.uid}/${canvasId}/${fileId}-${filename}`;
+
+    // Create pending DB record (size=0 indicates pending)
+    await this.prisma.driveFile.create({
+      data: {
+        fileId,
+        uid: user.uid,
+        canvasId,
+        name: filename,
+        type: contentType,
+        size: BigInt(0), // Pending upload
+        storageKey,
+        source: 'manual',
+        scope: 'present',
+        category: getFileCategory(contentType),
+      },
+    });
+
+    // Generate presigned PUT URL
+    let presignedUrl: string;
+    try {
+      presignedUrl = await this.internalOss.presignedPutObject(storageKey, PRESIGNED_UPLOAD_EXPIRY);
+    } catch (error) {
+      // Clean up DB record if presign fails
+      await this.prisma.driveFile.delete({ where: { fileId } }).catch(() => {});
+      if ((error as Error).message?.includes('PRESIGN_NOT_SUPPORTED')) {
+        throw new PresignNotSupportedError();
+      }
+      throw error;
+    }
+
+    // Store metadata in Redis for confirmation step
+    const metadata = JSON.stringify({
+      expectedSize: size,
+      contentType,
+      canvasId,
+      uid: user.uid,
+      storageKey,
+    });
+    await this.redis.setex(
+      this.buildPresignedUploadRedisKey(fileId),
+      PENDING_UPLOAD_REDIS_TTL,
+      metadata,
+    );
+
+    return {
+      uploadId: fileId,
+      presignedUrl,
+      expiresIn: PRESIGNED_UPLOAD_EXPIRY,
+    };
+  }
+
+  /**
+   * Confirm a presigned upload has completed
+   * @param user - User who initiated the upload
+   * @param uploadId - The upload ID (file ID) returned from createPresignedUpload
+   * @returns The completed drive file
+   */
+  async confirmPresignedUpload(user: User, uploadId: string): Promise<DriveFile> {
+    // Read metadata from Redis
+    const redisKey = this.buildPresignedUploadRedisKey(uploadId);
+    const metadataStr = await this.redis.get(redisKey);
+
+    if (!metadataStr) {
+      throw new UploadExpiredError('Upload session expired or not found');
+    }
+
+    const metadata = JSON.parse(metadataStr) as {
+      expectedSize: number;
+      contentType: string;
+      canvasId: string;
+      uid: string;
+      storageKey: string;
+    };
+
+    // Verify ownership
+    if (metadata.uid !== user.uid) {
+      throw new ParamsError('Upload does not belong to this user');
+    }
+
+    // Get actual file size from object storage
+    const objectInfo = await this.internalOss.statObject(metadata.storageKey);
+
+    if (!objectInfo) {
+      // File not uploaded yet or upload failed
+      throw new UploadSizeMismatchError('File not found in storage. Upload may have failed.');
+    }
+
+    // Verify size matches (with some tolerance for content-length header differences)
+    const sizeDiff = Math.abs(objectInfo.size - metadata.expectedSize);
+    const tolerance = Math.max(1024, metadata.expectedSize * 0.01); // 1KB or 1% tolerance
+
+    if (sizeDiff > tolerance) {
+      // Size mismatch - delete the uploaded object
+      this.logger.warn(
+        { uploadId, expected: metadata.expectedSize, actual: objectInfo.size },
+        'Upload size mismatch, cleaning up',
+      );
+      await this.internalOss.removeObject(metadata.storageKey, true).catch((err) => {
+        this.logger.error(`Failed to cleanup mismatched upload: ${err.message}`);
+      });
+      throw new UploadSizeMismatchError(
+        `Expected ${metadata.expectedSize} bytes, got ${objectInfo.size} bytes`,
+      );
+    }
+
+    // Update DB record with actual size
+    const updatedFile = await this.prisma.driveFile.update({
+      where: { fileId: uploadId },
+      data: {
+        size: BigInt(objectInfo.size),
+        updatedAt: new Date(),
+      },
+    });
+
+    // Delete Redis key
+    await this.redis.del(redisKey);
+
+    return this.toDTO(updatedFile);
+  }
+
+  /**
+   * Cleanup stale pending uploads (size=0 and older than threshold)
+   * Runs every 15 minutes
+   */
+  @Cron('0 */15 * * * *')
+  async cleanupStalePendingUploads(): Promise<void> {
+    const lockKey = 'cli:drive:upload:cleanup:lock';
+    const lockTTL = 300; // 5 minutes
+
+    // Try to acquire distributed lock
+    const releaseLock = await this.redis.acquireLock(lockKey, lockTTL);
+    if (!releaseLock) {
+      return; // Another instance is running cleanup
+    }
+
+    try {
+      const cutoffTime = new Date(Date.now() - PENDING_UPLOAD_CLEANUP_AGE);
+      const prefix = this.config.get<string>('drive.storageKeyPrefix').replace(/\/$/, '');
+      const cliPrefix = `${prefix}/cli/`;
+
+      // Find stale pending uploads
+      const staleFiles = await this.prisma.driveFile.findMany({
+        where: {
+          size: BigInt(0),
+          createdAt: { lt: cutoffTime },
+          storageKey: { startsWith: cliPrefix },
+        },
+        select: { fileId: true, storageKey: true, createdAt: true, updatedAt: true },
+        take: 100, // Limit batch size
+      });
+
+      if (staleFiles.length === 0) {
+        return;
+      }
+
+      this.logger.info({ count: staleFiles.length }, 'Cleaning up stale pending CLI uploads');
+
+      // Delete from storage and database
+      for (const file of staleFiles) {
+        try {
+          // Skip confirmed zero-byte uploads (updatedAt changes on confirmation)
+          if (file.updatedAt.getTime() - file.createdAt.getTime() > 500) {
+            continue;
+          }
+
+          // Delete from object storage (ignore if not found)
+          if (file.storageKey) {
+            await this.internalOss.removeObject(file.storageKey, true).catch(() => {});
+          }
+
+          // Hard delete DB record
+          await this.prisma.driveFile.delete({ where: { fileId: file.fileId } });
+
+          // Delete Redis key if exists
+          await this.redis.del(this.buildPresignedUploadRedisKey(file.fileId));
+        } catch (err) {
+          this.logger.warn(
+            { fileId: file.fileId, error: (err as Error).message },
+            'Failed to cleanup stale upload',
+          );
+        }
+      }
+
+      this.logger.info(
+        { cleaned: staleFiles.length },
+        'Finished cleaning up stale pending uploads',
+      );
+    } finally {
+      // Release lock
+      await releaseLock();
+    }
   }
 }

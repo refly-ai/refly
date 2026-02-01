@@ -2,8 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { CreditService } from '../credit/credit.service';
 import { ConfigService } from '@nestjs/config';
+import { RedisService } from '../common/redis.service';
 import { InvitationCode } from '@refly/openapi-schema';
 import { BaseResponse } from '@refly/openapi-schema';
+import { User as UserPo } from '@prisma/client';
 
 @Injectable()
 export class InvitationService {
@@ -11,6 +13,7 @@ export class InvitationService {
     private readonly prisma: PrismaService,
     private readonly creditService: CreditService,
     private readonly configService: ConfigService,
+    private readonly redis: RedisService,
   ) {}
 
   /**
@@ -55,41 +58,85 @@ export class InvitationService {
   }
 
   /**
-   * list the first 5 invitation codes for a user (by creation time), generate 5 codes if none exist
+   * list the first N invitation codes for a user (by creation time), generate up to N codes if fewer exist
+   * N is configurable via auth.invitation.maxCodesPerUser (default: 20)
    */
   async listInvitationCodes(uid: string): Promise<InvitationCode[]> {
+    const maxCodesPerUser = this.configService.get<number>('auth.invitation.maxCodesPerUser') ?? 20;
+
     let invitationCodes = await this.prisma.invitationCode.findMany({
       where: { inviterUid: uid },
       orderBy: { createdAt: 'asc' },
     });
 
-    // If no invitation codes exist, generate 5 new ones
-    if (!invitationCodes || invitationCodes.length === 0) {
-      // generate 5 unique invitation codes
-      const codes: string[] = [];
-      for (let i = 0; i < 5; i++) {
-        const code = await this.generateUniqueCode();
-        codes.push(code);
+    // If fewer than maxCodesPerUser invitation codes exist, generate new ones until there are maxCodesPerUser
+    if (!invitationCodes || invitationCodes.length < maxCodesPerUser) {
+      // Use distributed lock to prevent concurrent generation of invitation codes
+      const lockKey = `lock:invitation:generate:${uid}`;
+      let releaseLock = await this.redis.acquireLock(lockKey, 10);
+
+      if (!releaseLock) {
+        // If lock acquisition fails, wait and retry once
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        releaseLock = await this.redis.acquireLock(lockKey, 10);
+        if (!releaseLock) {
+          // If still can't acquire lock, just return existing codes
+          const existingCodes = await this.prisma.invitationCode.findMany({
+            where: { inviterUid: uid },
+            orderBy: { createdAt: 'asc' },
+            take: maxCodesPerUser,
+          });
+          return this.formatInvitationCodes(existingCodes);
+        }
       }
 
-      // create the invitation codes in batch
-      invitationCodes = await Promise.all(
-        codes.map((code) =>
-          this.prisma.invitationCode.create({
-            data: {
-              code,
-              inviterUid: uid,
-              status: 'pending',
-            },
-          }),
-        ),
-      );
+      try {
+        // Re-check the count after acquiring lock to avoid duplicate generation
+        invitationCodes = await this.prisma.invitationCode.findMany({
+          where: { inviterUid: uid },
+          orderBy: { createdAt: 'asc' },
+        });
+
+        // Double-check if we still need to generate codes
+        if (invitationCodes.length < maxCodesPerUser) {
+          const currentCount = invitationCodes.length;
+          const neededCount = maxCodesPerUser - currentCount;
+          const codes: string[] = [];
+          for (let i = 0; i < neededCount; i++) {
+            const code = await this.generateUniqueCode();
+            codes.push(code);
+          }
+
+          // create the new invitation codes in batch
+          const newInvitationCodes = await Promise.all(
+            codes.map((code) =>
+              this.prisma.invitationCode.create({
+                data: {
+                  code,
+                  inviterUid: uid,
+                  status: 'pending',
+                },
+              }),
+            ),
+          );
+          invitationCodes = [...invitationCodes, ...newInvitationCodes];
+        }
+      } finally {
+        await releaseLock();
+      }
     }
 
-    // Always return only the first 5 codes (by creation time)
-    const codesToReturn = invitationCodes.slice(0, 5);
+    // Always return the first maxCodesPerUser codes (by creation time)
+    const codesToReturn = invitationCodes.slice(0, maxCodesPerUser);
 
-    return codesToReturn.map((code) => ({
+    return this.formatInvitationCodes(codesToReturn);
+  }
+
+  /**
+   * format invitation codes for response
+   */
+  private formatInvitationCodes(codes: any[]): InvitationCode[] {
+    return codes.map((code) => ({
       code: code.code,
       inviterUid: code.inviterUid,
       inviteeUid: code.inviteeUid,
@@ -102,7 +149,7 @@ export class InvitationService {
   /**
    * check if a user has been invited (check hasBeenInvited field in user preferences)
    */
-  async hasBeenInvited(uid: string): Promise<boolean> {
+  async hasBeenInvited(uid: string, userPo?: UserPo): Promise<boolean> {
     const requireInvitationCode =
       this.configService.get('auth.invitation.requireInvitationCode') ?? false;
 
@@ -112,10 +159,12 @@ export class InvitationService {
     }
 
     // If invitation code is required, check user's hasBeenInvited preference
-    const user = await this.prisma.user.findUnique({
-      where: { uid },
-      select: { preferences: true },
-    });
+    const user =
+      userPo ??
+      (await this.prisma.user.findUnique({
+        where: { uid },
+        select: { preferences: true },
+      }));
 
     if (!user?.preferences) {
       return false;
@@ -209,6 +258,32 @@ export class InvitationService {
       inviteeUid,
       now,
     );
+
+    return { success: true };
+  }
+
+  /**
+   * skip invitation code for user
+   * set hasBeenInvited to true in user preferences
+   */
+  async skipInvitationCode(uid: string): Promise<BaseResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { uid },
+      select: { preferences: true },
+    });
+
+    const currentPreferences = user?.preferences ? JSON.parse(user.preferences) : {};
+    const updatedPreferences = {
+      ...currentPreferences,
+      hasBeenInvited: true,
+    };
+
+    await this.prisma.user.update({
+      where: { uid },
+      data: {
+        preferences: JSON.stringify(updatedPreferences),
+      },
+    });
 
     return { success: true };
   }

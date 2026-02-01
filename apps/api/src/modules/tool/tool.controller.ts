@@ -4,6 +4,7 @@ import { LoginedUser } from '../../utils/decorators/user.decorator';
 import { User as UserModel } from '@prisma/client';
 import { buildSuccessResponse } from '../../utils/response';
 import { ToolService } from './tool.service';
+import { ToolExecutionService, ToolDefinitionService } from './ptc';
 import {
   BaseResponse,
   ListToolsResponse,
@@ -14,12 +15,19 @@ import {
   ListToolsetInventoryResponse,
   ListUserToolsResponse,
   GetToolCallResultResponse,
+  ExecuteToolRequest,
+  ExecuteToolResponse,
+  ExportToolsetDefinitionsResponse,
 } from '@refly/openapi-schema';
 import { toolsetPO2DTO } from './tool.dto';
 
 @Controller('v1/tool')
 export class ToolController {
-  constructor(private readonly toolService: ToolService) {}
+  constructor(
+    private readonly toolService: ToolService,
+    private readonly toolExecutionService: ToolExecutionService,
+    private readonly toolDefinitionService: ToolDefinitionService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('/list')
@@ -27,7 +35,16 @@ export class ToolController {
     @LoginedUser() user: UserModel,
     @Query('isGlobal', new ParseBoolPipe({ optional: true })) isGlobal: boolean,
     @Query('enabled', new ParseBoolPipe({ optional: true })) enabled: boolean,
+    @Query('includeUnauthorized', new ParseBoolPipe({ optional: true }))
+    includeUnauthorized: boolean,
   ): Promise<ListToolsResponse> {
+    // If includeUnauthorized is true, use listAllToolsForCopilot which includes unauthorized tools
+    if (includeUnauthorized) {
+      const tools = await this.toolService.listAllToolsForCopilot(user);
+      const populatedTools = await this.toolService.populateToolsetsWithDefinition(tools);
+      return buildSuccessResponse(populatedTools);
+    }
+
     const tools = await this.toolService.listTools(user, {
       isGlobal,
       enabled,
@@ -100,6 +117,15 @@ export class ToolController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('/toolset/exportDefinitions')
+  async exportToolsetDefinitions(
+    @Query('toolsetKey') toolsetKey?: string,
+  ): Promise<ExportToolsetDefinitionsResponse> {
+    const definitions = await this.toolDefinitionService.exportToolsetDefinitions(toolsetKey);
+    return buildSuccessResponse(definitions);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('/call/result')
   async getToolCallResult(
     @LoginedUser() user: UserModel,
@@ -107,5 +133,15 @@ export class ToolController {
   ): Promise<GetToolCallResultResponse> {
     const result = await this.toolService.getToolCallResult(user, toolCallId);
     return buildSuccessResponse({ result });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/execute')
+  async executeTool(
+    @LoginedUser() user: UserModel,
+    @Body() request: ExecuteToolRequest,
+  ): Promise<ExecuteToolResponse> {
+    const result = await this.toolExecutionService.executeTool(user, request);
+    return buildSuccessResponse(result);
   }
 }

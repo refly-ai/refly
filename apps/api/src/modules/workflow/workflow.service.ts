@@ -231,37 +231,24 @@ export class WorkflowService {
     }
 
     // Check if there is no successful execution today to trigger voucher
-    try {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      const executionsToday = await this.prisma.workflowExecution.count({
-        where: {
-          uid: user.uid,
-          createdAt: {
-            gte: todayStart,
-          },
-        },
-      });
-
-      if (executionsToday === 0 && canvasData) {
-        this.voucherService
-          .handleCreateVoucherFromSource(
-            user,
-            { title: canvasData?.title, nodes: canvasData?.nodes },
-            finalVariables,
-            'run_workflow',
-            canvasId,
-          )
-          .catch((err) => {
-            this.logger.error(`Failed to handle template publish for voucher: ${err.message}`);
-          });
-      }
-    } catch (err) {
-      this.logger.error(`Failed to check today's executions for voucher: ${err.message}`);
-    }
+    this.handleDailyFirstExecutionVoucher(user, canvasId, canvasData, finalVariables).catch(
+      (err) => {
+        this.logger.error(`Failed to handle daily first execution voucher: ${err.message}`);
+      },
+    );
 
     const lookupToolsetDefinitionById = await this.buildLookupToolsetDefinitionById(user);
+
+    // Validate that all provided startNodes exist in the canvas
+    if (options?.startNodes?.length) {
+      const nodeIds = new Set(canvasData.nodes?.map((n) => n.id) ?? []);
+      const invalidNodes = options.startNodes.filter((nodeId) => !nodeIds.has(nodeId));
+      if (invalidNodes.length > 0) {
+        throw new Error(
+          `Invalid start node(s): ${invalidNodes.join(', ')}. Node(s) not found in workflow.`,
+        );
+      }
+    }
 
     const { nodeExecutions, startNodes } = prepareNodeExecutions({
       executionId,
@@ -360,6 +347,55 @@ export class WorkflowService {
     }
 
     return executionId;
+  }
+
+  /**
+   * Handle triggering voucher creation for the user's first workflow execution of the day.
+   * This only applies to users without an active non-trial subscription.
+   *
+   * @param user - The user executing the workflow
+   * @param canvasId - The ID of the canvas being executed
+   * @param canvasData - The raw data of the canvas
+   * @param finalVariables - The variables used for the execution
+   */
+  private async handleDailyFirstExecutionVoucher(
+    user: User,
+    canvasId: string,
+    canvasData: RawCanvasData,
+    finalVariables: WorkflowVariable[],
+  ): Promise<void> {
+    const subscriptionCount = await this.prisma.subscription.count({
+      where: {
+        uid: user.uid,
+        isTrial: false,
+      },
+    });
+
+    if (subscriptionCount > 0) {
+      return;
+    }
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const executionsToday = await this.prisma.workflowExecution.count({
+      where: {
+        uid: user.uid,
+        createdAt: {
+          gte: todayStart,
+        },
+      },
+    });
+
+    if (executionsToday === 0 && canvasData) {
+      await this.voucherService.handleCreateVoucherFromSource(
+        user,
+        { title: canvasData?.title, nodes: canvasData?.nodes },
+        finalVariables,
+        'run_workflow',
+        canvasId,
+      );
+    }
   }
 
   /**

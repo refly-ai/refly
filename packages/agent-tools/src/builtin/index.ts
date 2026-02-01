@@ -1,6 +1,12 @@
 import { z } from 'zod/v3';
 import { AgentBaseTool, AgentBaseToolset } from '../base';
 import { BuiltinExecuteCode } from './sandbox';
+import {
+  extractAllFileIds,
+  hasFileIds,
+  replaceAllMarkdownFileIds,
+  replaceAllHtmlFileIds,
+} from '@refly/utils';
 
 import type { RunnableConfig } from '@langchain/core/runnables';
 import type { ToolsetDefinition, User } from '@refly/openapi-schema';
@@ -354,13 +360,17 @@ export class BuiltinGenerateDoc extends AgentBaseTool<BuiltinToolParams> {
   schema = z.object({
     title: z.string().describe('Title of the document to generate'),
     content: z.string().describe(
-      `Document content. When embedding files from context, use these placeholder formats:
-- \`file-content://df-<fileId>\` - Direct content URL (for <img src="">, embedded media)
-- \`file://df-<fileId>\` - Share page URL (for <a href="">, clickable links)
+      `Document content in Markdown format.
 
-Example: ![image](file-content://df-xxx) or <img src="file-content://df-xxx">
+## File Embedding (CRITICAL: Use ONLY fileIds from context)
+When embedding files, you MUST use the EXACT fileId provided in context (e.g., from list_files or file metadata).
+⚠️ NEVER invent or guess file IDs. File IDs follow the format \`df-<alphanumeric>\` (e.g., df-abc123xyz).
 
-IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filename.`,
+Placeholder formats:
+- \`![alt](file-content://df-<fileId>)\` - For images/media (direct file URL)
+- \`[text](file://df-<fileId>)\` - For links (share page URL)
+
+If no files are in context, do NOT use file placeholders.`,
     ),
   });
   description =
@@ -380,6 +390,7 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
+      const canvasId = config.configurable?.canvasId;
 
       // Replace file placeholders with HTTP URLs before writing
       const processedContent = await this.replaceFilePlaceholders(input.content);
@@ -388,7 +399,7 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
         name: input.title,
         content: processedContent,
         type: 'text/plain',
-        canvasId: config.configurable?.canvasId,
+        canvasId,
         resultId: config.configurable?.resultId,
         resultVersion: config.configurable?.version,
       });
@@ -413,94 +424,59 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
   /**
    * Replace file placeholders in content with HTTP URLs.
    * Supported formats:
-   * - `file-content://df-xxx` → Direct file content URL (for images, embedded media)
-   * - `file://df-xxx` → Share page URL (for links)
+   * - `![alt](file-content://df-xxx)` → Direct file content URL (for images)
+   * - `[text](file://df-xxx)` → Share page URL (for links)
    */
   private async replaceFilePlaceholders(content: string): Promise<string> {
     if (!content) {
       return content;
     }
 
-    // Check for placeholder formats
-    const hasFileContent = content.includes('file-content://df-');
-    const hasFile = content.includes('file://df-');
-
-    if (!hasFileContent && !hasFile) {
+    // Use shared utility to check for and extract all file IDs
+    if (!hasFileIds(content)) {
       return content;
     }
 
-    try {
-      // Match both formats
-      const contentMatchPattern = /file-content:\/\/(df-[a-z0-9]+)/gi;
-      const shareMatchPattern = /file:\/\/(df-[a-z0-9]+)/gi;
+    // Extract all unique file IDs using shared utility
+    const uniqueFileIds = extractAllFileIds(content);
 
-      const contentMatches = Array.from(content.matchAll(contentMatchPattern));
-      const shareMatches = Array.from(content.matchAll(shareMatchPattern));
-
-      // Collect all unique file IDs
-      const allFileIds = new Set<string>();
-      for (const [, fileId] of contentMatches) {
-        allFileIds.add(fileId);
-      }
-      for (const [, fileId] of shareMatches) {
-        allFileIds.add(fileId);
-      }
-
-      if (allFileIds.size === 0) {
-        return content;
-      }
-
-      const uniqueFileIds = Array.from(allFileIds);
-      const { reflyService, user } = this.params;
-
-      // Fetch all drive files and generate URLs
-      const urlResults = await Promise.all(
-        uniqueFileIds.map(async (fileId) => {
-          try {
-            const { url, contentUrl } = await reflyService.createShareForDriveFile(user, fileId);
-            return { fileId, shareUrl: url, contentUrl };
-          } catch (error) {
-            console.error(
-              `[BuiltinGenerateDoc] Failed to create share URL for fileId ${fileId}:`,
-              error,
-            );
-            return { fileId, shareUrl: null, contentUrl: null };
-          }
-        }),
-      );
-
-      // Build URL maps
-      const shareUrlMap = new Map<string, string>();
-      const contentUrlMap = new Map<string, string>();
-
-      for (const { fileId, shareUrl, contentUrl } of urlResults) {
-        if (shareUrl) {
-          shareUrlMap.set(fileId, shareUrl);
-        }
-        if (contentUrl) {
-          contentUrlMap.set(fileId, contentUrl);
-        }
-      }
-
-      let result = content;
-
-      // Replace file-content://df-xxx with direct content URLs
-      result = result.replace(
-        /file-content:\/\/(df-[a-z0-9]+)/gi,
-        (match, fileId: string) => contentUrlMap.get(fileId) ?? match,
-      );
-
-      // Replace file://df-xxx with share page URLs (but not file-content://)
-      result = result.replace(
-        /file:\/\/(df-[a-z0-9]+)/gi,
-        (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
-      );
-
-      return result;
-    } catch (error) {
-      console.error('[BuiltinGenerateDoc] Error replacing file placeholders:', error);
+    if (uniqueFileIds.length === 0) {
       return content;
     }
+
+    const { reflyService, user } = this.params;
+
+    // Get both URL types for each file
+    const urlResults = await Promise.all(
+      uniqueFileIds.map(async (fileId) => {
+        try {
+          const { url, contentUrl } = await reflyService.createShareForDriveFile(user, fileId);
+          return { fileId, shareUrl: url, contentUrl };
+        } catch (error) {
+          console.error(
+            `[BuiltinGenerateDoc] Failed to create share URL for fileId ${fileId}:`,
+            error,
+          );
+          return { fileId, shareUrl: null, contentUrl: null };
+        }
+      }),
+    );
+
+    // Build URL maps
+    const shareUrlMap = new Map<string, string>();
+    const contentUrlMap = new Map<string, string>();
+
+    for (const { fileId, shareUrl, contentUrl } of urlResults) {
+      if (shareUrl) {
+        shareUrlMap.set(fileId, shareUrl);
+      }
+      if (contentUrl) {
+        contentUrlMap.set(fileId, contentUrl);
+      }
+    }
+
+    // Use shared utility to replace all file ID patterns in markdown content
+    return replaceAllMarkdownFileIds(content, contentUrlMap, shareUrlMap);
   }
 }
 
@@ -513,13 +489,17 @@ export class BuiltinGenerateCodeArtifact extends AgentBaseTool<BuiltinToolParams
       .string()
       .describe('Name of the file to generate, must include extension (.md, .html, .svg, etc.)'),
     content: z.string().describe(
-      `File content (markdown, HTML, SVG markup, etc.). When embedding files from context, use these placeholder formats:
-- \`file-content://df-<fileId>\` - Direct content URL (for <img src="">, <image href="">, embedded media)
-- \`file://df-<fileId>\` - Share page URL (for <a href="">, clickable links)
+      `File content (markdown, HTML, SVG markup, etc.).
 
-Example: ![image](file-content://df-xxx) or <img src="file-content://df-xxx">
+## File Embedding (CRITICAL: Use ONLY fileIds from context)
+When embedding files, you MUST use the EXACT fileId provided in context (e.g., from list_files or file metadata).
+⚠️ NEVER invent or guess file IDs. File IDs follow the format \`df-<alphanumeric>\` (e.g., df-abc123xyz).
 
-IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filename.`,
+Placeholder formats:
+- \`![alt](file-content://df-<fileId>)\` - For images/media (direct file URL)
+- \`[text](file://df-<fileId>)\` - For links (share page URL)
+
+If no files are in context, do NOT use file placeholders.`,
     ),
   });
 
@@ -556,15 +536,16 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
   ): Promise<ToolCallResult> {
     try {
       const { reflyService, user } = this.params;
+      const canvasId = config.configurable?.canvasId;
 
       // Replace file placeholders with HTTP URLs before writing
-      const processedContent = await this.replaceFilePlaceholders(input.content);
+      const processedContent = await this.replaceFilePlaceholders(input.content, input.filename);
 
       const file = await reflyService.writeFile(user, {
         name: input.filename,
         type: 'text/plain',
         content: processedContent,
-        canvasId: config.configurable?.canvasId,
+        canvasId,
         resultId: config.configurable?.resultId,
         resultVersion: config.configurable?.version,
       });
@@ -587,96 +568,79 @@ IMPORTANT: Use the fileId (format: df-xxx) from context, NOT the original filena
   }
 
   /**
+   * Check if the filename indicates an HTML file
+   */
+  private isHtmlFile(filename: string): boolean {
+    const ext = filename.toLowerCase().split('.').pop();
+    return ext === 'html' || ext === 'htm';
+  }
+
+  /**
    * Replace file placeholders in content with HTTP URLs.
    * Supported formats:
-   * - `file-content://df-xxx` → Direct file content URL (for images, embedded media)
-   * - `file://df-xxx` → Share page URL (for links)
+   * - `![alt](file-content://df-xxx)` → Direct file content URL (for images)
+   * - `[text](file://df-xxx)` → Share page URL (for links)
+   *
+   * For HTML files, all file references (including audio/video src) use content URLs
+   * to ensure proper media playback.
    */
-  private async replaceFilePlaceholders(content: string): Promise<string> {
+  private async replaceFilePlaceholders(content: string, filename: string): Promise<string> {
     if (!content) {
       return content;
     }
 
-    // Check for placeholder formats
-    const hasFileContent = content.includes('file-content://df-');
-    const hasFile = content.includes('file://df-');
-
-    if (!hasFileContent && !hasFile) {
+    // Use shared utility to check for and extract all file IDs
+    if (!hasFileIds(content)) {
       return content;
     }
 
-    try {
-      // Match both formats
-      const contentMatchPattern = /file-content:\/\/(df-[a-z0-9]+)/gi;
-      const shareMatchPattern = /file:\/\/(df-[a-z0-9]+)/gi;
+    // Extract all unique file IDs using shared utility
+    const uniqueFileIds = extractAllFileIds(content);
 
-      const contentMatches = Array.from(content.matchAll(contentMatchPattern));
-      const shareMatches = Array.from(content.matchAll(shareMatchPattern));
-
-      // Collect all unique file IDs
-      const allFileIds = new Set<string>();
-      for (const [, fileId] of contentMatches) {
-        allFileIds.add(fileId);
-      }
-      for (const [, fileId] of shareMatches) {
-        allFileIds.add(fileId);
-      }
-
-      if (allFileIds.size === 0) {
-        return content;
-      }
-
-      const uniqueFileIds = Array.from(allFileIds);
-      const { reflyService, user } = this.params;
-
-      // Fetch all drive files and generate URLs
-      const urlResults = await Promise.all(
-        uniqueFileIds.map(async (fileId) => {
-          try {
-            const { url, contentUrl } = await reflyService.createShareForDriveFile(user, fileId);
-            return { fileId, shareUrl: url, contentUrl };
-          } catch (error) {
-            console.error(
-              `[BuiltinGenerateCodeArtifact] Failed to create share URL for fileId ${fileId}:`,
-              error,
-            );
-            return { fileId, shareUrl: null, contentUrl: null };
-          }
-        }),
-      );
-
-      // Build URL maps
-      const shareUrlMap = new Map<string, string>();
-      const contentUrlMap = new Map<string, string>();
-
-      for (const { fileId, shareUrl, contentUrl } of urlResults) {
-        if (shareUrl) {
-          shareUrlMap.set(fileId, shareUrl);
-        }
-        if (contentUrl) {
-          contentUrlMap.set(fileId, contentUrl);
-        }
-      }
-
-      let result = content;
-
-      // Replace file-content://df-xxx with direct content URLs
-      result = result.replace(
-        /file-content:\/\/(df-[a-z0-9]+)/gi,
-        (match, fileId: string) => contentUrlMap.get(fileId) ?? match,
-      );
-
-      // Replace file://df-xxx with share page URLs (but not file-content://)
-      result = result.replace(
-        /file:\/\/(df-[a-z0-9]+)/gi,
-        (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
-      );
-
-      return result;
-    } catch (error) {
-      console.error('[BuiltinGenerateCodeArtifact] Error replacing file placeholders:', error);
+    if (uniqueFileIds.length === 0) {
       return content;
     }
+
+    const { reflyService, user } = this.params;
+
+    // Get both URL types for each file
+    const urlResults = await Promise.all(
+      uniqueFileIds.map(async (fileId) => {
+        try {
+          const { url, contentUrl } = await reflyService.createShareForDriveFile(user, fileId);
+          return { fileId, shareUrl: url, contentUrl };
+        } catch (error) {
+          console.error(
+            `[BuiltinGenerateCodeArtifact] Failed to create share URL for fileId ${fileId}:`,
+            error,
+          );
+          return { fileId, shareUrl: null, contentUrl: null };
+        }
+      }),
+    );
+
+    // Build URL maps
+    const shareUrlMap = new Map<string, string>();
+    const contentUrlMap = new Map<string, string>();
+
+    for (const { fileId, shareUrl, contentUrl } of urlResults) {
+      if (shareUrl) {
+        shareUrlMap.set(fileId, shareUrl);
+      }
+      if (contentUrl) {
+        contentUrlMap.set(fileId, contentUrl);
+      }
+    }
+
+    // For HTML files, use appropriate URLs based on attribute type:
+    // - src attributes (images, audio, video): contentUrl for direct playback
+    // - href attributes (links): shareUrl for navigation to share page
+    if (this.isHtmlFile(filename)) {
+      return replaceAllHtmlFileIds(content, contentUrlMap, shareUrlMap);
+    }
+
+    // For markdown and other files, use the standard replacement logic
+    return replaceAllMarkdownFileIds(content, contentUrlMap, shareUrlMap);
   }
 }
 
@@ -687,14 +651,17 @@ export class BuiltinSendEmail extends AgentBaseTool<BuiltinToolParams> {
   schema = z.object({
     subject: z.string().describe('The subject of the email'),
     html: z.string().describe(
-      `The HTML content of the email. When embedding files, use these placeholder formats:
-- \`file://df-<fileId>\` - Creates a shareable preview page link (for text links, clickable content)
-- \`file-content://df-<fileId>\` - Creates a direct file content URL (REQUIRED for <img src="">, <video src="">, etc.)
+      `The HTML content of the email.
 
-CRITICAL: For <img> tags, you MUST use \`file-content://\` format, not \`file://\`.
-Example: <img src="file-content://df-xa4ieer0xx9jod9zcfsu8nnf" />
+## File Embedding (CRITICAL: Use ONLY fileIds from context)
+When embedding files, you MUST use the EXACT fileId provided in context (e.g., from list_files or file metadata).
+⚠️ NEVER invent or guess file IDs. File IDs follow the format \`df-<alphanumeric>\` (e.g., df-abc123xyz).
 
-Use the fileId string directly (format: 'df-' followed by alphanumeric), NOT base64-encoded data.`,
+Placeholder formats:
+- \`file-content://df-<fileId>\` - For images/media in src attributes (direct file URL)
+- \`file://df-<fileId>\` - For links in href attributes (share page URL)
+
+If no files are in context, do NOT use file placeholders.`,
     ),
     to: z
       .string()
@@ -704,17 +671,21 @@ Use the fileId string directly (format: 'df-' followed by alphanumeric), NOT bas
       .optional(),
     attachments: z
       .array(z.string())
-      .describe('File attachments using file-content://df-<fileId> format')
+      .describe(
+        `File attachments using file-content://df-<fileId> format.
+⚠️ CRITICAL: Use ONLY fileIds from context. NEVER invent file IDs.
+Each fileId must be an exact match from list_files or file metadata (format: df-<alphanumeric>).`,
+      )
       .optional(),
   });
 
   description = `Send an email to a specified recipient with subject and HTML content.
 
 ## File Reference Placeholders
-- \`file://df-<fileId>\` → Shareable preview page (for links: <a href="file://df-xxx">)
-- \`file-content://df-<fileId>\` → Direct file content URL (for images: <img src="file-content://df-xxx">)
+- \`file-content://df-<fileId>\` → Use in <img>, <video>, <audio> src attributes (direct file URL)
+- \`file://df-<fileId>\` → Use in <a> href for clickable links (share page URL)
 
-IMPORTANT: Use \`file-content://\` for <img>, <video>, <audio> src attributes. Use \`file://\` for clickable links.`;
+⚠️ IMPORTANT: Only use fileIds that exist in context. Never invent file IDs.`;
 
   protected params: BuiltinToolParams;
 
@@ -755,38 +726,31 @@ IMPORTANT: Use \`file-content://\` for <img>, <video>, <audio> src attributes. U
     }
   }
 
+  /**
+   * Replace file placeholders in HTML content with HTTP URLs.
+   * Supported formats:
+   * - `file-content://df-xxx` → Direct file content URL (for images, embedded media)
+   * - `file://df-xxx` → Share page URL (for links)
+   * - `src="df-xxx"` or `href="df-xxx"` → Bare file IDs in HTML attributes (treated as content URLs)
+   */
   private async replaceFilePlaceholders(html: string): Promise<string> {
-    // Check for both placeholder formats
-    const hasFileContent = html?.includes('file-content://df-');
-    const hasFile = html?.includes('file://df-');
-
-    if (!html || (!hasFileContent && !hasFile)) {
+    if (!html) {
       return html;
     }
 
-    // Match both formats: file-content://df-xxx and file://df-xxx
-    const contentMatchPattern = /file-content:\/\/(df-[a-zA-Z0-9]+)/g;
-    const shareMatchPattern = /file:\/\/(df-[a-zA-Z0-9]+)/g;
+    // Use shared utility to check for file IDs
+    if (!hasFileIds(html)) {
+      return html;
+    }
 
-    const contentMatches = Array.from(html.matchAll(contentMatchPattern));
-    const shareMatches = Array.from(html.matchAll(shareMatchPattern));
+    // Extract all unique file IDs using shared utility
+    const uniqueFileIds = extractAllFileIds(html);
 
-    if (contentMatches.length === 0 && shareMatches.length === 0) {
+    if (uniqueFileIds.length === 0) {
       return html;
     }
 
     const { reflyService, user } = this.params;
-
-    // Collect all unique file IDs from both patterns
-    const allFileIds = new Set<string>();
-    for (const [, fileId] of contentMatches) {
-      allFileIds.add(fileId);
-    }
-    for (const [, fileId] of shareMatches) {
-      allFileIds.add(fileId);
-    }
-
-    const uniqueFileIds = Array.from(allFileIds);
 
     // Get both URL types for each file
     const urlResults = await Promise.all(
@@ -796,7 +760,7 @@ IMPORTANT: Use \`file-content://\` for <img>, <video>, <audio> src attributes. U
           return { fileId, shareUrl: url, contentUrl };
         } catch (error) {
           console.error(
-            `[BuiltinShareFiles] Failed to create share URL for fileId ${fileId}:`,
+            `[BuiltinSendEmail] Failed to create share URL for fileId ${fileId}:`,
             error,
           );
           return { fileId, shareUrl: null, contentUrl: null };
@@ -804,30 +768,23 @@ IMPORTANT: Use \`file-content://\` for <img>, <video>, <audio> src attributes. U
       }),
     );
 
-    // Build maps for both URL types (only include successful results)
-    const shareUrlMap = new Map<string, string>();
+    // Build URL maps (only include successful results)
     const contentUrlMap = new Map<string, string>();
+    const shareUrlMap = new Map<string, string>();
 
     for (const { fileId, shareUrl, contentUrl } of urlResults) {
-      if (shareUrl && contentUrl) {
-        shareUrlMap.set(fileId, shareUrl);
+      if (contentUrl) {
         contentUrlMap.set(fileId, contentUrl);
+      }
+      if (shareUrl) {
+        shareUrlMap.set(fileId, shareUrl);
       }
     }
 
-    // Replace file-content:// with direct content URLs
-    let result = html.replace(
-      contentMatchPattern,
-      (match, fileId: string) => contentUrlMap.get(fileId) ?? match,
-    );
-
-    // Replace file:// with share page URLs (but not file-content://)
-    result = result.replace(
-      /file:\/\/(df-[a-zA-Z0-9]+)/g,
-      (match, fileId: string) => shareUrlMap.get(fileId) ?? match,
-    );
-
-    return result;
+    // Use shared utility to replace all file ID patterns in HTML content
+    // - src attributes (images, audio, video): contentUrl for direct playback
+    // - href attributes (links): shareUrl for navigation to share page
+    return replaceAllHtmlFileIds(html, contentUrlMap, shareUrlMap);
   }
 }
 
@@ -1249,8 +1206,14 @@ Check toolCallsMeta.status first - only read if status is 'success' and you need
         };
       }
 
-      // Find the specific tool call
-      const toolCall = result.toolCalls?.find((tc: any) => tc.callId === input.callId);
+      const toolCall =
+        (result.toolCalls ?? []).find((tc: any) => tc.callId === input.callId) ??
+        (result.steps?.flatMap((step: any) => step?.toolCalls ?? []) ?? []).find(
+          (tc: any) => tc?.callId === input.callId,
+        ) ??
+        (result.messages?.map((msg: any) => msg?.toolCallResult) ?? []).find(
+          (tc: any) => tc?.callId === input.callId,
+        );
       if (!toolCall) {
         return {
           status: 'error',
