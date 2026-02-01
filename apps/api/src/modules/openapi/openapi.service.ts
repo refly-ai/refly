@@ -244,27 +244,34 @@ export class OpenapiService {
     let resultNodeIds: string[] | null = null;
     let sourceCanvasId = workflowExecution.canvasId;
 
-    if (workflowExecution.scheduleRecordId) {
-      const scheduleRecord = await this.prisma.workflowScheduleRecord.findUnique({
-        where: { scheduleRecordId: workflowExecution.scheduleRecordId },
-        select: { sourceCanvasId: true },
-      });
-      if (scheduleRecord?.sourceCanvasId) {
-        sourceCanvasId = scheduleRecord.sourceCanvasId;
-      }
-    }
+    // Parallel fetch: scheduleRecord and openapiConfig
+    const [scheduleRecord, openapiConfigResult] = await Promise.all([
+      workflowExecution.scheduleRecordId
+        ? this.prisma.workflowScheduleRecord.findUnique({
+            where: { scheduleRecordId: workflowExecution.scheduleRecordId },
+            select: { sourceCanvasId: true },
+          })
+        : Promise.resolve(null),
+      (async () => {
+        try {
+          const config = await this.prisma.workflowOpenapiConfig.findFirst({
+            where: { canvasId: sourceCanvasId, uid: user.uid },
+            select: { resultNodeIds: true },
+          });
+          return config?.resultNodeIds ? JSON.parse(config.resultNodeIds) : null;
+        } catch (error) {
+          this.logger.warn(
+            `Failed to parse resultNodeIds for execution ${executionId}: ${error?.message}`,
+          );
+          return null;
+        }
+      })(),
+    ]);
 
-    try {
-      const openapiConfig = await this.prisma.workflowOpenapiConfig.findFirst({
-        where: { canvasId: sourceCanvasId, uid: user.uid },
-        select: { resultNodeIds: true },
-      });
-      resultNodeIds = openapiConfig?.resultNodeIds ? JSON.parse(openapiConfig.resultNodeIds) : null;
-    } catch (error) {
-      this.logger.warn(
-        `Failed to parse resultNodeIds for execution ${executionId}: ${error?.message}`,
-      );
+    if (scheduleRecord?.sourceCanvasId) {
+      sourceCanvasId = scheduleRecord.sourceCanvasId;
     }
+    resultNodeIds = openapiConfigResult;
 
     let allowedNodeIds: Set<string> | null = null;
     let forceEmptyOutput = false;
@@ -296,20 +303,21 @@ export class OpenapiService {
     const actionDetailsMap = new Map<string, any>();
 
     if (skillResultIds.length > 0) {
-      const actionResults = await this.prisma.actionResult.findMany({
-        where: {
-          resultId: { in: skillResultIds },
-          uid: user.uid,
-        },
-      });
-
-      // Fetch Messages
-      const messages = await this.prisma.actionMessage.findMany({
-        where: {
-          resultId: { in: skillResultIds },
-        },
-        orderBy: { createdAt: 'asc' },
-      });
+      // Parallel fetch: actionResults and actionMessages
+      const [actionResults, messages] = await Promise.all([
+        this.prisma.actionResult.findMany({
+          where: {
+            resultId: { in: skillResultIds },
+            uid: user.uid,
+          },
+        }),
+        this.prisma.actionMessage.findMany({
+          where: {
+            resultId: { in: skillResultIds },
+          },
+          orderBy: { createdAt: 'asc' },
+        }),
+      ]);
 
       const latestMessageVersion = new Map<string, number>();
       for (const message of messages) {
