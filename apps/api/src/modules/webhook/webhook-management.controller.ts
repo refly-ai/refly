@@ -97,7 +97,15 @@ export class WebhookManagementController {
 
     const config = await this.webhookService.getWebhookConfig(canvasId, user.uid);
 
-    return buildSuccessResponse(config);
+    if (!config) {
+      return buildSuccessResponse(null);
+    }
+
+    return buildSuccessResponse({
+      webhookId: config.apiId,
+      isEnabled: config.isEnabled,
+      timeout: config.timeout,
+    });
   }
 
   /**

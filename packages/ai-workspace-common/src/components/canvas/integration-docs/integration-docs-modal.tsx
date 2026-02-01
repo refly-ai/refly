@@ -142,7 +142,7 @@ export const IntegrationDocsModal = memo(
                 onClick={() => handleSectionSelect(section.id)}
                 className={`${getItemClassName(level)} ${
                   isActive
-                    ? 'bg-[var(--refly-tertiary-hover)] text-[var(--integration-docs-text-1)] font-medium'
+                    ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
                     : ''
                 }`}
               >
@@ -427,7 +427,7 @@ export const IntegrationDocsModal = memo(
                   type="button"
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 bg-transparent text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
                     activeIntegration === 'skill'
-                      ? 'bg-[var(--refly-tertiary-hover)] text-[var(--integration-docs-text-1)] font-medium'
+                      ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
                       : ''
                   }`}
                   onClick={() => handleIntegrationChange('skill')}
@@ -439,7 +439,7 @@ export const IntegrationDocsModal = memo(
                   type="button"
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 bg-transparent text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
                     activeIntegration === 'api'
-                      ? 'bg-[var(--refly-tertiary-hover)] text-[var(--integration-docs-text-1)] font-medium'
+                      ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
                       : ''
                   }`}
                   onClick={() => handleIntegrationChange('api')}
@@ -451,7 +451,7 @@ export const IntegrationDocsModal = memo(
                   type="button"
                   className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 bg-transparent text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
                     activeIntegration === 'webhook'
-                      ? 'bg-[var(--refly-tertiary-hover)] text-[var(--integration-docs-text-1)] font-medium'
+                      ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
                       : ''
                   }`}
                   onClick={() => handleIntegrationChange('webhook')}

@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parse } from 'yaml';
+import zhTranslations from '../../i18n/src/zh-Hans/ui';
+import enTranslations from '../../i18n/src/en-US/ui';
 
 const schemaPath = path.resolve(__dirname, '../schema.yml');
 const outputPath = path.resolve(
@@ -16,6 +18,83 @@ const supportedPrefixes = [
   '/webhook',
 ];
 const allowedMethods = new Set(['get', 'post', 'put', 'delete', 'patch']);
+
+const docsRoot = path.resolve(__dirname, '../../../docs');
+const localeConfigs = {
+  zh: {
+    dict: zhTranslations as Record<string, any>,
+    baseDir: path.join(docsRoot, 'zh/guide/api'),
+    titles: {
+      openapi: 'API 文档',
+      webhook: 'Webhook 文档',
+    },
+    labels: {
+      baseUrl: '基础地址',
+    },
+  },
+  en: {
+    dict: enTranslations as Record<string, any>,
+    baseDir: path.join(docsRoot, 'en/guide/api'),
+    titles: {
+      openapi: 'API Documentation',
+      webhook: 'Webhook Documentation',
+    },
+    labels: {
+      baseUrl: 'Base URL',
+    },
+  },
+};
+
+const webhookErrorCodes = [
+  {
+    code: 'WEBHOOK_NOT_FOUND',
+    httpStatus: 404,
+    message: 'Webhook not found',
+    messageI18n: { 'zh-Hans': 'Webhook 不存在' },
+    description: 'Webhook does not exist or has been deleted.',
+    descriptionI18n: { 'zh-Hans': 'Webhook 不存在或已被删除。' },
+  },
+  {
+    code: 'WEBHOOK_DISABLED',
+    httpStatus: 403,
+    message: 'Webhook disabled',
+    messageI18n: { 'zh-Hans': 'Webhook 已停用' },
+    description: 'Webhook is disabled and cannot be triggered.',
+    descriptionI18n: { 'zh-Hans': 'Webhook 已停用，无法触发执行。' },
+  },
+  {
+    code: 'WEBHOOK_RATE_LIMITED',
+    httpStatus: 429,
+    message: 'Webhook rate limited',
+    messageI18n: { 'zh-Hans': 'Webhook 请求限流' },
+    description: 'Request rate exceeds the limit.',
+    descriptionI18n: { 'zh-Hans': '请求速率超过限制。' },
+  },
+  {
+    code: 'INVALID_REQUEST_BODY',
+    httpStatus: 400,
+    message: 'Invalid request body',
+    messageI18n: { 'zh-Hans': '请求体非法' },
+    description: 'Request body format is invalid.',
+    descriptionI18n: { 'zh-Hans': '请求体格式不正确。' },
+  },
+  {
+    code: 'CANVAS_NOT_FOUND',
+    httpStatus: 404,
+    message: 'Canvas not found',
+    messageI18n: { 'zh-Hans': '画布不存在' },
+    description: 'Associated canvas cannot be found.',
+    descriptionI18n: { 'zh-Hans': '关联画布不存在。' },
+  },
+  {
+    code: 'INSUFFICIENT_CREDITS',
+    httpStatus: 402,
+    message: 'Insufficient credits',
+    messageI18n: { 'zh-Hans': '积分不足' },
+    description: 'Insufficient credits for this operation.',
+    descriptionI18n: { 'zh-Hans': '当前操作所需积分不足。' },
+  },
+];
 
 const readSchema = () => {
   const raw = fs.readFileSync(schemaPath, 'utf8');
@@ -215,57 +294,6 @@ const buildDocs = (schema: Record<string, any>) => {
 
   endpoints.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
 
-  const webhookErrorCodes = [
-    {
-      code: 'WEBHOOK_NOT_FOUND',
-      httpStatus: 404,
-      message: 'Webhook not found',
-      messageI18n: { 'zh-Hans': 'Webhook 不存在' },
-      description: 'Webhook does not exist or has been deleted.',
-      descriptionI18n: { 'zh-Hans': 'Webhook 不存在或已被删除。' },
-    },
-    {
-      code: 'WEBHOOK_DISABLED',
-      httpStatus: 403,
-      message: 'Webhook disabled',
-      messageI18n: { 'zh-Hans': 'Webhook 已停用' },
-      description: 'Webhook is disabled and cannot be triggered.',
-      descriptionI18n: { 'zh-Hans': 'Webhook 已停用，无法触发执行。' },
-    },
-    {
-      code: 'WEBHOOK_RATE_LIMITED',
-      httpStatus: 429,
-      message: 'Webhook rate limited',
-      messageI18n: { 'zh-Hans': 'Webhook 请求限流' },
-      description: 'Request rate exceeds the limit.',
-      descriptionI18n: { 'zh-Hans': '请求速率超过限制。' },
-    },
-    {
-      code: 'INVALID_REQUEST_BODY',
-      httpStatus: 400,
-      message: 'Invalid request body',
-      messageI18n: { 'zh-Hans': '请求体非法' },
-      description: 'Request body format is invalid.',
-      descriptionI18n: { 'zh-Hans': '请求体格式不正确。' },
-    },
-    {
-      code: 'CANVAS_NOT_FOUND',
-      httpStatus: 404,
-      message: 'Canvas not found',
-      messageI18n: { 'zh-Hans': '画布不存在' },
-      description: 'Associated canvas cannot be found.',
-      descriptionI18n: { 'zh-Hans': '关联画布不存在。' },
-    },
-    {
-      code: 'INSUFFICIENT_CREDITS',
-      httpStatus: 402,
-      message: 'Insufficient credits',
-      messageI18n: { 'zh-Hans': '积分不足' },
-      description: 'Insufficient credits for this operation.',
-      descriptionI18n: { 'zh-Hans': '当前操作所需积分不足。' },
-    },
-  ];
-
   const errorCodes = mergeErrorCodes(webhookErrorCodes, loadErrorCodes());
 
   return { endpoints, errorCodes };
@@ -352,6 +380,605 @@ const mergeErrorCodes = (
   return Array.from(map.values()).sort((a, b) => a.code.localeCompare(b.code));
 };
 
+type SchemaNode = {
+  type?: string;
+  format?: string;
+  enum?: string[];
+  properties?: Record<string, SchemaNode>;
+  required?: string[];
+  items?: SchemaNode;
+  additionalProperties?: boolean | SchemaNode;
+  description?: string;
+  descriptionKey?: string;
+  example?: unknown;
+};
+
+type SchemaField = {
+  name: string;
+  type: string;
+  required: boolean;
+  description: string;
+  descriptionKey?: string;
+};
+
+const endpointCategoryOrder = ['workflow', 'files', 'webhook', 'copilot', 'other'];
+
+const getEndpointCategoryKey = (endpoint: { path: string }) => {
+  const endpointPath = endpoint.path || '';
+  if (
+    endpointPath.startsWith('/openapi/workflow/') ||
+    endpointPath.startsWith('/openapi/workflows')
+  ) {
+    return 'workflow';
+  }
+  if (endpointPath.startsWith('/openapi/files')) {
+    return 'files';
+  }
+  if (endpointPath.startsWith('/openapi/webhook/')) {
+    return 'webhook';
+  }
+  if (endpointPath.startsWith('/openapi/copilot/')) {
+    return 'copilot';
+  }
+  return 'other';
+};
+
+const groupApiEndpoints = (endpoints: Array<{ path: string }>) => {
+  const groups = new Map<string, Array<{ path: string }>>();
+  for (const endpoint of endpoints) {
+    const key = getEndpointCategoryKey(endpoint);
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)?.push(endpoint);
+  }
+
+  const ordered: Array<{ key: string; endpoints: Array<{ path: string }> }> = [];
+  for (const key of endpointCategoryOrder) {
+    const items = groups.get(key);
+    if (items && items.length > 0) {
+      ordered.push({ key, endpoints: items });
+      groups.delete(key);
+    }
+  }
+
+  for (const [key, items] of groups.entries()) {
+    ordered.push({ key, endpoints: items });
+  }
+
+  return ordered;
+};
+
+const resolveLocaleText = (dict: Record<string, any>, key?: string, fallback = ''): string => {
+  if (!key) return fallback;
+  const value = key.split('.').reduce<unknown>(
+    (acc, part) => {
+      if (acc && typeof acc === 'object' && part in (acc as Record<string, unknown>)) {
+        return (acc as Record<string, unknown>)[part];
+      }
+      return undefined;
+    },
+    dict as Record<string, unknown>,
+  );
+  return typeof value === 'string' ? value : fallback;
+};
+
+const escapeTableCell = (value: string) => value.replace(/\|/g, '\\|').replace(/\n/g, '<br/>');
+
+const renderTable = (headers: string[], rows: string[][]) => {
+  const lines = [
+    `| ${headers.map(escapeTableCell).join(' | ')} |`,
+    `| ${headers.map(() => '---').join(' | ')} |`,
+  ];
+  for (const row of rows) {
+    lines.push(`| ${row.map(escapeTableCell).join(' | ')} |`);
+  }
+  lines.push('');
+  return lines;
+};
+
+const formatSchemaType = (schema?: SchemaNode): string => {
+  if (!schema) return 'object';
+  if (schema.enum && schema.enum.length > 0) {
+    return `enum(${schema.enum.join(' | ')})`;
+  }
+  if (schema.type === 'array') {
+    return `${formatSchemaType(schema.items)}[]`;
+  }
+  if (schema.type === 'string' && schema.format) {
+    return `string(${schema.format})`;
+  }
+  return schema.type || 'object';
+};
+
+const extractSchemaFields = (
+  schema?: SchemaNode | null,
+  options?: {
+    wildcard?: {
+      name: string;
+      type: string;
+      description: string;
+    };
+  },
+): SchemaField[] => {
+  if (!schema) return [];
+  const fields: SchemaField[] = [];
+  const walk = (node: SchemaNode, prefix = '') => {
+    const requiredSet = new Set(node.required ?? []);
+    if (!node.properties) return;
+    for (const [key, value] of Object.entries(node.properties)) {
+      const prop = value as SchemaNode;
+      const name = prefix ? `${prefix}.${key}` : key;
+      fields.push({
+        name,
+        type: formatSchemaType(prop),
+        required: requiredSet.has(key),
+        description: prop.description ?? '',
+        descriptionKey: prop.descriptionKey,
+      });
+      if (prop.properties) {
+        walk(prop, name);
+      } else if (prop.type === 'array' && prop.items && prop.items.properties) {
+        walk(prop.items, `${name}[]`);
+      }
+    }
+  };
+  walk(schema);
+
+  if (fields.length === 0 && schema.additionalProperties) {
+    const wildcard = options?.wildcard;
+    if (schema.additionalProperties === true) {
+      if (wildcard) {
+        fields.push({
+          name: wildcard.name,
+          type: wildcard.type,
+          required: false,
+          description: wildcard.description,
+        });
+      }
+    } else {
+      const additionalSchema = schema.additionalProperties as SchemaNode;
+      fields.push({
+        name: wildcard?.name ?? 'key',
+        type: wildcard?.type ?? formatSchemaType(additionalSchema),
+        required: false,
+        description: additionalSchema.description ?? wildcard?.description ?? '',
+      });
+    }
+  }
+
+  return fields;
+};
+
+const generateExampleFromSchema = (schema?: SchemaNode | null): unknown => {
+  if (!schema) return null;
+  if (schema.example !== undefined) return schema.example;
+  if (schema.enum && schema.enum.length > 0) return schema.enum[0];
+  if (schema.type === 'array') {
+    return [generateExampleFromSchema(schema.items) ?? {}];
+  }
+  if (schema.type === 'object' || schema.properties) {
+    const result: Record<string, unknown> = {};
+    if (schema.properties) {
+      for (const [key, value] of Object.entries(schema.properties)) {
+        result[key] = generateExampleFromSchema(value as SchemaNode);
+      }
+    }
+    if (schema.additionalProperties && !schema.properties) {
+      result.key = generateExampleFromSchema(
+        schema.additionalProperties === true ? {} : (schema.additionalProperties as SchemaNode),
+      );
+    }
+    return result;
+  }
+  if (schema.type === 'boolean') return false;
+  if (schema.type === 'number' || schema.type === 'integer') return 0;
+  if (schema.type === 'string') return 'string';
+  return null;
+};
+
+const renderEndpointMarkdown = (endpoint: any, dict: Record<string, any>, headingLevel: number) => {
+  const lines: string[] = [];
+  const heading = '#'.repeat(headingLevel);
+  const anchorId = `api-endpoint-${endpoint.operationId || endpoint.id}`;
+  lines.push(`<a id="${anchorId}"></a>`);
+  lines.push(`${heading} ${endpoint.method} ${endpoint.path}`);
+  lines.push('');
+
+  const summary = resolveLocaleText(dict, endpoint.summaryKey, endpoint.summary);
+  if (summary) {
+    lines.push(`**${summary}**`);
+    lines.push('');
+  }
+
+  const description = resolveLocaleText(dict, endpoint.descriptionKey, endpoint.description);
+  if (description) {
+    lines.push(description);
+    lines.push('');
+  }
+
+  if (endpoint.parameters?.length) {
+    lines.push(`**${resolveLocaleText(dict, 'integration.api.parametersTitle', 'Parameters')}**`);
+    lines.push('');
+    const rows = endpoint.parameters.map((param: any) => [
+      param.name,
+      param.in,
+      param.type || '',
+      param.required
+        ? resolveLocaleText(dict, 'common.yes', 'Yes')
+        : resolveLocaleText(dict, 'common.no', 'No'),
+      resolveLocaleText(dict, param.descriptionKey, param.description || '-') || '-',
+    ]);
+    lines.push(
+      ...renderTable(
+        [
+          resolveLocaleText(dict, 'integration.api.paramName', 'Name'),
+          resolveLocaleText(dict, 'integration.api.paramIn', 'In'),
+          resolveLocaleText(dict, 'integration.api.paramType', 'Type'),
+          resolveLocaleText(dict, 'integration.api.paramRequired', 'Required'),
+          resolveLocaleText(dict, 'integration.api.paramDescription', 'Description'),
+        ],
+        rows,
+      ),
+    );
+  }
+
+  if (endpoint.requestBody) {
+    lines.push(
+      `**${resolveLocaleText(dict, 'integration.api.requestBodyTitle', 'Request Body')}**`,
+    );
+    lines.push('');
+    const bodySchema = endpoint.requestBody.schema as SchemaNode | undefined;
+    const bodyDesc = resolveLocaleText(
+      dict,
+      bodySchema?.descriptionKey,
+      bodySchema?.description ?? '',
+    );
+    if (bodyDesc) {
+      lines.push(bodyDesc);
+      lines.push('');
+    }
+
+    const fields = extractSchemaFields(bodySchema, {
+      wildcard: {
+        name: resolveLocaleText(dict, 'integration.api.requestBodyWildcardName', 'key'),
+        type: resolveLocaleText(dict, 'integration.api.requestBodyWildcardType', 'any'),
+        description: resolveLocaleText(dict, 'integration.api.requestBodyWildcardDescription', ''),
+      },
+    });
+    if (fields.length > 0) {
+      lines.push(
+        `**${resolveLocaleText(dict, 'integration.api.requestBodyFieldsTitle', 'Request Body Fields')}**`,
+      );
+      lines.push('');
+      const rows = fields.map((field) => [
+        field.name,
+        field.type,
+        field.required
+          ? resolveLocaleText(dict, 'common.yes', 'Yes')
+          : resolveLocaleText(dict, 'common.no', 'No'),
+        resolveLocaleText(dict, field.descriptionKey, field.description || '-') || '-',
+      ]);
+      lines.push(
+        ...renderTable(
+          [
+            resolveLocaleText(dict, 'integration.api.paramName', 'Name'),
+            resolveLocaleText(dict, 'integration.api.paramType', 'Type'),
+            resolveLocaleText(dict, 'integration.api.paramRequired', 'Required'),
+            resolveLocaleText(dict, 'integration.api.paramDescription', 'Description'),
+          ],
+          rows,
+        ),
+      );
+    }
+
+    const example = endpoint.requestBody.example ?? generateExampleFromSchema(bodySchema);
+    if (example !== null && example !== undefined) {
+      lines.push(
+        `**${resolveLocaleText(dict, 'integration.api.requestBodyExampleTitle', 'Request Body Example')}**`,
+      );
+      lines.push('');
+      const payload =
+        typeof example === 'string' ? example : JSON.stringify(example, null, 2) || '';
+      lines.push('```json');
+      lines.push(payload);
+      lines.push('```');
+      lines.push('');
+    }
+  }
+
+  if (endpoint.responses && Object.keys(endpoint.responses).length) {
+    lines.push(`**${resolveLocaleText(dict, 'integration.api.responsesTitle', 'Responses')}**`);
+    lines.push('');
+    const rows = Object.entries(endpoint.responses).map(([status, response]: [string, any]) => [
+      status,
+      resolveLocaleText(dict, response.descriptionKey, response.description || '-') || '-',
+    ]);
+    lines.push(
+      ...renderTable(
+        [
+          resolveLocaleText(dict, 'integration.api.responseStatus', 'Status'),
+          resolveLocaleText(dict, 'integration.api.responseDescription', 'Description'),
+        ],
+        rows,
+      ),
+    );
+
+    for (const [status, response] of Object.entries(endpoint.responses)) {
+      const responseSchema = (response as any).schema as SchemaNode | undefined;
+      const fields = extractSchemaFields(responseSchema);
+      if (fields.length === 0) continue;
+      lines.push(
+        `**${resolveLocaleText(dict, 'integration.api.responseFieldsTitle', 'Response Fields')} (${status})**`,
+      );
+      lines.push('');
+      const fieldRows = fields.map((field) => [
+        field.name,
+        field.type,
+        field.required
+          ? resolveLocaleText(dict, 'common.yes', 'Yes')
+          : resolveLocaleText(dict, 'common.no', 'No'),
+        resolveLocaleText(dict, field.descriptionKey, field.description || '-') || '-',
+      ]);
+      lines.push(
+        ...renderTable(
+          [
+            resolveLocaleText(dict, 'integration.api.paramName', 'Name'),
+            resolveLocaleText(dict, 'integration.api.paramType', 'Type'),
+            resolveLocaleText(dict, 'integration.api.paramRequired', 'Required'),
+            resolveLocaleText(dict, 'integration.api.paramDescription', 'Description'),
+          ],
+          fieldRows,
+        ),
+      );
+    }
+  }
+
+  return lines;
+};
+
+const buildOpenApiMarkdown = (
+  dict: Record<string, any>,
+  endpoints: any[],
+  errorCodes: any[],
+  baseUrl: string,
+  title: string,
+  labels: { baseUrl: string },
+  useZh: boolean,
+) => {
+  const lines: string[] = ['<!-- AUTO-GENERATED: DO NOT EDIT -->', '', `# ${title}`, ''];
+  const intro = resolveLocaleText(dict, 'integration.api.description', '');
+  if (intro) {
+    lines.push(intro);
+    lines.push('');
+  }
+  if (baseUrl) {
+    const baseLabel = resolveLocaleText(dict, 'integration.api.baseUrl', labels.baseUrl);
+    lines.push(`**${baseLabel}**: \`${baseUrl}\``);
+    lines.push('');
+  }
+
+  lines.push(`## ${resolveLocaleText(dict, 'integration.api.overviewTitle', 'Overview')}`);
+  const overview = resolveLocaleText(dict, 'integration.api.overviewDescription', '');
+  if (overview) {
+    lines.push(overview);
+    lines.push('');
+  }
+
+  lines.push(`## ${resolveLocaleText(dict, 'integration.api.authTitle', 'Authentication')}`);
+  const authDesc = resolveLocaleText(dict, 'integration.api.authDescription', '');
+  if (authDesc) {
+    lines.push(authDesc);
+    lines.push('');
+  }
+  const authHeader = resolveLocaleText(dict, 'integration.api.authHeader', '');
+  if (authHeader) {
+    lines.push(`\`${authHeader}\``);
+    lines.push('');
+  }
+
+  lines.push(`## ${resolveLocaleText(dict, 'integration.api.endpointsTitle', 'Endpoints')}`);
+  const endpointsDesc = resolveLocaleText(dict, 'integration.api.endpointsDescription', '');
+  if (endpointsDesc) {
+    lines.push(endpointsDesc);
+    lines.push('');
+  }
+
+  const grouped = groupApiEndpoints(endpoints);
+  for (const group of grouped) {
+    const groupLabel = resolveLocaleText(
+      dict,
+      `integration.api.endpointGroups.${group.key}`,
+      group.key,
+    );
+    lines.push(`### ${groupLabel}`);
+    lines.push('');
+    for (const endpoint of group.endpoints) {
+      lines.push(...renderEndpointMarkdown(endpoint, dict, 4));
+    }
+  }
+
+  lines.push(`## ${resolveLocaleText(dict, 'integration.api.errorsTitle', 'Error Codes')}`);
+  const errorsDesc = resolveLocaleText(dict, 'integration.api.errorsDescription', '');
+  if (errorsDesc) {
+    lines.push(errorsDesc);
+    lines.push('');
+  }
+  const errorRows = errorCodes.map((error) => [
+    String(error.code),
+    error.httpStatus === null || error.httpStatus === undefined ? '-' : String(error.httpStatus),
+    useZh ? (error.messageI18n?.['zh-Hans'] ?? error.message) : error.message,
+    useZh ? (error.descriptionI18n?.['zh-Hans'] ?? error.description) : error.description,
+  ]);
+  lines.push(
+    ...renderTable(
+      [
+        resolveLocaleText(dict, 'integration.api.errorCode', 'Error Code'),
+        resolveLocaleText(dict, 'integration.api.errorStatus', 'HTTP Status'),
+        resolveLocaleText(dict, 'integration.api.errorMessage', 'Message'),
+        resolveLocaleText(dict, 'integration.api.errorDescription', 'Description'),
+      ],
+      errorRows,
+    ),
+  );
+
+  return lines.join('\n');
+};
+
+const buildWebhookMarkdown = (
+  dict: Record<string, any>,
+  endpoint: any | undefined,
+  errorCodes: any[],
+  title: string,
+  useZh: boolean,
+) => {
+  const lines: string[] = ['<!-- AUTO-GENERATED: DO NOT EDIT -->', '', `# ${title}`, ''];
+  const subtitle = resolveLocaleText(dict, 'webhook.docsSubtitle', '');
+  if (subtitle) {
+    lines.push(subtitle);
+    lines.push('');
+  }
+
+  lines.push(`## ${resolveLocaleText(dict, 'integration.sections.requestBody', 'Request Body')}`);
+  const requestBody = endpoint?.requestBody;
+  if (requestBody?.schema) {
+    const bodySchema = requestBody.schema as SchemaNode;
+    const bodyDesc = resolveLocaleText(
+      dict,
+      bodySchema?.descriptionKey,
+      bodySchema?.description ?? '',
+    );
+    if (bodyDesc) {
+      lines.push(bodyDesc);
+      lines.push('');
+    }
+    const fields = extractSchemaFields(bodySchema, {
+      wildcard: {
+        name: resolveLocaleText(dict, 'integration.api.requestBodyWildcardName', 'key'),
+        type: resolveLocaleText(dict, 'integration.api.requestBodyWildcardType', 'any'),
+        description: resolveLocaleText(dict, 'integration.api.requestBodyWildcardDescription', ''),
+      },
+    });
+    if (fields.length > 0) {
+      const rows = fields.map((field) => [
+        field.name,
+        field.type,
+        field.required
+          ? resolveLocaleText(dict, 'common.yes', 'Yes')
+          : resolveLocaleText(dict, 'common.no', 'No'),
+        resolveLocaleText(dict, field.descriptionKey, field.description || '-') || '-',
+      ]);
+      lines.push(
+        ...renderTable(
+          [
+            resolveLocaleText(dict, 'integration.api.paramName', 'Name'),
+            resolveLocaleText(dict, 'integration.api.paramType', 'Type'),
+            resolveLocaleText(dict, 'integration.api.paramRequired', 'Required'),
+            resolveLocaleText(dict, 'integration.api.paramDescription', 'Description'),
+          ],
+          rows,
+        ),
+      );
+    }
+    const example = requestBody.example ?? generateExampleFromSchema(bodySchema);
+    if (example !== null && example !== undefined) {
+      lines.push(
+        `**${resolveLocaleText(dict, 'integration.api.requestBodyExampleTitle', 'Request Body Example')}**`,
+      );
+      lines.push('');
+      const payload =
+        typeof example === 'string' ? example : JSON.stringify(example, null, 2) || '';
+      lines.push('```json');
+      lines.push(payload);
+      lines.push('```');
+      lines.push('');
+    }
+  }
+
+  lines.push(`## ${resolveLocaleText(dict, 'integration.sections.fileUpload', 'File Upload')}`);
+  const fileUploadDesc = resolveLocaleText(dict, 'webhook.fileUploadDescription', '');
+  if (fileUploadDesc) {
+    lines.push(fileUploadDesc);
+    lines.push('');
+  }
+  const fileUploadLinkText = resolveLocaleText(dict, 'webhook.fileUploadLink', '');
+  if (fileUploadLinkText) {
+    lines.push(`[${fileUploadLinkText}](./openapi.md#api-endpoint-uploadOpenapiFiles)`);
+    lines.push('');
+  }
+
+  lines.push(`## ${resolveLocaleText(dict, 'integration.sections.errors', 'Error Codes')}`);
+  const errorsDesc = resolveLocaleText(dict, 'integration.api.errorsDescription', '');
+  if (errorsDesc) {
+    lines.push(errorsDesc);
+    lines.push('');
+  }
+  const webhookCodeSet = new Set(webhookErrorCodes.map((item) => item.code));
+  const webhookErrors = errorCodes.filter((error) => webhookCodeSet.has(error.code));
+  const errorRows = webhookErrors.map((error) => [
+    String(error.code),
+    error.httpStatus === null || error.httpStatus === undefined ? '-' : String(error.httpStatus),
+    useZh ? (error.messageI18n?.['zh-Hans'] ?? error.message) : error.message,
+    useZh ? (error.descriptionI18n?.['zh-Hans'] ?? error.description) : error.description,
+  ]);
+  lines.push(
+    ...renderTable(
+      [
+        resolveLocaleText(dict, 'integration.api.errorCode', 'Error Code'),
+        resolveLocaleText(dict, 'integration.api.errorStatus', 'HTTP Status'),
+        resolveLocaleText(dict, 'integration.api.errorMessage', 'Message'),
+        resolveLocaleText(dict, 'integration.api.errorDescription', 'Description'),
+      ],
+      errorRows,
+    ),
+  );
+
+  return lines.join('\n');
+};
+
+const writeDocs = (output: {
+  endpoints: any[];
+  errorCodes: any[];
+  baseUrl: string;
+}) => {
+  const apiEndpoints = output.endpoints.filter(
+    (endpoint) =>
+      endpoint.path.startsWith('/openapi/') &&
+      !endpoint.path.includes('/webhook/') &&
+      !endpoint.path.startsWith('/openapi/config'),
+  );
+  const webhookEndpoint = output.endpoints.find(
+    (endpoint) =>
+      endpoint.path === '/openapi/webhook/{webhookId}/run' && endpoint.method === 'POST',
+  );
+
+  for (const localeKey of Object.keys(localeConfigs) as Array<keyof typeof localeConfigs>) {
+    const localeConfig = localeConfigs[localeKey];
+    fs.mkdirSync(localeConfig.baseDir, { recursive: true });
+    const openapiPath = path.join(localeConfig.baseDir, 'openapi.md');
+    const webhookPath = path.join(localeConfig.baseDir, 'webhook.md');
+    const isZh = localeKey === 'zh';
+    const openapiContent = buildOpenApiMarkdown(
+      localeConfig.dict,
+      apiEndpoints,
+      output.errorCodes,
+      output.baseUrl,
+      localeConfig.titles.openapi,
+      localeConfig.labels,
+      isZh,
+    );
+    const webhookContent = buildWebhookMarkdown(
+      localeConfig.dict,
+      webhookEndpoint,
+      output.errorCodes,
+      localeConfig.titles.webhook,
+      isZh,
+    );
+    fs.writeFileSync(openapiPath, openapiContent);
+    fs.writeFileSync(webhookPath, webhookContent);
+  }
+};
+
 const main = () => {
   const schema = readSchema();
   const { endpoints, errorCodes } = buildDocs(schema);
@@ -373,6 +1000,8 @@ const main = () => {
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, fileContent);
+
+  writeDocs({ endpoints, errorCodes, baseUrl });
 };
 
 main();
