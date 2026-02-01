@@ -1,4 +1,4 @@
-import { memo, useState, useEffect } from 'react';
+import { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { Button, Input, Switch, message, Typography, Divider, Tabs } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Copy, Refresh } from 'refly-icons';
@@ -115,14 +115,17 @@ export const WebhookConfigTab = memo(({ canvasId }: WebhookConfigTabProps) => {
     }
   };
 
-  const handleCopy = async (text: string) => {
-    const success = await copyToClipboard(text);
-    if (success) {
-      message.success(t('common.copied'));
-    } else {
-      message.error(t('common.copyFailed'));
-    }
-  };
+  const handleCopy = useCallback(
+    async (text: string) => {
+      const success = await copyToClipboard(text);
+      if (success) {
+        message.success(t('common.copied'));
+      } else {
+        message.error(t('common.copyFailed'));
+      }
+    },
+    [t],
+  );
 
   const curlExample = config
     ? `curl -X POST ${config.webhookUrl} \\
@@ -148,6 +151,72 @@ print(response.json())`
 .then(res => res.json())
 .then(data => console.log(data));`
     : '';
+
+  const tabItems = useMemo(
+    () => [
+      {
+        key: 'curl',
+        label: t('webhook.examples.curl'),
+        children: (
+          <div className="relative">
+            <TextArea
+              value={curlExample}
+              readOnly
+              autoSize={{ minRows: 3, maxRows: 6 }}
+              className="font-mono text-xs"
+            />
+            <Button
+              size="small"
+              icon={<Copy size={12} />}
+              className="absolute top-2 right-2"
+              onClick={() => handleCopy(curlExample)}
+            />
+          </div>
+        ),
+      },
+      {
+        key: 'python',
+        label: t('webhook.examples.python'),
+        children: (
+          <div className="relative">
+            <TextArea
+              value={pythonExample}
+              readOnly
+              autoSize={{ minRows: 5, maxRows: 8 }}
+              className="font-mono text-xs"
+            />
+            <Button
+              size="small"
+              icon={<Copy size={12} />}
+              className="absolute top-2 right-2"
+              onClick={() => handleCopy(pythonExample)}
+            />
+          </div>
+        ),
+      },
+      {
+        key: 'javascript',
+        label: t('webhook.examples.javascript'),
+        children: (
+          <div className="relative">
+            <TextArea
+              value={javascriptExample}
+              readOnly
+              autoSize={{ minRows: 5, maxRows: 8 }}
+              className="font-mono text-xs"
+            />
+            <Button
+              size="small"
+              icon={<Copy size={12} />}
+              className="absolute top-2 right-2"
+              onClick={() => handleCopy(javascriptExample)}
+            />
+          </div>
+        ),
+      },
+    ],
+    [config, curlExample, pythonExample, javascriptExample, enabling, handleCopy, t],
+  );
 
   if (loading) {
     return <div className="py-6">{t('common.loading')}</div>;
@@ -208,70 +277,7 @@ print(response.json())`
       {/* Code Examples */}
       <section id="webhook-examples" className="space-y-4 scroll-mt-4">
         <Text strong>{t('webhook.examples')}</Text>
-        <Tabs
-          items={[
-            {
-              key: 'curl',
-              label: 'cURL',
-              children: (
-                <div className="relative">
-                  <TextArea
-                    value={curlExample}
-                    readOnly
-                    autoSize={{ minRows: 3, maxRows: 6 }}
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    size="small"
-                    icon={<Copy size={12} />}
-                    className="absolute top-2 right-2"
-                    onClick={() => handleCopy(curlExample)}
-                  />
-                </div>
-              ),
-            },
-            {
-              key: 'python',
-              label: 'Python',
-              children: (
-                <div className="relative">
-                  <TextArea
-                    value={pythonExample}
-                    readOnly
-                    autoSize={{ minRows: 5, maxRows: 8 }}
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    size="small"
-                    icon={<Copy size={12} />}
-                    className="absolute top-2 right-2"
-                    onClick={() => handleCopy(pythonExample)}
-                  />
-                </div>
-              ),
-            },
-            {
-              key: 'javascript',
-              label: 'JavaScript',
-              children: (
-                <div className="relative">
-                  <TextArea
-                    value={javascriptExample}
-                    readOnly
-                    autoSize={{ minRows: 5, maxRows: 8 }}
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    size="small"
-                    icon={<Copy size={12} />}
-                    className="absolute top-2 right-2"
-                    onClick={() => handleCopy(javascriptExample)}
-                  />
-                </div>
-              ),
-            },
-          ]}
-        />
+        <Tabs items={tabItems} />
       </section>
 
       <Divider />

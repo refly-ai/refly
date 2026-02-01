@@ -1,4 +1,13 @@
-import { Controller, Post, Get, Body, Query, UseGuards, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Query,
+  UseGuards,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { WebhookService } from './webhook.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
@@ -49,7 +58,7 @@ export class WebhookManagementController {
 
     await this.webhookService.disableWebhook(dto.webhookId, user.uid);
 
-    return buildSuccessResponse({ success: true });
+    return buildSuccessResponse();
   }
 
   /**
@@ -115,6 +124,11 @@ export class WebhookManagementController {
   @Get('history')
   @ApiOperation({ summary: 'Get call history for a webhook' })
   async getCallHistory(@Query() query: GetCallHistoryDto, @LoginedUser() user: User) {
+    // Validate required webhookId parameter
+    if (!query.webhookId || typeof query.webhookId !== 'string') {
+      throw new BadRequestException('webhookId is required and must be a string');
+    }
+
     this.logger.log(`[WEBHOOK_GET_HISTORY] uid=${user.uid} webhookId=${query.webhookId}`);
 
     const page = normalizePositiveInt(query.page, 1);
