@@ -123,7 +123,7 @@ Refly acts as the Agent skills builder, providing the governance and reliability
 
 For those who'd like to contribute code, see our [Contribution Guide](CONTRIBUTING.md). At the same time, please consider supporting Refly by sharing it on social media and at events and conferences.
 
-> We are looking for contributors to help translate Refly into languages other than Mandarin or English. If you are interested in helping, please see the <u><mark style="background: yellow">xxx</mark></u> for more information.
+> We are looking for contributors to help translate Refly into languages other than Mandarin or English. If you are interested in helping, please see the [Contribution Guide](CONTRIBUTING.md) for more information.
 
 ## Community
 
