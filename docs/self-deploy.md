@@ -69,8 +69,7 @@ e7b398dbd02b   postgres:16-alpine                         "docker-entrypoint.s�
 ```
 
 You can access the Refly application in `http://localhost:5700`.
->
-> 💡 **Find Refly useful?** Please support us with a **[Star on GitHub ⭐️](https://github.com/refly-ai/refly)**!
+
 
 ## Start Using Refly
 
