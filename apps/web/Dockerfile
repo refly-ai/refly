@@ -50,6 +50,7 @@ window.ENV = {
   CANVAS_TEMPLATE_ENABLED: "$CANVAS_TEMPLATE_ENABLED" === "true",
   SENTRY_ENABLED: "$SENTRY_ENABLED" === "true",
   ENV_TAG: "$ENV_TAG" || undefined,
+  DEPLOY_TYPE: "$DEPLOY_TYPE" || undefined,
 };
 EOF
 

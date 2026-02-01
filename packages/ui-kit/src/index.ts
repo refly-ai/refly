@@ -18,6 +18,7 @@ export {
   canvasTemplateEnabled,
   sentryEnabled,
   envTag,
+  isSelfHosted,
   runtime,
   isDesktop,
 } from './utils/env';

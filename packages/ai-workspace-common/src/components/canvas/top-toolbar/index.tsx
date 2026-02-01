@@ -20,6 +20,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { ActionsInCanvasDropdown } from '@refly-packages/ai-workspace-common/components/canvas/top-toolbar/actions-in-canvas-dropdown';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
+import { isSelfHosted } from '@refly/ui-kit';
 
 interface TopToolbarProps {
   canvasId: string;
@@ -151,8 +152,10 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, hideLogoButton,
           ) : (
             <>
               {/* <ShareSettings canvasId={canvasId} canvasTitle={canvasTitle} /> */}
-              <ScheduleButton canvasId={canvasId} />
-              <PublishTemplateButton canvasId={canvasId} canvasTitle={canvasTitle} />
+              {!isSelfHosted && <ScheduleButton canvasId={canvasId} />}
+              {!isSelfHosted && (
+                <PublishTemplateButton canvasId={canvasId} canvasTitle={canvasTitle} />
+              )}
             </>
           )}
           {!isRunDetail && (
