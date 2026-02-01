@@ -16,6 +16,13 @@ Refly 是首个用于构建稳定、原子化、版本化 Agent Skills 的开源
 
 **TL;DR**：Refly 将您的企业 SOP 编译为可执行的 Agent Skills。3 分钟构建完成，随处部署。
 
+## 快速开始
+- 📘 **[自部署指南](https://docs.refly.ai/community-version/self-deploy/)**  
+  *（推荐开发者使用）* 使用 Docker 在您自己的服务器上部署 Refly 的分步指南。
+
+- 🔌 **[API 参考文档](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api)**  
+  将 Refly 集成到您的应用程序的完整 API 文档。
+
 ## 为什么选择 Refly？
 
 大多数 AI Agent 在生产环境中失败，是因为它们依赖"Vibe Coding" 的脚本和脆弱的黑盒逻辑。随着生态系统向 Claude Code、AutoGen 和 MCP 等智能体框架发展，瓶颈不再是 LLM——而是缺乏标准化、可靠的操作能力。
@@ -118,15 +125,6 @@ Refly 充当 Agent Skills 构建器，提供在整个组织中部署 AI 所需�
 | **SOP 执行** | 工作流在<br><sub>副本间漂移</sub> | 依赖手动<br><sub>工程纪律</sub> | **SOP 级确定性Skills**<br><sub>可控执行</sub> |
 | **部署方式** | 实例绑定工作流 | 代码由每个<br><sub>团队手动维护</sub> | **本地优先、可私有部署**<br><sub>开源基础设施</sub> |
 | **总拥有成本 (TCO)** | 开销随<br><sub>工作流复杂性增长</sub> | 高工程<br><sub>维护成本</sub> | **精简 DSL**<br><sub>降低 token 开销</sub> |
-
-## 快速开始
-
-https://github.com/refly-ai/refly/tree/main/docs/en/guide/api
-
-## 文档
-
-- **[📖 自部署指南](https://docs.refly.ai/zh/community-version/self-deploy/)**  
-  *(推荐开发者使用)* 使用 Docker 在您自己的服务器上部署 Refly 的分步指南。
 
 ## 贡献
 
