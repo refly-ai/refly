@@ -8,7 +8,7 @@
 
 # Refly — 首个基于 Vibe Workflow 的开源 Agent Skills 构建器
 
-可作为 Lovable 的 API · Slack 的 Webhook · Claude Code 的 Skills · Refly 中的 SOP 手册。
+可作为 Lovable 的 API · Slack 的 Webhook · Claude Code 的 Skills · Refly 中的 SOP 手册
 
 Skills 不是提示词，而是持久化的基础设施。
 
