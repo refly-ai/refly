@@ -120,12 +120,12 @@ export const IntegrationDocsModal = memo(
 
     const getItemClassName = (level: number) => {
       if (level === 0) {
-        return 'text-left border-0 bg-transparent rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-2 text-[13px]';
+        return 'text-left border-0 rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-2 text-[13px]';
       }
       if (level === 1) {
-        return 'text-left border-0 bg-transparent rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-1.5 text-xs';
+        return 'text-left border-0 rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-1.5 text-xs';
       }
-      return 'text-left border-0 bg-transparent rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-1 text-[11px]';
+      return 'text-left border-0 rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-1 text-[11px]';
     };
 
     const getGroupClassName = (level: number) =>
@@ -428,7 +428,7 @@ export const IntegrationDocsModal = memo(
               <div className="flex flex-col gap-1">
                 <button
                   type="button"
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 bg-transparent text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
                     activeIntegration === 'skill'
                       ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
                       : ''
@@ -440,7 +440,7 @@ export const IntegrationDocsModal = memo(
                 </button>
                 <button
                   type="button"
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 bg-transparent text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
                     activeIntegration === 'api'
                       ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
                       : ''
@@ -452,7 +452,7 @@ export const IntegrationDocsModal = memo(
                 </button>
                 <button
                   type="button"
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 bg-transparent text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
                     activeIntegration === 'webhook'
                       ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
                       : ''

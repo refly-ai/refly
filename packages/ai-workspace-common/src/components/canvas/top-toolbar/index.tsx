@@ -171,6 +171,9 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, hideLogoButton,
                   <PublishTemplateButton canvasId={canvasId} canvasTitle={canvasTitle} />
                 </>
               )}
+              <div className="group relative">
+                <SettingItem showName={false} avatarAlign={'right'} />
+              </div>
             </>
           )}
         </div>

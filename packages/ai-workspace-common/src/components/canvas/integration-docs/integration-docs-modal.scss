@@ -5,7 +5,7 @@
   --integration-docs-bg-subtle: var(--refly-bg-content-z1, var(--refly-bg-content-z2));
   --integration-docs-toolbar-bg: var(--refly-bg-content-z2);
   --integration-docs-border: var(--refly-Card-Border, var(--refly-line, rgba(0, 0, 0, 0.12)));
-  --integration-docs-hover-bg: var(--refly-fill-hover);
+  --integration-docs-hover-bg: var(--refly-fill-hover, rgba(0, 0, 0, 0.06));
   --integration-docs-primary-bg: var(--ant-color-primary-bg, var(--refly-tertiary-hover));
   --integration-docs-primary-text: var(--ant-color-primary, var(--refly-primary-default));
   --integration-docs-text-1: var(--refly-text-1);
