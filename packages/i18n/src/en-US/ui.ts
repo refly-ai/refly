@@ -83,7 +83,7 @@ const translations = {
       subtitle: 'Publish First AI Workflow',
       description: 'Unlock unlimited access to top tools: Nano banana pro, Gemini 3.0 & more.',
       tag1: '100% Win Rate',
-      tag2: '3000 Credits',
+      tag2: '500 Credits',
       button: 'Join Now',
     },
     dismiss: 'Dismiss',
