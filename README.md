@@ -118,7 +118,7 @@ https://github.com/refly-ai/refly/tree/main/docs/en/guide/api
 
 ## Documentation
 
-- **[📖 Self-Deployment Guide](/docs/self-deploy.md)**  
+- **[📖 Self-Deployment Guide](https://docs.refly.ai/community-version/self-deploy/)**  
   *(Recommended for Developers)* Step-by-step guide to deploying Refly on your own server using Docker.
 
 
@@ -128,7 +128,7 @@ https://github.com/refly-ai/refly/tree/main/docs/en/guide/api
 
 ## Contributing
 
-For those who'd like to contribute code, see our [Contribution Guide](https://github.com/langgenius/dify/blob/main/CONTRIBUTING.md). At the same time, please consider supporting Refly by sharing it on social media and at events and conferences.
+For those who'd like to contribute code, see our [Contribution Guide](CONTRIBUTING.md). At the same time, please consider supporting Refly by sharing it on social media and at events and conferences.
 
 > We are looking for contributors to help translate Refly into languages other than Mandarin or English. If you are interested in helping, please see the <u><mark style="background: yellow">xxx</mark></u> for more information.
 
@@ -142,7 +142,7 @@ Connect with the Refly community:
 
 ## License
 
-This repository is licensed under the [ReflyAI Open Source License](https://github.com/refly-ai/refly/blob/main/LICENSE), which is essentially the Apache 2.0 License with some additional restrictions.
+This repository is licensed under the [ReflyAI Open Source License](LICENSE), which is essentially the Apache 2.0 License with some additional restrictions.
 
 Enterprise License Needed
 Apache License 2.0
