@@ -1,12 +1,12 @@
 <img width="1280" height="731" alt="image" src="https://github.com/user-attachments/assets/9ee376d9-946d-4c11-96c5-740533b4b124" />
 
-<div align="center">
+<div align="right">
 
-**English** | [**中文**](./README_CN.md)
+**English | [中文](README_CN.md)**
 
 </div>
-# Refly — The First Open-Source Agent Skills Builder Powered by Vibe Workflow
 
+# Refly — The First Open-Source Agent Skills Builder Powered by Vibe Workflow
 Ships as APIs for Lovable · Webhooks for Slack · Skills for Claude Code · SOP playbooks in Refly
 
 Skills are not prompts. They are durable infrastructure.
