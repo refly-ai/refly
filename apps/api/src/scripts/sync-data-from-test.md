@@ -8,8 +8,8 @@
 # 从项目根目录运行
 cd /path/to/refly
 
-TEST_ENV_DATABASE_URL="postgresql://user:pass@test-host:5432/refly" \
-TEST_ENV_ENCRYPTION_KEY="64位十六进制密钥..." \
+SOURCE_DATABASE_URL="postgresql://user:pass@test-host:5432/refly" \
+SOURCE_ENCRYPTION_KEY="64位十六进制密钥..." \
 ENCRYPTION_KEY="本地环境的64位十六进制密钥..." \
 pnpm --filter @refly/api exec ts-node -r tsconfig-paths/register src/scripts/sync-data-from-test.ts
 ```
@@ -18,8 +18,8 @@ pnpm --filter @refly/api exec ts-node -r tsconfig-paths/register src/scripts/syn
 
 | 变量                      | 必需 | 说明                                                |
 | ------------------------- | ---- | --------------------------------------------------- |
-| `TEST_ENV_DATABASE_URL`   | 是   | 测试环境的 PostgreSQL 连接 URL（只读访问）          |
-| `TEST_ENV_ENCRYPTION_KEY` | 推荐 | 测试环境的加密密钥（64 个十六进制字符）             |
+| `SOURCE_DATABASE_URL`   | 是   | 测试环境的 PostgreSQL 连接 URL（只读访问）          |
+| `SOURCE_ENCRYPTION_KEY` | 推荐 | 测试环境的加密密钥（64 个十六进制字符）             |
 | `ENCRYPTION_KEY`          | 推荐 | 目标环境的加密密钥（64 个十六进制字符，用于重加密） |
 
 注意：不再需要 `DATABASE_URL`，脚本只会读取源数据库并生成 SQL 文件。
@@ -94,7 +94,7 @@ SELECT key, auth_type, enabled, created_at FROM refly.toolset WHERE key = 'perpl
 
 ### ❌ 错误：解密失败
 
-**原因**：`TEST_ENV_ENCRYPTION_KEY` 不正确
+**原因**：`SOURCE_ENCRYPTION_KEY` 不正确
 
 **解决**：
 
@@ -112,7 +112,7 @@ echo -n "your-key" | wc -c  # 应该输出 64
 
 1. 检查 URL 格式：`postgresql://username:password@hostname:port/database`
 2. 测试网络连接：`nc -zv test-db-host 5432`
-3. 使用 psql 测试：`psql "$TEST_ENV_DATABASE_URL" -c "SELECT 1"`
+3. 使用 psql 测试：`psql "$SOURCE_DATABASE_URL" -c "SELECT 1"`
 4. 检查是否需要 VPN 或 SSH 隧道
 
 ### ❌ 错误：执行 SQL 时出现 duplicate key error

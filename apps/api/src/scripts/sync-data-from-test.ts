@@ -11,14 +11,9 @@ import path from 'node:path';
  * when synchronizing data between environments with different ENCRYPTION_KEY values.
  * It generates SQL INSERT statements instead of directly modifying the target database.
  *
- * Usage (from project root):
- * TEST_ENV_DATABASE_URL=<test-db-url> TEST_ENV_ENCRYPTION_KEY=<test-key> ENCRYPTION_KEY=<target-key> \
+ * Usage:
+ * SOURCE_DATABASE_URL=<test-db-url> SOURCE_ENCRYPTION_KEY=<test-key> ENCRYPTION_KEY=<target-key> \
  * pnpm --filter @refly/api exec ts-node -r tsconfig-paths/register src/scripts/sync-data-from-test.ts
- *
- * Or from apps/api directory:
- * cd apps/api
- * TEST_ENV_DATABASE_URL=<test-db-url> TEST_ENV_ENCRYPTION_KEY=<test-key> ENCRYPTION_KEY=<target-key> \
- * pnpm exec ts-node -r tsconfig-paths/register src/scripts/sync-data-from-test.ts
  */
 
 // ========== Sync Configuration ==========
@@ -323,12 +318,12 @@ async function syncData() {
   const logger = new Logger('DataSyncScript');
 
   // ========== Environment Variables Validation ==========
-  const sourceDbUrl = process.env.TEST_ENV_DATABASE_URL?.trim();
-  const sourceEncryptionKey = process.env.TEST_ENV_ENCRYPTION_KEY?.trim();
+  const sourceDbUrl = process.env.SOURCE_DATABASE_URL?.trim();
+  const sourceEncryptionKey = process.env.SOURCE_ENCRYPTION_KEY?.trim();
   const targetEncryptionKey = process.env.ENCRYPTION_KEY?.trim(); // Target encryption key for re-encryption
 
   if (!sourceDbUrl) {
-    logger.error('❌ TEST_ENV_DATABASE_URL environment variable is required');
+    logger.error('❌ SOURCE_DATABASE_URL environment variable is required');
     process.exit(1);
   }
 
@@ -372,7 +367,7 @@ async function syncData() {
   });
 
   // ========== Initialize Encryption Services ==========
-  const sourceEncryption = new EncryptionService(sourceEncryptionKey, 'TEST_ENV_ENCRYPTION_KEY');
+  const sourceEncryption = new EncryptionService(sourceEncryptionKey, 'SOURCE_ENCRYPTION_KEY');
   const targetEncryption = new EncryptionService(targetEncryptionKey, 'ENCRYPTION_KEY');
 
   // ========== Initialize SQL Output ==========
