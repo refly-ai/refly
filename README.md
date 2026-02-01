@@ -15,6 +15,13 @@ Refly is the first open-source platform for building stable, atomic, and version
 
 TL;DR: Refly compiles your enterprise SOPs into executable agent skills. Built in 3 minutes. Shipped anywhere.
 
+## Quick Start
+
+- **[📘Self-Deployment Guide](https://docs.refly.ai/community-version/self-deploy/)**
+  * Recommended for Developers) Step-by-step guide to deploying Refly on your own server using Docker. 
+- **[🔌API Reference](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api)**
+  * Complete API documentation for integrating Refly into your applications.
+
 ## Why Refly?
 
 Most AI Agents fail in production because they rely on "Vibe-coded" scripts and fragile, black-box logic. As the ecosystem moves toward agentic frameworks like Claude Code, AutoGen, and MCP, the bottleneck is no longer the LLM—it’s the lack of standardized, reliable actions.
@@ -111,20 +118,6 @@ Refly acts as the Agent skills builder, providing the governance and reliability
 | **SOP Enforcement** | Workflows drift<br><sub>across copies</sub> | Depends on manual<br><sub>engineering discipline</sub> | **SOP-grade deterministic skills**<br><sub>With controlled execution</sub> |
 | **Deployment** | Instance-bound workflows | Code maintained manually<br><sub>per team</sub> | **Local-first, on-prem ready**<br><sub>Open-source infrastructure</sub> |
 | **Total Cost (TCO)** | Overhead grows with<br><sub>workflow complexity</sub> | High engineering<br><sub>maintenance costs</sub> | **Minimal DSL**<br><sub>Reduces token spend</sub> |
-
-## Quick Start
-
-https://github.com/refly-ai/refly/tree/main/docs/en/guide/api
-
-## Documentation
-
-- **[📖 Self-Deployment Guide](https://docs.refly.ai/community-version/self-deploy/)**  
-  *(Recommended for Developers)* Step-by-step guide to deploying Refly on your own server using Docker.
-
-
-## Everything we built so far
-
-如果没有整合我们的历程，这一段也可以不要
 
 ## Contributing
 
