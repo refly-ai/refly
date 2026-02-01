@@ -1,11 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  BadRequestException,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma.service';
 import { Prisma } from '@prisma/client';
@@ -26,7 +19,6 @@ import {
   ScheduleAnalyticsEvents,
 } from './schedule.constants';
 import { SchedulePriorityService } from './schedule-priority.service';
-import { ScheduleCronService } from './schedule-cron.service';
 import { logEvent } from '@refly/telemetry-node';
 
 @Injectable()
@@ -39,8 +31,6 @@ export class ScheduleService {
     @Inject(OSS_INTERNAL) private readonly oss: ObjectStorageService,
     @InjectQueue(QUEUE_SCHEDULE_EXECUTION) private readonly scheduleQueue: Queue,
     private readonly priorityService: SchedulePriorityService,
-    @Inject(forwardRef(() => ScheduleCronService))
-    private readonly cronService: ScheduleCronService,
     configService: ConfigService,
   ) {
     this.scheduleConfig = getScheduleConfig(configService);
@@ -466,7 +456,8 @@ export class ScheduleService {
     uid: string,
     page = 1,
     pageSize = 10,
-    status?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed',
+    executionStatus?: 'scheduled' | 'pending' | 'processing' | 'running' | 'success' | 'failed',
+    triggerType?: 'schedule' | 'webhook' | 'api',
     keyword?: string,
     tools?: string[],
     canvasId?: string,
@@ -479,11 +470,22 @@ export class ScheduleService {
     }
 
     // Filter by status - only show completed records (success/failed) by default
-    if (status) {
-      where.status = status;
+    if (executionStatus) {
+      where.status = executionStatus;
     } else {
       // Default: only show success or failed records
       where.status = { in: ['success', 'failed'] };
+    }
+
+    if (triggerType === 'webhook') {
+      where.scheduleId = { startsWith: 'webhook:' };
+    } else if (triggerType === 'api') {
+      where.scheduleId = { startsWith: 'api:' };
+    } else if (triggerType === 'schedule') {
+      where.NOT = [
+        { scheduleId: { startsWith: 'webhook:' } },
+        { scheduleId: { startsWith: 'api:' } },
+      ];
     }
 
     // Filter by keyword (search in workflowTitle)

@@ -412,7 +412,11 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 | Simple Q&A / Translation | None | t2 | Model's native capability sufficient |
 | Image Understanding | None | t2 (vision) | Requires vision capability |
 | Data Analysis | execute_code | t1 | Runtime computation needed |
-| Information Retrieval | exa, jina, perplexity, etc. | t2 | External search needed |
+{{#if webSearchEnabled}}
+| Information Retrieval | web_search (recommended, free); jina, perplexity for complex tasks | t2 | External search needed |
+{{else}}
+| Information Retrieval | jina, perplexity, etc. | t2 | External search needed |
+{{/if}}
 
 ### General Guidelines
 1. **Linear Preferred** — Sequential dependencies unless parallelism needed

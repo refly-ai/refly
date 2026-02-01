@@ -93,7 +93,10 @@ export class ToolService {
   }
 
   private isDeprecatedToolset(key?: string): boolean {
-    return key === 'web_search';
+    if (key === 'web_search') {
+      return !this.configService.get<boolean>('tools.webSearchEnabled');
+    }
+    return false;
   }
 
   /**
@@ -101,11 +104,19 @@ export class ToolService {
    * Filters out deprecated and internal (system-level) toolsets.
    * Internal toolsets are auto-included by the system and not user-selectable.
    */
-  private shouldExposeToolset(key?: string, options?: { internal?: boolean }): boolean {
+  private shouldExposeToolset(definition?: Partial<ToolsetDefinition>): boolean {
+    const key = definition?.key;
     if (!key) return true;
     if (this.isDeprecatedToolset(key)) return false;
     // Filter out internal/system-level toolsets (e.g., read_file, list_files)
-    if (options?.internal) return false;
+    if (definition?.internal) return false;
+    // Hide OAuth tools when Composio is not configured
+    if (
+      definition?.authPatterns?.some((p) => p.type === 'oauth') &&
+      !this.configService.get('composio.apiKey')
+    ) {
+      return false;
+    }
     return true;
   }
 
@@ -143,7 +154,7 @@ export class ToolService {
     }));
     const definitions = await this.inventoryService.getInventoryDefinitions();
     return [...builtinInventory, ...definitions]
-      .filter((definition) => this.shouldExposeToolset(definition.key))
+      .filter((definition) => this.shouldExposeToolset(definition))
       .sort((a, b) => a.key.localeCompare(b.key));
   }
 
@@ -167,7 +178,7 @@ export class ToolService {
     // external_oauth type tools have requiresAuth=true and authPatterns with type='oauth'
     const allDefinitions = await this.inventoryService.getInventoryDefinitions();
     const unauthorizedTools = allDefinitions.filter(
-      (def) => this.shouldExposeToolset(def.key) && def.requiresAuth && !installedKeys.has(def.key),
+      (def) => this.shouldExposeToolset(def) && def.requiresAuth && !installedKeys.has(def.key),
     );
 
     // 4. Build result: authorized tools first, then unauthorized
@@ -207,11 +218,7 @@ export class ToolService {
 
     return Object.values(builtinToolsetInventory)
       .filter(
-        (toolset) =>
-          Boolean(toolset.definition) &&
-          this.shouldExposeToolset(toolset.definition.key, {
-            internal: toolset.definition.internal,
-          }),
+        (toolset) => Boolean(toolset.definition) && this.shouldExposeToolset(toolset.definition),
       )
       .map((toolset) => ({
         type: ToolsetType.REGULAR,
@@ -233,6 +240,11 @@ export class ToolService {
    */
   async listOAuthTools(user: User, param?: ListToolsData['query']): Promise<GenericToolset[]> {
     const { enabled, isGlobal } = param ?? {};
+
+    // Hide all OAuth tools when Composio is not configured
+    if (!this.configService.get('composio.apiKey')) {
+      return [];
+    }
 
     // OAuth tools are currently always user-specific, return empty if filtering for global
     if (isGlobal === true) {
@@ -306,7 +318,9 @@ export class ToolService {
     });
     const inventoryMap = await this.inventoryService.getInventoryMap();
     return toolsets
-      .filter((toolset) => this.shouldExposeToolset(toolset.key))
+      .filter((toolset) =>
+        this.shouldExposeToolset(toolset.key ? inventoryMap[toolset.key]?.definition : undefined),
+      )
       .map((toolset) => toolsetPo2GenericToolset(toolset, inventoryMap));
   }
 
@@ -348,7 +362,7 @@ export class ToolService {
 
     // Find unauthorized OAuth tools that should be exposed
     const unauthorizedDefinitions = allDefinitions.filter(
-      (def) => this.shouldExposeToolset(def.key) && def.requiresAuth && !installedKeys.has(def.key),
+      (def) => this.shouldExposeToolset(def) && def.requiresAuth && !installedKeys.has(def.key),
     );
 
     // Convert unauthorized definitions to GenericToolset format
@@ -1687,7 +1701,7 @@ export class ToolService {
   > {
     const inventoryMap = await this.inventoryService.getInventoryMap();
     return Object.entries(inventoryMap)
-      .filter(([, item]) => this.shouldExposeToolset(item.definition.key))
+      .filter(([, item]) => this.shouldExposeToolset(item.definition))
       .map(([key, item]) => ({
         key,
         name: (item.definition.labelDict?.en as string) || key,
@@ -1723,8 +1737,10 @@ export class ToolService {
       },
     });
 
+    const inventoryMap = await this.inventoryService.getInventoryMap();
     for (const toolset of globalToolsets) {
-      if (toolset.key && this.shouldExposeToolset(toolset.key)) {
+      const invItem = toolset.key ? inventoryMap[toolset.key] : undefined;
+      if (toolset.key && this.shouldExposeToolset(invItem?.definition)) {
         resultMap.set(toolset.key, {
           key: toolset.key,
           name: toolset.name || toolset.key,
@@ -1735,9 +1751,8 @@ export class ToolService {
     }
 
     // 2. Get tools from inventory (external OAuth tools, may need authorization)
-    const inventoryMap = await this.inventoryService.getInventoryMap();
     for (const [key, item] of Object.entries(inventoryMap)) {
-      if (this.shouldExposeToolset(key) && !resultMap.has(key)) {
+      if (this.shouldExposeToolset(item.definition) && !resultMap.has(key)) {
         resultMap.set(key, {
           key,
           name: (item.definition.labelDict?.en as string) || key,

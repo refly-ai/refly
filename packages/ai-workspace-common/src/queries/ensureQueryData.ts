@@ -30,6 +30,7 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
+  getOpenapiConfig,
   getPromptSuggestions,
   getResourceDetail,
   getSettings,
@@ -37,14 +38,19 @@ import {
   getSubscriptionUsage,
   getTemplateGenerationStatus,
   getToolCallResult,
+  getWebhookConfig,
+  getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowOutput,
   getWorkflowPlanDetail,
+  getWorkflowStatusViaApi,
   getWorkflowVariables,
   listAccounts,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
+  listCliApiKeys,
   listCodeArtifacts,
   listCopilotSessions,
   listDocuments,
@@ -90,12 +96,17 @@ import {
   GetCreditUsageData,
   GetDocumentDetailData,
   GetExportJobStatusData,
+  GetOpenapiConfigData,
   GetResourceDetailData,
   GetTemplateGenerationStatusData,
   GetToolCallResultData,
+  GetWebhookConfigData,
+  GetWebhookHistoryData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
+  GetWorkflowOutputData,
   GetWorkflowPlanDetailData,
+  GetWorkflowStatusViaApiData,
   GetWorkflowVariablesData,
   ListAccountsData,
   ListCanvasesData,
@@ -148,6 +159,14 @@ export const ensureUseCheckToolOauthStatusData = (
   queryClient.ensureQueryData({
     queryKey: Common.UseCheckToolOauthStatusKeyFn(clientOptions),
     queryFn: () => checkToolOauthStatus({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseListCliApiKeysData = (
+  queryClient: QueryClient,
+  clientOptions: Options<unknown, true> = {},
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseListCliApiKeysKeyFn(clientOptions),
+    queryFn: () => listCliApiKeys({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetCollabTokenData = (
   queryClient: QueryClient,
@@ -390,6 +409,46 @@ export const ensureUseGetTemplateGenerationStatusData = (
     queryKey: Common.UseGetTemplateGenerationStatusKeyFn(clientOptions),
     queryFn: () =>
       getTemplateGenerationStatus({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetWebhookConfigData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWebhookConfigData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetWebhookConfigKeyFn(clientOptions),
+    queryFn: () => getWebhookConfig({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetWebhookHistoryData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWebhookHistoryData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions),
+    queryFn: () => getWebhookHistory({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetOpenapiConfigData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetOpenapiConfigData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetOpenapiConfigKeyFn(clientOptions),
+    queryFn: () => getOpenapiConfig({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetWorkflowStatusViaApiData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowStatusViaApiData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetWorkflowStatusViaApiKeyFn(clientOptions),
+    queryFn: () => getWorkflowStatusViaApi({ ...clientOptions }).then((response) => response.data),
+  });
+export const ensureUseGetWorkflowOutputData = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowOutputData, true>,
+) =>
+  queryClient.ensureQueryData({
+    queryKey: Common.UseGetWorkflowOutputKeyFn(clientOptions),
+    queryFn: () => getWorkflowOutput({ ...clientOptions }).then((response) => response.data),
   });
 export const ensureUseGetSettingsData = (
   queryClient: QueryClient,

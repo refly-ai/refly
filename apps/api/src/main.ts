@@ -21,7 +21,7 @@ import { HttpRouteInterceptor } from './utils/interceptors/http-route.intercepto
 import { GlobalExceptionFilter } from './utils/filters/global-exception.filter';
 import { CustomWsAdapter } from './utils/adapters/ws-adapter';
 import { setupStatsig } from '@refly/telemetry-node';
-import { migrateDbSchema } from './utils/prisma';
+import { migrateDbSchema, seedDatabase } from './utils/prisma';
 import { initTokenizer } from '@refly/utils/token';
 
 Sentry.init({
@@ -39,6 +39,11 @@ async function bootstrap() {
   // Auto migrate db schema if the environment variable is set
   if (process.env.AUTO_MIGRATE_DB_SCHEMA) {
     migrateDbSchema();
+  }
+
+  // Auto seed database if the environment variable is set
+  if (process.env.AUTO_SEED_DATA) {
+    await seedDatabase();
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

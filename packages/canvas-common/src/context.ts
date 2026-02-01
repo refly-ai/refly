@@ -174,19 +174,22 @@ export const convertContextItemsToInvokeParams = (
   if (referencedVariables) {
     for (const variable of referencedVariables) {
       if (variable.variableType === 'resource' && variable.value?.length > 0) {
-        const fileId = variable.value[0]?.resource?.fileId;
-        if (fileId) {
-          variableToFileIdMap.set(variable.variableId, {
-            fileId,
-            variableId: variable.variableId,
-            variableName: variable.name,
-          });
-          // Also add to filesFromVariables for direct inclusion
-          filesFromVariables.push({
-            fileId,
-            variableId: variable.variableId,
-            variableName: variable.name,
-          });
+        // Iterate through all resource values in the variable
+        for (const value of variable.value) {
+          if (value.type === 'resource' && value.resource?.fileId) {
+            const fileId = value.resource.fileId;
+            variableToFileIdMap.set(`${variable.variableId}-${fileId}`, {
+              fileId,
+              variableId: variable.variableId,
+              variableName: variable.name,
+            });
+            // Also add to filesFromVariables for direct inclusion
+            filesFromVariables.push({
+              fileId,
+              variableId: variable.variableId,
+              variableName: variable.name,
+            });
+          }
         }
       }
     }

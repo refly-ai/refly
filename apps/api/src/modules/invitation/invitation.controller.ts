@@ -26,6 +26,12 @@ export class InvitationController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('/skip')
+  async skipInvitationCode(@LoginedUser() user: User): Promise<BaseResponse> {
+    return this.invitationService.skipInvitationCode(user.uid);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('/invited')
   async hasBeenInvited(@LoginedUser() user: User): Promise<BaseResponse> {
     const hasBeenInvited = await this.invitationService.hasBeenInvited(user.uid);

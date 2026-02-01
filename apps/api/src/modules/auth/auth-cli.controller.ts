@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Delete,
+  Patch,
   Query,
   Body,
   Param,
@@ -504,6 +505,39 @@ export class AuthCliController {
 
     if (!revoked) {
       throw new NotFoundException('API key not found or already revoked');
+    }
+
+    return buildSuccessResponse(null);
+  }
+
+  /**
+   * Update API key name
+   * PATCH /v1/auth/cli/api-key/:keyId
+   *
+   * @param user Current authenticated user
+   * @param keyId API key ID to update
+   * @param body Contains the new name
+   * @returns Success response
+   */
+  @UseGuards(JwtAuthGuard)
+  @Patch('api-key/:keyId')
+  async updateApiKey(
+    @LoginedUser() user: User,
+    @Param('keyId') keyId: string,
+    @Body() body: { name: string },
+  ): Promise<{ success: boolean }> {
+    this.logger.log(`[API_KEY_UPDATE] uid=${user.uid} keyId=${keyId}`);
+
+    const { name } = body;
+
+    if (!name) {
+      throw new BadRequestException('Name is required');
+    }
+
+    const updated = await this.apiKeyService.updateApiKey(user.uid, keyId, name);
+
+    if (!updated) {
+      throw new NotFoundException('API key not found');
     }
 
     return buildSuccessResponse(null);

@@ -6,6 +6,7 @@ import { useMutation, UseMutationOptions, useQuery, UseQueryOptions } from '@tan
 import {
   abortAction,
   abortWorkflow,
+  abortWorkflowViaApi,
   activateInvitationCode,
   authorizeComposioConnection,
   autoNameCanvas,
@@ -23,6 +24,7 @@ import {
   createCanvasTemplate,
   createCanvasVersion,
   createCheckoutSession,
+  createCliApiKey,
   createCodeArtifact,
   createCreditPackCheckoutSession,
   createDocument,
@@ -50,11 +52,13 @@ import {
   deleteShare,
   deleteToolset,
   deleteWorkflowApp,
+  disableWebhook,
   downloadExportJobResult,
   duplicateCanvas,
   duplicateShare,
   emailLogin,
   emailSignup,
+  enableWebhook,
   executeTool,
   executeWorkflowApp,
   exportCanvas,
@@ -85,6 +89,7 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
+  getOpenapiConfig,
   getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
@@ -96,9 +101,13 @@ import {
   getSubscriptionUsage,
   getTemplateGenerationStatus,
   getToolCallResult,
+  getWebhookConfig,
+  getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowOutput,
   getWorkflowPlanDetail,
+  getWorkflowStatusViaApi,
   getWorkflowVariables,
   importCanvas,
   initializeWorkflow,
@@ -108,6 +117,7 @@ import {
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
+  listCliApiKeys,
   listCodeArtifacts,
   listCopilotSessions,
   listDocuments,
@@ -133,8 +143,12 @@ import {
   refreshToken,
   reindexResource,
   resendVerification,
+  resetWebhook,
   retryScheduleRecord,
+  revokeCliApiKey,
   revokeComposioConnection,
+  runWebhook,
+  runWorkflowViaApi,
   scrape,
   search,
   serveStatic,
@@ -148,18 +162,22 @@ import {
   triggerVoucher,
   updateCanvas,
   updateCanvasTemplate,
+  updateCliApiKey,
   updateCodeArtifact,
   updateDocument,
   updateDriveFile,
   updateMcpServer,
+  updateOpenapiConfig,
   updateProvider,
   updateProviderItem,
   updateResource,
   updateSchedule,
   updateSettings,
   updateToolset,
+  updateWebhook,
   updateWorkflowVariables,
   upload,
+  uploadOpenapiFiles,
   validateMcpServer,
   validateVoucher,
   verifyVoucherInvitation,
@@ -169,6 +187,8 @@ import {
   AbortActionError,
   AbortWorkflowData,
   AbortWorkflowError,
+  AbortWorkflowViaApiData,
+  AbortWorkflowViaApiError,
   ActivateInvitationCodeData,
   ActivateInvitationCodeError,
   AuthorizeComposioConnectionData,
@@ -203,6 +223,8 @@ import {
   CreateCanvasVersionError,
   CreateCheckoutSessionData,
   CreateCheckoutSessionError,
+  CreateCliApiKeyData,
+  CreateCliApiKeyError,
   CreateCodeArtifactData,
   CreateCodeArtifactError,
   CreateCreditPackCheckoutSessionData,
@@ -256,6 +278,8 @@ import {
   DeleteToolsetError,
   DeleteWorkflowAppData,
   DeleteWorkflowAppError,
+  DisableWebhookData,
+  DisableWebhookError,
   DownloadExportJobResultData,
   DownloadExportJobResultError,
   DuplicateCanvasData,
@@ -266,6 +290,8 @@ import {
   EmailLoginError,
   EmailSignupData,
   EmailSignupError,
+  EnableWebhookData,
+  EnableWebhookError,
   ExecuteToolData,
   ExecuteToolError,
   ExecuteWorkflowAppData,
@@ -320,6 +346,8 @@ import {
   GetExportJobStatusData,
   GetExportJobStatusError,
   GetFormDefinitionError,
+  GetOpenapiConfigData,
+  GetOpenapiConfigError,
   GetPromptSuggestionsError,
   GetRecordSnapshotData,
   GetRecordSnapshotError,
@@ -338,12 +366,20 @@ import {
   GetTemplateGenerationStatusError,
   GetToolCallResultData,
   GetToolCallResultError,
+  GetWebhookConfigData,
+  GetWebhookConfigError,
+  GetWebhookHistoryData,
+  GetWebhookHistoryError,
   GetWorkflowAppDetailData,
   GetWorkflowAppDetailError,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
+  GetWorkflowOutputData,
+  GetWorkflowOutputError,
   GetWorkflowPlanDetailData,
   GetWorkflowPlanDetailError,
+  GetWorkflowStatusViaApiData,
+  GetWorkflowStatusViaApiError,
   GetWorkflowVariablesData,
   GetWorkflowVariablesError,
   ImportCanvasData,
@@ -361,6 +397,7 @@ import {
   ListCanvasTemplateCategoriesError,
   ListCanvasTemplatesData,
   ListCanvasTemplatesError,
+  ListCliApiKeysError,
   ListCodeArtifactsData,
   ListCodeArtifactsError,
   ListCopilotSessionsData,
@@ -404,10 +441,18 @@ import {
   ReindexResourceError,
   ResendVerificationData,
   ResendVerificationError,
+  ResetWebhookData,
+  ResetWebhookError,
   RetryScheduleRecordData,
   RetryScheduleRecordError,
+  RevokeCliApiKeyData,
+  RevokeCliApiKeyError,
   RevokeComposioConnectionData,
   RevokeComposioConnectionError,
+  RunWebhookData,
+  RunWebhookError,
+  RunWorkflowViaApiData,
+  RunWorkflowViaApiError,
   ScrapeData,
   ScrapeError,
   SearchData,
@@ -433,6 +478,8 @@ import {
   UpdateCanvasError,
   UpdateCanvasTemplateData,
   UpdateCanvasTemplateError,
+  UpdateCliApiKeyData,
+  UpdateCliApiKeyError,
   UpdateCodeArtifactData,
   UpdateCodeArtifactError,
   UpdateDocumentData,
@@ -441,6 +488,8 @@ import {
   UpdateDriveFileError,
   UpdateMcpServerData,
   UpdateMcpServerError,
+  UpdateOpenapiConfigData,
+  UpdateOpenapiConfigError,
   UpdateProviderData,
   UpdateProviderError,
   UpdateProviderItemData,
@@ -453,10 +502,14 @@ import {
   UpdateSettingsError,
   UpdateToolsetData,
   UpdateToolsetError,
+  UpdateWebhookData,
+  UpdateWebhookError,
   UpdateWorkflowVariablesData,
   UpdateWorkflowVariablesError,
   UploadData,
   UploadError,
+  UploadOpenapiFilesData,
+  UploadOpenapiFilesError,
   ValidateMcpServerData,
   ValidateMcpServerError,
   ValidateVoucherData,
@@ -525,6 +578,21 @@ export const useCheckToolOauthStatus = <
       checkToolOauthStatus({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
+    ...options,
+  });
+export const useListCliApiKeys = <
+  TData = Common.ListCliApiKeysDefaultResponse,
+  TError = ListCliApiKeysError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseListCliApiKeysKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      listCliApiKeys({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetCollabToken = <
@@ -995,6 +1063,83 @@ export const useGetTemplateGenerationStatus = <
       getTemplateGenerationStatus({ ...clientOptions }).then(
         (response) => response.data as TData,
       ) as TData,
+    ...options,
+  });
+export const useGetWebhookConfig = <
+  TData = Common.GetWebhookConfigDefaultResponse,
+  TError = GetWebhookConfigError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWebhookConfigData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetWebhookConfigKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWebhookConfig({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetWebhookHistory = <
+  TData = Common.GetWebhookHistoryDefaultResponse,
+  TError = GetWebhookHistoryError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWebhookHistoryData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWebhookHistory({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetOpenapiConfig = <
+  TData = Common.GetOpenapiConfigDefaultResponse,
+  TError = GetOpenapiConfigError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetOpenapiConfigData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetOpenapiConfigKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getOpenapiConfig({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useGetWorkflowStatusViaApi = <
+  TData = Common.GetWorkflowStatusViaApiDefaultResponse,
+  TError = GetWorkflowStatusViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowStatusViaApiData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowStatusViaApiKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowStatusViaApi({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useGetWorkflowOutput = <
+  TData = Common.GetWorkflowOutputDefaultResponse,
+  TError = GetWorkflowOutputError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowOutputData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowOutputKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowOutput({ ...clientOptions }).then((response) => response.data as TData) as TData,
     ...options,
   });
 export const useGetSettings = <
@@ -1677,6 +1822,23 @@ export const useLogout = <
   useMutation<TData, TError, Options<unknown, true>, TContext>({
     mutationKey: Common.UseLogoutKeyFn(mutationKey),
     mutationFn: (clientOptions) => logout(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useCreateCliApiKey = <
+  TData = Common.CreateCliApiKeyMutationResult,
+  TError = CreateCliApiKeyError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<CreateCliApiKeyData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<CreateCliApiKeyData, true>, TContext>({
+    mutationKey: Common.UseCreateCliApiKeyKeyFn(mutationKey),
+    mutationFn: (clientOptions) => createCliApiKey(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useImportCanvas = <
@@ -2586,6 +2748,159 @@ export const useRetryScheduleRecord = <
     mutationFn: (clientOptions) => retryScheduleRecord(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
+export const useEnableWebhook = <
+  TData = Common.EnableWebhookMutationResult,
+  TError = EnableWebhookError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<EnableWebhookData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<EnableWebhookData, true>, TContext>({
+    mutationKey: Common.UseEnableWebhookKeyFn(mutationKey),
+    mutationFn: (clientOptions) => enableWebhook(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useDisableWebhook = <
+  TData = Common.DisableWebhookMutationResult,
+  TError = DisableWebhookError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<DisableWebhookData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<DisableWebhookData, true>, TContext>({
+    mutationKey: Common.UseDisableWebhookKeyFn(mutationKey),
+    mutationFn: (clientOptions) => disableWebhook(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useResetWebhook = <
+  TData = Common.ResetWebhookMutationResult,
+  TError = ResetWebhookError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<ResetWebhookData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<ResetWebhookData, true>, TContext>({
+    mutationKey: Common.UseResetWebhookKeyFn(mutationKey),
+    mutationFn: (clientOptions) => resetWebhook(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useUpdateWebhook = <
+  TData = Common.UpdateWebhookMutationResult,
+  TError = UpdateWebhookError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UpdateWebhookData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UpdateWebhookData, true>, TContext>({
+    mutationKey: Common.UseUpdateWebhookKeyFn(mutationKey),
+    mutationFn: (clientOptions) => updateWebhook(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useRunWebhook = <
+  TData = Common.RunWebhookMutationResult,
+  TError = RunWebhookError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<RunWebhookData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<RunWebhookData, true>, TContext>({
+    mutationKey: Common.UseRunWebhookKeyFn(mutationKey),
+    mutationFn: (clientOptions) => runWebhook(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useUpdateOpenapiConfig = <
+  TData = Common.UpdateOpenapiConfigMutationResult,
+  TError = UpdateOpenapiConfigError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UpdateOpenapiConfigData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UpdateOpenapiConfigData, true>, TContext>({
+    mutationKey: Common.UseUpdateOpenapiConfigKeyFn(mutationKey),
+    mutationFn: (clientOptions) => updateOpenapiConfig(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useUploadOpenapiFiles = <
+  TData = Common.UploadOpenapiFilesMutationResult,
+  TError = UploadOpenapiFilesError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UploadOpenapiFilesData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UploadOpenapiFilesData, true>, TContext>({
+    mutationKey: Common.UseUploadOpenapiFilesKeyFn(mutationKey),
+    mutationFn: (clientOptions) => uploadOpenapiFiles(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useRunWorkflowViaApi = <
+  TData = Common.RunWorkflowViaApiMutationResult,
+  TError = RunWorkflowViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<RunWorkflowViaApiData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<RunWorkflowViaApiData, true>, TContext>({
+    mutationKey: Common.UseRunWorkflowViaApiKeyFn(mutationKey),
+    mutationFn: (clientOptions) => runWorkflowViaApi(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useAbortWorkflowViaApi = <
+  TData = Common.AbortWorkflowViaApiMutationResult,
+  TError = AbortWorkflowViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<AbortWorkflowViaApiData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<AbortWorkflowViaApiData, true>, TContext>({
+    mutationKey: Common.UseAbortWorkflowViaApiKeyFn(mutationKey),
+    mutationFn: (clientOptions) => abortWorkflowViaApi(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
 export const useSubmitForm = <
   TData = Common.SubmitFormMutationResult,
   TError = SubmitFormError,
@@ -3105,5 +3420,39 @@ export const useUpdateSettings = <
   useMutation<TData, TError, Options<UpdateSettingsData, true>, TContext>({
     mutationKey: Common.UseUpdateSettingsKeyFn(mutationKey),
     mutationFn: (clientOptions) => updateSettings(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useUpdateCliApiKey = <
+  TData = Common.UpdateCliApiKeyMutationResult,
+  TError = UpdateCliApiKeyError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<UpdateCliApiKeyData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<UpdateCliApiKeyData, true>, TContext>({
+    mutationKey: Common.UseUpdateCliApiKeyKeyFn(mutationKey),
+    mutationFn: (clientOptions) => updateCliApiKey(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useRevokeCliApiKey = <
+  TData = Common.RevokeCliApiKeyMutationResult,
+  TError = RevokeCliApiKeyError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<RevokeCliApiKeyData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<RevokeCliApiKeyData, true>, TContext>({
+    mutationKey: Common.UseRevokeCliApiKeyKeyFn(mutationKey),
+    mutationFn: (clientOptions) => revokeCliApiKey(clientOptions) as unknown as Promise<TData>,
     ...options,
   });

@@ -20,6 +20,7 @@ interface ResourceTypeFormProps {
   form?: any;
   showError?: boolean;
   isRequired?: boolean;
+  isSingle?: boolean;
 }
 
 export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
@@ -31,6 +32,7 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
     onRefreshFile,
     showError,
     isRequired = true,
+    isSingle = false,
   }) => {
     const { t } = useTranslation();
 
@@ -92,10 +94,10 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
             beforeUpload={handleUpload}
             onRemove={handleRemove}
             onChange={handleChange}
-            multiple={false}
+            multiple={!isSingle}
             listType="text"
             disabled={uploading}
-            maxCount={1}
+            maxCount={isSingle ? 1 : 10}
             itemRender={(_originNode, file) => (
               <Spin className="w-full" spinning={uploading}>
                 <div className="w-full h-9 flex items-center justify-between gap-2 box-border px-2 bg-refly-bg-control-z0 rounded-lg hover:bg-refly-tertiary-hover">
@@ -113,14 +115,16 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
                   </div>
 
                   <div className="fl">
-                    <Tooltip title={t('canvas.workflow.variables.replaceFile')}>
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={<Refresh size={16} color="var(--refly-text-1)" />}
-                        onClick={onRefreshFile}
-                      />
-                    </Tooltip>
+                    {isSingle && (
+                      <Tooltip title={t('canvas.workflow.variables.replaceFile')}>
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={<Refresh size={16} color="var(--refly-text-1)" />}
+                          onClick={onRefreshFile}
+                        />
+                      </Tooltip>
+                    )}
 
                     <Button
                       size="small"
@@ -133,7 +137,7 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
               </Spin>
             )}
           >
-            {fileList.length === 0 && (
+            {(fileList.length === 0 || (!isSingle && fileList.length < 10)) && (
               <Button
                 className="w-full bg-refly-bg-control-z0 border-none"
                 type="default"

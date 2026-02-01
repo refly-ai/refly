@@ -44,6 +44,8 @@ import { VoucherModule } from './voucher/voucher.module';
 import { CommonModule } from './common/common.module';
 import { ScheduleModule } from './schedule/schedule.module';
 import { SkillPackageModule } from './skill-package/skill-package.module';
+import { WebhookModule } from './webhook/webhook.module';
+import { OpenapiModule } from './openapi/openapi.module';
 import { RedisService } from './common/redis.service';
 
 import { isDesktop } from '../utils/runtime';
@@ -135,6 +137,8 @@ class CustomThrottlerGuard extends ThrottlerGuard {
     VoucherModule,
     ScheduleModule,
     SkillPackageModule,
+    WebhookModule,
+    OpenapiModule,
     EventEmitterModule.forRoot(),
     ...(isDesktop()
       ? []

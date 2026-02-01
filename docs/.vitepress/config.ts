@@ -44,6 +44,13 @@ const sidebar = {
       ],
     },
     {
+      text: 'Developer',
+      items: [
+        { text: 'API Documentation', link: '/guide/api/openapi' },
+        { text: 'Webhook Documentation', link: '/guide/api/webhook' },
+      ],
+    },
+    {
       text: 'Cloud Version',
       items: [
         {
@@ -165,6 +172,13 @@ const sidebar = {
         { text: '视频教程', link: '/zh/guide/video-tutorials' },
         // 核心概念需要新建文件后添加链接
         // { text: "核心概念", link: "/zh/getting-started/core-concepts" },
+      ],
+    },
+    {
+      text: '开发者',
+      items: [
+        { text: 'API 文档', link: '/zh/guide/api/openapi' },
+        { text: 'Webhook 文档', link: '/zh/guide/api/webhook' },
       ],
     },
     {
