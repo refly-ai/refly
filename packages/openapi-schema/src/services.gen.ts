@@ -339,6 +339,8 @@ import type {
   ActivateInvitationCodeData,
   ActivateInvitationCodeError,
   ActivateInvitationCodeResponse,
+  SkipInvitationCodeError,
+  SkipInvitationCodeResponse,
   GetSubscriptionPlansError,
   GetSubscriptionPlansResponse2,
   GetSubscriptionUsageError,
@@ -2320,6 +2322,23 @@ export const activateInvitationCode = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/invitation/activate',
+  });
+};
+
+/**
+ * Skip invitation code
+ * Skip invitation code and proceed to onboarding without rewards
+ */
+export const skipInvitationCode = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    SkipInvitationCodeResponse,
+    SkipInvitationCodeError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/invitation/skip',
   });
 };
 

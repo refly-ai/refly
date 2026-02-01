@@ -471,6 +471,42 @@ export class UploadExpiredError extends BaseError {
   };
 }
 
+export class ToolCallError extends BaseError {
+  code = 'E3012';
+  messageDict = {
+    en: 'Tool call failed',
+    'zh-CN': '工具调用失败',
+  };
+
+  constructor(detail?: string) {
+    super(detail);
+    if (detail) {
+      this.messageDict = {
+        en: `Tool call failed: ${detail}`,
+        'zh-CN': `工具调用失败: ${detail}`,
+      };
+    }
+  }
+}
+
+export class EmailSendError extends BaseError {
+  code = 'E3013';
+  messageDict = {
+    en: 'Failed to send email',
+    'zh-CN': '邮件发送失败',
+  };
+
+  constructor(detail?: string) {
+    super(detail);
+    if (detail) {
+      this.messageDict = {
+        en: `Failed to send email: ${detail}`,
+        'zh-CN': `邮件发送失败: ${detail}`,
+      };
+    }
+  }
+}
+
 // Create a mapping of error codes to error classes
 const errorMap = {
   E0000: UnknownError,
@@ -531,6 +567,8 @@ const errorMap = {
   E3009: InvalidContentTypeError,
   E3010: UploadSizeMismatchError,
   E3011: UploadExpiredError,
+  E3012: ToolCallError,
+  E3013: EmailSendError,
 };
 
 export function getErrorMessage(code: string, locale: string): string {

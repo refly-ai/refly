@@ -1,11 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  BadRequestException,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma.service';
 import { Prisma } from '@prisma/client';
@@ -26,7 +19,6 @@ import {
   ScheduleAnalyticsEvents,
 } from './schedule.constants';
 import { SchedulePriorityService } from './schedule-priority.service';
-import { ScheduleCronService } from './schedule-cron.service';
 import { logEvent } from '@refly/telemetry-node';
 
 @Injectable()
@@ -39,8 +31,6 @@ export class ScheduleService {
     @Inject(OSS_INTERNAL) private readonly oss: ObjectStorageService,
     @InjectQueue(QUEUE_SCHEDULE_EXECUTION) private readonly scheduleQueue: Queue,
     private readonly priorityService: SchedulePriorityService,
-    @Inject(forwardRef(() => ScheduleCronService))
-    private readonly cronService: ScheduleCronService,
     configService: ConfigService,
   ) {
     this.scheduleConfig = getScheduleConfig(configService);
