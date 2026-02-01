@@ -2,8 +2,8 @@
 FROM node:20.19.1-alpine3.20 AS builder
 WORKDIR /app
 
-# Install pnpm globally
-RUN npm install -g pnpm
+# Enable corepack and activate pnpm
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 # Set environment variables to skip gyp-related installations
 ENV npm_config_gyp_ignore=true
@@ -18,7 +18,8 @@ COPY apps/web/package.json ./apps/web/
 COPY packages/ ./packages/
 
 # Install dependencies with workspace support
-RUN pnpm install --ignore-scripts
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --ignore-scripts
 
 # Copy remaining source code
 COPY . .
