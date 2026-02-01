@@ -10,7 +10,6 @@ export class TurnstileService {
   async verifyToken(token: string): Promise<boolean> {
     const enabled = this.configService.get<boolean>('auth.turnstile.enabled');
 
-    // 如果 Turnstile 未启用，直接跳过验证
     if (!enabled) {
       this.logger.debug('Cloudflare Turnstile is disabled. Skipping verification.');
       return true;
