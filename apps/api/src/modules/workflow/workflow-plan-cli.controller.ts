@@ -32,6 +32,7 @@ import { CanvasNode } from '@refly/openapi-schema';
 import {
   GenerateWorkflowPlanRequest,
   PatchWorkflowPlanRequest,
+  PatchWorkflowPlanByCanvasRequest,
   CLI_ERROR_CODES,
 } from './workflow-cli.dto';
 
@@ -204,6 +205,89 @@ export class WorkflowPlanCliController {
         CLI_ERROR_CODES.VALIDATION_ERROR,
         `Failed to patch workflow plan: ${(error as Error).message}`,
         'Check your plan ID and operations',
+      );
+    }
+  }
+
+  /**
+   * Patch an existing workflow plan by canvas ID
+   * POST /v1/cli/workflow-plan/patch-by-canvas
+   *
+   * This endpoint resolves canvasId → copilotSessionId → planId internally.
+   * Only works for AI-generated workflows (those with a copilot session).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('patch-by-canvas')
+  async patchByCanvas(
+    @LoginedUser() user: User,
+    @Body() body: PatchWorkflowPlanByCanvasRequest,
+  ): Promise<{ success: boolean; data: WorkflowPlan }> {
+    this.logger.log(`Patching workflow plan by canvas ${body.canvasId} for user ${user.uid}`);
+
+    try {
+      // Validate operations
+      if (!body.operations || body.operations.length === 0) {
+        throwCliError(
+          CLI_ERROR_CODES.VALIDATION_ERROR,
+          'At least one operation is required',
+          'Provide operations array',
+        );
+      }
+
+      // 1. Query CopilotSession by canvasId (order by createdAt desc)
+      const copilotSession = await this.prisma.copilotSession.findFirst({
+        where: {
+          canvasId: body.canvasId,
+          uid: user.uid,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!copilotSession) {
+        throwCliError(
+          CLI_ERROR_CODES.NOT_FOUND,
+          `No copilot session found for canvas ${body.canvasId}`,
+          'This workflow was not generated via AI. Use `refly workflow generate` first.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      // 2. Query WorkflowPlan by copilotSessionId (order by version desc)
+      const workflowPlanRecord = await this.prisma.workflowPlan.findFirst({
+        where: {
+          copilotSessionId: copilotSession.sessionId,
+          uid: user.uid,
+        },
+        orderBy: { version: 'desc' },
+      });
+
+      if (!workflowPlanRecord) {
+        throwCliError(
+          CLI_ERROR_CODES.NOT_FOUND,
+          `No workflow plan found for canvas ${body.canvasId}`,
+          'This workflow may not have a plan yet.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      // 3. Call existing patchWorkflowPlan with resolved planId
+      const plan = await this.workflowPlanService.patchWorkflowPlan(user, {
+        planId: workflowPlanRecord.planId,
+        operations: body.operations,
+        resultId: genActionResultID(),
+        resultVersion: 0,
+      });
+
+      return buildCliSuccessResponse(plan);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error(`Failed to patch workflow plan by canvas: ${(error as Error).message}`);
+      throwCliError(
+        CLI_ERROR_CODES.VALIDATION_ERROR,
+        `Failed to patch workflow plan: ${(error as Error).message}`,
+        'Check your canvas ID and operations',
       );
     }
   }

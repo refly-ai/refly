@@ -1,5 +1,5 @@
 /**
- * refly workflow node-output - Get node execution output content
+ * refly workflow node output - Get node execution output content
  *
  * Supports both workflowId (c-xxx) and runId (we-xxx).
  * - workflowId: gets output for the latest run
@@ -10,10 +10,10 @@
  */
 
 import { Command } from 'commander';
-import { ok, fail, ErrorCodes } from '../../utils/output.js';
-import { apiRequest } from '../../api/client.js';
-import { CLIError } from '../../utils/errors.js';
-import { buildWorkflowApiUrl, detectIdType } from './utils.js';
+import { ok, fail, ErrorCodes } from '../../../utils/output.js';
+import { apiRequest } from '../../../api/client.js';
+import { CLIError } from '../../../utils/errors.js';
+import { buildWorkflowApiUrl, detectIdType } from '../utils.js';
 
 interface NodeOutputResponse {
   runId: string;
@@ -42,7 +42,7 @@ interface NodeOutputResponse {
   };
 }
 
-export const workflowNodeOutputCommand = new Command('node-output')
+export const nodeOutputCommand = new Command('output')
   .description('Get node execution output content')
   .argument('<id>', 'Workflow ID (c-xxx) or Run ID (we-xxx)')
   .argument('<nodeId>', 'Node ID')
@@ -63,7 +63,7 @@ export const workflowNodeOutputCommand = new Command('node-output')
       const url = buildWorkflowApiUrl(id, `node/${nodeId}/output`, params);
       const result = await apiRequest<NodeOutputResponse>(url);
 
-      ok('workflow.nodeOutput', {
+      ok('workflow.node.output', {
         runId: result.runId,
         workflowId: result.workflowId,
         idType,
@@ -84,9 +84,11 @@ export const workflowNodeOutputCommand = new Command('node-output')
       });
     } catch (error) {
       if (error instanceof CLIError) {
+        // Replace placeholder with actual id in hint
+        const hint = error.hint?.replace(/<workflowId>/g, id).replace(/<id>/g, id);
         fail(error.code, error.message, {
           details: error.details,
-          hint: error.hint,
+          hint,
           suggestedFix: error.suggestedFix,
         });
       }
@@ -94,7 +96,7 @@ export const workflowNodeOutputCommand = new Command('node-output')
         ErrorCodes.INTERNAL_ERROR,
         error instanceof Error ? error.message : 'Failed to get node output',
         {
-          hint: 'Ensure the node has completed execution. Use `refly workflow status <id>` to check.',
+          hint: `Ensure the node has completed execution. Use \`refly workflow status ${id}\` to check.`,
         },
       );
     }

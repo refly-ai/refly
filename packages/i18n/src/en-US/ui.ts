@@ -2704,10 +2704,11 @@ const translations = {
         'This invitation has already been activated. Please try again or join Discord to get a new one.',
       invitationCodeCopied: 'Invite code copied! Go share it with your friends~',
       invitationCodeCopyFailed: 'Failed to copy invitation code',
-      invitationReward: '+{amount} credits',
+      invitationReward: '+{{amount}} credits',
       inviteFriendsTitle: 'Invite friends with your code',
       inviteFriendsSubtitle: 'Both of you get 500 credits',
       invitationLimitText: 'Each user can invite {{used}}/{{limit}} times',
+      availableInvitationCodesText: 'Available invitation codes: {{available}}/{{total}}',
       copyInvitationCodeAction: 'Copy',
       resendInvitationCodeAction: 'Resend invite',
       statusUnknown: 'Unknown',
@@ -3063,10 +3064,11 @@ const translations = {
     },
   },
   invitationCode: {
-    title: 'Enter an invitation code to continue',
-    description: 'Enter your 6-digit invitation code',
+    title: 'Continue to Refly',
+    description: 'Enter an invite code to get credits (optional). Or skip to start now.',
     dontHaveInvitationCode: "Don't have an invite code yet?",
     reward: 'Used +500 points',
+    skip: 'Skip',
   },
   contentDetail: {
     breadcrumb: {

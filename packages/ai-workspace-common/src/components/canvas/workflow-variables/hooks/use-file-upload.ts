@@ -3,13 +3,6 @@ import { message } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
-import { ACCEPT_FILE_EXTENSIONS } from '../constants';
-import {
-  IMAGE_FILE_EXTENSIONS,
-  DOCUMENT_FILE_EXTENSIONS,
-  AUDIO_FILE_EXTENSIONS,
-  VIDEO_FILE_EXTENSIONS,
-} from '../constants';
 import { getFileCategoryAndLimit } from '../utils';
 
 export const useFileUpload = () => {
@@ -129,40 +122,15 @@ export const useFileUpload = () => {
     async (
       _fileList: UploadFile[],
       onFileListChange: (fileList: UploadFile[]) => void,
-      resourceTypes?: string[],
+      _resourceTypes?: string[],
       _oldFileId?: string,
       canvasId?: string | null,
       variableId?: string,
     ) => {
-      // Generate accept attribute based on resource types
-      const generateAcceptAttribute = (types?: string[]) => {
-        if (!types?.length) {
-          return ACCEPT_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
-        }
-
-        return types
-          .map((type) => {
-            switch (type) {
-              case 'document':
-                return DOCUMENT_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
-              case 'image':
-                return IMAGE_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
-              case 'audio':
-                return AUDIO_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
-              case 'video':
-                return VIDEO_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
-              default:
-                return '';
-            }
-          })
-          .filter(Boolean)
-          .join(',');
-      };
-
-      // Create a hidden file input element
+      // Create a hidden file input element without file type restrictions
       const fileInput = document.createElement('input');
       fileInput.type = 'file';
-      fileInput.accept = generateAcceptAttribute(resourceTypes);
+      // Remove accept attribute to allow all file types
       fileInput.multiple = false;
       fileInput.style.display = 'none';
 

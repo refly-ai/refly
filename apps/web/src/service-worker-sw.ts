@@ -167,7 +167,10 @@ registerRoute(
   new NetworkOnly(),
 );
 
-// === Strategy 2: HTML (non-home) - StaleWhileRevalidate with version check ===
+// === Strategy 2: API requests - NetworkOnly (never cache API responses) ===
+registerRoute(({ url }) => url.pathname.startsWith('/api/'), new NetworkOnly());
+
+// === Strategy 3: HTML (non-home) - StaleWhileRevalidate with version check ===
 registerRoute(
   ({ request, url }) =>
     request.destination === 'document' &&
@@ -258,7 +261,7 @@ registerRoute(
   }),
 );
 
-// === Strategy 3: All other same-origin resources - CacheFirst ===
+// === Strategy 4: All other same-origin resources - CacheFirst ===
 registerRoute(
   ({ url }) => url.origin === self.location.origin,
   new CacheFirst({
@@ -287,7 +290,7 @@ registerRoute(
   }),
 );
 
-// === Strategy 4: Google Fonts CSS - StaleWhileRevalidate ===
+// === Strategy 5: Google Fonts CSS - StaleWhileRevalidate ===
 registerRoute(
   ({ url }) => url.origin === 'https://fonts.googleapis.com',
   new StaleWhileRevalidate({
@@ -295,7 +298,7 @@ registerRoute(
   }),
 );
 
-// === Strategy 5: Google Fonts files - CacheFirst ===
+// === Strategy 6: Google Fonts files - CacheFirst ===
 registerRoute(
   ({ url }) => url.origin === 'https://fonts.gstatic.com',
   new CacheFirst({

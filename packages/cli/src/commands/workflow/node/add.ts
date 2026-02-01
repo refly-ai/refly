@@ -1,13 +1,13 @@
 /**
- * refly workflow node-add - Add a node to a workflow
+ * refly workflow node add - Add a node to a workflow
  *
  * Adds a new node to an existing workflow.
  */
 
 import { Command } from 'commander';
-import { ok, fail, ErrorCodes } from '../../utils/output.js';
-import { apiRequest } from '../../api/client.js';
-import { CLIError } from '../../utils/errors.js';
+import { ok, fail, ErrorCodes } from '../../../utils/output.js';
+import { apiRequest } from '../../../api/client.js';
+import { CLIError } from '../../../utils/errors.js';
 
 interface CanvasNode {
   id: string;
@@ -36,7 +36,7 @@ interface UpdateWorkflowRequest {
   operations: (AddNodeOperation | AddEdgeOperation)[];
 }
 
-export const workflowNodeAddCommand = new Command('node-add')
+export const nodeAddCommand = new Command('add')
   .description('Add a node to a workflow')
   .argument('<workflowId>', 'Workflow ID (c-xxx)')
   .requiredOption('--type <type>', 'Node type (skillResponse, start, document, resource, memo)')
@@ -169,15 +169,17 @@ export const workflowNodeAddCommand = new Command('node-add')
         ...(options.connectFrom && { connectedFrom: options.connectFrom }),
         ...(options.connectTo && { connectedTo: options.connectTo }),
         nextSteps: [
-          `View node: \`refly workflow node ${workflowId} ${nodeId}\``,
-          `List all nodes: \`refly workflow nodes ${workflowId}\``,
+          `View node: \`refly workflow node get ${workflowId} ${nodeId}\``,
+          `List all nodes: \`refly workflow node list ${workflowId}\``,
         ],
       });
     } catch (error) {
       if (error instanceof CLIError) {
+        // Replace placeholders with actual values in hint
+        const hint = error.hint?.replace(/<workflowId>/g, workflowId);
         fail(error.code, error.message, {
           details: error.details,
-          hint: error.hint,
+          hint,
           suggestedFix: error.suggestedFix,
         });
         return;

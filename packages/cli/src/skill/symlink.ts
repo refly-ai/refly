@@ -201,6 +201,7 @@ export function initializeBaseSkillSymlink(): SkillSymlinkResult {
 export function createReflySkillWithSymlink(
   skillName: string,
   skillMdContent: string,
+  options?: { force?: boolean },
 ): SkillSymlinkResult {
   const skillDir = getReflyDomainSkillDir(skillName);
 
@@ -209,6 +210,14 @@ export function createReflySkillWithSymlink(
     ensureReflySkillsDir();
 
     if (fs.existsSync(skillDir)) {
+      if (options?.force) {
+        // Force mode: update existing SKILL.md
+        const skillMdPath = path.join(skillDir, 'SKILL.md');
+        fs.writeFileSync(skillMdPath, skillMdContent, { encoding: 'utf-8', mode: 0o644 });
+        logger.debug(`Updated SKILL.md (force): ${skillMdPath}`);
+        // Ensure symlink exists
+        return createSkillSymlink(skillName);
+      }
       return {
         success: false,
         skillName,

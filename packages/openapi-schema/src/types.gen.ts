@@ -172,6 +172,10 @@ export type UpsertMcpServerRequest = {
    * MCP server name
    */
   name: string;
+  /**
+   * Original MCP server name for update
+   */
+  originalName?: string;
   type: McpServerType;
   /**
    * MCP server URL (required for sse and streamable types)
@@ -10500,6 +10504,10 @@ export type ActivateInvitationCodeData = {
 export type ActivateInvitationCodeResponse = BaseResponse;
 
 export type ActivateInvitationCodeError = unknown;
+
+export type SkipInvitationCodeResponse = BaseResponse;
+
+export type SkipInvitationCodeError = unknown;
 
 export type GetSubscriptionPlansResponse2 = GetSubscriptionPlansResponse;
 

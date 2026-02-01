@@ -148,6 +148,7 @@ export default () => ({
     },
     invitation: {
       requireInvitationCode: process.env.AUTH_REQUIRE_INVITATION_CODE === 'true' || false,
+      maxCodesPerUser: Number.parseInt(process.env.INVITATION_MAX_CODES_PER_USER) || 20,
       inviterCreditAmount: Number.parseInt(process.env.INVITATION_INVITER_CREDIT_AMOUNT) || 500,
       inviteeCreditAmount: Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_AMOUNT) || 500,
       inviterCreditExpiresInDays:
@@ -165,6 +166,7 @@ export default () => ({
     },
   },
   tools: {
+    webSearchEnabled: process.env.WEB_SEARCH_ENABLED === 'true',
     supportedToolsets: process.env.SUPPORTED_TOOLSETS || '', // comma separated list of toolset keys
     google: {
       clientId: process.env.GOOGLE_TOOLS_CLIENT_ID,

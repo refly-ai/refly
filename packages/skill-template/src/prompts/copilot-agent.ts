@@ -12,7 +12,10 @@ const formatInstalledToolsets = (installedToolsets: GenericToolset[]) => {
 
 const template = PromptTemplate.load('copilot-agent-system.md');
 
-export const buildWorkflowCopilotPrompt = (params: { installedToolsets: GenericToolset[] }) => {
+export const buildWorkflowCopilotPrompt = (params: {
+  installedToolsets: GenericToolset[];
+  webSearchEnabled?: boolean;
+}) => {
   const availableToolsJson = JSON.stringify(
     formatInstalledToolsets(params.installedToolsets),
     null,
@@ -21,5 +24,6 @@ export const buildWorkflowCopilotPrompt = (params: { installedToolsets: GenericT
 
   return template.render({
     availableToolsJson,
+    webSearchEnabled: params.webSearchEnabled,
   });
 };

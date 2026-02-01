@@ -21,6 +21,7 @@ import {
 import debug from 'debug';
 import { JSONSchemaToZod } from '@dmitryrechkin/json-schema-to-zod';
 import { z } from 'zod';
+import pinyin from 'pinyin';
 
 // Replace direct initialization with lazy initialization
 let debugLog: debug.Debugger;
@@ -29,6 +30,25 @@ function getDebugLog() {
     debugLog = debug('@langchain/mcp-adapters:tools');
   }
   return debugLog;
+}
+
+/**
+ * Sanitize a name to match the pattern [a-zA-Z0-9_-]+
+ * Converts Chinese characters to pinyin and removes invalid characters.
+ */
+function sanitizeToolNameSegment(name: string): string {
+  // Convert Chinese characters to pinyin (flat array, no tone marks)
+  const converted = pinyin(name, {
+    style: pinyin.STYLE_NORMAL,
+  })
+    .flat()
+    .join('');
+
+  // Replace any remaining invalid characters with underscore, then collapse multiple underscores
+  return converted
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
 }
 
 // Ensure Zod object schema marks all fields as required for stricter tool schema consumers (e.g., Azure OpenAI)
@@ -251,8 +271,10 @@ export async function loadMcpTools(
   const toolsResponse = await client.listTools();
   getDebugLog()(`INFO: Found ${toolsResponse.tools?.length || 0} MCP tools`);
 
+  const sanitizedServerName = sanitizeToolNameSegment(serverName);
+
   const initialPrefix = additionalToolNamePrefix ? `${additionalToolNamePrefix}__` : '';
-  const serverPrefix = prefixToolNameWithServerName ? `${serverName}__` : '';
+  const serverPrefix = prefixToolNameWithServerName ? `${sanitizedServerName}__` : '';
   const toolNamePrefix = `${initialPrefix}${serverPrefix}`;
 
   // Filter out tools without names and convert in a single map operation

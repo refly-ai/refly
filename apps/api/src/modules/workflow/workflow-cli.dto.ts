@@ -40,6 +40,7 @@ export interface WorkflowInfo {
   variables: WorkflowVariable[];
   createdAt: string;
   updatedAt: string;
+  sessionId?: string; // Latest copilot session ID for context continuity
 }
 
 export interface ListWorkflowsResponse {
@@ -224,6 +225,11 @@ export interface PatchWorkflowPlanRequest {
   operations: WorkflowPatchOperation[];
 }
 
+export interface PatchWorkflowPlanByCanvasRequest {
+  canvasId: string;
+  operations: WorkflowPatchOperation[];
+}
+
 // ============================================================================
 // AI Workflow Generation DTOs (CLI)
 // ============================================================================
@@ -315,6 +321,85 @@ export interface GenerateStatusResponse {
   error?: string;
   /** Completed result (only when status === 'completed') */
   result?: GenerateWorkflowCliResponse;
+}
+
+// ============================================================================
+// Node Output DTOs
+// ============================================================================
+
+/**
+ * Tool call summary for node output
+ */
+export interface NodeOutputToolCall {
+  callId: string;
+  toolName: string;
+  status: string;
+  output?: unknown;
+}
+
+/**
+ * Response for node output endpoint
+ */
+export interface NodeOutputResponse {
+  runId: string;
+  workflowId: string;
+  nodeId: string;
+  nodeTitle: string;
+  nodeType: string;
+  status: 'waiting' | 'executing' | 'finish' | 'failed';
+  content?: string;
+  contentType?: string;
+  outputTokens?: number;
+  toolCalls?: NodeOutputToolCall[];
+  error?: {
+    type: string;
+    message: string;
+  };
+  timing?: {
+    startTime?: string;
+    endTime?: string;
+    durationMs?: number;
+  };
+}
+
+// ============================================================================
+// Edit Workflow with Natural Language DTOs
+// ============================================================================
+
+/**
+ * Request to edit a workflow using natural language
+ */
+export interface EditWorkflowCliRequest {
+  /** Canvas ID (c-xxx) */
+  canvasId: string;
+  /** Natural language description of the edit */
+  query: string;
+  /** Output language locale */
+  locale?: string;
+  /** Optional model to use for generation */
+  modelItemId?: string;
+  /** Timeout in milliseconds for waiting Copilot completion */
+  timeout?: number;
+  /** Optional session ID to use for context continuity */
+  sessionId?: string;
+}
+
+/**
+ * Response from natural language workflow editing
+ */
+export interface EditWorkflowCliResponse {
+  /** Canvas ID */
+  canvasId: string;
+  /** Workflow plan ID */
+  planId: string;
+  /** Plan version */
+  version: number;
+  /** Which tool Copilot used: generate_workflow or patch_workflow */
+  toolUsed: 'generate_workflow' | 'patch_workflow';
+  /** The resulting workflow plan */
+  plan: WorkflowPlan;
+  /** Copilot session ID for context continuity */
+  sessionId?: string;
 }
 
 export const CLI_ERROR_CODES = {

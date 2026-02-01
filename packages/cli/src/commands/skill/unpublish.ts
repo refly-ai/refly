@@ -33,6 +33,12 @@ export const skillUnpublishCommand = new Command('unpublish')
       // If --name is provided, read skillId from local SKILL.md
       if (options.name) {
         name = options.name;
+        if (!name) {
+          fail(ErrorCodes.INVALID_INPUT, 'Skill name cannot be empty', {
+            hint: `Usage:\n  refly skill unpublish --name <name>\n  refly skill unpublish --id <skillId>\n\nTo find your skill name:\n  refly skill list\n  ls ${skillsDir}/`,
+          });
+          return;
+        }
         const skillDir = getReflyDomainSkillDir(name);
         const skillMdPath = path.join(skillDir, 'SKILL.md');
 

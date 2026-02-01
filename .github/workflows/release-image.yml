@@ -2,9 +2,11 @@ name: Release Docker Images
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
+    inputs:
+      version:
+        description: 'Release version (e.g. 0.3.1)'
+        required: true
+        type: string
 
 jobs:
   release-image:
@@ -17,35 +19,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Extract version from tag
-        id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - uses: pnpm/action-setup@v4
-        if: matrix.app == 'web'
-        with:
-          run_install: false
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        if: matrix.app == 'web'
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        if: matrix.app == 'web'
-        run: pnpm install
-
-      - name: Build
-        run: pnpm build:web
-        if: matrix.app == 'web'
-        env:
-          NODE_OPTIONS: '--max_old_space_size=8192'
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          VITE_RUNTIME: 'web'
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -68,4 +41,4 @@ jobs:
           push: true
           tags: |
             reflyai/refly-${{ matrix.app }}:latest
-            reflyai/refly-${{ matrix.app }}:${{ steps.get_version.outputs.VERSION }}
+            reflyai/refly-${{ matrix.app }}:${{ inputs.version }}
