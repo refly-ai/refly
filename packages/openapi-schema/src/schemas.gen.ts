@@ -1055,7 +1055,7 @@ export const ListAllScheduleRecordsRequestSchema = {
 
 export const ScheduleRecordExecutionStatusSchema = {
   type: 'string',
-  enum: ['scheduled', 'pending', 'processing', 'running', 'success', 'failed', 'skipped'],
+  enum: ['scheduled', 'pending', 'processing', 'running', 'success', 'failed'],
   description: 'Filter by execution status',
 } as const;
 

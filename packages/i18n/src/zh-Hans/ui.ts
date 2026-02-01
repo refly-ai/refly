@@ -2820,6 +2820,7 @@ const translations = {
       inviteFriendsTitle: '邀请好友，领取奖励',
       inviteFriendsSubtitle: '你们都可获得 500 积分',
       invitationLimitText: '每位用户可邀请 {{used}}/{{limit}} 次',
+      availableInvitationCodesText: '可用邀请码：{{available}}/{{total}}',
       copyInvitationCodeAction: '复制',
       resendInvitationCodeAction: '重邀',
       statusUnknown: '未知',
@@ -3155,10 +3156,11 @@ const translations = {
     },
   },
   invitationCode: {
-    title: '输入邀请码以继续',
-    description: '输入您的 6 位邀请码',
+    title: '继续使用 Refly',
+    description: '输入邀请码获取积分（可选）。或跳过立即开始。',
     dontHaveInvitationCode: '还没有邀请码？',
     reward: '已使用 +500积分',
+    skip: '跳过',
   },
   contentDetail: {
     breadcrumb: {
