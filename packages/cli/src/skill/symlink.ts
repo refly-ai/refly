@@ -452,22 +452,30 @@ ${inputExample}
 
 ## Execution
 
-**Run this skill with exactly these steps (no extra commands):**
+**Follow this exact 4-step pattern:**
 
 \`\`\`bash
-# Step 1: Run and capture runId
+# Step 1: Run and capture RUN_ID (we-xxx format)
 RESULT=$(${runCommand})
 RUN_ID=$(echo "$RESULT" | jq -r '.payload.workflowExecutions[0].id')
+# RUN_ID is we-xxx format, use this for workflow commands below
 
-# Step 2: Wait for completion
+# Step 2: Wait for completion (use RUN_ID, not installationId)
 refly workflow status "$RUN_ID" --watch --interval 30000
 
-# Step 3: Get results (includes all node outputs)
-DETAIL=$(refly workflow detail "$RUN_ID")
+# Step 3: Get files from this run (use RUN_ID)
+FILES=$(refly workflow toolcalls "$RUN_ID" --files --latest | jq -r '.payload.files[]')
 
-# Step 4: Download files if any (to /tmp/refly-output/, NOT ./downloads)
-FILE_ID=$(echo "$DETAIL" | jq -r '.payload.nodes[].data.metadata.files[0].fileId // empty' | head -1)
-[ -n "$FILE_ID" ] && refly file download "$FILE_ID" -o "/tmp/refly-output/$FILE_ID"
+# Step 4: Download and open each file
+echo "$FILES" | jq -c '.' | while read -r file; do
+  FILE_ID=$(echo "$file" | jq -r '.fileId')
+  FILE_NAME=$(echo "$file" | jq -r '.name')
+  if [ -n "$FILE_ID" ] && [ "$FILE_ID" != "null" ]; then
+    OUTPUT_PATH="$HOME/Desktop/$FILE_NAME"
+    refly file download "$FILE_ID" -o "$OUTPUT_PATH"
+    open "$OUTPUT_PATH"
+  fi
+done
 \`\`\`
 
 ## Output
@@ -476,10 +484,8 @@ ${outputSection}
 
 ## Rules
 
-**IMPORTANT: Follow the base skill execution workflow exactly. Do NOT add extra commands.**
-
 For workflow operations, refer to the base skill:
-- Base skill: \`~/.claude/skills/refly/SKILL.md\` (contains minimal execution workflow)
+- Base skill: \`~/.claude/skills/refly/SKILL.md\`
 `;
 
   return frontmatterLines.join('\n') + content;

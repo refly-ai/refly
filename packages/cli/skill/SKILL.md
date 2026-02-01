@@ -15,58 +15,121 @@ description: "Base skill for Refly ecosystem: creates, discovers, and runs domai
 
 ## Available Commands
 
-**IMPORTANT: Only use the commands listed below. Do NOT invent or guess commands.**
+| Command | ID Format | Description |
+|---------|-----------|-------------|
+| `refly status` | - | Check authentication and connection status |
+| `refly login` | - | Authenticate with Refly |
+| `refly skill list` | - | List all available skills in the marketplace |
+| `refly skill installations` | - | List your installed skills (get installationId here) |
+| `refly skill run --id <installationId> --input '<json>'` | skpi-xxx | Run an installed skill, returns runId (we-xxx) |
+| `refly workflow status <runId> --watch` | we-xxx | Watch workflow execution status |
+| `refly workflow detail <runId>` | we-xxx | Get workflow run details |
+| `refly workflow toolcalls <runId> --files --latest` | we-xxx | Get files from latest toolcall |
+| `refly file download <fileId> -o <path>` | df-xxx | Download a file |
 
-| Command | Description |
-|---------|-------------|
-| `refly status` | Check authentication and connection status |
-| `refly login` | Authenticate with Refly |
-| `refly skill list` | List all available skills in the marketplace |
-| `refly skill installations` | List your installed skills (get installationId here) |
-| `refly skill run --id <installationId> --input '<json>'` | Run an installed skill |
-| `refly workflow status <runId> --watch` | Watch workflow execution status |
-| `refly workflow detail <runId>` | Get workflow run details and node outputs |
-| `refly file list` | List files in your Refly account |
-| `refly file download <fileId> -o <path>` | Download a file |
+**Tip**: Get `installationId` (skpi-xxx) from `refly skill installations`.
 
-**Commands that do NOT exist** (never use these):
-- ~~`refly skill status`~~ - Use `refly status` instead
-- ~~`refly skill create`~~ - Skills are created via refly.ai web UI
-- ~~`refly run`~~ - Use `refly skill run --id <installationId>` instead
-- ~~`refly result get`~~ - Results are in `refly workflow detail` output
-- ~~`refly workflow list`~~ - Not needed; use the runId from `skill run`
-- ~~`refly file list --limit`~~ - No `--limit` flag exists
+### Command Options
 
-**Tip**: Get `installationId` from `refly skill installations` after installing a skill on refly.ai.
+| Command | Option | Description |
+|---------|--------|-------------|
+| `workflow status` | `--watch` | Poll until workflow completes |
+| `workflow status` | `--interval <ms>` | Polling interval in milliseconds (default: 5000) |
+| `workflow toolcalls` | `--files` | Return simplified output with only files and content |
+| `workflow toolcalls` | `--latest` | With `--files`, return only files from the most recent toolcall |
+| `workflow toolcalls` | `--raw` | Disable output sanitization (show full tool outputs) |
 
-## Execution Workflow (Minimal Steps)
+**Recommended**: Use `--files --latest` to get files from the final output without processing all toolcalls.
 
-**IMPORTANT: Follow this exact pattern. Do NOT add extra API calls.**
+## Skill Categories & Execution Patterns
+
+Choose the execution pattern based on the skill's output type:
+
+| Category | Skills | Output | Pattern |
+|----------|--------|--------|---------|
+| **File Generation** | image, video, audio skills | Files (png/mp4/mp3) | Run → Wait → Download → Open |
+| **Text/Data** | search, research, report skills | Text content | Run → Wait → Extract content |
+| **Action** | email, messaging, integration skills | Status confirmation | Run → Wait → Confirm |
+
+---
+
+### Pattern A: File Generation Skills
+**Use for**: nano-banana-pro, fal-image, fal-video, fal-audio, seedream-image, kling-video, wan-video
 
 ```bash
-# Step 1: Run skill and capture runId (single command)
+# Step 1: Run and capture RUN_ID
 RESULT=$(refly skill run --id <installationId> --input '<json>')
 RUN_ID=$(echo "$RESULT" | jq -r '.payload.workflowExecutions[0].id')
 
-# Step 2: Wait for completion (single command with --watch)
+# Step 2: Wait for completion
 refly workflow status "$RUN_ID" --watch --interval 30000
 
-# Step 3: Get results and download files (if any)
-DETAIL=$(refly workflow detail "$RUN_ID")
-FILE_ID=$(echo "$DETAIL" | jq -r '.payload.nodes[].data.metadata.files[0].fileId // empty' | head -1)
-
-if [ -n "$FILE_ID" ]; then
-  # Download to scratchpad directory (NEVER use ./downloads in project)
-  refly file download "$FILE_ID" -o "/tmp/refly-output/${FILE_ID}"
-fi
+# Step 3: Get files and download to Desktop
+FILES=$(refly workflow toolcalls "$RUN_ID" --files --latest | jq -r '.payload.files[]')
+echo "$FILES" | jq -c '.' | while read -r file; do
+  FILE_ID=$(echo "$file" | jq -r '.fileId')
+  FILE_NAME=$(echo "$file" | jq -r '.name')
+  if [ -n "$FILE_ID" ] && [ "$FILE_ID" != "null" ]; then
+    refly file download "$FILE_ID" -o "$HOME/Desktop/${FILE_NAME}"
+    open "$HOME/Desktop/${FILE_NAME}"
+  fi
+done
 ```
 
-**Key points:**
-- Only 3-4 commands total: `skill run` → `workflow status --watch` → `workflow detail` → `file download`
-- Do NOT call `workflow list` - you already have the runId from `skill run`
-- Do NOT call `workflow node output` separately - `workflow detail` contains all outputs
-- Do NOT download to `./downloads` - use `/tmp/refly-output/` or user-specified path
-- The `--watch` flag waits for completion, no polling loop needed
+---
+
+### Pattern B: Text/Data Skills
+**Use for**: jina, perplexity, weather-report, exa, research skills
+
+```bash
+# Step 1: Run and capture RUN_ID
+RESULT=$(refly skill run --id <installationId> --input '<json>')
+RUN_ID=$(echo "$RESULT" | jq -r '.payload.workflowExecutions[0].id')
+
+# Step 2: Wait for completion
+refly workflow status "$RUN_ID" --watch --interval 30000
+
+# Step 3: Extract text content from toolcalls
+CONTENT=$(refly workflow toolcalls "$RUN_ID" --files --latest | jq -r '.payload.nodes[].content')
+echo "$CONTENT"
+```
+
+---
+
+### Pattern C: Action Skills
+**Use for**: send-email, slack, microsoft-teams, zoom, calendar, CRM integrations
+
+```bash
+# Step 1: Run and capture RUN_ID
+RESULT=$(refly skill run --id <installationId> --input '<json>')
+RUN_ID=$(echo "$RESULT" | jq -r '.payload.workflowExecutions[0].id')
+
+# Step 2: Wait for completion
+refly workflow status "$RUN_ID" --watch --interval 30000
+
+# Step 3: Confirm action status
+STATUS=$(refly workflow detail "$RUN_ID" | jq -r '.payload.status')
+echo "Action completed with status: $STATUS"
+```
+
+---
+
+**ID Types:**
+| ID Format | Example | Used For |
+|-----------|---------|----------|
+| `skpi-xxx` | skpi-h9kpmts9ho1kl9l1sohaloeu | `skill run --id` only |
+| `we-xxx` | we-abc123def456 | `workflow status`, `workflow detail`, `workflow toolcalls` |
+| `c-xxx` | c-g6emwcpi1wpalsz6j4gyi3d9 | Browser URL only |
+| `df-xxx` | df-b3yxyelshtwsbxbrkmcqxmx9 | `file download` |
+| `skpe-xxx` | skpe-qga5lpyv59yjzz2ghz2iv9bu | ⚠️ Do NOT use for workflow commands |
+
+**Required behavior:**
+- `skill run` returns `RUN_ID` (we-xxx) in `.payload.workflowExecutions[0].id`
+- Use `we-xxx` for all workflow commands (`status`, `detail`, `toolcalls`)
+- Choose execution pattern (A/B/C) based on skill category
+- File skills: Download to `~/Desktop/` and `open` to show user
+- Text skills: Extract `.payload.nodes[].content` for text output
+- Action skills: Confirm `.payload.status` for completion
 
 ## Directory Structure
 
@@ -75,6 +138,7 @@ fi
 ├── base/                       # Base skill files (this symlink target)
 │   ├── SKILL.md
 │   └── rules/
+│       ├── execution.md
 │       ├── workflow.md
 │       ├── node.md
 │       ├── file.md
@@ -94,6 +158,7 @@ User intent -> match domain skill (name/trigger) in `~/.claude/skills/`
 
 ## References
 
+- `rules/execution.md` - **Skill execution patterns and error handling**
 - `rules/workflow.md` - Workflow command reference
 - `rules/node.md` - Node command reference
 - `rules/file.md` - File command reference
