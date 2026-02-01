@@ -86,6 +86,14 @@ Most agent tooling today falls into two categories:
 - Agent frameworks (LangChain): Powerful primitives, but require heavy engineering, manual boilerplate, and high maintenance to keep running.
 Refly eliminates the friction of manual configuration, giving you the fastest path from a "vibe" to a usable agent tool. By using our Streamlined DSL, you get the speed of a GUI with the precision of code.
 
+| Dimension | Legacy Automation <br><sub>(n8n, Dify)</sub> | Code-First SDKs <br><sub>(LangChain)</sub> | **Refly Skills** 🚀 |
+| :--- | :--- | :--- | :--- |
+| **Interaction Depth** | 📦 Trigger-only <br><sub>(Black box)</sub> | 💻 Programmatic <br><sub>(Code changes)</sub> | **⚡ Intervenable runtime**<br><sub>Steer logic mid-run</sub> |
+| **Construction** | 🔗 Manual API wiring & JSON | 📝 Manual Python/TS boilerplate | **🤖 Copilot-led**<br><sub>Describe intent → skills generated</sub> |
+| **Recovery** | 🔄 Fail = restart from scratch | 🐞 Debug → redeploy → rerun | **🛠️ Hot-fix**<br><sub>Repair workflows during execution</sub> |
+| **Portability** | 🔒 Hard to reuse across environments | 🧱 Framework-specific | **🌍 Export everywhere**<br><sub>Claude Code, Cursor, Manus</sub> |
+| **Deployment** | 🛠️ Limited function tools | 🏗️ Custom microservices | **✅ Production Ready**<br><sub>Stateful, validated APIs</sub> |
+
 ### For Enterprise: Scalable Skills Governance
 
 Workflow tools like n8n are great for basic connectivity, and frameworks like LangChain offer powerful primitives — but neither provides the governed, production-ready capability layer required for enterprise agent infrastructure.
