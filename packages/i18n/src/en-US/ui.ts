@@ -4435,7 +4435,7 @@ const translations = {
         'Access Refly open capabilities via API, such as running workflows and fetching status/output.',
       overviewTitle: 'Overview',
       overviewDescription:
-        'These APIs let you programmatically access Refly capabilities and integrate with workflows.',
+        'Refly API provides RESTful endpoints for programmatically running workflows, uploading files, querying execution status, and more. All API requests require authentication via API Key.',
       bestPracticesTitle: 'Best Practices',
       bestPracticesDescription:
         'Below is a ready-to-use flow example (upload files, run workflow, poll status, fetch output).',
@@ -4445,8 +4445,13 @@ const translations = {
       bestPracticesCommentPoll: '3) Poll status until done',
       bestPracticesCommentOutput: '4) Fetch output',
       authTitle: 'Authentication',
-      authDescription: 'Include your API Key in every request header.',
+      authDescription:
+        'All API requests require an API Key in the HTTP header for authentication.\\n\\n**How to get an API Key**:\\n1. Go to the Integration page in Refly workspace\\n2. Click the "API Key" tab\\n3. Create a new API Key and keep it secure',
+      authUsageTitle: 'Usage',
+      authHeaderField: 'Header Field',
+      authHeaderValue: 'Header Value',
       authHeader: 'Authorization: Bearer YOUR_API_KEY',
+      baseUrl: 'Base URL',
       keyLabel: 'API Key',
       keyPlaceholder: 'Select API Key',
       keyEmpty: 'No API Key found, please create one first.',

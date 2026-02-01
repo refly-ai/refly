@@ -320,7 +320,7 @@ const buildHeaders = (endpoint: ApiEndpoint, apiKey?: string, hasBody?: boolean)
   const requiresAuth =
     endpoint.security?.includes('api_key') || endpoint.security?.includes('bearerAuth');
   if (requiresAuth) {
-    headers.Authorization = `Bearer ${apiKey ?? 'YOUR_API_KEY'}`;
+    headers.Authorization = `Bearer ${apiKey ?? 'REFLY_API_KEY'}`;
   }
   if (hasBody) {
     // Derive Content-Type from endpoint.requestBody?.content (OpenAPI 3.0 style)
@@ -464,7 +464,7 @@ export const generateBestPracticesExamples = (
   comments: BestPracticesCommentText,
 ): CodeExamples => {
   const safeCanvasId = canvasId || 'YOUR_CANVAS_ID';
-  const safeApiKey = apiKey || 'YOUR_API_KEY';
+  const safeApiKey = apiKey || 'REFLY_API_KEY';
   const buildComment = (prefix: string, text: string) => `${prefix} ${text}`;
 
   const curl = `API_BASE_URL="${baseUrl}"

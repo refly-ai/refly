@@ -4463,7 +4463,8 @@ const translations = {
       title: 'API 集成',
       description: '通过 API 访问 Refly 的开放能力，如运行工作流、查询状态与结果等。',
       overviewTitle: '概览',
-      overviewDescription: '这些 API 支持以编程方式调用 Refly 的开放能力，并与现有工作流集成。',
+      overviewDescription:
+        'Refly API 提供 RESTful 接口，支持以编程方式调用工作流、上传文件、查询执行状态等功能。所有 API 请求均需要通过 API Key 进行身份验证。',
       bestPracticesTitle: '最佳实践',
       bestPracticesDescription:
         '下面给出可直接复用的完整流程示例（包含上传文件、运行工作流、轮询状态与获取结果）。',
@@ -4473,8 +4474,13 @@ const translations = {
       bestPracticesCommentPoll: '3) 轮询状态直到完成',
       bestPracticesCommentOutput: '4) 获取结果',
       authTitle: '认证',
-      authDescription: '每次请求需在 Header 中携带 API Key。',
+      authDescription:
+        '所有 API 请求都需要在 HTTP Header 中携带 API Key 进行身份验证。\\n\\n**如何获取 API Key**：\\n1. 在 Refly 工作台中，进入「集成」页面\\n2. 点击「API Key」标签\\n3. 创建新的 API Key 并妥善保管',
+      authUsageTitle: '使用方式',
+      authHeaderField: 'Header 字段',
+      authHeaderValue: 'Header 值',
       authHeader: 'Authorization: Bearer YOUR_API_KEY',
+      baseUrl: '基础地址',
       keyLabel: 'API Key',
       keyPlaceholder: '选择 API Key',
       keyEmpty: '暂无 API Key，请先创建。',
