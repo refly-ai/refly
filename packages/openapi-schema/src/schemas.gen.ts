@@ -3025,6 +3025,10 @@ export const AuthConfigResponseSchema = {
             $ref: '#/components/schemas/AuthConfigItem',
           },
         },
+        turnstileEnabled: {
+          type: 'boolean',
+          description: 'Whether Cloudflare Turnstile is enabled',
+        },
       },
     },
   ],
@@ -3042,6 +3046,10 @@ export const EmailSignupRequestSchema = {
     password: {
       type: 'string',
       description: 'Password',
+    },
+    turnstileToken: {
+      type: 'string',
+      description: 'Cloudflare Turnstile token',
     },
   },
 } as const;
@@ -3169,6 +3177,10 @@ export const EmailLoginRequestSchema = {
     password: {
       type: 'string',
       description: 'Password',
+    },
+    turnstileToken: {
+      type: 'string',
+      description: 'Cloudflare Turnstile token',
     },
   },
 } as const;

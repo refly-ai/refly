@@ -66,7 +66,7 @@ export class AuthService {
     });
   }
 
-  getAuthConfig(): AuthConfigItem[] {
+  getAuthConfig() {
     const items: AuthConfigItem[] = [];
     if (this.configService.get('auth.email.enabled')) {
       items.push({ provider: 'email' });
@@ -80,7 +80,13 @@ export class AuthService {
     if (this.configService.get('auth.invitation.requireInvitationCode')) {
       items.push({ provider: 'invitation' });
     }
-    return items;
+
+    const turnstileEnabled = this.configService.get<boolean>('auth.turnstile.enabled') ?? false;
+
+    return {
+      data: items,
+      turnstileEnabled,
+    };
   }
 
   async login(user: User): Promise<TokenData> {

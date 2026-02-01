@@ -1,6 +1,6 @@
 import { Button, Input, Form } from 'antd';
 import { Link } from '@refly-packages/ai-workspace-common/utils/router';
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useSearchParams, Navigate, useNavigate } from 'react-router-dom';
 
 import { OAuthButton } from '../../components/login-modal/oauth-button';
@@ -31,6 +31,76 @@ interface FormValues {
   password: string;
 }
 
+interface TurnstileProps {
+  siteKey: string;
+  theme?: 'light' | 'dark';
+  language?: string;
+  onVerify: (token: string) => void;
+  onError?: () => void;
+  onExpire?: () => void;
+}
+
+const Turnstile = ({
+  siteKey,
+  theme = 'light',
+  language = 'en',
+  onVerify,
+  onError,
+  onExpire,
+}: TurnstileProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const scriptId = 'cloudflare-turnstile-script';
+    let script = document.getElementById(scriptId) as HTMLScriptElement;
+
+    if (!script) {
+      script = document.createElement('script');
+      script.id = scriptId;
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    const renderWidget = () => {
+      if ((window as any).turnstile && containerRef.current && !widgetIdRef.current) {
+        widgetIdRef.current = (window as any).turnstile.render(containerRef.current, {
+          sitekey: siteKey,
+          callback: onVerify,
+          'error-callback': onError,
+          'expired-callback': onExpire,
+          width: '400px',
+          theme,
+          language: (language ?? 'en').toLowerCase(),
+          size: 'normal',
+          tabindex: 0,
+        });
+      }
+    };
+
+    if ((window as any).turnstile) {
+      renderWidget();
+    } else {
+      const originalOnLoad = script.onload;
+      script.onload = (e) => {
+        if (originalOnLoad) (originalOnLoad as any)(e);
+        renderWidget();
+      };
+    }
+
+    return () => {
+      if ((window as any).turnstile && widgetIdRef.current) {
+        (window as any).turnstile.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
+      }
+    };
+  }, [siteKey, theme, language, onVerify, onError, onExpire]);
+
+  return <div ref={containerRef} className="flex justify-center w-full" />;
+};
+
 const LoginPage = () => {
   const [form] = Form.useForm<FormValues>();
   const [searchParams] = useSearchParams();
@@ -42,6 +112,21 @@ const LoginPage = () => {
     isLogin: state.isLogin,
     isCheckingLoginStatus: state.isCheckingLoginStatus,
   }));
+
+  // Cloudflare Turnstile state
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileError = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
 
   // Store invite code from URL parameter for claiming after login
   // This must run synchronously before any redirect checks
@@ -85,7 +170,7 @@ const LoginPage = () => {
 
   const isPublicAccessPage = usePublicAccessPage();
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   /**
    * Smart redirect function - uses SPA navigation for internal routes, hard redirect for external URLs
@@ -127,13 +212,14 @@ const LoginPage = () => {
   }, [getLoginStatus, isLogin]);
 
   // Provide default values if config is not loaded
-  const { isGithubEnabled, isGoogleEnabled, isEmailEnabled } = useMemo(() => {
+  const { isGithubEnabled, isGoogleEnabled, isEmailEnabled, isTurnstileEnabled } = useMemo(() => {
     // Default to showing email login if config is not available
     if (!authConfig?.data || isAuthConfigLoading) {
       return {
         isGithubEnabled: false,
         isGoogleEnabled: false,
         isEmailEnabled: true,
+        isTurnstileEnabled: false,
       };
     }
 
@@ -141,8 +227,9 @@ const LoginPage = () => {
       isGithubEnabled: authConfig.data.some((item) => item.provider === 'github'),
       isGoogleEnabled: authConfig.data.some((item) => item.provider === 'google'),
       isEmailEnabled: authConfig.data.some((item) => item.provider === 'email') || true, // Always enable email as fallback
+      isTurnstileEnabled: authConfig.turnstileEnabled ?? false,
     };
-  }, [authConfig?.data, isAuthConfigLoading]);
+  }, [authConfig?.data, authConfig?.turnstileEnabled, isAuthConfigLoading]);
 
   const handleLogin = useCallback(
     (provider: 'github' | 'google') => {
@@ -180,6 +267,7 @@ const LoginPage = () => {
         body: {
           email: values.email,
           password: values.password,
+          turnstileToken: isTurnstileEnabled ? (turnstileToken ?? undefined) : undefined,
         },
       });
       authStore.setLoginInProgress(false);
@@ -220,6 +308,7 @@ const LoginPage = () => {
         body: {
           email: values.email,
           password: values.password,
+          turnstileToken: isTurnstileEnabled ? (turnstileToken ?? undefined) : undefined,
         },
       });
       authStore.setLoginInProgress(false);
@@ -239,7 +328,15 @@ const LoginPage = () => {
         handleRedirect(redirectUrl);
       }
     }
-  }, [authStore, form, isPublicAccessPage, searchParams, handleRedirect]);
+  }, [
+    authStore,
+    form,
+    isPublicAccessPage,
+    searchParams,
+    handleRedirect,
+    turnstileToken,
+    isTurnstileEnabled,
+  ]);
 
   const handleResetPassword = useCallback(() => {
     authStore.setResetPasswordModalOpen(true);
@@ -249,6 +346,7 @@ const LoginPage = () => {
     (signUp: boolean) => {
       authStore.setIsSignUpMode(signUp);
       form.resetFields();
+      setTurnstileToken(null);
     },
     [form, authStore],
   );
@@ -439,7 +537,7 @@ const LoginPage = () => {
             )}
 
             {isEmailEnabled && isEmailFormExpanded && (
-              <div className="flex flex-col w-full" style={{ gap: '24px' }}>
+              <div className="flex flex-col w-full" style={{ gap: '4px' }}>
                 <div className="flex flex-col w-full" style={{ gap: '24px' }}>
                   <div className="flex flex-col w-full" style={{ gap: '20px' }}>
                     <Form form={form} layout="vertical" className="w-full" requiredMark={false}>
@@ -591,10 +689,29 @@ const LoginPage = () => {
                     </Button>
                   </div>
                 </div>
+
+                {/* Cloudflare Turnstile */}
+                {isTurnstileEnabled && (
+                  <div className="flex justify-center w-full">
+                    <Turnstile
+                      siteKey={(import.meta as any).env.PUBLIC_CLOUDFLARE_SITE_KEY ?? ''}
+                      theme={isDarkMode ? 'dark' : 'light'}
+                      language={i18n?.language ?? 'en'}
+                      onVerify={handleTurnstileVerify}
+                      onError={handleTurnstileError}
+                      onExpire={handleTurnstileExpire}
+                    />
+                  </div>
+                )}
+
                 <Button
                   type="primary"
                   onClick={handleEmailAuth}
                   loading={authStore.loginInProgress && authStore.loginProvider === 'email'}
+                  disabled={
+                    (isTurnstileEnabled && !turnstileToken) ||
+                    (authStore.loginInProgress && authStore.loginProvider === 'email')
+                  }
                   className="w-full text-base font-semibold rounded-lg"
                   style={{
                     height: '40px',

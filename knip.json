@@ -10,6 +10,7 @@
     "docs/.vitepress/**",
     "packages/cli/**"
   ],
+  "ignoreDependencies": ["pino-pretty"],
   "workspaces": {
     ".": {},
     "apps/api": {
