@@ -1,8 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, Button, Divider } from 'antd';
 import { useSearchParams } from 'react-router-dom';
-import { useListTools, useUpdateSettings } from '@refly-packages/ai-workspace-common/queries';
-import { useCanvasResourcesPanelStoreShallow, useUserStoreShallow } from '@refly/stores';
+import { useListTools } from '@refly-packages/ai-workspace-common/queries';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { ActionResult, WorkflowPlanRecord } from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -12,6 +12,7 @@ import { useReactFlow } from '@xyflow/react';
 import { MessageList } from '@refly-packages/ai-workspace-common/components/result-message';
 import { useFetchActionResult } from '@refly-packages/ai-workspace-common/hooks/canvas/use-fetch-action-result';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
+import { useUpdateUserPreferences } from '@refly-packages/ai-workspace-common/hooks/use-update-user-preferences';
 import { useFetchProviderItems } from '@refly-packages/ai-workspace-common/hooks/use-fetch-provider-items';
 import { useCanvasLayout } from '@refly-packages/ai-workspace-common/hooks/canvas/use-canvas-layout';
 import { useUpdateCanvasTitle } from '@refly-packages/ai-workspace-common/hooks/canvas';
@@ -75,11 +76,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
 
   const { updateTitle } = useUpdateCanvasTitle(canvasId, canvasTitle ?? '');
 
-  const { userProfile, setUserProfile } = useUserStoreShallow((state) => ({
-    userProfile: state.userProfile,
-    setUserProfile: state.setUserProfile,
-  }));
-  const { mutate: updateUserSettings } = useUpdateSettings();
+  const { userProfile, updateUserPreferences } = useUpdateUserPreferences();
 
   const { t } = useTranslation();
   const [modal, contextHolder] = Modal.useModal();
@@ -188,19 +185,8 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     }
 
     if (isOnboarding) {
-      setUserProfile({
-        ...userProfile,
-        preferences: {
-          ...userProfile?.preferences,
-          needOnboarding: false,
-        },
-      });
-      updateUserSettings({
-        body: {
-          preferences: {
-            needOnboarding: false,
-          },
-        },
+      updateUserPreferences({
+        needOnboarding: false,
       });
     }
 
@@ -234,6 +220,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     searchParams,
     setSearchParams,
     userProfile,
+    updateUserPreferences,
   ]);
 
   const handleRetry = useCallback(() => {
