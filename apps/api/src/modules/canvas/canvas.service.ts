@@ -302,8 +302,14 @@ export class CanvasService {
     };
   }
 
+  /**
+   * Create a canvas snapshot with files/resources for export.
+   * Ownership is enforced via checkOwnership when reading canvas data.
+   */
   async createSnapshotFromCanvas(user: { uid: string }, canvasId: string): Promise<RawCanvasData> {
-    const rawData = await this.getCanvasRawData(user as User, canvasId);
+    const rawData = await this.getCanvasRawData(user as User, canvasId, {
+      checkOwnership: true,
+    });
 
     const driveFiles = await this.prisma.driveFile.findMany({
       where: {

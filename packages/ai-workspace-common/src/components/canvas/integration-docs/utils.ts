@@ -4,7 +4,7 @@ import type { ApiEndpoint, CodeExamples, SchemaObject } from './types';
 
 const endpointCategoryOrder = ['workflow', 'files', 'webhook', 'copilot', 'other'];
 
-export const getEndpointCategoryKey = (endpoint: ApiEndpoint): string => {
+const getEndpointCategoryKey = (endpoint: ApiEndpoint): string => {
   const path = endpoint.path || '';
   if (path.startsWith('/openapi/workflow/') || path.startsWith('/openapi/workflows')) {
     return 'workflow';
@@ -47,7 +47,7 @@ export const groupApiEndpoints = (endpoints: ApiEndpoint[]) => {
   return ordered;
 };
 
-export type SchemaField = {
+type SchemaField = {
   name: string;
   type: string;
   required: boolean;
@@ -450,7 +450,7 @@ export const generateCodeExamples = (
   return { curl, python, javascript };
 };
 
-export type BestPracticesCommentText = {
+type BestPracticesCommentText = {
   upload: string;
   run: string;
   poll: string;

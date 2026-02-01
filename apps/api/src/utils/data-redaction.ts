@@ -47,7 +47,7 @@ const SENSITIVE_BODY_FIELDS = [
  * @param headers - Headers object (can be Record<string, string> or Headers)
  * @returns Redacted headers object
  */
-export function redactHeaders(headers: unknown): Record<string, string> {
+function redactHeaders(headers: unknown): Record<string, string> {
   if (!headers || typeof headers !== 'object') {
     return {};
   }
@@ -103,7 +103,7 @@ export function redactHeaders(headers: unknown): Record<string, string> {
  * @param body - Body object (can be any JSON-serializable value)
  * @returns Redacted body object
  */
-export function redactBody(body: unknown): unknown {
+function redactBody(body: unknown): unknown {
   if (body === null || body === undefined) {
     return body;
   }
@@ -204,26 +204,4 @@ export function redactApiCallRecord(data: {
   }
 
   return result;
-}
-
-/**
- * Retention policy: Number of days to keep API call records
- * After this period, records should be purged or irreversibly redacted
- */
-export const API_CALL_RECORD_RETENTION_DAYS = 90;
-
-/**
- * Check if an API call record should be purged based on retention policy
- * @param completedAt - Completion timestamp
- * @returns true if record should be purged
- */
-export function shouldPurgeRecord(completedAt: Date | null): boolean {
-  if (!completedAt) {
-    return false; // Don't purge incomplete records
-  }
-
-  const retentionMs = API_CALL_RECORD_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-  const ageMs = Date.now() - completedAt.getTime();
-
-  return ageMs > retentionMs;
 }

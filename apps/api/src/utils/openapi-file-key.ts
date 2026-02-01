@@ -10,7 +10,7 @@ export const generateOpenapiFileKey = (uid: string, buffer: Buffer): string => {
   return `${OPENAPI_FILE_KEY_PREFIX}${shortHash}`;
 };
 
-export const isOpenapiFileKey = (value?: string | null): boolean => {
+const isOpenapiFileKey = (value?: string | null): boolean => {
   return !!value && value.startsWith(OPENAPI_FILE_KEY_PREFIX);
 };
 

@@ -27,6 +27,7 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [localControlsDisabled, setLocalControlsDisabled] = useState(false);
   const hasTouchedRef = useRef(false);
 
   const fetchConfig = async () => {
@@ -95,7 +96,10 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
         message.success(t('integration.outputModal.saveSuccess'));
         setConfig({ resultNodeIds });
       } else {
-        throw new Error('updateWebhook failed');
+        const errMsg = response.data?.errMsg || response.data?.errCode;
+        throw new Error(
+          errMsg ? `updateOpenApiConfig failed: ${errMsg}` : 'updateOpenApiConfig failed',
+        );
       }
     } catch (error) {
       console.error('Failed to save output config:', error);
@@ -103,11 +107,12 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
       setSelectedNodeIds(rollbackSelection);
     } finally {
       setSaving(false);
+      setLocalControlsDisabled(false);
     }
   };
 
   const hasAgents = agentNodes.length > 0;
-  const controlsDisabled = !hasAgents || loading || saving;
+  const controlsDisabled = !hasAgents || loading || saving || localControlsDisabled;
 
   return (
     <Modal
@@ -140,10 +145,12 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
                     checked={checked}
                     disabled={controlsDisabled}
                     onChange={() => {
+                      if (controlsDisabled) return;
                       const nextSelected = checked
                         ? selectedNodeIds.filter((id) => id !== node.id)
                         : [...selectedNodeIds, node.id];
                       handleSelectionChange(nextSelected);
+                      setLocalControlsDisabled(true);
                       saveSelection(nextSelected, selectedNodeIds);
                     }}
                   />

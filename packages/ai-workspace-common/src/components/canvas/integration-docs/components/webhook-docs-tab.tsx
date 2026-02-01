@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { Button, Input, message, Tabs, Popconfirm } from 'antd';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
@@ -7,6 +7,7 @@ import RemarkBreaks from 'remark-breaks';
 import { Copy, Refresh } from 'refly-icons';
 import { serverOrigin } from '@refly/ui-kit';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import { useGetWorkflowVariables } from '@refly-packages/ai-workspace-common/queries/queries';
 import { apiDocsData } from '../data/api-docs.generated';
 import { buildWorkflowVariablesExample, extractRequestBodyFields } from '../utils';
@@ -122,10 +123,17 @@ export const WebhookDocsTab = memo(
       return i18nMap[locale] ?? i18nMap[normalized] ?? fallback;
     };
 
-    const copyToClipboard = (text: string) => {
-      navigator.clipboard.writeText(text);
-      message.success(t('common.copied'));
-    };
+    const copyWebhookToClipboard = useCallback(
+      async (text: string) => {
+        const ok = await copyToClipboard(text);
+        if (ok) {
+          message.success(t('common.copy.success'));
+        } else {
+          message.error(t('common.copy.failed'));
+        }
+      },
+      [t],
+    );
 
     const handleResetWebhook = async () => {
       if (!webhookConfig?.webhookId) {
@@ -233,7 +241,10 @@ print(response.json())`;
               </h3>
               <div className="flex gap-2">
                 <Input value={webhookUrl} readOnly className="flex-1" />
-                <Button icon={<Copy size={14} />} onClick={() => copyToClipboard(webhookUrl)}>
+                <Button
+                  icon={<Copy size={14} />}
+                  onClick={() => copyWebhookToClipboard(webhookUrl)}
+                >
                   {t('common.copy.title')}
                 </Button>
                 <Popconfirm

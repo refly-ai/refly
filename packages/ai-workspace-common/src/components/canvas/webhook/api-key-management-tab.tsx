@@ -1,10 +1,11 @@
-import { memo, useState, useEffect } from 'react';
+import { memo, useCallback, useState, useEffect } from 'react';
 import { Button, Table, Input, Modal, message, Space, Typography, Popconfirm } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { Copy } from 'refly-icons';
 import { FiPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import dayjs from 'dayjs';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
+import { copyToClipboard } from '@refly-packages/ai-workspace-common/utils';
 import type { CliApiKeyInfo } from '@refly/openapi-schema';
 
 const { Text } = Typography;
@@ -107,10 +108,17 @@ export const ApiKeyManagementTab = memo(() => {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    message.success(t('common.copied'));
-  };
+  const copyApiKeyToClipboard = useCallback(
+    async (text: string) => {
+      const ok = await copyToClipboard(text);
+      if (ok) {
+        message.success(t('common.copy.success'));
+      } else {
+        message.error(t('common.copy.failed'));
+      }
+    },
+    [t],
+  );
 
   const columns = [
     {
@@ -205,7 +213,7 @@ export const ApiKeyManagementTab = memo(() => {
               <Input value={newApiKey || ''} readOnly className="flex-1" />
               <Button
                 icon={<Copy size={14} />}
-                onClick={() => newApiKey && copyToClipboard(newApiKey)}
+                onClick={() => newApiKey && copyApiKeyToClipboard(newApiKey)}
               >
                 {t('common.copy')}
               </Button>

@@ -310,20 +310,23 @@ export const IntegrationDocsModal = memo(
       };
     }, [clearScrollTimer, finalizeProgrammaticScroll]);
 
-    const handleSectionSelect = (sectionId: string) => {
-      const element = document.getElementById(sectionId);
-      if (element) {
-        pendingSectionRef.current = sectionId;
-        programmaticScrollRef.current = true;
-        clearScrollTimer();
-        setActiveSection(sectionId);
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        scrollEndTimeoutRef.current = setTimeout(() => {
-          finalizeProgrammaticScroll();
+    const handleSectionSelect = useCallback(
+      (sectionId: string) => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          pendingSectionRef.current = sectionId;
+          programmaticScrollRef.current = true;
           clearScrollTimer();
-        }, 150);
-      }
-    };
+          setActiveSection(sectionId);
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          scrollEndTimeoutRef.current = setTimeout(() => {
+            finalizeProgrammaticScroll();
+            clearScrollTimer();
+          }, 150);
+        }
+      },
+      [clearScrollTimer, finalizeProgrammaticScroll, setActiveSection],
+    );
 
     useEffect(() => {
       if (!open || !pendingIntegrationSectionRef.current) return;

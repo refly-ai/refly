@@ -47,14 +47,14 @@ export const workflowNodeExecutionPO2DTO = (
   };
 };
 
-export type WorkflowExecutionStatusViaApi = {
+type WorkflowExecutionStatusViaApi = {
   executionId: string;
   status: WorkflowExecutionStatus;
   createdAt: string;
   nodeExecutions?: WorkflowNodeExecutionStatusViaApi[];
 };
 
-export const workflowNodeExecutionStatusPO2DTO = (
+const workflowNodeExecutionStatusPO2DTO = (
   nodeExecution: WorkflowNodeExecutionPO,
 ): WorkflowNodeExecutionStatusViaApi => {
   return {

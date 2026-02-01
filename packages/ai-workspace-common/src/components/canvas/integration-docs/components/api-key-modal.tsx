@@ -13,6 +13,7 @@ interface ApiKeyModalProps {
 export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
   const { t } = useTranslation();
   const { apiKeys, loading, createApiKey, deleteApiKey } = useApiKeys();
+  const [isMutating, setIsMutating] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState<{ keyId: string; name: string } | null>(null);
@@ -21,11 +22,13 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
   const apiKeyNameInputId = useId();
 
   const handleCreate = async () => {
+    if (isMutating) return;
     if (!newKeyName.trim()) {
       message.error(t('webhook.apiKey.nameRequired'));
       return;
     }
 
+    setIsMutating(true);
     try {
       const result = await createApiKey(newKeyName.trim());
       setCreatedKey(result.apiKey);
@@ -33,12 +36,18 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
       message.success(t('webhook.apiKey.createSuccess'));
     } catch (_error) {
       message.error(t('webhook.apiKey.createFailed'));
+    } finally {
+      setIsMutating(false);
     }
   };
 
-  const handleCopyKey = (key: string) => {
-    navigator.clipboard.writeText(key);
-    message.success(t('common.copied'));
+  const handleCopyKey = async (key: string) => {
+    try {
+      await navigator.clipboard.writeText(key);
+      message.success(t('common.copied'));
+    } catch (_error) {
+      message.error(t('common.copy.failed'));
+    }
   };
 
   const handleDeleteClick = (keyId: string, name: string) => {
@@ -47,8 +56,9 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!keyToDelete) return;
+    if (!keyToDelete || isMutating) return;
 
+    setIsMutating(true);
     try {
       await deleteApiKey(keyToDelete.keyId);
       message.success(t('webhook.apiKey.deleteSuccess'));
@@ -56,6 +66,8 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
       setKeyToDelete(null);
     } catch (_error) {
       message.error(t('webhook.apiKey.deleteFailed'));
+    } finally {
+      setIsMutating(false);
     }
   };
 
@@ -133,6 +145,7 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
             icon={<PlusOutlined />}
             onClick={() => setCreateModalOpen(true)}
             loading={loading}
+            disabled={isMutating}
             className="inline-flex items-center gap-2"
           >
             {t('webhook.apiKey.create')}
@@ -193,7 +206,12 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
               </div>
               <div className="flex items-center justify-end gap-3">
                 <Button onClick={handleCloseCreateModal}>{t('common.cancel')}</Button>
-                <Button type="primary" onClick={handleCreate} loading={loading}>
+                <Button
+                  type="primary"
+                  onClick={handleCreate}
+                  loading={loading}
+                  disabled={isMutating}
+                >
                   {t('common.create')}
                 </Button>
               </div>
@@ -227,6 +245,7 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
             type="primary"
             onClick={handleDeleteConfirm}
             loading={loading}
+            disabled={isMutating}
             className="api-key-delete-confirm-btn"
           >
             {t('common.delete')}
