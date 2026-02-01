@@ -114,6 +114,12 @@ For those who'd like to contribute code, see our [Contribution Guide](https://gi
 
 ## Community
 
+Connect with the Refly community:
+
+- 🌟 **[Star us on GitHub](https://github.com/refly-ai/refly)**: It helps us keep building!
+- 💬 **Discord/Slack**: Join our chat... (如有)
+- 🐦 **Twitter**: Follow us... (如有)
+
 ## License
 
 This repository is licensed under the [ReflyAI Open Source License](https://github.com/refly-ai/refly/blob/main/LICENSE), which is essentially the Apache 2.0 License with some additional restrictions.
