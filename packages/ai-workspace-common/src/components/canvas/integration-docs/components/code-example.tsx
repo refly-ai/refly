@@ -18,19 +18,23 @@ export const CodeExample = memo(({ language, code, copyText }: CodeExampleProps)
   };
 
   return (
-    <div className="integration-docs-code-block">
-      <div className="code-header">
-        <span className="code-lang">{language}</span>
+    <div className="relative my-4 rounded-lg overflow-hidden bg-[var(--integration-docs-code-bg)]">
+      <div className="flex items-center justify-between px-3 py-2 bg-[var(--integration-docs-code-header-bg)] border-b border-[var(--integration-docs-code-border)]">
+        <span className="text-xs text-[var(--integration-docs-code-muted)] font-medium">
+          {language}
+        </span>
         <Button
           type="text"
           size="small"
-          className="code-copy-btn"
+          className="!text-[var(--integration-docs-code-action)] hover:!text-[var(--integration-docs-code-text)]"
           icon={<Copy size={14} />}
           onClick={handleCopy}
         />
       </div>
-      <pre>
-        <code>{code}</code>
+      <pre className="m-0 p-4 overflow-x-auto text-[13px] leading-relaxed bg-[var(--integration-docs-code-content-bg)]">
+        <code className="text-[var(--integration-docs-code-text)] font-mono bg-transparent">
+          {code}
+        </code>
       </pre>
     </div>
   );

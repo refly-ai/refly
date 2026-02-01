@@ -26,38 +26,57 @@ interface ApiDocsTabProps {
   canvasId: string;
 }
 
+const tableClassName =
+  'w-full border-collapse my-4 text-sm rounded-lg overflow-hidden border border-[var(--integration-docs-border,rgba(0,0,0,0.12))] bg-[var(--integration-docs-bg)] [&_tr:last-child_td]:border-b-0';
+const tableHeaderCellClassName =
+  'text-left px-3 py-2.5 border-b border-r border-[var(--integration-docs-border,rgba(0,0,0,0.12))] bg-[var(--integration-docs-bg-subtle)] font-medium text-[var(--integration-docs-text-1)] last:border-r-0';
+const tableCellClassName =
+  'text-left px-3 py-2.5 border-b border-r border-[var(--integration-docs-border,rgba(0,0,0,0.12))] text-[var(--integration-docs-text-2)] last:border-r-0';
+const inlineCodeClassName =
+  'bg-[var(--integration-docs-inline-code-bg)] px-1.5 py-0.5 rounded text-[13px] text-[var(--integration-docs-inline-code-text)]';
+const emptyStateClassName = 'text-[13px] text-[var(--integration-docs-text-3)] py-1.5';
+const sectionDescClassName =
+  'mt-2 mb-4 text-sm text-[var(--integration-docs-text-2)] leading-relaxed';
+
 const MarkdownText = ({ content }: { content: string }) => (
-  <ReactMarkdown className="api-docs-markdown" remarkPlugins={[RemarkBreaks, remarkGfm]}>
+  <ReactMarkdown
+    className="text-sm text-[var(--integration-docs-text-2)] leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0 [&_code]:bg-[var(--integration-docs-inline-code-bg)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[13px] [&_code]:text-[var(--integration-docs-inline-code-text)]"
+    remarkPlugins={[RemarkBreaks, remarkGfm]}
+  >
     {content}
   </ReactMarkdown>
 );
 
 const renderParameters = (endpoint: ApiEndpoint, t: (key: string) => string) => {
   if (!endpoint.parameters?.length) {
-    return <div className="api-docs-empty">{t('integration.api.noParameters')}</div>;
+    return <div className={emptyStateClassName}>{t('integration.api.noParameters')}</div>;
   }
 
   return (
-    <table className="api-docs-table">
+    <table className={tableClassName}>
       <thead>
         <tr>
-          <th>{t('integration.api.paramName')}</th>
-          <th>{t('integration.api.paramIn')}</th>
-          <th>{t('integration.api.paramType')}</th>
-          <th>{t('integration.api.paramRequired')}</th>
-          <th>{t('integration.api.paramDescription')}</th>
+          <th className={tableHeaderCellClassName}>{t('integration.api.paramName')}</th>
+          <th className={tableHeaderCellClassName}>{t('integration.api.paramIn')}</th>
+          <th className={tableHeaderCellClassName}>{t('integration.api.paramType')}</th>
+          <th className={tableHeaderCellClassName}>{t('integration.api.paramRequired')}</th>
+          <th className={tableHeaderCellClassName}>{t('integration.api.paramDescription')}</th>
         </tr>
       </thead>
       <tbody>
         {endpoint.parameters.map((param) => (
           <tr key={`${endpoint.id}-${param.name}-${param.in}`}>
-            <td>
-              <code>{param.name}</code>
+            <td className={tableCellClassName}>
+              <code className={inlineCodeClassName}>{param.name}</code>
             </td>
-            <td>{param.in}</td>
-            <td>{param.type}</td>
-            <td>{param.required ? t('common.yes') : t('common.no')}</td>
-            <td>{param.descriptionKey ? t(param.descriptionKey) : param.description || '-'}</td>
+            <td className={tableCellClassName}>{param.in}</td>
+            <td className={tableCellClassName}>{param.type}</td>
+            <td className={tableCellClassName}>
+              {param.required ? t('common.yes') : t('common.no')}
+            </td>
+            <td className={tableCellClassName}>
+              {param.descriptionKey ? t(param.descriptionKey) : param.description || '-'}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -68,35 +87,42 @@ const renderParameters = (endpoint: ApiEndpoint, t: (key: string) => string) => 
 const renderResponses = (endpoint: ApiEndpoint, t: (key: string) => string) => {
   const entries = Object.entries(endpoint.responses || {});
   if (!entries.length) {
-    return <div className="api-docs-empty">{t('integration.api.noResponses')}</div>;
+    return <div className={emptyStateClassName}>{t('integration.api.noResponses')}</div>;
   }
 
   const responseFields = entries.map(([status, response]) => {
     const fields = extractSchemaFields(response.schema);
     if (!fields.length) return null;
     return (
-      <div key={`${endpoint.id}-${status}-fields`} className="endpoint-subsection">
-        <div className="endpoint-subsection-title">
+      <div
+        key={`${endpoint.id}-${status}-fields`}
+        className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]"
+      >
+        <div className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
           {`${t('integration.api.responseFieldsTitle')} (${status})`}
         </div>
-        <table className="api-docs-table">
+        <table className={tableClassName}>
           <thead>
             <tr>
-              <th>{t('integration.api.paramName')}</th>
-              <th>{t('integration.api.paramType')}</th>
-              <th>{t('integration.api.paramRequired')}</th>
-              <th>{t('integration.api.paramDescription')}</th>
+              <th className={tableHeaderCellClassName}>{t('integration.api.paramName')}</th>
+              <th className={tableHeaderCellClassName}>{t('integration.api.paramType')}</th>
+              <th className={tableHeaderCellClassName}>{t('integration.api.paramRequired')}</th>
+              <th className={tableHeaderCellClassName}>{t('integration.api.paramDescription')}</th>
             </tr>
           </thead>
           <tbody>
             {fields.map((field) => (
               <tr key={`${endpoint.id}-${status}-${field.name}`}>
-                <td>
-                  <code>{field.name}</code>
+                <td className={tableCellClassName}>
+                  <code className={inlineCodeClassName}>{field.name}</code>
                 </td>
-                <td>{field.type}</td>
-                <td>{field.required ? t('common.yes') : t('common.no')}</td>
-                <td>{field.descriptionKey ? t(field.descriptionKey) : field.description || '-'}</td>
+                <td className={tableCellClassName}>{field.type}</td>
+                <td className={tableCellClassName}>
+                  {field.required ? t('common.yes') : t('common.no')}
+                </td>
+                <td className={tableCellClassName}>
+                  {field.descriptionKey ? t(field.descriptionKey) : field.description || '-'}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -106,23 +132,27 @@ const renderResponses = (endpoint: ApiEndpoint, t: (key: string) => string) => {
   });
 
   return (
-    <div className="api-response-list">
-      <div className="endpoint-subsection">
-        <div className="endpoint-subsection-title">{t('integration.api.responseStatusTitle')}</div>
-        <table className="api-docs-table">
+    <div className="flex flex-col gap-3">
+      <div className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]">
+        <div className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
+          {t('integration.api.responseStatusTitle')}
+        </div>
+        <table className={tableClassName}>
           <thead>
             <tr>
-              <th>{t('integration.api.responseStatus')}</th>
-              <th>{t('integration.api.responseDescription')}</th>
+              <th className={tableHeaderCellClassName}>{t('integration.api.responseStatus')}</th>
+              <th className={tableHeaderCellClassName}>
+                {t('integration.api.responseDescription')}
+              </th>
             </tr>
           </thead>
           <tbody>
             {entries.map(([status, response]) => (
               <tr key={`${endpoint.id}-${status}`}>
-                <td>
-                  <code>{status}</code>
+                <td className={tableCellClassName}>
+                  <code className={inlineCodeClassName}>{status}</code>
                 </td>
-                <td>
+                <td className={tableCellClassName}>
                   {response.descriptionKey
                     ? t(response.descriptionKey)
                     : response.description || '-'}
@@ -136,11 +166,11 @@ const renderResponses = (endpoint: ApiEndpoint, t: (key: string) => string) => {
       {responseFields.some(Boolean) ? (
         responseFields
       ) : (
-        <div className="endpoint-subsection">
-          <div className="endpoint-subsection-title">
+        <div className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]">
+          <div className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
             {t('integration.api.responseFieldsTitle')}
           </div>
-          <div className="api-docs-empty">{t('integration.api.noResponseFields')}</div>
+          <div className={emptyStateClassName}>{t('integration.api.noResponseFields')}</div>
         </div>
       )}
 
@@ -149,8 +179,11 @@ const renderResponses = (endpoint: ApiEndpoint, t: (key: string) => string) => {
         if (example === null || example === undefined) return null;
         const display = JSON.stringify(example, null, 2);
         return (
-          <div key={`${endpoint.id}-${status}-example`} className="endpoint-subsection">
-            <div className="endpoint-subsection-title">
+          <div
+            key={`${endpoint.id}-${status}-example`}
+            className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]"
+          >
+            <div className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
               {`${t('integration.api.responseExample')} (${status})`}
             </div>
             <CodeExample language="json" code={display} />
@@ -171,28 +204,32 @@ const renderRequestBodyFields = (endpoint: ApiEndpoint, t: (key: string) => stri
   });
 
   if (!fields.length) {
-    return <div className="api-docs-empty">{t('integration.api.noRequestBodyFields')}</div>;
+    return <div className={emptyStateClassName}>{t('integration.api.noRequestBodyFields')}</div>;
   }
 
   return (
-    <table className="api-docs-table">
+    <table className={tableClassName}>
       <thead>
         <tr>
-          <th>{t('integration.api.paramName')}</th>
-          <th>{t('integration.api.paramType')}</th>
-          <th>{t('integration.api.paramRequired')}</th>
-          <th>{t('integration.api.paramDescription')}</th>
+          <th className={tableHeaderCellClassName}>{t('integration.api.paramName')}</th>
+          <th className={tableHeaderCellClassName}>{t('integration.api.paramType')}</th>
+          <th className={tableHeaderCellClassName}>{t('integration.api.paramRequired')}</th>
+          <th className={tableHeaderCellClassName}>{t('integration.api.paramDescription')}</th>
         </tr>
       </thead>
       <tbody>
         {fields.map((field) => (
           <tr key={`${endpoint.id}-${field.name}`}>
-            <td>
-              <code>{field.name}</code>
+            <td className={tableCellClassName}>
+              <code className={inlineCodeClassName}>{field.name}</code>
             </td>
-            <td>{field.type}</td>
-            <td>{field.required ? t('common.yes') : t('common.no')}</td>
-            <td>{field.descriptionKey ? t(field.descriptionKey) : field.description || '-'}</td>
+            <td className={tableCellClassName}>{field.type}</td>
+            <td className={tableCellClassName}>
+              {field.required ? t('common.yes') : t('common.no')}
+            </td>
+            <td className={tableCellClassName}>
+              {field.descriptionKey ? t(field.descriptionKey) : field.description || '-'}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -265,28 +302,34 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
   };
 
   return (
-    <div className="integration-docs-body">
-      <div className="integration-docs-header">
-        <h2>{t('integration.api.title')}</h2>
-        <p>{t('integration.api.description')}</p>
+    <div className="mx-auto w-full max-w-[800px] pt-5 px-4 pb-10 md:pt-6 md:px-5 md:pb-12 lg:pt-8 lg:px-10 lg:pb-16">
+      <div className="mb-8">
+        <h2 className="text-[22px] md:text-[28px] font-semibold text-[var(--integration-docs-text-1)] mb-2">
+          {t('integration.api.title')}
+        </h2>
+        <p className="m-0 text-[15px] text-[var(--integration-docs-text-2)] leading-relaxed">
+          {t('integration.api.description')}
+        </p>
       </div>
 
-      <section id="api-overview" className="integration-docs-section">
-        <h3 className="integration-docs-section-title">{t('integration.api.overviewTitle')}</h3>
-        <div className="integration-docs-section-desc">
+      <section id="api-overview" className="mb-10 scroll-mt-6 last:mb-0">
+        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+          {t('integration.api.overviewTitle')}
+        </h3>
+        <div className="-mt-1 mb-4 text-sm text-[var(--integration-docs-text-2)] leading-relaxed">
           <MarkdownText content={t('integration.api.overviewDescription')} />
         </div>
       </section>
 
-      <section id="api-best-practices" className="integration-docs-section">
-        <h3 className="integration-docs-section-title">
+      <section id="api-best-practices" className="mb-10 scroll-mt-6 last:mb-0">
+        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
           {t('integration.api.bestPracticesTitle')}
         </h3>
-        <div className="integration-docs-section-desc">
+        <div className="-mt-1 mb-4 text-sm text-[var(--integration-docs-text-2)] leading-relaxed">
           <MarkdownText content={t('integration.api.bestPracticesDescription')} />
         </div>
-        <div className="api-best-practices-examples">
-          <h4 className="endpoint-section-title">
+        <div className="mt-3">
+          <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
             {t('integration.api.bestPracticesExamplesTitle')}
           </h4>
           <Tabs
@@ -330,13 +373,19 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
         </div>
       </section>
 
-      <section id="api-endpoints" className="integration-docs-section">
-        <h3 className="integration-docs-section-title">{t('integration.api.endpointsTitle')}</h3>
-        <p className="integration-docs-section-desc">{t('integration.api.endpointsDescription')}</p>
+      <section id="api-endpoints" className="mb-10 scroll-mt-6 last:mb-0">
+        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+          {t('integration.api.endpointsTitle')}
+        </h3>
+        <p className={sectionDescClassName}>{t('integration.api.endpointsDescription')}</p>
 
-        {groupedEndpoints.map((group) => (
-          <div key={group.key} id={`api-endpoints-${group.key}`} className="api-endpoint-group">
-            <h4 className="api-endpoint-group-title">
+        {groupedEndpoints.map((group, groupIndex) => (
+          <div
+            key={group.key}
+            id={`api-endpoints-${group.key}`}
+            className={groupIndex === 0 ? 'mt-5' : 'mt-8'}
+          >
+            <h4 className="text-[15px] font-semibold text-[var(--integration-docs-text-1)] mb-3 ml-1">
               {t(`integration.api.endpointGroups.${group.key}`)}
             </h4>
             {group.endpoints.map((endpoint) => {
@@ -380,15 +429,31 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                 : copyExamples;
 
               return (
-                <article key={endpoint.id} id={endpointAnchorId} className="api-endpoint-card">
-                  <div className="endpoint-header">
-                    <span className={`endpoint-method ${endpoint.method.toLowerCase()}`}>
+                <article
+                  key={endpoint.id}
+                  id={endpointAnchorId}
+                  className="border border-[var(--integration-docs-border)] rounded-xl mb-8 last:mb-0 overflow-hidden bg-[var(--integration-docs-bg)] shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+                >
+                  <div className="flex items-center gap-3 px-5 py-4 bg-[var(--integration-docs-bg-subtle)] border-b border-[var(--integration-docs-border)]">
+                    <span
+                      className={`px-2.5 py-1 rounded text-xs font-semibold uppercase ${
+                        endpoint.method.toLowerCase() === 'get'
+                          ? 'bg-[var(--integration-docs-method-get-bg)] text-[var(--integration-docs-method-get-text)]'
+                          : endpoint.method.toLowerCase() === 'post'
+                            ? 'bg-[var(--integration-docs-method-post-bg)] text-[var(--integration-docs-method-post-text)]'
+                            : endpoint.method.toLowerCase() === 'put'
+                              ? 'bg-[var(--integration-docs-method-put-bg)] text-[var(--integration-docs-method-put-text)]'
+                              : 'bg-[var(--integration-docs-method-delete-bg)] text-[var(--integration-docs-method-delete-text)]'
+                      }`}
+                    >
                       {endpoint.method}
                     </span>
-                    <span className="endpoint-path">{endpoint.path}</span>
+                    <span className="font-mono text-sm text-[var(--integration-docs-text-1)]">
+                      {endpoint.path}
+                    </span>
                   </div>
-                  <div className="endpoint-body">
-                    <div className="endpoint-summary">
+                  <div className="p-5">
+                    <div className="text-base font-semibold text-[var(--integration-docs-text-1)] mb-2">
                       {endpoint.summaryKey ? t(endpoint.summaryKey) : endpoint.summary}
                     </div>
                     {(() => {
@@ -396,21 +461,21 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                         ? t(endpoint.descriptionKey)
                         : endpoint.description;
                       return text ? (
-                        <div className="endpoint-description">
+                        <div className="text-sm text-[var(--integration-docs-text-2)] leading-relaxed mb-4">
                           <MarkdownText content={text} />
                         </div>
                       ) : null;
                     })()}
 
-                    <div className="endpoint-section">
-                      <h4 className="endpoint-section-title">
+                    <div className="mt-5 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
+                      <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
                         {t('integration.api.parametersTitle')}
                       </h4>
                       {renderParameters(endpoint, t)}
                     </div>
 
-                    <div className="endpoint-section">
-                      <h4 className="endpoint-section-title">
+                    <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
+                      <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
                         {t('integration.api.requestBodyTitle')}
                       </h4>
                       {endpoint.requestBody ? (
@@ -420,19 +485,19 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                               ? t(endpoint.requestBody.schema.descriptionKey)
                               : endpoint.requestBody.schema?.description;
                             return text ? (
-                              <div className="api-docs-section-desc">
+                              <div className={sectionDescClassName}>
                                 <MarkdownText content={text} />
                               </div>
                             ) : null;
                           })()}
-                          <div className="endpoint-subsection">
-                            <h5 className="endpoint-subsection-title">
+                          <div className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]">
+                            <h5 className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
                               {t('integration.api.requestBodyFieldsTitle')}
                             </h5>
                             {renderRequestBodyFields(endpoint, t)}
                           </div>
-                          <div className="endpoint-subsection">
-                            <h5 className="endpoint-subsection-title">
+                          <div className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]">
+                            <h5 className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
                               {t('integration.api.requestBodyExampleTitle')}
                             </h5>
                             {requestDisplay ? (
@@ -441,26 +506,28 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                                 code={requestDisplay}
                               />
                             ) : (
-                              <div className="api-docs-empty">
+                              <div className={emptyStateClassName}>
                                 {t('integration.api.noRequestBody')}
                               </div>
                             )}
                           </div>
                         </>
                       ) : (
-                        <div className="api-docs-empty">{t('integration.api.noRequestBody')}</div>
+                        <div className={emptyStateClassName}>
+                          {t('integration.api.noRequestBody')}
+                        </div>
                       )}
                     </div>
 
-                    <div className="endpoint-section">
-                      <h4 className="endpoint-section-title">
+                    <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
+                      <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
                         {t('integration.api.responsesTitle')}
                       </h4>
                       {renderResponses(endpoint, t)}
                     </div>
 
-                    <div className="endpoint-section">
-                      <h4 className="endpoint-section-title">
+                    <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
+                      <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
                         {t('integration.api.codeExamplesTitle')}
                       </h4>
                       <Tabs
@@ -510,27 +577,33 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
         ))}
       </section>
 
-      <section id="api-errors" className="integration-docs-section">
-        <h3 className="integration-docs-section-title">{t('integration.api.errorsTitle')}</h3>
-        <p className="integration-docs-section-desc">{t('integration.api.errorsDescription')}</p>
-        <table className="api-docs-table">
+      <section id="api-errors" className="mb-10 scroll-mt-6 last:mb-0">
+        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+          {t('integration.api.errorsTitle')}
+        </h3>
+        <p className={sectionDescClassName}>{t('integration.api.errorsDescription')}</p>
+        <table className={tableClassName}>
           <thead>
             <tr>
-              <th>{t('integration.api.errorCode')}</th>
-              <th>{t('integration.api.errorStatus')}</th>
-              <th>{t('integration.api.errorMessage')}</th>
-              <th>{t('integration.api.errorDescription')}</th>
+              <th className={tableHeaderCellClassName}>{t('integration.api.errorCode')}</th>
+              <th className={tableHeaderCellClassName}>{t('integration.api.errorStatus')}</th>
+              <th className={tableHeaderCellClassName}>{t('integration.api.errorMessage')}</th>
+              <th className={tableHeaderCellClassName}>{t('integration.api.errorDescription')}</th>
             </tr>
           </thead>
           <tbody>
             {apiDocsData.errorCodes.map((error) => (
               <tr key={error.code}>
-                <td>
-                  <code>{error.code}</code>
+                <td className={tableCellClassName}>
+                  <code className={inlineCodeClassName}>{error.code}</code>
                 </td>
-                <td>{error.httpStatus ?? '-'}</td>
-                <td>{resolveText(error.message, error.messageI18n)}</td>
-                <td>{resolveText(error.description, error.descriptionI18n)}</td>
+                <td className={tableCellClassName}>{error.httpStatus ?? '-'}</td>
+                <td className={tableCellClassName}>
+                  {resolveText(error.message, error.messageI18n)}
+                </td>
+                <td className={tableCellClassName}>
+                  {resolveText(error.description, error.descriptionI18n)}
+                </td>
               </tr>
             ))}
           </tbody>

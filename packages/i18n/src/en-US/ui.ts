@@ -4411,6 +4411,8 @@ const translations = {
     sections: {
       status: 'Status',
       url: 'URL',
+      requestBody: 'Request Body',
+      fileUpload: 'File Upload',
       examples: 'Examples',
       instructions: 'Instructions',
       overview: 'Overview',
@@ -4667,6 +4669,9 @@ const translations = {
     instruction2:
       'Request body is JSON. You can pass variables directly or wrap them under variables.',
     instruction3: 'Requests return immediately; check Run History for results.',
+    fileUploadDescription:
+      'If you need to send file variables, upload files via /openapi/files/upload to get fileKey (requires API Key), then pass fileKey or fileKey[] under variables in the webhook body.',
+    fileUploadLink: 'View file upload API docs',
     apiKey: {
       title: 'API Key',
       description: 'Manage your API keys for accessing the Refly API.',

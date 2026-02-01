@@ -10456,7 +10456,7 @@ export type WebhookCallRecord = {
   /**
    * Webhook ID
    */
-  webhookId?: string;
+  apiId?: string;
   /**
    * Canvas ID
    */

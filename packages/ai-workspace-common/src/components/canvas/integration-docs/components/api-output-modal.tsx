@@ -119,16 +119,22 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
       destroyOnClose
       className="api-output-modal"
     >
-      <div className="api-output-modal-content">
-        <p className="api-output-modal-description">{t('integration.outputModal.description')}</p>
+      <div className="px-6 pb-3">
+        <p className="text-sm text-[var(--refly-text-2)] mb-3 leading-normal">
+          {t('integration.outputModal.description')}
+        </p>
 
         {hasAgents ? (
-          <div className="api-output-node-list">
+          <div className="flex flex-col gap-2">
             {agentNodes.map((node) => {
               const title = node.data?.title || t('common.agent', { defaultValue: 'Agent' });
               const checked = selectedNodeIds.includes(node.id);
               return (
-                <label key={node.id} className="api-output-node-item" htmlFor={node.id}>
+                <label
+                  key={node.id}
+                  htmlFor={node.id}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[var(--refly-line)] bg-[var(--refly-bg-control-z0)] cursor-pointer"
+                >
                   <Checkbox
                     id={node.id}
                     checked={checked}
@@ -141,15 +147,19 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
                       saveSelection(nextSelected, selectedNodeIds);
                     }}
                   />
-                  <span className="api-output-node-title">{title}</span>
+                  <span className="text-sm text-[var(--refly-text-0)]">{title}</span>
                 </label>
               );
             })}
           </div>
         ) : (
-          <div className="api-output-modal-empty">{t('integration.outputModal.empty')}</div>
+          <div className="text-[13px] text-[var(--refly-text-3)] bg-[var(--refly-bg-control-z0)] border border-dashed border-[var(--refly-line)] rounded-lg p-3">
+            {t('integration.outputModal.empty')}
+          </div>
         )}
-        <div className="api-output-modal-hint">{t('integration.outputModal.hint')}</div>
+        <div className="text-xs text-[var(--refly-text-3)] mt-3">
+          {t('integration.outputModal.hint')}
+        </div>
       </div>
     </Modal>
   );

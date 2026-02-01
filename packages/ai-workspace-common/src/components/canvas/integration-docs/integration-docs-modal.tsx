@@ -47,6 +47,7 @@ export const IntegrationDocsModal = memo(
     const [webhookToggling, setWebhookToggling] = useState(false);
     const contentRef = useRef<HTMLDivElement>(null);
     const pendingSectionRef = useRef<string | null>(null);
+    const pendingIntegrationSectionRef = useRef<string | null>(null);
     const programmaticScrollRef = useRef(false);
     const scrollEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -76,8 +77,11 @@ export const IntegrationDocsModal = memo(
         case 'webhook':
           return [
             { id: 'webhook-url', label: t('integration.sections.url') },
+            { id: 'webhook-request-body', label: t('integration.sections.requestBody') },
+            { id: 'webhook-file-upload', label: t('integration.sections.fileUpload') },
             { id: 'webhook-examples', label: t('integration.sections.examples') },
             { id: 'webhook-instructions', label: t('integration.sections.instructions') },
+            { id: 'webhook-errors', label: t('integration.sections.errors') },
           ];
         case 'api':
           return [
@@ -111,20 +115,21 @@ export const IntegrationDocsModal = memo(
       return flattened;
     }, [sections]);
 
-    const getListClassName = (level: number) => {
-      if (level === 0) return 'integration-docs-toc-list';
-      if (level === 1) return 'integration-docs-toc-sublist';
-      return 'integration-docs-toc-subsublist';
-    };
+    const getListClassName = (level: number) =>
+      level === 0 ? 'flex flex-col gap-0.5' : 'flex flex-col gap-0.5 pl-2.5';
 
     const getItemClassName = (level: number) => {
-      if (level === 0) return 'integration-docs-toc-item';
-      if (level === 1) return 'integration-docs-toc-subitem';
-      return 'integration-docs-toc-subsubitem';
+      if (level === 0) {
+        return 'text-left border-0 bg-transparent rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-2 text-[13px]';
+      }
+      if (level === 1) {
+        return 'text-left border-0 bg-transparent rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-1.5 text-xs';
+      }
+      return 'text-left border-0 bg-transparent rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-1 text-[11px]';
     };
 
     const getGroupClassName = (level: number) =>
-      level === 0 ? 'integration-docs-toc-group' : 'integration-docs-toc-subgroup';
+      level === 0 ? 'flex flex-col gap-1' : 'flex flex-col gap-0.5';
 
     const renderTocList = (items: TocSection[], level = 0) => (
       <div className={getListClassName(level)}>
@@ -135,7 +140,11 @@ export const IntegrationDocsModal = memo(
               <button
                 type="button"
                 onClick={() => handleSectionSelect(section.id)}
-                className={`${getItemClassName(level)} ${isActive ? 'is-active' : ''}`}
+                className={`${getItemClassName(level)} ${
+                  isActive
+                    ? 'bg-[var(--refly-tertiary-hover)] text-[var(--integration-docs-text-1)] font-medium'
+                    : ''
+                }`}
               >
                 {section.label}
               </button>
@@ -316,12 +325,36 @@ export const IntegrationDocsModal = memo(
       }
     };
 
+    useEffect(() => {
+      if (!open || !pendingIntegrationSectionRef.current) return;
+      const targetId = pendingIntegrationSectionRef.current;
+      pendingIntegrationSectionRef.current = null;
+      let attempts = 0;
+      const tryScroll = () => {
+        const element = document.getElementById(targetId);
+        if (element) {
+          handleSectionSelect(targetId);
+          return;
+        }
+        attempts += 1;
+        if (attempts < 12) {
+          requestAnimationFrame(tryScroll);
+        }
+      };
+      requestAnimationFrame(tryScroll);
+    }, [open, activeIntegration, sections, handleSectionSelect]);
+
     const handleIntegrationChange = (type: IntegrationType) => {
       setActiveIntegration(type);
       setActiveSection('');
       if (type !== 'api') {
         setOutputModalOpen(false);
       }
+    };
+
+    const handleNavigateToIntegrationSection = (type: IntegrationType, sectionId: string) => {
+      pendingIntegrationSectionRef.current = sectionId;
+      handleIntegrationChange(type);
     };
 
     const getModalContainer = (): HTMLElement => {
@@ -338,6 +371,9 @@ export const IntegrationDocsModal = memo(
               onToggleWebhook={handleToggleWebhook}
               toggling={webhookToggling}
               onWebhookReset={fetchWebhookConfig}
+              onNavigateToApiSection={(sectionId) =>
+                handleNavigateToIntegrationSection('api', sectionId)
+              }
             />
           );
         case 'api':
@@ -359,12 +395,20 @@ export const IntegrationDocsModal = memo(
           width="100%"
           destroyOnClose
           closable={false}
-          className="integration-docs-modal"
-          wrapClassName="integration-docs-modal-wrap"
+          className="integration-docs-modal !max-w-none !w-full !h-[calc(100vh-50px)] !p-0"
+          wrapClassName="integration-docs-modal-wrap !top-[50px] left-0 right-0 bottom-0 !h-[calc(100vh-50px)] !overflow-hidden"
           getContainer={getModalContainer}
-          style={{ top: 0, padding: 0 }}
+          style={{ top: 0, padding: 0, height: 'calc(100vh - 50px)' }}
           styles={{
-            body: { height: 'calc(100vh - 50px)', padding: 0 },
+            content: {
+              height: 'calc(100vh - 50px)',
+              width: '100%',
+              padding: 0,
+              borderRadius: 0,
+              overflow: 'hidden',
+              boxShadow: 'none',
+            },
+            body: { height: 'calc(100vh - 50px)', padding: 0, overflow: 'hidden' },
             mask: {
               background: 'var(--refly-modal-mask)',
               top: 50,
@@ -372,50 +416,64 @@ export const IntegrationDocsModal = memo(
             },
           }}
         >
-          <div className="integration-docs-layout">
+          <div className="flex flex-row h-full w-full bg-[var(--integration-docs-bg)] overflow-hidden">
             {/* Left sidebar - Integration navigation */}
-            <aside className="integration-docs-nav">
-              <div className="integration-docs-nav-title">{t('integration.navTitle')}</div>
-              <div className="integration-docs-nav-list">
+            <aside className="hidden lg:flex w-[220px] py-5 px-4 border-r border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] flex-shrink-0 flex-col overflow-y-auto overflow-x-hidden">
+              <div className="text-xs font-medium text-[var(--integration-docs-text-3)] uppercase tracking-wide mb-4 px-2.5">
+                {t('integration.navTitle')}
+              </div>
+              <div className="flex flex-col gap-1">
                 <button
                   type="button"
-                  className={`integration-docs-nav-item ${activeIntegration === 'skill' ? 'is-active' : ''}`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 bg-transparent text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
+                    activeIntegration === 'skill'
+                      ? 'bg-[var(--refly-tertiary-hover)] text-[var(--integration-docs-text-1)] font-medium'
+                      : ''
+                  }`}
                   onClick={() => handleIntegrationChange('skill')}
                 >
-                  <AppstoreOutlined />
+                  <AppstoreOutlined className="text-base" />
                   <span>{t('integration.navSkill')}</span>
                 </button>
                 <button
                   type="button"
-                  className={`integration-docs-nav-item ${activeIntegration === 'api' ? 'is-active' : ''}`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 bg-transparent text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
+                    activeIntegration === 'api'
+                      ? 'bg-[var(--refly-tertiary-hover)] text-[var(--integration-docs-text-1)] font-medium'
+                      : ''
+                  }`}
                   onClick={() => handleIntegrationChange('api')}
                 >
-                  <CodeOutlined />
+                  <CodeOutlined className="text-base" />
                   <span>{t('integration.navApi')}</span>
                 </button>
                 <button
                   type="button"
-                  className={`integration-docs-nav-item ${activeIntegration === 'webhook' ? 'is-active' : ''}`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 bg-transparent text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
+                    activeIntegration === 'webhook'
+                      ? 'bg-[var(--refly-tertiary-hover)] text-[var(--integration-docs-text-1)] font-medium'
+                      : ''
+                  }`}
                   onClick={() => handleIntegrationChange('webhook')}
                 >
-                  <BranchesOutlined />
+                  <BranchesOutlined className="text-base" />
                   <span>{t('integration.navWebhook')}</span>
                 </button>
               </div>
             </aside>
 
             {/* Right content area with toolbar, main content, and toc */}
-            <div className="integration-docs-right-wrapper">
+            <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
               {/* Toolbar */}
-              <div className="integration-docs-toolbar">
-                <div className="integration-docs-toolbar-left">
+              <div className="flex items-center justify-between py-3 px-4 md:px-6 border-b border-[var(--integration-docs-border)] bg-[var(--integration-docs-toolbar-bg)] backdrop-blur-[8px] flex-shrink-0 z-[3]">
+                <div className="flex items-center gap-3">
                   {activeIntegration === 'api' ? (
                     <>
                       <Button type="primary" onClick={() => setApiKeyModalOpen(true)}>
                         <img
                           src={ApiKeyIcon}
                           alt=""
-                          className="integration-docs-toolbar-button-icon"
+                          className="w-4 h-4 mr-2 inline-block align-middle"
                         />
                         {t('integration.manageApiKeys')}
                       </Button>
@@ -423,14 +481,16 @@ export const IntegrationDocsModal = memo(
                         <img
                           src={OutputIcon}
                           alt=""
-                          className="integration-docs-toolbar-button-icon"
+                          className="w-4 h-4 mr-2 inline-block align-middle"
                         />
                         {t('integration.outputModal.button')}
                       </Button>
                     </>
                   ) : activeIntegration === 'webhook' ? (
-                    <div className="webhook-toolbar-toggle">
-                      <span className="webhook-toolbar-label">{t('webhook.enableWebhook')}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-[var(--integration-docs-text-1)]">
+                        {t('webhook.enableWebhook')}
+                      </span>
                       <Switch
                         checked={webhookConfig?.isEnabled || false}
                         loading={webhookToggling}
@@ -440,25 +500,30 @@ export const IntegrationDocsModal = memo(
                     </div>
                   ) : null}
                 </div>
-                <div className="integration-docs-toolbar-right">
+                <div className="flex items-center gap-3">
                   <CopyAllDocsButton activeIntegration={activeIntegration} canvasId={canvasId} />
                   <Button type="text" icon={<CloseOutlined />} onClick={onClose} />
                 </div>
               </div>
 
               {/* Content area with main and toc */}
-              <div className="integration-docs-body-wrapper">
+              <div className="flex flex-1 min-h-0 overflow-hidden">
                 {/* Main content area */}
-                <main className="integration-docs-main">
+                <main className="flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden bg-[linear-gradient(180deg,var(--integration-docs-bg)_0%,var(--integration-docs-bg-subtle)_100%)]">
                   {/* Scrollable content */}
-                  <div ref={contentRef} className="integration-docs-content">
+                  <div
+                    ref={contentRef}
+                    className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scroll-smooth"
+                  >
                     {renderContent()}
                   </div>
                 </main>
 
                 {/* Right sidebar - Table of contents */}
-                <aside className="integration-docs-toc">
-                  <div className="integration-docs-toc-title">{t('integration.contents')}</div>
+                <aside className="hidden lg:flex flex-col w-[240px] py-5 px-4 border-l border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg)] flex-shrink-0 overflow-y-auto overflow-x-hidden">
+                  <div className="text-xs font-medium text-[var(--integration-docs-text-3)] uppercase tracking-wide mb-4 px-2.5">
+                    {t('integration.contents')}
+                  </div>
                   <nav>{renderTocList(sections)}</nav>
                 </aside>
               </div>

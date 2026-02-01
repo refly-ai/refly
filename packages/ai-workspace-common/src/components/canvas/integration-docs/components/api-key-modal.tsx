@@ -82,16 +82,22 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
         destroyOnClose
         className="api-key-management-modal"
       >
-        <div className="api-key-modal-content">
-          <p className="api-key-modal-description">{t('webhook.apiKey.description')}</p>
+        <div className="px-6 pb-3">
+          <p className="text-sm text-[var(--refly-text-2)] mb-4 leading-normal">
+            {t('webhook.apiKey.description')}
+          </p>
 
           {/* API Keys List */}
           {apiKeys.length > 0 && (
-            <div className="api-key-list">
+            <div className="mb-4 rounded-lg bg-[var(--refly-bg-control-z0)] overflow-hidden">
               {/* List Header */}
               <div className="api-key-list-header">
-                <span className="api-key-header-name">{t('webhook.apiKey.name')}</span>
-                <span className="api-key-header-key">{t('webhook.apiKey.listHeader')}</span>
+                <span className="flex-1 text-sm text-[var(--refly-text-2)]">
+                  {t('webhook.apiKey.name')}
+                </span>
+                <span className="flex-1 text-sm text-[var(--refly-text-2)]">
+                  {t('webhook.apiKey.listHeader')}
+                </span>
               </div>
 
               {/* List Items */}
@@ -100,11 +106,15 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
                   key={apiKey.keyId}
                   className={`api-key-list-item ${index < apiKeys.length - 1 ? 'has-border' : ''}`}
                 >
-                  <div className="api-key-info">
-                    <span className="api-key-name">{apiKey.name}</span>
-                    <span className="api-key-value">{apiKey.keyPrefix}...</span>
+                  <div className="flex items-center gap-6 flex-1">
+                    <span className="flex-1 text-sm font-medium text-[var(--refly-text-0)]">
+                      {apiKey.name}
+                    </span>
+                    <span className="flex-1 text-sm font-medium text-[var(--refly-text-0)] font-mono">
+                      {apiKey.keyPrefix}...
+                    </span>
                   </div>
-                  <div className="api-key-actions">
+                  <div className="flex items-center gap-4">
                     <Button
                       type="text"
                       icon={<DeleteOutlined />}
@@ -123,7 +133,7 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
             icon={<PlusOutlined />}
             onClick={() => setCreateModalOpen(true)}
             loading={loading}
-            className="api-key-create-btn"
+            className="inline-flex items-center gap-2"
           >
             {t('webhook.apiKey.create')}
           </Button>
@@ -140,12 +150,16 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
         destroyOnClose
         className="api-key-create-modal"
       >
-        <div className="api-key-modal-content">
+        <div className="px-6 pb-3">
           {createdKey ? (
             <>
-              <div className="api-key-warning">{t('webhook.apiKey.copyWarning')}</div>
-              <div className="api-key-display">
-                <span className="api-key-display-value">{createdKey}</span>
+              <div className="text-xs text-[var(--refly-func-error-default,var(--ant-color-error,#ff4d4f))] -mt-2 mb-4 leading-normal">
+                {t('webhook.apiKey.copyWarning')}
+              </div>
+              <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-[var(--refly-bg-control-z1)] border border-[var(--refly-line)] mb-4">
+                <span className="flex-1 font-mono text-[13px] text-[var(--refly-text-0)] break-all leading-relaxed">
+                  {createdKey}
+                </span>
                 <Button
                   type="text"
                   icon={<CopyOutlined />}
@@ -153,7 +167,7 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
                   className="api-key-display-copy"
                 />
               </div>
-              <div className="api-key-modal-footer">
+              <div className="flex items-center justify-end gap-3">
                 <Button type="primary" onClick={handleCloseCreateModal}>
                   {t('common.close')}
                 </Button>
@@ -161,8 +175,11 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
             </>
           ) : (
             <>
-              <div className="api-key-form-field">
-                <label className="api-key-form-label" htmlFor={apiKeyNameInputId}>
+              <div className="mb-4">
+                <label
+                  className="block text-sm font-medium text-[var(--refly-text-0)] mb-2"
+                  htmlFor={apiKeyNameInputId}
+                >
                   {t('webhook.apiKey.name')}
                 </label>
                 <Input
@@ -174,7 +191,7 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
                   className="api-key-input"
                 />
               </div>
-              <div className="api-key-modal-footer">
+              <div className="flex items-center justify-end gap-3">
                 <Button onClick={handleCloseCreateModal}>{t('common.cancel')}</Button>
                 <Button type="primary" onClick={handleCreate} loading={loading}>
                   {t('common.create')}
@@ -195,11 +212,13 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
         destroyOnClose
         className="api-key-delete-modal"
       >
-        <div className="api-key-delete-content">
-          <p className="api-key-delete-description">{t('webhook.apiKey.deleteDescription')}</p>
+        <div className="mb-6">
+          <p className="text-sm text-[var(--refly-text-2)] leading-relaxed m-0">
+            {t('webhook.apiKey.deleteDescription')}
+          </p>
         </div>
 
-        <div className="api-key-delete-footer">
+        <div className="flex items-center justify-end gap-3">
           <Button onClick={handleDeleteCancel} className="api-key-delete-cancel-btn">
             {t('common.cancel')}
           </Button>

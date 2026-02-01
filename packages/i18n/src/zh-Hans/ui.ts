@@ -4441,6 +4441,8 @@ const translations = {
     sections: {
       status: '状态',
       url: 'URL',
+      requestBody: '请求体',
+      fileUpload: '文件上传',
       examples: '调用示例',
       instructions: '使用说明',
       overview: '概览',
@@ -4687,6 +4689,9 @@ const translations = {
     instruction1: '使用 Webhook URL 向该工作流发送 HTTP POST 请求。',
     instruction2: '请求体为 JSON，可直接传变量字典，或使用 variables 包裹变量字典。',
     instruction3: '请求成功会立即返回，执行结果可在运行历史中查看。',
+    fileUploadDescription:
+      '如需传文件变量，请先调用 /openapi/files/upload 上传文件并获取 fileKey（需要 API Key），然后在 Webhook 请求体的 variables 中传 fileKey 或 fileKey[]。',
+    fileUploadLink: '查看文件上传接口文档',
     apiKey: {
       title: 'API Key',
       description: '管理您的 API Key 以访问 Refly API。',
