@@ -256,6 +256,7 @@ export default () => ({
   },
   ptc: {
     mode: process.env.PTC_MODE || 'off',
+    debug: process.env.PTC_DEBUG || '',
     userAllowlist: process.env.PTC_USER_ALLOWLIST || '',
     toolsetAllowlist: process.env.PTC_TOOLSET_ALLOWLIST || '',
     toolsetBlocklist: process.env.PTC_TOOLSET_BLOCKLIST || '',

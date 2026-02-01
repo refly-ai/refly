@@ -27,6 +27,7 @@ export enum PtcMode {
  */
 export interface PtcConfig {
   mode: PtcMode;
+  debugMode: boolean;
   userAllowlist: Set<string>;
   toolsetAllowlist: Set<string> | null;
   toolsetBlocklist: Set<string>;
@@ -41,6 +42,7 @@ export interface PtcConfig {
  */
 export function getPtcConfig(configService: ConfigService): PtcConfig {
   const mode = parsePtcMode(configService.get<string>('ptc.mode'));
+  const debugMode = configService.get<string>('ptc.debug') === 'true';
   const userAllowlist = parseCommaSeparatedList(configService.get<string>('ptc.userAllowlist'));
   const toolsetAllowlist = parseOptionalCommaSeparatedList(
     configService.get<string>('ptc.toolsetAllowlist'),
@@ -54,6 +56,7 @@ export function getPtcConfig(configService: ConfigService): PtcConfig {
 
   return {
     mode,
+    debugMode,
     userAllowlist,
     toolsetAllowlist,
     toolsetBlocklist,

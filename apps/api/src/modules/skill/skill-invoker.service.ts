@@ -410,6 +410,11 @@ export class SkillInvokerService {
       const toolsetKeys = toolsets.map((t) => t.id);
       let ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
 
+      // Debug mode: PTC enabled only if agent node title contains "ptc"
+      if (ptcConfig.debugMode) {
+        ptcEnabled = !!data.title && data.title.toLowerCase().includes('ptc');
+      }
+
       // Workflow allowlist check (for local testing)
       // Check if we have a canvas ID and workflow allowlist is configured
       const canvasId = data.target?.entityType === 'canvas' ? data.target?.entityId : undefined;
