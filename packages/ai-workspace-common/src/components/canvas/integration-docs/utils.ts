@@ -548,6 +548,7 @@ print(output_res.json())`;
 
   const javascript = `import fs from "node:fs";
 import FormData from "form-data";
+import fetch from "node-fetch";
 
 const API_BASE_URL = "${baseUrl}";
 const API_KEY = "${safeApiKey}";
@@ -561,7 +562,10 @@ form.append("files", fs.createReadStream("./file1.pdf"));
 form.append("files", fs.createReadStream("./file2.txt"));
 const uploadRes = await fetch(\`\${API_BASE_URL}/openapi/files/upload\`, {
   method: "POST",
-  headers: { Authorization: \`Bearer \${API_KEY}\` },
+  headers: {
+    Authorization: \`Bearer \${API_KEY}\`,
+    ...form.getHeaders(),
+  },
   body: form,
 });
 const uploadJson = await uploadRes.json();
