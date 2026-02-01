@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { OpenapiService } from './openapi.service';
 import { FileUploadService } from './file-upload.service';
 import { WorkflowApiController } from './controllers/workflow-api.controller';
@@ -36,9 +36,9 @@ import { CopilotAutogenModule } from '../copilot-autogen/copilot-autogen.module'
 @Module({
   imports: [
     CommonModule,
-    forwardRef(() => AuthModule),
-    forwardRef(() => WorkflowModule),
-    forwardRef(() => DriveModule),
+    AuthModule,
+    WorkflowModule,
+    DriveModule,
     MiscModule,
     WorkflowAppModule,
     CanvasModule,

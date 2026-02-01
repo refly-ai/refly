@@ -288,27 +288,28 @@ const loadErrorCodes = () => {
     descriptionI18n?: Record<string, string>;
   }> = [];
 
-  let match: RegExpExecArray | null;
-  while ((match = classRegex.exec(content)) !== null) {
+  let match: RegExpExecArray | null = classRegex.exec(content);
+  while (match !== null) {
     const body = match[1];
     const codeMatch = body.match(/code\s*=\s*['"]([^'"]+)['"]/);
-    if (!codeMatch) continue;
-    const code = codeMatch[1];
     const dictMatch = body.match(/messageDict\s*=\s*{([\s\S]*?)}/);
-    if (!dictMatch) continue;
-    const dictBody = dictMatch[1];
-    const enMatch = dictBody.match(/en\s*:\s*['"]([^'"]+)['"]/);
-    const zhMatch = dictBody.match(/['"]zh-CN['"]\s*:\s*['"]([^'"]+)['"]/);
-    const message = enMatch?.[1] ?? '';
-    const zhMessage = zhMatch?.[1] ?? '';
-    results.push({
-      code,
-      httpStatus: null,
-      message,
-      messageI18n: zhMessage ? { 'zh-Hans': zhMessage } : undefined,
-      description: message,
-      descriptionI18n: zhMessage ? { 'zh-Hans': zhMessage } : undefined,
-    });
+    if (codeMatch && dictMatch) {
+      const code = codeMatch[1];
+      const dictBody = dictMatch[1];
+      const enMatch = dictBody.match(/en\s*:\s*['"]([^'"]+)['"]/);
+      const zhMatch = dictBody.match(/['"]zh-CN['"]\s*:\s*['"]([^'"]+)['"]/);
+      const message = enMatch?.[1] ?? '';
+      const zhMessage = zhMatch?.[1] ?? '';
+      results.push({
+        code,
+        httpStatus: null,
+        message,
+        messageI18n: zhMessage ? { 'zh-Hans': zhMessage } : undefined,
+        description: message,
+        descriptionI18n: zhMessage ? { 'zh-Hans': zhMessage } : undefined,
+      });
+    }
+    match = classRegex.exec(content);
   }
 
   return results;

@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-02-01T03:01:28.400Z',
+  generatedAt: '2026-02-01T05:20:18.599Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -351,7 +351,7 @@ export const apiDocsData: ApiDocsData = {
               additionalProperties: true,
             },
           },
-          additionalProperties: false,
+          additionalProperties: null,
         },
         example: {},
       },
@@ -452,7 +452,7 @@ export const apiDocsData: ApiDocsData = {
               additionalProperties: true,
             },
           },
-          additionalProperties: false,
+          additionalProperties: null,
         },
         example: {},
       },
@@ -1178,7 +1178,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Get webhook configuration for a canvas',
       description: 'Get webhook configuration including webhook ID and status',
       tags: ['webhook'],
-      security: ['api_key', 'bearerAuth'],
+      security: ['api_key'],
       parameters: [
         {
           name: 'canvasId',
@@ -1261,7 +1261,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Disable webhook',
       description: 'Disable webhook API for a canvas',
       tags: ['webhook'],
-      security: ['api_key', 'bearerAuth'],
+      security: ['api_key'],
       requestBody: {
         required: true,
         contentType: 'application/json',
@@ -1333,7 +1333,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Enable webhook for a canvas',
       description: 'Enable webhook API for a canvas to allow external triggers',
       tags: ['webhook'],
-      security: ['api_key', 'bearerAuth'],
+      security: ['api_key'],
       requestBody: {
         required: true,
         contentType: 'application/json',
@@ -1423,7 +1423,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Get call history for a webhook',
       description: 'Get webhook call history with pagination',
       tags: ['webhook'],
-      security: ['api_key', 'bearerAuth'],
+      security: ['api_key'],
       parameters: [
         {
           name: 'webhookId',
@@ -1578,7 +1578,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Reset webhook (generate new ID)',
       description: 'Reset webhook by generating a new webhook ID',
       tags: ['webhook'],
-      security: ['api_key', 'bearerAuth'],
+      security: ['api_key'],
       requestBody: {
         required: true,
         contentType: 'application/json',
@@ -1663,7 +1663,7 @@ export const apiDocsData: ApiDocsData = {
       summary: 'Update webhook configuration',
       description: 'Update webhook configuration',
       tags: ['webhook'],
-      security: ['api_key', 'bearerAuth'],
+      security: ['api_key'],
       requestBody: {
         required: true,
         contentType: 'application/json',
@@ -2424,6 +2424,30 @@ export const apiDocsData: ApiDocsData = {
       description: 'The upload session has expired, please request a new presigned URL',
       descriptionI18n: {
         'zh-Hans': '上传会话已过期，请重新获取预签名URL',
+      },
+    },
+    {
+      code: 'E3012',
+      httpStatus: null,
+      message: 'Tool call failed',
+      messageI18n: {
+        'zh-Hans': '工具调用失败',
+      },
+      description: 'Tool call failed',
+      descriptionI18n: {
+        'zh-Hans': '工具调用失败',
+      },
+    },
+    {
+      code: 'E3013',
+      httpStatus: null,
+      message: 'Failed to send email',
+      messageI18n: {
+        'zh-Hans': '邮件发送失败',
+      },
+      description: 'Failed to send email',
+      descriptionI18n: {
+        'zh-Hans': '邮件发送失败',
       },
     },
     {
