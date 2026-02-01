@@ -58,7 +58,7 @@ Refly is designed to be the universal bridge between your existing enterprise to
 Bring your own data and logic into Refly with zero friction.
 
 - 3,000+ Native Tools: Seamlessly integrate with industrial APIs like Stripe, Slack, Salesforce, GitHub and etc.
-A full list of supported model and tools providers can be found here。（可以跳转至站内，展示我们有多少plugin，并添加一个工具集合如下图）
+A full list of supported model and tools providers can be found here。
 
 <img width="1280" height="272" alt="image" src="https://github.com/user-attachments/assets/30475454-1bb7-41bd-b6d8-6f799bb30f79" />
 
