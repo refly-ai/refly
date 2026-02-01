@@ -76,7 +76,7 @@ To start using the self-deployed version of Refly, first register an account wit
 
 ![Register](images/register.jpg)
 
-After entrance, you can configure the providers and models you want to use. Click on the account icon in the left bottom corner and select `Settings`.
+After entrance, you can configure the providers and models you want to use. Click on the account icon in the right top corner and select `Settings`.
 
 ![Settings](images/settings.jpg)
 
