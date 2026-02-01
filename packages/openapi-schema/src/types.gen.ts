@@ -10505,6 +10505,10 @@ export type ActivateInvitationCodeResponse = BaseResponse;
 
 export type ActivateInvitationCodeError = unknown;
 
+export type SkipInvitationCodeResponse = BaseResponse;
+
+export type SkipInvitationCodeError = unknown;
+
 export type GetSubscriptionPlansResponse2 = GetSubscriptionPlansResponse;
 
 export type GetSubscriptionPlansError = unknown;
