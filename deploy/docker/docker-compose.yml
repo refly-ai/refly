@@ -1,3 +1,10 @@
+# Usage
+#   Start:              docker compose up
+#   Stop:               docker compose down
+#   Destroy:            docker compose down -v --remove-orphans
+
+name: refly
+
 include:
   - path: docker-compose.base.yml
 

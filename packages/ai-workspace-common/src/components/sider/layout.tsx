@@ -7,7 +7,7 @@ import {
 } from '@refly-packages/ai-workspace-common/utils/router';
 
 import cn from 'classnames';
-import { subscriptionEnabled } from '@refly/ui-kit';
+import { subscriptionEnabled, isSelfHosted } from '@refly/ui-kit';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 // components - Lazy load Modal components to reduce initial bundle size
 import { useTranslation } from 'react-i18next';
@@ -403,45 +403,47 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
 
   // Menu items configuration
   const menuItems = useMemo(
-    () => [
-      {
-        icon: <File key="home" style={{ fontSize: 20 }} />,
-        title: t('loggedHomePage.siderMenu.home'),
-        onActionClick: () => navigate('/'),
-        key: 'home',
-      },
-      {
-        icon: <Flow key="canvas" style={{ fontSize: 20 }} />,
-        title: t('loggedHomePage.siderMenu.canvas'),
-        onActionClick: () => navigate('/workflow-list'),
-        key: 'canvas',
-      },
-      {
-        icon: <Project key="appManager" style={{ fontSize: 20 }} />,
-        title: t('loggedHomePage.siderMenu.appManager'),
-        onActionClick: () => navigate('/app-manager'),
-        key: 'appManager',
-      },
-      {
-        icon: <MarketPlace key="marketplace" style={{ fontSize: 20 }} />,
-        title: t('loggedHomePage.siderMenu.marketplace'),
-        onActionClick: () => navigate('/marketplace'),
-        key: 'marketplace',
-      },
-    ],
-    [t, navigate],
+    () =>
+      [
+        {
+          icon: <File key="home" style={{ fontSize: 20 }} />,
+          title: t('loggedHomePage.siderMenu.home'),
+          onActionClick: () => navigate('/'),
+          key: 'home',
+        },
+        {
+          icon: <Flow key="canvas" style={{ fontSize: 20 }} />,
+          title: t('loggedHomePage.siderMenu.canvas'),
+          onActionClick: () => navigate('/workflow-list'),
+          key: 'canvas',
+        },
+        {
+          icon: <Project key="appManager" style={{ fontSize: 20 }} />,
+          title: t('loggedHomePage.siderMenu.appManager'),
+          onActionClick: () => navigate('/app-manager'),
+          key: 'appManager',
+        },
+        {
+          icon: <MarketPlace key="marketplace" style={{ fontSize: 20 }} />,
+          title: t('loggedHomePage.siderMenu.marketplace'),
+          onActionClick: () => navigate('/marketplace'),
+          key: 'marketplace',
+        },
+      ].filter((item) => !isSelfHosted || !['appManager', 'marketplace'].includes(item?.key)),
+    [t, navigate, isSelfHosted],
   );
 
   // Secondary menu items (below divider)
   const secondaryMenuItems = useMemo(
-    () => [
-      {
-        icon: <History key="runHistory" style={{ fontSize: 20 }} />,
-        title: t('loggedHomePage.siderMenu.runHistory'),
-        onActionClick: () => navigate('/run-history'),
-        key: 'runHistory',
-      },
-    ],
+    () =>
+      [
+        {
+          icon: <History key="runHistory" style={{ fontSize: 20 }} />,
+          title: t('loggedHomePage.siderMenu.runHistory'),
+          onActionClick: () => navigate('/run-history'),
+          key: 'runHistory',
+        },
+      ].filter((item) => !isSelfHosted || item.key !== 'runHistory'),
     [t, navigate],
   );
 

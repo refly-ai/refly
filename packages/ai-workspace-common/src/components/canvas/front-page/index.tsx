@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
 import { TemplateCardSkeleton } from '@refly-packages/ai-workspace-common/components/canvas-template/template-card-skeleton';
-import { canvasTemplateEnabled } from '@refly/ui-kit';
+import { canvasTemplateEnabled, isSelfHosted } from '@refly/ui-kit';
 import { useSiderStoreShallow } from '@refly/stores';
 import cn from 'classnames';
 import { useListCanvasTemplateCategories } from '@refly-packages/ai-workspace-common/queries/queries';
@@ -456,7 +456,7 @@ export const FrontPage = memo(() => {
         </Suspense>
       </ModuleContainer>
 
-      {canvasTemplateEnabled && (
+      {canvasTemplateEnabled && !isSelfHosted && (
         <ModuleContainer
           className="mt-[50px]"
           title={t('frontPage.template.title')}
