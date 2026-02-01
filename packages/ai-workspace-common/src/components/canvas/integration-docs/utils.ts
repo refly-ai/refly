@@ -323,8 +323,22 @@ const buildHeaders = (endpoint: ApiEndpoint, apiKey?: string, hasBody?: boolean)
     headers.Authorization = `Bearer ${apiKey ?? 'YOUR_API_KEY'}`;
   }
   if (hasBody) {
-    // Derive Content-Type from endpoint.requestBody?.contentType, fallback to 'application/json'
-    headers['Content-Type'] = endpoint.requestBody?.contentType ?? 'application/json';
+    // Derive Content-Type from endpoint.requestBody?.content (OpenAPI 3.0 style)
+    // or fall back to endpoint.requestBody?.contentType
+    let contentType = 'application/json'; // default fallback
+
+    if (endpoint.requestBody?.content) {
+      // Get the first available media type from the content object
+      const mediaTypes = Object.keys(endpoint.requestBody.content);
+      if (mediaTypes.length > 0) {
+        contentType = mediaTypes[0];
+      }
+    } else if (endpoint.requestBody?.contentType) {
+      // Fall back to the legacy contentType field
+      contentType = endpoint.requestBody.contentType;
+    }
+
+    headers['Content-Type'] = contentType;
   }
   return headers;
 };

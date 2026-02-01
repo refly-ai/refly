@@ -53,9 +53,26 @@ export function redactHeaders(headers: unknown): Record<string, string> {
   }
 
   const result: Record<string, string> = {};
-  const headersObj = headers as Record<string, unknown>;
 
-  for (const [key, value] of Object.entries(headersObj)) {
+  // Check if it's a Fetch API Headers object
+  const isHeadersObject =
+    (typeof Headers !== 'undefined' && headers instanceof Headers) ||
+    typeof (headers as any).entries === 'function';
+
+  let entries: Iterable<[string, string]>;
+
+  if (isHeadersObject) {
+    // Handle Fetch API Headers
+    entries = (headers as any).entries();
+  } else {
+    // Handle plain object
+    entries = Object.entries(headers as Record<string, unknown>).map(([key, value]) => [
+      key,
+      String(value ?? ''),
+    ]);
+  }
+
+  for (const [key, value] of entries) {
     const lowerKey = key.toLowerCase();
 
     if (SENSITIVE_HEADERS.includes(lowerKey)) {

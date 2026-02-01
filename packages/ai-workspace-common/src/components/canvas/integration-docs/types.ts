@@ -16,6 +16,7 @@ export interface ApiEndpoint {
   requestBody?: {
     required: boolean;
     contentType: string;
+    content?: Record<string, { schema?: SchemaObject }>;
     schema: SchemaObject;
     example?: Record<string, unknown>;
   };
