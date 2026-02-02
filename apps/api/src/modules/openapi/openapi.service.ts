@@ -34,7 +34,6 @@ import { redactApiCallRecord } from '../../utils/data-redaction';
 export enum ApiCallStatus {
   SUCCESS = 'success',
   FAILED = 'failed',
-  PENDING = 'pending',
 }
 
 type ResourceFileType = 'document' | 'image' | 'video' | 'audio';
