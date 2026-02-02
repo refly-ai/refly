@@ -435,16 +435,15 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
 
   // Secondary menu items (below divider)
   const secondaryMenuItems = useMemo(
-    () =>
-      [
-        {
-          icon: <History key="runHistory" style={{ fontSize: 20 }} />,
-          title: t('loggedHomePage.siderMenu.runHistory'),
-          onActionClick: () => navigate('/run-history'),
-          key: 'runHistory',
-        },
-      ].filter((item) => !isSelfHosted || item.key !== 'runHistory'),
-    [t, navigate, isSelfHosted],
+    () => [
+      {
+        icon: <History key="runHistory" style={{ fontSize: 20 }} />,
+        title: t('loggedHomePage.siderMenu.runHistory'),
+        onActionClick: () => navigate('/run-history'),
+        key: 'runHistory',
+      },
+    ],
+    [t, navigate],
   );
 
   const bottomMenuItems = useMemo(
