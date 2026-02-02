@@ -95,7 +95,28 @@ export const IntegrationDocsModal = memo(
             { id: 'api-errors', label: t('integration.sections.errors') },
           ];
         case 'skill':
-          return [{ id: 'skill-coming-soon', label: t('integration.sections.comingSoon') }];
+          return [
+            {
+              id: 'skill-workflow',
+              label: t('integration.sections.skillWorkflow'),
+              children: [
+                { id: 'skill-install-cli', label: t('integration.skill.installCliTitle') },
+                { id: 'skill-create', label: t('integration.skill.createSkillTitle') },
+                { id: 'skill-update', label: t('integration.skill.updateSkillTitle') },
+                { id: 'skill-publish', label: t('integration.skill.publishSkillTitle') },
+                { id: 'skill-use', label: t('integration.skill.useSkillTitle') },
+              ],
+            },
+            {
+              id: 'skill-registry',
+              label: t('integration.sections.skillRegistry'),
+              children: [
+                { id: 'skill-examples', label: t('integration.skill.examplesTitle') },
+                { id: 'skill-install', label: t('integration.skill.installFromRepoTitle') },
+                { id: 'skill-uninstall', label: t('integration.skill.uninstallSkillTitle') },
+              ],
+            },
+          ];
         default:
           return [];
       }
