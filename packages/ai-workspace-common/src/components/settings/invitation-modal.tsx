@@ -1,4 +1,4 @@
-import { Modal, message } from 'antd';
+import { Modal, message, Skeleton } from 'antd';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -164,8 +164,29 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
           <p className="text-xs text-refly-text-2">{t('settings.account.inviteFriendsSubtitle')}</p>
         </div>
         <div className="flex flex-col gap-4 rounded-lg">
-          <p className="text-sm text-refly-text-0 text-center font-semibold">{availableText}</p>
-          {invitationOverview.sortedCodes.length > 0 ? (
+          {loadingCodes ? (
+            <Skeleton
+              active
+              paragraph={{ rows: 0 }}
+              title={{ width: 120, style: { margin: '0 auto' } }}
+            />
+          ) : (
+            <p className="text-sm text-refly-text-0 text-center font-semibold">{availableText}</p>
+          )}
+          {loadingCodes ? (
+            <div className="max-h-[360px] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-2 pb-8">
+                {Array.from({ length: 10 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex min-h-[54px] h-[54px] items-center rounded-[10px] border border-solid border-refly-border-primary px-2.5"
+                  >
+                    <Skeleton.Input active size="small" style={{ width: 70, minWidth: 70 }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : invitationOverview.sortedCodes.length > 0 ? (
             <div className="max-h-[360px] overflow-y-auto">
               <div className="grid grid-cols-2 gap-2 pb-8">
                 {invitationOverview.sortedCodes.map((code, index) => (
