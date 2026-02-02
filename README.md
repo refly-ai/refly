@@ -15,7 +15,7 @@
   </a>
 </p>
 
-[APIs for Lovable](#use-case-1-api-integration) · [Webhooks for Slack/Lark](#use-case-2-webhook-for-Lark) · [Skills for Claude Code]((#use-case-3-skills-for-claude-code))
+[APIs for Lovable](#use-case-1-api-integration) · [Webhooks for Slack/Lark](#use-case-2-webhook-for-Lark) · [Skills for Claude Code](#use-case-3-skills-for-claude-code)
 
 Skills are not prompts. They are durable infrastructure.
 
