@@ -155,18 +155,39 @@ curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
 > ⚠️ **Note**: Detailed Slack integration guide coming soon. For now, see [API Reference](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api) for webhook configuration.
 
 ---
-
 ### Use Case 3: Skills for Claude Code
 
-**Goal**: Export your workflow as a skill that Claude Code can use
+**Goal**: Export your Refly workflows as Claude Code skills
 
-> 🚧 **Coming Soon**: Native export to Claude Code format (`.skill` files)
+#### Quick Start
 
-**Current Workaround**:
-1. Call your workflow via API (see [Use Case 1](#use-case-1-api-integration))
-2. Wrap the API call in a Claude Code MCP server
+1. **Install CLI**
+```bash
+npm install -g @refly-ai/refly-skills
+```
 
-We're working on direct export - stay tuned! Follow progress in [Issue #XXX](https://github.com/refly-ai/refly/issues/XXX)
+2. **Export Workflow**
+```bash
+refly-skills export --workflow-id <your-workflow-id>
+```
+
+This generates a `.refly` skill file in the `skills/` directory.
+
+3. **Use in Claude Code**
+
+The exported skill is automatically available in Claude Code. Claude can now invoke your workflow as a tool!
+
+#### Example
+```bash
+# Export your product research workflow
+refly-skills export --workflow-id wf_product_research
+
+# Claude Code can now use it:
+User: "Research this product and analyze competitors"
+Claude: [Uses product_research skill] → Returns detailed analysis
+```
+
+📖 **Documentation**: [refly-ai/refly-skills](https://github.com/refly-ai/refly-skills)
 
 ---
 
