@@ -201,9 +201,9 @@ export const SkillDocsTab = memo(() => {
           <p className="text-sm text-[var(--integration-docs-text-2)] m-0 italic">
             {t('integration.skill.claudeCodeDescription')}
           </p>
-          <div className="mt-3 px-3 py-2 rounded-lg bg-[var(--integration-docs-inline-code-bg)] inline-block">
+          <div className="mt-3 px-3 py-2 rounded-lg bg-[var(--integration-docs-inline-code-bg)]">
             <code className="text-[13px] text-[var(--integration-docs-inline-code-text)]">
-              ~/.claude/skills/
+              {t('integration.skill.examplePrompt1')}
             </code>
           </div>
         </blockquote>
