@@ -81,7 +81,7 @@ e7b398dbd02b   postgres:16-alpine                         "docker-entrypoint.s�
 
 进入后，您可以配置您想要使用的提供商和模型。点击右上角的账户图标并选择 `Settings`。
 
-![设置](/images/settings.webp)
+![设置](/images/settings-new.webp)
 
 添加您的第一个提供商：
 
@@ -101,7 +101,7 @@ e7b398dbd02b   postgres:16-alpine                         "docker-entrypoint.s�
 
 祝您聊得愉快！
 
-![开始对话](/images/start-chat.webp)
+![开始对话](/images/start-chat-new.webp)
 
 ## 故障排除 {#troubleshooting}
 

@@ -81,7 +81,7 @@ To start using the self-deployed version of Refly, first register an account wit
 
 After entrance, you can configure the providers and models you want to use. Click on the account icon in the right top corner and select `Settings`.
 
-![Settings](/images/settings.webp)
+![Settings](/images/settings-new.webp)
 
 Add your first provider:
 
@@ -101,7 +101,7 @@ Configure your default model:
 
 Happy chatting!
 
-![Start chat](/images/start-chat.webp)
+![Start chat](/images/start-chat-new.webp)
 
 ## Troubleshooting {#troubleshooting}
 
