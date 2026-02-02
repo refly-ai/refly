@@ -58,7 +58,6 @@ export const CopilotActions = memo(
         type="button"
         className={cn(
           'w-7 h-7 rounded-lg flex items-center justify-center',
-          'bg-black/[0.08] hover:bg-black/[0.12] transition-colors',
           'border-none outline-none focus:outline-none focus-visible:outline-none',
           '[&:focus]:ring-0 [&:focus]:ring-offset-0',
           'cursor-pointer',

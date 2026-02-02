@@ -1226,8 +1226,8 @@ export class ToolService {
         metadata: {
           name: readFileTool.name,
           type: 'copilot',
-          toolsetKey: 'copilot',
-          toolsetName: 'Copilot',
+          toolsetKey: readFileTool.toolsetKey,
+          toolsetName: 'Read File',
         },
       }),
       new DynamicStructuredTool({
@@ -1238,8 +1238,8 @@ export class ToolService {
         metadata: {
           name: listFilesTool.name,
           type: 'copilot',
-          toolsetKey: 'copilot',
-          toolsetName: 'Copilot',
+          toolsetKey: listFilesTool.toolsetKey,
+          toolsetName: 'List Files',
         },
       }),
     ];

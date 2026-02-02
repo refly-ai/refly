@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
 import { GenericToolset } from '@refly/openapi-schema';
-import { Mcp, Websearch, DocChecked, Code, Email, Time, Code1, Doc } from 'refly-icons';
+import { Mcp, Websearch, DocChecked, Code, Email, Time, Code1, Doc, List } from 'refly-icons';
 import { Favicon } from '@refly-packages/ai-workspace-common/components/common/favicon';
 import { useListToolsetInventory } from '@refly-packages/ai-workspace-common/queries';
 
@@ -38,6 +38,10 @@ const builtinToolsetIconMap = {
   },
   read_file: {
     icon: Doc,
+    backgroundColor: '#67CDFF',
+  },
+  list_files: {
+    icon: List,
     backgroundColor: '#67CDFF',
   },
 };
