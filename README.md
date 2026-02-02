@@ -43,7 +43,7 @@ After deployment, choose your path based on your use case:
 |-------------|-----------|------|
 | 🔧 **Build my first workflow** | [Create a Workflow](#create-your-first-workflow) | 5 mins |
 | 🔌 **Call workflows via API** | [API Integration](#use-case-1-api-integration) | 10 mins |
-| 💬 **Connect to Lark** | [Webhook Setup](#use-case-2-webhook-for-feishu) | 15 mins |
+| 💬 **Connect to Lark** | [Webhook Setup](#use-case-2-webhook-for-Lark) | 15 mins |
 | 🤖 **Export for Claude Code** | [Export Skills](#use-case-3-skills-for-claude-code) | 15mins |
 | 🦞  **Build a ClawdBot** | [Build ClawdBot](#build-a-clawdbot) | 20 mins |
 ---
