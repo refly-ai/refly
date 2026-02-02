@@ -260,7 +260,6 @@ export default () => ({
     userAllowlist: process.env.PTC_USER_ALLOWLIST || '',
     toolsetAllowlist: process.env.PTC_TOOLSET_ALLOWLIST || '',
     toolsetBlocklist: process.env.PTC_TOOLSET_BLOCKLIST || '',
-    workflowAllowlist: process.env.PTC_WORKFLOW_ALLOWLIST || '',
   },
   schedule: {
     // Rate limiting - controls global and per-user concurrency

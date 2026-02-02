@@ -32,7 +32,7 @@ describe('PtcConfig', () => {
     it('should parse default config correctly', () => {
       const config = getPtcConfig(mockConfigService as ConfigService);
       expect(config.mode).toBe(PtcMode.OFF);
-      expect(config.debugMode).toBe(false);
+      expect(config.debug).toBe(false);
       expect(config.userAllowlist.size).toBe(0);
       expect(config.toolsetAllowlist).toBeNull();
       expect(config.toolsetBlocklist.size).toBe(0);
@@ -78,7 +78,7 @@ describe('PtcConfig', () => {
       });
 
       const config = getPtcConfig(mockConfigService as ConfigService);
-      expect(config.debugMode).toBe(true);
+      expect(config.debug).toBe(true);
     });
   });
 
@@ -86,11 +86,10 @@ describe('PtcConfig', () => {
     it('should return false when mode is OFF', () => {
       const config: PtcConfig = {
         mode: PtcMode.OFF,
-        debugMode: false,
+        debug: false,
         userAllowlist: new Set<string>(),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
-        workflowAllowlist: null,
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(false);
     });
@@ -98,11 +97,10 @@ describe('PtcConfig', () => {
     it('should return true when mode is ON', () => {
       const config: PtcConfig = {
         mode: PtcMode.ON,
-        debugMode: false,
+        debug: false,
         userAllowlist: new Set<string>(),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
-        workflowAllowlist: null,
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(true);
     });
@@ -110,11 +108,10 @@ describe('PtcConfig', () => {
     it('should check allowlist when mode is PARTIAL', () => {
       const config: PtcConfig = {
         mode: PtcMode.PARTIAL,
-        debugMode: false,
+        debug: false,
         userAllowlist: new Set<string>(['u-123']),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
-        workflowAllowlist: null,
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(true);
       expect(isPtcEnabledForUser({ uid: 'u-other' } as User, config)).toBe(false);
@@ -124,11 +121,10 @@ describe('PtcConfig', () => {
   describe('isToolsetAllowed', () => {
     const baseConfig: PtcConfig = {
       mode: PtcMode.ON,
-      debugMode: false,
+      debug: false,
       userAllowlist: new Set<string>(),
       toolsetAllowlist: null,
       toolsetBlocklist: new Set<string>(),
-      workflowAllowlist: null,
     };
 
     it('should return false if toolset is in blocklist', () => {
@@ -163,11 +159,10 @@ describe('PtcConfig', () => {
   describe('isPtcEnabledForToolsets', () => {
     const config: PtcConfig = {
       mode: PtcMode.ON,
-      debugMode: false,
+      debug: false,
       userAllowlist: new Set<string>(),
       toolsetAllowlist: new Set<string>(['t1', 't2']),
       toolsetBlocklist: new Set<string>(['blocked']),
-      workflowAllowlist: null,
     };
 
     it('should return true if user is enabled and all toolsets are allowed', () => {

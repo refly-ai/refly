@@ -27,11 +27,10 @@ export enum PtcMode {
  */
 export interface PtcConfig {
   mode: PtcMode;
-  debugMode: boolean;
+  debug: boolean;
   userAllowlist: Set<string>;
   toolsetAllowlist: Set<string> | null;
   toolsetBlocklist: Set<string>;
-  workflowAllowlist: Set<string> | null;
 }
 
 /**
@@ -42,7 +41,7 @@ export interface PtcConfig {
  */
 export function getPtcConfig(configService: ConfigService): PtcConfig {
   const mode = parsePtcMode(configService.get<string>('ptc.mode'));
-  const debugMode = configService.get<string>('ptc.debug') === 'true';
+  const debug = configService.get<string>('ptc.debug') === 'true';
   const userAllowlist = parseCommaSeparatedList(configService.get<string>('ptc.userAllowlist'));
   const toolsetAllowlist = parseOptionalCommaSeparatedList(
     configService.get<string>('ptc.toolsetAllowlist'),
@@ -50,17 +49,13 @@ export function getPtcConfig(configService: ConfigService): PtcConfig {
   const toolsetBlocklist = parseCommaSeparatedList(
     configService.get<string>('ptc.toolsetBlocklist'),
   );
-  const workflowAllowlist = parseOptionalCommaSeparatedList(
-    configService.get<string>('ptc.workflowAllowlist'),
-  );
 
   return {
     mode,
-    debugMode,
+    debug,
     userAllowlist,
     toolsetAllowlist,
     toolsetBlocklist,
-    workflowAllowlist,
   };
 }
 
