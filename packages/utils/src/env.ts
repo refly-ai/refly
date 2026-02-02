@@ -52,6 +52,7 @@ declare global {
       SENTRY_ENABLED?: boolean;
       ENV_TAG?: string;
       DEPLOY_TYPE?: string;
+      CLOUDFLARE_SITE_KEY?: string;
     };
 
     ipcRenderer?: {
@@ -117,3 +118,29 @@ export class ReflyEnv {
 }
 
 export const reflyEnv = new ReflyEnv();
+
+/**
+ * Checks if code is running in browser environment
+ */
+const isBrowser = typeof window !== 'undefined';
+
+/**
+ * Safely access window properties in browser environment
+ */
+const getBrowserValue = <T>(getter: () => T, fallback: T): T => {
+  if (!isBrowser) return fallback;
+  try {
+    return getter() ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+/**
+ * Cloudflare Turnstile site key
+ * Priority: window.ENV (runtime) > VITE_CLOUDFLARE_SITE_KEY (build time)
+ */
+export const cloudflareSiteKey =
+  getBrowserValue(() => window.ENV?.CLOUDFLARE_SITE_KEY, '') ||
+  process.env.VITE_CLOUDFLARE_SITE_KEY ||
+  '';
