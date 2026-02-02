@@ -110,8 +110,8 @@ export const IntegrationDocsModal = memo(
               id: 'skill-registry',
               label: t('integration.sections.skillRegistry'),
               children: [
-                { id: 'skill-install', label: t('integration.skill.installFromRepoTitle') },
                 { id: 'skill-examples', label: t('integration.skill.examplesTitle') },
+                { id: 'skill-install', label: t('integration.skill.installFromRepoTitle') },
                 { id: 'skill-uninstall', label: t('integration.skill.uninstallSkillTitle') },
               ],
             },
