@@ -179,9 +179,18 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
                 {Array.from({ length: 10 }).map((_, index) => (
                   <div
                     key={index}
-                    className="flex min-h-[54px] h-[54px] items-center rounded-[10px] border border-solid border-refly-border-primary px-2.5"
+                    className="flex min-h-[54px] h-[54px] items-center rounded-[10px] border border-solid border-refly-primary-default px-2.5"
                   >
-                    <Skeleton.Input active size="small" style={{ width: 70, minWidth: 70 }} />
+                    <Skeleton.Input
+                      active
+                      size="small"
+                      style={{
+                        width: 70,
+                        minWidth: 70,
+                        height: 20,
+                        borderRadius: 4,
+                      }}
+                    />
                   </div>
                 ))}
               </div>
