@@ -113,6 +113,7 @@ jobs:
           VITE_STATIC_PRIVATE_ENDPOINT: ${{ vars.TEST_STATIC_PRIVATE_ENDPOINT }}
           VITE_CANVAS_TEMPLATE_ENABLED: true
           VITE_ENV_TAG: test
+          PUBLIC_CLOUDFLARE_SITE_KEY: ${{ vars.TEST_PUBLIC_CLOUDFLARE_SITE_KEY }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
