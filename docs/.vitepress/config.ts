@@ -5,8 +5,8 @@ const enNav = [
   { text: 'Refly', link: 'https://refly.ai' },
   { text: 'Community', link: '/community/contact-us' },
   {
-    text: 'v0.10.0',
-    items: [{ text: 'Changelog', link: '/changelog/v0.10.0' }],
+    text: 'v1.1.0',
+    items: [{ text: 'Changelog', link: '/changelog/v1.1.0' }],
   },
 ];
 
@@ -14,8 +14,8 @@ const zhNav = [
   { text: 'Refly', link: 'https://refly.ai' },
   { text: '社区', link: '/zh/community/contact-us' },
   {
-    text: 'v0.10.0',
-    items: [{ text: '更新日志', link: '/zh/changelog/v0.10.0' }],
+    text: 'v1.1.0',
+    items: [{ text: '更新日志', link: '/zh/changelog/v1.1.0' }],
   },
 ];
 
@@ -60,6 +60,7 @@ const sidebar = {
     {
       text: 'Changelog',
       items: [
+        { text: 'v1.1.0', link: '/changelog/v1.1.0' },
         { text: 'v0.10.0', link: '/changelog/v0.10.0' },
         { text: 'v0.9.0', link: '/changelog/v0.9.0' },
         { text: 'v0.8.0', link: '/changelog/v0.8.0' },
@@ -120,6 +121,7 @@ const sidebar = {
     {
       text: '更新日志',
       items: [
+        { text: 'v1.1.0', link: '/zh/changelog/v1.1.0' },
         { text: 'v0.10.0', link: '/zh/changelog/v0.10.0' },
         { text: 'v0.9.0', link: '/zh/changelog/v0.9.0' },
         { text: 'v0.8.0', link: '/zh/changelog/v0.8.0' },
