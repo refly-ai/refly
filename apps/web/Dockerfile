@@ -52,6 +52,7 @@ window.ENV = {
   SENTRY_ENABLED: "$SENTRY_ENABLED" === "true",
   ENV_TAG: "$ENV_TAG" || undefined,
   DEPLOY_TYPE: "$DEPLOY_TYPE" || undefined,
+  CLOUDFLARE_SITE_KEY: "$CLOUDFLARE_SITE_KEY" || undefined,
 };
 EOF
 

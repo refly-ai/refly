@@ -17,7 +17,7 @@ import { useIsLogin } from '@refly-packages/ai-workspace-common/hooks/use-is-log
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 import { logEvent } from '@refly/telemetry-web';
 import { useCookie } from 'react-use';
-import { UID_COOKIE } from '@refly/utils';
+import { UID_COOKIE, cloudflareSiteKey } from '@refly/utils';
 import './index.css';
 import { useUserStoreShallow } from '@refly/stores';
 import {
@@ -691,10 +691,10 @@ const LoginPage = () => {
                 </div>
 
                 {/* Cloudflare Turnstile */}
-                {isTurnstileEnabled && (
+                {isTurnstileEnabled && cloudflareSiteKey && (
                   <div className="flex justify-center w-full">
                     <Turnstile
-                      siteKey={(import.meta as any).env.PUBLIC_CLOUDFLARE_SITE_KEY ?? ''}
+                      siteKey={cloudflareSiteKey}
                       theme={isDarkMode ? 'dark' : 'light'}
                       language={i18n?.language ?? 'en'}
                       onVerify={handleTurnstileVerify}
