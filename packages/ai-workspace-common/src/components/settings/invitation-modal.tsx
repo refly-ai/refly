@@ -147,8 +147,15 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
   });
 
   return (
-    <Modal open={visible} onCancel={() => setVisible(false)} footer={null} width={440} centered>
-      <div className="p-6 space-y-5">
+    <Modal
+      open={visible}
+      onCancel={() => setVisible(false)}
+      footer={null}
+      width={440}
+      centered
+      styles={{ content: { paddingBottom: 0 }, body: { paddingBottom: 0 } }}
+    >
+      <div className="px-6 pt-6 space-y-5">
         <div className="flex flex-col items-center gap-1 text-center">
           <img src={InviteIcon} alt="Invite" className="w-16 h-16" />
           <h3 className="text-lg font-semibold text-refly-text-0">
@@ -156,11 +163,11 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
           </h3>
           <p className="text-xs text-refly-text-2">{t('settings.account.inviteFriendsSubtitle')}</p>
         </div>
-        <div className="flex flex-col gap-4 rounded-lg py-4">
+        <div className="flex flex-col gap-4 rounded-lg">
           <p className="text-sm text-refly-text-0 text-center font-semibold">{availableText}</p>
           {invitationOverview.sortedCodes.length > 0 ? (
             <div className="max-h-[360px] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2 pb-8">
                 {invitationOverview.sortedCodes.map((code, index) => (
                   <InvitationCodeCard
                     key={code.code ?? index}
