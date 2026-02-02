@@ -11,6 +11,17 @@
   },
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "files": [
+    "dist/",
+    "prisma/",
+    "seed-data/",
+    "scripts/",
+    ".env",
+    ".env.development",
+    ".env.example",
+    ".node-options",
+    ".swcrc"
+  ],
   "scripts": {
     "copy-env": "ncp .env.example .env",
     "copy-env:develop": "ncp .env.development .env",

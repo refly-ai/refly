@@ -1,6 +1,7 @@
 name: Build Test Docker Images
 
 on:
+  push:
   workflow_dispatch:
     inputs:
       tag_suffix:
@@ -79,7 +80,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./apps/${{ matrix.app }}/Dockerfile
+          file: ./apps/${{ matrix.app }}/Dockerfile${{ matrix.app == 'api' && '.slim' || '' }}
           platforms: ${{ matrix.platform }}
           push: true
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }},push-by-digest=true,name-canonical=true
