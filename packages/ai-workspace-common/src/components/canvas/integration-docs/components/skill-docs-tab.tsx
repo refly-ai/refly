@@ -78,6 +78,13 @@ export const SkillDocsTab = memo(() => {
         </div>
       </div>
 
+      {/* Skill Workflow Section Group */}
+      <section id="skill-workflow" className="mb-10 scroll-mt-6">
+        <h2 className="text-xl font-semibold text-[var(--integration-docs-text-1)] mb-6 pb-3 border-b-2 border-[var(--integration-docs-border)]">
+          {t('integration.sections.skillWorkflow')}
+        </h2>
+      </section>
+
       {/* Install CLI Section */}
       <section id="skill-install-cli" className="mb-10 scroll-mt-6 last:mb-0">
         <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
@@ -218,6 +225,13 @@ export const SkillDocsTab = memo(() => {
             </code>
           </div>
         </blockquote>
+      </section>
+
+      {/* Skill Registry Section Group */}
+      <section id="skill-registry" className="mb-10 scroll-mt-6">
+        <h2 className="text-xl font-semibold text-[var(--integration-docs-text-1)] mb-6 pb-3 border-b-2 border-[var(--integration-docs-border)]">
+          {t('integration.sections.skillRegistry')}
+        </h2>
       </section>
 
       {/* Examples Section */}
