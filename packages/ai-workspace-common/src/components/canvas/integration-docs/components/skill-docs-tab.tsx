@@ -184,37 +184,29 @@ export const SkillDocsTab = memo(() => {
             <li>{t('integration.skill.useStep3')}</li>
           </ul>
         </div>
-        {/* Emphasized Claude Code callout */}
-        <div className="mt-5 rounded-xl border-2 border-[var(--integration-docs-primary-text)] bg-[var(--integration-docs-bg-subtle)] p-5">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-[var(--integration-docs-primary-text)]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-              <span className="text-base font-semibold text-[var(--integration-docs-text-1)]">
-                {t('integration.skill.claudeCodeTitle')}
-              </span>
-            </div>
-            <p className="text-sm text-[var(--integration-docs-text-2)] m-0">
-              {t('integration.skill.claudeCodeDescription')}
-            </p>
-            <div className="mt-1 px-3 py-2 rounded-lg bg-[var(--integration-docs-inline-code-bg)]">
-              <code className="text-[13px] text-[var(--integration-docs-inline-code-text)]">
-                ~/.claude/skills/
-              </code>
-            </div>
+        {/* Claude Code callout - quote/dialog style */}
+        <blockquote className="mt-5 pl-4 border-l-4 border-[var(--integration-docs-primary-text)] bg-[var(--integration-docs-bg-subtle)] rounded-r-lg py-4 pr-4">
+          <div className="flex items-center gap-2 mb-2">
+            <svg
+              className="w-5 h-5 text-[var(--integration-docs-primary-text)]"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+            </svg>
+            <span className="text-base font-semibold text-[var(--integration-docs-text-1)]">
+              {t('integration.skill.claudeCodeTitle')}
+            </span>
           </div>
-        </div>
+          <p className="text-sm text-[var(--integration-docs-text-2)] m-0 italic">
+            {t('integration.skill.claudeCodeDescription')}
+          </p>
+          <div className="mt-3 px-3 py-2 rounded-lg bg-[var(--integration-docs-inline-code-bg)] inline-block">
+            <code className="text-[13px] text-[var(--integration-docs-inline-code-text)]">
+              ~/.claude/skills/
+            </code>
+          </div>
+        </blockquote>
       </section>
 
       {/* Examples Section */}
