@@ -118,3 +118,36 @@ jobs:
       - name: Inspect manifest
         run: |
           docker buildx imagetools inspect "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }}:${{ inputs.version }}"
+
+      - name: Generate summary
+        run: |
+          IMAGE="${{ env.IMAGE_PREFIX }}-${{ matrix.app }}"
+          VERSION="${{ inputs.version }}"
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🐳 Docker Image Published: ${{ matrix.app }}
+
+          **Version:** \`${VERSION}\`
+
+          **Image:** \`${IMAGE}\`
+
+          **Docker Hub:** [${IMAGE}](https://hub.docker.com/r/${IMAGE}/tags)
+
+          **Architectures:**
+          - ✅ linux/amd64
+          - ✅ linux/arm64
+
+          ### Pull Commands
+          \`\`\`bash
+          # Latest version
+          docker pull ${IMAGE}:latest
+
+          # Specific version
+          docker pull ${IMAGE}:${VERSION}
+          \`\`\`
+
+          ### Run Commands
+          \`\`\`bash
+          docker run -d ${IMAGE}:${VERSION}
+          \`\`\`
+          EOF
