@@ -16,7 +16,7 @@ const sectionDescClassName =
 export const SkillDocsTab = memo(() => {
   const { t } = useTranslation();
 
-  const installCliExample = 'npm install -g @anthropic/refly';
+  const installCliExample = 'npm install -g @powerformer/refly-cli';
 
   const createSkillExample = `refly skill create --name "my-skill" --workflow "c-xxxxx"`;
 
