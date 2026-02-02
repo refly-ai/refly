@@ -130,13 +130,13 @@ curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
 
 ---
 
-### Use Case 2: Webhook for Slack
+### Use Case 2: Webhook for Lark
 
-**Goal**: Trigger your workflow when someone sends a message in Slack
+**Goal**: Trigger your workflow when someone sends a message in Lark
 
 #### Prerequisites
 
-- A Slack workspace with admin access
+- A Lark workspace with admin access
 - A workflow created in Refly
 
 #### Setup Steps
@@ -148,15 +148,18 @@ curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
    - Copy the Webhook URL
 
 2. **In Slack**:
-   - Go to [api.slack.com/apps](https://api.slack.com/apps)
-   - Create a new app
-   - Enable **"Slash Commands"** or **"Event Subscriptions"**
-   - Paste the Refly Webhook URL
-   - Install the app to your workspace
+   - Go to [api.feishu.com/apps](https://open.feishu.cn/app)
+   - Create a **"Custom App"**
+   - Navigate to **"Event Subscriptions"**
+   - Paste the Refly Webhook URL into **"Request URL"**
+   - Click **"Add Event"** and select **"Receive Message"**
+   - Go to **"Version Management"** and publish the app
+     
 
 3. **Test**:
-   - In Slack, type `/your-command product-url`
-   - Your workflow executes and returns results
+   - In Feishu, find your bot in the search barSend a message (e.g., `analyze report.pdf`)
+   - Your workflow executes and returns results via the webhook
+
 
 > ⚠️ **Note**: Detailed Slack integration guide coming soon. For now, see [API Reference](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api) for webhook configuration.
 
@@ -273,10 +276,11 @@ Refly is designed to be the universal bridge between your existing enterprise to
 
 Bring your own data and logic into Refly with zero friction.
 
+- **3,000+ Native Tools**: Seamlessly integrate with Stripe, Slack, Salesforce, GitHub, etc.
+
+A full list of supported model and tools providers can be found here
 <img width="1920" height="627" alt="img_v3_02uh_37c05264-a390-4ceb-9a96-efce1a61d1eg" src="https://github.com/user-attachments/assets/0fdf8214-e244-41ae-b108-59cfa12a8600" />
 
-
-- **3,000+ Native Tools**: Seamlessly integrate with Stripe, Slack, Salesforce, GitHub, etc.
 - **MCP Support**: Full compatibility with Model Context Protocol servers
 - **Private Skill Connectors**: Connect to your databases, scripts, and internal systems
 
@@ -284,7 +288,8 @@ Bring your own data and logic into Refly with zero friction.
 
 Export your deterministic skills to any environment where work happens.
 
-<img width="1280" height="853" alt="image" src="https://github.com/user-attachments/assets/93053319-8903-4908-b2d0-4ae283ecc295" />
+<img width="1920" height="1080" alt="img_v3_02uh_2599ba2c-18f0-445d-b95c-aa7da6e41aag" src="https://github.com/user-attachments/assets/e4a73abd-1f01-4f84-9499-a535f6440a63" />
+
 
 - **AI Coding Tools**: Native export for Claude Code and Cursor (coming soon)
 - **App Builders**: Power Lovable or custom frontends via stateful APIs
@@ -328,7 +333,7 @@ Refly acts as the Agent skills builder, providing the governance and reliability
 ## Community & Support
 
 - 🌟 **[Star us on GitHub](https://github.com/refly-ai/refly)**: It helps us keep building!
-- 💬 **[Discord](https://discord.gg/refly)**: Join our community
+- 💬 **[Discord](https://discord.com/invite/YVuYFjFvRC)**: Join our community
 - 🐦 **[Twitter](https://x.com/reflyai)**: Follow us for updates
 - 📖 **[Documentation](https://docs.refly.ai)**: Full guides and tutorials
 - 🐛 **[Issues](https://github.com/refly-ai/refly/issues)**: Report bugs or request features
