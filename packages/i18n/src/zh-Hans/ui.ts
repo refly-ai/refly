@@ -4453,6 +4453,8 @@ const translations = {
       endpoints: '接口',
       errors: '错误码',
       comingSoon: '敬请期待',
+      skillWorkflow: '从工作流创建',
+      skillRegistry: '从仓库使用',
     },
     skill: {
       title: 'Skill 集成',

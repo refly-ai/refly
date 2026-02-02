@@ -4423,6 +4423,8 @@ const translations = {
       endpoints: 'Endpoints',
       errors: 'Error Codes',
       comingSoon: 'Coming Soon',
+      skillWorkflow: 'Create from Workflow',
+      skillRegistry: 'Use from Registry',
     },
     skill: {
       title: 'Skill Integration',
