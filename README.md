@@ -15,7 +15,7 @@
   </a>
 </p>
 
-[APIs for Lovable](#api-integration) · [Webhooks for Slack/Lark](#webhook-setup) · [Skills for Claude Code](#export-skills) · [SOP playbooks in Refly](https://refly.ai/app/wfa-vemwlgn3x4eammjv8hibd58r)
+[APIs for Lovable](#api-integration) · [Webhooks for Slack/Lark](#webhook-setup) · [Skills for Claude Code](#export-skills)
 
 Skills are not prompts. They are durable infrastructure.
 
