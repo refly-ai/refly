@@ -8,7 +8,7 @@
 
 # Refly — The First Open-Source Agent Skills Builder Powered by Vibe Workflow
 
-Ships as APIs for Lovable · Webhooks for Slack · Skills for Claude Code · SOP playbooks in Refly
+Ships as APIs for Lovable · Webhooks for Slack/Lark · Skills for Claude Code · SOP playbooks in Refly
 
 Skills are not prompts. They are durable infrastructure.
 
