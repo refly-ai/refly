@@ -155,7 +155,7 @@ Get workflow execution output (output nodes and drive files) via authenticated A
 | data.files[].name | string | Yes | File name |
 | data.files[].type | string | Yes | File type |
 | data.files[].size | number | No | File size |
-| data.files[].nodeId | string | No | 产出该文件的节点 ID |
+| data.files[].nodeId | string | No | Node ID that produced the file |
 | data.files[].url | string | No | File access URL |
 
 <a id="api-endpoint-getWorkflowStatusViaApi"></a>
@@ -364,7 +364,7 @@ Copilot workflow generation request.
 | Status | Description |
 | --- | --- |
 | 200 | Workflow generated successfully |
-| 400 | Invalid request parameters |
+| 400 | Request failed or invalid parameters (response may include modelResponse) |
 | 401 | Unauthorized - invalid or missing API key |
 | 404 | Canvas not found |
 
@@ -397,10 +397,10 @@ Copilot workflow generation request.
 
 | Name | Type | Required | Description |
 | --- | --- | --- | --- |
-| statusCode | number | Yes | HTTP 状态码 |
-| message | string | Yes | 错误信息（可读） |
-| error | string | Yes | 错误类型 |
-| modelResponse | string | No | AI 原始回复（可能为空，长度受限） |
+| statusCode | number | Yes | HTTP status code |
+| message | string | Yes | Readable error message |
+| error | string | Yes | Error type |
+| modelResponse | string | No | Original AI response (may be empty, length-limited) |
 
 ## Error Codes
 Common error codes for webhook and API integrations.

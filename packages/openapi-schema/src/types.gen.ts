@@ -10525,7 +10525,7 @@ export type DriveFileViaApi = {
    */
   size?: number;
   /**
-   * 产出该文件的节点 ID
+   * Node ID that produced the file
    */
   nodeId?: string;
   /**
@@ -10603,23 +10603,23 @@ export type OpenapiCopilotGenerateResponse = BaseResponse & {
 };
 
 /**
- * 生成工作流失败时的错误响应。
+ * Error response when workflow generation fails.
  */
 export type OpenapiCopilotGenerateErrorResponse = {
   /**
-   * HTTP 状态码
+   * HTTP status code
    */
   statusCode: number;
   /**
-   * 错误信息（可读）
+   * Readable error message
    */
   message: string;
   /**
-   * 错误类型
+   * Error type
    */
   error: string;
   /**
-   * AI 原始回复（可能为空，长度受限）
+   * Original AI response (may be empty, length-limited)
    */
   modelResponse?: string;
 };

@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-02-02T00:40:11.562Z',
+  generatedAt: '2026-02-02T02:52:37.991Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -193,28 +193,34 @@ export const apiDocsData: ApiDocsData = {
           },
         },
         '400': {
-          description: '生成失败或参数错误（响应体可能包含 modelResponse）',
+          description: 'Request failed or invalid parameters (response may include modelResponse)',
           descriptionKey: 'integration.api.openapi.copilotGenerate.response400',
           schema: {
             type: 'object',
-            description: '生成工作流失败时的错误响应。',
+            description: 'Error response when workflow generation fails.',
+            descriptionKey: 'integration.api.openapi.copilotGenerate.errorResponseDescription',
             required: ['statusCode', 'message', 'error'],
             properties: {
               statusCode: {
                 type: 'number',
-                description: 'HTTP 状态码',
+                description: 'HTTP status code',
+                descriptionKey: 'integration.api.openapi.copilotGenerate.errorResponseStatusCode',
               },
               message: {
                 type: 'string',
-                description: '错误信息（可读）',
+                description: 'Readable error message',
+                descriptionKey: 'integration.api.openapi.copilotGenerate.errorResponseMessage',
               },
               error: {
                 type: 'string',
-                description: '错误类型',
+                description: 'Error type',
+                descriptionKey: 'integration.api.openapi.copilotGenerate.errorResponseError',
               },
               modelResponse: {
                 type: 'string',
-                description: 'AI 原始回复（可能为空，长度受限）',
+                description: 'Original AI response (may be empty, length-limited)',
+                descriptionKey:
+                  'integration.api.openapi.copilotGenerate.errorResponseModelResponse',
               },
             },
           },
@@ -778,7 +784,8 @@ export const apiDocsData: ApiDocsData = {
                         },
                         nodeId: {
                           type: 'string',
-                          description: '产出该文件的节点 ID',
+                          description: 'Node ID that produced the file',
+                          descriptionKey: 'integration.api.schema.fileNodeId',
                         },
                         url: {
                           type: 'string',

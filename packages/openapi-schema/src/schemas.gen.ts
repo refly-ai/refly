@@ -13214,7 +13214,8 @@ export const DriveFileViaApiSchema = {
     },
     nodeId: {
       type: 'string',
-      description: '产出该文件的节点 ID',
+      description: 'Node ID that produced the file',
+      'x-i18n-description': 'integration.api.schema.fileNodeId',
     },
     url: {
       type: 'string',
@@ -13338,24 +13339,29 @@ export const OpenapiCopilotGenerateResponseSchema = {
 
 export const OpenapiCopilotGenerateErrorResponseSchema = {
   type: 'object',
-  description: '生成工作流失败时的错误响应。',
+  description: 'Error response when workflow generation fails.',
+  'x-i18n-description': 'integration.api.openapi.copilotGenerate.errorResponseDescription',
   required: ['statusCode', 'message', 'error'],
   properties: {
     statusCode: {
       type: 'number',
-      description: 'HTTP 状态码',
+      description: 'HTTP status code',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.errorResponseStatusCode',
     },
     message: {
       type: 'string',
-      description: '错误信息（可读）',
+      description: 'Readable error message',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.errorResponseMessage',
     },
     error: {
       type: 'string',
-      description: '错误类型',
+      description: 'Error type',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.errorResponseError',
     },
     modelResponse: {
       type: 'string',
-      description: 'AI 原始回复（可能为空，长度受限）',
+      description: 'Original AI response (may be empty, length-limited)',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.errorResponseModelResponse',
     },
   },
 } as const;

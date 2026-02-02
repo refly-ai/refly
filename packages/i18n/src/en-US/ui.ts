@@ -4540,6 +4540,7 @@ const translations = {
         fileName: 'File name',
         fileType: 'File type',
         fileSize: 'File size',
+        fileNodeId: 'Node ID that produced the file',
         fileUrl: 'File access URL',
         uploadedFiles: 'Uploaded files',
         webhookRunBody: 'Webhook variables payload',
@@ -4602,9 +4603,14 @@ const translations = {
           localeDescription:
             'Output locale. Supported: en, zh-CN, ja, zh-Hant, fr, de-DE, ko, hi, es, ru, de, it, tr, pt, vi, id, th, ar, mn, fa.',
           response200: 'Workflow generated successfully',
-          response400: 'Invalid request parameters',
+          response400: 'Request failed or invalid parameters (response may include modelResponse)',
           response401: 'Unauthorized - invalid or missing API key',
           response404: 'Canvas not found',
+          errorResponseDescription: 'Error response when workflow generation fails.',
+          errorResponseStatusCode: 'HTTP status code',
+          errorResponseMessage: 'Readable error message',
+          errorResponseError: 'Error type',
+          errorResponseModelResponse: 'Original AI response (may be empty, length-limited)',
         },
         workflowStatus: {
           summary: 'Get workflow execution status',

@@ -4569,6 +4569,7 @@ const translations = {
         fileName: '文件名',
         fileType: '文件类型',
         fileSize: '文件大小',
+        fileNodeId: '产出该文件的节点 ID',
         fileUrl: '文件访问 URL',
         uploadedFiles: '上传的文件',
         webhookRunBody: 'Webhook 变量请求体',
@@ -4628,9 +4629,14 @@ const translations = {
           localeDescription:
             '输出语言/地区。支持：en、zh-CN、ja、zh-Hant、fr、de-DE、ko、hi、es、ru、de、it、tr、pt、vi、id、th、ar、mn、fa。',
           response200: '工作流生成成功',
-          response400: '请求参数错误',
+          response400: '生成失败或参数错误（响应可能包含 modelResponse）',
           response401: '未授权或 API Key 缺失/无效',
           response404: '画布不存在',
+          errorResponseDescription: '生成工作流失败时的错误响应。',
+          errorResponseStatusCode: 'HTTP 状态码',
+          errorResponseMessage: '错误信息（可读）',
+          errorResponseError: '错误类型',
+          errorResponseModelResponse: 'AI 原始回复（可能为空，长度受限）',
         },
         workflowStatus: {
           summary: '获取工作流执行状态',
