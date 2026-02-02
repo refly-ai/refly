@@ -15,14 +15,10 @@ export const InvitationCodeModal = () => {
 
   const handleActivationSuccess = () => {
     // Check if user has been invited now
-    const hasBeenInvited = userStore.userProfile?.preferences?.hasBeenInvited ?? true;
-
-    if (hasBeenInvited) {
-      // Close invitation code modal
-      userStore.setShowInvitationCodeModal(false);
-      // Open onboarding form modal immediately
-      userStore.setShowOnboardingFormModal(true);
-    }
+    // Close invitation code modal
+    userStore.setShowInvitationCodeModal(false);
+    // Open onboarding form modal immediately
+    userStore.setShowOnboardingFormModal(true);
   };
 
   if (!userStore.showInvitationCodeModal) {
