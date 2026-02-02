@@ -1,4 +1,5 @@
-<img width="1280" height="731" alt="image" src="https://github.com/user-attachments/assets/9ee376d9-946d-4c11-96c5-740533b4b124" />
+<img width="1920" height="1080" alt="img_v3_02uh_63c35442-a356-4399-b10f-72f4ffd645fg" src="https://github.com/user-attachments/assets/57011a01-27a2-4f4e-a34c-1962927e1b16" />
+
 
 <div align="right">
 
@@ -200,28 +201,10 @@ Claude: [Uses product_research skill] → Returns detailed analysis
 
 ---
 
-### Use Case 4: Vibe Coding (AI-Powered Workflow Generation)
+### Use Case 4: Create Clawdbot
 
-**Goal**: Describe your workflow in plain English, let AI build it
+📖 **Tutorial**: (https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf)
 
-#### How to Use Vibe Mode
-
-1. Click **"New Workflow"**
-2. Select **"Vibe Mode"** (or press `V`)
-3. Describe what you want:
-```
-"Create a workflow that:
-1. Searches for a product on Amazon
-2. Extracts price, reviews, and ratings
-3. Compares with competitors
-4. Returns a recommendation report"
-```
-
-4. Refly generates the workflow automatically
-5. Review the generated nodes
-6. Click **"Save"** and test
-
-> 💡 **Tip**: Be specific about inputs, outputs, and logic. The more detail you provide, the better the result.
 
 ---
 
