@@ -69,7 +69,7 @@
   --refly-bg-dark: #2d2d2d;
   --refly-fill-label: #ececec;
   /* Login page background */
-  --refly-bg-login-page: #f7f6f9;
+  --refly-bg-login-page: #ffffff;
   /* Login page specific */
   --refly-bg-input: #f6f6f6;
   --refly-border-divider: rgba(0, 0, 0, 0.1);
@@ -148,7 +148,7 @@
   --refly-bg-dark: #ececec;
   --refly-fill-label: #424242;
   /* Login page background */
-  --refly-bg-login-page: #171a21;
+  --refly-bg-login-page: #161a1f;
   /* Login page specific */
   --refly-bg-input: #ffffff;
   --refly-border-divider: rgba(216, 216, 216, 0.08);

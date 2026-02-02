@@ -387,8 +387,8 @@ const LoginPage = () => {
             <img
               src={
                 isDarkMode
-                  ? 'https://static.refly.ai/static/login-dark.webp'
-                  : 'https://static.refly.ai/static/login.webp'
+                  ? 'https://static.refly.ai/static/refly-login-black.webp'
+                  : 'https://static.refly.ai/static/refly-login-white.webp'
               }
               alt="Welcome to Refly"
               className="w-full h-full object-cover"
