@@ -38,7 +38,6 @@ After deployment, choose your path based on your use case:
 | 🔌 **Call workflows via API** | [API Integration](#use-case-1-api-integration) | 10 min |
 | 💬 **Connect to Slack/Teams** | [Webhook Setup](#use-case-2-webhook-for-slack) | 15 min |
 | 🤖 **Export for Claude Code** | [Export Skills](#use-case-3-skills-for-claude-code) | Coming Soon |
-| 🏢 **Deploy for my team** | [Enterprise Setup](#for-enterprise) | 30 min |
 
 ---
 
