@@ -8,7 +8,7 @@
 
 # Refly — The First Open-Source Agent Skills Builder Powered by Vibe Workflow
 
-[APIs for Lovable](#api-integration) · [Webhooks for Slack/Lark](#webhook-setup) · [Skills for Claude Code](#export-skills) · [SOP playbooks in Refly](https://refly.ai/workflow/c-yajlpyvxrmhmlm4fcn54rorv)
+[APIs for Lovable](#api-integration) · [Webhooks for Slack/Lark](#webhook-setup) · [Skills for Claude Code](#export-skills) · [SOP playbooks in Refly](https://refly.ai/app/wfa-vemwlgn3x4eammjv8hibd58r)
 Skills are not prompts. They are durable infrastructure.
 
 Refly is the first open-source platform for building stable, atomic, and versioned agent skills. Skills are deterministic agent capabilities—reusable across workflows, teams, and runtimes.
