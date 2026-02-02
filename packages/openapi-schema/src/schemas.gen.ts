@@ -13212,6 +13212,10 @@ export const DriveFileViaApiSchema = {
       description: 'Drive file size',
       'x-i18n-description': 'integration.api.schema.fileSize',
     },
+    nodeId: {
+      type: 'string',
+      description: '产出该文件的节点 ID',
+    },
     url: {
       type: 'string',
       description: 'Access URL for the file',
@@ -13330,6 +13334,30 @@ export const OpenapiCopilotGenerateResponseSchema = {
       },
     },
   ],
+} as const;
+
+export const OpenapiCopilotGenerateErrorResponseSchema = {
+  type: 'object',
+  description: '生成工作流失败时的错误响应。',
+  required: ['statusCode', 'message', 'error'],
+  properties: {
+    statusCode: {
+      type: 'number',
+      description: 'HTTP 状态码',
+    },
+    message: {
+      type: 'string',
+      description: '错误信息（可读）',
+    },
+    error: {
+      type: 'string',
+      description: '错误类型',
+    },
+    modelResponse: {
+      type: 'string',
+      description: 'AI 原始回复（可能为空，长度受限）',
+    },
+  },
 } as const;
 
 export const OpenapiWorkflowSummarySchema = {

@@ -24,12 +24,13 @@ export class ApiKeyAuthGuard implements CanActivate {
     }
 
     // Validate API key
-    const uid = await this.apiKeyService.validateApiKey(apiKey);
-    if (!uid) {
+    const apiKeyInfo = await this.apiKeyService.validateApiKeyWithKeyId(apiKey);
+    if (!apiKeyInfo) {
       throw new UnauthorizedException('Invalid API key');
     }
 
     // Fetch user info from database
+    const { uid, keyId } = apiKeyInfo;
     const user = await this.prismaService.user.findUnique({
       where: { uid },
     });
@@ -40,6 +41,7 @@ export class ApiKeyAuthGuard implements CanActivate {
 
     // Attach user to request
     request.user = { uid: user.uid, email: user.email, name: user.name };
+    (request as Request & { apiKeyId?: string }).apiKeyId = keyId;
 
     return true;
   }

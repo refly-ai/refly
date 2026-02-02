@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Logger, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Post,
+  Query,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guard/jwt-auth.guard';
 import { LoginedUser } from '../../../utils/decorators/user.decorator';
@@ -6,10 +15,12 @@ import { User } from '@prisma/client';
 import { buildSuccessResponse } from '../../../utils/response';
 import { OpenapiService } from '../openapi.service';
 import { UpdateOpenapiConfigDto } from '../dto/openapi-config.dto';
+import { ApiCallTrackingInterceptor } from '../interceptors/api-call-tracking.interceptor';
 
 @ApiTags('OpenAPI Config')
 @Controller('v1/openapi/config')
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(ApiCallTrackingInterceptor)
 export class OpenapiConfigController {
   private readonly logger = new Logger(OpenapiConfigController.name);
 

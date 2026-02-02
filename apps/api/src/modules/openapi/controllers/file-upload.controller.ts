@@ -17,12 +17,14 @@ import { LoginedUser } from '../../../utils/decorators/user.decorator';
 import { User } from '@prisma/client';
 import { buildSuccessResponse } from '../../../utils/response';
 import { OpenapiFileUploadResponse } from '@refly/openapi-schema';
+import { ApiCallTrackingInterceptor } from '../interceptors/api-call-tracking.interceptor';
 
 /**
  * Controller for file upload endpoints (requires API Key)
  */
 @ApiTags('OpenAPI - Files')
 @Controller('v1/openapi/files')
+@UseInterceptors(ApiCallTrackingInterceptor)
 export class FileUploadController {
   private readonly logger = new Logger(FileUploadController.name);
 

@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-02-01T09:42:05.915Z',
+  generatedAt: '2026-02-02T00:40:11.562Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -193,8 +193,31 @@ export const apiDocsData: ApiDocsData = {
           },
         },
         '400': {
-          description: 'Invalid request parameters',
+          description: '生成失败或参数错误（响应体可能包含 modelResponse）',
           descriptionKey: 'integration.api.openapi.copilotGenerate.response400',
+          schema: {
+            type: 'object',
+            description: '生成工作流失败时的错误响应。',
+            required: ['statusCode', 'message', 'error'],
+            properties: {
+              statusCode: {
+                type: 'number',
+                description: 'HTTP 状态码',
+              },
+              message: {
+                type: 'string',
+                description: '错误信息（可读）',
+              },
+              error: {
+                type: 'string',
+                description: '错误类型',
+              },
+              modelResponse: {
+                type: 'string',
+                description: 'AI 原始回复（可能为空，长度受限）',
+              },
+            },
+          },
         },
         '401': {
           description: 'Unauthorized - invalid or missing API key',
@@ -752,6 +775,10 @@ export const apiDocsData: ApiDocsData = {
                           type: 'number',
                           description: 'Drive file size',
                           descriptionKey: 'integration.api.schema.fileSize',
+                        },
+                        nodeId: {
+                          type: 'string',
+                          description: '产出该文件的节点 ID',
                         },
                         url: {
                           type: 'string',

@@ -155,6 +155,7 @@ variables 内的每个 key 为变量名，value 可为字符串、数字、布�
 | data.files[].name | string | 是 | 文件名 |
 | data.files[].type | string | 是 | 文件类型 |
 | data.files[].size | number | 否 | 文件大小 |
+| data.files[].nodeId | string | 否 | 产出该文件的节点 ID |
 | data.files[].url | string | 否 | 文件访问 URL |
 
 <a id="api-endpoint-getWorkflowStatusViaApi"></a>
@@ -391,6 +392,15 @@ Copilot 工作流生成请求。
 | data.workflowPlan.variables[].variableType | enum(string \| option \| resource) | 否 | 变量类型 |
 | data.workflowPlan.variables[].required | boolean | 否 | 是否必填 |
 | data.workflowPlan.variables[].options | string[] | 否 | 可选项（仅 option 类型） |
+
+**响应字段 (400)**
+
+| 参数名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| statusCode | number | 是 | HTTP 状态码 |
+| message | string | 是 | 错误信息（可读） |
+| error | string | 是 | 错误类型 |
+| modelResponse | string | 否 | AI 原始回复（可能为空，长度受限） |
 
 ## 错误码
 Webhook 与 API 集成常见错误码。

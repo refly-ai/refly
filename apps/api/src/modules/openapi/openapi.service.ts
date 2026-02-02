@@ -31,7 +31,7 @@ import { WorkflowService } from '../workflow/workflow.service';
 import { DriveService } from '../drive/drive.service';
 import { redactApiCallRecord } from '../../utils/data-redaction';
 
-enum ApiCallStatus {
+export enum ApiCallStatus {
   SUCCESS = 'success',
   FAILED = 'failed',
   PENDING = 'pending',
@@ -66,7 +66,6 @@ export class OpenapiService {
     variables: Record<string, any>,
   ): Promise<{ executionId: string; status: string }> {
     const startTime = Date.now();
-    const recordId = `rec_${createId()}`;
     const scheduleRecordId = genScheduleRecordId();
     const scheduledAt = new Date();
     let recordCreated = false;
@@ -132,19 +131,6 @@ export class OpenapiService {
 
       const responseTime = Date.now() - startTime;
 
-      // Record API call
-      await this.recordApiCall({
-        recordId,
-        uid,
-        apiId: null,
-        canvasId,
-        workflowExecutionId: executionId,
-        requestBody: variables,
-        httpStatus: 200,
-        responseTime,
-        status: ApiCallStatus.SUCCESS,
-      });
-
       this.logger.log(
         `[API_EXECUTED] uid=${uid} canvasId=${canvasId} executionId=${executionId} responseTime=${responseTime}ms`,
       );
@@ -154,11 +140,7 @@ export class OpenapiService {
         status: 'running',
       };
     } catch (error) {
-      const responseTime = Date.now() - startTime;
-
       // Normalize error to extract safe values
-      const httpStatus =
-        error && typeof error === 'object' && 'status' in error ? (error as any).status : 500;
       const errorMessage =
         error && typeof error === 'object' && 'message' in error
           ? (error as any).message
@@ -167,19 +149,6 @@ export class OpenapiService {
         error && typeof error === 'object' && 'name' in error ? (error as any).name : undefined;
       const errorStack =
         error && typeof error === 'object' && 'stack' in error ? (error as any).stack : undefined;
-
-      // Record failed API call
-      await this.recordApiCall({
-        recordId,
-        uid,
-        apiId: null,
-        canvasId,
-        requestBody: variables,
-        httpStatus,
-        responseTime,
-        status: ApiCallStatus.FAILED,
-        failureReason: errorMessage,
-      });
 
       if (recordCreated) {
         await this.prisma.workflowScheduleRecord.update({
@@ -375,6 +344,13 @@ export class OpenapiService {
       };
     });
 
+    const resultIdToNodeId = new Map<string, string>();
+    for (const node of productNodes) {
+      if (node.entityId) {
+        resultIdToNodeId.set(node.entityId, node.nodeId);
+      }
+    }
+
     // Fetch Drive Files linked to these results
     let files: DriveFileViaApi[] = [];
     const fileEligibleResultIds = productNodes
@@ -410,11 +386,18 @@ export class OpenapiService {
       );
 
       // Return public URLs for the files
-      files = dbDriveFiles.map((file) => ({
-        ...driveFilePO2DTO(file, this.endpoint),
-        // Override URL to use public endpoint
-        url: this.endpoint ? `${this.endpoint}/v1/drive/file/public/${file.fileId}` : undefined,
-      }));
+      files = dbDriveFiles.map((file) => {
+        const dto = driveFilePO2DTO(file, this.endpoint);
+        const nameSegment = dto.name ? `/${encodeURIComponent(dto.name)}` : '';
+        return {
+          ...dto,
+          nodeId: file.resultId ? resultIdToNodeId.get(file.resultId) : undefined,
+          // Override URL to use public endpoint
+          url: this.endpoint
+            ? `${this.endpoint}/v1/drive/file/public/${file.fileId}${nameSegment}`
+            : undefined,
+        };
+      });
     }
 
     return {
@@ -567,23 +550,35 @@ export class OpenapiService {
   /**
    * Record API call to database
    */
-  private async recordApiCall(data: {
+  public async recordApiCall(data: {
     recordId: string;
     uid: string;
-    apiId: string | null;
-    canvasId: string;
+    apiId?: string | null;
+    canvasId?: string;
     workflowExecutionId?: string;
-    requestBody: any;
+    requestUrl?: string;
+    requestMethod?: string;
+    requestBody?: any;
+    requestHeaders?: Record<string, unknown> | string;
     httpStatus: number;
     responseTime: number;
     status: ApiCallStatus;
     failureReason?: string;
   }): Promise<void> {
     try {
+      const requestBody =
+        data.requestBody !== undefined ? safeStringifyJSON(data.requestBody) : null;
+      const requestHeaders =
+        data.requestHeaders !== undefined
+          ? typeof data.requestHeaders === 'string'
+            ? data.requestHeaders
+            : safeStringifyJSON(data.requestHeaders)
+          : null;
+
       // Redact sensitive data before persisting
       const redacted = redactApiCallRecord({
-        requestBody: safeStringifyJSON(data.requestBody),
-        requestHeaders: null,
+        requestBody,
+        requestHeaders,
         responseBody: null,
       });
 
@@ -592,8 +587,11 @@ export class OpenapiService {
           recordId: data.recordId,
           uid: data.uid,
           apiId: data.apiId ?? null,
-          canvasId: data.canvasId,
+          canvasId: data.canvasId ?? null,
           workflowExecutionId: data.workflowExecutionId,
+          requestUrl: data.requestUrl,
+          requestMethod: data.requestMethod,
+          requestHeaders: redacted.requestHeaders,
           requestBody: redacted.requestBody,
           httpStatus: data.httpStatus,
           responseTime: data.responseTime,

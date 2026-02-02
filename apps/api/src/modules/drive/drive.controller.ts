@@ -141,12 +141,59 @@ export class DriveController {
     @Res() res: Response,
     @Req() req: Request,
   ): Promise<void> {
+    await this.serveDriveFileInternal({ user, fileId, download, res, req });
+  }
+
+  @Get('file/content/:fileId/:filename')
+  @UseGuards(OptionalJwtAuthGuard)
+  async serveDriveFileWithName(
+    @LoginedUser() user: User | null,
+    @Param('fileId') fileId: string,
+    @Param('filename') filename: string,
+    @Query('download') download: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<void> {
+    await this.serveDriveFileInternal({ user, fileId, download, res, req, filename });
+  }
+
+  @Get('file/public/:fileId')
+  async servePublicDriveFile(
+    @Param('fileId') fileId: string,
+    @Query('download') download: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<void> {
+    await this.servePublicDriveFileInternal({ fileId, download, res, req });
+  }
+
+  @Get('file/public/:fileId/:filename')
+  async servePublicDriveFileWithName(
+    @Param('fileId') fileId: string,
+    @Param('filename') filename: string,
+    @Query('download') download: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<void> {
+    await this.servePublicDriveFileInternal({ fileId, download, res, req, filename });
+  }
+
+  private async serveDriveFileInternal(params: {
+    user: User | null;
+    fileId: string;
+    download: string;
+    res: Response;
+    req: Request;
+    filename?: string;
+  }): Promise<void> {
+    const { user, fileId, download, res, req, filename: filenameHint } = params;
     const origin = req.headers.origin;
 
     // First, get only metadata (no file content loaded yet)
     // Uses unified access: checks externalOss (public) first, then internalOss (private) if user is authenticated
     const { contentType, filename, lastModified, isPublic } =
       await this.driveService.getUnifiedFileMetadata(fileId, user);
+    const resolvedFilename = filename || filenameHint || 'file';
 
     // Check HTTP cache and get cache headers
     const cacheResult = checkHttpCache(req, {
@@ -172,7 +219,12 @@ export class DriveController {
     // Process content for download: replace private URLs with public URLs in markdown/html
     // Only process if user is authenticated (private files)
     if (download && user && !isPublic) {
-      data = await this.driveService.processContentForDownload(user, data, filename, contentType);
+      data = await this.driveService.processContentForDownload(
+        user,
+        data,
+        resolvedFilename,
+        contentType,
+      );
     }
 
     // Return file with cache headers
@@ -182,7 +234,7 @@ export class DriveController {
       ...corsHeaders,
       ...(download
         ? {
-            'Content-Disposition': buildContentDisposition(filename),
+            'Content-Disposition': buildContentDisposition(resolvedFilename),
           }
         : {}),
     });
@@ -190,18 +242,20 @@ export class DriveController {
     res.end(data);
   }
 
-  @Get('file/public/:fileId')
-  async servePublicDriveFile(
-    @Param('fileId') fileId: string,
-    @Query('download') download: string,
-    @Res() res: Response,
-    @Req() req: Request,
-  ): Promise<void> {
+  private async servePublicDriveFileInternal(params: {
+    fileId: string;
+    download: string;
+    res: Response;
+    req: Request;
+    filename?: string;
+  }): Promise<void> {
+    const { fileId, download, res, req, filename: filenameHint } = params;
     const origin = req.headers.origin;
 
     // First, get only metadata (no file content loaded yet)
     const { contentType, filename, lastModified } =
       await this.driveService.getPublicFileMetadata(fileId);
+    const resolvedFilename = filename || filenameHint || 'file';
 
     // Check HTTP cache and get cache headers
     const cacheResult = checkHttpCache(req, {
@@ -231,7 +285,7 @@ export class DriveController {
       ...corsHeaders,
       ...(download
         ? {
-            'Content-Disposition': buildContentDisposition(filename),
+            'Content-Disposition': buildContentDisposition(resolvedFilename),
           }
         : {}),
     });

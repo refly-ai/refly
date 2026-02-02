@@ -1,4 +1,6 @@
 import { Request } from 'express';
+import mime from 'mime';
+import path from 'node:path';
 import { AuthenticatedUser } from '../../../types/auth.types';
 import type {
   ActionStatus,
@@ -89,9 +91,29 @@ export function actionMessagePO2DTO(message: ActionMessageModel): ActionMessageV
  * @param endpoint - Server origin for generating content URL (e.g., 'https://api.example.com')
  */
 export function driveFilePO2DTO(driveFile: DriveFileModel, endpoint?: string): DriveFileViaApi {
+  const resolvedName = resolveDriveFileName(driveFile);
   return {
-    ...pick(driveFile, ['name', 'type']),
+    ...pick(driveFile, ['type']),
+    name: resolvedName,
     size: Number(driveFile.size),
-    url: endpoint ? `${endpoint}/v1/drive/file/content/${driveFile.fileId}` : undefined,
+    url: endpoint
+      ? `${endpoint}/v1/drive/file/content/${driveFile.fileId}${
+          resolvedName ? `/${encodeURIComponent(resolvedName)}` : ''
+        }`
+      : undefined,
   };
+}
+
+function resolveDriveFileName(driveFile: DriveFileModel): string {
+  const rawName = driveFile.name || '';
+  if (!rawName) {
+    return rawName;
+  }
+  if (path.extname(rawName)) {
+    return rawName;
+  }
+  const extFromType = driveFile.type ? mime.getExtension(driveFile.type) || '' : '';
+  const extFromStorage = driveFile.storageKey ? path.extname(driveFile.storageKey) : '';
+  const resolvedExt = extFromType || (extFromStorage ? extFromStorage.slice(1) : '');
+  return resolvedExt ? `${rawName}.${resolvedExt}` : rawName;
 }

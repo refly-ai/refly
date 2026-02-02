@@ -77,35 +77,26 @@ export class ApiKeyService {
    * @returns User UID if valid, null otherwise
    */
   async validateApiKey(apiKey: string): Promise<string | null> {
-    if (!apiKey || !apiKey.startsWith('rf_')) {
-      return null;
-    }
-
-    const keyHash = this.hashApiKey(apiKey);
-
-    const keyRecord = await this.prisma.userApiKey.findFirst({
-      where: {
-        keyHash,
-        revokedAt: null,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-      },
-    });
-
+    const keyRecord = await this.findValidApiKeyRecord(apiKey);
     if (!keyRecord) {
       return null;
     }
 
-    // Update last used timestamp (fire and forget)
-    this.prisma.userApiKey
-      .update({
-        where: { pk: keyRecord.pk },
-        data: { lastUsedAt: new Date() },
-      })
-      .catch((err) => {
-        this.logger.warn(`Failed to update lastUsedAt: ${err.message}`);
-      });
-
+    this.updateLastUsedAt(keyRecord.pk);
     return keyRecord.uid;
+  }
+
+  /**
+   * Validate an API key and return both uid and keyId if valid
+   */
+  async validateApiKeyWithKeyId(apiKey: string): Promise<{ uid: string; keyId: string } | null> {
+    const keyRecord = await this.findValidApiKeyRecord(apiKey);
+    if (!keyRecord) {
+      return null;
+    }
+
+    this.updateLastUsedAt(keyRecord.pk);
+    return { uid: keyRecord.uid, keyId: keyRecord.keyId };
   }
 
   /**
@@ -219,6 +210,41 @@ export class ApiKeyService {
    */
   private hashApiKey(apiKey: string): string {
     return crypto.createHash('sha256').update(apiKey).digest('hex');
+  }
+
+  private async findValidApiKeyRecord(apiKey: string): Promise<{
+    pk: bigint;
+    uid: string;
+    keyId: string;
+  } | null> {
+    if (!apiKey || !apiKey.startsWith('rf_')) {
+      return null;
+    }
+
+    const keyHash = this.hashApiKey(apiKey);
+    return this.prisma.userApiKey.findFirst({
+      where: {
+        keyHash,
+        revokedAt: null,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      select: {
+        pk: true,
+        uid: true,
+        keyId: true,
+      },
+    });
+  }
+
+  private updateLastUsedAt(pk: bigint): void {
+    this.prisma.userApiKey
+      .update({
+        where: { pk },
+        data: { lastUsedAt: new Date() },
+      })
+      .catch((err) => {
+        this.logger.warn(`Failed to update lastUsedAt: ${err.message}`);
+      });
   }
 
   /**

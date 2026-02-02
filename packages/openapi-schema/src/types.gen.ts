@@ -10525,6 +10525,10 @@ export type DriveFileViaApi = {
    */
   size?: number;
   /**
+   * 产出该文件的节点 ID
+   */
+  nodeId?: string;
+  /**
    * Access URL for the file
    */
   url?: string;
@@ -10596,6 +10600,28 @@ export type OpenapiCopilotGenerateResponse = BaseResponse & {
     canvasId?: string;
     workflowPlan?: OpenapiWorkflowPlan;
   };
+};
+
+/**
+ * 生成工作流失败时的错误响应。
+ */
+export type OpenapiCopilotGenerateErrorResponse = {
+  /**
+   * HTTP 状态码
+   */
+  statusCode: number;
+  /**
+   * 错误信息（可读）
+   */
+  message: string;
+  /**
+   * 错误类型
+   */
+  error: string;
+  /**
+   * AI 原始回复（可能为空，长度受限）
+   */
+  modelResponse?: string;
 };
 
 export type OpenapiWorkflowSummary = {
@@ -12082,7 +12108,7 @@ export type GenerateWorkflowViaCopilotData = {
 
 export type GenerateWorkflowViaCopilotResponse = OpenapiCopilotGenerateResponse;
 
-export type GenerateWorkflowViaCopilotError = unknown;
+export type GenerateWorkflowViaCopilotError = OpenapiCopilotGenerateErrorResponse | unknown;
 
 export type GetWorkflowStatusViaApiData = {
   path: {
