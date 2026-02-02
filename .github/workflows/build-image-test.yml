@@ -1,22 +1,46 @@
-name: Release Docker Images
+name: Build Test Docker Images
 
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Release version'
-        required: true
+      tag_suffix:
+        description: 'Optional custom tag suffix (default: timestamp YYYYMMDDHHMM)'
+        required: false
         type: string
 
 env:
   REGISTRY: docker.io
   IMAGE_PREFIX: reflyai/refly
 
+concurrency:
+  group: test-image-build
+  cancel-in-progress: true
+
 jobs:
+  prepare:
+    name: Prepare test tag
+    runs-on: ubuntu-latest
+    if: github.repository == 'refly-ai/refly'
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Generate test tag
+        id: tag
+        run: |
+          if [ -n "${{ inputs.tag_suffix }}" ]; then
+            TAG="test-${{ inputs.tag_suffix }}"
+          else
+            # Use UTC time to generate timestamp tag
+            TAG="test-$(date -u +%Y%m%d%H%M)"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Using tag: $TAG"
+
   build:
     name: Build ${{ matrix.app }} (${{ matrix.suffix }})
     runs-on: ${{ matrix.runner }}
     if: github.repository == 'refly-ai/refly'
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -79,7 +103,7 @@ jobs:
     name: Merge ${{ matrix.app }} manifests
     runs-on: ubuntu-latest
     if: github.repository == 'refly-ai/refly'
-    needs: build
+    needs: [prepare, build]
     strategy:
       matrix:
         app: ['api', 'web']
@@ -108,26 +132,26 @@ jobs:
           ARM64_DIGEST=$(cat /tmp/digests/${{ matrix.app }}-arm64)
 
           IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }}"
+          TEST_TAG="${{ needs.prepare.outputs.tag }}"
 
           docker buildx imagetools create \
-            -t "${IMAGE}:latest" \
-            -t "${IMAGE}:${{ inputs.version }}" \
+            -t "${IMAGE}:${TEST_TAG}" \
             "${IMAGE}@${AMD64_DIGEST}" \
             "${IMAGE}@${ARM64_DIGEST}"
 
       - name: Inspect manifest
         run: |
-          docker buildx imagetools inspect "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }}:${{ inputs.version }}"
+          docker buildx imagetools inspect "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }}:${{ needs.prepare.outputs.tag }}"
 
       - name: Generate summary
         run: |
           IMAGE="${{ env.IMAGE_PREFIX }}-${{ matrix.app }}"
-          VERSION="${{ inputs.version }}"
+          TAG="${{ needs.prepare.outputs.tag }}"
 
           cat >> $GITHUB_STEP_SUMMARY << EOF
-          ## 🐳 Docker Image Published: ${{ matrix.app }}
+          ## 🧪 Test Docker Image Published: ${{ matrix.app }}
 
-          **Version:** \`${VERSION}\`
+          **Tag:** \`${TAG}\`
 
           **Image:** \`${IMAGE}\`
 
@@ -139,15 +163,14 @@ jobs:
 
           ### Pull Commands
           \`\`\`bash
-          # Latest version
-          docker pull ${IMAGE}:latest
-
-          # Specific version
-          docker pull ${IMAGE}:${VERSION}
+          # Test image
+          docker pull ${IMAGE}:${TAG}
           \`\`\`
 
           ### Run Commands
           \`\`\`bash
-          docker run -d ${IMAGE}:${VERSION}
+          docker run -d ${IMAGE}:${TAG}
           \`\`\`
+
+          **Note:** This is a test image. The \`latest\` tag was not updated.
           EOF
