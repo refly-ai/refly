@@ -1,6 +1,14 @@
 import { Button, Input, Form } from 'antd';
 import { Link } from '@refly-packages/ai-workspace-common/utils/router';
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import {
+  useCallback,
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import { useSearchParams, Navigate, useNavigate } from 'react-router-dom';
 
 import { OAuthButton } from '../../components/login-modal/oauth-button';
@@ -40,66 +48,142 @@ interface TurnstileProps {
   onExpire?: () => void;
 }
 
-const Turnstile = ({
-  siteKey,
-  theme = 'light',
-  language = 'en',
-  onVerify,
-  onError,
-  onExpire,
-}: TurnstileProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const widgetIdRef = useRef<string | null>(null);
+export interface TurnstileRef {
+  reset: () => void;
+}
 
-  useEffect(() => {
+// Fixed height to prevent layout shift during widget transitions
+const TURNSTILE_HEIGHT = 65;
+
+/**
+ * Global script loader with Promise-based caching
+ * - Loads script only once across all component instances
+ * - Uses onload event instead of polling (more efficient)
+ * - Preloads script at module load time for faster widget rendering
+ */
+let turnstileScriptPromise: Promise<void> | null = null;
+
+const loadTurnstileScript = (): Promise<void> => {
+  if (turnstileScriptPromise) return turnstileScriptPromise;
+
+  // Already loaded
+  if ((window as any).turnstile) {
+    return Promise.resolve();
+  }
+
+  turnstileScriptPromise = new Promise((resolve, reject) => {
     const scriptId = 'cloudflare-turnstile-script';
     let script = document.getElementById(scriptId) as HTMLScriptElement;
 
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
+    if (script) {
+      // Script tag exists, wait for it to load
+      if ((window as any).turnstile) {
+        resolve();
+      } else {
+        script.addEventListener('load', () => resolve());
+        script.addEventListener('error', () => reject(new Error('Failed to load Turnstile')));
+      }
+      return;
     }
 
-    const renderWidget = () => {
-      if ((window as any).turnstile && containerRef.current && !widgetIdRef.current) {
+    script = document.createElement('script');
+    script.id = scriptId;
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Turnstile'));
+    document.head.appendChild(script);
+  });
+
+  return turnstileScriptPromise;
+};
+
+// Preload script at module load time (not blocking)
+if (typeof window !== 'undefined') {
+  loadTurnstileScript().catch(() => {
+    // Silent fail on preload - will retry when component mounts
+    turnstileScriptPromise = null;
+  });
+}
+
+/**
+ * Cloudflare Turnstile component following official best practices:
+ * - Preloads script at module load time for instant widget rendering
+ * - Uses Promise-based script loading (no polling)
+ * - Uses refs for callbacks to prevent unnecessary re-renders
+ * - Fixed height container prevents layout shift
+ *
+ * @see https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/
+ */
+const Turnstile = forwardRef<TurnstileRef, TurnstileProps>(
+  ({ siteKey, theme = 'light', language = 'en', onVerify, onError, onExpire }, ref) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const widgetIdRef = useRef<string | null>(null);
+
+    // Use refs to store latest callbacks - prevents re-mounting on callback changes
+    const callbacksRef = useRef({ onVerify, onError, onExpire });
+    callbacksRef.current = { onVerify, onError, onExpire };
+
+    // Expose reset method to parent component
+    useImperativeHandle(ref, () => ({
+      reset: () => {
+        if ((window as any).turnstile && widgetIdRef.current) {
+          (window as any).turnstile.reset(widgetIdRef.current);
+        }
+      },
+    }));
+
+    useEffect(() => {
+      let mounted = true;
+
+      const renderWidget = () => {
+        if (!mounted || !containerRef.current || !(window as any).turnstile) return;
+
+        // Remove existing widget if any
+        if (widgetIdRef.current) {
+          (window as any).turnstile.remove(widgetIdRef.current);
+          widgetIdRef.current = null;
+        }
+
         widgetIdRef.current = (window as any).turnstile.render(containerRef.current, {
           sitekey: siteKey,
-          callback: onVerify,
-          'error-callback': onError,
-          'expired-callback': onExpire,
-          width: '400px',
+          callback: (token: string) => callbacksRef.current.onVerify(token),
+          'error-callback': () => callbacksRef.current.onError?.(),
+          'expired-callback': () => callbacksRef.current.onExpire?.(),
+          'refresh-expired': 'auto',
           theme,
           language: (language ?? 'en').toLowerCase(),
           size: 'normal',
           tabindex: 0,
         });
-      }
-    };
-
-    if ((window as any).turnstile) {
-      renderWidget();
-    } else {
-      const originalOnLoad = script.onload;
-      script.onload = (e) => {
-        if (originalOnLoad) (originalOnLoad as any)(e);
-        renderWidget();
       };
-    }
 
-    return () => {
-      if ((window as any).turnstile && widgetIdRef.current) {
-        (window as any).turnstile.remove(widgetIdRef.current);
-        widgetIdRef.current = null;
-      }
-    };
-  }, [siteKey, theme, language, onVerify, onError, onExpire]);
+      // Load script and render widget
+      loadTurnstileScript()
+        .then(renderWidget)
+        .catch((err) => {
+          console.error('Turnstile load error:', err);
+          callbacksRef.current.onError?.();
+        });
 
-  return <div ref={containerRef} className="flex justify-center w-full" />;
-};
+      return () => {
+        mounted = false;
+        if ((window as any).turnstile && widgetIdRef.current) {
+          (window as any).turnstile.remove(widgetIdRef.current);
+          widgetIdRef.current = null;
+        }
+      };
+    }, [siteKey, theme, language]);
+
+    return (
+      <div
+        ref={containerRef}
+        className="flex justify-center w-full items-center"
+        style={{ minHeight: TURNSTILE_HEIGHT }}
+      />
+    );
+  },
+);
 
 const LoginPage = () => {
   const [form] = Form.useForm<FormValues>();
@@ -113,8 +197,9 @@ const LoginPage = () => {
     isCheckingLoginStatus: state.isCheckingLoginStatus,
   }));
 
-  // Cloudflare Turnstile state
+  // Cloudflare Turnstile state and ref
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileRef>(null);
 
   const handleTurnstileVerify = useCallback((token: string) => {
     setTurnstileToken(token);
@@ -126,6 +211,16 @@ const LoginPage = () => {
 
   const handleTurnstileExpire = useCallback(() => {
     setTurnstileToken(null);
+  }, []);
+
+  /**
+   * Reset Turnstile widget using official API (turnstile.reset)
+   * This is more efficient than remounting the component
+   * @see https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/
+   */
+  const resetTurnstile = useCallback(() => {
+    setTurnstileToken(null);
+    turnstileRef.current?.reset();
   }, []);
 
   // Store invite code from URL parameter for claiming after login
@@ -301,6 +396,9 @@ const LoginPage = () => {
           authStore.setSessionId(data.data?.sessionId ?? null);
           authStore.setVerificationModalOpen(true);
         }
+      } else {
+        // Signup failed, reset Turnstile for retry
+        resetTurnstile();
       }
     } else {
       logEvent('auth::login_click', 'email');
@@ -326,6 +424,9 @@ const LoginPage = () => {
         const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/workspace';
         // Use smart redirect - SPA navigation for internal routes
         handleRedirect(redirectUrl);
+      } else {
+        // Login failed, reset Turnstile for retry
+        resetTurnstile();
       }
     }
   }, [
@@ -336,6 +437,7 @@ const LoginPage = () => {
     handleRedirect,
     turnstileToken,
     isTurnstileEnabled,
+    resetTurnstile,
   ]);
 
   const handleResetPassword = useCallback(() => {
@@ -346,9 +448,10 @@ const LoginPage = () => {
     (signUp: boolean) => {
       authStore.setIsSignUpMode(signUp);
       form.resetFields();
-      setTurnstileToken(null);
+      // Reset Turnstile when switching between login/signup modes
+      resetTurnstile();
     },
-    [form, authStore],
+    [form, authStore, resetTurnstile],
   );
 
   const handleToggleEmailForm = useCallback(() => {
@@ -694,6 +797,7 @@ const LoginPage = () => {
                 {isTurnstileEnabled && cloudflareSiteKey && (
                   <div className="flex justify-center w-full">
                     <Turnstile
+                      ref={turnstileRef}
                       siteKey={cloudflareSiteKey}
                       theme={isDarkMode ? 'dark' : 'light'}
                       language={i18n?.language ?? 'en'}
