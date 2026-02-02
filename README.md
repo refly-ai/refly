@@ -15,7 +15,7 @@
   </a>
 </p>
 
-[APIs for Lovable](#api-integration) · [Webhooks for Slack/Lark](#webhook-setup) · [Skills for Claude Code](#export-skills)
+[APIs for Lovable](#use-case-1-api-integration) · [Webhooks for Slack/Lark](#use-case-2-webhook-for-Lark) · [Skills for Claude Code]((#use-case-3-skills-for-claude-code))
 
 Skills are not prompts. They are durable infrastructure.
 
@@ -201,7 +201,7 @@ Claude: [Uses product_research skill] → Returns detailed analysis
 
 ---
 
-### Use Case 4: Create Clawdbot
+### Use Case 4: Build Clawdbot
 
 📖 **Tutorial**: (https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf)
 
