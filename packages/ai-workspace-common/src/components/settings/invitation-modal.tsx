@@ -97,7 +97,7 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
 
  ⚡ Supercharge your automation with Banana Pro, Gemini 3.0, and other top-tier AI models
 
- 🎁 Plus 3,000 free credits to help you get started!
+ 🎁 Plus 500 free credits to help you get started!
 
 🔑 Invitation Code: ${invitationCode}
 
