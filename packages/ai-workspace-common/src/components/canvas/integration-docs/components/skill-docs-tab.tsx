@@ -209,6 +209,38 @@ export const SkillDocsTab = memo(() => {
         </blockquote>
       </section>
 
+      {/* Install from Repository Section */}
+      <section id="skill-install" className="mb-10 scroll-mt-6 last:mb-0">
+        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+          {t('integration.skill.installFromRepoTitle')}
+        </h3>
+        <p className={sectionDescClassName}>{t('integration.skill.installFromRepoDescription')}</p>
+        <CodeExample language="bash" code={installSkillExample} />
+        <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
+          <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
+            {t('integration.skill.whatHappensTitle')}
+          </h4>
+          <ul className="list-disc list-inside space-y-1 text-sm text-[var(--integration-docs-text-2)]">
+            <li>{t('integration.skill.installStep1')}</li>
+            <li>{t('integration.skill.installStep2')}</li>
+            <li>{t('integration.skill.installStep3')}</li>
+          </ul>
+        </div>
+        <div className="mt-3">
+          <span className="text-sm text-[var(--integration-docs-text-2)]">
+            {t('integration.skill.browseSkillsHint')}{' '}
+            <a
+              href="https://github.com/refly-ai/refly-skills/tree/main/skills"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--integration-docs-primary-text)] hover:underline"
+            >
+              {t('integration.skill.browseSkillsLink')}
+            </a>
+          </span>
+        </div>
+      </section>
+
       {/* Examples Section */}
       <section id="skill-examples" className="mb-10 scroll-mt-6 last:mb-0">
         <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
@@ -300,38 +332,6 @@ export const SkillDocsTab = memo(() => {
               </span>
             </li>
           </ul>
-        </div>
-      </section>
-
-      {/* Install from Repository Section */}
-      <section id="skill-install" className="mb-10 scroll-mt-6 last:mb-0">
-        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
-          {t('integration.skill.installFromRepoTitle')}
-        </h3>
-        <p className={sectionDescClassName}>{t('integration.skill.installFromRepoDescription')}</p>
-        <CodeExample language="bash" code={installSkillExample} />
-        <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
-          <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
-            {t('integration.skill.whatHappensTitle')}
-          </h4>
-          <ul className="list-disc list-inside space-y-1 text-sm text-[var(--integration-docs-text-2)]">
-            <li>{t('integration.skill.installStep1')}</li>
-            <li>{t('integration.skill.installStep2')}</li>
-            <li>{t('integration.skill.installStep3')}</li>
-          </ul>
-        </div>
-        <div className="mt-3">
-          <span className="text-sm text-[var(--integration-docs-text-2)]">
-            {t('integration.skill.browseSkillsHint')}{' '}
-            <a
-              href="https://github.com/refly-ai/refly-skills/tree/main/skills"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[var(--integration-docs-primary-text)] hover:underline"
-            >
-              {t('integration.skill.browseSkillsLink')}
-            </a>
-          </span>
         </div>
       </section>
 
