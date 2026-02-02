@@ -100,6 +100,7 @@ export const IntegrationDocsModal = memo(
               id: 'skill-workflow',
               label: t('integration.sections.skillWorkflow'),
               children: [
+                { id: 'skill-install-cli', label: t('integration.skill.installCliTitle') },
                 { id: 'skill-create', label: t('integration.skill.createSkillTitle') },
                 { id: 'skill-update', label: t('integration.skill.updateSkillTitle') },
                 { id: 'skill-publish', label: t('integration.skill.publishSkillTitle') },

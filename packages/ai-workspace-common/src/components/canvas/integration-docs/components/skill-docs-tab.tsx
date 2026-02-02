@@ -16,6 +16,8 @@ const sectionDescClassName =
 export const SkillDocsTab = memo(() => {
   const { t } = useTranslation();
 
+  const installCliExample = 'npm install -g @anthropic/refly';
+
   const createSkillExample = `refly skill create --name "my-skill" --workflow "c-xxxxx"`;
 
   const updateSkillExample = `refly skill update --name "my-skill"`;
@@ -75,6 +77,15 @@ export const SkillDocsTab = memo(() => {
           </div>
         </div>
       </div>
+
+      {/* Install CLI Section */}
+      <section id="skill-install-cli" className="mb-10 scroll-mt-6 last:mb-0">
+        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+          {t('integration.skill.installCliTitle')}
+        </h3>
+        <p className={sectionDescClassName}>{t('integration.skill.installCliDescription')}</p>
+        <CodeExample language="bash" code={installCliExample} />
+      </section>
 
       {/* Create Skill Section */}
       <section id="skill-create" className="mb-10 scroll-mt-6 last:mb-0">
