@@ -34,11 +34,11 @@ After deployment, choose your path based on your use case:
 
 | I want to... | Start here | Time |
 |-------------|-----------|------|
-| 🔧 **Build my first workflow** | [Create a Workflow](#create-your-first-workflow) | 5 min |
-| 🔌 **Call workflows via API** | [API Integration](#use-case-1-api-integration) | 10 min |
-| 💬 **Connect to Slack/Teams** | [Webhook Setup](#use-case-2-webhook-for-slack) | 15 min |
-| 🤖 **Export for Claude Code** | [Export Skills](#use-case-3-skills-for-claude-code) | Coming Soon |
-
+| 🔧 **Build my first workflow** | [Create a Workflow](#create-your-first-workflow) | 5 mins |
+| 🔌 **Call workflows via API** | [API Integration](#use-case-1-api-integration) | 10 mins |
+| 💬 **Connect to Slack/Teams** | [Webhook Setup](#use-case-2-webhook-for-slack) | 15 mins |
+| 🤖 **Export for Claude Code** | [Export Skills](#use-case-3-skills-for-claude-code) | 15mins |
+| 🤖 **Build a ClawdBot** | [Build ClawdBot](#build-a-clawdbot) | 20 min |
 ---
 
 ## Create Your First Workflow
