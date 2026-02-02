@@ -184,13 +184,36 @@ export const SkillDocsTab = memo(() => {
             <li>{t('integration.skill.useStep3')}</li>
           </ul>
         </div>
-        <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
-          <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
-            {t('integration.skill.claudeCodeTitle')}
-          </h4>
-          <p className="text-sm text-[var(--integration-docs-text-2)]">
-            {t('integration.skill.claudeCodeDescription')}
-          </p>
+        {/* Emphasized Claude Code callout */}
+        <div className="mt-5 rounded-xl border-2 border-[var(--integration-docs-primary-text)] bg-[var(--integration-docs-bg-subtle)] p-5">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-[var(--integration-docs-primary-text)]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+              <span className="text-base font-semibold text-[var(--integration-docs-text-1)]">
+                {t('integration.skill.claudeCodeTitle')}
+              </span>
+            </div>
+            <p className="text-sm text-[var(--integration-docs-text-2)] m-0">
+              {t('integration.skill.claudeCodeDescription')}
+            </p>
+            <div className="mt-1 px-3 py-2 rounded-lg bg-[var(--integration-docs-inline-code-bg)]">
+              <code className="text-[13px] text-[var(--integration-docs-inline-code-text)]">
+                ~/.claude/skills/
+              </code>
+            </div>
+          </div>
         </div>
       </section>
 
