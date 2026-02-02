@@ -52,7 +52,7 @@ declare global {
       SENTRY_ENABLED?: boolean;
       ENV_TAG?: string;
       DEPLOY_TYPE?: string;
-      CLOUDFLARE_SITE_KEY?: string;
+      PUBLIC_CLOUDFLARE_SITE_KEY?: string;
     };
 
     ipcRenderer?: {
@@ -141,6 +141,6 @@ const getBrowserValue = <T>(getter: () => T, fallback: T): T => {
  * Priority: window.ENV (runtime) > VITE_CLOUDFLARE_SITE_KEY (build time)
  */
 export const cloudflareSiteKey =
-  getBrowserValue(() => window.ENV?.CLOUDFLARE_SITE_KEY, '') ||
-  process.env.VITE_CLOUDFLARE_SITE_KEY ||
+  getBrowserValue(() => window.ENV?.PUBLIC_CLOUDFLARE_SITE_KEY, '') ||
+  process.env.PUBLIC_CLOUDFLARE_SITE_KEY ||
   '';
