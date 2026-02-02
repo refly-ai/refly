@@ -18,7 +18,7 @@ TL;DR: Refly compiles your enterprise SOPs into executable agent skills. Built i
 ## Quick Start
 
 - **[📘Self-Deployment Guide](https://docs.refly.ai/community-version/self-deploy/)**
-  * Recommended for Developers) Step-by-step guide to deploying Refly on your own server using Docker. 
+  * (Recommended for Developers) Step-by-step guide to deploying Refly on your own server using Docker. 
 - **[🔌API Reference](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api)**
   * Complete API documentation for integrating Refly into your applications.
 
