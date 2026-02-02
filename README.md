@@ -266,7 +266,8 @@ Refly is designed to be the universal bridge between your existing enterprise to
 
 Bring your own data and logic into Refly with zero friction.
 
-<img width="1280" height="272" alt="image" src="https://github.com/user-attachments/assets/30475454-1bb7-41bd-b6d8-6f799bb30f79" />
+<img width="1920" height="627" alt="img_v3_02uh_37c05264-a390-4ceb-9a96-efce1a61d1eg" src="https://github.com/user-attachments/assets/0fdf8214-e244-41ae-b108-59cfa12a8600" />
+
 
 - **3,000+ Native Tools**: Seamlessly integrate with Stripe, Slack, Salesforce, GitHub, etc.
 - **MCP Support**: Full compatibility with Model Context Protocol servers
