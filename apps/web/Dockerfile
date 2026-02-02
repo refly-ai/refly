@@ -24,6 +24,10 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
 # Copy remaining source code
 COPY . .
 
+# Build arguments for environment variables
+ARG PUBLIC_CLOUDFLARE_SITE_KEY
+ENV PUBLIC_CLOUDFLARE_SITE_KEY=$PUBLIC_CLOUDFLARE_SITE_KEY
+
 # Build packages in correct order
 RUN pnpm build:web
 
