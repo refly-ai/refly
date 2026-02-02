@@ -174,7 +174,7 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
             <p className="text-sm text-refly-text-0 text-center font-semibold">{availableText}</p>
           )}
           {loadingCodes ? (
-            <div className="max-h-[360px] overflow-y-auto">
+            <div className="-mx-4 max-h-[360px] overflow-y-auto px-4">
               <div className="grid grid-cols-2 gap-2 pb-8">
                 {Array.from({ length: 10 }).map((_, index) => (
                   <div
@@ -187,7 +187,7 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
               </div>
             </div>
           ) : invitationOverview.sortedCodes.length > 0 ? (
-            <div className="max-h-[360px] overflow-y-auto">
+            <div className="-mx-4 max-h-[360px] overflow-y-auto px-4">
               <div className="grid grid-cols-2 gap-2 pb-8">
                 {invitationOverview.sortedCodes.map((code, index) => (
                   <InvitationCodeCard
