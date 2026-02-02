@@ -130,8 +130,8 @@ For those who'd like to contribute code, see our [Contribution Guide](CONTRIBUTI
 Connect with the Refly community:
 
 - 🌟 **[Star us on GitHub](https://github.com/refly-ai/refly)**: It helps us keep building!
-- 💬 **Discord/Slack**: Join our chat... 
-- 🐦 **Twitter**: Follow us... 
+- 💬 **[Discord](https://discord.gg/你的邀请链接)**: Join our chat
+- 🐦 **[Twitter](https://x.com/reflyai?s=21)**: Follow us
 
 ## License
 
