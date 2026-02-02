@@ -4471,6 +4471,7 @@ const translations = {
       useStep2: 'Executes the bound workflow with provided input',
       useStep3: 'Returns execution result',
       claudeCodeTitle: 'In Claude Code',
+      claudeCodeExample: 'use <skill-name> to do something',
       claudeCodeDescription:
         'Skills are automatically discovered by Claude Code via symlinks in ~/.claude/skills/. When you describe a task that matches a skill description, Claude Code will suggest using it.',
       publishSkillTitle: 'Publish Skill',

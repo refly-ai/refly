@@ -203,7 +203,7 @@ export const SkillDocsTab = memo(() => {
           </p>
           <div className="mt-3 px-3 py-2 rounded-lg bg-[var(--integration-docs-inline-code-bg)]">
             <code className="text-[13px] text-[var(--integration-docs-inline-code-text)]">
-              {t('integration.skill.examplePrompt1')}
+              {t('integration.skill.claudeCodeExample')}
             </code>
           </div>
         </blockquote>

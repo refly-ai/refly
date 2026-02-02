@@ -4498,6 +4498,7 @@ const translations = {
       useStep2: '使用提供的输入执行绑定的工作流',
       useStep3: '返回执行结果',
       claudeCodeTitle: '在 Claude Code 中使用',
+      claudeCodeExample: 'use <skill-name> to do something',
       claudeCodeDescription:
         'Claude Code 会通过 ~/.claude/skills/ 中的符号链接自动发现 Skill。当您描述的任务与 Skill 描述匹配时，Claude Code 会建议使用它。',
       publishSkillTitle: '发布 Skill',
