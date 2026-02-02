@@ -1,4 +1,5 @@
-<img width="1280" height="731" alt="image" src="https://github.com/user-attachments/assets/9ee376d9-946d-4c11-96c5-740533b4b124" />
+<img width="1920" height="1080" alt="img_v3_02uh_3e01e906-f84a-4cd8-8b7a-b7274ae8e89g" src="https://github.com/user-attachments/assets/a7857ab5-e8db-4352-acfa-5e42b663aef7" />
+
 
 <div align="right">
 
@@ -16,12 +17,187 @@ Refly 是首个用于构建稳定、原子化、版本化 Agent Skills 的开源
 
 **TL;DR**：Refly 将您的企业 SOP 编译为可执行的 Agent Skills。3 分钟构建完成，随处部署。
 
-## 快速开始
-- 📘 **[自部署指南](https://docs.refly.ai/community-version/self-deploy/)**  
-  *（推荐开发者使用）* 使用 Docker 在您自己的服务器上部署 Refly 的分步指南。
 
-- 🔌 **[API 参考文档](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api)**  
-  将 Refly 集成到您的应用程序的完整 API 文档。
+## 快速开始
+
+### 部署 Refly
+
+- 📘 **[自部署指南](https://docs.refly.ai/community-version/self-deploy/)**  
+  *(推荐给开发者)* 使用 Docker 在你自己的服务器上部署 Refly 的分步指南。
+
+- 🔌 **[API 参考](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api)**  
+  将 Refly 集成到你应用中的完整 API 文档。
+
+### 接下来做什么？
+
+部署完成后，根据你的使用场景选择路径：
+
+| 我想要… | 从这里开始 | 时间 |
+|-------------|-----------|------|
+| 🔧 **构建第一个工作流** | [创建工作流](#create-your-first-workflow) | 5 分钟 |
+| 🔌 **通过 API 调用工作流** | [API 集成](#use-case-1-api-integration) | 10 分钟 |
+| 💬 **连接到 Lark** | [Webhook 设置](#use-case-2-webhook-for-feishu) | 15 分钟 |
+| 🤖 **导出到 Claude Code** | [导出技能](#use-case-3-skills-for-claude-code) | 15 分钟 |
+| 🦞  **构建 ClawdBot** | [构建 ClawdBot](#build-a-clawdbot) | 20 分钟 |
+---
+
+## 创建你的第一个工作流
+
+> **注意**：本节假设你已完成 [自部署](https://docs.refly.ai/community-version/self-deploy/)，并且可以通过 `http://localhost:5700` 访问 Refly
+
+### 第一步：注册并登录
+
+1. 在浏览器中打开 `http://localhost:5700`
+2. 使用你的邮箱和密码注册
+3. 配置你的第一个模型提供方：
+   - 点击右上角账号图标 → Settings
+   - 添加一个 Provider（如 OpenAI、Anthropic）
+   - 添加你的第一个对话模型
+   - 将其设置为默认
+
+> 📖 含截图的详细配置说明：[自部署指南](https://docs.refly.ai/community-version/self-deploy/#start-using-refly)
+
+### 第二步：创建工作流
+
+1. 在首页点击 **“New Workflow”**
+2. 选择一个模板或从零开始：
+   - **Blank Canvas**：使用可视化节点构建
+   - **Vibe Mode**：用自然语言描述你的工作流
+
+**示例 —— 产品调研工作流**：
+```
+1.添加 “Web Search” 节点 —— 搜索产品信息
+2.添加 “LLM” 节点 —— 分析搜索结果
+3.添加 “Output” 节点 —— 格式化报告
+4.连接各节点
+5.点击 “Save”
+```
+
+### 第三步：测试你的工作流
+
+1. 点击 **“Run”** 按钮
+2. 输入测试内容（例如：产品 URL）
+3. 实时查看执行结果
+4. 如果出现失败，查看日志排查问题
+
+---
+
+## 使用场景
+
+### 使用场景 1：API 集成
+
+**目标**：通过 REST API 从你的应用中调用工作流
+
+#### 获取你的 API 凭证
+
+1. 前往 **Settings** → **API Keys**
+2. 点击 **“Generate New Key”**
+3. 复制你的 API Key（请妥善保管！）
+
+#### 发起你的第一次 API 调用
+```bash
+curl -X POST https://your-refly-instance.com/api/v1/workflows/{WORKFLOW_ID}/execute \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": {
+      "product_url": "https://example.com/product"
+    }
+  }'
+```
+
+**响应**:
+```json
+{
+  "execution_id": "exec_abc123",
+  "status": "running"
+}
+```
+
+**查询执行状态**
+```bash
+curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+📖 **完整API文档**: [API文档](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api)
+
+---
+
+### 使用场景 2：Lark Webhook
+
+**目标**：当有人在 Lark 中发送消息时触发你的工作流
+
+#### 前置条件
+
+- 拥有管理员权限的 Lark 工作区
+- 已在 Refly 中创建工作流
+
+#### 配置步骤
+
+1. **在 Refly 中**：
+   - 打开你的工作流
+   - 点击 **“Settings”** → **“Triggers”**
+   - 启用 **“Webhook Trigger”**
+   - 复制 Webhook URL
+
+2. **在 飞书 / Lark 中**：
+   - 前往 [api.feishu.com/apps](https://open.feishu.cn/app)
+   - 创建一个 **“自定义应用”**
+   - 进入 **“事件订阅（Event Subscriptions）”**
+   - 将 Refly 的 Webhook URL 粘贴到 **“请求地址（Request URL）”**
+   - 点击 **“添加事件（Add Event）”** 并选择 **“接收消息（Receive Message）”**
+   - 前往 **“版本管理（Version Management）”** 并发布应用
+     
+
+3. **测试**：
+   - 在飞书中，通过搜索找到你的机器人并发送消息（例如：`analyze report.pdf`）
+   - 工作流将被触发，并通过 Webhook 返回执行结果
+
+
+> ⚠️ **注意**：详细的 Slack / 飞书集成指南即将推出。目前可参考 [API 参考](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api) 进行 Webhook 相关配置。
+
+---
+### 使用场景 3：Claude Code 技能
+
+**目标**：将你的 Refly 工作流导出为 Claude Code 技能
+
+#### 快速开始
+
+1. **安装 CLI**
+```bash
+npm install -g @refly-ai/refly-skills
+```
+
+2. **导出工作流**
+```bash
+refly-skills export --workflow-id <your-workflow-id>
+```
+
+这会在 skills/ 目录下生成一个 .refly 技能文件。
+
+3. **在 Claude Code 中使用**
+
+导出的技能会自动在 Claude Code 中可用。Claude 现在可以将你的工作流作为一个工具来调用
+
+#### 示例
+```bash
+# 导出你的产品调研工作流
+refly-skills export --workflow-id wf_product_research
+
+# Claude Code 现在可以使用它：
+User: "调研这个产品并分析竞争对手"
+Claude: [使用 product_research 技能] → 返回详细分析
+```
+
+📖 **Skills文档**: [refly-ai/refly-skills](https://github.com/refly-ai/refly-skills)
+
+---
+
+### 使用场景 4：构建Clawdbot
+📖 **使用教程**((https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf)
+
+---
 
 ## 为什么选择 Refly？
 
@@ -77,7 +253,8 @@ Refly 旨在成为您现有企业工具链与下一代 智能体运行时之间�
 - **3,000+ 原生工具**：与 Stripe、Slack、Salesforce、GitHub 等工业级 API 无缝集成。
 完整的支持模型和工具提供商列表可在此处找到。
 
-<img width="1280" height="272" alt="image" src="https://github.com/user-attachments/assets/30475454-1bb7-41bd-b6d8-6f799bb30f79" />
+<img width="1920" height="627" alt="img_v3_02uh_37c05264-a390-4ceb-9a96-efce1a61d1eg" src="https://github.com/user-attachments/assets/dc3eea7b-4dd8-4623-b42c-cf04d49f889c" />
+
 
 - **MCP 支持**：与任何模型上下文协议服务器完全原生兼容，以扩展超越标准 API 的 Agent 能力。
 - **私有Skills连接器**：通过 Refly 运行时安全运行和管理数千个内部Skills——连接到您的数据库、脚本和系统。
@@ -86,7 +263,8 @@ Refly 旨在成为您现有企业工具链与下一代 智能体运行时之间�
 
 将您的确定性Skills导出到工作发生的任何环境。
 
-<img width="1280" height="853" alt="image" src="https://github.com/user-attachments/assets/93053319-8903-4908-b2d0-4ae283ecc295" />
+<img width="1920" height="1080" alt="img_v3_02uh_2599ba2c-18f0-445d-b95c-aa7da6e41aag" src="https://github.com/user-attachments/assets/3863f4be-af61-474c-a82a-99b7ccd428eb" />
+
 
 - **AI 编码工具**：原生导出到 Claude Code 和 Cursor，允许 Agent 使用您的版本化Skills作为标准化工具。
 - **应用构建器**：通过有状态、经过认证的 API 为 Lovable 或自定义前端应用提供逻辑支持。
@@ -137,13 +315,11 @@ Refly 充当 Agent Skills 构建器，提供在整个组织中部署 AI 所需�
 与 Refly 社区建立联系：
 
 - 🌟 **[在 GitHub 上给我们加星](https://github.com/refly-ai/refly)**：这有助于我们持续构建！
-- 💬 **Discord/Slack**：加入我们的聊天... 
-- 🐦 **Twitter**：关注我们... 
-
+- 💬 **[Discord](https://discord.com/invite/YVuYFjFvRC)**: 加入我们的社区
+- 🐦 **[Twitter](https://x.com/reflyai)**: 关注我们的Twitter
+- 📖 **[文档](https://docs.refly.ai)**: 完整指南和教程
+- 🐛 **[问题](https://github.com/refly-ai/refly/issues)**: 报告 Bug 或提出功能需求
 ## 许可证
 
 本仓库采用 [ReflyAI 开源许可证](LICENSE)，本质上是带有一些额外限制的 Apache 2.0 许可证。
-
-需要企业许可证
-Apache License 2.0
 
