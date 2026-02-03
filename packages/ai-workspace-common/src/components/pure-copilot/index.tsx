@@ -117,7 +117,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
       canvasCreationInProgress.current = true;
 
       try {
-        const newCanvasId = await createCanvas(t('copilot.untitledCanvas'));
+        const newCanvasId = await createCanvas(t('common.untitled'));
 
         if (!newCanvasId) {
           throw new Error('Canvas creation failed');
