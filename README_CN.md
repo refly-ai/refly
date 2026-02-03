@@ -169,7 +169,7 @@ curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
 npm install -g @powerformer/refly-cli
 ```
 
-2. **安装 Skills**
+2. **安装 Skill**
 ```bash
 # Via Refly CLI
 refly skill install <skill-id>
@@ -178,7 +178,7 @@ refly skill install <skill-id>
 npx skills add refly-ai/<skill-name>
 ```
 
-**发布Skills**
+**发布Skill**
 ```bash
 refly skill publish <skill-id>
 ```
