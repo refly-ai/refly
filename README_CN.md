@@ -169,7 +169,7 @@ curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
 npm install -g @powerformer/refly-cli
 ```
 
-2. **安装 Skill**
+2. **安装 Skills**
 ```bash
 # Via Refly CLI
 refly skill install <skill-id>
@@ -178,12 +178,12 @@ refly skill install <skill-id>
 npx skills add refly-ai/<skill-name>
 ```
 
-**发布Skilll**
+**发布Skills**
 ```bash
 refly skill publish <skill-id>
 ```
 
-该 skill 现已在 Claude Code、Cursor 和支持 MCP 的工作流中可用。AI Agent 可以将您的工作流作为工具来调用！
+该 skills 现已在 Claude Code、Cursor 和支持 MCP 的工作流中可用。AI Agent 可以将您的工作流作为工具来调用！
 
 📖 **Skills文档**: [refly-ai/refly-skills](https://github.com/refly-ai/refly-skills)
 
