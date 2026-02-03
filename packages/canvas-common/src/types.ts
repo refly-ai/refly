@@ -105,6 +105,8 @@ export type SkillNodeMeta = {
   originalWidth?: number;
   projectId?: string;
   structuredData?: Record<string, unknown>;
+  /** Task ID from workflow plan, used for incremental editing mapping */
+  taskId?: string;
 };
 
 export type MediaSkillNodeMeta = {

@@ -23,7 +23,11 @@ export {
   useContextPanelStore,
   useContextPanelStoreShallow,
 } from './stores/context-panel';
-export { useCopilotStore, useCopilotStoreShallow } from './stores/copilot';
+export {
+  type NodeEditContext,
+  useCopilotStore,
+  useCopilotStoreShallow,
+} from './stores/copilot';
 export { useDocumentStore, useDocumentStoreShallow } from './stores/document';
 export {
   type MediaQueryData,

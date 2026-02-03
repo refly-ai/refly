@@ -76,6 +76,7 @@ export const ChatBox = memo(
       pendingFiles,
       setPendingPrompt,
       setPendingFiles,
+      nodeEditContext,
     } = useCopilotStoreShallow((state) => ({
       currentSessionId: state.currentSessionId[canvasId],
       setCurrentSessionId: state.setCurrentSessionId,
@@ -87,6 +88,7 @@ export const ChatBox = memo(
       pendingFiles: state.pendingFiles[canvasId],
       setPendingPrompt: state.setPendingPrompt,
       setPendingFiles: state.setPendingFiles,
+      nodeEditContext: state.nodeEditContext[canvasId],
     }));
 
     const { resultMap } = useActionResultStoreShallow((state) => ({
@@ -121,7 +123,6 @@ export const ChatBox = memo(
     useEffect(() => {
       if (onRegisterFileUploadHandler) {
         onRegisterFileUploadHandler(async (files: File[]) => {
-          // Upload files in parallel
           await Promise.all(files.map((file) => handleFileUpload(file)));
         });
       }
@@ -132,13 +133,11 @@ export const ChatBox = memo(
         const messageQuery = customQuery ?? query;
         const hasCompletedFiles = completedFileItems.length > 0;
 
-        // Prevent sending while uploads are in progress
         if (hasUploadingFiles) {
           message.info(t('copilot.uploadInProgress'));
           return;
         }
 
-        // Allow sending if there's a query or completed files
         if (isExecuting || (!messageQuery?.trim() && !hasCompletedFiles)) {
           return;
         }
@@ -154,7 +153,6 @@ export const ChatBox = memo(
           source: type,
         });
 
-        // Only send completed files (not pending uploads)
         invokeAction(
           {
             query: messageQuery,
@@ -163,6 +161,7 @@ export const ChatBox = memo(
             agentMode: 'copilot_agent',
             copilotSessionId: sessionId,
             contextItems: completedFileItems,
+            nodeEditContext: nodeEditContext ?? undefined,
           },
           {
             entityId: canvasId,
@@ -172,7 +171,6 @@ export const ChatBox = memo(
         if (!customQuery) {
           setQuery('');
         }
-        // Clear files after sending
         clearFiles();
 
         setCurrentSessionId(canvasId, sessionId);
@@ -201,6 +199,7 @@ export const ChatBox = memo(
         t,
         addHistoryTemplateSession,
         onSendMessage,
+        nodeEditContext,
       ],
     );
 
@@ -208,10 +207,8 @@ export const ChatBox = memo(
       if (pendingPrompt && !initialPromptProcessed.current) {
         initialPromptProcessed.current = true;
 
-        // Merge pending files with current context items
         const filesToSend = pendingFiles ?? [];
 
-        // Generate IDs for the message
         const resultId = genActionResultID();
         let sessionId = currentSessionId;
 
@@ -224,7 +221,6 @@ export const ChatBox = memo(
           source: 'pending_prompt',
         });
 
-        // Send message with pending prompt and files
         invokeAction(
           {
             query: pendingPrompt,
@@ -233,6 +229,7 @@ export const ChatBox = memo(
             agentMode: 'copilot_agent',
             copilotSessionId: sessionId,
             contextItems: filesToSend,
+            nodeEditContext: nodeEditContext ?? undefined,
           },
           {
             entityId: canvasId,
@@ -250,7 +247,6 @@ export const ChatBox = memo(
           updatedAt: new Date().toISOString(),
         });
 
-        // Clean up store
         setPendingPrompt(canvasId, null);
         setPendingFiles(canvasId, null);
       }
@@ -268,6 +264,7 @@ export const ChatBox = memo(
       setPendingFiles,
       onSendMessage,
       t,
+      nodeEditContext,
     ]);
 
     const handleAbort = useCallback(() => {

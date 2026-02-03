@@ -6,6 +6,7 @@ import { ChatBox } from './chat-box';
 import { Greeting } from './greeting';
 import { SessionDetail } from './session-detail';
 import { CopilotHeader } from './copilot-header';
+import { NodeEditBanner } from './node-edit-banner';
 
 import { useCopilotStoreShallow } from '@refly/stores';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
@@ -126,6 +127,7 @@ export const Copilot = memo(({ copilotWidth, setCopilotWidth }: CopilotProps) =>
         )}
       </div>
 
+      <NodeEditBanner />
       <div className="w-full p-3 pt-2">
         <ChatBox
           canvasId={canvasId}

@@ -43,8 +43,8 @@ import {
   UpsertDriveFileRequest,
   WorkflowPlan,
   WorkflowPlanRecord,
+  WorkflowPatchOperation,
 } from '@refly/openapi-schema';
-import type { WorkflowPatchOperation } from '@refly/canvas-common';
 import { Document as LangChainDocument } from '@langchain/core/documents';
 
 export interface ReflyService {
