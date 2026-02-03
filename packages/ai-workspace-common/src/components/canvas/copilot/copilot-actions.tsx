@@ -10,6 +10,7 @@ interface CopilotActionsProps {
   fileCount: number;
   maxFileCount: number;
   isExecuting: boolean;
+  isUploading: boolean;
   onUploadFiles: (files: File[]) => Promise<void>;
   onSendMessage: () => void;
   onAbort?: () => void;
@@ -21,6 +22,7 @@ export const CopilotActions = memo(
     fileCount,
     maxFileCount,
     isExecuting,
+    isUploading,
     onUploadFiles,
     onSendMessage,
     onAbort,
@@ -29,7 +31,7 @@ export const CopilotActions = memo(
     const uploadRef = useRef<HTMLInputElement>(null);
 
     const uploadDisabled = fileCount >= maxFileCount;
-    const canSend = query?.trim() || fileCount > 0;
+    const canSend = (query?.trim() || fileCount > 0) && !isUploading;
     const acceptExtensions = ACCEPT_FILE_EXTENSIONS ?? [];
     const acceptValue =
       acceptExtensions?.length > 0 ? acceptExtensions.map((ext) => `.${ext}`).join(',') : undefined;
