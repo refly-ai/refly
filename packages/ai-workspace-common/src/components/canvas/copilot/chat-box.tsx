@@ -205,7 +205,9 @@ export const ChatBox = memo(
     );
 
     useEffect(() => {
-      if (pendingPrompt && !initialPromptProcessed.current) {
+      // Allow sending if there's a prompt OR pending files
+      const hasPendingContent = pendingPrompt !== null || (pendingFiles?.length ?? 0) > 0;
+      if (hasPendingContent && !initialPromptProcessed.current) {
         initialPromptProcessed.current = true;
 
         // Merge pending files with current context items
@@ -227,7 +229,7 @@ export const ChatBox = memo(
         // Send message with pending prompt and files
         invokeAction(
           {
-            query: pendingPrompt,
+            query: pendingPrompt || '',
             resultId,
             modelInfo: null,
             agentMode: 'copilot_agent',
