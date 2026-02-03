@@ -27,15 +27,13 @@ interface SyncConfig {
 
 const SYNC_CONFIGS: SyncConfig[] = [
   {
-    table: 'toolset_inventory', // Toolset inventory with encrypted API keys
+    table: 'toolset_inventory', // Toolset inventory (API keys remain plaintext)
     where: {},
-    encryptedFields: ['apiKey'],
     labelField: 'name',
   },
   {
-    table: 'toolsets', // Global toolsets
+    table: 'toolsets', // Global toolsets (auth data remains plaintext)
     where: { isGlobal: true },
-    encryptedFields: ['authData'],
     labelField: 'key',
   },
   {
