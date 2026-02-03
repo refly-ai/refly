@@ -238,8 +238,11 @@ registerRoute(
                 const allCachedRequests = await cache.keys();
                 const htmlCachesToDelete = allCachedRequests.filter((req) => {
                   const url = new URL(req.url);
+                  // Match both:
+                  // - req.destination === 'document' (from fetch events)
+                  // - req.destination === '' (from cache.put with string keys)
                   return (
-                    req.destination === 'document' &&
+                    (req.destination === 'document' || req.destination === '') &&
                     url.pathname !== '/' &&
                     !isSsrPath(url.pathname)
                   );
@@ -255,9 +258,13 @@ registerRoute(
                 const commonRoutes = ['/workflow/', '/workspace', '/share/file/'];
 
                 console.log('[SW] Precaching new HTML for common routes');
+                const currentPathname = normalizedKey
+                  ? new URL(normalizedKey, self.location.origin).pathname
+                  : null;
+
                 await Promise.allSettled(
-                  commonRoutes
-                    .filter((route) => route !== normalizedKey)
+                  (commonRoutes ?? [])
+                    .filter((route) => route !== currentPathname)
                     .map(async (route) => {
                       try {
                         const routeUrl = new URL(route, self.location.origin).href;
