@@ -42,6 +42,7 @@ export const ChatBox = memo(
       completedFileItems,
       relevantUploads,
       handleFileUpload,
+      handleBatchFileUpload,
       handleRetryFile,
       handleRemoveFile,
       clearFiles,
@@ -120,12 +121,9 @@ export const ChatBox = memo(
     // Register file upload handler for drag-and-drop from parent
     useEffect(() => {
       if (onRegisterFileUploadHandler) {
-        onRegisterFileUploadHandler(async (files: File[]) => {
-          // Upload files in parallel
-          await Promise.all(files.map((file) => handleFileUpload(file)));
-        });
+        onRegisterFileUploadHandler(handleBatchFileUpload);
       }
-    }, [onRegisterFileUploadHandler, handleFileUpload]);
+    }, [onRegisterFileUploadHandler, handleBatchFileUpload]);
 
     const handleSendMessage = useCallback(
       async (type: 'input_enter_send' | 'button_click_send', customQuery?: string) => {
@@ -324,10 +322,7 @@ export const ChatBox = memo(
           handleSendMessage={() => handleSendMessage('input_enter_send')}
           placeholder={t('copilot.placeholder')}
           onUploadImage={handleFileUpload}
-          onUploadMultipleImages={async (files) => {
-            // Upload files in parallel
-            await Promise.all(files.map((file) => handleFileUpload(file)));
-          }}
+          onUploadMultipleImages={handleBatchFileUpload}
         />
 
         {/* Bottom action bar */}

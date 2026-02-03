@@ -94,6 +94,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     completedFileItems,
     relevantUploads,
     handleFileUpload,
+    handleBatchFileUpload,
     handleRetryFile,
     handleRemoveFile,
     clearFiles,
@@ -198,13 +199,13 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
       if (files.length > 0) {
-        await Promise.all(files.map((file) => handleFileUpload(file)));
+        await handleBatchFileUpload(files);
       }
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     },
-    [handleFileUpload],
+    [handleBatchFileUpload],
   );
 
   const isUploadDisabled = fileCount >= 10;
@@ -249,11 +250,10 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
       const files = Array.from(e.dataTransfer?.files ?? []);
       if (files.length === 0) return;
 
-      const remainingSlots = 10 - fileCount;
-      const filesToUpload = files.slice(0, remainingSlots);
-      await Promise.all(filesToUpload.map((file) => handleFileUpload(file)));
+      // handleBatchFileUpload will handle the slot limiting internally
+      await handleBatchFileUpload(files);
     },
-    [handleFileUpload, fileCount, isUploadDisabled],
+    [handleBatchFileUpload, isUploadDisabled],
   );
 
   const handlePromptClick = useCallback((prompt: string) => {
@@ -399,9 +399,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
                 setTimeout(() => setIsFocused(false), 200);
               }}
               onUploadImage={handleFileUpload}
-              onUploadMultipleImages={async (files) => {
-                await Promise.all(files.map((file) => handleFileUpload(file)));
-              }}
+              onUploadMultipleImages={handleBatchFileUpload}
             />
           </div>
           <div className="flex items-center justify-between">
