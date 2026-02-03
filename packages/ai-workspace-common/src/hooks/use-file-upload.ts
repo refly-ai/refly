@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { IContextItem } from '@refly/common-types';
@@ -32,7 +32,10 @@ export const useFileUpload = ({
   const { t } = useTranslation();
   const [contextItems, setContextItems] = useState<IContextItem[]>([]);
   const pendingFilesRef = useRef<Map<string, PendingFileData>>(new Map());
-  const fileCountRef = useRef(0);
+  // Track pending upload count separately from contextItems to avoid race conditions
+  // during batch uploads. This ref is incremented synchronously when upload starts
+  // and only reset via clearFiles or decremented via handleRemoveFile.
+  const pendingUploadCountRef = useRef(0);
   const { refetch: refetchFiles } = useFetchDriveFiles();
 
   const { uploads, startUpload, updateProgress, setUploadSuccess, setUploadError, removeUpload } =
@@ -47,10 +50,6 @@ export const useFileUpload = ({
     () => contextItems.filter((item) => item.type === 'file').length,
     [contextItems],
   );
-
-  useEffect(() => {
-    fileCountRef.current = fileCount;
-  }, [fileCount]);
 
   const hasUploadingFiles = useMemo(
     () => relevantUploads.some((u) => u.status === 'uploading'),
@@ -71,16 +70,16 @@ export const useFileUpload = ({
   const handleFileUpload = useCallback(
     async (file: File, existingUploadId?: string, existingEntityId?: string) => {
       if (!existingUploadId) {
-        if (fileCountRef.current >= maxFileCount) {
+        if (pendingUploadCountRef.current >= maxFileCount) {
           message.warning(t('copilot.fileLimit.reached'));
           return;
         }
-        fileCountRef.current += 1;
+        pendingUploadCountRef.current += 1;
       }
 
       if (file.size > maxFileSize) {
         if (!existingUploadId) {
-          fileCountRef.current -= 1;
+          pendingUploadCountRef.current -= 1;
         }
         message.error(t('copilot.fileSizeLimit'));
         return;
@@ -92,7 +91,7 @@ export const useFileUpload = ({
           currentCanvasId = await onCanvasRequired();
         } catch (_error) {
           if (!existingUploadId) {
-            fileCountRef.current -= 1;
+            pendingUploadCountRef.current -= 1;
           }
           message.error(t('copilot.canvasCreationFailed'));
           return;
@@ -101,7 +100,7 @@ export const useFileUpload = ({
 
       if (!currentCanvasId) {
         if (!existingUploadId) {
-          fileCountRef.current -= 1;
+          pendingUploadCountRef.current -= 1;
         }
         message.error(t('copilot.canvasRequired'));
         return;
@@ -315,6 +314,10 @@ export const useFileUpload = ({
       if (item?.metadata?.previewUrl) {
         URL.revokeObjectURL(item.metadata.previewUrl);
       }
+      // Decrement the pending upload count when a file is removed
+      if (item?.type === 'file' && pendingUploadCountRef.current > 0) {
+        pendingUploadCountRef.current -= 1;
+      }
       setContextItems((prev) => prev.filter((i) => i.entityId !== entityId));
     },
     [contextItems, removeUpload],
@@ -329,6 +332,8 @@ export const useFileUpload = ({
         pendingFilesRef.current.delete(item.metadata.uploadId);
       }
     }
+    // Reset the pending upload count when all files are cleared
+    pendingUploadCountRef.current = 0;
     setContextItems([]);
   }, [contextItems]);
 
