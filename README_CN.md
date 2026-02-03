@@ -190,7 +190,7 @@ refly skill publish <skill-id>
 ---
 
 ### 使用场景 4：构建Clawdbot
-📖 **使用教程**((https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf)
+📖 **使用教程**(https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf)
 
 ---
 
