@@ -77,25 +77,46 @@ COMMENT ON TABLE tool_billing IS 'Dynamic billing configuration for tool methods
 
 ### TypeScript Interface
 
+Using discriminated union for type safety:
+
 ```typescript
-interface BillingRule {
-  // Field identification
+/**
+ * Additive billing rule - charges based on field value
+ */
+type AdditiveBillingRule = {
   fieldPath: string;              // dataPath format: "prompt", "images[*]", "config.resolution"
-  phase: 'input' | 'output';      // Extract from request or response
-
-  // Billing type (additive vs multiplier)
-  category?: 'text' | 'image' | 'audio' | 'video';  // Required if NOT multiplier
-  isMultiplier?: boolean;         // If true, multiply category totals instead of adding
-  applyTo?: string;               // Which category to multiply (required if isMultiplier)
-
-  // Pricing configuration
+  phase: 'input' | 'output';
+  category: 'text' | 'image' | 'audio' | 'video';  // Required
+  isMultiplier?: false;           // Explicitly false or undefined
   pricingTiers?: Array<{
-    value: string | number;       // Match this value for tier pricing
+    value: string | number;       // Match this value for tier pricing (scalar fields only)
     creditsPerUnit: number;       // Credits for this tier
   }>;
-  defaultCreditsPerUnit?: number; // Fallback if no tier matches (or base price)
-}
+  defaultCreditsPerUnit: number;  // Required - fallback when no tier matches
+};
+
+/**
+ * Multiplier rule - multiplies category total by field value
+ */
+type MultiplierBillingRule = {
+  fieldPath: string;
+  phase: 'input' | 'output';
+  isMultiplier: true;             // Required and true
+  applyTo: 'text' | 'image' | 'audio' | 'video';  // Category to multiply
+  // No category, pricingTiers, or defaultCreditsPerUnit
+};
+
+/**
+ * Billing rule - either additive or multiplier
+ */
+type BillingRule = AdditiveBillingRule | MultiplierBillingRule;
 ```
+
+**Runtime validation:**
+- `pricingTiers` forbidden on aggregated fields (containing `[*]`)
+- `defaultCreditsPerUnit` required on all additive rules
+- Multiplier value must be finite, non-NaN, non-negative number
+- Array fields limited to 1000 items for DoS protection
 
 ### Category Calculation Methods
 
@@ -114,6 +135,10 @@ Uses **dataPath** notation (aligned with existing `schema-utils.ts`):
 - Array items: `"images[*]"`
 - Nested array: `"contents[0].parts[*].text"`
 
+**Schema support note:** `getFieldTypeFromSchema()` only supports `properties` + `items`
+traversal. Schemas using `$ref`, `oneOf`, or `allOf` are unsupported and should
+fail fast with clear errors.
+
 ---
 
 ## Calculation Logic
@@ -131,8 +156,57 @@ Uses **dataPath** notation (aligned with existing `schema-utils.ts`):
    e. Match pricing tier or use default
    f. Accumulate credits by category
 4. Apply multipliers to category totals
-5. Sum all categories and return Math.ceil(total)
+5. Sum all categories and return Math.floor(total + 0.5)
 6. On any error → throw to trigger fallback
+```
+
+### Core Pseudocode
+
+```text
+function processBilling(params):
+  rules = toolBillingService.getRules(params.inventoryKey, params.methodName)
+  if rules empty:
+    return legacyBilling(params)
+
+  try:
+    total = calculateCreditsFromRules(rules, params)
+    return total
+  catch:
+    return legacyBilling(params)
+
+function calculateCreditsFromRules(rules, params):
+  additive = rules where isMultiplier != true
+  multipliers = rules where isMultiplier == true
+
+  creditsByCategory = {}
+
+  for rule in additive:
+    schema = rule.phase == "input" ? params.requestSchema : params.responseSchema
+    if !schemaHasField(schema, rule.fieldPath):
+      throw Error("field missing")
+    if rule.pricingTiers and isAggregatedPath(rule.fieldPath):
+      throw Error("tiers not allowed on aggregated fields")
+
+    value = extractValue(params, rule)
+    if value is null:
+      continue
+
+    units = calculateUnits(value, rule.category)
+    price = matchTier(rule.pricingTiers, value) ?? rule.defaultCreditsPerUnit
+    if price is null:
+      throw Error("missing defaultCreditsPerUnit")
+
+    creditsByCategory[rule.category] += units * price
+
+  for m in multipliers:
+    if !schemaHasField(schemaFor(m), m.fieldPath):
+      throw Error("field missing")
+    mult = number(getValue(params, m))
+    if mult is not null and creditsByCategory[m.applyTo] exists:
+      creditsByCategory[m.applyTo] *= mult
+
+  total = sum(creditsByCategory.values)
+  return floor(total + 0.5)  // half-up rounding
 ```
 
 ### Array Aggregation
@@ -145,6 +219,10 @@ For array fields like `images[*]` or `parts[*].text`:
 | image | Count array length |
 | audio | Sum all duration values |
 
+**Note:** `pricingTiers` must not be used on aggregated fields. Tiers are only valid for
+scalar values (e.g., resolution, model name). Aggregated values should use
+`defaultCreditsPerUnit` only.
+
 ### Multiplier Logic
 
 Multipliers apply **after** category totals are calculated:
@@ -155,22 +233,64 @@ Multipliers apply **after** category totals are calculated:
 // Step 2: Apply multiplier → 18 × 2 = 36 credits
 ```
 
+**Multiple multipliers on same category:**
+
+When multiple multipliers target the same category, they apply sequentially:
+
+```typescript
+// Example:
+// Base image price: 10 credits
+// num_images=2, quality_factor=1.5
+// Result: 10 × 2 × 1.5 = 30 credits
+```
+
+**Multiplier validation rules:**
+- Must be finite, non-NaN number
+- Must be non-negative (≥ 0)
+- Zero multiplier results in free execution (logged as warning)
+- Fractional multipliers allowed (e.g., 1.5, 0.5)
+- If target category has no credits, multiplier is silently skipped
+
+### Rounding Policy
+
+Round to nearest integer using **half-up** rounding:
+
+```typescript
+// Examples: 0.0001 -> 0, 0.5 -> 1, 1.01 -> 1, 1.51 -> 2
+return Math.floor(totalCredits + 0.5);
+```
+
+This avoids charging 1 credit for tiny fractional usage while still rounding
+meaningfully for larger totals.
+
 ### Implementation
 
 ```typescript
+interface ProcessBillingParams {
+  inventoryKey: string;
+  methodName: string;
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+  requestSchema: string;
+  responseSchema: string;
+  billingConfig?: BillingConfig;
+}
+
 export async function calculateCreditsFromRules(
   rules: BillingRule[],
   input: Record<string, unknown>,
   output: Record<string, unknown>,
   requestSchema: string,
   responseSchema: string,
+  logger?: Logger,  // Optional for audit logging
 ): Promise<number> {
   // Separate additive rules and multipliers
-  const additiveRules = rules.filter(r => !r.isMultiplier);
-  const multiplierRules = rules.filter(r => r.isMultiplier);
+  const additiveRules = rules.filter(r => !r.isMultiplier) as AdditiveBillingRule[];
+  const multiplierRules = rules.filter(r => r.isMultiplier) as MultiplierBillingRule[];
 
   // Step 1: Calculate base credits by category
   const creditsByCategory: Record<string, number> = {};
+  const auditLog: any[] = []; // For debugging
 
   for (const rule of additiveRules) {
     // Select schema
@@ -181,6 +301,15 @@ export async function calculateCreditsFromRules(
     const fieldType = getFieldTypeFromSchema(schema, rule.fieldPath);
     if (!fieldType) {
       throw new Error(`Field ${rule.fieldPath} not found in ${rule.phase} schema`);
+    }
+
+    // Validate no tiers on aggregated fields
+    const isAggregated = rule.fieldPath.includes('[*]');
+    if (rule.pricingTiers?.length > 0 && isAggregated) {
+      throw new Error(
+        `pricingTiers not allowed on aggregated field: ${rule.fieldPath}. ` +
+        `Use defaultCreditsPerUnit only.`
+      );
     }
 
     // Extract value
@@ -206,25 +335,86 @@ export async function calculateCreditsFromRules(
     // Add to category total
     const credits = units * creditsPerUnit;
     creditsByCategory[rule.category] = (creditsByCategory[rule.category] || 0) + credits;
+
+    // Audit logging
+    auditLog.push({
+      fieldPath: rule.fieldPath,
+      phase: rule.phase,
+      category: rule.category,
+      units,
+      creditsPerUnit,
+      credits,
+    });
   }
 
   // Step 2: Apply multipliers
   for (const multiplier of multiplierRules) {
+    // Validate field exists in schema
+    const schemaJson = multiplier.phase === 'input' ? requestSchema : responseSchema;
+    const schema = JSON.parse(schemaJson);
+    const fieldType = getFieldTypeFromSchema(schema, multiplier.fieldPath);
+    if (!fieldType) {
+      throw new Error(`Multiplier field ${multiplier.fieldPath} not found in ${multiplier.phase} schema`);
+    }
+
     const source = multiplier.phase === 'input' ? input : output;
     const value = get(source, multiplier.fieldPath);
 
     if (value !== undefined && value !== null) {
       const multiplierValue = Number(value);
-      if (creditsByCategory[multiplier.applyTo]) {
-        creditsByCategory[multiplier.applyTo] *= multiplierValue;
+
+      // Validate multiplier value
+      if (!isFinite(multiplierValue) || isNaN(multiplierValue)) {
+        throw new Error(
+          `Invalid multiplier value for ${multiplier.fieldPath}: ${value} (must be finite number)`
+        );
       }
+      if (multiplierValue < 0) {
+        throw new Error(
+          `Negative multiplier not allowed for ${multiplier.fieldPath}: ${multiplierValue}`
+        );
+      }
+      if (multiplierValue === 0) {
+        logger?.warn(
+          `Zero multiplier on ${multiplier.fieldPath} results in free execution`
+        );
+      }
+
+      // Apply multiplier only if category has credits
+      if (creditsByCategory[multiplier.applyTo] !== undefined) {
+        const before = creditsByCategory[multiplier.applyTo];
+        creditsByCategory[multiplier.applyTo] *= multiplierValue;
+
+        auditLog.push({
+          fieldPath: multiplier.fieldPath,
+          type: 'multiplier',
+          applyTo: multiplier.applyTo,
+          multiplierValue,
+          before,
+          after: creditsByCategory[multiplier.applyTo],
+        });
+      }
+      // Silently skip if category not present (no additive rules for it)
     }
   }
 
   // Step 3: Sum all categories
   const totalCredits = Object.values(creditsByCategory).reduce((sum, c) => sum + c, 0);
 
-  return Math.ceil(totalCredits);
+  // Half-up rounding
+  const finalCredits = Math.floor(totalCredits + 0.5);
+
+  // Debug logging for audit trail
+  if (logger) {
+    logger.debug({
+      creditsByCategory,
+      totalCredits,
+      finalCredits,
+      auditLog,
+    });
+  }
+
+  return finalCredits;
 }
 
 function calculateUnits(value: unknown, category: string): number {
@@ -243,7 +433,7 @@ function calculateUnits(value: unknown, category: string): number {
       return Number(value);
 
     case 'video':
-      return 0; // Future implementation
+      throw new Error('Video billing not yet implemented');
   }
 }
 
@@ -261,6 +451,15 @@ function extractAndAggregateValue(
 
     if (!Array.isArray(arrayData)) {
       return null;
+    }
+
+    // DoS protection: limit array size
+    const MAX_ARRAY_SIZE = 1000;
+    if (arrayData.length > MAX_ARRAY_SIZE) {
+      throw new Error(
+        `Array too large for billing calculation: ${arrayData.length} items ` +
+        `(max ${MAX_ARRAY_SIZE})`
+      );
     }
 
     // Extract field from all array items
@@ -291,9 +490,10 @@ function getFieldTypeFromSchema(schema: any, fieldPath: string): string | null {
   let current = schema;
 
   for (const part of pathParts) {
-    // Handle array notation: "images[*]"
-    if (part.endsWith('[*]')) {
-      const fieldName = part.slice(0, -3);
+    // Handle array notation: "images[*]" or "contents[0]"
+    const arrayMatch = part.match(/^(.+)\[(\*|\d+)\]$/);
+    if (arrayMatch) {
+      const fieldName = arrayMatch[1];
       current = current.properties?.[fieldName];
       if (!current) return null;
       current = current.items;
@@ -379,6 +579,7 @@ export class ToolBillingService {
 - **Single-flight deduplication** prevents concurrent load stampedes
 - **No Redis dependency** - simpler infrastructure
 - **5-minute TTL** - balances freshness vs load
+- **Change propagation** - DB updates may take up to TTL to apply; use `refresh()` for immediate updates
 
 ---
 
@@ -408,14 +609,16 @@ export class BillingService {
           input,
           output,
           requestSchema,
-          responseSchema
+          responseSchema,
+          this.logger  // Pass logger for audit trail
         );
       }
     } catch (error) {
       // Any error → log and fall through to legacy billing
       this.logger.warn(
         `ToolBilling calculation failed for ${inventoryKey}:${methodName}, ` +
-        `falling back to legacy: ${error.message}`
+        `falling back to legacy: ${error.message}`,
+        { error, inventoryKey, methodName }
       );
     }
 
@@ -431,6 +634,20 @@ export class BillingService {
 }
 ```
 
+**ProcessBillingParams (for clarity)**
+
+```typescript
+interface ProcessBillingParams {
+  inventoryKey: string;
+  methodName: string;
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+  requestSchema: string;
+  responseSchema: string;
+  billingConfig?: BillingConfig; // Legacy fallback
+}
+```
+
 ### Fallback Strategy
 
 **Trigger fallback on ANY error:**
@@ -441,6 +658,14 @@ export class BillingService {
 - Cache lookup fails
 
 **Production stability over strict errors** - better to charge old price than fail billing.
+
+### Structured Logging (Fallback & Errors)
+
+Include these fields in warning logs for easy monitoring and debugging:
+- `inventoryKey`, `methodName`
+- `error.type`, `error.message`
+- `fallback_reason`
+- `new_credits_attempted`, `legacy_credits_used`
 
 ---
 
@@ -616,7 +841,7 @@ Calculation:
 - imageSize="2K" tier → 1 × 20 = **20 credits**
 - text (concatenated 6 tokens) → (6/1M) × 5 ≈ **0 credits**
 - inline_data count (2 images) → 2 × 3 = **6 credits**
-- **Total: 26 credits**
+- **Total: 26 credits** (half-up rounding)
 
 ---
 
@@ -679,7 +904,7 @@ Calculation:
 - prompt (9 tokens) → (9/1M) × 2 ≈ **0 credits**
 - image_size="landscape_16_9" tier → 1 × 18 = **18 credits**
 - num_images multiplier → 18 × 2 = **36 credits**
-- **Total: 36 credits**
+- **Total: 36 credits** (half-up rounding)
 
 ---
 
@@ -728,7 +953,7 @@ Calculation:
 - text (25 tokens) → (25/1M) × 3 ≈ **0 credits**
 - model="tts-1-hd" tier → 1 × 10 = **10 credits**
 - duration_seconds (output) → 12.5 × 2 = **25 credits**
-- **Total: 35 credits**
+- **Total: 35 credits** (half-up rounding)
 
 ---
 
@@ -763,6 +988,9 @@ Flow:
 2. `uploadBufferResource()` extracts duration using ffprobe
 3. Response includes `duration_seconds: 12.5`
 4. Billing calculates: 12.5 × 2 = 25 credits
+
+**Note:** Fish Audio billing should not be enabled in production until ffprobe
+integration is implemented or a temporary duration estimation strategy is defined.
 
 ---
 
@@ -820,6 +1048,13 @@ Flow:
 - Add warning logs for tools still using legacy billing
 - Plan removal of legacy code in future version
 
+### Rollback Strategy
+
+If production issues are detected:
+- Disable all dynamic configs: `UPDATE tool_billing SET enabled = false`
+- All tools immediately fall back to legacy billing
+- Revert code deploy if errors persist
+
 ---
 
 ## Implementation Checklist
@@ -864,6 +1099,75 @@ Flow:
 - [ ] Integration test: Audio with duration
 - [ ] Integration test: Fallback scenarios
 - [ ] Integration test: Schema validation errors
+- [ ] Performance test: large multi-part text inputs (token counting)
+
+### Detailed Test Checklist
+
+**Unit: dataPath parsing & schema validation**
+- [ ] `contents[0].parts[*].text` resolves in schema (numeric index + wildcard mix)
+- [ ] `contents[*].parts[0].text` resolves in schema
+- [ ] `images[*]` resolves to array item type
+- [ ] Missing field returns null and triggers fallback
+- [ ] Unsupported schema structures (`$ref`, `oneOf`, `allOf`) explicitly reject with clear error
+
+**Unit: value extraction & aggregation**
+- [ ] `contents[0].parts[*].text` concatenates text in order
+- [ ] `images[*]` returns array for counting
+- [ ] `audio_durations[*]` returns array for summing
+- [ ] Empty array returns null (skips rule)
+- [ ] Null/undefined values in array are filtered out
+- [ ] Array with >1000 items throws DoS protection error
+- [ ] Array with exactly 1000 items works correctly
+
+**Unit: tier pricing & defaults**
+- [ ] Tier matches exact scalar value and overrides default
+- [ ] Tier miss falls back to `defaultCreditsPerUnit`
+- [ ] Missing `defaultCreditsPerUnit` throws and forces fallback
+- [ ] Tier on aggregated field (with `[*]`) throws validation error
+- [ ] Tier on scalar field works correctly
+
+**Unit: multiplier rules**
+- [ ] Multiplier uses numeric conversion and multiplies category total
+- [ ] Non-numeric multiplier value (NaN) throws validation error
+- [ ] Infinite multiplier value throws validation error
+- [ ] Negative multiplier throws validation error
+- [ ] Zero multiplier works but logs warning
+- [ ] Fractional multiplier (1.5) works correctly
+- [ ] Multiplier on missing category (no additive rules) silently skips
+- [ ] Multiplier field missing in schema throws and forces fallback
+
+**Unit: rounding policy**
+- [ ] totalCredits = 0 returns 0
+- [ ] totalCredits = 0.0001 returns 0
+- [ ] totalCredits = 0.49 returns 0
+- [ ] totalCredits = 0.5 returns 1
+- [ ] totalCredits = 1.0 returns 1
+- [ ] totalCredits = 1.01 returns 1
+- [ ] totalCredits = 1.51 returns 2
+
+**Integration: rule combinations**
+- [ ] text + image + audio additive rules combined correctly
+- [ ] Additive rules then multiplier applied in correct order
+- [ ] Multiple multipliers on same category applied sequentially
+- [ ] Multiple categories with independent multipliers do not cross-affect
+
+**Integration: fallback paths**
+- [ ] No ToolBilling record → legacy billing
+- [ ] ToolBilling disabled → legacy billing
+- [ ] Schema validation failure → legacy billing
+- [ ] Extraction failure (bad path) → legacy billing
+- [ ] Calculation error (NaN) → legacy billing
+
+**Integration: tool-specific examples**
+- [ ] Nano Banana Pro config (text + image_size tier + inline images)
+- [ ] FAL Image config (image_size tier + num_images multiplier)
+- [ ] FAL Audio config (model tier + duration_seconds output)
+- [ ] Fish Audio buffer flow (duration extracted → output field billing)
+
+**Monitoring/validation smoke checks**
+- [ ] New vs legacy credit delta logged for seeded tools
+- [ ] Fallback rate per `inventoryKey:methodName` emitted
+- [ ] High fallback rate triggers alert in staging
 
 ### Monitoring & Validation
 
@@ -935,6 +1239,15 @@ Flow:
 - Simpler admin UX (one rule list)
 - Clear separation in calculation logic
 
+### 6. Why half-up rounding?
+
+**Decision:** Round to the nearest integer using **half-up** rounding.
+
+**Rationale:**
+- Avoids charging 1 credit for tiny fractional usage
+- Keeps pricing predictable at whole-credit granularity
+- Simple to reason about and document
+
 ---
 
 ## Future Enhancements
@@ -973,6 +1286,62 @@ interface BillingRule {
 - Provider API cost changes
 - Peak/off-peak pricing
 - User loyalty discounts
+
+---
+
+## Risks & Mitigations
+
+### ✅ Mitigated in Design
+
+1. **~~Tier matching on aggregated fields~~ - FIXED**
+   - **Mitigation:** Runtime validation throws error if `pricingTiers` used on fields containing `[*]`
+
+2. **~~Multiplier rules bypass schema validation~~ - FIXED**
+   - **Mitigation:** Multiplier fields validated against schema; throws if missing
+
+3. **~~Missing `defaultCreditsPerUnit` yields `NaN`~~ - FIXED**
+   - **Mitigation:** TypeScript requires it on `AdditiveBillingRule`; runtime throws if undefined
+
+4. **~~Optional `category` causes hidden errors~~ - FIXED**
+   - **Mitigation:** TypeScript requires `category` on `AdditiveBillingRule`; runtime validates presence
+
+5. **~~`video` category silently returns 0~~ - FIXED**
+   - **Mitigation:** Throws error when `video` category used (not yet implemented)
+
+6. **~~NaN/Infinite multiplier values~~ - FIXED**
+   - **Mitigation:** Runtime validates multiplier is finite, non-NaN number; throws otherwise
+
+7. **~~Negative multiplier values~~ - FIXED**
+   - **Mitigation:** Runtime validates multiplier ≥ 0; throws on negative values
+
+8. **~~Large array DoS attack~~ - FIXED**
+   - **Mitigation:** Array size limited to 1000 items; throws on larger arrays
+
+### ⚠️ Known Limitations
+
+9. **Zero multiplier results in free execution**
+   - **Risk:** `num_images=0` → 0 credits charged
+   - **Mitigation:** Logged as warning for audit trail; may be intentional behavior
+
+10. **`contents[0]` numeric index behavior**
+   - **Risk:** `[0]` and `[*]` both map to `.items` in schema validation; behavior differs in extraction
+   - **Mitigation:** Lodash `get()` handles both correctly; tested in integration tests
+
+11. **Half-up rounding allows free tiny usage**
+   - **Risk:** Very small usage (< 0.5 credits) rounds to 0
+   - **Mitigation:** Documented behavior; acceptable for negligible costs
+
+12. **Schema parser doesn't support `$ref`/`oneOf`/`allOf`**
+   - **Risk:** Valid fields appear missing; config falls back
+   - **Mitigation:** Documented limitation; fail fast with clear error message
+
+13. **Multiplier silently skips if category absent**
+   - **Risk:** Multiplier on category with no additive rules does nothing
+   - **Mitigation:** Intentional design; allows flexible config without errors
+
+14. **No transaction safety for concurrent billing**
+   - **Risk:** Multiple concurrent calls might race on cache load
+   - **Mitigation:** SingleFlightCache prevents stampede; single load shared by concurrent calls
 
 ---
 
