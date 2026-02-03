@@ -13,7 +13,6 @@
     "postinstall": "tsc --build --verbose"
   },
   "devDependencies": {
-    "@hey-api/client-fetch": "0.4.0",
     "@hey-api/openapi-ts": "0.53.8",
     "tsx": "^4.19.4",
     "yaml": "^2.6.1"
@@ -21,5 +20,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {}
+  "dependencies": {
+    "@hey-api/client-fetch": "0.4.0"
+  }
 }

@@ -30,19 +30,10 @@ services:
     ports:
       - "45800:5800"
     volumes:
-      - ../../apps/api/dist:/app/apps/api/dist:ro
-      - ../../apps/api/seed-data:/app/apps/api/seed-data:ro
-      # Mount only dist directories to avoid overwriting node_modules with broken pnpm symlinks
-      - ../../packages/agent-tools/dist:/app/packages/agent-tools/dist:ro
-      - ../../packages/canvas-common/dist:/app/packages/canvas-common/dist:ro
-      - ../../packages/common-types/dist:/app/packages/common-types/dist:ro
-      - ../../packages/errors/dist:/app/packages/errors/dist:ro
-      - ../../packages/observability/dist:/app/packages/observability/dist:ro
-      - ../../packages/openapi-schema/dist:/app/packages/openapi-schema/dist:ro
-      - ../../packages/providers/dist:/app/packages/providers/dist:ro
-      - ../../packages/skill-template/dist:/app/packages/skill-template/dist:ro
-      - ../../packages/telemetry-node/dist:/app/packages/telemetry-node/dist:ro
-      - ../../packages/utils/dist:/app/packages/utils/dist:ro
+      - ../../apps/api/dist:/app/dist:ro
+      - ../../apps/api/seed-data:/app/seed-data:ro
+      # Note: After pnpm deploy, workspace packages are in node_modules
+      # No need to mount individual package dist directories
 
   web:
     extends:

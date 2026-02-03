@@ -7,16 +7,40 @@ on:
         description: 'Release version'
         required: true
         type: string
+  release:
+    types: [released]
 
 env:
   REGISTRY: docker.io
   IMAGE_PREFIX: reflyai/refly
 
 jobs:
+  prepare:
+    name: Prepare version
+    runs-on: ubuntu-latest
+    if: github.repository == 'refly-ai/refly'
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            # Extract version from release tag, remove 'v' prefix
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
+          else
+            # Use input version for manual trigger
+            VERSION="${{ inputs.version }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+
   build:
     name: Build ${{ matrix.app }} (${{ matrix.suffix }})
     runs-on: ${{ matrix.runner }}
     if: github.repository == 'refly-ai/refly'
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -55,7 +79,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./apps/${{ matrix.app }}/Dockerfile
+          file: ./apps/${{ matrix.app }}/Dockerfile${{ matrix.app == 'api' && '.slim' || '' }}
           platforms: ${{ matrix.platform }}
           push: true
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }},push-by-digest=true,name-canonical=true
@@ -79,7 +103,7 @@ jobs:
     name: Merge ${{ matrix.app }} manifests
     runs-on: ubuntu-latest
     if: github.repository == 'refly-ai/refly'
-    needs: build
+    needs: [prepare, build]
     strategy:
       matrix:
         app: ['api', 'web']
@@ -111,18 +135,18 @@ jobs:
 
           docker buildx imagetools create \
             -t "${IMAGE}:latest" \
-            -t "${IMAGE}:${{ inputs.version }}" \
+            -t "${IMAGE}:${{ needs.prepare.outputs.version }}" \
             "${IMAGE}@${AMD64_DIGEST}" \
             "${IMAGE}@${ARM64_DIGEST}"
 
       - name: Inspect manifest
         run: |
-          docker buildx imagetools inspect "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }}:${{ inputs.version }}"
+          docker buildx imagetools inspect "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }}:${{ needs.prepare.outputs.version }}"
 
       - name: Generate summary
         run: |
           IMAGE="${{ env.IMAGE_PREFIX }}-${{ matrix.app }}"
-          VERSION="${{ inputs.version }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
 
           cat >> $GITHUB_STEP_SUMMARY << EOF
           ## 🐳 Docker Image Published: ${{ matrix.app }}

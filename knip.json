@@ -10,7 +10,8 @@
     "apps/api/load-tests/**",
     "docs/.vitepress/**",
     "packages/cli/**",
-    "packages/openapi-schema/openapi-ts.config.ts"
+    "packages/openapi-schema/openapi-ts.config.ts",
+    "deploy/docker/prepare-deploy.js"
   ],
   "workspaces": {
     ".": {},

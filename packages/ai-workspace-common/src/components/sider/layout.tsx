@@ -7,7 +7,7 @@ import {
 } from '@refly-packages/ai-workspace-common/utils/router';
 
 import cn from 'classnames';
-import { subscriptionEnabled, isSelfHosted } from '@refly/ui-kit';
+import { isSelfHosted } from '@refly/ui-kit';
 import { Logo } from '@refly-packages/ai-workspace-common/components/common/logo';
 // components - Lazy load Modal components to reduce initial bundle size
 import { useTranslation } from 'react-i18next';
@@ -49,11 +49,7 @@ import {
 } from 'refly-icons';
 import { ContactUsPopover } from '@refly-packages/ai-workspace-common/components/contact-us-popover';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite-sider.svg';
-import {
-  useKnowledgeBaseStoreShallow,
-  useUserStoreShallow,
-  useSubscriptionStoreShallow,
-} from '@refly/stores';
+import { useKnowledgeBaseStoreShallow, useUserStoreShallow } from '@refly/stores';
 const CanvasTemplateModal = lazy(() =>
   import('@refly-packages/ai-workspace-common/components/canvas-template').then((m) => ({
     default: m.CanvasTemplateModal,
@@ -322,10 +318,6 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
     userProfile: state.userProfile,
   }));
 
-  const { userType } = useSubscriptionStoreShallow((state) => ({
-    userType: state.userType,
-  }));
-
   const {
     collapseState,
     setCollapse,
@@ -575,13 +567,13 @@ const SiderLoggedIn = (props: { source: 'sider' | 'popover' }) => {
 
           {/* Promotion entry - show above invitation */}
           <div className="flex flex-col gap-2">
-            {subscriptionEnabled && !isCollapsed && (
+            {/* {subscriptionEnabled && !isCollapsed && (
               <PromotionItem
                 collapsed={isCollapsed}
                 promotionUrl={`${window.location.origin}/activities`}
                 userType={userType}
               />
-            )}
+            )} */}
 
             {!!userProfile?.uid &&
               authConfig?.data?.some((item) => item.provider === 'invitation') && (
