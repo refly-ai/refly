@@ -48,6 +48,111 @@ After deployment, choose your path based on your use case:
 | 🦞  **Build a ClawdBot** | [Build Clawdbot](#use-case-4-build-clawdbot) | 20 mins |
 ---
 
+
+## Why Refly?
+
+Most AI Agents fail in production because they rely on "Vibe-coded" scripts and fragile, black-box logic. As the ecosystem moves toward agentic frameworks like Claude Code, AutoGen, and MCP, the bottleneck is no longer the LLM—it's the lack of standardized, reliable actions.
+
+Refly bridges the gap between raw APIs and intelligent agents. We allow you to codify messy business logic into structured, version-controlled Agent skills that any agent can invoke with 100% reliability.
+
+**Stop hard-coding tools.** Build modular skills once in Refly's visual IDE and deploy them as MCP servers, standard APIs, or portable SDKs to any agent framework.
+
+---
+
+## Core Capabilities
+
+### 🎯 Construct with Vibe (Copilot-led Builder)
+
+Describe your business logic in natural language, and Refly's Model-Native DSL compiles your intent into a high-performance skill.
+
+- **Intent-Driven Construction**: Describe the work once; Refly turns intent into deterministic, reusable, and composable skills.
+- **Efficiency at Scale**: Streamlined DSL optimized for LLMs, ensuring fast execution and significantly lower token costs.
+- **3-Minute Deployment**: Transition from a static enterprise SOP to a production-ready agent skill in under 3 minutes.
+
+### ⚡ Execute with Control (Intervenable Runtime)
+
+Break the "black box" of AI execution with a stateful runtime designed for deterministic reliability.
+
+- **Intervenable Runtime**: Pause, audit, and re-steer agent logic mid-run to ensure 100% operational compliance.
+- **Deterministic Guarantees**: Enforce strict business rules that minimize hallucinations and handle failure recovery.
+
+### 🚀 Ship to Production (Unified Agent Stack)
+
+Unify MCP integrations, tools, models, and reusable skills into a single execution layer.
+
+- **Universal Delivery**: Export as APIs for Lovable, webhooks for Slack, or native tools for Claude Code and Cursor.
+- **Stable Scheduling**: Run workflows reliably on schedule with managed execution.
+
+### 🏛️ Govern as Assets (Skill Registry)
+
+Transform fragile scripts into governed, shared infrastructure across your organization.
+
+- **Central Skill Registry**: Securely manage, version, and share agent capabilities.
+- **Team Workspace Collaboration**: Build together with native version control and audit logs.
+
+---
+
+## Ecosystem
+
+Refly is designed to be the universal bridge between your existing enterprise toolchain and the next generation of agentic runtimes.
+
+### Tooling & Protocols (Inputs)
+
+Bring your own data and logic into Refly with zero friction.
+
+- **3,000+ Native Tools**: Seamlessly integrate with Stripe, Slack, Salesforce, GitHub, etc.
+
+A full list of supported model and tools providers can be found here
+<img width="1920" height="627" alt="img_v3_02uh_37c05264-a390-4ceb-9a96-efce1a61d1eg" src="https://github.com/user-attachments/assets/0fdf8214-e244-41ae-b108-59cfa12a8600" />
+
+- **MCP Support**: Full compatibility with Model Context Protocol servers
+- **Private Skill Connectors**: Connect to your databases, scripts, and internal systems
+
+### Agent Runtimes & Platforms (Outputs)
+
+Export your deterministic skills to any environment where work happens.
+
+<img width="1920" height="1080" alt="img_v3_02uh_2599ba2c-18f0-445d-b95c-aa7da6e41aag" src="https://github.com/user-attachments/assets/e4a73abd-1f01-4f84-9499-a535f6440a63" />
+
+
+- **AI Coding Tools**: Native export for Claude Code and Cursor (coming soon)
+- **App Builders**: Power Lovable or custom frontends via stateful APIs
+- **Automation Hubs**: Deploy as webhooks for Slack or Microsoft Teams
+- **Agent Frameworks**: Compatible with AutoGen, Manus, LangChain, and custom Python stacks
+
+---
+## Why Teams Choose Refly
+
+### For Builders: From Vibe to Production
+
+Most agent tooling today falls into two categories:
+
+- Workflow builders (n8n, Dify): Great for orchestration, but workflows are fragile, trigger-only "black boxes," and hard to reuse.
+- Agent frameworks (LangChain): Powerful primitives, but require heavy engineering, manual boilerplate, and high maintenance to keep running.
+Refly eliminates the friction of manual configuration, giving you the fastest path from a "vibe" to a usable agent tool. By using our Streamlined DSL, you get the speed of a GUI with the precision of code.
+
+| Dimension | Legacy Automation <br><sub>(n8n, Dify)</sub> | Code-First SDKs <br><sub>(LangChain)</sub> | **Refly Skills** |
+| :--- | :--- | :--- | :--- |
+| **Interaction Depth** | Trigger-only <br><sub>Black box</sub> | Programmatic <br><sub>Code changes</sub> | **Intervenable runtime**<br><sub>Steer logic mid-run</sub> |
+| **Construction** | Manual API wiring & JSON | Manual Python/TS boilerplate | **Copilot-led**<br><sub>Describe intent → skills generated</sub> |
+| **Recovery** | Fail = restart from scratch | Debug → redeploy → rerun | **Hot-fix**<br><sub>Repair workflows during execution</sub> |
+| **Portability** | Hard to reuse across environments | Framework-specific | **Export everywhere**<br><sub>To Claude Code, Cursor, Manus</sub> |
+| **Deployment** | Limited function tools | Custom microservices | **Production Ready**<br><sub>Stateful, validated APIs</sub> |
+### For Enterprise: Scalable Skills Governance
+
+Workflow tools like n8n are great for basic connectivity, and frameworks like LangChain offer powerful primitives — but neither provides the governed, production-ready capability layer required for enterprise agent infrastructure.
+
+Refly acts as the Agent skills builder, providing the governance and reliability infrastructure required to deploy AI across the entire organization.
+
+| Enterprise Requirement | Legacy Tools <br><sub>(Workflow-first)</sub> | SDKs <br><sub>(Code-first)</sub> | **Refly (Skill OS)** |
+| :--- | :--- | :--- | :--- |
+| **Governance & Reuse** | Templates are copied and<br><sub>reconfigured per instance</sub> | No native registry<br><sub>for sharing logic</sub> | **Central skill registry**<br><sub>Versioned, shareable capability assets</sub> |
+| **Operational Reliability** | Trigger-based<br><sub>limited recovery</sub> | Custom handling required | **Stateful runtime**<br><sub>With validation + failure recovery</sub> |
+| **SOP Enforcement** | Workflows drift<br><sub>across copies</sub> | Depends on manual<br><sub>engineering discipline</sub> | **SOP-grade deterministic skills**<br><sub>With controlled execution</sub> |
+| **Deployment** | Instance-bound workflows | Code maintained manually<br><sub>per team</sub> | **Local-first, on-prem ready**<br><sub>Open-source infrastructure</sub> |
+| **Total Cost (TCO)** | Overhead grows with<br><sub>workflow complexity</sub> | High engineering<br><sub>maintenance costs</sub> | **Minimal DSL**<br><sub>Reduces token spend</sub> |
+
+---
 ## Create Your First Workflow
 
 > **Note**: This section assumes you have completed [self-deployment](https://docs.refly.ai/community-version/self-deploy/) and can access Refly at `http://localhost:5700`
@@ -205,111 +310,6 @@ Claude: [Uses product_research skill] → Returns detailed analysis
 
 📖 **Tutorial**: (https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf)
 
-
----
-
-## Why Refly?
-
-Most AI Agents fail in production because they rely on "Vibe-coded" scripts and fragile, black-box logic. As the ecosystem moves toward agentic frameworks like Claude Code, AutoGen, and MCP, the bottleneck is no longer the LLM—it's the lack of standardized, reliable actions.
-
-Refly bridges the gap between raw APIs and intelligent agents. We allow you to codify messy business logic into structured, version-controlled Agent skills that any agent can invoke with 100% reliability.
-
-**Stop hard-coding tools.** Build modular skills once in Refly's visual IDE and deploy them as MCP servers, standard APIs, or portable SDKs to any agent framework.
-
----
-
-## Core Capabilities
-
-### 🎯 Construct with Vibe (Copilot-led Builder)
-
-Describe your business logic in natural language, and Refly's Model-Native DSL compiles your intent into a high-performance skill.
-
-- **Intent-Driven Construction**: Describe the work once; Refly turns intent into deterministic, reusable, and composable skills.
-- **Efficiency at Scale**: Streamlined DSL optimized for LLMs, ensuring fast execution and significantly lower token costs.
-- **3-Minute Deployment**: Transition from a static enterprise SOP to a production-ready agent skill in under 3 minutes.
-
-### ⚡ Execute with Control (Intervenable Runtime)
-
-Break the "black box" of AI execution with a stateful runtime designed for deterministic reliability.
-
-- **Intervenable Runtime**: Pause, audit, and re-steer agent logic mid-run to ensure 100% operational compliance.
-- **Deterministic Guarantees**: Enforce strict business rules that minimize hallucinations and handle failure recovery.
-
-### 🚀 Ship to Production (Unified Agent Stack)
-
-Unify MCP integrations, tools, models, and reusable skills into a single execution layer.
-
-- **Universal Delivery**: Export as APIs for Lovable, webhooks for Slack, or native tools for Claude Code and Cursor.
-- **Stable Scheduling**: Run workflows reliably on schedule with managed execution.
-
-### 🏛️ Govern as Assets (Skill Registry)
-
-Transform fragile scripts into governed, shared infrastructure across your organization.
-
-- **Central Skill Registry**: Securely manage, version, and share agent capabilities.
-- **Team Workspace Collaboration**: Build together with native version control and audit logs.
-
----
-
-## Ecosystem
-
-Refly is designed to be the universal bridge between your existing enterprise toolchain and the next generation of agentic runtimes.
-
-### Tooling & Protocols (Inputs)
-
-Bring your own data and logic into Refly with zero friction.
-
-- **3,000+ Native Tools**: Seamlessly integrate with Stripe, Slack, Salesforce, GitHub, etc.
-
-A full list of supported model and tools providers can be found here
-<img width="1920" height="627" alt="img_v3_02uh_37c05264-a390-4ceb-9a96-efce1a61d1eg" src="https://github.com/user-attachments/assets/0fdf8214-e244-41ae-b108-59cfa12a8600" />
-
-- **MCP Support**: Full compatibility with Model Context Protocol servers
-- **Private Skill Connectors**: Connect to your databases, scripts, and internal systems
-
-### Agent Runtimes & Platforms (Outputs)
-
-Export your deterministic skills to any environment where work happens.
-
-<img width="1920" height="1080" alt="img_v3_02uh_2599ba2c-18f0-445d-b95c-aa7da6e41aag" src="https://github.com/user-attachments/assets/e4a73abd-1f01-4f84-9499-a535f6440a63" />
-
-
-- **AI Coding Tools**: Native export for Claude Code and Cursor (coming soon)
-- **App Builders**: Power Lovable or custom frontends via stateful APIs
-- **Automation Hubs**: Deploy as webhooks for Slack or Microsoft Teams
-- **Agent Frameworks**: Compatible with AutoGen, Manus, LangChain, and custom Python stacks
-
----
-## Why Teams Choose Refly
-
-### For Builders: From Vibe to Production
-
-Most agent tooling today falls into two categories:
-
-- Workflow builders (n8n, Dify): Great for orchestration, but workflows are fragile, trigger-only "black boxes," and hard to reuse.
-- Agent frameworks (LangChain): Powerful primitives, but require heavy engineering, manual boilerplate, and high maintenance to keep running.
-Refly eliminates the friction of manual configuration, giving you the fastest path from a "vibe" to a usable agent tool. By using our Streamlined DSL, you get the speed of a GUI with the precision of code.
-
-| Dimension | Legacy Automation <br><sub>(n8n, Dify)</sub> | Code-First SDKs <br><sub>(LangChain)</sub> | **Refly Skills** |
-| :--- | :--- | :--- | :--- |
-| **Interaction Depth** | Trigger-only <br><sub>Black box</sub> | Programmatic <br><sub>Code changes</sub> | **Intervenable runtime**<br><sub>Steer logic mid-run</sub> |
-| **Construction** | Manual API wiring & JSON | Manual Python/TS boilerplate | **Copilot-led**<br><sub>Describe intent → skills generated</sub> |
-| **Recovery** | Fail = restart from scratch | Debug → redeploy → rerun | **Hot-fix**<br><sub>Repair workflows during execution</sub> |
-| **Portability** | Hard to reuse across environments | Framework-specific | **Export everywhere**<br><sub>To Claude Code, Cursor, Manus</sub> |
-| **Deployment** | Limited function tools | Custom microservices | **Production Ready**<br><sub>Stateful, validated APIs</sub> |
-### For Enterprise: Scalable Skills Governance
-
-Workflow tools like n8n are great for basic connectivity, and frameworks like LangChain offer powerful primitives — but neither provides the governed, production-ready capability layer required for enterprise agent infrastructure.
-
-Refly acts as the Agent skills builder, providing the governance and reliability infrastructure required to deploy AI across the entire organization.
-
-| Enterprise Requirement | Legacy Tools <br><sub>(Workflow-first)</sub> | SDKs <br><sub>(Code-first)</sub> | **Refly (Skill OS)** |
-| :--- | :--- | :--- | :--- |
-| **Governance & Reuse** | Templates are copied and<br><sub>reconfigured per instance</sub> | No native registry<br><sub>for sharing logic</sub> | **Central skill registry**<br><sub>Versioned, shareable capability assets</sub> |
-| **Operational Reliability** | Trigger-based<br><sub>limited recovery</sub> | Custom handling required | **Stateful runtime**<br><sub>With validation + failure recovery</sub> |
-| **SOP Enforcement** | Workflows drift<br><sub>across copies</sub> | Depends on manual<br><sub>engineering discipline</sub> | **SOP-grade deterministic skills**<br><sub>With controlled execution</sub> |
-| **Deployment** | Instance-bound workflows | Code maintained manually<br><sub>per team</sub> | **Local-first, on-prem ready**<br><sub>Open-source infrastructure</sub> |
-| **Total Cost (TCO)** | Overhead grows with<br><sub>workflow complexity</sub> | High engineering<br><sub>maintenance costs</sub> | **Minimal DSL**<br><sub>Reduces token spend</sub> |
 
 ---
 
