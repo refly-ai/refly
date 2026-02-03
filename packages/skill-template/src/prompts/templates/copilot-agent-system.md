@@ -133,7 +133,8 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 | description | string | What this variable represents |
 | required | boolean | Whether this input is required (default: false) |
 | resourceTypes | array | For resource type only: ["document", "image", "audio", "video"] |
-| value | array | For string: `[{ type: "text", text: "value" }]`; For resource: `[]` (always empty) |
+| isSingle | boolean | For resource type: false to accept multiple files (default: true for single file) |
+| value | array | For string: `[{ type: "text", text: "value" }]`; For resource: see File Input Value below |
 
 **Variable Design Principles**:
 - **Maximize Extensibility** — Always identify user-configurable parameters that would make the workflow reusable
@@ -160,7 +161,16 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
   - No explicit constraint mentioned
   - User says "if available" / "如果有的话"
 
-**File Input Value**: Always generate with empty value array: `value: []`
+**File Input Value**:
+- **No context files** → `value: []`
+- **User references uploaded files** ("用这些图片/analyze these files") → Pre-fill from context:
+  ```json
+  "value": [{ "type": "resource", "resource": { "fileId": "<context.files[].fileId>", "name": "<name>", "fileType": "<image|document|audio|video>" }}]
+  ```
+- **Multiple files** → Set `isSingle: false`
+- **Reusable template requested** → Keep `value: []`
+
+MIME mapping: `image/*`→image, `application/pdf|text/*|msword|vnd.*`→document, `audio/*`→audio, `video/*`→video
 
 ## Task Design
 
@@ -244,6 +254,22 @@ User instructions take precedence for overridable rules.
 ```
 
 **Workflow**: Analyze Data (execute_code) → Generate Report (generate_doc)
+
+---
+
+### Example 2.5: Pre-filling with Uploaded Files
+
+**Context files**: `[{ "fileId": "f1", "name": "design1.png", "type": "image/png" }, { "fileId": "f2", "name": "design2.png", "type": "image/png" }]`
+
+**Request**: "这2张图片作为输入，分析设计风格"
+
+**Variable**:
+```json
+{ "variableId": "var-1", "variableType": "resource", "name": "design_images", "resourceTypes": ["image"], "isSingle": false, "value": [
+  { "type": "resource", "resource": { "fileId": "f1", "name": "design1.png", "fileType": "image" }},
+  { "type": "resource", "resource": { "fileId": "f2", "name": "design2.png", "fileType": "image" }}
+]}
+```
 
 ---
 
