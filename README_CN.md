@@ -1,19 +1,59 @@
 <img width="1920" height="1080" alt="img_v3_02uh_3e01e906-f84a-4cd8-8b7a-b7274ae8e89g" src="https://github.com/user-attachments/assets/a7857ab5-e8db-4352-acfa-5e42b663aef7" />
 
 
-<div align="right">
-
-**[English](README.md) | 中文**
-
-</div>
-
 # Refly — 首个基于 Vibe Workflow 的开源 Agent Skills 构建器
 
-可作为 Lovable 的 API · Slack 的 Webhook · Claude Code 的 Skills
+<p align="center">
+  <a href="https://github.com/refly-ai/refly">
+    <img src="https://img.shields.io/github/stars/refly-ai/refly?style=flat&colorA=080f12&colorB=1fa669&logo=github" alt="GitHub stars">
+  </a>
+  <a href="https://refly.ai/workspace">
+    <img src="https://img.shields.io/badge/refly.ai-007bff?style=flat&colorA=080f12&colorB=007bff&logo=google-chrome&logoColor=white" alt="官网">
+  </a>
+  <a href="https://www.youtube.com/@refly-ai">
+    <img src="https://img.shields.io/badge/YouTube-Refly%20AI-FF0000?style=flat&colorA=080f12&colorB=FF0000&logo=youtube&logoColor=white" alt="YouTube">
+  </a>
+  <a href="https://discord.com/invite/YVuYFjFvRC">
+    <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Finvites%2FYVuYFjFvRC%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&suffix=%20members&logo=discord&logoColor=white&label=%20&color=7389D8&labelColor=6A7EC2" alt="Discord">
+  </a>
+  <a href="https://github.com/refly-ai/refly-skills">
+    <img src="https://img.shields.io/badge/refly--skills-Repo-2ea043?style=flat&colorA=080f12&logo=github" alt="Refly Skills">
+  </a>
+  <a href="https://docs.refly.ai/">
+    <img src="https://img.shields.io/badge/docs.refly.ai-Docs-2ea043?style=flat&colorA=080f12&logo=readthedocs" alt="Docs">
+  </a>
+  <a href="https://deepwiki.com/refly-ai/refly">
+    <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-ReflyAI%20License-2ea043?style=flat&colorA=080f12" alt="License">
+  </a>
+  <a href="https://x.com/reflyai">
+    <img src="https://img.shields.io/badge/%40reflyai-black?style=flat&logo=x&labelColor=%23101419&color=%232d2e30" alt="X (formerly Twitter) Follow">
+  </a>
+</p>
+
+<p align="center">
+  <a href="README.md"><u>English</u></a> · <a href="README_CN.md"><u>中文</u></a> · <a href="https://refly.ai/workspace"><u>Try it</u></a> · <a href="https://docs.refly.ai/community/contact-us"><u>Join us</u></a>
+</p>
+
+可作为 Lovable 的 API · Lark/飞书 的 Webhook · Claude Code 的 Skills
 
 Skills 不是提示词，而是持久化的基础设施。
 
 Refly 是首个用于构建稳定、原子化、版本化 Agent Skills 的开源平台。Skills 是确定性的 Agent 能力——可在工作流、团队和运行时之间复用。
+
+---
+## Refly Skills
+
+Refly Skills 是 Refly 官方可执行技能仓库。
+
+- ⚡ **即开即用**：一键在 Refly 中运行技能
+- 🧩 **可复用基础设施**：版本化 Skills，而不是一次性提示词
+- 🔌 **随处交付**：导出到 Claude Code 或部署为 API
+- 🌍 **社区共建**：导入、Fork 并发布你自己的技能
+
+查看仓库：https://github.com/refly-ai/refly-skills
 
 **TL;DR**：Refly 将您的企业 SOP 编译为可执行的 Agent Skills。3 分钟构建完成，随处部署。
 
@@ -28,6 +68,9 @@ Refly 是首个用于构建稳定、原子化、版本化 Agent Skills 的开源
 - 🔌 **[API 参考](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api)**  
   将 Refly 集成到你应用中的完整 API 文档。
 
+> [!TIP]
+> 想快速体验不部署？直接打开在线版：https://refly.ai/workspace
+
 ### 接下来做什么？
 
 部署完成后，根据你的使用场景选择路径：
@@ -38,12 +81,14 @@ Refly 是首个用于构建稳定、原子化、版本化 Agent Skills 的开源
 | 🔌 **通过 API 调用工作流** | [API 集成](#use-case-1-api-integration) | 10 分钟 |
 | 💬 **连接到 Lark** | [Webhook 设置](#use-case-2-webhook-for-feishu) | 15 分钟 |
 | 🤖 **导出到 Claude Code** | [导出技能](#use-case-3-skills-for-claude-code) | 15 分钟 |
-| 🦞  **构建 ClawdBot** | [构建 ClawdBot](#build-a-clawdbot) | 20 分钟 |
+| 🦞 **构建 ClawdBot** | [构建 ClawdBot](#build-a-clawdbot) | 20 分钟 |
 ---
 
+<a id="create-your-first-workflow"></a>
 ## 创建你的第一个工作流
 
-> **注意**：本节假设你已完成 [自部署](https://docs.refly.ai/community-version/self-deploy/)，并且可以通过 `http://localhost:5700` 访问 Refly
+> [!NOTE]
+> 本节假设你已完成 [自部署](https://docs.refly.ai/community-version/self-deploy/)，并且可以通过 `http://localhost:5700` 访问 Refly
 
 ### 第一步：注册并登录
 
@@ -65,13 +110,16 @@ Refly 是首个用于构建稳定、原子化、版本化 Agent Skills 的开源
    - **Vibe Mode**：用自然语言描述你的工作流
 
 **示例 —— 产品调研工作流**：
+```text
+1. 添加 “Web Search” 节点 —— 搜索产品信息
+2. 添加 “LLM” 节点 —— 分析搜索结果
+3. 添加 “Output” 节点 —— 格式化报告
+4. 连接各节点
+5. 点击 “Save”
 ```
-1.添加 “Web Search” 节点 —— 搜索产品信息
-2.添加 “LLM” 节点 —— 分析搜索结果
-3.添加 “Output” 节点 —— 格式化报告
-4.连接各节点
-5.点击 “Save”
-```
+
+> [!TIP]
+> 想最快跑通流程，可以先用 **Vibe Mode**，再从模板迭代完善。
 
 ### 第三步：测试你的工作流
 
@@ -82,6 +130,7 @@ Refly 是首个用于构建稳定、原子化、版本化 Agent Skills 的开源
 
 ---
 
+<a id="use-case-1-api-integration"></a>
 ## 使用场景
 
 ### 使用场景 1：API 集成
@@ -124,6 +173,7 @@ curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
 
 ---
 
+<a id="use-case-2-webhook-for-feishu"></a>
 ### 使用场景 2：Lark Webhook
 
 **目标**：当有人在 Lark 中发送消息时触发你的工作流
@@ -158,6 +208,7 @@ curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
 > ⚠️ **注意**：详细的 Slack / 飞书集成指南即将推出。目前可参考 [API 参考](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api) 进行 Webhook 相关配置。
 
 ---
+<a id="use-case-3-skills-for-claude-code"></a>
 ### 使用场景 3：Claude Code 技能
 
 **目标**：将你的 Refly 工作流导出为 Claude Code 技能
@@ -194,8 +245,9 @@ Claude: [使用 product_research 技能] → 返回详细分析
 
 ---
 
-### 使用场景 4：构建Clawdbot
-📖 **使用教程**((https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf)
+<a id="build-a-clawdbot"></a>
+### 使用场景 4：构建 ClawdBot
+📖 **使用教程**：<https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf>
 
 ---
 
@@ -215,9 +267,9 @@ Refly 是首个用于创建生产就绪、确定性Skills的开源 Agent Skills 
 
 ### 使用 Vibe 构建（Copilot 引导的构建器）
 
-用自然语言描述您的业务逻辑，Refly 的模型原生 DSL 将您的意图编译为高性能Skills。
+用自然语言描述您的业务逻辑，Refly 的模型原生 DSL 将您的意图编译为高性能 Skills。
 
-- **意图驱动构建**：描述一次工作，Refly 将意图转化为确定性、可复用、可组合的Skills。
+- **意图驱动构建**：描述一次工作，Refly 将意图转化为确定性、可复用、可组合的 Skills。
 - **大规模高效**：我们精简的 DSL 针对 LLM 优化，确保快速执行，与传统工具相比大幅降低 token 成本。
 - **3 分钟部署**：在 3 分钟内从静态企业 SOP 过渡到生产就绪的编译 Agent Skills。
 
@@ -230,43 +282,43 @@ Refly 是首个用于创建生产就绪、确定性Skills的开源 Agent Skills 
 
 ### 交付生产（统一 Agent 堆栈）
 
-将 MCP 集成、工具、模型和可复用Skills统一到单个执行层，可交付到任何平台。
+将 MCP 集成、工具、模型和可复用 Skills 统一到单个执行层，可交付到任何平台。
 
-- **通用交付**：将您的Skills导出为 Lovable 的认证有状态 API、Slack 的智能 webhook，或 Claude Code 和 Cursor 的原生工具。
+- **通用交付**：将您的 Skills 导出为 Lovable 的认证有状态 API、Slack 或 Lark/飞书 的智能 webhook，或 Claude Code 和 Cursor 的原生工具。
 - **稳定调度**：通过托管执行和可预测行为，可靠地按计划运行工作流，用于长期运行的自动化。
 
 ### 作为资产治理（Skills 注册表）
 
 将脆弱的脚本和手动剧本转化为组织范围内受治理的共享基础设施。
 
-- **中央Skills 注册表**：安全管理、版本控制和共享 Agent 能力作为可复用的企业资产。
+- **中央 Skills 注册表**：安全管理、版本控制和共享 Agent 能力作为可复用的企业资产。
 - **团队工作空间协作**：在具有原生版本控制和审计日志的集中环境中共同构建和共享 SOP 剧本。
 
 ## 生态系统
 
-Refly 旨在成为您现有企业工具链与下一代 智能体运行时之间的通用桥梁。
+Refly 旨在成为您现有企业工具链与下一代智能体运行时之间的通用桥梁。
 
 ### 工具与协议（输入）
 
 零摩擦地将您自己的数据和逻辑引入 Refly。
 
 - **3,000+ 原生工具**：与 Stripe、Slack、Salesforce、GitHub 等工业级 API 无缝集成。
-完整的支持模型和工具提供商列表可在此处找到。
+完整的支持模型和工具提供商列表可在此处找到：[provider-catalog.json](./config/provider-catalog.json)。
 
 <img width="1920" height="627" alt="img_v3_02uh_37c05264-a390-4ceb-9a96-efce1a61d1eg" src="https://github.com/user-attachments/assets/dc3eea7b-4dd8-4623-b42c-cf04d49f889c" />
 
 
 - **MCP 支持**：与任何模型上下文协议服务器完全原生兼容，以扩展超越标准 API 的 Agent 能力。
-- **私有Skills连接器**：通过 Refly 运行时安全运行和管理数千个内部Skills——连接到您的数据库、脚本和系统。
+- **私有 Skills 连接器**：通过 Refly 运行时安全运行和管理数千个内部 Skills——连接到您的数据库、脚本和系统。
 
 ### Agent 运行时与平台（输出）
 
-将您的确定性Skills导出到工作发生的任何环境。
+将您的确定性 Skills 导出到工作发生的任何环境。
 
 <img width="1920" height="1080" alt="img_v3_02uh_2599ba2c-18f0-445d-b95c-aa7da6e41aag" src="https://github.com/user-attachments/assets/3863f4be-af61-474c-a82a-99b7ccd428eb" />
 
 
-- **AI 编码工具**：原生导出到 Claude Code 和 Cursor，允许 Agent 使用您的版本化Skills作为标准化工具。
+- **AI 编码工具**：原生导出到 Claude Code 和 Cursor，允许 Agent 使用您的版本化 Skills 作为标准化工具。
 - **应用构建器**：通过有状态、经过认证的 API 为 Lovable 或自定义前端应用提供逻辑支持。
 - **自动化中心**：部署为智能 webhook，从 Slack 或 Microsoft Teams 触发复杂的 SOP。
 - **Agent 框架**：直接兼容 AutoGen、Manus 和自定义 LangChain/Python 技术栈。
@@ -319,7 +371,16 @@ Refly 充当 Agent Skills 构建器，提供在整个组织中部署 AI 所需�
 - 🐦 **[Twitter](https://x.com/reflyai)**: 关注我们的Twitter
 - 📖 **[文档](https://docs.refly.ai)**: 完整指南和教程
 - 🐛 **[问题](https://github.com/refly-ai/refly/issues)**: 报告 Bug 或提出功能需求
+
+## 加入我们
+
+加入社区获取支持、分享经验并与其他 Refly 用户交流：
+https://docs.refly.ai/community/contact-us
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=refly-ai/refly&type=Date)](https://star-history.com/#refly-ai/refly&Date)
+
 ## 许可证
 
 本仓库采用 [ReflyAI 开源许可证](LICENSE)，本质上是带有一些额外限制的 Apache 2.0 许可证。
-
