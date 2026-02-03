@@ -261,107 +261,80 @@ export class WebhookService {
     webhookId: string,
     variables: Record<string, any>,
   ): Promise<{ received: boolean }> {
-    const startTime = Date.now();
-    const recordId = `rec_${createId()}`;
     const scheduleRecordId = genScheduleRecordId();
     const scheduledAt = new Date();
+    // Get webhook config (with cache)
+    const config = await this.getWebhookConfigById(webhookId);
 
-    try {
-      // Get webhook config (with cache)
-      const config = await this.getWebhookConfigById(webhookId);
-
-      if (!config) {
-        throw new NotFoundException('Webhook not found');
-      }
-
-      if (!config.isEnabled) {
-        throw new ForbiddenException('Webhook is disabled');
-      }
-
-      // Get user
-      const user = await this.prisma.user.findUnique({
-        where: { uid: config.uid },
-      });
-
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
-
-      const canvasData = await this.canvasService.createSnapshotFromCanvas(
-        { uid: config.uid },
-        config.canvasId,
-      );
-      // Convert variables to workflow format and align with canvas variable IDs
-      const runtimeVariables = await this.buildWorkflowVariables(config.uid, variables);
-      const workflowVariables = mergeVariablesWithCanvas(
-        canvasData?.variables ?? [],
-        runtimeVariables,
-      );
-      const toolsetsWithNodes = extractToolsetsWithNodes(canvasData?.nodes ?? []);
-      const usedToolIds = toolsetsWithNodes.map((t) => t.toolset?.toolset?.key).filter(Boolean);
-      const scheduleId = `webhook:${webhookId}`;
-
-      await this.prisma.workflowScheduleRecord.create({
-        data: {
-          scheduleRecordId,
-          scheduleId,
-          uid: config.uid,
-          sourceCanvasId: config.canvasId,
-          canvasId: '',
-          workflowTitle: canvasData?.title ?? 'Untitled',
-          status: 'running',
-          scheduledAt,
-          triggeredAt: scheduledAt,
-          priority: 5,
-          usedTools: JSON.stringify(usedToolIds),
-        },
-      });
-
-      // Execute workflow asynchronously (fire-and-forget)
-      // Don't await - let it run in background
-      this.executeWorkflowAsync(
-        { uid: config.uid },
-        config,
-        workflowVariables,
-        recordId,
-        startTime,
-        webhookId,
-        variables,
-        canvasData,
-        scheduleId,
-        scheduleRecordId,
-      ).catch((error) => {
-        const normalizedError = normalizeError(error);
-        this.logger.error(
-          `[WEBHOOK_ASYNC_ERROR] uid=${config.uid} webhookId=${webhookId} error=${normalizedError.message}`,
-        );
-      });
-
-      this.logger.log(
-        `[WEBHOOK_RECEIVED] uid=${config.uid} webhookId=${webhookId} recordId=${recordId}`,
-      );
-
-      // Return immediately - webhook only confirms receipt
-      return { received: true };
-    } catch (error) {
-      const responseTime = Date.now() - startTime;
-      const normalizedError = normalizeError(error);
-
-      // Record failed API call
-      await this.recordApiCall({
-        recordId,
-        uid: 'unknown',
-        apiId: webhookId,
-        canvasId: 'unknown',
-        requestBody: variables,
-        httpStatus: normalizedError.status,
-        responseTime,
-        status: ApiCallStatus.FAILED,
-        failureReason: normalizedError.message,
-      });
-
-      throw error;
+    if (!config) {
+      throw new NotFoundException('Webhook not found');
     }
+
+    if (!config.isEnabled) {
+      throw new ForbiddenException('Webhook is disabled');
+    }
+
+    // Get user
+    const user = await this.prisma.user.findUnique({
+      where: { uid: config.uid },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const canvasData = await this.canvasService.createSnapshotFromCanvas(
+      { uid: config.uid },
+      config.canvasId,
+    );
+    // Convert variables to workflow format and align with canvas variable IDs
+    const runtimeVariables = await this.buildWorkflowVariables(config.uid, variables);
+    const workflowVariables = mergeVariablesWithCanvas(
+      canvasData?.variables ?? [],
+      runtimeVariables,
+    );
+    const toolsetsWithNodes = extractToolsetsWithNodes(canvasData?.nodes ?? []);
+    const usedToolIds = toolsetsWithNodes.map((t) => t.toolset?.toolset?.key).filter(Boolean);
+    const scheduleId = `webhook:${webhookId}`;
+
+    await this.prisma.workflowScheduleRecord.create({
+      data: {
+        scheduleRecordId,
+        scheduleId,
+        uid: config.uid,
+        sourceCanvasId: config.canvasId,
+        canvasId: '',
+        workflowTitle: canvasData?.title ?? 'Untitled',
+        status: 'running',
+        scheduledAt,
+        triggeredAt: scheduledAt,
+        priority: 5,
+        usedTools: JSON.stringify(usedToolIds),
+      },
+    });
+
+    // Execute workflow asynchronously (fire-and-forget)
+    // Don't await - let it run in background
+    this.executeWorkflowAsync(
+      { uid: config.uid },
+      config,
+      workflowVariables,
+      webhookId,
+      variables,
+      canvasData,
+      scheduleId,
+      scheduleRecordId,
+    ).catch((error) => {
+      const normalizedError = normalizeError(error);
+      this.logger.error(
+        `[WEBHOOK_ASYNC_ERROR] uid=${config.uid} webhookId=${webhookId} error=${normalizedError.message}`,
+      );
+    });
+
+    this.logger.log(`[WEBHOOK_RECEIVED] uid=${config.uid} webhookId=${webhookId}`);
+
+    // Return immediately - webhook only confirms receipt
+    return { received: true };
   }
 
   /**
@@ -371,10 +344,8 @@ export class WebhookService {
     user: any,
     config: WebhookConfig,
     workflowVariables: WorkflowVariable[],
-    recordId: string,
-    startTime: number,
     webhookId: string,
-    variables: Record<string, any>,
+    _variables: Record<string, any>,
     canvasData: RawCanvasData,
     scheduleId: string,
     scheduleRecordId: string,
@@ -396,40 +367,10 @@ export class WebhookService {
         },
       });
 
-      const responseTime = Date.now() - startTime;
-
-      // Record successful API call
-      await this.recordApiCall({
-        recordId,
-        uid: config.uid,
-        apiId: webhookId,
-        canvasId: config.canvasId,
-        workflowExecutionId: executionId,
-        requestBody: variables,
-        httpStatus: 200,
-        responseTime,
-        status: ApiCallStatus.SUCCESS,
-      });
-
       this.logger.log(
-        `[WEBHOOK_EXECUTED] uid=${config.uid} webhookId=${webhookId} executionId=${executionId} responseTime=${responseTime}ms`,
+        `[WEBHOOK_EXECUTED] uid=${config.uid} webhookId=${webhookId} executionId=${executionId}`,
       );
     } catch (error) {
-      const responseTime = Date.now() - startTime;
-
-      // Record failed execution
-      await this.recordApiCall({
-        recordId,
-        uid: config.uid,
-        apiId: webhookId,
-        canvasId: config.canvasId,
-        requestBody: variables,
-        httpStatus: 500,
-        responseTime,
-        status: ApiCallStatus.FAILED,
-        failureReason: error.message,
-      });
-
       await this.prisma.workflowScheduleRecord.update({
         where: { scheduleRecordId },
         data: {
@@ -795,23 +736,35 @@ export class WebhookService {
   /**
    * Record API call
    */
-  private async recordApiCall(data: {
+  public async recordApiCall(data: {
     recordId: string;
     uid: string;
-    apiId: string;
-    canvasId: string;
+    apiId?: string | null;
+    canvasId?: string;
     workflowExecutionId?: string;
+    requestUrl?: string;
+    requestMethod?: string;
     requestBody?: any;
+    requestHeaders?: Record<string, unknown> | string;
     httpStatus: number;
     responseTime: number;
     status: ApiCallStatus;
     failureReason?: string;
   }): Promise<void> {
     try {
+      const requestBody =
+        data.requestBody !== undefined ? safeStringifyJSON(data.requestBody) : null;
+      const requestHeaders =
+        data.requestHeaders !== undefined
+          ? typeof data.requestHeaders === 'string'
+            ? data.requestHeaders
+            : safeStringifyJSON(data.requestHeaders)
+          : null;
+
       // Redact sensitive data before persisting
       const redacted = redactApiCallRecord({
-        requestBody: data.requestBody ? safeStringifyJSON(data.requestBody) : null,
-        requestHeaders: null,
+        requestBody,
+        requestHeaders,
         responseBody: null,
       });
 
@@ -819,14 +772,18 @@ export class WebhookService {
         data: {
           recordId: data.recordId,
           uid: data.uid,
-          apiId: data.apiId,
-          canvasId: data.canvasId,
+          apiId: data.apiId ?? null,
+          canvasId: data.canvasId ?? null,
           workflowExecutionId: data.workflowExecutionId,
+          requestUrl: data.requestUrl,
+          requestMethod: data.requestMethod,
+          requestHeaders: redacted.requestHeaders,
           requestBody: redacted.requestBody,
           httpStatus: data.httpStatus,
           responseTime: data.responseTime,
           status: data.status,
           failureReason: data.failureReason,
+          createdAt: new Date(),
           completedAt: new Date(),
         },
       });

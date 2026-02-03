@@ -110,6 +110,7 @@ jobs:
           VITE_STATIC_PRIVATE_ENDPOINT: ${{ inputs.static_private_endpoint }}
           VITE_CANVAS_TEMPLATE_ENABLED: ${{ inputs.canvas_template_enabled }}
           VITE_ENV_TAG: ${{ inputs.env_tag }}
+          PUBLIC_CLOUDFLARE_SITE_KEY: ${{ inputs.environment == 'production' && vars.PUBLIC_CLOUDFLARE_SITE_KEY || (inputs.environment == 'staging' && vars.STAGING_PUBLIC_CLOUDFLARE_SITE_KEY || vars.TEST_PUBLIC_CLOUDFLARE_SITE_KEY) }}
 
       - name: Create Sentry release
         if: inputs.create_sentry_release

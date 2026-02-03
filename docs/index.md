@@ -1,68 +1,103 @@
-![product](https://static.refly.ai/landing/refly-cover-2.webp)
+![Refly Cover](/images/refly-cover.webp)
 
-# Welcome to Refly
+# Refly — The First Open-Source Agent Skills Builder Powered by Vibe Workflow
 
-Refly is an AI-native content creation platform built on the concept of "**Free Canvas**". Through multi-threaded conversations, knowledge base integration, context memory, intelligent search, and a WYSIWYG AI document editor, **it provides a one-stop solution from creative ideation to finished content:**
+Ships as APIs for Lovable · Webhooks for Slack · Skills for Claude Code · SOP playbooks in Refly
 
-1. Multi-topic & multi-threaded conversation functionality on a free canvas, allowing you to freely brainstorm and organize creative thoughts with AI assistance
-2. Integration of writing materials and AI knowledge base to build a powerful second brain system
-3. Context memory functionality similar to Cursor and NotebookLM for precise modifications
-4. Built-in Perplexity-style AI web search and knowledge base retrieval to break through information bottlenecks
-5. Integration of Notion-style AI editor and ChatGPT Canvas-like document processing experience for seamless creation
+Skills are not prompts. They are durable infrastructure.
 
-### 1-Minute Quick Overview Video
+Refly is the first open-source platform for building stable, atomic, and versioned agent skills. Skills are deterministic agent capabilities—reusable across workflows, teams, and runtimes.
 
-<div style="padding: 20px 0;">
-<iframe width="100%" height="415" style="border-radius: 10px;" src="https://www.youtube.com/embed/MWgWy_LBtko" title="Refly Quick Overview" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</div>
+TL;DR: Refly compiles your enterprise SOPs into executable agent skills. Built in 3 minutes. Shipped anywhere.
 
-## Core Features and Value
+## Why Refly?
 
-Refly aims to "**Let creators focus on thinking while AI assists with efficient creation**".
+Most AI Agents fail in production because they rely on "Vibe-coded" scripts and fragile, black-box logic. As the ecosystem moves toward agentic frameworks like Claude Code, AutoGen, and MCP, the bottleneck is no longer the LLM—it's the lack of standardized, reliable actions.
 
-Therefore, we have implemented 4 core capabilities:
+Refly bridges the gap between raw APIs and intelligent agents. We allow you to codify messy business logic into structured, version-controlled Agent skills that any Any agent can invoke with 100% reliability.
 
-1. **Smart Canvas | Visualize Your Thinking**
-   1. Free canvas helps you clarify thoughts and easily organize ideas
-   2. Covers 10+ scenarios including academic research, legal document research, investment analysis, and technical documentation
-   3. AI intelligently analyzes topics and automatically generates research frameworks
-   4. Personal knowledge base integration stimulates deep thought connections
+Stop hard-coding tools. Build modular skills once in Refly's visual IDE and deploy them as MCP servers, standard APIs, or portable SDKs to any agent framework.
 
-![feature-1](/images/feature1.webp)
+## Core Infrastructure
 
-2. **Knowledge Management | Organize Information Better**
-   1. One-click import of papers, web pages, and various professional materials
-   2. AI intelligent search for quick location of core reference content
-   3. Automatic knowledge point correlation to inspire cross-domain innovation
-   4. Seamless integration with existing knowledge systems
+Refly is the first open-source agent skills builder for creating production-ready, deterministic skills — not just one-off workflows.
 
-![feature-2](/images/feature2.webp)
+By transforming natural language intent into a governed capability layer, Refly allows teams to ship reliable agentic infrastructure in minutes.
 
-3. **Multi-threaded Conversations | More Efficient Creation**
-   1. Canvas-style dialogue exploration for deep topic research
-   2. Intelligent context management for more focused conversations
-   3. Access knowledge base anytime to break through research bottlenecks
-   4. Support real-time collaboration for collective wisdom(coming soon...)
+### Construct with Vibe (Copilot-led Builder)
 
-![feature-3](/images/feature3.webp)
+Describe your business logic in natural language, and Refly's Model-Native DSL compiles your intent into a high-performance skill.
 
-4. **Professional Creation | More Professional Output**
-   1. Personalized writing environment for flexible creative scenarios
-   2. Professional writing tools to support academic and technical content
-   3. AI editing assistant to control content quality
-   4. Structured output to ensure professional expression
+- Intent-Driven Construction: Describe the work once; Refly turns intent into deterministic, reusable, and composable skills.
+- Efficiency at Scale: Our streamlined DSL is optimized for LLMs, ensuring fast execution and significantly lower token costs compared to legacy tools.
+- 3-Minute Deployment: Transition from a static enterprise SOP to a production-ready, compiled agent skill in under 3 minutes.
+### Execute with Control (Intervenable Runtime)
 
-![feature-4](/images/feature4.webp)
+Break the "black box" of AI execution with a stateful runtime designed for deterministic reliability and limitless connectivity.
 
-## Use Cases and User Groups
+- Intervenable Runtime: Unlike trigger-only tools, Refly allows you to pause, audit, and re-steer agent logic mid-run to ensure 100% operational compliance.
+- Deterministic Guarantees: Enforce strict business rules within a governed execution layer that minimizes hallucinations and handles failure recovery.
+### Ship to Production (Unified Agent Stack)
 
-Whether you're a student writing papers, an office worker with a side business, or a content creator managing social media, you'll find suitable use cases.
+Unify MCP integrations, tools, models, and reusable skills into a single execution layer that ships to any platform.
 
-|                                           | Scenarios                                                                  | Effects                                                                               | Benefits                                                       |
-| ----------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **Content Creators**                      | Writing articles, social media posts, public accounts, short video scripts | Generate eye-catching titles and content frameworks in 30 minutes, inspire creativity | Eliminate content drought, improve creation efficiency         |
-| **Knowledge Workers**                     | Year-end summaries, work reports, project proposals                        | Quickly organize key points, generate professional expressions                        | Save 50% writing time, improve document quality                |
-| **Academic/Legal/Investment Researchers** | Thesis writing, literature reviews, research plans                         | Intelligent literature analysis, extract core viewpoints                              | Greatly improve research efficiency, ensure academic standards |
-| **Business Managers**                     | Strategic planning, job reports, meeting minutes                           | Quickly integrate information, form decision basis                                    | Improve management efficiency, optimize decision quality       |
-| **Freelancers**                           | Writing orders, proposal planning, business copywriting                    | One-click generation of multi-style content                                           | Increase order efficiency, ensure delivery quality             |
-| **Small Teams**                           | Product documentation, training materials, team collaboration              | Unify document standards, share knowledge assets                                      | Reduce communication costs, improve team efficiency            |
+- Universal Delivery: Export your skills as authenticated, stateful APIs for Lovable, intelligent webhooks for Slack, or native tools for Claude Code and Cursor.
+- Stable Scheduling: Run workflows reliably on schedule with managed execution and predictable behavior for long-running automations.
+### Govern as Assets (Skill Registry)
+
+Transform fragile scripts and manual playbooks into governed, shared infrastructure across your organization.
+
+- Central Skill Registry: Securely manage, version, and share agent capabilities as reusable corporate assets.
+- Team Workspace Collaboration: Build together and share SOP playbooks in a centralized environment with native version control and audit logs.
+## Ecosystem
+
+Refly is designed to be the universal bridge between your existing enterprise toolchain and the next generation of agentic runtimes.
+
+### Tooling & Protocols (Inputs)
+
+Bring your own data and logic into Refly with zero friction.
+
+- 3,000+ Native Tools: Seamlessly integrate with industrial APIs like Stripe, Slack, Salesforce, GitHub and etc.
+A full list of supported model and tools providers can be found here。
+
+![Refly Tools](/images/refly-tools.webp)
+
+
+- MCP Support: Full native compatibility with any Model Context Protocol server to extend agent capabilities beyond standard APIs.
+- Private Skill Connectors：Securely run and manage thousands of internal skills — connected to your databases, scripts, and systems through Refly's runtime.
+### Agent Runtimes & Platforms (Outputs)
+
+Export your deterministic skills to any environment where work happens.
+
+![Refly Platforms](/images/refly-platforms.webp)
+
+
+- AI Coding Tools: Native export for Claude Code and Cursor, allowing agents to use your versioned skills as standardized tools.
+- App Builders: Power the logic of Lovable or custom frontend apps via stateful, authenticated APIs.
+- Automation Hubs: Deploy as intelligent webhooks to trigger complex SOPs from Slack or Microsoft Teams.
+- Agent Frameworks: Directly compatible with AutoGen, Manus, and custom LangChain/Python stacks.
+## Why Teams Choose Refly
+
+### For Builders: From Vibe to Production
+
+Most agent tooling today falls into two categories:
+
+- Workflow builders (n8n, Dify): Great for orchestration, but workflows are fragile, trigger-only "black boxes," and hard to reuse.
+- Agent frameworks (LangChain): Powerful primitives, but require heavy engineering, manual boilerplate, and high maintenance to keep running.
+Refly eliminates the friction of manual configuration, giving you the fastest path from a "vibe" to a usable agent tool. By using our Streamlined DSL, you get the speed of a GUI with the precision of code.
+
+### For Enterprise: Scalable Skills Governance
+
+Workflow tools like n8n are great for basic connectivity, and frameworks like LangChain offer powerful primitives — but neither provides the governed, production-ready capability layer required for enterprise agent infrastructure.
+
+Refly acts as the Agent skills builder, providing the governance and reliability infrastructure required to deploy AI across the entire organization.
+
+## Community
+
+Connect with the Refly community:
+
+- 🌟 **[Star us on GitHub](https://github.com/refly-ai/refly)**: It helps us keep building!
+
+## License
+
+This repository is licensed under the [ReflyAI Open Source License](https://github.com/refly-ai/refly/blob/main/LICENSE), which is essentially the Apache 2.0 License with some additional restrictions.

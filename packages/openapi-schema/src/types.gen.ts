@@ -2863,6 +2863,10 @@ export type AuthConfigResponse = BaseResponse & {
    * Auth providers
    */
   data?: Array<AuthConfigItem>;
+  /**
+   * Whether Cloudflare Turnstile is enabled
+   */
+  turnstileEnabled?: boolean;
 };
 
 /**
@@ -2877,6 +2881,10 @@ export type EmailSignupRequest = {
    * Password
    */
   password: string;
+  /**
+   * Cloudflare Turnstile token
+   */
+  turnstileToken?: string;
 };
 
 export type EmailSignupData = {
@@ -2972,6 +2980,10 @@ export type EmailLoginRequest = {
    * Password
    */
   password: string;
+  /**
+   * Cloudflare Turnstile token
+   */
+  turnstileToken?: string;
 };
 
 export type EmailLoginData = {
@@ -10513,6 +10525,10 @@ export type DriveFileViaApi = {
    */
   size?: number;
   /**
+   * Node ID that produced the file
+   */
+  nodeId?: string;
+  /**
    * Access URL for the file
    */
   url?: string;
@@ -10584,6 +10600,28 @@ export type OpenapiCopilotGenerateResponse = BaseResponse & {
     canvasId?: string;
     workflowPlan?: OpenapiWorkflowPlan;
   };
+};
+
+/**
+ * Error response when workflow generation fails.
+ */
+export type OpenapiCopilotGenerateErrorResponse = {
+  /**
+   * HTTP status code
+   */
+  statusCode: number;
+  /**
+   * Readable error message
+   */
+  message: string;
+  /**
+   * Error type
+   */
+  error: string;
+  /**
+   * Original AI response (may be empty, length-limited)
+   */
+  modelResponse?: string;
 };
 
 export type OpenapiWorkflowSummary = {
@@ -12070,7 +12108,7 @@ export type GenerateWorkflowViaCopilotData = {
 
 export type GenerateWorkflowViaCopilotResponse = OpenapiCopilotGenerateResponse;
 
-export type GenerateWorkflowViaCopilotError = unknown;
+export type GenerateWorkflowViaCopilotError = OpenapiCopilotGenerateErrorResponse | unknown;
 
 export type GetWorkflowStatusViaApiData = {
   path: {

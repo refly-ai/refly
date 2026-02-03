@@ -66,6 +66,7 @@ import {
   extractVariables,
   generateAppTemplate,
   generateMedia,
+  generateWorkflowViaCopilot,
   getActionResult,
   getAuthConfig,
   getAvailableTools,
@@ -104,6 +105,7 @@ import {
   getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowDetailViaApi,
   getWorkflowOutput,
   getWorkflowPlanDetail,
   getWorkflowStatusViaApi,
@@ -150,8 +152,10 @@ import {
   runWorkflowViaApi,
   scrape,
   search,
+  searchWorkflowsViaApi,
   serveStatic,
   setCanvasState,
+  skipInvitationCode,
   startExportJob,
   streamInvokeSkill,
   submitForm,
@@ -599,6 +603,30 @@ export const UseGetOpenapiConfigKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetOpenapiConfigKey, ...(queryKey ?? [clientOptions])];
+export type SearchWorkflowsViaApiDefaultResponse = Awaited<
+  ReturnType<typeof searchWorkflowsViaApi>
+>['data'];
+export type SearchWorkflowsViaApiQueryResult<
+  TData = SearchWorkflowsViaApiDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useSearchWorkflowsViaApiKey = 'SearchWorkflowsViaApi';
+export const UseSearchWorkflowsViaApiKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useSearchWorkflowsViaApiKey, ...(queryKey ?? [clientOptions])];
+export type GetWorkflowDetailViaApiDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowDetailViaApi>
+>['data'];
+export type GetWorkflowDetailViaApiQueryResult<
+  TData = GetWorkflowDetailViaApiDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWorkflowDetailViaApiKey = 'GetWorkflowDetailViaApi';
+export const UseGetWorkflowDetailViaApiKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWorkflowDetailViaApiKey, ...(queryKey ?? [clientOptions])];
 export type GetWorkflowStatusViaApiDefaultResponse = Awaited<
   ReturnType<typeof getWorkflowStatusViaApi>
 >['data'];
@@ -1411,6 +1439,14 @@ export const UseRunWorkflowViaApiKeyFn = (mutationKey?: Array<unknown>) => [
   useRunWorkflowViaApiKey,
   ...(mutationKey ?? []),
 ];
+export type GenerateWorkflowViaCopilotMutationResult = Awaited<
+  ReturnType<typeof generateWorkflowViaCopilot>
+>;
+export const useGenerateWorkflowViaCopilotKey = 'GenerateWorkflowViaCopilot';
+export const UseGenerateWorkflowViaCopilotKeyFn = (mutationKey?: Array<unknown>) => [
+  useGenerateWorkflowViaCopilotKey,
+  ...(mutationKey ?? []),
+];
 export type AbortWorkflowViaApiMutationResult = Awaited<ReturnType<typeof abortWorkflowViaApi>>;
 export const useAbortWorkflowViaApiKey = 'AbortWorkflowViaApi';
 export const UseAbortWorkflowViaApiKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1429,6 +1465,12 @@ export type ActivateInvitationCodeMutationResult = Awaited<
 export const useActivateInvitationCodeKey = 'ActivateInvitationCode';
 export const UseActivateInvitationCodeKeyFn = (mutationKey?: Array<unknown>) => [
   useActivateInvitationCodeKey,
+  ...(mutationKey ?? []),
+];
+export type SkipInvitationCodeMutationResult = Awaited<ReturnType<typeof skipInvitationCode>>;
+export const useSkipInvitationCodeKey = 'SkipInvitationCode';
+export const UseSkipInvitationCodeKeyFn = (mutationKey?: Array<unknown>) => [
+  useSkipInvitationCodeKey,
   ...(mutationKey ?? []),
 ];
 export type CreateCheckoutSessionMutationResult = Awaited<ReturnType<typeof createCheckoutSession>>;

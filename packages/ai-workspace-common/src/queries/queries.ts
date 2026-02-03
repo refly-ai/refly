@@ -67,6 +67,7 @@ import {
   extractVariables,
   generateAppTemplate,
   generateMedia,
+  generateWorkflowViaCopilot,
   getActionResult,
   getAuthConfig,
   getAvailableTools,
@@ -105,6 +106,7 @@ import {
   getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowDetailViaApi,
   getWorkflowOutput,
   getWorkflowPlanDetail,
   getWorkflowStatusViaApi,
@@ -151,8 +153,10 @@ import {
   runWorkflowViaApi,
   scrape,
   search,
+  searchWorkflowsViaApi,
   serveStatic,
   setCanvasState,
+  skipInvitationCode,
   startExportJob,
   streamInvokeSkill,
   submitForm,
@@ -308,6 +312,8 @@ import {
   GenerateAppTemplateError,
   GenerateMediaData,
   GenerateMediaError,
+  GenerateWorkflowViaCopilotData,
+  GenerateWorkflowViaCopilotError,
   GetActionResultData,
   GetActionResultError,
   GetAuthConfigError,
@@ -374,6 +380,8 @@ import {
   GetWorkflowAppDetailError,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
+  GetWorkflowDetailViaApiData,
+  GetWorkflowDetailViaApiError,
   GetWorkflowOutputData,
   GetWorkflowOutputError,
   GetWorkflowPlanDetailData,
@@ -457,9 +465,12 @@ import {
   ScrapeError,
   SearchData,
   SearchError,
+  SearchWorkflowsViaApiData,
+  SearchWorkflowsViaApiError,
   ServeStaticError,
   SetCanvasStateData,
   SetCanvasStateError,
+  SkipInvitationCodeError,
   StartExportJobData,
   StartExportJobError,
   StreamInvokeSkillData,
@@ -1108,6 +1119,40 @@ export const useGetOpenapiConfig = <
     queryKey: Common.UseGetOpenapiConfigKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getOpenapiConfig({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useSearchWorkflowsViaApi = <
+  TData = Common.SearchWorkflowsViaApiDefaultResponse,
+  TError = SearchWorkflowsViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<SearchWorkflowsViaApiData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseSearchWorkflowsViaApiKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      searchWorkflowsViaApi({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useGetWorkflowDetailViaApi = <
+  TData = Common.GetWorkflowDetailViaApiDefaultResponse,
+  TError = GetWorkflowDetailViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowDetailViaApiData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowDetailViaApiKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowDetailViaApi({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetWorkflowStatusViaApi = <
@@ -2884,6 +2929,24 @@ export const useRunWorkflowViaApi = <
     mutationFn: (clientOptions) => runWorkflowViaApi(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
+export const useGenerateWorkflowViaCopilot = <
+  TData = Common.GenerateWorkflowViaCopilotMutationResult,
+  TError = GenerateWorkflowViaCopilotError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<GenerateWorkflowViaCopilotData, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<GenerateWorkflowViaCopilotData, true>, TContext>({
+    mutationKey: Common.UseGenerateWorkflowViaCopilotKeyFn(mutationKey),
+    mutationFn: (clientOptions) =>
+      generateWorkflowViaCopilot(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
 export const useAbortWorkflowViaApi = <
   TData = Common.AbortWorkflowViaApiMutationResult,
   TError = AbortWorkflowViaApiError,
@@ -2934,6 +2997,23 @@ export const useActivateInvitationCode = <
     mutationKey: Common.UseActivateInvitationCodeKeyFn(mutationKey),
     mutationFn: (clientOptions) =>
       activateInvitationCode(clientOptions) as unknown as Promise<TData>,
+    ...options,
+  });
+export const useSkipInvitationCode = <
+  TData = Common.SkipInvitationCodeMutationResult,
+  TError = SkipInvitationCodeError,
+  TQueryKey extends Array<unknown> = unknown[],
+  TContext = unknown,
+>(
+  mutationKey?: TQueryKey,
+  options?: Omit<
+    UseMutationOptions<TData, TError, Options<unknown, true>, TContext>,
+    'mutationKey' | 'mutationFn'
+  >,
+) =>
+  useMutation<TData, TError, Options<unknown, true>, TContext>({
+    mutationKey: Common.UseSkipInvitationCodeKeyFn(mutationKey),
+    mutationFn: (clientOptions) => skipInvitationCode(clientOptions) as unknown as Promise<TData>,
     ...options,
   });
 export const useCreateCheckoutSession = <

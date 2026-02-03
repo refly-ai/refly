@@ -15,9 +15,10 @@ import { ConfigService } from '@nestjs/config';
 
 import { LoginedUser } from '../../utils/decorators/user.decorator';
 import { AuthService } from './auth.service';
+import { TurnstileService } from './turnstile.service';
 import { GithubOauthGuard } from './guard/github-oauth.guard';
 import { GoogleOauthGuard } from './guard/google-oauth.guard';
-import { OAuthError } from '@refly/errors';
+import { OAuthError, HumanVerificationFailed } from '@refly/errors';
 import {
   EmailSignupRequest,
   EmailLoginRequest,
@@ -46,17 +47,30 @@ export class AuthController {
 
   constructor(
     private authService: AuthService,
+    private turnstileService: TurnstileService,
     private configService: ConfigService,
   ) {}
 
   @Get('config')
   getAuthConfig(): AuthConfigResponse {
-    return buildSuccessResponse(this.authService.getAuthConfig());
+    const config = this.authService.getAuthConfig();
+    return {
+      success: true,
+      ...config,
+    };
   }
 
   @Throttle({ default: { limit: 10, ttl: seconds(10) } })
   @Post('email/signup')
-  async emailSignup(@Body() { email, password }: EmailSignupRequest, @Res() res: Response) {
+  async emailSignup(
+    @Body() { email, password, turnstileToken }: EmailSignupRequest,
+    @Res() res: Response,
+  ) {
+    const isHuman = await this.turnstileService.verifyToken(turnstileToken);
+    if (!isHuman) {
+      throw new HumanVerificationFailed();
+    }
+
     const { sessionId, tokenData } = await this.authService.emailSignup(email, password);
     if (tokenData) {
       return this.authService
@@ -68,7 +82,15 @@ export class AuthController {
 
   @Throttle({ default: { limit: 10, ttl: seconds(10) } })
   @Post('email/login')
-  async emailLogin(@Body() { email, password }: EmailLoginRequest, @Res() res: Response) {
+  async emailLogin(
+    @Body() { email, password, turnstileToken }: EmailLoginRequest,
+    @Res() res: Response,
+  ) {
+    const isHuman = await this.turnstileService.verifyToken(turnstileToken);
+    if (!isHuman) {
+      throw new HumanVerificationFailed();
+    }
+
     const tokens = await this.authService.emailLogin(email, password);
     return this.authService.setAuthCookie(res, tokens).json(buildSuccessResponse());
   }

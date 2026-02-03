@@ -42,6 +42,7 @@ import {
   getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowDetailViaApi,
   getWorkflowOutput,
   getWorkflowPlanDetail,
   getWorkflowStatusViaApi,
@@ -70,6 +71,7 @@ import {
   listUserVouchers,
   listWorkflowApps,
   listWorkflowExecutions,
+  searchWorkflowsViaApi,
   serveStatic,
   verifyVoucherInvitation,
 } from '@refly/openapi-schema';
@@ -104,6 +106,7 @@ import {
   GetWebhookHistoryData,
   GetWorkflowAppDetailData,
   GetWorkflowDetailData,
+  GetWorkflowDetailViaApiData,
   GetWorkflowOutputData,
   GetWorkflowPlanDetailData,
   GetWorkflowStatusViaApiData,
@@ -125,6 +128,7 @@ import {
   ListToolsetsData,
   ListWorkflowAppsData,
   ListWorkflowExecutionsData,
+  SearchWorkflowsViaApiData,
   VerifyVoucherInvitationData,
 } from '@refly/openapi-schema';
 import * as Common from './common';
@@ -433,6 +437,22 @@ export const prefetchUseGetOpenapiConfig = (
   queryClient.prefetchQuery({
     queryKey: Common.UseGetOpenapiConfigKeyFn(clientOptions),
     queryFn: () => getOpenapiConfig({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseSearchWorkflowsViaApi = (
+  queryClient: QueryClient,
+  clientOptions: Options<SearchWorkflowsViaApiData, true> = {},
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseSearchWorkflowsViaApiKeyFn(clientOptions),
+    queryFn: () => searchWorkflowsViaApi({ ...clientOptions }).then((response) => response.data),
+  });
+export const prefetchUseGetWorkflowDetailViaApi = (
+  queryClient: QueryClient,
+  clientOptions: Options<GetWorkflowDetailViaApiData, true>,
+) =>
+  queryClient.prefetchQuery({
+    queryKey: Common.UseGetWorkflowDetailViaApiKeyFn(clientOptions),
+    queryFn: () => getWorkflowDetailViaApi({ ...clientOptions }).then((response) => response.data),
   });
 export const prefetchUseGetWorkflowStatusViaApi = (
   queryClient: QueryClient,

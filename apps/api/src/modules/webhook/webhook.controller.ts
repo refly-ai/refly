@@ -4,6 +4,7 @@ import {
   Param,
   Body,
   UseGuards,
+  UseInterceptors,
   Req,
   Logger,
   BadRequestException,
@@ -13,6 +14,7 @@ import { RateLimitGuard } from './guards/rate-limit.guard';
 import { DebounceGuard } from './guards/debounce.guard';
 import { buildSuccessResponse } from '../../utils/response';
 import { WebhookRequest } from './types/request.types';
+import { WebhookCallTrackingInterceptor } from './interceptors/webhook-call-tracking.interceptor';
 
 /**
  * Type guard to check if a value is a non-null object (not an array)
@@ -26,6 +28,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * No authentication required - webhookId acts as the secret
  */
 @Controller('v1/openapi/webhook')
+@UseInterceptors(WebhookCallTrackingInterceptor)
 export class WebhookController {
   private readonly logger = new Logger(WebhookController.name);
 

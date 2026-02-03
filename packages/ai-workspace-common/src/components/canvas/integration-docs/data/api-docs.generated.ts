@@ -2,7 +2,7 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-02-01T06:25:38.455Z',
+  generatedAt: '2026-02-02T02:52:37.991Z',
   baseUrl: '/v1',
   endpoints: [
     {
@@ -193,8 +193,37 @@ export const apiDocsData: ApiDocsData = {
           },
         },
         '400': {
-          description: 'Invalid request parameters',
+          description: 'Request failed or invalid parameters (response may include modelResponse)',
           descriptionKey: 'integration.api.openapi.copilotGenerate.response400',
+          schema: {
+            type: 'object',
+            description: 'Error response when workflow generation fails.',
+            descriptionKey: 'integration.api.openapi.copilotGenerate.errorResponseDescription',
+            required: ['statusCode', 'message', 'error'],
+            properties: {
+              statusCode: {
+                type: 'number',
+                description: 'HTTP status code',
+                descriptionKey: 'integration.api.openapi.copilotGenerate.errorResponseStatusCode',
+              },
+              message: {
+                type: 'string',
+                description: 'Readable error message',
+                descriptionKey: 'integration.api.openapi.copilotGenerate.errorResponseMessage',
+              },
+              error: {
+                type: 'string',
+                description: 'Error type',
+                descriptionKey: 'integration.api.openapi.copilotGenerate.errorResponseError',
+              },
+              modelResponse: {
+                type: 'string',
+                description: 'Original AI response (may be empty, length-limited)',
+                descriptionKey:
+                  'integration.api.openapi.copilotGenerate.errorResponseModelResponse',
+              },
+            },
+          },
         },
         '401': {
           description: 'Unauthorized - invalid or missing API key',
@@ -752,6 +781,11 @@ export const apiDocsData: ApiDocsData = {
                           type: 'number',
                           description: 'Drive file size',
                           descriptionKey: 'integration.api.schema.fileSize',
+                        },
+                        nodeId: {
+                          type: 'string',
+                          description: 'Node ID that produced the file',
+                          descriptionKey: 'integration.api.schema.fileNodeId',
                         },
                         url: {
                           type: 'string',
@@ -1872,6 +1906,18 @@ export const apiDocsData: ApiDocsData = {
     {
       code: 'E0011',
       httpStatus: null,
+      message: 'Human verification failed, please try again',
+      messageI18n: {
+        'zh-Hans': '人机验证失败，请重试',
+      },
+      description: 'Human verification failed, please try again',
+      descriptionI18n: {
+        'zh-Hans': '人机验证失败，请重试',
+      },
+    },
+    {
+      code: 'E0012',
+      httpStatus: null,
       message: 'Authentication expired, please sign in again',
       messageI18n: {
         'zh-Hans': '身份验证已过期，请重新登录',
@@ -1882,7 +1928,7 @@ export const apiDocsData: ApiDocsData = {
       },
     },
     {
-      code: 'E0012',
+      code: 'E0013',
       httpStatus: null,
       message: 'This file type is temporarily not supported',
       messageI18n: {
@@ -1894,7 +1940,7 @@ export const apiDocsData: ApiDocsData = {
       },
     },
     {
-      code: 'E0013',
+      code: 'E0014',
       httpStatus: null,
       message: 'Switching embedding model is not supported temporarily',
       messageI18n: {
@@ -1906,7 +1952,7 @@ export const apiDocsData: ApiDocsData = {
       },
     },
     {
-      code: 'E0014',
+      code: 'E0015',
       httpStatus: null,
       message: 'Chat model not configured, please configure a chat model in the settings',
       messageI18n: {
@@ -1918,7 +1964,7 @@ export const apiDocsData: ApiDocsData = {
       },
     },
     {
-      code: 'E0015',
+      code: 'E0016',
       httpStatus: null,
       message:
         'Embedding model not configured, please configure an embedding model in the settings',
@@ -1932,7 +1978,7 @@ export const apiDocsData: ApiDocsData = {
       },
     },
     {
-      code: 'E0016',
+      code: 'E0017',
       httpStatus: null,
       message: 'Media provider not configured, please configure a media provider in the settings',
       messageI18n: {
@@ -1945,7 +1991,7 @@ export const apiDocsData: ApiDocsData = {
       },
     },
     {
-      code: 'E0017',
+      code: 'E0018',
       httpStatus: null,
       message: 'Media model not configured, please configure a media model in the settings',
       messageI18n: {

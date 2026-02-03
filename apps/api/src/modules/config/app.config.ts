@@ -112,6 +112,10 @@ export default () => ({
       expiresIn: process.env.JWT_EXPIRATION_TIME || '1d',
       refreshExpiresIn: process.env.JWT_REFRESH_EXPIRATION_TIME || '14d',
     },
+    turnstile: {
+      enabled: process.env.CLOUDFLARE_TURNSTILE_ENABLED === 'true' || false,
+      secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+    },
     collab: {
       tokenExpiry: process.env.COLLAB_TOKEN_EXPIRY || '1h',
     },

@@ -4,7 +4,7 @@
   "ignoreDependencies": ["pino-pretty"],
   "ignore": [
     "postcss.config.*",
-    "*.config.ts",
+    "**/*.config.ts",
     "**/scripts/**",
     "apps/web/src/service-worker-sw.ts",
     "apps/api/load-tests/**",
@@ -65,6 +65,9 @@
         "@refly-packages/ai-workspace-common": ["./src/index.ts"],
         "@refly-packages/ai-workspace-common/*": ["./src/*"]
       }
+    },
+    "packages/openapi-schema": {
+      "entry": ["openapi-ts.config.ts"]
     }
   }
 }

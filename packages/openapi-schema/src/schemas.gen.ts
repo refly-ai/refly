@@ -3098,6 +3098,10 @@ export const AuthConfigResponseSchema = {
             $ref: '#/components/schemas/AuthConfigItem',
           },
         },
+        turnstileEnabled: {
+          type: 'boolean',
+          description: 'Whether Cloudflare Turnstile is enabled',
+        },
       },
     },
   ],
@@ -3115,6 +3119,10 @@ export const EmailSignupRequestSchema = {
     password: {
       type: 'string',
       description: 'Password',
+    },
+    turnstileToken: {
+      type: 'string',
+      description: 'Cloudflare Turnstile token',
     },
   },
 } as const;
@@ -3242,6 +3250,10 @@ export const EmailLoginRequestSchema = {
     password: {
       type: 'string',
       description: 'Password',
+    },
+    turnstileToken: {
+      type: 'string',
+      description: 'Cloudflare Turnstile token',
     },
   },
 } as const;
@@ -13200,6 +13212,11 @@ export const DriveFileViaApiSchema = {
       description: 'Drive file size',
       'x-i18n-description': 'integration.api.schema.fileSize',
     },
+    nodeId: {
+      type: 'string',
+      description: 'Node ID that produced the file',
+      'x-i18n-description': 'integration.api.schema.fileNodeId',
+    },
     url: {
       type: 'string',
       description: 'Access URL for the file',
@@ -13318,6 +13335,35 @@ export const OpenapiCopilotGenerateResponseSchema = {
       },
     },
   ],
+} as const;
+
+export const OpenapiCopilotGenerateErrorResponseSchema = {
+  type: 'object',
+  description: 'Error response when workflow generation fails.',
+  'x-i18n-description': 'integration.api.openapi.copilotGenerate.errorResponseDescription',
+  required: ['statusCode', 'message', 'error'],
+  properties: {
+    statusCode: {
+      type: 'number',
+      description: 'HTTP status code',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.errorResponseStatusCode',
+    },
+    message: {
+      type: 'string',
+      description: 'Readable error message',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.errorResponseMessage',
+    },
+    error: {
+      type: 'string',
+      description: 'Error type',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.errorResponseError',
+    },
+    modelResponse: {
+      type: 'string',
+      description: 'Original AI response (may be empty, length-limited)',
+      'x-i18n-description': 'integration.api.openapi.copilotGenerate.errorResponseModelResponse',
+    },
+  },
 } as const;
 
 export const OpenapiWorkflowSummarySchema = {

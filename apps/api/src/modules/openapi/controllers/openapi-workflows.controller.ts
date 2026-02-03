@@ -1,4 +1,4 @@
-import { Controller, Get, Logger, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Logger, Param, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiKeyAuthGuard } from '../guards/api-key-auth.guard';
 import { RateLimitGuard } from '../guards/rate-limit.guard';
@@ -7,6 +7,7 @@ import { User } from '@prisma/client';
 import { OpenapiService } from '../openapi.service';
 import { buildSuccessResponse } from '../../../utils/response';
 import type { ListOrder } from '@refly/openapi-schema';
+import { ApiCallTrackingInterceptor } from '../interceptors/api-call-tracking.interceptor';
 
 type WorkflowSearchQuery = {
   keyword?: string;
@@ -17,6 +18,7 @@ type WorkflowSearchQuery = {
 
 @ApiTags('OpenAPI - Workflow')
 @Controller('v1/openapi/workflows')
+@UseInterceptors(ApiCallTrackingInterceptor)
 export class OpenapiWorkflowsController {
   private readonly logger = new Logger(OpenapiWorkflowsController.name);
 

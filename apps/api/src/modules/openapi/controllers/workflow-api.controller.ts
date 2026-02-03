@@ -5,6 +5,7 @@ import {
   Param,
   Body,
   UseGuards,
+  UseInterceptors,
   Logger,
   BadRequestException,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { LoginedUser } from '../../../utils/decorators/user.decorator';
 import { User } from '@prisma/client';
 import { buildSuccessResponse } from '../../../utils/response';
 import { workflowExecutionStatusPO2DTO } from '../types/request.types';
+import { ApiCallTrackingInterceptor } from '../interceptors/api-call-tracking.interceptor';
 
 /**
  * Type guard to check if a value is a non-null object (not an array)
@@ -31,6 +33,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 @ApiTags('OpenAPI - Workflow')
 @Controller('v1/openapi/workflow')
+@UseInterceptors(ApiCallTrackingInterceptor)
 export class WorkflowApiController {
   private readonly logger = new Logger(WorkflowApiController.name);
 

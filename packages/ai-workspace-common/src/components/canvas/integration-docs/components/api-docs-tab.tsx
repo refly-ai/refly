@@ -5,8 +5,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import RemarkBreaks from 'remark-breaks';
 import { apiDocsData } from '../data/api-docs.generated';
-import { useApiKeys } from '../hooks/use-api-keys';
-import { useSelectedApiKey } from '../hooks/use-selected-api-key';
 import { CodeExample } from './code-example';
 import { useGetWorkflowVariables } from '@refly-packages/ai-workspace-common/queries/queries';
 import {
@@ -239,8 +237,6 @@ const renderRequestBodyFields = (endpoint: ApiEndpoint, t: (key: string) => stri
 
 export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
   const { t, i18n } = useTranslation();
-  const { apiKeys } = useApiKeys();
-  const { selectedKey } = useSelectedApiKey(apiKeys);
   const { data: workflowVariablesResponse } = useGetWorkflowVariables(
     {
       query: { canvasId },
@@ -252,21 +248,20 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
   );
 
   const baseUrl = useMemo(() => getApiBaseUrl(apiDocsData.baseUrl), []);
-  const displayKey = selectedKey ? `${selectedKey.keyPrefix}****` : 'YOUR_API_KEY';
   const pathParams = useMemo(() => ({ canvasId }), [canvasId]);
   const bestPracticeExamples = useMemo(
     () =>
-      generateBestPracticesExamples(baseUrl, canvasId, displayKey, {
+      generateBestPracticesExamples(baseUrl, canvasId, 'REFLY_API_KEY', {
         upload: t('integration.api.bestPracticesCommentUpload'),
         run: t('integration.api.bestPracticesCommentRun'),
         poll: t('integration.api.bestPracticesCommentPoll'),
         output: t('integration.api.bestPracticesCommentOutput'),
       }),
-    [baseUrl, canvasId, displayKey, t],
+    [baseUrl, canvasId, t],
   );
   const bestPracticeCopyExamples = useMemo(
     () =>
-      generateBestPracticesExamples(baseUrl, canvasId, 'YOUR_API_KEY', {
+      generateBestPracticesExamples(baseUrl, canvasId, 'REFLY_API_KEY', {
         upload: t('integration.api.bestPracticesCommentUpload'),
         run: t('integration.api.bestPracticesCommentRun'),
         poll: t('integration.api.bestPracticesCommentPoll'),
@@ -318,6 +313,50 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
         </h3>
         <div className="-mt-1 mb-4 text-sm text-[var(--integration-docs-text-2)] leading-relaxed">
           <MarkdownText content={t('integration.api.overviewDescription')} />
+        </div>
+        <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-semibold text-[var(--integration-docs-text-1)]">
+              {t('integration.api.baseUrl')}:
+            </span>
+            <code className="text-sm bg-[var(--integration-docs-inline-code-bg)] px-2 py-1 rounded text-[var(--integration-docs-inline-code-text)]">
+              {baseUrl}
+            </code>
+          </div>
+        </div>
+      </section>
+
+      <section id="api-authentication" className="mb-10 scroll-mt-6 last:mb-0">
+        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+          {t('integration.api.authTitle')}
+        </h3>
+        <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
+          <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-3">
+            {t('integration.api.authUsageTitle')}
+          </h4>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="text-sm text-[var(--integration-docs-text-2)] min-w-[80px]">
+                {t('integration.api.authHeaderField')}:
+              </span>
+              <code className="text-sm bg-[var(--integration-docs-inline-code-bg)] px-2 py-1 rounded text-[var(--integration-docs-inline-code-text)]">
+                Authorization
+              </code>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-sm text-[var(--integration-docs-text-2)] min-w-[80px]">
+                {t('integration.api.authHeaderValue')}:
+              </span>
+              <code className="text-sm bg-[var(--integration-docs-inline-code-bg)] px-2 py-1 rounded text-[var(--integration-docs-inline-code-text)]">
+                Bearer REFLY_API_KEY
+              </code>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-[var(--integration-docs-border)]">
+            <div className="text-xs text-[var(--integration-docs-text-3)]">
+              {t('integration.api.keyHelper')}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -396,13 +435,13 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
               const displayExamples = generateCodeExamples(
                 endpoint,
                 baseUrl,
-                displayKey,
+                'REFLY_API_KEY',
                 pathParams,
               );
               const copyExamples = generateCodeExamples(
                 endpoint,
                 baseUrl,
-                'YOUR_API_KEY',
+                'REFLY_API_KEY',
                 pathParams,
               );
               const requestExample =
@@ -416,13 +455,19 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                   ? JSON.stringify(requestExample, null, 2)
                   : '';
               const resolvedDisplayExamples = isRunEndpoint
-                ? generateCodeExamples(endpoint, baseUrl, displayKey, pathParams, requestExample)
+                ? generateCodeExamples(
+                    endpoint,
+                    baseUrl,
+                    'REFLY_API_KEY',
+                    pathParams,
+                    requestExample,
+                  )
                 : displayExamples;
               const resolvedCopyExamples = isRunEndpoint
                 ? generateCodeExamples(
                     endpoint,
                     baseUrl,
-                    'YOUR_API_KEY',
+                    'REFLY_API_KEY',
                     pathParams,
                     requestExample,
                   )

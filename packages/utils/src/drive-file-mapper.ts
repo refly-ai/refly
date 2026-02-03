@@ -39,7 +39,8 @@ export function mapDriveFileToCanvasNode(file: DriveFile, serverOrigin: string):
   }
 
   // Construct content URL for file access
-  const contentUrl = `${serverOrigin}/v1/drive/file/content/${file.fileId}`;
+  const nameSegment = file.name ? `/${encodeURIComponent(file.name)}` : '';
+  const contentUrl = `${serverOrigin}/v1/drive/file/content/${file.fileId}${nameSegment}`;
 
   // Build metadata with all DriveFile fields for FilePreview component
   const metadata: Record<string, any> = {
@@ -96,7 +97,8 @@ export function mapDriveFileToWorkflowNodeExecution(
   }
 
   // Construct content URL for file access
-  const contentUrl = `${serverOrigin}/v1/drive/file/content/${file.fileId}`;
+  const nameSegment = file.name ? `/${encodeURIComponent(file.name)}` : '';
+  const contentUrl = `${serverOrigin}/v1/drive/file/content/${file.fileId}${nameSegment}`;
 
   // Build metadata with all DriveFile fields for FilePreview component
   const metadata: Record<string, any> = {

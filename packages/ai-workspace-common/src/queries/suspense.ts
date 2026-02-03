@@ -42,6 +42,7 @@ import {
   getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowDetailViaApi,
   getWorkflowOutput,
   getWorkflowPlanDetail,
   getWorkflowStatusViaApi,
@@ -70,6 +71,7 @@ import {
   listUserVouchers,
   listWorkflowApps,
   listWorkflowExecutions,
+  searchWorkflowsViaApi,
   serveStatic,
   verifyVoucherInvitation,
 } from '@refly/openapi-schema';
@@ -143,6 +145,8 @@ import {
   GetWorkflowAppDetailError,
   GetWorkflowDetailData,
   GetWorkflowDetailError,
+  GetWorkflowDetailViaApiData,
+  GetWorkflowDetailViaApiError,
   GetWorkflowOutputData,
   GetWorkflowOutputError,
   GetWorkflowPlanDetailData,
@@ -192,6 +196,8 @@ import {
   ListWorkflowAppsError,
   ListWorkflowExecutionsData,
   ListWorkflowExecutionsError,
+  SearchWorkflowsViaApiData,
+  SearchWorkflowsViaApiError,
   ServeStaticError,
   VerifyVoucherInvitationData,
   VerifyVoucherInvitationError,
@@ -787,6 +793,40 @@ export const useGetOpenapiConfigSuspense = <
     queryKey: Common.UseGetOpenapiConfigKeyFn(clientOptions, queryKey),
     queryFn: () =>
       getOpenapiConfig({ ...clientOptions }).then((response) => response.data as TData) as TData,
+    ...options,
+  });
+export const useSearchWorkflowsViaApiSuspense = <
+  TData = Common.SearchWorkflowsViaApiDefaultResponse,
+  TError = SearchWorkflowsViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<SearchWorkflowsViaApiData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseSearchWorkflowsViaApiKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      searchWorkflowsViaApi({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
+    ...options,
+  });
+export const useGetWorkflowDetailViaApiSuspense = <
+  TData = Common.GetWorkflowDetailViaApiDefaultResponse,
+  TError = GetWorkflowDetailViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWorkflowDetailViaApiData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useSuspenseQuery<TData, TError>({
+    queryKey: Common.UseGetWorkflowDetailViaApiKeyFn(clientOptions, queryKey),
+    queryFn: () =>
+      getWorkflowDetailViaApi({ ...clientOptions }).then(
+        (response) => response.data as TData,
+      ) as TData,
     ...options,
   });
 export const useGetWorkflowStatusViaApiSuspense = <

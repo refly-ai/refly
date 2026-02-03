@@ -12,6 +12,7 @@ declare global {
       SENTRY_ENABLED?: boolean;
       ENV_TAG?: string;
       DEPLOY_TYPE?: string;
+      PUBLIC_CLOUDFLARE_SITE_KEY?: string;
     };
 
     ipcRenderer?: {

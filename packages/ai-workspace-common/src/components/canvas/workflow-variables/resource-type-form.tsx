@@ -23,6 +23,8 @@ interface ResourceTypeFormProps {
   isSingle?: boolean;
 }
 
+const MAX_FILES = 10;
+
 export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
   ({
     fileList,
@@ -37,10 +39,28 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
     const { t } = useTranslation();
 
     const handleUpload = useCallback(
-      async (file: File) => {
+      async (file: File, batchFileList: File[]) => {
+        if (!isSingle) {
+          const remainingSlots = MAX_FILES - fileList.length;
+          if (remainingSlots <= 0) {
+            if (batchFileList?.[0] === file) {
+              message.error(t('canvas.workflow.variables.tooManyFiles', { max: MAX_FILES }));
+            }
+            return Upload.LIST_IGNORE;
+          }
+
+          const batchIndex = Array.isArray(batchFileList) ? batchFileList.indexOf(file) : -1;
+          if (batchIndex >= remainingSlots) {
+            if (batchIndex === remainingSlots) {
+              message.error(t('canvas.workflow.variables.tooManyFiles', { max: MAX_FILES }));
+            }
+            return Upload.LIST_IGNORE;
+          }
+        }
+
         return await onFileUpload(file);
       },
-      [onFileUpload],
+      [onFileUpload, fileList, isSingle, t],
     );
 
     const handleRemove = useCallback(
@@ -97,15 +117,14 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
             multiple={!isSingle}
             listType="text"
             disabled={uploading}
-            maxCount={isSingle ? 1 : 10}
             itemRender={(_originNode, file) => (
               <Spin className="w-full" spinning={uploading}>
-                <div className="w-full h-9 flex items-center justify-between gap-2 box-border px-2 bg-refly-bg-control-z0 rounded-lg hover:bg-refly-tertiary-hover">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-full h-10 flex items-center justify-between gap-3 box-border px-3 bg-refly-bg-control-z0 rounded-lg hover:bg-refly-tertiary-hover transition-colors">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <FileIcon
                       extension={getFileIconType(file.name || '')}
-                      width={20}
-                      height={20}
+                      width={24}
+                      height={24}
                       type="icon"
                       {...defaultStyles[getFileIconType(file.name || '')]}
                     />
@@ -137,7 +156,7 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
               </Spin>
             )}
           >
-            {(fileList.length === 0 || (!isSingle && fileList.length < 10)) && (
+            {(fileList.length === 0 || (!isSingle && fileList.length < MAX_FILES)) && (
               <Button
                 className="w-full bg-refly-bg-control-z0 border-none"
                 type="default"

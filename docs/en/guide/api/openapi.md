@@ -7,10 +7,10 @@ Access Refly open capabilities via API, such as running workflows and fetching s
 **Base URL**: `/v1`
 
 ## Overview
-These APIs let you programmatically access Refly capabilities and integrate with workflows.
+Refly API provides RESTful endpoints for programmatically running workflows, uploading files, querying execution status, and more. All API requests require authentication via API Key.
 
 ## Authentication
-Include your API Key in every request header.
+All API requests require an API Key in the HTTP header for authentication.\n\n**How to get an API Key**:\n1. Go to the Integration page in Refly workspace\n2. Click the "API Key" tab\n3. Create a new API Key and keep it secure
 
 `Authorization: Bearer YOUR_API_KEY`
 
@@ -155,6 +155,7 @@ Get workflow execution output (output nodes and drive files) via authenticated A
 | data.files[].name | string | Yes | File name |
 | data.files[].type | string | Yes | File type |
 | data.files[].size | number | No | File size |
+| data.files[].nodeId | string | No | Node ID that produced the file |
 | data.files[].url | string | No | File access URL |
 
 <a id="api-endpoint-getWorkflowStatusViaApi"></a>
@@ -363,7 +364,7 @@ Copilot workflow generation request.
 | Status | Description |
 | --- | --- |
 | 200 | Workflow generated successfully |
-| 400 | Invalid request parameters |
+| 400 | Request failed or invalid parameters (response may include modelResponse) |
 | 401 | Unauthorized - invalid or missing API key |
 | 404 | Canvas not found |
 
@@ -392,6 +393,15 @@ Copilot workflow generation request.
 | data.workflowPlan.variables[].required | boolean | No | Whether the variable is required |
 | data.workflowPlan.variables[].options | string[] | No | Variable options (only for option type) |
 
+**Response Fields (400)**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| statusCode | number | Yes | HTTP status code |
+| message | string | Yes | Readable error message |
+| error | string | Yes | Error type |
+| modelResponse | string | No | Original AI response (may be empty, length-limited) |
+
 ## Error Codes
 Common error codes for webhook and API integrations.
 
@@ -408,13 +418,14 @@ Common error codes for webhook and API integrations.
 | E0008 | - | Verification session not found or expired, please try again | Verification session not found or expired, please try again |
 | E0009 | - | Verification code is incorrect, please try again | Verification code is incorrect, please try again |
 | E0010 | - | Operation too frequent, please try again later | Operation too frequent, please try again later |
-| E0011 | - | Authentication expired, please sign in again | Authentication expired, please sign in again |
-| E0012 | - | This file type is temporarily not supported | This file type is temporarily not supported |
-| E0013 | - | Switching embedding model is not supported temporarily | Switching embedding model is not supported temporarily |
-| E0014 | - | Chat model not configured, please configure a chat model in the settings | Chat model not configured, please configure a chat model in the settings |
-| E0015 | - | Embedding model not configured, please configure an embedding model in the settings | Embedding model not configured, please configure an embedding model in the settings |
-| E0016 | - | Media provider not configured, please configure a media provider in the settings | Media provider not configured, please configure a media provider in the settings |
-| E0017 | - | Media model not configured, please configure a media model in the settings | Media model not configured, please configure a media model in the settings |
+| E0011 | - | Human verification failed, please try again | Human verification failed, please try again |
+| E0012 | - | Authentication expired, please sign in again | Authentication expired, please sign in again |
+| E0013 | - | This file type is temporarily not supported | This file type is temporarily not supported |
+| E0014 | - | Switching embedding model is not supported temporarily | Switching embedding model is not supported temporarily |
+| E0015 | - | Chat model not configured, please configure a chat model in the settings | Chat model not configured, please configure a chat model in the settings |
+| E0016 | - | Embedding model not configured, please configure an embedding model in the settings | Embedding model not configured, please configure an embedding model in the settings |
+| E0017 | - | Media provider not configured, please configure a media provider in the settings | Media provider not configured, please configure a media provider in the settings |
+| E0018 | - | Media model not configured, please configure a media model in the settings | Media model not configured, please configure a media model in the settings |
 | E1000 | - | Canvas not found, please refresh | Canvas not found, please refresh |
 | E1002 | - | Resource not found, please refresh | Resource not found, please refresh |
 | E1003 | - | Document not found, please refresh | Document not found, please refresh |

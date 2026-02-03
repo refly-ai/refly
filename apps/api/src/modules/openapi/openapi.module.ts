@@ -9,6 +9,7 @@ import { OpenapiWorkflowsController } from './controllers/openapi-workflows.cont
 import { ApiKeyAuthGuard } from './guards/api-key-auth.guard';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { DebounceGuard } from './guards/debounce.guard';
+import { ApiCallTrackingInterceptor } from './interceptors/api-call-tracking.interceptor';
 import { CommonModule } from '../common/common.module';
 import { AuthModule } from '../auth/auth.module';
 import { WorkflowModule } from '../workflow/workflow.module';
@@ -54,7 +55,14 @@ import { CopilotAutogenModule } from '../copilot-autogen/copilot-autogen.module'
     // Future: StorageApiController,
     // Future: KnowledgeApiController,
   ],
-  providers: [OpenapiService, FileUploadService, ApiKeyAuthGuard, RateLimitGuard, DebounceGuard],
+  providers: [
+    OpenapiService,
+    FileUploadService,
+    ApiKeyAuthGuard,
+    RateLimitGuard,
+    DebounceGuard,
+    ApiCallTrackingInterceptor,
+  ],
   exports: [OpenapiService, FileUploadService],
 })
 export class OpenapiModule {}

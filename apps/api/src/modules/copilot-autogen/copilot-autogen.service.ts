@@ -138,9 +138,11 @@ export class CopilotAutogenService {
     const { planRef, reason } = this.extractWorkflowPlanRef(actionResult);
     if (!planRef) {
       this.logger.error(`[Autogen] Failed to extract workflow plan reference: ${reason}`);
-      throw new Error(
+      const error = new Error(
         `Failed to extract workflow plan from Copilot response. ${reason ?? 'Unknown reason'}`,
       );
+      this.attachModelResponse(error, actionResult);
+      throw error;
     }
     this.logger.log(
       `[Autogen] Extracted workflow plan reference: planId=${planRef.planId}, version=${planRef.version}`,
@@ -835,8 +837,27 @@ export class CopilotAutogenService {
       }
 
       if (result.status === 'failed') {
-        this.logger.error(`[Autogen] Action failed: ${JSON.stringify(result.errors)}`);
-        throw new Error(`Copilot execution failed: ${JSON.stringify(result.errors)}`);
+        const errorPayload = Array.isArray(result.errors) ? result.errors[0] : result.errors;
+        let errorText = 'Copilot execution failed';
+        if (errorPayload !== null && errorPayload !== undefined) {
+          if (typeof errorPayload === 'string') {
+            errorText = errorPayload;
+          } else {
+            try {
+              errorText = JSON.stringify(errorPayload);
+            } catch (_stringifyError) {
+              errorText = String(errorPayload);
+            }
+          }
+        }
+        const reason = errorText.startsWith('Copilot execution failed')
+          ? errorText
+          : `Copilot execution failed: ${errorText}`;
+        const detailedReason = this.appendModelResponse(reason, result) ?? reason;
+        this.logger.error(`[Autogen] Action failed: ${reason}`);
+        const error = new Error(detailedReason);
+        this.attachModelResponse(error, result);
+        throw error;
       }
 
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
@@ -866,6 +887,47 @@ export class CopilotAutogenService {
       return `${normalized.slice(0, maxLength)}...`;
     }
     return normalized;
+  }
+
+  private getModelResponseRaw(actionResult: ActionDetail, maxLength = 2000): string | null {
+    const steps = actionResult.steps ?? [];
+    let stepContent: string | undefined;
+    for (let index = steps.length - 1; index >= 0; index -= 1) {
+      const content = steps[index]?.content;
+      if (typeof content === 'string' && content.trim()) {
+        stepContent = content;
+        break;
+      }
+    }
+
+    const messages = actionResult.messages ?? [];
+    let messageContent: string | undefined;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const content = messages[index]?.content;
+      if (typeof content === 'string' && content.trim()) {
+        messageContent = content;
+        break;
+      }
+    }
+
+    const rawContent = stepContent ?? messageContent;
+    if (!rawContent) {
+      return null;
+    }
+    if (!rawContent.trim()) {
+      return null;
+    }
+    if (rawContent.length > maxLength) {
+      return `${rawContent.slice(0, maxLength)}...`;
+    }
+    return rawContent;
+  }
+
+  private attachModelResponse(error: Error, actionResult: ActionDetail): void {
+    const rawResponse = this.getModelResponseRaw(actionResult);
+    if (rawResponse) {
+      (error as Error & { modelResponse?: string }).modelResponse = rawResponse;
+    }
   }
 
   private appendModelResponse(

@@ -5,6 +5,7 @@ import { WebhookManagementController } from './webhook-management.controller';
 import { WebhookAuthGuard } from './guards/webhook-auth.guard';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { DebounceGuard } from './guards/debounce.guard';
+import { WebhookCallTrackingInterceptor } from './interceptors/webhook-call-tracking.interceptor';
 import { CommonModule } from '../common/common.module';
 import { AuthModule } from '../auth/auth.module';
 import { WorkflowModule } from '../workflow/workflow.module';
@@ -25,7 +26,13 @@ import { CanvasModule } from '../canvas/canvas.module';
     CanvasModule,
   ],
   controllers: [WebhookController, WebhookManagementController],
-  providers: [WebhookService, WebhookAuthGuard, RateLimitGuard, DebounceGuard],
+  providers: [
+    WebhookService,
+    WebhookAuthGuard,
+    RateLimitGuard,
+    DebounceGuard,
+    WebhookCallTrackingInterceptor,
+  ],
   exports: [WebhookService],
 })
 export class WebhookModule {}

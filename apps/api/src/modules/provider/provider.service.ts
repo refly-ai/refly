@@ -62,6 +62,11 @@ interface GlobalProviderConfig {
   items: (ProviderItemModel & { provider: ProviderModel })[];
 }
 
+type UserPreferencesWithModelOverride = UserPreferences & {
+  defaultModelOverride?: DefaultModelConfig;
+  defaultModelOverrideEnabled?: boolean;
+};
+
 const PROVIDER_ITEMS_BATCH_LIMIT = 50;
 
 @Injectable()
@@ -993,8 +998,62 @@ export class ProviderService implements OnModuleInit {
     scene: ModelScene,
     userPo?: { preferences: string },
   ): Promise<ProviderItemModel | null> {
-    const userPreferences = await this.getUserPreferences(user, userPo?.preferences);
+    const userPreferences = (await this.getUserPreferences(
+      user,
+      userPo?.preferences,
+    )) as UserPreferencesWithModelOverride;
     const { defaultModel: userDefaultModel } = userPreferences;
+
+    const overrideEnabled = userPreferences?.defaultModelOverrideEnabled === true;
+    const overrideModel = userPreferences?.defaultModelOverride;
+
+    let overrideItemId: string | null = null;
+    if (overrideEnabled && overrideModel) {
+      if (scene === 'chat' && overrideModel?.chat) {
+        overrideItemId = overrideModel.chat.itemId;
+      }
+      if (scene === 'copilot' && overrideModel?.copilot) {
+        overrideItemId = overrideModel.copilot.itemId;
+      }
+      if (scene === 'agent' && overrideModel?.agent) {
+        overrideItemId = overrideModel.agent.itemId;
+      }
+      if (scene === 'titleGeneration' && overrideModel?.titleGeneration) {
+        overrideItemId = overrideModel.titleGeneration.itemId;
+      }
+      if (scene === 'queryAnalysis' && overrideModel?.queryAnalysis) {
+        overrideItemId = overrideModel.queryAnalysis.itemId;
+      }
+      if (scene === 'image' && overrideModel?.image) {
+        overrideItemId = overrideModel.image.itemId;
+      }
+      if (scene === 'video' && overrideModel?.video) {
+        overrideItemId = overrideModel.video.itemId;
+      }
+      if (scene === 'audio' && overrideModel?.audio) {
+        overrideItemId = overrideModel.audio.itemId;
+      }
+    }
+
+    if (overrideItemId) {
+      const overrideProviderItem = await this.prisma.providerItem.findUnique({
+        where: { itemId: overrideItemId, enabled: true, deletedAt: null },
+      });
+
+      if (
+        overrideProviderItem &&
+        (overrideProviderItem.uid === user.uid || !overrideProviderItem.uid)
+      ) {
+        this.logger.log(
+          `Using user override model ${overrideItemId} for scene ${scene} for user ${user.uid}`,
+        );
+        return overrideProviderItem;
+      }
+
+      this.logger.warn(
+        `User override model ${overrideItemId} for scene ${scene} not found or not accessible for user ${user.uid}`,
+      );
+    }
 
     let itemId: string | null = null;
 

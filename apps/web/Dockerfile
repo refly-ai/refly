@@ -2,8 +2,8 @@
 FROM node:20.19.1-alpine3.20 AS builder
 WORKDIR /app
 
-# Install pnpm globally
-RUN npm install -g pnpm
+# Enable corepack and activate pnpm
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 # Set environment variables to skip gyp-related installations
 ENV npm_config_gyp_ignore=true
@@ -18,10 +18,15 @@ COPY apps/web/package.json ./apps/web/
 COPY packages/ ./packages/
 
 # Install dependencies with workspace support
-RUN pnpm install --ignore-scripts
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --ignore-scripts
 
 # Copy remaining source code
 COPY . .
+
+# Build arguments for environment variables
+ARG PUBLIC_CLOUDFLARE_SITE_KEY
+ENV PUBLIC_CLOUDFLARE_SITE_KEY=$PUBLIC_CLOUDFLARE_SITE_KEY
 
 # Build packages in correct order
 RUN pnpm build:web
@@ -51,6 +56,7 @@ window.ENV = {
   SENTRY_ENABLED: "$SENTRY_ENABLED" === "true",
   ENV_TAG: "$ENV_TAG" || undefined,
   DEPLOY_TYPE: "$DEPLOY_TYPE" || undefined,
+  PUBLIC_CLOUDFLARE_SITE_KEY: "$PUBLIC_CLOUDFLARE_SITE_KEY" || undefined,
 };
 EOF
 
