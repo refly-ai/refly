@@ -25,6 +25,26 @@ const ChevronRightIcon = ({ size = 16, className }: { size?: number; className?:
   </svg>
 );
 
+// ChevronLeft icon component
+const ChevronLeftIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path
+      d="M15 18L9 12L15 6"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 interface FileListProps {
   contextItems: IContextItem[];
   canvasId: string;
@@ -47,6 +67,7 @@ export const FileList = memo(
   }: FileListProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [showRightArrow, setShowRightArrow] = useState(false);
+    const [showLeftArrow, setShowLeftArrow] = useState(false);
 
     const fileItems = contextItems.filter((item) => item.type === 'file');
 
@@ -63,13 +84,15 @@ export const FileList = memo(
     // Create a map of uploadId -> UploadProgress for quick lookup
     const uploadMap = new Map(uploads.map((u) => [u.id, u]));
 
-    // Check if right arrow should be shown
+    // Check if arrows should be shown
     const checkScroll = useCallback(() => {
       const el = scrollRef.current;
       if (!el) return;
       const hasOverflow = el.scrollWidth > el.clientWidth;
       const notAtEnd = el.scrollLeft < el.scrollWidth - el.clientWidth - 10;
+      const notAtStart = el.scrollLeft > 10;
       setShowRightArrow(hasOverflow && notAtEnd);
+      setShowLeftArrow(hasOverflow && notAtStart);
     }, []);
 
     useEffect(() => {
@@ -89,8 +112,28 @@ export const FileList = memo(
       scrollRef.current?.scrollBy({ left: 174, behavior: 'smooth' });
     };
 
+    const handleScrollLeft = () => {
+      scrollRef.current?.scrollBy({ left: -174, behavior: 'smooth' });
+    };
+
     return (
       <div className={cn('relative', className)}>
+        {/* Left gradient mask + circular arrow button */}
+        {showLeftArrow && (
+          <div
+            className="absolute left-0 top-0 h-full w-10 flex items-center justify-start cursor-pointer z-10"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(255,255,255,1) 40%, rgba(255,255,255,0) 100%)',
+            }}
+            onClick={handleScrollLeft}
+          >
+            <div className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center bg-white shadow-sm hover:shadow transition-shadow">
+              <ChevronLeftIcon size={16} className="text-gray-700" />
+            </div>
+          </div>
+        )}
+
         {/* Scrollable file cards container - pt-2 to prevent close button clipping */}
         <div ref={scrollRef} className="flex gap-2 overflow-x-auto p-2 scrollbar-hide -m-2">
           {fileItems
@@ -115,14 +158,14 @@ export const FileList = memo(
         {/* Right gradient mask + circular arrow button */}
         {showRightArrow && (
           <div
-            className="absolute right-0 top-0 h-full w-12 flex items-center justify-end cursor-pointer"
+            className="absolute right-0 top-0 h-full w-10 flex items-center justify-end cursor-pointer z-10"
             style={{
               background:
-                'linear-gradient(270deg, rgba(255,255,255,1) 50%, rgba(255,255,255,0) 100%)',
+                'linear-gradient(270deg, rgba(255,255,255,1) 40%, rgba(255,255,255,0) 100%)',
             }}
             onClick={handleScrollRight}
           >
-            <div className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center bg-white shadow-sm hover:shadow transition-shadow mr-1">
+            <div className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center bg-white shadow-sm hover:shadow transition-shadow">
               <ChevronRightIcon size={16} className="text-gray-700" />
             </div>
           </div>
