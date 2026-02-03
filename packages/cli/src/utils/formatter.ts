@@ -161,8 +161,28 @@ export class OutputFormatter {
   // === JSON Format ===
 
   private outputJson(data: unknown): void {
-    console.log(JSON.stringify(data, null, 2));
+    console.log(JSON.stringify(data, this.sanitizeJsonReplacer, 2));
   }
+
+  /**
+   * JSON replacer that sanitizes control characters in strings.
+   * Control characters (U+0000 to U+001F) can break jq parsing.
+   */
+  private sanitizeJsonReplacer = (_key: string, value: unknown): unknown => {
+    if (typeof value === 'string') {
+      // Remove control characters (except \n, \r, \t which are common)
+      // Using character code check to avoid linter issues with control chars in regex
+      return value
+        .split('')
+        .filter((char) => {
+          const code = char.charCodeAt(0);
+          // Allow printable chars (>= 0x20), and \t (0x09), \n (0x0A), \r (0x0D)
+          return code >= 0x20 || code === 0x09 || code === 0x0a || code === 0x0d;
+        })
+        .join('');
+    }
+    return value;
+  };
 
   // === Pretty Format ===
 
