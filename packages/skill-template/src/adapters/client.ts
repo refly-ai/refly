@@ -23,7 +23,7 @@ function getDebugLog() {
 /**
  * Stdio transport restart configuration
  */
-export function createStdioRestartSchema() {
+function createStdioRestartSchema() {
   return z
     .object({
       /**
@@ -48,7 +48,7 @@ export function createStdioRestartSchema() {
 /**
  * Stdio transport connection
  */
-export function createStdioConnectionSchema() {
+function createStdioConnectionSchema() {
   return z
     .object({
       /**
@@ -116,7 +116,7 @@ export function createStdioConnectionSchema() {
 /**
  * Streamable HTTP transport reconnection configuration
  */
-export function createStreamableReconnectSchema() {
+function createStreamableReconnectSchema() {
   return z
     .object({
       /**
@@ -197,7 +197,7 @@ export function createConnectionSchema() {
 /**
  * {@link MultiServerMCPClient} configuration
  */
-export function createClientConfigSchema() {
+function createClientConfigSchema() {
   return z
     .object({
       /**
@@ -289,7 +289,7 @@ export type ResolvedClientConfig = z.infer<ReturnType<typeof createClientConfigS
 /**
  * Error class for MCP client operations
  */
-export class MCPClientError extends Error {
+class MCPClientError extends Error {
   constructor(
     message: string,
     public readonly serverName?: string,

@@ -2,8 +2,8 @@
 FROM node:20.19.1-alpine3.20 AS builder
 WORKDIR /app
 
-# Install pnpm globally
-RUN npm install -g pnpm
+# Enable corepack and activate pnpm
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 # Set environment variables to skip gyp-related installations
 ENV npm_config_gyp_ignore=true
@@ -19,17 +19,14 @@ COPY apps/api/prisma ./apps/api/prisma
 COPY packages/ ./packages/
 
 # Install dependencies with workspace support
-RUN pnpm install --ignore-scripts
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --ignore-scripts
 
 # Copy remaining source code
 COPY . .
 
 # Build packages in correct order
 RUN pnpm build:api
-
-# # Clean up development dependencies
-# RUN rm -rf node_modules
-# RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # wkhtmltopdf stage
 FROM surnet/alpine-wkhtmltopdf:3.20.3-0.12.6-small AS wkhtmltopdf
@@ -79,11 +76,9 @@ COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /app/apps/api/seed-data ./apps/api/seed-data
 COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/packages/ ./packages/
-
-# Set environment variables
-ENV NODE_ENV=production
 
 # Set working directory to the dist directory
 WORKDIR /app/apps/api/dist

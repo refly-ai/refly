@@ -2,7 +2,7 @@
  * Error codes for skill execution.
  */
 
-export const SKILL_EXECUTION_ERROR_CODES = {
+const SKILL_EXECUTION_ERROR_CODES = {
   // Execution lifecycle errors
   EXECUTION_NOT_FOUND: 'EXECUTION_NOT_FOUND',
   EXECUTION_ALREADY_RUNNING: 'EXECUTION_ALREADY_RUNNING',

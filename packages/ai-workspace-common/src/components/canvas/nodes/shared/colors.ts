@@ -4,6 +4,8 @@ export type ResourceFileType =
   | 'application/pdf'
   | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   | 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  | 'application/vnd.ms-excel'
+  | 'text/csv'
   | 'text/markdown'
   | 'text/plain'
   | 'application/epub+zip'
@@ -69,7 +71,9 @@ export const NODE_COLORS: Record<
   'text/markdown': 'var(--refly-text-1)',
   'text/plain': 'var(--refly-Colorful-Blue)',
   'application/epub+zip': 'var(--refly-text-0)',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'var(--refly-Colorful-Blue)',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '#12B76A',
+  'application/vnd.ms-excel': '#12B76A',
+  'text/csv': '#12B76A',
   'text/html': 'var(--refly-Colorful-Blue)',
   // Images
   'image/jpeg': '#02b0c7',
@@ -90,13 +94,6 @@ export const NODE_COLORS: Record<
   'audio/ogg': 'var(--refly-Colorful-red)',
   'audio/aac': 'var(--refly-Colorful-red)',
   'audio/webm': 'var(--refly-Colorful-red)',
-};
-
-export const NODE_MINI_MAP_COLORS = {
-  ...NODE_COLORS,
-  resource: '#40df2b',
-  group: '#bfc5bf',
-  memo: 'transparent',
 };
 
 export const AGENT_CONFIG_KEY_CLASSNAMES = {

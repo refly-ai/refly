@@ -39,5 +39,3 @@ export const ClaimedVoucherPopup = () => {
     />
   );
 };
-
-export default ClaimedVoucherPopup;

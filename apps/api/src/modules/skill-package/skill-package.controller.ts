@@ -14,8 +14,8 @@ import {
   UseGuards,
   Req,
   NotFoundException,
-  Logger,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
@@ -32,6 +32,7 @@ import {
   InstallSkillDto,
   InstallationFilterDto,
   UninstallOptionsDto,
+  UpdateInstallationDto,
   RunSkillDto,
   PaginatedResult,
   SkillPackageResponse,
@@ -98,10 +99,11 @@ export class SkillPackageController {
     return this.skillPackageService.updateSkillPackage(req.user, skillId, input);
   }
 
-  @Delete(':skillId')
-  async deleteSkillPackage(@Req() req: any, @Param('skillId') skillId: string): Promise<void> {
-    return this.skillPackageService.deleteSkillPackage(req.user, skillId);
-  }
+  // DELETE endpoint removed - use uninstall instead
+  // @Delete(':skillId')
+  // async deleteSkillPackage(@Req() req: any, @Param('skillId') skillId: string): Promise<void> {
+  //   return this.skillPackageService.deleteSkillPackage(req.user, skillId);
+  // }
 
   // ===== Workflow Management =====
 
@@ -208,6 +210,15 @@ export class SkillInstallationController {
     return this.skillInstallationService.upgradeSkill(req.user, installationId);
   }
 
+  @Patch(':installationId')
+  async updateInstallation(
+    @Req() req: any,
+    @Param('installationId') installationId: string,
+    @Body() input: UpdateInstallationDto,
+  ): Promise<SkillInstallationResponse> {
+    return this.skillInstallationService.updateInstallation(req.user, installationId, input);
+  }
+
   @Delete(':installationId')
   async uninstallSkill(
     @Req() req: any,
@@ -247,6 +258,21 @@ export class SkillInstallationController {
     @Body() input: RunSkillDto,
   ): Promise<SkillExecutionResult> {
     return this.skillInstallationService.runInstalledSkill(req.user, installationId, input);
+  }
+
+  @Post(':installationId/stop')
+  async stopSkill(
+    @Req() req: any,
+    @Param('installationId') installationId: string,
+  ): Promise<{
+    message: string;
+    installationId: string;
+    stoppedExecutions: Array<{
+      executionId: string;
+      workflowsAborted: number;
+    }>;
+  }> {
+    return this.skillInstallationService.stopRunningExecutions(req.user, installationId);
   }
 }
 
@@ -366,37 +392,38 @@ export class SkillPackageCliController {
     }
   }
 
-  /**
-   * Delete a skill package (CLI format)
-   * DELETE /v1/cli/skill-packages/:skillId
-   */
-  @ApiOperation({ summary: 'Delete skill package' })
-  @ApiResponse({ status: 200, description: 'Skill package deleted' })
-  @ApiResponse({ status: 404, description: 'Skill not found' })
-  @Delete(':skillId')
-  async deleteSkillPackage(
-    @Req() req: any,
-    @Param('skillId') skillId: string,
-  ): Promise<{ ok: true; type: string; version: string; payload: { deleted: boolean } }> {
-    this.logger.log(`Deleting skill package ${skillId} for user ${req.user?.uid}`);
-
-    try {
-      await this.skillPackageService.deleteSkillPackage(req.user, skillId);
-
-      return {
-        ok: true,
-        type: 'skill.delete',
-        version: '1.0',
-        payload: { deleted: true },
-      };
-    } catch (error) {
-      if ((error as any).response?.ok === false) {
-        throw error;
-      }
-
-      const { code, status, hint } = mapErrorToCliCode(error as Error);
-      this.logger.error(`Failed to delete skill package: ${(error as Error).message}`);
-      throwCliError(code, (error as Error).message, hint, status);
-    }
-  }
+  // DELETE endpoint removed - use uninstall instead
+  // /**
+  //  * Delete a skill package (CLI format)
+  //  * DELETE /v1/cli/skill-packages/:skillId
+  //  */
+  // @ApiOperation({ summary: 'Delete skill package' })
+  // @ApiResponse({ status: 200, description: 'Skill package deleted' })
+  // @ApiResponse({ status: 404, description: 'Skill not found' })
+  // @Delete(':skillId')
+  // async deleteSkillPackage(
+  //   @Req() req: any,
+  //   @Param('skillId') skillId: string,
+  // ): Promise<{ ok: true; type: string; version: string; payload: { deleted: boolean } }> {
+  //   this.logger.log(`Deleting skill package ${skillId} for user ${req.user?.uid}`);
+  //
+  //   try {
+  //     await this.skillPackageService.deleteSkillPackage(req.user, skillId);
+  //
+  //     return {
+  //       ok: true,
+  //       type: 'skill.delete',
+  //       version: '1.0',
+  //       payload: { deleted: true },
+  //     };
+  //   } catch (error) {
+  //     if ((error as any).response?.ok === false) {
+  //       throw error;
+  //     }
+  //
+  //     const { code, status, hint } = mapErrorToCliCode(error as Error);
+  //     this.logger.error(`Failed to delete skill package: ${(error as Error).message}`);
+  //     throwCliError(code, (error as Error).message, hint, status);
+  //   }
+  // }
 }

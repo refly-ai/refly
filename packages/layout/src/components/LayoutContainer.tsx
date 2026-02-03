@@ -83,7 +83,7 @@ export function LayoutContainer<T>({
   );
 }
 
-export function useLayoutContainerSlotProps<T>(
+function useLayoutContainerSlotProps<T>(
   RenderLayout: ComponentType<LayoutContainerRenderLayoutProps<T>>,
 ): LayoutContainerSlotProps<T> | null {
   const LayoutSlotPropsContext = getLayoutSlotPropsContext(RenderLayout);

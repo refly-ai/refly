@@ -28,30 +28,6 @@ import type {
   ValidateMcpServerData,
   ValidateMcpServerError,
   ValidateMcpServerResponse2,
-  ListPagesData,
-  ListPagesError,
-  ListPagesResponse2,
-  GetPageDetailData,
-  GetPageDetailError,
-  GetPageDetailResponse,
-  UpdatePageData,
-  UpdatePageError,
-  UpdatePageResponse2,
-  DeletePageData,
-  DeletePageError,
-  DeletePageResponse2,
-  SharePageData,
-  SharePageError,
-  SharePageResponse2,
-  DeletePageNodeData,
-  DeletePageNodeError,
-  DeletePageNodeResponse2,
-  GetPageByCanvasIdData,
-  GetPageByCanvasIdError,
-  GetPageByCanvasIdResponse,
-  AddNodesToCanvasPageData,
-  AddNodesToCanvasPageError,
-  AddNodesToCanvasPageResponse,
   GetAuthConfigError,
   GetAuthConfigResponse,
   RefreshTokenError,
@@ -79,6 +55,17 @@ import type {
   CheckToolOauthStatusData,
   CheckToolOauthStatusError,
   CheckToolOauthStatusResponse,
+  CreateCliApiKeyData2,
+  CreateCliApiKeyError,
+  CreateCliApiKeyResponse2,
+  ListCliApiKeysError,
+  ListCliApiKeysResponse2,
+  RevokeCliApiKeyData,
+  RevokeCliApiKeyError,
+  RevokeCliApiKeyResponse,
+  UpdateCliApiKeyData,
+  UpdateCliApiKeyError,
+  UpdateCliApiKeyResponse,
   GetCollabTokenError,
   GetCollabTokenResponse2,
   ListCanvasesData,
@@ -212,27 +199,6 @@ import type {
   BatchUpdateDocumentData,
   BatchUpdateDocumentError,
   BatchUpdateDocumentResponse,
-  ListProjectsData,
-  ListProjectsError,
-  ListProjectsResponse,
-  GetProjectDetailData,
-  GetProjectDetailError,
-  GetProjectDetailResponse2,
-  CreateProjectData,
-  CreateProjectError,
-  CreateProjectResponse,
-  UpdateProjectData,
-  UpdateProjectError,
-  UpdateProjectResponse,
-  UpdateProjectItemsData,
-  UpdateProjectItemsError,
-  UpdateProjectItemsResponse,
-  DeleteProjectData,
-  DeleteProjectError,
-  DeleteProjectResponse,
-  DeleteProjectItemsData,
-  DeleteProjectItemsError,
-  DeleteProjectItemsResponse,
   ListCodeArtifactsData,
   ListCodeArtifactsError,
   ListCodeArtifactsResponse,
@@ -257,94 +223,21 @@ import type {
   DuplicateShareData,
   DuplicateShareError,
   DuplicateShareResponse2,
-  ListLabelClassesData,
-  ListLabelClassesError,
-  ListLabelClassesResponse2,
-  CreateLabelClassData,
-  CreateLabelClassError,
-  CreateLabelClassResponse,
-  UpdateLabelClassData,
-  UpdateLabelClassError,
-  UpdateLabelClassResponse,
-  DeleteLabelClassData,
-  DeleteLabelClassError,
-  DeleteLabelClassResponse,
-  ListLabelInstancesData,
-  ListLabelInstancesError,
-  ListLabelInstancesResponse2,
-  CreateLabelInstanceData,
-  CreateLabelInstanceError,
-  CreateLabelInstanceResponse,
-  UpdateLabelInstanceData,
-  UpdateLabelInstanceError,
-  UpdateLabelInstanceResponse,
-  DeleteLabelInstanceData,
-  DeleteLabelInstanceError,
-  DeleteLabelInstanceResponse,
-  ListActionsError,
-  ListActionsResponse,
   GetActionResultData,
   GetActionResultError,
   GetActionResultResponse2,
   AbortActionData,
   AbortActionError,
   AbortActionResponse,
-  ListSkillsError,
-  ListSkillsResponse,
   InvokeSkillData,
   InvokeSkillError,
   InvokeSkillResponse2,
   StreamInvokeSkillData,
   StreamInvokeSkillError,
   StreamInvokeSkillResponse,
-  ListSkillInstancesData,
-  ListSkillInstancesError,
-  ListSkillInstancesResponse,
-  CreateSkillInstanceData,
-  CreateSkillInstanceError,
-  CreateSkillInstanceResponse2,
-  UpdateSkillInstanceData,
-  UpdateSkillInstanceError,
-  UpdateSkillInstanceResponse2,
-  PinSkillInstanceData,
-  PinSkillInstanceError,
-  PinSkillInstanceResponse,
-  UnpinSkillInstanceData,
-  UnpinSkillInstanceError,
-  UnpinSkillInstanceResponse,
-  DeleteSkillInstanceData,
-  DeleteSkillInstanceError,
-  DeleteSkillInstanceResponse,
-  ListSkillTriggersData,
-  ListSkillTriggersError,
-  ListSkillTriggersResponse,
-  CreateSkillTriggerData,
-  CreateSkillTriggerError,
-  CreateSkillTriggerResponse2,
-  UpdateSkillTriggerData,
-  UpdateSkillTriggerError,
-  UpdateSkillTriggerResponse2,
-  DeleteSkillTriggerData,
-  DeleteSkillTriggerError,
-  DeleteSkillTriggerResponse,
   GenerateMediaData,
   GenerateMediaError,
   GenerateMediaResponse,
-  CreatePilotSessionData,
-  CreatePilotSessionError,
-  CreatePilotSessionResponse,
-  UpdatePilotSessionData,
-  UpdatePilotSessionError,
-  UpdatePilotSessionResponse,
-  ListPilotSessionsData,
-  ListPilotSessionsError,
-  ListPilotSessionsResponse2,
-  GetPilotSessionDetailData,
-  GetPilotSessionDetailError,
-  GetPilotSessionDetailResponse2,
-  RecoverPilotSessionData,
-  RecoverPilotSessionError,
-  RecoverPilotSessionResponse,
   ListCopilotSessionsData,
   ListCopilotSessionsError,
   ListCopilotSessionsResponse2,
@@ -419,6 +312,57 @@ import type {
   RetryScheduleRecordData,
   RetryScheduleRecordError,
   RetryScheduleRecordResponse2,
+  EnableWebhookData,
+  EnableWebhookError,
+  EnableWebhookResponse2,
+  DisableWebhookData,
+  DisableWebhookError,
+  DisableWebhookResponse,
+  ResetWebhookData,
+  ResetWebhookError,
+  ResetWebhookResponse2,
+  UpdateWebhookData,
+  UpdateWebhookError,
+  UpdateWebhookResponse,
+  GetWebhookConfigData,
+  GetWebhookConfigError,
+  GetWebhookConfigResponse2,
+  GetWebhookHistoryData,
+  GetWebhookHistoryError,
+  GetWebhookHistoryResponse2,
+  RunWebhookData,
+  RunWebhookError,
+  RunWebhookResponse,
+  GetOpenapiConfigData,
+  GetOpenapiConfigError,
+  GetOpenapiConfigResponse,
+  UpdateOpenapiConfigData,
+  UpdateOpenapiConfigError,
+  UpdateOpenapiConfigResponse,
+  UploadOpenapiFilesData,
+  UploadOpenapiFilesError,
+  UploadOpenapiFilesResponse,
+  SearchWorkflowsViaApiData,
+  SearchWorkflowsViaApiError,
+  SearchWorkflowsViaApiResponse,
+  GetWorkflowDetailViaApiData,
+  GetWorkflowDetailViaApiError,
+  GetWorkflowDetailViaApiResponse,
+  RunWorkflowViaApiData,
+  RunWorkflowViaApiError,
+  RunWorkflowViaApiResponse,
+  GenerateWorkflowViaCopilotData,
+  GenerateWorkflowViaCopilotError,
+  GenerateWorkflowViaCopilotResponse,
+  GetWorkflowStatusViaApiData,
+  GetWorkflowStatusViaApiError,
+  GetWorkflowStatusViaApiResponse2,
+  GetWorkflowOutputData,
+  GetWorkflowOutputError,
+  GetWorkflowOutputResponse2,
+  AbortWorkflowViaApiData,
+  AbortWorkflowViaApiError,
+  AbortWorkflowViaApiResponse,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -432,8 +376,6 @@ import type {
   SubmitFormData,
   SubmitFormError,
   SubmitFormResponse,
-  HasFilledFormError,
-  HasFilledFormResponse2,
   GetCreditRechargeData,
   GetCreditRechargeError,
   GetCreditRechargeResponse2,
@@ -459,8 +401,8 @@ import type {
   ActivateInvitationCodeData,
   ActivateInvitationCodeError,
   ActivateInvitationCodeResponse,
-  HasBeenInvitedError,
-  HasBeenInvitedResponse2,
+  SkipInvitationCodeError,
+  SkipInvitationCodeResponse,
   GetSubscriptionPlansError,
   GetSubscriptionPlansResponse2,
   GetSubscriptionUsageError,
@@ -719,122 +661,6 @@ export const validateMcpServer = <ThrowOnError extends boolean = false>(
 };
 
 /**
- * List user pages
- * List all pages for a user
- */
-export const listPages = <ThrowOnError extends boolean = false>(
-  options?: Options<ListPagesData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<ListPagesResponse2, ListPagesError, ThrowOnError>({
-    ...options,
-    url: '/pages',
-  });
-};
-
-/**
- * Get page detail
- * Get detail of a specific page
- */
-export const getPageDetail = <ThrowOnError extends boolean = false>(
-  options: Options<GetPageDetailData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<GetPageDetailResponse, GetPageDetailError, ThrowOnError>({
-    ...options,
-    url: '/pages/{pageId}',
-  });
-};
-
-/**
- * Update a page
- * Update a specific page
- */
-export const updatePage = <ThrowOnError extends boolean = false>(
-  options: Options<UpdatePageData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).put<UpdatePageResponse2, UpdatePageError, ThrowOnError>({
-    ...options,
-    url: '/pages/{pageId}',
-  });
-};
-
-/**
- * Delete a page
- * Delete a specific page
- */
-export const deletePage = <ThrowOnError extends boolean = false>(
-  options: Options<DeletePageData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).delete<DeletePageResponse2, DeletePageError, ThrowOnError>({
-    ...options,
-    url: '/pages/{pageId}',
-  });
-};
-
-/**
- * Share a page
- * Create a share link for a specific page
- */
-export const sharePage = <ThrowOnError extends boolean = false>(
-  options: Options<SharePageData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<SharePageResponse2, SharePageError, ThrowOnError>({
-    ...options,
-    url: '/pages/{pageId}/share',
-  });
-};
-
-/**
- * Delete a node from a page
- * Remove a specific node from a page
- */
-export const deletePageNode = <ThrowOnError extends boolean = false>(
-  options: Options<DeletePageNodeData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).delete<
-    DeletePageNodeResponse2,
-    DeletePageNodeError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/pages/{pageId}/nodes/{nodeId}',
-  });
-};
-
-/**
- * Get page by canvas ID
- * Retrieve the page associated with a specific canvas
- */
-export const getPageByCanvasId = <ThrowOnError extends boolean = false>(
-  options: Options<GetPageByCanvasIdData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<
-    GetPageByCanvasIdResponse,
-    GetPageByCanvasIdError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/pages/canvas/{canvasId}',
-  });
-};
-
-/**
- * Add nodes to canvas page
- * Add nodes to a page associated with a specific canvas. If no page exists, a new one will be created.
- */
-export const addNodesToCanvasPage = <ThrowOnError extends boolean = false>(
-  options: Options<AddNodesToCanvasPageData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    AddNodesToCanvasPageResponse,
-    AddNodesToCanvasPageError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/pages/canvas/{canvasId}/nodes',
-  });
-};
-
-/**
  * Get auth config
  * Get auth config
  */
@@ -977,6 +803,74 @@ export const checkToolOauthStatus = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/auth/tool-oauth/status',
+  });
+};
+
+/**
+ * Create CLI API key
+ * Create a new API key for CLI authentication
+ */
+export const createCliApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCliApiKeyData2, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateCliApiKeyResponse2,
+    CreateCliApiKeyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key',
+  });
+};
+
+/**
+ * List CLI API keys
+ * List API keys for current user
+ */
+export const listCliApiKeys = <ThrowOnError extends boolean = false>(
+  options?: Options<unknown, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    ListCliApiKeysResponse2,
+    ListCliApiKeysError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key',
+  });
+};
+
+/**
+ * Revoke CLI API key
+ * Revoke API key by ID
+ */
+export const revokeCliApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<RevokeCliApiKeyData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).delete<
+    RevokeCliApiKeyResponse,
+    RevokeCliApiKeyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key/{keyId}',
+  });
+};
+
+/**
+ * Update CLI API key
+ * Update API key name
+ */
+export const updateCliApiKey = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateCliApiKeyData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).patch<
+    UpdateCliApiKeyResponse,
+    UpdateCliApiKeyError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/auth/cli/api-key/{keyId}',
   });
 };
 
@@ -1718,109 +1612,6 @@ export const batchUpdateDocument = <ThrowOnError extends boolean = false>(
 };
 
 /**
- * List projects
- * List all projects
- */
-export const listProjects = <ThrowOnError extends boolean = false>(
-  options?: Options<ListProjectsData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<ListProjectsResponse, ListProjectsError, ThrowOnError>({
-    ...options,
-    url: '/project/list',
-  });
-};
-
-/**
- * Get project detail
- * Get project detail by project ID
- */
-export const getProjectDetail = <ThrowOnError extends boolean = false>(
-  options: Options<GetProjectDetailData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<
-    GetProjectDetailResponse2,
-    GetProjectDetailError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/project/detail',
-  });
-};
-
-/**
- * Create new project
- * Create a new project
- */
-export const createProject = <ThrowOnError extends boolean = false>(
-  options: Options<CreateProjectData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<CreateProjectResponse, CreateProjectError, ThrowOnError>({
-    ...options,
-    url: '/project/new',
-  });
-};
-
-/**
- * Update project
- * Update an existing project
- */
-export const updateProject = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateProjectData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<UpdateProjectResponse, UpdateProjectError, ThrowOnError>({
-    ...options,
-    url: '/project/update',
-  });
-};
-
-/**
- * Update items in project
- * Update items in a project
- */
-export const updateProjectItems = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateProjectItemsData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    UpdateProjectItemsResponse,
-    UpdateProjectItemsError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/project/updateItems',
-  });
-};
-
-/**
- * Delete project
- * Delete an existing project
- */
-export const deleteProject = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteProjectData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<DeleteProjectResponse, DeleteProjectError, ThrowOnError>({
-    ...options,
-    url: '/project/delete',
-  });
-};
-
-/**
- * Delete items in project
- * Delete items in a project
- */
-export const deleteProjectItems = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteProjectItemsData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    DeleteProjectItemsResponse,
-    DeleteProjectItemsError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/project/deleteItems',
-  });
-};
-
-/**
  * List code artifacts
  * List all code artifacts
  */
@@ -1945,155 +1736,6 @@ export const duplicateShare = <ThrowOnError extends boolean = false>(
 };
 
 /**
- * List label classes
- * List all label classes
- */
-export const listLabelClasses = <ThrowOnError extends boolean = false>(
-  options?: Options<ListLabelClassesData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<
-    ListLabelClassesResponse2,
-    ListLabelClassesError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/label/class/list',
-  });
-};
-
-/**
- * Create new label class
- * Create a new label class
- */
-export const createLabelClass = <ThrowOnError extends boolean = false>(
-  options: Options<CreateLabelClassData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    CreateLabelClassResponse,
-    CreateLabelClassError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/label/class/new',
-  });
-};
-
-/**
- * Update label class
- * Update an existing label class
- */
-export const updateLabelClass = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateLabelClassData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    UpdateLabelClassResponse,
-    UpdateLabelClassError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/label/class/update',
-  });
-};
-
-/**
- * Delete label class
- * Delete an existing label class
- */
-export const deleteLabelClass = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteLabelClassData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    DeleteLabelClassResponse,
-    DeleteLabelClassError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/label/class/delete',
-  });
-};
-
-/**
- * List labels
- * List all label instances
- */
-export const listLabelInstances = <ThrowOnError extends boolean = false>(
-  options?: Options<ListLabelInstancesData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<
-    ListLabelInstancesResponse2,
-    ListLabelInstancesError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/label/instance/list',
-  });
-};
-
-/**
- * Create new label instance
- * Create new label instance
- */
-export const createLabelInstance = <ThrowOnError extends boolean = false>(
-  options: Options<CreateLabelInstanceData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    CreateLabelInstanceResponse,
-    CreateLabelInstanceError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/label/instance/new',
-  });
-};
-
-/**
- * Update label
- * Update an existing label instance
- */
-export const updateLabelInstance = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateLabelInstanceData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    UpdateLabelInstanceResponse,
-    UpdateLabelInstanceError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/label/instance/update',
-  });
-};
-
-/**
- * Delete label
- * Delete an existing label
- */
-export const deleteLabelInstance = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteLabelInstanceData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    DeleteLabelInstanceResponse,
-    DeleteLabelInstanceError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/label/instance/delete',
-  });
-};
-
-/**
- * List actions
- * List all actions
- */
-export const listActions = <ThrowOnError extends boolean = false>(
-  options?: Options<unknown, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<ListActionsResponse, ListActionsError, ThrowOnError>({
-    ...options,
-    url: '/action/list',
-  });
-};
-
-/**
  * Get action result
  * Get action result by result ID
  */
@@ -2120,19 +1762,6 @@ export const abortAction = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<AbortActionResponse, AbortActionError, ThrowOnError>({
     ...options,
     url: '/action/abort',
-  });
-};
-
-/**
- * List skills
- * List all skills
- */
-export const listSkills = <ThrowOnError extends boolean = false>(
-  options?: Options<unknown, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<ListSkillsResponse, ListSkillsError, ThrowOnError>({
-    ...options,
-    url: '/skill/list',
   });
 };
 
@@ -2167,176 +1796,6 @@ export const streamInvokeSkill = <ThrowOnError extends boolean = false>(
 };
 
 /**
- * List skill instances
- * List skill instances for a user
- */
-export const listSkillInstances = <ThrowOnError extends boolean = false>(
-  options?: Options<ListSkillInstancesData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<
-    ListSkillInstancesResponse,
-    ListSkillInstancesError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/skill/instance/list',
-  });
-};
-
-/**
- * Create new skill instance
- * Create a new skill instance for user
- */
-export const createSkillInstance = <ThrowOnError extends boolean = false>(
-  options: Options<CreateSkillInstanceData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    CreateSkillInstanceResponse2,
-    CreateSkillInstanceError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/skill/instance/new',
-  });
-};
-
-/**
- * Update skill instance
- * Update an existing skill instance
- */
-export const updateSkillInstance = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateSkillInstanceData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    UpdateSkillInstanceResponse2,
-    UpdateSkillInstanceError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/skill/instance/update',
-  });
-};
-
-/**
- * Pin skill instance
- * Pin an existing skill instance
- */
-export const pinSkillInstance = <ThrowOnError extends boolean = false>(
-  options: Options<PinSkillInstanceData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    PinSkillInstanceResponse,
-    PinSkillInstanceError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/skill/instance/pin',
-  });
-};
-
-/**
- * Unpin skill instance
- * Unpin an existing skill instance
- */
-export const unpinSkillInstance = <ThrowOnError extends boolean = false>(
-  options: Options<UnpinSkillInstanceData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    UnpinSkillInstanceResponse,
-    UnpinSkillInstanceError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/skill/instance/unpin',
-  });
-};
-
-/**
- * Delete skill instance
- * Delete an existing skill instance
- */
-export const deleteSkillInstance = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteSkillInstanceData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    DeleteSkillInstanceResponse,
-    DeleteSkillInstanceError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/skill/instance/delete',
-  });
-};
-
-/**
- * List skill triggers
- * List all skill triggers
- */
-export const listSkillTriggers = <ThrowOnError extends boolean = false>(
-  options?: Options<ListSkillTriggersData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<
-    ListSkillTriggersResponse,
-    ListSkillTriggersError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/skill/trigger/list',
-  });
-};
-
-/**
- * Create new trigger
- * Create a new trigger
- */
-export const createSkillTrigger = <ThrowOnError extends boolean = false>(
-  options: Options<CreateSkillTriggerData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    CreateSkillTriggerResponse2,
-    CreateSkillTriggerError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/skill/trigger/new',
-  });
-};
-
-/**
- * Update trigger
- * Update an existing trigger
- */
-export const updateSkillTrigger = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateSkillTriggerData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    UpdateSkillTriggerResponse2,
-    UpdateSkillTriggerError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/skill/trigger/update',
-  });
-};
-
-/**
- * Delete trigger
- * Delete an existing trigger
- */
-export const deleteSkillTrigger = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteSkillTriggerData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    DeleteSkillTriggerResponse,
-    DeleteSkillTriggerError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/skill/trigger/delete',
-  });
-};
-
-/**
  * Generate multimedia content
  * Generate image, video or audio based on the given prompt
  */
@@ -2346,91 +1805,6 @@ export const generateMedia = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<GenerateMediaResponse, GenerateMediaError, ThrowOnError>({
     ...options,
     url: '/media/generate',
-  });
-};
-
-/**
- * Create new pilot session
- * Create a new pilot session
- */
-export const createPilotSession = <ThrowOnError extends boolean = false>(
-  options: Options<CreatePilotSessionData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    CreatePilotSessionResponse,
-    CreatePilotSessionError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/pilot/session/new',
-  });
-};
-
-/**
- * Update pilot session
- * Update an existing pilot session
- */
-export const updatePilotSession = <ThrowOnError extends boolean = false>(
-  options: Options<UpdatePilotSessionData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    UpdatePilotSessionResponse,
-    UpdatePilotSessionError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/pilot/session/update',
-  });
-};
-
-/**
- * List pilot sessions
- * List all pilot sessions
- */
-export const listPilotSessions = <ThrowOnError extends boolean = false>(
-  options?: Options<ListPilotSessionsData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<
-    ListPilotSessionsResponse2,
-    ListPilotSessionsError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/pilot/session/list',
-  });
-};
-
-/**
- * Get pilot session detail
- * Get detail for a pilot session
- */
-export const getPilotSessionDetail = <ThrowOnError extends boolean = false>(
-  options: Options<GetPilotSessionDetailData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<
-    GetPilotSessionDetailResponse2,
-    GetPilotSessionDetailError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/pilot/session/detail',
-  });
-};
-
-/**
- * Recover pilot session
- * Recover a failed pilot session by retrying failed steps. Can recover all failed steps or specific steps.
- */
-export const recoverPilotSession = <ThrowOnError extends boolean = false>(
-  options: Options<RecoverPilotSessionData, ThrowOnError>,
-) => {
-  return (options?.client ?? client).post<
-    RecoverPilotSessionResponse,
-    RecoverPilotSessionError,
-    ThrowOnError
-  >({
-    ...options,
-    url: '/pilot/session/recover',
   });
 };
 
@@ -2854,6 +2228,308 @@ export const retryScheduleRecord = <ThrowOnError extends boolean = false>(
 };
 
 /**
+ * Enable webhook for a canvas
+ * Enable webhook API for a canvas to allow external triggers
+ */
+export const enableWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<EnableWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<EnableWebhookResponse2, EnableWebhookError, ThrowOnError>(
+    {
+      ...options,
+      url: '/webhook/enable',
+    },
+  );
+};
+
+/**
+ * Disable webhook
+ * Disable webhook API for a canvas
+ */
+export const disableWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<DisableWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DisableWebhookResponse,
+    DisableWebhookError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/webhook/disable',
+  });
+};
+
+/**
+ * Reset webhook (generate new ID)
+ * Reset webhook by generating a new webhook ID
+ */
+export const resetWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<ResetWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<ResetWebhookResponse2, ResetWebhookError, ThrowOnError>({
+    ...options,
+    url: '/webhook/reset',
+  });
+};
+
+/**
+ * Update webhook configuration
+ * Update webhook configuration
+ */
+export const updateWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<UpdateWebhookResponse, UpdateWebhookError, ThrowOnError>({
+    ...options,
+    url: '/webhook/update',
+  });
+};
+
+/**
+ * Get webhook configuration for a canvas
+ * Get webhook configuration including webhook ID and status
+ */
+export const getWebhookConfig = <ThrowOnError extends boolean = false>(
+  options: Options<GetWebhookConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWebhookConfigResponse2,
+    GetWebhookConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/webhook/config',
+  });
+};
+
+/**
+ * Get call history for a webhook
+ * Get webhook call history with pagination
+ */
+export const getWebhookHistory = <ThrowOnError extends boolean = false>(
+  options: Options<GetWebhookHistoryData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWebhookHistoryResponse2,
+    GetWebhookHistoryError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/webhook/history',
+  });
+};
+
+/**
+ * Run workflow via webhook
+ * Trigger a webhook to run the linked workflow without authentication.
+ *
+ * **Request Body Rules**:
+ * - If the workflow requires no variables, send an empty body `{}` or `{ "variables": {} }`
+ * - If passing variables, they MUST be wrapped in a "variables" field
+ * - Do NOT pass variables directly at the top level
+ */
+export const runWebhook = <ThrowOnError extends boolean = false>(
+  options: Options<RunWebhookData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<RunWebhookResponse, RunWebhookError, ThrowOnError>({
+    ...options,
+    url: '/openapi/webhook/{webhookId}/run',
+  });
+};
+
+/**
+ * Get OpenAPI configuration for a canvas
+ * Get OpenAPI configuration including output node settings
+ */
+export const getOpenapiConfig = <ThrowOnError extends boolean = false>(
+  options: Options<GetOpenapiConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetOpenapiConfigResponse,
+    GetOpenapiConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/config',
+  });
+};
+
+/**
+ * Update OpenAPI configuration for a canvas
+ * Update OpenAPI configuration including output node settings
+ */
+export const updateOpenapiConfig = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateOpenapiConfigData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UpdateOpenapiConfigResponse,
+    UpdateOpenapiConfigError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/config',
+  });
+};
+
+/**
+ * Upload files for OpenAPI workflow variables
+ * Upload files and get fileKey values for workflow variables. Unused files are cleaned up after about 24 hours.
+ */
+export const uploadOpenapiFiles = <ThrowOnError extends boolean = false>(
+  options: Options<UploadOpenapiFilesData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    UploadOpenapiFilesResponse,
+    UploadOpenapiFilesError,
+    ThrowOnError
+  >({
+    ...options,
+    ...formDataBodySerializer,
+    headers: {
+      'Content-Type': null,
+      ...options?.headers,
+    },
+    url: '/openapi/files/upload',
+  });
+};
+
+/**
+ * Search workflows via API
+ * Search workflows accessible by this API key.
+ */
+export const searchWorkflowsViaApi = <ThrowOnError extends boolean = false>(
+  options?: Options<SearchWorkflowsViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    SearchWorkflowsViaApiResponse,
+    SearchWorkflowsViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflows',
+  });
+};
+
+/**
+ * Get workflow detail via API
+ * Get workflow details and workflow plan by canvas ID.
+ */
+export const getWorkflowDetailViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowDetailViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowDetailViaApiResponse,
+    GetWorkflowDetailViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflows/{canvasId}',
+  });
+};
+
+/**
+ * Run workflow via API (returns execution ID)
+ * Execute a workflow via authenticated API call.
+ * Unlike webhook triggers, this endpoint requires API Key authentication
+ * and returns an execution ID that can be used to track workflow status.
+ *
+ * **Request Body Rules**:
+ * - If the workflow requires no variables, send an empty body `{}` or `{ "variables": {} }`
+ * - If passing variables, they MUST be wrapped in a "variables" field
+ * - Do NOT pass variables directly at the top level
+ *
+ */
+export const runWorkflowViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<RunWorkflowViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    RunWorkflowViaApiResponse,
+    RunWorkflowViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{canvasId}/run',
+  });
+};
+
+/**
+ * Generate workflow via Copilot
+ * Generate a workflow plan from a natural language prompt.
+ * If `canvasId` is provided, the workflow on that canvas will be overwritten and cannot be undone.
+ *
+ */
+export const generateWorkflowViaCopilot = <ThrowOnError extends boolean = false>(
+  options: Options<GenerateWorkflowViaCopilotData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    GenerateWorkflowViaCopilotResponse,
+    GenerateWorkflowViaCopilotError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/copilot/workflow/generate',
+  });
+};
+
+/**
+ * Get workflow execution status via API
+ * Get workflow execution status via authenticated API call.
+ * Requires API Key authentication.
+ *
+ */
+export const getWorkflowStatusViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowStatusViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowStatusViaApiResponse2,
+    GetWorkflowStatusViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{executionId}/status',
+  });
+};
+
+/**
+ * Get workflow execution output via API
+ * Get workflow execution output (output nodes and drive files) via authenticated API call.
+ * Requires API Key authentication.
+ * Messages may include partial content while nodes are executing or failed. Files are returned only after nodes finish.
+ *
+ */
+export const getWorkflowOutput = <ThrowOnError extends boolean = false>(
+  options: Options<GetWorkflowOutputData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).get<
+    GetWorkflowOutputResponse2,
+    GetWorkflowOutputError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{executionId}/output',
+  });
+};
+
+/**
+ * Abort workflow execution via API
+ * Abort a running workflow execution via authenticated API call.
+ * Requires API Key authentication.
+ *
+ */
+export const abortWorkflowViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<AbortWorkflowViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    AbortWorkflowViaApiResponse,
+    AbortWorkflowViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/workflow/{executionId}/abort',
+  });
+};
+
+/**
  * Get user settings
  * Return settings for current user
  */
@@ -2925,19 +2601,6 @@ export const submitForm = <ThrowOnError extends boolean = false>(
   return (options?.client ?? client).post<SubmitFormResponse, SubmitFormError, ThrowOnError>({
     ...options,
     url: '/form/submission',
-  });
-};
-
-/**
- * Check if user has filled the form
- * Check if user has filled the form
- */
-export const hasFilledForm = <ThrowOnError extends boolean = false>(
-  options?: Options<unknown, ThrowOnError>,
-) => {
-  return (options?.client ?? client).get<HasFilledFormResponse2, HasFilledFormError, ThrowOnError>({
-    ...options,
-    url: '/form/hasFilledForm',
   });
 };
 
@@ -3095,19 +2758,19 @@ export const activateInvitationCode = <ThrowOnError extends boolean = false>(
 };
 
 /**
- * Check if user has been invited
- * Check if user has been invited
+ * Skip invitation code
+ * Skip invitation code and proceed to onboarding without rewards
  */
-export const hasBeenInvited = <ThrowOnError extends boolean = false>(
+export const skipInvitationCode = <ThrowOnError extends boolean = false>(
   options?: Options<unknown, ThrowOnError>,
 ) => {
-  return (options?.client ?? client).get<
-    HasBeenInvitedResponse2,
-    HasBeenInvitedError,
+  return (options?.client ?? client).post<
+    SkipInvitationCodeResponse,
+    SkipInvitationCodeError,
     ThrowOnError
   >({
     ...options,
-    url: '/invitation/invited',
+    url: '/invitation/skip',
   });
 };
 

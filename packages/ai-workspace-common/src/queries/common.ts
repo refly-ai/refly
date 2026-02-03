@@ -5,8 +5,8 @@ import { UseQueryResult } from '@tanstack/react-query';
 import {
   abortAction,
   abortWorkflow,
+  abortWorkflowViaApi,
   activateInvitationCode,
-  addNodesToCanvasPage,
   authorizeComposioConnection,
   autoNameCanvas,
   batchCreateDriveFiles,
@@ -23,24 +23,19 @@ import {
   createCanvasTemplate,
   createCanvasVersion,
   createCheckoutSession,
+  createCliApiKey,
   createCodeArtifact,
   createCreditPackCheckoutSession,
   createDocument,
   createDriveFile,
-  createLabelClass,
-  createLabelInstance,
   createMcpServer,
-  createPilotSession,
   createPortalSession,
-  createProject,
   createProvider,
   createProviderItem,
   createResource,
   createResourceWithFile,
   createSchedule,
   createShare,
-  createSkillInstance,
-  createSkillTrigger,
   createToolset,
   createVerification,
   createVoucherInvitation,
@@ -48,27 +43,21 @@ import {
   deleteCanvas,
   deleteDocument,
   deleteDriveFile,
-  deleteLabelClass,
-  deleteLabelInstance,
   deleteMcpServer,
-  deletePage,
-  deletePageNode,
-  deleteProject,
-  deleteProjectItems,
   deleteProvider,
   deleteProviderItem,
   deleteResource,
   deleteSchedule,
   deleteShare,
-  deleteSkillInstance,
-  deleteSkillTrigger,
   deleteToolset,
   deleteWorkflowApp,
+  disableWebhook,
   downloadExportJobResult,
   duplicateCanvas,
   duplicateShare,
   emailLogin,
   emailSignup,
+  enableWebhook,
   executeTool,
   executeWorkflowApp,
   exportCanvas,
@@ -77,6 +66,7 @@ import {
   extractVariables,
   generateAppTemplate,
   generateMedia,
+  generateWorkflowViaCopilot,
   getActionResult,
   getAuthConfig,
   getAvailableTools,
@@ -99,10 +89,7 @@ import {
   getDocumentDetail,
   getExportJobStatus,
   getFormDefinition,
-  getPageByCanvasId,
-  getPageDetail,
-  getPilotSessionDetail,
-  getProjectDetail,
+  getOpenapiConfig,
   getPromptSuggestions,
   getRecordSnapshot,
   getResourceDetail,
@@ -114,42 +101,37 @@ import {
   getSubscriptionUsage,
   getTemplateGenerationStatus,
   getToolCallResult,
+  getWebhookConfig,
+  getWebhookHistory,
   getWorkflowAppDetail,
   getWorkflowDetail,
+  getWorkflowDetailViaApi,
+  getWorkflowOutput,
   getWorkflowPlanDetail,
+  getWorkflowStatusViaApi,
   getWorkflowVariables,
-  hasBeenInvited,
-  hasFilledForm,
   importCanvas,
   initializeWorkflow,
   invokeSkill,
   listAccounts,
-  listActions,
   listAllScheduleRecords,
   listCanvases,
   listCanvasTemplateCategories,
   listCanvasTemplates,
+  listCliApiKeys,
   listCodeArtifacts,
   listCopilotSessions,
   listDocuments,
   listDriveFiles,
   listInvitationCodes,
-  listLabelClasses,
-  listLabelInstances,
   listMcpServers,
   listModels,
-  listPages,
-  listPilotSessions,
-  listProjects,
   listProviderItemOptions,
   listProviderItems,
   listProviders,
   listResources,
   listSchedules,
   listShares,
-  listSkillInstances,
-  listSkills,
-  listSkillTriggers,
   listTools,
   listToolsetInventory,
   listToolsets,
@@ -159,18 +141,21 @@ import {
   listWorkflowExecutions,
   logout,
   multiLingualWebSearch,
-  pinSkillInstance,
-  recoverPilotSession,
   refreshToken,
   reindexResource,
   resendVerification,
+  resetWebhook,
   retryScheduleRecord,
+  revokeCliApiKey,
   revokeComposioConnection,
+  runWebhook,
+  runWorkflowViaApi,
   scrape,
   search,
+  searchWorkflowsViaApi,
   serveStatic,
   setCanvasState,
-  sharePage,
+  skipInvitationCode,
   startExportJob,
   streamInvokeSkill,
   submitForm,
@@ -178,33 +163,28 @@ import {
   testProviderConnection,
   triggerScheduleManually,
   triggerVoucher,
-  unpinSkillInstance,
   updateCanvas,
   updateCanvasTemplate,
+  updateCliApiKey,
   updateCodeArtifact,
   updateDocument,
   updateDriveFile,
-  updateLabelClass,
-  updateLabelInstance,
   updateMcpServer,
-  updatePage,
-  updatePilotSession,
-  updateProject,
-  updateProjectItems,
+  updateOpenapiConfig,
   updateProvider,
   updateProviderItem,
   updateResource,
   updateSchedule,
   updateSettings,
-  updateSkillInstance,
-  updateSkillTrigger,
   updateToolset,
+  updateWebhook,
   updateWorkflowVariables,
   upload,
+  uploadOpenapiFiles,
   validateMcpServer,
   validateVoucher,
   verifyVoucherInvitation,
-} from '../requests/services.gen';
+} from '@refly/openapi-schema';
 export type ListMcpServersDefaultResponse = Awaited<ReturnType<typeof listMcpServers>>['data'];
 export type ListMcpServersQueryResult<
   TData = ListMcpServersDefaultResponse,
@@ -215,38 +195,6 @@ export const UseListMcpServersKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListMcpServersKey, ...(queryKey ?? [clientOptions])];
-export type ListPagesDefaultResponse = Awaited<ReturnType<typeof listPages>>['data'];
-export type ListPagesQueryResult<
-  TData = ListPagesDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListPagesKey = 'ListPages';
-export const UseListPagesKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListPagesKey, ...(queryKey ?? [clientOptions])];
-export type GetPageDetailDefaultResponse = Awaited<ReturnType<typeof getPageDetail>>['data'];
-export type GetPageDetailQueryResult<
-  TData = GetPageDetailDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useGetPageDetailKey = 'GetPageDetail';
-export const UseGetPageDetailKeyFn = (
-  clientOptions: Options<unknown, true>,
-  queryKey?: Array<unknown>,
-) => [useGetPageDetailKey, ...(queryKey ?? [clientOptions])];
-export type GetPageByCanvasIdDefaultResponse = Awaited<
-  ReturnType<typeof getPageByCanvasId>
->['data'];
-export type GetPageByCanvasIdQueryResult<
-  TData = GetPageByCanvasIdDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useGetPageByCanvasIdKey = 'GetPageByCanvasId';
-export const UseGetPageByCanvasIdKeyFn = (
-  clientOptions: Options<unknown, true>,
-  queryKey?: Array<unknown>,
-) => [useGetPageByCanvasIdKey, ...(queryKey ?? [clientOptions])];
 export type GetAuthConfigDefaultResponse = Awaited<ReturnType<typeof getAuthConfig>>['data'];
 export type GetAuthConfigQueryResult<
   TData = GetAuthConfigDefaultResponse,
@@ -279,6 +227,16 @@ export const UseCheckToolOauthStatusKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useCheckToolOauthStatusKey, ...(queryKey ?? [clientOptions])];
+export type ListCliApiKeysDefaultResponse = Awaited<ReturnType<typeof listCliApiKeys>>['data'];
+export type ListCliApiKeysQueryResult<
+  TData = ListCliApiKeysDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useListCliApiKeysKey = 'ListCliApiKeys';
+export const UseListCliApiKeysKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useListCliApiKeysKey, ...(queryKey ?? [clientOptions])];
 export type GetCollabTokenDefaultResponse = Awaited<ReturnType<typeof getCollabToken>>['data'];
 export type GetCollabTokenQueryResult<
   TData = GetCollabTokenDefaultResponse,
@@ -475,26 +433,6 @@ export const UseDownloadExportJobResultKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useDownloadExportJobResultKey, ...(queryKey ?? [clientOptions])];
-export type ListProjectsDefaultResponse = Awaited<ReturnType<typeof listProjects>>['data'];
-export type ListProjectsQueryResult<
-  TData = ListProjectsDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListProjectsKey = 'ListProjects';
-export const UseListProjectsKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListProjectsKey, ...(queryKey ?? [clientOptions])];
-export type GetProjectDetailDefaultResponse = Awaited<ReturnType<typeof getProjectDetail>>['data'];
-export type GetProjectDetailQueryResult<
-  TData = GetProjectDetailDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useGetProjectDetailKey = 'GetProjectDetail';
-export const UseGetProjectDetailKeyFn = (
-  clientOptions: Options<unknown, true>,
-  queryKey?: Array<unknown>,
-) => [useGetProjectDetailKey, ...(queryKey ?? [clientOptions])];
 export type ListCodeArtifactsDefaultResponse = Awaited<
   ReturnType<typeof listCodeArtifacts>
 >['data'];
@@ -529,38 +467,6 @@ export const UseListSharesKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListSharesKey, ...(queryKey ?? [clientOptions])];
-export type ListLabelClassesDefaultResponse = Awaited<ReturnType<typeof listLabelClasses>>['data'];
-export type ListLabelClassesQueryResult<
-  TData = ListLabelClassesDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListLabelClassesKey = 'ListLabelClasses';
-export const UseListLabelClassesKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListLabelClassesKey, ...(queryKey ?? [clientOptions])];
-export type ListLabelInstancesDefaultResponse = Awaited<
-  ReturnType<typeof listLabelInstances>
->['data'];
-export type ListLabelInstancesQueryResult<
-  TData = ListLabelInstancesDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListLabelInstancesKey = 'ListLabelInstances';
-export const UseListLabelInstancesKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListLabelInstancesKey, ...(queryKey ?? [clientOptions])];
-export type ListActionsDefaultResponse = Awaited<ReturnType<typeof listActions>>['data'];
-export type ListActionsQueryResult<
-  TData = ListActionsDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListActionsKey = 'ListActions';
-export const UseListActionsKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListActionsKey, ...(queryKey ?? [clientOptions])];
 export type GetActionResultDefaultResponse = Awaited<ReturnType<typeof getActionResult>>['data'];
 export type GetActionResultQueryResult<
   TData = GetActionResultDefaultResponse,
@@ -571,64 +477,6 @@ export const UseGetActionResultKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetActionResultKey, ...(queryKey ?? [clientOptions])];
-export type ListSkillsDefaultResponse = Awaited<ReturnType<typeof listSkills>>['data'];
-export type ListSkillsQueryResult<
-  TData = ListSkillsDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListSkillsKey = 'ListSkills';
-export const UseListSkillsKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListSkillsKey, ...(queryKey ?? [clientOptions])];
-export type ListSkillInstancesDefaultResponse = Awaited<
-  ReturnType<typeof listSkillInstances>
->['data'];
-export type ListSkillInstancesQueryResult<
-  TData = ListSkillInstancesDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListSkillInstancesKey = 'ListSkillInstances';
-export const UseListSkillInstancesKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListSkillInstancesKey, ...(queryKey ?? [clientOptions])];
-export type ListSkillTriggersDefaultResponse = Awaited<
-  ReturnType<typeof listSkillTriggers>
->['data'];
-export type ListSkillTriggersQueryResult<
-  TData = ListSkillTriggersDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListSkillTriggersKey = 'ListSkillTriggers';
-export const UseListSkillTriggersKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListSkillTriggersKey, ...(queryKey ?? [clientOptions])];
-export type ListPilotSessionsDefaultResponse = Awaited<
-  ReturnType<typeof listPilotSessions>
->['data'];
-export type ListPilotSessionsQueryResult<
-  TData = ListPilotSessionsDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useListPilotSessionsKey = 'ListPilotSessions';
-export const UseListPilotSessionsKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useListPilotSessionsKey, ...(queryKey ?? [clientOptions])];
-export type GetPilotSessionDetailDefaultResponse = Awaited<
-  ReturnType<typeof getPilotSessionDetail>
->['data'];
-export type GetPilotSessionDetailQueryResult<
-  TData = GetPilotSessionDetailDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useGetPilotSessionDetailKey = 'GetPilotSessionDetail';
-export const UseGetPilotSessionDetailKeyFn = (
-  clientOptions: Options<unknown, true>,
-  queryKey?: Array<unknown>,
-) => [useGetPilotSessionDetailKey, ...(queryKey ?? [clientOptions])];
 export type ListCopilotSessionsDefaultResponse = Awaited<
   ReturnType<typeof listCopilotSessions>
 >['data'];
@@ -723,6 +571,86 @@ export const UseGetTemplateGenerationStatusKeyFn = (
   clientOptions: Options<unknown, true>,
   queryKey?: Array<unknown>,
 ) => [useGetTemplateGenerationStatusKey, ...(queryKey ?? [clientOptions])];
+export type GetWebhookConfigDefaultResponse = Awaited<ReturnType<typeof getWebhookConfig>>['data'];
+export type GetWebhookConfigQueryResult<
+  TData = GetWebhookConfigDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWebhookConfigKey = 'GetWebhookConfig';
+export const UseGetWebhookConfigKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWebhookConfigKey, ...(queryKey ?? [clientOptions])];
+export type GetWebhookHistoryDefaultResponse = Awaited<
+  ReturnType<typeof getWebhookHistory>
+>['data'];
+export type GetWebhookHistoryQueryResult<
+  TData = GetWebhookHistoryDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWebhookHistoryKey = 'GetWebhookHistory';
+export const UseGetWebhookHistoryKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWebhookHistoryKey, ...(queryKey ?? [clientOptions])];
+export type GetOpenapiConfigDefaultResponse = Awaited<ReturnType<typeof getOpenapiConfig>>['data'];
+export type GetOpenapiConfigQueryResult<
+  TData = GetOpenapiConfigDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetOpenapiConfigKey = 'GetOpenapiConfig';
+export const UseGetOpenapiConfigKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetOpenapiConfigKey, ...(queryKey ?? [clientOptions])];
+export type SearchWorkflowsViaApiDefaultResponse = Awaited<
+  ReturnType<typeof searchWorkflowsViaApi>
+>['data'];
+export type SearchWorkflowsViaApiQueryResult<
+  TData = SearchWorkflowsViaApiDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useSearchWorkflowsViaApiKey = 'SearchWorkflowsViaApi';
+export const UseSearchWorkflowsViaApiKeyFn = (
+  clientOptions: Options<unknown, true> = {},
+  queryKey?: Array<unknown>,
+) => [useSearchWorkflowsViaApiKey, ...(queryKey ?? [clientOptions])];
+export type GetWorkflowDetailViaApiDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowDetailViaApi>
+>['data'];
+export type GetWorkflowDetailViaApiQueryResult<
+  TData = GetWorkflowDetailViaApiDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWorkflowDetailViaApiKey = 'GetWorkflowDetailViaApi';
+export const UseGetWorkflowDetailViaApiKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWorkflowDetailViaApiKey, ...(queryKey ?? [clientOptions])];
+export type GetWorkflowStatusViaApiDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowStatusViaApi>
+>['data'];
+export type GetWorkflowStatusViaApiQueryResult<
+  TData = GetWorkflowStatusViaApiDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWorkflowStatusViaApiKey = 'GetWorkflowStatusViaApi';
+export const UseGetWorkflowStatusViaApiKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWorkflowStatusViaApiKey, ...(queryKey ?? [clientOptions])];
+export type GetWorkflowOutputDefaultResponse = Awaited<
+  ReturnType<typeof getWorkflowOutput>
+>['data'];
+export type GetWorkflowOutputQueryResult<
+  TData = GetWorkflowOutputDefaultResponse,
+  TError = unknown,
+> = UseQueryResult<TData, TError>;
+export const useGetWorkflowOutputKey = 'GetWorkflowOutput';
+export const UseGetWorkflowOutputKeyFn = (
+  clientOptions: Options<unknown, true>,
+  queryKey?: Array<unknown>,
+) => [useGetWorkflowOutputKey, ...(queryKey ?? [clientOptions])];
 export type GetSettingsDefaultResponse = Awaited<ReturnType<typeof getSettings>>['data'];
 export type GetSettingsQueryResult<
   TData = GetSettingsDefaultResponse,
@@ -757,16 +685,6 @@ export const UseGetFormDefinitionKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useGetFormDefinitionKey, ...(queryKey ?? [clientOptions])];
-export type HasFilledFormDefaultResponse = Awaited<ReturnType<typeof hasFilledForm>>['data'];
-export type HasFilledFormQueryResult<
-  TData = HasFilledFormDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useHasFilledFormKey = 'HasFilledForm';
-export const UseHasFilledFormKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useHasFilledFormKey, ...(queryKey ?? [clientOptions])];
 export type GetCreditRechargeDefaultResponse = Awaited<
   ReturnType<typeof getCreditRecharge>
 >['data'];
@@ -859,16 +777,6 @@ export const UseListInvitationCodesKeyFn = (
   clientOptions: Options<unknown, true> = {},
   queryKey?: Array<unknown>,
 ) => [useListInvitationCodesKey, ...(queryKey ?? [clientOptions])];
-export type HasBeenInvitedDefaultResponse = Awaited<ReturnType<typeof hasBeenInvited>>['data'];
-export type HasBeenInvitedQueryResult<
-  TData = HasBeenInvitedDefaultResponse,
-  TError = unknown,
-> = UseQueryResult<TData, TError>;
-export const useHasBeenInvitedKey = 'HasBeenInvited';
-export const UseHasBeenInvitedKeyFn = (
-  clientOptions: Options<unknown, true> = {},
-  queryKey?: Array<unknown>,
-) => [useHasBeenInvitedKey, ...(queryKey ?? [clientOptions])];
 export type GetSubscriptionPlansDefaultResponse = Awaited<
   ReturnType<typeof getSubscriptionPlans>
 >['data'];
@@ -1107,18 +1015,6 @@ export const UseValidateMcpServerKeyFn = (mutationKey?: Array<unknown>) => [
   useValidateMcpServerKey,
   ...(mutationKey ?? []),
 ];
-export type SharePageMutationResult = Awaited<ReturnType<typeof sharePage>>;
-export const useSharePageKey = 'SharePage';
-export const UseSharePageKeyFn = (mutationKey?: Array<unknown>) => [
-  useSharePageKey,
-  ...(mutationKey ?? []),
-];
-export type AddNodesToCanvasPageMutationResult = Awaited<ReturnType<typeof addNodesToCanvasPage>>;
-export const useAddNodesToCanvasPageKey = 'AddNodesToCanvasPage';
-export const UseAddNodesToCanvasPageKeyFn = (mutationKey?: Array<unknown>) => [
-  useAddNodesToCanvasPageKey,
-  ...(mutationKey ?? []),
-];
 export type RefreshTokenMutationResult = Awaited<ReturnType<typeof refreshToken>>;
 export const useRefreshTokenKey = 'RefreshToken';
 export const UseRefreshTokenKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1159,6 +1055,12 @@ export type LogoutMutationResult = Awaited<ReturnType<typeof logout>>;
 export const useLogoutKey = 'Logout';
 export const UseLogoutKeyFn = (mutationKey?: Array<unknown>) => [
   useLogoutKey,
+  ...(mutationKey ?? []),
+];
+export type CreateCliApiKeyMutationResult = Awaited<ReturnType<typeof createCliApiKey>>;
+export const useCreateCliApiKeyKey = 'CreateCliApiKey';
+export const UseCreateCliApiKeyKeyFn = (mutationKey?: Array<unknown>) => [
+  useCreateCliApiKeyKey,
   ...(mutationKey ?? []),
 ];
 export type ImportCanvasMutationResult = Awaited<ReturnType<typeof importCanvas>>;
@@ -1327,36 +1229,6 @@ export const UseBatchUpdateDocumentKeyFn = (mutationKey?: Array<unknown>) => [
   useBatchUpdateDocumentKey,
   ...(mutationKey ?? []),
 ];
-export type CreateProjectMutationResult = Awaited<ReturnType<typeof createProject>>;
-export const useCreateProjectKey = 'CreateProject';
-export const UseCreateProjectKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreateProjectKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateProjectMutationResult = Awaited<ReturnType<typeof updateProject>>;
-export const useUpdateProjectKey = 'UpdateProject';
-export const UseUpdateProjectKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateProjectKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateProjectItemsMutationResult = Awaited<ReturnType<typeof updateProjectItems>>;
-export const useUpdateProjectItemsKey = 'UpdateProjectItems';
-export const UseUpdateProjectItemsKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateProjectItemsKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteProjectMutationResult = Awaited<ReturnType<typeof deleteProject>>;
-export const useDeleteProjectKey = 'DeleteProject';
-export const UseDeleteProjectKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteProjectKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteProjectItemsMutationResult = Awaited<ReturnType<typeof deleteProjectItems>>;
-export const useDeleteProjectItemsKey = 'DeleteProjectItems';
-export const UseDeleteProjectItemsKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteProjectItemsKey,
-  ...(mutationKey ?? []),
-];
 export type CreateCodeArtifactMutationResult = Awaited<ReturnType<typeof createCodeArtifact>>;
 export const useCreateCodeArtifactKey = 'CreateCodeArtifact';
 export const UseCreateCodeArtifactKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1387,42 +1259,6 @@ export const UseDuplicateShareKeyFn = (mutationKey?: Array<unknown>) => [
   useDuplicateShareKey,
   ...(mutationKey ?? []),
 ];
-export type CreateLabelClassMutationResult = Awaited<ReturnType<typeof createLabelClass>>;
-export const useCreateLabelClassKey = 'CreateLabelClass';
-export const UseCreateLabelClassKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreateLabelClassKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateLabelClassMutationResult = Awaited<ReturnType<typeof updateLabelClass>>;
-export const useUpdateLabelClassKey = 'UpdateLabelClass';
-export const UseUpdateLabelClassKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateLabelClassKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteLabelClassMutationResult = Awaited<ReturnType<typeof deleteLabelClass>>;
-export const useDeleteLabelClassKey = 'DeleteLabelClass';
-export const UseDeleteLabelClassKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteLabelClassKey,
-  ...(mutationKey ?? []),
-];
-export type CreateLabelInstanceMutationResult = Awaited<ReturnType<typeof createLabelInstance>>;
-export const useCreateLabelInstanceKey = 'CreateLabelInstance';
-export const UseCreateLabelInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreateLabelInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateLabelInstanceMutationResult = Awaited<ReturnType<typeof updateLabelInstance>>;
-export const useUpdateLabelInstanceKey = 'UpdateLabelInstance';
-export const UseUpdateLabelInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateLabelInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteLabelInstanceMutationResult = Awaited<ReturnType<typeof deleteLabelInstance>>;
-export const useDeleteLabelInstanceKey = 'DeleteLabelInstance';
-export const UseDeleteLabelInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteLabelInstanceKey,
-  ...(mutationKey ?? []),
-];
 export type AbortActionMutationResult = Awaited<ReturnType<typeof abortAction>>;
 export const useAbortActionKey = 'AbortAction';
 export const UseAbortActionKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1441,76 +1277,10 @@ export const UseStreamInvokeSkillKeyFn = (mutationKey?: Array<unknown>) => [
   useStreamInvokeSkillKey,
   ...(mutationKey ?? []),
 ];
-export type CreateSkillInstanceMutationResult = Awaited<ReturnType<typeof createSkillInstance>>;
-export const useCreateSkillInstanceKey = 'CreateSkillInstance';
-export const UseCreateSkillInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreateSkillInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateSkillInstanceMutationResult = Awaited<ReturnType<typeof updateSkillInstance>>;
-export const useUpdateSkillInstanceKey = 'UpdateSkillInstance';
-export const UseUpdateSkillInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateSkillInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type PinSkillInstanceMutationResult = Awaited<ReturnType<typeof pinSkillInstance>>;
-export const usePinSkillInstanceKey = 'PinSkillInstance';
-export const UsePinSkillInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  usePinSkillInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type UnpinSkillInstanceMutationResult = Awaited<ReturnType<typeof unpinSkillInstance>>;
-export const useUnpinSkillInstanceKey = 'UnpinSkillInstance';
-export const UseUnpinSkillInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useUnpinSkillInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteSkillInstanceMutationResult = Awaited<ReturnType<typeof deleteSkillInstance>>;
-export const useDeleteSkillInstanceKey = 'DeleteSkillInstance';
-export const UseDeleteSkillInstanceKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteSkillInstanceKey,
-  ...(mutationKey ?? []),
-];
-export type CreateSkillTriggerMutationResult = Awaited<ReturnType<typeof createSkillTrigger>>;
-export const useCreateSkillTriggerKey = 'CreateSkillTrigger';
-export const UseCreateSkillTriggerKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreateSkillTriggerKey,
-  ...(mutationKey ?? []),
-];
-export type UpdateSkillTriggerMutationResult = Awaited<ReturnType<typeof updateSkillTrigger>>;
-export const useUpdateSkillTriggerKey = 'UpdateSkillTrigger';
-export const UseUpdateSkillTriggerKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdateSkillTriggerKey,
-  ...(mutationKey ?? []),
-];
-export type DeleteSkillTriggerMutationResult = Awaited<ReturnType<typeof deleteSkillTrigger>>;
-export const useDeleteSkillTriggerKey = 'DeleteSkillTrigger';
-export const UseDeleteSkillTriggerKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeleteSkillTriggerKey,
-  ...(mutationKey ?? []),
-];
 export type GenerateMediaMutationResult = Awaited<ReturnType<typeof generateMedia>>;
 export const useGenerateMediaKey = 'GenerateMedia';
 export const UseGenerateMediaKeyFn = (mutationKey?: Array<unknown>) => [
   useGenerateMediaKey,
-  ...(mutationKey ?? []),
-];
-export type CreatePilotSessionMutationResult = Awaited<ReturnType<typeof createPilotSession>>;
-export const useCreatePilotSessionKey = 'CreatePilotSession';
-export const UseCreatePilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
-  useCreatePilotSessionKey,
-  ...(mutationKey ?? []),
-];
-export type UpdatePilotSessionMutationResult = Awaited<ReturnType<typeof updatePilotSession>>;
-export const useUpdatePilotSessionKey = 'UpdatePilotSession';
-export const UseUpdatePilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdatePilotSessionKey,
-  ...(mutationKey ?? []),
-];
-export type RecoverPilotSessionMutationResult = Awaited<ReturnType<typeof recoverPilotSession>>;
-export const useRecoverPilotSessionKey = 'RecoverPilotSession';
-export const UseRecoverPilotSessionKeyFn = (mutationKey?: Array<unknown>) => [
-  useRecoverPilotSessionKey,
   ...(mutationKey ?? []),
 ];
 export type InitializeWorkflowMutationResult = Awaited<ReturnType<typeof initializeWorkflow>>;
@@ -1621,6 +1391,68 @@ export const UseRetryScheduleRecordKeyFn = (mutationKey?: Array<unknown>) => [
   useRetryScheduleRecordKey,
   ...(mutationKey ?? []),
 ];
+export type EnableWebhookMutationResult = Awaited<ReturnType<typeof enableWebhook>>;
+export const useEnableWebhookKey = 'EnableWebhook';
+export const UseEnableWebhookKeyFn = (mutationKey?: Array<unknown>) => [
+  useEnableWebhookKey,
+  ...(mutationKey ?? []),
+];
+export type DisableWebhookMutationResult = Awaited<ReturnType<typeof disableWebhook>>;
+export const useDisableWebhookKey = 'DisableWebhook';
+export const UseDisableWebhookKeyFn = (mutationKey?: Array<unknown>) => [
+  useDisableWebhookKey,
+  ...(mutationKey ?? []),
+];
+export type ResetWebhookMutationResult = Awaited<ReturnType<typeof resetWebhook>>;
+export const useResetWebhookKey = 'ResetWebhook';
+export const UseResetWebhookKeyFn = (mutationKey?: Array<unknown>) => [
+  useResetWebhookKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateWebhookMutationResult = Awaited<ReturnType<typeof updateWebhook>>;
+export const useUpdateWebhookKey = 'UpdateWebhook';
+export const UseUpdateWebhookKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateWebhookKey,
+  ...(mutationKey ?? []),
+];
+export type RunWebhookMutationResult = Awaited<ReturnType<typeof runWebhook>>;
+export const useRunWebhookKey = 'RunWebhook';
+export const UseRunWebhookKeyFn = (mutationKey?: Array<unknown>) => [
+  useRunWebhookKey,
+  ...(mutationKey ?? []),
+];
+export type UpdateOpenapiConfigMutationResult = Awaited<ReturnType<typeof updateOpenapiConfig>>;
+export const useUpdateOpenapiConfigKey = 'UpdateOpenapiConfig';
+export const UseUpdateOpenapiConfigKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateOpenapiConfigKey,
+  ...(mutationKey ?? []),
+];
+export type UploadOpenapiFilesMutationResult = Awaited<ReturnType<typeof uploadOpenapiFiles>>;
+export const useUploadOpenapiFilesKey = 'UploadOpenapiFiles';
+export const UseUploadOpenapiFilesKeyFn = (mutationKey?: Array<unknown>) => [
+  useUploadOpenapiFilesKey,
+  ...(mutationKey ?? []),
+];
+export type RunWorkflowViaApiMutationResult = Awaited<ReturnType<typeof runWorkflowViaApi>>;
+export const useRunWorkflowViaApiKey = 'RunWorkflowViaApi';
+export const UseRunWorkflowViaApiKeyFn = (mutationKey?: Array<unknown>) => [
+  useRunWorkflowViaApiKey,
+  ...(mutationKey ?? []),
+];
+export type GenerateWorkflowViaCopilotMutationResult = Awaited<
+  ReturnType<typeof generateWorkflowViaCopilot>
+>;
+export const useGenerateWorkflowViaCopilotKey = 'GenerateWorkflowViaCopilot';
+export const UseGenerateWorkflowViaCopilotKeyFn = (mutationKey?: Array<unknown>) => [
+  useGenerateWorkflowViaCopilotKey,
+  ...(mutationKey ?? []),
+];
+export type AbortWorkflowViaApiMutationResult = Awaited<ReturnType<typeof abortWorkflowViaApi>>;
+export const useAbortWorkflowViaApiKey = 'AbortWorkflowViaApi';
+export const UseAbortWorkflowViaApiKeyFn = (mutationKey?: Array<unknown>) => [
+  useAbortWorkflowViaApiKey,
+  ...(mutationKey ?? []),
+];
 export type SubmitFormMutationResult = Awaited<ReturnType<typeof submitForm>>;
 export const useSubmitFormKey = 'SubmitForm';
 export const UseSubmitFormKeyFn = (mutationKey?: Array<unknown>) => [
@@ -1633,6 +1465,12 @@ export type ActivateInvitationCodeMutationResult = Awaited<
 export const useActivateInvitationCodeKey = 'ActivateInvitationCode';
 export const UseActivateInvitationCodeKeyFn = (mutationKey?: Array<unknown>) => [
   useActivateInvitationCodeKey,
+  ...(mutationKey ?? []),
+];
+export type SkipInvitationCodeMutationResult = Awaited<ReturnType<typeof skipInvitationCode>>;
+export const useSkipInvitationCodeKey = 'SkipInvitationCode';
+export const UseSkipInvitationCodeKeyFn = (mutationKey?: Array<unknown>) => [
+  useSkipInvitationCodeKey,
   ...(mutationKey ?? []),
 ];
 export type CreateCheckoutSessionMutationResult = Awaited<ReturnType<typeof createCheckoutSession>>;
@@ -1813,27 +1651,21 @@ export const UseTriggerVoucherKeyFn = (mutationKey?: Array<unknown>) => [
   useTriggerVoucherKey,
   ...(mutationKey ?? []),
 ];
-export type UpdatePageMutationResult = Awaited<ReturnType<typeof updatePage>>;
-export const useUpdatePageKey = 'UpdatePage';
-export const UseUpdatePageKeyFn = (mutationKey?: Array<unknown>) => [
-  useUpdatePageKey,
-  ...(mutationKey ?? []),
-];
 export type UpdateSettingsMutationResult = Awaited<ReturnType<typeof updateSettings>>;
 export const useUpdateSettingsKey = 'UpdateSettings';
 export const UseUpdateSettingsKeyFn = (mutationKey?: Array<unknown>) => [
   useUpdateSettingsKey,
   ...(mutationKey ?? []),
 ];
-export type DeletePageMutationResult = Awaited<ReturnType<typeof deletePage>>;
-export const useDeletePageKey = 'DeletePage';
-export const UseDeletePageKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeletePageKey,
+export type UpdateCliApiKeyMutationResult = Awaited<ReturnType<typeof updateCliApiKey>>;
+export const useUpdateCliApiKeyKey = 'UpdateCliApiKey';
+export const UseUpdateCliApiKeyKeyFn = (mutationKey?: Array<unknown>) => [
+  useUpdateCliApiKeyKey,
   ...(mutationKey ?? []),
 ];
-export type DeletePageNodeMutationResult = Awaited<ReturnType<typeof deletePageNode>>;
-export const useDeletePageNodeKey = 'DeletePageNode';
-export const UseDeletePageNodeKeyFn = (mutationKey?: Array<unknown>) => [
-  useDeletePageNodeKey,
+export type RevokeCliApiKeyMutationResult = Awaited<ReturnType<typeof revokeCliApiKey>>;
+export const useRevokeCliApiKeyKey = 'RevokeCliApiKey';
+export const UseRevokeCliApiKeyKeyFn = (mutationKey?: Array<unknown>) => [
+  useRevokeCliApiKeyKey,
   ...(mutationKey ?? []),
 ];

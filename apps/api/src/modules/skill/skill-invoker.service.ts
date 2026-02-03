@@ -14,11 +14,7 @@ import { FilteredLangfuseCallbackHandler, Trace, getTracer } from '@refly/observ
 import { propagation, context, SpanStatusCode } from '@opentelemetry/api';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
-import {
-  ModelUsageQuotaExceeded,
-  ProjectNotFoundError,
-  WorkflowExecutionNotFoundError,
-} from '@refly/errors';
+import { ModelUsageQuotaExceeded, WorkflowExecutionNotFoundError } from '@refly/errors';
 import {
   ActionMessage,
   ActionResult,
@@ -40,7 +36,13 @@ import {
   SkillRunnableMeta,
   createSkillInventory,
 } from '@refly/skill-template';
-import { genImageID, getWholeParsedContent, safeParseJSON, genTransactionId } from '@refly/utils';
+import {
+  genImageID,
+  getWholeParsedContent,
+  safeParseJSON,
+  genTransactionId,
+  isKnownVisionModel,
+} from '@refly/utils';
 import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
@@ -48,7 +50,6 @@ import * as Y from 'yjs';
 import { countToken } from '@refly/utils/token';
 import {
   QUEUE_AUTO_NAME_CANVAS,
-  QUEUE_SYNC_PILOT_STEP,
   QUEUE_SYNC_REQUEST_USAGE,
   QUEUE_SYNC_TOKEN_USAGE,
 } from '../../utils/const';
@@ -64,8 +65,6 @@ import { PrismaService } from '../common/prisma.service';
 import { CreditUsageStep, SyncBatchTokenCreditUsageJobData } from '../credit/credit.dto';
 import { CreditService } from '../credit/credit.service';
 import { MiscService } from '../misc/misc.service';
-import { SyncPilotStepJobData } from '../pilot/pilot.processor';
-import { projectPO2DTO } from '../project/project.dto';
 import { ProviderService } from '../provider/provider.service';
 import { SkillEngineService } from '../skill/skill-engine.service';
 import { StepService } from '../step/step.service';
@@ -112,14 +111,20 @@ export class SkillInvokerService {
     @Optional()
     @InjectQueue(QUEUE_AUTO_NAME_CANVAS)
     private autoNameCanvasQueue?: Queue<AutoNameCanvasJobData>,
-    @Optional()
-    @InjectQueue(QUEUE_SYNC_PILOT_STEP)
-    private pilotStepQueue?: Queue<SyncPilotStepJobData>,
   ) {
     this.logger.setContext(SkillInvokerService.name);
     this.skillEngine = this.skillEngineService.getEngine();
     this.skillInventory = createSkillInventory(this.skillEngine);
     this.logger.info({ count: this.skillInventory.length }, 'Skill inventory initialized');
+  }
+
+  /**
+   * Check if a model has vision capability, either through explicit config or by matching known vision-capable models.
+   * Known vision-capable models are auto-enabled even if not explicitly configured in the database.
+   */
+  private hasModelVisionCapability(providerItem: ProviderItem | undefined): boolean {
+    const modelConfig = providerItem?.config as LLMModelConfig;
+    return modelConfig?.capabilities?.vision || isKnownVisionModel(modelConfig?.modelId);
   }
 
   private async buildLangchainMessages(
@@ -129,9 +134,9 @@ export class SkillInvokerService {
   ): Promise<BaseMessage[]> {
     const query = result.input?.query || result.title;
 
-    // Only create content array if images exist
+    // Only create content array if images exist and model has vision capability
     let messageContent: string | MessageContentComplex[] = query;
-    if (result.input?.images?.length > 0 && (providerItem?.config as any)?.capabilities?.vision) {
+    if (result.input?.images?.length > 0 && this.hasModelVisionCapability(providerItem)) {
       const imageUrls = await this.miscService.generateImageUrls(user, result.input.images);
       messageContent = [
         { type: 'text', text: query },
@@ -268,7 +273,6 @@ export class SkillInvokerService {
       modelConfigMap,
       provider,
       resultHistory,
-      projectId,
       eventListener,
       toolsets,
     } = data;
@@ -356,12 +360,18 @@ export class SkillInvokerService {
 
     const modelInfo = data.result?.modelInfo;
     const providerInfo = providerItem?.provider ?? provider;
-    const providerConfig = providerItem?.config as any;
+    const providerConfig = providerItem?.config;
     const traceparent =
       typeof data.traceCarrier?.traceparent === 'string'
         ? data.traceCarrier?.traceparent
         : undefined;
     const traceId = traceparent?.split('-')[1];
+    const modelNameFromConfig =
+      providerConfig &&
+      'modelName' in providerConfig &&
+      typeof providerConfig.modelName === 'string'
+        ? providerConfig.modelName
+        : undefined;
 
     setMetadata('runType', 'skill');
     setMetadata('traceId', traceId);
@@ -375,7 +385,7 @@ export class SkillInvokerService {
     setMetadata('resultVersion', data.result?.version);
     setMetadata('status', data.result?.status);
     setMetadata('errorType', data.result?.errorType);
-    setMetadata('modelName', modelInfo?.name ?? providerConfig?.modelName ?? data.modelName);
+    setMetadata('modelName', modelInfo?.name ?? modelNameFromConfig ?? data.modelName);
     setMetadata(
       'modelItemId',
       data.modelItemId ?? modelInfo?.providerItemId ?? data.result?.actualProviderItemId,
@@ -389,15 +399,8 @@ export class SkillInvokerService {
       config.metadata = metadata;
     }
 
-    // Add project info if projectId is provided
-    if (projectId) {
-      const project = await this.prisma.project.findUnique({
-        where: { projectId, uid: user.uid, deletedAt: null },
-      });
-      if (!project) {
-        throw new ProjectNotFoundError(`project ${projectId} not found`);
-      }
-      config.configurable.project = projectPO2DTO(project);
+    if (data.copilotSessionId) {
+      config.configurable.copilotSessionId = data.copilotSessionId;
     }
 
     if (resultHistory?.length > 0) {
@@ -441,6 +444,8 @@ export class SkillInvokerService {
         enabled: true,
       });
     }
+
+    config.configurable.webSearchEnabled = this.config.get<boolean>('tools.webSearchEnabled');
 
     if (eventListener) {
       const emitter = new EventEmitter<SkillEventMap>();
@@ -613,8 +618,35 @@ export class SkillInvokerService {
       ctx?.files
         ?.filter((item) => item.file?.category === 'image' || item.file?.type.startsWith('image/'))
         ?.map((item) => item.file) ?? [];
-    const hasVisionCapability =
-      (data.providerItem?.config as LLMModelConfig)?.capabilities?.vision ?? false;
+
+    const hasVisionCapability = this.hasModelVisionCapability(data.providerItem);
+    const modelConfig = data.providerItem?.config as LLMModelConfig;
+    const modelId = modelConfig?.modelId ?? '';
+
+    // Debug logging for vision capability detection
+    this.logger.info(
+      {
+        filesCount: ctx?.files?.length ?? 0,
+        imageFilesCount: imageFiles.length,
+        hasVisionCapability,
+        explicitVisionConfig: modelConfig?.capabilities?.vision,
+        providerItemId: data.providerItem?.itemId,
+        modelId,
+      },
+      '[Vision Debug] Image processing check',
+    );
+
+    if (imageFiles.length > 0 && !hasVisionCapability) {
+      this.logger.warn(
+        {
+          modelId,
+          imageCount: imageFiles.length,
+          capabilities: modelConfig?.capabilities,
+        },
+        '[Vision Warning] Images found but model does not have vision capability - images will be ignored',
+      );
+    }
+
     const providerWithKey = data.provider as { key?: string } | undefined;
     const providerKey = providerWithKey?.key ?? data.provider?.providerKey ?? '';
     const forceBase64ForImages = providerKey === 'bedrock' || providerKey === 'vertex';
@@ -999,7 +1031,8 @@ export class SkillInvokerService {
               const input = data.input;
               const output = data.output;
               const errorMessage = String(data.errorMessage ?? '');
-              const createdAt = startTs;
+              // Use the actual tool call start time, not the skill invocation start time
+              const createdAt = toolCallStartTimes.get(toolCallId) ?? Date.now();
               const updatedAt = Date.now();
               await this.toolCallService.persistToolCallResult(
                 res,
@@ -1067,7 +1100,7 @@ export class SkillInvokerService {
                       stepName,
                       input: event.data?.input,
                       status: 'executing',
-                      createdAt: startTs,
+                      createdAt: toolStartTs,
                       updatedAt: Date.now(),
                     },
                   });
@@ -1621,14 +1654,6 @@ export class SkillInvokerService {
         ...(messages.length > 0
           ? [this.prisma.actionMessage.createMany({ data: messages, skipDuplicates: true })]
           : []),
-        ...(result.pilotStepId
-          ? [
-              this.prisma.pilotStep.updateMany({
-                where: { stepId: result.pilotStepId },
-                data: { status },
-              }),
-            ]
-          : []),
         ...(result.workflowNodeExecutionId
           ? [
               this.prisma.workflowNodeExecution.updateMany({
@@ -1723,17 +1748,6 @@ export class SkillInvokerService {
           });
         }
         // In desktop mode, we could handle usage tracking differently if needed
-      }
-
-      // Sync pilot step if needed
-      if (result.pilotStepId && this.pilotStepQueue) {
-        this.logger.info(
-          `Sync pilot step for result ${resultId}, pilotStepId: ${result.pilotStepId}`,
-        );
-        await this.pilotStepQueue.add('syncPilotStep', {
-          user: { uid: user.uid },
-          stepId: result.pilotStepId,
-        });
       }
 
       await resultAggregator.clearCache();

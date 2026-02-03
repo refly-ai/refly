@@ -58,6 +58,6 @@ export abstract class BaseWebSearcher {
    */
   protected defaultFallback(error: any): WebSearchResult[] {
     this.logger.error(`Web search failed: ${error?.message || 'Unknown error'}`);
-    return [];
+    throw error;
   }
 }

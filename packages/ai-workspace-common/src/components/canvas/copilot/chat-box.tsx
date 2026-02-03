@@ -5,199 +5,339 @@ import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canva
 import { genActionResultID, genCopilotSessionID } from '@refly/utils/id';
 import { useActionResultStoreShallow, useCopilotStoreShallow } from '@refly/stores';
 import { ChatInput } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-input';
-import { ChatActions } from '@refly-packages/ai-workspace-common/components/canvas/launchpad/chat-actions';
 import { useTranslation } from 'react-i18next';
 import { useListCopilotSessions } from '@refly-packages/ai-workspace-common/queries';
 import { logEvent } from '@refly/telemetry-web';
+import { FileList } from './file-list';
+import { CopilotActions } from './copilot-actions';
+import { useFileUpload } from '@refly-packages/ai-workspace-common/hooks/use-file-upload';
+
+const MAX_FILE_COUNT = 10;
 
 interface ChatBoxProps {
   canvasId: string;
   query: string;
   setQuery: (query: string) => void;
   onSendMessage?: () => void;
+  onRegisterFileUploadHandler?: (handler: (files: File[]) => Promise<void>) => void;
+  onUploadDisabledChange?: (disabled: boolean) => void;
 }
 
-export const ChatBox = memo(({ canvasId, query, setQuery, onSendMessage }: ChatBoxProps) => {
-  const { t } = useTranslation();
-  const initialPromptProcessed = useRef(false);
+export const ChatBox = memo(
+  ({
+    canvasId,
+    query,
+    setQuery,
+    onSendMessage,
+    onRegisterFileUploadHandler,
+    onUploadDisabledChange,
+  }: ChatBoxProps) => {
+    const { t } = useTranslation();
+    const initialPromptProcessed = useRef(false);
 
-  const { refetch: refetchHistorySessions } = useListCopilotSessions(
-    {
-      query: {
-        canvasId,
+    const {
+      contextItems,
+      fileCount,
+      hasUploadingFiles,
+      completedFileItems,
+      relevantUploads,
+      handleFileUpload,
+      handleRetryFile,
+      handleRemoveFile,
+      clearFiles,
+    } = useFileUpload({
+      canvasId,
+      maxFileCount: MAX_FILE_COUNT,
+      maxFileSize: 50 * 1024 * 1024,
+    });
+
+    useEffect(() => {
+      onUploadDisabledChange?.(fileCount >= MAX_FILE_COUNT);
+    }, [fileCount, onUploadDisabledChange]);
+
+    const { refetch: refetchHistorySessions } = useListCopilotSessions(
+      {
+        query: {
+          canvasId,
+        },
       },
-    },
-    [],
-    { enabled: false },
-  );
-
-  const {
-    currentSessionId,
-    setCurrentSessionId,
-    appendSessionResultId,
-    setCreatedCopilotSessionId,
-    sessionResultIds,
-    addHistoryTemplateSession,
-    pendingPrompt,
-    setPendingPrompt,
-    nodeEditContext,
-  } = useCopilotStoreShallow((state) => ({
-    currentSessionId: state.currentSessionId[canvasId],
-    setCurrentSessionId: state.setCurrentSessionId,
-    appendSessionResultId: state.appendSessionResultId,
-    setCreatedCopilotSessionId: state.setCreatedCopilotSessionId,
-    sessionResultIds: state.sessionResultIds[state.currentSessionId?.[canvasId]],
-    addHistoryTemplateSession: state.addHistoryTemplateSession,
-    pendingPrompt: state.pendingPrompt[canvasId],
-    setPendingPrompt: state.setPendingPrompt,
-    nodeEditContext: state.nodeEditContext[canvasId],
-  }));
-
-  const { resultMap } = useActionResultStoreShallow((state) => ({
-    resultMap: state.resultMap,
-  }));
-
-  const results = useMemo(() => {
-    return sessionResultIds?.map((resultId) => resultMap[resultId]) ?? [];
-  }, [sessionResultIds, resultMap]);
-
-  const currentExecutingResult = useMemo(() => {
-    return (
-      results.find((result) => ['executing', 'waiting'].includes(result?.status ?? '')) ?? null
+      [],
+      { enabled: false },
     );
-  }, [results]);
 
-  const isExecuting = !!currentExecutingResult;
-
-  const firstResult = useMemo(() => {
-    return results?.[0] ?? null;
-  }, [results]);
-
-  useEffect(() => {
-    if (['finish', 'failed'].includes(firstResult?.status ?? '')) {
-      refetchHistorySessions();
-    }
-  }, [firstResult?.status, refetchHistorySessions]);
-
-  const { invokeAction, abortAction } = useInvokeAction();
-
-  const handleSendMessage = useCallback(
-    async (type: 'input_enter_send' | 'button_click_send', customQuery?: string) => {
-      const messageQuery = customQuery ?? query;
-      if (isExecuting || !messageQuery?.trim()) {
-        return;
-      }
-
-      const resultId = genActionResultID();
-      let sessionId = currentSessionId;
-
-      if (!sessionId) {
-        sessionId = genCopilotSessionID();
-      }
-      onSendMessage?.();
-      logEvent('copilot_prompt_sent', Date.now(), {
-        source: type,
-      });
-
-      invokeAction(
-        {
-          query: messageQuery,
-          resultId,
-          modelInfo: null,
-          agentMode: 'copilot_agent',
-          copilotSessionId: sessionId,
-          nodeEditContext: nodeEditContext ?? undefined,
-        },
-        {
-          entityId: canvasId,
-          entityType: 'canvas',
-        },
-      );
-      if (!customQuery) {
-        setQuery('');
-      }
-
-      setCurrentSessionId(canvasId, sessionId);
-      appendSessionResultId(sessionId, resultId);
-      setCreatedCopilotSessionId(sessionId);
-      addHistoryTemplateSession(canvasId, {
-        sessionId,
-        title: messageQuery,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-    },
-    [
-      isExecuting,
+    const {
       currentSessionId,
-      query,
+      setCurrentSessionId,
+      appendSessionResultId,
+      setCreatedCopilotSessionId,
+      sessionResultIds,
+      addHistoryTemplateSession,
+      pendingPrompt,
+      pendingFiles,
+      setPendingPrompt,
+      setPendingFiles,
+      nodeEditContext,
+    } = useCopilotStoreShallow((state) => ({
+      currentSessionId: state.currentSessionId[canvasId],
+      setCurrentSessionId: state.setCurrentSessionId,
+      appendSessionResultId: state.appendSessionResultId,
+      setCreatedCopilotSessionId: state.setCreatedCopilotSessionId,
+      sessionResultIds: state.sessionResultIds[state.currentSessionId?.[canvasId]],
+      addHistoryTemplateSession: state.addHistoryTemplateSession,
+      pendingPrompt: state.pendingPrompt[canvasId],
+      pendingFiles: state.pendingFiles[canvasId],
+      setPendingPrompt: state.setPendingPrompt,
+      setPendingFiles: state.setPendingFiles,
+      nodeEditContext: state.nodeEditContext[canvasId],
+    }));
+
+    const { resultMap } = useActionResultStoreShallow((state) => ({
+      resultMap: state.resultMap,
+    }));
+
+    const results = useMemo(() => {
+      return sessionResultIds?.map((resultId) => resultMap[resultId]) ?? [];
+    }, [sessionResultIds, resultMap]);
+
+    const currentExecutingResult = useMemo(() => {
+      return (
+        results.find((result) => ['executing', 'waiting'].includes(result?.status ?? '')) ?? null
+      );
+    }, [results]);
+
+    const isExecuting = !!currentExecutingResult;
+
+    const firstResult = useMemo(() => {
+      return results?.[0] ?? null;
+    }, [results]);
+
+    useEffect(() => {
+      if (['finish', 'failed'].includes(firstResult?.status ?? '')) {
+        refetchHistorySessions();
+      }
+    }, [firstResult?.status, refetchHistorySessions]);
+
+    const { invokeAction, abortAction } = useInvokeAction();
+
+    // Register file upload handler for drag-and-drop from parent
+    useEffect(() => {
+      if (onRegisterFileUploadHandler) {
+        onRegisterFileUploadHandler(async (files: File[]) => {
+          await Promise.all(files.map((file) => handleFileUpload(file)));
+        });
+      }
+    }, [onRegisterFileUploadHandler, handleFileUpload]);
+
+    const handleSendMessage = useCallback(
+      async (type: 'input_enter_send' | 'button_click_send', customQuery?: string) => {
+        const messageQuery = customQuery ?? query;
+        const hasCompletedFiles = completedFileItems.length > 0;
+
+        if (hasUploadingFiles) {
+          message.info(t('copilot.uploadInProgress'));
+          return;
+        }
+
+        if (isExecuting || (!messageQuery?.trim() && !hasCompletedFiles)) {
+          return;
+        }
+
+        const resultId = genActionResultID();
+        let sessionId = currentSessionId;
+
+        if (!sessionId) {
+          sessionId = genCopilotSessionID();
+        }
+        onSendMessage?.();
+        logEvent('copilot_prompt_sent', Date.now(), {
+          source: type,
+        });
+
+        invokeAction(
+          {
+            query: messageQuery,
+            resultId,
+            modelInfo: null,
+            agentMode: 'copilot_agent',
+            copilotSessionId: sessionId,
+            contextItems: completedFileItems,
+            nodeEditContext: nodeEditContext ?? undefined,
+          },
+          {
+            entityId: canvasId,
+            entityType: 'canvas',
+          },
+        );
+        if (!customQuery) {
+          setQuery('');
+        }
+        clearFiles();
+
+        setCurrentSessionId(canvasId, sessionId);
+        appendSessionResultId(sessionId, resultId);
+        setCreatedCopilotSessionId(sessionId);
+        addHistoryTemplateSession(canvasId, {
+          sessionId,
+          title: messageQuery || t('copilot.fileAttachment'),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      },
+      [
+        isExecuting,
+        hasUploadingFiles,
+        currentSessionId,
+        query,
+        completedFileItems,
+        canvasId,
+        invokeAction,
+        setQuery,
+        clearFiles,
+        setCurrentSessionId,
+        appendSessionResultId,
+        setCreatedCopilotSessionId,
+        t,
+        addHistoryTemplateSession,
+        onSendMessage,
+        nodeEditContext,
+      ],
+    );
+
+    useEffect(() => {
+      if (pendingPrompt && !initialPromptProcessed.current) {
+        initialPromptProcessed.current = true;
+
+        const filesToSend = pendingFiles ?? [];
+
+        const resultId = genActionResultID();
+        let sessionId = currentSessionId;
+
+        if (!sessionId) {
+          sessionId = genCopilotSessionID();
+        }
+
+        onSendMessage?.();
+        logEvent('copilot_prompt_sent', Date.now(), {
+          source: 'pending_prompt',
+        });
+
+        invokeAction(
+          {
+            query: pendingPrompt,
+            resultId,
+            modelInfo: null,
+            agentMode: 'copilot_agent',
+            copilotSessionId: sessionId,
+            contextItems: filesToSend,
+            nodeEditContext: nodeEditContext ?? undefined,
+          },
+          {
+            entityId: canvasId,
+            entityType: 'canvas',
+          },
+        );
+
+        setCurrentSessionId(canvasId, sessionId);
+        appendSessionResultId(sessionId, resultId);
+        setCreatedCopilotSessionId(sessionId);
+        addHistoryTemplateSession(canvasId, {
+          sessionId,
+          title: pendingPrompt || t('copilot.fileAttachment'),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        setPendingPrompt(canvasId, null);
+        setPendingFiles(canvasId, null);
+      }
+    }, [
+      pendingPrompt,
+      pendingFiles,
+      currentSessionId,
       canvasId,
       invokeAction,
-      setQuery,
       setCurrentSessionId,
       appendSessionResultId,
       setCreatedCopilotSessionId,
       addHistoryTemplateSession,
+      setPendingPrompt,
+      setPendingFiles,
+      onSendMessage,
+      t,
       nodeEditContext,
-      logEvent,
-    ],
-  );
+    ]);
 
-  useEffect(() => {
-    if (pendingPrompt && !initialPromptProcessed.current) {
-      initialPromptProcessed.current = true;
-      handleSendMessage('button_click_send', pendingPrompt);
+    const handleAbort = useCallback(() => {
+      if (!currentExecutingResult) {
+        return;
+      }
 
-      // Clean up store
-      setPendingPrompt(canvasId, null);
-    }
-  }, [pendingPrompt, handleSendMessage, setPendingPrompt, canvasId]);
+      Modal.confirm({
+        title: t('copilot.abortConfirmModal.title'),
+        content: t('copilot.abortConfirmModal.content'),
+        okText: t('copilot.abortConfirmModal.confirm'),
+        cancelText: t('copilot.abortConfirmModal.cancel'),
+        icon: null,
+        centered: true,
+        okButtonProps: {
+          className: '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
+        },
+        onOk: async () => {
+          await abortAction(currentExecutingResult.resultId);
+          message.success(t('copilot.abortSuccess'));
+        },
+      });
+    }, [currentExecutingResult, abortAction, t]);
 
-  const handleAbort = useCallback(() => {
-    if (!currentExecutingResult) {
-      return;
-    }
-
-    Modal.confirm({
-      title: t('copilot.abortConfirmModal.title'),
-      content: t('copilot.abortConfirmModal.content'),
-      okText: t('copilot.abortConfirmModal.confirm'),
-      cancelText: t('copilot.abortConfirmModal.cancel'),
-      icon: null,
-      centered: true,
-      okButtonProps: {
-        className: '!bg-[#0E9F77] !border-[#0E9F77] hover:!bg-[#0C8A66] hover:!border-[#0C8A66]',
-      },
-      onOk: async () => {
-        await abortAction(currentExecutingResult.resultId);
-        message.success(t('copilot.abortSuccess'));
-      },
-    });
-  }, [currentExecutingResult, abortAction, t]);
-
-  return (
-    <div className="w-full p-3 rounded-xl overflow-hidden border-[1px] border-solid border-refly-primary-default ">
-      <ChatInput
-        readonly={false}
-        query={query}
-        setQuery={(value) => {
-          setQuery(value);
+    return (
+      <div
+        className="w-full p-3 rounded-xl overflow-hidden border-[0.5px] border-solid border-[rgba(0,0,0,0.1)] bg-[rgba(255,255,255,0.9)]"
+        style={{
+          boxShadow: '0px 5px 30px 0px rgba(31,35,41,0.05), 0px 0px 2px 0px rgba(31,35,41,0.04)',
         }}
-        maxRows={6}
-        handleSendMessage={() => handleSendMessage('input_enter_send')}
-        placeholder={t('copilot.placeholder')}
-      />
+      >
+        {/* File list area */}
+        {fileCount > 0 && (
+          <FileList
+            contextItems={contextItems}
+            canvasId={canvasId}
+            onRemove={handleRemoveFile}
+            onRetry={handleRetryFile}
+            uploads={relevantUploads}
+            className="mb-3"
+          />
+        )}
 
-      <ChatActions
-        query={query}
-        handleSendMessage={() => handleSendMessage('button_click_send')}
-        onUploadImage={() => Promise.resolve()}
-        isExecuting={isExecuting}
-        showLeftActions={false}
-        handleAbort={handleAbort}
-      />
-    </div>
-  );
-});
+        {/* Input area */}
+        <ChatInput
+          readonly={false}
+          query={query}
+          setQuery={(value) => {
+            setQuery(value);
+          }}
+          maxRows={6}
+          handleSendMessage={() => handleSendMessage('input_enter_send')}
+          placeholder={t('copilot.placeholder')}
+          onUploadImage={handleFileUpload}
+          onUploadMultipleImages={async (files) => {
+            // Upload files in parallel
+            await Promise.all(files.map((file) => handleFileUpload(file)));
+          }}
+        />
+
+        {/* Bottom action bar */}
+        <CopilotActions
+          query={query}
+          fileCount={fileCount}
+          maxFileCount={MAX_FILE_COUNT}
+          isExecuting={isExecuting}
+          onUploadFile={handleFileUpload}
+          onSendMessage={() => handleSendMessage('button_click_send')}
+          onAbort={handleAbort}
+        />
+      </div>
+    );
+  },
+);
 
 ChatBox.displayName = 'ChatBox';

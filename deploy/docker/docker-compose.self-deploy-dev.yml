@@ -1,0 +1,99 @@
+# Self-deploy development mode
+# Usage: docker compose -f docker-compose.self-deploy-dev.yml up -d
+#
+# This mode is designed for fast iteration during self-deploy development:
+#   - API: Uses pre-built image with local dist mounted for hot reload
+#   - Web: Uses pre-built dev image
+#
+# Exposed ports (4xxxx prefix to avoid conflicts with local dev 3xxxx):
+#   API:          45800
+#   PostgreSQL:   45432
+#   MinIO API:    49000
+#   MinIO Console:49001
+#   Redis:        46379
+#   RedisInsight: 48001
+#   Qdrant HTTP:  46333
+#   Qdrant gRPC:  46334
+#   SearXNG:      48080
+#   Sandbox:      48088
+#
+# Workflow:
+#   1. Start: docker compose -p refly_self_deploy -f docker-compose.self-deploy-dev.yml up -d
+#   2. After API changes: pnpm build:api, and then docker compose -p refly_self_deploy restart api
+
+services:
+  api:
+    extends:
+      file: docker-compose.services.yml
+      service: api
+    image: reflyai/refly-api:dev
+    ports:
+      - "45800:5800"
+    volumes:
+      - ../../apps/api/dist:/app/dist:ro
+      - ../../apps/api/seed-data:/app/seed-data:ro
+      # Note: After pnpm deploy, workspace packages are in node_modules
+      # No need to mount individual package dist directories
+
+  web:
+    extends:
+      file: docker-compose.services.yml
+      service: web
+    image: reflyai/refly-web:dev
+    ports:
+      - 5700:80
+
+  db:
+    extends:
+      file: docker-compose.base.yml
+      service: db
+    ports:
+      - "45432:5432"
+
+  minio:
+    extends:
+      file: docker-compose.base.yml
+      service: minio
+    ports:
+      - "49000:9000"
+      - "49001:9001"
+
+  redis:
+    extends:
+      file: docker-compose.base.yml
+      service: redis
+    ports:
+      - "46379:6379"
+      - "48001:8001"
+
+  qdrant:
+    extends:
+      file: docker-compose.base.yml
+      service: qdrant
+    ports:
+      - "46333:6333"
+      - "46334:6334"
+
+  searxng:
+    extends:
+      file: docker-compose.base.yml
+      service: searxng
+    ports:
+      - "48080:8080"
+
+  sandbox:
+    extends:
+      file: docker-compose.base.yml
+      service: sandbox
+    ports:
+      - "48088:8080"
+
+networks:
+  refly_network:
+    driver: bridge
+
+volumes:
+  db_data:
+  minio_data:
+  redis_data:
+  qdrant_data:

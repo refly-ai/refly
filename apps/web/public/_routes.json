@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/static/*",
+    "/assets/*",
+    "/favicon.ico",
+    "/logo.svg",
+    "/config.js",
+    "/service-worker.*.js",
+    "/precache.*.json"
+  ]
+}

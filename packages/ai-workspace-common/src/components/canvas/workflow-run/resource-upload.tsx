@@ -1,15 +1,9 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button, Upload, Spin, Tooltip } from 'antd';
 import { Attachment } from 'refly-icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useTranslation } from 'react-i18next';
 import cn from 'classnames';
-import {
-  IMAGE_FILE_EXTENSIONS,
-  DOCUMENT_FILE_EXTENSIONS,
-  AUDIO_FILE_EXTENSIONS,
-  VIDEO_FILE_EXTENSIONS,
-} from '../workflow-variables/constants';
 import { ImageFileIcon, RepeatIcon, TrashIcon } from './resource-upload-icons';
 
 interface ResourceUploadProps {
@@ -33,7 +27,6 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
     onUpload,
     onRemove,
     onRefresh,
-    resourceTypes,
     disabled = false,
     maxCount = 1,
     className,
@@ -77,31 +70,6 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
       }
     }, [onRefresh]);
 
-    // Generate accept attribute based on resource types
-    const accept = useMemo(() => {
-      if (!resourceTypes?.length) {
-        return '';
-      }
-
-      return resourceTypes
-        .map((type) => {
-          switch (type) {
-            case 'document':
-              return DOCUMENT_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
-            case 'image':
-              return IMAGE_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
-            case 'audio':
-              return AUDIO_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
-            case 'video':
-              return VIDEO_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
-            default:
-              return '';
-          }
-        })
-        .filter(Boolean)
-        .join(',');
-    }, [resourceTypes]);
-
     return (
       <div className={`space-y-2 ${className || ''}`} data-field-name={dataFieldName}>
         <Upload
@@ -110,8 +78,7 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
           beforeUpload={handleFileUpload}
           onRemove={handleFileRemove}
           onChange={() => {}} // Handle change is managed by our custom handlers
-          multiple={false}
-          accept={accept}
+          multiple={maxCount > 1}
           listType="text"
           disabled={disabled || uploading}
           maxCount={maxCount}
@@ -156,7 +123,7 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
             </Spin>
           )}
         >
-          {(!value || value.length === 0) && (
+          {(!value || value.length === 0 || (maxCount > 1 && value.length < maxCount)) && (
             <Button
               className={`w-full h-[37px] !border-[#E5E5E5] !rounded-xl hover:!border-[#155EEF] ${hasError ? '!border-[#F04438]' : ''}`}
               type="default"

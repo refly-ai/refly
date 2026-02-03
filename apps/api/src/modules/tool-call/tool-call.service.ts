@@ -7,11 +7,6 @@ import { writeSSEResponse } from '../../utils/response';
 import { PrismaService } from '../common/prisma.service';
 import { ActionStep, ToolCallResult } from '@prisma/client';
 import { sanitizeToolOutput } from '../action/action.dto';
-export type ToolEventPayload = {
-  run_id?: string;
-  metadata?: { toolsetKey?: string; name?: string };
-  data?: { input?: unknown; output?: unknown; error?: unknown };
-};
 
 // Tool call status
 export enum ToolCallStatus {

@@ -77,35 +77,26 @@ export class ApiKeyService {
    * @returns User UID if valid, null otherwise
    */
   async validateApiKey(apiKey: string): Promise<string | null> {
-    if (!apiKey || !apiKey.startsWith('rf_')) {
-      return null;
-    }
-
-    const keyHash = this.hashApiKey(apiKey);
-
-    const keyRecord = await this.prisma.userApiKey.findFirst({
-      where: {
-        keyHash,
-        revokedAt: null,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-      },
-    });
-
+    const keyRecord = await this.findValidApiKeyRecord(apiKey);
     if (!keyRecord) {
       return null;
     }
 
-    // Update last used timestamp (fire and forget)
-    this.prisma.userApiKey
-      .update({
-        where: { pk: keyRecord.pk },
-        data: { lastUsedAt: new Date() },
-      })
-      .catch((err) => {
-        this.logger.warn(`Failed to update lastUsedAt: ${err.message}`);
-      });
-
+    this.updateLastUsedAt(keyRecord.pk);
     return keyRecord.uid;
+  }
+
+  /**
+   * Validate an API key and return both uid and keyId if valid
+   */
+  async validateApiKeyWithKeyId(apiKey: string): Promise<{ uid: string; keyId: string } | null> {
+    const keyRecord = await this.findValidApiKeyRecord(apiKey);
+    if (!keyRecord) {
+      return null;
+    }
+
+    this.updateLastUsedAt(keyRecord.pk);
+    return { uid: keyRecord.uid, keyId: keyRecord.keyId };
   }
 
   /**
@@ -177,6 +168,33 @@ export class ApiKeyService {
   }
 
   /**
+   * Update API key name
+   * @param uid User ID (for ownership verification)
+   * @param keyId Key ID to update
+   * @param name New name
+   * @returns true if updated, false if not found or not owned
+   */
+  async updateApiKey(uid: string, keyId: string, name: string): Promise<boolean> {
+    const result = await this.prisma.userApiKey.updateMany({
+      where: {
+        keyId,
+        uid,
+        revokedAt: null,
+      },
+      data: {
+        name,
+      },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`[API_KEY_UPDATED] uid=${uid} keyId=${keyId} name=${name}`);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
    * Generate a secure API key
    * Format: rf_<32 random chars in base62>
    */
@@ -192,6 +210,41 @@ export class ApiKeyService {
    */
   private hashApiKey(apiKey: string): string {
     return crypto.createHash('sha256').update(apiKey).digest('hex');
+  }
+
+  private async findValidApiKeyRecord(apiKey: string): Promise<{
+    pk: bigint;
+    uid: string;
+    keyId: string;
+  } | null> {
+    if (!apiKey || !apiKey.startsWith('rf_')) {
+      return null;
+    }
+
+    const keyHash = this.hashApiKey(apiKey);
+    return this.prisma.userApiKey.findFirst({
+      where: {
+        keyHash,
+        revokedAt: null,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      select: {
+        pk: true,
+        uid: true,
+        keyId: true,
+      },
+    });
+  }
+
+  private updateLastUsedAt(pk: bigint): void {
+    this.prisma.userApiKey
+      .update({
+        where: { pk },
+        data: { lastUsedAt: new Date() },
+      })
+      .catch((err) => {
+        this.logger.warn(`Failed to update lastUsedAt: ${err.message}`);
+      });
   }
 
   /**

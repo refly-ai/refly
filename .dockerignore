@@ -9,7 +9,7 @@
 *.chunks.jsonl
 
 # Build dependencies
-node_modules
+**/node_modules
 coverage
 
 # Environment (contains sensitive data)
@@ -17,7 +17,7 @@ coverage
 
 # Files not required for production
 .editorconfig
-Dockerfile
+Dockerfile*
 README.md
 .eslintrc.js
 nodemon.json

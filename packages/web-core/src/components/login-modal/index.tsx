@@ -70,5 +70,5 @@ const LoginModal = (props: { visible?: boolean; from?: string }) => {
 };
 
 // Optimize with memo to prevent unnecessary re-renders
-export const MemoizedLoginModal = React.memo(LoginModal);
+const MemoizedLoginModal = React.memo(LoginModal);
 export { MemoizedLoginModal as LoginModal };

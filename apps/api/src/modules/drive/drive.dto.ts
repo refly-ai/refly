@@ -32,6 +32,10 @@ export function driveFilePO2DTO(driveFile: DriveFileModel, endpoint?: string): D
     size: Number(driveFile.size),
     createdAt: driveFile.createdAt.toJSON(),
     updatedAt: driveFile.updatedAt.toJSON(),
-    url: endpoint ? `${endpoint}/v1/drive/file/content/${driveFile.fileId}` : undefined,
+    url: endpoint
+      ? `${endpoint}/v1/drive/file/content/${driveFile.fileId}${
+          driveFile.name ? `/${encodeURIComponent(driveFile.name)}` : ''
+        }`
+      : undefined,
   };
 }

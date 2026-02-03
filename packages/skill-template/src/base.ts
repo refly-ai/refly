@@ -18,7 +18,6 @@ import {
   Icon,
   Artifact,
   ActionStepMeta,
-  Project,
   Provider,
   LLMModelConfig,
   MediaGenerationModelConfig,
@@ -328,7 +327,6 @@ export interface SkillRunnableConfig extends RunnableConfig {
     };
     mode?: AgentMode;
     provider?: Provider;
-    project?: Project;
     currentSkill?: SkillMeta;
     currentStep?: ActionStepMeta;
     chatHistory?: BaseMessage[];
@@ -341,6 +339,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     ptcEnabled?: boolean;
     ptcContext?: PtcContext;
     nodeEditContext?: NodeEditContext;
+    webSearchEnabled?: boolean;
   };
   metadata?: SkillRunnableMeta;
 }

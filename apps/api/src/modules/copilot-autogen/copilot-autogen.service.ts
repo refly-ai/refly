@@ -21,6 +21,8 @@ import {
   GenerateWorkflowResponse,
   GenerateWorkflowCliRequest,
   GenerateWorkflowCliResponse,
+  EditWorkflowCliRequest,
+  EditWorkflowCliResponse,
 } from './copilot-autogen.dto';
 import {
   GenerateWorkflowAsyncResponse,
@@ -84,17 +86,6 @@ export class CopilotAutogenService {
   /**
    * Generate workflow - Original method for web/frontend usage
    * This method maintains compatibility with the original API contract
-   *
-   * @deprecated This method has a bug: it uses extractWorkflowPlan() which expects
-   * the full WorkflowPlan in tool output.data. However, the generate_workflow tool
-   * now returns only { planId, version } reference, NOT the full plan.
-   *
-   * The correct approach (used in generateWorkflowForCli):
-   * 1. Use extractWorkflowPlanRef() to get { planId, version }
-   * 2. Fetch full plan from DB via WorkflowPlanService.getWorkflowPlanDetail()
-   *
-   * TODO: Fix this method to use the same approach as generateWorkflowForCli()
-   * or remove it entirely and consolidate into a single method.
    */
   async generateWorkflow(
     user: User,
@@ -109,7 +100,6 @@ export class CopilotAutogenService {
       this.logger.log('[Autogen] Creating new canvas');
       const canvas = await this.canvasService.createCanvas(user, {
         title: `Workflow: ${request.query.slice(0, 50)}`,
-        projectId: request.projectId,
         variables: request.variables,
       });
       canvasId = canvas.canvasId;
@@ -132,7 +122,6 @@ export class CopilotAutogenService {
       input: { query: request.query },
       mode: 'copilot_agent',
       target: { entityId: canvasId, entityType: 'canvas' },
-      projectId: request.projectId,
       locale: request.locale,
       modelItemId: request.modelItemId,
     };
@@ -145,16 +134,36 @@ export class CopilotAutogenService {
     const actionResult = await this.waitForActionCompletion(user, resultId);
     this.logger.log(`[Autogen] Copilot completed with status: ${actionResult.status}`);
 
-    // 5. Extract Workflow Plan
-    const { plan: workflowPlan, reason } = this.extractWorkflowPlan(actionResult);
-    if (!workflowPlan) {
-      this.logger.error(`[Autogen] Failed to extract workflow plan: ${reason}`);
-      throw new Error(
+    // 5. Extract Workflow Plan Reference (planId + version)
+    const { planRef, reason } = this.extractWorkflowPlanRef(actionResult);
+    if (!planRef) {
+      this.logger.error(`[Autogen] Failed to extract workflow plan reference: ${reason}`);
+      const error = new Error(
         `Failed to extract workflow plan from Copilot response. ${reason ?? 'Unknown reason'}`,
       );
+      this.attachModelResponse(error, actionResult);
+      throw error;
     }
     this.logger.log(
-      `[Autogen] Extracted workflow plan with ${workflowPlan.tasks?.length ?? 0} tasks`,
+      `[Autogen] Extracted workflow plan reference: planId=${planRef.planId}, version=${planRef.version}`,
+    );
+
+    // 5.1 Fetch full workflow plan from database
+    const workflowPlanRecord = await this.workflowPlanService.getWorkflowPlanDetail(user, {
+      planId: planRef.planId,
+      version: planRef.version,
+    });
+    if (!workflowPlanRecord) {
+      this.logger.error(`[Autogen] Failed to fetch workflow plan: ${planRef.planId}`);
+      throw new Error(`Failed to fetch workflow plan with ID: ${planRef.planId}`);
+    }
+    const workflowPlan: WorkflowPlan = {
+      title: workflowPlanRecord.title,
+      tasks: workflowPlanRecord.tasks,
+      variables: workflowPlanRecord.variables,
+    };
+    this.logger.log(
+      `[Autogen] Fetched workflow plan with ${workflowPlan.tasks?.length ?? 0} tasks`,
     );
 
     // 6. Get tools list and default model (reuse ToolService and ProviderService)
@@ -179,10 +188,11 @@ export class CopilotAutogenService {
 
     // Merge preserved start nodes with generated workflow nodes
     const startNodeIds = new Set(startNodes.map((node) => node.id));
-    const finalNodes = [
+    const mergedNodes = [
       ...startNodes,
       ...generatedNodes.filter((node) => !startNodeIds.has(node.id)),
     ];
+    const finalNodes = ensureStartNode(mergedNodes as CanvasNode[]);
     this.logger.log(
       `[Autogen] Generated ${finalNodes.length} nodes (including ${startNodes.length} start nodes) and ${edges.length} edges`,
     );
@@ -190,6 +200,15 @@ export class CopilotAutogenService {
     // 8. Update Canvas state (reuse CanvasSyncService)
     await this.updateCanvasState(canvasId, finalNodes, edges, variables, user);
     this.logger.log(`[Autogen] Canvas ${canvasId} updated successfully`);
+
+    // 9. Update canvas title with workflow plan title (if new canvas was created)
+    if (!request.canvasId && workflowPlan.title) {
+      await this.canvasService.updateCanvas(user, {
+        canvasId,
+        title: workflowPlan.title,
+      });
+      this.logger.log(`[Autogen] Canvas title updated to: ${workflowPlan.title}`);
+    }
 
     return {
       canvasId,
@@ -225,7 +244,6 @@ export class CopilotAutogenService {
         user,
         {
           title: `Workflow: ${request.query.slice(0, 50)}`,
-          projectId: request.projectId,
           variables: request.variables,
         },
         { skipDefaultNodes },
@@ -250,7 +268,6 @@ export class CopilotAutogenService {
       input: { query: request.query },
       mode: 'copilot_agent',
       target: { entityId: canvasId, entityType: 'canvas' },
-      projectId: request.projectId,
       locale: request.locale,
       modelItemId: request.modelItemId,
     };
@@ -332,6 +349,15 @@ export class CopilotAutogenService {
     await this.updateCanvasState(canvasId, finalNodes, edges, variables, user);
     this.logger.log(`[Autogen CLI] Canvas ${canvasId} updated successfully`);
 
+    // 9. Update canvas title with workflow plan title (if new canvas was created)
+    if (!request.canvasId && workflowPlan.title) {
+      await this.canvasService.updateCanvas(user, {
+        canvasId,
+        title: workflowPlan.title,
+      });
+      this.logger.log(`[Autogen CLI] Canvas title updated to: ${workflowPlan.title}`);
+    }
+
     return {
       canvasId,
       workflowPlan,
@@ -340,6 +366,170 @@ export class CopilotAutogenService {
       resultId,
       nodesCount: finalNodes.length,
       edgesCount: edges.length,
+    };
+  }
+
+  /**
+   * Edit workflow for CLI - Uses natural language to edit an existing workflow
+   * Supports both generate_workflow and patch_workflow tool outputs from Copilot.
+   */
+  async editWorkflowForCli(
+    user: User,
+    request: EditWorkflowCliRequest,
+  ): Promise<EditWorkflowCliResponse> {
+    const {
+      canvasId,
+      query,
+      locale,
+      modelItemId,
+      timeout = 60000,
+      sessionId: providedSessionId,
+    } = request;
+
+    this.logger.log(`[Autogen Edit] Starting workflow edit for canvas ${canvasId}`);
+    this.logger.log(`[Autogen Edit] Query: ${query}`);
+
+    // 1. Validate canvas exists and belongs to user
+    const canvas = await this.prisma.canvas.findFirst({
+      where: { canvasId, uid: user.uid, deletedAt: null },
+    });
+    if (!canvas) {
+      this.logger.error(`[Autogen Edit] Canvas ${canvasId} not found or access denied`);
+      throw new Error(`Canvas ${canvasId} not found or access denied`);
+    }
+
+    // 2. Determine copilot session ID for context continuity
+    // Priority: provided sessionId > existing session for canvas > create new
+    let copilotSessionId: string | undefined = providedSessionId;
+
+    if (!copilotSessionId) {
+      // First try: find session by exact canvasId match
+      let session = await this.prisma.copilotSession.findFirst({
+        where: { canvasId, uid: user.uid },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      // Fallback: if no session found for this canvas, check actionResult table
+      // which stores the actual copilotSessionId used for this canvas
+      if (!session) {
+        this.logger.log('[Autogen Edit] No session found by canvasId, checking actionResult...');
+        const actionResult = await this.prisma.actionResult.findFirst({
+          where: {
+            uid: user.uid,
+            targetId: canvasId,
+            copilotSessionId: { not: null },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (actionResult?.copilotSessionId) {
+          session = await this.prisma.copilotSession.findFirst({
+            where: { sessionId: actionResult.copilotSessionId },
+          });
+        }
+      }
+
+      copilotSessionId = session?.sessionId;
+      this.logger.log(
+        `[Autogen Edit] Found existing session: ${copilotSessionId ?? 'none (will create new)'}`,
+      );
+    } else {
+      this.logger.log(`[Autogen Edit] Using provided session: ${copilotSessionId}`);
+    }
+
+    // 3. Invoke Copilot Agent
+    const invokeRequest: InvokeSkillRequest = {
+      input: { query },
+      mode: 'copilot_agent',
+      target: { entityId: canvasId, entityType: 'canvas' },
+      locale,
+      modelItemId,
+      copilotSessionId,
+    };
+
+    const { resultId } = await this.skillService.sendInvokeSkillTask(user, invokeRequest);
+    this.logger.log(`[Autogen Edit] Copilot invoked, resultId: ${resultId}`);
+
+    // 4. Wait for Copilot completion
+    this.logger.log(`[Autogen Edit] Waiting for Copilot completion (timeout: ${timeout}ms)...`);
+    const actionResult = await this.waitForActionCompletion(user, resultId, timeout);
+    this.logger.log(`[Autogen Edit] Copilot completed with status: ${actionResult.status}`);
+
+    // 5. Extract result (supports both generate_workflow and patch_workflow)
+    const { planRef, toolUsed, reason } = this.extractWorkflowEditResult(actionResult);
+    if (!planRef) {
+      this.logger.error(`[Autogen Edit] Failed to extract workflow edit result: ${reason}`);
+      throw new Error(reason || 'Failed to edit workflow');
+    }
+    this.logger.log(
+      `[Autogen Edit] Extracted result: planId=${planRef.planId}, version=${planRef.version}, toolUsed=${toolUsed}`,
+    );
+
+    // 6. Fetch full plan from database
+    const plan = await this.workflowPlanService.getWorkflowPlanDetail(user, {
+      planId: planRef.planId,
+      version: planRef.version,
+    });
+    if (!plan) {
+      this.logger.error(`[Autogen Edit] Failed to fetch workflow plan: ${planRef.planId}`);
+      throw new Error(`Failed to fetch workflow plan with ID: ${planRef.planId}`);
+    }
+    this.logger.log(`[Autogen Edit] Fetched workflow plan with ${plan.tasks?.length ?? 0} tasks`);
+
+    // 7. Auto-approve: Apply workflow plan to canvas
+    // Get canvas raw data and preserve start nodes
+    const rawCanvas = await this.canvasService.getCanvasRawData(user, canvasId, {
+      checkOwnership: true,
+    });
+    const startNodes = (rawCanvas.nodes ?? []).filter((node) => node.type === 'start');
+    this.logger.log(`[Autogen Edit] Found ${startNodes.length} start nodes in canvas`);
+
+    // Get tools list and default model
+    const toolsData = await this.toolService.listAllToolsForCopilot(user);
+    const defaultModel = await this.providerService.findDefaultProviderItem(
+      user,
+      'agent' as ModelScene,
+    );
+    this.logger.log(`[Autogen Edit] Using ${toolsData?.length ?? 0} available tools`);
+
+    // Convert workflow plan to canvas data
+    const workflowPlan: WorkflowPlan = {
+      title: plan.title,
+      tasks: plan.tasks,
+      variables: plan.variables,
+    };
+    const {
+      nodes: generatedNodes,
+      edges,
+      variables,
+    } = generateCanvasDataFromWorkflowPlan(workflowPlan, toolsData ?? [], {
+      autoLayout: true,
+      defaultModel: defaultModel ? providerItem2ModelInfo(defaultModel as any) : undefined,
+      startNodes,
+    });
+
+    // Merge preserved start nodes with generated workflow nodes
+    const startNodeIds = new Set(startNodes.map((node) => node.id));
+    const mergedNodes = [
+      ...startNodes,
+      ...generatedNodes.filter((node) => !startNodeIds.has(node.id)),
+    ];
+    const finalNodes = ensureStartNode(mergedNodes as CanvasNode[]);
+    this.logger.log(
+      `[Autogen Edit] Generated ${finalNodes.length} nodes and ${edges.length} edges`,
+    );
+
+    // Update canvas state
+    await this.updateCanvasState(canvasId, finalNodes, edges, variables, user);
+    this.logger.log(`[Autogen Edit] Canvas ${canvasId} updated successfully (auto-approved)`);
+
+    return {
+      canvasId,
+      planId: planRef.planId,
+      version: planRef.version,
+      toolUsed: toolUsed!,
+      plan,
+      sessionId: copilotSessionId,
     };
   }
 
@@ -364,7 +554,6 @@ export class CopilotAutogenService {
         user,
         {
           title: `Workflow: ${request.query.slice(0, 50)}`,
-          projectId: request.projectId,
           variables: request.variables,
         },
         { skipDefaultNodes },
@@ -377,7 +566,6 @@ export class CopilotAutogenService {
       input: { query: request.query },
       mode: 'copilot_agent',
       target: { entityId: canvasId, entityType: 'canvas' },
-      projectId: request.projectId,
       locale: request.locale,
       modelItemId: request.modelItemId,
       copilotSessionId: request.sessionId,
@@ -603,6 +791,15 @@ export class CopilotAutogenService {
     // Update canvas state
     await this.updateCanvasState(finalCanvasId, finalNodes, edges, variables, user);
 
+    // Update canvas title with workflow plan title (if new canvas was created)
+    if (!canvasId && workflowPlan.title) {
+      await this.canvasService.updateCanvas(user, {
+        canvasId: finalCanvasId,
+        title: workflowPlan.title,
+      });
+      this.logger.log(`[Autogen Async] Canvas title updated to: ${workflowPlan.title}`);
+    }
+
     return {
       workflowId: finalCanvasId, // workflowId is same as canvasId
       canvasId: finalCanvasId,
@@ -640,8 +837,27 @@ export class CopilotAutogenService {
       }
 
       if (result.status === 'failed') {
-        this.logger.error(`[Autogen] Action failed: ${JSON.stringify(result.errors)}`);
-        throw new Error(`Copilot execution failed: ${JSON.stringify(result.errors)}`);
+        const errorPayload = Array.isArray(result.errors) ? result.errors[0] : result.errors;
+        let errorText = 'Copilot execution failed';
+        if (errorPayload !== null && errorPayload !== undefined) {
+          if (typeof errorPayload === 'string') {
+            errorText = errorPayload;
+          } else {
+            try {
+              errorText = JSON.stringify(errorPayload);
+            } catch (_stringifyError) {
+              errorText = String(errorPayload);
+            }
+          }
+        }
+        const reason = errorText.startsWith('Copilot execution failed')
+          ? errorText
+          : `Copilot execution failed: ${errorText}`;
+        const detailedReason = this.appendModelResponse(reason, result) ?? reason;
+        this.logger.error(`[Autogen] Action failed: ${reason}`);
+        const error = new Error(detailedReason);
+        this.attachModelResponse(error, result);
+        throw error;
       }
 
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
@@ -649,6 +865,83 @@ export class CopilotAutogenService {
 
     this.logger.error('[Autogen] Timeout waiting for Copilot completion');
     throw new Error('Timeout waiting for Copilot to complete');
+  }
+
+  private getModelResponseSnippet(actionResult: ActionDetail, maxLength = 500): string | null {
+    const steps = actionResult.steps ?? [];
+    const stepContent = steps.find(
+      (step) => typeof step?.content === 'string' && step.content.trim(),
+    )?.content;
+    const messageContent = actionResult.messages?.find(
+      (message) => typeof message?.content === 'string' && message.content.trim(),
+    )?.content;
+    const rawContent = stepContent ?? messageContent;
+    if (!rawContent) {
+      return null;
+    }
+    const normalized = rawContent.replace(/\s+/g, ' ').trim();
+    if (!normalized) {
+      return null;
+    }
+    if (normalized.length > maxLength) {
+      return `${normalized.slice(0, maxLength)}...`;
+    }
+    return normalized;
+  }
+
+  private getModelResponseRaw(actionResult: ActionDetail, maxLength = 2000): string | null {
+    const steps = actionResult.steps ?? [];
+    let stepContent: string | undefined;
+    for (let index = steps.length - 1; index >= 0; index -= 1) {
+      const content = steps[index]?.content;
+      if (typeof content === 'string' && content.trim()) {
+        stepContent = content;
+        break;
+      }
+    }
+
+    const messages = actionResult.messages ?? [];
+    let messageContent: string | undefined;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const content = messages[index]?.content;
+      if (typeof content === 'string' && content.trim()) {
+        messageContent = content;
+        break;
+      }
+    }
+
+    const rawContent = stepContent ?? messageContent;
+    if (!rawContent) {
+      return null;
+    }
+    if (!rawContent.trim()) {
+      return null;
+    }
+    if (rawContent.length > maxLength) {
+      return `${rawContent.slice(0, maxLength)}...`;
+    }
+    return rawContent;
+  }
+
+  private attachModelResponse(error: Error, actionResult: ActionDetail): void {
+    const rawResponse = this.getModelResponseRaw(actionResult);
+    if (rawResponse) {
+      (error as Error & { modelResponse?: string }).modelResponse = rawResponse;
+    }
+  }
+
+  private appendModelResponse(
+    reason: string | undefined,
+    actionResult: ActionDetail,
+  ): string | undefined {
+    const snippet = this.getModelResponseSnippet(actionResult);
+    if (!snippet) {
+      return reason;
+    }
+    if (!reason) {
+      return `Model response: ${snippet}`;
+    }
+    return `${reason} Model response: ${snippet}`;
   }
 
   /**
@@ -664,7 +957,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen] No steps found in action result');
       return {
         plan: null,
-        reason: 'No steps found in Copilot response. The action result may be incomplete.',
+        reason: this.appendModelResponse(
+          'No steps found in Copilot response. The action result may be incomplete.',
+          actionResult,
+        ),
       };
     }
 
@@ -677,8 +973,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen] Copilot did not call any tools, possibly asking questions');
       return {
         plan: null,
-        reason:
+        reason: this.appendModelResponse(
           'Copilot did not generate a workflow. It may be asking for clarification or more information. Please refine your input query to be more specific and complete.',
+          actionResult,
+        ),
       };
     }
 
@@ -690,7 +988,10 @@ export class CopilotAutogenService {
       );
       return {
         plan: null,
-        reason: `Copilot called other tools (${availableTools}) but not 'generate_workflow'. Please adjust your query to explicitly request workflow generation.`,
+        reason: this.appendModelResponse(
+          `Copilot called other tools (${availableTools}) but not 'generate_workflow'. Please adjust your query to explicitly request workflow generation.`,
+          actionResult,
+        ),
       };
     }
 
@@ -698,8 +999,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen] generate_workflow tool call has no output');
       return {
         plan: null,
-        reason:
+        reason: this.appendModelResponse(
           'generate_workflow tool was called but returned no output. This may indicate an internal error.',
+          actionResult,
+        ),
       };
     }
 
@@ -717,7 +1020,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen] Workflow plan data field is missing');
       return {
         plan: null,
-        reason: 'Workflow plan data field is missing from generate_workflow tool output.',
+        reason: this.appendModelResponse(
+          'Workflow plan data field is missing from generate_workflow tool output.',
+          actionResult,
+        ),
       };
     }
   }
@@ -736,7 +1042,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen CLI] No steps found in action result');
       return {
         planRef: null,
-        reason: 'No steps found in Copilot response. The action result may be incomplete.',
+        reason: this.appendModelResponse(
+          'No steps found in Copilot response. The action result may be incomplete.',
+          actionResult,
+        ),
       };
     }
 
@@ -749,8 +1058,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen CLI] Copilot did not call any tools, possibly asking questions');
       return {
         planRef: null,
-        reason:
+        reason: this.appendModelResponse(
           'Copilot did not generate a workflow. It may be asking for clarification or more information. Please refine your input query to be more specific and complete.',
+          actionResult,
+        ),
       };
     }
 
@@ -762,7 +1073,10 @@ export class CopilotAutogenService {
       );
       return {
         planRef: null,
-        reason: `Copilot called other tools (${availableTools}) but not 'generate_workflow'. Please adjust your query to explicitly request workflow generation.`,
+        reason: this.appendModelResponse(
+          `Copilot called other tools (${availableTools}) but not 'generate_workflow'. Please adjust your query to explicitly request workflow generation.`,
+          actionResult,
+        ),
       };
     }
 
@@ -770,8 +1084,10 @@ export class CopilotAutogenService {
       this.logger.warn('[Autogen CLI] generate_workflow tool call has no output');
       return {
         planRef: null,
-        reason:
+        reason: this.appendModelResponse(
           'generate_workflow tool was called but returned no output. This may indicate an internal error.',
+          actionResult,
+        ),
       };
     }
 
@@ -789,7 +1105,10 @@ export class CopilotAutogenService {
       );
       return {
         planRef: null,
-        reason: 'Workflow plan reference (planId) is missing from generate_workflow tool output.',
+        reason: this.appendModelResponse(
+          'Workflow plan reference (planId) is missing from generate_workflow tool output.',
+          actionResult,
+        ),
       };
     }
 
@@ -802,6 +1121,87 @@ export class CopilotAutogenService {
       `[Autogen CLI] Successfully extracted workflow plan reference: ${planRef.planId}`,
     );
     return { planRef };
+  }
+
+  /**
+   * Extract Workflow Edit Result from ActionResult
+   * Supports both generate_workflow and patch_workflow tool outputs.
+   * Used by editWorkflowForCli method.
+   */
+  private extractWorkflowEditResult(actionResult: ActionDetail): {
+    planRef: WorkflowPlanRef | null;
+    toolUsed: 'generate_workflow' | 'patch_workflow' | null;
+    reason?: string;
+  } {
+    const steps = actionResult.steps ?? [];
+    if (steps.length === 0) {
+      this.logger.warn('[Autogen Edit] No steps found in action result');
+      return { planRef: null, toolUsed: null, reason: 'No steps in response' };
+    }
+
+    const toolCalls = steps[0]?.toolCalls ?? [];
+
+    // Check if Copilot is asking questions instead of calling workflow tools
+    const firstStepContent = steps[0]?.content;
+    if (toolCalls.length === 0 && firstStepContent) {
+      this.logger.warn('[Autogen Edit] Copilot did not call any tools, possibly asking questions');
+      return {
+        planRef: null,
+        toolUsed: null,
+        reason:
+          'Copilot did not call workflow tools. It may be asking for clarification. Please refine your edit instruction.',
+      };
+    }
+
+    // Check for patch_workflow first (more likely in edit scenario)
+    let toolCall = toolCalls.find((c) => c.toolName === 'patch_workflow');
+    let toolUsed: 'patch_workflow' | 'generate_workflow' | null = toolCall
+      ? 'patch_workflow'
+      : null;
+
+    // Fallback to generate_workflow
+    if (!toolCall) {
+      toolCall = toolCalls.find((c) => c.toolName === 'generate_workflow');
+      toolUsed = toolCall ? 'generate_workflow' : null;
+    }
+
+    if (!toolCall) {
+      const availableTools = toolCalls.map((c) => c.toolName).join(', ');
+      this.logger.warn(
+        `[Autogen Edit] No workflow tool call found. Available tools: ${availableTools}`,
+      );
+      return {
+        planRef: null,
+        toolUsed: null,
+        reason: `Copilot did not call workflow tools. Called: ${availableTools || 'none'}`,
+      };
+    }
+
+    if (!toolCall.output) {
+      this.logger.warn(`[Autogen Edit] ${toolUsed} tool call has no output`);
+      return { planRef: null, toolUsed: null, reason: 'Tool call has no output' };
+    }
+
+    const output =
+      typeof toolCall.output === 'string' ? safeParseJSON(toolCall.output) : toolCall.output;
+
+    // Extract planId and version from tool output
+    // Both tools return: { status: 'success', data: { planId, version } }
+    const data = (output as { data?: { planId?: string; version?: number } })?.data;
+    if (!data?.planId) {
+      this.logger.warn('[Autogen Edit] Missing planId in tool output');
+      return { planRef: null, toolUsed: null, reason: 'Missing planId in tool output' };
+    }
+
+    const planRef: WorkflowPlanRef = {
+      planId: data.planId,
+      version: data.version ?? 0,
+    };
+
+    this.logger.log(
+      `[Autogen Edit] Successfully extracted result: planId=${planRef.planId}, toolUsed=${toolUsed}`,
+    );
+    return { planRef, toolUsed };
   }
 
   /**

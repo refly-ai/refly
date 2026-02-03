@@ -1,9 +1,0 @@
-{
-  "name": "@refly/canvas",
-  "private": true,
-  "version": "0.0.1",
-  "description": "Canvas components for Refly AI Workspace",
-  "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts"
-}

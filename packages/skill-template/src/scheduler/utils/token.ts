@@ -1,9 +1,6 @@
 import { BaseMessage, MessageContent } from '@langchain/core/messages';
 import { SkillContext } from '@refly/openapi-schema';
-import {
-  truncateContent as baseTruncateContent,
-  countToken as baseCountToken,
-} from '@refly/utils/token';
+import { countToken as baseCountToken } from '@refly/utils/token';
 
 // ============================================================================
 // Token Estimation (Fast, ~1000x faster than exact counting)
@@ -100,9 +97,3 @@ export const countMessagesTokens = (messages: BaseMessage[] = []) => {
     0,
   );
 };
-
-/**
- * Truncate content to target token count
- * Re-export from @refly/utils for consistency
- */
-export const truncateContent = baseTruncateContent;

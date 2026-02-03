@@ -19,12 +19,8 @@ import { useCanvasData } from '@refly-packages/ai-workspace-common/hooks/canvas/
 import { NodeHeader } from './shared/node-header';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useInsertToDocument } from '@refly-packages/ai-workspace-common/hooks/canvas/use-insert-to-document';
-import { useAddNode } from '@refly-packages/ai-workspace-common/hooks/canvas/use-add-node';
-import { genSkillID } from '@refly/utils/id';
-import { IContextItem } from '@refly/common-types';
 import { detectActualTypeFromType } from '@refly/utils';
-import { useChatStore } from '@refly/stores';
-import { CodeArtifact, CodeArtifactType, Skill } from '@refly/openapi-schema';
+import { CodeArtifact, CodeArtifactType } from '@refly/openapi-schema';
 import Renderer from '@refly-packages/ai-workspace-common/modules/artifacts/code-runner/render';
 import { useGetCodeArtifactDetail } from '@refly-packages/ai-workspace-common/queries/queries';
 import { useFetchShareData } from '@refly-packages/ai-workspace-common/hooks/use-fetch-share-data';
@@ -33,8 +29,6 @@ import { useUpdateNodeTitle } from '@refly-packages/ai-workspace-common/hooks/us
 import { codeArtifactEmitter } from '@refly-packages/ai-workspace-common/events/codeArtifact';
 import { useSetNodeDataByEntity } from '@refly-packages/ai-workspace-common/hooks/canvas/use-set-node-data-by-entity';
 import { NodeActionButtons } from './shared/node-action-buttons';
-import { useGetNodeConnectFromDragCreateInfo } from '@refly-packages/ai-workspace-common/hooks/canvas/use-get-node-connect';
-import { NodeDragCreateInfo } from '@refly-packages/ai-workspace-common/events/nodeOperations';
 import {
   useNodeData,
   useNodeExecutionStatus,
@@ -103,11 +97,9 @@ export const CodeArtifactNode = memo(
     const [isHovered, setIsHovered] = useState(false);
     const { edges } = useCanvasData();
     const { getNode } = useReactFlow();
-    const { addNode } = useAddNode();
     const { t } = useTranslation();
     const updateNodeTitle = useUpdateNodeTitle();
     const setNodeDataByEntity = useSetNodeDataByEntity();
-    const { getConnectionInfo } = useGetNodeConnectFromDragCreateInfo();
     const { setNodeStyle } = useNodeData();
 
     const { i18n } = useTranslation();
@@ -218,64 +210,6 @@ export const CodeArtifactNode = memo(
       [insertToDoc],
     );
 
-    const handleAskAI = useCallback(
-      (event?: {
-        dragCreateInfo?: NodeDragCreateInfo;
-      }) => {
-        // Get the current model
-        const { skillSelectedModel } = useChatStore.getState();
-
-        // Define a default code fix skill
-        const defaultCodeFixSkill: Skill = {
-          name: 'codeArtifacts',
-          icon: {
-            type: 'emoji',
-            value: '🔧',
-          },
-          description: t('codeArtifact.fix.title'),
-          configSchema: {
-            items: [],
-          },
-        };
-
-        const { position, connectTo } = getConnectionInfo(
-          { entityId: data.entityId, type: 'codeArtifact' },
-          event?.dragCreateInfo,
-        );
-
-        addNode(
-          {
-            type: 'skill',
-            data: {
-              title: 'Skill',
-              entityId: genSkillID(),
-              metadata: {
-                contextItems: [
-                  {
-                    type: 'codeArtifact',
-                    title: data.title,
-                    entityId: data.entityId,
-                    metadata: {
-                      ...data.metadata,
-                      withHistory: true,
-                    },
-                  },
-                ] as IContextItem[],
-                query: '',
-                selectedSkill: defaultCodeFixSkill,
-                modelInfo: skillSelectedModel,
-              },
-            },
-            position,
-          },
-          connectTo,
-          false,
-          true,
-        );
-      },
-      [data, addNode, t, getConnectionInfo],
-    );
-
     const updateTitle = (newTitle: string) => {
       if (newTitle === node.data?.title) {
         return;
@@ -290,27 +224,22 @@ export const CodeArtifactNode = memo(
       const handleNodeDelete = () => handleDelete();
       const handleNodeInsertToDoc = (event: { content: string }) =>
         handleInsertToDoc(event.content);
-      const handleNodeAskAI = (event?: {
-        dragCreateInfo?: NodeDragCreateInfo;
-      }) => handleAskAI(event);
 
       // Register events with node ID
       nodeActionEmitter.on(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
       nodeActionEmitter.on(createNodeEventName(id, 'delete'), handleNodeDelete);
       nodeActionEmitter.on(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
-      nodeActionEmitter.on(createNodeEventName(id, 'askAI'), handleNodeAskAI);
 
       return () => {
         // Cleanup events when component unmounts
         nodeActionEmitter.off(createNodeEventName(id, 'addToContext'), handleNodeAddToContext);
         nodeActionEmitter.off(createNodeEventName(id, 'delete'), handleNodeDelete);
         nodeActionEmitter.off(createNodeEventName(id, 'insertToDoc'), handleNodeInsertToDoc);
-        nodeActionEmitter.off(createNodeEventName(id, 'askAI'), handleNodeAskAI);
 
         // Clean up all node events
         cleanupNodeEvents(id);
       };
-    }, [id, handleAddToContext, handleDelete, handleInsertToDoc, handleAskAI]);
+    }, [id, handleAddToContext, handleDelete, handleInsertToDoc]);
 
     return (
       <div

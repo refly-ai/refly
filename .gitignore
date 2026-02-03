@@ -54,6 +54,7 @@ docs/.vitepress/cache/*
 *.opt
 
 .claude/*
+.zed/*
 
 .codex/*
 .ai/*

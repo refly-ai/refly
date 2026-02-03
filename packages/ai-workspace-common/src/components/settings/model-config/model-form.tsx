@@ -27,7 +27,7 @@ import { providerInfoList } from '@refly/utils';
 import { IconPlus } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { Loading } from '../parser-config';
 import { ProviderModal } from '@refly-packages/ai-workspace-common/components/settings/model-providers/provider-modal';
-import { Provider } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { Provider } from '@refly/openapi-schema';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import mediaConfig from './media-config.json';
 import { useUserStoreShallow } from '@refly/stores';

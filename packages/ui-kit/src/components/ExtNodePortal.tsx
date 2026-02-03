@@ -1,4 +1,4 @@
-import { Fragment, type ReactElement, useEffect, useRef, useState } from 'react';
+import { type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 interface ExtNodePortalActions {
@@ -9,7 +9,7 @@ interface ExtNodePortalActions {
 
 const globalExtNodeMap = new WeakMap<ReactElement, { container: HTMLDivElement; root: Root }>();
 
-let extNodePortalActions: ExtNodePortalActions = {
+const extNodePortalActions: ExtNodePortalActions = {
   mount(node) {
     if (globalExtNodeMap.has(node)) {
       return;
@@ -54,56 +54,4 @@ export function unmountExtNode(node: ReactElement): void {
 
 export function replaceExtNode(node: ReactElement, newNode: ReactElement): void {
   extNodePortalActions.replace(node, newNode);
-}
-
-const extNodeKeyMap = new WeakMap<ReactElement, number>();
-let extNodeKeyCount = 0;
-
-export function ExtNodePortal(): ReactElement {
-  const [nodes, setNodes] = useState<ReactElement[]>([]);
-  const nodesRef = useRef(nodes);
-  nodesRef.current = nodes;
-
-  useEffect(() => {
-    extNodePortalActions = {
-      mount(node) {
-        if (nodesRef.current.includes(node)) {
-          return;
-        }
-        extNodeKeyMap.set(node, ++extNodeKeyCount);
-        setNodes((prev) => [...prev, node]);
-      },
-      unmount(node) {
-        if (!nodesRef.current.includes(node)) {
-          return;
-        }
-        setNodes((prev) => {
-          const next = [...prev];
-          next.splice(next.indexOf(node), 1);
-          return next;
-        });
-        extNodeKeyMap.delete(node);
-      },
-      replace(node, newNode) {
-        if (!nodesRef.current.includes(node)) {
-          return;
-        }
-        extNodeKeyMap.set(newNode, extNodeKeyMap.get(node) ?? -1);
-        setNodes((prev) => {
-          const next = [...prev];
-          next.splice(next.indexOf(node), 1, newNode);
-          return next;
-        });
-        extNodeKeyMap.delete(node);
-      },
-    };
-  }, []);
-
-  return (
-    <>
-      {nodes.map((node) => {
-        return <Fragment key={extNodeKeyMap.get(node)}>{node}</Fragment>;
-      })}
-    </>
-  );
 }

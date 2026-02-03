@@ -18,11 +18,24 @@ export interface SuccessPayload {
   [key: string]: unknown;
 }
 
+export interface SuggestedFix {
+  field?: string;
+  format?: string;
+  example?: string;
+}
+
 export interface ErrorPayload {
   code: string;
   message: string;
   details?: Record<string, unknown>;
   hint?: string;
+  suggestedFix?: SuggestedFix;
+  /**
+   * Indicates if the error can be fixed by adjusting parameters.
+   * - true: Fix the parameters (see suggestedFix) and retry the SAME command
+   * - false: The approach may not work, consider alternatives
+   */
+  recoverable?: boolean;
 }
 
 const VERSION = '1.0';
@@ -148,8 +161,28 @@ export class OutputFormatter {
   // === JSON Format ===
 
   private outputJson(data: unknown): void {
-    console.log(JSON.stringify(data, null, 2));
+    console.log(JSON.stringify(data, this.sanitizeJsonReplacer, 2));
   }
+
+  /**
+   * JSON replacer that sanitizes control characters in strings.
+   * Control characters (U+0000 to U+001F) can break jq parsing.
+   */
+  private sanitizeJsonReplacer = (_key: string, value: unknown): unknown => {
+    if (typeof value === 'string') {
+      // Remove control characters (except \n, \r, \t which are common)
+      // Using character code check to avoid linter issues with control chars in regex
+      return value
+        .split('')
+        .filter((char) => {
+          const code = char.charCodeAt(0);
+          // Allow printable chars (>= 0x20), and \t (0x09), \n (0x0A), \r (0x0D)
+          return code >= 0x20 || code === 0x09 || code === 0x0a || code === 0x0d;
+        })
+        .join('');
+    }
+    return value;
+  };
 
   // === Pretty Format ===
 
@@ -295,6 +328,14 @@ export class OutputFormatter {
       console.log(UI.keyValue('Code', UI.dim(error.code)));
     }
 
+    // Show recoverable status prominently
+    if (error.recoverable !== undefined) {
+      const recoverableText = error.recoverable
+        ? '🔄 Recoverable: Fix the parameter and retry the SAME command'
+        : '❌ Not recoverable: Consider a different approach';
+      console.log(UI.dim(`  ${recoverableText}`));
+    }
+
     if (error.details && Object.keys(error.details).length > 0) {
       console.log();
       console.log(UI.indent(UI.dim('Details:')));
@@ -313,6 +354,14 @@ export class OutputFormatter {
     if (error.hint) {
       console.log();
       console.log(UI.dim(`  💡 Hint: ${error.hint}`));
+    }
+
+    if (error.suggestedFix && Object.keys(error.suggestedFix).length > 0) {
+      console.log();
+      console.log(UI.dim('  ✅ Suggested fix:'));
+      console.log(
+        UI.indent(this.formatObject(error.suggestedFix as Record<string, unknown>, 2), 4),
+      );
     }
 
     console.log();
@@ -613,6 +662,9 @@ export class OutputFormatter {
     if (error.hint) {
       console.log(UI.dim(`  ${error.hint}`));
     }
+    if (error.suggestedFix) {
+      console.log(UI.dim(`  fix: ${this.formatValue(error.suggestedFix)}`));
+    }
   }
 
   // === Plain Format ===
@@ -634,6 +686,9 @@ export class OutputFormatter {
     console.log(`  code: ${error.code}`);
     if (error.hint) {
       console.log(`  hint: ${error.hint}`);
+    }
+    if (error.suggestedFix) {
+      console.log(`  suggestedFix: ${this.formatValue(error.suggestedFix)}`);
     }
   }
 

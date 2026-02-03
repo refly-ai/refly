@@ -16,12 +16,6 @@ export interface OutputSelector {
   default?: unknown; // Default value if path not found
 }
 
-export interface MappingConfig {
-  inputMapping?: InputMapping;
-  outputSelector?: OutputSelector;
-  mergeStrategy?: MergeStrategy;
-}
-
 @Injectable()
 export class SkillWorkflowMapperService {
   private readonly logger = new Logger(SkillWorkflowMapperService.name);

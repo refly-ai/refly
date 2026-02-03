@@ -5,14 +5,13 @@ import { persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { DriveFile } from '@refly/openapi-schema';
 
-export type CanvasResourcesPanelMode = 'wide' | 'normal' | 'hidden';
-
 export type CanvasResourcesParentType = 'stepsRecord' | 'resultsRecord' | 'myUpload';
 
 interface CanvasResourcesPanelState {
   // Panel width in pixels
   currentResource: CanvasNode | null;
   currentFile: DriveFile | null;
+  currentFileUsePublicFileUrl?: boolean;
   sidePanelVisible: boolean;
   wideScreenVisible: boolean;
   // Change from single activeNode to map of canvasId to activeNode
@@ -25,7 +24,7 @@ interface CanvasResourcesPanelState {
 
   // Methods
   setCurrentResource: (resource: CanvasNode | null) => void;
-  setCurrentFile: (file: DriveFile | null) => void;
+  setCurrentFile: (file: DriveFile | null, options?: { usePublicFileUrl?: boolean }) => void;
   setSidePanelVisible: (visible: boolean) => void;
   setWideScreenVisible: (visible: boolean) => void;
   // Update setActiveNode to accept canvasId parameter
@@ -62,7 +61,11 @@ export const useCanvasResourcesPanelStore = create<CanvasResourcesPanelState>()(
 
       // Methods
       setCurrentResource: (resource: CanvasNode | null) => set({ currentResource: resource }),
-      setCurrentFile: (file: DriveFile | null) => set({ currentFile: file }),
+      setCurrentFile: (file: DriveFile | null, options?: { usePublicFileUrl?: boolean }) =>
+        set({
+          currentFile: file,
+          currentFileUsePublicFileUrl: file ? options?.usePublicFileUrl : undefined,
+        }),
       setSidePanelVisible: (visible: boolean) => set({ sidePanelVisible: visible }),
       setWideScreenVisible: (visible: boolean) => set({ wideScreenVisible: visible }),
       // Update setActiveNode to handle canvasId

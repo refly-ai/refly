@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { IconLightning01 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { logEvent } from '@refly/telemetry-web';
+import { useUserStoreShallow } from '@refly/stores';
 
 const INVITATION_CODE_LENGTH = 6;
 
@@ -19,6 +20,13 @@ export const ActivationCodeInput: React.FC<ActivationCodeInputProps> = ({
   className = '',
 }) => {
   const { t } = useTranslation();
+
+  const userStore = useUserStoreShallow((state) => ({
+    userProfile: state.userProfile,
+    showInvitationCodeModal: state.showInvitationCodeModal,
+    setShowInvitationCodeModal: state.setShowInvitationCodeModal,
+    setShowOnboardingFormModal: state.setShowOnboardingFormModal,
+  }));
 
   // Invitation code activation state
   const [activationCode, setActivationCode] = useState('');
@@ -59,6 +67,20 @@ export const ActivationCodeInput: React.FC<ActivationCodeInputProps> = ({
     window.open('https://discord.gg/YVuYFjFvRC', '_blank');
   };
 
+  const handleSkip = async () => {
+    try {
+      const response = await getClient().skipInvitationCode();
+      if (response.data?.success) {
+        // Close invitation code modal
+        userStore.setShowInvitationCodeModal(false);
+        // Open onboarding form modal immediately
+        userStore.setShowOnboardingFormModal(true);
+      }
+    } catch (error) {
+      console.error('Error skipping invitation code:', error);
+    }
+  };
+
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
       {/* Activate Invitation Code */}
@@ -76,19 +98,32 @@ export const ActivationCodeInput: React.FC<ActivationCodeInputProps> = ({
           />
         </div>
       </div>
-      <div className="flex justify-center">
+      <div className="flex flex-row items-center gap-3" style={{ width: 308 }}>
         <Button
           type="primary"
           onClick={handleActivateInvitationCode}
           loading={activatingCode}
           disabled={activatingCode || (activationCode ?? '').trim().length < INVITATION_CODE_LENGTH}
-          style={{ width: 308, height: 36 }}
+          className="!flex-1 !h-9 !rounded-lg !border-0 !bg-[#0E9F77] hover:!bg-[#0B8A66] focus:!bg-[#0E9F77]"
+          style={{ padding: '6px 12px' }}
         >
           <div className="flex items-center gap-1">
-            <IconLightning01 className="w-4 h-4" />
-            {activatingCode ? t('common.activating') : t('settings.account.activateInvitationCode')}
+            <IconLightning01 className="w-4 h-4 text-white" />
+            <span className="font-semibold text-base text-white">
+              {activatingCode
+                ? t('common.activating')
+                : t('settings.account.activateInvitationCode')}
+            </span>
           </div>
         </Button>
+        <button
+          type="button"
+          onClick={handleSkip}
+          className="flex justify-center items-center cursor-pointer h-9 rounded-lg border border-[rgba(28,31,35,0.1)] bg-white px-3 text-base text-[#1C1F23] hover:bg-gray-50 dark:border-gray-600 dark:bg-transparent dark:text-gray-200 dark:hover:bg-gray-800 transition-colors shrink-0"
+          style={{ width: 75 }}
+        >
+          {t('invitationCode.skip')}
+        </button>
       </div>
 
       {showDiscordButton && (

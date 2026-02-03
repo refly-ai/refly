@@ -57,38 +57,3 @@ export function calculateCredits(config: BillingConfig, input: Record<string, un
 
   return Math.ceil(credits);
 }
-
-/**
- * Validate billing configuration
- * @param config - Billing configuration to validate
- * @throws Error if configuration is invalid
- */
-export function validateBillingConfig(config: BillingConfig): void {
-  if (!config.enabled) {
-    return;
-  }
-
-  switch (config.type) {
-    case BillingType.PER_CALL:
-      if (!config.creditsPerCall || config.creditsPerCall <= 0) {
-        throw new Error('creditsPerCall must be a positive number for PER_CALL billing');
-      }
-      break;
-
-    case BillingType.PER_QUANTITY:
-      if (!config.quantityField) {
-        throw new Error('quantityField is required for PER_QUANTITY billing');
-      }
-      if (!config.creditsPerUnit || config.creditsPerUnit <= 0) {
-        throw new Error('creditsPerUnit must be a positive number for PER_QUANTITY billing');
-      }
-      break;
-
-    default:
-      throw new Error(`Unknown billing type: ${config.type}`);
-  }
-
-  if (config.maxCredits !== undefined && config.maxCredits <= 0) {
-    throw new Error('maxCredits must be a positive number if specified');
-  }
-}

@@ -12,6 +12,7 @@ export const SKILL_CLI_ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   INVALID_INPUT: 'INVALID_INPUT',
   INVALID_SPEC: 'INVALID_SPEC',
+  DESCRIPTION_REQUIRED: 'DESCRIPTION_REQUIRED',
 
   // Resource errors
   SKILL_NOT_FOUND: 'SKILL_NOT_FOUND',
@@ -26,17 +27,16 @@ export const SKILL_CLI_ERROR_CODES = {
   // Conflict errors
   DUPLICATE_NAME: 'DUPLICATE_NAME',
   ALREADY_EXISTS: 'ALREADY_EXISTS',
+  ALREADY_INSTALLED: 'ALREADY_INSTALLED',
 
   // Internal errors
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 
-export type SkillCliErrorCode = (typeof SKILL_CLI_ERROR_CODES)[keyof typeof SKILL_CLI_ERROR_CODES];
-
 /**
  * CLI Error Response interface
  */
-export interface CliErrorResponse {
+interface CliErrorResponse {
   ok: false;
   type: 'error';
   version: string;
@@ -44,18 +44,30 @@ export interface CliErrorResponse {
     code: string;
     message: string;
     hint?: string;
+    recoverable?: boolean;
     details?: Record<string, unknown>;
+    suggestedFix?: {
+      field?: string;
+      format?: string;
+      example?: string;
+    };
   };
 }
 
 /**
  * Build a CLI-style error response
  */
-export function buildCliErrorResponse(
+function buildCliErrorResponse(
   code: string,
   message: string,
   hint?: string,
   details?: Record<string, unknown>,
+  suggestedFix?: {
+    field?: string;
+    format?: string;
+    example?: string;
+  },
+  recoverable?: boolean,
 ): CliErrorResponse {
   return {
     ok: false,
@@ -65,7 +77,9 @@ export function buildCliErrorResponse(
       code,
       message,
       hint,
+      ...(recoverable !== undefined && { recoverable }),
       details,
+      ...(suggestedFix && { suggestedFix }),
     },
   };
 }
@@ -79,8 +93,17 @@ export function throwCliError(
   hint?: string,
   status: HttpStatus = HttpStatus.BAD_REQUEST,
   details?: Record<string, unknown>,
+  suggestedFix?: {
+    field?: string;
+    format?: string;
+    example?: string;
+  },
+  recoverable?: boolean,
 ): never {
-  throw new HttpException(buildCliErrorResponse(code, message, hint, details), status);
+  throw new HttpException(
+    buildCliErrorResponse(code, message, hint, details, suggestedFix, recoverable),
+    status,
+  );
 }
 
 /**
@@ -115,6 +138,14 @@ export function mapErrorToCliCode(error: Error): {
       code: SKILL_CLI_ERROR_CODES.ACCESS_DENIED,
       status: HttpStatus.FORBIDDEN,
       hint: 'You do not have permission to access this resource',
+    };
+  }
+
+  if (message.includes('already installed')) {
+    return {
+      code: SKILL_CLI_ERROR_CODES.ALREADY_INSTALLED,
+      status: HttpStatus.CONFLICT,
+      hint: 'Use --force to reinstall',
     };
   }
 

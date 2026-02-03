@@ -1,13 +1,59 @@
-import { Modal, message } from 'antd';
-import { useState, useEffect, useMemo } from 'react';
+import { Modal, message, Skeleton } from 'antd';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { InvitationCode } from '@refly/openapi-schema';
 import { useUserStoreShallow } from '@refly/stores';
 import InviteIcon from '@refly-packages/ai-workspace-common/assets/invite.svg';
-import { IconCheck } from '@refly-packages/ai-workspace-common/components/common/icon';
+import { IconCopy } from '@refly-packages/ai-workspace-common/components/common/icon';
 
-const INVITATION_LIMIT = 5;
+const INVITATION_LIMIT = 20;
+
+interface InvitationCodeCardProps {
+  code: InvitationCode;
+  onCopy: (code: string) => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+const InvitationCodeCard = memo<InvitationCodeCardProps>(({ code, onCopy, t }) => {
+  const isPending = code.status === 'pending';
+  const isAccepted = code.status === 'accepted';
+
+  const cardClassName = isPending
+    ? 'group flex min-h-[54px] h-[54px] cursor-pointer items-center justify-between rounded-[10px] border border-solid border-refly-primary-default px-2.5 transition-colors hover:bg-black/[0.08]'
+    : isAccepted
+      ? 'flex min-h-[54px] h-[54px] items-center justify-between gap-1 rounded-[10px] border border-solid border-[rgba(28,31,35,0.1)] px-2.5'
+      : 'flex min-h-[54px] h-[54px] items-center justify-between rounded-[10px] border border-solid border-refly-border-primary px-2.5';
+
+  const handleClick = useCallback(() => {
+    if (isPending) {
+      onCopy(code.code ?? '');
+    }
+  }, [isPending, code.code, onCopy]);
+
+  return (
+    <div className={cardClassName} onClick={handleClick} role={isPending ? 'button' : undefined}>
+      <span
+        className={`font-mono text-sm font-medium leading-[20px] ${
+          isPending ? '!text-refly-text-0' : '!text-[rgba(28,31,35,0.35)]'
+        }`}
+      >
+        {code.code}
+      </span>
+      {isPending ? (
+        <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
+          <IconCopy className="h-[14px] w-[14px] text-refly-text-2" strokeWidth={1.5} />
+        </div>
+      ) : isAccepted ? (
+        <span className="flex-shrink-0 text-xs font-normal leading-[18px] text-[rgba(28,31,35,0.35)]">
+          {t('settings.account.invitationReward', { amount: 500 })}
+        </span>
+      ) : null}
+    </div>
+  );
+});
+
+InvitationCodeCard.displayName = 'InvitationCodeCard';
 
 interface InvitationModalProps {
   visible: boolean;
@@ -51,7 +97,7 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
 
  ⚡ Supercharge your automation with Banana Pro, Gemini 3.0, and other top-tier AI models
 
- 🎁 Plus 3,000 free credits to help you get started!
+ 🎁 Plus 500 free credits to help you get started!
 
 🔑 Invitation Code: ${invitationCode}
 
@@ -95,14 +141,21 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
     };
   }, [invitationCodes]);
 
-  const usageText = t('settings.account.invitationLimitText', {
-    used: invitationOverview.acceptedCodes.length,
-    limit: INVITATION_LIMIT,
+  const availableText = t('settings.account.availableInvitationCodesText', {
+    available: invitationOverview.pendingCodes.length,
+    total: INVITATION_LIMIT,
   });
 
   return (
-    <Modal open={visible} onCancel={() => setVisible(false)} footer={null} width={440} centered>
-      <div className="p-6 space-y-5">
+    <Modal
+      open={visible}
+      onCancel={() => setVisible(false)}
+      footer={null}
+      width={440}
+      centered
+      styles={{ content: { paddingBottom: 0 }, body: { paddingBottom: 0 } }}
+    >
+      <div className="px-6 pt-6 space-y-5">
         <div className="flex flex-col items-center gap-1 text-center">
           <img src={InviteIcon} alt="Invite" className="w-16 h-16" />
           <h3 className="text-lg font-semibold text-refly-text-0">
@@ -110,69 +163,50 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
           </h3>
           <p className="text-xs text-refly-text-2">{t('settings.account.inviteFriendsSubtitle')}</p>
         </div>
-        <div className="flex flex-col gap-4 rounded-lg p-4">
-          <p className="text-sm text-refly-text-0 text-center font-semibold">{usageText}</p>
-          {invitationOverview.sortedCodes.length > 0 ? (
-            <div className="space-y-3">
-              {invitationOverview.sortedCodes.map((code, index) => (
-                <div
-                  key={code.code || index}
-                  className={`p-3 rounded-lg ${
-                    code.status === 'pending'
-                      ? 'bg-refly-bg-control-z0 cursor-pointer transition-colors border-[1px] border-solid border-refly-primary-default hover:bg-refly-primary-light'
-                      : code.status === 'accepted'
-                        ? 'bg-refly-bg-control-z0'
-                        : 'bg-refly-bg-control-z1'
-                  }`}
-                  onClick={() =>
-                    code.status === 'pending' && handleCopyInvitationCode(code.code || '')
-                  }
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex flex-col items-center justify-center text-base gap-1 bg-refly-bg-content-z2 h-7 rounded-lg min-w-[76px] px-2">
-                        <div className="font-mono font-semibold text-refly-primary">
-                          {code.code}
-                        </div>
-                      </div>
-                      {code.status === 'accepted' && code.updatedAt ? (
-                        <div className="flex items-center justify-center gap-1 text-refly-text-3">
-                          <div className="w-3 h-3 rounded-full flex items-center justify-center border-[1.5px] border-solid border-refly-primary">
-                            <IconCheck className="w-2 h-2 text-refly-primary" strokeWidth={3} />
-                          </div>
-                          <span className="text-[12px] font-medium leading-[16px]">
-                            {t('invitationCode.reward')}
-                          </span>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div
-                      className={`text-base font-medium px-2 py-2 rounded-full text-center min-w-[60px] ${
-                        code.status === 'pending'
-                          ? 'text-refly-primary hover:text-refly-primary-hover'
-                          : code.status === 'accepted'
-                            ? 'text-refly-text-3 text-xs'
-                            : 'text-refly-text-1'
-                      }`}
-                    >
-                      {code.status === 'pending' ? (
-                        t('settings.account.copy')
-                      ) : code.status === 'accepted' ? (
-                        code.updatedAt ? (
-                          <span className="text-[12px] font-medium leading-[16px]">
-                            {new Date(code.updatedAt).toLocaleDateString()}
-                          </span>
-                        ) : (
-                          t('settings.account.statusUsed')
-                        )
-                      ) : (
-                        code.status || 'Unknown'
-                      )}
-                    </div>
+        <div className="flex flex-col gap-4 rounded-lg">
+          {loadingCodes ? (
+            <Skeleton
+              active
+              paragraph={{ rows: 0 }}
+              title={{ width: 120, style: { margin: '0 auto' } }}
+            />
+          ) : (
+            <p className="text-sm text-refly-text-0 text-center font-semibold">{availableText}</p>
+          )}
+          {loadingCodes ? (
+            <div className="-mx-4 max-h-[360px] overflow-y-auto px-4">
+              <div className="grid grid-cols-2 gap-2 pb-8">
+                {Array.from({ length: 10 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex min-h-[54px] h-[54px] items-center rounded-[10px] border border-solid border-refly-primary-default px-2.5"
+                  >
+                    <Skeleton.Input
+                      active
+                      size="small"
+                      style={{
+                        width: 70,
+                        minWidth: 70,
+                        height: 20,
+                        borderRadius: 4,
+                      }}
+                    />
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+          ) : invitationOverview.sortedCodes.length > 0 ? (
+            <div className="-mx-4 max-h-[360px] overflow-y-auto px-4">
+              <div className="grid grid-cols-2 gap-2 pb-8">
+                {invitationOverview.sortedCodes.map((code, index) => (
+                  <InvitationCodeCard
+                    key={code.code ?? index}
+                    code={code}
+                    onCopy={handleCopyInvitationCode}
+                    t={t}
+                  />
+                ))}
+              </div>
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-refly-border-primary px-4 py-8 text-center text-sm text-refly-text-1">

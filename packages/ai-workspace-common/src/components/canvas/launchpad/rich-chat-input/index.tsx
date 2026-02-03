@@ -8,7 +8,7 @@ import { useAgentNodeManagement } from '@refly-packages/ai-workspace-common/hook
 import { useFetchDriveFiles } from '@refly-packages/ai-workspace-common/hooks/use-fetch-drive-files';
 import type { IContextItem } from '@refly/common-types';
 import type { GenericToolset } from '@refly/openapi-schema';
-import { useSearchStoreShallow, useUserStoreShallow, useToolStoreShallow } from '@refly/stores';
+import { useUserStoreShallow, useToolStoreShallow } from '@refly/stores';
 import { cn } from '@refly/utils/cn';
 import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
@@ -86,9 +86,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
     const isLogin = useUserStoreShallow((state) => state.isLogin);
     const { canvasId } = useCanvasContext();
     const { data: files } = useFetchDriveFiles();
-    const searchStore = useSearchStoreShallow((state) => ({
-      setIsSearchOpen: state.setIsSearchOpen,
-    }));
     const { setToolStoreModalOpen } = useToolStoreShallow((state) => ({
       setToolStoreModalOpen: state.setToolStoreModalOpen,
     }));
@@ -813,12 +810,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
 
         handlePopupShow();
 
-        // Handle Ctrl+K or Cmd+K to open search
-        if (e.keyCode === 75 && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          searchStore.setIsSearchOpen(true);
-        }
-
         // Handle the Enter key
         if (e.keyCode === 13) {
           // Shift + Enter creates a new line (let default behavior handle it)
@@ -836,7 +827,6 @@ const RichChatInputComponent = forwardRef<RichChatInputRef, RichChatInputProps>(
         query,
         readonly,
         handleSendMessageWithMentions,
-        searchStore,
         isLogin,
         isMentionListVisible,
         handlePopupShow,

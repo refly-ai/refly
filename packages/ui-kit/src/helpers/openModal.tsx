@@ -33,11 +33,11 @@ const WIDTH_MAP = {
   },
 } as const;
 
-export interface ModalActionConfig extends Omit<ButtonProps, 'onClick'> {
+interface ModalActionConfig extends Omit<ButtonProps, 'onClick'> {
   onClick?: () => boolean | undefined | Promise<boolean | undefined>;
 }
 
-export interface ModalSlotProps<T = unknown> {
+interface ModalSlotProps<T = unknown> {
   setCancelAction: Dispatch<SetStateAction<ModalActionConfig>>;
   setConfirmAction: Dispatch<SetStateAction<ModalActionConfig>>;
   close: () => void;
@@ -47,7 +47,7 @@ export interface ModalSlotProps<T = unknown> {
   setContext: Dispatch<SetStateAction<T>>;
 }
 
-export type ModalSlot<T> = ReactNode | ((props: ModalSlotProps<T>) => JSX.Element | null);
+type ModalSlot<T> = ReactNode | ((props: ModalSlotProps<T>) => JSX.Element | null);
 
 const renderSlot = <T,>(Slot: ModalSlot<T>, slotProps: ModalSlotProps<T>) => {
   if (typeof Slot === 'function') {
@@ -56,7 +56,7 @@ const renderSlot = <T,>(Slot: ModalSlot<T>, slotProps: ModalSlotProps<T>) => {
   return Slot;
 };
 
-export interface OpenModalOptionsBase<T> {
+interface OpenModalOptionsBase<T> {
   Title?: ModalSlot<T>;
   Content?: ModalSlot<T>;
   Footer?: ModalSlot<T>;
@@ -73,7 +73,7 @@ export type OpenModalOptions<T = unknown> = unknown extends T
   ? OpenModalOptionsBase<T> & { initialContext?: undefined }
   : OpenModalOptionsBase<T> & { initialContext: T };
 
-export interface PortalModelRef {
+interface PortalModelRef {
   close: () => void;
 }
 
@@ -266,8 +266,4 @@ export function openModal<T = unknown>(
   } else {
     mountExtNode(node);
   }
-}
-
-export function closeModal(symbol: symbol): void {
-  modalsMap.get(symbol)?.[1].current?.close();
 }

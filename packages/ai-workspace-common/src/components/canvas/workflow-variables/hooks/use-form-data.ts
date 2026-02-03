@@ -16,7 +16,7 @@ const defaultResourceData: VariableFormData = {
   value: [{ type: 'resource', resource: { name: '', storageKey: '', fileType: 'image' } }],
   description: '',
   required: true,
-  isSingle: true,
+  isSingle: false,
   options: [],
   resourceTypes: RESOURCE_TYPE,
 };

@@ -13,6 +13,7 @@ import {
 } from '../config/config.js';
 import { getReflyDir } from '../config/paths.js';
 import { installSkill, isSkillInstalled } from '../skill/installer.js';
+import { detectInstalledAgents, deploySkillToAllPlatforms } from '../platform/manager.js';
 import { printDim, printError, println, printLogo, printSuccess } from '../utils/logo.js';
 import { ErrorCodes, fail, isPrettyOutput, ok, print } from '../utils/output.js';
 import { isTTY, shouldUseColor } from '../utils/ui.js';
@@ -101,7 +102,45 @@ export const initCommand = new Command('init')
           printError('Slash commands installation failed');
         }
         println('');
-      } else if (!pretty) {
+      }
+
+      // Detect and sync to all installed agents (multi-platform support)
+      const installedAgents = await detectInstalledAgents();
+      const deployableAgents = installedAgents.filter((a) => a.format !== 'unknown');
+
+      if (pretty && tty && deployableAgents.length > 0) {
+        println(`Found ${deployableAgents.length} installed agent(s):`);
+        for (const agent of deployableAgents) {
+          const dir = agent.globalSkillsDir || agent.skillsDir || 'N/A';
+          println(`  \u2713 ${agent.displayName.padEnd(16)} ${dir}`);
+        }
+        println('');
+      }
+
+      // Deploy base skill to all agents
+      const platformResults: Array<{ agent: string; success: boolean; path?: string }> = [];
+      if (deployableAgents.length > 0) {
+        const deployResult = await deploySkillToAllPlatforms('refly', { force: true });
+        for (const [agentName, result] of deployResult.results) {
+          platformResults.push({
+            agent: agentName,
+            success: result.success,
+            path: result.deployedPath || undefined,
+          });
+        }
+
+        if (pretty && tty) {
+          const successCount = platformResults.filter((r) => r.success).length;
+          if (successCount === deployableAgents.length) {
+            printSuccess(`Synced to ${successCount} agent(s)`);
+          } else {
+            printDim(`Synced to ${successCount}/${deployableAgents.length} agent(s)`);
+          }
+          println('');
+        }
+      }
+
+      if (!pretty) {
         // JSON mode: print install result
         print('init', {
           message: 'Refly CLI initialized successfully',
@@ -109,9 +148,14 @@ export const initCommand = new Command('init')
           apiEndpoint: apiEndpoint,
           skillInstalled: installResult.skillInstalled,
           skillPath: installResult.skillPath,
+          symlinkPath: installResult.symlinkPath,
           commandsInstalled: installResult.commandsInstalled,
           commandsPath: installResult.commandsPath,
           version: installResult.version,
+          platforms: {
+            detected: installedAgents.map((a) => a.name),
+            deployed: platformResults,
+          },
         });
       }
 
@@ -171,7 +215,10 @@ export const initCommand = new Command('init')
           configDir: getReflyDir(),
           apiEndpoint: apiEndpoint,
           skillInstalled: installResult.skillInstalled,
+          skillPath: installResult.skillPath,
+          symlinkPath: installResult.symlinkPath,
           commandsInstalled: installResult.commandsInstalled,
+          commandsPath: installResult.commandsPath,
           version: installResult.version,
           authenticated: !!(getAccessToken() || getApiKey()),
         });

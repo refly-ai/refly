@@ -1234,7 +1234,6 @@ export class CreditService {
         modelName: true,
         usageType: true,
         actionResultId: true,
-        pilotSessionId: true,
         description: true,
         extraData: true,
         createdAt: true,

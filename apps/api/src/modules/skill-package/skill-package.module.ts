@@ -22,6 +22,7 @@ import { SkillExecutionPlanService } from './skill-execution-plan.service';
 import { SkillWorkflowMapperService } from './skill-workflow-mapper.service';
 import { SkillPackageExecutorService } from './skill-package-executor.service';
 import { SkillExecutionProcessor, SkillWorkflowProcessor } from './skill-execution.processor';
+import { SkillGithubService } from './skill-github.service';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { SkillExecutionProcessor, SkillWorkflowProcessor } from './skill-executi
     SkillPackageExecutorService,
     SkillExecutionProcessor,
     SkillWorkflowProcessor,
+    SkillGithubService,
   ],
   exports: [SkillPackageService, SkillInstallationService, SkillPackageExecutorService],
 })

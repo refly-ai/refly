@@ -9,7 +9,7 @@ export interface UploadProgress {
   error?: string;
 }
 
-export interface ImageUploadState {
+interface ImageUploadState {
   uploads: UploadProgress[];
   isUploading: boolean;
   totalFiles: number;

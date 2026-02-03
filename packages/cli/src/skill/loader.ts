@@ -1,15 +1,17 @@
 /**
- * Skill loader module - parsing and loading skill.md files.
+ * Skill loader module - parsing and loading SKILL.md files.
  *
  * Uses gray-matter for frontmatter extraction.
  *
  * Implements:
  * - parseFrontmatter(content) - Extract YAML frontmatter
- * - loadSkill(name) - Load and parse skill.md
+ * - loadSkill(name) - Load and parse SKILL.md
  * - validateSkillFrontmatter(frontmatter) - Validate required fields
  * - getSkillWithWorkflow(name) - Load skill with workflow details
  */
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import matter from 'gray-matter';
 import { logger } from '../utils/logger.js';
 import {
@@ -21,8 +23,48 @@ import {
   validateCommonSkillFields,
   validateOptionalSkillFields,
 } from './types.js';
-import { readSkillFile, getSkillFilePath, skillFileExists } from './storage.js';
-import { findSkill } from './registry.js';
+import { getReflyDomainSkillDir } from '../config/paths.js';
+import { isSkillSymlinkValid } from './symlink.js';
+
+/**
+ * Get the SKILL.md file path for a given skill name.
+ * Returns: ~/.refly/skills/<skill-name>/SKILL.md
+ */
+function getSkillFilePath(name: string): string {
+  return path.join(getReflyDomainSkillDir(name), 'SKILL.md');
+}
+
+/**
+ * Check if a SKILL.md file exists.
+ */
+function skillFileExists(name: string): boolean {
+  try {
+    const skillFile = getSkillFilePath(name);
+    return fs.existsSync(skillFile);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Read SKILL.md content from a skill directory.
+ * Throws if file doesn't exist.
+ */
+function readSkillFile(name: string): string {
+  const skillFile = getSkillFilePath(name);
+
+  if (!fs.existsSync(skillFile)) {
+    throw createSkillError(SkillErrorCode.SKILL_DIR_NOT_FOUND, `Skill file not found: ${name}`, {
+      details: { path: skillFile },
+      suggestions: [
+        'Check if the skill exists with `refly skill installations`',
+        'Install a skill with `refly skill install`',
+      ],
+    });
+  }
+
+  return fs.readFileSync(skillFile, 'utf-8');
+}
 
 /**
  * Parse frontmatter from skill.md content.
@@ -117,36 +159,30 @@ export function loadSkill(name: string): LoadedSkill {
 }
 
 /**
- * Load a skill by name, with validation that it exists in registry.
- * Returns skill with registry entry information.
+ * Load a skill by name, with validation that it exists and has a valid symlink.
+ * Returns skill with symlink information.
  */
-export function loadSkillWithRegistry(
-  name: string,
-): LoadedSkill & { registryEntry: ReturnType<typeof findSkill> } {
-  const registryEntry = findSkill(name);
+export function loadSkillWithSymlink(name: string): LoadedSkill & { symlinkValid: boolean } {
+  const symlinkStatus = isSkillSymlinkValid(name);
 
-  if (!registryEntry) {
-    throw createSkillError(
-      SkillErrorCode.SKILL_NOT_FOUND,
-      `Skill '${name}' not found in registry`,
-      {
-        suggestions: [
-          'Use `refly skill list` to see available skills',
-          'Use `refly skill create` to create a new skill',
-        ],
-      },
-    );
+  if (!symlinkStatus.exists) {
+    throw createSkillError(SkillErrorCode.SKILL_NOT_FOUND, `Skill '${name}' not found`, {
+      suggestions: [
+        'Use `refly skill installations` to see installed skills',
+        'Install a skill with `refly skill install`',
+      ],
+    });
   }
 
   // Check if skill file exists
   if (!skillFileExists(name)) {
     throw createSkillError(
       SkillErrorCode.SKILL_DIR_NOT_FOUND,
-      `Skill '${name}' is in registry but skill.md file is missing`,
+      `Skill '${name}' symlink exists but SKILL.md file is missing`,
       {
         suggestions: [
-          'Run `refly skill validate --fix` to repair the registry',
-          'Recreate the skill with `refly skill create`',
+          'The skill directory may be corrupted',
+          'Try reinstalling the skill with `refly skill install`',
         ],
       },
     );
@@ -156,7 +192,7 @@ export function loadSkillWithRegistry(
 
   return {
     ...loadedSkill,
-    registryEntry,
+    symlinkValid: symlinkStatus.isValid,
   };
 }
 

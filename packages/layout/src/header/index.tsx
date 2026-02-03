@@ -1,7 +1,7 @@
 import React, { type ReactNode } from 'react';
 import clsx from 'clsx';
 
-export interface HeaderProps {
+interface HeaderProps {
   leftActions?: ReactNode[];
   rightActions?: ReactNode[];
   className?: string;

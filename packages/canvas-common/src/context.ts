@@ -1,6 +1,7 @@
 import {
   ActionResult,
   CanvasNodeType,
+  DriveFile,
   SkillContext,
   SkillContextFileItem,
   WorkflowVariable,
@@ -173,45 +174,57 @@ export const convertContextItemsToInvokeParams = (
   if (referencedVariables) {
     for (const variable of referencedVariables) {
       if (variable.variableType === 'resource' && variable.value?.length > 0) {
-        const fileId = variable.value[0]?.resource?.fileId;
-        if (fileId) {
-          variableToFileIdMap.set(variable.variableId, {
-            fileId,
-            variableId: variable.variableId,
-            variableName: variable.name,
-          });
-          // Also add to filesFromVariables for direct inclusion
-          filesFromVariables.push({
-            fileId,
-            variableId: variable.variableId,
-            variableName: variable.name,
-          });
+        // Iterate through all resource values in the variable
+        for (const value of variable.value) {
+          if (value.type === 'resource' && value.resource?.fileId) {
+            const fileId = value.resource.fileId;
+            variableToFileIdMap.set(`${variable.variableId}-${fileId}`, {
+              fileId,
+              variableId: variable.variableId,
+              variableName: variable.name,
+            });
+            // Also add to filesFromVariables for direct inclusion
+            filesFromVariables.push({
+              fileId,
+              variableId: variable.variableId,
+              variableName: variable.name,
+            });
+          }
         }
       }
     }
   }
 
   // Get files from context items (for backward compatibility)
-  const filesFromContextItems = purgedItems
-    ?.filter((item) => item?.type === 'file')
-    .map((item) => {
-      // For resource variables, resolve variableId to fileId
-      if (item.metadata?.source === 'variable' && item.metadata?.variableId) {
-        const detail = variableToFileIdMap.get(item.metadata.variableId);
-        if (detail) {
-          // Find the variable to get its name
-          return detail;
+  const filesFromContextItems: SkillContextFileItem[] =
+    purgedItems
+      ?.filter((item) => item?.type === 'file')
+      .map((item): SkillContextFileItem | null => {
+        // For resource variables, resolve variableId to fileId
+        if (item.metadata?.source === 'variable' && item.metadata?.variableId) {
+          const detail = variableToFileIdMap.get(item.metadata.variableId);
+          if (detail) {
+            // Find the variable to get its name
+            return detail;
+          }
+          // If variableId cannot be resolved, skip this item
+          console.warn(`Cannot resolve variableId ${item.metadata.variableId} to fileId, skipping`);
+          return null;
         }
-        // If variableId cannot be resolved, skip this item
-        console.warn(`Cannot resolve variableId ${item.metadata.variableId} to fileId, skipping`);
-        return null;
-      }
-      // For direct file references, use entityId as fileId
-      return {
-        fileId: item.entityId,
-      };
-    })
-    .filter((item): item is SkillContextFileItem => item !== null);
+        // For direct file references, use entityId as fileId and preserve metadata
+        return {
+          fileId: item.entityId,
+          // Store partial file metadata for display purposes
+          file: {
+            fileId: item.entityId,
+            name: item.title ?? '',
+            type: item.metadata?.mimeType ?? '',
+            size: item.metadata?.size,
+            canvasId: '', // Required by type but not needed for display
+          } as DriveFile,
+        };
+      })
+      .filter((item): item is SkillContextFileItem => item !== null) ?? [];
 
   // Merge files from both sources, deduplicating by fileId
   const allFiles = [...filesFromVariables, ...(filesFromContextItems ?? [])];

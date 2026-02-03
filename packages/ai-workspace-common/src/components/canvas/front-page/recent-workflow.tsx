@@ -49,9 +49,8 @@ export const RecentWorkflow = memo(({ canvases }: { canvases: SiderData[] }) => 
 
   const handleNewWorkflow = useCallback(() => {
     logEvent('new_workflow', Date.now(), {});
-    setIsManualCollapse(false);
     debouncedCreateCanvas();
-  }, [debouncedCreateCanvas, setIsManualCollapse, logEvent]);
+  }, [debouncedCreateCanvas, logEvent]);
 
   const handleEditCanvas = useCallback(
     (canvasId: string) => {

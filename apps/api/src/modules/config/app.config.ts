@@ -112,6 +112,10 @@ export default () => ({
       expiresIn: process.env.JWT_EXPIRATION_TIME || '1d',
       refreshExpiresIn: process.env.JWT_REFRESH_EXPIRATION_TIME || '14d',
     },
+    turnstile: {
+      enabled: process.env.CLOUDFLARE_TURNSTILE_ENABLED === 'true' || false,
+      secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+    },
     collab: {
       tokenExpiry: process.env.COLLAB_TOKEN_EXPIRY || '1h',
     },
@@ -148,6 +152,7 @@ export default () => ({
     },
     invitation: {
       requireInvitationCode: process.env.AUTH_REQUIRE_INVITATION_CODE === 'true' || false,
+      maxCodesPerUser: Number.parseInt(process.env.INVITATION_MAX_CODES_PER_USER) || 20,
       inviterCreditAmount: Number.parseInt(process.env.INVITATION_INVITER_CREDIT_AMOUNT) || 500,
       inviteeCreditAmount: Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_AMOUNT) || 500,
       inviterCreditExpiresInDays:
@@ -165,6 +170,7 @@ export default () => ({
     },
   },
   tools: {
+    webSearchEnabled: process.env.WEB_SEARCH_ENABLED === 'true',
     supportedToolsets: process.env.SUPPORTED_TOOLSETS || '', // comma separated list of toolset keys
     google: {
       clientId: process.env.GOOGLE_TOOLS_CLIENT_ID,
@@ -314,6 +320,8 @@ export default () => ({
       maxDuration: Number.parseInt(process.env.VIDEO_MAX_DURATION) || 600, // 10 minutes
     },
     s3: {
+      inputBucket:
+        process.env.LAMBDA_INPUT_S3_BUCKET || process.env.MINIO_INTERNAL_BUCKET || 'refly-weblink',
       bucket: process.env.LAMBDA_S3_BUCKET || process.env.MINIO_INTERNAL_BUCKET || 'refly-weblink',
       outputPrefix: process.env.LAMBDA_OUTPUT_PREFIX || 'lambda-output',
     },
@@ -349,6 +357,13 @@ export default () => ({
       hash: process.env.SANDBOX_S3LIB_HASH,
       cache: process.env.SANDBOX_S3LIB_CACHE,
       reset: process.env.SANDBOX_S3LIB_RESET,
+    },
+    s3: {
+      overlap: {
+        enabled: process.env.SANDBOX_S3_OVERLAP_ENABLED,
+        endpoint: process.env.SANDBOX_S3_OVERLAP_ENDPOINT,
+        port: process.env.SANDBOX_S3_OVERLAP_PORT,
+      },
     },
     scalebox: {
       apiKey: process.env.SCALEBOX_API_KEY,

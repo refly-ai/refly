@@ -97,9 +97,14 @@ Operations (op field):
 - createTask: { op, task: { id, title, prompt, toolsets, dependentTasks? } }
 - updateTask: { op, taskId, data: { title?, prompt?, toolsets?, dependentTasks? } }
 - deleteTask: { op, taskId }
-- createVariable: { op, variable: { variableId, variableType, name, description, value, required?, resourceTypes? } }
-- updateVariable: { op, variableId, data: { name?, description?, value?, required?, ... } }
+- createVariable: { op, variable: { variableId, variableType, name, description, value, required?, resourceTypes?, options?, isSingle? } }
+- updateVariable: { op, variableId, data: { name?, description?, value?, required?, variableType?, options?, isSingle?, ... } }
 - deleteVariable: { op, variableId }
+
+Variable types:
+- string: text input
+- resource: file upload (use resourceTypes to specify accepted types)
+- option: selection from predefined choices (use options array and isSingle boolean)
 
 Notes:
 - planId is optional; if omitted, patches the latest plan in the current session

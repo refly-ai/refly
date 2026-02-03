@@ -102,12 +102,6 @@ export const Pricing = lazy(
   () => import(/* webpackChunkName: "group-landing" */ './pages/pricing'),
 );
 
-// ========== Temporarily unused pages (Separate grouping) ==========
-// ProjectPage is currently not referenced by routes, keep it independent
-export const ProjectPage = lazy(
-  () => import(/* webpackChunkName: "page-project" */ './pages/project'),
-);
-
 export { AppLayout, LazyErrorBoundary } from './components/layout';
 
 export { setupI18n } from './effect/i18n';

@@ -48,7 +48,7 @@ Note: Use `--run-id` when you already have a specific run context; use `--workfl
 ## List Nodes in Workflow
 
 ```bash
-refly workflow nodes <workflowId> [options]
+refly workflow node list <workflowId> [options]
   --include-edges            # Include edge/connection info
   --include-position         # Include node coordinates
   --include-metadata         # Include full node metadata
@@ -57,7 +57,7 @@ refly workflow nodes <workflowId> [options]
 ## Get Single Node Information
 
 ```bash
-refly workflow node <id> <nodeId> [options]
+refly workflow node get <id> <nodeId> [options]
   --include-connections      # Include incoming/outgoing connections
 ```
 

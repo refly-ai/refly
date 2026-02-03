@@ -10,6 +10,7 @@ import { CanvasTitle, ReadonlyCanvasTitle, type CanvasTitleMode } from './canvas
 // import ShareSettings from './share-settings';
 import PublishTemplateButton from './publish-template-button';
 import ScheduleButton from './schedule-button';
+import { IntegrationDocsButton } from '../integration-docs';
 import { useUserStoreShallow } from '@refly/stores';
 import './index.scss';
 import { IconLink } from '@refly-packages/ai-workspace-common/components/common/icon';
@@ -20,6 +21,7 @@ import { logEvent } from '@refly/telemetry-web';
 import { ActionsInCanvasDropdown } from '@refly-packages/ai-workspace-common/components/canvas/top-toolbar/actions-in-canvas-dropdown';
 import { SettingItem } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
 import { GithubStar } from '@refly-packages/ai-workspace-common/components/common/github-star';
+import { isSelfHosted } from '@refly/ui-kit';
 
 interface TopToolbarProps {
   canvasId: string;
@@ -151,14 +153,26 @@ export const TopToolbar: FC<TopToolbarProps> = memo(({ canvasId, hideLogoButton,
           ) : (
             <>
               {/* <ShareSettings canvasId={canvasId} canvasTitle={canvasTitle} /> */}
-              <ScheduleButton canvasId={canvasId} />
-              <PublishTemplateButton canvasId={canvasId} canvasTitle={canvasTitle} />
+              <div className="top-toolbar-button-group">
+                <ScheduleButton
+                  canvasId={canvasId}
+                  className="top-toolbar-group-button top-toolbar-group-button-schedule"
+                />
+                <span className="top-toolbar-button-divider" />
+                <IntegrationDocsButton
+                  canvasId={canvasId}
+                  buttonClassName="top-toolbar-group-button top-toolbar-group-button-integration"
+                  buttonType="text"
+                />
+              </div>
+              <span className="top-toolbar-external-divider" />
+              {!isSelfHosted && (
+                <PublishTemplateButton canvasId={canvasId} canvasTitle={canvasTitle} />
+              )}
+              <div className="group relative">
+                <SettingItem showName={false} avatarAlign={'right'} />
+              </div>
             </>
-          )}
-          {!isRunDetail && (
-            <div className="group relative">
-              <SettingItem showName={false} avatarAlign={'right'} />
-            </div>
           )}
         </div>
       </div>

@@ -52,6 +52,9 @@ export const DOCUMENT_FILE_EXTENSIONS = [
   'html',
   'docx',
   'epub',
+  'csv',
+  'xls',
+  'xlsx',
   ...CODE_FILE_EXTENSIONS,
 ];
 export const IMAGE_FILE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'tiff', 'bmp', 'webp', 'svg'];

@@ -57,7 +57,7 @@ export const workflowVariableSchema = z.object({
   variableType: z
     .enum(['string', 'resource', 'option'])
     .describe(
-      'Variable type: string for text input, resource for file upload, option for select options',
+      'Variable type: string for text input, resource for file upload, option for selection from predefined choices',
     )
     .default('string'),
   name: z.string().describe('Variable name used in the workflow'),
@@ -70,6 +70,16 @@ export const workflowVariableSchema = z.object({
     .array(z.enum(['document', 'image', 'audio', 'video']))
     .optional()
     .describe('Accepted resource types (only for resource type variables)'),
+  options: z
+    .array(z.string())
+    .optional()
+    .describe('Predefined options for selection (only for option type variables)'),
+  isSingle: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether only single selection is allowed (only for option type variables). Defaults to true.',
+    ),
   value: z.array(workflowVariableValueSchema).describe('Variable values'),
 });
 
@@ -118,6 +128,8 @@ export const workflowPatchDataSchema = z.object({
     .array(z.enum(['document', 'image', 'audio', 'video']))
     .optional()
     .describe('New accepted resource types'),
+  options: z.array(z.string()).optional().describe('New predefined options for selection'),
+  isSingle: z.boolean().optional().describe('Whether only single selection is allowed'),
   value: z.array(workflowVariableValueSchema).optional().describe('New variable values'),
 });
 
@@ -300,6 +312,8 @@ export const applyWorkflowPatchOperations = (
             ...(data.resourceTypes !== undefined && {
               resourceTypes: data.resourceTypes,
             }),
+            ...(data.options !== undefined && { options: data.options }),
+            ...(data.isSingle !== undefined && { isSingle: data.isSingle }),
             ...(data.value !== undefined && { value: data.value }),
           };
           // Validate the updated variable
@@ -459,6 +473,8 @@ export const planVariableToWorkflowVariable = (
     description: planVariable.description ?? '',
     required: planVariable.required ?? false,
     resourceTypes: planVariable.resourceTypes,
+    options: planVariable.options,
+    isSingle: planVariable.isSingle,
   };
 };
 
@@ -484,6 +500,14 @@ export const generateCanvasDataFromWorkflowPlan = (
   const rowStepY = 240;
 
   if (Array.isArray(workflowPlan.tasks) && workflowPlan.tasks.length > 0) {
+    // Phase 0: Pre-generate entity IDs for all tasks to enable complete ID replacement
+    // This ensures that when we replace agent mentions in prompts, we have all task-to-entity mappings available
+    for (const task of workflowPlan.tasks) {
+      const taskId = task?.id ?? `task-${genUniqueId()}`;
+      const taskEntityId = genNodeEntityId('skillResponse');
+      taskIdToEntityId.set(taskId, taskEntityId);
+    }
+
     // Phase 1: Process tasks in dependency order
     // First, identify tasks with no dependencies (roots)
     const taskMap = new Map<string, (typeof workflowPlan.tasks)[0]>();
@@ -554,10 +578,11 @@ export const generateCanvasDataFromWorkflowPlan = (
         }
       }
 
-      // Create the node data for prepareAddNode
-      const taskEntityId = genNodeEntityId('skillResponse');
-      taskIdToEntityId.set(taskId, taskEntityId);
+      // Get the pre-generated entity ID for this task
+      const taskEntityId = taskIdToEntityId.get(taskId)!;
 
+      // Replace agent mentions in prompt with real entity IDs
+      // Now taskIdToEntityId contains all tasks, so all references will be replaced correctly
       const normalizedPrompt = replaceTaskAgentMentions(taskPrompt, taskIdToEntityId);
 
       // Calculate default position for non-auto-layout mode

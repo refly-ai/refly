@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly/stores';
 import { useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
+import { logEvent } from '@refly/telemetry-web';
+import { useUpdateUserPreferences } from '@refly-packages/ai-workspace-common/hooks/use-update-user-preferences';
 
 export const PureCopilotModal = () => {
   const { t } = useTranslation();
@@ -17,13 +19,17 @@ export const PureCopilotModal = () => {
       showInvitationCodeModal: state.showInvitationCodeModal,
       userProfile: state.userProfile,
     }));
+  const { updateUserPreferences } = useUpdateUserPreferences();
 
   const needOnboarding = userProfile?.preferences?.needOnboarding;
   const isWorkflowPage = pathname.startsWith('/workflow');
 
   const handleClose = useCallback(() => {
     setHidePureCopilotModal(true);
-  }, [setHidePureCopilotModal]);
+
+    logEvent('click_back_to_workspace');
+    updateUserPreferences({ needOnboarding: false });
+  }, [setHidePureCopilotModal, updateUserPreferences]);
 
   if (showInvitationCodeModal || hidePureCopilotModal || !needOnboarding || isWorkflowPage) {
     return null;

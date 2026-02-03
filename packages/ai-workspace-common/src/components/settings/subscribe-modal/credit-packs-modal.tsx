@@ -88,7 +88,7 @@ export interface CreditPacksModalProps {
   onSuccess?: () => void;
 }
 
-export const CreditPacksModal = memo(({ onCancel, onSuccess }: CreditPacksModalProps) => {
+const CreditPacksModal = memo(({ onCancel, onSuccess }: CreditPacksModalProps) => {
   const { t } = useTranslation('ui');
   const [selectedPackId, setSelectedPackId] = useState<string>('credit_pack_100');
   const [isLoading, setIsLoading] = useState(false);

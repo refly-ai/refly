@@ -55,7 +55,7 @@ export interface CanvasDetailModel extends CanvasModel {
   schedule?: Omit<WorkflowScheduleModel, 'pk'>;
 }
 
-export function schedulePO2DTO(schedule: Omit<WorkflowScheduleModel, 'pk'>): WorkflowSchedule {
+function schedulePO2DTO(schedule: Omit<WorkflowScheduleModel, 'pk'>): WorkflowSchedule {
   return {
     scheduleId: schedule.scheduleId,
     name: schedule.name,

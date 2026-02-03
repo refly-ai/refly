@@ -7,18 +7,20 @@
   "scripts": {
     "dev": "nodemon",
     "codegen": "openapi-ts && tsc --build --verbose",
+    "generate:docs": "tsx scripts/generate-docs.ts",
     "clean": "rimraf dist && rimraf tsconfig.tsbuildinfo",
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "tsc --build --verbose"
   },
   "devDependencies": {
-    "@hey-api/client-fetch": "0.4.0",
-    "@hey-api/openapi-ts": "0.53.8"
+    "@hey-api/openapi-ts": "0.53.8",
+    "tsx": "^4.19.4",
+    "yaml": "^2.6.1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@tanstack/react-query": "^5.61.3"
+    "@hey-api/client-fetch": "0.4.0"
   }
 }

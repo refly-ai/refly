@@ -1,10 +1,10 @@
 # CONTRIBUTING
 
-So you're looking to contribute to Refly - that's awesome, we can't wait to see what you do. As an AI-native creation engine, we aim to provide the most intuitive free-form canvas interface that combines multi-threaded conversations, knowledge base RAG integration, contextual memory, and intelligent search capabilities. Any help from the community counts, truly.
+So you're looking to contribute to Refly - that's awesome, we can't wait to see what you do. Refly is the first open-source platform for building stable, atomic, and versioned agent skills. As an AI-native creation engine, we provide an intuitive free-form canvas interface to codify business logic into structured agent skills that any agent can invoke with 100% reliability. Any help from the community counts, truly.
 
 We need to be nimble and ship fast given where we are, but we also want to make sure that contributors like you get as smooth an experience at contributing as possible. We've assembled this contribution guide for that purpose, aiming at getting you familiarized with the codebase & how we work with contributors, so you could quickly jump to the fun part.
 
-This guide, like Refly itself, is a constant work in progress. We highly appreciate your understanding if at times it lags behind the actual project, and welcome any feedback for us to improve.
+This guide, like Refly itself, is a constant work in progress. We've recently evolved from a creative engine into an agentic infrastructure platform, and we highly appreciate your understanding if at times it lags behind the actual project. We welcome any feedback for us to improve.
 
 In terms of licensing, please take a minute to read our short [License and Contributor Agreement](./LICENSE). The community also adheres to the [code of conduct](./.github/CODE_OF_CONDUCT.md).
 
@@ -133,18 +133,13 @@ cd apps/web && pnpm dev # terminal 1
 cd apps/api && pnpm dev # terminal 2
 ```
 
-You can visit [http://localhost:5173](http://localhost:5173/) to start developing Refly.
-
-6. Developing desktop application:
+6. Developing CLI:
 
 ```bash
-# Option 1: from the root directory
-pnpm dev:electron
-
-# Option 2: from separate packages in two terminals
-cd apps/web && pnpm dev:electron # terminal 1
-cd apps/desktop && pnpm dev:electron # terminal 2
+cd packages/cli && pnpm dev
 ```
+
+You can visit [http://localhost:5173](http://localhost:5173/) to start developing Refly web application.
 
 ## Code Structure
 
@@ -156,39 +151,50 @@ To help you quickly navigate where your contribution fits, here's a brief outlin
 [apps/api/]                // Main API server application
 ├── src/
 │   ├── modules/          // Feature modules (NestJS modules)
-│   │   ├── auth/        // Authentication and authorization
-│   │   ├── canvas/      // Canvas-related backend services
+│   │   ├── skill/       // Agent skills management
+│   │   ├── workflow/    // Workflow execution and planning
+│   │   ├── action/      // Agent action handling
+│   │   ├── mcp-server/  // Model Context Protocol integration
+│   │   ├── tool/        // Tool inventory and execution (Composio, etc.)
+│   │   ├── drive/       // File and storage management
+│   │   ├── schedule/    // Task scheduling and multi-model routing
 │   │   ├── rag/         // RAG pipeline implementation
 │   │   ├── knowledge/   // Knowledge base management
-│   │   ├── provider/    // AI provider integrations
-│   │   ├── search/      // Search functionality
-│   │   ├── collab/      // Real-time collaboration
-│   │   ├── project/     // Project management
-│   │   ├── user/        // User management
-│   │   └── ...          // Other feature modules
+│   │   ├── auth/        // Authentication and authorization
+│   │   ├── canvas/      // Canvas-related backend services
+│   │   └── ...          // Other feature modules (collab, user, etc.)
 │   ├── utils/           // Shared utilities
 │   └── scripts/         // Build and deployment scripts
 ├── prisma/              // Database schema and migrations
 └── data/                // Static data and configurations
 
 [packages/]
-├── providers/           // AI provider abstractions and implementations
-│   └── src/            // LLM integrations (OpenAI, Anthropic, etc.)
-├── common-types/       // Shared TypeScript types and interfaces
-├── ai-workspace-common/ // Shared AI workspace components and logic
+├── cli/                 // Refly CLI for skill development
+├── skill-template/      // Templates and engine for agent skills
+├── agent-tools/         // Standardized tools for agents
+├── providers/           // AI provider abstractions (OpenAI, Vertex, etc.)
+├── canvas-common/       // Shared canvas logic and types
+├── ai-workspace-common/ // Shared workspace UI components
+├── web-core/            // Core frontend logic and hooks
+├── ui-kit/              // Shared UI component library
+├── stores/              // Shared state management (Zustand)
+├── common-types/        // Shared TypeScript types
+├── i18n/                // Internationalization resources
+├── openapi-schema/     // API schema definitions (OpenAPI)
 ├── utils/              // Shared utility functions
 ├── errors/             // Common error definitions
-├── openapi-schema/     // API schema definitions
+├── observability/      // Tracing and monitoring (Langfuse)
 └── tsconfig/           // Shared TypeScript configurations
 ```
 
 The backend is built with NestJS and TypeScript, focusing on:
 
-- Modular architecture with feature-based modules
-- AI provider integrations and LLM management
+- Building stable, atomic, and versioned agent skills
+- Deterministic execution with intervenable runtime
+- Universal delivery via MCP, APIs, and SDKs
+- Multi-model routing and advanced task scheduling
 - RAG pipeline implementation for knowledge retrieval
-- Real-time collaboration using WebSockets
-- Canvas state management and persistence
+- Real-time collaboration and canvas state management
 - RESTful APIs with OpenAPI documentation
 - Efficient database operations with Prisma ORM
 
@@ -207,41 +213,28 @@ The backend is built with NestJS and TypeScript, focusing on:
 ├── public/                // Static assets
 └── typing/                // TypeScript type definitions
 
-[apps/desktop/]            // Desktop application (Electron)
-├── src/                   // Desktop-specific code
-└── ...                    // Electron configuration
-
-[apps/extension/]          // Browser extension
+[apps/extension/]          // Browser extension for web clipping
 ├── src/                   // Extension-specific code
 └── ...                    // Extension manifest and assets
 
 [packages/]
+├── web-core/              // Core frontend logic and hooks
 ├── ai-workspace-common/   // Shared AI workspace components
-│   ├── src/
-│   │   ├── components/    // Canvas, editor, and AI feature components
-│   │   ├── hooks/         // Custom React hooks
-│   │   ├── stores/        // State management (Zustand/Redux)
-│   │   ├── utils/         // Shared utilities
-│   │   ├── types/         // Component-specific types
-│   │   └── modules/       // Feature modules
-│
+├── canvas-common/         // Shared canvas logic
+├── ui-kit/                // Shared UI component library
+├── stores/                // Shared state management
 ├── i18n/                  // Internationalization
-│   ├── src/
-│   │   ├── en-US/         // English translations
-│   │   └── zh-Hans/       // Chinese translations
-│
-└── wxt/                   // Web extension toolkit configuration
+└── ...                    // Other shared packages
 ```
 
 The frontend is built with React, TypeScript, and modern tooling:
 
-- Component-based architecture with reusable UI components
+- Agent skills builder interface for visual logic construction
 - Canvas-based interface for AI-powered content creation
-- Real-time collaboration features
+- Real-time execution logs and workflow transparency
 - Multi-threaded conversation management
 - Knowledge base integration and RAG-powered search
 - Responsive design with Tailwind CSS
-- State management for complex application state
 - Internationalization support for multiple languages
 
 ## Submitting your PR

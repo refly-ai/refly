@@ -4,21 +4,11 @@ import {
   EditorCommandItem,
   EditorCommandList,
 } from '../core/components';
-import { useState } from 'react';
-import { Divider } from 'antd';
-import { ColorSelector } from './selectors/color-selector';
-import { LinkSelector } from './selectors/link-selector';
-import { NodeSelector } from './selectors/node-selector';
-import { AIBtnSelector } from './selectors/ai-btn-selector';
-
-import GenerativeMenuSwitch from './generative-menu-switch';
-import { TextButtons } from './selectors/text-buttons';
 import { configureSuggestionItems } from './slash-command';
 
 import './styles/globals.css';
 import './styles/prosemirror.css';
 import './styles/table.css';
-import { CreateMemoSelector } from '@refly-packages/ai-workspace-common/components/editor/components/selectors/create-memo-selector';
 
 export const CollabEditorCommand = (props: { entityId: string; entityType: string }) => {
   const suggestionItems = configureSuggestionItems(props);
@@ -45,38 +35,5 @@ export const CollabEditorCommand = (props: { entityId: string; entityType: strin
         ))}
       </EditorCommandList>
     </EditorCommand>
-  );
-};
-
-interface CollabGenAIMenuSwitchProps {
-  contentSelector: {
-    text: string;
-    handleClick: () => void;
-    createMemo: () => void;
-  };
-}
-export const CollabGenAIMenuSwitch: React.FC<CollabGenAIMenuSwitchProps> = (props) => {
-  const { contentSelector } = props;
-  const [openNode, setOpenNode] = useState(false);
-  const [openColor, setOpenColor] = useState(false);
-  const [openLink, setOpenLink] = useState(false);
-  const [openAI, setOpenAI] = useState(false);
-
-  return (
-    <GenerativeMenuSwitch open={openAI} onOpenChange={setOpenAI}>
-      <AIBtnSelector open={openAI} onOpenChange={setOpenAI} />
-      {/* <ContentSelectorButtons
-        text={contentSelector?.text}
-        handleClick={contentSelector?.handleClick}
-      /> */}
-      <CreateMemoSelector text={contentSelector?.text} handleClick={contentSelector?.createMemo} />
-      <Divider className="mx-0 h-8" type="vertical" />
-      <NodeSelector open={openNode} onOpenChange={setOpenNode} />
-      <Divider className="mx-0 h-8" type="vertical" />
-      <TextButtons />
-      <LinkSelector open={openLink} onOpenChange={setOpenLink} />
-      <Divider className="mx-0 h-8" type="vertical" />
-      <ColorSelector open={openColor} onOpenChange={setOpenColor} />
-    </GenerativeMenuSwitch>
   );
 };

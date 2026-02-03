@@ -1,16 +1,7 @@
-import { Provider, ProviderCategory } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { Provider, ProviderCategory } from '@refly/openapi-schema';
 
 // Pricing model for community providers
 export type ProviderPricingModel = 'free' | 'paid' | 'freemium';
-
-// Provider configuration field
-export interface ProviderConfigField {
-  type: 'string' | 'number' | 'boolean';
-  required: boolean;
-  defaultValue?: any;
-  placeholder?: string;
-  description?: string;
-}
 
 // Community provider configuration type
 export interface CommunityProviderConfig {
@@ -46,17 +37,6 @@ export interface CommunityProviderResponse {
   };
 }
 
-// Community provider card props
-export interface CommunityProviderCardProps {
-  config: CommunityProviderConfig;
-  isInstalled: boolean;
-  isInstalling?: boolean;
-  onInstall?: (config: CommunityProviderConfig) => void;
-  onInstallStart?: (config: CommunityProviderConfig) => void;
-  onInstallError?: (config: CommunityProviderConfig, error: any) => void;
-  onViewDetails?: (config: CommunityProviderConfig) => void;
-}
-
 // Community provider list props
 export interface CommunityProviderListProps {
   visible: boolean;
@@ -70,30 +50,4 @@ export interface CommunityProviderFilterState {
   selectedCategory: ProviderCategory | 'all';
   selectedPricing: ProviderPricingModel | 'all';
   selectedTags: string[];
-}
-
-// Provider install modal props
-export interface ProviderInstallModalProps {
-  visible: boolean;
-  config: CommunityProviderConfig | null;
-  onClose: () => void;
-  onSuccess: (provider: Provider) => void;
-  loading?: boolean;
-}
-
-// Provider store filters props
-export interface ProviderStoreFiltersProps {
-  filters: CommunityProviderFilterState;
-  onFiltersChange: (filters: CommunityProviderFilterState) => void;
-  categories: ProviderCategory[];
-  availableTags: string[];
-}
-
-// Provider detail props
-export interface ProviderDetailProps {
-  config: CommunityProviderConfig;
-  visible: boolean;
-  onClose: () => void;
-  onInstall: (config: CommunityProviderConfig) => void;
-  isInstalled: boolean;
 }

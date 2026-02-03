@@ -1,103 +1,48 @@
 services:
   db:
-    container_name: refly_db
-    image: postgres:16-alpine
+    extends:
+      file: docker-compose.base.yml
+      service: db
     ports:
       - 35432:5432
-    restart: always
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=refly
-      - POSTGRES_USER=refly
-      - POSTGRES_PASSWORD=test
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U refly']
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - refly_network
+
   minio:
-    container_name: refly_minio
-    image: minio/minio:RELEASE.2025-01-20T14-49-07Z
-    command: server /data --console-address ":9001"
-    restart: always
+    extends:
+      file: docker-compose.base.yml
+      service: minio
     ports:
       - 39000:9000
       - 39001:9001
-    volumes:
-      - minio_data:/data
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    networks:
-      - refly_network
+
   redis:
-    container_name: refly_redis
-    image: redis/redis-stack:latest
-    restart: always
+    extends:
+      file: docker-compose.base.yml
+      service: redis
     ports:
       - 36379:6379
       - 38001:8001
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - refly_network
+
   qdrant:
-    container_name: refly_qdrant
-    image: reflyai/qdrant:v1.13.1
+    extends:
+      file: docker-compose.base.yml
+      service: qdrant
     ports:
       - 36333:6333
       - 36334:6334
-    volumes:
-      - qdrant_data:/qdrant/storage:z
-    restart: always
-    healthcheck:
-      test: ['CMD-SHELL', "curl -s http://localhost:6333/healthz | grep -q 'healthz check passed' || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    networks:
-      - refly_network
+
   searxng:
-    container_name: refly_searxng
-    image: docker.io/searxng/searxng:latest
-    restart: unless-stopped
+    extends:
+      file: docker-compose.base.yml
+      service: searxng
     ports:
       - 38080:8080
-    volumes:
-      - ./searxng:/etc/searxng
-    environment:
-      - SEARXNG_BASE_URL=https://${SEARXNG_HOSTNAME:-localhost}/
-      - UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS:-4}
-      - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS:-4}
-    networks:
-      - refly_network
+
   sandbox:
-    container_name: refly_sandbox
-    image: ghcr.io/refly-ai/refly-sandbox:latest
-    restart: unless-stopped
+    extends:
+      file: docker-compose.base.yml
+      service: sandbox
     ports:
-      - 7651:7651
-    env_file:
-      - .env
-    networks:
-      - refly_network
+      - 38088:8080
 
 networks:
   refly_network:

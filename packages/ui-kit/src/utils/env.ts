@@ -11,6 +11,8 @@ declare global {
       CANVAS_TEMPLATE_ENABLED?: boolean;
       SENTRY_ENABLED?: boolean;
       ENV_TAG?: string;
+      DEPLOY_TYPE?: string;
+      PUBLIC_CLOUDFLARE_SITE_KEY?: string;
     };
 
     ipcRenderer?: {
@@ -71,18 +73,24 @@ export const staticPrivateEndpoint =
 
 export const subscriptionEnabled =
   getBrowserValue(() => Boolean(window.ENV?.SUBSCRIPTION_ENABLED), false) ||
-  Boolean(process.env.VITE_SUBSCRIPTION_ENABLED);
+  process.env.VITE_SUBSCRIPTION_ENABLED === 'true';
 
 export const canvasTemplateEnabled =
   getBrowserValue(() => Boolean(window.ENV?.CANVAS_TEMPLATE_ENABLED), false) ||
-  Boolean(process.env.VITE_CANVAS_TEMPLATE_ENABLED);
+  process.env.VITE_CANVAS_TEMPLATE_ENABLED === 'true';
 
 export const sentryEnabled =
   getBrowserValue(() => Boolean(window.ENV?.SENTRY_ENABLED), false) ||
-  Boolean(process.env.VITE_SENTRY_ENABLED);
+  process.env.VITE_SENTRY_ENABLED === 'true';
 
 export const envTag = getBrowserValue(() => window.ENV?.ENV_TAG, '') || process.env.VITE_ENV_TAG;
 console.log('envTag', envTag);
+
+const DEPLOY_TYPE_SELF_HOSTED = 'self-hosted';
+
+export const isSelfHosted =
+  getBrowserValue(() => window.ENV?.DEPLOY_TYPE, '') === DEPLOY_TYPE_SELF_HOSTED ||
+  process.env.VITE_DEPLOY_TYPE === DEPLOY_TYPE_SELF_HOSTED;
 
 export const runtime = process.env.VITE_RUNTIME as IRuntime;
 

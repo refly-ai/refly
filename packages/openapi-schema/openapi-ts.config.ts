@@ -4,7 +4,10 @@ export default defineConfig({
   client: '@hey-api/client-fetch',
   input: './schema.yml',
   output: {
-    format: 'biome',
-    path: 'src/',
+    path: './src',
+    format: 'prettier',
+  },
+  types: {
+    enums: 'javascript',
   },
 });

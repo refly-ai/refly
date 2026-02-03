@@ -4,7 +4,7 @@ export interface CacheInfo {
   accessedAt?: number;
 }
 
-export interface StorageConfig {
+interface StorageConfig {
   maxSize?: number;
   maxAge?: number;
   evictionPolicy?: 'lru' | 'fifo' | 'lifo';
@@ -77,8 +77,3 @@ export const createAutoEvictionStorage = (config: StorageConfig = {}) => {
     },
   };
 };
-
-// Default storage for canvas and document stores
-export const canvasStorage = createAutoEvictionStorage({ maxSize: 50 });
-export const documentStorage = createAutoEvictionStorage({ maxSize: 100 });
-export const appStorage = createAutoEvictionStorage({ maxSize: 20 });

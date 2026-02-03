@@ -7,7 +7,7 @@ import {
   ToolsetAuthType,
   DynamicConfigItem,
   DynamicConfigValue,
-} from '@refly-packages/ai-workspace-common/requests';
+} from '@refly/openapi-schema';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { Close } from 'refly-icons';

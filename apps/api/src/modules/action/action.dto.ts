@@ -34,7 +34,7 @@ export type ActionDetail = ActionResultModel & {
 
 export type SanitizeOptions = { sanitizeForDisplay?: boolean };
 
-export function actionStepPO2DTO(step: ActionStepDetail, options?: SanitizeOptions): ActionStep {
+function actionStepPO2DTO(step: ActionStepDetail, options?: SanitizeOptions): ActionStep {
   return {
     ...pick(step, ['name', 'content', 'reasoningContent']),
     logs: safeParseJSON(step.logs || '[]'),
@@ -111,7 +111,7 @@ export function sanitizeToolOutput(
   return output;
 }
 
-export function toolCallResultPO2DTO(
+function toolCallResultPO2DTO(
   toolCall: ToolCallResultModel,
   options?: { sanitizeForDisplay?: boolean },
 ): ToolCallResult {
@@ -143,8 +143,6 @@ export function actionResultPO2DTO(result: ActionDetail, options?: SanitizeOptio
       'version',
       'title',
       'targetId',
-      'pilotSessionId',
-      'pilotStepId',
       'workflowExecutionId',
       'workflowNodeExecutionId',
       'actualProviderItemId',

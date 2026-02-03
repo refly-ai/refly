@@ -158,5 +158,3 @@ function createLangfuseProcessor(config: LangfuseConfig): SpanProcessor | null {
     return null;
   }
 }
-
-export default sdk;

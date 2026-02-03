@@ -152,7 +152,7 @@ function wrapEmail(subject: string, content: string): string {
   `;
 }
 
-export interface ScheduleEmailCommonData {
+interface ScheduleEmailCommonData {
   userName: string;
   scheduleName: string;
   schedulesLink: string;

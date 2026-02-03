@@ -5,7 +5,7 @@ export interface JinaConfig {
   apiKey: string;
 }
 
-export class JinaError extends Error {
+class JinaError extends Error {
   constructor(
     message: string,
     public status: number,
@@ -107,7 +107,3 @@ export class JinaClient {
     return response.json();
   }
 }
-
-export const createJinaClient = (config: JinaConfig): JinaClient => {
-  return new JinaClient(config);
-};

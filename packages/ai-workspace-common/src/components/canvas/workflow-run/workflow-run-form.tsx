@@ -29,6 +29,7 @@ import { extractToolsetsWithNodes, ToolWithNodes } from '@refly/canvas-common';
 import GiftIcon from '@refly-packages/ai-workspace-common/assets/gift.png';
 import { useFirstSuccessExecutionToday } from '@refly-packages/ai-workspace-common/hooks/canvas';
 import { useUserMembership } from '@refly-packages/ai-workspace-common/hooks/use-user-membership';
+import { subscriptionEnabled } from '@refly/ui-kit';
 import { WorkflowInputFormCollapse } from '@refly-packages/ai-workspace-common/components/canvas/workflow-run/workflow-input-form-collapse';
 import './user-input-collapse.scss';
 
@@ -199,7 +200,7 @@ export const WorkflowRunForm = ({
     uploading,
     handleFileUpload: uploadFile,
     handleRefreshFile: refreshFile,
-  } = useFileUpload();
+  } = useFileUpload(10); // Support up to 10 files
 
   // Check if all required fields are filled
   const isFormValid = useMemo(() => {
@@ -312,31 +313,54 @@ export const WorkflowRunForm = ({
           value: valueArray.map((v) => ({ type: 'text', text: v })),
         });
       } else if (variable.variableType === 'resource') {
-        const v = Array.isArray(value) ? value[0] : undefined;
-        const entityId = variable?.value?.[0]?.resource?.entityId;
-        const existingFileId = variable?.value?.[0]?.resource?.fileId;
+        // Convert all files in the value array
+        const fileValues = Array.isArray(value) ? value : value ? [value] : [];
 
-        if (v) {
-          // Extract fileId from upload response if available
-          const uploadedFileId = v.response?.fileId || v.uid;
-          // Use uploaded fileId if it looks like a fileId (starts with 'df-'),
-          // otherwise use existing fileId from variable
-          const fileId = uploadedFileId?.startsWith?.('df-') ? uploadedFileId : existingFileId;
+        if (fileValues.length > 0) {
+          const resourceValues = fileValues.map((v) => {
+            // Extract fileId from upload response if available
+            const uploadedFileId = v.response?.fileId || v.uid;
+
+            // Match by uploadedFileId first, then storageKey, then name as fallback
+            const matchedResource = variable?.value?.find((val) => {
+              // First try to match by fileId
+              if (uploadedFileId && val.resource?.fileId === uploadedFileId) {
+                return true;
+              }
+              // Then try to match by entityId (uid)
+              if (v.uid && val.resource?.entityId === v.uid) {
+                return true;
+              }
+              // Then try to match by storageKey (url)
+              if (v.url && val.resource?.storageKey === v.url) {
+                return true;
+              }
+              // Finally fall back to name matching
+              return val.resource?.name === v.name;
+            });
+
+            const entityId = matchedResource?.resource?.entityId;
+            const existingFileId = matchedResource?.resource?.fileId;
+
+            // Use uploaded fileId if it looks like a fileId (starts with 'df-'),
+            // otherwise use existing fileId from variable
+            const fileId = uploadedFileId?.startsWith?.('df-') ? uploadedFileId : existingFileId;
+
+            return {
+              type: 'resource' as const,
+              resource: {
+                name: v.name,
+                storageKey: v.url,
+                fileType: getFileType(v.name, v.type),
+                ...(fileId && { fileId }),
+                ...(entityId && { entityId }),
+              },
+            };
+          });
 
           newVariables.push({
             ...variable,
-            value: [
-              {
-                type: 'resource',
-                resource: {
-                  name: v.name,
-                  storageKey: v.url,
-                  fileType: getFileType(v.name, v.type),
-                  ...(fileId && { fileId }),
-                  ...(entityId && { entityId }),
-                },
-              },
-            ],
+            value: resourceValues,
           });
         } else {
           // Keep the variable even if no file is uploaded (with empty value)
@@ -362,6 +386,18 @@ export const WorkflowRunForm = ({
   const handleFileUpload = useCallback(
     async (file: File, variableName: string) => {
       const currentFileList = variableValues[variableName] || [];
+      const variable = workflowVariables.find((v) => v.name === variableName);
+      const maxCount = variable?.isSingle === true ? 1 : 10;
+
+      // Check if we've reached the limit
+      if (currentFileList.length >= maxCount) {
+        message.error(
+          t('canvas.workflow.variables.tooManyFiles', { max: maxCount }) ||
+            `Maximum ${maxCount} files allowed`,
+        );
+        return false;
+      }
+
       const result = await uploadFile(file, currentFileList);
 
       if (result && typeof result === 'object' && 'storageKey' in result) {
@@ -402,17 +438,23 @@ export const WorkflowRunForm = ({
           ...(fileId && { response: { fileId } }), // Store fileId in response for later retrieval
         };
 
-        // Replace the file list with the new file (single file limit)
-        const newFileList = [newFile];
-        handleValueChange(variableName, newFileList);
-        form.setFieldsValue({
-          [variableName]: newFileList,
+        setVariableValues((prev) => {
+          const prevFileList = prev[variableName] || [];
+          // For single file mode, replace the file list; for multi-file mode, append
+          const nextFileList = variable?.isSingle === true ? [newFile] : [...prevFileList, newFile];
+          form.setFieldsValue({
+            [variableName]: nextFileList,
+          });
+          return {
+            ...prev,
+            [variableName]: nextFileList,
+          };
         });
         return false; // Prevent default upload behavior
       }
       return false;
     },
-    [uploadFile, variableValues, canvasId, workflowVariables],
+    [uploadFile, variableValues, canvasId, workflowVariables, form, t],
   );
 
   // Handle file removal for resource type variables
@@ -811,10 +853,10 @@ export const WorkflowRunForm = ({
             value={value || []}
             onUpload={(file) => handleFileUpload(file, name)}
             onRemove={(file) => handleFileRemove(file, name)}
-            onRefresh={() => handleRefreshFile(name)}
+            onRefresh={isSingle === true ? () => handleRefreshFile(name) : undefined}
             resourceTypes={resourceTypes}
             disabled={uploading || isFormDisabled}
-            maxCount={1}
+            maxCount={isSingle === true ? 1 : 10}
             data-field-name={name}
             hasError={hasError}
           />
@@ -856,7 +898,7 @@ export const WorkflowRunForm = ({
             )}
             <Tooltip
               title={
-                !workflowIsRunning && !hasFirstSuccessExecutionToday
+                subscriptionEnabled && !workflowIsRunning && !hasFirstSuccessExecutionToday
                   ? t('canvas.workflow.run.runTooltip')
                   : undefined
               }
@@ -883,13 +925,16 @@ export const WorkflowRunForm = ({
                   ? t('canvas.workflow.run.abort.abortButton') || 'Abort'
                   : t('canvas.workflow.run.run') || 'Run'}
 
-                {!workflowIsRunning && !hasFirstSuccessExecutionToday && planType === 'free' && (
-                  <img
-                    src={GiftIcon}
-                    alt="gift"
-                    className="w-[18px] h-[18px] group-hover:animate-shake"
-                  />
-                )}
+                {subscriptionEnabled &&
+                  !workflowIsRunning &&
+                  !hasFirstSuccessExecutionToday &&
+                  planType === 'free' && (
+                    <img
+                      src={GiftIcon}
+                      alt="gift"
+                      className="w-[18px] h-[18px] group-hover:animate-shake"
+                    />
+                  )}
               </Button>
             </Tooltip>
           </div>

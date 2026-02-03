@@ -15,7 +15,7 @@ import { HttpClient } from './http-client';
 /**
  * Configuration for Volcengine API signing
  */
-export interface VolcengineAuthConfig {
+interface VolcengineAuthConfig {
   /** Access Key ID */
   accessKeyId: string;
   /** Secret Access Key */
@@ -33,7 +33,7 @@ export interface VolcengineAuthConfig {
 /**
  * Request parameters for signing
  */
-export interface VolcengineSignRequest {
+interface VolcengineSignRequest {
   /** HTTP method */
   method: string;
   /** Request host (e.g., 'visual.volcengineapi.com') */
@@ -51,7 +51,7 @@ export interface VolcengineSignRequest {
 /**
  * Signed headers result
  */
-export interface VolcengineSignedHeaders {
+interface VolcengineSignedHeaders {
   /** All headers to include in the request */
   headers: Record<string, string>;
   /** Full URL with query parameters */
@@ -248,7 +248,7 @@ function sign(params: SignParams): string {
  * Sign a request for Volcengine API
  * Returns headers and URL to use for the request
  */
-export function signVolcengineRequest(
+function signVolcengineRequest(
   config: VolcengineAuthConfig,
   request: VolcengineSignRequest,
 ): VolcengineSignedHeaders {
@@ -360,7 +360,7 @@ export function isVolcengineAuth(credentials: Record<string, unknown>): boolean 
  *
  * Action and Version are extracted from the endpoint URL query params or from credentials
  */
-export function extractVolcengineConfig(
+function extractVolcengineConfig(
   credentials: Record<string, unknown>,
   params: Record<string, unknown>,
   endpoint?: string,
@@ -986,7 +986,7 @@ export class VolcenginePollingHelper {
  *
  * This function extracts the task_id from data.task_id, NOT request_id
  */
-export function extractVolcengineTaskId(response: unknown): string | null {
+function extractVolcengineTaskId(response: unknown): string | null {
   if (!response || typeof response !== 'object') {
     return null;
   }
@@ -1023,23 +1023,10 @@ export function extractVolcengineTaskId(response: unknown): string | null {
 }
 
 /**
- * Check if a Volcengine API response indicates success
- * Success is indicated by code === 10000
- */
-export function isVolcengineSuccess(response: unknown): boolean {
-  if (!response || typeof response !== 'object') {
-    return false;
-  }
-
-  const resp = response as Record<string, unknown>;
-  return resp.code === 10000;
-}
-
-/**
  * Extract error message from Volcengine API response
  * Returns the message field if code !== 10000
  */
-export function extractVolcengineError(response: unknown): string | null {
+function extractVolcengineError(response: unknown): string | null {
   if (!response || typeof response !== 'object') {
     return null;
   }

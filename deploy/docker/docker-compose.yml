@@ -1,60 +1,24 @@
+# Usage
+#   Start:              docker compose up
+#   Stop:               docker compose down
+#   Destroy:            docker compose down -v --remove-orphans
+
+name: refly
+
 include:
-  - path: docker-compose.middleware.yml
+  - path: docker-compose.base.yml
+
 services:
   api:
+    extends:
+      file: docker-compose.services.yml
+      service: api
     image: reflyai/refly-api:latest
-    container_name: refly_api
-    depends_on:
-      db:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - 5800:5800
-      - 5801:5801
-    restart: always
-    env_file:
-      - .env
-    environment:
-      - AUTO_MIGRATE_DB_SCHEMA=1
-      - MINIO_INTERNAL_ENDPOINT=minio
-      - MINIO_EXTERNAL_ENDPOINT=minio
-      - REDIS_HOST=redis
-      - DATABASE_URL=postgresql://refly:test@db:5432/refly?schema=refly
-      - QDRANT_HOST=qdrant
-      - SEARXNG_BASE_URL=http://searxng:8080
-      - STATIC_PUBLIC_ENDPOINT=/api/v1/misc/public
-      - STATIC_PRIVATE_ENDPOINT=/api/v1/misc
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5800"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    networks:
-      - refly_network  
+
   web:
+    extends:
+      file: docker-compose.services.yml
+      service: web
     image: reflyai/refly-web:latest
-    container_name: refly_web
     ports:
       - 5700:80
-    restart: always
-    environment:
-      - API_URL=/api
-      - COLLAB_URL=/collab
-      - STATIC_PUBLIC_ENDPOINT=/api/v1/misc/public
-      - STATIC_PRIVATE_ENDPOINT=/api/v1/misc
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    networks:
-      - refly_network

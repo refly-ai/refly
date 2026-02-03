@@ -22,6 +22,7 @@ import {
   genSkillPackageExecutionID,
   genSkillPackageWorkflowExecID,
   genVariableID,
+  safeParseJSON,
 } from '@refly/utils';
 import { User } from '@refly/openapi-schema';
 
@@ -379,15 +380,53 @@ export class SkillPackageExecutorService {
 
       // Initialize and run workflow
       // Note: This creates a WorkflowExecution record and queues the workflow for execution
-      const workflowExecutionId = await this.workflowService.initializeWorkflowExecution(
-        { uid: execution.uid } as User,
-        workflowId,
-        Object.entries(input).map(([name, value]) => ({
+
+      // Get existing canvas variables to preserve variableId mapping
+      // This ensures that variable references in node queries (e.g., @{type=var,id=var-xxx,...})
+      // can be correctly matched with the variables passed at runtime
+      const canvas = await this.prisma.canvas.findFirst({
+        where: { canvasId: workflowId, deletedAt: null },
+        select: { workflow: true },
+      });
+      const existingVariables = canvas?.workflow
+        ? (safeParseJSON(canvas.workflow)?.variables ?? [])
+        : [];
+
+      // Merge input variables with existing variables
+      // Strategy: preserve all existing variables, override values for matching names, add new ones
+      const inputNames = new Set(Object.keys(input));
+
+      // Start with existing variables, update values if they appear in input
+      const mergedVariables = existingVariables.map((v: any) => {
+        if (inputNames.has(v.name)) {
+          // Variable exists in both - update the value
+          return {
+            variableId: v.variableId,
+            name: v.name,
+            variableType: 'string' as const,
+            value: [{ type: 'text' as const, text: String(input[v.name]) }],
+          };
+        }
+        // Variable only exists in workflow - keep as is
+        return v;
+      });
+
+      // Add new variables that don't exist in workflow
+      const newVariables = Object.entries(input)
+        .filter(([name]) => !existingVariables.some((v: any) => v.name === name))
+        .map(([name, value]) => ({
           variableId: genVariableID(),
           name,
           variableType: 'string' as const,
-          value: [{ type: 'text', content: String(value) }],
-        })),
+          value: [{ type: 'text' as const, text: String(value) }],
+        }));
+
+      const runtimeVariables = [...mergedVariables, ...newVariables];
+
+      const workflowExecutionId = await this.workflowService.initializeWorkflowExecution(
+        { uid: execution.uid } as User,
+        workflowId,
+        runtimeVariables,
         { checkCanvasOwnership: false },
       );
 

@@ -1,4 +1,5 @@
 import { useSubscriptionStoreShallow } from '@refly/stores';
+import { subscriptionEnabled } from '@refly/ui-kit';
 import { VoucherPopup } from './voucher-popup';
 
 /**
@@ -13,6 +14,9 @@ export const EarnedVoucherPopup = () => {
       hideEarnedVoucherPopup: state.hideEarnedVoucherPopup,
     }));
 
+  // Skip voucher popup when subscription features are disabled (self-deploy mode)
+  if (!subscriptionEnabled) return null;
+
   if (!earnedVoucherResult) return null;
 
   return (
@@ -23,5 +27,3 @@ export const EarnedVoucherPopup = () => {
     />
   );
 };
-
-export default EarnedVoucherPopup;

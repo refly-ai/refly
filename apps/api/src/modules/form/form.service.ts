@@ -11,6 +11,10 @@ export class FormService {
     private readonly configService: ConfigService,
   ) {}
 
+  private isOnboardingEnabled(): boolean {
+    return this.configService.get('auth.onboarding.enabled') ?? false;
+  }
+
   private extractRoleFromAnswers(answers: string): string | null {
     if (!answers?.trim()) {
       return null;
@@ -84,6 +88,11 @@ export class FormService {
     preferenceJson?: string,
     answersJson?: string,
   ): Promise<{ hasFilledForm: boolean; identity: string | null }> {
+    // If onboarding is disabled, skip form requirement
+    if (!this.isOnboardingEnabled()) {
+      return { hasFilledForm: true, identity: null };
+    }
+
     const [user, answers] = await Promise.all([
       preferenceJson === undefined
         ? this.prisma.user.findUnique({

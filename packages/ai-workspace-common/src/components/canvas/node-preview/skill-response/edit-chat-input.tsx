@@ -9,7 +9,6 @@ import { useInvokeAction } from '@refly-packages/ai-workspace-common/hooks/canva
 import { convertContextItemsToEdges } from '@refly/canvas-common';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
 import { useReactFlow } from '@xyflow/react';
-import { useAskProject } from '@refly-packages/ai-workspace-common/hooks/canvas/use-ask-project';
 import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use-query-processor';
 import { useActionResultStoreShallow, useActiveNode } from '@refly/stores';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -37,8 +36,6 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
   const editAreaRef = useRef<HTMLDivElement | null>(null);
 
   const { t } = useTranslation();
-
-  const { getFinalProjectId } = useAskProject();
 
   // Get action result from store to access original input.query
   const { resultMap } = useActionResultStoreShallow((state) => ({
@@ -205,7 +202,6 @@ const EditChatInputComponent = forwardRef<ChatComposerRef, EditChatInputProps>((
     deleteElements,
     invokeAction,
     setEditMode,
-    getFinalProjectId,
     selectedToolsets,
     addNode,
     activeNode,

@@ -1,7 +1,7 @@
 import { type ReactElement, type ReactNode, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export interface RedirectRule {
+interface RedirectRule {
   when: () => boolean;
   redirectTo: string;
 }

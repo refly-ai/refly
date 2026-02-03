@@ -5,12 +5,6 @@
 ### Management
 
 ```bash
-# Create workflow
-refly workflow create [options]
-  --name <name>              # Workflow name
-  --spec <json>              # Workflow spec JSON
-  --description <desc>       # Description
-
 # Generate workflow from natural language
 refly workflow generate [options]
   --query <query>            # Natural language description
@@ -29,14 +23,6 @@ refly workflow edit <workflowId> [options]
   --variables <json>         # Variables array
   --toolsets <keys>          # Toolset keys (comma-separated)
   --auto-layout              # Auto-layout nodes
-
-# Patch workflow plan
-refly workflow patch <planId> [options]
-  --ops <json>               # Operations array
-  --ops-file <path>          # Read ops from file
-  --update-title <title>     # Shortcut: update title
-  --delete-task <taskId>     # Shortcut: delete task
-  --delete-variable <varId>  # Shortcut: delete variable
 
 # Other management
 refly workflow get <workflowId>
@@ -67,9 +53,9 @@ refly workflow abort <workflowId>
 
 ```bash
 # List/get nodes
-refly workflow nodes <workflowId> [--include-edges] [--include-position] [--include-metadata]
-refly workflow node <id> <nodeId> [--include-connections]
-refly workflow node-output <id> <nodeId> [--include-tool-calls] [--raw]
+refly workflow node list <workflowId> [--include-edges] [--include-position] [--include-metadata]
+refly workflow node get <id> <nodeId> [--include-connections]
+refly workflow node output <id> <nodeId> [--include-tool-calls] [--raw]
 
 # Run from node
 refly workflow run node-start [options]
@@ -111,7 +97,7 @@ refly workflow run node-toolcall <callId> [--raw]
 
 - `workflow run start` returns `runId` used by `workflow run get` and `workflow run node-detail`.
 - `workflow run node-detail` returns `resultId` for action/tool lookups (see `node.md`).
-- `workflow node-output` retrieves the actual execution output content of a node.
+- `workflow node output` retrieves the actual execution output content of a node.
 - Action results may include file IDs; use `file.md` to fetch/download.
 
 ## Node Output Command
@@ -120,16 +106,16 @@ Get the execution output content of a specific node:
 
 ```bash
 # Using workflowId (gets output from latest run)
-refly workflow node-output c-xxx <nodeId>
+refly workflow node output c-xxx <nodeId>
 
 # Using runId (gets output from specific run)
-refly workflow node-output we-xxx <nodeId>
+refly workflow node output we-xxx <nodeId>
 
 # Include tool call details
-refly workflow node-output <id> <nodeId> --include-tool-calls
+refly workflow node output <id> <nodeId> --include-tool-calls
 
 # Get full content without truncation (default: 10KB limit)
-refly workflow node-output <id> <nodeId> --raw
+refly workflow node output <id> <nodeId> --raw
 ```
 
 **ID Type Detection:**
@@ -146,33 +132,6 @@ refly workflow generate --query "Parse PDF, summarize content, translate to Chin
 
 ```bash
 refly workflow generate \
-  --query "Research topic, write article, export to markdown" \
-  --model-id <modelId> \
-  --locale en \
-  --timeout 300000
-```
-
-```bash
-refly workflow generate \
   --query "Process documents from input folder" \
   --variables '[{"variableId":"v1","name":"inputFolder","variableType":"string"}]'
-```
-
-## Workflow Spec Schema (Simplified)
-
-`workflow create` expects a simplified spec (no `version` or `metadata`).
-Supported node types: `skill`, `agent` (start node is auto-created).
-
-```json
-{
-  "nodes": [
-    {
-      "id": "string",
-      "type": "skill",
-      "query": "string",
-      "toolsetKeys": ["string"],
-      "dependsOn": ["string"]
-    }
-  ]
-}
 ```

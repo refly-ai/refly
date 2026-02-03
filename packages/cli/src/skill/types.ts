@@ -7,7 +7,7 @@
  */
 
 // ============================================================================
-// Registry Types
+// Skill Types
 // ============================================================================
 
 /**
@@ -16,15 +16,15 @@
 export type SkillSource = 'local' | 'refly-cloud';
 
 /**
- * Skill entry in the registry.
- * Lightweight version for listing and searching.
+ * Skill entry for listing and searching.
  *
  * Field requirements:
  * - name: Required, format: ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ (1-64 chars)
  * - description: Required, max 200 chars
  * - workflowId: Required, bound workflow ID
  * - triggers: Required, 1-10 intent matching phrases
- * - path: Required, relative path to skill directory
+ * - reflyPath: Required, path to ~/.refly/skills/<name>/
+ * - claudePath: Required, symlink path ~/.claude/skills/<name>
  * - createdAt: Required, ISO 8601 timestamp
  * - source: Required, 'local' or 'refly-cloud'
  * - tags: Optional, categorization tags
@@ -45,8 +45,17 @@ export interface SkillEntry {
   /** Keywords/phrases that activate this skill (1-10 items) */
   triggers: string[];
 
-  /** Relative path to skill directory (e.g., "domain-skills/skill-name") */
-  path: string;
+  /** Path to skill directory in ~/.refly/skills/<name>/ */
+  reflyPath?: string;
+
+  /** Symlink path in ~/.claude/skills/<name> */
+  claudePath?: string;
+
+  /**
+   * @deprecated Use reflyPath instead
+   * Relative path to skill directory (legacy)
+   */
+  path?: string;
 
   /** Creation timestamp (ISO 8601) */
   createdAt: string;
@@ -70,11 +79,14 @@ export interface SkillEntry {
 
   /** Cloud skill ID (for refly-cloud source) */
   skillId?: string;
+
+  /** Installation ID (for installed skills) */
+  installationId?: string;
 }
 
 /**
  * Skill registry root structure.
- * Stored at ~/.claude/skills/refly/registry.json
+ * @deprecated Registry is no longer used. Skills are discovered via symlinks.
  */
 export interface SkillRegistry {
   /** Registry schema version (currently 1) */
@@ -396,7 +408,6 @@ export function isSkillEntry(obj: unknown): obj is SkillEntry {
     typeof (obj as SkillEntry).description === 'string' &&
     typeof (obj as SkillEntry).workflowId === 'string' &&
     Array.isArray((obj as SkillEntry).triggers) &&
-    typeof (obj as SkillEntry).path === 'string' &&
     typeof (obj as SkillEntry).createdAt === 'string' &&
     typeof (obj as SkillEntry).source === 'string'
   );

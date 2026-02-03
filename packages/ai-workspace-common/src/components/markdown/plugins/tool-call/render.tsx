@@ -7,7 +7,7 @@ import { MarkdownMode } from '../../types';
 import { ToolCallStatus, parseToolCallStatus } from './types';
 import { CopilotWorkflowPlan } from './copilot-workflow-plan';
 import { safeParseJSON } from '@refly/utils/parse';
-import { InternalToolRenderer } from './internal-tool-renderers';
+import { InternalToolRenderer, INTERNAL_TOOL_KEYS } from './internal-tool-renderers';
 import { ProductCard } from './product-card';
 import { ToolsetIcon } from '@refly-packages/ai-workspace-common/components/canvas/common/toolset-icon';
 import { Button, Typography } from 'antd';
@@ -339,6 +339,21 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
         />
       );
     }
+
+    // Handle copilot file tools (read_file, list_files) - reuse InternalToolRenderer
+    // Use toolName as the key to match the renderer registry
+    if (INTERNAL_TOOL_KEYS.includes(toolName)) {
+      return (
+        <InternalToolRenderer
+          toolsetKey={toolName}
+          toolsetName={toolName}
+          toolCallStatus={toolCallStatus}
+          durationText={durationText}
+          parametersContent={parametersContent as Record<string, unknown>}
+          resultContent={resultContentParsed}
+        />
+      );
+    }
   }
 
   const isDriveFileId = (value: unknown): value is string => {
@@ -390,7 +405,9 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
   const toolsetName = toolsetDefinition?.labelDict?.[currentLanguage] ?? toolsetKey;
 
   // Compact rendering for internal/system-level tools (read_file, list_files)
-  const isInternalTool = toolsetDefinition?.internal === true;
+  // Use INTERNAL_TOOL_KEYS directly instead of relying on API data, since internal tools
+  // are filtered out by shouldExposeToolset and won't be returned by /tool/inventory/list
+  const isInternalTool = INTERNAL_TOOL_KEYS.includes(toolsetKey);
   if (isInternalTool) {
     return (
       <InternalToolRenderer

@@ -28,7 +28,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install
@@ -36,10 +36,13 @@ jobs:
       - name: Check with Biome
         run: pnpm check
 
+      - name: Check with Knip
+        run: pnpm knip
+
       - name: Build
         run: pnpm build
         env:
-          NODE_OPTIONS: '--max_old_space_size=8192'
+          NODE_OPTIONS: "--max_old_space_size=8192"
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          VITE_ENFORCE_TYPE_CHECK: 'true'
+          VITE_ENFORCE_TYPE_CHECK: "true"

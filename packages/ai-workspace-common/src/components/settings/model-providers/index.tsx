@@ -18,7 +18,7 @@ import {
 
 import { LuGlobe, LuPlus } from 'react-icons/lu';
 import { cn } from '@refly-packages/ai-workspace-common/utils/cn';
-import { Provider } from '@refly-packages/ai-workspace-common/requests/types.gen';
+import { Provider } from '@refly/openapi-schema';
 import { ProviderModal } from './provider-modal';
 import { ProviderStore } from './ProviderStore';
 import { ContentHeader } from '@refly-packages/ai-workspace-common/components/settings/contentHeader';

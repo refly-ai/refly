@@ -46,27 +46,3 @@ export const ABORT_LOG_LABELS = {
   /** System timeout - stream idle */
   SYSTEM_STREAM_TIMEOUT: 'system_stream_timeout',
 } as const;
-
-/**
- * Type definitions for abort messages
- */
-export type AbortMessage = (typeof ABORT_MESSAGES)[keyof typeof ABORT_MESSAGES];
-export type AbortLogLabel = (typeof ABORT_LOG_LABELS)[keyof typeof ABORT_LOG_LABELS];
-
-/**
- * Helper function to check if an error message is a user-initiated abort
- * @param message - Error message to check
- * @returns true if the message indicates user-initiated abort
- */
-export function isUserAbortMessage(message: string): boolean {
-  return message === ABORT_MESSAGES.USER_ABORT;
-}
-
-/**
- * Helper function to check if an error message is a system timeout
- * @param message - Error message to check
- * @returns true if the message indicates system timeout
- */
-export function isSystemTimeoutMessage(message: string): boolean {
-  return message === ABORT_MESSAGES.STREAM_TIMEOUT;
-}

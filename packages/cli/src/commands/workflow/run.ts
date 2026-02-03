@@ -11,6 +11,7 @@ import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import {
   apiRequest,
   apiGetWorkflow,
+  apiGetWorkflowVariables,
   apiUploadDriveFile,
   type WorkflowVariable,
   type WorkflowInfo,
@@ -18,7 +19,12 @@ import {
 import { CLIError } from '../../utils/errors.js';
 import { getWebUrl } from '../../config/config.js';
 import { promptForFilePath, isInteractive } from '../../utils/prompt.js';
-import { determineFileType } from '../../utils/file-type.js';
+import { getFileCategoryByName } from '../../utils/file-type.js';
+import {
+  checkRequiredVariables,
+  buildMissingVariablesError,
+  variablesToObject,
+} from '../../utils/variable-check.js';
 
 interface RunResult {
   runId: string;
@@ -191,7 +197,15 @@ async function collectFileVariables(
     return [];
   }
 
-  // 2. Find required resource variables
+  // 2. Fetch saved variable values from backend
+  let savedVariables: WorkflowVariable[] = [];
+  try {
+    savedVariables = await apiGetWorkflowVariables(workflowId);
+  } catch (_error) {
+    // Continue without saved values
+  }
+
+  // 3. Find required resource variables
   const resourceVars = (workflow.variables ?? []).filter(
     (v) => v.variableType === 'resource' && v.required === true,
   );
@@ -200,16 +214,52 @@ async function collectFileVariables(
     return [];
   }
 
-  // 3. Filter out variables already provided in --input
-  // Check by both variableId and name for maximum compatibility
-  const providedIds = new Set(existingInput.map((v) => v.variableId).filter(Boolean));
-  const providedNames = new Set(existingInput.map((v) => v.name).filter(Boolean));
+  // 4. Filter out variables already provided in --input OR saved in backend with valid values
+  // Also track variables with invalid format for better error messages
+  const invalidFormatVars: Array<{ name: string; reason: string }> = [];
+
+  // Helper to check if a variable has valid file value
+  const hasValidFileValue = (variable: WorkflowVariable | undefined): boolean => {
+    if (!variable) return false;
+    const values = variable.value;
+    if (!Array.isArray(values) || values.length === 0) return false;
+    return values.some((val: any) => {
+      const fileId = val?.resource?.fileId || val?.fileId;
+      return typeof fileId === 'string' && fileId.length > 0;
+    });
+  };
 
   const missingVars = resourceVars.filter((v) => {
-    // Variable is provided if its ID or name matches
-    if (v.variableId && providedIds.has(v.variableId)) return false;
-    if (v.name && providedNames.has(v.name)) return false;
-    return true;
+    // Find if this variable was provided in --input
+    const providedInInput = existingInput.find(
+      (input) =>
+        (v.variableId && input.variableId === v.variableId) || (v.name && input.name === v.name),
+    );
+
+    // Find if this variable has saved value in backend
+    const savedValue = savedVariables.find(
+      (saved) =>
+        (v.variableId && saved.variableId === v.variableId) || (v.name && saved.name === v.name),
+    );
+
+    // Check --input first (takes precedence)
+    if (providedInInput) {
+      if (hasValidFileValue(providedInInput)) {
+        return false; // Valid value in --input
+      }
+      invalidFormatVars.push({
+        name: v.name,
+        reason: 'invalid format in --input',
+      });
+      // Continue to check saved value
+    }
+
+    // Check saved value from backend
+    if (hasValidFileValue(savedValue)) {
+      return false; // Valid value saved in backend
+    }
+
+    return true; // No valid value found
   });
 
   if (missingVars.length === 0) {
@@ -218,13 +268,30 @@ async function collectFileVariables(
 
   // 4. Check if we can prompt
   if (noPrompt || !isInteractive()) {
-    const names = missingVars.map((v) => v.name).join(', ');
-    throw new CLIError(
-      ErrorCodes.INVALID_INPUT,
-      `Missing required file variables: ${names}`,
-      undefined,
-      'Provide files via --input or run interactively without --no-prompt',
-    );
+    // Build helpful error message
+    const missingNames = missingVars.map((v) => v.name);
+    const formatIssues = invalidFormatVars.filter((f) => missingNames.includes(f.name));
+
+    let message: string;
+    let hint: string;
+
+    if (formatIssues.length > 0) {
+      // User provided values but format was wrong
+      const details = formatIssues.map((f) => `  - ${f.name}: ${f.reason}`).join('\n');
+      message = `Invalid format for file variables:\n${details}`;
+      hint =
+        'For file variables, use format: \'{"varName": "df-fileId"}\' or \'{"varName": [{"fileId": "df-xxx"}]}\'';
+    } else {
+      // Variables were not provided at all
+      message = `Missing required file variables: ${missingNames.join(', ')}`;
+      hint = 'Provide files via --input or run interactively without --no-prompt';
+    }
+
+    throw new CLIError(ErrorCodes.INVALID_INPUT, message, undefined, hint, {
+      field: '--input',
+      format: 'json-object',
+      example: '{"fileVar": "df-fileId"}',
+    });
   }
 
   // 5. Prompt for each variable
@@ -257,7 +324,7 @@ async function collectFileVariables(
         type: 'resource',
         resource: {
           name: uploadResult.name,
-          fileType: determineFileType(filePath, uploadResult.type),
+          fileType: getFileCategoryByName(filePath, uploadResult.type),
           fileId: uploadResult.fileId,
           storageKey: uploadResult.storageKey,
         },
@@ -288,24 +355,146 @@ async function collectFileVariables(
 }
 
 /**
+ * Convert simple key-value input format to WorkflowVariable array.
+ * Supports:
+ *   - {"varName": "stringValue"} -> string variable
+ *   - {"varName": "df-xxx"} -> file variable (auto-detect by fileId prefix)
+ *   - {"varName": [{"fileId": "df-xxx"}]} -> file variable
+ *   - {"varName": [{"type": "file", "fileId": "df-xxx"}]} -> file variable
+ */
+function convertKeyValueToVariables(
+  obj: Record<string, unknown>,
+  workflow?: WorkflowInfo,
+): WorkflowVariable[] {
+  const variables: WorkflowVariable[] = [];
+
+  for (const [name, rawValue] of Object.entries(obj)) {
+    // Find variable definition from workflow if available
+    const varDef = workflow?.variables?.find((v) => v.name === name || v.variableId === name);
+    const isResourceVar = varDef?.variableType === 'resource';
+
+    // Determine if this looks like a file value
+    const looksLikeFileId = typeof rawValue === 'string' && rawValue.startsWith('df-');
+    const looksLikeFileArray =
+      Array.isArray(rawValue) &&
+      rawValue.length > 0 &&
+      typeof rawValue[0] === 'object' &&
+      rawValue[0] !== null &&
+      ('fileId' in rawValue[0] || 'type' in rawValue[0]);
+
+    if (isResourceVar || looksLikeFileId || looksLikeFileArray) {
+      // Handle as file/resource variable
+      let fileValues: Array<{ type: string; resource: { fileId: string } }> = [];
+
+      if (typeof rawValue === 'string') {
+        // Simple fileId string: "df-xxx"
+        fileValues = [
+          {
+            type: 'resource',
+            resource: { fileId: rawValue },
+          },
+        ];
+      } else if (Array.isArray(rawValue)) {
+        // Array format: [{"fileId": "df-xxx"}] or [{"type": "file", "fileId": "df-xxx"}]
+        fileValues = rawValue.map((item: any) => ({
+          type: 'resource',
+          resource: { fileId: item.fileId || item.resource?.fileId || '' },
+        }));
+      }
+
+      variables.push({
+        variableId: varDef?.variableId,
+        name: varDef?.name || name,
+        variableType: 'resource',
+        value: fileValues,
+        required: varDef?.required,
+      });
+    } else {
+      // Handle as string variable
+      let value: Array<{ type: string; text?: string }> = [];
+
+      if (typeof rawValue === 'string') {
+        value = [{ type: 'text', text: rawValue }];
+      } else if (Array.isArray(rawValue)) {
+        value = rawValue;
+      }
+
+      variables.push({
+        variableId: varDef?.variableId,
+        name: varDef?.name || name,
+        variableType: 'string',
+        value,
+        required: varDef?.required,
+      });
+    }
+  }
+
+  return variables;
+}
+
+/**
  * Main workflow execution logic
  */
 async function runWorkflow(workflowId: string, options: any): Promise<void> {
+  // Fetch workflow info early for variable type detection
+  let workflow: WorkflowInfo | undefined;
+  try {
+    workflow = await apiGetWorkflow(workflowId);
+  } catch {
+    // Continue without workflow info, validation will happen on server
+  }
+
   // Parse input JSON to extract variables
   let inputVars: WorkflowVariable[] = [];
   try {
     const parsed = JSON.parse(options?.input ?? '{}');
-    // Support both { variables: [...] } and raw array format
+    // Support multiple formats:
+    // 1. Array format: [{variableId, name, value}, ...]
+    // 2. Object with variables: {variables: [...]}
+    // 3. Simple key-value: {"varName": "value", "fileVar": "df-xxx"}
     if (Array.isArray(parsed)) {
       inputVars = parsed;
     } else if (parsed.variables && Array.isArray(parsed.variables)) {
       inputVars = parsed.variables;
+    } else if (typeof parsed === 'object' && parsed !== null && Object.keys(parsed).length > 0) {
+      // Simple key-value format - convert to WorkflowVariable array
+      inputVars = convertKeyValueToVariables(parsed, workflow);
     }
   } catch {
     fail(ErrorCodes.INVALID_INPUT, 'Invalid JSON in --input', {
-      hint: 'Ensure the input is valid JSON, e.g., {"variables":[...]}',
+      hint:
+        'Ensure the input is valid JSON. Supported formats:\n' +
+        '  - Simple: \'{"varName": "value", "fileVar": "df-xxx"}\'\n' +
+        '  - Array: \'[{"name": "varName", "value": [...]}]\'',
+      suggestedFix: {
+        field: '--input',
+        format: 'json-object | json-array',
+        example: '{"varName": "value", "fileVar": "df-xxx"}',
+      },
     });
     return; // TypeScript flow control
+  }
+
+  // Check required variables when noPrompt is true (for agent/script usage)
+  // This provides a recoverable error with all missing variables info
+  if (options?.noPrompt && workflow?.variables) {
+    const inputObject = variablesToObject(inputVars);
+    const checkResult = checkRequiredVariables(workflow.variables, inputObject);
+
+    if (!checkResult.valid) {
+      const errorPayload = buildMissingVariablesError(
+        'workflow',
+        workflowId,
+        workflow.name,
+        checkResult,
+      );
+      fail(ErrorCodes.MISSING_VARIABLES, errorPayload.message, {
+        details: errorPayload.details,
+        hint: errorPayload.hint,
+        suggestedFix: errorPayload.suggestedFix,
+        recoverable: errorPayload.recoverable,
+      });
+    }
   }
 
   // Collect file variables interactively (if needed)
@@ -431,7 +620,11 @@ export const workflowRunCommand = new Command('run')
       await runWorkflow(workflowId, options);
     } catch (error) {
       if (error instanceof CLIError) {
-        fail(error.code, error.message, { details: error.details, hint: error.hint });
+        fail(error.code, error.message, {
+          details: error.details,
+          hint: error.hint,
+          suggestedFix: error.suggestedFix,
+        });
       }
       fail(
         ErrorCodes.INTERNAL_ERROR,

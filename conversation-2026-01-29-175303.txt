@@ -1,0 +1,1946 @@
+
+ ▐▛███▜▌   Claude Code v2.1.23
+▝▜█████▛▘  Sonnet 4.5 · API Usage Billing
+  ▘▘ ▝▝    ~/Documents/Code/anthhub/ai/refly-team/refly-origin
+
+  /model to try Opus 4.5
+
+❯ 整理暂存区的代码, 去掉不需要提交的代码和文件 
+
+⏺ 我来帮你整理暂存区。首先查看一下当前的详细状态。
+
+⏺ Bash(git status)
+  ⎿  On branch feat/copilot-files-input
+     Your branch is up to date with 'upstream/feat/copilot-files-input'.
+     … +25 lines (ctrl+o to expand)
+
+⏺ 现在让我查看一下这些文件的改动内容，以便判断哪些是核心功能，哪些可能是调试代码
+  或不必要的改动。
+
+⏺ Bash(git diff --staged --stat)
+  ⎿  apps/api/src/modules/tool/tool.service.spec.ts     | 153 ++++++++++++
+     apps/api/src/modules/tool/tool.service.ts          |  29 +++
+     .../file-preview/file-preview-modal.tsx            | 200 +++++++++++++
+    … +13 lines (ctrl+o to expand)
+
+
+⏺ 让我查看一些关键文件的具体改动，特别是那些改动较小的文件，看看是否有不必要的改
+  动。
+
+⏺ Bash(git diff --staged packages/ai-workspace-common/src/components/canvas/copi
+      lot/copilot-message.tsx)
+  ⎿ diff --git a/packages/ai-workspace-common/src/components/canvas/copilot
+    /copilot-message.tsx b/packages/ai-workspace-common/src/components/canv
+    as/copilot/copilot-message.tsx
+    … +17 lines (ctrl+o to expand)
+
+
+
+⏺ 现在让我查看一些更重要的文件改动：
+
+⏺ Bash(git diff --staged apps/api/src/modules/tool/tool.service.ts | head -100)
+  ⎿ diff --git a/apps/api/src/modules/tool/tool.service.ts b/apps/api/src/m
+    odules/tool/tool.service.ts
+    index 0714a4de4..2d21a42f7 100644
+    … +46 lines (ctrl+o to expand)
+
+
+⏺ 基于我查看的改动，这些文件看起来都是功能相关的核心改动。让我检查一下是否有调试
+  代码或 console.log：
+
+⏺ Bash(git diff --staged | grep -E "(console\.(log|debug|warn|error)|debugger)"
+      | head -20)
+  ⎿  (No content)
+
+⏺ 很好，没有调试代码。现在让我查看一下测试文件的内容，确认是否需要提交：
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ 现在让我查看 prompt 模板文件的改动大小：
+
+⏺ Bash(git diff --staged
+      packages/skill-template/src/prompts/templates/copilot-agent-system.md | wc
+       -l)
+  ⎿  272
+
+⏺ 让我查看这个 prompt 文件的改动内容：
+
+⏺ Bash(git diff --staged
+      packages/skill-template/src/prompts/templates/copilot-agent-system.md |
+      head -50)
+  ⎿ diff --git a/packages/skill-template/src/prompts/templates/copilot-agen
+    t-system.md b/packages/skill-template/src/prompts/templates/copilot-age
+    nt-system.md
+    … +58 lines (ctrl+o to expand)
+
+
+
+⏺ 这个 prompt 文件改动很大（261行新增）。让我看看这是否是必要的功能改动：
+
+⏺ Bash(git log --oneline -5)
+  ⎿ b805fcb13 refactor(copilot): extract file utilities and optimize file c
+    ard components
+    93732f65a feat(copilot): enhance file upload and management features
+    … +4 lines (ctrl+o to expand)
+
+
+⏺ 根据最近的提交记录，当前分支是关于 copilot
+  文件上传和管理功能的。让我检查一下这个 prompt 改动是否与文件功能相关：
+
+⏺ Bash(git diff --staged
+      packages/skill-template/src/prompts/templates/copilot-agent-system.md |
+      grep -A 5 -B 5 "file\|image\|upload" | head -40)
+  ⎿  **Default Preference**: Use `patch_workflow` when an existing workflow
+     plan exists and user requests specific modifications. Use `generate_wo
+    rkflow` for new workflows or major restructuring. Use `get_workflow_sum
+    … +43 lines (ctrl+o to expand)
+
+
+
+
+⏺ 这个 prompt 改动是关于图片理解和文件处理的，与当前分支的文件上传功能相关。现在
+  让我总结一下所有暂存的文件：
+
+  根据我的分析，当前暂存区的所有文件都是与 feat/copilot-files-input
+  功能相关的核心改动：
+
+  核心功能文件（应该保留）：
+
+  1. API 层改动：
+    - apps/api/src/modules/tool/tool.service.ts - 添加了 copilot_read_file 和
+  copilot_list_files 工具
+    - apps/api/src/modules/tool/tool.service.spec.ts - 对应的单元测试
+  2. 前端组件改动：
+    - packages/ai-workspace-common/src/components/canvas/canvas-resources/file-p
+  review/file-preview-modal.tsx - 新增文件预览模态框
+    - packages/ai-workspace-common/src/components/canvas/canvas-resources/file-p
+  review/index.tsx - 文件预览组件更新
+    -
+  packages/ai-workspace-common/src/components/canvas/canvas-resources/index.tsx
+  - 资源面板更新
+  3. Copilot 组件改动：
+    - packages/ai-workspace-common/src/components/canvas/copilot/chat-box.tsx -
+  传递 canvasId
+    -
+  packages/ai-workspace-common/src/components/canvas/copilot/copilot-message.tsx
+   - 传递 canvasId
+    - packages/ai-workspace-common/src/components/canvas/copilot/file-card.tsx -
+   文件卡片优化
+    - packages/ai-workspace-common/src/components/canvas/copilot/file-list.tsx -
+   文件列表更新
+    - packages/ai-workspace-common/src/components/canvas/copilot/message-file-li
+  st.tsx - 消息文件列表增强
+  4. Store 改动：
+    - packages/stores/src/stores/canvas-resources-panel.ts - 添加
+  currentFileUsePublicFileUrl 支持
+  5. 其他改动：
+    - packages/ai-workspace-common/src/components/markdown/plugins/tool-call/pro
+  duct-card.tsx - Store 引用重构
+    - packages/skill-template/src/prompts/templates/copilot-agent-system.md -
+  添加图片理解和文件处理的 prompt 指导
+
+  检查结果：
+  - ✅ 没有发现 console.log 或调试代码
+  - ✅ 所有改动都与功能相关
+  - ✅ 测试文件完整且有意义
+  - ✅ Prompt 改动与文件/图片功能相关
+
+  所有暂存的文件都是功能相关的核心改动，没有发现需要移除的调试代码或不必要的文件
+  。这些改动构成了一个完整的功能特性：Copilot 文件输入和管理功能。
+
+  你想要：
+  1. 保留所有文件 - 它们都是必要的功能代码
+  2. 移除某些特定文件 - 如果你认为某些改动不应该在这个提交中
+
+  请告诉我你的决定，或者如果你想查看某个特定文件的详细改动来做决定。
+
+✻ Cogitated for 1m 48s
+
+❯ Prompt 改动与文件/图片功能相关修改 是如何的?  是如何处理文件/图片的? 
+
+⏺ 让我详细查看 prompt 文件的完整改动内容：
+
+⏺ Bash(git diff --staged
+      packages/skill-template/src/prompts/templates/copilot-agent-system.md)
+  ⎿  (No content)
+
+⏺ Bash(git diff --staged
+      packages/skill-template/src/prompts/templates/copilot-agent-system.md >
+      /tmp/prompt-diff.txt && wc -l /tmp/prompt-diff.txt)
+  ⎿         0 /tmp/prompt-diff.txt
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ 现在让我查看这个文件在改动前的内容，对比一下：
+
+⏺ Bash(git show
+      HEAD:packages/skill-template/src/prompts/templates/copilot-agent-system.md
+       | head -50)
+  ⎿ You are the Copilot Agent of Refly.ai, responsible for designing and ge
+    nerating vibe workflows through multi-turn conversation.
+    … +68 lines (ctrl+o to expand)
+
+
+⏺ 好的，我发现了！让我对比一下改动前后的差异：
+
+⏺ Bash(git show
+      HEAD:packages/skill-template/src/prompts/templates/copilot-agent-system.md
+       | wc -l)
+  ⎿  594
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ 行数一样？让我再检查一下：
+
+⏺ Bash(git diff --staged --numstat
+      packages/skill-template/src/prompts/templates/copilot-agent-system.md)
+  ⎿  (No content)
+
+⏺ Bash(git diff --cached
+      packages/skill-template/src/prompts/templates/copilot-agent-system.md |
+      head -100)
+  ⎿  (No content)
+
+⏺ 奇怪，让我重新检查 git 状态：
+
+⏺ Bash(git status --short)
+  ⎿  M packages/ai-workspace-common/src/components/canvas/copilot/file-list
+    .tsx
+
+
+⏺ 看起来暂存区已经被清空了！只剩下一个未暂存的文件。让我重新检查完整状态：
+
+⏺ Bash(git status)
+  ⎿  On branch feat/copilot-files-input
+     Your branch is up to date with 'upstream/feat/copilot-files-input'.
+     … +7 lines (ctrl+o to expand)
+
+⏺ 看来暂存区已经被清空了！让我检查一下最近的操作历史：
+
+⏺ Bash(git reflog -5)
+  ⎿ c0c22947e HEAD@{0}: commit: test(api): add unit tests for ToolService
+    b805fcb13 HEAD@{1}: reset: moving to HEAD~
+    ba8dfcee7 HEAD@{2}: commit: docs: add AGENTS.md and CLAUDE.md for agent
+    … +5 lines (ctrl+o to expand)
+
+
+⏺ 我明白了！你刚才已经提交了一次（test(api): add unit tests for 
+  ToolService），然后又 reset 回去了。让我看看那次提交包含了什么：
+
+⏺ Bash(git show c0c22947e --stat)
+  ⎿  commit c0c22947e4fc15fb77255fb72e683844ab57c925
+     Author: anthhub <anthhub@163.com>
+     Date:   Thu Jan 29 11:50:52 2026 +0800
+     … +30 lines (ctrl+o to expand)
+
+⏺ 好的！现在我明白了整个情况。让我查看那次提交中 prompt 文件的具体改动：
+
+⏺ Bash(git show c0c22947e:packages/skill-template/src/prompts/templates/copilot-
+      agent-system.md | grep -A 20 "### Image Understanding")
+  ⎿ ### Image Understanding for Workflow Design
+
+    **IMPORTANT**: When users attach images to their messages, you can dire
+    … +21 lines (ctrl+o to expand)
+
+
+⏺ Bash(git show c0c22947e:packages/skill-template/src/prompts/templates/copilot-
+      agent-system.md | grep -A 30 "### File Content Access")
+  ⎿ ### File Content Access for Workflow Design
+
+    You have access to `list_files` and `read_file` tools to help design be
+    … +33 lines (ctrl+o to expand)
+
+
+⏺ 完美！现在我可以给你一个完整的总结了。
+
+  Prompt 改动总结
+
+  这次 prompt 文件（copilot-agent-system.md）新增了 261 
+  行内容，主要添加了两个重要的功能指导部分：
+
+  1. 图片理解功能 (Image Understanding for Workflow Design)
+
+  核心机制：
+  - 用户上传的图片会通过 vision capability 自动传递给 Copilot Agent
+  - Agent 可以直接"看到"图片内容，无需调用任何工具
+  - 重要：不要使用 read_file 读取图片（会报错）
+
+  处理流程：
+
+  Step 1: 识别图片类型
+  ├─ UI/UX 设计（mockup、wireframe、截图）
+  ├─ 流程图/架构图
+  ├─ 数据可视化（图表、仪表板）
+  ├─ 代码截图
+  └─ 文档/表单
+
+  Step 2: 提取关键信息
+  例如 UI 设计：
+  ├─ Layout（布局结构）
+  ├─ Components（组件列表）
+  ├─ Colors（颜色值，如 #155EEF）
+  ├─ Typography（字体大小、粗细）
+  ├─ Spacing（间距、padding）
+  └─ States（状态：hover、active 等）
+
+  Step 3: 设计工作流
+  ├─ 将提取的信息转化为具体的任务 prompt
+  ├─ 包含精确的规格（颜色、尺寸、组件名）
+  ├─ 创建 resource 变量引用图片
+  └─ 供 Node Agent 执行时参考
+
+  Step 4: 质量检查
+  └─ 确认提取的信息是否完整、具体、可执行
+
+  示例场景：
+  用户上传登录页面设计稿 → Agent 分析出：
+  - 居中卡片布局（max-w-md）
+  - 用户名输入框（带用户图标）
+  - 密码输入框（带锁图标和眼睛切换）
+  - 主按钮颜色 #155EEF
+  - 间距 p-8, space-y-4
+
+  然后生成包含这些精确规格的工作流任务。
+
+  ---
+  2. 文件内容访问功能 (File Content Access for Workflow Design)
+
+  新增工具：
+  - list_files - 列出 canvas 中的文件
+  - read_file - 读取文件内容
+
+  使用场景：
+
+  ✅ 应该使用 read_file 的情况：
+  - 用户上传 CSV/JSON 数据文件，要求"分析"或"处理"
+  - 用户上传文档（PDF、Word、文本），要求"基于这个规格创建工作流"
+  - 需要了解文件结构才能设计合适的任务
+
+  ❌ 不应该使用 read_file 的情况：
+  - 图片文件（使用 vision capability）
+  - 音频/视频文件（不支持）
+  - 不需要内容就能设计工作流的情况
+
+  处理流程：
+
+  用户上传 sales-data.csv，说"分析这个销售数据"
+      ↓
+  1. 调用 read_file 读取 CSV 结构
+      ↓
+  2. 发现列：date, product, revenue, region
+      ↓
+  3. 设计工作流：
+     - Task 1: 按地区汇总收入
+     - Task 2: 识别畅销产品
+     - Task 3: 生成趋势图表
+      ↓
+  4. 创建 resource 变量引用文件
+     @{type=var,id=var-1,name=sales_data}
+
+  支持的文件类型：
+  - ✅ 文本文件：txt, md, json, csv, js, py, xml, yaml
+  - ✅ 文档：PDF, Word (.docx), EPUB
+  - ❌ 图片：使用 vision capability（自动传递）
+  - ❌ 音频/视频：不支持
+
+  关键原则：
+  - 在设计工作流之前读取文件（如果内容影响任务结构）
+  - 大文件自动截断到 25K tokens
+  - 读取后仍需创建 resource 变量供执行时使用
+  - 不要在任务 prompt 中硬编码文件内容，使用文件引用
+
+  ---
+  3. 两者的关系
+  ┌──────────┬───────────────────────────┬────────────────────────┐
+  │   特性   │         图片处理          │        文件处理        │
+  ├──────────┼───────────────────────────┼────────────────────────┤
+  │ 传递方式 │ Vision capability（自动） │ 需要调用 read_file     │
+  ├──────────┼───────────────────────────┼────────────────────────┤
+  │ 何时可见 │ 用户发送消息时立即可见    │ 调用工具后才能看到内容 │
+  ├──────────┼───────────────────────────┼────────────────────────┤
+  │ 处理方式 │ 直接分析视觉内容          │ 读取文本/结构化数据    │
+  ├──────────┼───────────────────────────┼────────────────────────┤
+  │ 典型用途 │ UI 设计稿 → 生成代码      │ CSV 数据 → 分析工作流  │
+  ├──────────┼───────────────────────────┼────────────────────────┤
+  │ 引用方式 │ 创建 resource 变量        │ 创建 resource 变量     │
+  └──────────┴───────────────────────────┴────────────────────────┘
+  ---
+  为什么需要这些改动？
+
+  这些 prompt 改动是为了支持 Copilot 文件输入功能：
+
+  1. 用户可以上传图片 → Agent 需要知道如何分析图片并设计工作流
+  2. 用户可以上传文件 → Agent 需要知道何时/如何读取文件内容
+  3. Agent 需要引用这些资源 → 通过 resource 变量传递给 Node Agent 执行
+
+  这与你在 API 层添加的 copilot_read_file 和 copilot_list_files 工具是配套的：
+  - API 提供了工具能力
+  - Prompt 指导 Agent 如何正确使用这些工具
+
+  所以这个 prompt 改动是核心功能的一部分，应该保留在提交中。
+
+✻ Cooked for 2m 54s
+
+❯ 现在 copilot 可以支持生成哪些类型的输入项, 我需要支持 选项变量的生成 
+
+⏺ 我需要了解当前 Copilot
+  支持哪些类型的输入项，以及如何支持选项变量的生成。让我先探索相关代码。
+
+⏺ Explore(Explore copilot variable types)
+  ⎿  Done (22 tool uses · 141.6k tokens · 3m 23s)
+
+⏺ 太好了！现在让我探索 Copilot
+  如何生成这些变量，特别是在工作流生成时的处理逻辑。
+
+⏺ Explore(Explore copilot workflow generation)
+  ⎿  Done (25 tool uses · 147.8k tokens · 4m 1s)
+
+⏺ 完美！现在我已经完全理解了情况。让我创建计划文件。
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ 现在让我读取关键文件来验证我的理解是否正确：
+
+⏺ Read 1 file (ctrl+o to expand)
+
+⏺ 好的，我看到了关键信息。现在让我检查一下 prompt 文件中关于变量的说明：
+
+⏺ Searched for 1 pattern (ctrl+o to expand)
+
+⏺ 完美！现在让我查看一个实际的 option 变量示例，确认我理解正确：
+
+⏺ Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+⏺ 很好！现在我需要查看 option 变量在数据库 schema 中的完整定义：
+
+⏺ Searched for 3 patterns (ctrl+o to expand)
+
+⏺ 完美！现在我已经完全理解了。让我更新计划文件，添加一些额外的细节：
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ 现在让我完善 prompt 更新部分，添加更具体的示例：
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ 现在让我更新测试策略部分，使其更加具体：
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ 完美！现在计划已经很完善了。让我最后检查一下是否有任何需要向用户确认的问题：
+
+  根据我的探索和分析，我已经完全理解了需求：
+
+  1. 当前状态：Copilot 只能生成 string 和 resource 类型的变量
+  2. 用户需求：支持生成 option 类型的变量（选项/选择变量）
+  3. 关键发现：Option 变量在系统中已经完全实现（UI、数据库、API），只是在
+  Copilot 工作流生成的 schema 中被排除了
+
+  计划非常清晰，不需要向用户提问。现在可以退出计划模式了。
+  ⎿  User rejected Claude's plan:
+     ╭─────────────────────────────────────────────────────────────────────────╮
+     │ Plan: Add Option Variable Support to Copilot Workflow Generation        │
+     │                                                                         │
+     │ Current State                                                           │
+     │                                                                         │
+     │ What Copilot Currently Supports                                         │
+     │                                                                         │
+     │ Copilot Agent can generate workflows with 2 variable types:             │
+     │ 1. string - Text input variables (e.g., project name, description, date)│
+     │ 2. resource - File upload variables (e.g., documents, images, videos,   │
+     │ audio)                                                                  │
+     │                                                                         │
+     │ What's Missing                                                          │
+     │                                                                         │
+     │ option variables (select/choice variables) are fully implemented in the │
+     │ system but excluded from Copilot workflow generation.                   │
+     │                                                                         │
+     │ - ✅ Option variables exist in the database schema                      │
+     │ (WorkflowVariable.variableType = 'option')                              │
+     │ - ✅ UI components fully support option variables (single/multi-select) │
+     │ - ✅ Variable extraction service can extract option variables           │
+     │ - ❌ Copilot Agent cannot generate workflows with option variables      │
+     │                                                                         │
+     │ Root Cause: The workflowPlanSchema in                                   │
+     │ packages/canvas-common/src/workflow-plan.ts only allows ['string',      │
+     │ 'resource'] in the variableType enum.                                   │
+     │                                                                         │
+     │ User Request                                                            │
+     │                                                                         │
+     │ Enable Copilot to generate workflows with option variables              │
+     │ (select/choice inputs).                                                 │
+     │                                                                         │
+     │ Implementation Plan                                                     │
+     │                                                                         │
+     │ Phase 1: Update Workflow Plan Schema                                    │
+     │                                                                         │
+     │ File: packages/canvas-common/src/workflow-plan.ts                       │
+     │                                                                         │
+     │ Changes to workflowVariableSchema (lines 53-70):                        │
+     │                                                                         │
+     │ 1. Update variableType enum to include 'option':                        │
+     │ variableType: z                                                         │
+     │   .enum(['string', 'option', 'resource'])  // Add 'option'              │
+     │   .describe('Variable type: string for text input, option for selection,│
+     │  resource for file upload')                                             │
+     │   .default('string'),                                                   │
+     │ 2. Add options field (array of available choices):                      │
+     │ options: z                                                              │
+     │   .array(z.string())                                                    │
+     │   .optional()                                                           │
+     │   .describe('Array of available options (required for option type       │
+     │ variables). Example: ["small", "medium", "large"]'),                    │
+     │ 3. Add isSingle field (single vs multi-select mode):                    │
+     │ isSingle: z                                                             │
+     │   .boolean()                                                            │
+     │   .optional()                                                           │
+     │   .describe('Whether single selection (true) or multiple selection      │
+     │ (false). Only for option type. Defaults to true.'),                     │
+     │                                                                         │
+     │ Also update workflowPatchDataSchema (line 109):                         │
+     │ - Change variableType: z.enum(['string', 'resource']) to                │
+     │ z.enum(['string', 'option', 'resource'])                                │
+     │ - This allows patch operations to update variable types to option       │
+     │                                                                         │
+     │ Phase 2: Update Copilot Agent System Prompt                             │
+     │                                                                         │
+     │ File:                                                                   │
+     │ packages/skill-template/src/prompts/templates/copilot-agent-system.md   │
+     │                                                                         │
+     │ Changes:                                                                │
+     │                                                                         │
+     │ 2.1 Update Variable Types Table (around line 352-360)                   │
+     │                                                                         │
+     │ Add option variable documentation to the existing table:                │
+     │                                                                         │
+     │ | Field | Type | Description |                                          │
+     │ |-------|------|-------------|                                          │
+     │ | variableId | string | Unique identifier (e.g., "var-1") |             │
+     │ | variableType | string | "string" for text input, "option" for         │
+     │ selection, "resource" for file upload |                                 │
+     │ | name | string | Variable name for reference |                         │
+     │ | description | string | What this variable represents |                │
+     │ | required | boolean | Whether this input is required (default: false) |│
+     │ | options | array | For option type only: array of available choices    │
+     │ (e.g., ["small", "medium", "large"]) |                                  │
+     │ | isSingle | boolean | For option type only: true for single selection, │
+     │ false for multiple selection (default: true) |                          │
+     │ | resourceTypes | array | For resource type only: ["document", "image", │
+     │ "audio", "video"] |                                                     │
+     │ | value | array | For string: `[{ type: "text", text: "value" }]`; For  │
+     │ option: `[{ type: "text", text: "selected_option" }]`; For resource:    │
+     │ `[]` (always empty) |                                                   │
+     │                                                                         │
+     │ 2.2 Add Option Variable Recognition Section (after line 376)            │
+     │                                                                         │
+     │ Insert new section after the "File Input Recognition" section:          │
+     │                                                                         │
+     │ **Option Input Recognition** — Generate `variableType: "option"` when   │
+     │ user mentions:                                                          │
+     │ - "选择格式/模式/风格/难度/语气/主题..." (Chinese: select               │
+     │ format/mode/style/difficulty/tone/theme)                                │
+     │ - "select format/mode/style/difficulty/tone/theme..."                   │
+     │ - "choose from: A, B, C..." or "options: X, Y, Z"                       │
+     │ - "用户选择一个选项，然后..." (Chinese: user selects an option, then...)│
+     │ - "based on the selected option..."                                     │
+     │ - Any scenario with predefined choices or enumeration values            │
+     │ - Dropdown selection, radio buttons, checkboxes                         │
+     │                                                                         │
+     │ **Option Variable Guidelines:**                                         │
+     │ - Use `isSingle: true` for single selection (default) - renders as      │
+     │ dropdown or radio buttons                                               │
+     │ - Use `isSingle: false` for multiple selection - renders as checkboxes  │
+     │ - Provide 2-10 options in the `options` array                           │
+     │ - Set default value in `value: [{ type: "text", text: "default_option"  │
+     │ }]`                                                                     │
+     │ - Default value must be one of the options in the `options` array       │
+     │ - For multi-select, you can provide multiple default values: `value: [{ │
+     │ type: "text", text: "option1" }, { type: "text", text: "option2" }]`    │
+     │                                                                         │
+     │ **Common Use Cases for Option Variables:**                              │
+     │ - Output format selection: ["markdown", "html", "pdf", "docx"]          │
+     │ - Writing tone: ["professional", "casual", "humorous", "formal"]        │
+     │ - Difficulty level: ["beginner", "intermediate", "advanced"]            │
+     │ - Language selection: ["English", "中文", "日本語", "Español"]          │
+     │ - Priority: ["low", "medium", "high", "urgent"]                         │
+     │ - Status: ["draft", "in_progress", "review", "completed"]               │
+     │                                                                         │
+     │ 2.3 Add Option Variable Examples (in the examples section around line   │
+     │ 458)                                                                    │
+     │                                                                         │
+     │ Add examples showing option variable usage:                             │
+     │                                                                         │
+     │ // Example 1: Single-select option variable (output format)             │
+     │ {                                                                       │
+     │   "variableId": "var-1",                                                │
+     │   "variableType": "option",                                             │
+     │   "name": "output_format",                                              │
+     │   "description": "Output format for the generated content",             │
+     │   "required": true,                                                     │
+     │   "isSingle": true,                                                     │
+     │   "options": ["markdown", "html", "pdf", "docx"],                       │
+     │   "value": [{ "type": "text", "text": "markdown" }]                     │
+     │ }                                                                       │
+     │                                                                         │
+     │ // Example 2: Single-select option variable (writing tone)              │
+     │ {                                                                       │
+     │   "variableId": "var-2",                                                │
+     │   "variableType": "option",                                             │
+     │   "name": "tone",                                                       │
+     │   "description": "Writing tone for the article",                        │
+     │   "required": false,                                                    │
+     │   "isSingle": true,                                                     │
+     │   "options": ["professional", "casual", "humorous", "formal"],          │
+     │   "value": [{ "type": "text", "text": "professional" }]                 │
+     │ }                                                                       │
+     │                                                                         │
+     │ // Example 3: Multi-select option variable (tags)                       │
+     │ {                                                                       │
+     │   "variableId": "var-3",                                                │
+     │   "variableType": "option",                                             │
+     │   "name": "tags",                                                       │
+     │   "description": "Content tags for categorization",                     │
+     │   "required": false,                                                    │
+     │   "isSingle": false,                                                    │
+     │   "options": ["technology", "design", "product", "marketing",           │
+     │ "engineering"],                                                         │
+     │   "value": [                                                            │
+     │     { "type": "text", "text": "technology" },                           │
+     │     { "type": "text", "text": "product" }                               │
+     │   ]                                                                     │
+     │ }                                                                       │
+     │                                                                         │
+     │ 2.4 Update Complete Workflow Example (around line 458-466)              │
+     │                                                                         │
+     │ Add an option variable to the existing example:                         │
+     │                                                                         │
+     │ {                                                                       │
+     │   "variables": [                                                        │
+     │     {                                                                   │
+     │       "variableId": "var-1",                                            │
+     │       "variableType": "resource",                                       │
+     │       "name": "financial_report",                                       │
+     │       "required": true,                                                 │
+     │       "resourceTypes": ["document"],                                    │
+     │       "value": []                                                       │
+     │     },                                                                  │
+     │     {                                                                   │
+     │       "variableId": "var-2",                                            │
+     │       "variableType": "string",                                         │
+     │       "name": "analysis_focus",                                         │
+     │       "value": [{ "type": "text", "text": "comprehensive" }]            │
+     │     },                                                                  │
+     │     {                                                                   │
+     │       "variableId": "var-3",                                            │
+     │       "variableType": "option",                                         │
+     │       "name": "report_format",                                          │
+     │       "description": "Format for the analysis report",                  │
+     │       "required": true,                                                 │
+     │       "isSingle": true,                                                 │
+     │       "options": ["executive_summary", "detailed_analysis",             │
+     │ "visual_dashboard"],                                                    │
+     │       "value": [{ "type": "text", "text": "executive_summary" }]        │
+     │     }                                                                   │
+     │   ]                                                                     │
+     │ }                                                                       │
+     │                                                                         │
+     │ Phase 3: Update Validation Logic (Optional but Recommended)             │
+     │                                                                         │
+     │ File: packages/canvas-common/src/workflow-plan.ts                       │
+     │                                                                         │
+     │ Note: The Zod schema will handle basic validation automatically. This   │
+     │ phase adds additional business logic validation.                        │
+     │                                                                         │
+     │ Location: After schema parsing, in the parseWorkflowPlan() function or  │
+     │ in a separate validation function                                       │
+     │                                                                         │
+     │ Changes:                                                                │
+     │ Add custom validation for option variables:                             │
+     │ // Validate option variables                                            │
+     │ for (const variable of plan.variables) {                                │
+     │   if (variable.variableType === 'option') {                             │
+     │     // Ensure options array exists and has at least one option          │
+     │     if (!variable.options || variable.options.length === 0) {           │
+     │       throw new Error(`Option variable "${variable.name}" must have at  │
+     │ least one option`);                                                     │
+     │     }                                                                   │
+     │                                                                         │
+     │     // Validate default value is in options (if provided)               │
+     │     if (variable.value && variable.value.length > 0) {                  │
+     │       for (const val of variable.value) {                               │
+     │         if (val.type === 'text' && val.text &&                          │
+     │ !variable.options.includes(val.text)) {                                 │
+     │           throw new Error(                                              │
+     │             `Default value "${val.text}" for variable "${variable.name}"│
+     │  is not in options: [${variable.options.join(', ')}]`                   │
+     │           );                                                            │
+     │         }                                                               │
+     │       }                                                                 │
+     │     }                                                                   │
+     │                                                                         │
+     │     // For single-select, ensure only one value                         │
+     │     if (variable.isSingle !== false && variable.value &&                │
+     │ variable.value.length > 1) {                                            │
+     │       throw new Error(                                                  │
+     │         `Single-select variable "${variable.name}" cannot have multiple │
+     │ default values`                                                         │
+     │       );                                                                │
+     │     }                                                                   │
+     │   }                                                                     │
+     │ }                                                                       │
+     │                                                                         │
+     │ Alternative: This validation could also be added as a Zod refinement in │
+     │ the schema itself.                                                      │
+     │                                                                         │
+     │ Phase 4: Update Type Definitions (if needed)                            │
+     │                                                                         │
+     │ File: packages/canvas-common/src/workflow-plan.ts                       │
+     │                                                                         │
+     │ Check: Ensure TypeScript types are exported correctly:                  │
+     │ export type WorkflowVariable = z.infer<typeof workflowVariableSchema>;  │
+     │                                                                         │
+     │ This should automatically include the new fields once the schema is     │
+     │ updated.                                                                │
+     │                                                                         │
+     │ Critical Files to Modify                                                │
+     │                                                                         │
+     │ 1. packages/canvas-common/src/workflow-plan.ts (lines 53-70, 100-150)   │
+     │   - Update schema to include option type                                │
+     │   - Add validation logic                                                │
+     │ 2. packages/skill-template/src/prompts/templates/copilot-agent-system.md│
+     │  (lines 352-376, 458+)                                                  │
+     │   - Document option variable usage                                      │
+     │   - Add recognition patterns                                            │
+     │   - Add examples                                                        │
+     │                                                                         │
+     │ Testing Strategy                                                        │
+     │                                                                         │
+     │ 1. Schema Validation Tests                                              │
+     │                                                                         │
+     │ Manual Testing (no existing test files found for workflow-plan.ts):     │
+     │                                                                         │
+     │ Test cases to verify:                                                   │
+     │ - ✅ Create workflow with option variable (single select)               │
+     │ - ✅ Create workflow with option variable (multi-select)                │
+     │ - ✅ Validate error handling for missing options array                  │
+     │ - ✅ Validate error handling for empty options array                    │
+     │ - ✅ Validate error handling for invalid default values (not in options)│
+     │ - ✅ Validate single-select with multiple default values (should fail or│
+     │  use first)                                                             │
+     │ - ✅ Validate multi-select with multiple default values (should succeed)│
+     │                                                                         │
+     │ Test Data Examples:                                                     │
+     │                                                                         │
+     │ // Valid single-select option variable                                  │
+     │ {                                                                       │
+     │   variableId: "var-1",                                                  │
+     │   variableType: "option",                                               │
+     │   name: "format",                                                       │
+     │   description: "Output format",                                         │
+     │   required: true,                                                       │
+     │   isSingle: true,                                                       │
+     │   options: ["markdown", "html", "pdf"],                                 │
+     │   value: [{ type: "text", text: "markdown" }]                           │
+     │ }                                                                       │
+     │                                                                         │
+     │ // Valid multi-select option variable                                   │
+     │ {                                                                       │
+     │   variableId: "var-2",                                                  │
+     │   variableType: "option",                                               │
+     │   name: "tags",                                                         │
+     │   description: "Content tags",                                          │
+     │   required: false,                                                      │
+     │   isSingle: false,                                                      │
+     │   options: ["tech", "design", "product"],                               │
+     │   value: [                                                              │
+     │     { type: "text", text: "tech" },                                     │
+     │     { type: "text", text: "design" }                                    │
+     │   ]                                                                     │
+     │ }                                                                       │
+     │                                                                         │
+     │ // Invalid: missing options (should fail)                               │
+     │ {                                                                       │
+     │   variableId: "var-3",                                                  │
+     │   variableType: "option",                                               │
+     │   name: "invalid",                                                      │
+     │   value: [{ type: "text", text: "test" }]                               │
+     │   // Missing: options array                                             │
+     │ }                                                                       │
+     │                                                                         │
+     │ // Invalid: default value not in options (should fail if validation     │
+     │ added)                                                                  │
+     │ {                                                                       │
+     │   variableId: "var-4",                                                  │
+     │   variableType: "option",                                               │
+     │   name: "invalid",                                                      │
+     │   options: ["a", "b", "c"],                                             │
+     │   value: [{ type: "text", text: "d" }]  // "d" not in options           │
+     │ }                                                                       │
+     │                                                                         │
+     │ 2. Copilot Generation Tests                                             │
+     │                                                                         │
+     │ Test Prompts (use in Copilot chat):                                     │
+     │                                                                         │
+     │ Test 1: Simple Single-Select                                            │
+     │                                                                         │
+     │ Prompt: "创建一个工作流，让用户选择输出格式：markdown、html、pdf"       │
+     │                                                                         │
+     │ Expected Result:                                                        │
+     │ - Workflow created with 1 option variable                               │
+     │ - variableType: "option"                                                │
+     │ - isSingle: true                                                        │
+     │ - options: ["markdown", "html", "pdf"]                                  │
+     │ - Default value set to one of the options                               │
+     │                                                                         │
+     │ Test 2: Multiple Option Variables                                       │
+     │                                                                         │
+     │ Prompt: "Create a workflow where user selects difficulty level (easy,   │
+     │ medium, hard) and output language (English, Chinese, Japanese)"         │
+     │                                                                         │
+     │ Expected Result:                                                        │
+     │ - Workflow created with 2 option variables                              │
+     │ - Both have variableType: "option" and isSingle: true                   │
+     │ - Correct options arrays for each                                       │
+     │                                                                         │
+     │ Test 3: Multi-Select                                                    │
+     │                                                                         │
+     │ Prompt: "生成一个工作流，用户可以多选标签：技术、设计、产品、运营、市场"│
+     │                                                                         │
+     │ Expected Result:                                                        │
+     │ - Workflow created with 1 option variable                               │
+     │ - variableType: "option"                                                │
+     │ - isSingle: false                                                       │
+     │ - options: ["技术", "设计", "产品", "运营", "市场"]                     │
+     │                                                                         │
+     │ Test 4: Mixed Variable Types                                            │
+     │                                                                         │
+     │ Prompt: "Create a workflow that takes a document upload, user enters    │
+     │ project name, and selects priority (low, medium, high)"                 │
+     │                                                                         │
+     │ Expected Result:                                                        │
+     │ - Workflow with 3 variables:                                            │
+     │   a. variableType: "resource" for document                              │
+     │   b. variableType: "string" for project name                            │
+     │   c. variableType: "option" for priority with correct options           │
+     │                                                                         │
+     │ 3. End-to-End Workflow                                                  │
+     │                                                                         │
+     │ Steps:                                                                  │
+     │ 1. Open Copilot chat in the application                                 │
+     │ 2. Send prompt: "创建一个工作流，让用户选择输出格式（markdown、html、pdf│
+     │ ）和写作风格（专业、轻松、幽默）"                                       │
+     │ 3. Verify: Workflow is generated successfully                           │
+     │ 4. Verify: Check workflow variables panel shows 2 option variables      │
+     │ 5. Verify: Click "Run Workflow" button                                  │
+     │ 6. Verify: Workflow run form displays:                                  │
+     │   - Dropdown for "output_format" with options: markdown, html, pdf      │
+     │   - Dropdown for "writing_style" with options: 专业, 轻松, 幽默         │
+     │ 7. Verify: Select options and run workflow                              │
+     │ 8. Verify: Selected values are passed to workflow execution (check in   │
+     │ task prompts)                                                           │
+     │                                                                         │
+     │ 4. Edge Cases                                                           │
+     │                                                                         │
+     │ Test Cases:                                                             │
+     │                                                                         │
+     │ 1. Empty options array:                                                 │
+     │   - Try to create workflow with options: []                             │
+     │   - Should fail validation (if validation added in Phase 3)             │
+     │ 2. Single option:                                                       │
+     │   - Create workflow with options: ["only_one"]                          │
+     │   - Should succeed (though not very useful)                             │
+     │ 3. Many options:                                                        │
+     │   - Create workflow with 20+ options                                    │
+     │   - Should succeed, but UI might need scrolling                         │
+     │ 4. Unicode options:                                                     │
+     │   - Create workflow with Chinese/Japanese/Emoji options                 │
+     │   - Should work correctly (UTF-8 support)                               │
+     │ 5. Default value not in options:                                        │
+     │   - Try options: ["a", "b"] with value: [{ type: "text", text: "c" }]   │
+     │   - Should fail validation (if validation added in Phase 3)             │
+     │ 6. Multi-select with single value:                                      │
+     │   - isSingle: false with value: [{ type: "text", text: "one" }]         │
+     │   - Should succeed (multi-select can have 0, 1, or many values)         │
+     │ 7. Single-select with multiple values:                                  │
+     │   - isSingle: true with multiple values in array                        │
+     │   - Should fail validation or use only first value                      │
+     │                                                                         │
+     │ 5. Regression Testing                                                   │
+     │                                                                         │
+     │ Verify existing functionality still works:                              │
+     │ - ✅ String variables still work correctly                              │
+     │ - ✅ Resource variables still work correctly                            │
+     │ - ✅ Workflow generation without option variables still works           │
+     │ - ✅ Workflow patching still works                                      │
+     │ - ✅ Variable extraction service still works                            │
+     │                                                                         │
+     │ Verification Steps                                                      │
+     │                                                                         │
+     │ 1. Build the project: pnpm build                                        │
+     │ 2. Run tests: pnpm test (if unit tests exist)                           │
+     │ 3. Manual testing:                                                      │
+     │   - Start the application                                               │
+     │   - Open Copilot chat                                                   │
+     │   - Ask: "创建一个工作流，让用户选择输出格式：markdown、html、pdf"      │
+     │   - Verify workflow is generated with option variable                   │
+     │   - Check the workflow variables panel shows the option variable        │
+     │ correctly                                                               │
+     │   - Run the workflow and verify the select dropdown appears             │
+     │   - Select an option and verify it's passed to the workflow execution   │
+     │                                                                         │
+     │ Notes                                                                   │
+     │                                                                         │
+     │ - Option variables are already fully supported in the UI and database   │
+     │ - This change only enables Copilot to generate workflows with option    │
+     │ variables                                                               │
+     │ - No changes needed to UI components, API endpoints, or database schema │
+     │ - The change is backward compatible (existing workflows unaffected)     │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     ╰─────────────────────────────────────────────────────────────────────────╯
+
+❯ 再次严格检查方案, 新方案是否会影响其他模块, 其他逻辑, 是否兼容已有流程,   
+  需要思考全面, 使用中文总结                                                
+                                                                            
+  人工多 Agent（不靠工具）                                                  
+  你现在分三种视角思考：                                                    
+  - Architect：负责结构                                                     
+  - Reviewer：找风险                                                        
+  - Implementer：写代码                                                     
+  分别输出，再给最终方案                                                    
+
+⏺ 好的，让我以三个不同的角色严格审查这个方案。
+
+⏺ sequential-thinking - sequentialthinking (MCP)(thought: "作为
+                                                Architect（架构师）开始分析：\n\
+                                                n当前系统架构中，变量类型的定义
+                                                分布在多个层次：\n1.
+                                                数据库层：WorkflowVariable
+                                                表支持 variableType = 'string' |
+                                                 'option' | 'resource'\n2. API
+                                                Schema 层：openapi-schema
+                                                定义了完整的三种类型\n3.
+                                                工作流计划层：canvas-common/work
+                                                flow-plan.ts 只支持 'string' |
+                                                'resource'\n4. UI 层：完整支持三
+                                                种类型的渲染和交互\n\n这是一个典
+                                                型的\"部分实现\"状态 - option
+                                                变量在系统的大部分地方都已实现，
+                                                唯独在 Copilot 工作流生成的
+                                                schema 中被排除。\n\n从架构角度
+                                                看，这个改动的影响范围：\n-
+                                                修改点：workflow-plan.ts 的
+                                                schema 定义\n-
+                                                影响范围：所有使用
+                                                workflowPlanSchema 的地方\n-
+                                                依赖关系：需要检查谁在使用这个
+                                                schema", next_thought_needed:
+                                                true, thought_number: 1,
+                                                total_thoughts: 15)
+  ⎿  Error: {
+       "error": "Invalid thoughtNumber: must be a number",
+       "status": "failed"
+     }
+
+⏺ 让我直接进行多角色分析：
+
+⏺ Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+⏺ 现在让我查看 API 层如何处理工作流计划：
+
+⏺ Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ 好的，现在我已经收集了足够的信息。让我以三个角色进行全面分析：
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ 现在让我更新实施计划部分，整合三个角色的分析结果：
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ 完美！现在计划已经非常完善了。让我退出计划模式：
+  ⎿  User rejected Claude's plan:
+     ╭─────────────────────────────────────────────────────────────────────────╮
+     │ Plan: Add Option Variable Support to Copilot Workflow Generation        │
+     │                                                                         │
+     │ 多角色严格审查                                                          │
+     │                                                                         │
+     │ 🏗️ Architect（架构师）视角                                              │
+     │                                                                         │
+     │ 系统架构分析                                                            │
+     │                                                                         │
+     │ 当前架构层次：                                                          │
+     │ ┌─────────────────────────────────────────────────────────┐             │
+     │ │ UI 层 (ai-workspace-common)                              │            │
+     │ │ ✅ 完整支持 string | option | resource                   │            │
+     │ │ - option-type-form.tsx (创建/编辑)                       │            │
+     │ │ - workflow-input-form-collapse.tsx (运行时渲染)          │            │
+     │ └─────────────────────────────────────────────────────────┘             │
+     │                           ↓                                             │
+     │ ┌─────────────────────────────────────────────────────────┐             │
+     │ │ API Schema 层 (openapi-schema)                           │            │
+     │ │ ✅ 完整支持 string | option | resource                   │            │
+     │ │ - WorkflowVariable.variableType enum                     │            │
+     │ │ - options, isSingle 字段定义                             │            │
+     │ └─────────────────────────────────────────────────────────┘             │
+     │                           ↓                                             │
+     │ ┌─────────────────────────────────────────────────────────┐             │
+     │ │ 工作流计划层 (canvas-common/workflow-plan.ts)            │            │
+     │ │ ❌ 仅支持 string | resource                              │            │
+     │ │ - workflowVariableSchema (Zod schema)                    │            │
+     │ │ - workflowPatchDataSchema (Zod schema)                   │            │
+     │ └─────────────────────────────────────────────────────────┘             │
+     │                           ↓                                             │
+     │ ┌─────────────────────────────────────────────────────────┐             │
+     │ │ Copilot Agent 层 (agent-tools/copilot)                   │            │
+     │ │ ❌ 使用 workflowPlanSchema，无法生成 option              │            │
+     │ │ - GenerateWorkflow.schema = workflowPlanSchema           │            │
+     │ │ - PatchWorkflow.schema = workflowPlanPatchSchema         │            │
+     │ └─────────────────────────────────────────────────────────┘             │
+     │                           ↓                                             │
+     │ ┌─────────────────────────────────────────────────────────┐             │
+     │ │ 数据库层 (Prisma)                                        │            │
+     │ │ ✅ 存储 JSON，支持任意 variableType                       │           │
+     │ │ - workflowPlan.data (JSONB)                              │            │
+     │ └─────────────────────────────────────────────────────────┘             │
+     │                                                                         │
+     │ 架构问题诊断：                                                          │
+     │ - 不一致性：工作流计划层的 schema 与系统其他层不一致                    │
+     │ - 人为限制：Zod schema 人为限制了 option 类型，但系统其他部分都支持     │
+     │ - 影响范围：仅影响 Copilot 生成工作流时的能力，不影响手动创建或 API     │
+     │ 直接操作                                                                │
+     │                                                                         │
+     │ 依赖关系图：                                                            │
+     │ workflowVariableSchema (修改点)                                         │
+     │     ↓ 被引用于                                                          │
+     │     ├─ workflowPlanSchema (line 76)                                     │
+     │     ├─ workflowPatchOperationSchema (line 130)                          │
+     │     └─ applyWorkflowPatchOperations (line 189, 301)                     │
+     │          ↓ 被调用于                                                     │
+     │          └─ WorkflowPlanService.patchWorkflowPlan                       │
+     │               ↓ 被调用于                                                │
+     │               ├─ SkillEngineService (Copilot 工具)                      │
+     │               └─ WorkflowPlanCliController (CLI 接口)                   │
+     │                                                                         │
+     │ 架构建议：                                                              │
+     │ 1. ✅ 修改是架构对齐，不是新增功能                                      │
+     │ 2. ✅ 修改点单一且清晰（workflow-plan.ts）                              │
+     │ 3. ✅ 向下兼容（新增 enum 值，不破坏现有类型）                          │
+     │ 4. ⚠️ 需要同步更新 workflowPatchDataSchema (line 109)                   │
+     │                                                                         │
+     │ ---                                                                     │
+     │ 🔍 Reviewer（风险审查员）视角                                           │
+     │                                                                         │
+     │ 潜在风险分析                                                            │
+     │                                                                         │
+     │ 1. 向后兼容性风险 ⚠️ 中等                                               │
+     │ - 现象：现有工作流中没有 option 变量                                    │
+     │ - 风险：新增 enum 值不会破坏现有数据                                    │
+     │ - 验证：Zod 的 .enum() 是扩展性的，添加新值不影响旧值                   │
+     │ - 结论：✅ 向后兼容                                                     │
+     │                                                                         │
+     │ 2. Schema 验证风险 ⚠️ 中等                                              │
+     │ - 现象：option 变量需要 options 和 isSingle 字段                        │
+     │ - 风险：如果这些字段标记为 .optional()，可能导致运行时错误              │
+     │ - 当前方案：字段标记为 .optional()                                      │
+     │ - 问题：                                                                │
+     │ // 可能通过验证但运行时出错                                             │
+     │ {                                                                       │
+     │   variableType: "option",                                               │
+     │   // 缺少 options 数组！                                                │
+     │ }                                                                       │
+     │ - 建议：添加 Zod refinement 验证：                                      │
+     │ .refine(                                                                │
+     │   (data) => {                                                           │
+     │     if (data.variableType === 'option') {                               │
+     │       return data.options && data.options.length > 0;                   │
+     │     }                                                                   │
+     │     return true;                                                        │
+     │   },                                                                    │
+     │   { message: "Option variables must have at least one option" }         │
+     │ )                                                                       │
+     │                                                                         │
+     │ 3. 数据一致性风险 ⚠️ 低                                                 │
+     │ - 现象：option 变量的 value 必须是 { type: "text", text: string }       │
+     │ - 风险：与 resource 变量的 value 结构不同                               │
+     │ - 当前 schema：workflowVariableValueSchema 已支持 text 类型             │
+     │ - 结论：✅ 无风险                                                       │
+     │                                                                         │
+     │ 4. UI 渲染风险 ✅ 无风险                                                │
+     │ - 现象：UI 层已完整实现 option 变量渲染                                 │
+     │ - 验证路径：                                                            │
+     │   - option-type-form.tsx - 创建/编辑表单                                │
+     │   - workflow-input-form-collapse.tsx - 运行时表单                       │
+     │ - 结论：✅ UI 已就绪                                                    │
+     │                                                                         │
+     │ 5. API 处理风险 ✅ 无风险                                               │
+     │ - 现象：API 层使用 JSON.stringify(data) 存储                            │
+     │ - 验证：                                                                │
+     │ // workflow-plan.service.ts line 84                                     │
+     │ data: JSON.stringify(data)                                              │
+     │ - 结论：✅ 数据库存储为 JSON，支持任意结构                              │
+     │                                                                         │
+     │ 6. 变量提取服务风险 ⚠️ 低                                               │
+     │ - 现象：Variable Extraction Service 已支持 option 类型                  │
+     │ - 文件：apps/api/src/modules/variable-extraction/                       │
+     │ - 风险：Copilot 生成的 option 变量可能与提取服务生成的格式不一致        │
+     │ - 建议：确保 Copilot prompt 中的示例与提取服务的格式一致                │
+     │                                                                         │
+     │ 7. Patch 操作风险 ⚠️ 中等                                               │
+     │ - 现象：workflowPatchDataSchema (line 109) 也需要更新                   │
+     │ - 当前代码：                                                            │
+     │ variableType: z.enum(['string', 'resource']).optional()                 │
+     │ - 风险：如果不更新，patch 操作无法修改变量类型为 option                 │
+     │ - 结论：⚠️ 必须同步更新                                                 │
+     │                                                                         │
+     │ 8. 类型推导风险 ✅ 无风险                                               │
+     │ - 现象：TypeScript 类型通过 z.infer 自动推导                            │
+     │ - 验证：                                                                │
+     │ export type WorkflowVariableInput = z.infer<typeof                      │
+     │ workflowVariableSchema>;                                                │
+     │ - 结论：✅ 类型会自动更新                                               │
+     │                                                                         │
+     │ 风险等级总结                                                            │
+     │                                                                         │
+     │ - 🔴 高风险：0 个                                                       │
+     │ - 🟡 中风险：3 个（Schema 验证、Patch 操作、变量提取一致性）            │
+     │ - 🟢 低风险：5 个                                                       │
+     │ - ✅ 无风险：3 个                                                       │
+     │                                                                         │
+     │ 必须处理的风险                                                          │
+     │                                                                         │
+     │ 1. 必须：更新 workflowPatchDataSchema (line 109)                        │
+     │ 2. 强烈建议：添加 Zod refinement 验证 options 字段                      │
+     │ 3. 建议：确保 Copilot prompt 示例与变量提取服务格式一致                 │
+     │                                                                         │
+     │ ---                                                                     │
+     │ 💻 Implementer（实现者）视角                                            │
+     │                                                                         │
+     │ 实现复杂度评估                                                          │
+     │                                                                         │
+     │ 修改文件数量：2 个                                                      │
+     │ 1. packages/canvas-common/src/workflow-plan.ts - Schema 定义            │
+     │ 2. packages/skill-template/src/prompts/templates/copilot-agent-system.md│
+     │  - Prompt 指导                                                          │
+     │                                                                         │
+     │ 代码修改量：                                                            │
+     │ - Schema 修改：~30 行（添加字段 + refinement）                          │
+     │ - Prompt 修改：~100 行（文档 + 示例）                                   │
+     │ - 总计：~130 行                                                         │
+     │                                                                         │
+     │ 实现难度：⭐⭐☆☆☆ (2/5)                                                 │
+     │ - Schema 修改：简单（添加 enum 值和字段）                               │
+     │ - Validation 添加：中等（需要理解 Zod refinement）                      │
+     │ - Prompt 编写：简单（参考现有格式）                                     │
+     │                                                                         │
+     │ 具体实现步骤                                                            │
+     │                                                                         │
+     │ Step 1: 更新 workflowVariableSchema (line 53-70)                        │
+     │ export const workflowVariableSchema = z.object({                        │
+     │   variableId: z.string().describe('Variable ID, unique and readonly'),  │
+     │   variableType: z                                                       │
+     │     .enum(['string', 'option', 'resource'])  // ✅ 添加 'option'        │
+     │     .describe('Variable type: string for text input, option for         │
+     │ selection, resource for file upload')                                   │
+     │     .default('string'),                                                 │
+     │   name: z.string().describe('Variable name used in the workflow'),      │
+     │   description: z.string().describe('Description of what this variable   │
+     │ represents'),                                                           │
+     │   required: z                                                           │
+     │     .boolean()                                                          │
+     │     .describe('Whether this variable is required. Defaults to false.')  │
+     │     .default(false),                                                    │
+     │                                                                         │
+     │   // ✅ 新增：option 变量字段                                           │
+     │   options: z                                                            │
+     │     .array(z.string())                                                  │
+     │     .optional()                                                         │
+     │     .describe('Array of available options (required for option type     │
+     │ variables). Example: ["small", "medium", "large"]'),                    │
+     │   isSingle: z                                                           │
+     │     .boolean()                                                          │
+     │     .optional()                                                         │
+     │     .describe('Whether single selection (true) or multiple selection    │
+     │ (false). Only for option type. Defaults to true.'),                     │
+     │                                                                         │
+     │   resourceTypes: z                                                      │
+     │     .array(z.enum(['document', 'image', 'audio', 'video']))             │
+     │     .optional()                                                         │
+     │     .describe('Accepted resource types (only for resource type          │
+     │ variables)'),                                                           │
+     │   value: z.array(workflowVariableValueSchema).describe('Variable        │
+     │ values'),                                                               │
+     │ }).refine(                                                              │
+     │   // ✅ 新增：验证 option 变量必须有 options                            │
+     │   (data) => {                                                           │
+     │     if (data.variableType === 'option') {                               │
+     │       return data.options && data.options.length > 0;                   │
+     │     }                                                                   │
+     │     return true;                                                        │
+     │   },                                                                    │
+     │   {                                                                     │
+     │     message: "Option variables must have at least one option in the     │
+     │ 'options' array",                                                       │
+     │     path: ['options'],                                                  │
+     │   }                                                                     │
+     │ ).refine(                                                               │
+     │   // ✅ 新增：验证默认值在 options 中                                   │
+     │   (data) => {                                                           │
+     │     if (data.variableType === 'option' && data.options && data.value) { │
+     │       for (const val of data.value) {                                   │
+     │         if (val.type === 'text' && val.text &&                          │
+     │ !data.options.includes(val.text)) {                                     │
+     │           return false;                                                 │
+     │         }                                                               │
+     │       }                                                                 │
+     │     }                                                                   │
+     │     return true;                                                        │
+     │   },                                                                    │
+     │   {                                                                     │
+     │     message: "Default values must be one of the available options",     │
+     │     path: ['value'],                                                    │
+     │   }                                                                     │
+     │ );                                                                      │
+     │                                                                         │
+     │ Step 2: 更新 workflowPatchDataSchema (line 109)                         │
+     │ // Variable update fields                                               │
+     │ variableType: z.enum(['string', 'option',                               │
+     │ 'resource']).optional().describe('New variable type'),  // ✅ 添加      │
+     │ 'option'                                                                │
+     │ name: z.string().optional().describe('New variable name'),              │
+     │ description: z.string().optional().describe('New variable description'),│
+     │ required: z.boolean().optional().describe('Whether this variable is     │
+     │ required'),                                                             │
+     │                                                                         │
+     │ // ✅ 新增：option 变量字段                                             │
+     │ options: z                                                              │
+     │   .array(z.string())                                                    │
+     │   .optional()                                                           │
+     │   .describe('New options array (for option type variables)'),           │
+     │ isSingle: z                                                             │
+     │   .boolean()                                                            │
+     │   .optional()                                                           │
+     │   .describe('New isSingle setting (for option type variables)'),        │
+     │                                                                         │
+     │ resourceTypes: z                                                        │
+     │   .array(z.enum(['document', 'image', 'audio', 'video']))               │
+     │   .optional()                                                           │
+     │   .describe('New accepted resource types'),                             │
+     │ value: z.array(workflowVariableValueSchema).optional().describe('New    │
+     │ variable values'),                                                      │
+     │                                                                         │
+     │ Step 3: 更新 Copilot Prompt                                             │
+     │ （详见计划中的 Phase 2）                                                │
+     │                                                                         │
+     │ 测试策略                                                                │
+     │                                                                         │
+     │ 单元测试（如果存在测试文件）：                                          │
+     │ describe('workflowVariableSchema', () => {                              │
+     │   it('should accept option variable with valid options', () => {        │
+     │     const result = workflowVariableSchema.safeParse({                   │
+     │       variableId: 'var-1',                                              │
+     │       variableType: 'option',                                           │
+     │       name: 'format',                                                   │
+     │       description: 'Output format',                                     │
+     │       options: ['markdown', 'html', 'pdf'],                             │
+     │       isSingle: true,                                                   │
+     │       value: [{ type: 'text', text: 'markdown' }],                      │
+     │     });                                                                 │
+     │     expect(result.success).toBe(true);                                  │
+     │   });                                                                   │
+     │                                                                         │
+     │   it('should reject option variable without options', () => {           │
+     │     const result = workflowVariableSchema.safeParse({                   │
+     │       variableId: 'var-1',                                              │
+     │       variableType: 'option',                                           │
+     │       name: 'format',                                                   │
+     │       description: 'Output format',                                     │
+     │       value: [],                                                        │
+     │     });                                                                 │
+     │     expect(result.success).toBe(false);                                 │
+     │     expect(result.error.issues[0].message).toContain('must have at least│
+     │  one option');                                                          │
+     │   });                                                                   │
+     │                                                                         │
+     │   it('should reject option variable with invalid default value', () => {│
+     │     const result = workflowVariableSchema.safeParse({                   │
+     │       variableId: 'var-1',                                              │
+     │       variableType: 'option',                                           │
+     │       name: 'format',                                                   │
+     │       description: 'Output format',                                     │
+     │       options: ['markdown', 'html'],                                    │
+     │       value: [{ type: 'text', text: 'pdf' }],  // 'pdf' not in options  │
+     │     });                                                                 │
+     │     expect(result.success).toBe(false);                                 │
+     │   });                                                                   │
+     │ });                                                                     │
+     │                                                                         │
+     │ 实现建议                                                                │
+     │                                                                         │
+     │ 1. 先修改 Schema，再修改 Prompt                                         │
+     │   - 原因：Schema 是基础，Prompt 依赖 Schema                             │
+     │ 2. 添加详细的 Zod 错误信息                                              │
+     │   - 帮助 Copilot Agent 理解验证失败原因                                 │
+     │ 3. Prompt 中提供丰富的示例                                              │
+     │   - 单选示例                                                            │
+     │   - 多选示例                                                            │
+     │   - 混合变量类型示例                                                    │
+     │ 4. 考虑添加 E2E 测试                                                    │
+     │   - 测试 Copilot 生成包含 option 变量的工作流                           │
+     │   - 测试工作流运行时 option 变量的渲染和传值                            │
+     │                                                                         │
+     │ ---                                                                     │
+     │ 最终方案总结                                                            │
+     │                                                                         │
+     │ ✅ 方案可行性：高                                                       │
+     │                                                                         │
+     │ 理由：                                                                  │
+     │ 1. 系统其他层已完整支持 option 变量                                     │
+     │ 2. 修改点单一且清晰                                                     │
+     │ 3. 向后兼容，不破坏现有功能                                             │
+     │ 4. 风险可控，主要是 Schema 验证层面                                     │
+     │                                                                         │
+     │ ⚠️ 必须处理的问题                                                       │
+     │                                                                         │
+     │ 1. 同步更新 workflowPatchDataSchema                                     │
+     │   - 位置：line 109                                                      │
+     │   - 原因：否则 patch 操作无法修改变量类型为 option                      │
+     │ 2. 添加 Zod refinement 验证                                             │
+     │   - 验证 option 变量必须有 options 数组                                 │
+     │   - 验证默认值在 options 中                                             │
+     │   - 提供清晰的错误信息                                                  │
+     │ 3. 确保 Prompt 示例格式一致                                             │
+     │   - 与变量提取服务的格式保持一致                                        │
+     │   - 与 UI 层的期望格式保持一致                                          │
+     │                                                                         │
+     │ 🎯 推荐实施顺序                                                         │
+     │                                                                         │
+     │ 1. Phase 1: 更新 Schema（包含 refinement 验证）                         │
+     │ 2. Phase 2: 更新 Copilot Prompt                                         │
+     │ 3. Phase 3: 手动测试验证                                                │
+     │ 4. Phase 4: （可选）添加单元测试                                        │
+     │                                                                         │
+     │ 📊 影响范围评估                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │ ┌───────────────┬─────────────┬────────────────────────────┐            │
+     │ │     模块      │  影响程度   │            说明            │            │
+     │ ├───────────────┼─────────────┼────────────────────────────┤            │
+     │ │ Copilot Agent │ ✅ 直接受益 │ 可以生成 option 变量       │            │
+     │ ├───────────────┼─────────────┼────────────────────────────┤            │
+     │ │ UI 层         │ ✅ 无影响   │ 已支持 option 变量         │            │
+     │ ├───────────────┼─────────────┼────────────────────────────┤            │
+     │ │ API 层        │ ✅ 无影响   │ JSON 存储，支持任意结构    │            │
+     │ ├───────────────┼─────────────┼────────────────────────────┤            │
+     │ │ 数据库层      │ ✅ 无影响   │ JSONB 字段，无 schema 限制 │            │
+     │ ├───────────────┼─────────────┼────────────────────────────┤            │
+     │ │ 变量提取服务  │ ⚠️ 需确认   │ 确保格式一致性             │            │
+     │ ├───────────────┼─────────────┼────────────────────────────┤            │
+     │ │ 现有工作流    │ ✅ 无影响   │ 向后兼容                   │            │
+     │ ├───────────────┼─────────────┼────────────────────────────┤            │
+     │ │ Patch 操作    │ ⚠️ 需更新   │ 必须同步更新 schema        │            │
+     │ └───────────────┴─────────────┴────────────────────────────┘            │
+     │ 🔒 兼容性保证                                                           │
+     │                                                                         │
+     │ - ✅ 向后兼容：现有 string 和 resource 变量不受影响                     │
+     │ - ✅ 数据兼容：数据库存储为 JSON，无结构限制                            │
+     │ - ✅ 类型安全：TypeScript 类型自动推导                                  │
+     │ - ✅ UI 兼容：UI 层已完整支持 option 变量                               │
+     │                                                                         │
+     │ ---                                                                     │
+     │ Plan: Add Option Variable Support to Copilot Workflow Generation        │
+     │                                                                         │
+     │ Current State                                                           │
+     │                                                                         │
+     │ What Copilot Currently Supports                                         │
+     │                                                                         │
+     │ Copilot Agent can generate workflows with 2 variable types:             │
+     │ 1. string - Text input variables (e.g., project name, description, date)│
+     │ 2. resource - File upload variables (e.g., documents, images, videos,   │
+     │ audio)                                                                  │
+     │                                                                         │
+     │ What's Missing                                                          │
+     │                                                                         │
+     │ option variables (select/choice variables) are fully implemented in the │
+     │ system but excluded from Copilot workflow generation.                   │
+     │                                                                         │
+     │ - ✅ Option variables exist in the database schema                      │
+     │ (WorkflowVariable.variableType = 'option')                              │
+     │ - ✅ UI components fully support option variables (single/multi-select) │
+     │ - ✅ Variable extraction service can extract option variables           │
+     │ - ❌ Copilot Agent cannot generate workflows with option variables      │
+     │                                                                         │
+     │ Root Cause: The workflowPlanSchema in                                   │
+     │ packages/canvas-common/src/workflow-plan.ts only allows ['string',      │
+     │ 'resource'] in the variableType enum.                                   │
+     │                                                                         │
+     │ User Request                                                            │
+     │                                                                         │
+     │ Enable Copilot to generate workflows with option variables              │
+     │ (select/choice inputs).                                                 │
+     │                                                                         │
+     │ 实施计划（基于三角色审查）                                              │
+     │                                                                         │
+     │ Phase 1: 更新 Workflow Plan Schema（核心修改）                          │
+     │                                                                         │
+     │ 文件: packages/canvas-common/src/workflow-plan.ts                       │
+     │                                                                         │
+     │ 1.1 更新 workflowVariableSchema (lines 53-70)                           │
+     │                                                                         │
+     │ 完整代码（包含 Reviewer 建议的验证逻辑）：                              │
+     │                                                                         │
+     │ export const workflowVariableSchema = z.object({                        │
+     │   variableId: z.string().describe('Variable ID, unique and readonly'),  │
+     │   variableType: z                                                       │
+     │     .enum(['string', 'option', 'resource'])  // ✅ 添加 'option'        │
+     │     .describe('Variable type: string for text input, option for         │
+     │ selection, resource for file upload')                                   │
+     │     .default('string'),                                                 │
+     │   name: z.string().describe('Variable name used in the workflow'),      │
+     │   description: z.string().describe('Description of what this variable   │
+     │ represents'),                                                           │
+     │   required: z                                                           │
+     │     .boolean()                                                          │
+     │     .describe('Whether this variable is required. Defaults to false.')  │
+     │     .default(false),                                                    │
+     │                                                                         │
+     │   // ✅ 新增：option 变量专用字段                                       │
+     │   options: z                                                            │
+     │     .array(z.string())                                                  │
+     │     .optional()                                                         │
+     │     .describe('Array of available options (required for option type     │
+     │ variables). Example: ["small", "medium", "large"]'),                    │
+     │   isSingle: z                                                           │
+     │     .boolean()                                                          │
+     │     .optional()                                                         │
+     │     .describe('Whether single selection (true) or multiple selection    │
+     │ (false). Only for option type. Defaults to true.'),                     │
+     │                                                                         │
+     │   resourceTypes: z                                                      │
+     │     .array(z.enum(['document', 'image', 'audio', 'video']))             │
+     │     .optional()                                                         │
+     │     .describe('Accepted resource types (only for resource type          │
+     │ variables)'),                                                           │
+     │   value: z.array(workflowVariableValueSchema).describe('Variable        │
+     │ values'),                                                               │
+     │ })                                                                      │
+     │ .refine(                                                                │
+     │   // ✅ 验证：option 变量必须有 options 数组                            │
+     │   (data) => {                                                           │
+     │     if (data.variableType === 'option') {                               │
+     │       return data.options && data.options.length > 0;                   │
+     │     }                                                                   │
+     │     return true;                                                        │
+     │   },                                                                    │
+     │   {                                                                     │
+     │     message: "Option variables must have at least one option in the     │
+     │ 'options' array",                                                       │
+     │     path: ['options'],                                                  │
+     │   }                                                                     │
+     │ )                                                                       │
+     │ .refine(                                                                │
+     │   // ✅ 验证：默认值必须在 options 中                                   │
+     │   (data) => {                                                           │
+     │     if (data.variableType === 'option' && data.options && data.value) { │
+     │       for (const val of data.value) {                                   │
+     │         if (val.type === 'text' && val.text &&                          │
+     │ !data.options.includes(val.text)) {                                     │
+     │           return false;                                                 │
+     │         }                                                               │
+     │       }                                                                 │
+     │     }                                                                   │
+     │     return true;                                                        │
+     │   },                                                                    │
+     │   {                                                                     │
+     │     message: "Default values must be one of the available options",     │
+     │     path: ['value'],                                                    │
+     │   }                                                                     │
+     │ );                                                                      │
+     │                                                                         │
+     │ 修改说明：                                                              │
+     │ - 添加 'option' 到 variableType enum                                    │
+     │ - 添加 options 字段（可选，但 option 类型必需）                         │
+     │ - 添加 isSingle 字段（可选，默认 true）                                 │
+     │ - 添加两个 refinement 验证，确保数据完整性                              │
+     │                                                                         │
+     │ 1.2 更新 workflowPatchDataSchema (line 109) ⚠️ 必须同步更新             │
+     │                                                                         │
+     │ 修改代码：                                                              │
+     │                                                                         │
+     │ export const workflowPatchDataSchema = z.object({                       │
+     │   // Task update fields                                                 │
+     │   title: z.string().optional().describe('New display title for the      │
+     │ task'),                                                                 │
+     │   prompt: z.string().optional().describe('New prompt or instruction for │
+     │ this task'),                                                            │
+     │   dependentTasks: z                                                     │
+     │     .array(z.string())                                                  │
+     │     .optional()                                                         │
+     │     .describe('New list of task IDs that must execute before this       │
+     │ task'),                                                                 │
+     │   toolsets: z.array(z.string()).optional().describe('New list of toolset│
+     │  IDs for this task'),                                                   │
+     │                                                                         │
+     │   // Variable update fields                                             │
+     │   variableType: z.enum(['string', 'option',                             │
+     │ 'resource']).optional().describe('New variable type'),  // ✅ 添加      │
+     │ 'option'                                                                │
+     │   name: z.string().optional().describe('New variable name'),            │
+     │   description: z.string().optional().describe('New variable             │
+     │ description'),                                                          │
+     │   required: z.boolean().optional().describe('Whether this variable is   │
+     │ required'),                                                             │
+     │                                                                         │
+     │   // ✅ 新增：option 变量字段                                           │
+     │   options: z                                                            │
+     │     .array(z.string())                                                  │
+     │     .optional()                                                         │
+     │     .describe('New options array (for option type variables)'),         │
+     │   isSingle: z                                                           │
+     │     .boolean()                                                          │
+     │     .optional()                                                         │
+     │     .describe('New isSingle setting (for option type variables)'),      │
+     │                                                                         │
+     │   resourceTypes: z                                                      │
+     │     .array(z.enum(['document', 'image', 'audio', 'video']))             │
+     │     .optional()                                                         │
+     │     .describe('New accepted resource types'),                           │
+     │   value: z.array(workflowVariableValueSchema).optional().describe('New  │
+     │ variable values'),                                                      │
+     │ });                                                                     │
+     │                                                                         │
+     │ 为什么必须更新：                                                        │
+     │ - 如果不更新，patch_workflow 工具无法修改变量类型为 option              │
+     │ - 用户无法通过 patch 操作添加或修改 option 变量的 options 和 isSingle   │
+     │ 字段                                                                    │
+     │                                                                         │
+     │ Phase 2: Update Copilot Agent System Prompt                             │
+     │                                                                         │
+     │ File:                                                                   │
+     │ packages/skill-template/src/prompts/templates/copilot-agent-system.md   │
+     │                                                                         │
+     │ Changes:                                                                │
+     │                                                                         │
+     │ 2.1 Update Variable Types Table (around line 352-360)                   │
+     │                                                                         │
+     │ Add option variable documentation to the existing table:                │
+     │                                                                         │
+     │ | Field | Type | Description |                                          │
+     │ |-------|------|-------------|                                          │
+     │ | variableId | string | Unique identifier (e.g., "var-1") |             │
+     │ | variableType | string | "string" for text input, "option" for         │
+     │ selection, "resource" for file upload |                                 │
+     │ | name | string | Variable name for reference |                         │
+     │ | description | string | What this variable represents |                │
+     │ | required | boolean | Whether this input is required (default: false) |│
+     │ | options | array | For option type only: array of available choices    │
+     │ (e.g., ["small", "medium", "large"]) |                                  │
+     │ | isSingle | boolean | For option type only: true for single selection, │
+     │ false for multiple selection (default: true) |                          │
+     │ | resourceTypes | array | For resource type only: ["document", "image", │
+     │ "audio", "video"] |                                                     │
+     │ | value | array | For string: `[{ type: "text", text: "value" }]`; For  │
+     │ option: `[{ type: "text", text: "selected_option" }]`; For resource:    │
+     │ `[]` (always empty) |                                                   │
+     │                                                                         │
+     │ 2.2 Add Option Variable Recognition Section (after line 376)            │
+     │                                                                         │
+     │ Insert new section after the "File Input Recognition" section:          │
+     │                                                                         │
+     │ **Option Input Recognition** — Generate `variableType: "option"` when   │
+     │ user mentions:                                                          │
+     │ - "选择格式/模式/风格/难度/语气/主题..." (Chinese: select               │
+     │ format/mode/style/difficulty/tone/theme)                                │
+     │ - "select format/mode/style/difficulty/tone/theme..."                   │
+     │ - "choose from: A, B, C..." or "options: X, Y, Z"                       │
+     │ - "用户选择一个选项，然后..." (Chinese: user selects an option, then...)│
+     │ - "based on the selected option..."                                     │
+     │ - Any scenario with predefined choices or enumeration values            │
+     │ - Dropdown selection, radio buttons, checkboxes                         │
+     │                                                                         │
+     │ **Option Variable Guidelines:**                                         │
+     │ - Use `isSingle: true` for single selection (default) - renders as      │
+     │ dropdown or radio buttons                                               │
+     │ - Use `isSingle: false` for multiple selection - renders as checkboxes  │
+     │ - Provide 2-10 options in the `options` array                           │
+     │ - Set default value in `value: [{ type: "text", text: "default_option"  │
+     │ }]`                                                                     │
+     │ - Default value must be one of the options in the `options` array       │
+     │ - For multi-select, you can provide multiple default values: `value: [{ │
+     │ type: "text", text: "option1" }, { type: "text", text: "option2" }]`    │
+     │                                                                         │
+     │ **Common Use Cases for Option Variables:**                              │
+     │ - Output format selection: ["markdown", "html", "pdf", "docx"]          │
+     │ - Writing tone: ["professional", "casual", "humorous", "formal"]        │
+     │ - Difficulty level: ["beginner", "intermediate", "advanced"]            │
+     │ - Language selection: ["English", "中文", "日本語", "Español"]          │
+     │ - Priority: ["low", "medium", "high", "urgent"]                         │
+     │ - Status: ["draft", "in_progress", "review", "completed"]               │
+     │                                                                         │
+     │ 2.3 Add Option Variable Examples (in the examples section around line   │
+     │ 458)                                                                    │
+     │                                                                         │
+     │ Add examples showing option variable usage:                             │
+     │                                                                         │
+     │ // Example 1: Single-select option variable (output format)             │
+     │ {                                                                       │
+     │   "variableId": "var-1",                                                │
+     │   "variableType": "option",                                             │
+     │   "name": "output_format",                                              │
+     │   "description": "Output format for the generated content",             │
+     │   "required": true,                                                     │
+     │   "isSingle": true,                                                     │
+     │   "options": ["markdown", "html", "pdf", "docx"],                       │
+     │   "value": [{ "type": "text", "text": "markdown" }]                     │
+     │ }                                                                       │
+     │                                                                         │
+     │ // Example 2: Single-select option variable (writing tone)              │
+     │ {                                                                       │
+     │   "variableId": "var-2",                                                │
+     │   "variableType": "option",                                             │
+     │   "name": "tone",                                                       │
+     │   "description": "Writing tone for the article",                        │
+     │   "required": false,                                                    │
+     │   "isSingle": true,                                                     │
+     │   "options": ["professional", "casual", "humorous", "formal"],          │
+     │   "value": [{ "type": "text", "text": "professional" }]                 │
+     │ }                                                                       │
+     │                                                                         │
+     │ // Example 3: Multi-select option variable (tags)                       │
+     │ {                                                                       │
+     │   "variableId": "var-3",                                                │
+     │   "variableType": "option",                                             │
+     │   "name": "tags",                                                       │
+     │   "description": "Content tags for categorization",                     │
+     │   "required": false,                                                    │
+     │   "isSingle": false,                                                    │
+     │   "options": ["technology", "design", "product", "marketing",           │
+     │ "engineering"],                                                         │
+     │   "value": [                                                            │
+     │     { "type": "text", "text": "technology" },                           │
+     │     { "type": "text", "text": "product" }                               │
+     │   ]                                                                     │
+     │ }                                                                       │
+     │                                                                         │
+     │ 2.4 Update Complete Workflow Example (around line 458-466)              │
+     │                                                                         │
+     │ Add an option variable to the existing example:                         │
+     │                                                                         │
+     │ {                                                                       │
+     │   "variables": [                                                        │
+     │     {                                                                   │
+     │       "variableId": "var-1",                                            │
+     │       "variableType": "resource",                                       │
+     │       "name": "financial_report",                                       │
+     │       "required": true,                                                 │
+     │       "resourceTypes": ["document"],                                    │
+     │       "value": []                                                       │
+     │     },                                                                  │
+     │     {                                                                   │
+     │       "variableId": "var-2",                                            │
+     │       "variableType": "string",                                         │
+     │       "name": "analysis_focus",                                         │
+     │       "value": [{ "type": "text", "text": "comprehensive" }]            │
+     │     },                                                                  │
+     │     {                                                                   │
+     │       "variableId": "var-3",                                            │
+     │       "variableType": "option",                                         │
+     │       "name": "report_format",                                          │
+     │       "description": "Format for the analysis report",                  │
+     │       "required": true,                                                 │
+     │       "isSingle": true,                                                 │
+     │       "options": ["executive_summary", "detailed_analysis",             │
+     │ "visual_dashboard"],                                                    │
+     │       "value": [{ "type": "text", "text": "executive_summary" }]        │
+     │     }                                                                   │
+     │   ]                                                                     │
+     │ }                                                                       │
+     │                                                                         │
+     │ Phase 3: Update Validation Logic (Optional but Recommended)             │
+     │                                                                         │
+     │ File: packages/canvas-common/src/workflow-plan.ts                       │
+     │                                                                         │
+     │ Note: The Zod schema will handle basic validation automatically. This   │
+     │ phase adds additional business logic validation.                        │
+     │                                                                         │
+     │ Location: After schema parsing, in the parseWorkflowPlan() function or  │
+     │ in a separate validation function                                       │
+     │                                                                         │
+     │ Changes:                                                                │
+     │ Add custom validation for option variables:                             │
+     │ // Validate option variables                                            │
+     │ for (const variable of plan.variables) {                                │
+     │   if (variable.variableType === 'option') {                             │
+     │     // Ensure options array exists and has at least one option          │
+     │     if (!variable.options || variable.options.length === 0) {           │
+     │       throw new Error(`Option variable "${variable.name}" must have at  │
+     │ least one option`);                                                     │
+     │     }                                                                   │
+     │                                                                         │
+     │     // Validate default value is in options (if provided)               │
+     │     if (variable.value && variable.value.length > 0) {                  │
+     │       for (const val of variable.value) {                               │
+     │         if (val.type === 'text' && val.text &&                          │
+     │ !variable.options.includes(val.text)) {                                 │
+     │           throw new Error(                                              │
+     │             `Default value "${val.text}" for variable "${variable.name}"│
+     │  is not in options: [${variable.options.join(', ')}]`                   │
+     │           );                                                            │
+     │         }                                                               │
+     │       }                                                                 │
+     │     }                                                                   │
+     │                                                                         │
+     │     // For single-select, ensure only one value                         │
+     │     if (variable.isSingle !== false && variable.value &&                │
+     │ variable.value.length > 1) {                                            │
+     │       throw new Error(                                                  │
+     │         `Single-select variable "${variable.name}" cannot have multiple │
+     │ default values`                                                         │
+     │       );                                                                │
+     │     }                                                                   │
+     │   }                                                                     │
+     │ }                                                                       │
+     │                                                                         │
+     │ Alternative: This validation could also be added as a Zod refinement in │
+     │ the schema itself.                                                      │
+     │                                                                         │
+     │ Phase 4: Update Type Definitions (if needed)                            │
+     │                                                                         │
+     │ File: packages/canvas-common/src/workflow-plan.ts                       │
+     │                                                                         │
+     │ Check: Ensure TypeScript types are exported correctly:                  │
+     │ export type WorkflowVariable = z.infer<typeof workflowVariableSchema>;  │
+     │                                                                         │
+     │ This should automatically include the new fields once the schema is     │
+     │ updated.                                                                │
+     │                                                                         │
+     │ Critical Files to Modify                                                │
+     │                                                                         │
+     │ 1. packages/canvas-common/src/workflow-plan.ts (lines 53-70, 100-150)   │
+     │   - Update schema to include option type                                │
+     │   - Add validation logic                                                │
+     │ 2. packages/skill-template/src/prompts/templates/copilot-agent-system.md│
+     │  (lines 352-376, 458+)                                                  │
+     │   - Document option variable usage                                      │
+     │   - Add recognition patterns                                            │
+     │   - Add examples                                                        │
+     │                                                                         │
+     │ Testing Strategy                                                        │
+     │                                                                         │
+     │ 1. Schema Validation Tests                                              │
+     │                                                                         │
+     │ Manual Testing (no existing test files found for workflow-plan.ts):     │
+     │                                                                         │
+     │ Test cases to verify:                                                   │
+     │ - ✅ Create workflow with option variable (single select)               │
+     │ - ✅ Create workflow with option variable (multi-select)                │
+     │ - ✅ Validate error handling for missing options array                  │
+     │ - ✅ Validate error handling for empty options array                    │
+     │ - ✅ Validate error handling for invalid default values (not in options)│
+     │ - ✅ Validate single-select with multiple default values (should fail or│
+     │  use first)                                                             │
+     │ - ✅ Validate multi-select with multiple default values (should succeed)│
+     │                                                                         │
+     │ Test Data Examples:                                                     │
+     │                                                                         │
+     │ // Valid single-select option variable                                  │
+     │ {                                                                       │
+     │   variableId: "var-1",                                                  │
+     │   variableType: "option",                                               │
+     │   name: "format",                                                       │
+     │   description: "Output format",                                         │
+     │   required: true,                                                       │
+     │   isSingle: true,                                                       │
+     │   options: ["markdown", "html", "pdf"],                                 │
+     │   value: [{ type: "text", text: "markdown" }]                           │
+     │ }                                                                       │
+     │                                                                         │
+     │ // Valid multi-select option variable                                   │
+     │ {                                                                       │
+     │   variableId: "var-2",                                                  │
+     │   variableType: "option",                                               │
+     │   name: "tags",                                                         │
+     │   description: "Content tags",                                          │
+     │   required: false,                                                      │
+     │   isSingle: false,                                                      │
+     │   options: ["tech", "design", "product"],                               │
+     │   value: [                                                              │
+     │     { type: "text", text: "tech" },                                     │
+     │     { type: "text", text: "design" }                                    │
+     │   ]                                                                     │
+     │ }                                                                       │
+     │                                                                         │
+     │ // Invalid: missing options (should fail)                               │
+     │ {                                                                       │
+     │   variableId: "var-3",                                                  │
+     │   variableType: "option",                                               │
+     │   name: "invalid",                                                      │
+     │   value: [{ type: "text", text: "test" }]                               │
+     │   // Missing: options array                                             │
+     │ }                                                                       │
+     │                                                                         │
+     │ // Invalid: default value not in options (should fail if validation     │
+     │ added)                                                                  │
+     │ {                                                                       │
+     │   variableId: "var-4",                                                  │
+     │   variableType: "option",                                               │
+     │   name: "invalid",                                                      │
+     │   options: ["a", "b", "c"],                                             │
+     │   value: [{ type: "text", text: "d" }]  // "d" not in options           │
+     │ }                                                                       │
+     │                                                                         │
+     │ 2. Copilot Generation Tests                                             │
+     │                                                                         │
+     │ Test Prompts (use in Copilot chat):                                     │
+     │                                                                         │
+     │ Test 1: Simple Single-Select                                            │
+     │                                                                         │
+     │ Prompt: "创建一个工作流，让用户选择输出格式：markdown、html、pdf"       │
+     │                                                                         │
+     │ Expected Result:                                                        │
+     │ - Workflow created with 1 option variable                               │
+     │ - variableType: "option"                                                │
+     │ - isSingle: true                                                        │
+     │ - options: ["markdown", "html", "pdf"]                                  │
+     │ - Default value set to one of the options                               │
+     │                                                                         │
+     │ Test 2: Multiple Option Variables                                       │
+     │                                                                         │
+     │ Prompt: "Create a workflow where user selects difficulty level (easy,   │
+     │ medium, hard) and output language (English, Chinese, Japanese)"         │
+     │                                                                         │
+     │ Expected Result:                                                        │
+     │ - Workflow created with 2 option variables                              │
+     │ - Both have variableType: "option" and isSingle: true                   │
+     │ - Correct options arrays for each                                       │
+     │                                                                         │
+     │ Test 3: Multi-Select                                                    │
+     │                                                                         │
+     │ Prompt: "生成一个工作流，用户可以多选标签：技术、设计、产品、运营、市场"│
+     │                                                                         │
+     │ Expected Result:                                                        │
+     │ - Workflow created with 1 option variable                               │
+     │ - variableType: "option"                                                │
+     │ - isSingle: false                                                       │
+     │ - options: ["技术", "设计", "产品", "运营", "市场"]                     │
+     │                                                                         │
+     │ Test 4: Mixed Variable Types                                            │
+     │                                                                         │
+     │ Prompt: "Create a workflow that takes a document upload, user enters    │
+     │ project name, and selects priority (low, medium, high)"                 │
+     │                                                                         │
+     │ Expected Result:                                                        │
+     │ - Workflow with 3 variables:                                            │
+     │   a. variableType: "resource" for document                              │
+     │   b. variableType: "string" for project name                            │
+     │   c. variableType: "option" for priority with correct options           │
+     │                                                                         │
+     │ 3. End-to-End Workflow                                                  │
+     │                                                                         │
+     │ Steps:                                                                  │
+     │ 1. Open Copilot chat in the application                                 │
+     │ 2. Send prompt: "创建一个工作流，让用户选择输出格式（markdown、html、pdf│
+     │ ）和写作风格（专业、轻松、幽默）"                                       │
+     │ 3. Verify: Workflow is generated successfully                           │
+     │ 4. Verify: Check workflow variables panel shows 2 option variables      │
+     │ 5. Verify: Click "Run Workflow" button                                  │
+     │ 6. Verify: Workflow run form displays:                                  │
+     │   - Dropdown for "output_format" with options: markdown, html, pdf      │
+     │   - Dropdown for "writing_style" with options: 专业, 轻松, 幽默         │
+     │ 7. Verify: Select options and run workflow                              │
+     │ 8. Verify: Selected values are passed to workflow execution (check in   │
+     │ task prompts)                                                           │
+     │                                                                         │
+     │ 4. Edge Cases                                                           │
+     │                                                                         │
+     │ Test Cases:                                                             │
+     │                                                                         │
+     │ 1. Empty options array:                                                 │
+     │   - Try to create workflow with options: []                             │
+     │   - Should fail validation (if validation added in Phase 3)             │
+     │ 2. Single option:                                                       │
+     │   - Create workflow with options: ["only_one"]                          │
+     │   - Should succeed (though not very useful)                             │
+     │ 3. Many options:                                                        │
+     │   - Create workflow with 20+ options                                    │
+     │   - Should succeed, but UI might need scrolling                         │
+     │ 4. Unicode options:                                                     │
+     │   - Create workflow with Chinese/Japanese/Emoji options                 │
+     │   - Should work correctly (UTF-8 support)                               │
+     │ 5. Default value not in options:                                        │
+     │   - Try options: ["a", "b"] with value: [{ type: "text", text: "c" }]   │
+     │   - Should fail validation (if validation added in Phase 3)             │
+     │ 6. Multi-select with single value:                                      │
+     │   - isSingle: false with value: [{ type: "text", text: "one" }]         │
+     │   - Should succeed (multi-select can have 0, 1, or many values)         │
+     │ 7. Single-select with multiple values:                                  │
+     │   - isSingle: true with multiple values in array                        │
+     │   - Should fail validation or use only first value                      │
+     │                                                                         │
+     │ 5. Regression Testing                                                   │
+     │                                                                         │
+     │ Verify existing functionality still works:                              │
+     │ - ✅ String variables still work correctly                              │
+     │ - ✅ Resource variables still work correctly                            │
+     │ - ✅ Workflow generation without option variables still works           │
+     │ - ✅ Workflow patching still works                                      │
+     │ - ✅ Variable extraction service still works                            │
+     │                                                                         │
+     │ Verification Steps                                                      │
+     │                                                                         │
+     │ 1. Build the project: pnpm build                                        │
+     │ 2. Run tests: pnpm test (if unit tests exist)                           │
+     │ 3. Manual testing:                                                      │
+     │   - Start the application                                               │
+     │   - Open Copilot chat                                                   │
+     │   - Ask: "创建一个工作流，让用户选择输出格式：markdown、html、pdf"      │
+     │   - Verify workflow is generated with option variable                   │
+     │   - Check the workflow variables panel shows the option variable        │
+     │ correctly                                                               │
+     │   - Run the workflow and verify the select dropdown appears             │
+     │   - Select an option and verify it's passed to the workflow execution   │
+     │                                                                         │
+     │ Notes                                                                   │
+     │                                                                         │
+     │ - Option variables are already fully supported in the UI and database   │
+     │ - This change only enables Copilot to generate workflows with option    │
+     │ variables                                                               │
+     │ - No changes needed to UI components, API endpoints, or database schema │
+     │ - The change is backward compatible (existing workflows unaffected)     │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     │                                                                         │
+     ╰─────────────────────────────────────────────────────────────────────────╯

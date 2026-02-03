@@ -1,0 +1,74 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "tags": ["-lintignore"],
+  "ignoreDependencies": ["pino-pretty"],
+  "ignore": [
+    "postcss.config.*",
+    "**/*.config.ts",
+    "**/scripts/**",
+    "apps/web/src/service-worker-sw.ts",
+    "apps/api/load-tests/**",
+    "docs/.vitepress/**",
+    "packages/cli/**",
+    "packages/openapi-schema/openapi-ts.config.ts",
+    "deploy/docker/prepare-deploy.js"
+  ],
+  "workspaces": {
+    ".": {},
+    "apps/api": {
+      "entry": ["src/scripts/preload.ts"],
+      "project": ["src/**/*.{ts,tsx,js,jsx}"],
+      "ignoreDependencies": ["pino-pretty"],
+      "paths": {
+        "@refly-packages/ai-workspace-common": ["../../packages/ai-workspace-common/src/index.ts"],
+        "@refly-packages/ai-workspace-common/*": ["../../packages/ai-workspace-common/src/*"]
+      }
+    },
+    "apps/web": {
+      "entry": ["src/index.tsx", "src/service-worker-sw.ts"],
+      "project": ["src/**/*.{ts,tsx,js,jsx}"],
+      "paths": {
+        "@refly-packages/ai-workspace-common": ["../../packages/ai-workspace-common/src/index.ts"],
+        "@refly-packages/ai-workspace-common/*": ["../../packages/ai-workspace-common/src/*"]
+      }
+    },
+    "packages/web-core": {
+      "entry": ["src/pages/**/*.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx,js,jsx}"],
+      "paths": {
+        "@refly-packages/ai-workspace-common": ["../ai-workspace-common/src/index.ts"],
+        "@refly-packages/ai-workspace-common/*": ["../ai-workspace-common/src/*"]
+      }
+    },
+    "packages/ai-workspace-common": {
+      "entry": [
+        "src/components/slideshow/**/*.{ts,tsx,css}",
+        "src/components/app-manager/**/*.{ts,tsx,css,scss}",
+        "src/components/run-history/**/*.{ts,tsx,css,scss}",
+        "src/components/run-detail/**/*.{ts,tsx,css,scss}",
+        "src/components/invite-redirect/**/*.{ts,tsx,css,scss}",
+        "src/components/workflow-app/**/*.{ts,tsx,css,scss,svg}",
+        "src/components/workflow-list/**/*.{ts,tsx,css,scss,svg}",
+        "src/components/subscription/**/*.{ts,tsx,css,scss}",
+        "src/components/rjsf/**/*.{ts,tsx}",
+        "src/hooks/**/*.{ts,tsx}",
+        "src/context/**/*.{ts,tsx}",
+        "src/modules/**/*.{ts,tsx}",
+        "src/queries/**/*.{ts,tsx}",
+        "src/requests/**/*.{ts,tsx}",
+        "src/utils/**/*.{ts,tsx}",
+        "src/events/**/*.{ts,tsx}",
+        "src/styles/**/*.{css,scss}",
+        "src/assets/**/*.{png,webp,svg}"
+      ],
+      "project": ["src/**/*.{ts,tsx,css,scss}"],
+      "paths": {
+        "@refly-packages/ai-workspace-common": ["./src/index.ts"],
+        "@refly-packages/ai-workspace-common/*": ["./src/*"]
+      }
+    },
+    "packages/openapi-schema": {
+      "entry": ["openapi-ts.config.ts"]
+    }
+  }
+}

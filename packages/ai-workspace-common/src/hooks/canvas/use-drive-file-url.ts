@@ -28,36 +28,29 @@ export const getDriveFileUrl = (
       fileUrl: null,
     };
   }
+  const nameSegment = file.name ? `/${encodeURIComponent(file.name)}` : '';
 
   if (usePublicFileUrl !== undefined) {
     return {
       fileUrl: usePublicFileUrl
-        ? `${serverOrigin}/v1/drive/file/public/${file.fileId}`
-        : `${serverOrigin}/v1/drive/file/content/${file.fileId}${download ? '?download=1' : ''}`,
+        ? `${serverOrigin}/v1/drive/file/public/${file.fileId}${nameSegment}`
+        : `${serverOrigin}/v1/drive/file/content/${file.fileId}${nameSegment}${
+            download ? '?download=1' : ''
+          }`,
     };
   }
 
   if (isSharePage) {
     return {
-      fileUrl: `${serverOrigin}/v1/drive/file/public/${file.fileId}`,
+      fileUrl: `${serverOrigin}/v1/drive/file/public/${file.fileId}${nameSegment}`,
     };
   }
 
   // Fallback to API endpoint
-  try {
-    const url = new URL(`${serverOrigin}/v1/drive/file/content/${file.fileId}`);
-    if (download) {
-      url.searchParams.set('download', '1');
-    }
-    return {
-      fileUrl: url.toString(),
-    };
-  } catch (error) {
-    console.error('Error getting drive file URL:', error);
-    return {
-      fileUrl: null,
-    };
-  }
+  const basePath = `${serverOrigin}/v1/drive/file/content/${file.fileId}${nameSegment}`;
+  return {
+    fileUrl: download ? `${basePath}?download=1` : basePath,
+  };
 };
 
 /**
@@ -78,5 +71,5 @@ export const useDriveFileUrl = ({
 
   return useMemo(() => {
     return getDriveFileUrl(file, isSharePage, contextUsePublicFileUrl, download);
-  }, [file?.fileId, isSharePage, download, contextUsePublicFileUrl]);
+  }, [file?.fileId, file?.name, isSharePage, download, contextUsePublicFileUrl]);
 };

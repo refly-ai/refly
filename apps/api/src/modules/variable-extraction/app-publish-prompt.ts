@@ -103,7 +103,7 @@ ${nodesText}
 
 ${
   usedVariables?.length
-    ? `**⚠️ CRITICAL: Use EXACT names below in template.content - NO modifications allowed**
+    ? `**! CRITICAL: Use EXACT names below in template.content - NO modifications allowed**
 
 ${buildVariablesTableText(usedVariables)}
 
@@ -429,32 +429,6 @@ Generate your response now.`;
 }
 
 /**
- * Extract variable references from originalQuery string
- * Handles patterns like @{type=var,id=var-xxx,name=xxx}
- */
-function extractVariableReferences(originalQuery: string): string[] {
-  if (!originalQuery || typeof originalQuery !== 'string') {
-    return [];
-  }
-
-  // Match pattern: @{type=var,id=var-xxx,name=xxx} or @{type=resource,id=r-xxx,name=xxx}
-  const variablePattern = /@\{type=(?:var|resource),id=([^,]+),name=([^}]+)\}/g;
-  const matches: string[] = [];
-  let match: RegExpExecArray | null;
-
-  match = variablePattern.exec(originalQuery);
-  while (match !== null) {
-    const variableName = match[2]; // Extract the name part
-    if (variableName && !matches.includes(variableName)) {
-      matches.push(variableName);
-    }
-    match = variablePattern.exec(originalQuery);
-  }
-
-  return matches;
-}
-
-/**
  * Build nodes text - format canvas nodes into readable description
  * Includes node title, type, and query content for prompt generation
  */
@@ -482,52 +456,6 @@ function buildNodesText(skillResponses: CanvasNode[]): string {
       return description;
     })
     .join('\n');
-}
-
-/**
- * Filter variables to only include those actually used in canvas nodes
- */
-export function filterUsedVariables(
-  variables: WorkflowVariable[],
-  skillResponses: CanvasNode[],
-): WorkflowVariable[] {
-  if (!variables?.length || !skillResponses?.length) {
-    return variables || [];
-  }
-
-  // Extract all variable references from all nodes' originalQuery fields
-  const usedVariableNames = new Set<string>();
-
-  for (const node of skillResponses) {
-    const originalQuery = (node.data as any).metadata?.structuredData?.query || '';
-    if (originalQuery) {
-      const variableRefs = extractVariableReferences(originalQuery);
-      for (const name of variableRefs) {
-        usedVariableNames.add(name);
-      }
-    }
-  }
-
-  // Filter variables to only include those that are actually used
-  return variables.filter((variable) => {
-    // Check if variable name is used
-    if (usedVariableNames.has(variable.name)) {
-      return true;
-    }
-
-    // Check if any resource name in variable values is used
-    if (variable.value && Array.isArray(variable.value)) {
-      for (const valueItem of variable.value) {
-        if (valueItem.type === 'resource' && valueItem.resource?.name) {
-          if (usedVariableNames.has(valueItem.resource.name)) {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
-  });
 }
 
 /**

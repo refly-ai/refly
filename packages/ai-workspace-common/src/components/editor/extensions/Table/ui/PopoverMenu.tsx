@@ -6,10 +6,9 @@ import { Surface } from './Surface';
 import { Toolbar } from './Toolbar';
 import { Button } from 'antd';
 
-export const Trigger = Popover.Trigger;
-export const Portal = Popover.Portal;
+const Trigger = Popover.Trigger;
 
-export type MenuProps = {
+type MenuProps = {
   children: React.ReactNode;
   trigger: React.ReactNode;
   triggerClassName?: string;
@@ -21,7 +20,7 @@ export type MenuProps = {
   isActive?: boolean;
 };
 
-export const Menu = ({
+const Menu = ({
   customTrigger,
   trigger,
   triggerClassName,
@@ -93,19 +92,7 @@ export const Item = ({
   );
 };
 
-export type CategoryTitle = {
-  children: React.ReactNode;
-};
-
-export const CategoryTitle = ({ children }: CategoryTitle) => {
-  return (
-    <div className="mt-4 first:mt-1.5 mb-1.5 text-[0.625rem] font-medium text-neutral-400 uppercase select-none px-1">
-      {children}
-    </div>
-  );
-};
-
-export const Divider = forwardRef<HTMLHRElement>((props, ref) => {
+const Divider = forwardRef<HTMLHRElement>((props, ref) => {
   return <hr {...props} ref={ref} className="my-1 border-neutral-200" />;
 });
 

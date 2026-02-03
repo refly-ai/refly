@@ -167,10 +167,17 @@ registerRoute(
   new NetworkOnly(),
 );
 
-// === Strategy 2: HTML (non-home) - StaleWhileRevalidate with version check ===
+// === Strategy 2: API requests - NetworkOnly (never cache API responses) ===
+registerRoute(({ url }) => url.pathname.startsWith('/api/'), new NetworkOnly());
+
+// === Strategy 3: HTML (non-home) - StaleWhileRevalidate with version check ===
 registerRoute(
   ({ request, url }) =>
-    request.destination === 'document' && url.pathname !== '/' && !isSsrPath(url.pathname),
+    request.destination === 'document' &&
+    url.pathname !== '/' &&
+    !isSsrPath(url.pathname) &&
+    // Exclude static assets to prevent caching HTML content for CSS/JS files
+    !url.pathname.startsWith('/static/'),
   new StaleWhileRevalidate({
     cacheName: CACHE_NAME,
     plugins: [
@@ -220,9 +227,15 @@ registerRoute(
                 changed: newVersion !== oldVersion,
               });
 
-              // If version changed, notify the client
+              // If version changed, update cache immediately and notify the client
               if (newVersion && oldVersion && newVersion !== oldVersion) {
-                console.log('[SW] New version detected! Notifying client:', clientId);
+                console.log(
+                  '[SW] New version detected! Updating cache and notifying client:',
+                  clientId,
+                );
+
+                // Immediately cache the new HTML to ensure reload gets fresh version
+                await cache.put(normalizedKey, response.clone());
 
                 const client = clientId ? await self.clients.get(clientId) : null;
                 if (client) {
@@ -248,7 +261,7 @@ registerRoute(
   }),
 );
 
-// === Strategy 3: All other same-origin resources - CacheFirst ===
+// === Strategy 4: All other same-origin resources - CacheFirst ===
 registerRoute(
   ({ url }) => url.origin === self.location.origin,
   new CacheFirst({
@@ -277,7 +290,7 @@ registerRoute(
   }),
 );
 
-// === Strategy 4: Google Fonts CSS - StaleWhileRevalidate ===
+// === Strategy 5: Google Fonts CSS - StaleWhileRevalidate ===
 registerRoute(
   ({ url }) => url.origin === 'https://fonts.googleapis.com',
   new StaleWhileRevalidate({
@@ -285,7 +298,7 @@ registerRoute(
   }),
 );
 
-// === Strategy 5: Google Fonts files - CacheFirst ===
+// === Strategy 6: Google Fonts files - CacheFirst ===
 registerRoute(
   ({ url }) => url.origin === 'https://fonts.gstatic.com',
   new CacheFirst({

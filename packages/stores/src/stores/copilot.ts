@@ -1,4 +1,5 @@
 import { CopilotSession, CanvasNodeType } from '@refly/openapi-schema';
+import type { IContextItem } from '@refly/common-types';
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
@@ -42,6 +43,8 @@ interface CopilotState {
   pendingPrompt: Record<string, string | null>;
   /** Node edit context for targeted editing, keyed by canvasId */
   nodeEditContext: Record<string, NodeEditContext | null>;
+  pendingFiles: Record<string, IContextItem[] | null>;
+  pureCopilotCanvas: Record<string, { canvasId: string; createdAt: number } | null>;
 
   // method
   setCurrentSessionId: (canvasId: string, sessionId: string | null) => void;
@@ -56,6 +59,9 @@ interface CopilotState {
   setNodeEditContext: (canvasId: string, context: NodeEditContext | null) => void;
   /** Update the edit mode for the current node edit context */
   setNodeEditMode: (canvasId: string, editMode: 'modify' | 'extend') => void;
+  setPendingFiles: (canvasId: string, files: IContextItem[] | null) => void;
+  setPureCopilotCanvas: (source: string, canvasId: string | null) => void;
+  clearPureCopilotCanvas: (source: string) => void;
 }
 
 export const useCopilotStore = create<CopilotState>()(
@@ -69,6 +75,8 @@ export const useCopilotStore = create<CopilotState>()(
         historyTemplateSessions: {},
         pendingPrompt: {},
         nodeEditContext: {},
+        pendingFiles: {},
+        pureCopilotCanvas: {},
 
         setCurrentSessionId: (canvasId: string, sessionId: string | null) =>
           set((state) => ({
@@ -158,6 +166,29 @@ export const useCopilotStore = create<CopilotState>()(
               },
             };
           }),
+        setPendingFiles: (canvasId: string, files: IContextItem[] | null) =>
+          set((state) => ({
+            pendingFiles: {
+              ...state.pendingFiles,
+              [canvasId]: files,
+            },
+          })),
+
+        setPureCopilotCanvas: (source: string, canvasId: string | null) =>
+          set((state) => ({
+            pureCopilotCanvas: {
+              ...state.pureCopilotCanvas,
+              [source]: canvasId ? { canvasId, createdAt: Date.now() } : null,
+            },
+          })),
+
+        clearPureCopilotCanvas: (source: string) =>
+          set((state) => ({
+            pureCopilotCanvas: {
+              ...state.pureCopilotCanvas,
+              [source]: null,
+            },
+          })),
       }),
       {
         name: 'copilot-storage',
@@ -166,6 +197,7 @@ export const useCopilotStore = create<CopilotState>()(
           canvasCopilotWidth: state.canvasCopilotWidth,
           historyTemplateSessions: state.historyTemplateSessions,
           pendingPrompt: state.pendingPrompt,
+          pureCopilotCanvas: state.pureCopilotCanvas,
         }),
       },
     ),

@@ -67,6 +67,8 @@ const FILE_ICONS: Record<ResourceFileType, IconComponent> = {
   'text/plain': Text,
   'application/epub+zip': CodeZip,
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': Excel,
+  'application/vnd.ms-excel': Excel,
+  'text/csv': Excel,
   'text/html': Html,
   // Images
   'image/jpeg': Image,

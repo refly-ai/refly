@@ -12,30 +12,16 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@apify/consts": "^2.47.0",
-    "@e2b/code-interpreter": "^2.1.0",
     "@langchain/core": "1.1.4",
     "@notionhq/client": "^5.1.0",
     "@refly/common-types": "workspace:*",
     "@refly/openapi-schema": "workspace:*",
     "@refly/canvas-common": "workspace:*",
-    "@refly/sandbox-agent": "workspace:*",
     "@refly/utils": "workspace:*",
-    "@scalebox/sdk": "3.4.0",
     "apify-client": "^2.19.0",
-    "googleapis": "^159.0.0",
-    "html-to-text": "^9.0.5",
-    "nodemailer": "^6.7.8",
-    "novita-sandbox": "^1.0.1",
-    "oauth-1.0a": "^2.2.6",
-    "pyodide": "^0.28.2",
-    "zod": "^3.25.76",
-    "zod-to-json-schema": "3.24.6"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/html-to-text": "^9.0.4",
-    "@types/node": "^20.19.0",
-    "@types/nodemailer": "^6.4.17",
-    "ts-node": "^10.9.2"
+    "@types/node": "^20.19.0"
   }
 }

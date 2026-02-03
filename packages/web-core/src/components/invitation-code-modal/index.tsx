@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { useUserStoreShallow } from '@refly/stores';
-import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { ActivationCodeInput } from '@refly-packages/ai-workspace-common/components/settings/activation-code-input';
 import reflyUnionSvg from '@refly-packages/ai-workspace-common/assets/refly-union.svg';
 
@@ -8,27 +7,18 @@ export const InvitationCodeModal = () => {
   const { t } = useTranslation();
 
   const userStore = useUserStoreShallow((state) => ({
+    userProfile: state.userProfile,
     showInvitationCodeModal: state.showInvitationCodeModal,
     setShowInvitationCodeModal: state.setShowInvitationCodeModal,
     setShowOnboardingFormModal: state.setShowOnboardingFormModal,
   }));
 
-  const handleActivationSuccess = async () => {
+  const handleActivationSuccess = () => {
     // Check if user has been invited now
-    try {
-      const invitationResp = await getClient().hasBeenInvited();
-      const hasBeenInvited = invitationResp.data?.data ?? false;
-
-      if (hasBeenInvited) {
-        // Close invitation code modal
-        userStore.setShowInvitationCodeModal(false);
-        // Open onboarding form modal immediately
-        userStore.setShowOnboardingFormModal(true);
-      }
-    } catch (error) {
-      // If check fails, keep modal open
-      console.error('Failed to check invitation status after activation:', error);
-    }
+    // Close invitation code modal
+    userStore.setShowInvitationCodeModal(false);
+    // Open onboarding form modal immediately
+    userStore.setShowOnboardingFormModal(true);
   };
 
   if (!userStore.showInvitationCodeModal) {

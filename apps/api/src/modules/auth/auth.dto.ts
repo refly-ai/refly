@@ -9,15 +9,6 @@ export interface TokenData {
   refreshToken: string;
 }
 
-export interface SendVerificationEmailJobData {
-  sessionId: string;
-}
-
-export class JwtPayload {
-  uid: string;
-  email: string;
-}
-
 export const accountPO2DTO = (account: AccountPO): Account => {
   return {
     type: account.type as AuthType,

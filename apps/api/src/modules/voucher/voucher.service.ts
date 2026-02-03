@@ -236,11 +236,10 @@ export class VoucherService implements OnModuleInit {
       });
 
       if (unusedVoucher) {
-        // Update existing unused voucher with latest values and fresh expiration
+        // Update existing unused voucher with latest values
         voucher = await this.updateVoucher(unusedVoucher.voucherId, {
           discountPercent,
           llmScore,
-          expiresAt,
           sourceId,
           status: VoucherStatus.UNUSED,
         });
@@ -269,7 +268,6 @@ export class VoucherService implements OnModuleInit {
             voucher = await this.updateVoucher(existingVoucherToday.voucherId, {
               discountPercent,
               llmScore,
-              expiresAt,
               sourceId,
               status: VoucherStatus.UNUSED,
             });

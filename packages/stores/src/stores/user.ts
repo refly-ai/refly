@@ -13,7 +13,7 @@ export interface LocalSettings {
   disableHoverCard: boolean;
 }
 
-export interface UserState {
+interface UserState {
   // state
   isCheckingLoginStatus: boolean | undefined;
   isLogin: boolean;
@@ -53,7 +53,7 @@ const getDefaultLocale = () => {
   return 'en';
 };
 
-export const defaultLocalSettings = {
+const defaultLocalSettings = {
   uiLocale: getDefaultLocale(),
   outputLocale: navigator.language,
   isLocaleInitialized: false,
@@ -64,7 +64,7 @@ const defaultCheckingLoginStatus = {
   isCheckingLoginStatus: undefined,
 };
 
-export const defaultExtraState = {
+const defaultExtraState = {
   isCheckingLoginStatus: false,
   isLogin: false,
   userProfile: undefined,
@@ -73,7 +73,7 @@ export const defaultExtraState = {
   hidePureCopilotModal: false,
 };
 
-export const defaultState = {
+const defaultState = {
   ...defaultExtraState,
   ...defaultCheckingLoginStatus,
   showInvitationCodeModal: false,

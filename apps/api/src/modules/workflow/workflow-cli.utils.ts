@@ -60,7 +60,7 @@ export interface CliNodeInput {
  * CLI uses simplified type names (e.g., 'agent') that need to be mapped
  * to proper canvas node types (e.g., 'skillResponse').
  */
-export function mapCliNodeTypeToCanvasType(cliType: string): CanvasNodeType {
+function mapCliNodeTypeToCanvasType(cliType: string): CanvasNodeType {
   const typeMapping: Record<string, CanvasNodeType> = {
     agent: 'skillResponse',
     skill: 'skillResponse',
@@ -125,7 +125,7 @@ export function transformCliNodesToCanvasNodes(
   });
 }
 
-export function getDefaultMetadataForNodeType(nodeType: CanvasNodeType): Record<string, unknown> {
+function getDefaultMetadataForNodeType(nodeType: CanvasNodeType): Record<string, unknown> {
   switch (nodeType) {
     case 'start':
       return {};
@@ -162,7 +162,7 @@ export function getDefaultMetadataForNodeType(nodeType: CanvasNodeType): Record<
   }
 }
 
-export function getDefaultTitleForNodeType(nodeType: CanvasNodeType): string {
+function getDefaultTitleForNodeType(nodeType: CanvasNodeType): string {
   switch (nodeType) {
     case 'start':
       return 'Start';
