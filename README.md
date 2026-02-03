@@ -277,38 +277,35 @@ curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
 
 ### Use Case 3: Skills for Claude Code
 
-**Goal**: Export your Refly workflows as Claude Code skills
+**Goal**:Publish your Refly workflows as Claude Code skills
 
-**Quick Start**
+#### Quick Start
 
-1. **Install CLI**
+**Install Refly CLI**
 ```bash
-npm install -g @refly-ai/refly-skills
+npm install -g @powerformer/refly-cli
 ```
 
-2. **Export Workflow**
+**Install a Skill**
 ```bash
-refly-skills export --workflow-id <your-workflow-id>
+# Via Refly CLI
+refly skill install <skill-id>
+
+# Via npx
+npx skills add refly-ai/<skill-name>
 ```
 
-This generates a `.refly` skill file in the `skills/` directory.
-
-3. **Use in Claude Code**
-
-The exported skill is automatically available in Claude Code. Claude can now invoke your workflow as a tool!
-
-**Example**
+**Publish a Skill**
 ```bash
-# Export your product research workflow
-refly-skills export --workflow-id wf_product_research
-
-# Claude Code can now use it:
-User: "Research this product and analyze competitors"
-Claude: [Uses product_research skill] → Returns detailed analysis
+refly skill publish <skill-id>
 ```
+
+The skill is now available in Claude Code, Cursor, and MCP-powered workflows. Agent can invoke your workflow as a tool!
 
 📖 **Documentation**: [refly-ai/refly-skills](https://github.com/refly-ai/refly-skills)
 
+
+---
 
 ### Use Case 4: Build Clawdbot
 
