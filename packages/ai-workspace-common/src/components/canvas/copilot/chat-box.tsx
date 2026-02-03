@@ -331,7 +331,7 @@ export const ChatBox = memo(
           fileCount={fileCount}
           maxFileCount={MAX_FILE_COUNT}
           isExecuting={isExecuting}
-          onUploadFile={handleFileUpload}
+          onUploadFiles={handleBatchFileUpload}
           onSendMessage={() => handleSendMessage('button_click_send')}
           onAbort={handleAbort}
         />

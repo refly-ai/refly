@@ -10,7 +10,7 @@ interface CopilotActionsProps {
   fileCount: number;
   maxFileCount: number;
   isExecuting: boolean;
-  onUploadFile: (file: File) => Promise<void>;
+  onUploadFiles: (files: File[]) => Promise<void>;
   onSendMessage: () => void;
   onAbort?: () => void;
 }
@@ -21,7 +21,7 @@ export const CopilotActions = memo(
     fileCount,
     maxFileCount,
     isExecuting,
-    onUploadFile,
+    onUploadFiles,
     onSendMessage,
     onAbort,
   }: CopilotActionsProps) => {
@@ -39,12 +39,12 @@ export const CopilotActions = memo(
         const files = e.target.files;
         if (!files?.length) return;
 
-        // Upload files in parallel
-        await Promise.all(Array.from(files).map((file) => onUploadFile(file)));
+        // Use batch upload to handle multiple files atomically
+        await onUploadFiles(Array.from(files));
         // Reset input
         e.target.value = '';
       },
-      [onUploadFile],
+      [onUploadFiles],
     );
 
     const handleAttachmentClick = useCallback(() => {
