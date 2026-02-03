@@ -328,6 +328,8 @@ The tool returns:
 {{{availableToolsJson}}}
 ```
 
+{{{nodeEditContextSection}}}
+
 ---
 
 Now begin!
