@@ -85,12 +85,21 @@ export class SkillGithubService {
     }
 
     // Check if already submitted
-    if (await this.hasExistingSubmission(skill)) {
+    const hasExisting = await this.hasExistingSubmission(skill);
+
+    // If already submitted and no skillContent provided (no local changes), skip
+    if (hasExisting && !skillContent) {
       this.logger.log(`Skill ${skill.skillId} already submitted to GitHub, skipping`);
       return {
         prUrl: skill.githubPrUrl!,
         prNumber: skill.githubPrNumber!,
       };
+    }
+
+    // If already submitted but skillContent provided, update the existing PR
+    if (hasExisting && skillContent) {
+      this.logger.log(`Skill ${skill.skillId} already submitted, updating PR`);
+      return await this.updateExistingPR(skill, skillContent);
     }
 
     // 1. Determine SKILL.md content
@@ -193,6 +202,88 @@ export class SkillGithubService {
     });
 
     this.logger.log(`PR created: #${pr.number}`);
+
+    return {
+      prUrl: pr.html_url,
+      prNumber: pr.number,
+    };
+  }
+
+  /**
+   * Update existing PR with new content
+   */
+  private async updateExistingPR(
+    skill: SkillPackage,
+    skillContent: string,
+  ): Promise<GitHubSubmitResult> {
+    if (!this.octokit || !skill.githubPrNumber) {
+      throw new Error('Cannot update PR: missing octokit or PR number');
+    }
+
+    this.logger.log(`Updating PR #${skill.githubPrNumber} for skill ${skill.skillId}`);
+
+    // Get the PR to find the branch name
+    const { data: pr } = await this.octokit.pulls.get({
+      owner: this.repoOwner,
+      repo: this.repoName,
+      pull_number: skill.githubPrNumber,
+    });
+
+    const branchName = pr.head.ref;
+
+    // Get the branch's latest commit
+    const { data: refData } = await this.octokit.git.getRef({
+      owner: this.repoOwner,
+      repo: this.repoName,
+      ref: `heads/${branchName}`,
+    });
+
+    const baseCommitSha = refData.object.sha;
+
+    // Get the tree SHA from the commit
+    const { data: commitData } = await this.octokit.git.getCommit({
+      owner: this.repoOwner,
+      repo: this.repoName,
+      commit_sha: baseCommitSha,
+    });
+    const baseTreeSha = commitData.tree.sha;
+
+    // Update SKILL.md file
+    const safeName = skill.name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const skillMdPath = `skills/${safeName}/SKILL.md`;
+
+    const { data: tree } = await this.octokit.git.createTree({
+      owner: this.repoOwner,
+      repo: this.repoName,
+      base_tree: baseTreeSha,
+      tree: [
+        {
+          path: skillMdPath,
+          mode: '100644',
+          type: 'blob',
+          content: skillContent,
+        },
+      ],
+    });
+
+    // Create new commit
+    const { data: commit } = await this.octokit.git.createCommit({
+      owner: this.repoOwner,
+      repo: this.repoName,
+      message: `Update skill: ${skill.name}`,
+      tree: tree.sha,
+      parents: [baseCommitSha],
+    });
+
+    // Update branch to point to new commit
+    await this.octokit.git.updateRef({
+      owner: this.repoOwner,
+      repo: this.repoName,
+      ref: `heads/${branchName}`,
+      sha: commit.sha,
+    });
+
+    this.logger.log(`Updated PR #${skill.githubPrNumber}`);
 
     return {
       prUrl: pr.html_url,

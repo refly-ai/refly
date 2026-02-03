@@ -44,7 +44,7 @@ interface CreateSkillResponse {
 export const skillCreateCommand = new Command('create')
   .description('Create a new skill package with workflow')
   .requiredOption('--name <name>', 'Skill package name')
-  .option('--version <version>', 'Semantic version', '1.0.0')
+  .option('--skill-version <version>', 'Semantic version', '1.0.0')
   .option('--description <description>', 'Skill description')
   .option('--triggers <triggers>', 'Trigger phrases (comma-separated)')
   .option('--tags <tags>', 'Category tags (comma-separated)')
@@ -80,7 +80,7 @@ export const skillCreateCommand = new Command('create')
 
       const input: Record<string, unknown> = {
         name: options.name,
-        version: options.version,
+        version: options.skillVersion,
       };
 
       if (options.description) input.description = options.description;
@@ -135,7 +135,7 @@ export const skillCreateCommand = new Command('create')
               workflowId: result.workflowId,
               triggers: input.triggers as string[] | undefined,
               tags: input.tags as string[] | undefined,
-              version: options.version,
+              version: options.skillVersion,
               inputSchema: result.inputSchema,
               outputSchema: result.outputSchema,
             });
