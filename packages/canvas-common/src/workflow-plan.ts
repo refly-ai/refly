@@ -42,6 +42,7 @@ export const workflowVariableValueSchema = z.object({
   text: z.string().optional().describe('Text value (for text type)'),
   resource: z
     .object({
+      fileId: z.string().optional().describe('File ID from uploaded context files'),
       name: z.string().describe('Resource file name'),
       fileType: z.enum(['document', 'image', 'audio', 'video']).describe('Resource file type'),
     })
@@ -76,7 +77,7 @@ export const workflowVariableSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      'Whether only single selection is allowed (only for option type variables). Defaults to true.',
+      'For option type: whether only single selection is allowed. For resource type: whether only single file is accepted (false for multiple files). Defaults to true.',
     ),
   value: z.array(workflowVariableValueSchema).describe('Variable values'),
 });
@@ -435,6 +436,7 @@ export const planVariableToWorkflowVariable = (
       ...(value?.resource?.name && value?.resource?.fileType
         ? {
             resource: {
+              ...(value.resource.fileId ? { fileId: value.resource.fileId } : {}),
               name: value.resource.name,
               fileType: value.resource.fileType,
             },
