@@ -145,25 +145,22 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 - **Sensible Defaults** — Provide reasonable default values when possible to reduce user friction
 
 **File Input Recognition** — Generate `variableType: "resource"` when user mentions:
-- "上传文件/账单/报告/图片/视频..."
 - "upload a PDF/CSV/Excel/image/file..."
-- "用户上传一个文件，然后..."
-- "根据用户上传的xxx进行分析"
 - "based on the uploaded file..."
 - "analyze the document/image/video that user provides"
+- Chinese equivalents: "上传文件/账单/报告/图片/视频", "用户上传一个文件，然后...", "根据用户上传的xxx进行分析"
 
 **Required vs Optional**:
 - **required: true** — When user uses strong constraint words:
-  - "必须上传" / "需要上传" / "请上传" / "上传...来..."
-  - "must upload" / "need to upload" / "require" / "based on the uploaded file only"
+  - "must upload", "need to upload", "require", "based on the uploaded file only"
+  - Chinese equivalents: "必须上传", "需要上传", "请上传", "上传...来..."
 - **required: false** (default) — When:
-  - "可以上传" / "可选上传" / "optionally upload"
-  - No explicit constraint mentioned
-  - User says "if available" / "如果有的话"
+  - "optionally upload", "if available", no explicit constraint mentioned
+  - Chinese equivalents: "可以上传", "可选上传", "如果有的话"
 
 **File Input Value**:
 - **No context files** → `value: []`
-- **User references uploaded files** ("用这些图片/analyze these files") → Pre-fill from context:
+- **User references uploaded files** (e.g., "analyze these files", "use these images") → Pre-fill from context:
   ```json
   "value": [{ "type": "resource", "resource": { "fileId": "<context.files[].fileId>", "name": "<name>", "fileType": "<image|document|audio|video>" }}]
   ```
@@ -261,7 +258,7 @@ User instructions take precedence for overridable rules.
 
 **Context files**: `[{ "fileId": "f1", "name": "design1.png", "type": "image/png" }, { "fileId": "f2", "name": "design2.png", "type": "image/png" }]`
 
-**Request**: "这2张图片作为输入，分析设计风格"
+**Request**: "Use these 2 images as input, analyze the design style"
 
 **Variable**:
 ```json
