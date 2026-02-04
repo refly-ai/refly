@@ -61,6 +61,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [currentCanvasId, setCurrentCanvasId] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Drag-and-drop state (align with canvas/copilot)
@@ -163,13 +164,23 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
 
     if (currentCanvasId) {
       // We have an existing canvas, use it directly
-      await navigateToWorkflow(currentCanvasId);
+      setIsSending(true);
+      try {
+        await navigateToWorkflow(currentCanvasId);
+      } finally {
+        setIsSending(false);
+      }
     } else if (stagedFileItems.length > 0 || completedFileItems.length > 0) {
       // No canvas but have files: create canvas first, then finalize files
       // This ensures files are properly associated with the new canvas
-      const newCanvasId = await createCanvas('');
-      if (newCanvasId) {
-        await navigateToWorkflow(newCanvasId);
+      setIsSending(true);
+      try {
+        const newCanvasId = await createCanvas('');
+        if (newCanvasId) {
+          await navigateToWorkflow(newCanvasId);
+        }
+      } finally {
+        setIsSending(false);
       }
     } else {
       // No canvas, no files: use debounced create (original behavior)
@@ -440,7 +451,9 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
             <Button
               type="primary"
               shape="circle"
-              disabled={(!query.trim() && completedFileItems.length === 0) || isCreating}
+              disabled={
+                (!query.trim() && completedFileItems.length === 0) || isCreating || isSending
+              }
               icon={<Send size={20} color="var(--refly-bg-canvas)" />}
               className={cn(
                 '!w-9 !h-9 flex items-center justify-center border-none transition-all',
@@ -449,7 +462,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
                   : '!bg-refly-primary-disabled',
               )}
               onClick={handleSendMessage}
-              loading={isCreating}
+              loading={isCreating || isSending}
             />
           </div>
         </div>
