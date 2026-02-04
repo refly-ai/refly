@@ -2,7 +2,7 @@
 <img width="2880" height="1620" alt="the first open-source agent skills builder" src="https://github.com/user-attachments/assets/2609adbb-c8db-4ca4-8404-12eb32d19cf1" />
 
 
-# Refly — The First Agent Skills Builder Powered by Vibe Workflow
+# Refly — Agent Skills Builder Powered by Vibe Workflow
 <p align="right">
   <a href="README.md"><u>English</u></a> · <a href="README_CN.md"><u>中文</u></a>
 </p>
