@@ -1,6 +1,6 @@
 import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Skeleton, message } from 'antd';
+import { Button, Skeleton, message, Tooltip } from 'antd';
 import { Send, Attachment } from 'refly-icons';
 import { ChatInput } from '../canvas/launchpad/chat-input';
 import { useCreateCanvas } from '../../hooks/canvas/use-create-canvas';
@@ -435,13 +435,27 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
               accept={ACCEPT_FILE_EXTENSIONS}
               className="hidden"
             />
-            <Button
-              type="text"
-              icon={<Attachment size={20} />}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={fileCount >= 10}
-              className="!text-refly-text-0 "
-            />
+            <Tooltip
+              title={fileCount >= 10 ? t('copilot.maxFilesPerTask') : t('copilot.uploadFile')}
+              placement="top"
+              overlayInnerStyle={{ borderRadius: '8px' }}
+              color="#000"
+            >
+              <div
+                className={cn(
+                  'flex items-center justify-center',
+                  fileCount >= 10 ? 'cursor-not-allowed' : 'cursor-pointer',
+                )}
+              >
+                <Button
+                  type="text"
+                  icon={<Attachment size={20} />}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={fileCount >= 10}
+                  className="!text-refly-text-0 "
+                />
+              </div>
+            </Tooltip>
             <Button
               type="primary"
               shape="circle"
