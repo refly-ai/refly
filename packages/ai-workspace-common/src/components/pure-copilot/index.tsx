@@ -61,7 +61,6 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [currentCanvasId, setCurrentCanvasId] = useState<string | null>(null);
-  const canvasCreationInProgress = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Drag-and-drop state (align with canvas/copilot)
@@ -112,42 +111,9 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     canvasId: currentCanvasId,
     maxFileCount: 10,
     maxFileSize: 50 * 1024 * 1024,
-    onCanvasRequired: async () => {
-      // If we already have a canvas ID, reuse it
-      if (currentCanvasId) {
-        return currentCanvasId;
-      }
-
-      if (canvasCreationInProgress.current) {
-        return new Promise<string>((resolve) => {
-          const checkInterval = setInterval(() => {
-            if (currentCanvasId) {
-              clearInterval(checkInterval);
-              resolve(currentCanvasId);
-            }
-          }, 100);
-        });
-      }
-
-      canvasCreationInProgress.current = true;
-
-      try {
-        const newCanvasId = await createCanvas(t('common.untitled'));
-
-        if (!newCanvasId) {
-          throw new Error('Canvas creation failed');
-        }
-
-        setPureCopilotCanvas(source || 'default', newCanvasId);
-        setCurrentCanvasId(newCanvasId);
-
-        canvasCreationInProgress.current = false;
-        return newCanvasId;
-      } catch (error) {
-        canvasCreationInProgress.current = false;
-        throw error;
-      }
-    },
+    // NOTE: Do NOT pass onCanvasRequired here.
+    // In workspace page (without real canvas context), files should always use staging mode.
+    // Canvas will only be created when user sends the message, not during file upload.
   });
 
   const isFloatingVisible = useMemo(
@@ -167,21 +133,22 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
 
     if (!query.trim() && completedFileItems.length === 0) return;
 
-    if (currentCanvasId) {
+    // Helper function to navigate to workflow with files
+    const navigateToWorkflow = async (canvasId: string) => {
       // Finalize any staged files before sending
       let finalFiles = completedFileItems;
       if (stagedFileItems.length > 0) {
-        finalFiles = await finalizeFiles(currentCanvasId);
+        finalFiles = await finalizeFiles(canvasId);
       }
 
-      setPendingPrompt(currentCanvasId, query);
-      setPendingFiles(currentCanvasId, finalFiles);
+      setPendingPrompt(canvasId, query);
+      setPendingFiles(canvasId, finalFiles);
 
       const queryParams = new URLSearchParams();
       if (source) {
         queryParams.append('source', source);
       }
-      navigate(`/workflow/${currentCanvasId}?${queryParams.toString()}`);
+      navigate(`/workflow/${canvasId}?${queryParams.toString()}`);
 
       if (source === 'onboarding') {
         setTimeout(() => {
@@ -192,7 +159,20 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
       clearFiles();
       setQuery('');
       setPureCopilotCanvas(source || 'default', null);
+    };
+
+    if (currentCanvasId) {
+      // We have an existing canvas, use it directly
+      await navigateToWorkflow(currentCanvasId);
+    } else if (stagedFileItems.length > 0 || completedFileItems.length > 0) {
+      // No canvas but have files: create canvas first, then finalize files
+      // This ensures files are properly associated with the new canvas
+      const newCanvasId = await createCanvas('');
+      if (newCanvasId) {
+        await navigateToWorkflow(newCanvasId);
+      }
     } else {
+      // No canvas, no files: use debounced create (original behavior)
       debouncedCreateCanvas(source, {
         initialPrompt: query,
       });
@@ -215,6 +195,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     navigate,
     setHidePureCopilotModal,
     setPureCopilotCanvas,
+    createCanvas,
     debouncedCreateCanvas,
     t,
   ]);
