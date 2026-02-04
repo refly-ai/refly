@@ -424,7 +424,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
               icon={<Attachment size={20} />}
               onClick={() => fileInputRef.current?.click()}
               disabled={fileCount >= 10}
-              className="!text-refly-text-2 hover:!text-refly-text-0"
+              className="!text-refly-text-0 "
             />
             <Button
               type="primary"

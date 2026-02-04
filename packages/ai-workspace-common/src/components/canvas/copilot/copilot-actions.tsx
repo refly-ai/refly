@@ -1,5 +1,5 @@
 import { memo, useCallback, useRef } from 'react';
-import { Tooltip } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { Attachment, Send, Stop } from 'refly-icons';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@refly/utils/cn';
@@ -56,21 +56,13 @@ export const CopilotActions = memo(
     }, [uploadDisabled]);
 
     const attachmentButton = (
-      <button
-        type="button"
-        className={cn(
-          'w-7 h-7 rounded-lg flex items-center justify-center',
-          'border-none outline-none focus:outline-none focus-visible:outline-none',
-          '[&:focus]:ring-0 [&:focus]:ring-offset-0',
-          'cursor-pointer transition-colors',
-          '[&_path]:transition-[fill] [&_path]:duration-200',
-          '[&_path]:!fill-[var(--refly-text-0)] hover:[&_path]:!fill-[color-mix(in_srgb,var(--refly-text-0)_35%,transparent)]',
-          uploadDisabled && 'opacity-50',
-        )}
+      <Button
+        type="text"
+        icon={<Attachment size={20} />}
         onClick={handleAttachmentClick}
-      >
-        <Attachment size={18} />
-      </button>
+        disabled={fileCount >= 10}
+        className="!text-refly-text-0 "
+      />
     );
 
     return (

@@ -3,7 +3,13 @@ import type { IContextItem } from '@refly/common-types';
 import { cn } from '@refly/utils/cn';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { serverOrigin } from '@refly/ui-kit';
-import { isImageFile, isDocumentFile, formatFileSize, getFileExtension } from './file-utils';
+import {
+  isImageFile,
+  isDocumentFile,
+  isAudioVideoFile,
+  formatFileSize,
+  getFileExtension,
+} from './file-utils';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import type { DriveFile } from '@refly/openapi-schema';
 
@@ -245,11 +251,13 @@ export const MessageFileList = memo(
               !!item.metadata?.previewUrl ||
               !!item.metadata?.url ||
               (!!item.entityId && !item.entityId.startsWith('pending_'));
-            // Show as image when: clearly image, or we have a content URL and it's not clearly a document
+            // Show as image when: clearly image, or we have a content URL and it's not clearly a document or audio/video
             // (handles cases where API omits mimeType or filename has no extension)
             const isImage =
               isImageFile(mimeType, extension) ||
-              (hasPreviewUrl && !isDocumentFile(mimeType, extension));
+              (hasPreviewUrl &&
+                !isDocumentFile(mimeType, extension) &&
+                !isAudioVideoFile(mimeType, extension));
 
             return isImage ? (
               <ImageThumbnail key={item.entityId} item={item} canvasId={canvasId} />
