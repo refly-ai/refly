@@ -139,7 +139,6 @@ export const useCopilotStore = create<CopilotState>()(
           canvasCopilotWidth: state.canvasCopilotWidth,
           historyTemplateSessions: state.historyTemplateSessions,
           pendingPrompt: state.pendingPrompt,
-          pureCopilotCanvas: state.pureCopilotCanvas,
         }),
       },
     ),
