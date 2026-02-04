@@ -15,8 +15,16 @@ import { useFileUpload } from '../../hooks/use-file-upload';
 import { FileList } from '../canvas/copilot/file-list';
 import { useNavigate } from 'react-router-dom';
 
-const ACCEPT_FILE_EXTENSIONS =
-  '.jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv';
+const ACCEPT_FILE_EXTENSIONS = [
+  // 文档类
+  '.pdf,.docx,.doc,.txt,.md,.pptx',
+  // 数据/代码类
+  '.csv,.xlsx,.xls,.json,.xml,.py,.js,.html,.css',
+  // 图片类
+  '.png,.jpg,.jpeg,.webp,.gif',
+  // 音视频类
+  '.mp3,.wav,.m4a,.mp4,.mov,.avi',
+].join(',');
 
 export const defaultPromt: PromptSuggestion = {
   prompt: {
