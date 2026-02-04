@@ -45,6 +45,7 @@ interface ToolCallProps {
   'data-tool-video-name'?: string;
   'data-tool-video-format'?: string;
   'data-tool-error'?: string;
+  'data-tool-is-ptc'?: string;
   id?: string;
   mode?: MarkdownMode;
 }
@@ -167,13 +168,24 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     ToolCallStatus.EXECUTING;
 
   // Format the content for parameters
+  // Note: input field has inconsistent formats across different call types:
+  // - old style: nested JSON string {"input": "{\"key\":\"value\"}"}
+  // - new style: flat object {"input": {"key": "value"}}
   const parametersContent = useMemo(() => {
     // First try props data
     if (props['data-tool-arguments']) {
       try {
         const argsStr = props['data-tool-arguments'];
         const args = JSON.parse(argsStr);
-        return JSON.parse(args?.input ?? '{}');
+        const input = args?.input;
+
+        // Handle both formats: string (old style) or object (new style)
+        if (typeof input === 'string') {
+          return JSON.parse(input);
+        } else if (typeof input === 'object' && input !== null) {
+          return input;
+        }
+        return {};
       } catch {
         // Fall through to API data
       }
@@ -181,7 +193,16 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
 
     // Fall back to API data
     if (fetchedData?.data?.result?.input) {
-      return fetchedData.data.result.input;
+      const input = fetchedData.data.result.input;
+      // Also handle both formats for API data
+      if (typeof input === 'string') {
+        try {
+          return JSON.parse(input);
+        } catch {
+          return {};
+        }
+      }
+      return input;
     }
 
     return {};
@@ -398,6 +419,9 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     return filePreviewDriveFile.length > 0;
   }, [filePreviewDriveFile]);
 
+  // Check if this is a PTC tool call
+  const isPtc = props['data-tool-is-ptc'] === 'true';
+
   const { data } = useListToolsetInventory({}, null, {
     enabled: true,
   });
@@ -423,7 +447,12 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
 
   return (
     <>
-      <div className="rounded-lg overflow-hidden bg-refly-bg-control-z0 text-refly-text-0">
+      <div
+        className={cn(
+          'rounded-lg overflow-hidden bg-refly-bg-control-z0 text-refly-text-0',
+          isPtc && 'ml-4',
+        )}
+      >
         {/* Header bar */}
         <div
           className="flex items-center justify-between p-3 gap-3 cursor-pointer select-none min-h-[48px] transition-all duration-200"

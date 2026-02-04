@@ -2135,6 +2135,10 @@ export type ActionMessage = {
    */
   toolCallResult?: ToolCallResult;
   /**
+   * Whether this is a PTC (Programmatic Tool Calling) internal tool call
+   */
+  isPtc?: boolean;
+  /**
    * Action message creation time
    */
   createdAt?: string;
@@ -3957,6 +3961,10 @@ export type SkillEvent = {
    * Tool call result data.
    */
   toolCallResult?: ToolCallResult;
+  /**
+   * Whether this is a PTC (Programmatic Tool Calling) internal tool call. Only present when `event` is `tool_call_end` or `tool_call_error` for PTC internal calls.
+   */
+  isPtc?: boolean;
 };
 
 /**
@@ -5130,6 +5138,10 @@ export type SandboxExecuteContext = {
    * Whether PTC (Programmatic Tool Calling) is enabled
    */
   ptcEnabled?: boolean;
+  /**
+   * Tool call ID (execute_code's toolCallId) for PTC context tracking
+   */
+  toolCallId?: string;
   /**
    * Environment variables for execution
    */
