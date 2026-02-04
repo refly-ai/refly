@@ -158,44 +158,39 @@ curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
 > ⚠️ **注意**：详细的 Slack / 飞书集成指南即将推出。目前可参考 [API 参考](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api) 进行 Webhook 相关配置。
 
 ---
-### 使用场景 3：Claude Code 技能
+### 使用场景 3：Claude Code Skills
 
-**目标**：将你的 Refly 工作流导出为 Claude Code 技能
+**目标**：将你的 Refly 工作流导出为 Claude Code Skills
 
 #### 快速开始
 
 1. **安装 CLI**
 ```bash
-npm install -g @refly-ai/refly-skills
+npm install -g @powerformer/refly-cli
 ```
 
-2. **导出工作流**
+2. **安装 Skill**
 ```bash
-refly-skills export --workflow-id <your-workflow-id>
+# Via Refly CLI
+refly skill install <skill-id>
+
+# Via npx
+npx skills add refly-ai/<skill-name>
 ```
 
-这会在 skills/ 目录下生成一个 .refly 技能文件。
-
-3. **在 Claude Code 中使用**
-
-导出的技能会自动在 Claude Code 中可用。Claude 现在可以将你的工作流作为一个工具来调用
-
-#### 示例
+**发布Skill**
 ```bash
-# 导出你的产品调研工作流
-refly-skills export --workflow-id wf_product_research
-
-# Claude Code 现在可以使用它：
-User: "调研这个产品并分析竞争对手"
-Claude: [使用 product_research 技能] → 返回详细分析
+refly skill publish <skill-id>
 ```
+
+该 skills 现已在 Claude Code、Cursor 和支持 MCP 的工作流中可用。AI Agent 可以将您的工作流作为工具来调用！
 
 📖 **Skills文档**: [refly-ai/refly-skills](https://github.com/refly-ai/refly-skills)
 
 ---
 
 ### 使用场景 4：构建Clawdbot
-📖 **使用教程**((https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf)
+📖 **使用教程**(https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf)
 
 ---
 
