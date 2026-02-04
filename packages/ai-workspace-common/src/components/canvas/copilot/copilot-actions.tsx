@@ -62,8 +62,9 @@ export const CopilotActions = memo(
           'w-7 h-7 rounded-lg flex items-center justify-center',
           'border-none outline-none focus:outline-none focus-visible:outline-none',
           '[&:focus]:ring-0 [&:focus]:ring-offset-0',
-          'cursor-pointer',
-          'text-[#1C1F23] hover:text-[rgba(28,31,35,0.35)] transition-colors',
+          'cursor-pointer transition-colors',
+          '[&_path]:transition-[fill] [&_path]:duration-200',
+          '[&_path]:!fill-[#1C1F23] hover:[&_path]:!fill-[rgba(28,31,35,0.35)]',
           uploadDisabled && 'opacity-50',
         )}
         onClick={handleAttachmentClick}

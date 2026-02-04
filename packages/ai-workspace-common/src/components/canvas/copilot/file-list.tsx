@@ -1,49 +1,10 @@
 import { memo, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import type { IContextItem } from '@refly/common-types';
 import type { UploadProgress } from '@refly/stores';
+import { ArrowLeft, ArrowRight } from 'refly-icons';
 import { FileCard } from './file-card';
 import { cn } from '@refly/utils/cn';
 import { isImageFile, getFileExtension } from './file-utils';
-
-// ChevronRight icon component (no equivalent in refly-icons)
-const ChevronRightIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-  >
-    <path
-      d="M9 18L15 12L9 6"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-// ChevronLeft icon component
-const ChevronLeftIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-  >
-    <path
-      d="M15 18L9 12L15 6"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 interface FileListProps {
   contextItems: IContextItem[];
@@ -129,7 +90,7 @@ export const FileList = memo(
             onClick={handleScrollLeft}
           >
             <div className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center bg-white shadow-sm hover:shadow transition-shadow">
-              <ChevronLeftIcon size={16} className="text-gray-700" />
+              <ArrowLeft size={16} color="var(--refly-text-1)" />
             </div>
           </div>
         )}
@@ -166,7 +127,7 @@ export const FileList = memo(
             onClick={handleScrollRight}
           >
             <div className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center bg-white shadow-sm hover:shadow transition-shadow">
-              <ChevronRightIcon size={16} className="text-gray-700" />
+              <ArrowRight size={16} color="var(--refly-text-1)" />
             </div>
           </div>
         )}
