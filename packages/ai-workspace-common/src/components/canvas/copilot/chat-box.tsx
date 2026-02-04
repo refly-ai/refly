@@ -203,8 +203,8 @@ export const ChatBox = memo(
     );
 
     useEffect(() => {
-      // Allow sending if there's a prompt OR pending files
-      const hasPendingContent = pendingPrompt !== null || (pendingFiles?.length ?? 0) > 0;
+      // Allow sending if there's a non-empty prompt OR pending files
+      const hasPendingContent = !!pendingPrompt?.trim() || (pendingFiles?.length ?? 0) > 0;
       if (hasPendingContent && !initialPromptProcessed.current) {
         initialPromptProcessed.current = true;
 
