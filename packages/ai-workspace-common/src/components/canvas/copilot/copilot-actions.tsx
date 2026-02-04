@@ -63,11 +63,12 @@ export const CopilotActions = memo(
           'border-none outline-none focus:outline-none focus-visible:outline-none',
           '[&:focus]:ring-0 [&:focus]:ring-offset-0',
           'cursor-pointer',
+          'text-[#1C1F23] hover:text-[rgba(28,31,35,0.35)] transition-colors',
           uploadDisabled && 'opacity-50',
         )}
         onClick={handleAttachmentClick}
       >
-        <Attachment size={18} color="#1C1F23" />
+        <Attachment size={18} />
       </button>
     );
 
