@@ -623,6 +623,12 @@ const WorkflowRunPreviewComponent = () => {
     return sortedFiles;
   }, [outputsOnly, skillResponseNodes, driveFilesData?.data]);
 
+  // Memoize context value to prevent unnecessary re-renders
+  const previewContextValue = useMemo(
+    () => ({ location: 'runlog' as const, setCurrentFile }),
+    [setCurrentFile],
+  );
+
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
       <WorkflowRunPreviewHeader
@@ -683,7 +689,7 @@ const WorkflowRunPreviewComponent = () => {
           >
             {outputsOnly ? (
               // Outputs only mode: Show only product cards
-              <LastRunTabContext.Provider value={{ location: 'runlog', setCurrentFile }}>
+              <LastRunTabContext.Provider value={previewContextValue}>
                 <div className="flex flex-col gap-4 p-4">
                   {isDriveFilesLoading ? (
                     <Skeleton paragraph={{ rows: 6 }} active title={false} />
@@ -1003,7 +1009,7 @@ const WorkflowRunPreviewComponent = () => {
 
         {currentFile && (
           <div className="absolute inset-0 bg-refly-bg-content-z2 z-10">
-            <LastRunTabContext.Provider value={{ location: 'runlog', setCurrentFile }}>
+            <LastRunTabContext.Provider value={previewContextValue}>
               <ProductCard
                 file={currentFile}
                 classNames="w-full h-full"

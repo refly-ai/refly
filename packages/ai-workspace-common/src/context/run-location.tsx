@@ -14,7 +14,7 @@ export interface LastRunTabContextValue {
 
 export const LastRunTabContext = createContext<LastRunTabContextValue | null>(null);
 
-export const useLastRunTabContext = () => {
+export const useLastRunTabContext = (): LastRunTabContextValue => {
   const context = useContext(LastRunTabContext);
   return context ?? { location: 'agent' };
 };
