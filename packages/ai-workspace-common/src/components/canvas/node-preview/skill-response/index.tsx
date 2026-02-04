@@ -22,6 +22,7 @@ import { Close } from 'refly-icons';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use-query-processor';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
+import { LastRunTabContext } from '@refly-packages/ai-workspace-common/context/run-location';
 import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
 import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
 import { useVariableView } from '@refly-packages/ai-workspace-common/hooks/canvas/use-variable-view';
@@ -396,12 +397,14 @@ const SkillResponseNodePreviewComponent = ({
 
         {currentFile && (
           <div className="absolute inset-0 bg-refly-bg-content-z2 z-10">
-            <ProductCard
-              file={currentFile}
-              classNames="w-full h-full"
-              source="preview"
-              onAddToFileLibrary={handleAddToFileLibrary}
-            />
+            <LastRunTabContext.Provider value={{ location: 'agent', setCurrentFile }}>
+              <ProductCard
+                file={currentFile}
+                classNames="w-full h-full"
+                source="preview"
+                onAddToFileLibrary={handleAddToFileLibrary}
+              />
+            </LastRunTabContext.Provider>
           </div>
         )}
       </div>
