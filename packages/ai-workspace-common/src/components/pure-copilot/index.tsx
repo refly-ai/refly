@@ -100,17 +100,24 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     fileCount,
     hasUploadingFiles,
     completedFileItems,
+    stagedFileItems,
     relevantUploads,
     handleFileUpload,
     handleBatchFileUpload,
     handleRetryFile,
     handleRemoveFile,
     clearFiles,
+    finalizeFiles,
   } = useFileUpload({
     canvasId: currentCanvasId,
     maxFileCount: 10,
     maxFileSize: 50 * 1024 * 1024,
     onCanvasRequired: async () => {
+      // If we already have a canvas ID, reuse it
+      if (currentCanvasId) {
+        return currentCanvasId;
+      }
+
       if (canvasCreationInProgress.current) {
         return new Promise<string>((resolve) => {
           const checkInterval = setInterval(() => {
@@ -152,7 +159,7 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     onFloatingChange?.(isFloatingVisible);
   }, [isFloatingVisible, onFloatingChange]);
 
-  const handleSendMessage = useCallback(() => {
+  const handleSendMessage = useCallback(async () => {
     if (hasUploadingFiles) {
       message.info(t('copilot.uploadInProgress'));
       return;
@@ -161,8 +168,14 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     if (!query.trim() && completedFileItems.length === 0) return;
 
     if (currentCanvasId) {
+      // Finalize any staged files before sending
+      let finalFiles = completedFileItems;
+      if (stagedFileItems.length > 0) {
+        finalFiles = await finalizeFiles(currentCanvasId);
+      }
+
       setPendingPrompt(currentCanvasId, query);
-      setPendingFiles(currentCanvasId, completedFileItems);
+      setPendingFiles(currentCanvasId, finalFiles);
 
       const queryParams = new URLSearchParams();
       if (source) {
@@ -193,9 +206,12 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     currentCanvasId,
     hasUploadingFiles,
     completedFileItems,
+    stagedFileItems,
+    finalizeFiles,
     clearFiles,
     source,
     setPendingPrompt,
+    setPendingFiles,
     navigate,
     setHidePureCopilotModal,
     setPureCopilotCanvas,

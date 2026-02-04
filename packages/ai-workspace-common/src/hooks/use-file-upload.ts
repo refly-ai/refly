@@ -56,13 +56,29 @@ export const useFileUpload = ({
     [relevantUploads],
   );
 
+  // Files that are ready to be sent (either fully completed or staged with storageKey)
   const completedFileItems = useMemo(
     () =>
       contextItems.filter((item) => {
         if (item.type !== 'file') return false;
-        if (item.entityId.startsWith('pending_')) return false;
         if (item.metadata?.errorType) return false;
-        return true;
+        // Include files that are fully completed (have real fileId)
+        if (!item.entityId.startsWith('pending_')) return true;
+        // Also include staged files (have storageKey but pending entityId)
+        if (item.metadata?.storageKey) return true;
+        return false;
+      }),
+    [contextItems],
+  );
+
+  // Files that are staged (have storageKey but not yet added to drive)
+  const stagedFileItems = useMemo(
+    () =>
+      contextItems.filter((item) => {
+        if (item.type !== 'file') return false;
+        if (item.metadata?.errorType) return false;
+        // Staged = has storageKey but still has pending entityId
+        return item.entityId.startsWith('pending_') && !!item.metadata?.storageKey;
       }),
     [contextItems],
   );
@@ -85,26 +101,19 @@ export const useFileUpload = ({
         return;
       }
 
+      // Try to get canvas ID, but allow staging mode if not available
       let currentCanvasId = canvasId;
       if (!currentCanvasId && onCanvasRequired) {
         try {
           currentCanvasId = await onCanvasRequired();
         } catch (_error) {
-          if (!existingUploadId) {
-            pendingUploadCountRef.current -= 1;
-          }
-          message.error(t('copilot.canvasCreationFailed'));
-          return;
+          // Canvas creation failed, continue in staging mode (upload without canvas)
+          console.log('[useFileUpload] Canvas creation failed, continuing in staging mode');
         }
       }
 
-      if (!currentCanvasId) {
-        if (!existingUploadId) {
-          pendingUploadCountRef.current -= 1;
-        }
-        message.error(t('copilot.canvasRequired'));
-        return;
-      }
+      // Allow upload even without canvas ID (staging mode)
+      const isStagingMode = !currentCanvasId;
 
       const uploadId = existingUploadId || genUniqueId();
       const tempEntityId = existingEntityId || `pending_${uploadId}`;
@@ -156,8 +165,11 @@ export const useFileUpload = ({
           const xhr = new XMLHttpRequest();
           const formData = new FormData();
           formData.append('file', file);
-          formData.append('entityId', currentCanvasId);
-          formData.append('entityType', 'canvas');
+          // Only include entityId/entityType if we have a canvas (non-staging mode)
+          if (!isStagingMode) {
+            formData.append('entityId', currentCanvasId!);
+            formData.append('entityType', 'canvas');
+          }
 
           xhr.upload.addEventListener('progress', (e) => {
             if (e.lengthComputable) {
@@ -204,14 +216,22 @@ export const useFileUpload = ({
             ),
           );
 
+          // In staging mode, skip batchCreateDriveFiles - will be done later when canvas is available
+          if (isStagingMode) {
+            // Mark as staged (upload success, but not yet added to drive)
+            setUploadSuccess(uploadId);
+            // Keep the pending file data for later finalization
+            return;
+          }
+
           try {
             const { data: createResult } = await getClient().batchCreateDriveFiles({
               body: {
-                canvasId: currentCanvasId,
+                canvasId: currentCanvasId!,
                 files: [
                   {
                     name: file.name,
-                    canvasId: currentCanvasId,
+                    canvasId: currentCanvasId!,
                     storageKey: data.storageKey,
                     type: file.type || 'application/octet-stream',
                   },
@@ -337,6 +357,79 @@ export const useFileUpload = ({
     setContextItems([]);
   }, [contextItems]);
 
+  // Finalize staged files by creating drive files when canvas ID is available
+  const finalizeFiles = useCallback(
+    async (targetCanvasId: string): Promise<IContextItem[]> => {
+      if (!targetCanvasId || stagedFileItems.length === 0) {
+        return completedFileItems;
+      }
+
+      const finalizedItems: IContextItem[] = [];
+
+      for (const item of stagedFileItems) {
+        const storageKey = item.metadata?.storageKey;
+        if (!storageKey) continue;
+
+        try {
+          const { data: createResult } = await getClient().batchCreateDriveFiles({
+            body: {
+              canvasId: targetCanvasId,
+              files: [
+                {
+                  name: item.title,
+                  canvasId: targetCanvasId,
+                  storageKey,
+                  type: item.metadata?.mimeType || 'application/octet-stream',
+                },
+              ],
+            },
+          });
+
+          if (createResult?.success && createResult.data?.[0]) {
+            const driveFile = createResult.data[0];
+
+            // Update context item with real fileId
+            setContextItems((prev) =>
+              prev.map((i) =>
+                i.entityId === item.entityId
+                  ? {
+                      ...i,
+                      entityId: driveFile.fileId,
+                      title: driveFile.name,
+                      metadata: { ...i.metadata, errorType: undefined },
+                    }
+                  : i,
+              ),
+            );
+
+            finalizedItems.push({
+              ...item,
+              entityId: driveFile.fileId,
+              title: driveFile.name,
+            });
+
+            // Clean up pending file data
+            if (item.metadata?.uploadId) {
+              pendingFilesRef.current.delete(item.metadata.uploadId);
+            }
+          }
+        } catch (error) {
+          console.error('[useFileUpload] Failed to finalize file:', item.title, error);
+          // Continue with other files even if one fails
+        }
+      }
+
+      await refetchFiles();
+
+      // Return all completed items (both previously completed and newly finalized)
+      return [
+        ...completedFileItems.filter((item) => !item.entityId.startsWith('pending_')),
+        ...finalizedItems,
+      ];
+    },
+    [stagedFileItems, completedFileItems, refetchFiles],
+  );
+
   // Batch upload method that handles multiple files atomically
   // This ensures all files are added to contextItems in a single update
   // before any async operations begin, avoiding race conditions
@@ -383,33 +476,21 @@ export const useFileUpload = ({
       // Atomically reserve slots for all files
       pendingUploadCountRef.current += filesToUpload.length;
 
-      // Ensure canvas exists before adding files
+      // Try to get canvas ID, but allow staging mode if not available
       let currentCanvasId = canvasId;
       if (!currentCanvasId && onCanvasRequired) {
         try {
           currentCanvasId = await onCanvasRequired();
         } catch (_error) {
-          // Release reserved slots on failure
-          pendingUploadCountRef.current -= filesToUpload.length;
-          // Clean up preview URLs
-          for (const { previewUrl } of filesToUpload) {
-            if (previewUrl) URL.revokeObjectURL(previewUrl);
-          }
-          message.error(t('copilot.canvasCreationFailed'));
-          return;
+          // Canvas creation failed, continue in staging mode (upload without canvas)
+          console.log(
+            '[useFileUpload] Canvas creation failed, continuing in staging mode for batch',
+          );
         }
       }
 
-      if (!currentCanvasId) {
-        // Release reserved slots
-        pendingUploadCountRef.current -= filesToUpload.length;
-        // Clean up preview URLs
-        for (const { previewUrl } of filesToUpload) {
-          if (previewUrl) URL.revokeObjectURL(previewUrl);
-        }
-        message.error(t('copilot.canvasRequired'));
-        return;
-      }
+      // Allow upload even without canvas ID (staging mode)
+      const isStagingMode = !currentCanvasId;
 
       // Add all files to context items in a single update
       const newContextItems: IContextItem[] = filesToUpload.map(
@@ -446,8 +527,11 @@ export const useFileUpload = ({
               const xhr = new XMLHttpRequest();
               const formData = new FormData();
               formData.append('file', file);
-              formData.append('entityId', currentCanvasId!);
-              formData.append('entityType', 'canvas');
+              // Only include entityId/entityType if we have a canvas (non-staging mode)
+              if (!isStagingMode) {
+                formData.append('entityId', currentCanvasId!);
+                formData.append('entityType', 'canvas');
+              }
 
               xhr.upload.addEventListener('progress', (e) => {
                 if (e.lengthComputable) {
@@ -493,6 +577,12 @@ export const useFileUpload = ({
                     : item,
                 ),
               );
+
+              // In staging mode, skip batchCreateDriveFiles - will be done later when canvas is available
+              if (isStagingMode) {
+                setUploadSuccess(uploadId);
+                return;
+              }
 
               try {
                 const { data: createResult } = await getClient().batchCreateDriveFiles({
@@ -582,11 +672,13 @@ export const useFileUpload = ({
     fileCount,
     hasUploadingFiles,
     completedFileItems,
+    stagedFileItems,
     relevantUploads,
     handleFileUpload,
     handleBatchFileUpload,
     handleRetryFile,
     handleRemoveFile,
     clearFiles,
+    finalizeFiles,
   };
 };
