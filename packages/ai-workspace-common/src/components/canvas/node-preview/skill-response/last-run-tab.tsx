@@ -10,6 +10,7 @@ import {
   LastRunTabContext,
   LastRunTabLocation,
 } from '@refly-packages/ai-workspace-common/context/run-location';
+import { useActionResultStoreShallow } from '@refly/stores';
 
 interface LastRunTabProps {
   loading: boolean;
@@ -163,7 +164,13 @@ const LastRunTabComponent = ({
 
 export const LastRunTab = memo((props: LastRunTabProps) => {
   const { location } = props;
-  const contextValue = useMemo(() => ({ location }), [location]);
+
+  // Get actionResultStore's setCurrentFile for drawer preview
+  const { setCurrentFile } = useActionResultStoreShallow((state) => ({
+    setCurrentFile: state.setCurrentFile,
+  }));
+
+  const contextValue = useMemo(() => ({ location, setCurrentFile }), [location, setCurrentFile]);
 
   return (
     <LastRunTabContext.Provider value={contextValue}>
