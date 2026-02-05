@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Button, Switch, message } from 'antd';
-import { AppstoreOutlined, BranchesOutlined, CodeOutlined, CloseOutlined } from '@ant-design/icons';
+import { CloseOutlined } from '@ant-design/icons';
+import { FaCode } from 'react-icons/fa6';
+import { FiCommand } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { serverOrigin } from '@refly/ui-kit';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -15,6 +17,7 @@ import type { IntegrationType } from './types';
 import { groupApiEndpoints } from './utils';
 import { HiOutlineKey } from 'react-icons/hi';
 import { TbTargetArrow } from 'react-icons/tb';
+import { LuWebhook } from 'react-icons/lu';
 import './integration-docs-modal.scss';
 
 interface WebhookConfig {
@@ -167,7 +170,7 @@ export const IntegrationDocsModal = memo(
                     : ''
                 }`}
               >
-                {section.label}
+                <span className="text-[14px] text-refly-text-0">{section.label}</span>
               </button>
               {section.children?.length ? renderTocList(section.children, level + 1) : null}
             </div>
@@ -442,8 +445,8 @@ export const IntegrationDocsModal = memo(
         >
           <div className="flex flex-row h-full w-full bg-[var(--integration-docs-bg)] overflow-hidden">
             {/* Left sidebar - Integration navigation */}
-            <aside className="hidden lg:flex w-[220px] py-5 px-4 border-r border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] flex-shrink-0 flex-col overflow-y-auto overflow-x-hidden">
-              <div className="text-xs font-medium text-[var(--integration-docs-text-3)] uppercase tracking-wide mb-4 px-2.5">
+            <aside className="hidden lg:flex w-[262px] py-5 px-4 border-r border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] flex-shrink-0 flex-col overflow-y-auto overflow-x-hidden">
+              <div className="text-[16px] font-medium text-refly-text-0 uppercase tracking-wide mb-4 px-2.5">
                 {t('integration.navTitle')}
               </div>
               <div className="flex flex-col gap-1">
@@ -456,8 +459,8 @@ export const IntegrationDocsModal = memo(
                   }`}
                   onClick={() => handleIntegrationChange('skill')}
                 >
-                  <AppstoreOutlined className="text-base" />
-                  <span>{t('integration.navSkill')}</span>
+                  <FiCommand className="text-refly-text-0" size={20} />
+                  <span className="text-refly-text-0 text-[16px]">{t('integration.navSkill')}</span>
                 </button>
                 <button
                   type="button"
@@ -468,8 +471,8 @@ export const IntegrationDocsModal = memo(
                   }`}
                   onClick={() => handleIntegrationChange('api')}
                 >
-                  <CodeOutlined className="text-base" />
-                  <span>{t('integration.navApi')}</span>
+                  <FaCode className="text-refly-text-0" size={20} />
+                  <span className="text-refly-text-0 text-[16px]">{t('integration.navApi')}</span>
                 </button>
                 <button
                   type="button"
@@ -480,8 +483,10 @@ export const IntegrationDocsModal = memo(
                   }`}
                   onClick={() => handleIntegrationChange('webhook')}
                 >
-                  <BranchesOutlined className="text-base" />
-                  <span>{t('integration.navWebhook')}</span>
+                  <LuWebhook className="text-refly-text-0" size={20} />
+                  <span className="text-refly-text-0 text-[16px]">
+                    {t('integration.navWebhook')}
+                  </span>
                 </button>
               </div>
             </aside>
@@ -525,7 +530,7 @@ export const IntegrationDocsModal = memo(
               {/* Content area with main and toc */}
               <div className="flex flex-1 min-h-0 overflow-hidden">
                 {/* Main content area */}
-                <main className="flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden bg-[linear-gradient(180deg,var(--integration-docs-bg)_0%,var(--integration-docs-bg-subtle)_100%)]">
+                <main className="flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden">
                   {/* Scrollable content */}
                   <div
                     ref={contentRef}
@@ -536,8 +541,8 @@ export const IntegrationDocsModal = memo(
                 </main>
 
                 {/* Right sidebar - Table of contents */}
-                <aside className="hidden lg:flex flex-col w-[240px] py-5 px-4 border-l border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg)] flex-shrink-0 overflow-y-auto overflow-x-hidden">
-                  <div className="text-xs font-medium text-[var(--integration-docs-text-3)] uppercase tracking-wide mb-4 px-2.5">
+                <aside className="hidden lg:flex flex-col w-[284px] py-5 px-4 border-l border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg)] flex-shrink-0 overflow-y-auto overflow-x-hidden">
+                  <div className="text-[14px] font-medium text-refly-text-2 uppercase tracking-wide mb-4 px-2.5">
                     {t('integration.contents')}
                   </div>
                   <nav>{renderTocList(sections)}</nav>

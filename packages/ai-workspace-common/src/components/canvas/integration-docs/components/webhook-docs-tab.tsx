@@ -182,7 +182,7 @@ print(response.json())`;
 .then(data => console.log(data));`;
 
     return (
-      <div className="mx-auto w-full max-w-[800px] pt-5 px-4 pb-10 md:pt-6 md:px-5 md:pb-12 lg:pt-8 lg:px-10 lg:pb-16">
+      <div className="mx-auto w-full max-w-[814px]">
         <div className="mb-8">
           <h2 className="text-[22px] md:text-[28px] font-semibold text-[var(--integration-docs-text-1)] mb-2">
             {t('webhook.docsTitle')}

@@ -183,7 +183,10 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
                 />
               </div>
               <div className="flex items-center justify-end gap-3">
-                <Button type="primary" onClick={handleCloseCreateModal}>
+                <Button
+                  className="api-key-create-confirm-btn-black"
+                  onClick={handleCloseCreateModal}
+                >
                   {t('common.close')}
                 </Button>
               </div>
@@ -209,10 +212,10 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
               <div className="flex items-center justify-end gap-3">
                 <Button onClick={handleCloseCreateModal}>{t('common.cancel')}</Button>
                 <Button
-                  type="primary"
                   onClick={handleCreate}
                   loading={loading}
                   disabled={isMutating}
+                  className="api-key-create-confirm-btn-black"
                 >
                   {t('common.create')}
                 </Button>
@@ -235,7 +238,7 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
       >
         <div className="p-6">
           <div className="mb-6">
-            <p className="text-sm text-[var(--refly-text-2)] leading-relaxed m-0">
+            <p className="text-sm text-refly-text-0 leading-relaxed m-0">
               {t('webhook.apiKey.deleteDescription')}
             </p>
           </div>
@@ -245,8 +248,6 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
               {t('common.cancel')}
             </Button>
             <Button
-              danger
-              type="primary"
               onClick={handleDeleteConfirm}
               loading={loading}
               disabled={isMutating}
