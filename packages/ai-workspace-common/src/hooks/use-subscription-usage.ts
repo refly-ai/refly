@@ -10,12 +10,12 @@ export const useSubscriptionUsage = () => {
     refetch: refetchBalance,
     isSuccess: isBalanceSuccess,
   } = useGetCreditBalance({}, [], {
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // Disabled to prevent excessive requests when switching tabs
     refetchOnMount: true,
     refetchOnReconnect: true,
-    refetchInterval: 15 * 1000, // Refetch every 15 seconds
-    staleTime: 15 * 1000,
-    gcTime: 15 * 1000,
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds (reduced from 15s to minimize API calls)
+    staleTime: 30 * 1000,
+    gcTime: 60 * 1000, // Keep in cache for 60 seconds
     enabled: subscriptionEnabled && isLogin,
   });
 
@@ -24,12 +24,12 @@ export const useSubscriptionUsage = () => {
     isLoading: isUsageLoading,
     refetch,
   } = useGetSubscriptionUsage({}, [], {
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // Disabled to prevent excessive requests when switching tabs
     refetchOnMount: true,
     refetchOnReconnect: true,
-    refetchInterval: 15 * 1000, // Refetch every 15 seconds
-    staleTime: 15 * 1000,
-    gcTime: 15 * 1000,
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds (reduced from 15s to minimize API calls)
+    staleTime: 30 * 1000,
+    gcTime: 60 * 1000, // Keep in cache for 60 seconds
     enabled: subscriptionEnabled && isLogin,
   });
   const { token, storage, fileParsing } = data?.data ?? {};
