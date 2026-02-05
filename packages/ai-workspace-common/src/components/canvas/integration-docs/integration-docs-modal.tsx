@@ -459,7 +459,7 @@ export const IntegrationDocsModal = memo(
                   }`}
                   onClick={() => handleIntegrationChange('skill')}
                 >
-                  <FiCommand className="text-refly-text-0" size={20} />
+                  <FiCommand className="text-refly-text-0" size={20} strokeWidth={2.5} />
                   <span className="text-refly-text-0 text-[16px]">{t('integration.navSkill')}</span>
                 </button>
                 <button
@@ -483,7 +483,7 @@ export const IntegrationDocsModal = memo(
                   }`}
                   onClick={() => handleIntegrationChange('webhook')}
                 >
-                  <LuWebhook className="text-refly-text-0" size={20} />
+                  <LuWebhook className="text-refly-text-0" size={20} strokeWidth={2.5} />
                   <span className="text-refly-text-0 text-[16px]">
                     {t('integration.navWebhook')}
                   </span>
