@@ -17,12 +17,12 @@ import { genToolsetID } from '@refly/utils';
 import { PrismaService } from '../../common/prisma.service';
 import { RedisService } from '../../common/redis.service';
 import { COMPOSIO_CONNECTION_STATUS } from '../constant/constant';
+import { ComposioToolPostHandlerService } from '../handlers/post/composio-post.service';
+import type { ComposioPostHandlerInput } from '../handlers/post/post.interface';
+import { PreHandlerRegistryService } from '../handlers/pre/pre-registry.service';
 import { ToolInventoryService } from '../inventory/inventory.service';
 import { ResourceHandler } from '../resource.service';
 import { getContext, getCurrentUser, runInContext } from '../tool-context';
-import { ComposioToolPostHandlerService } from '../tool-execution/post-execution/composio-post.service';
-import type { ComposioPostHandlerInput } from '../tool-execution/post-execution/post.interface';
-import { PreHandlerRegistryService } from '../tool-execution/pre-execution/composio/pre-registry.service';
 import { enhanceToolSchema, FILE_UPLOAD_GUIDANCE } from '../utils/schema-utils';
 
 @Injectable()

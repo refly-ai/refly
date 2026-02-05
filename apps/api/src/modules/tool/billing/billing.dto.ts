@@ -41,6 +41,26 @@ export interface ProcessBillingOptions {
   params?: Record<string, unknown>;
 
   /**
+   * Tool execution input data (for dynamic billing)
+   */
+  input?: Record<string, unknown>;
+
+  /**
+   * Tool execution output data (for dynamic billing)
+   */
+  output?: Record<string, unknown>;
+
+  /**
+   * Request schema as JSON string (for dynamic billing)
+   */
+  requestSchema?: string;
+
+  /**
+   * Response schema as JSON string (for dynamic billing)
+   */
+  responseSchema?: string;
+
+  /**
    * Result ID from context (optional, falls back to context if not provided)
    */
   resultId?: string;

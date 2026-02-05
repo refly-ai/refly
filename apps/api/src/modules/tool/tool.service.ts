@@ -52,7 +52,7 @@ import {
   toolsetPo2GenericOAuthToolset,
   toolsetPo2GenericToolset,
 } from './tool.dto';
-import { ToolWrapperFactoryService } from './tool-execution/wrapper/wrapper.service';
+import { ToolWrapperFactoryService } from './handlers/core/wrapper.service';
 
 /**
  * Categorized tools returned from instantiateToolsets

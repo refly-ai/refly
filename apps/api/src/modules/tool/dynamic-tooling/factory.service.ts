@@ -15,9 +15,9 @@ import type {
   ToolMetadata,
   ToolsetConfig,
 } from '@refly/openapi-schema';
+import { HandlerService, type HttpHandlerOptions } from '../handlers/core/handler.service';
 import type { SkillRunnableConfig } from '@refly/skill-template';
 import { SingleFlightCache } from '../../../utils/cache';
-import { BillingService } from '../billing/billing.service';
 import { ToolInventoryService } from '../inventory/inventory.service';
 import {
   ResourceHandler,
@@ -26,8 +26,8 @@ import {
   parseJsonSchema,
   resolveCredentials,
 } from '../utils';
-import { AdapterFactory } from './adapters/factory';
-import { HttpHandler } from './core/handler';
+import { AdapterFactory } from './adapters/adapter-factory.service';
+import type { IAdapter } from './adapters/adapter';
 import { getCurrentUser, runInContext } from '../tool-context';
 
 /**
@@ -43,7 +43,7 @@ export class ToolFactory {
     private readonly inventoryService: ToolInventoryService,
     private readonly adapterFactory: AdapterFactory,
     private resourceHandler: ResourceHandler,
-    private readonly billingService: BillingService,
+    private readonly handlerService: HandlerService,
   ) {}
 
   /**
@@ -137,15 +137,17 @@ export class ToolFactory {
         const parsedMethod = this.parseMethodConfig(methodConfig);
         // Resolve credentials
         const credentials = credentialsOverride || resolveCredentials(config.credentials || {});
-        // Create handler with adapter and resource processing
-        const handler = await this.createHttpHandler(parsedMethod, credentials);
+        // Create adapter for this tool
+        const adapter = await this.adapterFactory.createAdapter(parsedMethod, credentials);
+        // Build handler options
+        const handlerOptions = this.buildHandlerOptions(parsedMethod, credentials);
         // Create DynamicStructuredTool
         const toolSchema = definition.schema as unknown;
         const tool = new DynamicStructuredTool({
           name: definition.name,
           description: definition.description,
           schema: toolSchema,
-          func: this.createToolExecutor(config, definition, parsedMethod, handler),
+          func: this.createToolExecutor(config, definition, parsedMethod, adapter, handlerOptions),
         });
 
         // Attach metadata to tool for tracking
@@ -182,26 +184,24 @@ export class ToolFactory {
   }
 
   /**
-   * Create HTTP handler with adapter and resource processing configuration
+   * Build handler options for tool execution
    */
-  private async createHttpHandler(
+  private buildHandlerOptions(
     parsedMethod: ParsedMethodConfig,
     credentials: Record<string, unknown>,
-  ): Promise<HttpHandler> {
-    const adapter = await this.adapterFactory.createAdapter(parsedMethod, credentials);
-    return new HttpHandler(adapter, {
+  ): HttpHandlerOptions {
+    return {
       endpoint: parsedMethod.endpoint,
       method: parsedMethod.method,
       credentials,
       responseSchema: parsedMethod.responseSchema,
       billing: parsedMethod.billing,
-      billingService: this.billingService,
       timeout: parsedMethod.timeout,
       useFormData: parsedMethod.useFormData,
       formatResponse: false, // Return JSON, not formatted text
       enableResourceUpload: true, // Enable ResourceHandler for output processing
       resourceHandler: this.resourceHandler,
-    });
+    };
   }
 
   /**
@@ -212,7 +212,8 @@ export class ToolFactory {
     config: ToolsetConfig,
     definition: DynamicToolDefinition,
     parsedMethod: ParsedMethodConfig,
-    handler: HttpHandler,
+    adapter: IAdapter,
+    handlerOptions: HttpHandlerOptions,
   ) {
     return async (
       args: Record<string, unknown>,
@@ -230,8 +231,8 @@ export class ToolFactory {
           async () => {
             // Prepare request with defaults and resource preprocessing
             const request = await this.prepareToolRequest(config, parsedMethod, args);
-            // Execute handler with prepared request
-            return await handler.handle(request);
+            // Execute via handler service
+            return await this.handlerService.execute(request, adapter, handlerOptions);
           },
         );
 
@@ -274,6 +275,11 @@ export class ToolFactory {
       metadata: {
         toolName: parsedMethod.name,
         toolsetKey: config.inventoryKey,
+        // Include schemas for dynamic billing
+        requestSchema: parsedMethod.schema ? JSON.stringify(parsedMethod.schema) : undefined,
+        responseSchema: parsedMethod.responseSchema
+          ? JSON.stringify(parsedMethod.responseSchema)
+          : undefined,
       },
     };
 

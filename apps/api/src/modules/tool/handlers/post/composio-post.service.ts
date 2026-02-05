@@ -13,8 +13,7 @@ import axios from 'axios';
 import HTMLtoDOCX from 'html-to-docx';
 import * as XLSX from 'xlsx';
 import { BillingService } from '../../billing/billing.service';
-import { extractFileIdToTopLevel } from '../../dynamic-tooling/core/handler-post';
-import { ResourceHandler } from '../../resource.service';
+import { ResourceHandler, extractFileIdToTopLevel } from '../../utils';
 import {
   DEFAULT_MAX_TOKENS,
   MAX_SNIPPET_TOKENS,

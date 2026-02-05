@@ -1763,6 +1763,29 @@ model ToolsetInventory {
   @@map("toolset_inventory")
 }
 
+model ToolBilling {
+  /// Primary key
+  pk           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Inventory key (e.g., 'nano_banana_pro', 'fal_image')
+  inventoryKey String   @map("inventory_key")
+  /// Method name (e.g., 'generate', 'text_to_image')
+  methodName   String   @map("method_name")
+  /// Billing rules (array of AdditiveBillingRule or MultiplierBillingRule)
+  billingRules Json     @map("billing_rules")
+  /// Token pricing for USD-based billing (optional)
+  tokenPricing Json?    @map("token_pricing")
+  /// Whether this billing config is enabled
+  enabled      Boolean  @default(true)
+  /// Create timestamp
+  createdAt    DateTime @default(now()) @map("created_at")
+  /// Update timestamp
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([inventoryKey, methodName])
+  @@index([inventoryKey, methodName], map: "idx_tool_billing_lookup")
+  @@map("tool_billing")
+}
+
 model ComposioConnection {
   /// Primary key
   pk                 BigInt    @id @default(autoincrement())

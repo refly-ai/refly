@@ -4,9 +4,9 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import sharp from 'sharp';
-import { DriveService } from '../../../../drive/drive.service';
-import { getCurrentUser } from '../../../tool-context';
-import { collectResourceFields, extractFileId } from '../../../utils/schema-utils';
+import { DriveService } from '../../../drive/drive.service';
+import { getCurrentUser } from '../../tool-context';
+import { collectResourceFields, extractFileId } from '../../utils/schema-utils';
 import type { IToolPreHandler, PreHandlerInput, PreHandlerOutput } from './pre.interface';
 
 /**

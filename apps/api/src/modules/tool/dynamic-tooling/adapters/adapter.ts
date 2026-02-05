@@ -11,7 +11,7 @@ import { AdapterType } from '../../constant';
 
 /**
  * Base adapter interface
- * Abstracts HTTP/SDK API calls
+ * Abstracts HTTP API calls
  */
 export interface IAdapter {
   /**
@@ -54,28 +54,6 @@ export interface IHttpAdapter extends IAdapter {
    * @returns Default headers
    */
   getDefaultHeaders(): Record<string, string>;
-}
-
-/**
- * SDK-specific adapter interface
- */
-export interface ISdkAdapter extends IAdapter {
-  /**
-   * Get adapter type (always 'sdk')
-   */
-  getType(): typeof AdapterType.SDK;
-
-  /**
-   * Get SDK client instance
-   * @returns SDK client
-   */
-  getClient(): unknown;
-
-  /**
-   * Reload SDK client with new credentials
-   * @param credentials - New credentials
-   */
-  reloadClient(credentials: Record<string, unknown>): Promise<void>;
 }
 
 /**

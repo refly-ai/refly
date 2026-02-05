@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { IToolPreHandler } from './pre.interface';
 import { ComposioToolPreHandlerService } from './composio-pre.service';
+import type { IToolPreHandler } from './pre.interface';
 
 /**
  * Registry for pre-execution handlers

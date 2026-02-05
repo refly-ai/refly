@@ -20,8 +20,7 @@ import {
   pick,
   safeParseJSON,
 } from '../../utils/token';
-import { ResourceHandler } from '../../resource.service';
-import { extractFileIdToTopLevel } from '../../dynamic-tooling/core/handler-post';
+import { ResourceHandler, extractFileIdToTopLevel } from '../../utils';
 
 // ============================================================================
 // Regular Tool Post-Handler Service

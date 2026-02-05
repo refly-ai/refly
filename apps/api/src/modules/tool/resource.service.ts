@@ -61,6 +61,7 @@ type ProcessingMode = 'input' | 'output';
 
 @Injectable()
 export class ResourceHandler {
+  [x: string]: any;
   private readonly logger = new Logger(ResourceHandler.name);
 
   constructor(
