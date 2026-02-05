@@ -63,7 +63,7 @@ const SubscriptionCard = React.memo(
     }));
 
     return (
-      <div className="subscription-card p-3 shadow-refly-m rounded-lg border-solid border-[1px] border-refly-Card-Border bg-refly-bg-float-z3">
+      <div className="subscription-card p-3 shadow-refly-m rounded-lg border-solid border-[1px] border-refly-Card-Border">
         <div className="flex items-center justify-between gap-2 text-refly-text-0 text-xs leading-4 font-semibold">
           {planType === 'free'
             ? t('subscription.subscriptionManagement.planNames.freePlan')
