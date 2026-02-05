@@ -12,7 +12,6 @@ const outputPath = path.resolve(
 
 const supportedPrefixes = [
   '/openapi/workflow',
-  '/openapi/share',
   '/openapi/webhook',
   '/openapi/files',
   '/openapi/copilot',
