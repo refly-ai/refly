@@ -96,7 +96,11 @@ export const FileList = memo(
         )}
 
         {/* Scrollable file cards container - pt-2 to prevent close button clipping */}
-        <div ref={scrollRef} className="flex gap-2 overflow-x-auto p-2 scrollbar-hide -m-2">
+        <div
+          ref={scrollRef}
+          className="flex gap-2 overflow-x-auto p-2 -m-2 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {fileItems
             .slice()
             .reverse()

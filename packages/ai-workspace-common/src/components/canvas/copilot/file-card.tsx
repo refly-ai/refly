@@ -151,7 +151,7 @@ export const FileCard = memo(
           )}
 
           {/* Close button - Only show on hover for compact mode */}
-          {!disabled && !isUploading && (
+          {!disabled && (
             <button
               type="button"
               onClick={(e) => {
@@ -210,13 +210,13 @@ export const FileCard = memo(
 
         {/* File info area */}
         <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-          {/* File name - 12px, truncate */}
-          <div className="text-[12px] font-medium truncate leading-tight text-[#1C1F23]">
+          {/* File name - 12px, truncate, fixed height */}
+          <div className="text-[12px] font-medium truncate leading-[16px] h-4 text-[#1C1F23]">
             {item.title}
           </div>
 
-          {/* Meta info row */}
-          <div className="flex items-center justify-between min-w-0">
+          {/* Meta info row - fixed height */}
+          <div className="flex items-center justify-between min-w-0 h-[14px]">
             {/* Left: Type/Size or Status */}
             <div className="flex items-center gap-1.5 text-[10px] text-[rgba(28,31,35,0.35)] truncate flex-1">
               {isUploadPhase ? (
@@ -268,7 +268,7 @@ export const FileCard = memo(
         </div>
 
         {/* Close button - 16x16px, top right corner */}
-        {!disabled && !isUploading && (
+        {!disabled && (
           <button
             type="button"
             onClick={(e) => {
