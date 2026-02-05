@@ -7,15 +7,22 @@
     border: none;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+    padding: 0;
   }
 
   .ant-modal-header {
-    height: 34px;
+    margin: 0;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--refly-line);
+    margin-bottom: 0;
+
+    .ant-modal-title {
+      margin-bottom: 0;
+    }
   }
 
   .ant-modal-body {
-    border-top: 1px solid var(--refly-line);
-    padding: 16px 0px;
+    padding: 0;
   }
 
   // Override primary button styles
@@ -74,7 +81,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 8px 16px;
   position: relative;
 
   &.has-border::after {

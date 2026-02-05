@@ -335,7 +335,7 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
             {t('integration.api.authUsageTitle')}
           </h4>
           <div className="space-y-2">
-            <div className="flex items-start gap-2">
+            <div className="flex items-center gap-2">
               <span className="text-sm text-[var(--integration-docs-text-2)] min-w-[80px]">
                 {t('integration.api.authHeaderField')}:
               </span>
@@ -343,8 +343,8 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                 Authorization
               </code>
             </div>
-            <div className="flex items-start gap-2">
-              <span className="text-sm text-[var(--integration-docs-text-2)] min-w-[80px]">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-[var(--integration-docs-text-2)]">
                 {t('integration.api.authHeaderValue')}:
               </span>
               <code className="text-sm bg-[var(--integration-docs-inline-code-bg)] px-2 py-1 rounded text-[var(--integration-docs-inline-code-text)]">

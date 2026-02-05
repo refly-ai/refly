@@ -24,6 +24,10 @@
   .ant-checkbox-checked .ant-checkbox-inner {
     background-color: var(--refly-text-0);
     border-color: var(--refly-text-0);
+
+    &::after {
+      border-color: var(--text-icon-refly-text-flip);
+    }
   }
 
   .ant-checkbox-wrapper:hover .ant-checkbox-inner,
