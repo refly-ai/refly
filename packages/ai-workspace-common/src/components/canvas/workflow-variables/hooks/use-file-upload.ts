@@ -211,25 +211,8 @@ export const useFileUpload = (maxCount = 1) => {
         }
 
         // Clean up the file input
-        cleanup();
+        document.body.removeChild(fileInput);
       });
-
-      // Clean up function
-      const cleanup = () => {
-        if (document.body.contains(fileInput)) {
-          document.body.removeChild(fileInput);
-        }
-        window.removeEventListener('focus', handleFocusBack);
-      };
-
-      // Handle cancel (user closes file dialog without selecting)
-      const handleFocusBack = () => {
-        // Small delay to allow change event to fire first if file was selected
-        setTimeout(() => {
-          cleanup();
-        }, 300);
-      };
-      window.addEventListener('focus', handleFocusBack);
 
       // Add to DOM and trigger click
       document.body.appendChild(fileInput);
