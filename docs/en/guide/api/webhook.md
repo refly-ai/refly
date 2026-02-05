@@ -4,6 +4,24 @@
 
 Trigger the current canvas workflow via Webhook and track executions in Run History.
 
+## How to Enable Webhook
+
+**Steps to get Webhook URL**:
+
+1. Visit https://refly.ai/workspace and enter any workflow.
+
+   ![1. Visit https://refly.ai/workspace and enter any workflow.](https://static.refly.ai/static/20260205-114458.jpeg)
+
+2. Click the "Integration" button in the top right corner.
+
+   ![2. Click the "Integration" button in the top right corner.](https://static.refly.ai/static/screenshot-20260205-114520.png)
+
+3. Click the "Webhook" tab at the top, then toggle the Enable switch at the top.
+
+   ![3. Click the "Webhook" tab at the top, then toggle the Enable switch at the top.](https://static.refly.ai/static/screenshot-20260205-145015.png)
+
+4. Copy the generated Webhook URL for integration.
+
 ## Request Body
 Webhook variables payload
 

@@ -2,8 +2,8 @@ import type { ApiDocsData } from '../types';
 
 export const apiDocsData: ApiDocsData = {
   version: '0.2.0',
-  generatedAt: '2026-02-05T03:08:32.048Z',
-  baseUrl: '/v1',
+  generatedAt: '2026-02-05T06:58:02.460Z',
+  baseUrl: 'https://api.refly.ai/v1',
   endpoints: [
     {
       id: 'post-openapi-copilot-workflow-generate',

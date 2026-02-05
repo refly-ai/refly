@@ -4757,6 +4757,13 @@ const translations = {
     docsTitle: 'Webhook API Docs',
     docsSubtitle:
       'Trigger the current canvas workflow via Webhook and track executions in Run History.',
+    howToEnableTitle: 'How to Enable Webhook',
+    howToEnableStepsTitle: 'Steps to get Webhook URL',
+    howToEnableStep1: '1. Visit https://refly.ai/workspace and enter any workflow.',
+    howToEnableStep2: '2. Click the "Integration" button in the top right corner.',
+    howToEnableStep3:
+      '3. Click the "Webhook" tab at the top, then toggle the Enable switch at the top.',
+    howToEnableStep4: '4. Copy the generated Webhook URL for integration.',
     navTitle: 'Integrations',
     navSkill: 'Skill',
     navApi: 'API',

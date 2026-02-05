@@ -10,23 +10,7 @@
 Refly API 提供 RESTful 接口，支持以编程方式调用工作流、上传文件、查询执行状态等功能。所有 API 请求均需要通过 API Key 进行身份验证。
 
 ## 认证
-所有 API 请求都需要在 HTTP Header 中携带 API Key 进行身份验证。
-
-**如何获取 API Key**：
-
-1. 访问 https://refly.ai/workspace 并进入任意一个工作流。
-
-   ![进入工作流示例图片](https://static.refly.ai/static/screenshot-20260205-112644.png)
-
-2. 点击右上角“集成”按钮。
-
-   ![点击集成按钮示例图片](https://static.refly.ai/static/screenshot-20260205-112430.png)
-
-3. 点击“API Key”标签页，点击“创建新的 API Key”按钮并妥善保管。
-
-   ![创建 API Key 示例图片](https://static.refly.ai/static/screenshot-20260205-112457.png)
-
-**请求头示例**：
+所有 API 请求都需要在 HTTP Header 中携带 API Key 进行身份验证。\n\n**如何获取 API Key**：\n\n1. 访问 https://refly.ai/workspace 并进入任意一个工作流。\n\n   ![进入工作流示例图片](https://static.refly.ai/static/screenshot-20260205-112644.png)\n\n2. 点击右上角“集成”按钮。\n\n   ![点击集成按钮示例图片](https://static.refly.ai/static/screenshot-20260205-112430.png)\n\n3. 点击“API Key”标签页，点击“创建新的 API Key”按钮并妥善保管。\n\n   ![创建 API Key 示例图片](https://static.refly.ai/static/screenshot-20260205-112457.png)\n\n**请求头示例**：
 
 `Authorization: Bearer YOUR_API_KEY`
 
