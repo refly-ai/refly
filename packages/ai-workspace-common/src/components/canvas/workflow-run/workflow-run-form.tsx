@@ -391,10 +391,12 @@ export const WorkflowRunForm = ({
 
       // Check if we've reached the limit
       if (currentFileList.length >= maxCount) {
-        message.error(
-          t('canvas.workflow.variables.tooManyFiles', { max: maxCount }) ||
+        message.error({
+          content:
+            t('canvas.workflow.variables.tooManyFiles', { max: maxCount }) ||
             `Maximum ${maxCount} files allowed`,
-        );
+          key: 'too-many-files-error',
+        });
         return false;
       }
 

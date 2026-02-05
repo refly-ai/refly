@@ -49,7 +49,10 @@ export const useFileUpload = (maxCount = 1) => {
 
       if (maxSize > 0 && file.size > maxSize) {
         const maxSizeMB = `${maxSize / (1024 * 1024)}MB`;
-        message.error(t('resource.import.fileTooLarge', { size: maxSizeMB }));
+        message.error({
+          content: t('resource.import.fileTooLarge', { size: maxSizeMB }),
+          key: 'file-too-large-error',
+        });
         return false;
       }
       return true;
@@ -69,14 +72,20 @@ export const useFileUpload = (maxCount = 1) => {
         const data = await uploadFile(file, tempUid);
 
         if (!data?.storageKey) {
-          message.error(t('common.uploadFailed') || 'Upload failed');
+          message.error({
+            content: t('common.uploadFailed') || 'Upload failed',
+            key: 'upload-failed-error',
+          });
           return null;
         }
 
         return data;
       } catch (error) {
         console.error('Upload error:', error);
-        message.error(t('common.uploadFailed') || 'Upload failed');
+        message.error({
+          content: t('common.uploadFailed') || 'Upload failed',
+          key: 'upload-failed-error',
+        });
         return null;
       } finally {
         setUploading(false);
@@ -88,18 +97,23 @@ export const useFileUpload = (maxCount = 1) => {
   const handleFileUpload = useCallback(
     async (file: File, fileList: UploadFile[]) => {
       if (fileList.length >= maxCount) {
-        message.error(
-          t('canvas.workflow.variables.tooManyFiles', { max: maxCount }) ||
+        message.error({
+          content:
+            t('canvas.workflow.variables.tooManyFiles', { max: maxCount }) ||
             `Maximum ${maxCount} files allowed`,
-        );
+          key: 'too-many-files-error',
+        });
         return false;
       }
 
       const existingFileNames = fileList.map((f) => f.name);
       if (existingFileNames.includes(file.name)) {
-        message.error(
-          t('canvas.workflow.variables.duplicateFileName') || 'File with this name already exists',
-        );
+        message.error({
+          content:
+            t('canvas.workflow.variables.duplicateFileName') ||
+            'File with this name already exists',
+          key: 'duplicate-filename-error',
+        });
         return false;
       }
 
@@ -109,7 +123,10 @@ export const useFileUpload = (maxCount = 1) => {
 
       const data = await processFileUpload(file);
       if (data) {
-        message.success(t('common.uploadSuccess') || 'Upload successful');
+        message.success({
+          content: t('common.uploadSuccess') || 'Upload successful',
+          key: 'upload-success',
+        });
         return data;
       }
       return false;
@@ -186,13 +203,33 @@ export const useFileUpload = (maxCount = 1) => {
             const newFileList = [newFile];
             onFileListChange(newFileList);
 
-            message.success(t('common.uploadSuccess') || 'File refreshed successfully');
+            message.success({
+              content: t('common.uploadSuccess') || 'File refreshed successfully',
+              key: 'upload-success',
+            });
           }
         }
 
         // Clean up the file input
-        document.body.removeChild(fileInput);
+        cleanup();
       });
+
+      // Clean up function
+      const cleanup = () => {
+        if (document.body.contains(fileInput)) {
+          document.body.removeChild(fileInput);
+        }
+        window.removeEventListener('focus', handleFocusBack);
+      };
+
+      // Handle cancel (user closes file dialog without selecting)
+      const handleFocusBack = () => {
+        // Small delay to allow change event to fire first if file was selected
+        setTimeout(() => {
+          cleanup();
+        }, 300);
+      };
+      window.addEventListener('focus', handleFocusBack);
 
       // Add to DOM and trigger click
       document.body.appendChild(fileInput);
