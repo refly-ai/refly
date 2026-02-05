@@ -4183,42 +4183,6 @@ export type DuplicateCodeArtifactRequest = {
   canvasId?: string;
 };
 
-export type OpenapiCreateWorkflowShareRequest = {
-  /**
-   * Share title (optional, defaults to workflow title)
-   */
-  title?: string;
-  /**
-   * Whether to allow others to duplicate this workflow
-   */
-  allowDuplication?: boolean;
-};
-
-export type OpenapiCreateWorkflowShareResponse = BaseResponse & {
-  /**
-   * Created share record
-   */
-  data?: ShareRecord;
-};
-
-export type OpenapiDuplicateWorkflowShareRequest = {
-  /**
-   * Target canvas ID (optional, for duplicating into existing canvas)
-   */
-  canvasId?: string;
-  /**
-   * Title for the duplicated workflow (optional)
-   */
-  title?: string;
-};
-
-export type OpenapiDuplicateWorkflowShareResponse = BaseResponse & {
-  /**
-   * Duplicated entity
-   */
-  data?: Entity;
-};
-
 export type CreateShareRequest = {
   /**
    * Entity type
@@ -12196,47 +12160,6 @@ export type AbortWorkflowViaApiData = {
 export type AbortWorkflowViaApiResponse = BaseResponse;
 
 export type AbortWorkflowViaApiError = unknown;
-
-export type CreateWorkflowShareViaApiData = {
-  body?: OpenapiCreateWorkflowShareRequest;
-  path: {
-    /**
-     * Canvas/Workflow ID
-     */
-    canvasId: string;
-  };
-};
-
-export type CreateWorkflowShareViaApiResponse = OpenapiCreateWorkflowShareResponse;
-
-export type CreateWorkflowShareViaApiError = unknown;
-
-export type DeleteWorkflowShareViaApiData = {
-  path: {
-    /**
-     * Share ID
-     */
-    shareId: string;
-  };
-};
-
-export type DeleteWorkflowShareViaApiResponse = BaseResponse;
-
-export type DeleteWorkflowShareViaApiError = unknown;
-
-export type DuplicateWorkflowShareViaApiData = {
-  body?: OpenapiDuplicateWorkflowShareRequest;
-  path: {
-    /**
-     * Share ID
-     */
-    shareId: string;
-  };
-};
-
-export type DuplicateWorkflowShareViaApiResponse = OpenapiDuplicateWorkflowShareResponse;
-
-export type DuplicateWorkflowShareViaApiError = unknown;
 
 export type GetSettingsResponse = GetUserSettingsResponse;
 
