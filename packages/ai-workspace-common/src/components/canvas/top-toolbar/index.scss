@@ -182,14 +182,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 .schedule-toolbar-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   color: currentColor;
+  flex-shrink: 0;
 }
 
 .top-toolbar-button-divider {
@@ -208,7 +209,8 @@
 }
 
 .integration-docs-button-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   display: inline-block;
+  flex-shrink: 0;
 }

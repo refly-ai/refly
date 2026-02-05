@@ -4404,7 +4404,7 @@ const translations = {
     },
   },
   integration: {
-    title: 'Integration',
+    title: 'Integrations',
     navTitle: 'Integrations',
     navSkill: 'Skill',
     navApi: 'API',

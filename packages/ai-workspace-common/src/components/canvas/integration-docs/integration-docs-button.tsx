@@ -29,7 +29,7 @@ export const IntegrationDocsButton = memo(
             type={buttonType}
             className={cn('integration-docs-button', buttonClassName)}
           >
-            <LuPuzzle size={16} />
+            <LuPuzzle size={16} className="integration-docs-button-icon" />
             {t('integration.title')}
           </Button>
         </Tooltip>
