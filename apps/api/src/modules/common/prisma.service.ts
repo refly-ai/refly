@@ -38,7 +38,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
     this.$on('query' as never, (e: any) => {
       if (process.env.NODE_ENV === 'production') {
-        this.logger.log(`query: ${e.query}, param: ${e.params}, duration: ${e.duration}ms`);
+        const normalizedQuery = typeof e.query === 'string' ? e.query.trim().toLowerCase() : '';
+        const isWriteQuery =
+          normalizedQuery.startsWith('insert') ||
+          normalizedQuery.startsWith('update') ||
+          normalizedQuery.startsWith('delete');
+        if (isWriteQuery) {
+          this.logger.log(`query: ${e.query}, param: ${e.params}, duration: ${e.duration}ms`);
+        }
       }
     });
   }
