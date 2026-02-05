@@ -4366,6 +4366,8 @@ const translations = {
       cancel: '取消',
       deactivate: '停用',
     },
+    tooltipText: '可定时任务数量，升级到 Plus 后上限提升至 20',
+    limited: '定时任务已达上限',
   },
   runHistory: {
     pageTitle: '运行历史',

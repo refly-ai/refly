@@ -60,3 +60,58 @@
     caret-color: transparent !important;
   }
 }
+
+// Ensure frequency buttons have 1px border width
+.schedule-frequency-button {
+  border-width: 1px !important;
+}
+
+// Style for time picker ok button to take full width
+.schedule-timepicker-popup {
+  .ant-picker-now-btn {
+    display: none !important;
+  }
+
+  .ant-picker-footer {
+    padding: 0;
+  }
+
+  .ant-picker-ranges {
+    margin-bottom: 0;
+    width: 180px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    border-top: 1px solid var(--Border-colorBorderSecondary, #f0f0f0);
+
+    .ant-picker-ok {
+      float: none;
+      margin-inline-start: 0;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+
+      button {
+        width: 164px;
+        height: 24px;
+        background: var(--text-icon-refly-text-0, #1c1f23) !important;
+        border: none !important;
+        border-radius: 4px; // borderRadiusSM
+        font-size: 12px; // size="small"
+        font-weight: 500;
+        padding: 0 8px; // paddingXS
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: white !important;
+
+        &:hover {
+          opacity: 0.85;
+        }
+      }
+    }
+  }
+}
