@@ -120,17 +120,14 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
       onCancel={onClose}
       footer={null}
       title={t('integration.outputModal.title')}
-      width={520}
+      width={550}
       destroyOnClose
+      centered
       className="api-output-modal"
     >
-      <div className="px-6 pb-3">
-        <p className="text-sm text-[var(--refly-text-2)] mb-3 leading-normal">
-          {t('integration.outputModal.description')}
-        </p>
-
+      <div>
         {hasAgents ? (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 max-h-[376px] overflow-y-auto">
             {agentNodes.map((node) => {
               const title = node.data?.title || t('common.agent', { defaultValue: 'Agent' });
               const checked = selectedNodeIds.includes(node.id);
@@ -138,7 +135,7 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
                 <label
                   key={node.id}
                   htmlFor={node.id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[var(--refly-line)] bg-[var(--refly-bg-control-z0)] cursor-pointer"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-[var(--refly-line)] bg-transparent cursor-pointer"
                 >
                   <Checkbox
                     id={node.id}
@@ -164,9 +161,6 @@ export const ApiOutputModal = memo(({ open, canvasId, onClose }: ApiOutputModalP
             {t('integration.outputModal.empty')}
           </div>
         )}
-        <div className="text-xs text-[var(--refly-text-3)] mt-3">
-          {t('integration.outputModal.hint')}
-        </div>
       </div>
     </Modal>
   );

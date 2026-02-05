@@ -1,8 +1,7 @@
 // API Key Management Modal - Only keep Ant Design overrides and complex styles
 .api-key-management-modal,
 .api-key-create-modal,
-.api-key-delete-modal,
-.api-output-modal {
+.api-key-delete-modal {
   .ant-modal-content {
     border-radius: 20px;
     border: none;
