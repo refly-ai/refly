@@ -1,6 +1,12 @@
 import { setupI18n, setupSentry } from '@refly/web-core';
 import { useEffect, useState } from 'react';
-import { LightLoading, ReflyConfigProvider, useConfigProviderStore } from '@refly/ui-kit';
+import {
+  LightLoading,
+  ReflyConfigProvider,
+  cssinjsCache,
+  useConfigProviderStore,
+} from '@refly/ui-kit';
+import { StyleProvider } from '@ant-design/cssinjs';
 import { ConfigProvider, theme } from 'antd';
 import { useThemeStoreShallow } from '@refly/stores';
 import { setRuntime } from '@refly/utils/env';
@@ -70,7 +76,11 @@ export function InitializationSuspense({ children }: InitializationSuspenseProps
     updateTheme(themeConfig);
 
     ConfigProvider.config({
-      holderRender: (children) => <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>,
+      holderRender: (children) => (
+        <StyleProvider cache={cssinjsCache}>
+          <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>
+        </StyleProvider>
+      ),
     });
   }, [isDarkMode]);
 

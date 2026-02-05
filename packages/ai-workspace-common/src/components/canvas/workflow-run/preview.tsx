@@ -1,6 +1,7 @@
 import { Segmented, Collapse, Skeleton, message } from 'antd';
 import { memo, useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLazyCollapse } from '@refly-packages/ai-workspace-common/components/common/lazy-collapse';
 import { ArrowDown, CheckCircleBroken, AiChat, Cancelled, Subscription } from 'refly-icons';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -80,6 +81,13 @@ NodeCreditUsage.displayName = 'NodeCreditUsage';
 const WorkflowRunPreviewComponent = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<ResultActiveTab>('configure');
+  // Track if LastRun tab has been rendered at least once (for lazy loading + keep mounted)
+  const [hasRenderedLastRun, setHasRenderedLastRun] = useState(false);
+
+  // Use lazy collapse hooks for managing panel rendering
+  const agentNodesLazy = useLazyCollapse();
+  const inputPanelsLazy = useLazyCollapse();
+  const outputPanelsLazy = useLazyCollapse();
   const { canvasId, workflow } = useCanvasContext();
   const { nodes, edges } = useRealtimeCanvasData();
   const { resultMap, streamResults, currentFile, setCurrentFile } = useActionResultStoreShallow(
@@ -95,6 +103,13 @@ const WorkflowRunPreviewComponent = () => {
   useEffect(() => {
     setCurrentFile(null);
   }, [setCurrentFile]);
+
+  // Track when LastRun tab is accessed for the first time (lazy loading)
+  useEffect(() => {
+    if (activeTab === 'lastRun' && !hasRenderedLastRun) {
+      setHasRenderedLastRun(true);
+    }
+  }, [activeTab, hasRenderedLastRun]);
   const { fetchActionResult } = useFetchActionResult();
   const { setShowWorkflowRun, showWorkflowRun } = useCanvasResourcesPanelStoreShallow((state) => ({
     setShowWorkflowRun: state.setShowWorkflowRun,
@@ -372,6 +387,41 @@ const WorkflowRunPreviewComponent = () => {
       }
     }
   }, [skillResponseNodes, resultMap, fetchActionResult]);
+
+  // Auto-expand executing nodes for streaming updates
+  useEffect(() => {
+    if (activeTab === 'lastRun' && hasRenderedLastRun) {
+      for (const node of skillResponseNodes) {
+        const resultId = node.data?.entityId;
+        if (!resultId) continue;
+
+        const nodeExecution = nodeExecutionMap.get(node.id);
+        const result = resultMap[resultId];
+        const nodeStatus = (nodeExecution?.status ??
+          result?.status ??
+          node.data?.metadata?.status) as ActionStatus | 'init' | undefined;
+        const isExecuting = nodeStatus === 'executing' || nodeStatus === 'waiting';
+        const isNotExecuted = nodeStatus === 'init' || !nodeStatus;
+
+        if (isExecuting) {
+          agentNodesLazy.markAsRendered(node.id);
+          outputPanelsLazy.markAsRendered(node.id);
+        } else if (isNotExecuted) {
+          // Auto-expand input panel for not executed nodes
+          inputPanelsLazy.markAsRendered(node.id);
+        }
+      }
+    }
+  }, [
+    activeTab,
+    hasRenderedLastRun,
+    skillResponseNodes,
+    nodeExecutionMap,
+    resultMap,
+    agentNodesLazy,
+    inputPanelsLazy,
+    outputPanelsLazy,
+  ]);
 
   const handleClose = useCallback(() => {
     setShowWorkflowRun(false);
@@ -687,323 +737,335 @@ const WorkflowRunPreviewComponent = () => {
             className={activeTab === 'lastRun' ? 'h-full overflow-y-auto' : 'hidden'}
             style={{ display: activeTab === 'lastRun' ? 'block' : 'none' }}
           >
-            {outputsOnly ? (
-              // Outputs only mode: Show only product cards
-              <LastRunTabContext.Provider value={previewContextValue}>
-                <div className="flex flex-col gap-4 p-4">
-                  {isDriveFilesLoading ? (
-                    <Skeleton paragraph={{ rows: 6 }} active title={false} />
-                  ) : allProductFiles.length === 0 ? (
+            {/* Lazy loading: Only render LastRun content after first access, then keep it mounted */}
+            {hasRenderedLastRun &&
+              (outputsOnly ? (
+                // Outputs only mode: Show only product cards
+                <LastRunTabContext.Provider value={previewContextValue}>
+                  <div className="flex flex-col gap-4 p-4">
+                    {isDriveFilesLoading ? (
+                      <Skeleton paragraph={{ rows: 6 }} active title={false} />
+                    ) : allProductFiles.length === 0 ? (
+                      <div className="flex items-center justify-center h-32 text-refly-text-2">
+                        {t('canvas.workflow.run.noArtifacts')}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-4">
+                        {allProductFiles.map((file) => (
+                          <ProductCard
+                            key={file.fileId}
+                            file={file}
+                            source="card"
+                            onAddToFileLibrary={(file) => handleAddToFileLibrary(file, 'runlog')}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </LastRunTabContext.Provider>
+              ) : (
+                // Normal mode: Show user input + agent collapse components
+                <div className="flex flex-col gap-2 px-4">
+                  {/* User Input Section */}
+                  {workflowVariables && workflowVariables.length > 0 && (
+                    <WorkflowInputFormCollapse
+                      key={`workflow-input-${workflowVariables.map((v) => `${v.variableId}-${JSON.stringify(v.value)}`).join('-')}`}
+                      workflowVariables={workflowVariables}
+                      canvasId={canvasId}
+                      defaultActiveKey={[]}
+                      readonly={true}
+                    />
+                  )}
+
+                  {skillResponseNodes.length === 0 ? (
                     <div className="flex items-center justify-center h-32 text-refly-text-2">
-                      {t('canvas.workflow.run.noArtifacts')}
+                      {t('canvas.workflow.run.noNodes')}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                      {allProductFiles.map((file) => (
-                        <ProductCard
-                          key={file.fileId}
-                          file={file}
-                          source="card"
-                          onAddToFileLibrary={(file) => handleAddToFileLibrary(file, 'runlog')}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </LastRunTabContext.Provider>
-            ) : (
-              // Normal mode: Show user input + agent collapse components
-              <div className="flex flex-col gap-2 px-4">
-                {/* User Input Section */}
-                {workflowVariables && workflowVariables.length > 0 && (
-                  <WorkflowInputFormCollapse
-                    key={`workflow-input-${workflowVariables.map((v) => `${v.variableId}-${JSON.stringify(v.value)}`).join('-')}`}
-                    workflowVariables={workflowVariables}
-                    canvasId={canvasId}
-                    defaultActiveKey={[]}
-                    readonly={true}
-                  />
-                )}
-
-                {skillResponseNodes.length === 0 ? (
-                  <div className="flex items-center justify-center h-32 text-refly-text-2">
-                    {t('canvas.workflow.run.noNodes')}
-                  </div>
-                ) : (
-                  skillResponseNodes.map((node) => {
-                    const resultId = node.data?.entityId;
-                    if (!resultId) {
-                      return null;
-                    }
-
-                    // Get node execution from workflow detail (prioritize this over canvas node metadata)
-                    // Extend WorkflowNodeExecution with optional startTime/endTime for backward compatibility
-                    const nodeExecution = nodeExecutionMap.get(node.id) as
-                      | (WorkflowNodeExecution & {
-                          startTime?: string;
-                          endTime?: string;
-                        })
-                      | null;
-                    const result = resultMap[resultId];
-                    const isStreaming = !!streamResults[resultId];
-                    const loading = !result && !isStreaming;
-
-                    // Extract parameters for LastRunTab and ConfigureTab
-                    const title = node.data?.title ?? result?.title ?? nodeExecution?.title;
-                    const query = node.data?.metadata?.query ?? result?.input?.query ?? null;
-                    const selectedToolsets =
-                      node.data?.metadata?.selectedToolsets ?? result?.toolsets ?? [];
-                    const steps = result?.steps ?? [];
-                    const outputStep = steps.find((step) => OUTPUT_STEP_NAMES.includes(step.name));
-                    const version = result?.version ?? node.data?.metadata?.version ?? 0;
-
-                    // Get node execution status - prioritize nodeExecution status, then result status, then node metadata status
-                    const nodeStatus = (nodeExecution?.status ??
-                      result?.status ??
-                      node.data?.metadata?.status) as ActionStatus | 'init' | undefined;
-                    const isNotExecuted = nodeStatus === 'init' || !nodeStatus;
-                    const isExecuting = nodeStatus === 'executing' || nodeStatus === 'waiting';
-                    const isFinished = nodeStatus === 'finish';
-                    const isFailed = nodeStatus === 'failed';
-
-                    // Get error message from nodeExecution, result, or node metadata
-                    const errorMessage =
-                      nodeExecution?.errorMessage ??
-                      result?.errors?.[0] ??
-                      node.data?.metadata?.errors?.[0];
-
-                    // Get execution time from nodeExecution
-                    // Prefer startTime/endTime for execution duration, fallback to createdAt/updatedAt for backward compatibility
-                    const executionTime = formatExecutionTime(
-                      nodeExecution?.startTime ?? nodeExecution?.createdAt,
-                      isExecuting
-                        ? currentTime
-                        : (nodeExecution?.endTime ?? nodeExecution?.updatedAt),
-                    );
-
-                    // Agent title
-                    const agentTitle = title || t('canvas.workflow.run.defaultAgentTitle');
-
-                    // Get status icon based on node status (only for executed nodes)
-                    const getStatusIcon = () => {
-                      if (isNotExecuted) {
-                        return null; // No icon for not executed nodes
+                    skillResponseNodes.map((node) => {
+                      const resultId = node.data?.entityId;
+                      if (!resultId) {
+                        return null;
                       }
-                      if (isFinished) {
-                        return <CheckCircleBroken size={16} color="#0E9F77" />;
-                      }
-                      if (isFailed) {
-                        return <Cancelled size={16} color="#F04438" />;
-                      }
-                      if (isExecuting) {
-                        return (
-                          <IconLoading className="w-4 h-4 text-refly-primary-default animate-spin" />
-                        );
-                      }
-                      return null;
-                    };
 
-                    // Build collapse items array for Input/Output sections
-                    // - Not executed: Only input item (no output item)
-                    // - Executed (running/finished/failed): Both input and output items
-                    const collapseItems = [
-                      {
-                        key: 'input',
-                        label: (
-                          <div className="flex items-center justify-between w-full py-[10px] pl-4 pr-[10px] font-medium text-sm leading-[1.7142857142857142em] h-[34px] rounded-t-[6px] bg-[#E6E8EA]">
-                            <span>{t('agent.configure')}</span>
-                          </div>
-                        ),
-                        children: (
-                          <div className="bg-white pt-2 px-[1px] pb-3">
-                            <ConfigureTab
-                              readonly={true}
-                              query={query}
-                              version={version}
-                              resultId={resultId}
-                              nodeId={node.id}
-                              canvasId={canvasId}
-                              disabled={true}
-                            />
-                          </div>
-                        ),
-                      },
-                      // Only add output item for executed nodes (running, finished, or failed)
-                      // Not executed nodes will only have input item
-                      ...(isNotExecuted
-                        ? []
-                        : [
-                            {
-                              key: 'output',
-                              label: (
-                                <div className="flex items-center justify-between w-full py-[10px] px-4 font-medium text-sm leading-[1.7142857142857142em] h-[34px] bg-[#E6E8EA]">
-                                  <span>{t('agent.lastRun')}</span>
-                                </div>
-                              ),
-                              children: (
-                                <div className="bg-white pt-2 px-[1px] pb-3">
-                                  {/* Show error message if execution failed */}
-                                  {isFailed && errorMessage && (
-                                    <div className="flex flex-col py-3 px-4 mb-2">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <Cancelled size={16} color="#F04438" />
-                                        <span className="text-sm font-semibold text-refly-func-danger-default">
-                                          {t('canvas.workflow.run.executionFailed')}
-                                        </span>
-                                      </div>
-                                      <div className="text-sm text-refly-text-1 bg-refly-Colorful-red-light rounded-lg p-3">
-                                        {errorMessage}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {/* Show result content for executed states (running, finished, failed) */}
-                                  <LastRunTab
-                                    location="runlog"
-                                    loading={loading}
-                                    isStreaming={isStreaming}
-                                    resultId={resultId}
-                                    result={result}
-                                    outputStep={outputStep}
-                                    query={query}
-                                    title={title}
-                                    nodeId={node.id}
-                                    selectedToolsets={selectedToolsets}
-                                    handleRetry={createRetryHandler(node, resultId)}
-                                  />
-                                </div>
-                              ),
-                            },
-                          ]),
-                    ];
+                      // Get node execution from workflow detail (prioritize this over canvas node metadata)
+                      // Extend WorkflowNodeExecution with optional startTime/endTime for backward compatibility
+                      const nodeExecution = nodeExecutionMap.get(node.id) as
+                        | (WorkflowNodeExecution & {
+                            startTime?: string;
+                            endTime?: string;
+                          })
+                        | null;
+                      const result = resultMap[resultId];
+                      const isStreaming = !!streamResults[resultId];
+                      const loading = !result && !isStreaming;
 
-                    return (
-                      <div key={node.id} className="flex flex-col gap-2">
-                        {/* Agent Node Collapse */}
-                        <Collapse
-                          defaultActiveKey={[]}
-                          ghost
-                          onChange={(activeKeys) => {
-                            // Track when user expands agent node in run log
-                            if (
-                              Array.isArray(activeKeys) &&
-                              activeKeys.includes('agent') &&
-                              canvasId
-                            ) {
-                              logEvent('runlog_agent_expand', null, {
-                                canvasId,
-                                nodeId: node.id,
-                                resultId,
-                              });
-                            }
-                          }}
-                          expandIcon={({ isActive }) => (
-                            <ArrowDown
-                              size={14}
-                              className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
-                            />
-                          )}
-                          expandIconPosition="end"
-                          className="agent-node-collapse [&_.ant-collapse-item]:!border-0 [&_.ant-collapse-header]:!bg-[#D9FFFE] [&_.ant-collapse-header]:!p-3 [&_.ant-collapse-header]:!rounded-lg [&_.ant-collapse-header]:!h-12 [&_.ant-collapse-content]:!bg-transparent [&_.ant-collapse-content]:!p-0 [&_.ant-collapse-content-box]:!p-0"
-                          items={[
-                            {
-                              key: 'agent',
-                              label: (
-                                <div className="flex items-center justify-between w-full min-w-0">
-                                  <div
-                                    title={agentTitle}
-                                    className="flex items-center flex-1 min-w-0 gap-1"
-                                  >
-                                    <AiChat size={20} className="flex-shrink-0" />
-                                    <span className="text-[#1C1F23] truncate font-inter font-medium text-sm leading-[1.5em] w-[180px]">
-                                      {agentTitle}
-                                    </span>
+                      // Extract parameters for LastRunTab and ConfigureTab
+                      const title = node.data?.title ?? result?.title ?? nodeExecution?.title;
+                      const query = node.data?.metadata?.query ?? result?.input?.query ?? null;
+                      const selectedToolsets =
+                        node.data?.metadata?.selectedToolsets ?? result?.toolsets ?? [];
+                      const steps = result?.steps ?? [];
+                      const outputStep = steps.find((step) =>
+                        OUTPUT_STEP_NAMES.includes(step.name),
+                      );
+                      const version = result?.version ?? node.data?.metadata?.version ?? 0;
+
+                      // Get node execution status - prioritize nodeExecution status, then result status, then node metadata status
+                      const nodeStatus = (nodeExecution?.status ??
+                        result?.status ??
+                        node.data?.metadata?.status) as ActionStatus | 'init' | undefined;
+                      const isNotExecuted = nodeStatus === 'init' || !nodeStatus;
+                      const isExecuting = nodeStatus === 'executing' || nodeStatus === 'waiting';
+                      const isFinished = nodeStatus === 'finish';
+                      const isFailed = nodeStatus === 'failed';
+
+                      // Get error message from nodeExecution, result, or node metadata
+                      const errorMessage =
+                        nodeExecution?.errorMessage ??
+                        result?.errors?.[0] ??
+                        node.data?.metadata?.errors?.[0];
+
+                      // Get execution time from nodeExecution
+                      // Prefer startTime/endTime for execution duration, fallback to createdAt/updatedAt for backward compatibility
+                      const executionTime = formatExecutionTime(
+                        nodeExecution?.startTime ?? nodeExecution?.createdAt,
+                        isExecuting
+                          ? currentTime
+                          : (nodeExecution?.endTime ?? nodeExecution?.updatedAt),
+                      );
+
+                      // Agent title
+                      const agentTitle = title || t('canvas.workflow.run.defaultAgentTitle');
+
+                      // Get status icon based on node status (only for executed nodes)
+                      const getStatusIcon = () => {
+                        if (isNotExecuted) {
+                          return null; // No icon for not executed nodes
+                        }
+                        if (isFinished) {
+                          return <CheckCircleBroken size={16} color="#0E9F77" />;
+                        }
+                        if (isFailed) {
+                          return <Cancelled size={16} color="#F04438" />;
+                        }
+                        if (isExecuting) {
+                          return (
+                            <IconLoading className="w-4 h-4 text-refly-primary-default animate-spin" />
+                          );
+                        }
+                        return null;
+                      };
+
+                      // Build collapse items array for Input/Output sections
+                      // - Not executed: Only input item (no output item)
+                      // - Executed (running/finished/failed): Both input and output items
+                      const collapseItems = [
+                        {
+                          key: 'input',
+                          label: (
+                            <div className="flex items-center justify-between w-full py-[10px] pl-4 pr-[10px] font-medium text-sm leading-[1.7142857142857142em] h-[34px] rounded-t-[6px] bg-[#E6E8EA]">
+                              <span>{t('agent.configure')}</span>
+                            </div>
+                          ),
+                          children: inputPanelsLazy.shouldRender(node.id) ? (
+                            <div className="bg-white pt-2 px-[1px] pb-3">
+                              <ConfigureTab
+                                readonly={true}
+                                query={query}
+                                version={version}
+                                resultId={resultId}
+                                nodeId={node.id}
+                                canvasId={canvasId}
+                                disabled={true}
+                              />
+                            </div>
+                          ) : null,
+                        },
+                        // Only add output item for executed nodes (running, finished, or failed)
+                        // Not executed nodes will only have input item
+                        ...(isNotExecuted
+                          ? []
+                          : [
+                              {
+                                key: 'output',
+                                label: (
+                                  <div className="flex items-center justify-between w-full py-[10px] px-4 font-medium text-sm leading-[1.7142857142857142em] h-[34px] bg-[#E6E8EA]">
+                                    <span>{t('agent.lastRun')}</span>
                                   </div>
-                                  <div className="flex items-center flex-shrink-0 gap-3">
-                                    {/* Collapsed state: show different info based on status */}
-                                    {/* 
+                                ),
+                                children: outputPanelsLazy.shouldRender(node.id) ? (
+                                  <div className="bg-white pt-2 px-[1px] pb-3">
+                                    {/* Show error message if execution failed */}
+                                    {isFailed && errorMessage && (
+                                      <div className="flex flex-col py-3 px-4 mb-2">
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <Cancelled size={16} color="#F04438" />
+                                          <span className="text-sm font-semibold text-refly-func-danger-default">
+                                            {t('canvas.workflow.run.executionFailed')}
+                                          </span>
+                                        </div>
+                                        <div className="text-sm text-refly-text-1 bg-refly-Colorful-red-light rounded-lg p-3">
+                                          {errorMessage}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {/* Show result content for executed states (running, finished, failed) */}
+                                    <LastRunTab
+                                      location="runlog"
+                                      loading={loading}
+                                      isStreaming={isStreaming}
+                                      resultId={resultId}
+                                      result={result}
+                                      outputStep={outputStep}
+                                      query={query}
+                                      title={title}
+                                      nodeId={node.id}
+                                      selectedToolsets={selectedToolsets}
+                                      handleRetry={createRetryHandler(node, resultId)}
+                                    />
+                                  </div>
+                                ) : null,
+                              },
+                            ]),
+                      ];
+
+                      return (
+                        <div key={node.id} className="flex flex-col gap-2">
+                          {/* Agent Node Collapse */}
+                          <Collapse
+                            defaultActiveKey={[]}
+                            ghost
+                            onChange={(activeKeys) => {
+                              // Track when user expands agent node in run log
+                              if (Array.isArray(activeKeys) && activeKeys.includes('agent')) {
+                                // Add to expanded nodes for lazy loading
+                                agentNodesLazy.markAsRendered(node.id);
+
+                                if (canvasId) {
+                                  logEvent('runlog_agent_expand', null, {
+                                    canvasId,
+                                    nodeId: node.id,
+                                    resultId,
+                                  });
+                                }
+                              }
+                            }}
+                            expandIcon={({ isActive }) => (
+                              <ArrowDown
+                                size={14}
+                                className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
+                              />
+                            )}
+                            expandIconPosition="end"
+                            className="agent-node-collapse [&_.ant-collapse-item]:!border-0 [&_.ant-collapse-header]:!bg-[#D9FFFE] [&_.ant-collapse-header]:!p-3 [&_.ant-collapse-header]:!rounded-lg [&_.ant-collapse-header]:!h-12 [&_.ant-collapse-content]:!bg-transparent [&_.ant-collapse-content]:!p-0 [&_.ant-collapse-content-box]:!p-0"
+                            items={[
+                              {
+                                key: 'agent',
+                                label: (
+                                  <div className="flex items-center justify-between w-full min-w-0">
+                                    <div
+                                      title={agentTitle}
+                                      className="flex items-center flex-1 min-w-0 gap-1"
+                                    >
+                                      <AiChat size={20} className="flex-shrink-0" />
+                                      <span className="text-[#1C1F23] truncate font-inter font-medium text-sm leading-[1.5em] w-[180px]">
+                                        {agentTitle}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center flex-shrink-0 gap-3">
+                                      {/* Collapsed state: show different info based on status */}
+                                      {/* 
                                     - Not executed: Only show node name (no time, no credit)
                                     - Running: Show node name + execution time (real-time updates)
                                     - Finished/Failed: Show node name + execution time + credit usage
                                     Note: Node name is always shown on the left side
                                   */}
-                                    {isNotExecuted ? null : ( // Not executed: Only show node name (nothing else)
-                                      <div className="flex items-center gap-2 text-[10px] leading-[1.4em] font-normal">
-                                        {/* Running state: Show execution time */}
-                                        {isExecuting && executionTime && (
-                                          <span className="text-[rgba(28,31,35,0.35)]">
-                                            {executionTime}
-                                          </span>
-                                        )}
-                                        {/* Finished/Failed state: Show execution time + credit usage */}
-                                        {(isFinished || isFailed) && (
-                                          <>
-                                            <NodeCreditUsage
-                                              resultId={resultId}
-                                              version={version}
-                                              enabled={!!resultId && (isFinished || isFailed)}
-                                            />
+                                      {isNotExecuted ? null : ( // Not executed: Only show node name (nothing else)
+                                        <div className="flex items-center gap-2 text-[10px] leading-[1.4em] font-normal">
+                                          {/* Running state: Show execution time */}
+                                          {isExecuting && executionTime && (
+                                            <span className="text-[rgba(28,31,35,0.35)]">
+                                              {executionTime}
+                                            </span>
+                                          )}
+                                          {/* Finished/Failed state: Show execution time + credit usage */}
+                                          {(isFinished || isFailed) && (
+                                            <>
+                                              <NodeCreditUsage
+                                                resultId={resultId}
+                                                version={version}
+                                                enabled={!!resultId && (isFinished || isFailed)}
+                                              />
 
-                                            {executionTime && (
-                                              <span className="text-[rgba(28,31,35,0.35)]">
-                                                {executionTime}
-                                              </span>
-                                            )}
-                                          </>
-                                        )}
+                                              {executionTime && (
+                                                <span className="text-[rgba(28,31,35,0.35)]">
+                                                  {executionTime}
+                                                </span>
+                                              )}
+                                            </>
+                                          )}
+                                        </div>
+                                      )}
+                                      {getStatusIcon()}
+                                    </div>
+                                  </div>
+                                ),
+                                children: (
+                                  <>
+                                    {agentNodesLazy.shouldRender(node.id) && (
+                                      <div className="overflow-hidden bg-transparent border-[0.5px] border-solid border-[rgba(0,0,0,0.14)] rounded-lg mt-[10px] w-[calc(100%-8px)] mx-auto">
+                                        <Collapse
+                                          defaultActiveKey={
+                                            isNotExecuted
+                                              ? ['input'] // Not executed: Only show input area (expanded)
+                                              : isExecuting
+                                                ? ['output'] // Running: Input area (collapsed) + Output area (expanded with streaming)
+                                                : [] // Finished/Failed: Input area (collapsed) + Output area (collapsed)
+                                          }
+                                          ghost
+                                          onChange={(activeKeys) => {
+                                            // Track expanded panels for lazy loading
+                                            if (Array.isArray(activeKeys)) {
+                                              if (activeKeys.includes('input')) {
+                                                inputPanelsLazy.markAsRendered(node.id);
+                                              }
+                                              if (activeKeys.includes('output')) {
+                                                outputPanelsLazy.markAsRendered(node.id);
+
+                                                if (canvasId) {
+                                                  logEvent('agent_output_select', null, {
+                                                    canvasId,
+                                                    nodeId: node.id,
+                                                    resultId,
+                                                  });
+                                                }
+                                              }
+                                            }
+                                          }}
+                                          expandIcon={({ isActive }) => (
+                                            <ArrowDown
+                                              size={14}
+                                              className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
+                                            />
+                                          )}
+                                          expandIconPosition="end"
+                                          className="workflow-run-preview-collapse"
+                                          items={collapseItems}
+                                        />
                                       </div>
                                     )}
-                                    {getStatusIcon()}
-                                  </div>
-                                </div>
-                              ),
-                              children: (
-                                <>
-                                  <div className="overflow-hidden bg-transparent border-[0.5px] border-solid border-[rgba(0,0,0,0.14)] rounded-lg mt-[10px] w-[calc(100%-8px)] mx-auto">
-                                    <Collapse
-                                      defaultActiveKey={
-                                        isNotExecuted
-                                          ? ['input'] // Not executed: Only show input area (expanded)
-                                          : isExecuting
-                                            ? ['output'] // Running: Input area (collapsed) + Output area (expanded with streaming)
-                                            : [] // Finished/Failed: Input area (collapsed) + Output area (collapsed)
-                                      }
-                                      ghost
-                                      onChange={(activeKeys) => {
-                                        // Track when user selects agent output panel
-                                        if (
-                                          Array.isArray(activeKeys) &&
-                                          activeKeys.includes('output') &&
-                                          canvasId
-                                        ) {
-                                          logEvent('agent_output_select', null, {
-                                            canvasId,
-                                            nodeId: node.id,
-                                            resultId,
-                                          });
-                                        }
-                                      }}
-                                      expandIcon={({ isActive }) => (
-                                        <ArrowDown
-                                          size={14}
-                                          className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
-                                        />
-                                      )}
-                                      expandIconPosition="end"
-                                      className="workflow-run-preview-collapse"
-                                      items={collapseItems}
-                                    />
-                                  </div>
-                                </>
-                              ),
-                            },
-                          ]}
-                        />
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
+                                  </>
+                                ),
+                              },
+                            ]}
+                          />
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              ))}
           </div>
         </div>
 
