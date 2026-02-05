@@ -139,27 +139,27 @@
       border-radius: 100px !important;
       border-width: 0.5px !important;
       padding: 0 16px !important;
-      background: var(--bg-control---refly-bg-control-z0, #F6F6F6) !important;
-      border: 0.5px solid var(--border---refly-Control-Border, #00000024) !important;
+      background: var(--refly-bg-control-z0) !important;
+      border: 0.5px solid var(--refly-Control-Border) !important;
       color: var(--refly-text-0) !important;
       font-size: 14px !important;
       font-weight: 400 !important;
       margin: 0 !important;
 
       &:hover {
-        background: var(--bg-control---refly-bg-control-z0, #F6F6F6) !important;
-        border-color: var(--border---refly-Control-Border, #00000024) !important;
+        background: var(--refly-bg-control-z0) !important;
+        border-color: var(--refly-Control-Border) !important;
         opacity: 0.8 !important;
       }
 
       &:focus {
-        background: var(--bg-control---refly-bg-control-z0, #F6F6F6) !important;
-        border-color: var(--border---refly-Control-Border, #00000024) !important;
+        background: var(--refly-bg-control-z0) !important;
+        border-color: var(--refly-Control-Border) !important;
       }
 
       &:disabled {
-        background: var(--bg-control---refly-bg-control-z0, #F6F6F6) !important;
-        border-color: var(--border---refly-Control-Border, #00000024) !important;
+        background: var(--refly-bg-control-z0) !important;
+        border-color: var(--refly-Control-Border) !important;
         opacity: 0.5 !important;
       }
     }
@@ -170,108 +170,32 @@
       height: 32px !important;
       border-radius: 100px !important;
       padding: 0 16px !important;
-      background: var(--text-icon-refly-text-0, #1C1F23) !important;
+      background: var(--refly-text-0) !important;
       border: none !important;
-      color: white !important;
+      color: var(--refly-bg-body-z0) !important;
       font-size: 14px !important;
       font-weight: 400 !important;
       margin: 0 !important;
 
       &:hover {
-        background: var(--text-icon-refly-text-0, #1C1F23) !important;
+        background: var(--refly-text-0) !important;
         opacity: 0.8 !important;
       }
 
       &:focus {
-        background: var(--text-icon-refly-text-0, #1C1F23) !important;
+        background: var(--refly-text-0) !important;
       }
 
       &:disabled {
-        background: var(--text-icon-refly-text-0, #1C1F23) !important;
+        background: var(--refly-text-0) !important;
         opacity: 0.5 !important;
       }
 
       &.ant-btn-loading {
-        background: var(--text-icon-refly-text-0, #1C1F23) !important;
+        background: var(--refly-text-0) !important;
 
         .ant-btn-loading-icon {
-          color: white !important;
-        }
-      }
-    }
-  }
-}
-
-// Integration docs modal button styles
-.deactivate-schedule-modal {
-  .ant-modal-footer {
-    display: flex !important;
-    gap: 12px !important;
-    justify-content: flex-end !important;
-    // Left button (Cancel) - light theme, tertiary type
-    .ant-btn:first-child {
-      width: 82px !important;
-      height: 32px !important;
-      border-radius: 100px !important;
-      border-width: 0.5px !important;
-      padding: 0 16px !important;
-      background: var(--bg-control---refly-bg-control-z0, #F6F6F6) !important;
-      border: 0.5px solid var(--border---refly-Control-Border, #00000024) !important;
-      color: var(--refly-text-0) !important;
-      font-size: 14px !important;
-      font-weight: 400 !important;
-      margin: 0 !important;
-
-      &:hover {
-        background: var(--bg-control---refly-bg-control-z0, #F6F6F6) !important;
-        border-color: var(--border---refly-Control-Border, #00000024) !important;
-        opacity: 0.8 !important;
-      }
-
-      &:focus {
-        background: var(--bg-control---refly-bg-control-z0, #F6F6F6) !important;
-        border-color: var(--border---refly-Control-Border, #00000024) !important;
-      }
-
-      &:disabled {
-        background: var(--bg-control---refly-bg-control-z0, #F6F6F6) !important;
-        border-color: var(--border---refly-Control-Border, #00000024) !important;
-        opacity: 0.5 !important;
-      }
-    }
-
-    // Right button (Deactivate) - solid theme, danger type
-    .ant-btn:last-child {
-      width: 103px !important;
-      height: 32px !important;
-      border-radius: 100px !important;
-      padding: 0 16px !important;
-      background: var(--text-icon-refly-text-0, #1C1F23) !important;
-      border: none !important;
-      color: white !important;
-      font-size: 14px !important;
-      font-weight: 400 !important;
-      margin: 0 !important;
-
-      &:hover {
-        background: var(--text-icon-refly-text-0, #1C1F23) !important;
-        opacity: 0.8 !important;
-      }
-
-      &:focus {
-        background: var(--text-icon-refly-text-0, #1C1F23) !important;
-      }
-
-      &:disabled {
-        background: var(--text-icon-refly-text-0, #1C1F23) !important;
-        opacity: 0.5 !important;
-      }
-
-      &.ant-btn-loading {
-        background: var(--text-icon-refly-text-0, #1C1F23) !important;
-
-        .ant-btn-loading-icon {
-          color: white !important;
+          color: var(--refly-bg-body-z0) !important;
         }
       }
     }
