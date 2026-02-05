@@ -391,10 +391,12 @@ export const WorkflowRunForm = ({
 
       // Check if we've reached the limit
       if (currentFileList.length >= maxCount) {
-        message.error(
-          t('canvas.workflow.variables.tooManyFiles', { max: maxCount }) ||
+        message.error({
+          content:
+            t('canvas.workflow.variables.tooManyFiles', { max: maxCount }) ||
             `Maximum ${maxCount} files allowed`,
-        );
+          key: 'too-many-files-error',
+        });
         return false;
       }
 
@@ -802,13 +804,17 @@ export const WorkflowRunForm = ({
             data-field-name={name}
             disabled={isFormDisabled}
             status={hasError ? 'error' : undefined}
+            showSearch={false}
+            maxTagCount="responsive"
             className={cn(
               '[&_.ant-select-selector]:!border-[#E5E5E5] [&_.ant-select-selector]:!rounded-xl',
               '[&_.ant-select-selector]:!px-3 [&_.ant-select-selector]:!min-h-[37px]',
-              '[&_.ant-select-selector]:!py-0 [&_.ant-select-selector]:!leading-[35px]',
+              isSingle
+                ? '[&_.ant-select-selector]:!py-0 [&_.ant-select-selector]:!leading-[35px]'
+                : '[&_.ant-select-selector]:!py-1',
               '[&_.ant-select-selector]:!text-sm [&_.ant-select-selector]:!text-[rgba(28,31,35,0.35)]',
               '[&_.ant-select-selection-placeholder]:!text-[rgba(28,31,35,0.35)]',
-              '[&_.ant-select-selection-item]:!leading-[35px]',
+              isSingle && '[&_.ant-select-selection-item]:!leading-[35px]',
               isFormDisabled
                 ? '[&_.ant-select-selection-item]:!text-[rgba(28,31,35,0.35)]'
                 : '[&_.ant-select-selection-item]:!text-[#1C1F23]',

@@ -265,7 +265,52 @@ export class ToolIdentifyService {
       };
     }
 
-    // No record found anywhere
+    // Step 4: Fallback to static inventory if no database records found
+    // This handles tools registered in code but not yet in database
+    const inventoryItem = await this.inventoryService.getInventoryItem(toolsetKey);
+
+    if (inventoryItem) {
+      // If it has a class definition → legacy_sdk
+      if (inventoryItem.class) {
+        return {
+          type: 'legacy_sdk',
+          toolsetKey,
+        };
+      }
+
+      // If it has a definition without class → determine from authPatterns
+      if (inventoryItem.definition) {
+        const { authPatterns, type } = inventoryItem.definition;
+
+        // Check authPatterns for OAuth tools
+        if (authPatterns && authPatterns.length > 0) {
+          const authType = authPatterns[0]?.type;
+          if (authType === 'oauth') {
+            return {
+              type: 'composio_oauth',
+              toolsetKey,
+            };
+          }
+          // Could add support for other auth types here if needed
+        }
+
+        // Check definition.type for external tools
+        if (type === 'external_oauth') {
+          return {
+            type: 'composio_oauth',
+            toolsetKey,
+          };
+        }
+
+        // Default to config_based for other types
+        return {
+          type: 'config_based',
+          toolsetKey,
+        };
+      }
+    }
+
+    // No record found anywhere (neither database nor static inventory)
     throw new ToolsetNotFoundError(`Toolset not found: ${toolsetKey}`);
   }
 }

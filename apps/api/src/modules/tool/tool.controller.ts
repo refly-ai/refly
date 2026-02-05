@@ -144,15 +144,18 @@ export class ToolController {
     @Req() req: Request,
   ): Promise<ExecuteToolResponse> {
     // Extract PTC context from headers
-    const ptcCallId = req.headers['x-ptc-call-id'] as string | undefined;
-    const resultId = req.headers['x-refly-result-id'] as string | undefined;
-    const versionStr = req.headers['x-refly-result-version'] as string | undefined;
+    const headers = req?.headers ?? {};
+    const ptcCallId = headers?.['x-ptc-call-id'] as string | undefined;
+    const resultId = headers?.['x-refly-result-id'] as string | undefined;
+    const versionStr = headers?.['x-refly-result-version'] as string | undefined;
+    const canvasId = headers?.['x-refly-canvas-id'] as string | undefined;
     const version = versionStr ? Number.parseInt(versionStr, 10) : undefined;
 
     const result = await this.toolExecutionService.executeTool(user, request, {
       ptcCallId,
       resultId,
       version,
+      canvasId,
     });
     return buildSuccessResponse(result);
   }

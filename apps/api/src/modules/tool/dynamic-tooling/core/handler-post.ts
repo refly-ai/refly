@@ -12,6 +12,7 @@ import type {
 } from '@refly/openapi-schema';
 import type { BillingService } from '../../billing/billing.service';
 import { ResourceHandler } from '../../utils';
+import { MissingCanvasContextError } from '../../errors/resource-errors';
 
 /**
  * Configuration for base post-handler
@@ -91,6 +92,8 @@ export function createBasePostHandler(
 
       // Step 2: Upload resources using ResourceHandler
       if (resourceHandler && context.responseSchema) {
+        // Note: Resource processing errors (e.g., missing canvasId) are not caught here
+        // and will propagate to the caller, which is the correct behavior
         processedResponse = await resourceHandler.persistOutputResources(
           processedResponse,
           request,
@@ -103,11 +106,15 @@ export function createBasePostHandler(
 
       return processedResponse;
     } catch (error) {
+      // Re-throw resource-related errors instead of swallowing them
+      if (error instanceof MissingCanvasContextError) {
+        throw error;
+      }
       logger.error(
         `Post-processing failed for ${request.method}: ${(error as Error).message}`,
         (error as Error).stack,
       );
-      // Return original response if post-processing fails
+      // Return original response if post-processing fails (for non-critical errors)
       return response;
     }
   };

@@ -152,7 +152,10 @@ export async function withLifecycleRetry<T extends ISandboxWrapper>(
       onRetry: (err) => {
         const error = err as SandboxLifecycleException;
         errors.push(error.message);
-        logger.warn({ error: error.message }, `Sandbox ${operation} attempt failed`);
+        logger.warn(
+          { error: error.message, sandboxId: error.sandboxId },
+          `Sandbox ${operation} attempt failed`,
+        );
         if (error.sandboxId) {
           onFailed?.(error.sandboxId, error);
         }

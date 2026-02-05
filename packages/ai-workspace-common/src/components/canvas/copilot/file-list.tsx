@@ -82,7 +82,7 @@ export const FileList = memo(
         {/* Left gradient mask + circular arrow button */}
         {showLeftArrow && (
           <div
-            className="absolute left-0 top-0 h-full w-10 flex items-center justify-start cursor-pointer z-10"
+            className="absolute left-[-10px] top-0 h-full w-10 flex items-center justify-start cursor-pointer z-10"
             style={{
               background:
                 'linear-gradient(90deg, rgba(255,255,255,1) 40%, rgba(255,255,255,0) 100%)',
@@ -96,7 +96,11 @@ export const FileList = memo(
         )}
 
         {/* Scrollable file cards container - pt-2 to prevent close button clipping */}
-        <div ref={scrollRef} className="flex gap-2 overflow-x-auto p-2 scrollbar-hide -m-2">
+        <div
+          ref={scrollRef}
+          className="flex gap-2 overflow-x-auto p-2 -m-2 [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {fileItems
             .slice()
             .reverse()
@@ -119,7 +123,7 @@ export const FileList = memo(
         {/* Right gradient mask + circular arrow button */}
         {showRightArrow && (
           <div
-            className="absolute right-0 top-0 h-full w-10 flex items-center justify-end cursor-pointer z-10"
+            className="absolute right-[-10px] top-0 h-full w-10 flex items-center justify-end cursor-pointer z-10"
             style={{
               background:
                 'linear-gradient(270deg, rgba(255,255,255,1) 40%, rgba(255,255,255,0) 100%)',

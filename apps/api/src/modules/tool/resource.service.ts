@@ -33,6 +33,7 @@ import {
   getToolName,
   getToolsetKey,
 } from './tool-context';
+import { MissingCanvasContextError } from './errors/resource-errors';
 
 /**
  * Error thrown when resource value is neither a valid fileId nor a public URL
@@ -895,6 +896,11 @@ export class ResourceHandler {
       const user = getCurrentUser();
       const canvasId = getCanvasId();
 
+      // Validate required context
+      if (!canvasId) {
+        throw new MissingCanvasContextError();
+      }
+
       // Handle Buffer type
       if (Buffer.isBuffer(value)) {
         return await this.uploadBufferResource(user, canvasId, value, fileName);
@@ -1089,7 +1095,7 @@ export class ResourceHandler {
     const { canvasId, toolsetKey, toolName, content, resultId, resultVersion } = options;
 
     if (!canvasId) {
-      return null;
+      throw new MissingCanvasContextError();
     }
 
     try {

@@ -476,7 +476,7 @@ export function enhanceToolSchema(schema: JsonSchema): EnhancedSchemaResult {
  * This field guides the AI to generate descriptive filenames for tool outputs
  * @param schema - Schema to enhance with file_name_title field (mutates in place)
  */
-function addFileNameTitleField(schema: JsonSchema): void {
+export function addFileNameTitleField(schema: JsonSchema): void {
   // Ensure properties object exists
   if (!schema.properties) {
     schema.properties = {};

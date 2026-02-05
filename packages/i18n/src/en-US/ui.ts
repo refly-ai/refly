@@ -4557,7 +4557,7 @@ const translations = {
       bestPracticesCommentOutput: '4) Fetch output',
       authTitle: 'Authentication',
       authDescription:
-        'All API requests require an API Key in the HTTP header for authentication.\\n\\n**How to get an API Key**:\\n1. Go to the Integration page in Refly workspace\\n2. Click the "API Key" tab\\n3. Create a new API Key and keep it secure',
+        'All API requests require an API Key in the HTTP header for authentication.\\n\\n**How to get an API Key**:\\n\\n1. Visit https://refly.ai/workspace and enter any workflow.\\n\\n   ![Enter Workflow Example](https://static.refly.ai/static/20260205-114458.jpeg)\\n\\n2. Click the "Integration" button in the top right corner.\\n\\n   ![Click Integration Button Example](https://static.refly.ai/static/screenshot-20260205-114520.png)\\n\\n3. Click the "API Key" tab, then click "Create new API Key" and keep it secure.\\n\\n   ![Create API Key Example](https://static.refly.ai/static/screenshot-20260205-114548.png)\\n\\n**Header Example**:',
       authUsageTitle: 'Usage',
       authHeaderField: 'Header Field',
       authHeaderValue: 'Header Value',
@@ -4759,6 +4759,13 @@ const translations = {
     docsTitle: 'Webhook API Docs',
     docsSubtitle:
       'Trigger the current canvas workflow via Webhook and track executions in Run History.',
+    howToEnableTitle: 'How to Enable Webhook',
+    howToEnableStepsTitle: 'Steps to get Webhook URL',
+    howToEnableStep1: '1. Visit https://refly.ai/workspace and enter any workflow.',
+    howToEnableStep2: '2. Click the "Integration" button in the top right corner.',
+    howToEnableStep3:
+      '3. Click the "Webhook" tab at the top, then toggle the Enable switch at the top.',
+    howToEnableStep4: '4. Copy the generated Webhook URL for integration.',
     navTitle: 'Integrations',
     navSkill: 'Skill',
     navApi: 'API',
