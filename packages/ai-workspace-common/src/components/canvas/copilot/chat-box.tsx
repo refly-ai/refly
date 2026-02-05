@@ -294,7 +294,7 @@ export const ChatBox = memo(
 
     return (
       <div
-        className="w-full p-3 rounded-xl overflow-hidden border-[0.5px] border-solid border-[rgba(0,0,0,0.1)] bg-[rgba(255,255,255,0.9)]"
+        className="w-full p-3 rounded-xl overflow-hidden border-[0.5px] border-solid border-refly-Card-Border bg-refly-bg-content-z2"
         style={{
           boxShadow: '0px 5px 30px 0px rgba(31,35,41,0.05), 0px 0px 2px 0px rgba(31,35,41,0.04)',
         }}
