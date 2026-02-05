@@ -6,7 +6,6 @@ import { FileUploadController } from './controllers/file-upload.controller';
 import { OpenapiConfigController } from './controllers/openapi-config.controller';
 import { OpenapiCopilotController } from './controllers/openapi-copilot.controller';
 import { OpenapiWorkflowsController } from './controllers/openapi-workflows.controller';
-import { OpenapiShareController } from './controllers/openapi-share.controller';
 import { ApiKeyAuthGuard } from './guards/api-key-auth.guard';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { DebounceGuard } from './guards/debounce.guard';
@@ -19,7 +18,6 @@ import { WorkflowAppModule } from '../workflow-app/workflow-app.module';
 import { CanvasModule } from '../canvas/canvas.module';
 import { MiscModule } from '../misc/misc.module';
 import { CopilotAutogenModule } from '../copilot-autogen/copilot-autogen.module';
-import { ShareModule } from '../share/share.module';
 
 /**
  * OpenAPI Module
@@ -46,7 +44,6 @@ import { ShareModule } from '../share/share.module';
     WorkflowAppModule,
     CanvasModule,
     CopilotAutogenModule,
-    ShareModule,
   ],
   controllers: [
     WorkflowApiController,
@@ -54,7 +51,6 @@ import { ShareModule } from '../share/share.module';
     FileUploadController,
     OpenapiConfigController,
     OpenapiCopilotController,
-    OpenapiShareController,
     // Future: AccountApiController,
     // Future: StorageApiController,
     // Future: KnowledgeApiController,

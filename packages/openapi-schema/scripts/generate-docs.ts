@@ -1069,7 +1069,9 @@ const main = () => {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, fileContent);
 
-  writeDocs({ endpoints, errorCodes, baseUrl });
+  // For documentation, use full production URL
+  const docsBaseUrl = 'https://api.refly.ai/v1';
+  writeDocs({ endpoints, errorCodes, baseUrl: docsBaseUrl });
 };
 
 main();
