@@ -8,6 +8,8 @@ import { ApiKeyService } from '../../auth/api-key.service';
 export interface PtcEnvVars {
   REFLY_TOOL_SERVICE_API_URL: string;
   REFLY_TOOL_SERVICE_API_KEY: string;
+  REFLY_PTC_DEBUG: string;
+  REFLY_CANVAS_ID: string;
   REFLY_RESULT_ID?: string;
   REFLY_RESULT_VERSION?: string;
   REFLY_PTC_CALL_ID?: string;
@@ -47,22 +49,18 @@ export class PtcEnvService {
    * @param req - Sandbox execute request containing context
    */
   async getPtcEnvVars(user: User, req: SandboxExecuteRequest): Promise<PtcEnvVars> {
-    const { parentResultId: resultId, version, toolCallId } = req.context ?? {};
-
-    // Context tracking environment variables
-    const contextEnvVars: Partial<PtcEnvVars> = {
-      ...(resultId && { REFLY_RESULT_ID: resultId }),
-      ...(version !== undefined && { REFLY_RESULT_VERSION: String(version) }),
-      ...(toolCallId && { REFLY_PTC_CALL_ID: toolCallId }),
-    };
-
     const toolServiceApiUrl = this.endpoint.replace('localhost', 'host.docker.internal');
     const toolServiceApiKey = await this.getOrCreateApiKey(user.uid);
+    const isPtcDebugEnabled = this.config.get<string>('ptc.debug') === 'true';
 
     return {
-      ...contextEnvVars,
       REFLY_TOOL_SERVICE_API_URL: toolServiceApiUrl,
       REFLY_TOOL_SERVICE_API_KEY: toolServiceApiKey,
+      REFLY_PTC_DEBUG: String(isPtcDebugEnabled),
+      REFLY_CANVAS_ID: req.context?.canvasId ?? undefined,
+      REFLY_RESULT_ID: req.context?.parentResultId ?? undefined,
+      REFLY_RESULT_VERSION: req.context?.version ? String(req.context?.version) : undefined,
+      REFLY_PTC_CALL_ID: req.context?.toolCallId ?? undefined,
     };
   }
 

@@ -19,6 +19,7 @@ import { createBasePostHandler } from './handler-post';
 import { createBasePreHandler } from './handler-pre';
 import { ResourceHandler } from '../../utils';
 import type { BillingService } from '../../billing/billing.service';
+import { MissingCanvasContextError } from '../../errors/resource-errors';
 
 /**
  * Base handler interface
@@ -150,7 +151,11 @@ abstract class BaseHandler implements IHandler {
             `Post-handler failed: ${(error as Error).message}`,
             (error as Error).stack,
           );
-          // Don't fail the request if post-handler fails, just log it
+          // Re-throw critical errors (e.g., missing canvasId for resource upload)
+          if (error instanceof MissingCanvasContextError) {
+            throw error;
+          }
+          // Don't fail the request if post-handler fails (for non-critical errors), just log it
           // The API call was successful, so we should return the response
         }
       }
