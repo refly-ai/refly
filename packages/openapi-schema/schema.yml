@@ -8,7 +8,7 @@ info:
 externalDocs:
   url: https://refly.ai
 servers:
-  - url: /v1
+  - url: https://api.refly.ai/v1
 tags:
   - name: auth
     description: Authentication endpoints
@@ -3333,6 +3333,126 @@ paths:
         '404':
           description: Workflow execution not found
           x-i18n-description: integration.api.openapi.workflowAbort.response404
+      security:
+        - bearerAuth: []
+        - api_key: []
+
+  /openapi/share/workflow/{canvasId}:
+    post:
+      tags:
+        - workflow
+      summary: Create workflow share via API
+      x-i18n-summary: integration.api.openapi.workflowShare.summary
+      description: Create a share link for a workflow. The canvasId can be obtained from the browser URL.
+      x-i18n-description: integration.api.openapi.workflowShare.description
+      operationId: createWorkflowShareViaApi
+      parameters:
+        - name: canvasId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Canvas/Workflow ID
+          x-i18n-description: integration.api.openapi.workflowShare.paramCanvasId
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenapiCreateWorkflowShareRequest'
+      responses:
+        '200':
+          description: Workflow share created successfully
+          x-i18n-description: integration.api.openapi.workflowShare.response200
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenapiCreateWorkflowShareResponse'
+        '401':
+          description: Unauthorized - invalid or missing API key
+          x-i18n-description: integration.api.openapi.workflowShare.response401
+        '404':
+          description: Workflow not found
+          x-i18n-description: integration.api.openapi.workflowShare.response404
+      security:
+        - bearerAuth: []
+        - api_key: []
+
+  /openapi/share/workflow/{shareId}:
+    delete:
+      tags:
+        - workflow
+      summary: Delete workflow share via API
+      x-i18n-summary: integration.api.openapi.workflowShareDelete.summary
+      description: Delete a workflow share by shareId
+      x-i18n-description: integration.api.openapi.workflowShareDelete.description
+      operationId: deleteWorkflowShareViaApi
+      parameters:
+        - name: shareId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Share ID
+          x-i18n-description: integration.api.openapi.workflowShareDelete.paramShareId
+      responses:
+        '200':
+          description: Workflow share deleted successfully
+          x-i18n-description: integration.api.openapi.workflowShareDelete.response200
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+        '401':
+          description: Unauthorized - invalid or missing API key
+          x-i18n-description: integration.api.openapi.workflowShareDelete.response401
+        '404':
+          description: Share not found
+          x-i18n-description: integration.api.openapi.workflowShareDelete.response404
+      security:
+        - bearerAuth: []
+        - api_key: []
+
+  /openapi/share/workflow/{shareId}/duplicate:
+    post:
+      tags:
+        - workflow
+      summary: Duplicate shared workflow via API
+      x-i18n-summary: integration.api.openapi.workflowShareDuplicate.summary
+      description: Duplicate a shared workflow to your account. The shareId can be obtained from the share URL.
+      x-i18n-description: integration.api.openapi.workflowShareDuplicate.description
+      operationId: duplicateWorkflowShareViaApi
+      parameters:
+        - name: shareId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Share ID
+          x-i18n-description: integration.api.openapi.workflowShareDuplicate.paramShareId
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenapiDuplicateWorkflowShareRequest'
+      responses:
+        '200':
+          description: Workflow duplicated successfully
+          x-i18n-description: integration.api.openapi.workflowShareDuplicate.response200
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenapiDuplicateWorkflowShareResponse'
+        '401':
+          description: Unauthorized - invalid or missing API key
+          x-i18n-description: integration.api.openapi.workflowShareDuplicate.response401
+        '403':
+          description: Duplication not allowed
+          x-i18n-description: integration.api.openapi.workflowShareDuplicate.response403
+        '404':
+          description: Share not found
+          x-i18n-description: integration.api.openapi.workflowShareDuplicate.response404
       security:
         - bearerAuth: []
         - api_key: []
@@ -8317,6 +8437,41 @@ components:
         canvasId:
           type: string
           description: Target canvas ID
+    OpenapiCreateWorkflowShareRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Share title (optional, defaults to workflow title)
+        allowDuplication:
+          type: boolean
+          description: Whether to allow others to duplicate this workflow
+          default: false
+    OpenapiCreateWorkflowShareResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/ShareRecord'
+              description: Created share record
+    OpenapiDuplicateWorkflowShareRequest:
+      type: object
+      properties:
+        canvasId:
+          type: string
+          description: Target canvas ID (optional, for duplicating into existing canvas)
+        title:
+          type: string
+          description: Title for the duplicated workflow (optional)
+    OpenapiDuplicateWorkflowShareResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Entity'
+              description: Duplicated entity
     CreateShareRequest:
       type: object
       required:

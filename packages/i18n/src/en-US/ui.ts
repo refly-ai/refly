@@ -4555,7 +4555,7 @@ const translations = {
       bestPracticesCommentOutput: '4) Fetch output',
       authTitle: 'Authentication',
       authDescription:
-        'All API requests require an API Key in the HTTP header for authentication.\\n\\n**How to get an API Key**:\\n1. Go to the Integration page in Refly workspace\\n2. Click the "API Key" tab\\n3. Create a new API Key and keep it secure',
+        'All API requests require an API Key in the HTTP header for authentication.\\n\\n**How to get an API Key**:\\n\\n1. Visit https://refly.ai/workspace and enter any workflow.\\n\\n   ![Enter Workflow Example](https://static.refly.ai/static/20260205-114458.jpeg)\\n\\n2. Click the "Integration" button in the top right corner.\\n\\n   ![Click Integration Button Example](https://static.refly.ai/static/screenshot-20260205-114520.png)\\n\\n3. Click the "API Key" tab, then click "Create new API Key" and keep it secure.\\n\\n   ![Create API Key Example](https://static.refly.ai/static/screenshot-20260205-114548.png)\\n\\n**Header Example**:',
       authUsageTitle: 'Usage',
       authHeaderField: 'Header Field',
       authHeaderValue: 'Header Value',

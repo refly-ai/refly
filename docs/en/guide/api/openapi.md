@@ -4,13 +4,29 @@
 
 Access Refly open capabilities via API, such as running workflows and fetching status/output.
 
-**Base URL**: `/v1`
+**Base URL**: `https://api.refly.ai/v1`
 
 ## Overview
 Refly API provides RESTful endpoints for programmatically running workflows, uploading files, querying execution status, and more. All API requests require authentication via API Key.
 
 ## Authentication
-All API requests require an API Key in the HTTP header for authentication.\n\n**How to get an API Key**:\n1. Go to the Integration page in Refly workspace\n2. Click the "API Key" tab\n3. Create a new API Key and keep it secure
+All API requests require an API Key in the HTTP header for authentication.
+
+**How to get an API Key**:
+
+1. Visit https://refly.ai/workspace and enter any workflow.
+
+   ![Enter Workflow Example](https://static.refly.ai/static/20260205-114458.jpeg)
+
+2. Click the "Integration" button in the top right corner.
+
+   ![Click Integration Button Example](https://static.refly.ai/static/screenshot-20260205-114520.png)
+
+3. Click the "API Key" tab, then click "Create new API Key" and keep it secure.
+
+   ![Create API Key Example](https://static.refly.ai/static/screenshot-20260205-114548.png)
+
+**Header Example**:
 
 `Authorization: Bearer YOUR_API_KEY`
 
@@ -401,6 +417,151 @@ Copilot workflow generation request.
 | message | string | Yes | Readable error message |
 | error | string | Yes | Error type |
 | modelResponse | string | No | Original AI response (may be empty, length-limited) |
+
+### Other
+
+<a id="api-endpoint-createWorkflowShareViaApi"></a>
+#### POST /openapi/share/workflow/{canvasId}
+
+**Create workflow share via API**
+
+Create a share link for a workflow. The canvasId can be obtained from the browser URL.
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| canvasId | path | string | Yes | Canvas/Workflow ID |
+
+**Request Body**
+
+**Request Body Fields**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| title | string | No | Share title (optional, defaults to workflow title) |
+| allowDuplication | boolean | No | Whether to allow others to duplicate this workflow |
+
+**Request Body Example**
+
+```json
+{
+  "title": "string",
+  "allowDuplication": false
+}
+```
+
+**Responses**
+
+| Status | Description |
+| --- | --- |
+| 200 | Workflow share created successfully |
+| 401 | Unauthorized - invalid or missing API key |
+| 404 | Workflow not found |
+
+**Response Fields (200)**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| success | boolean | Yes | Whether the operation was successful |
+| errCode | string | No | Error code |
+| errMsg | string | No | Error message |
+| traceId | string | No | Trace ID |
+| stack | string | No | Error stack (only returned in development environment) |
+| data | object | No | - |
+| data.shareId | string | Yes | Share ID |
+| data.title | string | No | Share title |
+| data.entityType | enum(document \| resource \| canvas \| share \| user \| project \| skillResponse \| codeArtifact \| page \| mediaResult \| workflowApp \| driveFile) | Yes | Entity type |
+| data.entityId | string | Yes | Entity ID |
+| data.allowDuplication | boolean | No | Whether to allow duplication of the shared entity |
+| data.parentShareId | string | No | Parent share ID |
+| data.templateId | string | No | Canvas template ID |
+| data.createdAt | string | No | Create timestamp |
+| data.updatedAt | string | No | Update timestamp |
+
+<a id="api-endpoint-deleteWorkflowShareViaApi"></a>
+#### DELETE /openapi/share/workflow/{shareId}
+
+**Delete workflow share via API**
+
+Delete a workflow share by shareId
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| shareId | path | string | Yes | Share ID |
+
+**Responses**
+
+| Status | Description |
+| --- | --- |
+| 200 | Workflow share deleted successfully |
+| 401 | Unauthorized - invalid or missing API key |
+| 404 | Share not found |
+
+**Response Fields (200)**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| success | boolean | Yes | Whether the operation was successful |
+| errCode | string | No | Error code |
+| errMsg | string | No | Error message |
+| traceId | string | No | Trace ID |
+| stack | string | No | Error stack (only returned in development environment) |
+
+<a id="api-endpoint-duplicateWorkflowShareViaApi"></a>
+#### POST /openapi/share/workflow/{shareId}/duplicate
+
+**Duplicate shared workflow via API**
+
+Duplicate a shared workflow to your account. The shareId can be obtained from the share URL.
+
+**Parameters**
+
+| Name | In | Type | Required | Description |
+| --- | --- | --- | --- | --- |
+| shareId | path | string | Yes | Share ID |
+
+**Request Body**
+
+**Request Body Fields**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| canvasId | string | No | Target canvas ID (optional, for duplicating into existing canvas) |
+| title | string | No | Title for the duplicated workflow (optional) |
+
+**Request Body Example**
+
+```json
+{
+  "canvasId": "string",
+  "title": "string"
+}
+```
+
+**Responses**
+
+| Status | Description |
+| --- | --- |
+| 200 | Workflow duplicated successfully |
+| 401 | Unauthorized - invalid or missing API key |
+| 403 | Duplication not allowed |
+| 404 | Share not found |
+
+**Response Fields (200)**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| success | boolean | Yes | Whether the operation was successful |
+| errCode | string | No | Error code |
+| errMsg | string | No | Error message |
+| traceId | string | No | Trace ID |
+| stack | string | No | Error stack (only returned in development environment) |
+| data | object | No | Entity |
+| data.entityId | string | No | Entity ID |
+| data.entityType | enum(document \| resource \| canvas \| share \| user \| project \| skillResponse \| codeArtifact \| page \| mediaResult \| workflowApp \| driveFile) | No | Entity type |
 
 ## Error Codes
 Common error codes for webhook and API integrations.

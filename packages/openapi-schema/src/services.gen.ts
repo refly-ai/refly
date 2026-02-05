@@ -363,6 +363,15 @@ import type {
   AbortWorkflowViaApiData,
   AbortWorkflowViaApiError,
   AbortWorkflowViaApiResponse,
+  CreateWorkflowShareViaApiData,
+  CreateWorkflowShareViaApiError,
+  CreateWorkflowShareViaApiResponse,
+  DeleteWorkflowShareViaApiData,
+  DeleteWorkflowShareViaApiError,
+  DeleteWorkflowShareViaApiResponse,
+  DuplicateWorkflowShareViaApiData,
+  DuplicateWorkflowShareViaApiError,
+  DuplicateWorkflowShareViaApiResponse,
   GetSettingsError,
   GetSettingsResponse,
   UpdateSettingsData,
@@ -2526,6 +2535,57 @@ export const abortWorkflowViaApi = <ThrowOnError extends boolean = false>(
   >({
     ...options,
     url: '/openapi/workflow/{executionId}/abort',
+  });
+};
+
+/**
+ * Create workflow share via API
+ * Create a share link for a workflow. The canvasId can be obtained from the browser URL.
+ */
+export const createWorkflowShareViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<CreateWorkflowShareViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    CreateWorkflowShareViaApiResponse,
+    CreateWorkflowShareViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/share/workflow/{canvasId}',
+  });
+};
+
+/**
+ * Delete workflow share via API
+ * Delete a workflow share by shareId
+ */
+export const deleteWorkflowShareViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteWorkflowShareViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).delete<
+    DeleteWorkflowShareViaApiResponse,
+    DeleteWorkflowShareViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/share/workflow/{shareId}',
+  });
+};
+
+/**
+ * Duplicate shared workflow via API
+ * Duplicate a shared workflow to your account. The shareId can be obtained from the share URL.
+ */
+export const duplicateWorkflowShareViaApi = <ThrowOnError extends boolean = false>(
+  options: Options<DuplicateWorkflowShareViaApiData, ThrowOnError>,
+) => {
+  return (options?.client ?? client).post<
+    DuplicateWorkflowShareViaApiResponse,
+    DuplicateWorkflowShareViaApiError,
+    ThrowOnError
+  >({
+    ...options,
+    url: '/openapi/share/workflow/{shareId}/duplicate',
   });
 };
 

@@ -4,13 +4,29 @@
 
 通过 API 访问 Refly 的开放能力，如运行工作流、查询状态与结果等。
 
-**基础地址**: `/v1`
+**基础地址**: `https://api.refly.ai/v1`
 
 ## 概览
 Refly API 提供 RESTful 接口，支持以编程方式调用工作流、上传文件、查询执行状态等功能。所有 API 请求均需要通过 API Key 进行身份验证。
 
 ## 认证
-所有 API 请求都需要在 HTTP Header 中携带 API Key 进行身份验证。\n\n**如何获取 API Key**：\n1. 在 Refly 工作台中，进入「集成」页面\n2. 点击「API Key」标签\n3. 创建新的 API Key 并妥善保管
+所有 API 请求都需要在 HTTP Header 中携带 API Key 进行身份验证。
+
+**如何获取 API Key**：
+
+1. 访问 https://refly.ai/workspace 并进入任意一个工作流。
+
+   ![进入工作流示例图片](https://static.refly.ai/static/screenshot-20260205-112644.png)
+
+2. 点击右上角“集成”按钮。
+
+   ![点击集成按钮示例图片](https://static.refly.ai/static/screenshot-20260205-112430.png)
+
+3. 点击“API Key”标签页，点击“创建新的 API Key”按钮并妥善保管。
+
+   ![创建 API Key 示例图片](https://static.refly.ai/static/screenshot-20260205-112457.png)
+
+**请求头示例**：
 
 `Authorization: Bearer YOUR_API_KEY`
 
@@ -401,6 +417,151 @@ Copilot 工作流生成请求。
 | message | string | 是 | 错误信息（可读） |
 | error | string | 是 | 错误类型 |
 | modelResponse | string | 否 | AI 原始回复（可能为空，长度受限） |
+
+### 其他
+
+<a id="api-endpoint-createWorkflowShareViaApi"></a>
+#### POST /openapi/share/workflow/{canvasId}
+
+**Create workflow share via API**
+
+Create a share link for a workflow. The canvasId can be obtained from the browser URL.
+
+**参数**
+
+| 参数名 | 位置 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| canvasId | path | string | 是 | Canvas/Workflow ID |
+
+**请求体**
+
+**请求体字段**
+
+| 参数名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| title | string | 否 | Share title (optional, defaults to workflow title) |
+| allowDuplication | boolean | 否 | Whether to allow others to duplicate this workflow |
+
+**请求体示例**
+
+```json
+{
+  "title": "string",
+  "allowDuplication": false
+}
+```
+
+**响应**
+
+| 状态码 | 说明 |
+| --- | --- |
+| 200 | Workflow share created successfully |
+| 401 | Unauthorized - invalid or missing API key |
+| 404 | Workflow not found |
+
+**响应字段 (200)**
+
+| 参数名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| success | boolean | 是 | 是否成功 |
+| errCode | string | 否 | 错误码 |
+| errMsg | string | 否 | 错误信息 |
+| traceId | string | 否 | 追踪 ID |
+| stack | string | 否 | 错误堆栈（仅开发环境返回） |
+| data | object | 否 | - |
+| data.shareId | string | 是 | Share ID |
+| data.title | string | 否 | Share title |
+| data.entityType | enum(document \| resource \| canvas \| share \| user \| project \| skillResponse \| codeArtifact \| page \| mediaResult \| workflowApp \| driveFile) | 是 | Entity type |
+| data.entityId | string | 是 | Entity ID |
+| data.allowDuplication | boolean | 否 | Whether to allow duplication of the shared entity |
+| data.parentShareId | string | 否 | Parent share ID |
+| data.templateId | string | 否 | Canvas template ID |
+| data.createdAt | string | 否 | Create timestamp |
+| data.updatedAt | string | 否 | Update timestamp |
+
+<a id="api-endpoint-deleteWorkflowShareViaApi"></a>
+#### DELETE /openapi/share/workflow/{shareId}
+
+**Delete workflow share via API**
+
+Delete a workflow share by shareId
+
+**参数**
+
+| 参数名 | 位置 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| shareId | path | string | 是 | Share ID |
+
+**响应**
+
+| 状态码 | 说明 |
+| --- | --- |
+| 200 | Workflow share deleted successfully |
+| 401 | Unauthorized - invalid or missing API key |
+| 404 | Share not found |
+
+**响应字段 (200)**
+
+| 参数名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| success | boolean | 是 | 是否成功 |
+| errCode | string | 否 | 错误码 |
+| errMsg | string | 否 | 错误信息 |
+| traceId | string | 否 | 追踪 ID |
+| stack | string | 否 | 错误堆栈（仅开发环境返回） |
+
+<a id="api-endpoint-duplicateWorkflowShareViaApi"></a>
+#### POST /openapi/share/workflow/{shareId}/duplicate
+
+**Duplicate shared workflow via API**
+
+Duplicate a shared workflow to your account. The shareId can be obtained from the share URL.
+
+**参数**
+
+| 参数名 | 位置 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| shareId | path | string | 是 | Share ID |
+
+**请求体**
+
+**请求体字段**
+
+| 参数名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| canvasId | string | 否 | Target canvas ID (optional, for duplicating into existing canvas) |
+| title | string | 否 | Title for the duplicated workflow (optional) |
+
+**请求体示例**
+
+```json
+{
+  "canvasId": "string",
+  "title": "string"
+}
+```
+
+**响应**
+
+| 状态码 | 说明 |
+| --- | --- |
+| 200 | Workflow duplicated successfully |
+| 401 | Unauthorized - invalid or missing API key |
+| 403 | Duplication not allowed |
+| 404 | Share not found |
+
+**响应字段 (200)**
+
+| 参数名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| success | boolean | 是 | 是否成功 |
+| errCode | string | 否 | 错误码 |
+| errMsg | string | 否 | 错误信息 |
+| traceId | string | 否 | 追踪 ID |
+| stack | string | 否 | 错误堆栈（仅开发环境返回） |
+| data | object | 否 | Entity |
+| data.entityId | string | 否 | Entity ID |
+| data.entityType | enum(document \| resource \| canvas \| share \| user \| project \| skillResponse \| codeArtifact \| page \| mediaResult \| workflowApp \| driveFile) | 否 | Entity type |
 
 ## 错误码
 Webhook 与 API 集成常见错误码。

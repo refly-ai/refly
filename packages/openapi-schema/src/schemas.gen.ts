@@ -5037,6 +5037,69 @@ export const DuplicateCodeArtifactRequestSchema = {
   },
 } as const;
 
+export const OpenapiCreateWorkflowShareRequestSchema = {
+  type: 'object',
+  properties: {
+    title: {
+      type: 'string',
+      description: 'Share title (optional, defaults to workflow title)',
+    },
+    allowDuplication: {
+      type: 'boolean',
+      description: 'Whether to allow others to duplicate this workflow',
+      default: false,
+    },
+  },
+} as const;
+
+export const OpenapiCreateWorkflowShareResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/ShareRecord',
+          description: 'Created share record',
+        },
+      },
+    },
+  ],
+} as const;
+
+export const OpenapiDuplicateWorkflowShareRequestSchema = {
+  type: 'object',
+  properties: {
+    canvasId: {
+      type: 'string',
+      description: 'Target canvas ID (optional, for duplicating into existing canvas)',
+    },
+    title: {
+      type: 'string',
+      description: 'Title for the duplicated workflow (optional)',
+    },
+  },
+} as const;
+
+export const OpenapiDuplicateWorkflowShareResponseSchema = {
+  allOf: [
+    {
+      $ref: '#/components/schemas/BaseResponse',
+    },
+    {
+      type: 'object',
+      properties: {
+        data: {
+          $ref: '#/components/schemas/Entity',
+          description: 'Duplicated entity',
+        },
+      },
+    },
+  ],
+} as const;
+
 export const CreateShareRequestSchema = {
   type: 'object',
   required: ['entityType', 'entityId'],
