@@ -13,8 +13,8 @@ import { CopyAllDocsButton } from './components/copy-all-docs-button';
 import { apiDocsData } from './data/api-docs.generated';
 import type { IntegrationType } from './types';
 import { groupApiEndpoints } from './utils';
-import ApiKeyIcon from '../../../assets/key-01.svg';
-import OutputIcon from '../../../assets/target-04.svg';
+import { HiOutlineKey } from 'react-icons/hi';
+import { TbTargetArrow } from 'react-icons/tb';
 import './integration-docs-modal.scss';
 
 interface WebhookConfig {
@@ -494,19 +494,11 @@ export const IntegrationDocsModal = memo(
                   {activeIntegration === 'api' ? (
                     <>
                       <Button type="primary" onClick={() => setApiKeyModalOpen(true)}>
-                        <img
-                          src={ApiKeyIcon}
-                          alt=""
-                          className="w-4 h-4 mr-2 inline-block align-middle"
-                        />
+                        <HiOutlineKey />
                         {t('integration.manageApiKeys')}
                       </Button>
                       <Button onClick={() => setOutputModalOpen(true)}>
-                        <img
-                          src={OutputIcon}
-                          alt=""
-                          className="w-4 h-4 mr-2 inline-block align-middle"
-                        />
+                        <TbTargetArrow />
                         {t('integration.outputModal.button')}
                       </Button>
                     </>
