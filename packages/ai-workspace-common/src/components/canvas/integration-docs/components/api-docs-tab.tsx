@@ -27,18 +27,17 @@ interface ApiDocsTabProps {
 const tableClassName =
   'w-full border-collapse my-4 text-sm rounded-lg overflow-hidden border border-[var(--integration-docs-border,rgba(0,0,0,0.12))] bg-[var(--integration-docs-bg)] [&_tr:last-child_td]:border-b-0';
 const tableHeaderCellClassName =
-  'text-left px-3 py-2.5 border-b border-r border-[var(--integration-docs-border,rgba(0,0,0,0.12))] bg-[var(--integration-docs-bg-subtle)] font-medium text-[var(--integration-docs-text-1)] last:border-r-0';
+  'text-left px-3 py-2.5 border-b border-r border-[var(--integration-docs-border,rgba(0,0,0,0.12))] bg-[var(--integration-docs-bg-subtle)] font-medium text-refly-text-0 last:border-r-0';
 const tableCellClassName =
-  'text-left px-3 py-2.5 border-b border-r border-[var(--integration-docs-border,rgba(0,0,0,0.12))] text-[var(--integration-docs-text-2)] last:border-r-0';
+  'text-left px-3 py-2.5 border-b border-r border-[var(--integration-docs-border,rgba(0,0,0,0.12))] text-refly-text-1 last:border-r-0';
 const inlineCodeClassName =
   'bg-[var(--integration-docs-inline-code-bg)] px-1.5 py-0.5 rounded text-[13px] text-[var(--integration-docs-inline-code-text)]';
 const emptyStateClassName = 'text-[13px] text-[var(--integration-docs-text-3)] py-1.5';
-const sectionDescClassName =
-  'mt-2 mb-4 text-sm text-[var(--integration-docs-text-2)] leading-relaxed';
+const sectionDescClassName = 'mt-2 mb-4 text-sm text-refly-text-1 leading-relaxed';
 
 const MarkdownText = ({ content }: { content: string }) => (
   <ReactMarkdown
-    className="text-sm text-[var(--integration-docs-text-2)] leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0 [&_code]:bg-[var(--integration-docs-inline-code-bg)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[13px] [&_code]:text-[var(--integration-docs-inline-code-text)]"
+    className="text-sm text-refly-text-1 leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0 [&_code]:bg-[var(--integration-docs-inline-code-bg)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[13px] [&_code]:text-[var(--integration-docs-inline-code-text)]"
     remarkPlugins={[RemarkBreaks, remarkGfm]}
   >
     {content}
@@ -96,7 +95,7 @@ const renderResponses = (endpoint: ApiEndpoint, t: (key: string) => string) => {
         key={`${endpoint.id}-${status}-fields`}
         className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]"
       >
-        <div className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
+        <div className="text-xs font-semibold text-refly-text-1 tracking-[0.2px] mb-1.5">
           {`${t('integration.api.responseFieldsTitle')} (${status})`}
         </div>
         <table className={tableClassName}>
@@ -132,7 +131,7 @@ const renderResponses = (endpoint: ApiEndpoint, t: (key: string) => string) => {
   return (
     <div className="flex flex-col gap-3">
       <div className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]">
-        <div className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
+        <div className="text-xs font-semibold text-refly-text-1 tracking-[0.2px] mb-1.5">
           {t('integration.api.responseStatusTitle')}
         </div>
         <table className={tableClassName}>
@@ -165,7 +164,7 @@ const renderResponses = (endpoint: ApiEndpoint, t: (key: string) => string) => {
         responseFields
       ) : (
         <div className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]">
-          <div className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
+          <div className="text-xs font-semibold text-refly-text-1 tracking-[0.2px] mb-1.5">
             {t('integration.api.responseFieldsTitle')}
           </div>
           <div className={emptyStateClassName}>{t('integration.api.noResponseFields')}</div>
@@ -181,7 +180,7 @@ const renderResponses = (endpoint: ApiEndpoint, t: (key: string) => string) => {
             key={`${endpoint.id}-${status}-example`}
             className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]"
           >
-            <div className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
+            <div className="text-xs font-semibold text-refly-text-1 tracking-[0.2px] mb-1.5">
               {`${t('integration.api.responseExample')} (${status})`}
             </div>
             <CodeExample language="json" code={display} />
@@ -297,26 +296,26 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[814px] pb-6">
+    <div className="mx-auto w-full max-w-[814px] pt-6">
       <div className="mb-8">
-        <h2 className="text-[22px] md:text-[28px] font-semibold text-[var(--integration-docs-text-1)] mb-2">
+        <h2 className="text-[22px] md:text-[28px] font-semibold text-refly-text-0 mb-2">
           {t('integration.api.title')}
         </h2>
-        <p className="m-0 text-[15px] text-[var(--integration-docs-text-2)] leading-relaxed">
+        <p className="m-0 text-[15px] text-refly-text-1 leading-relaxed">
           {t('integration.api.description')}
         </p>
       </div>
 
       <section id="api-overview" className="mb-10 scroll-mt-6 last:mb-0">
-        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+        <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
           {t('integration.api.overviewTitle')}
         </h3>
-        <div className="-mt-1 mb-4 text-sm text-[var(--integration-docs-text-2)] leading-relaxed">
+        <div className="-mt-1 mb-4 text-sm text-refly-text-1 leading-relaxed">
           <MarkdownText content={t('integration.api.overviewDescription')} />
         </div>
         <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-sm font-semibold text-[var(--integration-docs-text-1)]">
+            <span className="text-sm font-semibold text-refly-text-0">
               {t('integration.api.baseUrl')}:
             </span>
             <code className="text-sm bg-[var(--integration-docs-inline-code-bg)] px-2 py-1 rounded text-[var(--integration-docs-inline-code-text)]">
@@ -327,16 +326,16 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
       </section>
 
       <section id="api-authentication" className="mb-10 scroll-mt-6 last:mb-0">
-        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+        <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
           {t('integration.api.authTitle')}
         </h3>
         <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
-          <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-3">
+          <h4 className="text-sm font-semibold text-refly-text-0 mb-3">
             {t('integration.api.authUsageTitle')}
           </h4>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-[var(--integration-docs-text-2)] min-w-[80px]">
+              <span className="text-sm text-refly-text-1 min-w-[80px]">
                 {t('integration.api.authHeaderField')}:
               </span>
               <code className="text-sm bg-[var(--integration-docs-inline-code-bg)] px-2 py-1 rounded text-[var(--integration-docs-inline-code-text)]">
@@ -344,7 +343,7 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
               </code>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-[var(--integration-docs-text-2)]">
+              <span className="text-sm text-refly-text-1">
                 {t('integration.api.authHeaderValue')}:
               </span>
               <code className="text-sm bg-[var(--integration-docs-inline-code-bg)] px-2 py-1 rounded text-[var(--integration-docs-inline-code-text)]">
@@ -361,14 +360,14 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
       </section>
 
       <section id="api-best-practices" className="mb-10 scroll-mt-6 last:mb-0">
-        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+        <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
           {t('integration.api.bestPracticesTitle')}
         </h3>
-        <div className="-mt-1 mb-4 text-sm text-[var(--integration-docs-text-2)] leading-relaxed">
+        <div className="-mt-1 mb-4 text-sm text-refly-text-1 leading-relaxed">
           <MarkdownText content={t('integration.api.bestPracticesDescription')} />
         </div>
         <div className="mt-3">
-          <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
+          <h4 className="text-sm font-semibold text-refly-text-0 mb-2">
             {t('integration.api.bestPracticesExamplesTitle')}
           </h4>
           <Tabs
@@ -413,7 +412,7 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
       </section>
 
       <section id="api-endpoints" className="mb-10 scroll-mt-6 last:mb-0">
-        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+        <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
           {t('integration.api.endpointsTitle')}
         </h3>
         <p className={sectionDescClassName}>{t('integration.api.endpointsDescription')}</p>
@@ -424,7 +423,7 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
             id={`api-endpoints-${group.key}`}
             className={groupIndex === 0 ? 'mt-5' : 'mt-8'}
           >
-            <h4 className="text-[15px] font-semibold text-[var(--integration-docs-text-1)] mb-3 ml-1">
+            <h4 className="text-[15px] font-semibold text-refly-text-0 mb-3 ml-1">
               {t(`integration.api.endpointGroups.${group.key}`)}
             </h4>
             {group.endpoints.map((endpoint) => {
@@ -477,9 +476,9 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                 <article
                   key={endpoint.id}
                   id={endpointAnchorId}
-                  className="border border-[var(--integration-docs-border)] rounded-xl mb-8 last:mb-0 overflow-hidden bg-[var(--integration-docs-bg)] shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+                  className="rounded-xl mb-8 last:mb-0 overflow-hidden "
                 >
-                  <div className="flex items-center gap-3 px-5 py-4 bg-[var(--integration-docs-bg-subtle)] border-b border-[var(--integration-docs-border)]">
+                  <div className="flex items-center gap-3 px-5 py-4">
                     <span
                       className={`px-2.5 py-1 rounded text-xs font-semibold uppercase ${
                         endpoint.method.toLowerCase() === 'get'
@@ -493,12 +492,10 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                     >
                       {endpoint.method}
                     </span>
-                    <span className="font-mono text-sm text-[var(--integration-docs-text-1)]">
-                      {endpoint.path}
-                    </span>
+                    <span className="font-mono text-sm text-refly-text-0">{endpoint.path}</span>
                   </div>
                   <div className="p-5">
-                    <div className="text-base font-semibold text-[var(--integration-docs-text-1)] mb-2">
+                    <div className="text-base font-semibold text-refly-text-0 mb-2">
                       {endpoint.summaryKey ? t(endpoint.summaryKey) : endpoint.summary}
                     </div>
                     {(() => {
@@ -506,21 +503,21 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                         ? t(endpoint.descriptionKey)
                         : endpoint.description;
                       return text ? (
-                        <div className="text-sm text-[var(--integration-docs-text-2)] leading-relaxed mb-4">
+                        <div className="text-sm text-refly-text-1 leading-relaxed mb-4">
                           <MarkdownText content={text} />
                         </div>
                       ) : null;
                     })()}
 
                     <div className="mt-5 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
-                      <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
+                      <h4 className="text-sm font-semibold text-refly-text-0 mb-2">
                         {t('integration.api.parametersTitle')}
                       </h4>
                       {renderParameters(endpoint, t)}
                     </div>
 
                     <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
-                      <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
+                      <h4 className="text-sm font-semibold text-refly-text-0 mb-2">
                         {t('integration.api.requestBodyTitle')}
                       </h4>
                       {endpoint.requestBody ? (
@@ -536,13 +533,13 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                             ) : null;
                           })()}
                           <div className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]">
-                            <h5 className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
+                            <h5 className="text-xs font-semibold text-refly-text-1 tracking-[0.2px] mb-1.5">
                               {t('integration.api.requestBodyFieldsTitle')}
                             </h5>
                             {renderRequestBodyFields(endpoint, t)}
                           </div>
                           <div className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]">
-                            <h5 className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
+                            <h5 className="text-xs font-semibold text-refly-text-1 tracking-[0.2px] mb-1.5">
                               {t('integration.api.requestBodyExampleTitle')}
                             </h5>
                             {requestDisplay ? (
@@ -565,14 +562,14 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
                     </div>
 
                     <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
-                      <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
+                      <h4 className="text-sm font-semibold text-refly-text-0 mb-2">
                         {t('integration.api.responsesTitle')}
                       </h4>
                       {renderResponses(endpoint, t)}
                     </div>
 
                     <div className="mt-4 rounded-lg border border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] px-4 py-3">
-                      <h4 className="text-sm font-semibold text-[var(--integration-docs-text-1)] mb-2">
+                      <h4 className="text-sm font-semibold text-refly-text-0 mb-2">
                         {t('integration.api.codeExamplesTitle')}
                       </h4>
                       <Tabs
@@ -623,7 +620,7 @@ export const ApiDocsTab = memo(({ canvasId }: ApiDocsTabProps) => {
       </section>
 
       <section id="api-errors" className="mb-10 scroll-mt-6 last:mb-0">
-        <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+        <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
           {t('integration.api.errorsTitle')}
         </h3>
         <p className={sectionDescClassName}>{t('integration.api.errorsDescription')}</p>

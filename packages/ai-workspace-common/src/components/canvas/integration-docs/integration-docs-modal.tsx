@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Button, Switch, message } from 'antd';
+import { Modal, Button, Switch, message, Divider } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import { FaCode } from 'react-icons/fa6';
 import { FiCommand } from 'react-icons/fi';
@@ -144,12 +144,12 @@ export const IntegrationDocsModal = memo(
 
     const getItemClassName = (level: number) => {
       if (level === 0) {
-        return 'text-left border-0 rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-2 text-[13px]';
+        return 'text-left border-0 rounded-md cursor-pointer transition-colors duration-150 text-refly-text-1 hover:bg-[var(--integration-docs-hover-bg)] hover:text-refly-text-0 leading-[1.4] px-2.5 py-2 text-[13px]';
       }
       if (level === 1) {
-        return 'text-left border-0 rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-1.5 text-xs';
+        return 'text-left border-0 rounded-md cursor-pointer transition-colors duration-150 text-refly-text-1 hover:bg-[var(--integration-docs-hover-bg)] hover:text-refly-text-0 leading-[1.4] px-2.5 py-1.5 text-xs';
       }
-      return 'text-left border-0 rounded-md cursor-pointer transition-colors duration-150 text-[var(--integration-docs-text-2)] hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] leading-[1.4] px-2.5 py-1 text-[11px]';
+      return 'text-left border-0 rounded-md cursor-pointer transition-colors duration-150 text-refly-text-1 hover:bg-[var(--integration-docs-hover-bg)] hover:text-refly-text-0 leading-[1.4] px-2.5 py-1 text-[11px]';
     };
 
     const getGroupClassName = (level: number) =>
@@ -165,9 +165,7 @@ export const IntegrationDocsModal = memo(
                 type="button"
                 onClick={() => handleSectionSelect(section.id)}
                 className={`${getItemClassName(level)} ${
-                  isActive
-                    ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
-                    : ''
+                  isActive ? 'bg-refly-fill-hover text-refly-text-0 font-medium' : ''
                 }`}
               >
                 <span className="text-[14px] text-refly-text-0">{section.label}</span>
@@ -445,16 +443,16 @@ export const IntegrationDocsModal = memo(
         >
           <div className="flex flex-row h-full w-full bg-[var(--integration-docs-bg)] overflow-hidden">
             {/* Left sidebar - Integration navigation */}
-            <aside className="hidden lg:flex w-[262px] py-5 px-4 border-r border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg-subtle)] flex-shrink-0 flex-col overflow-y-auto overflow-x-hidden">
+            <aside className="hidden lg:flex w-[262px] py-5 px-4 bg-[var(--integration-docs-bg-subtle)] flex-shrink-0 flex-col overflow-y-auto overflow-x-hidden">
               <div className="text-[16px] font-medium text-refly-text-0 uppercase tracking-wide mb-4 px-2.5">
                 {t('integration.navTitle')}
               </div>
               <div className="flex flex-col gap-1">
                 <button
                   type="button"
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 text-sm text-refly-text-1 text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-refly-text-0 ${
                     activeIntegration === 'skill'
-                      ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
+                      ? 'bg-[var(--integration-docs-hover-bg)] text-refly-text-0 font-medium'
                       : ''
                   }`}
                   onClick={() => handleIntegrationChange('skill')}
@@ -464,9 +462,9 @@ export const IntegrationDocsModal = memo(
                 </button>
                 <button
                   type="button"
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 text-sm text-refly-text-1 text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-refly-text-0 ${
                     activeIntegration === 'api'
-                      ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
+                      ? 'bg-[var(--integration-docs-hover-bg)] text-refly-text-0 font-medium'
                       : ''
                   }`}
                   onClick={() => handleIntegrationChange('api')}
@@ -476,9 +474,9 @@ export const IntegrationDocsModal = memo(
                 </button>
                 <button
                   type="button"
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 text-sm text-[var(--integration-docs-text-2)] text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-[var(--integration-docs-text-1)] ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-0 text-sm text-refly-text-1 text-left cursor-pointer transition-colors duration-150 hover:bg-[var(--integration-docs-hover-bg)] hover:text-refly-text-0 ${
                     activeIntegration === 'webhook'
-                      ? 'bg-[var(--integration-docs-hover-bg)] text-[var(--integration-docs-text-1)] font-medium'
+                      ? 'bg-[var(--integration-docs-hover-bg)] text-refly-text-0 font-medium'
                       : ''
                   }`}
                   onClick={() => handleIntegrationChange('webhook')}
@@ -491,46 +489,52 @@ export const IntegrationDocsModal = memo(
               </div>
             </aside>
 
+            {/* Vertical divider */}
+            <div className="hidden lg:block w-[1px] bg-[var(--integration-docs-border)] flex-shrink-0" />
+
             {/* Right content area with toolbar, main content, and toc */}
             <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-              {/* Toolbar */}
-              <div className="flex items-center justify-between py-3 px-4 md:px-6 border-b border-[var(--integration-docs-border)] bg-[var(--integration-docs-toolbar-bg)] backdrop-blur-[8px] flex-shrink-0 z-[3]">
-                <div className="flex items-center gap-3">
-                  {activeIntegration === 'api' ? (
-                    <>
-                      <Button type="primary" onClick={() => setApiKeyModalOpen(true)}>
-                        <HiOutlineKey />
-                        {t('integration.manageApiKeys')}
-                      </Button>
-                      <Button onClick={() => setOutputModalOpen(true)}>
-                        <TbTargetArrow />
-                        {t('integration.outputModal.button')}
-                      </Button>
-                    </>
-                  ) : activeIntegration === 'webhook' ? (
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-[var(--integration-docs-text-1)]">
-                        {t('webhook.enableWebhook')}
-                      </span>
-                      <Switch
-                        checked={webhookConfig?.isEnabled || false}
-                        loading={webhookToggling}
-                        onChange={handleToggleWebhook}
-                        disabled={webhookLoading}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex items-center gap-3">
-                  <CopyAllDocsButton activeIntegration={activeIntegration} canvasId={canvasId} />
-                  <Button type="text" icon={<CloseOutlined />} onClick={onClose} />
-                </div>
-              </div>
-
               {/* Content area with main and toc */}
               <div className="flex flex-1 min-h-0 overflow-hidden">
                 {/* Main content area */}
                 <main className="flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden">
+                  {/* Toolbar */}
+                  <div className="flex items-center justify-between py-3 px-4 md:px-6">
+                    <div className="flex items-center gap-3">
+                      {activeIntegration === 'api' ? (
+                        <>
+                          <Button type="primary" onClick={() => setApiKeyModalOpen(true)}>
+                            <HiOutlineKey />
+                            {t('integration.manageApiKeys')}
+                          </Button>
+                          <Button onClick={() => setOutputModalOpen(true)}>
+                            <TbTargetArrow />
+                            {t('integration.outputModal.button')}
+                          </Button>
+                        </>
+                      ) : activeIntegration === 'webhook' ? (
+                        <div className="flex items-center gap-3">
+                          <span className="text-[16px] font-semibold text-refly-text-0">
+                            {t('webhook.enableWebhook')}
+                          </span>
+                          <Switch
+                            checked={webhookConfig?.isEnabled || false}
+                            loading={webhookToggling}
+                            onChange={handleToggleWebhook}
+                            disabled={webhookLoading}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CopyAllDocsButton
+                        activeIntegration={activeIntegration}
+                        canvasId={canvasId}
+                      />
+                    </div>
+                  </div>
+                  <Divider className="m-0" />
+
                   {/* Scrollable content */}
                   <div
                     ref={contentRef}
@@ -540,10 +544,14 @@ export const IntegrationDocsModal = memo(
                   </div>
                 </main>
 
+                {/* Vertical divider */}
+                <div className="hidden lg:block w-[1px] bg-[var(--integration-docs-border)] flex-shrink-0" />
+
                 {/* Right sidebar - Table of contents */}
-                <aside className="hidden lg:flex flex-col w-[284px] py-5 px-4 border-l border-[var(--integration-docs-border)] bg-[var(--integration-docs-bg)] flex-shrink-0 overflow-y-auto overflow-x-hidden">
-                  <div className="text-[14px] font-medium text-refly-text-2 uppercase tracking-wide mb-4 px-2.5">
+                <aside className="hidden lg:flex flex-col w-[284px] p-4 bg-[var(--integration-docs-bg)] flex-shrink-0 overflow-y-auto overflow-x-hidden">
+                  <div className="text-[14px] font-medium text-refly-text-2 uppercase tracking-wide flex justify-between items-center pb-2">
                     {t('integration.contents')}
+                    <Button type="text" icon={<CloseOutlined />} onClick={onClose} />
                   </div>
                   <nav>{renderTocList(sections)}</nav>
                 </aside>

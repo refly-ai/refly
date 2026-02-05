@@ -31,18 +31,17 @@ interface WebhookDocsTabProps {
 const tableClassName =
   'w-full border-collapse my-4 text-sm rounded-lg overflow-hidden border border-[var(--integration-docs-border,rgba(0,0,0,0.12))] bg-[var(--integration-docs-bg)] [&_tr:last-child_td]:border-b-0';
 const tableHeaderCellClassName =
-  'text-left px-3 py-2.5 border-b border-r border-[var(--integration-docs-border,rgba(0,0,0,0.12))] bg-[var(--integration-docs-bg-subtle)] font-medium text-[var(--integration-docs-text-1)] last:border-r-0';
+  'text-left px-3 py-2.5 border-b border-r border-[var(--integration-docs-border,rgba(0,0,0,0.12))] bg-[var(--integration-docs-bg-subtle)] font-medium text-refly-text-0 last:border-r-0';
 const tableCellClassName =
-  'text-left px-3 py-2.5 border-b border-r border-[var(--integration-docs-border,rgba(0,0,0,0.12))] text-[var(--integration-docs-text-2)] last:border-r-0';
+  'text-left px-3 py-2.5 border-b border-r border-[var(--integration-docs-border,rgba(0,0,0,0.12))] text-refly-text-1 last:border-r-0';
 const inlineCodeClassName =
   'bg-[var(--integration-docs-inline-code-bg)] px-1.5 py-0.5 rounded text-[13px] text-[var(--integration-docs-inline-code-text)]';
 const emptyStateClassName = 'text-[13px] text-[var(--integration-docs-text-3)] py-1.5';
-const sectionDescClassName =
-  'mt-2 mb-4 text-sm text-[var(--integration-docs-text-2)] leading-relaxed';
+const sectionDescClassName = 'mt-2 mb-4 text-sm text-refly-text-1 leading-relaxed';
 
 const MarkdownText = ({ content }: { content: string }) => (
   <ReactMarkdown
-    className="text-sm text-[var(--integration-docs-text-2)] leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0 [&_code]:bg-[var(--integration-docs-inline-code-bg)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[13px] [&_code]:text-[var(--integration-docs-inline-code-text)]"
+    className="text-sm text-refly-text-1 leading-relaxed [&_p]:mb-3 [&_p:last-child]:mb-0 [&_code]:bg-[var(--integration-docs-inline-code-bg)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[13px] [&_code]:text-[var(--integration-docs-inline-code-text)]"
     remarkPlugins={[RemarkBreaks, remarkGfm]}
   >
     {content}
@@ -182,12 +181,12 @@ print(response.json())`;
 .then(data => console.log(data));`;
 
     return (
-      <div className="mx-auto w-full max-w-[814px]">
+      <div className="mx-auto w-full max-w-[814px] pt-6">
         <div className="mb-8">
-          <h2 className="text-[22px] md:text-[28px] font-semibold text-[var(--integration-docs-text-1)] mb-2">
+          <h2 className="text-[22px] md:text-[28px] font-semibold text-refly-text-0 mb-2">
             {t('webhook.docsTitle')}
           </h2>
-          <p className="m-0 text-[15px] text-[var(--integration-docs-text-2)] leading-relaxed">
+          <p className="m-0 text-[15px] text-refly-text-1 leading-relaxed">
             {t('webhook.docsSubtitle')}
           </p>
         </div>
@@ -201,7 +200,7 @@ print(response.json())`;
               viewBox="0 0 89 89"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="w-[88px] h-[88px] mb-6 text-[var(--integration-docs-text-1)]"
+              className="w-[88px] h-[88px] mb-6 text-refly-text-0"
             >
               <path
                 d="M49.5033 16.9563C43.1755 13.3029 35.0841 15.471 31.4308 21.7988C28.1514 27.4788 29.5626 34.5797 34.4624 38.6164C35.4023 39.3907 35.7797 40.7263 35.1708 41.7809L26.2863 57.1694"
@@ -236,7 +235,7 @@ print(response.json())`;
           <>
             {/* Webhook URL */}
             <section id="webhook-url" className="mb-10 scroll-mt-6 last:mb-0">
-              <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+              <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
                 {t('webhook.url')}
               </h3>
               <div className="flex gap-2">
@@ -264,7 +263,7 @@ print(response.json())`;
 
             {/* Request Body */}
             <section id="webhook-request-body" className="mb-10 scroll-mt-6 last:mb-0">
-              <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+              <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
                 {t('integration.api.requestBodyTitle')}
               </h3>
               {webhookEndpoint?.requestBody?.schema ? (
@@ -281,7 +280,7 @@ print(response.json())`;
                     ) : null;
                   })()}
                   <div className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]">
-                    <h5 className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
+                    <h5 className="text-xs font-semibold text-refly-text-1 tracking-[0.2px] mb-1.5">
                       {t('integration.api.requestBodyFieldsTitle')}
                     </h5>
                     {requestBodyFields.length ? (
@@ -328,7 +327,7 @@ print(response.json())`;
                     )}
                   </div>
                   <div className="mt-3 pl-3 border-l-2 border-[var(--integration-docs-border)]">
-                    <h5 className="text-xs font-semibold text-[var(--integration-docs-text-2)] tracking-[0.2px] mb-1.5">
+                    <h5 className="text-xs font-semibold text-refly-text-1 tracking-[0.2px] mb-1.5">
                       {t('integration.api.requestBodyExampleTitle')}
                     </h5>
                     <CodeExample language="json" code={payloadJson} />
@@ -341,7 +340,7 @@ print(response.json())`;
 
             {/* File Upload */}
             <section id="webhook-file-upload" className="mb-10 scroll-mt-6 last:mb-0">
-              <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+              <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
                 {t('integration.sections.fileUpload')}
               </h3>
               <p className={sectionDescClassName}>{t('webhook.fileUploadDescription')}</p>
@@ -356,7 +355,7 @@ print(response.json())`;
 
             {/* Code Examples */}
             <section id="webhook-examples" className="mb-10 scroll-mt-6 last:mb-0">
-              <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+              <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
                 {t('webhook.examples')}
               </h3>
               <Tabs
@@ -383,10 +382,10 @@ print(response.json())`;
 
             {/* Usage Instructions */}
             <section id="webhook-instructions" className="mb-10 scroll-mt-6 last:mb-0">
-              <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+              <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
                 {t('webhook.instructions')}
               </h3>
-              <ul className="list-disc list-inside space-y-2 text-sm text-[var(--integration-docs-text-2)]">
+              <ul className="list-disc list-inside space-y-2 text-sm text-refly-text-1">
                 <li>{t('webhook.instruction1')}</li>
                 <li>{t('webhook.instruction2')}</li>
                 <li>{t('webhook.instruction3')}</li>
@@ -395,7 +394,7 @@ print(response.json())`;
 
             {/* Error Codes */}
             <section id="webhook-errors" className="mb-10 scroll-mt-6 last:mb-0">
-              <h3 className="text-lg font-semibold text-[var(--integration-docs-text-1)] mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
+              <h3 className="text-lg font-semibold text-refly-text-0 mb-4 pb-2 border-b border-[var(--integration-docs-border)]">
                 {t('integration.sections.errors')}
               </h3>
               <p className={sectionDescClassName}>{t('integration.api.errorsDescription')}</p>
