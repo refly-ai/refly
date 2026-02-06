@@ -42,6 +42,10 @@ const sidebar = {
           text: 'Self Deploy',
           link: '/community-version/self-deploy/',
         },
+        {
+          text: 'FAQ: Accessing via IP address',
+          link: '/community-version/self-deploy/faq-ip-access',
+        },
       ],
     },
     {
@@ -102,6 +106,10 @@ const sidebar = {
         {
           text: '私有部署',
           link: '/zh/community-version/self-deploy/',
+        },
+        {
+          text: 'FAQ：通过 IP 地址访问',
+          link: '/zh/community-version/self-deploy/faq-ip-access',
         },
       ],
     },

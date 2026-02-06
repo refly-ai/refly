@@ -51,6 +51,10 @@ If you need to generate image/audio/video, please get your own key from https://
 TOOLSET_FAL_API_KEY=your_fal_api_key
 ```
 
+#### 2.3. Accessing via IP address {#ip-access-section}
+
+If you are deploying on a cloud server and accessing it via an IP address, please refer to the [Accessing via IP address](./faq-ip-access.md) for environment variable settings.
+
 ### 3. Start the application via docker compose {#start-the-application-via-docker-compose}
 
 ```bash
