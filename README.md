@@ -350,7 +350,7 @@ The skill is now available in Claude Code, Cursor, and MCP-powered workflows. Ag
 
 ### Use Case 4: Build Clawdbot
 
-📖 **Tutorial**: <a href="https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf"><u>Build Clawdbot Tutorial</u></a> 
+📖 **Tutorial**: <a href="https://powerformer.feishu.cn/wiki/Gz4swMzn0izknZki3g4coSgvnNe"><u>Build Clawdbot Tutorial</u></a> 
 
 ***
 
