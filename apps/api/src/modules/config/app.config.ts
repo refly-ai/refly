@@ -104,7 +104,7 @@ export default () => ({
     redirectUrl: process.env.LOGIN_REDIRECT_URL,
     cookie: {
       domain: process.env.REFLY_COOKIE_DOMAIN,
-      secure: process.env.REFLY_COOKIE_SECURE,
+      secure: process.env.REFLY_COOKIE_SECURE === 'true' || false,
       sameSite: process.env.REFLY_COOKIE_SAME_SITE,
     },
     jwt: {

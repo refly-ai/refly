@@ -240,7 +240,7 @@ refly skill publish <skill-id>
 
 <a id="build-a-clawdbot"></a>
 ### 使用场景 4：构建 ClawdBot
-📖 **使用教程**：<a href="https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf"><u>ClawdBot教程</u></a> 
+📖 **使用教程**：<a href="https://powerformer.feishu.cn/wiki/Gz4swMzn0izknZki3g4coSgvnNe"><u>ClawdBot教程</u></a> 
 
 ---
 
