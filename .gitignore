@@ -27,7 +27,6 @@ common/deploy/
 common/temp/
 common/autoinstallers/*/.npmrc
 **/.rush/temp/
-*.lock
 *.log
 *.chunks.jsonl
 
