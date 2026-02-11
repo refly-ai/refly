@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "refly-api.fullname" . }}
+  labels:
+    {{- include "refly-api.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ .Values.podLabels.app | quote }}
+  ports:
+    {{- toYaml .Values.service.ports | nindent 4 }}

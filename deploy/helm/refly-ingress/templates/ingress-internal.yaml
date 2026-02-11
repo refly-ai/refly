@@ -1,0 +1,31 @@
+{{- if .Values.internal.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.internal.name | quote }}
+  labels:
+    {{- include "refly-ingress.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.internal.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.internal.ingressClassName | quote }}
+  rules:
+    {{- range $rule := .Values.internal.rules }}
+    - host: {{ $rule.host | quote }}
+      http:
+        paths:
+          {{- range $p := $rule.paths }}
+          - pathType: {{ $p.pathType }}
+            path: {{ $p.path | quote }}
+            backend:
+              service:
+                name: {{ $p.backend.service.name | quote }}
+                port:
+                  number: {{ $p.backend.service.portNumber }}
+          {{- end }}
+    {{- end }}
+  {{- with .Values.internal.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

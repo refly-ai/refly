@@ -1,0 +1,101 @@
+nameOverride: ""
+fullnameOverride: ""
+
+public:
+  enabled: true
+  name: refly-ingress
+  ingressClassName: nginx
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$proxy_add_x_forwarded_for"
+    nginx.ingress.kubernetes.io/enable-websocket: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  tls: []
+  rules:
+    - host: refly.powerformer.net
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: refly-web
+              portNumber: 80
+    - host: refly-api.powerformer.net
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: refly-api
+              portNumber: 3000
+    - host: refly-collab.powerformer.net
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: refly-api
+              portNumber: 1234
+    - host: refly-mkt.powerformer.net
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: refly-mkt
+              portNumber: 3000
+    - host: admin.powerformer.net
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: refly-admin
+              portNumber: 3000
+    - host: litellm.powerformer.net
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: litellm
+              portNumber: 4000
+    - host: box.powerformer.net
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: refly-testbox
+              portNumber: 80
+
+internal:
+  enabled: true
+  name: refly-ingress-internal
+  ingressClassName: nginx-internal
+  annotations:
+    kubernetes.io/ingress.class: "nginx-internal"
+    cert-manager.io/cluster-issuer: "letsencrypt-test"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$proxy_add_x_forwarded_for"
+    nginx.ingress.kubernetes.io/enable-websocket: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  rules:
+    - host: box-internal.powerformer.net
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: refly-testbox
+              portNumber: 80
+  tls:
+    - hosts:
+        - powerformer.net
+        - "*.powerformer.net"
+      secretName: refly-tls

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: refly-ingress
+description: Refly ingress (test) - public and internal Ingress resources
+type: application
+version: 0.1.0
+appVersion: "1"
