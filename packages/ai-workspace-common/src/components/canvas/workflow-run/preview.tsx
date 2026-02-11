@@ -1,5 +1,5 @@
 import { Segmented, Collapse, Skeleton, message } from 'antd';
-import { memo, useState, useMemo, useEffect, useCallback } from 'react';
+import { memo, useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLazyCollapse } from '@refly-packages/ai-workspace-common/components/common/lazy-collapse';
 import { ArrowDown, CheckCircleBroken, AiChat, Cancelled, Subscription } from 'refly-icons';
@@ -377,14 +377,35 @@ const WorkflowRunPreviewComponent = () => {
     return result;
   }, [nodes, edges]);
 
-  // Fetch action results for all nodes
+  // Track in-flight fetch requests to prevent duplicate concurrent requests.
+  // Only tracks requests while they're in progress; released on completion (success or failure).
+  // This is needed because skillResponseNodes changes reference frequently (due to node data
+  // updates, layout changes, etc.), causing this effect to re-fire repeatedly.
+  const fetchingRef = useRef<Set<string>>(new Set());
+
+  // Fetch action results for nodes that have been executed (not 'init' status)
   useEffect(() => {
     for (const node of skillResponseNodes) {
       const resultId = node.data?.entityId;
-      if (resultId && !resultMap[resultId]) {
-        // Fetch result if not already in store
-        fetchActionResult(resultId, { silent: true, nodeToUpdate: node });
+      const nodeStatus = node.data?.metadata?.status;
+
+      // Skip nodes that haven't been executed yet - no action result exists on the backend
+      if (!resultId || nodeStatus === 'init') {
+        continue;
       }
+
+      // Skip if already in store or a fetch is currently in-flight
+      if (resultMap[resultId] || fetchingRef.current.has(resultId)) {
+        continue;
+      }
+
+      fetchingRef.current.add(resultId);
+      fetchActionResult(resultId, { silent: true, nodeToUpdate: node }).finally(() => {
+        // Release on completion so that:
+        // - On success: resultMap[resultId] becomes truthy, naturally preventing re-fetch
+        // - On failure: allows retry on next effect trigger (e.g., status change, re-run)
+        fetchingRef.current.delete(resultId);
+      });
     }
   }, [skillResponseNodes, resultMap, fetchActionResult]);
 
