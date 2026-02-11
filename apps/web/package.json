@@ -15,6 +15,7 @@
     "analyze:chunks": "node scripts/analyze-chunks.cjs"
   },
   "dependencies": {
+    "@ant-design/cssinjs": "^1.23.0",
     "@refly/stores": "workspace:*",
     "@refly/telemetry-web": "workspace:*",
     "@refly/ui-kit": "workspace:*",

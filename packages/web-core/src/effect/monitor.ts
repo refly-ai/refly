@@ -18,7 +18,13 @@ export const setupSentry = async () => {
       environment: envTag || getEnv(),
       integrations: [
         Sentry.browserTracingIntegration(),
-        Sentry.replayIntegration(),
+        Sentry.replayIntegration({
+          // Block Ant Design CSS-in-JS <style> elements from rrweb serialization.
+          // These elements can be 72kb+ (grid system generates col-1~24 × all breakpoints),
+          // and rrweb's internal CSS text processing (em() function) has O(n²) complexity
+          // on large stylesheets, causing main-thread freezes on DOM mutations.
+          block: ['style[data-rc-order]'],
+        }),
         Sentry.reactRouterV6BrowserTracingIntegration({
           useEffect: React.useEffect,
           useLocation,

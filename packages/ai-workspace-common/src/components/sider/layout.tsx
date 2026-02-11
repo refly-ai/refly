@@ -90,24 +90,22 @@ const SiderSectionHeader = ({
     >
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <div className="flex-shrink-0 flex items-center">{icon}</div>
-        <span
-          className={cn(
-            'truncate transition-all duration-300',
-            isActive ? 'font-semibold' : 'font-normal',
-            collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto',
-          )}
-        >
-          {title}
-        </span>
+        {!collapsed && (
+          <span
+            className={cn(
+              'truncate transition-opacity duration-300',
+              isActive ? 'font-semibold' : 'font-normal',
+            )}
+          >
+            {title}
+          </span>
+        )}
       </div>
-      {actionIcon && onActionClick && (
+      {actionIcon && onActionClick && !collapsed && (
         <Button
           type="text"
           size="small"
-          className={cn(
-            'box-border px-1 text-refly-text-0 transition-opacity duration-200',
-            collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-0 group-hover:opacity-100',
-          )}
+          className="box-border px-1 text-refly-text-0 transition-opacity duration-200 opacity-0 group-hover:opacity-100"
           icon={actionIcon}
           onClick={(e) => {
             e.stopPropagation();

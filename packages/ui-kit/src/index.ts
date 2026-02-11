@@ -4,7 +4,7 @@ export { LightLoading } from './components/Loading';
 export { InlineLoading } from './components/InlineLoading';
 
 // Shared Provider
-export { ReflyConfigProvider } from './components/ConfigProvider';
+export { ReflyConfigProvider, cssinjsCache } from './components/ConfigProvider';
 
 // Shared store
 export { useConfigProviderStore } from './store/useConfigProviderStore';

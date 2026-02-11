@@ -7,6 +7,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
+    "@ant-design/cssinjs": "^1.23.0",
     "@ant-design/icons": "^5.5.2",
     "@refly/common-types": "workspace:*",
     "@refly/utils": "workspace:*",
