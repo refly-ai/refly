@@ -1,0 +1,64 @@
+replicaCount: 2
+
+image:
+  repository: 186593931982.dkr.ecr.us-east-1.amazonaws.com/refly-web
+  tag: nightly
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: refly-ecr
+
+nameOverride: ""
+fullnameOverride: ""
+
+podLabels:
+  app: refly-web
+
+podSecurityContext: {}
+securityContext: {}
+
+containerPort: 80
+
+env:
+  API_URL: "https://refly-api.powerformer.net"
+  COLLAB_URL: "https://refly-collab.powerformer.net"
+  STATIC_PUBLIC_ENDPOINT: "https://refly-api.powerformer.net/v1/misc/public"
+  STATIC_PRIVATE_ENDPOINT: "https://refly-api.powerformer.net/v1/misc"
+  SUBSCRIPTION_ENABLED: "true"
+  CANVAS_TEMPLATE_ENABLED: "true"
+  SENTRY_ENABLED: "true"
+  ENV_TAG: "test"
+
+resources:
+  limits:
+    cpu: "500m"
+    memory: "1Gi"
+  requests:
+    cpu: "50m"
+    memory: "128Mi"
+
+probes:
+  readiness:
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 10
+    periodSeconds: 5
+  liveness:
+    httpGet:
+      path: /
+      port: 80
+    initialDelaySeconds: 15
+    periodSeconds: 10
+
+deploymentStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 1
+minReadySeconds: 0
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80

@@ -67,8 +67,8 @@ jobs:
             echo "issue_ids=[]" >> "$GITHUB_OUTPUT"
           fi
 
-  deploy:
-    name: Deploy
+  build-push-images:
+    name: Build and Push Images
     runs-on: ubuntu-latest
     needs: linear-precheck
     if: github.repository == 'refly-ai/refly' && needs.linear-precheck.outputs.should_deploy == 'true'
@@ -178,28 +178,91 @@ jobs:
           build-args: |
             PUBLIC_CLOUDFLARE_SITE_KEY=${{ vars.TEST_PUBLIC_CLOUDFLARE_SITE_KEY }}
 
-      - name: Update kubeconfig for EKS cluster
+      - name: Persist image tag for sync job
         if: github.ref_name == 'main'
         run: |
-          aws eks update-kubeconfig --name ${{ vars.AWS_EKS_CLUSTER_TEST }} --region ${{ vars.AWS_REGION }}
+          echo "${{ steps.docker_tags.outputs.image_tag }}" > image_tag.txt
 
-      - name: Update API deployment image on EKS
-        if: matrix.app == 'api' && github.ref_name == 'main'
-        run: |
-          kubectl set image deployment/refly-api refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
-          kubectl rollout status deployment/refly-api -n refly-app --timeout=300s
+      - name: Upload image tag artifact
+        if: github.ref_name == 'main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-tag-${{ matrix.app }}
+          path: image_tag.txt
+          if-no-files-found: error
 
-      - name: Update Web deployment image on EKS
-        if: matrix.app == 'web' && github.ref_name == 'main'
+  sync-apps:
+    name: Sync App Values (PR)
+    runs-on: ubuntu-latest
+    needs: [linear-precheck, build-push-images]
+    if: github.repository == 'refly-ai/refly' && needs.linear-precheck.outputs.should_deploy == 'true' && github.ref_name == 'main'
+    steps:
+      - name: Download image tag artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Call Orbit sync API
+        env:
+          ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
+          ORBIT_API_KEY: ${{ secrets.ORBIT_API_KEY }}
         run: |
-          kubectl set image deployment/refly-web refly-web=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
-          kubectl rollout status deployment/refly-web -n refly-app --timeout=300s
+          set -euo pipefail
+
+          API_TAG=$(cat artifacts/image-tag-api/image_tag.txt)
+          WEB_TAG=$(cat artifacts/image-tag-web/image_tag.txt)
+
+          PAYLOAD=$(jq -n \
+            --arg environment "test" \
+            --arg syncMode "createPR" \
+            --arg apiTag "$API_TAG" \
+            --arg webTag "$WEB_TAG" \
+            '{
+              environment: $environment,
+              syncMode: $syncMode,
+              changes: [
+                {
+                  application: "refly-api",
+                  valuesContent: {"image": {"tag": $apiTag}}
+                },
+                {
+                  application: "refly-web",
+                  valuesContent: {"image": {"tag": $webTag}}
+                }
+              ]
+            }')
+
+          echo "Sync payload:" 
+          echo "$PAYLOAD" | jq .
+
+          RESPONSE=$(curl -fsS -X POST "$ORBIT_API_URL/api/app/sync" \
+            -H "Content-Type: application/json" \
+            -H "X-Orbit-API-Key: $ORBIT_API_KEY" \
+            -d "$PAYLOAD")
+
+          echo "Orbit sync response:"
+          echo "$RESPONSE" | jq .
+
+          # Validate JSON response
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.success // false')
+          if [ "$SUCCESS" != "true" ]; then
+            ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // .message // "Unknown error"')
+            echo "✗ Orbit sync failed: $ERROR_MSG"
+            exit 1
+          fi
+
+          PR_URL=$(echo "$RESPONSE" | jq -r '.data.prUrl // .data.pullRequestUrl // .data.url // empty')
+          if [ -n "$PR_URL" ]; then
+            echo "✓ Orbit sync succeeded: $PR_URL"
+          else
+            echo "✓ Orbit sync succeeded"
+          fi
 
   update-linear-status:
     name: Update Linear Issues to In Review
     runs-on: ubuntu-latest
-    needs: [linear-precheck, deploy]
-    if: success() && needs.linear-precheck.outputs.should_deploy == 'true'
+    needs: [linear-precheck, build-push-images, sync-apps]
+    if: success() && needs.linear-precheck.outputs.should_deploy == 'true' && github.ref_name == 'main'
     steps:
       - name: Update issue statuses to In Review
         env:

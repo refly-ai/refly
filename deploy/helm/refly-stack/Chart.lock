@@ -1,0 +1,18 @@
+dependencies:
+- name: refly-api
+  repository: file://../refly-api
+  version: 0.1.0
+- name: refly-web
+  repository: file://../refly-web
+  version: 0.1.0
+- name: refly-ingress
+  repository: file://../refly-ingress
+  version: 0.1.0
+- name: redis
+  repository: https://charts.bitnami.com/bitnami
+  version: 20.13.4
+- name: postgresql
+  repository: https://charts.bitnami.com/bitnami
+  version: 15.5.38
+digest: sha256:ff85cc4380b82052b06d9df9b2c06471c1194135adfe52cfff0ce77f9d855103
+generated: "2026-02-10T20:48:23.559256+08:00"

@@ -1,0 +1,32 @@
+apiVersion: v2
+name: refly-stack
+description: Refly stack (api, web, ingress) with optional redis and postgresql
+type: application
+version: 0.1.0
+
+dependencies:
+  - name: refly-api
+    version: 0.1.0
+    repository: "file://../refly-api"
+    condition: refly-api.enabled
+
+  - name: refly-web
+    version: 0.1.0
+    repository: "file://../refly-web"
+    condition: refly-web.enabled
+
+  - name: refly-ingress
+    version: 0.1.0
+    repository: "file://../refly-ingress"
+    condition: refly-ingress.enabled
+
+  # Optional in-cluster dependencies (primarily for test/dev)
+  - name: redis
+    version: "20.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+
+  - name: postgresql
+    version: "15.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled

@@ -1,0 +1,42 @@
+nameOverride: ""
+fullnameOverride: ""
+
+ingress:
+  enabled: true
+  name: refly-ingress
+  domain: example.com
+  ingressClassName: nginx
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$proxy_add_x_forwarded_for"
+    nginx.ingress.kubernetes.io/enable-websocket: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  tls: []
+  rules:
+    - subdomain: refly
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: refly-web
+              portNumber: 80
+    - subdomain: refly-api
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: refly-api
+              portNumber: 3000
+    - subdomain: refly-collab
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: refly-api
+              portNumber: 1234
