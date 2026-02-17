@@ -106,16 +106,16 @@ export class ScaleboxPauseProcessor extends WorkerHost {
     return storage.run(new Store(this.logger.logger), async () => {
       this.logger.assign({ jobId: job.id, sandboxId });
 
-      this.logger.debug('Processing auto-pause job');
+      this.logger.info('Processing auto-pause job');
 
       const metadata = await this.storage.loadMetadata(sandboxId);
       if (!metadata) {
-        this.logger.debug('Sandbox metadata not found, skipping pause');
+        this.logger.warn('Sandbox metadata not found, skipping pause');
         return;
       }
 
       if (metadata.isPaused) {
-        this.logger.debug('Sandbox already paused, skipping');
+        this.logger.info('Sandbox already paused, skipping');
         return;
       }
 
@@ -130,7 +130,7 @@ export class ScaleboxPauseProcessor extends WorkerHost {
           () => this.acquirePauseLock(sandboxId),
           () => this.executePause(sandboxId, metadata),
         ),
-      (error) => this.logger.debug({ sandboxId, error }, 'Skipped pause (sandbox in use or error)'),
+      (error) => this.logger.warn({ sandboxId, error }, 'Skipped pause (sandbox in use or error)'),
     );
   }
 
@@ -153,6 +153,7 @@ export class ScaleboxPauseProcessor extends WorkerHost {
     await wrapper.betaPause();
     wrapper.markAsPaused();
     await this.storage.saveMetadata(wrapper);
+    this.logger.info({ sandboxId: wrapper.sandboxId }, 'Sandbox paused and metadata updated');
   }
 }
 
@@ -186,7 +187,7 @@ export class ScaleboxKillProcessor extends WorkerHost {
 
     return storage.run(new Store(this.logger.logger), async () => {
       this.logger.assign({ jobId: job.id, sandboxId, label });
-      this.logger.debug('Processing kill job');
+      this.logger.info('Processing kill job');
 
       const result = await this.safeKill(sandboxId);
 

@@ -3,30 +3,20 @@ import { defineConfig } from 'vitepress';
 // Single navigation item
 const enNav = [
   { text: 'Refly', link: 'https://refly.ai' },
-  {
-    text: 'Add to Chrome',
-    link: 'https://chromewebstore.google.com/detail/lecbjbapfkinmikhadakbclblnemmjpd',
-  },
   { text: 'Community', link: '/community/contact-us' },
   {
-    text: 'v0.10.0',
-    items: [{ text: 'Changelog', link: '/changelog/v0.10.0' }],
+    text: 'v1.1.0',
+    items: [{ text: 'Changelog', link: '/changelog/v1.1.0' }],
   },
-  { text: 'Roadmap', link: '/roadmap' },
 ];
 
 const zhNav = [
   { text: 'Refly', link: 'https://refly.ai' },
-  {
-    text: '添加到 Chrome',
-    link: 'https://chromewebstore.google.com/detail/lecbjbapfkinmikhadakbclblnemmjpd',
-  },
   { text: '社区', link: '/zh/community/contact-us' },
   {
-    text: 'v0.10.0',
-    items: [{ text: '更新日志', link: '/zh/changelog/v0.10.0' }],
+    text: 'v1.1.0',
+    items: [{ text: '更新日志', link: '/zh/changelog/v1.1.0' }],
   },
-  { text: '路线图', link: '/zh/roadmap' },
 ];
 
 // Sidebar translations
@@ -36,92 +26,32 @@ const sidebar = {
       text: 'Getting Started',
       items: [
         { text: 'Welcome to Refly', link: '/' }, // Points to index.md
-        { text: 'Crash Course', link: '/guide/crash-course' },
-        { text: 'Introduction', link: '/guide/introduction' },
-        { text: 'Video Tutorials', link: '/guide/video-tutorials' },
-        // Core Concepts needs to be created
-        // { text: "Core Concepts", link: "/getting-started/core-concepts" },
       ],
     },
     {
-      text: 'Cloud Version',
+      text: 'Developer',
       items: [
-        {
-          text: 'Feature Intro',
-          items: [
-            { text: 'Product Overview', link: '/cloud/feature-intro/' },
-            { text: 'Ask AI', link: '/cloud/feature-intro/ask-ai' },
-            {
-              text: 'Canvas and Nodes',
-              link: '/cloud/feature-intro/canvas-nodes.md',
-            },
-            {
-              text: 'Creation Toolbar',
-              link: '/cloud/feature-intro/creation-toolbar',
-            },
-            {
-              text: 'Global Search',
-              link: '/cloud/feature-intro/global-search',
-            },
-            {
-              text: 'Knowledge Base',
-              link: '/cloud/feature-intro/knowledge-base',
-            },
-            { text: 'Templates', link: '/cloud/feature-intro/templates' },
-            { text: 'UI Overview', link: '/cloud/feature-intro/ui-overview' },
-          ],
-        },
-        { text: 'Credit Usage Guide', link: '/cloud/credit-usage-guide' },
-        { text: 'Chrome Extension', link: '/cloud/chrome-extension' },
+        { text: 'API Documentation', link: '/guide/api/openapi' },
+        { text: 'Webhook Documentation', link: '/guide/api/webhook' },
       ],
     },
     {
       text: 'Community Version',
       items: [
-        { text: 'Community Version Overview', link: '/community-version/' },
         {
-          text: 'Self-Deploy',
-          items: [
-            {
-              text: 'Deployment Guide',
-              link: '/community-version/self-deploy/',
-            },
-            {
-              text: 'Ollama Integration',
-              link: '/community-version/self-deploy/ollama',
-            },
-            {
-              text: 'Configuration Guide',
-              link: '/community-version/self-deploy/configuration',
-            },
-            {
-              text: 'Gitpod Quick Deploy',
-              link: '/community-version/self-deploy/gitpod-quick-deploy',
-            },
-          ],
+          text: 'Self Deploy',
+          link: '/community-version/self-deploy/',
         },
-        { text: 'FAQ', link: '/community-version/faq' },
-      ],
-    },
-    {
-      text: 'Scenarios',
-      items: [
-        { text: 'Scenarios', link: '/scenarios/' },
         {
-          text: 'Create Tech PPT in 15 mins',
-          link: '/scenarios/create-tech-ppt',
+          text: 'FAQ: Accessing via IP address',
+          link: '/community-version/self-deploy/faq-ip-access',
         },
       ],
-    },
-    {
-      text: 'Future Plans',
-      items: [{ text: 'Product Roadmap', link: '/roadmap' }],
     },
     {
       text: 'Community',
       items: [
         { text: 'Contact Us', link: '/community/contact-us' },
-        { text: 'MCP Store Onboarding', link: '/community/mcp-onboarding' },
       ],
     },
     {
@@ -134,6 +64,7 @@ const sidebar = {
     {
       text: 'Changelog',
       items: [
+        { text: 'v1.1.0', link: '/changelog/v1.1.0' },
         { text: 'v0.10.0', link: '/changelog/v0.10.0' },
         { text: 'v0.9.0', link: '/changelog/v0.9.0' },
         { text: 'v0.8.0', link: '/changelog/v0.8.0' },
@@ -159,89 +90,33 @@ const sidebar = {
     {
       text: '入门',
       items: [
-        { text: '欢迎使用 Refly', link: '/zh/' }, // 指向 zh/index.md
-        { text: '快速上手', link: '/zh/guide/crash-course' },
-        { text: '入门介绍', link: '/zh/guide/introduction' },
-        { text: '视频教程', link: '/zh/guide/video-tutorials' },
-        // 核心概念需要新建文件后添加链接
-        // { text: "核心概念", link: "/zh/getting-started/core-concepts" },
+        { text: '欢迎使用 Refly', link: '/zh/' },
       ],
     },
     {
-      text: '云版本',
+      text: '开发者',
       items: [
-        {
-          text: '功能介绍',
-          items: [
-            { text: '功能介绍概览', link: '/zh/cloud/feature-intro/' }, // 指向 zh/cloud/feature-intro/index.md
-            { text: '问问 AI', link: '/zh/cloud/feature-intro/ask-ai' },
-            {
-              text: '画布和节点',
-              link: '/zh/cloud/feature-intro/canvas-nodes.md',
-            },
-            {
-              text: '创作工具栏',
-              link: '/zh/cloud/feature-intro/creation-toolbar',
-            },
-            { text: '全局搜索', link: '/zh/cloud/feature-intro/global-search' },
-            { text: '知识库', link: '/zh/cloud/feature-intro/knowledge-base' },
-            { text: '模板', link: '/zh/cloud/feature-intro/templates' },
-            {
-              text: '右上角界面概览',
-              link: '/zh/cloud/feature-intro/ui-overview',
-            },
-          ],
-        },
-        { text: '积分系统使用指南', link: '/zh/cloud/credit-usage-guide' },
-        { text: 'Chrome 插件', link: '/zh/cloud/chrome-extension' },
+        { text: 'API 文档', link: '/zh/guide/api/openapi' },
+        { text: 'Webhook 文档', link: '/zh/guide/api/webhook' },
       ],
     },
     {
       text: '社区版本',
       items: [
-        { text: '社区版本概览', link: '/zh/community-version/' },
         {
           text: '私有部署',
-          items: [
-            { text: '部署指南', link: '/zh/community-version/self-deploy/' },
-            {
-              text: 'Ollama 集成',
-              link: '/zh/community-version/self-deploy/ollama',
-            },
-            {
-              text: '配置指南',
-              link: '/zh/community-version/self-deploy/configuration',
-            },
-{ text: '个性化设置', link: '/zh/community-version/self-deploy/personalization.md' },
-            { text: '本地快速使用 Refly', link: '/zh/community-version/self-deploy/local-quick-start.md' },
-            {
-              text: 'Gitpod 快速部署',
-              link: '/zh/community-version/self-deploy/gitpod-quick-deploy',
-            },
-          ],
+          link: '/zh/community-version/self-deploy/',
         },
-        { text: '常见问题', link: '/zh/community-version/faq' },
-      ],
-    },
-    {
-      text: '场景分享',
-      items: [
-        { text: '场景分享', link: '/zh/scenarios/' },
         {
-          text: '15分钟快速制作一份技术架构PPT',
-          link: '/zh/scenarios/create-tech-ppt',
+          text: 'FAQ：通过 IP 地址访问',
+          link: '/zh/community-version/self-deploy/faq-ip-access',
         },
       ],
-    },
-    {
-      text: '未来计划',
-      items: [{ text: '产品路线图', link: '/zh/roadmap' }],
     },
     {
       text: '社区',
       items: [
         { text: '联系我们', link: '/zh/community/contact-us' },
-        { text: 'MCP Store 入驻指南', link: '/zh/community/mcp-onboarding' },
       ],
     },
     {
@@ -254,6 +129,7 @@ const sidebar = {
     {
       text: '更新日志',
       items: [
+        { text: 'v1.1.0', link: '/zh/changelog/v1.1.0' },
         { text: 'v0.10.0', link: '/zh/changelog/v0.10.0' },
         { text: 'v0.9.0', link: '/zh/changelog/v0.9.0' },
         { text: 'v0.8.0', link: '/zh/changelog/v0.8.0' },

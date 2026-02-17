@@ -1,4 +1,5 @@
-import { Body, Controller, Get, ParseBoolPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, ParseBoolPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { LoginedUser } from '../../utils/decorators/user.decorator';
 import { User as UserModel } from '@prisma/client';
@@ -140,8 +141,22 @@ export class ToolController {
   async executeTool(
     @LoginedUser() user: UserModel,
     @Body() request: ExecuteToolRequest,
+    @Req() req: Request,
   ): Promise<ExecuteToolResponse> {
-    const result = await this.toolExecutionService.executeTool(user, request);
+    // Extract PTC context from headers
+    const headers = req?.headers ?? {};
+    const ptcCallId = headers?.['x-ptc-call-id'] as string | undefined;
+    const resultId = headers?.['x-refly-result-id'] as string | undefined;
+    const versionStr = headers?.['x-refly-result-version'] as string | undefined;
+    const canvasId = headers?.['x-refly-canvas-id'] as string | undefined;
+    const version = versionStr ? Number.parseInt(versionStr, 10) : undefined;
+
+    const result = await this.toolExecutionService.executeTool(user, request, {
+      ptcCallId,
+      resultId,
+      version,
+      canvasId,
+    });
     return buildSuccessResponse(result);
   }
 }

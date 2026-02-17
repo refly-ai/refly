@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
 import { getFileCategoryAndLimit } from '../utils';
 
-export const useFileUpload = () => {
+export const useFileUpload = (maxCount = 1) => {
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
 
@@ -49,7 +49,10 @@ export const useFileUpload = () => {
 
       if (maxSize > 0 && file.size > maxSize) {
         const maxSizeMB = `${maxSize / (1024 * 1024)}MB`;
-        message.error(t('resource.import.fileTooLarge', { size: maxSizeMB }));
+        message.error({
+          content: t('resource.import.fileTooLarge', { size: maxSizeMB }),
+          key: 'file-too-large-error',
+        });
         return false;
       }
       return true;
@@ -69,14 +72,20 @@ export const useFileUpload = () => {
         const data = await uploadFile(file, tempUid);
 
         if (!data?.storageKey) {
-          message.error(t('common.uploadFailed') || 'Upload failed');
+          message.error({
+            content: t('common.uploadFailed') || 'Upload failed',
+            key: 'upload-failed-error',
+          });
           return null;
         }
 
         return data;
       } catch (error) {
         console.error('Upload error:', error);
-        message.error(t('common.uploadFailed') || 'Upload failed');
+        message.error({
+          content: t('common.uploadFailed') || 'Upload failed',
+          key: 'upload-failed-error',
+        });
         return null;
       } finally {
         setUploading(false);
@@ -87,20 +96,24 @@ export const useFileUpload = () => {
 
   const handleFileUpload = useCallback(
     async (file: File, fileList: UploadFile[]) => {
-      const maxFileCount = 1;
-      if (fileList.length >= maxFileCount) {
-        message.error(
-          t('canvas.workflow.variables.tooManyFiles', { max: maxFileCount }) ||
-            `Maximum ${maxFileCount} files allowed`,
-        );
+      if (fileList.length >= maxCount) {
+        message.error({
+          content:
+            t('canvas.workflow.variables.tooManyFiles', { max: maxCount }) ||
+            `Maximum ${maxCount} files allowed`,
+          key: 'too-many-files-error',
+        });
         return false;
       }
 
       const existingFileNames = fileList.map((f) => f.name);
       if (existingFileNames.includes(file.name)) {
-        message.error(
-          t('canvas.workflow.variables.duplicateFileName') || 'File with this name already exists',
-        );
+        message.error({
+          content:
+            t('canvas.workflow.variables.duplicateFileName') ||
+            'File with this name already exists',
+          key: 'duplicate-filename-error',
+        });
         return false;
       }
 
@@ -110,12 +123,15 @@ export const useFileUpload = () => {
 
       const data = await processFileUpload(file);
       if (data) {
-        message.success(t('common.uploadSuccess') || 'Upload successful');
+        message.success({
+          content: t('common.uploadSuccess') || 'Upload successful',
+          key: 'upload-success',
+        });
         return data;
       }
       return false;
     },
-    [t, validateFileSize, processFileUpload],
+    [t, validateFileSize, processFileUpload, maxCount],
   );
 
   const handleRefreshFile = useCallback(
@@ -187,7 +203,10 @@ export const useFileUpload = () => {
             const newFileList = [newFile];
             onFileListChange(newFileList);
 
-            message.success(t('common.uploadSuccess') || 'File refreshed successfully');
+            message.success({
+              content: t('common.uploadSuccess') || 'File refreshed successfully',
+              key: 'upload-success',
+            });
           }
         }
 

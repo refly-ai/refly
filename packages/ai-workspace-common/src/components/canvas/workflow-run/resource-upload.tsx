@@ -78,12 +78,12 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
           beforeUpload={handleFileUpload}
           onRemove={handleFileRemove}
           onChange={() => {}} // Handle change is managed by our custom handlers
-          multiple={false}
+          multiple={maxCount > 1}
           listType="text"
           disabled={disabled || uploading}
           maxCount={maxCount}
           itemRender={(_originNode, file) => (
-            <Spin className="w-full" spinning={uploading}>
+            <Spin className="w-full" spinning={file.status === 'uploading'}>
               <div className="w-full h-[37px] flex items-center justify-between gap-[10px] box-border px-3 border border-solid border-[#E5E5E5] rounded-xl hover:border-[#155EEF] transition-colors">
                 <div className="flex items-center gap-1 min-w-0 flex-1">
                   <ImageFileIcon />
@@ -123,7 +123,7 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
             </Spin>
           )}
         >
-          {(!value || value.length === 0) && (
+          {(!value || value.length === 0 || (maxCount > 1 && value.length < maxCount)) && (
             <Button
               className={`w-full h-[37px] !border-[#E5E5E5] !rounded-xl hover:!border-[#155EEF] ${hasError ? '!border-[#F04438]' : ''}`}
               type="default"

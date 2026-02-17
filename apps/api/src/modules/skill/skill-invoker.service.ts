@@ -36,7 +36,13 @@ import {
   SkillRunnableMeta,
   createSkillInventory,
 } from '@refly/skill-template';
-import { genImageID, getWholeParsedContent, safeParseJSON, genTransactionId } from '@refly/utils';
+import {
+  genImageID,
+  getWholeParsedContent,
+  safeParseJSON,
+  genTransactionId,
+  isKnownVisionModel,
+} from '@refly/utils';
 import { Queue } from 'bullmq';
 import { Response } from 'express';
 import { EventEmitter } from 'node:events';
@@ -71,6 +77,7 @@ import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { normalizeCreditBilling } from '../../utils/credit-billing';
 import { SkillInvokeMetrics } from './skill-invoke.metrics';
+import { PtcPollerManager } from './ptc-poller.manager';
 
 @Injectable()
 export class SkillInvokerService {
@@ -112,6 +119,15 @@ export class SkillInvokerService {
     this.logger.info({ count: this.skillInventory.length }, 'Skill inventory initialized');
   }
 
+  /**
+   * Check if a model has vision capability, either through explicit config or by matching known vision-capable models.
+   * Known vision-capable models are auto-enabled even if not explicitly configured in the database.
+   */
+  private hasModelVisionCapability(providerItem: ProviderItem | undefined): boolean {
+    const modelConfig = providerItem?.config as LLMModelConfig;
+    return modelConfig?.capabilities?.vision || isKnownVisionModel(modelConfig?.modelId);
+  }
+
   private async buildLangchainMessages(
     user: User,
     providerItem: ProviderItem,
@@ -119,9 +135,9 @@ export class SkillInvokerService {
   ): Promise<BaseMessage[]> {
     const query = result.input?.query || result.title;
 
-    // Only create content array if images exist
+    // Only create content array if images exist and model has vision capability
     let messageContent: string | MessageContentComplex[] = query;
-    if (result.input?.images?.length > 0 && (providerItem?.config as any)?.capabilities?.vision) {
+    if (result.input?.images?.length > 0 && this.hasModelVisionCapability(providerItem)) {
       const imageUrls = await this.miscService.generateImageUrls(user, result.input.images);
       messageContent = [
         { type: 'text', text: query },
@@ -407,7 +423,12 @@ export class SkillInvokerService {
       // Calculate PTC status based on user and toolsets
       const ptcConfig = getPtcConfig(this.config);
       const toolsetKeys = toolsets.map((t) => t.id);
-      const ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
+      let ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
+
+      // Debug mode: PTC enabled only if agent node title contains "ptc"
+      if (ptcConfig.debug) {
+        ptcEnabled = !!data.title && data.title.toLowerCase().includes('ptc');
+      }
 
       config.configurable.ptcEnabled = ptcEnabled;
 
@@ -601,8 +622,35 @@ export class SkillInvokerService {
       ctx?.files
         ?.filter((item) => item.file?.category === 'image' || item.file?.type.startsWith('image/'))
         ?.map((item) => item.file) ?? [];
-    const hasVisionCapability =
-      (data.providerItem?.config as LLMModelConfig)?.capabilities?.vision ?? false;
+
+    const hasVisionCapability = this.hasModelVisionCapability(data.providerItem);
+    const modelConfig = data.providerItem?.config as LLMModelConfig;
+    const modelId = modelConfig?.modelId ?? '';
+
+    // Debug logging for vision capability detection
+    this.logger.info(
+      {
+        filesCount: ctx?.files?.length ?? 0,
+        imageFilesCount: imageFiles.length,
+        hasVisionCapability,
+        explicitVisionConfig: modelConfig?.capabilities?.vision,
+        providerItemId: data.providerItem?.itemId,
+        modelId,
+      },
+      '[Vision Debug] Image processing check',
+    );
+
+    if (imageFiles.length > 0 && !hasVisionCapability) {
+      this.logger.warn(
+        {
+          modelId,
+          imageCount: imageFiles.length,
+          capabilities: modelConfig?.capabilities,
+        },
+        '[Vision Warning] Images found but model does not have vision capability - images will be ignored',
+      );
+    }
+
     const providerWithKey = data.provider as { key?: string } | undefined;
     const providerKey = providerWithKey?.key ?? data.provider?.providerKey ?? '';
     const forceBase64ForImages = providerKey === 'bedrock' || providerKey === 'vertex';
@@ -903,6 +951,20 @@ export class SkillInvokerService {
     let _lastStepName: string | undefined;
     let _lastToolCallMeta: ToolCallMeta | undefined;
 
+    // PTC polling manager for execute_code tools
+    // Declared outside try block so finally can clean up even if early error occurs
+    const ptcPollerManager = new PtcPollerManager(
+      {
+        res,
+        resultId,
+        version,
+        messageAggregator,
+        getRunMeta: () => runMeta,
+      },
+      this.toolCallService,
+      this.logger,
+    );
+
     try {
       // Check if already aborted before starting execution (handles queued aborts)
       const isAlreadyAborted = await this.actionService.isAbortRequested(resultId, version);
@@ -1061,6 +1123,12 @@ export class SkillInvokerService {
                     },
                   });
                 }
+
+                // Start PTC polling for execute_code tool
+                if (toolName === 'execute_code' && res) {
+                  ptcPollerManager.start(toolCallId);
+                }
+
                 break;
               }
             }
@@ -1132,6 +1200,11 @@ export class SkillInvokerService {
                 toolCallStartTimes.delete(toolCallId);
               }
               this.metrics.tool.fail({ toolName, toolsetKey, error: errorMsg });
+
+              // Stop PTC polling for execute_code tool on error
+              if (toolName === 'execute_code' && res) {
+                await ptcPollerManager.stop(toolCallId);
+              }
 
               break;
             }
@@ -1227,6 +1300,11 @@ export class SkillInvokerService {
                 this.metrics.tool.fail({ toolName, toolsetKey, error: errorMessage || '' });
               } else {
                 this.metrics.tool.success({ toolName, toolsetKey });
+              }
+
+              // Stop PTC polling and send remaining events for execute_code tool
+              if (toolName === 'execute_code' && res) {
+                await ptcPollerManager.stop(toolCallId);
               }
 
               break;
@@ -1579,6 +1657,9 @@ export class SkillInvokerService {
       if (!cleanupExecuted) {
         performCleanup();
       }
+
+      // Cleanup all PTC pollers
+      ptcPollerManager.cleanup();
 
       // Unregister the abort controller
       this.actionService.unregisterAbortController(resultId);
@@ -2428,7 +2509,12 @@ export class SkillInvokerService {
     version: number,
     canvasId: string,
   ): Promise<{
-    file: { fileId: string; internalUrl: string; mimeType: string; name: string };
+    file: {
+      fileId: string;
+      internalUrl: string;
+      mimeType: string;
+      name: string;
+    };
     toolCallCount: number;
   } | null> {
     try {

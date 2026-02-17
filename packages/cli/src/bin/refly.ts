@@ -33,6 +33,7 @@ import { workflowCommand } from '../commands/workflow/index.js';
 import { toolCommand } from '../commands/tool/index.js';
 import { fileCommand } from '../commands/file/index.js';
 import { skillCommand } from '../commands/skill/index.js';
+import { platformCommand } from '../commands/platform/index.js';
 
 const VERSION = getVersion();
 
@@ -88,6 +89,7 @@ program.addCommand(workflowCommand);
 program.addCommand(toolCommand);
 program.addCommand(fileCommand);
 program.addCommand(skillCommand);
+program.addCommand(platformCommand);
 
 // Error handling
 program.exitOverride((err) => {

@@ -1,16 +1,30 @@
-import { memo, useState, useCallback, useMemo, useEffect } from 'react';
+import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Skeleton } from 'antd';
-import { Send } from 'refly-icons';
+import { Button, Skeleton, message, Tooltip } from 'antd';
+import { Send, Attachment } from 'refly-icons';
 import { ChatInput } from '../canvas/launchpad/chat-input';
 import { useCreateCanvas } from '../../hooks/canvas/use-create-canvas';
 import { cn } from '@refly/utils/cn';
 import { motion, AnimatePresence } from 'motion/react';
 import { LuCornerRightUp } from 'react-icons/lu';
 import './index.scss';
-import { useUserStoreShallow } from '@refly/stores';
+import { useCopilotStoreShallow, useUserStoreShallow } from '@refly/stores';
 import { PromptSuggestion } from '@refly/openapi-schema';
 import { useGetPromptSuggestions } from '@refly-packages/ai-workspace-common/queries';
+import { useFileUpload } from '../../hooks/use-file-upload';
+import { FileList } from '../canvas/copilot/file-list';
+import { useNavigate } from 'react-router-dom';
+
+const ACCEPT_FILE_EXTENSIONS = [
+  // 文档类
+  '.pdf,.docx,.doc,.txt,.md,.pptx',
+  // 数据/代码类
+  '.csv,.xlsx,.xls,.json,.xml,.py,.js,.html,.css',
+  // 图片类
+  '.png,.jpg,.jpeg,.webp,.gif',
+  // 音视频类
+  '.mp3,.wav,.m4a,.mp4,.mov,.avi',
+].join(',');
 
 export const defaultPromt: PromptSuggestion = {
   prompt: {
@@ -43,22 +57,64 @@ interface PureCopilotProps {
 
 export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureCopilotProps) => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [currentCanvasId, setCurrentCanvasId] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Drag-and-drop state (align with canvas/copilot)
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
 
   const { setHidePureCopilotModal, showOnboardingFormModal } = useUserStoreShallow((state) => ({
     setHidePureCopilotModal: state.setHidePureCopilotModal,
     showOnboardingFormModal: state.showOnboardingFormModal,
   }));
 
-  const handleAfterCreateSuccess = useCallback(() => {
-    setTimeout(() => {
-      setHidePureCopilotModal(true);
-    }, 1000);
-  }, [setHidePureCopilotModal]);
+  const { pureCopilotCanvas, setPureCopilotCanvas, setPendingPrompt, setPendingFiles } =
+    useCopilotStoreShallow((state) => ({
+      pureCopilotCanvas: state.pureCopilotCanvas?.[source || 'default'],
+      setPureCopilotCanvas: state.setPureCopilotCanvas,
+      setPendingPrompt: state.setPendingPrompt,
+      setPendingFiles: state.setPendingFiles,
+    }));
 
-  const { debouncedCreateCanvas, isCreating } = useCreateCanvas({
-    afterCreateSuccess: handleAfterCreateSuccess,
+  useEffect(() => {
+    if (pureCopilotCanvas?.canvasId) {
+      setCurrentCanvasId(pureCopilotCanvas.canvasId);
+    }
+  }, [pureCopilotCanvas]);
+
+  const { debouncedCreateCanvas, createCanvas, isCreating } = useCreateCanvas({
+    afterCreateSuccess: useCallback(() => {
+      setTimeout(() => {
+        setHidePureCopilotModal(true);
+      }, 1000);
+    }, [setHidePureCopilotModal]),
+  });
+
+  const {
+    contextItems,
+    fileCount,
+    hasUploadingFiles,
+    completedFileItems,
+    stagedFileItems,
+    relevantUploads,
+    handleFileUpload,
+    handleBatchFileUpload,
+    handleRetryFile,
+    handleRemoveFile,
+    clearFiles,
+    finalizeFiles,
+  } = useFileUpload({
+    canvasId: currentCanvasId,
+    maxFileCount: 10,
+    maxFileSize: 50 * 1024 * 1024,
+    // NOTE: Do NOT pass onCanvasRequired here.
+    // In workspace page (without real canvas context), files should always use staging mode.
+    // Canvas will only be created when user sends the message, not during file upload.
   });
 
   const isFloatingVisible = useMemo(
@@ -70,16 +126,151 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
     onFloatingChange?.(isFloatingVisible);
   }, [isFloatingVisible, onFloatingChange]);
 
-  const handleSendMessage = useCallback(() => {
-    if (!query.trim() || isCreating) return;
-    debouncedCreateCanvas(source, {
-      initialPrompt: query,
-    });
+  const handleSendMessage = useCallback(async () => {
+    if (hasUploadingFiles) {
+      message.info(t('copilot.uploadInProgress'));
+      return;
+    }
 
-    setTimeout(() => {
+    if (!query.trim() && completedFileItems.length === 0) return;
+
+    // Helper function to navigate to workflow with files
+    const navigateToWorkflow = async (canvasId: string) => {
+      // Finalize any staged files before sending
+      let finalFiles = completedFileItems;
+      if (stagedFileItems.length > 0) {
+        finalFiles = await finalizeFiles(canvasId);
+      }
+
+      setPendingPrompt(canvasId, query);
+      setPendingFiles(canvasId, finalFiles);
+
+      const queryParams = new URLSearchParams();
+      if (source) {
+        queryParams.append('source', source);
+      }
+      navigate(`/workflow/${canvasId}?${queryParams.toString()}`);
+
+      if (source === 'onboarding') {
+        setTimeout(() => {
+          setHidePureCopilotModal(true);
+        }, 1000);
+      }
+
+      clearFiles();
       setQuery('');
-    }, 1000);
-  }, [query, debouncedCreateCanvas, isCreating, source]);
+      setPureCopilotCanvas(source || 'default', null);
+    };
+
+    if (currentCanvasId) {
+      // We have an existing canvas, use it directly
+      setIsSending(true);
+      try {
+        await navigateToWorkflow(currentCanvasId);
+      } finally {
+        setIsSending(false);
+      }
+    } else if (stagedFileItems.length > 0 || completedFileItems.length > 0) {
+      // No canvas but have files: create canvas first, then finalize files
+      // This ensures files are properly associated with the new canvas
+      setIsSending(true);
+      try {
+        const newCanvasId = await createCanvas('');
+        if (newCanvasId) {
+          await navigateToWorkflow(newCanvasId);
+        }
+      } finally {
+        setIsSending(false);
+      }
+    } else {
+      // No canvas, no files: use debounced create (original behavior)
+      debouncedCreateCanvas(source, {
+        initialPrompt: query,
+      });
+
+      setTimeout(() => {
+        setQuery('');
+      }, 1000);
+    }
+  }, [
+    query,
+    currentCanvasId,
+    hasUploadingFiles,
+    completedFileItems,
+    stagedFileItems,
+    finalizeFiles,
+    clearFiles,
+    source,
+    setPendingPrompt,
+    setPendingFiles,
+    navigate,
+    setHidePureCopilotModal,
+    setPureCopilotCanvas,
+    createCanvas,
+    debouncedCreateCanvas,
+    t,
+  ]);
+
+  const handleFileInputChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      if (files.length > 0) {
+        await handleBatchFileUpload(files);
+      }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [handleBatchFileUpload],
+  );
+
+  const isUploadDisabled = fileCount >= 10;
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    if (e.dataTransfer?.types?.includes('Files')) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Ensure the copy cursor is shown
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current = 0;
+      setIsDragging(false);
+
+      if (isUploadDisabled) return;
+
+      const files = Array.from(e.dataTransfer?.files ?? []);
+      if (files.length === 0) return;
+
+      // handleBatchFileUpload will handle the slot limiting internally
+      await handleBatchFileUpload(files);
+    },
+    [handleBatchFileUpload, isUploadDisabled],
+  );
 
   const handlePromptClick = useCallback((prompt: string) => {
     setQuery(prompt);
@@ -182,7 +373,13 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
         </div>
       </div>
 
-      <div className="w-full relative">
+      <div
+        className="w-full relative"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         <div
           className={cn(
             'w-full px-4 py-3 rounded-[12px] border-[1px] border-solid bg-refly-bg-content-z2 transition-all duration-300 relative z-20',
@@ -191,6 +388,17 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
               : 'border-transparent pure-copilot-glow-effect',
           )}
         >
+          {fileCount > 0 && (
+            <FileList
+              contextItems={contextItems}
+              canvasId={currentCanvasId}
+              onRemove={handleRemoveFile}
+              onRetry={handleRetryFile}
+              uploads={relevantUploads}
+              className="mb-3"
+            />
+          )}
+
           <div className={cn('mb-1', source === 'onboarding' && 'min-h-[80px]')}>
             <ChatInput
               readonly={false}
@@ -206,23 +414,89 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
                 // Use a small timeout to allow clicking on sample prompts
                 setTimeout(() => setIsFocused(false), 200);
               }}
+              onUploadImage={handleFileUpload}
+              onUploadMultipleImages={handleBatchFileUpload}
             />
           </div>
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-between">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileInputChange}
+              multiple
+              accept={ACCEPT_FILE_EXTENSIONS}
+              className="hidden"
+            />
+            <Tooltip
+              title={fileCount >= 10 ? t('copilot.maxFilesPerTask') : t('copilot.uploadFile')}
+              placement="top"
+              overlayInnerStyle={{ borderRadius: '8px' }}
+              color="#000"
+            >
+              <div
+                className={cn(
+                  'flex items-center justify-center',
+                  fileCount >= 10 ? 'cursor-not-allowed' : 'cursor-pointer',
+                )}
+              >
+                <Button
+                  type="text"
+                  icon={<Attachment size={20} />}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={fileCount >= 10}
+                  className="!text-refly-text-0 "
+                />
+              </div>
+            </Tooltip>
             <Button
               type="primary"
               shape="circle"
-              disabled={!query.trim() || isCreating}
+              disabled={
+                (!query.trim() && completedFileItems.length === 0) || isCreating || isSending
+              }
               icon={<Send size={20} color="var(--refly-bg-canvas)" />}
               className={cn(
                 '!w-9 !h-9 flex items-center justify-center border-none transition-all',
-                query.trim() ? '!bg-refly-text-0' : '!bg-refly-primary-disabled',
+                query.trim() || completedFileItems.length > 0
+                  ? '!bg-refly-text-0'
+                  : '!bg-refly-primary-disabled',
               )}
               onClick={handleSendMessage}
-              loading={isCreating}
+              loading={isCreating || isSending}
             />
           </div>
         </div>
+
+        {/* Dropzone overlay: Figma 20776-18504 (active) / 20776-18912 (limit) */}
+        {isDragging && (
+          <div
+            className={cn(
+              'absolute inset-0 z-50 rounded-[12px] border-2 border-dashed',
+              'flex flex-col items-center justify-center gap-2',
+              isUploadDisabled
+                ? 'border-[#C7CACD] bg-[rgba(28,31,35,0.1)] backdrop-blur-[25px]'
+                : 'border-[#0E9F77] bg-[rgba(14,159,119,0.25)] backdrop-blur-[25px]',
+            )}
+          >
+            <Attachment size={32} color={isUploadDisabled ? '#1C1F23' : '#0E9F77'} />
+            <div
+              className={cn(
+                'text-sm font-medium text-center',
+                isUploadDisabled ? 'text-[#1C1F23] opacity-50' : 'text-[#1C1F23]',
+              )}
+            >
+              {t('copilot.dropFilesToUpload')}
+            </div>
+            <div
+              className={cn(
+                'text-[10px]',
+                isUploadDisabled ? 'text-[#1C1F23]/35' : 'text-[rgba(28,31,35,0.6)]',
+              )}
+            >
+              {t('copilot.maxUploadSize')}
+            </div>
+          </div>
+        )}
 
         <AnimatePresence>
           {source === 'frontPage' && isFocused && !query.trim() && (

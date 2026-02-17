@@ -6,6 +6,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import { AuthService } from './auth.service';
+import { TurnstileService } from './turnstile.service';
 import { AuthController } from './auth.controller';
 import { AuthCliController } from './auth-cli.controller';
 import { ApiKeyService } from './api-key.service';
@@ -43,6 +44,7 @@ import { CreditModule } from '../credit/credit.module';
   ],
   providers: [
     AuthService,
+    TurnstileService,
     ApiKeyService,
     DeviceAuthService,
     GithubOauthStrategy,

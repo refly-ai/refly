@@ -1,4 +1,4 @@
-import { Modal, message } from 'antd';
+import { Modal, message, Skeleton } from 'antd';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import getClient from '@refly-packages/ai-workspace-common/requests/proxiedRequest';
@@ -97,7 +97,7 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
 
  ⚡ Supercharge your automation with Banana Pro, Gemini 3.0, and other top-tier AI models
 
- 🎁 Plus 3,000 free credits to help you get started!
+ 🎁 Plus 500 free credits to help you get started!
 
 🔑 Invitation Code: ${invitationCode}
 
@@ -147,8 +147,15 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
   });
 
   return (
-    <Modal open={visible} onCancel={() => setVisible(false)} footer={null} width={440} centered>
-      <div className="p-6 space-y-5">
+    <Modal
+      open={visible}
+      onCancel={() => setVisible(false)}
+      footer={null}
+      width={440}
+      centered
+      styles={{ content: { paddingBottom: 0 }, body: { paddingBottom: 0 } }}
+    >
+      <div className="px-6 pt-6 space-y-5">
         <div className="flex flex-col items-center gap-1 text-center">
           <img src={InviteIcon} alt="Invite" className="w-16 h-16" />
           <h3 className="text-lg font-semibold text-refly-text-0">
@@ -156,11 +163,41 @@ export const InvitationModal: React.FC<InvitationModalProps> = ({ visible, setVi
           </h3>
           <p className="text-xs text-refly-text-2">{t('settings.account.inviteFriendsSubtitle')}</p>
         </div>
-        <div className="flex flex-col gap-4 rounded-lg py-4">
-          <p className="text-sm text-refly-text-0 text-center font-semibold">{availableText}</p>
-          {invitationOverview.sortedCodes.length > 0 ? (
-            <div className="max-h-[360px] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-4 rounded-lg">
+          {loadingCodes ? (
+            <Skeleton
+              active
+              paragraph={{ rows: 0 }}
+              title={{ width: 120, style: { margin: '0 auto' } }}
+            />
+          ) : (
+            <p className="text-sm text-refly-text-0 text-center font-semibold">{availableText}</p>
+          )}
+          {loadingCodes ? (
+            <div className="-mx-4 max-h-[360px] overflow-y-auto px-4">
+              <div className="grid grid-cols-2 gap-2 pb-8">
+                {Array.from({ length: 10 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex min-h-[54px] h-[54px] items-center rounded-[10px] border border-solid border-refly-primary-default px-2.5"
+                  >
+                    <Skeleton.Input
+                      active
+                      size="small"
+                      style={{
+                        width: 70,
+                        minWidth: 70,
+                        height: 20,
+                        borderRadius: 4,
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : invitationOverview.sortedCodes.length > 0 ? (
+            <div className="-mx-4 max-h-[360px] overflow-y-auto px-4">
+              <div className="grid grid-cols-2 gap-2 pb-8">
                 {invitationOverview.sortedCodes.map((code, index) => (
                   <InvitationCodeCard
                     key={code.code ?? index}

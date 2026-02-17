@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { memo, useState, useCallback, useEffect, useMemo } from 'react';
-import { Button, Tooltip, Popover, message, Modal } from 'antd';
+import { Button, Popover, message, Modal, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@refly/utils/cn';
@@ -75,16 +75,16 @@ const isToolsetAuthorized = (toolset: GenericToolset, userTools: UserTool[]): bo
 
 interface ScheduleButtonProps {
   canvasId: string;
+  className?: string;
 }
 
-const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
+const ScheduleButton = memo(({ canvasId, className }: ScheduleButtonProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const [scheduleLimitModalVisible, setScheduleLimitModalVisible] = useState(false);
   const [deactivateModalVisible, setDeactivateModalVisible] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
 
   // Local state for popover form
   const [schedule, setSchedule] = useState<WorkflowSchedule | null>(null);
@@ -593,21 +593,6 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
 
     logEvent('schedule_entry_click');
 
-    // Check if this canvas already has an ENABLED schedule (only enabled schedules count toward quota)
-    const hasEnabledSchedule = !!schedule?.isEnabled;
-
-    // If canvas doesn't have enabled schedule and quota is reached, show appropriate modal
-    if (!hasEnabledSchedule && totalEnabledSchedules >= scheduleQuota) {
-      if (planType === 'free') {
-        // Free user: show credit insufficient modal
-        setCreditInsufficientModalVisible(true, undefined, 'schedule');
-      } else {
-        // Paid user: show schedule limit reached modal
-        setScheduleLimitModalVisible(true);
-      }
-      return; // Don't open popover when showing limit modals
-    }
-
     // Initialize form state when opening popover
     const config = parseScheduleConfig(schedule?.scheduleConfig);
     setIsEnabled(schedule?.isEnabled ?? false);
@@ -618,15 +603,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
     setHours(config?.hours || 1);
 
     setOpen(true);
-  }, [
-    disabled,
-    canvasId,
-    schedule,
-    totalEnabledSchedules,
-    scheduleQuota,
-    planType,
-    setCreditInsufficientModalVisible,
-  ]);
+  }, [disabled, schedule]);
 
   // Handle popover close
   const handleClose = useCallback(() => {
@@ -652,6 +629,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
 
   // Determine schedule status
   const isScheduled = schedule?.isEnabled;
+  const [isHovered, setIsHovered] = useState(false);
   const scheduleStatus = useMemo(() => {
     if (!isScheduled) {
       return 'off';
@@ -699,12 +677,19 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
             isCreditLoading={isCreditUsageLoading}
             showUpgrade={planType === 'free'}
             onUpgradeClick={handleUpgradeClick}
+            totalEnabledSchedules={totalEnabledSchedules}
+            scheduleQuota={scheduleQuota}
+            hasLoadedInitially={hasLoadedInitially}
+            isLoadingScheduleCount={isLoadingScheduleCount}
+            planType={planType}
+            setCreditInsufficientModalVisible={setCreditInsufficientModalVisible}
+            setScheduleLimitModalVisible={setScheduleLimitModalVisible}
           />
         }
         trigger="click"
         open={open}
         onOpenChange={handleOpenChange}
-        placement="bottomLeft"
+        placement="bottom"
         overlayClassName="schedule-popover"
       >
         <Tooltip
@@ -722,22 +707,25 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
           }
           placement="top"
         >
-          <div className="flex items-center gap-2">
+          <Button
+            type="text"
+            disabled={disabled}
+            className={cn('schedule-toolbar-button', className)}
+            onClick={handleButtonClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
             <div className="relative">
               <div
                 className={cn(
-                  'rounded-lg p-1.5 transition-colors flex items-center justify-center',
-                  disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-refly-tertiary-hover',
+                  'schedule-toolbar-icon-wrap rounded-lg transition-colors',
+                  disabled ? 'cursor-not-allowed' : 'cursor-pointer',
                 )}
-                onClick={handleButtonClick}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
               >
                 <LuAlarmClock
                   className={cn(
-                    'text-lg transition-colors',
+                    'schedule-toolbar-icon transition-colors',
                     disabled ? 'opacity-50' : '',
-                    'text-gray-600 dark:text-gray-400',
                   )}
                 />
               </div>
@@ -757,7 +745,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
                 </div>
               )}
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+            <span className="schedule-toolbar-text">
               {!hasLoadedInitially && isLoadingScheduleCount ? (
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
@@ -765,10 +753,14 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
                   <div className="w-2 h-3 bg-gray-300 dark:bg-gray-600 rounded" />
                 </div>
               ) : (
-                `${totalEnabledSchedules}/${scheduleQuota}`
+                <>
+                  <span className="schedule-toolbar-label">
+                    {t('schedule.title') || 'Schedule'}
+                  </span>
+                </>
               )}
             </span>
-          </div>
+          </Button>
         </Tooltip>
       </Popover>
 
@@ -808,6 +800,7 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
         closable={!isDeactivating}
         maskClosable={!isDeactivating}
         centered
+        wrapClassName="deactivate-schedule-modal"
         footer={[
           <Button
             key="cancel"
@@ -821,7 +814,6 @@ const ScheduleButton = memo(({ canvasId }: ScheduleButtonProps) => {
             type="primary"
             loading={isDeactivating}
             onClick={handleConfirmDeactivate}
-            className="!bg-gray-600 hover:!bg-gray-700 !border-gray-600"
           >
             {t('schedule.deactivate.confirm') || 'Deactivate'}
           </Button>,

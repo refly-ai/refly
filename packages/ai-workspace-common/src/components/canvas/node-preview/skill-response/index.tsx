@@ -11,7 +11,7 @@ import {
   useCanvasStoreShallow,
 } from '@refly/stores';
 import { Segmented, Button, message } from 'antd';
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { SkillResponseNodeHeader } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-node-header';
@@ -22,6 +22,7 @@ import { Close } from 'refly-icons';
 import { useVariablesManagement } from '@refly-packages/ai-workspace-common/hooks/use-variables-management';
 import { useQueryProcessor } from '@refly-packages/ai-workspace-common/hooks/use-query-processor';
 import { ProductCard } from '@refly-packages/ai-workspace-common/components/markdown/plugins/tool-call/product-card';
+import { LastRunTabContext } from '@refly-packages/ai-workspace-common/context/run-location';
 import { SkillResponseActions } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/skill-response-actions';
 import { useSkillResponseActions } from '@refly-packages/ai-workspace-common/hooks/canvas/use-skill-response-actions';
 import { useVariableView } from '@refly-packages/ai-workspace-common/hooks/canvas/use-variable-view';
@@ -297,14 +298,20 @@ const SkillResponseNodePreviewComponent = ({
 
   useEffect(() => {
     setCurrentFile(null);
-  }, [resultId]);
+  }, [resultId, setCurrentFile]);
 
   useEffect(() => {
     if (isExecuting) {
       setCurrentFile(null);
       setResultActiveTab(resultId, 'lastRun');
     }
-  }, [isExecuting, resultId]);
+  }, [isExecuting, resultId, setCurrentFile, setResultActiveTab]);
+
+  // Memoize context value to prevent unnecessary re-renders
+  const previewContextValue = useMemo(
+    () => ({ location: 'agent' as const, setCurrentFile }),
+    [setCurrentFile],
+  );
 
   return purePreview ? (
     !result && !loading ? (
@@ -396,12 +403,14 @@ const SkillResponseNodePreviewComponent = ({
 
         {currentFile && (
           <div className="absolute inset-0 bg-refly-bg-content-z2 z-10">
-            <ProductCard
-              file={currentFile}
-              classNames="w-full h-full"
-              source="preview"
-              onAddToFileLibrary={handleAddToFileLibrary}
-            />
+            <LastRunTabContext.Provider value={previewContextValue}>
+              <ProductCard
+                file={currentFile}
+                classNames="w-full h-full"
+                source="preview"
+                onAddToFileLibrary={handleAddToFileLibrary}
+              />
+            </LastRunTabContext.Provider>
           </div>
         )}
       </div>

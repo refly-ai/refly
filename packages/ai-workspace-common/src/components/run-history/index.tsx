@@ -10,7 +10,7 @@ import { LOCALE } from '@refly/common-types';
 import EmptyImage from '@refly-packages/ai-workspace-common/assets/noResource.webp';
 import { RunHistoryFilters, RunStatusFilter, RunTypeFilter } from './run-history-filters';
 import { UsedTools } from './used-tools';
-import { client } from '@refly/openapi-schema';
+import { client, listAllScheduleRecords } from '@refly/openapi-schema';
 import { useFetchDataList } from '@refly-packages/ai-workspace-common/hooks/use-fetch-data-list';
 import { useState } from 'react';
 import { logEvent } from '@refly/telemetry-web';
@@ -223,12 +223,17 @@ const RunHistoryList = memo(() => {
   const fetchScheduleRecords = useCallback(
     async ({ page, pageSize }: { page: number; pageSize: number }) => {
       try {
-        const response = await client.post({
-          url: '/schedule/records/list',
+        const triggerType =
+          typeFilter === 'schedule' || typeFilter === 'webhook' || typeFilter === 'api'
+            ? typeFilter
+            : undefined;
+        const response = await listAllScheduleRecords({
+          client,
           body: {
             page,
             pageSize,
-            status: statusFilter !== 'all' ? statusFilter : undefined,
+            executionStatus: statusFilter !== 'all' ? statusFilter : undefined,
+            triggerType,
             keyword: titleFilter || undefined,
             canvasId: canvasIdFilter || undefined,
             tools: selectedTools.length > 0 ? selectedTools : undefined,
@@ -248,14 +253,14 @@ const RunHistoryList = memo(() => {
         return { success: false, data: [] };
       }
     },
-    [statusFilter, titleFilter, canvasIdFilter, selectedTools],
+    [statusFilter, typeFilter, titleFilter, canvasIdFilter, selectedTools],
   );
 
   const { dataList, isRequesting, reload, loadMore, hasMore } =
     useFetchDataList<ScheduleRecordItem>({
       fetchData: fetchScheduleRecords,
       pageSize: 20,
-      dependencies: [statusFilter, titleFilter, canvasIdFilter, selectedTools],
+      dependencies: [statusFilter, typeFilter, titleFilter, canvasIdFilter, selectedTools],
     });
 
   // Initial load

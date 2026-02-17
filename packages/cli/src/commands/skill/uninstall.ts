@@ -8,7 +8,7 @@ import { Command } from 'commander';
 import { ok, fail, ErrorCodes } from '../../utils/output.js';
 import { apiRequest } from '../../api/client.js';
 import { CLIError } from '../../utils/errors.js';
-import { deleteDomainSkillWithSymlink, parseReflySkillMd } from '../../skill/symlink.js';
+import { removeMultiPlatformSkill, parseReflySkillMd } from '../../skill/symlink.js';
 import { getReflyDomainSkillDir, getReflySkillsDir } from '../../config/paths.js';
 import { logger } from '../../utils/logger.js';
 
@@ -89,16 +89,25 @@ export const skillUninstallCommand = new Command('uninstall')
         }
       }
 
-      // Clean up local skill and symlink (only if --name was provided)
-      let symlinkRemoved = false;
+      // Clean up local skill from all platforms (only if --name was provided)
       let directoryRemoved = false;
+      const platformResults: Array<{ agent: string; success: boolean }> = [];
 
       if (name && !options.keepLocal) {
         try {
-          const cleanup = deleteDomainSkillWithSymlink(name);
-          symlinkRemoved = cleanup.symlinkRemoved;
+          const cleanup = await removeMultiPlatformSkill(name);
           directoryRemoved = cleanup.directoryRemoved;
-          logger.info(`Cleaned up local skill: ${name}`);
+
+          for (const [agentName, result] of cleanup.platformResults.results) {
+            platformResults.push({
+              agent: agentName,
+              success: result.success,
+            });
+          }
+
+          logger.info(
+            `Cleaned up local skill: ${name}, removed from ${cleanup.platformResults.successCount} platform(s)`,
+          );
         } catch (err) {
           // Log but don't fail - API uninstall was successful
           logger.warn(`Failed to clean up local skill: ${(err as Error).message}`);
@@ -111,8 +120,8 @@ export const skillUninstallCommand = new Command('uninstall')
         installationId,
         uninstalled: true,
         localCleanup: {
-          symlinkRemoved,
           directoryRemoved,
+          platforms: platformResults.length > 0 ? platformResults : undefined,
         },
       });
     } catch (error) {

@@ -191,6 +191,21 @@ export class ToolCallService {
   }
 
   /**
+   * Fetch PTC tool calls by ptcCallId (the execute_code's callId)
+   * Used to retrieve all tool calls made from within a sandbox execution
+   */
+  async fetchPtcToolCalls(ptcCallId: string) {
+    return this.prisma.toolCallResult.findMany({
+      where: {
+        ptcCallId,
+        type: 'ptc',
+        deletedAt: null,
+      },
+      orderBy: { pk: 'asc' },
+    });
+  }
+
+  /**
    * Build consolidated tool call history entries grouped by step name for a given result.
    * Only final tool call results are returned to avoid duplicating streaming fragments.
    */

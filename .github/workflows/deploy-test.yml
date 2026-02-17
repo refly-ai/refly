@@ -175,6 +175,8 @@ jobs:
           tags: ${{ steps.docker_tags.outputs.tags }}
           cache-from: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache
           cache-to: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache,mode=max
+          build-args: |
+            PUBLIC_CLOUDFLARE_SITE_KEY=${{ vars.TEST_PUBLIC_CLOUDFLARE_SITE_KEY }}
 
       - name: Update kubeconfig for EKS cluster
         if: github.ref_name == 'main'

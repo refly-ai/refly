@@ -1,0 +1,219 @@
+// API Key Management Modal - Only keep Ant Design overrides and complex styles
+.api-key-management-modal,
+.api-key-create-modal,
+.api-key-delete-modal {
+  .ant-modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .ant-modal-header {
+    margin: 0;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--refly-line);
+    margin-bottom: 0;
+
+    .ant-modal-title {
+      margin-bottom: 0;
+    }
+  }
+
+  .ant-modal-body {
+    padding: 0;
+  }
+
+  // Override primary button styles
+  .ant-btn-primary {
+    background: var(--refly-text-0) !important;
+    border-color: var(--refly-text-0) !important;
+    color: var(--refly-bg-content-z2) !important;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+
+    &:hover {
+      background: var(--refly-text-1) !important;
+      border-color: var(--refly-text-1) !important;
+      color: var(--refly-bg-content-z2) !important;
+    }
+
+    &:active {
+      background: var(--refly-text-0) !important;
+      border-color: var(--refly-text-0) !important;
+      color: var(--refly-bg-content-z2) !important;
+    }
+
+    &:disabled {
+      background: var(--refly-text-3) !important;
+      border-color: var(--refly-text-3) !important;
+      color: var(--refly-bg-content-z2) !important;
+      opacity: 0.5;
+    }
+  }
+}
+
+// List header with pseudo-element border
+.api-key-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--refly-line);
+    opacity: 0.3;
+  }
+}
+
+// List item with conditional border
+.api-key-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  position: relative;
+
+  &.has-border::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--refly-line);
+    opacity: 0.3;
+  }
+}
+
+// Action button with hover state
+.api-key-action-btn {
+  color: var(--refly-text-1);
+  padding: 4px;
+
+  &:hover {
+    color: var(--refly-text-0);
+    background: transparent;
+  }
+
+  .anticon {
+    font-size: 18px;
+  }
+}
+
+// Display copy button with hover state
+.api-key-display-copy {
+  flex-shrink: 0;
+  color: var(--refly-text-1);
+  padding: 4px;
+
+  &:hover {
+    color: var(--refly-text-0);
+    background: transparent;
+  }
+
+  .anticon {
+    font-size: 16px;
+  }
+}
+
+// Ant Design Input overrides
+.api-key-input {
+  &.ant-input {
+    height: 40px;
+    border-radius: 8px;
+    background: var(--refly-bg-content-z1);
+    border-color: var(--refly-line);
+    color: var(--refly-text-0);
+
+    &:focus,
+    &:hover {
+      border-color: var(--refly-text-0);
+    }
+
+    &::placeholder {
+      color: var(--refly-text-3);
+    }
+  }
+}
+
+// Delete modal button styles
+.api-key-delete-cancel-btn,
+.api-key-delete-confirm-btn {
+  height: 32px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 20px;
+}
+
+
+
+.api-key-delete-confirm-btn {
+  background: var(--refly-func-danger-default) !important;
+  border-color: var(--refly-func-danger-default) !important;
+  color: #fff !important;
+
+  &:hover {
+    background: var(--refly-func-danger-hover) !important;
+    border-color: var(--refly-func-danger-hover) !important;
+    color: #fff !important;
+    opacity: 1;
+  }
+
+  &:active {
+    background: var(--refly-func-danger-active) !important;
+    border-color: var(--refly-func-danger-active) !important;
+    color: #fff !important;
+  }
+}
+
+.api-key-delete-confirm-btn {
+  background: var(--refly-func-error-default);
+  border-color: var(--refly-func-error-default);
+
+  &:hover {
+    background: var(--refly-func-error-hover);
+    border-color: var(--refly-func-error-hover);
+  }
+}
+
+.api-key-create-confirm-btn-black {
+  background: var(--refly-text-0) !important;
+  border-color: var(--refly-text-0) !important;
+  color: var(--refly-bg-content-z2) !important;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+
+  &:hover {
+    background: var(--refly-text-1) !important;
+    border-color: var(--refly-text-1) !important;
+    color: var(--refly-bg-content-z2) !important;
+  }
+
+  &:active {
+    background: var(--refly-text-0) !important;
+    border-color: var(--refly-text-0) !important;
+    color: var(--refly-bg-content-z2) !important;
+  }
+
+  &:disabled {
+    background: var(--refly-text-3) !important;
+    border-color: var(--refly-text-3) !important;
+    color: var(--refly-bg-content-z2) !important;
+    opacity: 0.5;
+  }
+}
+

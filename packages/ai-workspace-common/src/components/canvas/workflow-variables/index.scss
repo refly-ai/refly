@@ -43,9 +43,28 @@
   }
 
   .file-upload-container {
+    display: block;
+
     .ant-upload {
       padding: 0;
       width: 100%;
+      margin-bottom: 8px;
+      display: block !important;
+    }
+
+    .ant-upload-list {
+      .ant-upload-list-item-container {
+        margin-bottom: 8px !important;
+        
+        &:last-child {
+          margin-bottom: 0 !important;
+        }
+
+        .ant-upload-list-item {
+            margin-top: 0 !important;
+            height: auto !important;
+        }
+      }
     }
   }
 

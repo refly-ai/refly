@@ -5,12 +5,18 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import type { ToolsetExportDefinition, ToolExportDefinition } from '@refly/openapi-schema';
+import type {
+  ToolsetExportDefinition,
+  ToolExportDefinition,
+  JsonSchema,
+} from '@refly/openapi-schema';
 import { ParamsError, ToolsetNotFoundError } from '@refly/errors';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ComposioService } from '../composio/composio.service';
 import { ToolInventoryService } from '../inventory/inventory.service';
 import { ToolIdentifyService } from './tool-identify.service';
 import { PrismaService } from '../../common/prisma.service';
+import { addFileNameTitleField } from '../utils/schema-utils';
 
 @Injectable()
 export class ToolDefinitionService {
@@ -62,8 +68,8 @@ export class ToolDefinitionService {
 
   /**
    * Get all supported toolset keys from both toolset_inventory and toolset tables.
-   * Only returns toolsets that can be exported (Composio and Config-based).
-   * Filters out Legacy SDK, MCP, and Builtin tools.
+   * Returns toolsets that can be exported: Composio, Config-based, and Legacy SDK.
+   * Filters out MCP and Builtin tools (these have separate protocols).
    *
    * @returns Array of unique toolset keys
    */
@@ -86,7 +92,7 @@ export class ToolDefinitionService {
     });
 
     // Get static inventory items to check for class definitions
-    const staticInventoryMap = await this.inventoryService.getInventoryMap();
+    const _staticInventoryMap = await this.inventoryService.getInventoryMap();
 
     // Filter to only supported types from toolset_inventory
     for (const item of inventoryItems) {
@@ -96,12 +102,10 @@ export class ToolDefinitionService {
         continue;
       }
 
-      // Support Config-based tools (those without a class in static inventory)
-      // Legacy SDK tools have a class and are not yet supported
-      const staticItem = staticInventoryMap[item.key];
-      if (!staticItem?.class) {
-        supportedKeys.add(item.key);
-      }
+      // Support Config-based tools and Legacy SDK tools
+      // Config-based: no class in static inventory (uses DB-driven config)
+      // Legacy SDK: has class in static inventory (uses TypeScript Zod schemas)
+      supportedKeys.add(item.key);
     }
 
     // Step 2: Query toolset table for instance-level toolsets
@@ -137,15 +141,10 @@ export class ToolDefinitionService {
       }
 
       // For config_based/credentials auth types:
-      // - Must exist in toolset_inventory to be a valid config-based tool
-      // - Must not have a class in static inventory (otherwise it's Legacy SDK)
+      // - Must exist in toolset_inventory to be a valid tool
+      // - Supports both Config-based (no class) and Legacy SDK (has class)
       if (inventoryKeySet.has(toolset.key)) {
-        const staticItem = staticInventoryMap[toolset.key];
-        if (!staticItem?.class) {
-          // Config-based tool: exists in toolset_inventory and has no class
-          supportedKeys.add(toolset.key);
-        }
-        // Otherwise it's Legacy SDK (has a class), not yet supported
+        supportedKeys.add(toolset.key);
       }
       // If not in toolset_inventory, skip it (incomplete configuration)
     }
@@ -176,10 +175,7 @@ export class ToolDefinitionService {
         return await this.exportConfigBasedToolset(toolsetKey);
 
       case 'legacy_sdk':
-        // Legacy SDK tools are not yet supported for export
-        throw new ParamsError(
-          `Toolset ${toolsetKey} not supported: legacy_sdk schema export is not implemented.`,
-        );
+        return await this.exportLegacySdkToolset(toolsetKey);
 
       case 'mcp':
         throw new ParamsError(`Toolset ${toolsetKey} not supported: MCP tools cannot be exported.`);
@@ -286,10 +282,14 @@ export class ToolDefinitionService {
         }
       }
 
+      // Deep clone and add file_name_title field (consistent with non-PTC mode)
+      const enhancedSchema = JSON.parse(JSON.stringify(inputSchema)) as JsonSchema;
+      addFileNameTitleField(enhancedSchema);
+
       return {
         name: method.name,
         description: method.description ?? '',
-        inputSchema,
+        inputSchema: enhancedSchema,
       };
     });
 
@@ -298,6 +298,75 @@ export class ToolDefinitionService {
     const definition = inventoryItem?.definition;
 
     const name = config.name ?? toolsetKey;
+    const description =
+      (definition?.descriptionDict?.en as string) ??
+      (definition?.descriptionDict?.['zh-CN'] as string) ??
+      '';
+
+    return {
+      key: toolsetKey,
+      name,
+      description,
+      tools,
+    };
+  }
+
+  /**
+   * Export Legacy SDK toolset definition
+   * Instantiates the toolset class to extract Zod schemas and converts them to JSON Schema
+   *
+   * @param toolsetKey - The toolset key
+   * @returns Toolset export definition
+   */
+  private async exportLegacySdkToolset(toolsetKey: string): Promise<ToolsetExportDefinition> {
+    // Get toolset class from static inventory
+    const inventoryItem = await this.inventoryService.getInventoryItem(toolsetKey);
+
+    if (!inventoryItem?.class) {
+      throw new ToolsetNotFoundError(`Legacy SDK toolset class not found: ${toolsetKey}`);
+    }
+
+    const ToolsetClass = inventoryItem.class;
+    const definition = inventoryItem.definition;
+
+    // Instantiate toolset without params (safe for schema extraction)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    const toolset = new ToolsetClass();
+
+    // Initialize tools without params to get tool instances with schemas
+    const toolInstances = toolset.initializeTools();
+
+    // Convert each tool's Zod schema to JSON Schema
+    const tools: ToolExportDefinition[] = toolInstances.map((tool) => {
+      let inputSchema: Record<string, unknown> = {};
+
+      if (tool.schema) {
+        try {
+          // Convert Zod schema to JSON Schema using openApi3 target for better compatibility
+          inputSchema = zodToJsonSchema(tool.schema, { target: 'openApi3' }) as Record<
+            string,
+            unknown
+          >;
+        } catch (e) {
+          this.logger.warn(
+            `Failed to convert Zod schema to JSON Schema for tool ${tool.name}: ${(e as Error).message}`,
+          );
+        }
+      }
+
+      return {
+        name: tool.name,
+        description: tool.description ?? '',
+        inputSchema,
+      };
+    });
+
+    // Get toolset metadata
+    const name =
+      (definition?.labelDict?.en as string) ??
+      (definition?.labelDict?.['zh-CN'] as string) ??
+      toolsetKey;
+
     const description =
       (definition?.descriptionDict?.en as string) ??
       (definition?.descriptionDict?.['zh-CN'] as string) ??
@@ -350,10 +419,14 @@ export class ToolDefinitionService {
   }): ToolExportDefinition {
     const fn = tool.function;
 
+    // Deep clone and add file_name_title field (consistent with non-PTC mode)
+    const inputSchema = JSON.parse(JSON.stringify(fn?.parameters ?? {})) as JsonSchema;
+    addFileNameTitleField(inputSchema);
+
     return {
       name: fn?.name ?? 'unknown_tool',
       description: fn?.description ?? '',
-      inputSchema: (fn?.parameters ?? {}) as Record<string, unknown>,
+      inputSchema,
     };
   }
 }

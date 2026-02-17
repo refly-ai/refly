@@ -2,6 +2,7 @@ import { z } from 'zod/v3';
 import { AgentBaseTool, AgentBaseToolset } from '../base';
 import { BuiltinExecuteCode } from './sandbox';
 import {
+  extractFileId,
   extractAllFileIds,
   hasFileIds,
   replaceAllMarkdownFileIds,
@@ -703,7 +704,11 @@ Each fileId must be an exact match from list_files or file metadata (format: df-
         html: htmlWithResolvedFiles,
         to: input.to,
         attachments: await Promise.all(
-          input.attachments?.map((file) => this.replaceFilePlaceholders(file)) || [],
+          input.attachments?.map((file) => {
+            const fileId = extractFileId(file);
+            const normalized = fileId && file === fileId ? `file-content://${fileId}` : file;
+            return this.replaceFilePlaceholders(normalized);
+          }) || [],
         ),
       });
 

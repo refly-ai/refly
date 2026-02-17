@@ -5,6 +5,7 @@ import { InfiniteData, useInfiniteQuery, UseInfiniteQueryOptions } from '@tansta
 import {
   getCreditRecharge,
   getCreditUsage,
+  getWebhookHistory,
   listCanvases,
   listCanvasTemplates,
   listCodeArtifacts,
@@ -13,12 +14,15 @@ import {
   listResources,
   listWorkflowApps,
   listWorkflowExecutions,
+  searchWorkflowsViaApi,
 } from '@refly/openapi-schema';
 import {
   GetCreditRechargeData,
   GetCreditRechargeError,
   GetCreditUsageData,
   GetCreditUsageError,
+  GetWebhookHistoryData,
+  GetWebhookHistoryError,
   ListCanvasesData,
   ListCanvasesError,
   ListCanvasTemplatesData,
@@ -35,6 +39,8 @@ import {
   ListWorkflowAppsError,
   ListWorkflowExecutionsData,
   ListWorkflowExecutionsError,
+  SearchWorkflowsViaApiData,
+  SearchWorkflowsViaApiError,
 } from '@refly/openapi-schema';
 import * as Common from './common';
 export const useListCanvasesInfinite = <
@@ -225,6 +231,56 @@ export const useListWorkflowAppsInfinite = <
     queryKey: Common.UseListWorkflowAppsKeyFn(clientOptions, queryKey),
     queryFn: ({ pageParam }) =>
       listWorkflowApps({
+        ...clientOptions,
+        query: { ...clientOptions.query, page: pageParam as number },
+      }).then((response) => response.data as TData) as TData,
+    initialPageParam: '1',
+    getNextPageParam: (response) =>
+      (
+        response as {
+          nextPage: number;
+        }
+      ).nextPage,
+    ...options,
+  });
+export const useGetWebhookHistoryInfinite = <
+  TData = InfiniteData<Common.GetWebhookHistoryDefaultResponse>,
+  TError = GetWebhookHistoryError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<GetWebhookHistoryData, true>,
+  queryKey?: TQueryKey,
+  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useInfiniteQuery({
+    queryKey: Common.UseGetWebhookHistoryKeyFn(clientOptions, queryKey),
+    queryFn: ({ pageParam }) =>
+      getWebhookHistory({
+        ...clientOptions,
+        query: { ...clientOptions.query, page: pageParam as number },
+      }).then((response) => response.data as TData) as TData,
+    initialPageParam: '1',
+    getNextPageParam: (response) =>
+      (
+        response as {
+          nextPage: number;
+        }
+      ).nextPage,
+    ...options,
+  });
+export const useSearchWorkflowsViaApiInfinite = <
+  TData = InfiniteData<Common.SearchWorkflowsViaApiDefaultResponse>,
+  TError = SearchWorkflowsViaApiError,
+  TQueryKey extends Array<unknown> = unknown[],
+>(
+  clientOptions: Options<SearchWorkflowsViaApiData, true> = {},
+  queryKey?: TQueryKey,
+  options?: Omit<UseInfiniteQueryOptions<TData, TError>, 'queryKey' | 'queryFn'>,
+) =>
+  useInfiniteQuery({
+    queryKey: Common.UseSearchWorkflowsViaApiKeyFn(clientOptions, queryKey),
+    queryFn: ({ pageParam }) =>
+      searchWorkflowsViaApi({
         ...clientOptions,
         query: { ...clientOptions.query, page: pageParam as number },
       }).then((response) => response.data as TData) as TData,

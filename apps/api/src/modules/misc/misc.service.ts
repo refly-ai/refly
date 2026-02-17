@@ -497,6 +497,7 @@ export class MiscService implements OnModuleInit {
         uid: user.uid,
         storageKey,
         storageSize: buf.length,
+        originalName: path.basename(fpath),
         entityId,
         entityType,
         contentType,
@@ -571,6 +572,7 @@ export class MiscService implements OnModuleInit {
         where: { pk: existingFile.pk },
         data: {
           storageSize: file.buffer.length,
+          originalName: file.originalname,
           entityId,
           entityType,
           contentType,
@@ -583,6 +585,7 @@ export class MiscService implements OnModuleInit {
           uid: user.uid,
           storageKey,
           storageSize: file.buffer.length,
+          originalName: file.originalname,
           entityId,
           entityType,
           contentType,
@@ -1035,18 +1038,28 @@ export class MiscService implements OnModuleInit {
    * Clean up orphaned static files that are older than one day and have no entity association
    */
   async cleanOrphanedStaticFiles(): Promise<void> {
-    const oneDayAgo = new Date();
-    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     // Find orphaned files
     const orphanedFiles = await this.prisma.staticFile.findMany({
       where: {
         entityId: null,
         entityType: null,
-        createdAt: {
-          lt: oneDayAgo,
-        },
         deletedAt: null,
+        OR: [
+          {
+            expiredAt: {
+              lt: now,
+            },
+          },
+          {
+            expiredAt: null,
+            createdAt: {
+              lt: oneDayAgo,
+            },
+          },
+        ],
       },
       select: {
         pk: true,
@@ -1156,6 +1169,7 @@ export class MiscService implements OnModuleInit {
         storageKey: finalTargetFile.storageKey,
         storageSize: sourceStaticFile.storageSize,
         contentType: sourceStaticFile.contentType,
+        originalName: sourceStaticFile.originalName,
         entityId: targetEntityId,
         entityType: targetEntityType,
         visibility: sourceStaticFile.visibility,

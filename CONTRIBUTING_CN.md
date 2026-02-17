@@ -1,10 +1,10 @@
 # 贡献指南
 
-欢迎来到 Refly 贡献指南！作为 AI 原生的创作引擎，我们致力于提供最直观的自由画布界面，整合多线程对话、知识库 RAG 集成、上下文记忆和智能搜索功能。社区的每一份帮助都意义非凡。
+欢迎来到 Refly 贡献指南！Refly 是首个用于构建稳定、原子化和版本化 Agent Skill 的开源平台。作为 AI 原生的创作引擎，我们提供直观的自由画布界面，将业务逻辑转化为结构化的 Agent Skill，使任何 Agent 都能以 100% 的可靠性调用。社区的每一份帮助都意义非凡。
 
 考虑到我们目前的发展阶段，我们需要保持敏捷并快速交付，但同时也希望确保像您这样的贡献者能够获得尽可能顺畅的贡献体验。我们制作了这份贡献指南，旨在帮助您熟悉代码库以及我们与贡献者的协作方式，让您能够快速进入有趣的部分。
 
-这份指南，就像 Refly 本身一样，是一个持续改进的过程。如果有时它滞后于实际项目，我们非常感谢您的理解，也欢迎任何反馈来帮助我们改进。
+这份指南，就像 Refly 本身一样，是一个持续改进的过程。我们最近已从创作引擎演进为智能体基础设施平台，如果有时它滞后于实际项目，我们非常感谢您的理解，也欢迎任何反馈来帮助我们改进。
 
 在许可方面，请花一分钟阅读我们简短的[许可和贡献者协议](./LICENSE)。社区还遵守[行为准则](./.github/CODE_OF_CONDUCT.md)。
 
@@ -133,18 +133,13 @@ cd apps/web && pnpm dev # 终端 1
 cd apps/api && pnpm dev # 终端 2
 ```
 
-您可以访问 [http://localhost:5173](http://localhost:5173/) 开始开发 Refly。
-
-6. 开发桌面应用程序：
+6. 开发 CLI：
 
 ```bash
-# 选项 1：从根目录
-pnpm dev:electron
-
-# 选项 2：在两个终端中分别运行包
-cd apps/web && pnpm dev:electron # 终端 1
-cd apps/desktop && pnpm dev:electron # 终端 2
+cd packages/cli && pnpm dev
 ```
+
+您可以访问 [http://localhost:5173](http://localhost:5173/) 开始开发 Refly Web 应用程序。
 
 ## 代码结构
 
@@ -156,39 +151,50 @@ cd apps/desktop && pnpm dev:electron # 终端 2
 [apps/api/]                // 主 API 服务器应用程序
 ├── src/
 │   ├── modules/          // 功能模块（NestJS 模块）
-│   │   ├── auth/        // 身份验证和授权
-│   │   ├── canvas/      // 画布相关后端服务
+│   │   ├── skill/       // Agent Skill 管理
+│   │   ├── workflow/    // 工作流执行和规划
+│   │   ├── action/      // Agent 动作处理
+│   │   ├── mcp-server/  // Model Context Protocol 集成
+│   │   ├── tool/        // 工具库存和执行（Composio 等）
+│   │   ├── drive/       // 文件和存储管理
+│   │   ├── schedule/    // 任务调度和多模型路由
 │   │   ├── rag/         // RAG 管道实现
 │   │   ├── knowledge/   // 知识库管理
-│   │   ├── provider/    // AI 提供商集成
-│   │   ├── search/      // 搜索功能
-│   │   ├── collab/      // 实时协作
-│   │   ├── project/     // 项目管理
-│   │   ├── user/        // 用户管理
-│   │   └── ...          // 其他功能模块
+│   │   ├── auth/        // 身份验证和授权
+│   │   ├── canvas/      // 画布相关后端服务
+│   │   └── ...          // 其他功能模块（协作、用户等）
 │   ├── utils/           // 共享工具
 │   └── scripts/         // 构建和部署脚本
 ├── prisma/              // 数据库架构和迁移
 └── data/                // 静态数据和配置
 
 [packages/]
-├── providers/           // AI 提供商抽象和实现
-│   └── src/            // LLM 集成（OpenAI、Anthropic 等）
-├── common-types/       // 共享 TypeScript 类型和接口
-├── ai-workspace-common/ // 共享 AI 工作区组件和逻辑
+├── cli/                 // 用于 Skill 开发的 Refly CLI
+├── skill-template/      // Agent Skill 的模板和引擎
+├── agent-tools/         // 智能体的标准化工具
+├── providers/           // AI 提供商抽象（OpenAI, Vertex 等）
+├── canvas-common/       // 共享画布逻辑和类型
+├── ai-workspace-common/ // 共享工作区 UI 组件
+├── web-core/            // 核心前端逻辑和 hooks
+├── ui-kit/              // 共享 UI 组件库
+├── stores/              // 共享状态管理 (Zustand)
+├── common-types/        // 共享 TypeScript 类型
+├── i18n/                // 国际化资源
+├── openapi-schema/     // API 架构定义 (OpenAPI)
 ├── utils/              // 共享工具函数
 ├── errors/             // 通用错误定义
-├── openapi-schema/     // API 架构定义
+├── observability/      // 追踪和监控 (Langfuse)
 └── tsconfig/           // 共享 TypeScript 配置
 ```
 
 后端使用 NestJS 和 TypeScript 构建，专注于：
 
-- 基于功能模块的模块化架构
-- AI 提供商集成和 LLM 管理
+- 构建稳定、原子化且版本化的 Agent Skill
+- 具有可干预运行时的确定性执行
+- 通过 MCP、API 和 SDK 进行通用交付
+- 多模型路由和高级任务调度
 - 用于知识检索的 RAG 管道实现
-- 使用 WebSocket 的实时协作
-- 画布状态管理和持久化
+- 实时协作和画布状态管理
 - 带有 OpenAPI 文档的 RESTful API
 - 使用 Prisma ORM 的高效数据库操作
 
@@ -207,41 +213,28 @@ cd apps/desktop && pnpm dev:electron # 终端 2
 ├── public/                // 静态资源
 └── typing/                // TypeScript 类型定义
 
-[apps/desktop/]            // 桌面应用程序（Electron）
-├── src/                   // 桌面特定代码
-└── ...                    // Electron 配置
-
-[apps/extension/]          // 浏览器扩展
+[apps/extension/]          // 用于网页剪辑的浏览器扩展
 ├── src/                   // 扩展特定代码
 └── ...                    // 扩展清单和资源
 
 [packages/]
+├── web-core/              // 核心前端逻辑和 hooks
 ├── ai-workspace-common/   // 共享 AI 工作区组件
-│   ├── src/
-│   │   ├── components/    // 画布、编辑器和 AI 功能组件
-│   │   ├── hooks/         // 自定义 React hooks
-│   │   ├── stores/        // 状态管理（Zustand/Redux）
-│   │   ├── utils/         // 共享工具
-│   │   ├── types/         // 组件特定类型
-│   │   └── modules/       // 功能模块
-│
+├── canvas-common/         // 共享画布逻辑
+├── ui-kit/                // 共享 UI 组件库
+├── stores/                // 共享状态管理
 ├── i18n/                  // 国际化
-│   ├── src/
-│   │   ├── en-US/         // 英文翻译
-│   │   └── zh-Hans/       // 中文翻译
-│
-└── wxt/                   // Web 扩展工具包配置
+└── ...                    // 其他共享包
 ```
 
-前端使用 React、TypeScript 和现代工具构建：
+前端使用 React、TypeScript 和 modern 工具构建：
 
-- 基于组件的架构，具有可重用的 UI 组件
+- 用于视觉逻辑构建的 Agent Skill 构建器界面
 - 基于画布的 AI 驱动内容创作界面
-- 实时协作功能
+- 实时执行日志和工作流透明度
 - 多线程对话管理
 - 知识库集成和 RAG 驱动的搜索
 - 使用 Tailwind CSS 的响应式设计
-- 复杂应用程序状态的状态管理
 - 多语言国际化支持
 
 ## 提交 PR
@@ -264,5 +257,3 @@ cd apps/desktop && pnpm dev:electron # 终端 2
 - 加入我们的 [Discord](https://discord.gg/YVuYFjFvRC) 社区
 - 在我们的 [GitHub 讨论](https://github.com/refly-ai/refly/discussions)中开启讨论
 - 查看我们的[文档](https://docs.refly.ai)
-
- 

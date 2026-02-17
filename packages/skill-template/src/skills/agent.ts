@@ -9,6 +9,7 @@ import {
 import { ToolNode } from '@langchain/langgraph/prebuilt';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import pLimit from 'p-limit';
 import { BaseSkill, BaseSkillState, SkillRunnableConfig, baseStateGraphArgs } from '../base';
 import { Icon, SkillTemplateConfigDefinition, User } from '@refly/openapi-schema';
 
@@ -38,9 +39,27 @@ const MAX_TOOL_ITERATIONS = 25;
 const DEFAULT_RECURSION_LIMIT = 2 * MAX_TOOL_ITERATIONS + 1;
 // Max consecutive identical tool calls to detect infinite loops
 const MAX_IDENTICAL_TOOL_CALLS = 3;
+// Default maximum concurrent tool calls (can be overridden by WORKFLOW_TOOL_PARALLEL_CONCURRENCY env var)
+const DEFAULT_TOOL_PARALLEL_CONCURRENCY = 10;
 
 // WeakMap cache for Zod to JSON Schema conversion (avoids repeated conversions)
 const zodSchemaCache = new WeakMap<object, object>();
+
+/**
+ * Get tool parallel concurrency limit from environment variable
+ * @returns Maximum number of concurrent tool calls
+ */
+function getToolParallelConcurrency(): number {
+  const envConcurrency = process.env.WORKFLOW_TOOL_PARALLEL_CONCURRENCY;
+  if (envConcurrency) {
+    const parsed = Number.parseInt(envConcurrency, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return DEFAULT_TOOL_PARALLEL_CONCURRENCY;
+}
 
 /**
  * Convert Zod schema to JSON Schema with caching.
@@ -284,11 +303,12 @@ export class Agent extends BaseSkill {
     workflow = workflow.addEdge(START, 'llm');
 
     if (actualToolNodeInstance) {
-      // Enhanced tool node with strict sequential execution of tool calls
+      // Get concurrency limit from environment variable
+      const concurrencyLimit = getToolParallelConcurrency();
+
+      // Enhanced tool node with parallel execution of tool calls (with concurrency control)
       const enhancedToolNode = async (toolState: typeof MessagesAnnotation.State) => {
         try {
-          this.engine.logger.info('Executing tool node with strict sequential tool calls');
-
           const priorMessages = toolState.messages ?? [];
           const lastMessage = priorMessages[priorMessages.length - 1] as AIMessage | undefined;
           const toolCalls = lastMessage?.tool_calls ?? [];
@@ -298,69 +318,87 @@ export class Agent extends BaseSkill {
             return { messages: priorMessages };
           }
 
-          const toolResultMessages: BaseMessage[] = [];
+          this.engine.logger.info(
+            `Executing ${toolCalls.length} tool calls with concurrency limit ${concurrencyLimit}: [${toolCalls.map((tc) => tc?.name).join(', ')}]`,
+          );
 
-          // Execute each tool call strictly in sequence
-          for (const call of toolCalls) {
-            const toolName = call?.name ?? '';
-            const toolArgs = (call?.args as Record<string, unknown>) ?? {};
+          // Create a concurrency limiter
+          const limit = pLimit(concurrencyLimit);
 
-            if (!toolName) {
-              this.engine.logger.warn('Encountered a tool call with empty name, skipping');
-              toolResultMessages.push(
-                new ToolMessage({
-                  content: 'Error: Tool name is missing',
-                  tool_call_id: call?.id ?? '',
-                  name: toolName || 'unknown_tool',
-                }),
-              );
-              continue;
-            }
+          // Execute all tool calls with concurrency control
+          const toolPromises = toolCalls.map((call, index) =>
+            limit(async () => {
+              const toolName = call?.name ?? '';
+              const toolArgs = (call?.args as Record<string, unknown>) ?? {};
+              const toolCallId = call?.id ?? '';
 
-            const matchedTool = (availableToolsForNode || []).find((t) => t?.name === toolName);
+              if (!toolName) {
+                this.engine.logger.warn(`Tool call at index ${index} has empty name`);
+                return {
+                  index,
+                  message: new ToolMessage({
+                    content: 'Error: Tool name is missing',
+                    tool_call_id: toolCallId,
+                    name: 'unknown_tool',
+                  }),
+                };
+              }
 
-            if (!matchedTool) {
-              this.engine.logger.warn(`Requested tool not found: ${toolName}`);
-              toolResultMessages.push(
-                new ToolMessage({
-                  content: `Error: Tool '${toolName}' not available`,
-                  tool_call_id: call?.id ?? '',
-                  name: toolName,
-                }),
-              );
-              continue;
-            }
+              const matchedTool = (availableToolsForNode || []).find((t) => t?.name === toolName);
 
-            try {
-              // Each invocation awaited to ensure strict serial execution
-              const rawResult = await matchedTool.invoke(toolArgs);
-              const stringified =
-                typeof rawResult === 'string'
-                  ? rawResult
-                  : JSON.stringify(rawResult ?? {}, null, 2);
+              if (!matchedTool) {
+                this.engine.logger.warn(`Tool not found: ${toolName}`);
+                return {
+                  index,
+                  message: new ToolMessage({
+                    content: `Error: Tool '${toolName}' not available`,
+                    tool_call_id: toolCallId,
+                    name: toolName,
+                  }),
+                };
+              }
 
-              toolResultMessages.push(
-                new ToolMessage({
-                  content: stringified,
-                  tool_call_id: call?.id ?? '',
-                  name: matchedTool.name,
-                }),
-              );
+              try {
+                const rawResult = await matchedTool.invoke(toolArgs);
+                const stringified =
+                  typeof rawResult === 'string'
+                    ? rawResult
+                    : JSON.stringify(rawResult ?? {}, null, 2);
 
-              this.engine.logger.info(`Tool '${toolName}' executed successfully`);
-            } catch (toolError) {
-              const errMsg =
-                (toolError as Error)?.message ?? String(toolError ?? 'Unknown tool error');
-              this.engine.logger.error(`Tool '${toolName}' execution failed: ${errMsg}`);
-              toolResultMessages.push(
-                new ToolMessage({
-                  content: `Error executing tool '${toolName}': ${errMsg}`,
-                  tool_call_id: call?.id ?? '',
-                  name: matchedTool.name,
-                }),
-              );
-            }
-          }
+                this.engine.logger.info(`Tool '${toolName}' completed successfully`);
+                return {
+                  index,
+                  message: new ToolMessage({
+                    content: stringified,
+                    tool_call_id: toolCallId,
+                    name: matchedTool.name,
+                  }),
+                };
+              } catch (toolError) {
+                const errMsg =
+                  (toolError as Error)?.message ?? String(toolError ?? 'Unknown tool error');
+                this.engine.logger.error(`Tool '${toolName}' failed: ${errMsg}`);
+                return {
+                  index,
+                  message: new ToolMessage({
+                    content: `Error executing tool '${toolName}': ${errMsg}`,
+                    tool_call_id: toolCallId,
+                    name: matchedTool.name,
+                  }),
+                };
+              }
+            }),
+          );
+
+          // Wait for all tools to complete
+          const results = await Promise.all(toolPromises);
+
+          // Sort by original index to maintain order for LLM context
+          const toolResultMessages = results
+            .sort((a, b) => a.index - b.index)
+            .map((r) => r.message);
+
+          this.engine.logger.info(`All ${toolCalls.length} tool calls completed`);
           if ((lastMessage as any).response_metadata?.model_provider === 'google-vertexai') {
             const originalSignatures = (lastMessage as any).additional_kwargs?.signatures as any[];
             const toolCallsCount = lastMessage.tool_calls?.length ?? 0;

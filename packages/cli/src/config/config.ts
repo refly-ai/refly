@@ -9,6 +9,27 @@ import * as crypto from 'node:crypto';
 import { z } from 'zod';
 import { getConfigPath, getReflyDir } from './paths.js';
 
+// Platform agent types for config schema
+const AgentTypeEnum = z.enum([
+  'claude-code',
+  'codex',
+  'antigravity',
+  'github-copilot',
+  'windsurf',
+  'opencode',
+  'moltbot',
+  'cursor',
+  'continue',
+  'trae',
+  'qoder',
+]);
+
+// Platform config schema
+const PlatformConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  globalPath: z.string().optional(),
+});
+
 // Config schema
 const ConfigSchema = z.object({
   version: z.number().default(1),
@@ -46,6 +67,8 @@ const ConfigSchema = z.object({
       installedAt: z.string().optional(),
     })
     .optional(),
+  // Multi-platform configuration
+  platforms: z.record(AgentTypeEnum, PlatformConfigSchema).optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

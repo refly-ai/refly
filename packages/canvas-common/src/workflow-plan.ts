@@ -42,6 +42,7 @@ export const workflowVariableValueSchema = z.object({
   text: z.string().optional().describe('Text value (for text type)'),
   resource: z
     .object({
+      fileId: z.string().optional().describe('File ID from uploaded context files'),
       name: z.string().describe('Resource file name'),
       fileType: z.enum(['document', 'image', 'audio', 'video']).describe('Resource file type'),
     })
@@ -53,8 +54,10 @@ export const workflowVariableValueSchema = z.object({
 export const workflowVariableSchema = z.object({
   variableId: z.string().describe('Variable ID, unique and readonly'),
   variableType: z
-    .enum(['string', 'resource'])
-    .describe('Variable type: string for text input, resource for file upload')
+    .enum(['string', 'resource', 'option'])
+    .describe(
+      'Variable type: string for text input, resource for file upload, option for selection from predefined choices',
+    )
     .default('string'),
   name: z.string().describe('Variable name used in the workflow'),
   description: z.string().describe('Description of what this variable represents'),
@@ -66,6 +69,16 @@ export const workflowVariableSchema = z.object({
     .array(z.enum(['document', 'image', 'audio', 'video']))
     .optional()
     .describe('Accepted resource types (only for resource type variables)'),
+  options: z
+    .array(z.string())
+    .optional()
+    .describe('Predefined options for selection (only for option type variables)'),
+  isSingle: z
+    .boolean()
+    .optional()
+    .describe(
+      'For option type: whether only single selection is allowed. For resource type: whether only single file is accepted (false for multiple files). Defaults to true.',
+    ),
   value: z.array(workflowVariableValueSchema).describe('Variable values'),
 });
 
@@ -106,7 +119,7 @@ export const workflowPatchDataSchema = z.object({
   toolsets: z.array(z.string()).optional().describe('New list of toolset IDs for this task'),
 
   // Variable update fields
-  variableType: z.enum(['string', 'resource']).optional().describe('New variable type'),
+  variableType: z.enum(['string', 'resource', 'option']).optional().describe('New variable type'),
   name: z.string().optional().describe('New variable name'),
   description: z.string().optional().describe('New variable description'),
   required: z.boolean().optional().describe('Whether this variable is required'),
@@ -114,6 +127,8 @@ export const workflowPatchDataSchema = z.object({
     .array(z.enum(['document', 'image', 'audio', 'video']))
     .optional()
     .describe('New accepted resource types'),
+  options: z.array(z.string()).optional().describe('New predefined options for selection'),
+  isSingle: z.boolean().optional().describe('Whether only single selection is allowed'),
   value: z.array(workflowVariableValueSchema).optional().describe('New variable values'),
 });
 
@@ -295,6 +310,8 @@ export const applyWorkflowPatchOperations = (
             ...(data.resourceTypes !== undefined && {
               resourceTypes: data.resourceTypes,
             }),
+            ...(data.options !== undefined && { options: data.options }),
+            ...(data.isSingle !== undefined && { isSingle: data.isSingle }),
             ...(data.value !== undefined && { value: data.value }),
           };
           // Validate the updated variable
@@ -419,6 +436,7 @@ export const planVariableToWorkflowVariable = (
       ...(value?.resource?.name && value?.resource?.fileType
         ? {
             resource: {
+              ...(value.resource.fileId ? { fileId: value.resource.fileId } : {}),
               name: value.resource.name,
               fileType: value.resource.fileType,
             },
@@ -428,6 +446,8 @@ export const planVariableToWorkflowVariable = (
     description: planVariable.description,
     required: planVariable.required ?? false,
     resourceTypes: planVariable.resourceTypes,
+    options: planVariable.options,
+    isSingle: planVariable.isSingle,
   };
 };
 

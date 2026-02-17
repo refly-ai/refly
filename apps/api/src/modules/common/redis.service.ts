@@ -131,6 +131,40 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  /**
+   * Atomically set a key only if it doesn't exist, with expiry
+   * @param key - Redis key
+   * @param value - Value to set
+   * @param ttlSeconds - Time to live in seconds
+   * @returns true if the key was set, false if it already existed
+   */
+  async setIfNotExists(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    if (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0) {
+      throw new RangeError(`ttlSeconds must be a positive integer, received ${ttlSeconds}`);
+    }
+
+    if (this.client) {
+      try {
+        // SET key value EX ttl NX returns 'OK' if set, null if key already exists
+        const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
+        return result === 'OK';
+      } catch (error) {
+        this.logger.error(`Redis SET NX EX failed: key=${key}, error=${error}`);
+        throw error;
+      }
+    }
+
+    // In-memory implementation
+    const item = this.inMemoryStore.get(key);
+    if (item && !this.isExpired(item)) {
+      return false; // Key already exists
+    }
+
+    const expiresAt = Date.now() + ttlSeconds * 1000;
+    this.inMemoryStore.set(key, { value, expiresAt });
+    return true;
+  }
+
   async setex(key: string, seconds: number, value: string): Promise<void> {
     if (this.client) {
       try {

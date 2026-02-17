@@ -13,6 +13,7 @@ import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { McpServerModule } from '../mcp-server/mcp-server.module';
 import { MiscModule } from '../misc/misc.module';
 import { ProviderModule } from '../provider/provider.module';
+import { ToolCallModule } from '../tool-call/tool-call.module';
 import { BillingModule } from './billing/billing.module';
 import { ComposioModule } from './composio/composio.module';
 import { AdapterFactory } from './dynamic-tooling/adapters/adapter-factory.service';
@@ -46,6 +47,7 @@ import { ToolService } from './tool.service';
     BillingModule,
     HandlersModule,
     ScaleboxModule,
+    ToolCallModule,
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_SYNC_TOOL_CREDIT_USAGE })]),
   ],
   controllers: [ToolController],

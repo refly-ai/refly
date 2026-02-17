@@ -19,6 +19,12 @@ const internalToolRenderers: Record<string, React.FC<InternalToolRendererProps>>
 };
 
 /**
+ * List of internal tool keys for determining if a tool should use InternalToolRenderer
+ * This allows render.tsx to identify internal tools without relying on API data
+ */
+export const INTERNAL_TOOL_KEYS = Object.keys(internalToolRenderers);
+
+/**
  * Main component for rendering internal tools
  * Selects the appropriate renderer based on toolsetKey
  */

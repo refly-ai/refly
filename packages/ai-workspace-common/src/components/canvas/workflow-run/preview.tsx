@@ -13,6 +13,7 @@ import { CanvasNode, ResponseNodeMeta } from '@refly/canvas-common';
 import { LastRunTab } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/last-run-tab';
 import { ConfigureTab } from '@refly-packages/ai-workspace-common/components/canvas/node-preview/skill-response/configure-tab';
 import { useCanvasContext } from '@refly-packages/ai-workspace-common/context/canvas';
+import { LastRunTabContext } from '@refly-packages/ai-workspace-common/context/run-location';
 import { WorkflowRunPreviewHeader } from './workflow-run-preview-header';
 import { WorkflowRunForm } from './workflow-run-form';
 import { WorkflowInputFormCollapse } from './workflow-input-form-collapse';
@@ -622,6 +623,12 @@ const WorkflowRunPreviewComponent = () => {
     return sortedFiles;
   }, [outputsOnly, skillResponseNodes, driveFilesData?.data]);
 
+  // Memoize context value to prevent unnecessary re-renders
+  const previewContextValue = useMemo(
+    () => ({ location: 'runlog' as const, setCurrentFile }),
+    [setCurrentFile],
+  );
+
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
       <WorkflowRunPreviewHeader
@@ -682,26 +689,28 @@ const WorkflowRunPreviewComponent = () => {
           >
             {outputsOnly ? (
               // Outputs only mode: Show only product cards
-              <div className="flex flex-col gap-4 p-4">
-                {isDriveFilesLoading ? (
-                  <Skeleton paragraph={{ rows: 6 }} active title={false} />
-                ) : allProductFiles.length === 0 ? (
-                  <div className="flex items-center justify-center h-32 text-refly-text-2">
-                    {t('canvas.workflow.run.noArtifacts')}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {allProductFiles.map((file) => (
-                      <ProductCard
-                        key={file.fileId}
-                        file={file}
-                        source="card"
-                        onAddToFileLibrary={(file) => handleAddToFileLibrary(file, 'runlog')}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              <LastRunTabContext.Provider value={previewContextValue}>
+                <div className="flex flex-col gap-4 p-4">
+                  {isDriveFilesLoading ? (
+                    <Skeleton paragraph={{ rows: 6 }} active title={false} />
+                  ) : allProductFiles.length === 0 ? (
+                    <div className="flex items-center justify-center h-32 text-refly-text-2">
+                      {t('canvas.workflow.run.noArtifacts')}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4">
+                      {allProductFiles.map((file) => (
+                        <ProductCard
+                          key={file.fileId}
+                          file={file}
+                          source="card"
+                          onAddToFileLibrary={(file) => handleAddToFileLibrary(file, 'runlog')}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </LastRunTabContext.Provider>
             ) : (
               // Normal mode: Show user input + agent collapse components
               <div className="flex flex-col gap-2 px-4">
@@ -1000,12 +1009,14 @@ const WorkflowRunPreviewComponent = () => {
 
         {currentFile && (
           <div className="absolute inset-0 bg-refly-bg-content-z2 z-10">
-            <ProductCard
-              file={currentFile}
-              classNames="w-full h-full"
-              source="preview"
-              onAddToFileLibrary={(file) => handleAddToFileLibrary(file, 'agent')}
-            />
+            <LastRunTabContext.Provider value={previewContextValue}>
+              <ProductCard
+                file={currentFile}
+                classNames="w-full h-full"
+                source="preview"
+                onAddToFileLibrary={(file) => handleAddToFileLibrary(file, 'runlog')}
+              />
+            </LastRunTabContext.Provider>
           </div>
         )}
       </div>

@@ -6,7 +6,7 @@ import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/
 import { FilePreview } from '@refly-packages/ai-workspace-common/components/canvas/canvas-resources/file-preview';
 import { DriveFile, ResourceType, EntityType } from '@refly/openapi-schema';
 import cn from 'classnames';
-import { useActionResultStoreShallow } from '@refly/stores';
+import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { TbArrowBackUp } from 'react-icons/tb';
 import { useDownloadFile } from '@refly-packages/ai-workspace-common/hooks/canvas/use-download-file';
 import { useTranslation } from 'react-i18next';
@@ -98,14 +98,20 @@ export const ProductCard = memo(
     onAddToFileLibrary,
     isAddingToFileLibrary = false,
   }: ProductCardProps) => {
-    const { setCurrentFile } = useActionResultStoreShallow((state) => ({
-      setCurrentFile: state.setCurrentFile,
-    }));
+    // Get default setCurrentFile (for file library panel)
+    const { setCurrentFile: defaultSetCurrentFile } = useCanvasResourcesPanelStoreShallow(
+      (state) => ({
+        setCurrentFile: state.setCurrentFile,
+      }),
+    );
+
+    // Get Context's setCurrentFile (for drawer preview)
+    const { location, setCurrentFile: contextSetCurrentFile } = useLastRunTabContext();
+
     const inheritedUsePublicFileUrl = usePublicFileUrlContext();
     const { t } = useTranslation();
     const { handleDownload, isDownloading } = useDownloadFile();
     const { exportDocument } = useExportDocument();
-    const { location } = useLastRunTabContext();
 
     const title = file?.name ?? 'Untitled file';
 
@@ -118,8 +124,14 @@ export const ProductCard = memo(
     }, [file.type]);
 
     const handlePreview = useCallback(() => {
-      setCurrentFile(file, { usePublicFileUrl: inheritedUsePublicFileUrl });
-    }, [file, inheritedUsePublicFileUrl, setCurrentFile]);
+      if (contextSetCurrentFile) {
+        // Drawer preview mode
+        contextSetCurrentFile(file, { usePublicFileUrl: inheritedUsePublicFileUrl });
+      } else {
+        // File library panel preview mode (default)
+        defaultSetCurrentFile(file, { usePublicFileUrl: inheritedUsePublicFileUrl });
+      }
+    }, [file, inheritedUsePublicFileUrl, contextSetCurrentFile, defaultSetCurrentFile]);
 
     const handleDownloadProduct = useCallback(() => {
       logEvent('artifact_download', Date.now(), {
@@ -384,8 +396,12 @@ export const ProductCard = memo(
     ]);
 
     const handleClosePreview = useCallback(() => {
-      setCurrentFile(null);
-    }, [setCurrentFile]);
+      if (contextSetCurrentFile) {
+        contextSetCurrentFile(null);
+      } else {
+        defaultSetCurrentFile(null);
+      }
+    }, [contextSetCurrentFile, defaultSetCurrentFile]);
 
     return (
       <div

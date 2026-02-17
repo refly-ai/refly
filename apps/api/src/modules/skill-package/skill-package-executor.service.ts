@@ -392,16 +392,36 @@ export class SkillPackageExecutorService {
         ? (safeParseJSON(canvas.workflow)?.variables ?? [])
         : [];
 
-      // Create variables with existing IDs when available (match by name)
-      const runtimeVariables = Object.entries(input).map(([name, value]) => {
-        const existingVar = existingVariables.find((v: any) => v.name === name);
-        return {
-          variableId: existingVar?.variableId ?? genVariableID(),
+      // Merge input variables with existing variables
+      // Strategy: preserve all existing variables, override values for matching names, add new ones
+      const inputNames = new Set(Object.keys(input));
+
+      // Start with existing variables, update values if they appear in input
+      const mergedVariables = existingVariables.map((v: any) => {
+        if (inputNames.has(v.name)) {
+          // Variable exists in both - update the value
+          return {
+            variableId: v.variableId,
+            name: v.name,
+            variableType: 'string' as const,
+            value: [{ type: 'text' as const, text: String(input[v.name]) }],
+          };
+        }
+        // Variable only exists in workflow - keep as is
+        return v;
+      });
+
+      // Add new variables that don't exist in workflow
+      const newVariables = Object.entries(input)
+        .filter(([name]) => !existingVariables.some((v: any) => v.name === name))
+        .map(([name, value]) => ({
+          variableId: genVariableID(),
           name,
           variableType: 'string' as const,
           value: [{ type: 'text' as const, text: String(value) }],
-        };
-      });
+        }));
+
+      const runtimeVariables = [...mergedVariables, ...newVariables];
 
       const workflowExecutionId = await this.workflowService.initializeWorkflowExecution(
         { uid: execution.uid } as User,

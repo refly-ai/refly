@@ -104,13 +104,17 @@ export default () => ({
     redirectUrl: process.env.LOGIN_REDIRECT_URL,
     cookie: {
       domain: process.env.REFLY_COOKIE_DOMAIN,
-      secure: process.env.REFLY_COOKIE_SECURE,
+      secure: process.env.REFLY_COOKIE_SECURE === 'true' || false,
       sameSite: process.env.REFLY_COOKIE_SAME_SITE,
     },
     jwt: {
       secret: process.env.JWT_SECRET || 'test',
       expiresIn: process.env.JWT_EXPIRATION_TIME || '1d',
       refreshExpiresIn: process.env.JWT_REFRESH_EXPIRATION_TIME || '14d',
+    },
+    turnstile: {
+      enabled: process.env.CLOUDFLARE_TURNSTILE_ENABLED === 'true' || false,
+      secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
     },
     collab: {
       tokenExpiry: process.env.COLLAB_TOKEN_EXPIRY || '1h',
@@ -252,6 +256,7 @@ export default () => ({
   },
   ptc: {
     mode: process.env.PTC_MODE || 'off',
+    debug: process.env.PTC_DEBUG || '',
     userAllowlist: process.env.PTC_USER_ALLOWLIST || '',
     toolsetAllowlist: process.env.PTC_TOOLSET_ALLOWLIST || '',
     toolsetBlocklist: process.env.PTC_TOOLSET_BLOCKLIST || '',
@@ -316,6 +321,8 @@ export default () => ({
       maxDuration: Number.parseInt(process.env.VIDEO_MAX_DURATION) || 600, // 10 minutes
     },
     s3: {
+      inputBucket:
+        process.env.LAMBDA_INPUT_S3_BUCKET || process.env.MINIO_INTERNAL_BUCKET || 'refly-weblink',
       bucket: process.env.LAMBDA_S3_BUCKET || process.env.MINIO_INTERNAL_BUCKET || 'refly-weblink',
       outputPrefix: process.env.LAMBDA_OUTPUT_PREFIX || 'lambda-output',
     },

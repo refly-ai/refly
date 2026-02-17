@@ -230,10 +230,10 @@ export const WorkflowInputFormCollapse = React.memo<WorkflowInputFormCollapsePro
             <ResourceUpload
               onUpload={async () => false}
               onRemove={async () => {}}
-              onRefresh={async () => {}}
+              onRefresh={isSingle === true ? async () => {} : undefined}
               resourceTypes={resourceTypes}
               disabled={readonly}
-              maxCount={1}
+              maxCount={isSingle === true ? 1 : 10}
               data-field-name={name}
               hasError={false}
             />

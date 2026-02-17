@@ -1176,6 +1176,11 @@ export class ToolService {
     const patchWorkflow = new PatchWorkflow(params);
     const getWorkflowSummary = new GetWorkflowSummary(params);
 
+    // Add read_file and list_files tools for Copilot to directly read file content
+    const builtinToolset = new BuiltinToolset(params);
+    const readFileTool = builtinToolset.getToolInstance('read_file');
+    const listFilesTool = builtinToolset.getToolInstance('list_files');
+
     return [
       new DynamicStructuredTool({
         name: 'copilot_generate_workflow',
@@ -1211,6 +1216,30 @@ export class ToolService {
           type: 'copilot',
           toolsetKey: 'copilot',
           toolsetName: 'Copilot',
+        },
+      }),
+      new DynamicStructuredTool({
+        name: 'copilot_read_file',
+        description: readFileTool.description,
+        schema: readFileTool.schema,
+        func: readFileTool.invoke.bind(readFileTool),
+        metadata: {
+          name: readFileTool.name,
+          type: 'copilot',
+          toolsetKey: readFileTool.toolsetKey,
+          toolsetName: 'Read File',
+        },
+      }),
+      new DynamicStructuredTool({
+        name: 'copilot_list_files',
+        description: listFilesTool.description,
+        schema: listFilesTool.schema,
+        func: listFilesTool.invoke.bind(listFilesTool),
+        metadata: {
+          name: listFilesTool.name,
+          type: 'copilot',
+          toolsetKey: listFilesTool.toolsetKey,
+          toolsetName: 'List Files',
         },
       }),
     ];

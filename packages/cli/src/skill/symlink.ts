@@ -328,6 +328,29 @@ export function listSkillSymlinks(): Array<{
 }
 
 /**
+ * Escape a string for safe use as a YAML value.
+ * Quotes the string if it contains special characters.
+ */
+function escapeYamlValue(value: string): string {
+  // If the value contains special YAML characters, wrap in quotes and escape inner quotes
+  if (
+    value.includes(':') ||
+    value.includes('#') ||
+    value.includes("'") ||
+    value.includes('"') ||
+    value.includes('\n') ||
+    value.startsWith(' ') ||
+    value.endsWith(' ') ||
+    value.startsWith('[') ||
+    value.startsWith('{')
+  ) {
+    // Use double quotes and escape any double quotes inside
+    return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  }
+  return value;
+}
+
+/**
  * Generate SKILL.md content for a Refly skill
  */
 export function generateReflySkillMd(options: {
@@ -359,28 +382,28 @@ export function generateReflySkillMd(options: {
 
   // Build frontmatter - Claude Code compatible format
   // description is the primary trigger mechanism for Claude Code skill discovery
-  const frontmatterLines = ['---', `name: ${name}`];
-  frontmatterLines.push(`description: ${description}`);
+  const frontmatterLines = ['---', `name: ${escapeYamlValue(name)}`];
+  frontmatterLines.push(`description: ${escapeYamlValue(description)}`);
 
   // Standard Claude Code optional fields
   if (tags.length > 0) {
     frontmatterLines.push('tags:');
-    frontmatterLines.push(...tags.map((t) => `  - ${t}`));
+    frontmatterLines.push(...tags.map((t) => `  - ${escapeYamlValue(t)}`));
   }
 
-  frontmatterLines.push(`version: ${version}`);
+  frontmatterLines.push(`version: ${escapeYamlValue(version)}`);
 
   // Refly-specific metadata (kept for Refly CLI compatibility)
-  frontmatterLines.push(`skillId: ${skillId}`);
-  frontmatterLines.push(`workflowId: ${workflowId}`);
+  frontmatterLines.push(`skillId: ${escapeYamlValue(skillId)}`);
+  frontmatterLines.push(`workflowId: ${escapeYamlValue(workflowId)}`);
 
   if (installationId) {
-    frontmatterLines.push(`installationId: ${installationId}`);
+    frontmatterLines.push(`installationId: ${escapeYamlValue(installationId)}`);
   }
 
   if (triggers.length > 0) {
     frontmatterLines.push('triggers:');
-    frontmatterLines.push(...triggers.map((t) => `  - ${t}`));
+    frontmatterLines.push(...triggers.map((t) => `  - ${escapeYamlValue(t)}`));
   }
 
   frontmatterLines.push('---');
@@ -419,14 +442,6 @@ ${JSON.stringify(outputSchema, null, 2)}
 
 ${description}
 
-## Usage
-
-This skill is executed via Refly CLI:
-
-\`\`\`bash
-${runCommand}
-\`\`\`
-
 ## Input
 
 Provide input as JSON:
@@ -435,16 +450,42 @@ Provide input as JSON:
 ${inputExample}
 \`\`\`
 
+## Execution
+
+**Follow this exact 4-step pattern:**
+
+\`\`\`bash
+# Step 1: Run and capture RUN_ID (we-xxx format)
+RESULT=$(${runCommand})
+RUN_ID=$(echo "$RESULT" | jq -r '.payload.workflowExecutions[0].id')
+# RUN_ID is we-xxx format, use this for workflow commands below
+
+# Step 2: Wait for completion (use RUN_ID, not installationId)
+refly workflow status "$RUN_ID" --watch --interval 30000
+
+# Step 3: Get files from this run (use RUN_ID)
+FILES=$(refly workflow toolcalls "$RUN_ID" --files --latest | jq -r '.payload.files[]')
+
+# Step 4: Download and open each file
+echo "$FILES" | jq -c '.' | while read -r file; do
+  FILE_ID=$(echo "$file" | jq -r '.fileId')
+  FILE_NAME=$(echo "$file" | jq -r '.name')
+  if [ -n "$FILE_ID" ] && [ "$FILE_ID" != "null" ]; then
+    OUTPUT_PATH="$HOME/Desktop/$FILE_NAME"
+    refly file download "$FILE_ID" -o "$OUTPUT_PATH"
+    open "$OUTPUT_PATH"
+  fi
+done
+\`\`\`
+
 ## Output
 
 ${outputSection}
 
 ## Rules
 
-For workflow operations, refer to the base skill rules:
-- Workflow: \`~/.claude/skills/refly/rules/workflow.md\`
-- Node: \`~/.claude/skills/refly/rules/node.md\`
-- File: \`~/.claude/skills/refly/rules/file.md\`
+For workflow operations, refer to the base skill:
+- Base skill: \`~/.claude/skills/refly/SKILL.md\`
 `;
 
   return frontmatterLines.join('\n') + content;
@@ -546,4 +587,124 @@ export function parseReflySkillMd(content: string): {
     body: body.trim(),
     raw: content,
   };
+}
+
+// ============================================================================
+// Multi-Platform Support
+// ============================================================================
+
+import type { AgentType } from '../platform/registry.js';
+import type { MultiPlatformDeployResult, MultiPlatformRemoveResult } from '../platform/adapter.js';
+import {
+  deploySkillToAllPlatforms,
+  removeSkillFromAllPlatforms,
+  listAllDeployedSkills,
+} from '../platform/manager.js';
+
+/**
+ * Create a skill in Refly directory and deploy to all enabled platforms
+ */
+export async function createMultiPlatformSkill(
+  skillName: string,
+  skillMdContent: string,
+  options?: { force?: boolean; agents?: AgentType[] },
+): Promise<MultiPlatformDeployResult> {
+  const skillDir = getReflyDomainSkillDir(skillName);
+
+  // Ensure skill directory exists
+  ensureReflySkillsDir();
+
+  if (fs.existsSync(skillDir)) {
+    if (options?.force) {
+      // Force mode: update existing SKILL.md
+      const skillMdPath = path.join(skillDir, 'SKILL.md');
+      fs.writeFileSync(skillMdPath, skillMdContent, { encoding: 'utf-8', mode: 0o644 });
+      logger.debug(`Updated SKILL.md (force): ${skillMdPath}`);
+    } else {
+      // Return error result
+      return {
+        skillName,
+        sourcePath: skillDir,
+        results: new Map(),
+        successCount: 0,
+        failureCount: 1,
+      };
+    }
+  } else {
+    // Create skill directory and SKILL.md
+    fs.mkdirSync(skillDir, { recursive: true, mode: 0o755 });
+    const skillMdPath = path.join(skillDir, 'SKILL.md');
+    fs.writeFileSync(skillMdPath, skillMdContent, { encoding: 'utf-8', mode: 0o644 });
+    logger.debug(`Created SKILL.md: ${skillMdPath}`);
+  }
+
+  // Deploy to all platforms
+  return deploySkillToAllPlatforms(skillName, {
+    force: options?.force,
+    agents: options?.agents,
+  });
+}
+
+/**
+ * Remove a skill from all platforms and delete Refly directory
+ */
+export async function removeMultiPlatformSkill(
+  skillName: string,
+  options?: { agents?: AgentType[]; keepLocal?: boolean },
+): Promise<{
+  platformResults: MultiPlatformRemoveResult;
+  directoryRemoved: boolean;
+}> {
+  // Remove from all platforms first
+  const platformResults = await removeSkillFromAllPlatforms(skillName, {
+    agents: options?.agents,
+  });
+
+  // Remove skill directory unless keepLocal is true
+  let directoryRemoved = false;
+  if (!options?.keepLocal) {
+    const skillDir = getReflyDomainSkillDir(skillName);
+    try {
+      if (fs.existsSync(skillDir)) {
+        fs.rmSync(skillDir, { recursive: true, force: true });
+        directoryRemoved = true;
+        logger.info(`Removed skill directory: ${skillDir}`);
+      }
+    } catch (err) {
+      logger.error(`Failed to remove skill directory ${skillDir}:`, err);
+    }
+  }
+
+  return { platformResults, directoryRemoved };
+}
+
+/**
+ * List skills deployed across all platforms
+ */
+export async function listMultiPlatformSkills(options?: {
+  agents?: AgentType[];
+}): Promise<
+  Map<AgentType, Array<{ name: string; path: string; isValid: boolean; isSymlink: boolean }>>
+> {
+  const allDeployed = await listAllDeployedSkills({ agents: options?.agents });
+
+  // Transform to simplified format
+  const result = new Map<
+    AgentType,
+    Array<{ name: string; path: string; isValid: boolean; isSymlink: boolean }>
+  >();
+
+  for (const [agent, skills] of allDeployed) {
+    result.set(
+      agent,
+      skills.map((s) => ({
+        name: s.name,
+        path: s.path,
+        isValid: s.isValid,
+        isSymlink: s.isSymlink,
+      })),
+    );
+  }
+
+  return result;
 }

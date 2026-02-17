@@ -1,20 +1,24 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-lintignore"],
+  "ignoreDependencies": ["pino-pretty"],
   "ignore": [
     "postcss.config.*",
-    "*.config.ts",
+    "**/*.config.ts",
     "**/scripts/**",
     "apps/web/src/service-worker-sw.ts",
     "apps/api/load-tests/**",
     "docs/.vitepress/**",
-    "packages/cli/**"
+    "packages/cli/**",
+    "packages/openapi-schema/openapi-ts.config.ts",
+    "deploy/docker/prepare-deploy.js"
   ],
   "workspaces": {
     ".": {},
     "apps/api": {
       "entry": ["src/scripts/preload.ts"],
       "project": ["src/**/*.{ts,tsx,js,jsx}"],
+      "ignoreDependencies": ["pino-pretty"],
       "paths": {
         "@refly-packages/ai-workspace-common": ["../../packages/ai-workspace-common/src/index.ts"],
         "@refly-packages/ai-workspace-common/*": ["../../packages/ai-workspace-common/src/*"]
@@ -62,6 +66,9 @@
         "@refly-packages/ai-workspace-common": ["./src/index.ts"],
         "@refly-packages/ai-workspace-common/*": ["./src/*"]
       }
+    },
+    "packages/openapi-schema": {
+      "entry": ["openapi-ts.config.ts"]
     }
   }
 }

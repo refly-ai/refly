@@ -81,14 +81,14 @@ export const ScheduleColumn = memo(
         if (newOpen) {
           // Check quota before opening for disabled schedules
           // If schedule is disabled and user already reached quota, show modal instead
-          if (!schedule?.isEnabled && totalEnabledSchedules >= scheduleQuota) {
+          /*if (!schedule?.isEnabled && totalEnabledSchedules >= scheduleQuota) {
             if (planType === 'free') {
               setCreditInsufficientModalVisible(true, undefined, 'schedule');
             } else {
               setScheduleLimitModalVisible(true);
             }
             return; // Don't open popover
-          }
+          }*/
 
           const config = parseScheduleConfig(schedule?.scheduleConfig);
           setIsEnabled(schedule?.isEnabled ?? false);
@@ -106,21 +106,6 @@ export const ScheduleColumn = memo(
     const handleEnabledChange = useCallback(
       async (enabled: boolean) => {
         if (!schedule?.scheduleId || !timeValue) return;
-
-        // Check quota when trying to enable
-        if (enabled && !schedule?.isEnabled) {
-          // This schedule is not currently enabled, check if quota allows enabling
-          if (totalEnabledSchedules >= scheduleQuota) {
-            if (planType === 'free') {
-              // Free user: show credit insufficient modal
-              setCreditInsufficientModalVisible(true, undefined, 'schedule');
-            } else {
-              // Paid user: show schedule limit reached modal
-              setScheduleLimitModalVisible(true);
-            }
-            return;
-          }
-        }
 
         setIsEnabled(enabled);
 
@@ -175,10 +160,6 @@ export const ScheduleColumn = memo(
         updateScheduleMutation,
         onScheduleChange,
         t,
-        totalEnabledSchedules,
-        scheduleQuota,
-        planType,
-        setCreditInsufficientModalVisible,
       ],
     );
 
@@ -311,9 +292,21 @@ export const ScheduleColumn = memo(
 
       return (
         <div className="flex items-center gap-1 bg-refly-bg-control-z0 rounded-[6px] px-2 h-[26px]">
+          <style>
+            {`
+          .schedule-timepicker-popup .ant-picker-time-panel {
+            width: 188px !important;
+            min-width: 188px !important;
+          }
+          .schedule-timepicker-popup .ant-picker-dropdown {
+            width: 188px !important;
+            min-width: 188px !important;
+          }
+        `}
+          </style>
           <span className="text-xs font-normal leading-[18px] text-refly-text-0">{label}</span>
           <span
-            className={`px-1 py-0.5 flex items-center text-[9px] font-bold leading-[11px] rounded-sm ${
+            className={`px-1 py-0.5 flex items-center text-[9px] font-bold leading-[11px] rounded ${
               enabled
                 ? 'bg-refly-primary-default text-refly-bg-body-z0'
                 : 'bg-refly-fill-hover text-refly-text-3'
@@ -359,6 +352,11 @@ export const ScheduleColumn = memo(
                   setCreditInsufficientModalVisible(true, undefined, 'schedule');
                 }, 100);
               }}
+              totalEnabledSchedules={totalEnabledSchedules}
+              scheduleQuota={scheduleQuota}
+              planType={planType}
+              setCreditInsufficientModalVisible={setCreditInsufficientModalVisible}
+              setScheduleLimitModalVisible={setScheduleLimitModalVisible}
             />
           }
           trigger="click"
@@ -368,7 +366,7 @@ export const ScheduleColumn = memo(
           overlayClassName="schedule-popover"
         >
           <div
-            className="flex items-center justify-center gap-1 cursor-pointer hover:opacity-70 transition-opacity select-none"
+            className="flex items-center gap-1 cursor-pointer hover:opacity-70 transition-opacity select-none"
             onClick={(e) => e.stopPropagation()}
           >
             {renderBadge()}

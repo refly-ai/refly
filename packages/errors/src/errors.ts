@@ -80,8 +80,16 @@ export class OperationTooFrequent extends BaseError {
   };
 }
 
-export class AuthenticationExpiredError extends BaseError {
+export class HumanVerificationFailed extends BaseError {
   code = 'E0011';
+  messageDict = {
+    en: 'Human verification failed, please try again',
+    'zh-CN': '人机验证失败，请重试',
+  };
+}
+
+export class AuthenticationExpiredError extends BaseError {
+  code = 'E0012';
   messageDict = {
     en: 'Authentication expired, please sign in again',
     'zh-CN': '身份验证已过期，请重新登录',
@@ -89,7 +97,7 @@ export class AuthenticationExpiredError extends BaseError {
 }
 
 export class UnsupportedFileTypeError extends BaseError {
-  code = 'E0012';
+  code = 'E0013';
   messageDict = {
     en: 'This file type is temporarily not supported',
     'zh-CN': '暂不支持该文件类型',
@@ -97,7 +105,7 @@ export class UnsupportedFileTypeError extends BaseError {
 }
 
 export class EmbeddingNotAllowedToChangeError extends BaseError {
-  code = 'E0013';
+  code = 'E0014';
   messageDict = {
     en: 'Switching embedding model is not supported temporarily',
     'zh-CN': '暂不支持切换嵌入模型',
@@ -105,7 +113,7 @@ export class EmbeddingNotAllowedToChangeError extends BaseError {
 }
 
 export class ChatModelNotConfiguredError extends BaseError {
-  code = 'E0014';
+  code = 'E0015';
   messageDict = {
     en: 'Chat model not configured, please configure a chat model in the settings',
     'zh-CN': '未配置对话模型，请先在设置中进行配置',
@@ -113,7 +121,7 @@ export class ChatModelNotConfiguredError extends BaseError {
 }
 
 export class EmbeddingNotConfiguredError extends BaseError {
-  code = 'E0015';
+  code = 'E0016';
   messageDict = {
     en: 'Embedding model not configured, please configure an embedding model in the settings',
     'zh-CN': '未配置嵌入模型，请先在设置中进行配置',
@@ -121,7 +129,7 @@ export class EmbeddingNotConfiguredError extends BaseError {
 }
 
 export class MediaProviderNotConfiguredError extends BaseError {
-  code = 'E0016';
+  code = 'E0017';
   messageDict = {
     en: 'Media provider not configured, please configure a media provider in the settings',
     'zh-CN': '未配置媒体提供方，请先在设置中进行配置',
@@ -129,7 +137,7 @@ export class MediaProviderNotConfiguredError extends BaseError {
 }
 
 export class MediaModelNotConfiguredError extends BaseError {
-  code = 'E0017';
+  code = 'E0018';
   messageDict = {
     en: 'Media model not configured, please configure a media model in the settings',
     'zh-CN': '未配置媒体模型，请先在设置中进行配置',
@@ -511,13 +519,14 @@ const errorMap = {
   E0008: InvalidVerificationSession,
   E0009: IncorrectVerificationCode,
   E0010: OperationTooFrequent,
-  E0011: AuthenticationExpiredError,
-  E0012: UnsupportedFileTypeError,
-  E0013: EmbeddingNotAllowedToChangeError,
-  E0014: ChatModelNotConfiguredError,
-  E0015: EmbeddingNotConfiguredError,
-  E0016: MediaProviderNotConfiguredError,
-  E0017: MediaModelNotConfiguredError,
+  E0011: HumanVerificationFailed,
+  E0012: AuthenticationExpiredError,
+  E0013: UnsupportedFileTypeError,
+  E0014: EmbeddingNotAllowedToChangeError,
+  E0015: ChatModelNotConfiguredError,
+  E0016: EmbeddingNotConfiguredError,
+  E0017: MediaProviderNotConfiguredError,
+  E0018: MediaModelNotConfiguredError,
   E1000: CanvasNotFoundError,
   E1002: ResourceNotFoundError,
   E1003: DocumentNotFoundError,

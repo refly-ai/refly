@@ -10,7 +10,7 @@ import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin';
 import { PrecacheManifestPlugin } from './config/plugins/precache-manifest-plugin';
 import { ChunkDependencyReportPlugin } from './config/plugins/chunk-dependency-report-plugin';
 
-const { publicVars } = loadEnv({ prefixes: ['VITE_'] });
+const { publicVars } = loadEnv({ prefixes: ['VITE_', 'PUBLIC_'] });
 
 import path from 'node:path';
 import crypto from 'node:crypto';

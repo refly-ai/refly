@@ -5,6 +5,7 @@ import { FileOverview } from './share/file-overview';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import { FileItemHeader } from './share/file-item-header';
 import { FilePreview } from './file-preview';
+import { PublicFileUrlProvider } from '@refly-packages/ai-workspace-common/context/public-file-url';
 
 import './index.scss';
 
@@ -14,10 +15,12 @@ interface CanvasDriveProps {
 }
 
 export const CanvasDrive = memo(({ className, wideScreen }: CanvasDriveProps) => {
-  const { currentFile, setSidePanelVisible } = useCanvasResourcesPanelStoreShallow((state) => ({
-    currentFile: state.currentFile,
-    setSidePanelVisible: state.setSidePanelVisible,
-  }));
+  const { currentFile, currentFileUsePublicFileUrl, setSidePanelVisible } =
+    useCanvasResourcesPanelStoreShallow((state) => ({
+      currentFile: state.currentFile,
+      currentFileUsePublicFileUrl: state.currentFileUsePublicFileUrl,
+      setSidePanelVisible: state.setSidePanelVisible,
+    }));
 
   useEffect(() => {
     if (currentFile) {
@@ -34,21 +37,23 @@ export const CanvasDrive = memo(({ className, wideScreen }: CanvasDriveProps) =>
     >
       <FileOverview />
       {currentFile && (
-        <div
-          className={cn(
-            'h-full flex flex-col flex-1 min-w-0 border-solid border-l-[1px] border-y-0 border-r-0 border-refly-Card-Border',
-            !wideScreen ? 'w-[460px]' : '',
-          )}
-        >
-          <FileItemHeader />
-          <div className="flex-grow overflow-hidden min-w-0">
-            <FilePreview
-              file={currentFile}
-              markdownClassName="text-base px-3 py-2"
-              source="preview"
-            />
+        <PublicFileUrlProvider value={currentFileUsePublicFileUrl}>
+          <div
+            className={cn(
+              'h-full flex flex-col flex-1 min-w-0 border-solid border-l-[1px] border-y-0 border-r-0 border-refly-Card-Border',
+              !wideScreen ? 'w-[460px]' : '',
+            )}
+          >
+            <FileItemHeader />
+            <div className="flex-grow overflow-hidden min-w-0">
+              <FilePreview
+                file={currentFile}
+                markdownClassName="text-base px-3 py-2"
+                source="preview"
+              />
+            </div>
           </div>
-        </div>
+        </PublicFileUrlProvider>
       )}
     </div>
   );

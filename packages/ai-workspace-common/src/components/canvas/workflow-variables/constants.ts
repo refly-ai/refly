@@ -52,11 +52,21 @@ export const DOCUMENT_FILE_EXTENSIONS = [
   'html',
   'docx',
   'epub',
+  'csv',
+  'xls',
+  'xlsx',
   ...CODE_FILE_EXTENSIONS,
 ];
 export const IMAGE_FILE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'tiff', 'bmp', 'webp', 'svg'];
 export const AUDIO_FILE_EXTENSIONS = ['mp3', 'm4a', 'wav', 'mpga', 'ogg', 'flac', 'aac'];
 export const VIDEO_FILE_EXTENSIONS = ['mp4', 'mov', 'webm', 'avi', 'mkv', 'flv', 'wmv'];
+
+export const ACCEPT_FILE_EXTENSIONS = [
+  ...DOCUMENT_FILE_EXTENSIONS,
+  ...IMAGE_FILE_EXTENSIONS,
+  ...AUDIO_FILE_EXTENSIONS,
+  ...VIDEO_FILE_EXTENSIONS,
+];
 
 export const FILE_SIZE_LIMITS = {
   document: 50, // 50MB

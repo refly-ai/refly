@@ -1,0 +1,177 @@
+name: Release Docker Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version'
+        required: true
+        type: string
+  release:
+    types: [released]
+
+env:
+  REGISTRY: docker.io
+  IMAGE_PREFIX: reflyai/refly
+
+jobs:
+  prepare:
+    name: Prepare version
+    runs-on: ubuntu-latest
+    if: github.repository == 'refly-ai/refly'
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            # Extract version from release tag, remove 'v' prefix
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
+          else
+            # Use input version for manual trigger
+            VERSION="${{ inputs.version }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+
+  build:
+    name: Build ${{ matrix.app }} (${{ matrix.suffix }})
+    runs-on: ${{ matrix.runner }}
+    if: github.repository == 'refly-ai/refly'
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: api
+            platform: linux/amd64
+            runner: ubuntu-latest
+            suffix: amd64
+          - app: api
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            suffix: arm64
+          - app: web
+            platform: linux/amd64
+            runner: ubuntu-latest
+            suffix: amd64
+          - app: web
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            suffix: arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: reflyai
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/${{ matrix.app }}/Dockerfile${{ matrix.app == 'api' && '.slim' || '' }}
+          platforms: ${{ matrix.platform }}
+          push: true
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }},push-by-digest=true,name-canonical=true
+          cache-from: type=gha,scope=${{ matrix.app }}-${{ matrix.suffix }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}-${{ matrix.suffix }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          echo "${{ steps.build.outputs.digest }}" > "/tmp/digests/${{ matrix.app }}-${{ matrix.suffix }}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.app }}-${{ matrix.suffix }}
+          path: /tmp/digests/${{ matrix.app }}-${{ matrix.suffix }}
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge ${{ matrix.app }} manifests
+    runs-on: ubuntu-latest
+    if: github.repository == 'refly-ai/refly'
+    needs: [prepare, build]
+    strategy:
+      matrix:
+        app: ['api', 'web']
+    steps:
+      - name: Download amd64 digest
+        uses: actions/download-artifact@v4
+        with:
+          name: digest-${{ matrix.app }}-amd64
+          path: /tmp/digests
+
+      - name: Download arm64 digest
+        uses: actions/download-artifact@v4
+        with:
+          name: digest-${{ matrix.app }}-arm64
+          path: /tmp/digests
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: reflyai
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifest
+        run: |
+          AMD64_DIGEST=$(cat /tmp/digests/${{ matrix.app }}-amd64)
+          ARM64_DIGEST=$(cat /tmp/digests/${{ matrix.app }}-arm64)
+
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }}"
+
+          docker buildx imagetools create \
+            -t "${IMAGE}:latest" \
+            -t "${IMAGE}:${{ needs.prepare.outputs.version }}" \
+            "${IMAGE}@${AMD64_DIGEST}" \
+            "${IMAGE}@${ARM64_DIGEST}"
+
+      - name: Inspect manifest
+        run: |
+          docker buildx imagetools inspect "${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.app }}:${{ needs.prepare.outputs.version }}"
+
+      - name: Generate summary
+        run: |
+          IMAGE="${{ env.IMAGE_PREFIX }}-${{ matrix.app }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🐳 Docker Image Published: ${{ matrix.app }}
+
+          **Version:** \`${VERSION}\`
+
+          **Image:** \`${IMAGE}\`
+
+          **Docker Hub:** [${IMAGE}](https://hub.docker.com/r/${IMAGE}/tags)
+
+          **Architectures:**
+          - ✅ linux/amd64
+          - ✅ linux/arm64
+
+          ### Pull Commands
+          \`\`\`bash
+          # Latest version
+          docker pull ${IMAGE}:latest
+
+          # Specific version
+          docker pull ${IMAGE}:${VERSION}
+          \`\`\`
+
+          ### Run Commands
+          \`\`\`bash
+          docker run -d ${IMAGE}:${VERSION}
+          \`\`\`
+          EOF
