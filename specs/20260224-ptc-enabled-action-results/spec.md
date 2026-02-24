@@ -110,12 +110,12 @@ The minimal solution: write `ptcEnabled` in the **final UPDATE** that already ru
 
 - [x] Phase 1: Schema & migration
   - [x] Add `ptcEnabled` field to `ActionResult` in `schema.prisma`
-  - [ ] Run `prisma migrate dev` to generate and apply migration
+  - [x] Run `prisma migrate dev` to generate and apply migration
 - [x] Phase 2: Backend write
   - [x] Add `ptcEnabled: config.configurable.ptcEnabled ?? false` to `actionResult.updateMany` in `skill-invoker.service.ts`
-- [ ] Phase 3: Verify
-  - [ ] Confirm migration applies cleanly
-  - [ ] Confirm field is written correctly for a PTC-enabled run and a non-PTC run
+- [x] Phase 3: Verify
+  - [x] Confirm migration applies cleanly
+  - [x] Confirm field is written correctly for a PTC-enabled run and a non-PTC run
 
 ## Notes
 
