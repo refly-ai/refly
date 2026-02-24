@@ -12,9 +12,6 @@
       "runtimeArgs": ["-F", "api", "dev:debug"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
-      "env": {
-        "NODE_OPTIONS": "--inspect=0.0.0.0:9229"
-      },
       "autoAttachChildProcesses": true,
       "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
@@ -44,7 +41,6 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "env": {
-        "NODE_OPTIONS": "--inspect=0.0.0.0:9229",
         "DEBUG": "refly:tool:*",
         "DEBUG_TO_FILE": "true",
         "DEBUG_DIR": "${workspaceFolder}/debug-logs",
