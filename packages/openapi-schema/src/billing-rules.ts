@@ -93,6 +93,14 @@ export interface AdditiveBillingRule {
    * Phase to extract unitField from (defaults to same as phase)
    */
   unitPhase?: BillingPhase;
+
+  /**
+   * How to measure units for the text category.
+   * - 'tokens' (default): count tokens via countToken()
+   * - 'utf8_bytes': count UTF-8 byte length via Buffer.byteLength()
+   * Only applicable when category is 'text'.
+   */
+  unitMode?: 'tokens' | 'utf8_bytes';
 }
 
 /**

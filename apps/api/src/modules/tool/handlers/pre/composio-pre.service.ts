@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import _ from 'lodash';
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
+import { get as _get, set as _set } from 'lodash';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import sharp from 'sharp';
 import { DriveService } from '../../../drive/drive.service';
 import { getCurrentUser } from '../../tool-context';
@@ -88,7 +88,7 @@ export class ComposioToolPreHandlerService implements IToolPreHandler {
       const modifiedParams = { ...request.params };
 
       for (const field of fileUploadFields) {
-        const value = _.get(modifiedParams, field.dataPath);
+        const value = _get(modifiedParams, field.dataPath);
 
         if (!value) {
           continue; // Skip undefined/null values
@@ -107,7 +107,7 @@ export class ComposioToolPreHandlerService implements IToolPreHandler {
         localTempFiles.push(localPath);
 
         // Replace fileId with local file path
-        _.set(modifiedParams, field.dataPath, localPath);
+        _set(modifiedParams, field.dataPath, localPath);
       }
 
       // Return modified request with cleanup function

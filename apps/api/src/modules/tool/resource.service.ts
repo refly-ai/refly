@@ -14,7 +14,7 @@ import type {
 } from '@refly/openapi-schema';
 import type { ExtendedUpsertDriveFileRequest } from '../drive/drive.service';
 import { fileTypeFromBuffer } from 'file-type';
-import _ from 'lodash';
+import { get as _get, set as _set } from 'lodash';
 import mime from 'mime';
 import { DriveService } from '../drive/drive.service';
 import { MiscService } from '../misc/misc.service';
@@ -208,7 +208,7 @@ export class ResourceHandler {
             // Expand nested array paths within each array item
             const expandedPaths = this.expandArrayPaths(field.dataPath, field.arrayPaths, item);
             for (const path of expandedPaths) {
-              const value = _.get(item, path);
+              const value = _get(item, path);
               if (value !== undefined && value !== null) {
                 // Prefix with array index for correct path in root array
                 resourceTasks.push({
@@ -219,7 +219,7 @@ export class ResourceHandler {
               }
             }
           } else {
-            const value = _.get(item, field.dataPath);
+            const value = _get(item, field.dataPath);
             if (value !== undefined && value !== null) {
               // Prefix with array index for correct path in root array
               resourceTasks.push({
@@ -237,13 +237,13 @@ export class ResourceHandler {
         if (field.isArrayItem) {
           const expandedPaths = this.expandArrayPaths(field.dataPath, field.arrayPaths, data);
           for (const path of expandedPaths) {
-            const value = _.get(data, path);
+            const value = _get(data, path);
             if (value !== undefined && value !== null) {
               resourceTasks.push({ path, value, schema: field.schema });
             }
           }
         } else {
-          const value = _.get(data, field.dataPath);
+          const value = _get(data, field.dataPath);
           if (value !== undefined && value !== null) {
             resourceTasks.push({ path: field.dataPath, value, schema: field.schema });
           }
@@ -272,7 +272,7 @@ export class ResourceHandler {
       const task = resourceTasks[i];
       const result = taskResults.get(i);
       if (result) {
-        _.set(data, task.path, result);
+        _set(data, task.path, result);
       }
     }
 
@@ -457,7 +457,7 @@ export class ResourceHandler {
     // Process all fields in parallel (mutates data directly)
     await Promise.all(
       tasks.map(async ({ path, schema, isOptionalResource }) => {
-        const value = _.get(data, path);
+        const value = _get(data, path);
         if (value !== undefined) {
           const processed = await this.processResourceValue(
             value,
@@ -467,7 +467,7 @@ export class ResourceHandler {
             mode,
             isOptionalResource,
           );
-          _.set(data, path, processed);
+          _set(data, path, processed);
         }
       }),
     );
@@ -502,7 +502,7 @@ export class ResourceHandler {
 
       for (const { path, resolvedArrayPaths } of current) {
         const arrayPath = resolvedArrayPaths[depth];
-        const arrayData = _.get(data, arrayPath);
+        const arrayData = _get(data, arrayPath);
 
         if (Array.isArray(arrayData)) {
           for (let i = 0; i < arrayData.length; i++) {

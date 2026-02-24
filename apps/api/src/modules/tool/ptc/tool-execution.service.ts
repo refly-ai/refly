@@ -26,11 +26,11 @@ import { ToolCallService, ToolCallStatus } from '../../tool-call/tool-call.servi
 import { PrismaService } from '../../common/prisma.service';
 import { EncryptionService } from '../../common/encryption.service';
 import { ToolInventoryService } from '../inventory/inventory.service';
-import { AdapterFactory } from '../dynamic-tooling/adapters/factory';
-import { HttpHandler } from '../dynamic-tooling/core/handler';
+import { AdapterFactory } from '../dynamic-tooling/adapters/adapter-factory.service';
 import { BillingService } from '../billing/billing.service';
 import { ResourceHandler, parseJsonSchema, resolveCredentials, fillDefaultValues } from '../utils';
 import { runInContext } from '../tool-context';
+import { HandlerService, type HttpHandlerOptions } from '../handlers/core/handler.service';
 
 /**
  * PTC (Programmatic Tool Call) context for /v1/tool/execute API
@@ -63,6 +63,7 @@ export class ToolExecutionService {
     private readonly toolCallService: ToolCallService,
     private readonly inventoryService: ToolInventoryService,
     private readonly adapterFactory: AdapterFactory,
+    private readonly handlerService: HandlerService,
     private readonly resourceHandler: ResourceHandler,
     private readonly billingService: BillingService,
     private readonly encryptionService: EncryptionService,
@@ -373,7 +374,7 @@ export class ToolExecutionService {
     const credentials = resolveCredentials(config.credentials || {});
 
     // Step 4: Create HTTP handler
-    const handler = await this.createHttpHandler(config, parsedMethod, credentials);
+    const { adapter, options } = await this.createHttpHandler(config, parsedMethod, credentials);
 
     // Step 5: Prepare request with defaults and resource preprocessing
     const request = await this.prepareToolRequest(config, parsedMethod, args, user);
@@ -397,7 +398,7 @@ export class ToolExecutionService {
         requestId: `ptc-${toolsetKeyValue}-${toolNameValue}-${Date.now()}`,
         metadata: { toolName: toolNameValue, toolsetKey: toolsetKeyValue },
       },
-      async () => handler.handle(request),
+      async () => this.handlerService.execute(request, adapter, options),
     );
 
     // Step 7: Convert HandlerResponse to execution result format
@@ -425,22 +426,27 @@ export class ToolExecutionService {
     _config: ToolsetConfig,
     parsedMethod: ParsedMethodConfig,
     credentials: Record<string, unknown>,
-  ): Promise<HttpHandler> {
+  ): Promise<{
+    adapter: Awaited<ReturnType<AdapterFactory['createAdapter']>>;
+    options: HttpHandlerOptions;
+  }> {
     const adapter = await this.adapterFactory.createAdapter(parsedMethod, credentials);
 
-    return new HttpHandler(adapter, {
-      endpoint: parsedMethod.endpoint,
-      method: parsedMethod.method,
-      credentials,
-      responseSchema: parsedMethod.responseSchema,
-      billing: parsedMethod.billing,
-      billingService: this.billingService,
-      timeout: parsedMethod.timeout,
-      useFormData: parsedMethod.useFormData,
-      formatResponse: false, // Return JSON, not formatted text
-      enableResourceUpload: true, // Enable ResourceHandler for output processing
-      resourceHandler: this.resourceHandler,
-    });
+    return {
+      adapter,
+      options: {
+        endpoint: parsedMethod.endpoint,
+        method: parsedMethod.method,
+        credentials,
+        responseSchema: parsedMethod.responseSchema,
+        billing: parsedMethod.billing,
+        timeout: parsedMethod.timeout,
+        useFormData: parsedMethod.useFormData,
+        formatResponse: false, // Return JSON, not formatted text
+        enableResourceUpload: true, // Enable ResourceHandler for output processing
+        resourceHandler: this.resourceHandler,
+      },
+    };
   }
 
   /**

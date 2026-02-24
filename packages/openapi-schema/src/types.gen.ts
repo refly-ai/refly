@@ -7222,6 +7222,14 @@ export type ToolCreationContext = {
    */
   creditCost: number;
   /**
+   * Per-action tier config for provider billing
+   */
+  creditBillingMap?: {
+    [key: string]: {
+      tier: 'standard' | 'premium';
+    };
+  };
+  /**
    * Toolset type identifier
    */
   toolsetType: GenericToolsetType;

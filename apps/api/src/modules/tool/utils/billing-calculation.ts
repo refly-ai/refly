@@ -19,6 +19,18 @@ import type {
 } from '@refly/openapi-schema';
 
 /**
+ * USD to Credits conversion rate
+ * Configurable via USD_TO_CREDITS_RATE environment variable (default: 120)
+ */
+const USD_TO_CREDITS_RATE = (() => {
+  const rate = Number(process.env.USD_TO_CREDITS_RATE);
+  if (!process.env.USD_TO_CREDITS_RATE || !Number.isFinite(rate) || rate <= 0) {
+    return 120; // Default rate
+  }
+  return rate;
+})();
+
+/**
  * Calculate credits from billing rules
  *
  * @param config - Tool billing configuration with rules and optional token pricing
@@ -27,7 +39,7 @@ import type {
  * @param requestSchema - Request schema as JSON string
  * @param responseSchema - Response schema as JSON string
  * @param logger - Optional logger for audit trail
- * @returns Total credits (rounded using half-up rounding)
+ * @returns Total credits as raw float (rounding occurs at accumulator flush time)
  * @throws Error on validation failures (triggers fallback to legacy billing)
  */
 export async function calculateCreditsFromRules(
@@ -113,13 +125,13 @@ export async function calculateCreditsFromRules(
     if (unitValue === undefined || unitValue === null) {
       units = 1;
     } else {
-      units = calculateUnits(unitValue, rule.category);
+      units = calculateUnits(unitValue, rule.category, rule.unitMode);
     }
 
     // Calculate credits (with tokenPricing conversion if applicable)
     let credits: number;
     if (tokenPricing && rule.category === 'text') {
-      // USD-based pricing: (tokens / 1M) × pricePer1MUsd × 120
+      // USD-based pricing: (tokens / 1M) × pricePer1MUsd × USD_TO_CREDITS_RATE
       const pricePer1MUsd =
         rule.phase === 'input' ? tokenPricing.inputPer1MUsd : tokenPricing.outputPer1MUsd;
 
@@ -130,7 +142,7 @@ export async function calculateCreditsFromRules(
         );
       }
 
-      credits = units * pricePer1MUsd * 120;
+      credits = units * pricePer1MUsd * USD_TO_CREDITS_RATE;
     } else {
       // Standard credit-based pricing
       credits = units * creditsPerUnit;
@@ -212,9 +224,6 @@ export async function calculateCreditsFromRules(
   // Step 3: Sum all categories
   const totalCredits = Object.values(creditsByCategory).reduce((sum, c) => sum + c, 0);
 
-  // Half-up rounding
-  const finalCredits = Math.floor(totalCredits + 0.5);
-
   // Debug logging for audit trail
   if (logger) {
     logger.debug({
@@ -225,12 +234,13 @@ export async function calculateCreditsFromRules(
       },
       creditsByCategory,
       totalCredits,
-      finalCredits,
       auditLog,
     });
   }
 
-  return finalCredits;
+  // Return raw float for micro-credit accumulator precision.
+  // Rounding to integer happens at flush time in the accumulator.
+  return totalCredits;
 }
 
 /**
@@ -240,9 +250,12 @@ export async function calculateCreditsFromRules(
  * @param category - Billing category
  * @returns Number of units
  */
-function calculateUnits(value: unknown, category: BillingCategory): number {
+function calculateUnits(value: unknown, category: BillingCategory, unitMode?: string): number {
   switch (category) {
     case 'text': {
+      if (unitMode === 'utf8_bytes') {
+        return Buffer.byteLength(String(value), 'utf-8') / 1_000_000;
+      }
       const tokens = countToken(String(value));
       return tokens / 1_000_000; // Per million tokens
     }

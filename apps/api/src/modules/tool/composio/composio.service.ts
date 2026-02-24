@@ -25,6 +25,10 @@ import { ResourceHandler } from '../resource.service';
 import { getContext, getCurrentUser, runInContext } from '../tool-context';
 import { enhanceToolSchema, FILE_UPLOAD_GUIDANCE } from '../utils/schema-utils';
 
+interface ComposioToolCreationContext extends ToolCreationContext {
+  creditBillingMap?: Record<string, { tier: 'standard' | 'premium' }>;
+}
+
 @Injectable()
 export class ComposioService {
   private readonly logger = new Logger(ComposioService.name);
@@ -46,6 +50,33 @@ export class ComposioService {
       this.logger.error(message);
     } else {
       this.composio = new Composio({ apiKey });
+    }
+  }
+
+  private parseCreditBillingMap(
+    rawCreditBilling?: string | null,
+  ): Record<string, { tier: 'standard' | 'premium' }> | undefined {
+    if (!rawCreditBilling) {
+      return undefined;
+    }
+
+    try {
+      const parsed = JSON.parse(rawCreditBilling) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return undefined;
+      }
+
+      const result: Record<string, { tier: 'standard' | 'premium' }> = {};
+      for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+        const tier = (value as { tier?: string })?.tier;
+        if (tier === 'standard' || tier === 'premium') {
+          result[key] = { tier };
+        }
+      }
+
+      return Object.keys(result).length > 0 ? result : undefined;
+    } catch {
+      return undefined;
     }
   }
 
@@ -376,18 +407,25 @@ export class ComposioService {
             name: true,
           },
         });
-        const creditCost = inventory?.creditBilling
-          ? Number.parseFloat(inventory.creditBilling)
-          : 3;
+        const creditBillingMap = this.parseCreditBillingMap(inventory?.creditBilling);
+        let creditCost = 3;
+        if (creditBillingMap) {
+          // sentinel for provider-based billing path
+          creditCost = 0;
+        } else if (inventory?.creditBilling) {
+          const numericCost = Number.parseFloat(inventory.creditBilling);
+          creditCost = Number.isFinite(numericCost) ? numericCost : 3;
+        }
 
         // Fetch tools definition from Composio
         const tools = await this.fetchTools(userId, integrationId);
 
         // Create context for tool creation (user/userId comes from getCurrentUser() at runtime)
-        const toolCreateContext: ToolCreationContext = {
+        const toolCreateContext: ComposioToolCreationContext = {
           connectedAccountId,
           authType,
           creditCost,
+          creditBillingMap,
           toolsetType: toolset.type,
           toolsetKey: toolset.toolset?.key ?? '',
           toolsetName: inventory?.name ?? toolset.name,
@@ -584,7 +622,7 @@ export class ComposioService {
    */
   private createStructuredTool(
     tool: { function?: { name?: string; description?: string; parameters?: Record<string, any> } },
-    context: ToolCreationContext,
+    context: ComposioToolCreationContext,
   ): DynamicStructuredTool {
     const fn = tool.function;
     const toolName = fn?.name ?? 'unknown_tool';
@@ -681,6 +719,7 @@ export class ComposioService {
             toolsetKey: context.toolsetKey,
             rawResult: result,
             creditCost: context.creditCost,
+            creditBillingMap: context.creditBillingMap,
             toolsetName: context.toolsetName,
             fileNameTitle: (file_name_title as string) || 'untitled',
             context: {

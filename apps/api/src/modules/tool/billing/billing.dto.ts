@@ -77,10 +77,34 @@ export interface ProcessBillingOptions {
 export interface ProcessBillingResult {
   /** Whether billing was processed successfully */
   success: boolean;
-  /** Actual amount deducted (after discount) */
+  /** Effective cost for this call after discount (may be fractional) */
   discountedPrice: number;
   /** Original price before discount */
   originalPrice?: number;
+  /** Actual integer credits flushed/deducted this call (accumulator-based paths) */
+  flushedCredits?: number;
   /** Error message if processing failed */
   error?: string;
+}
+
+export interface ProviderBillingConfig {
+  providerKey: string;
+  plan: string;
+  standardRatePer1K: number;
+  premiumRatePer1K: number;
+  margin: number;
+}
+
+export interface ProcessComposioBillingOptions {
+  uid: string;
+  toolName: string;
+  toolsetKey: string;
+  /** Fractional credit cost (e.g., 0.036 for standard tier) */
+  fractionalCreditCost: number;
+  /** Original cost before any discount */
+  originalFractionalCost: number;
+  resultId?: string;
+  version?: number;
+  toolCallId?: string;
+  idempotencyKey?: string;
 }
