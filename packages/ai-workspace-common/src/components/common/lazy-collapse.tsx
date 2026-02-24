@@ -1,5 +1,5 @@
 import { Collapse, CollapseProps } from 'antd';
-import { useState, useCallback, useMemo } from 'react';
+import { memo, useState, useCallback, useMemo } from 'react';
 import type { Key } from 'react';
 
 /**
@@ -23,7 +23,7 @@ import type { Key } from 'react';
  * />
  * ```
  */
-export const LazyCollapse = (props: CollapseProps) => {
+export const LazyCollapse = memo((props: CollapseProps) => {
   const { items, onChange, ...restProps } = props;
 
   // Track which panels have been rendered at least once
@@ -35,6 +35,14 @@ export const LazyCollapse = (props: CollapseProps) => {
       // Add newly expanded panels to rendered set
       const keys = Array.isArray(activeKeys) ? activeKeys : [activeKeys];
       setRenderedPanels((prev) => {
+        let hasNew = false;
+        for (const key of keys) {
+          if (!prev.has(key)) {
+            hasNew = true;
+            break;
+          }
+        }
+        if (!hasNew) return prev;
         const newSet = new Set(prev);
         for (const key of keys) {
           newSet.add(key);
@@ -58,12 +66,19 @@ export const LazyCollapse = (props: CollapseProps) => {
     return items.map((item) => ({
       ...item,
       // Only render children if panel has been expanded at least once
-      children: renderedPanels.has(item.key) ? item.children : null,
+      // Defensively handle undefined keys - panels with undefined key never lazy-gate
+      children:
+        item.key != null && renderedPanels.has(item.key)
+          ? item.children
+          : item.key == null
+            ? item.children
+            : null,
     }));
   }, [items, renderedPanels]);
 
   return <Collapse {...restProps} items={lazyItems} onChange={handleChange} />;
-};
+});
+LazyCollapse.displayName = 'LazyCollapse';
 
 /**
  * Hook for managing lazy collapse state externally
@@ -93,7 +108,10 @@ export const useLazyCollapse = () => {
   const [renderedPanels, setRenderedPanels] = useState<Set<string | number>>(new Set());
 
   const markAsRendered = useCallback((key: string | number) => {
-    setRenderedPanels((prev) => new Set(prev).add(key));
+    setRenderedPanels((prev) => {
+      if (prev.has(key)) return prev;
+      return new Set(prev).add(key);
+    });
   }, []);
 
   const shouldRender = useCallback(
