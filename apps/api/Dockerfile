@@ -1,9 +1,9 @@
 # Build stage
-FROM node:20.19.1-alpine3.20 AS builder
+FROM node:24.13.1-alpine AS builder
 WORKDIR /app
 
 # Enable corepack and activate pnpm
-RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+RUN corepack enable && corepack prepare pnpm@10.30.2 --activate
 
 # Set environment variables to skip gyp-related installations
 ENV npm_config_gyp_ignore=true
@@ -32,7 +32,7 @@ RUN pnpm build:api
 FROM surnet/alpine-wkhtmltopdf:3.20.3-0.12.6-small AS wkhtmltopdf
 
 # Production stage
-FROM node:20.19.1-alpine3.20 AS production
+FROM node:24.13.1-alpine AS production
 WORKDIR /app
 
 # Install system dependencies in a single layer
