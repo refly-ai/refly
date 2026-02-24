@@ -128,8 +128,8 @@ The scripts use these environment variables (with defaults):
 
 ## Prerequisites
 
-- Node.js 20+
-- pnpm 9+
+- Node.js 24+
+- pnpm 10+
 - Docker & Docker Compose
 - Git
 
