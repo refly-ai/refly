@@ -346,6 +346,10 @@ export default () => ({
     pollLockTtlMs: Number.parseInt(process.env.WORKFLOW_POLL_LOCK_TTL_MS) || 5000,
   },
 
+  eval: {
+    serviceKey: process.env.EVAL_SERVICE_KEY,
+    userId: process.env.EVAL_USER_ID,
+  },
   sandbox: {
     url: process.env.SANDBOX_URL,
     timeout: process.env.SANDBOX_TIMEOUT_MS,

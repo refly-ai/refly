@@ -73,6 +73,28 @@ export class ToolWrapperFactoryService implements IToolWrapperFactory {
     const toolType: ToolType = toolAny.toolType ?? 'regular';
     const toolName = tool.name;
 
+    // Eval mock interception: return mock response instead of real tool execution
+    const configurable = config?.configurable as Record<string, unknown> | undefined;
+    const evalContext = configurable?.__evalContext as
+      | { toolBehaviors?: Record<string, { mock?: boolean; mockResponse?: unknown }> }
+      | undefined;
+
+    if (evalContext?.toolBehaviors) {
+      const behavior = evalContext.toolBehaviors[toolName] ?? evalContext.toolBehaviors[toolsetKey];
+      if (behavior?.mock && behavior.mockResponse !== undefined) {
+        this.logger.log(`[Eval] Tool "${toolName}" returning mock response`);
+        const mockContent =
+          typeof behavior.mockResponse === 'string'
+            ? behavior.mockResponse
+            : JSON.stringify(behavior.mockResponse, null, 2);
+        return {
+          content: mockContent,
+          status: 'success',
+          creditCost: 0,
+        };
+      }
+    }
+
     let rawResult: unknown;
     try {
       rawResult = await tool.invoke(input, config);
@@ -96,8 +118,7 @@ export class ToolWrapperFactoryService implements IToolWrapperFactory {
     // Extract creditCost from raw result before post-processing
     const creditCost = (rawResult as any)?.creditCost ?? 0;
 
-    // Build context from config.configurable
-    const configurable = config?.configurable as Record<string, unknown> | undefined;
+    // Build context from config.configurable (reuses `configurable` declared above)
     const context: PostHandlerContext = {
       user: configurable?.user as PostHandlerContext['user'],
       canvasId: configurable?.canvasId as string,

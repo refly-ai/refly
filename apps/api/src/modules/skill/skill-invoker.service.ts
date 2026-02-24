@@ -420,6 +420,20 @@ export class SkillInvokerService {
       (config.configurable as any).builtInToolsets = tools.builtInToolsets;
       (config.configurable as any).nonBuiltInToolsets = tools.nonBuiltInToolsets;
 
+      // Apply tool description overrides from eval context
+      const evalCtx = (config.configurable as any)?.__evalContext;
+      if (evalCtx?.toolDescriptionOverrides) {
+        for (const tool of tools.all) {
+          const shortName = (tool as any).metadata?.name || tool.name.replace(/^builtin_/, '');
+          const override =
+            evalCtx.toolDescriptionOverrides[shortName] ||
+            evalCtx.toolDescriptionOverrides[tool.name];
+          if (override) {
+            (tool as any).description = override;
+          }
+        }
+      }
+
       // Calculate PTC status based on user and toolsets
       const ptcConfig = getPtcConfig(this.config);
       const toolsetKeys = toolsets.map((t) => t.id);
@@ -450,6 +464,11 @@ export class SkillInvokerService {
     }
 
     config.configurable.webSearchEnabled = this.config.get<boolean>('tools.webSearchEnabled');
+
+    // Thread eval context through configurable for tool mock interception
+    if ((data as any).__evalContext) {
+      (config.configurable as any).__evalContext = (data as any).__evalContext;
+    }
 
     if (eventListener) {
       const emitter = new EventEmitter<SkillEventMap>();
@@ -929,17 +948,31 @@ export class SkillInvokerService {
       startTimeoutCheck();
     }
 
+    // Look up current canvas version for Langfuse metadata
+    let canvasVersion: string | undefined;
+    if (canvasId) {
+      const canvas = await this.prisma.canvas.findFirst({
+        where: { canvasId },
+        select: { version: true },
+      });
+      canvasVersion = canvas?.version;
+    }
+
     // Create Langfuse callback handler if baseUrl is configured
     // New @langfuse/langchain v4 API: simpler initialization, trace ID via runId parameter
     const callbacks = [];
     const langfuseBaseUrl = this.config.get<string>('langfuse.baseUrl');
     if (langfuseBaseUrl) {
       try {
+        const evalContext = (data as any).__evalContext;
         const handler = this.createLangfuseHandler({
           sessionId: data.target?.entityId,
           userId: user.uid,
           skillName: data.skillName,
           mode: data.mode,
+          evalContext,
+          canvasId,
+          canvasVersion,
         });
         callbacks.push(handler);
       } catch (err) {
@@ -2227,16 +2260,47 @@ export class SkillInvokerService {
     userId: string;
     skillName?: string;
     mode?: string;
+    evalContext?: {
+      isEval: boolean;
+      evalRunId?: string;
+      evalTags?: string[];
+      baselineTraceId?: string;
+    };
+    canvasId?: string;
+    canvasVersion?: string;
   }): FilteredLangfuseCallbackHandler {
     this.logger.info(
       `[Langfuse Debug] Creating FilteredLangfuseCallbackHandler with params: ${JSON.stringify(params)}`,
     );
+
+    const evalTags = params.evalContext?.isEval
+      ? ['eval', ...(params.evalContext.evalTags || []), params.evalContext.evalRunId].filter(
+          Boolean,
+        )
+      : [];
+
+    const evalMetadata = params.evalContext?.isEval
+      ? {
+          isEval: true,
+          evalRunId: params.evalContext.evalRunId,
+          baselineTraceId: params.evalContext.baselineTraceId,
+        }
+      : undefined;
+
+    // Build metadata with canvas version info for reproducibility
+    const metadata: Record<string, unknown> = {
+      ...evalMetadata,
+      ...(params.canvasId ? { canvasId: params.canvasId } : {}),
+      ...(params.canvasVersion ? { canvasVersion: params.canvasVersion } : {}),
+    };
+
     // Use FilteredLangfuseCallbackHandler to remove internal LangGraph/LangChain metadata
     // (langgraph_*, ls_* fields) that duplicate top-level Langfuse fields
     const handler = new FilteredLangfuseCallbackHandler({
       sessionId: params.sessionId,
       userId: params.userId,
-      tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent'],
+      tags: [params.skillName || 'skill-invocation', params.mode || 'node_agent', ...evalTags],
+      ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
     });
     this.logger.info('[Langfuse Debug] FilteredLangfuseCallbackHandler created successfully');
     return handler;
